@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
 import com.google.inject.Inject
 import scala.concurrent._
@@ -37,9 +38,27 @@ class URISummaryCommander @Inject()(
   embedlyStore: EmbedlyStore,
   articleStore: ArticleStore,
   imageFetcher: ImageFetcher,
+  uriSummaryCache: URISummaryCache,
   airbrake: AirbrakeNotifier,
   clock: Clock
 ) extends Logging {
+
+  /**
+   * Gets the default URI Summary
+   */
+  def getDefaultURISummary(uriId: Id[NormalizedURI], waiting: Boolean): Future[URISummary] = {
+    val uri = db.readOnly { implicit session => normalizedUriRepo.get(uriId) }
+    getDefaultURISummary(uri, waiting)
+  }
+
+  def getDefaultURISummary(uri: NormalizedURI, waiting: Boolean): Future[URISummary] = {
+    import TransactionalCaching.Implicits.directCacheAccess
+
+    uriSummaryCache.getOrElseFuture(URISummaryKey(uri.id.get)) {
+      val uriSummaryRequest = URISummaryRequest(uri.url, ImageType.ANY, ImageSize(0,0), withDescription = true, waiting = waiting, silent = false)
+      getURISummaryForRequest(uriSummaryRequest, uri)
+    }
+  }
 
   /**
    * Gets an image for the given URI. It can be an image on the page or a screenshot, and there are no size restrictions
@@ -108,11 +127,13 @@ class URISummaryCommander @Inject()(
       }
       val storedSummaryOpt = storedImageInfos flatMap { imageInfo =>
         if (withDescription) {
+          // todo: get word count from scraper here
+          val wordCount = None
           for {
             nUriId <- nUri.id
             pageInfo <- pageInfoRepo.getByUri(nUriId)
           } yield {
-            URISummary(getS3URL(imageInfo, nUri), pageInfo.title, pageInfo.description, imageInfo.width, imageInfo.height)
+            URISummary(getS3URL(imageInfo, nUri), pageInfo.title, pageInfo.description, imageInfo.width, imageInfo.height, wordCount)
           }
         }
         else {

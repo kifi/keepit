@@ -51,6 +51,8 @@ POST  /internal/eliza/sendGlobalNotification    @com.keepit.eliza.controllers.in
 GET   /internal/eliza/unsendNotification        @com.keepit.eliza.controllers.internal.MessagingController.unsendNotification(id: Long)
 GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.controllers.internal.MessagingController.getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long)
 
+GET  /internal/eliza/keepAttribution            @com.keepit.eliza.controllers.internal.MessagingController.keepAttribution(userId: Id[User], uriId: Id[NormalizedURI])
+
 GET   /internal/eliza/verifyAllNotifications    @com.keepit.eliza.controllers.internal.MessagingController.verifyAllNotifications
 GET   /internal/eliza/getNonUserThreadMuteInfo  @com.keepit.eliza.controllers.internal.MessagingController.getNonUserThreadMuteInfo(publicId: String)
 POST  /internal/eliza/setNonUserThreadMuteState @com.keepit.eliza.controllers.internal.MessagingController.setNonUserThreadMuteState(publicId: String, muted: Boolean)

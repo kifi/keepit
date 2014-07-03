@@ -84,12 +84,6 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         (contacts(1) \ "name").as[String] === "forty two"
         (contacts(1) \ "emails").as[Seq[String]].length === 3
 
-        val contactsJsArr = commander.getContactsDirect(u42, 500)
-        val contactsSeqOpt = contactsJsArr.validate[Seq[Contact]].asOpt
-        val contactsSeq = contactsSeqOpt.get
-        contactsSeq.isEmpty === false
-        contactsSeq.length === 3
-
         val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson).get
         gbookInfo.id.get === Id[ABookInfo](2)
         gbookInfo.origin === ABookOrigins.GMAIL

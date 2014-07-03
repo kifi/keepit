@@ -1,20 +1,18 @@
 html
   height: 100%
-  text-align: center
-  overflow-x: auto
-  overflow-y: hidden
+  text-align: left
+  overflow: visible
 
 body
   position: relative
-  height: 100%
-  min-width: 1024px
+  overflow: visible
+  min-height: calc(100% - 62px)
+  width: 100%
   padding: 0
-  margin: 0 auto
-  background: #fafafa
-  font-family: Arial, sans-serif
-
-.mac &
+  margin: 62px 0 0;
+  background: appBackgroundColor
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif
+  min-width: 800px
 
 *, :after, :before
   box-sizing: content-box
@@ -22,6 +20,10 @@ body
 h1, h2, h3, h4, h5, label
   margin: 0
   font-weight: normal
+  font-smoothing: antialiased
+
+h1, h2
+  title-text()
 
 input[type="text"]
   padding: 0
@@ -41,18 +43,20 @@ menu, ol, ul
 a[href]
   color: linkColor
   text-decoration: none
+  font-smoothing: antialiased
 
 ::-webkit-input-placeholder
-  color: #b6c3cc
-
+  color: #aaaaaa
+  font-style: italic
 :-moz-placeholder
-  color: #b6c3cc
-
+  color: #aaaaaa
+  font-style: italic
 ::-moz-placeholder
-  color: #b6c3cc
-
+  color: #aaaaaa
+  font-style: italic
 :-ms-input-placeholder
-  color: #b6c3cc
+  color: #aaaaaa
+  font-style: italic
 
 :focus
   outline: none
@@ -69,20 +73,26 @@ a[href]
   zoom: 1
 
 .kf-cols
-  display: table
-  table-layout: fixed
-  min-width: 100%
-  height: 100%
-  overflow: hidden
-  text-align: left
   text-align: start
+  background-color: appBackgroundColor
+
+.kf-col-island
+  max-width: appMaxWidth
+  margin: 0 auto
 
 .kf-col
-  position: relative
-  display: table-cell
+  display: inline-block
   vertical-align: top
+  background: appBackgroundColor
+  margin-top: 15px
+  box-sizing: border-box
 
 .kf-col-inner
-  position: relative
   height: 100%
   width: 100%
+
+.kf-horizontal-separator
+  width: 100%
+  padding: 2px 0 0
+  border-bottom: separatorBorder
+  margin: 10px 0

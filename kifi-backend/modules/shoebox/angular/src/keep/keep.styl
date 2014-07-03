@@ -1,9 +1,95 @@
+keepBorderRadius = 3px
+
+.kf-keep
+.kf-keep-selection-tools
+  box-sizing: border-box
+  box-shadow: defaultBoxShadow
+  border: defaultBorder
+  background-color: white
+  border-radius: keepBorderRadius
+  margin-top: 10px
+
+.kf-keep-selection-tools-body
+  padding: 0 0 7px 27px
+
+.kf-keep-selection-tags
+  overflow: hidden
+
+.kf-keep-selection-tags-list
+  overflow: hidden
+
+.kf-keep-selection-tags-done
+  float: right
+
+.kf-edit-keeps-label
+.kf-keep-selection-tags-done
+  color: linkColor
+  cursor: pointer
+  user-select: none
+
+.kf-keep-selection-tags-done
+  vertical-align: middle
+  font-size: 13px
+  font-smoothing: antialiased
+  line-height: 33px
+
+.kf-keep-selection-tools
+  margin-left: 3px
+  margin-right: 25px
+
+.kf-keep-selected-count
+  text-align: center
+  font-size: 14px
+  padding: 10px 0 5px
+
+.kf-keep-selected-count-number
+  font-size: 28px
+  font-family: "Georgia", Arial, sans-serif
+  font-weight: bold
+
+.kf-keep-selection-options
+  position: relative
+  background-color: #eee
+  color: linkColor
+  font-size: 13px
+  font-smoothing: antialiased
+  text-align: center
+  user-select: none
+  padding: 12px 20px
+  margin: 7px 20px
+
+.kf-keep-selection-options-mask
+  position: absolute
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  display: none
+
+.kf-keep-selection-options.disabled
+  background-color: #f5f5f5
+
+  .kf-keep-selection-option
+    color: textLightGrey
+
+  .kf-keep-selection-options-mask
+    display: block
+
+.kf-keep-selection-tags
+  margin: 0px 20px
+
+.kf-keep-selection-option
+  display: inline-block
+
+  span
+    cursor: pointer
+
+.kf-keep-selection-option + .kf-keep-selection-option::before
+  content: "|"
+  padding: 5px
+
 .kf-keep
   position: relative
-  padding-left: 30px
-  border-top: 1px solid #f9f9f9
-  background-color: white
-  box-sizing: border-box
 
   &.detailed
     background-color: #eff2f7
@@ -11,22 +97,9 @@
   &.selected.detailed
     background-color: #F7F7F5
 
-  &.ui-draggable-dragging
-    border-top: none
-
   &.toggling
     overflow: hidden
     transition: height .3s ease-in-out
-
-  &:before
-    content: " "
-    display: block
-    height: 10px
-
-  &:after
-    content: " "
-    display: block
-    height: 13px
 
   &.ng-hide-add
   &.ng-hide-remove
@@ -41,89 +114,194 @@
   &.ng-hide-remove.ng-hide-remove-active
     max-height: 200px
 
-.kf-keep.selected
-.kf-shadow-keep-ellipsis
-  background-color: #fffcf1
-  border-color: #f0f0f0
+  &.editing
+    border-radius: 0 3px 3px
 
-.kf-keep-time
-  float: right
-  margin: 0 16px 0 4%
+    .kf-keep-edit-tools
+      display: block
+
+.kf-keep-body
+  padding: 0 20px 5px
+
+.kf-keep-contents
+  padding: 25px 0 10px
+  overflow: hidden
+
+.kf-keep-who
+  padding: 6px 35px 5px 0
+
+.kf-keep-tag
+  margin-top: 3px
+
+.kf-keep-footer
+  background-color: #f9f9f9
   font-size: 12px
-  line-height: 28px
-  color: #99a3b3
+  font-weight: 200
+  color: #5983bd
+  padding: 0 20px
+  line-height: 37px
 
-.kf-keep-handle
-  display: none
-  position: absolute
-  top: 0
-  bottom: 0
-  left: 0
-  width: 21px
-  background: url(../img/drag-handle.png) center/10px no-repeat
-  cursor: move
+  a:active
+    color: #92add3
 
-  &:hover
-  .kf-keep.detailed &
-  .kf-keep.selected &
-  .kf-keep.ui-draggable-dragging &
-    background-color: #e3e6ee
+.kf-keep-tags
+  padding: 7px 0
 
-  .kf-keep:hover &
-  .kf-keep.detailed &
-  .kf-keep.selected &
-  .kf-keep.ui-draggable-dragging &
-    display: block
-
-.kf-keep-checkbox
-  display: none
-  position: absolute
-  left: 3px
-  top: 4px
-  width: 15px
-  height: 15px
-  background: url(../img/check.png) 99px/12px 8px no-repeat #fff
+.kf-keep-footer-link a
   cursor: pointer
 
-  .kf-keep-handle:hover &
-  .kf-keep.detailed &
-  .kf-keep.selected &
-  .kf-keep.ui-draggable-dragging &
-    display: block
+  &:hover
+    text-decoration: underline
 
-  .kf-keep.selected &
-    background-position: 2px 4px
+  &:active
+    text-decoration: underline
+
+.kf-keep-footer-link + .kf-keep-footer-link:before
+    content: "·"
+    color: textGreyColor
+    padding: 0 6px 0 5px
+
+.kf-keep-subtitle-element
+  display: inline-block
+  margin-right: 10px
+
+.kf-keep-time
+.kf-keep-read-time
+  font-size: 13px
+  color: #99a3b3
+  font-family: "Georgia", Arial, sans-serif
+  white-space: nowrap
+
+.kf-keep-edit-tools
+  display: none
+  position: absolute
+  top: -1px
+  bottom: 0
+  left: -28px
+  width: 28px
+  height: 110px
+  background-color: #fff
+  border: defaultBorder
+  border-right: none
+  border-radius: keepBorderRadius 0 0 keepBorderRadius
+  box-sizing: border-box
+
+.kf-keep-checkbox-icon
+  float: left
+  margin: 15px 0 0 5px
+
+.kf-keep-handle
+  cursor: move
+  margin-left: 9px
+  margin-top: 18px
+
+.kf-keep-big-image-container
+  width: 100%
+
+.kf-keep-content-line
+  padding: 0
+  width: 100%
+  padding-top: 14px
+  position: relative
+
+.kf-keep-big-image
+  margin: 4px 0 11px
+
+.kf-keep-big-image
+  display: block
+  max-width: 100%
+  max-height: 400px
+  margin-left: auto
+  margin-right: auto
+
+.kf-keep-small-image
+  width: 150px
+  vertical-align: top
+  float: right
+  padding-top: 5px
+  padding-left: 20px
+  min-width: 90px
+
+  @media screen and (min-width: 1150px) and (max-width: 1250px)
+    width: 150px
+
+  @media screen and (min-width: 1024px) and (max-width: 1149px)
+    width: 100px
+
+  @media screen and (min-width: 800px) and (max-width: 950px)
+    width: 150px
+
+  @media screen and (max-width: 800px)
+    display: none
+
+.kf-keep-image
+  width: 100%
+
+.kf-keep-small-image + .kf-keep-info
+  padding-left: 20px
+
+.kf-keep-info-wrap
+  position: relative
+  display: block
+  overflow: hidden
+  margin-right: 30px
+
+.kf-keep-info
+  vertical-align: top
+  width: 100%
 
 .kf-keep-title
   max-width: 100%
-  font-size: 16px
+  font-size: 20px
+  font-weight: 500
   line-height: 24px
-  color: #0089d5
   font-smoothing: antialiased
-  long-text()
+  word-break: break-word
 
-.kf-keep.example .kf-keep-title-link.kf-keep-title-link
-  color: #66b8e6
+  a[href]
+    color: textBlackColor
+
+.kf-keep-loading
+  padding-right: 5px
+
+.kf-keep-subtitle
+  line-height: 17px
+
+.kf-keep-description
+  font-size: 16px
+  line-height: 23px
+  margin-top: 5px
+  font-family: "Georgia", Arial, sans-serif
+  font-smoothing: antialiased
+  color: textBlackColor
+  word-break: break-word
+
+.kf-dyn-positioned
+  overflow: hidden
+
+.kf-keep-description-sizer
+  position: absolute
+  visibility: hidden
+  z-index: -1
+  top: -999px
+  left: -999px
 
 .kf-keep-url
-  font-size: 12px
-  line-height: 14px
+  display: inline-block
+  font-size: 13px
   color: #99a3b3
+  vertical-align: middle
+  font-smoothing: antialiased
+  font-weight: 500
   long-text()
+  max-width: calc(100% - 100px)
+  overflow: hidden
 
   .kf-keep.example &
     color: #c6cbd3
 
 // tag
 .kf-keep-tags
-  margin-right: 10px
-  border: solid transparent
-  border-width: 7px 0
-  background: url(../img/tag-icon-small.png) 0 0/18px 18px no-repeat
-  padding-left: 19px
-  font-size: 12px
-  line-height: 18px
-  overflow: hidden
 
   &:empty
     border-bottom-width: 0
@@ -132,110 +310,112 @@
   .kf-keep-tags
     background-position: 0 1px
 
+
+.kf-keep-tag
+input.kf-keep-tag-input
+  border: 1px solid blueColor
+  border-radius: 3px
+  margin-right: 4px
+  vertical-align: middle
+
+.kf-keep-tag
+input.kf-keep-tag-input
+.kf-keep-tag-opt
+.kf-keep-tag-hidden
+  max-width: 150px
+  font-size: 12px
+  font-smoothing: antialiased
+  color: linkColor
+
+.kf-keep-tag
+input.kf-keep-tag-input
+  padding: 2px 6px 1px
+  margin-bottom: 3px
+
+.kf-keep-tag-opt
+  padding: 3px 6px 3px
+
+input.kf-keep-tag-input
+.kf-keep-tag-opt
+  long-text()
+
+input.kf-keep-tag-input
+  width: 100%
+  min-width: 141px
+
 .kf-keep-tag
   display: inline-block
   position: relative
   overflow: hidden
   white-space: nowrap
 
-  &:not(:last-of-type):after
-    content: " "
-    display: inline-block
-    height: 9px
-    font-size: 0
-    border-right: 1px solid #99a3b3
-
   &.removed
     width: 0 !important
     transition: width .12s ease-in-out
 
 .kf-keep-tag-link
-  padding: 0 5px
+  padding: 0 11px 0 0
+  font-smoothing: antialiased
+  long-text()
 
-  &:not(:hover)
-    color: #99a3b3
+  &:active
+    color: clearBlueColor
 
-    .kf-keep-tag.example &
-      color: #c3dba8
-
-  &:hover
-    text-decoration: underline
-    font-smoothing: antialiased
-
-.kf-example-tag
-  display: none
-  position: relative
-  top: -1px
-  font-size: 12px
-  font-weight: 500
-  line-height: 22px
-  padding: 0 10px
-  border-radius: 2px
-  margin-right: 4px
-  color: white
-  background-color: #c3dba8
-
-  .kf-keep.example &
-    display: inline-block
-
-.kf-keep:not(.mine)
-  .me
-  .keep-you
-  .kf-keep-private
-    display: none
-
-.kf-keep-private
-  display: inline-block
-  padding-left: 21px
-  margin: 0 2px
-  line-height: 17px
-  background: url(../img/private.png) left center/17px no-repeat
-
-  &:not(.on)
-    display: none
-
-.kf-keep:not(.mine) .kf-keep-you + .keep-kept-this:before
-  content: "Nobody has "
-  line-height: 23px
-
-// preview arrow
-.kf-keep-arrow-1
+.kf-keep-tag-x
   position: absolute
-  top: 26px
-  bottom: 0
-  right: 16px
-  width: 22px
-
-.kf-keep-arrow-2
-  display: table
-  table-layout: fixed
-  width: 100%
-  height: 100%
-
-.kf-keep-arrow-3
-  display: table-cell
-  vertical-align: middle
-
-.kf-keep-arrow-4
-  display: inline-block
-  width: 6px
-  height: 16px
-  border: solid transparent
-  border-width: 4px 8px
-  background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box
-  transition: transform .2s
+  right: 5px
+  top: 1px
   cursor: pointer
 
-  &:hover
-    border-color: rgba(0,0,0,.05)
-    background-color: rgba(0,0,0,.05)
+.kf-keep-tag-opts-container
+  position: absolute
 
-  .kf-keep:hover &
-    background-position: right
+.kf-keep-tag-opts
+  position: relative
+  top: -4px
+  border: 1px solid blueColor
+  border-radius: 3px
+  background-color: #fff
+  z-index: 1
+  min-width: 153px
 
-  .kf-keep.detailed &
-    background-position: right
-    transform: scale(-1,1)
+.kf-keep-tag-opt
+  cursor: pointer
+
+.kf-keep-tag-opt.current
+  background-color: #eee
+
+.kf-keep-tag-opt-new
+  padding: 2px 3px 1px 6px
+
+.kf-keep-tag-opt-new-text
+  long-text()
+
+.kf-keep-tag-opt-new-label
+  float: right
+  font-size: 9px
+  padding: 2px 3px 1px 3px
+  margin-left: 5px
+  background-color: blueColor
+  color: #fff
+
+.kf-keep-tag-hidden
+  position: absolute
+  white-space: nowrap
+  visibility: hidden
+
+.kf-keep-private
+  float: right
+  margin: 0 2px
+
+  .kf-keep-private-label
+    padding-right: 6px
+    color: textDarkGrey
+    font-size: 13px
+    font-weight: 200
+    font-smoothing: antialiased
+    font-style: italic
+    vertical-align: middle
 
 // preview button
 .kf-keep-hover-button-wrapper
@@ -282,54 +462,47 @@
 .kf-keep.detailed .kf-keep-button-preview
   display: none
 
-.kf-drag-target
-  background-color: #E2E6EC
+.kf-tag-list>li
+  display: inline-block
 
-.kf-keep.kf-dragged-keep
-  box-sizing: border-box
-  border-width: 1px
-  border-color: #d2d2d2
-  border-style: solid
+.kf-keep-add-tag-button
+  cursor: pointer
 
-.kf-shadow-keep-first
-.kf-shadow-keep-second
-.kf-shadow-keep-ellipsis
-.kf-shadow-keep-last
-  position: absolute
-  top: 0
-  left: 0
-  width: 100%
-
-.kf-shadow-keep-ellipsis
-  display: none
-  box-sizing: border-box
-  border-width: 1px
-  border-style: solid
-  border-bottom: none
-  border-color: #d2d2d2
-
-  &.active
-    display: inline
-
-.kf-shadow-keep-ellipsis-line
+.kf-keep-loader
   position: relative
-  top: 50%
-  height: 50%
-  width: 100%
-  border: inherit
-  border-left: none
-  border-right: none
-  margin-top: -1px
+  top: 2px
+  width: 16px
+  height: 16px
+  border-radius: 50%
+  display: inline-block
+  vertical-align: middle
+  background-color: #6fa6ef
+  margin: 0 8px 5px 0
 
-.kf-shadow-keep-ellipsis-counter
-.kf-shadow-keep-ellipsis-counter-hidden
-  position: absolute
-  font-size: 13px
-  color: #818692
-  background-color: inherit
-  height: 80%
-  top: 20%
-  padding: 0 3px
+.kf-keep-loader
+.kf-keep-loader:before
+.kf-keep-loader:after
+    animation: 1s infinite linear
 
-.kf-shadow-keep-ellipsis-counter-hidden
-  visibility: hidden
+.kf-keep-loader:before
+.kf-keep-loader:after
+    width: 100%
+    height: 100%
+    border-radius: 50%
+    position: absolute
+    top: 0
+    left: 0
+
+.kf-keep-loader
+  animation-name: kf-keep-loader
+
+@keyframes kf-keep-loader {
+  from {
+    transform: scale(0)
+    opacity: 1
+  }
+  to {
+    transform: scale(1)
+    opacity: 0
+  }
+}

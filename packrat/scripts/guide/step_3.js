@@ -23,10 +23,8 @@ guide.step3 = guide.step3 || function () {
       pad: [128, 100, 112, 20],
       arrow: {dx: 160, dy: 80, from: {angle: -80, gap: 10}, to: {angle: 0, gap: 5, along: [0, .45], sel: '.kifi-compose>.kifi-ti-list'}},
       allow: [
-        {type: /^key/, target: '.kifi-compose input', unless: function (e) {
-          return e.keyCode === 27 || e.keyCode === 13 && $('.kifi-ti-dropdown-tip').hasClass('kifi-ti-dropdown-item-selected');
-        }},
-        {type: /^key/, target: '.kifi-compose-draft', unless: function (e) {return e.keyCode === 27}},  // esc
+        {type: /^key/, target: '.kifi-compose input', unless: isEscOrEnterOnTip},
+        {type: /^key/, target: '.kifi-compose-draft', unless: isEsc},
         {type: 'mousedown', target: '.kifi-ti-dropdown-item-token'}
       ],
       afterTransition: '.kifi-toast'
@@ -38,13 +36,15 @@ guide.step3 = guide.step3 || function () {
       // pad: [-28, 100, 92, 70],
       arrow: {dx: 290, dy: 180, from: {angle: 0, gap: 16, along: [1, .55]}, to: {angle: -90, gap: 10, sel: '.kifi-compose-submit'}},
       allow: [
-        {type: /^key/, target: '.kifi-compose input,.kifi-compose-draft,.kifi-compose-submit', unless: function (e) {return e.keyCode === 27}},  // esc
-        {type: /^(?:mouse|click)/, target: '.kifi-compose input,.kifi-compose-draft,.kifi-compose-submit,.kifi-ti-token-x'}
+        {type: /^key/, target: '.kifi-compose input', unless: isEscOrEnterOnTip},
+        {type: /^key/, target: '.kifi-compose-draft,.kifi-compose-submit', unless: isEsc},
+        {type: /^(?:mouse|click)/, target: '.kifi-compose input,.kifi-ti-dropdown-item-token,.kifi-compose-draft,.kifi-compose-submit,.kifi-ti-token-x'}
       ],
       substep: true
     },
     {
       afterTransition: '.kifi-pane-box-cart',
+      litFor: 1000,
       pos: {bottom: 300, right: 390},
       transition: 'opacity'
     },
@@ -62,7 +62,7 @@ guide.step3 = guide.step3 || function () {
     }
   };
 
-  function show($guide, page, pageIdx) {
+  function show($guide, page, pageIdx, allowEsc) {
     if (!step) {
       tile.style.display = '';
       step = guide.step(steps, {
@@ -75,7 +75,8 @@ guide.step3 = guide.step3 || function () {
         opacity: .8,
         step: onStep,
         next: onClickNext,
-        hide: onHide
+        hide: onHide,
+        esc: allowEsc
       });
     }
   }
@@ -134,7 +135,7 @@ guide.step3 = guide.step3 || function () {
     if (stepIdx === 4) {
       step.show(5);
     } else {
-      step.nav('https://preview.kifi.com');
+      step.nav('https://www.kifi.com');
     }
   }
 
@@ -157,5 +158,13 @@ guide.step3 = guide.step3 || function () {
         return rec.target;
       }
     }
+  }
+
+  function isEsc(e) {
+    return e.keyCode === 27;
+  }
+
+  function isEscOrEnterOnTip(e) {
+    return e.keyCode === 27 || e.keyCode === 13 && $('.kifi-ti-dropdown-tip').hasClass('kifi-ti-dropdown-item-selected');
   }
 }();

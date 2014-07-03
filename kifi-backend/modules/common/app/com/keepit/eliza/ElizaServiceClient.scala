@@ -1,6 +1,6 @@
 package com.keepit.eliza
 
-import com.keepit.model.{ChangedURI, NotificationCategory, User}
+import com.keepit.model.{NormalizedURI, ChangedURI, NotificationCategory, User}
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
@@ -12,6 +12,7 @@ import com.keepit.search.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.collection.mutable
 import scala.concurrent.{Future, Promise}
 
 import play.api.libs.json.{JsArray, Json, JsObject}
@@ -42,6 +43,8 @@ trait ElizaServiceClient extends ServiceClient {
   def getNonUserThreadMuteInfo(publicId: String): Future[Option[(String, Boolean)]]
 
   def setNonUserThreadMuteState(publicId: String, muted: Boolean): Future[Boolean]
+
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]):Future[Seq[Id[User]]]
 
   //migration
   def importThread(data: JsObject): Unit
@@ -138,9 +141,15 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]] = call(Eliza.internal.getRenormalizationSequenceNumber).map(_.json.as(SequenceNumber.format[ChangedURI]))
+
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]] = {
+    call(Eliza.internal.keepAttribution(userId, uriId)).map { response =>
+      Json.parse(response.body).as[Seq[Id[User]]]
+    }
+  }
 }
 
-class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ElizaServiceClient{
+class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler, attributionInfo:mutable.Map[Id[NormalizedURI], Seq[Id[User]]] = mutable.HashMap.empty) extends ElizaServiceClient{
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, ()=>{})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
@@ -185,4 +194,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats] = Promise.successful(UserThreadStats(0, 0, 0)).future
 
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]] = Future.successful(SequenceNumber.ZERO)
+
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]] = {
+    Future.successful(attributionInfo.get(uriId).getOrElse(Seq.empty).filter(_ != userId))
+  }
 }

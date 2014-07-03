@@ -10,7 +10,7 @@ guide.step0 = guide.step0 || function () {
   var eventsToBlock = ['mousewheel','wheel'];
   return {show: show, remove: removeAll};
 
-  function show($guide, pages) {
+  function show($guide, pages, __, allowEsc) {
     if (!$stage) {
       $stage = $(render('html/guide/step_0', {me: me, pages: pages})).appendTo('body').layout().addClass('kifi-open');
       $steps = $guide.appendTo('body')
@@ -18,7 +18,9 @@ guide.step0 = guide.step0 || function () {
       $stage.find('.kifi-guide-pages')
         .on('click', '.kifi-guide-0-next', onClickNext)
         .on('click', '.kifi-guide-site-a', onClickSite);
-      $(document).data('esc').add(hide);
+      if (allowEsc) {
+        $(document).data('esc').add(hide);
+      }
       api.port.emit('track_guide', [0, 0]);
       eventsToBlock.forEach(function (type) {
         window.addEventListener(type, blockEvent, true);

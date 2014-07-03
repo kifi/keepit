@@ -41,7 +41,6 @@ trait ABookServiceClient extends ServiceClient {
   def getABookInfos(userId:Id[User]):Future[Seq[ABookInfo]]
   def getABookInfo(userId:Id[User], id:Id[ABookInfo]):Future[Option[ABookInfo]]
   def getABookInfoByExternalId(id: ExternalId[ABookInfo]):Future[Option[ABookInfo]]
-  def getContacts(userId:Id[User], maxRows:Int):Future[Seq[Contact]]
   def getEContacts(userId:Id[User], maxRows:Int):Future[Seq[EContact]]
   def getEContactCount(userId:Id[User]):Future[Int]
   def getEContactById(contactId:Id[EContact]):Future[Option[EContact]]
@@ -62,20 +61,16 @@ trait ABookServiceClient extends ServiceClient {
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int]
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
   def validateAllContacts(readOnly: Boolean): Unit
-  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean]
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Int]
 }
 
 
 class ABookServiceClientImpl @Inject() (
   val airbrakeNotifier: AirbrakeNotifier,
-  htpClient: HttpClient,
+  val httpClient: HttpClient, // todo(ray/eng): revisit handling of non-200 responses in service calls
   val serviceCluster: ServiceCluster
 )
   extends ABookServiceClient with Logging {
-
-  val httpClient =
-    if (!htpClient.isInstanceOf[HttpClientImpl]) htpClient
-    else htpClient.asInstanceOf[HttpClientImpl].copy(silentFail = true) // todo: revisit default behavior
 
   val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxJsonParseTime = Some(30000))
 
@@ -125,12 +120,6 @@ class ABookServiceClientImpl @Inject() (
   def getABookInfoByExternalId(id: ExternalId[ABookInfo]):Future[Option[ABookInfo]] = {
     call(ABook.internal.getABookInfoByExternalId(id)).map { r =>
       Json.fromJson[Option[ABookInfo]](r.json).get
-    }
-  }
-
-  def getContacts(userId: Id[User], maxRows: Int): Future[Seq[Contact]] = {
-    call(ABook.internal.getContacts(userId, maxRows), callTimeouts = longTimeout).map { r =>
-      Json.fromJson[Seq[Contact]](r.json).get
     }
   }
 
@@ -280,8 +269,8 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.validateAllContacts(readOnly))
   }
 
-  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = {
-    call(ABook.internal.hideEmailFromUser(userId, email)).map(_.json.as[Boolean])
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Int] = {
+    call(ABook.internal.hideEmailFromUser(userId, email)).map(_.json.as[Int])
   }
 
 }
@@ -307,8 +296,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getABookInfoByExternalId(id: ExternalId[ABookInfo]):Future[Option[ABookInfo]] = ???
 
   def getABooksCount(): Future[Int] = ???
-
-  def getContacts(userId: Id[User], maxRows: Int): Future[Seq[Contact]] = ???
 
   def getEContacts(userId: Id[User], maxRows: Int): Future[Seq[EContact]] = Future.successful(Seq.empty[EContact])
 
@@ -352,5 +339,5 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def validateAllContacts(readOnly: Boolean = true): Unit = ???
 
-  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = ???
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Int] = ???
 }

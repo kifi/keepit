@@ -45,21 +45,21 @@ object ExperimentType {
   val SHOW_HIT_SCORES = ExperimentType("show_hit_scores")
   val SHOW_DISCUSSIONS = ExperimentType("show_discussions")
   val MOBILE_REDIRECT = ExperimentType("mobile_redirect")
-  val KIFI_BLACK = ExperimentType("kifi_black")
+  val GUIDE = ExperimentType("guide")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE ::
     CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
-    MOBILE_REDIRECT :: KIFI_BLACK :: Nil
+    MOBILE_REDIRECT :: GUIDE :: Nil
 
-  val _ALL_MAP: Map[String, ExperimentType] = _ALL map { e => e.value -> e } toMap
+  private val _ALL_MAP: Map[String, ExperimentType] = _ALL map { e => e.value -> e } toMap
 
   def get(str: String): ExperimentType = _ALL_MAP(str.toLowerCase.trim)
 
-  def getUserStatus(experiments: Set[ExperimentType]): String =
+  def getUserStatus(experiments: Set[ExperimentType]): String = {
     if (experiments.contains(FAKE)) FAKE.value
     else if (experiments.contains(ADMIN)) ADMIN.value
     else "standard"
-
+  }
 }
 
 object UserExperimentStates extends States[UserExperiment] {

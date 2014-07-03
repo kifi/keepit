@@ -204,14 +204,7 @@ class KeepsCommander @Inject() (
   }
 
   private def getKeepSummary(keep: Keep, waiting: Boolean = false): Future[URISummary] = {
-    val request = URISummaryRequest(
-      url = keep.url,
-      imageType = ImageType.ANY,
-      withDescription = true,
-      waiting = waiting,
-      silent = false
-    )
-    uriSummaryCommander.getURISummaryForRequest(request)
+    uriSummaryCommander.getDefaultURISummary(keep.uriId, waiting)
   }
 
   def allKeeps(
@@ -601,7 +594,7 @@ class KeepsCommander @Inject() (
   def processKifiHit(clicker:Id[User], kifiHit:SanitizedKifiHit):Unit = {
     db.readWrite { implicit rw =>
       val keepers = kifiHit.context.keepers
-      if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, kifiHit.uriId, true)
+      if (kifiHit.context.isOwnKeep || kifiHit.context.isPrivate || keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, kifiHit.uriId, true)
       else {
         kifiHitCache.get(KifiHitKey(clicker, kifiHit.uriId)) match { // simple throttling
           case Some(hit) =>
@@ -625,4 +618,30 @@ class KeepsCommander @Inject() (
     }
   }
 
+  def assembleKeepExport(keepExports: Seq[KeepExport]): String = {
+    // HTML format that follows Delicious exports
+    val before = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
+                   |<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+                   |<!--This is an automatically generated file.
+                   |It will be read and overwritten.
+                   |Do Not Edit! -->
+                   |<Title>Kifi Bookmarks Export</Title>
+                   |<H1>Bookmarks</H1>
+                   |<DL>
+                   |""".stripMargin
+    val after = "\n</DL>"
+
+    def createExport(keep : KeepExport): String = {
+      // Parse Tags
+      val title = keep.title getOrElse ""
+      val tagString = keep.tags map { tags =>
+        s""" TAGS="${tags.replace("&","&amp;").replace("\"","")}""""
+      } getOrElse ""
+      val date = keep.createdAt.getMillis()/1000
+      val line =
+        s"""<DT><A HREF="${keep.url}" ADD_DATE="${date}"${tagString}>${title.replace("&","&amp;")}</A>"""
+      line
+    }
+    before + keepExports.map(createExport).mkString("\n") + after
+  }
 }

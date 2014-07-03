@@ -36,20 +36,14 @@ class ExtPreferenceController @Inject() (
     lookHereMode: Boolean,
     enterToSend: Boolean,
     maxResults: Int,
-    showKeeperIntro: Boolean,
-    showSearchIntro: Boolean,
     showExtMsgIntro: Boolean,
-    showFindFriends: Boolean,
     messagingEmails: Boolean)
 
   private implicit val userPrefsFormat = (
       (__ \ 'lookHereMode).write[Boolean] and
       (__ \ 'enterToSend).write[Boolean] and
       (__ \ 'maxResults).write[Int] and
-      (__ \ 'showKeeperIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
-      (__ \ 'showSearchIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
       (__ \ 'showExtMsgIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
-      (__ \ 'showFindFriends).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
       (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
     )(unlift(UserPrefs.unapply))
 
@@ -88,23 +82,8 @@ class ExtPreferenceController @Inject() (
     Ok(JsNumber(0))
   }
 
-  def setShowKeeperIntro(show: Boolean) = JsonAction.authenticated { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showKeeperIntro.name, show))
-    Ok(JsNumber(0))
-  }
-
-  def setShowSearchIntro(show: Boolean) = JsonAction.authenticated { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showSearchIntro.name, show))
-    Ok(JsNumber(0))
-  }
-
   def setShowExtMsgIntro(show: Boolean) = JsonAction.authenticated { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showExtMsgIntro.name, show))
-    Ok(JsNumber(0))
-  }
-
-  def setShowFindFriends(show: Boolean) = JsonAction.authenticated { request =>
-    db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, UserValues.showFindFriends.name, show))
     Ok(JsNumber(0))
   }
 
@@ -156,15 +135,11 @@ class ExtPreferenceController @Inject() (
       userVals <- userValsFuture
       messagingEmails <- messagingEmailsFuture
     } yield {
-      val preview = experiments.contains(ExperimentType.KIFI_BLACK)
       UserPrefs(
         lookHereMode = UserValues.lookHereMode.parseFromMap(userVals),
         enterToSend = UserValues.enterToSend.parseFromMap(userVals),
         maxResults = UserValues.maxResults.parseFromMap(userVals),
-        showKeeperIntro = UserValues.showKeeperIntro.parseFromMap(userVals) && !preview,
-        showSearchIntro = UserValues.showSearchIntro.parseFromMap(userVals) && !preview,
-        showExtMsgIntro = UserValues.showExtMsgIntro.parseFromMap(userVals) && !preview,
-        showFindFriends = UserValues.showFindFriends.parseFromMap(userVals) && !preview,
+        showExtMsgIntro = UserValues.showExtMsgIntro.parseFromMap(userVals),
         messagingEmails = messagingEmails)
     }
   }

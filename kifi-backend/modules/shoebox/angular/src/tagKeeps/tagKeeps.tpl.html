@@ -2,16 +2,28 @@
   <div class="kf-main-head">
     <h1 class="kf-main-title">Tags / {{tag.name}}</h1>
     <div class="kf-subtitle">
-      <span class="kf-check-all" ng-class="{ enabled: isCheckEnabled(), checked: isSelectedAll(), 'multi-checked': isMultiChecked() }" ng-click="toggleSelectAll()" ng-mouseover="onMouseoverCheckAll()" ng-mouseout="onMouseoutCheckAll()"></span>
+      <div class="kf-edit-keeps" ng-click="toggleEdit()">
+        <span class="sprite sprite-edit-pencil-icon"></span>
+        <span class="kf-edit-keeps-label">{{editKeepsLabel()}}</span>
+      </div>
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>
     </div>
   </div>
-  <div kf-keeps
+  <div class="kf-tag-empty-state" ng-if="showEmptyState()">
+    You don't have any keeps tagged with "{{tag.name}}". You can:
+    <ul>
+      <li><div class="kf-circle-border"><span class="sprite sprite-add-a-tag-button-hover kf-empty-state-add-to-tag-item"></span></div> Tag any keep within your keep library</li>
+      <li><div class="kf-circle-border"><span class="sprite sprite-arrow-gray-down kf-empty-state-remove-tag-item"></span></div>Remove this tag via the drop down menu</li>
+    </ul>
+  </div>
+  <div ng-if="!showEmptyState()" kf-keeps
     keeps="keeps"
     keeps-loading="loading"
     keeps-has-more="hasMore()"
     scroll-distance="scrollDistance"
     scroll-disabled="scrollDisabled"
     scroll-next="getNextKeeps()"
+    edit-mode="editMode"
+    toggle-edit="toggleEdit"
   ></div>
 </div>

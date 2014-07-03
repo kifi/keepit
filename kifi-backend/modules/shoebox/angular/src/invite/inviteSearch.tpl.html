@@ -1,5 +1,5 @@
 <div class="social-invite-search">
-  <input type="text" ng-model="search.name" placeholder="Find friends to add to Kifi" ng-change="change($event)">
+  <input type="text" ng-model="search.name" placeholder="Search for friends" ng-change="change($event)">
   <ul class="social-invite-dropdown" ng-show="search.showDropdown">
     <li class="social-invite-element" ng-repeat="result in results" ng-class="'social-invite-{{result.status === 'joined' && result.network === 'fortytwoNF' ? '' : result.status}}'">
 
@@ -14,7 +14,7 @@
             </div>
           </div>
           <div class="social-invite-action clickable">
-            <div class="social-invite-button" ng-click="invite(result, $event)">Invite</div>
+            <div class="social-invite-button" ng-click="invite(result, $event)"><span class="sprite sprite-tag-new-plus-icon"> </span>Invite</div>
           </div>
         </div>
 
@@ -44,7 +44,7 @@
             </div>
           </div>
           <div class="social-invite-action clickable">
-            <div class="social-invite-button" ng-click="invite(result, $event)">Add</div>
+            <div class="social-invite-button user-add-button" ng-click="invite(result, $event)"><span class="sprite sprite-tag-new-plus-icon"></span> Add</div>
           </div>
         </div>
 
@@ -71,7 +71,7 @@
           </div>
         </div>
         <div class="social-invite-action clickable">
-          <div class="social-invite-button" ng-click="invite(result, $event)">Invite</div>
+          <div class="social-invite-button" ng-click="invite(result, $event)"><span class="sprite sprite-tag-new-plus-icon"></span> Invite</div>
         </div>
       </div>
 
@@ -85,6 +85,7 @@
       <div class="clearfix"></div>
     </li>
   </ul>
+  <div class="social-invite-search-explain">Search by name or email address</div>
   <div kf-modal show="data.showCantFindModal" kf-width="670px">
     <div kf-basic-modal-content single-action="false">
       <div class="friend-not-found-modal">

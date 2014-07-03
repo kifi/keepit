@@ -1,10 +1,4 @@
 .friends-wrapper
-  position: absolute
-  top: 70px
-  left: 0
-  right: 0
-  bottom: 0
-  border-right: 1px solid #dbdee3
   font-size: 14px
   font-weight: 300
   color: #566278
@@ -14,20 +8,30 @@
     font-size: 26px
     line-height: 1.2
     font-smoothing: antialiased
+    margin-left: 10px
+
+    span
+      font-size: 20px
+
+
+.friends-list
+  padding-right: 4px
+  padding-bottom: 15px
+  @media screen and (max-width: 1365px)
+    padding-right: 7px
 
 .friends
-  padding-top: 18px
-  padding-right: 18px
-  padding-left: 18px
+  padding-top: 10px
+  padding-right: 23px
+  padding-left: 23px
+  position: relative
 
   .friends-list-header
-    margin-bottom: 25px
-    margin-left: 5px
-    font-size: 130%
+    margin-bottom: 10px
+    margin-left: 15px
+    font-size: 120%
     font-weight: 200
 
-    a
-      text-decoration: underline
 
   .friend-requests
     margin-top: 30px
@@ -37,8 +41,8 @@
     transform: translateY(-30px)
 
     &.unfold
-      margin-top: 30px
-      margin-bottom: 40px
+      margin-top: 20px
+      margin-bottom: 20px
       opacity: 1
       transform: translateY(0px)
 

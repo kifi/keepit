@@ -23,7 +23,14 @@ angular.module('util', [])
         // empties oldArray, loads newArray values into it, keeping the same reference.
         oldArray = oldArray || [];
         oldArray.length = 0;
-        oldArray.push.apply(oldArray, newArray);
+        // returning the array in case it was undefined before
+        Array.prototype.push.apply(oldArray, newArray);
+        return oldArray;
+      },
+      completeObjectInPlace: function (oldObj, newObj) {
+        _.forOwn(newObj || {}, function (num, key) {
+          oldObj[key] = newObj[key];
+        });
       },
       replaceObjectInPlace: function (oldObj, newObj) {
         // empties oldObj, loads newObj key/values into it, keeping the same reference.
@@ -44,6 +51,14 @@ angular.module('util', [])
         var _x = rawDom.getBoundingClientRect().left + scrollX;
         var _y = rawDom.getBoundingClientRect().top + scrollY;
         return { left: _x, top: _y };
+      },
+      isIE: function() {
+        // Feature detection should be preferred to browser detection, so this function should be avoided.
+        return (
+          (navigator.appName === 'Microsoft Internet Explorer') ||
+          ((navigator.appName === 'Netscape') &&
+           (/Trident/.exec(navigator.userAgent) != null))
+        );
       }
     };
   }
@@ -78,5 +93,6 @@ angular.module('util', [])
   KEY_ESC: 27,
   KEY_TAB: 9,
   KEY_DEL: 46,
-  KEY_F2: 113
+  KEY_F2: 113,
+  KEY_SPACE: 32
 });

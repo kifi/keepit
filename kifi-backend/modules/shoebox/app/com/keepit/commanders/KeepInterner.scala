@@ -1,8 +1,12 @@
 package com.keepit.commanders
 
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.cache.TransactionalCaching
+import com.keepit.common.concurrent.{FutureHelpers, ExecutionContext}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.scraper.ScrapeSchedulerPlugin
 import com.keepit.common.logging.Logging
@@ -14,8 +18,9 @@ import com.keepit.common.service.FortyTwoServices
 import com.google.inject.{Inject, Singleton}
 import com.keepit.normalizer.{NormalizedURIInterner, NormalizationCandidate}
 import java.util.UUID
-import com.keepit.heimdal.HeimdalContext
+import com.keepit.heimdal.{SanitizedKifiHit, HeimdalContext}
 import play.api.libs.json.Json
+import scala.concurrent.Future
 import scala.util.{Try, Success, Failure, Random}
 
 case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
@@ -40,9 +45,12 @@ class KeepInterner @Inject() (
   userValueRepo: UserValueRepo,
   rawKeepRepo: RawKeepRepo,
   rawKeepImporterPlugin: RawKeepImporterPlugin,
+  elizaClient: ElizaServiceClient,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
+
+  implicit private val fj = ExecutionContext.fj
 
   private[commanders] def deDuplicateRawKeep(rawKeeps: Seq[RawKeep]): Seq[RawKeep] =
     rawKeeps.map(b => (b.url, b)).toMap.values.toList
@@ -98,18 +106,57 @@ class KeepInterner @Inject() (
     }
   }
 
-  def keepAttribution(userId:Id[User], newKeeps: Seq[Keep]):Unit = {
-    newKeeps.foreach { keep =>
-      db.readWrite { implicit rw =>
-        kifiHitCache.get(KifiHitKey(userId, keep.uriId)) match {
-          case None =>
-            log.info(s"[keepAttribution($userId)] no click event found for ${keep.uriId}")
-          case Some(hit) =>
-            keepClickRepo.getClicksByUUID(hit.uuid) map { c =>
-              val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
-              rekeepRepo.save(rekeep)
-              log.info(s"[keepAttribution($userId)] rekeep=$rekeep; most recent click: $c")
-            }
+  def keepAttribution(userId:Id[User], newKeeps: Seq[Keep]): Future[Unit] = {
+    SafeFuture {
+      val builder = collection.mutable.ArrayBuilder.make[Keep]
+      newKeeps.foreach { keep =>
+        val rekeeps = searchAttribution(userId, keep)
+        if (rekeeps.isEmpty) {
+          builder += keep
+        }
+      }
+      builder.result
+    } flatMap { remainders =>
+      FutureHelpers.sequentialExec(remainders) { keep =>
+        chatAttribution(userId, keep)
+      }
+    }
+  }
+
+  def searchAttribution(userId: Id[User], keep: Keep): Seq[ReKeep] = {
+    implicit val dca = TransactionalCaching.Implicits.directCacheAccess
+    kifiHitCache.get(KifiHitKey(userId, keep.uriId)) map { hit =>
+      val res = db.readWrite { implicit rw =>
+        keepClickRepo.getClicksByUUID(hit.uuid) collect { case c if rekeepRepo.getReKeep(c.keeperId, c.uriId, userId).isEmpty =>
+          val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
+          val saved = rekeepRepo.save(rekeep)
+          log.info(s"[searchAttribution($userId,${keep.uriId})] rekeep=$saved; click=$c")
+          saved
+        }
+      }
+      res
+    } getOrElse Seq.empty
+  }
+
+  def chatAttribution(userId: Id[User], keep: Keep): Future[Unit] = {
+    elizaClient.keepAttribution(userId, keep.uriId) map { otherStarters =>
+      log.info(s"chatAttribution($userId,${keep.uriId})] otherStarters=$otherStarters")
+      otherStarters.foreach { chatUserId =>
+        db.readWrite { implicit rw =>
+          rekeepRepo.getReKeep(chatUserId, keep.uriId, userId) match {
+            case Some(rekeep) =>
+              log.info(s"[chatAttribution($userId,${keep.uriId},$chatUserId)] rekeep=$rekeep already exists. Skipped.")
+              None
+            case None =>
+              keepRepo.getByUriAndUser(keep.uriId, chatUserId) map { chatUserKeep =>
+                val click = KeepClick(hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging"))
+                val savedClick = keepClickRepo.save(click)
+                val rekeep = ReKeep(keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = 1)
+                val saved = rekeepRepo.save(rekeep)
+                log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; click=$savedClick")
+                saved
+              }
+          }
         }
       }
     }

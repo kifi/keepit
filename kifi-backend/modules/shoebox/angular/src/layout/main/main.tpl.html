@@ -1,24 +1,21 @@
 <div class="kf-col-inner" ng-controller="MainCtrl">
-  <div class="kf-query-wrap" ng-class="{ empty: isEmpty(), focus: focus }">
-    <input kf-no-drag-input class="kf-query" type="text" placeholder="Find anything..." ng-model="search.text" ng-keydown="onKeydown($event)" ng-focus="onFocus()" ng-blur="onBlur()" ng-change="onChange()">
-    <span class="kf-query-icon">
-      <b class="kf-query-mag"></b>
-      <a class="kf-query-x" href="javascript:" ng-click="clear()"></a>
-    </span>
-    <div class="kf-small-tooltip" ng-if="undo.isSet() || tooltipMessage">
-      <span class="kf-small-tooltip-box">
-        <span class="kf-small-tooltip-message">{{undo.message || tooltipMessage}}</span>
-        <a class="kf-small-tooltip-link" href="javascript:" ng-click="undo.undo()" ng-if="undo.isSet()">Undo</a>
-      <span>
-    </div>
-  </div>
+  <div ng-show="searchEnabled" ng-include="'search/mainSearchBar.tpl.html'"></div>
   <div ng-view></div>
+  <div class="kf-small-tooltip" ng-if="undo.isSet() || tooltipMessage">
+    <span class="kf-small-tooltip-box">
+      <span class="kf-small-tooltip-message">{{undo.message || tooltipMessage}}</span>
+      <a class="kf-small-tooltip-link" href="javascript:" ng-click="undo.undo()" ng-if="undo.isSet()">Undo</a>
+    <span>
+  </div>
 
   <!-- Dialogs -->
   <div ng-if="modal">
-    <div ng-include="'keep/importModal.tpl.html'"></div>
-    <div ng-include="'keep/bookmarkFileModal.tpl.html'"></div>
-    <div ng-include="'social/addNetworksModal.tpl.html'"></div>
-    <div kf-add-keeps-modal></div>
+    <div ng-include="'keep/importModal.tpl.html'" ng-if="modal == 'import_bookmarks'"></div>
+    <div ng-include="'keep/bookmarkFileModal.tpl.html'" ng-if="modal == 'import_bookmark_file'"></div>
+    <div ng-include="'social/addNetworksModal.tpl.html'" ng-if="modal == 'add_networks'"></div>
+    <div ng-include="'keeps/addKeepsModal.tpl.html'" ng-if="modal == 'add_keeps'"></div>
+    <div ng-include="'common/modal/genericErrorModal.tpl.html'" ng-if="modal == 'generic_error'"></div>
+    <div ng-include="'common/modal/installExtensionModal.tpl.html'" ng-if="modal == 'install_extension'"></div>
+    <div ng-include="'common/modal/installExtensionErrorModal.tpl.html'" ng-if="modal == 'install_extension_error'"></div>
   </div>
 </div>

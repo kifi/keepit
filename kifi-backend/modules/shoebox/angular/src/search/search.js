@@ -18,19 +18,20 @@ angular.module('kifi.search', [
 
 .controller('SearchCtrl', [
   '$http', '$scope', 'keepService', '$routeParams', '$location', '$window', 'routeService', '$log',
-  function ($http, $scope, keepService, $routeParams, $location, $window, routeService, $log) {
+function ($http, $scope, keepService, $routeParams, $location, $window, routeService, $log) {
     keepService.reset();
 
     if ($scope.search) {
       $scope.search.text = $routeParams.q;
     }
+    $scope.enableSearch();
 
-    var reportSearchAnalyticsOnUnload = function() {
+    var reportSearchAnalyticsOnUnload = function () {
       reportSearchAnalytics('unload');
     };
 
     //either "unload" or "refinement"
-    var reportSearchAnalytics = function(endedWith) {
+    var reportSearchAnalytics = function (endedWith) {
       var url = routeService.searchedAnalytics;
       var lastSearchContext = keepService.lastSearchContext();
       if (lastSearchContext && lastSearchContext.query) {
@@ -77,7 +78,9 @@ angular.module('kifi.search', [
           isMyBookmark: keep.isMyBookmark,
           isPrivate: keep.isPrivate,
           count: keeps.length,
-          keepers: keep.keepers.map(function(elem) {return elem.id; }),
+          keepers: keep.keepers.map(function (elem) {
+            return elem.id;
+          }),
           tags: keep.tags,
           title: keep.bookmark.title,
           titleMatches: (matches.title || []).length,
@@ -168,29 +171,8 @@ angular.module('kifi.search', [
       return '';
     };
 
-    $scope.toggleSelectAll = keepService.toggleSelectAll;
-    $scope.isSelectedAll = keepService.isSelectedAll;
-
-    $scope.isMultiChecked = function () {
-      return keepService.getSelectedLength() > 0 && !keepService.isSelectedAll();
-    };
-
-    $scope.isCheckEnabled = function () {
-      return $scope.keeps.length;
-    };
-
     $scope.hasMore = function () {
       return !keepService.isEnd();
-    };
-
-    $scope.mouseoverCheckAll = false;
-
-    $scope.onMouseoverCheckAll = function () {
-      $scope.mouseoverCheckAll = true;
-    };
-
-    $scope.onMouseoutCheckAll = function () {
-      $scope.mouseoverCheckAll = false;
     };
 
     $scope.getSubtitle = function () {
@@ -244,6 +226,18 @@ angular.module('kifi.search', [
       });
     };
 
-    $scope.getNextKeeps();
+    function initKeepList() {
+      $scope.scrollDisabled = false;
+      lastResult = null;
+      $scope.getNextKeeps();
+    }
+
+    $scope.$watch('keepService.seqReset()', function () {
+      initKeepList();
+    });
+
+    $scope.allowEdit = function () {
+      return !$scope.isFilterSelected('f') && !$scope.isFilterSelected('a');
+    };
   }
 ]);

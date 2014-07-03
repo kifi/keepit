@@ -19,10 +19,12 @@
     var locations = {
       yourKeeps: /^\/$/,
       yourFriends: /^\/friends$/,
-      tagResults: /^\/tag/,
-      searchResults: /^\/find/,
-      addFriends: /^\/friends\/(invite|find)$/,
-      requests: /^\/friends\/requests$/
+      tagResults: /^\/tag\//,
+      searchResults: /^\/find\b/,
+      addFriends: /^\/invite$/,
+      requests: /^\/friends\/requests$/,
+      helpRankClicks: /^\/helprank\/clicks?$/,
+      helpRankReKeeps: /^\/helprank\/rekeeps?$/
     };
 
     function getLocation(path) {
@@ -94,20 +96,22 @@
       $analyticsProvider.registerPageTrack(function (path) {
         if (profileService && $window) {
           var mixpanel = $window.mixpanel;
-          var normalizedPath = getLocation(path);
           var origin = $window.location.origin;
-          pageTrackForVisitor(mixpanel, normalizedPath, origin);
-          pageTrackForUser(mixpanel, normalizedPath, origin);
+          pageTrackForVisitor(mixpanel, path, origin);
+          pageTrackForUser(mixpanel, path, origin);
         }
       });
     });
 
     angulartics.waitForVendorApi('mixpanel', 5000, function (/*mixpanel*/) {
-      $analyticsProvider.registerEventTrack(function (action, properties) {
+      $analyticsProvider.registerEventTrack(function (action, props) {
         if ($window) {
-          var mixpanel = $window.mixpanel;
-          $log.log('mixpanelService.eventTrack(' + action + ')', properties);
-          mixpanel.track(action, properties);
+          if ('path' in props && !props.type) {
+            props.type = getLocation(props.path);
+            delete props.path;
+          }
+          $log.log('mixpanelService.eventTrack(' + action + ')', props);
+          $window.mixpanel.track(action, props);
         }
       });
     });
