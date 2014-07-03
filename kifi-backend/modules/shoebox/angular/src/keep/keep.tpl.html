@@ -21,8 +21,9 @@
         <div class="kf-keep-info-wrap">
           <div class="kf-keep-info">
             <div class="kf-keep-subtitle">
-              <div class="kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
-              <time class="kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
+              <div class="kf-keep-subtitle-element kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
+              <time class="kf-keep-subtitle-element kf-keep-time" ng-attr-datetime="{{keep.createdAt}}" ng-show="keep.createdAt" am-time-ago="keep.createdAt"></time>
+              <div class="kf-keep-subtitle-element kf-keep-read-time" ng-show="keep.summary.wordCount"><span class="sprite sprite-small-clock"></span>{{getKeepReadTime()}}</div>
             </div>
             <div class="kf-keep-description">
               {{keep.summary.description}}
@@ -41,8 +42,8 @@
   </div>
   <div class="kf-keep-footer">
     <span class="kf-keep-footer-link">
-      <a ng-if="canSend()" ng-href="{{keep.url}}" data-locator='/messages:all#compose'>Send</a>
-      <a ng-if="!canSend()" href="javascript:" ng-click="triggerInstall()">Send</a>
+      <a kf-min-version="3.0.7" ng-href="{{keep.url}}" data-locator='/messages:all#compose'>Send</a>
+      <a kf-max-version="3.0.7" href="javascript:" ng-click="triggerInstall()">Send</a>
     </span>
     <span class="kf-keep-footer-link" ng-if="!hasTag() && isMyBookmark(keep)"><a ng-click="showAddTag()" href='javascript:'>Tag</a></span>
     <span class="kf-keep-footer-link" ng-if="isMine() && !isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Private</a></span>

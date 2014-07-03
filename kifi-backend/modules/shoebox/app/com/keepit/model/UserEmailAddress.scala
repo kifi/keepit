@@ -6,7 +6,7 @@ import java.security.SecureRandom
 import com.keepit.common.db._
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
-import com.keepit.model.ExperimentType.{AUTO_GEN, FAKE, GUIDE, KIFI_BLACK}
+import com.keepit.model.ExperimentType.{AUTO_GEN, FAKE, GUIDE}
 
 import org.joda.time.DateTime
 
@@ -42,25 +42,14 @@ object UserEmailAddress {
   def getExperiments(email: UserEmailAddress): Set[ExperimentType] = {
     val Array(local, host) = email.address.address.split('@')
     val tags = tagRe.findAllIn(local).toSet
-
-    var exps: Set[ExperimentType] = if (kifiDomains.contains(host) && tags.exists(_.startsWith("autogen"))) {
+    val exps: Set[ExperimentType] = if (kifiDomains.contains(host) && tags.exists(_.startsWith("autogen"))) {
       Set(FAKE, AUTO_GEN)
     } else if (testDomains.contains(host) && tags.exists { t => t.startsWith("test") || t.startsWith("utest") }) {
       Set(FAKE)
     } else {
       Set.empty
     }
-
-    if (tags.contains("preview") || local == "casey" && host == "theverge.com") {
-      exps += KIFI_BLACK
-
-      // Note: When preview.kifi.com launches to www, *all* new non-FAKE users should get GUIDE (an A/B test experiment)
-      if (!exps.contains(FAKE)) {
-        exps += GUIDE
-      }
-    }
-
-    exps
+    if (exps.contains(FAKE)) exps else exps + GUIDE  // GUIDE is an A/B test for all new signups
   }
 }
 

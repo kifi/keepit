@@ -247,17 +247,8 @@ class UserCommander @Inject() (
       userRepo.save(User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state))
     }
     SafeFuture {
-      val onNewSite = addrOpt.map { addr =>
-        UserEmailAddress.getExperiments(UserEmailAddress(userId = newUser.id.get, address = addr)).contains(ExperimentType.KIFI_BLACK)
-      } getOrElse false
-      if (!onNewSite) {
-        createDefaultKeeps(newUser.id.get)
-        db.readWrite { implicit session =>
-          userValueRepo.setValue(newUser.id.get, "ext_show_keeper_intro", true)
-          userValueRepo.setValue(newUser.id.get, "ext_show_search_intro", true)
-          userValueRepo.setValue(newUser.id.get, "ext_show_ext_msg_intro", true)
-          userValueRepo.setValue(newUser.id.get, "ext_show_find_friends", true)
-        }
+      db.readWrite { implicit session =>
+        userValueRepo.setValue(newUser.id.get, "ext_show_ext_msg_intro", true)
       }
       searchClient.warmUpUser(newUser.id.get)
       searchClient.updateUserIndex()

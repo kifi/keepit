@@ -34,8 +34,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 ])
 
 .directive('kfKeep', [
-  '$document', '$rootScope', '$rootElement', '$timeout', 'tagService', 'keepService', 'installService', 'util',
-  function ($document, $rootScope, $rootElement, $timeout, tagService, keepService, installService, util) {
+  '$document', '$rootScope', '$rootElement', '$timeout', 'tagService', 'keepService', 'util',
+  function ($document, $rootScope, $rootElement, $timeout, tagService, keepService, util) {
     return {
       restrict: 'A',
       scope: {
@@ -104,10 +104,6 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           } else {
             return [];
           }
-        };
-
-        scope.canSend = function () {
-          return installService.hasMinimumVersion('3.0.7');
         };
 
         scope.triggerInstall = function () {
@@ -296,6 +292,18 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           // needed to prevent previewing
           e.stopPropagation();
           return scope.toggleSelect();
+        };
+
+        var read_times = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 60];
+        scope.getKeepReadTime = function () {
+          var wc = scope.keep && scope.keep.summary && scope.keep.summary.wordCount;
+          if (wc < 0) {
+            return null;
+          } else {
+            var minutesEstimate = wc / 250;
+            var found = _.find(read_times, function (t) { return minutesEstimate < t; });
+            return found ? found + ' min' : '> 1 h';
+          }
         };
 
         var tagDragMask = element.find('.kf-tag-drag-mask');
