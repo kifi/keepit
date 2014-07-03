@@ -144,7 +144,7 @@ class ElizaEmailCommander @Inject() (
       nUrlId <- thread.uriId
       url <- thread.url
     } yield {
-      scraper.getURIWordCount(nUrlId, url) map { cnt => TimeToReadCommander.wordCountToReadTimeMinutes(cnt)}
+      scraper.getURIWordCount(nUrlId, Some(url)) map { cnt => TimeToReadCommander.wordCountToReadTimeMinutes(cnt)}
     }) getOrElse Future.successful(None)
   }
 
