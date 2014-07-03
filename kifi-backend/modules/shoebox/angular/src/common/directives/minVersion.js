@@ -14,4 +14,18 @@ angular.module('kifi.minVersion', ['kifi.installService'])
       }
     };
   }
+])
+
+.directive('kfMaxVersion', [
+  'installService',
+  function (installService) {
+    return {
+      restrict: 'A',
+      link: function (scope, element, attrs) {
+        if (installService.hasMinimumVersion(attrs.kfMaxVersion, attrs.minCanary)) {
+          element.remove();
+        }
+      }
+    };
+  }
 ]);

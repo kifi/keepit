@@ -34,8 +34,8 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
 ])
 
 .directive('kfKeep', [
-  '$document', '$rootScope', '$rootElement', '$timeout', 'tagService', 'keepService', 'installService', 'util',
-  function ($document, $rootScope, $rootElement, $timeout, tagService, keepService, installService, util) {
+  '$document', '$rootScope', '$rootElement', '$timeout', 'tagService', 'keepService', 'util',
+  function ($document, $rootScope, $rootElement, $timeout, tagService, keepService, util) {
     return {
       restrict: 'A',
       scope: {
@@ -104,10 +104,6 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
           } else {
             return [];
           }
-        };
-
-        scope.canSend = function () {
-          return installService.hasMinimumVersion('3.0.7');
         };
 
         scope.triggerInstall = function () {
