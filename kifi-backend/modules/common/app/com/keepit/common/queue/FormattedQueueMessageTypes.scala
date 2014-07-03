@@ -129,17 +129,3 @@ case object Block extends RichConnectionUpdateMessageKind[Block] {
   implicit val format = Json.format[Block]
   implicit val typeCode = "block"
 }
-
-//Propages changes to EmailAddressRepo (needs sequence number).
-case class RecordVerifiedEmail(userId: Id[User], email: EmailAddress) extends RichConnectionUpdateMessage {
-  type M = RecordVerifiedEmail
-  def kind = RecordVerifiedEmail
-}
-case object RecordVerifiedEmail extends RichConnectionUpdateMessageKind[RecordVerifiedEmail] {
-  private implicit val userIdFormat = Id.format[User]
-  implicit val format = Json.format[RecordVerifiedEmail]
-  implicit val typeCode = "record_email_address"
-}
-
-
-
