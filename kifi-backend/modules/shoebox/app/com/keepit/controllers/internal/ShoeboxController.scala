@@ -243,9 +243,11 @@ class ShoeboxController @Inject() (
             }
             uri match {
               case Some(existingUri) if existingUri.id.get == bestReference.id.get => // ignore
-              case _ => db.readWrite { implicit session =>
-                normalizedURIInterner.internByUri(alternateUrl, bestCandidate)
-              }
+              case _ => try {
+                db.readWrite { implicit session =>
+                  normalizedURIInterner.internByUri(alternateUrl, bestCandidate)
+                }
+              } catch { case ex: Throwable => log.error(s"Failed to intern alternate url $alternateUrl for $bestCandidate")}
             }
           }
         }

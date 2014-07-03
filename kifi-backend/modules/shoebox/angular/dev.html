@@ -6,14 +6,18 @@
   <meta name="viewport" content="width=device-width">
   <title>Kifi</title>
   <link rel="shortcut icon" type="image/png" href="/img/kifi-favi-50.png">
-  <link rel="stylesheet" type="text/css" href="/dist/kifi.css">
   <link rel="stylesheet" type="text/css" href="/dist/lib.css">
+  <link rel="stylesheet" type="text/css" href="/dist/kifi.css">
 </head>
 <body>
   <div class="kf-cols" ng-controller="AppCtrl">
-    <aside class="kf-col kf-col-left" ng-include="'layout/leftCol/leftCol.tpl.html'"></aside>
-    <section class="kf-col kf-main" ng-include="'layout/main/main.tpl.html'"></section>
-    <aside class="kf-col kf-col-right" ng-include="'layout/rightCol/rightCol.tpl.html'"></aside>
+    <header class="kf-header" ng-include="'layout/header/header.tpl.html'"></header>
+    <div class="kf-col-island">
+      <aside class="kf-col kf-sidebar" ng-include="'layout/sidebar/sidebar.tpl.html'">
+      </aside><section class="kf-scrollable-pane"><section class="kf-col kf-main" ng-include="'layout/main/main.tpl.html'">
+      </section><aside class="kf-col kf-col-right" ng-include="'layout/rightCol/rightCol.tpl.html'"></aside>
+      </section>
+    </div>
   </div>
   <script>
     !function (d, s) {

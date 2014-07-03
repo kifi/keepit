@@ -1,11 +1,9 @@
 <span class="kf-keep-who-text">
   <span class="kf-keep-you" ng-if="keep.isMyBookmark">
     You
-    <span class="kf-keep-private" ng-class="{ on: isPrivate() }" ng-show="hasKeepers() || hasOthers()">Private</span>
   </span>
   <span class="kf-keep-friends" ng-show="hasKeepers()">{{getFriendText()}}</span>
   <span></span>
   <span class="kf-keep-others" ng-show="hasOthers()">{{getOthersText()}}</span>
   <span class="kf-keep-kept-this">kept this</span>
-  <span class="kf-keep-private" ng-class="{ on: isPrivate() }" ng-if="!hasKeepers() && !hasOthers()">Private</span>
 </span>

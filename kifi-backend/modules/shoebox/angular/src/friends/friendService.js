@@ -6,8 +6,8 @@ angular.module('kifi.friendService', [
 ])
 
 .factory('friendService', [
-  '$http', 'env', '$q', 'routeService', '$analytics', 'Clutch', 'util',
-  function ($http, env, $q, routeService, $analytics, Clutch, util) {
+  '$http', 'env', '$q', 'routeService', '$analytics', '$location', 'Clutch', 'util',
+  function ($http, env, $q, routeService, $analytics, $location, Clutch, util) {
     /* Naming convention:
      *  - Kifi Friend is an existing connection on Kifi
      *  - Kifi User is a user of Kifi, may not be a friend.
@@ -48,9 +48,6 @@ angular.module('kifi.friendService', [
     }, clutchParams);
 
     var api = {
-      connectWithKifiUser: function (userId) {
-        return userId; // todo!
-      },
 
       getMore: function () {
         return api.getKifiFriends(++currentPage);
@@ -69,7 +66,9 @@ angular.module('kifi.friendService', [
         return totalFriends;
       },
 
-      hasMoreFriends: hasMoreFriends,
+      hasMore: function () {
+        return hasMoreFriends;
+      },
 
       friendsHasRequested: friendsHasRequested,
 
@@ -80,7 +79,8 @@ angular.module('kifi.friendService', [
           kifiFriendsService.expireAll();
           api.getKifiFriends();
           $analytics.eventTrack('user_clicked_page', {
-            'action': 'hideFriendInSearch'
+            'action': 'hideFriendInSearch',
+            'path': $location.path()
           });
         });
       },
@@ -90,7 +90,8 @@ angular.module('kifi.friendService', [
           kifiFriendsService.expireAll();
           api.getKifiFriends();
           $analytics.eventTrack('user_clicked_page', {
-            'action': 'unHideFriendInSearch'
+            'action': 'unHideFriendInSearch',
+            'path': $location.path()
           });
         });
       },
@@ -102,7 +103,8 @@ angular.module('kifi.friendService', [
           api.getRequests();
           api.getKifiFriends();
           $analytics.eventTrack('user_clicked_page', {
-            'action': 'acceptRequest'
+            'action': 'acceptRequest',
+            'path': $location.path()
           });
         });
       },
@@ -112,7 +114,8 @@ angular.module('kifi.friendService', [
           kifiFriendsService.expireAll();
           api.getRequests();
           $analytics.eventTrack('user_clicked_page', {
-            'action': 'ignoreRequest'
+            'action': 'ignoreRequest',
+            'path': $location.path()
           });
         });
       },
@@ -122,9 +125,14 @@ angular.module('kifi.friendService', [
           kifiFriendsService.expireAll();
           api.getKifiFriends();
           $analytics.eventTrack('user_clicked_page', {
-            'action': 'unFriend'
+            'action': 'unFriend',
+            'path': $location.path()
           });
         });
+      },
+
+      getPictureUrlForUser: function (user) {
+        return '//djty7jcqog9qu.cloudfront.net/users/' + user.id + '/pics/200/' + user.pictureName;
       }
 
 

@@ -46,7 +46,7 @@ frisby.create('get user information for site (api.kifi.com/site/user/me)')
     emails: [
       {
         address: 'stephen+test+integrationA@kifi.com',
-        isPrimary: false,
+        isPrimary: true,
         isVerified: false,
         isPendingPrimary: true
       }
@@ -64,7 +64,7 @@ frisby.create('get user information for site, second user (api.kifi.com/site/use
     emails: [
       {
         address: 'stephen+test+integrationB@kifi.com',
-        isPrimary: false,
+        isPrimary: true,
         isVerified: false,
         isPendingPrimary: true
       }

@@ -594,7 +594,7 @@ class KeepsCommander @Inject() (
   def processKifiHit(clicker:Id[User], kifiHit:SanitizedKifiHit):Unit = {
     db.readWrite { implicit rw =>
       val keepers = kifiHit.context.keepers
-      if (keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, kifiHit.uriId, true)
+      if (kifiHit.context.isOwnKeep || kifiHit.context.isPrivate || keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, kifiHit.uriId, true)
       else {
         kifiHitCache.get(KifiHitKey(clicker, kifiHit.uriId)) match { // simple throttling
           case Some(hit) =>

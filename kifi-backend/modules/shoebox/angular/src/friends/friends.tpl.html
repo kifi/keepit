@@ -1,15 +1,16 @@
 <div ng-controller="FriendsCtrl">
-  <div class="friends-wrapper" antiscroll="{ autoHide: false }">
+  <div class="friends-wrapper">
     <div class="friends">
       <h2>Kifi Friends <span ng-show="totalFriends() > 0">({{totalFriends()}})</span></h2>
-      <p>Search your friends list by name or email address.</p>
-      <div class="import-wrapper" ng-if="isRefreshingSocialGraph">
-        <div class="bouncy-ball">
-          <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
-        </div> Importing your contacts
+      <div class="friends-networks-status">
+        <div kf-social-networks-status ng-if="!isRefreshingSocialGraph"></div>
+        <div class="import-wrapper" ng-if="isRefreshingSocialGraph">
+          <div class="bouncy-ball">
+            <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
+          </div> Importing your contacts
+        </div>
       </div>
-
-      <div kf-social-invite-well></div>
+      <div kf-social-invite-well show-find-friends="true"></div>
 
       <div kf-networks-need-attention></div>
 
@@ -22,7 +23,7 @@
         <div kf-friend-request-card ng-repeat="request in requests | limitTo: requestsToShow" request="request"></div>
       </div>
       <div class="friends-list" ng-show="friends.length > 0" smart-scroll scroll-distance="friendsScrollDistance" scroll-disabled="isFriendsScrollDisabled()" scroll-next="friendsScrollNext()">
-        <div class="friends-list-header">You have {{totalFriends()}} Kifi friends | <a href="/invite">Invite more friends</a> </div>
+        <div class="friends-list-header">{{totalFriends()}} Kifi friends</div>
         <div kf-friend-card ng-repeat="friend in friends" friend="friend"></div>
         <span ng-click="friendsScrollNext()" ng-hide="isFriendsScrollDisabled()" class="kf-show-more">Show more</span>
       </div>

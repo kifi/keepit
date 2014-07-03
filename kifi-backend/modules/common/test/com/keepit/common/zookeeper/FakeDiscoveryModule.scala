@@ -10,7 +10,6 @@ import com.keepit.common.actor.{FakeSchedulerModule, TestActorSystemModule}
 import org.apache.zookeeper.KeeperException
 import com.keepit.common.strings.fromByteArray
 
-case class ZooKeeperSubtree(path: String, data: Option[JsValue], children: Seq[ZooKeeperSubtree])
 
 case class FakeDiscoveryModule() extends LocalDiscoveryModule(ServiceType.TEST_MODE) {
 

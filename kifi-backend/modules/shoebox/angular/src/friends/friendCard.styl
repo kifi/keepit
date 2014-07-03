@@ -1,26 +1,29 @@
 .kf-friend-card
   @media screen and (min-width: 1365px)
-    width: calc(50% - 24px)
+    width: calc(50% - 28px)
 
   @media screen and (max-width: 1365px)
     width: calc(100% - 25px)
 
-  border-style: solid
-  border-width: 1px
-  border-radius: 2px
-  border-color: #43C481
+  box-shadow: defaultBoxShadow
+  border: defaultBorder
+  border-radius: 3px
   display: inline-block
-  height: 80px
+  height: 90px
   margin: 5px 6px
+  margin-left: 10px
   padding: 5px
   position: relative
+  background-color: #FFFFFF
 
   .kf-friend-card-image
     float: left
     margin-right: 12px
-    height: 80px
-    width: 80px
+    height: 60px
+    width: 60px
     border-radius: 3px
+    margin-top: 15px
+    margin-left: 5px
 
   .kf-friend-card-who
 
@@ -42,26 +45,24 @@
       padding-top: 3px;
 
   .kf-friend-card-button
-    border-style: solid
-    border-width: 1px
-    border-radius: 2px
-    border-color: #43C481
-    color: #40C087
+    background-color: greenColor
+    color: #FFFFFF
     position: absolute
-    right: 10px
-    top: 33px
-    padding: 2px 10px
+    right: 15px
+    top: 39px
+    padding: 4px 12px
     cursor: pointer
+    border-radius: 2px
 
     &:hover + .kf-friend-card-menu
       display: block
 
   .kf-friend-card-menu
-    border-color: #43C481
-    right: 10px
+    right: 15px
     display: none
-    top: 55px
-    box-shadow: 4px 4px 0px 0px #DADAE2
+    top: 60px
+    box-shadow: defaultBoxShadow
+    border: defaultBorder
 
     &:hover {
       display: block

@@ -1,25 +1,27 @@
 <div ng-if="modal == 'import_bookmark_file'" kf-modal show="data.showBookmarkFileModal1" kf-width="590px" class="import-file-modal">
-  <div kf-basic-modal-content title="Keep your links privately on Kifi" single-action="false" cancel="cancelBookmarkUpload()">
+  <div kf-basic-modal-content title="Import your links to Kifi" single-action="false" cancel="cancelBookmarkUpload()">
     <div class="file-import-inner">
       <img src="/img/bookmark-to-kifi@2x.png" class="import-kippt-to-kifi">
-      <h3 class="pitch">Benefits of Kifi</h3>
       <ul>
-        <li class="import-benefit">Search the full content within the pages you kept (forever free)
-        <li class="import-benefit">Find your content directly when searching on Google
-        <li class="import-benefit">Send and discuss on any page
+        <li>The "keep engine" indexes each word of each page so that you can easily find it later when searching on Google or kifi.com</li>
+        <li><b>Public Keeps</b> are only discoverable by friends when searching and never displayed anywhere else</li>
       </ul>
       <div class="file-import-well">
         <p class="import-how-to">How to import your content into Kifi:</p>
         <div class="import-inset">
           <p>Step 1: Export your links from
-          <a ng-click="openExportPopup($event)" href="https://getpocket.com/export">Pocket</a>,
-          <a ng-click="openExportPopup($event)" href="http://export.delicious.com/settings/bookmarks/export">Delicious</a>,
-          <a ng-click="openExportPopup($event)" href="https://kippt.com/export/">Kippt</a>, or
-          <a ng-click="openExportPopup($event)" href="https://www.instapaper.com/user">Instapaper</a>.</p>
-          <p ng-click="openBookmarkFileSelector($event)" class="import-file-link">Step 2: <a href="javascript:">Click here to select the file you downloaded</a>.
+          <a href="https://getpocket.com/export" ng-click="openExportPopup($event)">Pocket</a>,
+          <a href="http://export.delicious.com/settings/bookmarks/export" ng-click="openExportPopup($event)">Delicious</a>,
+          <a href="https://kippt.com/export/" ng-click="openExportPopup($event)">Kippt</a>,
+          <a href="https://www.instapaper.com/user/export" ng-click="openExportPopup($event)">Instapaper</a>, or
+          <a href="https://pinboard.in/export/" ng-click="openExportPopup($event)">Pinboard</a> (the format should be HTML).</p>
+          <p class="import-file-link">Step 2: <a ng-click="openBookmarkFileSelector($event)" href="javascript:">Click here to select the file you downloaded</a>.
           <input class="bookmark-file-upload" type="file" name="bookmark-file" accept=".html,text/html" onchange="angular.element(this).scope().allowUpload(this)"></p>
-          <div class="dialog-buttons">
-            <button ng-click="uploadBookmarkFile($event)" ng-class="{'disabled': disableBookmarkImport }" ng-show="importFilename">Step 3: Upload your bookmarks</button>
+          <div ng-show="importFilename">Step 3: Upload your bookmarks
+            <div class="dialog-buttons">
+              <button ng-click="uploadBookmarkFile($event)" ng-class="{'disabled': disableBookmarkImport }"><span class="sprite sprite-white-lock-private"></span>Import privately</button>
+              <button ng-click="uploadBookmarkFile($event, true)" ng-class="{'disabled': disableBookmarkImport }">Import publicly</button>
+            </div>
           </div>
           <div ng-click="openBookmarkFileSelector($event)" class="import-file-status">
             <div ng-if="importFilename"><i>{{importFilename}}</i> selected.</div>

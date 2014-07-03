@@ -7,8 +7,8 @@ angular.module('kifi.inviteService', [
 ])
 
 .factory('inviteService', [
-  '$http', 'env', '$q', 'routeService', 'util', 'Clutch', '$window', '$log', '$analytics', '$FB',
-  function ($http, env, $q, routeService, util, Clutch, $window, $log, $analytics, $FB) {
+  '$http', 'env', '$q', 'routeService', 'util', 'Clutch', '$window', '$log', '$analytics', '$location', '$FB',
+  function ($http, env, $q, routeService, util, Clutch, $window, $log, $analytics, $location, $FB) {
     /* Naming convention:
      *  - Kifi Friend is an existing connection on Kifi
      *  - Kifi User is a user of Kifi, may not be a friend.
@@ -29,7 +29,8 @@ angular.module('kifi.inviteService', [
         var results = res.data;
         _.forEach(results, augmentSocialResult);
         $analytics.eventTrack('user_clicked_page', {
-          'action': 'searchContacts'
+          'action': 'searchContacts',
+          'path': $location.path()
         });
         return results;
       });
@@ -124,7 +125,8 @@ angular.module('kifi.inviteService', [
           }).then(function (res) {
             $analytics.eventTrack('user_clicked_page', {
               'action': 'inviteFriend',
-              'platform': platform
+              'platform': platform,
+              'path': $location.path()
             });
             if (res.data.url && platform === 'facebook') {
               $FB.ui({
