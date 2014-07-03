@@ -117,9 +117,6 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         val e2Res = commander.getOrCreateEContact(u42, e2)
         e2Res.isSuccess === true
 
-        val npeRes = commander.getOrCreateEContact(u42, null)
-        npeRes.isSuccess === false
-
         val e1 = BasicContact.fromString("foobar@42go.com").get
         val e1Res = commander.getOrCreateEContact(u42, e1)
         e1Res.isSuccess === true
