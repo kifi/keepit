@@ -22,7 +22,7 @@ trait EContactRepo extends Repo[EContact] {
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getByUserId(userId: Id[User])(implicit session:RSession):Seq[EContact]
   def getEContactCount(userId: Id[User])(implicit session:RSession):Int
-  def insertAll(userId:Id[User], contacts: Seq[BasicContact])(implicit session:RWSession): Int
+  def insertAll(userId:Id[User], contacts: Seq[BasicContact])(implicit session:RWSession): Unit
   def internContact(userId:Id[User], contact: BasicContact)(implicit session: RWSession): EContact
   def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
 
@@ -112,7 +112,7 @@ class EContactRepoImpl @Inject() (
     Q.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first
   }
 
-  def insertAll(userId: Id[User], contacts: Seq[BasicContact])(implicit session:RWSession): Int = timing(s"econtactRepo.insertAll($userId) #contacts=${contacts.length}") {
+  def insertAll(userId: Id[User], contacts: Seq[BasicContact])(implicit session:RWSession): Unit = timing(s"econtactRepo.insertAll($userId) #contacts=${contacts.length}") {
     val toBeInserted = contacts.map { contact => EContact(userId = userId, email = contact.email, name = contact.name, firstName = contact.firstName, lastName = contact.lastName) }
     rows.insertAll(toBeInserted: _*)
   }
