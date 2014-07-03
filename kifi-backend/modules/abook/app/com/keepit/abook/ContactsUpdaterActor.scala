@@ -154,9 +154,9 @@ class ContactsUpdater @Inject() (
             processed += g.length
             abookEntry = db.readWrite(attempts = 2) { implicit s =>
               try {
-                val insertedContacts = econtactRepo.insertAll(userId, newContacts.toSeq)
-                s.onTransactionSuccess { recordContactUserIds(insertedContacts.map(_.email)) }
-                log.infoP(s"added batch#${batchNum}(sz=${insertedContacts.length}) to econtacts: ${insertedContacts.map(_.email).mkString}")
+                econtactRepo.insertAll(userId, newContacts.toSeq)
+                s.onTransactionSuccess { recordContactUserIds(newContacts.map(_.email)) }
+                log.infoP(s"added batch#${batchNum}(sz=${newContacts.length}) to econtacts: ${newContacts.map(_.email).mkString}")
               } catch {
                 case ex:MySQLIntegrityConstraintViolationException => {
                   log.errorP(s"Caught exception while processing batch(len=${newContacts.length}): ${newContacts.mkString(",")}")
