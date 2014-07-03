@@ -279,6 +279,7 @@ object Scraper extends Service {
     def getEmbedlyImageInfos() = ServiceRoute(POST, s"/internal/scraper/embedly/imageInfos")
     def getEmbedlyInfo() = ServiceRoute(POST, s"/internal/scraper/embedly/embedlyInfo")
     def getURISummaryFromEmbedly() = ServiceRoute(POST, s"/internal/scraper/uriSummary/embedly")
+    def getURIWordCount() = ServiceRoute(GET, s"/internal/scraper/uriWordCount")
   }
 }
 
