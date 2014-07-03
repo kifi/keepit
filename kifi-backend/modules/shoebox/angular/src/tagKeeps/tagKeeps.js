@@ -85,5 +85,9 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
       $scope.tag = tag || null;
     });
 
+    $scope.showEmptyState = function () {
+      return $scope.keeps.length === 0 && !$scope.hasMore();
+    };
+
   }
 ]);

@@ -9,7 +9,14 @@
       <span class="kf-subtitle-text">{{getSubtitle()}}</span>
     </div>
   </div>
-  <div kf-keeps
+  <div class="kf-tag-empty-state" ng-if="showEmptyState()">
+    You don't have any keeps tagged with "{{tag.name}}". You can:
+    <ul>
+      <li><div class="kf-circle-border"><span class="sprite sprite-add-a-tag-button-hover kf-empty-state-add-to-tag-item"></span></div> Tag any keep within your keep library</li>
+      <li><div class="kf-circle-border"><span class="sprite sprite-arrow-gray-down kf-empty-state-remove-tag-item"></span></div>Remove this tag via the drop down menu</li>
+    </ul>
+  </div>
+  <div ng-if="!showEmptyState()" kf-keeps
     keeps="keeps"
     keeps-loading="loading"
     keeps-has-more="hasMore()"
