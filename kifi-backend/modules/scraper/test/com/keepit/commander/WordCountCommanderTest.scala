@@ -14,7 +14,6 @@ import akka.actor.ActorSystem
 import play.api.test.Helpers.running
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import com.keepit.scraper.FixedResultScraperModule
 import com.keepit.scraper.TestScraperServiceModule
 import com.keepit.scraper.extractor._
 import scala.concurrent.Future
