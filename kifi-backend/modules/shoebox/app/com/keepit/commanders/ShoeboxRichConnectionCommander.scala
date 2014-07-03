@@ -131,25 +131,6 @@ class ShoeboxRichConnectionCommander @Inject() (
     invitations.length
   }
 
-  def sendEmailAddresses(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
-    val emails = db.readOnly() { implicit session =>
-      val currentSeq = systemValueRepo.getSequenceNumber(sqsEmailAddressSeq) getOrElse SequenceNumber.ZERO
-      emailAddressRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
-    }
-
-    if (emails.nonEmpty) {
-      emails.collect { case verifiedEmail if verifiedEmail.state == UserEmailAddressStates.VERIFIED =>
-        processUpdate(RecordVerifiedEmail(verifiedEmail.userId, verifiedEmail.address))
-      }
-
-      db.readWrite { implicit session =>
-        systemValueRepo.setSequenceNumber(sqsEmailAddressSeq, emails.map(_.seq).max)
-      }
-    }
-
-    emails.length
-  }
-
   def block(userId: Id[User], fullSocialId: FullSocialId): Unit = {
     val friendId = fullSocialId.identifier.left.map { socialId =>
       db.readOnly { implicit session =>
@@ -227,17 +208,3 @@ class InvitationModificationActor @Inject() (
     flushPlease()
   }
 }
-
-case class EmailAddressModification(modif: RepoModification[UserEmailAddress]) extends RepoModificationEvent[UserEmailAddress]
-class EmailAddressModificationActor @Inject() (
-  val clock: Clock,
-  val scheduler: Scheduler,
-  airbrake: AirbrakeNotifier,
-  richConnectionCommander: ShoeboxRichConnectionCommander
-  ) extends RepoModificationActor[EmailAddressModification](airbrake) {
-  def getEventTime(modification: EmailAddressModification) = modification.modif.model.updatedAt
-  def processBatch(modifications: Seq[EmailAddressModification]) = if (richConnectionCommander.sendEmailAddresses(batchingConf.MaxBatchSize) == batchingConf.MaxBatchSize) {
-    flushPlease()
-  }
-}
-
