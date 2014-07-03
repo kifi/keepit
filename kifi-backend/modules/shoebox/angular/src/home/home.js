@@ -87,7 +87,7 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
 
     $scope.showEmptyState = function () {
       return tagService.getTotalKeepCount() === 0;
-    }
+    };
 
     $scope.triggerInstall = function () {
       installService.triggerInstall(function () {
