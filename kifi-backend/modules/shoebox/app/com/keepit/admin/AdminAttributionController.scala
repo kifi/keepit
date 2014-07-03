@@ -37,7 +37,7 @@ class AdminAttributionController @Inject()(
 
   implicit val execCtx = fj
 
-  def keepClicksView(page:Int, size:Int, showImage:Boolean) = AdminHtmlAction.authenticated { request =>
+  def keepDiscoveriesView(page:Int, size:Int, showImage:Boolean) = AdminHtmlAction.authenticated { request =>
     val (t, count) = db.readOnly { implicit ro =>
       val t = keepClickRepo.page(page, size, Set(KeepClickStates.INACTIVE)).map { c =>
         val rc = RichKeepClick(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, userRepo.get(c.keeperId), keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
@@ -51,7 +51,7 @@ class AdminAttributionController @Inject()(
       }
       (t, keepClickRepo.count)
     }
-    Ok(html.admin.keepClicks(t, showImage, page, count, size))
+    Ok(html.admin.keepDiscoveries(t, showImage, page, count, size))
   }
 
   def rekeepsView(page:Int, size:Int, showImage:Boolean) = AdminHtmlAction.authenticated { request =>

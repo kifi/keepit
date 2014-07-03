@@ -1,6 +1,6 @@
 @(keepInfos:Seq[(com.keepit.model.RichKeepClick, Option[com.keepit.model.PageInfo], Option[com.keepit.model.ImageInfo])], showImage:Boolean, page:Int, keepInfosCount:Int, pageSize:Int)
 
-@otherPagesRoute(page:Int) = {@com.keepit.controllers.admin.routes.AdminAttributionController.keepClicksView(page, pageSize, showImage)}
+@otherPagesRoute(page:Int) = {@com.keepit.controllers.admin.routes.AdminAttributionController.keepDiscoveriesView(page, pageSize, showImage)}
 
 @admin(keepInfosCount + " Keep Discoveries") {
 
