@@ -130,7 +130,7 @@ trait ScraperServiceClient extends ServiceClient {
   def getEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]]
   def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]]
   def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]]
-  def getURIWordCount(uriId: Id[NormalizedURI], url: String): Future[Int]
+  def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int]
 }
 
 case class ScraperCacheProvider @Inject()(
@@ -204,7 +204,7 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
-  def getURIWordCount(uriId: Id[NormalizedURI], url: String): Future[Int] = {
+  def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int] = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
     cacheProvider.wordCountCache.get(NormalizedURIWordCountKey(uriId)) match {
@@ -240,5 +240,5 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
 
   def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = ???
 
-  def getURIWordCount(uriId: Id[NormalizedURI], url: String): Future[Int] = ???
+  def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int] = ???
 }
