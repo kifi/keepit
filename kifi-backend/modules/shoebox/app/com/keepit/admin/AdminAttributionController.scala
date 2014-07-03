@@ -157,9 +157,9 @@ class AdminAttributionController @Inject()(
     }
   }
 
-  def keepAttribution(degree:Int) = AdminHtmlAction.authenticatedAsync { request =>
+  def topReKeeps(degree:Int) = AdminHtmlAction.authenticatedAsync { request =>
     getTopReKeeps(degree) map { grouped =>
-      Ok(html.admin.keepAttribution(degree, grouped))
+      Ok(html.admin.topReKeeps(degree, grouped))
     }
   }
 
