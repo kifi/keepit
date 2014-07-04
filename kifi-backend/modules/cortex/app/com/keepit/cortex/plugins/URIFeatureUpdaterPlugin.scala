@@ -14,6 +14,7 @@ import com.keepit.model.UrlHash
 import com.keepit.common.db.slick.Database
 import com.keepit.cortex.dbmodel.CortexURIRepo
 import com.keepit.cortex.dbmodel.CortexURI
+import com.keepit.model.NormalizedURIStates
 
 @ImplementedBy(classOf[URIPullerImpl])
 trait URIPuller extends DataPuller[NormalizedURI]
@@ -29,9 +30,10 @@ class URIPullerImpl @Inject()(
     NormalizedURI(id = Some(uri.uriId), seq = SequenceNumber[NormalizedURI](uri.seq.value), url = "", urlHash = UrlHash(""))
   }
 
+  // scraped uris only
   def getSince(lowSeq: SequenceNumber[NormalizedURI], limit: Int): Seq[NormalizedURI] = {
     db.readOnly{ implicit s =>
-      uriRepo.getSince(lowSeq, limit).map{convertToNormalizedURI(_)}
+      uriRepo.getSince(lowSeq, limit).filter(_.state.value == NormalizedURIStates.SCRAPED.value).map{convertToNormalizedURI(_)}
     }
   }
 }
