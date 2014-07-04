@@ -51,15 +51,42 @@ a.profile-logout
   height: 100%
   z-index: -1
 
-.profile-image
+.profile-image-flip
   display: block
+  position: relative
   width: 72px
   height: 72px
-  border: 6px solid #e3e6ee
+
+  &:hover
+    .profile-image
+      transform: rotateY(180deg)
+    .profile-image-change
+      transform: rotateY(0deg)
+    
+.profile-image
+.profile-image-change
+  position: absolute
+  top: 0
+  left: 0
+  display: block
+  width: 100%
+  height: 100%
   border-radius: 100%
+  border: 4px solid #e3e6ee
   margin: 0 auto 6px
   background-color: #b8c5d1
   background-size: 100%
+  transition: transform 0.3s
+  backface-visibility: hidden
+
+.profile-image-change
+  transform: rotateY(-180deg)
+  line-height: 69px
+  vertical-align: middle
+  font-size: 36px
+  font-family: sans-serif
+  font-weight: 400
+  color: #e3e6ee
 
 a.profile-image-change
   display: inline-block
