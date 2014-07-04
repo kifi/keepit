@@ -36,6 +36,7 @@ class ScrapeWorker(
   helper: SyncShoeboxDbCallbacks,
   shoeboxClient: ShoeboxServiceClient,
   wordCountCache: NormalizedURIWordCountCache,
+  uriSummaryCache: URISummaryCache,
   embedlyCommander: EmbedlyCommander
 ) extends Logging {
 
@@ -112,6 +113,11 @@ class ScrapeWorker(
 
     log.info(s"updating wordCount cache for uriId = $uriId, word count = $count")
     wordCountCache.set(NormalizedURIWordCountKey(uriId), count)
+
+    uriSummaryCache.get(URISummaryKey(uriId)) match {
+      case Some(summary) => uriSummaryCache.set(URISummaryKey(uriId), summary.copy(wordCount = Some(count)))
+      case None =>
+    }
   }
 
   private def handleSuccessfulScraped(latestUri: NormalizedURI, scraped: Scraped, info: ScrapeInfo, pageInfoOpt: Option[PageInfo]): Option[Article] = {

@@ -1,7 +1,6 @@
 package com.keepit.abook
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.abook.typeahead.EContactABookTypeahead
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
@@ -12,8 +11,6 @@ import com.keepit.common.time._
 import com.keepit.model._
 import scala.slick.jdbc.{StaticQuery => Q}
 import scala.slick.util.CloseableIterator
-import play.api.Mode
-import play.api.Mode.Mode
 
 @ImplementedBy(classOf[EContactRepoImpl])
 trait EContactRepo extends Repo[EContact] {
@@ -25,7 +22,7 @@ trait EContactRepo extends Repo[EContact] {
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getByUserId(userId: Id[User])(implicit session:RSession):Seq[EContact]
   def getEContactCount(userId: Id[User])(implicit session:RSession):Int
-  def insertAll(userId:Id[User], contacts: Seq[BasicContact])(implicit session:RWSession): Seq[EContact]
+  def insertAll(userId:Id[User], contacts: Seq[BasicContact])(implicit session:RWSession): Unit
   def internContact(userId:Id[User], contact: BasicContact)(implicit session: RWSession): EContact
   def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
 
@@ -38,7 +35,6 @@ class EContactRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   econtactCache: EContactCache,
-  mode: Mode,
   override protected val changeListener: Option[RepoModification.Listener[EContact]]
 ) extends DbRepo[EContact] with EContactRepo with Logging {
 
@@ -116,21 +112,9 @@ class EContactRepoImpl @Inject() (
     Q.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first
   }
 
-  def insertAll(userId: Id[User], contacts: Seq[BasicContact])(implicit session:RWSession): Seq[EContact] = timing(s"econtactRepo.insertAll($userId) #contacts=${contacts.length}") {
+  def insertAll(userId: Id[User], contacts: Seq[BasicContact])(implicit session:RWSession): Unit = timing(s"econtactRepo.insertAll($userId) #contacts=${contacts.length}") {
     val toBeInserted = contacts.map { contact => EContact(userId = userId, email = contact.email, name = contact.name, firstName = contact.firstName, lastName = contact.lastName) }
-    try {
-      mode match {
-        case Mode.Prod => {
-          val insertedContacts = (rows returning rows).insertAll(toBeInserted: _*)
-          insertedContacts.foreach(invalidateCache)
-          insertedContacts
-        }
-        case _ => toBeInserted.map(save)
-      }
-    } catch { case ex: Throwable =>
-      log.error(s"Failed to insert mutiple contacts: $ex")
-      toBeInserted.map(save)
-    }
+    rows.insertAll(toBeInserted: _*)
   }
 
   def internContact(userId:Id[User], contact: BasicContact)(implicit session: RWSession): EContact = {

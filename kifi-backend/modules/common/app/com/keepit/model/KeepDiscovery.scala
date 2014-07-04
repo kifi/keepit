@@ -5,7 +5,6 @@ import org.joda.time.DateTime
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.search.ArticleSearchResult
-import com.keepit.heimdal.SanitizedKifiHit
 
 case class KeepDiscovery(
   id: Option[Id[KeepDiscovery]] = None,
@@ -13,7 +12,7 @@ case class KeepDiscovery(
   updatedAt: DateTime = currentDateTime,
   state: State[KeepDiscovery] = KeepDiscoveryStates.ACTIVE,
 
-  hitUUID: ExternalId[SanitizedKifiHit],
+  hitUUID: ExternalId[ArticleSearchResult],
   numKeepers: Int,
 
   keeperId: Id[User],
@@ -28,4 +27,4 @@ case class KeepDiscovery(
 
 object KeepDiscoveryStates extends States[KeepDiscovery]
 
-case class RichKeepDiscovery(id:Option[Id[KeepDiscovery]], createdAt:DateTime, updatedAt:DateTime, state:State[KeepDiscovery], hitUUID:ExternalId[SanitizedKifiHit], numKeepers:Int, keeper:User, keep:Keep, uri:NormalizedURI, origin:Option[String])
+case class RichKeepDiscovery(id:Option[Id[KeepDiscovery]], createdAt:DateTime, updatedAt:DateTime, state:State[KeepDiscovery], hitUUID:ExternalId[ArticleSearchResult], numKeepers:Int, keeper:User, keep:Keep, uri:NormalizedURI, origin:Option[String])
