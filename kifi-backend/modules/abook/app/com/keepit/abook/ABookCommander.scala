@@ -230,13 +230,13 @@ class ABookCommander @Inject() (
     json
   }
 
-  def getOrCreateEContact(userId:Id[User], contact: BasicContact):Try[EContact] = {
-    val res = db.readWrite(attempts = 2) { implicit s =>
-      econtactRepo.getOrCreate(userId, contact)
+  def internContact(userId:Id[User], contact: BasicContact): EContact = {
+    val econtact = db.readWrite(attempts = 2) { implicit s =>
+      econtactRepo.internContact(userId, contact)
     }
     econtactTypeahead.refresh(userId) // async
-    log.info(s"[getOrCreateEContact($userId,${contact.email},${contact.name.getOrElse("")})] res=$res")
-    res
+    log.info(s"[getOrCreateEContact($userId,${contact.email},${contact.name.getOrElse("")})] res=$econtact")
+    econtact
   }
 
   // todo: removeme (inefficient)

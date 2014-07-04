@@ -10,8 +10,8 @@ guide.step2 = guide.step2 || function () {
       pad: [20, -180, 70, 20],
       arrow: {dx: -200, dy: -100, from: {angle: 180, gap: 12, along: [0, .55]}, to: {angle: 120, gap: 4, along: [.5, 1]}},
       allow: [
-        {type: 'click', target: '.kifi-res-title', proceed: true},
-        {type: /^mouse/, target: '.kifi-res-title'}
+        {type: 'click', target: '#kifi-res-list .r a[href]', proceed: true},  // note: Google sometimes alters the link's class name
+        {type: /^mouse/, target: '#kifi-res-list .r a[href]'}
       ]
     }
   ];

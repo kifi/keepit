@@ -50,7 +50,7 @@ import scala.concurrent.duration._
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsString
 import scala.Some
-import com.keepit.model.KeepClick
+import com.keepit.model.KeepDiscovery
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.model.KeepToCollection
@@ -405,7 +405,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val keepRepo = inject[KeepRepo]
-      val keepClickRepo = inject[KeepClickRepo]
+      val keepDiscoveryRepo = inject[KeepDiscoveryRepo]
       val rekeepRepo = inject[ReKeepRepo]
       val userExpRepo = inject[UserExperimentRepo]
       val keeper = KeepSource.keeper
@@ -415,7 +415,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val (u1, u2, u3, u4) = db.readWrite { implicit session =>
         val u1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         val u2 = userRepo.save(User(firstName = "Foo", lastName = "Bar"))
-        val u3 = userRepo.save(User(firstName = "Clicker", lastName = "ClicketyClickyClick"))
+        val u3 = userRepo.save(User(firstName = "Discoveryer", lastName = "DiscoveryetyDiscoveryyDiscovery"))
         val u4 = userRepo.save(User(firstName = "Ro", lastName = "Bot"))
 
         (u1, u2, u3, u4)
@@ -435,14 +435,14 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val (kc0, kc1, kc2) = db.readWrite { implicit rw =>
         val kifiHitCache = inject[KifiHitCache]
         val origin = "https://www.google.com"
-        val kc0 = keepClickRepo.save(KeepClick(createdAt = currentDateTime, hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId))
+        val kc0 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId))
         // u2 -> 42 (u1)
         kifiHitCache.set(KifiHitKey(u2.id.get, keeps1(0).uriId), SanitizedKifiHit(kc0.hitUUID, origin, raw1(0).url, kc0.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId), Seq.empty, None, 0, 0)))
 
         val ts = currentDateTime
-        val uuid = ExternalId[SanitizedKifiHit]()
-        val kc1 = keepClickRepo.save(KeepClick(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId))
-        val kc2 = keepClickRepo.save(KeepClick(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId))
+        val uuid = ExternalId[ArticleSearchResult]()
+        val kc1 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId))
+        val kc2 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId))
         // u3 -> kifi (u1, u2) [rekeep]
         kifiHitCache.set(KifiHitKey(u3.id.get, keeps1(1).uriId), SanitizedKifiHit(kc1.hitUUID, origin, raw1(1).url, kc1.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId, u2.externalId), Seq.empty, None, 0, 0)))
 
@@ -454,7 +454,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val kc3 = db.readWrite { implicit rw =>
         val kifiHitCache = inject[KifiHitCache]
         val origin = "https://www.google.com"
-        val kc3 = keepClickRepo.save(KeepClick(createdAt = currentDateTime, hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
+        val kc3 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
         // u4 -> kifi (u3) [rekeep]
         kifiHitCache.set(KifiHitKey(u4.id.get, keeps3(0).uriId), SanitizedKifiHit(kc3.hitUUID, origin, raw3(0).url, kc3.uriId, KifiHitContext(false, false, 0, Seq(u3.externalId), Seq.empty, None, 0, 0)))
         kc3
@@ -464,8 +464,8 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 
       val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnly {implicit s =>
         val keeps = keepRepo.getByUser(u1.id.get, None, None, 100)
-        val clickCount = keepClickRepo.getClickCountByKeeper(u1.id.get)
-        val clicks = keepClickRepo.getClickCountsByKeeper(u1.id.get)
+        val clickCount = keepDiscoveryRepo.getDiscoveryCountByKeeper(u1.id.get)
+        val clicks = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u1.id.get)
         val rekeepCount = rekeepRepo.getReKeepCountByKeeper(u1.id.get)
         val rekeeps = rekeepRepo.getReKeepCountsByKeeper(u1.id.get)
         (keeps, clickCount, rekeepCount, clicks, rekeeps)
@@ -549,7 +549,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val keepRepo = inject[KeepRepo]
-      val keepClickRepo = inject[KeepClickRepo]
+      val keepDiscoveryRepo = inject[KeepDiscoveryRepo]
       val rekeepRepo = inject[ReKeepRepo]
       val userExpRepo = inject[UserExperimentRepo]
       val keeper = KeepSource.keeper
@@ -559,7 +559,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val (u1, u2, u3, u4) = db.readWrite { implicit session =>
         val u1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         val u2 = userRepo.save(User(firstName = "Foo", lastName = "Bar"))
-        val u3 = userRepo.save(User(firstName = "Clicker", lastName = "ClicketyClickyClick"))
+        val u3 = userRepo.save(User(firstName = "Discoveryer", lastName = "DiscoveryetyDiscoveryyDiscovery"))
         val u4 = userRepo.save(User(firstName = "Ro", lastName = "Bot"))
 
         (u1, u2, u3, u4)
@@ -579,14 +579,14 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val (kc0, kc1, kc2) = db.readWrite { implicit rw =>
         val kifiHitCache = inject[KifiHitCache]
         val origin = "https://www.google.com"
-        val kc0 = keepClickRepo.save(KeepClick(createdAt = currentDateTime, hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId))
+        val kc0 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId))
         // u2 -> 42 (u1)
         kifiHitCache.set(KifiHitKey(u2.id.get, keeps1(0).uriId), SanitizedKifiHit(kc0.hitUUID, origin, raw1(0).url, kc0.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId), Seq.empty, None, 0, 0)))
 
         val ts = currentDateTime
-        val uuid = ExternalId[SanitizedKifiHit]()
-        val kc1 = keepClickRepo.save(KeepClick(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId))
-        val kc2 = keepClickRepo.save(KeepClick(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId))
+        val uuid = ExternalId[ArticleSearchResult]()
+        val kc1 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId))
+        val kc2 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId))
         // u3 -> kifi (u1, u2) [rekeep]
         kifiHitCache.set(KifiHitKey(u3.id.get, keeps1(1).uriId), SanitizedKifiHit(kc1.hitUUID, origin, raw1(1).url, kc1.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId, u2.externalId), Seq.empty, None, 0, 0)))
 
@@ -598,7 +598,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val kc3 = db.readWrite { implicit rw =>
         val kifiHitCache = inject[KifiHitCache]
         val origin = "https://www.google.com"
-        val kc3 = keepClickRepo.save(KeepClick(createdAt = currentDateTime, hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
+        val kc3 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
         // u4 -> kifi (u3) [rekeep]
         kifiHitCache.set(KifiHitKey(u4.id.get, keeps3(0).uriId), SanitizedKifiHit(kc3.hitUUID, origin, raw3(0).url, kc3.uriId, KifiHitContext(false, false, 0, Seq(u3.externalId), Seq.empty, None, 0, 0)))
         kc3
@@ -608,8 +608,8 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 
       val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnly {implicit s =>
         val keeps = keepRepo.getByUser(u1.id.get, None, None, 100)
-        val clickCount = keepClickRepo.getClickCountByKeeper(u1.id.get)
-        val clicks = keepClickRepo.getClickCountsByKeeper(u1.id.get)
+        val clickCount = keepDiscoveryRepo.getDiscoveryCountByKeeper(u1.id.get)
+        val clicks = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u1.id.get)
         val rekeepCount = rekeepRepo.getReKeepCountByKeeper(u1.id.get)
         val rekeeps = rekeepRepo.getReKeepCountsByKeeper(u1.id.get)
         (keeps, clickCount, rekeepCount, clicks, rekeeps)
