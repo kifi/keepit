@@ -294,7 +294,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
           kifiHitCache.set(KifiHitKey(u2.id.get, keeps1(0).uriId), SanitizedKifiHit(kc0.hitUUID, origin, raw1(0).url, kc0.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId), Seq.empty, None, 0, 0)))
 
           val ts = currentDateTime
-          val uuid = ExternalId[SanitizedKifiHit]()
+          val uuid = ExternalId[ArticleSearchResult]()
           val kc1 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId))
           val kc2 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId))
           // u3 -> kifi (u1, u2) [rekeep]
@@ -438,7 +438,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
           kifiHitCache.set(KifiHitKey(u2.id.get, keeps1(0).uriId), SanitizedKifiHit(kc0.hitUUID, origin, raw1(0).url, kc0.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId), Seq.empty, None, 0, 0)))
 
           val ts = currentDateTime
-          val uuid = ExternalId[SanitizedKifiHit]()
+          val uuid = ExternalId[ArticleSearchResult]()
           val kc1 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId))
           val kc2 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId))
           // u3 -> kifi (u1, u2) [rekeep]
