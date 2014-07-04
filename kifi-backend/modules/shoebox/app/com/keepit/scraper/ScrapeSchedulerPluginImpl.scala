@@ -40,8 +40,10 @@ private[scraper] class ScrapeScheduler @Inject() (
 ) extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
-    case CheckOverdues => checkOverdues()
-    case CheckOverdueCount => checkOverdueCount()
+    case CheckOverdues =>
+      checkOverdues()
+    case CheckOverdueCount =>
+      checkOverdueCount()
     case m => throw new UnsupportedActorMessage(m)
   }
 

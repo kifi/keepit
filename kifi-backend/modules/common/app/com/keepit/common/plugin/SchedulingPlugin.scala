@@ -95,10 +95,10 @@ trait SchedulerPlugin extends Plugin with Logging {
   }
 
   def cancelTasks() = _cancellables.synchronized {
-    log.info(s"Cancelling scheduled tasks: ${_cancellables map (_.name) mkString ","}")
+    log.debug(s"Cancelling scheduled tasks: ${_cancellables map (_.name) mkString ","}")
     _cancellables foreach { task =>
       if (!task.isCancelled) {
-        log.info(s"[aboutToCancelTask] task:${task.name}) isCancelled:${task.isCancelled}")
+        log.debug(s"[aboutToCancelTask] task:${task.name}) isCancelled:${task.isCancelled}")
         task.cancel()
         log.info(s"[canceledTask] task:${task.name}) isCancelled:${task.isCancelled}")
       } else {
@@ -108,7 +108,7 @@ trait SchedulerPlugin extends Plugin with Logging {
   }
 
   override def onStop() {
-    cancelTasks()
+    //cancelTasks()
     super.onStop()
   }
 }

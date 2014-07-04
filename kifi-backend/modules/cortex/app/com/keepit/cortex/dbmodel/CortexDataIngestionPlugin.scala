@@ -48,6 +48,7 @@ private class CortexDataIngestionPluginImpl @Inject()(
 
   override def onStop() {
     log.info(s"stopping $name")
+    super.onStop()
   }
 }
 

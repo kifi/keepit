@@ -98,6 +98,7 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, 
   override def onStop() {
     log.info(s"stopping $name")
     indexer.close()
+    super.onStop()
   }
 
   def update(): Unit = {

@@ -94,4 +94,9 @@ class EmailAccountUpdaterPlugin @Inject() (
     log.info(s"starting $this")
     scheduleTaskOnLeader(actor.system, 2 minutes, 5 minutes, actor.ref, FetchEmailUpdates(100))
   }
+
+  override def onStop() {
+    log.info(s"stopping $this")
+    super.onStop()
+  }
 }

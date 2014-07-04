@@ -35,7 +35,7 @@ class SpellIndexerPluginImpl @Inject()(
   }
   override def onStop() {
     log.info("stopping SpellDictionaryPluginImpl")
-    cancelTasks()
+    super.onStop()
   }
 
 }

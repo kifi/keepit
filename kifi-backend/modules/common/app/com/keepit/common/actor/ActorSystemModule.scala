@@ -14,7 +14,7 @@ trait ActorSystemModule extends ScalaModule
 case class ProdActorSystemModule() extends ActorSystemModule {
 
   def configure() {
-    bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
+    bind[ActorSystem].toProvider[ActorPlugin]
   }
 
   @Provides
@@ -26,7 +26,6 @@ case class ProdActorSystemModule() extends ActorSystemModule {
     new SchedulingPropertiesImpl(serviceDiscovery, !(DiscoveryModule.isCanary)) // can allow some (e.g. heimdal) to run on canary later
 
   @Provides
-  @AppScoped
   def actorPluginProvider: ActorPlugin =
     new ActorPlugin(ActorSystem("prod-actor-system",
       Play.current.configuration.underlying,
@@ -54,7 +53,7 @@ case class DevActorSystemModule() extends ActorSystemModule {
   }
 
   @Provides
-  @AppScoped
-  def actorPluginProvider: ActorPlugin =
+  def actorPluginProvider: ActorPlugin = {
     new ActorPlugin(ActorSystem("dev-actor-system", Play.current.configuration.underlying, Play.current.classloader))
+  }
 }

@@ -358,6 +358,7 @@ class UriIntegrityPluginImpl @Inject() (
   }
   override def onStop() {
     log.info("stopping UriIntegrityPluginImpl")
+    super.onStop()
   }
 
   def handleChangedUri(change: UriChangeMessage) = {

@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
 import akka.actor.{Cancellable, Scheduler}
+import scala.concurrent.Future
 import scala.concurrent.duration.{FiniteDuration, Duration}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.reflect._
@@ -26,9 +27,9 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
   protected val scheduler: Scheduler
   protected val batchingConf: BatchingActorConfiguration[_ <: BatchingActor[E]]
   protected def getEventTime(event: E): DateTime
-  protected def processBatch(events: Seq[E]): Unit
+  protected def processBatch(events: Seq[E]): Future[_]
   object FlushEventQueue
-  final def flushPlease() = if (!flushIsPending.getAndSet(true)) { self ! FlushEventQueue }
+  final def flushPlease() = if (!flushIsPending.getAndSet(true)) { self ! FlushEventQueue; Future.successful(()) } else Future.successful(())
 
   private val batchId: AtomicInteger = new AtomicInteger(0)
   private var events: Vector[E] = Vector.empty
@@ -61,21 +62,22 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
       }
     case FlushEventQueueAndClose =>
       closing = true
-      flushPlease()
+      sender ! flush().map(_ => ())
     case FlushEventQueue =>
       flushIsPending.set(false)
       flush()
     case FlushPlease => flushPlease()
   }
 
-  private def flush(): Unit = {
+  private def flush(): Future[_] = {
     scheduledFlush.foreach(_.cancel())
     scheduledFlush = None
     val thisBatchId = batchId.incrementAndGet
     log.info(s"Processing ${events.size} events: $events")
     events.zipWithIndex map { case (event, i) => verifyEventStaleTime(event, batchingConf.StaleEventFlushTime, s"flushed (${i+1}/${events.size} in batch #$thisBatchId)") }
-    processBatch(events)
+    var future = processBatch(events)
     events = Vector.empty
+    future
   }
 
   private def verifyEventStaleTime(event: E, timeout: Duration, action: String): Unit = {

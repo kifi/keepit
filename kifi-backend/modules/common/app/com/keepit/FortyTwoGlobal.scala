@@ -1,6 +1,8 @@
 package com.keepit
 
 import java.io.File
+import akka.actor.ActorSystem
+import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.strings._
@@ -34,6 +36,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   //used to identify instance of applciation. used to debug intest mode
   val globalId: ExternalId[FortyTwoGlobal] = ExternalId()
   log.debug(s"########## starting FortyTwoGlobal $globalId")
+
+  @volatile private var pluginsStarted: Boolean = false
 
   override def getControllerInstance[A](clazz: Class[A]) = try {
     injector.getInstance(clazz)
@@ -92,7 +96,10 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       Some(serviceDiscovery)
     }
 
+    injector.instance[ActorPlugin].onStart() // start actor system
     injector.instance[AppScope].onStart(app)
+    pluginsStarted = true
+
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
       statsd.incrementOne("deploys", ALWAYS)
       injector.instance[AirbrakeNotifier].reportDeployment()
@@ -199,8 +206,12 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         }
       }
       try {
-        if (mode == Mode.Prod)
-        injector.instance[AppScope].onStop(app)
+        //if (mode == Mode.Prod)
+        if (pluginsStarted) {
+          injector.instance[AppScope].onStop(app)
+          injector.instance[ActorPlugin].onStop()
+          pluginsStarted = false
+        }
       } catch {
         case e: Throwable =>
           val errorMessage = "====================== error during onStop ==============================="

@@ -54,6 +54,7 @@ abstract class BaseFeatureUpdatePlugin[K, T, M <: StatModel, FT <: FeatureRepres
 
   override def onStop() {
     log.info(s"stopping $name")
+    super.onStop()
   }
 
   override def update(): Unit = {

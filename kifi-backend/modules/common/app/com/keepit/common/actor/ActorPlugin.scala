@@ -25,6 +25,7 @@ class ActorPlugin(system: ActorSystem)
   }
 
   override def onStop() {
+    println("STOPPING ACTOR SYSTEM!!!!")
     system.shutdown()
     system.awaitTermination()
   }

@@ -62,7 +62,7 @@ class AppScope extends Scope with Logging {
       // stop plugins, explicitly using the app classloader
       Threads.withContextClassLoader(app.classloader) {
         for (plugin <- plugins) {
-          SafeFuture {
+          {
             log.info("stopping plugin: " + plugin)
             plugin match {
               case p: SchedulerPlugin =>
