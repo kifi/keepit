@@ -38,6 +38,7 @@ object EmailAccountStates extends States[EmailAccount]
 trait EmailAccountRepo extends Repo[EmailAccount] with SeqNumberFunction[EmailAccount] {
   def getByAddress(address: EmailAddress)(implicit session: RSession): Option[EmailAccount]
   def internByAddress(address: EmailAddress)(implicit session: RWSession): EmailAccount
+  def internByAddresses(addresses: EmailAddress*)(implicit session: RWSession): Seq[EmailAccount]
   def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
 }
 
@@ -78,6 +79,18 @@ class EmailAccountRepoImpl @Inject() (
     getByAddress(address) match {
       case None => save(EmailAccount(address = address))
       case Some(emailAccount) => emailAccount
+    }
+  }
+
+  def internByAddresses(addresses: EmailAddress*)(implicit session: RWSession): Seq[EmailAccount] = {
+    val existingAccounts = (for(row <- rows if row.address inSet(addresses)) yield row).list
+    val lowerCasedExistingAddresses = existingAccounts.map(_.address.address.toLowerCase)
+    val allByLowerCasedAddress = addresses.map { address => address.address.toLowerCase -> address }.toMap
+    val toBeInserted = (allByLowerCasedAddress -- lowerCasedExistingAddresses).values.map(address => EmailAccount(address = address)).toSeq
+    if (toBeInserted.isEmpty) { existingAccounts }
+    else {
+      rows.insertAll(toBeInserted: _*)
+      (for(row <- rows if row.address inSet(addresses)) yield row).list
     }
   }
 
