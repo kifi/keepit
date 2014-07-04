@@ -63,7 +63,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[NormalizedURI]]
   def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]]
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[IndexableUri]]
-  def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[UriIdAndSeq]]
   def getHighestUriSeq(): Future[SequenceNumber[NormalizedURI]]
   def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int): Future[Seq[User]]
   def getBookmarks(userId: Id[User]): Future[Seq[Keep]]
@@ -480,13 +479,6 @@ class ShoeboxServiceClientImpl @Inject() (
     val timeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(6000), maxJsonParseTime = Some(10000))
     call(Shoebox.internal.getScrapedUris(seqNum, fetchSize), callTimeouts = timeout).map { r =>
       Json.fromJson[Seq[IndexableUri]](r.json).get
-    }
-  }
-
-  def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[UriIdAndSeq]] = {
-    val timeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(6000), maxJsonParseTime = Some(10000))
-    call(Shoebox.internal.getScrapedUriIdAndSeq(seqNum, fetchSize), callTimeouts = timeout).map { r =>
-      ScalaMessagePack.read[UriIdAndSeqBatch](r.bytes).batch
     }
   }
 

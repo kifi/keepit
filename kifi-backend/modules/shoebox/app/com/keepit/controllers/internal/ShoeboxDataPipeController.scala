@@ -53,14 +53,6 @@ class ShoeboxDataPipeController @Inject() (
     Ok(Json.toJson(indexables))
   }
 
-  // deprecate this soon
-  def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
-    val uris = db.readOnly(2, Slave) { implicit s =>
-      normUriRepo.getIdAndSeqChanged(seqNum, limit = fetchSize)
-    }
-    Ok(ScalaMessagePack.write(UriIdAndSeqBatch(uris))).as(ContentTypes.BINARY)
-  }
-
   def getHighestUriSeq() = Action { request =>
     val seq = db.readOnly(2, Slave) { implicit s =>
       normUriRepo.getCurrentSeqNum()
