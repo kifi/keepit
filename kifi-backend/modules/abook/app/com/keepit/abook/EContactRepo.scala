@@ -18,13 +18,14 @@ trait EContactRepo extends Repo[EContact] {
   def getByIds(econtactIds:Seq[Id[EContact]])(implicit session:RSession):Seq[EContact]
   def bulkGetByIds(ids:Seq[Id[EContact]])(implicit session:RSession):Map[Id[EContact], EContact]
   def getByIdsIter(ids:Traversable[Id[EContact]])(implicit session:RSession): CloseableIterator[EContact]
-  def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Option[EContact]
+  def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Seq[EContact]
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getByUserId(userId: Id[User])(implicit session:RSession):Seq[EContact]
   def getEContactCount(userId: Id[User])(implicit session:RSession):Int
-  def insertAll(userId:Id[User], abookId: Id[ABookInfo], contacts: Seq[BasicContact])(implicit session:RWSession): Unit
-  def internContact(userId:Id[User], abookId: Id[ABookInfo], contact: BasicContact)(implicit session: RWSession): EContact
+  def insertAll(contacts: Seq[EContact])(implicit session:RWSession): Int
   def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
+  def getByAbookIdAndEmail(abookId: Id[ABookInfo], email: EmailAddress)(implicit session: RSession): Option[EContact]
+  def getByAbookId(abookId: Id[ABookInfo])(implicit session: RSession): Seq[EContact]
 
   //used only for full resync
   def getIdRangeBatch(minId: Id[EContact], maxId: Id[EContact], maxBatchSize: Int)(implicit session: RSession): Seq[EContact]
@@ -96,8 +97,8 @@ class EContactRepoImpl @Inject() (
     }
   }
 
-  def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Option[EContact] = {
-    (for(f <- rows if f.userId === userId && f.email === email && f.state === EContactStates.ACTIVE) yield f).firstOption
+  def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Seq[EContact] = {
+    (for(f <- rows if f.userId === userId && f.email === email && f.state === EContactStates.ACTIVE) yield f).list
   }
 
   def getByUserIdIter(userId: Id[User], maxRows:Int)(implicit session: RSession): CloseableIterator[EContact] = {
@@ -113,19 +114,16 @@ class EContactRepoImpl @Inject() (
     Q.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first
   }
 
-  def insertAll(userId: Id[User], abookId: Id[ABookInfo], contacts: Seq[BasicContact])(implicit session:RWSession): Unit = timing(s"econtactRepo.insertAll($userId) #contacts=${contacts.length}") {
-    val toBeInserted = contacts.map { contact => EContact(userId = userId, abookId = Some(abookId), email = contact.email, name = contact.name, firstName = contact.firstName, lastName = contact.lastName) }
-    rows.insertAll(toBeInserted: _*)
+  def getByAbookIdAndEmail(abookId: Id[ABookInfo], email: EmailAddress)(implicit session: RSession): Option[EContact] = {
+    (for(row <- rows if row.abookId === abookId && row.email === email) yield row).firstOption
   }
 
-  def internContact(userId:Id[User], abookId: Id[ABookInfo], contact: BasicContact)(implicit session: RWSession): EContact = {
-    getByUserIdAndEmail(userId, contact.email) match {
-      case None => save(EContact(userId = userId, abookId = Some(abookId), email = contact.email, name = contact.name, firstName = contact.firstName, lastName = contact.lastName))
-      case Some(existingContact) => existingContact.updateWith(contact) match {
-        case modifiedContact if modifiedContact != existingContact => save(modifiedContact)
-        case _ => existingContact
-      }
-    }
+  def getByAbookId(abookId: Id[ABookInfo])(implicit session: RSession): Seq[EContact] = {
+    (for(row <- rows if row.abookId === abookId) yield row).list
+  }
+
+  def insertAll(contacts: Seq[EContact])(implicit session:RWSession): Int = timing(s"econtactRepo.insertAll #contacts=${contacts.length}") {
+    rows.insertAll(contacts: _*).get
   }
 
   def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int = {

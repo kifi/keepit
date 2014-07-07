@@ -16,6 +16,7 @@ class ExtNonUserSearchControllerTest extends Specification {
         EContact(
           id = Some(Id[EContact](8)),
           userId = Id[User](1),
+          abookId = Some(Id(1)),
           email = EmailAddress("jim@davis.name"),
           name = Some("James R. Davis"),
           firstName = Some("Jim"),
@@ -28,6 +29,7 @@ class ExtNonUserSearchControllerTest extends Specification {
         EContact(
           id = Some(Id[EContact](9)),
           userId = Id[User](1),
+          abookId = Some(Id(1)),
           email = EmailAddress("bill@wattersons.org")
         )
       ) === Json.obj("email" -> "bill@wattersons.org")

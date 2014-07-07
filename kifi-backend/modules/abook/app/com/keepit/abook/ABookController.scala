@@ -62,7 +62,7 @@ class ABookController @Inject() (
   oauth2TokenRepo:OAuth2TokenRepo,
   typeahead:EContactABookTypeahead,
   abookCommander:ABookCommander,
-  contactsUpdater:ContactsUpdaterPlugin,
+  contactsUpdater:ABookImporterPlugin,
   richConnectionCommander: LocalRichConnectionCommander
 ) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
@@ -229,11 +229,11 @@ class ABookController @Inject() (
     Ok(Json.toJson(tokenOpt))
   }
 
-  def internContact(userId:Id[User]) = Action(parse.json) { request =>
+  def internKifiContact(userId:Id[User]) = Action(parse.json) { request =>
     val contact = request.body.as[BasicContact]
     log.info(s"[internContact] userId=$userId contact=$contact")
 
-    val eContact = abookCommander.internContact(userId, contact)
+    val eContact = abookCommander.internKifiContact(userId, contact)
     Ok(Json.toJson(eContact))
   }
 
@@ -260,13 +260,6 @@ class ABookController @Inject() (
   }
   def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]) = Action { request =>
     val eContacts = prefixQueryDirect(userId, limit, search, after)
-    Ok(Json.toJson(eContacts))
-  }
-
-  // todo: removeme (inefficient)
-  def queryEContacts(userId:Id[User], limit:Int, search: Option[String], after:Option[String]) = Action { request =>
-    val eContacts = abookCommander.queryEContacts(userId, limit, search, after)
-    log.info(s"[queryEContacts] userId=$userId search=$search after=$after limit=$limit res(len=${eContacts.length}):${eContacts.mkString}")
     Ok(Json.toJson(eContacts))
   }
 

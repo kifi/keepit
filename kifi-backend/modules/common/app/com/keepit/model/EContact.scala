@@ -9,7 +9,6 @@ import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin, CacheSt
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.common.mail.{BasicContact, EmailAddress}
-import scala.util.{Failure, Try}
 
 object EContactStates extends States[EContact] {
   val PARSE_FAILURE = State[EContact]("parse_failure")
@@ -33,9 +32,19 @@ case class EContact(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def updateWith(contactInfo: BasicContact): EContact = {
     require(email.equalsIgnoreCase(contactInfo.email), s"Supplied info $contactInfo does not represent the same email address as $this.")
+
+    val updatedName = contactInfo.name orElse {
+      (contactInfo.firstName, contactInfo.lastName) match {
+        case (Some(f), Some(l)) => Some(s"$f $l")
+        case (Some(f), None) => Some(f)
+        case (None, Some(l)) => Some(l)
+        case (None, None) => None
+      }
+    } orElse name
+
     this.copy(
       email = contactInfo.email,
-      name = contactInfo.name orElse name,
+      name = updatedName,
       firstName = contactInfo.firstName orElse firstName,
       lastName = contactInfo.lastName orElse lastName
     )

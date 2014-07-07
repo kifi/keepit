@@ -405,7 +405,7 @@ class InviteCommander @Inject() (
         val invitationsSentFuture = countInvitationsSent(userId, Left(friendSocialUserInfo.id.get))
         (Future.successful(Left(friendSocialUserInfo)), invitationsSentFuture)
       case Right(emailAddress) => {
-        val friendEContactFuture = abook.internContact(userId, BasicContact(emailAddress, fullSocialId.name)).map(Right(_))
+        val friendEContactFuture = abook.internKifiContact(userId, BasicContact(emailAddress, fullSocialId.name)).map(Right(_))
         val invitationsSentFuture = countInvitationsSent(userId, Right(emailAddress))
         (friendEContactFuture, invitationsSentFuture)
       }

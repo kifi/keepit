@@ -39,16 +39,17 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
 
   "ABook Commander" should {
 
-    "handle imports from IOS and gmail" in {
+    "handle imports from IOS and gmail and interning of Kifi contacts independently" in {
       withDb(modules: _*) { implicit injector =>
         val (commander) = inject[ABookCommander] //setup()
 
       db.readOnly(inject[ABookInfoRepo].count(_))
-        // empty abook upload
+        // EMPTY IOS IMPORT
         val emptyABookRawInfo = ABookRawInfo(None, ABookOrigins.IOS, None, None, None, JsArray(Seq.empty))
         val emptyABookOpt = commander.processUpload(u42, ABookOrigins.IOS, None, None, Json.toJson(emptyABookRawInfo))
         emptyABookOpt.isEmpty === true
 
+        // NON EMPTY IOS IMPORT
         var abookInfo:ABookInfo = try {
           val info1 = commander.processUpload(u42, ABookOrigins.IOS, None, None, iosUploadJson).get
 //          val info2 = commander.processUpload(u42, ABookOrigins.IOS, None, None, iosUploadJson) // should have no impact
@@ -84,6 +85,8 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         (contacts(1) \ "name").as[String] === "forty two"
         (contacts(1) \ "emails").as[Seq[String]].length === 3
 
+        // GMAIL IMPORT
+
         val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson).get
         gbookInfo.id.get === Id[ABookInfo](2)
         gbookInfo.origin === ABookOrigins.GMAIL
@@ -98,31 +101,25 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         val econtactsJsArr = commander.getEContactsDirect(u42, 500)
         val econtactsSeqOpt = econtactsJsArr.validate[Seq[EContact]].asOpt
         econtactsSeqOpt.isEmpty === false
-        val econtactsSeq = econtactsSeqOpt.get
-        econtactsSeq.isEmpty === false
-        econtactsSeq.length === 4 // distinct
+        val econtacts = econtactsSeqOpt.get.groupBy(_.abookId.get)
+        econtacts(gbookInfo.id.get).length === 4
 
-        val e2 = BasicContact.fromString("foo@42go.com").get
-        val e2Res = commander.internContact(u42, e2)
-        e2Res.email.address === "foo@42go.com"
-        e2Res.name must beSome("foo bar")
-        e2Res.firstName must beSome("foo")
-        e2Res.lastName must beSome("bar")
+        // INTERN KIFI CONTACTS
 
         val e1 = BasicContact.fromString("foobar@42go.com").get
-        val e1Res = commander.internContact(u42, e1)
+        val e1Res = commander.internKifiContact(u42, e1)
         e1Res.email.address === "foobar@42go.com"
         e1Res.name must beNone
 
-        val e3 = BasicContact.fromString("Douglas Adams <doug@kifi.com>").get
-        val e3Res = commander.internContact(u42, e3)
-        e3Res.email.address === "doug@kifi.com"
-        e3Res.name must beSome("Douglas Adams")
+        val e2 = BasicContact.fromString("Douglas Adams <doug@kifi.com>").get
+        val e2Res = commander.internKifiContact(u42, e2)
+        e2Res.email.address === "doug@kifi.com"
+        e2Res.name must beSome("Douglas Adams")
 
-        val e4 = BasicContact.fromString("Marvin Adams <marvin@kifi.com>").get.copy(name = Some("Smada Nivram"))
-        val e4Res = commander.internContact(u42, e4)
-        e4Res.email.address === "marvin@kifi.com"
-        e4Res.name must beSome("Smada Nivram")
+        val e3 = BasicContact.fromString("Marvin Adams <marvin@kifi.com>").get.copy(name = Some("Smada Nivram"))
+        val e3Res = commander.internKifiContact(u42, e3)
+        e3Res.email.address === "marvin@kifi.com"
+        e3Res.name must beSome("Smada Nivram")
       }
     }
 

@@ -41,7 +41,8 @@ object ABookOriginType {
 object ABookOrigins {
   case object IOS extends ABookOriginType("ios")
   case object GMAIL extends ABookOriginType("gmail")
-  val ALL:Seq[ABookOriginType] = Seq(IOS, GMAIL)
+  case object KIFI extends ABookOriginType("kifi")
+  val ALL:Seq[ABookOriginType] = Seq(IOS, GMAIL, KIFI)
 }
 
 case class ABookRawInfo(userId:Option[Id[User]], origin:ABookOriginType, ownerId:Option[String] = None, ownerEmail:Option[String] = None, numContacts:Option[Int] = None, contacts:JsArray) // ios ownerId may not be present

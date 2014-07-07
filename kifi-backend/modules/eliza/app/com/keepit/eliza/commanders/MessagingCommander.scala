@@ -201,7 +201,7 @@ class MessagingCommander @Inject() (
 
   private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[BasicContact]): Future[Seq[NonUserParticipant]] = {
     val pimpedParticipants = nonUsers.map { emailContact =>
-      abookServiceClient.internContact(userId, emailContact).map {
+      abookServiceClient.internKifiContact(userId, emailContact).map {
         case eContact => NonUserEmailParticipant(eContact.email) // todo(Léo) we may want to get a name here, otherwise don't really need to wait for this call
       }
     }

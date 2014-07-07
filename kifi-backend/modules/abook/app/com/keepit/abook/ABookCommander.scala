@@ -26,15 +26,18 @@ import scala.xml.Elem
 import com.keepit.abook.typeahead.EContactABookTypeahead
 import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail, BasicContact, EmailAddress}
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.abook.model.EmailAccountRepo
+import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.commanders.ContactInterner
 
 class ABookCommander @Inject() (
   db:Database,
   airbrake:AirbrakeNotifier,
   s3:ABookRawInfoStore,
-  econtactTypeahead:EContactABookTypeahead,
   abookInfoRepo:ABookInfoRepo,
   econtactRepo:EContactRepo,
-  contactsUpdater:ContactsUpdaterPlugin,
+  abookImporter:ABookImporterPlugin,
+  contactInterner: ContactInterner,
   shoebox: ShoeboxServiceClient
 ) extends Logging {
 
@@ -152,6 +155,8 @@ class ABookCommander @Inject() (
             val dbEntryOpt = abookInfoRepo.findByUserIdOriginAndOwnerId(userId, origin, abookInfo.ownerId)
             (abookInfo, dbEntryOpt)
           }
+
+          case _ => throw new UnsupportedOperationException(s"Unsupported ABook origin $origin.")
         }
         val savedEntry = dbEntryOpt match {
           case Some(currEntry) => {
@@ -176,7 +181,7 @@ class ABookCommander @Inject() (
       }
 
       if (proceed) {
-        contactsUpdater.asyncProcessContacts(userId, origin, updatedEntry, s3Key, WeakReference(json))
+        abookImporter.asyncProcessContacts(userId, origin, updatedEntry, s3Key, WeakReference(json))
         log.infoP(s"scheduled for processing: $updatedEntry")
       }
       Some(updatedEntry)
@@ -191,9 +196,10 @@ class ABookCommander @Inject() (
     econtactOpt map { Json.toJson(_) }
   }
 
-  def getEContactByEmailDirect(userId:Id[User], email: EmailAddress):Option[JsValue] = {
+  def getEContactByEmailDirect(userId:Id[User], email: EmailAddress): Option[JsValue] = {
     val econtactOpt = db.readOnly(attempts = 2) { implicit s =>
-      econtactRepo.getByUserIdAndEmail(userId, email)
+      val all = econtactRepo.getByUserIdAndEmail(userId, email)
+      all.find(_.name.isDefined) orElse all.headOption
     }
     log.info(s"[getEContactDirect($userId,$email)] res=$econtactOpt")
     econtactOpt map { Json.toJson(_) }
@@ -230,13 +236,9 @@ class ABookCommander @Inject() (
     json
   }
 
-  def internContact(userId:Id[User], contact: BasicContact): EContact = {
-    val econtact = db.readWrite(attempts = 2) { implicit s =>
-      econtactRepo.internContact(userId, contact)
-    }
-    econtactTypeahead.refresh(userId) // async
-    log.info(s"[getOrCreateEContact($userId,${contact.email},${contact.name.getOrElse("")})] res=$econtact")
-    econtact
+  def internKifiContact(userId: Id[User], contact: BasicContact): EContact = {
+    val kifiAbook = db.readWrite { implicit session =>  abookInfoRepo.internKifiABook(userId) }
+    contactInterner.internContact(userId, kifiAbook.id.get, contact)
   }
 
   def validateAllContacts(readOnly: Boolean): Unit = {
