@@ -96,7 +96,7 @@ class ABookImporter @Inject() (
               val firstName = (contact \ "firstName").asOpt[String] trimOpt
               val lastName = (contact \ "lastName").asOpt[String] trimOpt
               val name = (contact \ "name").asOpt[String] trimOpt
-              val emails = (contact \ "emails").asOpt[Seq[JsValue]].getOrElse(Seq.empty[JsValue]).foldLeft(Seq[EmailAddress]()) { case (validEmails, nextValue) =>
+              val validEmails = (contact \ "emails").asOpt[Seq[JsValue]].getOrElse(Seq.empty[JsValue]).foldLeft(Seq[EmailAddress]()) { case (validEmails, nextValue) =>
                 nextValue.validate[EmailAddress] match {
                   case JsSuccess(validEmail, _) => validEmails :+ validEmail
                   case JsError(errors) =>
@@ -104,7 +104,10 @@ class ABookImporter @Inject() (
                     validEmails
                 }
               }
-              emails.map { email => BasicContact(email, name = name, firstName = firstName, lastName = lastName) }
+              val uniqueEmails = validEmails.groupBy(_.address.toLowerCase).map { case (lowerCasedAddress, emails) =>
+                emails.find(_.address == lowerCasedAddress) getOrElse emails.head // arbitrary preference for lower cased addresses
+              }
+              uniqueEmails.map { email => BasicContact(email, name = name, firstName = firstName, lastName = lastName) }
             }
 
             processed += g.length
