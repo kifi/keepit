@@ -151,6 +151,10 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
           element.addClass('animate');
         }
 
+        if (scope.tag && scope.tag.isNew) {
+          animate();
+        }
+
         element.on('dragstart', function (e) {
           // Firefox requires data to be set
           e.dataTransfer.setData('text', '');
