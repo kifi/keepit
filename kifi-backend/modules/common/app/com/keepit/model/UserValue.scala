@@ -78,5 +78,6 @@ object UserValues {
   val availableInvites = UserValueIntHandler("availableInvites", 1000)
   val hasSeenInstall = UserValueBooleanHandler("has_seen_install", false)
   val welcomeEmailSent = UserValueBooleanHandler("welcomeEmailSent", false)
-
+  
+  val tagOrdering = UserValueStringHandler("user_collection_ordering", "[]")
 }

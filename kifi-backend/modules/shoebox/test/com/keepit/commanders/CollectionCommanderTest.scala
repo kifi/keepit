@@ -132,7 +132,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
             Nil
           val collectionIds = collections.map(_.externalId).toSeq
 
-          userValueRepo.save(UserValue(userId = user1.id.get, name = CollectionOrderingKey, value = collectionIds.toString()))
+          userValueRepo.save(UserValue(userId = user1.id.get, name = CollectionOrderingKey, value = Json.stringify(Json.toJson(collectionIds))))
           (user1, collectionIds, tagA, tagB, tagC, tagD)
         }
 

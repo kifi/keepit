@@ -20,7 +20,8 @@ import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
 import com.keepit.social.{SecureSocialUserPlugin, SecureSocialAuthenticatorPlugin, SocialId, SocialNetworks}
 import com.keepit.test.{ShoeboxTestInjector, ShoeboxApplication}
-import scala.concurrent.Await
+import play.api.libs.iteratee.Iteratee
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import play.api.libs.json.{JsObject, Json, JsArray, JsString}
 import play.api.mvc.Result
@@ -82,7 +83,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
   }
 
   "KeepsController" should {
-/*
+
     "allKeeps" in {
       running(new ShoeboxApplication(controllerTestModules:_*)) {
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -760,7 +761,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         Json.parse(contentAsString(result)) must equalTo(expected)
       }
     }
-*/
+
     "reorder tags" in {
       running(new ShoeboxApplication(controllerTestModules:_*)) {
         val (user, oldOrdering, tagA, tagB, tagC, tagD) = inject[Database].readWrite { implicit session =>
@@ -779,7 +780,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
             Nil
 
           val collectionIds = collections.map(_.externalId).toSeq
-          inject[UserValueRepo].save(UserValue(userId = user1.id.get, name = "user_collection_ordering", value = collectionIds.toString()))
+          inject[UserValueRepo].save(UserValue(userId = user1.id.get, name = "user_collection_ordering", value = Json.stringify(Json.toJson(collectionIds))))
           (user1, collectionIds, tagA, tagB, tagC, tagD)
         }
 
@@ -791,7 +792,37 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         )
         val request1 = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.
           updateCollectionIndexOrdering().toString).withJsonBody(inputJson1)
-        val result1 = route(request1).get
+
+
+        val inputJson2 = Json.obj(
+          "tagId" -> tagD.externalId,
+          "newIndex" -> 0
+        )
+        val request2 = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.
+          updateCollectionIndexOrdering().toString).withJsonBody(inputJson2)
+
+
+        val inputJson3 = Json.obj(
+          "tagId" -> tagB.externalId,
+          "newIndex" -> 3
+        )
+        val request3 = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.
+          updateCollectionIndexOrdering().toString).withJsonBody(inputJson3)
+
+        val resultFutures = for {
+          result1 <- { route(request1).get }
+          result2 <- { route(request2).get }
+          result3 <- { route(request3).get }
+
+        } yield {
+          (result1, result2, result3)
+        }
+
+        val result1 = resultFutures.map(_._1)
+        val result2 = resultFutures.map(_._2)
+        val result3 = resultFutures.map(_._3)
+
+
         status(result1) must equalTo(OK);
         contentType(result1) must beSome("application/json");
 
@@ -804,13 +835,6 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
 
-        val inputJson2 = Json.obj(
-          "tagId" -> tagD.externalId,
-          "newIndex" -> 0
-        )
-        val request2 = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.
-          updateCollectionIndexOrdering().toString).withJsonBody(inputJson2)
-        val result2 = route(request2).get
         status(result2) must equalTo(OK);
         contentType(result2) must beSome("application/json");
 
@@ -821,16 +845,8 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
              |"${tagC.externalId}",
              |"${tagA.externalId}"]}
            """.stripMargin)
-
         Json.parse(contentAsString(result2)) must equalTo(expected2)
 
-        val inputJson3 = Json.obj(
-          "tagId" -> tagB.externalId,
-          "newIndex" -> 3
-        )
-        val request3 = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.
-          updateCollectionIndexOrdering().toString).withJsonBody(inputJson3)
-        val result3 = route(request3).get
         status(result3) must equalTo(OK);
         contentType(result3) must beSome("application/json");
 
@@ -841,7 +857,6 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
              |"${tagA.externalId}",
              |"${tagB.externalId}"]}
            """.stripMargin)
-
         Json.parse(contentAsString(result3)) must equalTo(expected3)
       }
     }

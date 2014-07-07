@@ -6,7 +6,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import play.api.libs.json.Json
+import play.api.libs.json.{JsArray, Json}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.heimdal._
@@ -117,19 +117,29 @@ class CollectionCommander @Inject() (
                                 (implicit s: RWSession): Seq[ExternalId[Collection]] = {
     implicit val externalIdFormat = ExternalId.format[Collection]
 
-    val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(uid).map(_.externalId)
-    val orderStr = userValueRepo.getUserValue(uid, CollectionOrderingKey).get.value
-    val orderStrArr = orderStr.substring(1, orderStr.length-1).split(",") //removes '[]'
+    val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(uid).zipWithIndex
+    val orderStr = userValueRepo.getValue(uid, UserValues.tagOrdering)
+    val orderStrArr = Json.parse(orderStr).as[JsArray].value.map(_.toString)
 
-    val idsBuffer = allCollectionIds.sortBy(x => orderStrArr.indexOf(x.toString())).toBuffer
+    val tupleBuffer = allCollectionIds.sortWith { case (first, second) =>
+      val firstIdx = orderStrArr.indexOf(s"${Json.stringify(Json.toJson(first._1.externalId))}")
+      val secondIdx = orderStrArr.indexOf(s"${Json.stringify(Json.toJson(second._1.externalId))}")
+      if (firstIdx != -1 && secondIdx == -1) {
+        true
+      } else if (firstIdx == -1 && secondIdx != -1) {
+        false
+      } else if (firstIdx == -1 && secondIdx == -1) { // both not found
+        first._2 < second._2
+      } else { // both found
+        firstIdx < secondIdx
+      }
+    }.toBuffer
+    val idsBuffer = tupleBuffer.unzip._1.map(_.externalId)
     idsBuffer.remove(idsBuffer.indexOf(tagId))
     idsBuffer.insert(newIndex, tagId)
 
     val newOrdering = idsBuffer.toSeq
-
-    log.info(userValueRepo.getUserValue(uid, CollectionOrderingKey).get.value)
     userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(newOrdering)))
-    log.info(userValueRepo.getUserValue(uid, CollectionOrderingKey).get.value)
 
     newOrdering
   }

@@ -85,6 +85,7 @@ angular.module('kifi.tagService', [
       _.remove(allTags, function (tag) { return tag.id === srcTagId; });
       api.refreshList();
       newSrcTag.id = srcTagId;
+      persistOrdering()
       */
 
       var oldIndex = _.indexOf(allTags, srcTag);
