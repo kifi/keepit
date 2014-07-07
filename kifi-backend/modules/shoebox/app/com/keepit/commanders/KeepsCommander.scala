@@ -134,7 +134,7 @@ class KeepsCommander @Inject() (
     collectionRepo: CollectionRepo,
     userRepo: UserRepo,
     userBookmarkClicksRepo: UserBookmarkClicksRepo,
-    keepClicksRepo: KeepClickRepo,
+    keepDiscoveriesRepo: KeepDiscoveryRepo,
     rekeepRepo: ReKeepRepo,
     kifiHitCache: KifiHitCache,
     keptAnalytics: KeepingAnalytics,
@@ -187,7 +187,7 @@ class KeepsCommander @Inject() (
             case Some(selector) =>
               val keepIds = selector.trim match {
                 case "rekeep" => filter(rekeepRepo.getUriReKeepCountsByKeeper(userId))
-                case _  => filter(keepClicksRepo.getUriClickCountsByKeeper(userId)) // click
+                case _  => filter(keepDiscoveriesRepo.getUriDiscoveryCountsByKeeper(userId)) // click
               }
               val km = keepRepo.bulkGetByUserAndUriIds(userId, keepIds.toSet)
               log.info(s"[getKeeps($beforeOpt,$afterOpt,${helprankOpt.get},$count,$userId)] keeps=$km")
@@ -197,7 +197,7 @@ class KeepsCommander @Inject() (
       }
       val (clkCount, rkCount) = helprankOpt match {
         case None => (Map.empty[Id[Keep], Int], Map.empty[Id[Keep], Int])
-        case Some(s) => (keepClicksRepo.getClickCountsByKeepIds(userId, keeps.map(_.id.get).toSet), rekeepRepo.getReKeepCountsByKeepIds(userId, keeps.map(_.id.get).toSet))
+        case Some(s) => (keepDiscoveriesRepo.getDiscoveryCountsByKeepIds(userId, keeps.map(_.id.get).toSet), rekeepRepo.getReKeepCountsByKeepIds(userId, keeps.map(_.id.get).toSet))
       }
       (keeps, collectionOpt, clkCount, rkCount)
     }
@@ -591,26 +591,26 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def processKifiHit(clicker:Id[User], kifiHit:SanitizedKifiHit):Unit = {
+  def processKifiHit(discoverer:Id[User], kifiHit:SanitizedKifiHit):Unit = {
     db.readWrite { implicit rw =>
       val keepers = kifiHit.context.keepers
-      if (kifiHit.context.isOwnKeep || kifiHit.context.isPrivate || keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(clicker, kifiHit.uriId, true)
+      if (kifiHit.context.isOwnKeep || kifiHit.context.isPrivate || keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(discoverer, kifiHit.uriId, true)
       else {
-        kifiHitCache.get(KifiHitKey(clicker, kifiHit.uriId)) match { // simple throttling
+        kifiHitCache.get(KifiHitKey(discoverer, kifiHit.uriId)) match { // simple throttling
           case Some(hit) =>
-            log.warn(s"[kifiHit($clicker,${kifiHit.uriId})] already recorded kifiHit ($hit) for user within threshold -- skip")
+            log.warn(s"[kifiHit($discoverer,${kifiHit.uriId})] already recorded kifiHit ($hit) for user within threshold -- skip")
           case None =>
-            kifiHitCache.set(KifiHitKey(clicker, kifiHit.uriId), kifiHit)
+            kifiHitCache.set(KifiHitKey(discoverer, kifiHit.uriId), kifiHit)
             keepers.foreach { extId =>
               val keeperId: Id[User] = userRepo.get(extId).id.get
               userBookmarkClicksRepo.increaseCounts(keeperId, kifiHit.uriId, false)
               keepRepo.getByUriAndUser(kifiHit.uriId, keeperId) match {
                 case None =>
-                  log.warn(s"[kifiHit($clicker,${kifiHit.uriId},${keepers.mkString(",")})] keep not found for keeperId=$keeperId")
+                  log.warn(s"[kifiHit($discoverer,${kifiHit.uriId},${keepers.mkString(",")})] keep not found for keeperId=$keeperId")
                   // move on
                 case Some(keep) =>
-                  val saved = keepClicksRepo.save(KeepClick(hitUUID = kifiHit.uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId, origin = Some(kifiHit.origin)))
-                  log.info(s"[kifiHit($clicker, ${kifiHit.uriId}, ${keepers.mkString(",")})] saved $saved")
+                  val saved = keepDiscoveriesRepo.save(KeepDiscovery(hitUUID = kifiHit.uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId, origin = Some(kifiHit.origin)))
+                  log.info(s"[kifiHit($discoverer, ${kifiHit.uriId}, ${keepers.mkString(",")})] saved $saved")
               }
             }
         }

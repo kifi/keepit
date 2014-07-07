@@ -9,13 +9,7 @@ angular.module('kifi.tags', ['util', 'dom', 'kifi.tagService', 'kifi.tagItem'])
       if (name) {
         return tagService.create(name)
           .then(function (tag) {
-            tag.isNew = true;
             $scope.clearFilter();
-
-            $timeout(function () {
-              delete tag.isNew;
-            }, 2600);
-
             return tag;
           });
       }

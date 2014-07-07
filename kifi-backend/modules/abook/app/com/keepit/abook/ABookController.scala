@@ -236,10 +236,8 @@ class ABookController @Inject() (
     val contact = request.body.as[BasicContact]
     log.info(s"[internContact] userId=$userId contact=$contact")
 
-    abookCommander.getOrCreateEContact(userId, contact) match {
-      case Success(c) => Ok(Json.toJson(c))
-      case Failure(t) => BadRequest(t.getMessage)
-    }
+    val eContact = abookCommander.internContact(userId, contact)
+    Ok(Json.toJson(eContact))
   }
 
   // todo(ray): move to commander

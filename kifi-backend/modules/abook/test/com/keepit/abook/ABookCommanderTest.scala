@@ -114,25 +114,26 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         qRes.length === 2
 
         val e2 = BasicContact.fromString("foo@42go.com").get
-        val e2Res = commander.getOrCreateEContact(u42, e2)
-        e2Res.isSuccess === true
-
-        val npeRes = commander.getOrCreateEContact(u42, null)
-        npeRes.isSuccess === false
+        val e2Res = commander.internContact(u42, e2)
+        e2Res.email.address === "foo@42go.com"
+        e2Res.name must beSome("foo bar")
+        e2Res.firstName must beSome("foo")
+        e2Res.lastName must beSome("bar")
 
         val e1 = BasicContact.fromString("foobar@42go.com").get
-        val e1Res = commander.getOrCreateEContact(u42, e1)
-        e1Res.isSuccess === true
+        val e1Res = commander.internContact(u42, e1)
+        e1Res.email.address === "foobar@42go.com"
+        e1Res.name must beNone
 
         val e3 = BasicContact.fromString("Douglas Adams <doug@kifi.com>").get
-        val e3Res = commander.getOrCreateEContact(u42, e3)
-        e3Res.get.email.address === "doug@kifi.com"
-        e3Res.get.name must beSome("Douglas Adams")
+        val e3Res = commander.internContact(u42, e3)
+        e3Res.email.address === "doug@kifi.com"
+        e3Res.name must beSome("Douglas Adams")
 
         val e4 = BasicContact.fromString("Marvin Adams <marvin@kifi.com>").get.copy(name = Some("Smada Nivram"))
-        val e4Res = commander.getOrCreateEContact(u42, e4)
-        e4Res.get.email.address === "marvin@kifi.com"
-        e4Res.get.name must beSome("Smada Nivram")
+        val e4Res = commander.internContact(u42, e4)
+        e4Res.email.address === "marvin@kifi.com"
+        e4Res.name must beSome("Smada Nivram")
       }
     }
 

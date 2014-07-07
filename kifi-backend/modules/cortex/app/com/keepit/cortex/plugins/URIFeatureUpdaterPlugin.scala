@@ -11,22 +11,30 @@ import com.keepit.model.NormalizedURI
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.model.serialize.UriIdAndSeq
 import com.keepit.model.UrlHash
+import com.keepit.common.db.slick.Database
+import com.keepit.cortex.dbmodel.CortexURIRepo
+import com.keepit.cortex.dbmodel.CortexURI
+import com.keepit.model.NormalizedURIStates
 
 @ImplementedBy(classOf[URIPullerImpl])
 trait URIPuller extends DataPuller[NormalizedURI]
 
 @Singleton
 class URIPullerImpl @Inject()(
-  shoebox: ShoeboxServiceClient
+  db: Database,
+  uriRepo: CortexURIRepo
 ) extends URIPuller{
 
   // temp solution for type match.
-  private def convertToNormalizedURI(idAndSeq: UriIdAndSeq): NormalizedURI = {
-    NormalizedURI(id = Some(idAndSeq.id), seq = idAndSeq.seq, url = "", urlHash = UrlHash(""))
+  private def convertToNormalizedURI(uri: CortexURI): NormalizedURI = {
+    NormalizedURI(id = Some(uri.uriId), seq = SequenceNumber[NormalizedURI](uri.seq.value), url = "", urlHash = UrlHash(""))
   }
 
+  // scraped uris only
   def getSince(lowSeq: SequenceNumber[NormalizedURI], limit: Int): Seq[NormalizedURI] = {
-    Await.result(shoebox.getScrapedUriIdAndSeq(lowSeq, limit), 5 seconds).map{convertToNormalizedURI(_)}
+    db.readOnly{ implicit s =>
+      uriRepo.getSince(lowSeq, limit).filter(_.state.value == NormalizedURIStates.SCRAPED.value).map{convertToNormalizedURI(_)}
+    }
   }
 }
 

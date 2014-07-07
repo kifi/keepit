@@ -21,7 +21,7 @@ case class Word2VecDocRepresenter @Inject()(
   private val doc2vec = new Doc2Vec(word2vec.mapper, word2vec.dimension)
 
   override def apply(doc: Document): Option[FloatVecFeature[Document, Word2Vec]] = {
-    doc2vec.sampleBest(doc.tokens, numTry = 6).map{ res =>
+    doc2vec.sampleBest(doc.tokens, numTry = 4).map{ res =>
       FloatVecFeature[Document, Word2Vec](res.vec)
     }
   }

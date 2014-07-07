@@ -131,6 +131,7 @@ trait ScraperServiceClient extends ServiceClient {
   def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]]
   def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]]
   def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int]
+  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int]
 }
 
 case class ScraperCacheProvider @Inject()(
@@ -209,9 +210,28 @@ class ScraperServiceClientImpl @Inject() (
 
     cacheProvider.wordCountCache.get(NormalizedURIWordCountKey(uriId)) match {
       case Some(cnt) => Future.successful(cnt)
-      case None =>
+      case None => {
         val payload = Json.obj("uriId" -> uriId, "url" -> url)
-        call(Scraper.internal.getURISummaryFromEmbedly, payload) map { r => r.json.as[Int] }
+        call(Scraper.internal.getURIWordCount, payload) map { r => r.json.as[Int] }
+      }
+    }
+  }
+
+  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int] = {
+    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
+    log.info(s"Requesting word count from cache for uri $uriId with url $url")
+    cacheProvider.wordCountCache.get(NormalizedURIWordCountKey(uriId)) match {
+      case Some(cnt) => {
+        log.info(s"Found word count $cnt for uri $uriId with url $url")
+        Some(cnt)
+      }
+      case None => {
+        log.info(s"Requesting word count from scraper for uri $uriId with url $url")
+        val payload = Json.obj("uriId" -> uriId, "url" -> url)
+        call(Scraper.internal.getURIWordCount, payload) // Word count will be added to cache
+        None
+      }
     }
   }
 }
@@ -241,4 +261,6 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
   def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = ???
 
   def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int] = ???
+
+  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int] = ???
 }

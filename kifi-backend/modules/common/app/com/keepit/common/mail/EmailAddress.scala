@@ -78,7 +78,7 @@ object SystemEmailAddress {
   }
 }
 
-case class BasicContact(email: EmailAddress, name: Option[String] = None, firstName:Option[String] = None, lastName:Option[String] = None)
+case class BasicContact(email: EmailAddress, name: Option[String] = None, firstName: Option[String] = None, lastName: Option[String] = None)
 
 object BasicContact {
 

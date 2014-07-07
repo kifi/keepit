@@ -19,10 +19,10 @@ import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationExceptio
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.sql.SQLException
 import com.keepit.common.performance._
-import com.keepit.abook.typeahead.EContactABookTypeahead
 import com.keepit.abook.model.EmailAccountRepo
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{BasicContact, EmailAddress}
+import com.keepit.abook.typeahead.EContactABookTypeahead
 
 
 trait ContactsUpdaterPlugin extends Plugin {
@@ -66,10 +66,10 @@ import Logging._
 class ContactsUpdater @Inject() (
   db:Database,
   s3:ABookRawInfoStore,
-  econtactABookTypeahead:EContactABookTypeahead,
   abookInfoRepo:ABookInfoRepo,
   econtactRepo:EContactRepo,
   emailAccountRepo: EmailAccountRepo,
+  typeahead: EContactABookTypeahead,
   airbrake:AirbrakeNotifier,
   abookUploadConf:ABookUploadConf,
   shoeboxClient: ShoeboxServiceClient) extends Logging {
@@ -125,11 +125,11 @@ class ContactsUpdater @Inject() (
           log.infoP(s"abookRawInfo=$abookRawInfo existingEmails=$existingEmails")
 
           abookRawInfo.contacts.value.grouped(abookUploadConf.batchSize).foreach { g =>
-            val econtactsToAddBuilder = mutable.ArrayBuilder.make[EContact]
+            val newContactsBuilder = mutable.ArrayBuilder.make[BasicContact]
             batchNum += 1
             g.foreach { contact =>
-              val fName = (contact \ "firstName").asOpt[String] trimOpt
-              val lName = (contact \ "lastName").asOpt[String] trimOpt
+              val firstName = (contact \ "firstName").asOpt[String] trimOpt
+              val lastName = (contact \ "lastName").asOpt[String] trimOpt
               val emails = (contact \ "emails").asOpt[Seq[JsValue]].getOrElse(Seq.empty[JsValue]).foldLeft(Seq[EmailAddress]()) { case (validEmails, nextValue) =>
                 nextValue.validate[EmailAddress] match {
                   case JsSuccess(validEmail, _) => validEmails :+ validEmail
@@ -143,29 +143,28 @@ class ContactsUpdater @Inject() (
                 if (existingEmails.contains(email)) {
                   log.infoP(s"DUP $email; discarded")
                 } else {
-                  val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, fName, lName)
-                  val e = EContact(userId = userId, email = email, name = nameOpt, firstName = fName, lastName = lName)
+                  val nameOpt = mkName((contact \ "name").asOpt[String] trimOpt, firstName, lastName)
                   existingEmails += email
-                  econtactsToAddBuilder += e
+                  newContactsBuilder += BasicContact(email, name = nameOpt, firstName = firstName, lastName = lastName)
                 }
               }
             }
-            val econtactsToAdd = econtactsToAddBuilder.result
+            val newContacts = newContactsBuilder.result
 
             processed += g.length
             abookEntry = db.readWrite(attempts = 2) { implicit s =>
               try {
-                econtactRepo.insertAll(userId, econtactsToAdd.toSeq)
-                s.onTransactionSuccess { recordContactUserIds(econtactsToAdd.map(_.email)) }
-                log.infoP(s"added batch#${batchNum}(sz=${econtactsToAdd.length}) to econtacts: ${econtactsToAdd.map(_.email).mkString}")
+                econtactRepo.insertAll(userId, newContacts.toSeq)
+                s.onTransactionSuccess { recordContactUserIds(newContacts.map(_.email)) }
+                log.infoP(s"added batch#${batchNum}(sz=${newContacts.length}) to econtacts: ${newContacts.map(_.email).mkString}")
               } catch {
                 case ex:MySQLIntegrityConstraintViolationException => {
-                  log.errorP(s"Caught exception while processing batch(len=${econtactsToAdd.length}): ${econtactsToAdd.mkString(",")}")
+                  log.errorP(s"Caught exception while processing batch(len=${newContacts.length}): ${newContacts.mkString(",")}")
                   log.errorP(s"ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
                   // moving along
                 }
                 case ex:java.sql.BatchUpdateException => {
-                  log.errorP(s"Caught exception while processing batch(len=${econtactsToAdd.length}): ${econtactsToAdd.mkString(",")}")
+                  log.errorP(s"Caught exception while processing batch(len=${newContacts.length}): ${newContacts.mkString(",")}")
                   log.errorP(s"ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
                   // moving along
                 }
@@ -177,21 +176,13 @@ class ContactsUpdater @Inject() (
               abookInfoRepo.save(abookEntry.withNumProcessed(Some(processed))) // status update
             }
           }
-          abookEntry = db.readWrite(attempts = 2) { implicit s => // don't wait for contact table
+          abookEntry = db.readWrite(attempts = 2) { implicit s =>
             val saved = abookInfoRepo.save(abookEntry.withState(ABookInfoStates.ACTIVE))
             log.infoP(s"abook is ACTIVE! saved=$saved")
             saved
           }
-
-          // batch inserts (i.e. insertAll) do not work well with current model; upper layer handle cache invalidation for now
-          SafeFuture {
-            val econtacts = db.readOnly { implicit ro =>
-              econtactRepo.getByUserId(userId) // get all of 'em
-            }
-            econtactRepo.bulkInvalidateCache(userId, econtacts)
-          }
-          econtactABookTypeahead.refresh(userId) // async
         }
+        typeahead.refresh(userId)
       }
     } catch {
       case ex:SQLException => {

@@ -100,6 +100,7 @@ class QueuedScrapeProcessor @Inject() (
   helper: SyncShoeboxDbCallbacks,
   shoeboxClient: ShoeboxServiceClient,
   wordCountCache: NormalizedURIWordCountCache,
+  uriSummaryCache: URISummaryCache,
   embedlyCommander: EmbedlyCommander) extends ScrapeProcessor with Logging with ScraperUtils {
 
   type ScrapingForkJoinTask = ForkJoinTask[Try[Option[Article]]]
@@ -212,7 +213,7 @@ class QueuedScrapeProcessor @Inject() (
     scheduler.scheduleWithFixedDelay(terminator, TERMINATOR_FREQ, TERMINATOR_FREQ, TimeUnit.SECONDS)
   }
 
-  private def worker = new ScrapeWorker(airbrake, config, schedulerConfig, httpFetcher, httpClient, extractorFactory, articleStore, pornDetectorFactory, helper, shoeboxClient, wordCountCache, embedlyCommander)
+  private def worker = new ScrapeWorker(airbrake, config, schedulerConfig, httpFetcher, httpClient, extractorFactory, articleStore, pornDetectorFactory, helper, shoeboxClient, wordCountCache, uriSummaryCache, embedlyCommander)
   def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxy: Option[HttpProxy]): Unit = {
     log.info(s"[QScraper.asyncScrape($fjPool)] uri=$nuri info=$scrapeInfo proxy=$proxy")
     try {

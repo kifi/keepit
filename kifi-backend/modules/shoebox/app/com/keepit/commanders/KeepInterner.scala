@@ -18,7 +18,8 @@ import com.keepit.common.service.FortyTwoServices
 import com.google.inject.{Inject, Singleton}
 import com.keepit.normalizer.{NormalizedURIInterner, NormalizationCandidate}
 import java.util.UUID
-import com.keepit.heimdal.{SanitizedKifiHit, HeimdalContext}
+import com.keepit.heimdal.HeimdalContext
+import com.keepit.search.ArticleSearchResult
 import play.api.libs.json.Json
 import scala.concurrent.Future
 import scala.util.{Try, Success, Failure, Random}
@@ -37,7 +38,7 @@ class KeepInterner @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   airbrake: AirbrakeNotifier,
   kifiHitCache: KifiHitCache,
-  keepClickRepo: KeepClickRepo,
+  keepDiscoveryRepo: KeepDiscoveryRepo,
   rekeepRepo: ReKeepRepo,
   keptAnalytics: KeepingAnalytics,
   keepsAbuseMonitor: KeepsAbuseMonitor,
@@ -127,7 +128,7 @@ class KeepInterner @Inject() (
     implicit val dca = TransactionalCaching.Implicits.directCacheAccess
     kifiHitCache.get(KifiHitKey(userId, keep.uriId)) map { hit =>
       val res = db.readWrite { implicit rw =>
-        keepClickRepo.getClicksByUUID(hit.uuid) collect { case c if rekeepRepo.getReKeep(c.keeperId, c.uriId, userId).isEmpty =>
+        keepDiscoveryRepo.getDiscoveriesByUUID(hit.uuid) collect { case c if rekeepRepo.getReKeep(c.keeperId, c.uriId, userId).isEmpty =>
           val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
           val saved = rekeepRepo.save(rekeep)
           log.info(s"[searchAttribution($userId,${keep.uriId})] rekeep=$saved; click=$c")
@@ -149,11 +150,11 @@ class KeepInterner @Inject() (
               None
             case None =>
               keepRepo.getByUriAndUser(keep.uriId, chatUserId) map { chatUserKeep =>
-                val click = KeepClick(hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging"))
-                val savedClick = keepClickRepo.save(click)
+                val discovery = KeepDiscovery(hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging")) // todo(ray): None for uuid
+                val savedDiscovery = keepDiscoveryRepo.save(discovery)
                 val rekeep = ReKeep(keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = 1)
                 val saved = rekeepRepo.save(rekeep)
-                log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; click=$savedClick")
+                log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; discovery=$savedDiscovery")
                 saved
               }
           }

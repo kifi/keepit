@@ -27,7 +27,7 @@ class AdminAttributionController @Inject()(
   attributionCmdr: AttributionCommander,
   userRepo: UserRepo,
   keepRepo: KeepRepo,
-  keepClickRepo: KeepClickRepo,
+  keepDiscoveryRepo: KeepDiscoveryRepo,
   rekeepRepo: ReKeepRepo,
   uriRepo: NormalizedURIRepo,
   pageInfoRepo: PageInfoRepo,
@@ -37,10 +37,10 @@ class AdminAttributionController @Inject()(
 
   implicit val execCtx = fj
 
-  def keepClicksView(page:Int, size:Int, showImage:Boolean) = AdminHtmlAction.authenticated { request =>
+  def keepDiscoveriesView(page:Int, size:Int, showImage:Boolean) = AdminHtmlAction.authenticated { request =>
     val (t, count) = db.readOnly { implicit ro =>
-      val t = keepClickRepo.page(page, size, Set(KeepClickStates.INACTIVE)).map { c =>
-        val rc = RichKeepClick(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, userRepo.get(c.keeperId), keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
+      val t = keepDiscoveryRepo.page(page, size, Set(KeepDiscoveryStates.INACTIVE)).map { c =>
+        val rc = RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, userRepo.get(c.keeperId), keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
         val pageInfoOpt = pageInfoRepo.getByUri(c.uriId)
         val imgOpt = if (!showImage) None else
           for {
@@ -49,9 +49,9 @@ class AdminAttributionController @Inject()(
           } yield imageInfoRepo.get(imgId)
         (rc, pageInfoOpt, imgOpt)
       }
-      (t, keepClickRepo.count)
+      (t, keepDiscoveryRepo.count)
     }
-    Ok(html.admin.keepClicks(t, showImage, page, count, size))
+    Ok(html.admin.keepDiscoveries(t, showImage, page, count, size))
   }
 
   def rekeepsView(page:Int, size:Int, showImage:Boolean) = AdminHtmlAction.authenticated { request =>
@@ -71,11 +71,11 @@ class AdminAttributionController @Inject()(
     Ok(html.admin.rekeeps(t, showImage, page, count, size))
   }
 
-  private def getKeepInfos(userId:Id[User]):(User, Seq[RichKeepClick], Seq[RichReKeep], Seq[RichReKeep]) = {
+  private def getKeepInfos(userId:Id[User]):(User, Seq[RichKeepDiscovery], Seq[RichReKeep], Seq[RichReKeep]) = {
     db.readOnly { implicit ro =>
       val u = userRepo.get(userId)
-      val rc = keepClickRepo.getClicksByKeeper(userId).take(10) map { c =>
-        RichKeepClick(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, u, keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
+      val rc = keepDiscoveryRepo.getDiscoveriesByKeeper(userId).take(10) map { c =>
+        RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, u, keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
       }
       val rekeeps = rekeepRepo.getAllReKeepsByKeeper(userId).sortBy(_.createdAt)(Ordering[DateTime].reverse).take(10)
       val rk = rekeeps map { k =>
@@ -157,22 +157,22 @@ class AdminAttributionController @Inject()(
     }
   }
 
-  def keepAttribution(degree:Int) = AdminHtmlAction.authenticatedAsync { request =>
+  def topReKeeps(degree:Int) = AdminHtmlAction.authenticatedAsync { request =>
     getTopReKeeps(degree) map { grouped =>
-      Ok(html.admin.keepAttribution(degree, grouped))
+      Ok(html.admin.topReKeeps(degree, grouped))
     }
   }
 
   def updateReKeepStats() = AdminHtmlAction.authenticatedAsync { request =>
     attributionCmdr.updateUserReKeepStatus(request.userId) map { saved =>
-      Ok(s"Updated ${saved.length} bookmarkClick entries for ${request.userId}")
+      Ok(s"Updated ${saved.length} bookmarkDiscovery entries for ${request.userId}")
     }
   }
 
   def updateUserReKeepStats() = AdminHtmlAction.authenticatedParseJsonAsync { request =>
     Json.fromJson[Id[User]](request.body).asOpt map { userId =>
       attributionCmdr.updateUserReKeepStatus(userId) map { saved =>
-        Ok(s"Updated ${saved.length} bookmarkClick entries for ${userId}")
+        Ok(s"Updated ${saved.length} bookmarkDiscovery entries for ${userId}")
       }
     } getOrElse Future.successful(BadRequest(s"Illegal argument"))
   }
@@ -181,14 +181,14 @@ class AdminAttributionController @Inject()(
   def updateUsersReKeepStats() = AdminHtmlAction.authenticatedParseJsonAsync { request =>
     Json.fromJson[Seq[Id[User]]](request.body).asOpt map { userIds =>
       attributionCmdr.updateUsersReKeepStats(userIds) map { saved =>
-        Ok(s"Updated bookmarkClick table for ${saved.length} users")
+        Ok(s"Updated bookmarkDiscovery table for ${saved.length} users")
       }
     } getOrElse Future.successful(BadRequest(s"Illegal argument"))
   }
 
   def updateAllReKeepStats() = AdminHtmlAction.authenticatedAsync { request =>
     attributionCmdr.updateAllReKeepStats() map { saved =>
-      Ok(s"Updated bookmarkClicks table for ${saved.length} users")
+      Ok(s"Updated bookmarkDiscoveries table for ${saved.length} users")
     }
   }
 

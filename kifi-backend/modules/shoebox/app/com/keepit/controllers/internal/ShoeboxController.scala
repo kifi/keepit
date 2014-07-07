@@ -636,20 +636,6 @@ class ShoeboxController @Inject() (
     Ok
   }
 
-  def getVerifiedAddressOwners() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val addresses = (request.body \ "addresses").as[Seq[EmailAddress]]
-    val owners = db.readOnly { implicit session =>
-      for {
-        address <- addresses
-        userId <- verifiedEmailUserIdCache.getOrElseOpt(VerifiedEmailUserIdKey(address)) {
-          emailAddressRepo.getVerifiedOwner(address)
-        }
-      } yield (address -> userId)
-    }
-    val json = Json.toJson(owners.map { case (address, userId) => address.address -> userId }.toMap)
-    Ok(json)
-  }
-
   def getAllURLPatternRules() = Action { request =>
     val patterns = urlPatternRuleRepo.rules.rules
     Ok(Json.toJson(patterns))
