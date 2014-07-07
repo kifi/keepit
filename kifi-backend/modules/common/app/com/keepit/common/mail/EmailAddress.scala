@@ -15,7 +15,7 @@ object EmailAddress {
   implicit val format = new Format[EmailAddress] {
     def reads(json: JsValue) = for {
       address <- json.validate[String]
-      validAddress <- validate(address.trim).map(JsSuccess(_)).recover { case ex: Throwable => JsError(ex.getMessage) }.get
+      validAddress <- validate(address).map(JsSuccess(_)).recover { case ex: Throwable => JsError(ex.getMessage) }.get
     } yield validAddress
 
     def writes(email: EmailAddress) = JsString(email.address)
@@ -38,7 +38,7 @@ object EmailAddress {
 
   private def isValid(address: String): Boolean = emailRegex.findFirstIn(address).isDefined
   private def canonicalize(address: String): EmailAddress = {
-    val (localAt, host) = address.splitAt(address.lastIndexOf('@') + 1)
+    val (localAt, host) = address.trim.splitAt(address.lastIndexOf('@') + 1)
     EmailAddress(localAt + host.toLowerCase)
   }
   def validate(address: String): Try[EmailAddress] = Try { canonicalize(address) }
