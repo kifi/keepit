@@ -60,13 +60,24 @@ angular.module('kifi.tagService', [
       return post;
     }
 
+    /*
     function persistOrdering() {
       $http.post(routeService.tagOrdering, _.pluck(allTags, 'id')).then(function () {
       });
       api.fetchAll();
     }
+    */
+    function persistIndexOrdering(id, newInd) {
+      var payload = {
+        tagId: id,
+        newIndex: newInd
+      };
+      $http.post(routeService.tagIndexOrdering, payload).then(function () {});
+      api.fetchAll();
+    }
 
     function reorderTag(srcTag, index) {
+      /*
       var newSrcTag = _.clone(srcTag);
       var srcTagId = srcTag.id;
       newSrcTag.id = -1;
@@ -74,7 +85,15 @@ angular.module('kifi.tagService', [
       _.remove(allTags, function (tag) { return tag.id === srcTagId; });
       api.refreshList();
       newSrcTag.id = srcTagId;
-      persistOrdering();
+      */
+
+      var oldIndex = _.indexOf(allTags, srcTag);
+      allTags.splice(index, 0, srcTag); // add to array
+      allTags.splice(oldIndex, 1);      // remove from array
+      api.refreshList();
+      var currentIndex = _.indexOf(allTags, srcTag)
+
+      persistIndexOrdering(srcTag.id, currentIndex);
       $analytics.eventTrack('user_clicked_page', {
         'action': 'reorderTag',
         'path': $location.path()

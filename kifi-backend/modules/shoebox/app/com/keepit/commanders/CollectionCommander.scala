@@ -10,7 +10,7 @@ import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.heimdal._
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ListBuffer, ArrayBuffer}
 import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
@@ -111,6 +111,27 @@ class CollectionCommander @Inject() (
     val newCollectionIds = allCollectionIds.sortBy(order.indexOf(_))
     userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(newCollectionIds)))
     newCollectionIds
+  }
+
+  def setCollectionIndexOrdering(uid: Id[User], tagId: ExternalId[Collection], newIndex: Int)
+                                (implicit s: RWSession): Seq[ExternalId[Collection]] = {
+    implicit val externalIdFormat = ExternalId.format[Collection]
+
+    val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(uid).map(_.externalId)
+    val orderStr = userValueRepo.getUserValue(uid, CollectionOrderingKey).get.value
+    val orderStrArr = orderStr.substring(1, orderStr.length-1).split(",") //removes '[]'
+
+    val idsBuffer = allCollectionIds.sortBy(x => orderStrArr.indexOf(x.toString())).toBuffer
+    idsBuffer.remove(idsBuffer.indexOf(tagId))
+    idsBuffer.insert(newIndex, tagId)
+
+    val newOrdering = idsBuffer.toSeq
+
+    log.info(userValueRepo.getUserValue(uid, CollectionOrderingKey).get.value)
+    userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(newOrdering)))
+    log.info(userValueRepo.getUserValue(uid, CollectionOrderingKey).get.value)
+
+    newOrdering
   }
 
   def saveCollection(id: String, userId: Id[User], collectionOpt: Option[BasicCollection])(implicit context: HeimdalContext): Either[BasicCollection, CollectionSaveFail] = {

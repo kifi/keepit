@@ -53,6 +53,7 @@ angular.module('kifi.routeService', [])
       },
       removeKeeps: route('/keeps/remove'),
       tagOrdering: route('/collections/ordering'),
+      tagIndexOrdering: route('/collections/indexOrdering'),
       whoToInvite: route('/friends/wti'),
       blockWtiConnection: route('/friends/wti/block'),
       friends: function (page, pageSize) {
