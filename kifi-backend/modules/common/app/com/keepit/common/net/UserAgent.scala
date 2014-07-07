@@ -17,9 +17,7 @@ case class UserAgent(
   lazy val isMobile: Boolean = UserAgent.MobileOs.contains(operatingSystemFamily) || isKifiIphoneApp
   lazy val isWebsiteEnabled: Boolean = !isMobile || UserAgent.WebsiteEnabled.exists(userAgent.contains(_))
   lazy val isPreviewWebsiteEnabled: Boolean = !isMobile || UserAgent.PreviewWebsiteEnabled.exists(userAgent.contains(_))
-  lazy val isSupportedDesktop: Boolean = {
-    !isMobile && UserAgent.SupportedDesktopBrowsers.contains(name)
-  }
+  lazy val isSupportedDesktop: Boolean = !isMobile && UserAgent.SupportedDesktopBrowsers.contains(name)
   lazy val isOldIE: Boolean = name == "IE" && (try { version.toDouble.toInt } catch { case _:NumberFormatException => Double.MaxValue }) < 10
 }
 
