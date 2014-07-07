@@ -163,7 +163,9 @@ class AuthController @Inject() (
       // All devices for which preview website is enabled can login, however they may not be able to
       // access kifi.com or preview.kifi.com after logging in (redirected to "unsupported" page).
       // Remove this when preview experiment is over.
-      if (!agent.isWebsiteEnabled && !agent.isPreviewWebsiteEnabled) {
+      if (agent.isOldIE) {
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
+      } else if (!agent.isWebsiteEnabled) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else None
     }.flatten.getOrElse(Ok(views.html.auth.authGrey("login")))
