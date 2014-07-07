@@ -130,7 +130,7 @@ class UserAgentTest extends Specification {
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
       agent.isIphone === false
-      agent.screenCanFitWebApp === true
+      agent.screenCanFitWebApp === false // TODO: make true
       agent.isOldIE === false
     }
     "parse browser versions Firefox on Android Tablet" in {
@@ -141,7 +141,7 @@ class UserAgentTest extends Specification {
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
       agent.isIphone === false
-      agent.screenCanFitWebApp === true
+      agent.screenCanFitWebApp === false // TODO: make true
       agent.isOldIE === false
     }
   }
