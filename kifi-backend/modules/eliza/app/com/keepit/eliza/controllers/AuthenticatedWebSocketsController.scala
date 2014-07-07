@@ -233,7 +233,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   }
 
   private def updateNeeded(streamSession: StreamSession, versionOpt: Option[String]): Boolean = {
-    if (UserAgent.fromString(streamSession.userAgent).isSupportedDesktop) {
+    if (UserAgent.fromString(streamSession.userAgent).canRunExtensionIfUpToDate) {
       versionOpt.flatMap(v => Try(KifiExtVersion(v)).toOption).map { ver =>
         val details = kifInstallationStore.get()
         if (ver < details.gold) {

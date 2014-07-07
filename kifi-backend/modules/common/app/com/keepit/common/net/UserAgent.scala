@@ -14,21 +14,19 @@ case class UserAgent(
   version: String) {
   lazy val isKifiIphoneApp: Boolean = typeName == UserAgent.KifiAppTypeName
   lazy val isIphone: Boolean = (operatingSystemFamily == "iOS" && userAgent.contains("CPU iPhone OS")) || isKifiIphoneApp
-  lazy val isMobile: Boolean = UserAgent.MobileOs.contains(operatingSystemFamily) || isKifiIphoneApp
-  lazy val isWebsiteEnabled: Boolean = !isMobile || UserAgent.WebsiteEnabled.exists(userAgent.contains(_))
-  lazy val isPreviewWebsiteEnabled: Boolean = !isMobile || UserAgent.PreviewWebsiteEnabled.exists(userAgent.contains(_))
-  lazy val isSupportedDesktop: Boolean = !isMobile && UserAgent.SupportedDesktopBrowsers.contains(name)
+  lazy val isMobile: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily) || isKifiIphoneApp
+  lazy val screenCanFitWebApp: Boolean = !isMobile // || UserAgent.TabletIndicators.exists(userAgent.contains(_))  // TODO: let people use web app on tablet
+  lazy val canRunExtensionIfUpToDate: Boolean = !isMobile && UserAgent.ExtensionBrowserNames.contains(name)
   lazy val isOldIE: Boolean = name == "IE" && (try { version.toDouble.toInt } catch { case _:NumberFormatException => Double.MaxValue }) < 10
 }
 
 object UserAgent extends Logging {
 
-  val KifiAppTypeName = "kifi app"
+  private val KifiAppTypeName = "kifi app"
 
-  val MobileOs = Set("Android", "iOS", "Bada", "DangerOS", "Firefox OS", "Mac OS", "Palm OS", "BlackBerry OS", "Symbian OS", "webOS")
-  val WebsiteEnabled = Set()
-  val PreviewWebsiteEnabled = Set("iPad", "Tablet")
-  val SupportedDesktopBrowsers = Set("Chrome", "Firefox")
+  private val MobileOses = Set("Android", "iOS", "Bada", "DangerOS", "Firefox OS", "Mac OS", "Palm OS", "BlackBerry OS", "Symbian OS", "webOS")
+  private val TabletIndicators = Set("iPad", "Tablet")
+  private val ExtensionBrowserNames = Set("Chrome", "Firefox")
 
   private val MAX_USER_AGENT_LENGTH = 512
   lazy val parser = UADetectorServiceFactory.getResourceModuleParser()
@@ -52,10 +50,12 @@ object UserAgent extends Logging {
     }
   }
 
-  private def trim(str: String) = if(str.length > MAX_USER_AGENT_LENGTH) {
+  private def trim(str: String) = {
+    if (str.length > MAX_USER_AGENT_LENGTH) {
       log.warn(s"trunking user agent string since its too long: $str")
       str.substring(0, MAX_USER_AGENT_LENGTH - 3) + "..."
     } else {
       str
     }
+  }
 }

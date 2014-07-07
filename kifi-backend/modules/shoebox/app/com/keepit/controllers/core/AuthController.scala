@@ -162,7 +162,7 @@ class AuthController @Inject() (
       log.info(s"trying to log in via $agent. orig string: $agentString")
       if (agent.isOldIE) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
-      } else if (!agent.isWebsiteEnabled) {
+      } else if (!agent.screenCanFitWebApp) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else None
     }.flatten.getOrElse(Ok(views.html.auth.authGrey("login")))
@@ -197,7 +197,7 @@ class AuthController @Inject() (
     }
     if (agentOpt.exists(_.isOldIE)) {
       Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
-    } else if (agentOpt.exists(!_.isWebsiteEnabled)) {
+    } else if (agentOpt.exists(!_.screenCanFitWebApp)) {
       Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding())
     } else {
       (request.userOpt, request.identityOpt) match {
