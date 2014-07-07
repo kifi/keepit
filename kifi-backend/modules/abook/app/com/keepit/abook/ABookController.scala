@@ -141,7 +141,6 @@ class ABookController @Inject() (
     Ok(JsNumber(abookCommander.hideEmailFromUser(userId, email)))
   }
 
-
   def getEContacts(userId:Id[User], maxRows:Int) = Action { request =>
     val res = {
       abookCommander.getEContactsDirect(userId, maxRows)

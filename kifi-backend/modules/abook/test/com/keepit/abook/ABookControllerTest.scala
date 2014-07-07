@@ -1,6 +1,7 @@
 package com.keepit.abook
 
 
+import com.keepit.common.mail.EmailAddress
 import org.specs2.mutable._
 import com.keepit.common.db.slick.Database
 import com.keepit.abook.store.ABookRawInfoStore
@@ -210,6 +211,23 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         econtacts !== null
         econtacts.isEmpty !== true
         econtacts.length  === 3
+      }
+    }
+
+    "support hide email from user" in {
+      running(new ABookApplication(modules:_*)) {
+        val hideEmailRoute = com.keepit.abook.routes.ABookController.hideEmailFromUser(Id[User](1), EmailAddress("tan@kifi.com"))
+        hideEmailRoute.toString === "/internal/abook/1/hideEmailFromUser?email=tan%40kifi.com"
+        //val hideEmailRequest = FakeRequest("POST", hideEmailRoute, FakeHeaders(Seq("Content-Type" -> Seq("application/json"))), body = payload)
+        val controller = inject[ABookController] // setup
+        val result = controller.hideEmailFromUser(Id[User](1), EmailAddress("tan@kifi.com"))(FakeRequest())
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+        var content = contentAsString(result)
+        content !== null
+        val json = Json.parse(content)
+        val updateResult = json.as[Int]
+        updateResult should be >= 0
       }
     }
 

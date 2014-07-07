@@ -19,7 +19,7 @@ import com.keepit.common.healthcheck.{AirbrakeNotifier, FakeAirbrakeModule}
 import com.keepit.typeahead.abook.{EContactTypeaheadStore, EContactTypeahead}
 import com.keepit.abook.typeahead.EContactABookTypeahead
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.common.mail.BasicContact
+import com.keepit.common.mail.{EmailAddress, BasicContact}
 
 class ABookCommanderTest extends Specification with DbTestInjector with ABookTestHelper {
 
@@ -162,6 +162,31 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         gBookRawInfoSeq2.length === 2
       }
     }
+
+    "handle hiding given email from current user" in  {
+      withDb(modules: _*) { implicit injector =>
+        val (commander) = inject[ABookCommander]
+        val (econRepo) = inject[EContactRepo] // setup()
+
+        val e1 = BasicContact.fromString("Douglas Adams <doug@kifi.com>").get
+        val e1Res = commander.getOrCreateEContact(u42, e1)
+        e1Res.isSuccess === true
+
+        val result1 = commander.hideEmailFromUser(u42, e1Res.get.email)
+        result1 > 0
+
+        db.readOnly() {
+          implicit session =>
+            val e2 = econRepo.get(e1Res.get.id.get)
+            e2.state === EContactStates.HIDDEN
+        }
+
+        val result2 = commander.hideEmailFromUser(u42, EmailAddress("nonexist@email.com"))
+        result2 === 0
+
+      }
+    }
+
   }
 }
 

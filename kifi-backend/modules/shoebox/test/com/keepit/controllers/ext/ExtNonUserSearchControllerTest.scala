@@ -32,6 +32,7 @@ class ExtNonUserSearchControllerTest extends Specification {
         )
       ) === Json.obj("email" -> "bill@wattersons.org")
     }
+
   }
 
 }
