@@ -13,9 +13,6 @@ trait HeimdalQueueModule extends ScalaModule {
 
 case class HeimdalQueueProdModule() extends HeimdalQueueModule {
 
-  import scala.collection.JavaConversions._
-  println("\n\t" + (new Exception()).getStackTrace.take(8).mkString("\n\t") + "\n\n")
-
   @Singleton
   @Provides
   def heimdalEventQueue(basicAWSCreds:BasicAWSCredentials): SQSQueue[Seq[HeimdalEvent]] = {
