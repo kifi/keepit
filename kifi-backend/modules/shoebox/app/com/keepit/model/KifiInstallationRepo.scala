@@ -35,6 +35,7 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
       val kifiInstallationPlatform = KifiInstallationPlatform(platform)
       val kifiVersion: KifiVersion = kifiInstallationPlatform match {
         case KifiInstallationPlatform.IPhone => KifiIPhoneVersion(version)
+        case KifiInstallationPlatform.Android => KifiAndroidVersion(version)
         case KifiInstallationPlatform.Extension => KifiExtVersion(version)
       }
       KifiInstallation(id, createdAt, updatedAt, userId, externalId, kifiVersion, userAgent, kifiInstallationPlatform, state)
