@@ -68,7 +68,9 @@ class HomeController @Inject() (
   private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
-      if (!agent.isWebsiteEnabled) {
+      if (agent.isOldIE) {
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
+      } else if (!agent.screenCanFitWebApp) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else None
     }.flatten.getOrElse(Ok(views.html.marketing.about(isLoggedIn)))
@@ -78,7 +80,9 @@ class HomeController @Inject() (
   private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
-      if (!agent.isWebsiteEnabled) {
+      if (agent.isOldIE) {
+        None
+      } else if (!agent.screenCanFitWebApp) {
         Some(true)
       } else {
         Some(false)
@@ -92,7 +96,9 @@ class HomeController @Inject() (
   private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
-      if (!agent.isWebsiteEnabled) {
+      if (agent.isOldIE) {
+        None
+      } else if (!agent.screenCanFitWebApp) {
         Some(true)
       } else {
         Some(false)
@@ -147,7 +153,7 @@ class HomeController @Inject() (
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(routes.HomeController.install())
-    } else if (agentOpt.exists(_.isWebsiteEnabled)) {
+    } else if (agentOpt.exists(_.screenCanFitWebApp)) {
       Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular/index.html").get)) as HTML
     } else {
       Redirect(routes.HomeController.unsupported())
@@ -169,7 +175,7 @@ class HomeController @Inject() (
         UserAgent.fromString(agent)
       }
       temporaryReportLandingLoad()
-      if (agentOpt.exists(!_.isWebsiteEnabled)) {
+      if (agentOpt.exists(!_.screenCanFitWebApp)) {
         val ua = agentOpt.get.userAgent
         val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
         if (isIphone) {
@@ -258,9 +264,9 @@ class HomeController @Inject() (
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
-      if (!agent.isWebsiteEnabled) {
+      if (!agent.screenCanFitWebApp) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
-      } else if (!agent.isSupportedDesktop) {
+      } else if (!agent.canRunExtensionIfUpToDate) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
       } else None
     }.flatten.getOrElse(Ok(views.html.website.install(request.user)))
