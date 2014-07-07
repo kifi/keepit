@@ -102,17 +102,6 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         econtactsSeq.isEmpty === false
         econtactsSeq.length === 4 // distinct
 
-        // todo: remove queryEContacts
-        var qRes = commander.queryEContacts(u42, 10, None, None)
-        qRes.isEmpty !== true
-        qRes.length === 4
-        qRes = commander.queryEContacts(u42, 10, Some("ray"), None)
-        qRes.isEmpty !== true
-        qRes.length === 1
-        qRes = commander.queryEContacts(u42, 10, Some("foo"), None)  // name and email both considered in our current alg
-        qRes.isEmpty !== true
-        qRes.length === 2
-
         val e2 = BasicContact.fromString("foo@42go.com").get
         val e2Res = commander.internContact(u42, e2)
         e2Res.email.address === "foo@42go.com"

@@ -49,7 +49,6 @@ trait ABookServiceClient extends ServiceClient {
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
   def internContact(userId:Id[User], contact: BasicContact):Future[EContact]
-  def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
   def prefixSearch(userId:Id[User], query:String):Future[Seq[EContact]]
   def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
   def refreshPrefixFilter(userId:Id[User]):Future[Unit]
@@ -177,15 +176,6 @@ class ABookServiceClientImpl @Inject() (
   def internContact(userId:Id[User], contact: BasicContact):Future[EContact] = {
     call(ABook.internal.internContact(userId), Json.toJson(contact)).map { r =>
       r.json.as[EContact]
-    }
-  }
-
-  def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = {
-    call(ABook.internal.queryEContacts(userId, limit, search, after)).map { r =>
-      r.status match {
-        case Status.OK => Json.fromJson[Seq[EContact]](r.json).get
-        case _ => throw new IllegalStateException(s"[queryEContacts($userId,$limit,$search,$after)] failed with ${r.status}; body=${r.body}")
-      }
     }
   }
 

@@ -33,7 +33,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
 
   "abook controller" should {
 
-    "support mobile (ios) upload + query" in {
+    "support mobile (ios) upload" in {
       running(new ABookApplication(modules:_*)) {
         val uploadRoute = com.keepit.abook.routes.ABookController.uploadContacts(Id[User](1), ABookOrigins.IOS).url
         uploadRoute === "/internal/abook/ios/uploadContacts?userId=1"
@@ -66,68 +66,8 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
            Thread.sleep(200)
         }
         abookInfo.state === ABookInfoStates.ACTIVE
-
-        // get all
-        var resultQ = controller.queryEContacts(Id[User](1), 10, None, None)(FakeRequest())
-        status(resultQ) must equalTo(OK)
-        contentType(resultQ) must beSome("application/json")
-        var content = contentAsString(resultQ)
-        content !== null
-        var econtacts = Json.fromJson[Seq[EContact]](Json.parse(content)).get
-        println(s"[query-all] result(${econtacts.length}):${econtacts.mkString(",")}")
-        econtacts !== null
-        econtacts.isEmpty !== true
-        econtacts.length  === 4
-
-        // get 0
-        resultQ = controller.queryEContacts(Id[User](1), 10, Some("lolcat"), None)(FakeRequest())
-        status(resultQ) must equalTo(OK)
-        contentType(resultQ) must beSome("application/json")
-        content = contentAsString(resultQ)
-        content !== null
-        econtacts = Json.fromJson[Seq[EContact]](Json.parse(content)).get
-        println(s"[query-0] result(${econtacts.length}):${econtacts.mkString(",")}")
-        econtacts !== null
-        econtacts.isEmpty === true
-        econtacts.length  === 0
-
-        // search
-        resultQ = controller.queryEContacts(Id[User](1), 10, Some("ray"), None)(FakeRequest())
-        status(resultQ) must equalTo(OK)
-        contentType(resultQ) must beSome("application/json")
-        content = contentAsString(resultQ)
-        content !== null
-        econtacts = Json.fromJson[Seq[EContact]](Json.parse(content)).get
-        println(s"[query-search] result(${econtacts.length}):${econtacts.mkString(",")}")
-        econtacts !== null
-        econtacts.isEmpty !== true
-        econtacts.length  === 1
-
-        // limit
-        resultQ = controller.queryEContacts(Id[User](1), 2, Some("42go"), None)(FakeRequest())
-        status(resultQ) must equalTo(OK)
-        contentType(resultQ) must beSome("application/json")
-        content = contentAsString(resultQ)
-        content !== null
-        econtacts = Json.fromJson[Seq[EContact]](Json.parse(content)).get
-        println(s"[query-limit] result(${econtacts.length}):${econtacts.mkString(",")}")
-        econtacts !== null
-        econtacts.isEmpty !== true
-        econtacts.length  === 2
-
-        // after
-        resultQ = controller.queryEContacts(Id[User](1), 10, Some("42go"), Some("email/bar@42go.com"))(FakeRequest())
-        status(resultQ) must equalTo(OK)
-        contentType(resultQ) must beSome("application/json")
-        content = contentAsString(resultQ)
-        content !== null
-        econtacts = Json.fromJson[Seq[EContact]](Json.parse(content)).get
-        println(s"[query-after] result(${econtacts.length}):${econtacts.mkString(",")}")
-        econtacts.isEmpty !== true
-        econtacts.find(_.email.address == "bar@42go.com").isDefined !== true
-        econtacts !== null
-      }
     }
+  }
 
     "support prefixQuery" in {
       running(new ABookApplication(modules:_*)) {
