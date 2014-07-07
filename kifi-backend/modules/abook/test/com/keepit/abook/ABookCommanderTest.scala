@@ -170,15 +170,14 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         val (econRepo) = inject[EContactRepo] // setup()
 
         val e1 = BasicContact.fromString("Douglas Adams <doug@kifi.com>").get
-        val e1Res = commander.getOrCreateEContact(u42, e1)
-        e1Res.isSuccess === true
+        val e1Res = commander.internContact(u42, e1)
 
-        val result1 = commander.hideEmailFromUser(u42, e1Res.get.email)
+        val result1 = commander.hideEmailFromUser(u42, e1Res.email)
         result1 > 0
 
         db.readOnly() {
           implicit session =>
-            val e2 = econRepo.get(e1Res.get.id.get)
+            val e2 = econRepo.get(e1Res.id.get)
             e2.state === EContactStates.HIDDEN
         }
 
