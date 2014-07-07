@@ -113,14 +113,6 @@ class ABookController @Inject() (
     Ok(Json.toJson(abookInfoRepoEntryOpt))
   }
 
-  def getEContactById(contactId:Id[EContact]) = Action { request =>
-    // todo: parse email
-    abookCommander.getEContactByIdDirect(contactId) match {
-      case Some(js) => Ok(js)
-      case _ => Ok(JsNull)
-    }
-  }
-
   def getEContactsByIds() = Action(parse.tolerantJson) { request =>
     val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
     val contactIds = jsArray.value map { x => Id[EContact](x.as[Long]) }
