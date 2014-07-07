@@ -12,7 +12,8 @@ case class UserAgent(
   operatingSystemName: String,
   typeName: String,
   version: String) {
-  lazy val isKifiIphoneApp: Boolean = typeName == UserAgent.KifiAppTypeName
+  lazy val isKifiIphoneApp: Boolean = typeName == UserAgent.KifiIphoneAppTypeName
+  lazy val isKifiAndroidApp: Boolean = typeName == UserAgent.KifiAndroidAppTypeName
   lazy val isIphone: Boolean = (operatingSystemFamily == "iOS" && userAgent.contains("CPU iPhone OS")) || isKifiIphoneApp
   lazy val isMobile: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily) || isKifiIphoneApp
   lazy val screenCanFitWebApp: Boolean = !isMobile // || UserAgent.TabletIndicators.exists(userAgent.contains(_))  // TODO: let people use web app on tablet
@@ -22,7 +23,8 @@ case class UserAgent(
 
 object UserAgent extends Logging {
 
-  private val KifiAppTypeName = "kifi app"
+  val KifiIphoneAppTypeName = "kifi iphone app"
+  val KifiAndroidAppTypeName = "kifi android app"
 
   private val MobileOses = Set("Android", "iOS", "Bada", "DangerOS", "Firefox OS", "Mac OS", "Palm OS", "BlackBerry OS", "Symbian OS", "webOS")
   private val TabletIndicators = Set("iPad", "Tablet")
@@ -36,11 +38,11 @@ object UserAgent extends Logging {
   private def normalizeChrome(str: String): String = if (str == "Chromium") "Chrome" else str
 
   def fromString(userAgent: String): UserAgent = {
+    val agent: SFUserAgent = parser.parse(userAgent)
     userAgent match {
       case iPhonePattern(appName, appVersion, buildSuffix, device, os, osVersion) =>
-        UserAgent(userAgent, appName, os, device, KifiAppTypeName, appVersion)
+        UserAgent(userAgent, appName, os, device, KifiIphoneAppTypeName, appVersion)
       case _ =>
-        val agent: SFUserAgent = parser.parse(userAgent)
         UserAgent(trim(userAgent),
           normalizeChrome(normalize(agent.getName)),
           normalize(agent.getOperatingSystem.getFamilyName),

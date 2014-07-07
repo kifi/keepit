@@ -154,6 +154,7 @@ POST    /m/1/password/forgot                    @com.keepit.controllers.mobile.M
 POST    /m/1/password/change                    @com.keepit.controllers.mobile.MobileUserController.changePassword()
 
 POST    /m/1/iphone/version/register            @com.keepit.controllers.mobile.MobileAuthController.registerIPhoneVersion()
+POST    /m/1/android/version/register           @com.keepit.controllers.mobile.MobileAuthController.registerAndroidVersion()
 
 GET     /m/1/user/connections/all               @com.keepit.controllers.mobile.MobileUserController.queryAll(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= false)
 GET     /m/1/user/connections/social            @com.keepit.controllers.mobile.MobileUserController.querySocial(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= false)
