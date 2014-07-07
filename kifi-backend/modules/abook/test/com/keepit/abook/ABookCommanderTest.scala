@@ -175,8 +175,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         val result1 = commander.hideEmailFromUser(u42, e1Res.email)
         result1 > 0
 
-        db.readOnly() {
-          implicit session =>
+        db.readOnly { implicit session =>
             val e2 = econRepo.get(e1Res.id.get)
             e2.state === EContactStates.HIDDEN
         }

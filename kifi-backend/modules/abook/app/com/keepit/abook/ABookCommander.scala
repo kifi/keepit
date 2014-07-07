@@ -6,7 +6,7 @@ import com.keepit.abook.store.ABookRawInfoStore
 import com.keepit.common.db.Id
 import com.keepit.common.performance._
 import com.keepit.model._
-import play.api.libs.json._
+import play.api.libs.json.{JsObject, JsArray, Json, JsValue}
 import scala.ref.WeakReference
 import com.keepit.common.logging.{LogPrefix, Logging}
 import scala.collection.mutable
