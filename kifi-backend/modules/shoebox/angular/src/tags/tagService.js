@@ -160,6 +160,7 @@ angular.module('kifi.tagService', [
           var tag = res.data;
 
           tag.keeps = tag.keeps || 0;
+          tag.isNew = true;
           tag.lowerName = tag.name.toLowerCase();
           tagsById[tag.id] = tag;
           allTags.unshift(tag);
