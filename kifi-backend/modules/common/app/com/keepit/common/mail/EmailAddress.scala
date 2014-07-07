@@ -15,7 +15,7 @@ object EmailAddress {
   implicit val format = new Format[EmailAddress] {
     def reads(json: JsValue) = for {
       address <- json.validate[String]
-      validAddress <- validate(address).map(JsSuccess(_)).recover { case ex: Throwable => JsError(ex.getMessage) }.get
+      validAddress <- validate(address.trim).map(JsSuccess(_)).recover { case ex: Throwable => JsError(ex.getMessage) }.get
     } yield validAddress
 
     def writes(email: EmailAddress) = JsString(email.address)
