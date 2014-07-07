@@ -22,8 +22,8 @@ trait EContactRepo extends Repo[EContact] {
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getByUserId(userId: Id[User])(implicit session:RSession):Seq[EContact]
   def getEContactCount(userId: Id[User])(implicit session:RSession):Int
-  def insertAll(userId:Id[User], contacts: Seq[BasicContact])(implicit session:RWSession): Unit
-  def internContact(userId:Id[User], contact: BasicContact)(implicit session: RWSession): EContact
+  def insertAll(userId:Id[User], abookId: Id[ABookInfo], contacts: Seq[BasicContact])(implicit session:RWSession): Unit
+  def internContact(userId:Id[User], abookId: Id[ABookInfo], contact: BasicContact)(implicit session: RWSession): EContact
   def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
 
   //used only for full resync
@@ -44,12 +44,13 @@ class EContactRepoImpl @Inject() (
   type RepoImpl = EContactTable
   class EContactTable(tag: Tag) extends RepoTable[EContact](db, tag, "econtact") {
     def userId     = column[Id[User]]("user_id", O.NotNull)
+    def abookId     = column[Id[ABookInfo]]("abook_id", O.Nullable)
     def email      = column[EmailAddress]("email", O.NotNull)
     def name       = column[String]("name", O.Nullable)
     def firstName  = column[String]("first_name", O.Nullable)
     def lastName   = column[String]("last_name", O.Nullable)
     def contactUserId = column[Id[User]]("contact_user_id", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, email, name.?, firstName.?, lastName.?, contactUserId.?, state) <> ((EContact.apply _).tupled, EContact.unapply _)
+    def * = (id.?, createdAt, updatedAt, userId, abookId.?, email, name.?, firstName.?, lastName.?, contactUserId.?, state) <> ((EContact.apply _).tupled, EContact.unapply _)
   }
 
   def table(tag: Tag) = new EContactTable(tag)
@@ -112,14 +113,14 @@ class EContactRepoImpl @Inject() (
     Q.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first
   }
 
-  def insertAll(userId: Id[User], contacts: Seq[BasicContact])(implicit session:RWSession): Unit = timing(s"econtactRepo.insertAll($userId) #contacts=${contacts.length}") {
-    val toBeInserted = contacts.map { contact => EContact(userId = userId, email = contact.email, name = contact.name, firstName = contact.firstName, lastName = contact.lastName) }
+  def insertAll(userId: Id[User], abookId: Id[ABookInfo], contacts: Seq[BasicContact])(implicit session:RWSession): Unit = timing(s"econtactRepo.insertAll($userId) #contacts=${contacts.length}") {
+    val toBeInserted = contacts.map { contact => EContact(userId = userId, abookId = Some(abookId), email = contact.email, name = contact.name, firstName = contact.firstName, lastName = contact.lastName) }
     rows.insertAll(toBeInserted: _*)
   }
 
-  def internContact(userId:Id[User], contact: BasicContact)(implicit session: RWSession): EContact = {
+  def internContact(userId:Id[User], abookId: Id[ABookInfo], contact: BasicContact)(implicit session: RWSession): EContact = {
     getByUserIdAndEmail(userId, contact.email) match {
-      case None => save(EContact(userId = userId, email = contact.email, name = contact.name, firstName = contact.firstName, lastName = contact.lastName))
+      case None => save(EContact(userId = userId, abookId = Some(abookId), email = contact.email, name = contact.name, firstName = contact.firstName, lastName = contact.lastName))
       case Some(existingContact) => existingContact.updateWith(contact) match {
         case modifiedContact if modifiedContact != existingContact => save(modifiedContact)
         case _ => existingContact
