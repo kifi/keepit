@@ -1,11 +1,13 @@
 package com.keepit.scraper.extractor
 
+import com.keepit.common.logging.Logging
 import com.keepit.scraper.ScraperConfig
 import org.apache.tika.metadata.Metadata
 import org.apache.tika.parser.html.BoilerpipeContentHandler
 import org.apache.tika.parser.html.DefaultHtmlMapper
 import org.apache.tika.parser.html.HtmlMapper
-import org.apache.tika.sax.ContentHandlerDecorator
+import org.apache.tika.sax
+import org.apache.tika.sax.{WriteOutContentHandler, ContentHandlerDecorator}
 import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
 import play.api.http.MimeTypes
@@ -16,6 +18,7 @@ object DefaultExtractorProvider extends ExtractorProvider {
   def isDefinedAt(uri: URI) = true
   def apply(uri: URI) = apply(uri.toString)
   def apply(url: String) = new DefaultExtractor(url, ScraperConfig.maxContentChars, htmlMapper)
+  def apply(uri: URI, maxContentChars: Int) = new DefaultExtractor(uri.toString, maxContentChars, htmlMapper)
 
   val htmlMapper = Some(new DefaultHtmlMapper {
     override def mapSafeElement(name: String) = {
@@ -33,7 +36,7 @@ object DefaultExtractor {
 }
 
 class DefaultExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
-  private[this] val handler: DefaultContentHandler = new DefaultContentHandler(output, metadata, url)
+  private[this] val handler: DefaultContentHandler = new DefaultContentHandler(maxContentChars, output, metadata, url)
 
   protected def getContentHandler: ContentHandler = handler
 
@@ -76,7 +79,10 @@ class DefaultExtractor(url: String, maxContentChars: Int, htmlMapper: Option[Htm
   }
 }
 
-class DefaultContentHandler(handler: ContentHandler, metadata: Metadata, uri: String) extends ContentHandlerDecorator(handler) {
+class DefaultContentHandler(maxContentChars: Int, handler: ContentHandler, metadata: Metadata, uri: String) extends ContentHandlerDecorator(handler) with Logging {
+
+  var charsCount = 0
+  var maxContentCharsLimitReached = false
 
   private[this] var keywordValidatorContentHandler: Option[KeywordValidatorContentHandler] = None
 
@@ -157,9 +163,15 @@ class DefaultContentHandler(handler: ContentHandler, metadata: Metadata, uri: St
   }
 
   override def characters(ch: Array[Char], start: Int, length: Int) {
-    //ignore text options (drop down menu, etc.)
-    if (!inOption) {
-      super.characters(ch, start, length)
+    // skip when max reached && ignore text options (drop down menu, etc.)
+    if (!(maxContentCharsLimitReached || inOption)) {
+      if ((charsCount + length) < maxContentChars) {
+        charsCount += length
+        super.characters(ch, start, length)
+      } else {
+        log.warn(s"maxContentCharsLimit($maxContentChars) reached for $uri; skip rest of document.")
+        maxContentCharsLimitReached = true
+      }
     }
   }
 }
