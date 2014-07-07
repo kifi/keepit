@@ -20,6 +20,7 @@ case class EContact(
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   userId:    Id[User],
+  abookId:   Option[Id[ABookInfo]],
   email:     EmailAddress,
   name:      Option[String] = None,
   firstName: Option[String] = None,
@@ -47,6 +48,7 @@ object EContact {
       (__ \ 'createdAt).format[DateTime] and
       (__ \ 'updatedAt).format[DateTime] and
       (__ \ 'userId).format(Id.format[User]) and
+      (__ \ 'abookId).formatNullable(Id.format[ABookInfo]) and
       (__ \ 'email).format[EmailAddress] and
       (__ \ 'name).formatNullable[String] and
       (__ \ 'firstName).formatNullable[String] and
