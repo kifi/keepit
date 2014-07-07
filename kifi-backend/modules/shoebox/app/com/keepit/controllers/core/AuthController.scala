@@ -196,7 +196,7 @@ class AuthController @Inject() (
     val agentOpt = request.headers.get("User-Agent").map { agent =>
       UserAgent.fromString(agent)
     }
-    if (agentOpt.exists(ua => ua.name == "IE" || ua.name == "Safari")) {
+    if (agentOpt.exists(_.isOldIE)) {
       Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
     } else if (agentOpt.exists(!_.isWebsiteEnabled)) {
       Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding())

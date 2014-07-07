@@ -20,6 +20,7 @@ case class UserAgent(
   lazy val isSupportedDesktop: Boolean = {
     !isMobile && UserAgent.SupportedDesktopBrowsers.contains(name)
   }
+  lazy val isOldIE: Boolean = name == "IE" && (try { version.toDouble.toInt } catch { case _:NumberFormatException => Double.MaxValue }) < 10
 }
 
 object UserAgent extends Logging {
