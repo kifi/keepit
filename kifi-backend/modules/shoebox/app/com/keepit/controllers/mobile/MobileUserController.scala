@@ -192,6 +192,12 @@ class MobileUserController @Inject() (
     }
   }
 
+  private val MobilePrefNames = Set("show_delighted_question")
+
+  def getPrefs() = JsonAction.authenticated { request =>
+    userCommander.setLastUserActive(request.userId)
+    Ok(userCommander.getPrefs(MobilePrefNames, request.userId))
+  }
 }
 
 

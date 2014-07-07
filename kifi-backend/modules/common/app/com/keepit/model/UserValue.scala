@@ -65,6 +65,10 @@ object UserValues {
     def parse(valOpt: Option[String]): String = valOpt.getOrElse(default)
   }
 
+  case class UserValueDateTimeHandler(override val name: String, default: DateTime) extends UserValueHandler[DateTime] {
+    def parse(valOpt: Option[String]): DateTime = valOpt.map(parseStandardTime(_)).getOrElse(default)
+  }
+
   val lookHereMode = UserValueBooleanHandler("ext_look_here_mode", true)
   val enterToSend = UserValueBooleanHandler("enter_to_send", true)
   val maxResults = UserValueIntHandler("ext_max_results", 1)
@@ -75,5 +79,9 @@ object UserValues {
   val availableInvites = UserValueIntHandler("availableInvites", 1000)
   val hasSeenInstall = UserValueBooleanHandler("has_seen_install", false)
   val welcomeEmailSent = UserValueBooleanHandler("welcomeEmailSent", false)
+
+  val lastDelightedVote = UserValueDateTimeHandler("last_delighted_vote", START_OF_TIME)
+  val showDelightedQuestion = UserValueBooleanHandler("show_delighted_question", false)
+  val lastActive = UserValueDateTimeHandler("last_active", START_OF_TIME)
 
 }

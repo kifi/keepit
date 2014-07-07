@@ -25,7 +25,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 import java.util.concurrent.atomic.AtomicBoolean
 import com.keepit.eliza.ElizaServiceClient
-import play.api.mvc.Request
+import play.api.mvc.{Request, MaxSizeExceeded}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import play.api.data.Form
@@ -37,7 +37,6 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsBoolean
 import scala.Some
 import play.api.libs.json.JsUndefined
-import play.api.mvc.MaxSizeExceeded
 import play.api.libs.json.JsNumber
 import com.keepit.common.mail.EmailAddress
 import play.api.libs.json.JsObject
@@ -252,34 +251,17 @@ class UserController @Inject() (
     ))
   }
 
-  private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "onboarding_seen")
+  private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "onboarding_seen", "show_delighted_question")
 
   def getPrefs() = JsonAction.authenticated { request =>
-    Ok(db.readOnly { implicit s =>
-      val values = userValueRepo.getValues(request.userId, SitePrefNames.toSeq: _*)
-      JsObject(SitePrefNames.toSeq.map { name =>
-        name -> values(name).map(value => {
-          if (value == "false") JsBoolean(false)
-          else if (value == "true") JsBoolean(true)
-          else if (value == "null") JsNull
-          else JsString(value)
-        }).getOrElse(JsNull)
-      })
-    })
+    userCommander.setLastUserActive(request.userId)
+    Ok(userCommander.getPrefs(SitePrefNames, request.userId))
   }
 
   def savePrefs() = JsonAction.authenticatedParseJson { request =>
     val o = request.request.body.as[JsObject]
     if (o.keys.subsetOf(SitePrefNames)) {
-      db.readWrite(attempts = 3) { implicit s =>
-        o.fields.foreach { case (name, value) =>
-          if (value == JsNull || value.isInstanceOf[JsUndefined]) {
-            userValueRepo.clearValue(request.userId, name)
-          } else {
-            userValueRepo.setValue(request.userId, name, value.as[String])
-          }
-        }
-      }
+      userCommander.savePrefs(SitePrefNames, request.userId, o)
       Ok(o)
     } else {
       BadRequest(Json.obj("error" -> ((SitePrefNames -- o.keys).mkString(", ") + " not recognized")))

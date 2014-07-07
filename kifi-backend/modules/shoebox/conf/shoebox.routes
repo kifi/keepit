@@ -132,6 +132,7 @@ POST    /m/1/collections/create             @com.keepit.controllers.mobile.Mobil
 GET     /m/1/collections/all                @com.keepit.controllers.mobile.MobileBookmarksController.allCollections(sort: String ?= "last_kept")
 GET     /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.currentUser()
 POST    /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.updateCurrentUser()
+GET     /m/1/user/prefs                     @com.keepit.controllers.mobile.MobileUserController.getPrefs()
 GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileBookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileBookmarksController.addTag(id: ExternalId[Collection])
 POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileBookmarksController.removeTag(id: ExternalId[Collection])
