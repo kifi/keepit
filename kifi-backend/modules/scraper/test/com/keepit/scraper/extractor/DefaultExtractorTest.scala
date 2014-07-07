@@ -7,10 +7,13 @@ import com.keepit.common.net.URI
 
 class DefaultExtractorTest extends Specification {
 
-  def setup(url: String, file: String): DefaultExtractor = {
+  def setup(url: String, file: String, maxContentChars:Option[Int] = None): DefaultExtractor = {
     val uri = URI.parse(url).get
     val stream = new FileInputStream("test/com/keepit/scraper/extractor/" + file)
-    val extractor = DefaultExtractorProvider(uri)
+    val extractor = maxContentChars match {
+      case Some(max) => DefaultExtractorProvider(uri, max)
+      case None => DefaultExtractorProvider(uri)
+    }
     extractor.process(new HttpInputStream(stream))
     extractor
   }
@@ -46,6 +49,15 @@ class DefaultExtractorTest extends Specification {
       extractor.getLinks("canonical") === Set("http://www.bbc.co.uk/news/technology-25233230")
       extractor.getLinks("alternate") === Set("http://www.bbc.co.uk/news/technology-25233230", "http://www.bbc.com/news/technology-25233230")
       extractor.getMetadata("og:url") === Some("http://www.bbc.co.uk/news/technology-25233230")
+    }
+
+    "stop when limit reached" in {
+      val extractor = setup("https://cnn.com/url2", "www.cnn.com.health.txt", Some(500))
+      extractor.getCanonicalUrl() === Some("http://www.cnn.com/video/data/2.0/video/us/2014/01/24/newday-live-larson-u-s-olympic-team-uniforms.cnn-ap.html")
+      extractor.getLinks("canonical") === Set("http://www.cnn.com/video/data/2.0/video/us/2014/01/24/newday-live-larson-u-s-olympic-team-uniforms.cnn-ap.html")
+      extractor.getMetadata("og:url") === Some("http://www.cnn.com/video/data/2.0/video/us/2014/01/24/newday-live-larson-u-s-olympic-team-uniforms.cnn-ap.html")
+      extractor.getKeywords() !== None
+      extractor.getKeywords().exists(_.contains("Olympics")) === true
     }
 
   }
