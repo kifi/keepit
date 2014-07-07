@@ -68,7 +68,9 @@ class HomeController @Inject() (
   private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
-      if (!agent.isWebsiteEnabled) {
+      if (agent.isOldIE) {
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
+      } else if (!agent.isWebsiteEnabled) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else None
     }.flatten.getOrElse(Ok(views.html.marketing.about(isLoggedIn)))
@@ -78,7 +80,9 @@ class HomeController @Inject() (
   private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
-      if (!agent.isWebsiteEnabled) {
+      if (agent.isOldIE) {
+        None
+      } else if (!agent.isWebsiteEnabled) {
         Some(true)
       } else {
         Some(false)
@@ -92,7 +96,9 @@ class HomeController @Inject() (
   private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
-      if (!agent.isWebsiteEnabled) {
+      if (agent.isOldIE) {
+        None
+      } else if (!agent.isWebsiteEnabled) {
         Some(true)
       } else {
         Some(false)
