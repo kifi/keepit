@@ -143,7 +143,7 @@ class EContactRepoImpl @Inject() (
       val updatedContacts = for { row <- rows if row.userId === userId && row.email === email } yield row
       updatedContacts.foreach(invalidateCache)
     }
-    (updated > 0)
+    updated > 0
   }
 
   //used only for full resync
