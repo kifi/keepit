@@ -39,7 +39,7 @@ private[store] class ImageDataIntegrityActor @Inject() (
         log.info("Not verifying pictures since we are not storing images in S3")
       } else {
         log.info("Verifying pictures for all users")
-        for (user <- db.readOnly { implicit s =>
+        for (user <- db.readOnlyMaster { implicit s =>
           userRepo.allExcluding(UserStates.BLOCKED, UserStates.INACTIVE)
         }) yield {
           for (((url, response), cloudfrontInfo) <- findPictures(user)) {
@@ -63,7 +63,7 @@ private[store] class ImageDataIntegrityActor @Inject() (
   private def findPictures(user: User): Seq[ImageResponseInfo] = {
     val urls: Seq[(String, String)] =  {
       S3UserPictureConfig.ImageSizes.map { size =>
-        val pics = db.readOnly { implicit session =>
+        val pics = db.readOnlyMaster { implicit session =>
           userPictureRepo.getByUser(user.id.get)
         }
         pics.map { pic =>

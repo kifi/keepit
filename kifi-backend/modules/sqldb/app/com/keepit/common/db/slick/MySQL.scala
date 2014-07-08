@@ -7,7 +7,7 @@ import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
 import com.keepit.common.logging.Logging
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
-class MySQL(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
+class MySQL(val masterDb: SlickDatabase, val replicaDb: Option[SlickDatabase])
     extends DataBaseComponent with Logging {
   println("initiating MySQL driver")
   val Driver = MySQLDriver

@@ -1,6 +1,5 @@
 package com.keepit.commanders
 
-
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -49,7 +48,7 @@ import com.keepit.common.mail.EmailAddress
 import play.api.libs.json.JsObject
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.commanders.emails.EmailOptOutCommander
-import com.keepit.common.db.slick.Database.Slave
+import com.keepit.common.db.slick.Database.Replica
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
 object BasicSocialUser {
@@ -142,7 +141,7 @@ class UserCommander @Inject() (
 
 
   def getConnectionsPage(userId: Id[User], page: Int, pageSize: Int): (Seq[ConnectionInfo], Int) = {
-    val infos = db.readOnly { implicit s =>
+    val infos = db.readOnlyMaster { implicit s =>
       val searchFriends = searchFriendRepo.getSearchFriends(userId)
       val connectionIds = userConnectionRepo.getConnectedUsers(userId)
       val unfriendedIds = userConnectionRepo.getUnfriendedUsers(userId)
@@ -155,7 +154,7 @@ class UserCommander @Inject() (
   }
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
-    val basicUsers = db.readOnly { implicit s =>
+    val basicUsers = db.readOnlyMaster { implicit s =>
       if (canMessageAllUsers(user.id.get)) {
         userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
           .collect { case u if u.id.get != user.id.get => BasicUser.fromUser(u) }.toSet
@@ -188,7 +187,7 @@ class UserCommander @Inject() (
     userExperimentCommander.userHasExperiment(userId, ExperimentType.CAN_MESSAGE_ALL_USERS)
   }
 
-  def socialNetworkInfo(userId: Id[User]) = db.readOnly { implicit s =>
+  def socialNetworkInfo(userId: Id[User]) = db.readOnlyMaster { implicit s =>
     socialUserInfoRepo.getByUser(userId).map(BasicSocialUser.from)
   }
 
@@ -199,7 +198,7 @@ class UserCommander @Inject() (
   }
 
   def getUserInfo(user: User): BasicUserInfo = {
-    val (basicUser, description, emails, pendingPrimary, notAuthed) = db.readOnly { implicit session =>
+    val (basicUser, description, emails, pendingPrimary, notAuthed) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
       val description =  userValueRepo.getValueStringOpt(user.id.get, "user_description")
       val emails = emailRepo.getAllByUser(user.id.get)
@@ -222,11 +221,11 @@ class UserCommander @Inject() (
 
   def getHelpCounts(user: Id[User]): (Int, Int) = {
     //unique keeps, total clicks
-    db.readOnly { implicit session => bookmarkClicksRepo.getClickCounts(user) }
+    db.readOnlyMaster { implicit session => bookmarkClicksRepo.getClickCounts(user) }
   }
 
   def getKeepAttributionCounts(userId: Id[User]): (Int, Int, Int) = { // (discoveryCount, rekeepCount, rekeepTotalCount)
-    db.readOnly(dbMasterSlave = Slave) { implicit ro =>
+    db.readOnlyReplica { implicit ro =>
       val discoveryCount = keepClickRepo.getDiscoveryCountByKeeper(userId)
       val (rekeepCount, rekeepTotalCount) = bookmarkClicksRepo.getReKeepCounts(userId)
       (discoveryCount, rekeepCount, rekeepTotalCount)
@@ -234,7 +233,7 @@ class UserCommander @Inject() (
   }
 
   def getUserSegment(userId: Id[User]): UserSegment = {
-    val (numBms, numFriends) = db.readOnly{ implicit s => //using cache
+    val (numBms, numFriends) = db.readOnlyMaster{ implicit s => //using cache
       (keepRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
     }
 
@@ -258,9 +257,9 @@ class UserCommander @Inject() (
 
   def tellAllFriendsAboutNewUserImmediate(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = synchronized {
     val guardKey = "friendsNotifiedAboutJoining"
-    if (!db.readOnly{ implicit session => userValueRepo.getValueStringOpt(newUserId, guardKey).exists(_=="true") }) {
+    if (!db.readOnlyMaster{ implicit session => userValueRepo.getValueStringOpt(newUserId, guardKey).exists(_=="true") }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, true) }
-      val (newUser, toNotify, id2Email) = db.readOnly { implicit session =>
+      val (newUser, toNotify, id2Email) = db.readOnlyMaster { implicit session =>
         val newUser = userRepo.get(newUserId)
         val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
         val id2Email = toNotify.map { userId =>
@@ -307,7 +306,7 @@ class UserCommander @Inject() (
 
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None): Unit = {
     val olderUser : Boolean = newUser.createdAt.isBefore(currentDateTime.minus(24*3600*1000)) //users older than 24h get the long form welcome email
-    if (!db.readOnly{ implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
+    if (!db.readOnlyMaster{ implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, UserValues.welcomeEmailSent.name, true) }
 
       if (withVerification) {
@@ -367,7 +366,7 @@ class UserCommander @Inject() (
   }
 
   def doChangePassword(userId:Id[User], oldPassword:String, newPassword:String):Try[Identity] = Try {
-    val resOpt = db.readOnly { implicit session =>
+    val resOpt = db.readOnlyMaster { implicit session =>
       socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO)
     } map { sui =>
       val hasher = Registry.hashers.currentHasher
@@ -387,7 +386,7 @@ class UserCommander @Inject() (
   def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
     @inline def mkId(email: EmailAddress) = s"email/${email.address}"
     @inline def getEInviteStatus(contactEmail: EmailAddress): String = { // todo: batch
-      db.readOnly { implicit s =>
+      db.readOnlyMaster { implicit s =>
         invitationRepo.getBySenderIdAndRecipientEmailAddress(userId, contactEmail) map { inv =>
           if (inv.state != InvitationStates.INACTIVE) "invited" else ""
         }
@@ -446,7 +445,7 @@ class UserCommander @Inject() (
       }
     }
 
-    val connections = db.readOnly { implicit s =>
+    val connections = db.readOnlyMaster { implicit s =>
       val infos = socialConnectionRepo.getSocialConnectionInfosByUser(userId).filterKeys(networkType => network.forall(_ == networkType.name))
       val filteredConnections = infos.values.map(getFilteredConnections).flatten.toSeq.sorted.map(_.info)
 
@@ -599,12 +598,12 @@ class UserCommander @Inject() (
   }
 
   def unfriend(userId:Id[User], id:ExternalId[User]):Boolean = {
-    db.readOnly(attempts = 2) { implicit ro => userRepo.getOpt(id) } exists { user =>
+    db.readOnlyMaster(attempts = 2) { implicit ro => userRepo.getOpt(id) } exists { user =>
       val success = db.readWrite(attempts = 2) { implicit s =>
         userConnectionRepo.unfriendConnections(userId, user.id.toSet) > 0
       }
       if (success) {
-        db.readOnly{ implicit session =>
+        db.readOnlyMaster{ implicit session =>
           elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
           elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
         }
@@ -630,20 +629,20 @@ class UserCommander @Inject() (
   }
 
   def incomingFriendRequests(userId:Id[User]):Seq[BasicUser] = {
-    db.readOnly(attempts = 2) { implicit ro =>
+    db.readOnlyMaster(attempts = 2) { implicit ro =>
       friendRequestRepo.getByRecipient(userId) map { fr => basicUserRepo.load(fr.senderId) }
     }
   }
 
   def outgoingFriendRequests(userId:Id[User]):Seq[BasicUser] = {
-    db.readOnly(attempts = 2) { implicit ro =>
+    db.readOnlyMaster(attempts = 2) { implicit ro =>
       friendRequestRepo.getBySender(userId) map { fr => basicUserRepo.load(fr.recipientId) }
     }
   }
 
   def disconnect(userId:Id[User], networkString: String):(Option[SocialUserInfo], String) = {
     val network = SocialNetworkType(networkString)
-    val (thisNetwork, otherNetworks) = db.readOnly { implicit s =>
+    val (thisNetwork, otherNetworks) = db.readOnlyMaster { implicit s =>
       userCache.remove(SocialUserInfoUserKey(userId))
       socialUserInfoRepo.getByUser(userId).partition(_.networkType == network)
     }
@@ -772,11 +771,58 @@ class UserCommander @Inject() (
   }
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
-    val user = db.readOnly { implicit session => userRepo.get(userId) }
+    val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
     implicit val txn = TransactionalCaching.Implicits.directCacheAccess
     userImageUrlCache.getOrElseFuture(UserImageUrlCacheKey(userId, width)) {
       s3ImageStore.getPictureUrl(Some(width), user, user.pictureName.getOrElse("0"))
     }
+  }
+
+  def getPrefs(prefSet: Set[String], userId: Id[User]): JsObject = {
+    db.readOnlyMaster { implicit s =>
+      val values = userValueRepo.getValues(userId, prefSet.toSeq: _*)
+      JsObject(prefSet.toSeq.map { name =>
+        name -> values(name).map(value => {
+          if (value == "false") JsBoolean(false)
+          else if (value == "true") JsBoolean(true)
+          else if (value == "null") JsNull
+          else JsString(value)
+        }).getOrElse(JsNull)
+      })
+    }
+  }
+
+  def savePrefs(prefSet: Set[String], userId: Id[User], o: JsObject) = {
+    db.readWrite(attempts = 3) { implicit s =>
+      o.fields.foreach { case (name, value) =>
+        if (value == JsNull || value.isInstanceOf[JsUndefined]) {
+          userValueRepo.clearValue(userId, name)
+        } else {
+          userValueRepo.setValue(userId, name, value.as[String])
+        }
+      }
+    }
+  }
+
+  val DELIGHTED_MIN_INTERVAL = 30 // days
+  val DELIGHTED_INITIAL_DELAY = 7 // days
+
+  def setLastUserActive(userId: Id[User]): Future[Unit] = {
+    val time = clock.now
+    val userCreationDate = db.readWrite { implicit s =>
+      userValueRepo.setValue(userId, "last_active", time)
+      userRepo.get(userId).createdAt
+    }
+
+    // Check if user should be shown Delighted question
+    if (time.minusDays(DELIGHTED_INITIAL_DELAY) > userCreationDate) {
+      heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
+        val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
+        if (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate) {
+          db.readWrite { implicit s => userValueRepo.setValue(userId, "show_delighted_question", true) }
+        }
+      }
+    } else Future.successful()
   }
 }
 

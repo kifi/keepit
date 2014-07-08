@@ -177,7 +177,7 @@ class KeepsCommander @Inject() (
       if (count > 0) after.take(count) else after
     }
 
-    db.readOnly { implicit ro =>
+    db.readOnlyMaster { implicit ro =>
       val collectionOpt = (collectionId map { id => collectionRepo.getByUserAndExternalId(userId, id)}).flatten
       val keeps = collectionOpt match {
         case Some(collection) =>
@@ -221,7 +221,7 @@ class KeepsCommander @Inject() (
       if (withPageInfo) getKeepSummary(keep).map(Some(_)) else Future.successful(None)
     })
 
-    val colls = db.readOnly { implicit s =>
+    val colls = db.readOnlyMaster { implicit s =>
       keeps.map{ keep =>
         keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
       }
@@ -231,7 +231,7 @@ class KeepsCommander @Inject() (
       sharingInfos <- sharingInfosFuture
       pageInfos <- pageInfosFuture
     } yield {
-      val idToBasicUser = db.readOnly { implicit s =>
+      val idToBasicUser = db.readOnlyMaster { implicit s =>
         basicUserRepo.loadAll(sharingInfos.flatMap(_.sharingUserIds).toSet)
       }
       val keepsInfo = (keeps zip colls, sharingInfos, pageInfos).zipped.map { case ((keep, colls), sharingInfos, pageInfos) =>
@@ -247,14 +247,14 @@ class KeepsCommander @Inject() (
    * Waiting is enabled for URISummary fetching
    */
   def getFullKeepInfo(keepId: ExternalId[Keep], userId: Id[User], withPageInfo: Boolean): Option[Future[FullKeepInfo]] = {
-    db.readOnly { implicit s => keepRepo.getOpt(keepId) } filter { _.isActive } map { keep =>
+    db.readOnlyMaster { implicit s => keepRepo.getOpt(keepId) } filter { _.isActive } map { keep =>
       val sharingInfoFuture = searchClient.sharingUserInfo(userId, keep.uriId)
       val pageInfoFuture = if (withPageInfo) getKeepSummary(keep, true).map(Some(_)) else Future.successful(None)
       for {
         sharingInfo <- sharingInfoFuture
         pageInfo <- pageInfoFuture
       } yield {
-        val (idToBasicUser, colls) = db.readOnly { implicit s =>
+        val (idToBasicUser, colls) = db.readOnlyMaster { implicit s =>
           val idToBasicUser = basicUserRepo.loadAll(sharingInfo.sharingUserIds)
           val collIds: Seq[Id[Collection]] = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
           val colls : Seq[BasicCollection] = collectionCommander.getBasicCollections(collIds)
@@ -268,7 +268,7 @@ class KeepsCommander @Inject() (
 
   def getKeepsInBulkSelection(selection: BulkKeepSelection, userId: Id[User]): Seq[Keep] = {
     val MAX_KEEPS_IN_COLLECTION = 1000
-    val (collectionKeeps, individualKeeps) = db.readOnly { implicit s =>
+    val (collectionKeeps, individualKeeps) = db.readOnlyMaster { implicit s =>
       val collectionKeeps = selection.tag flatMap { tagExtId =>
         val tagIdOpt = collectionRepo.getByUserAndExternalId(userId, tagExtId).flatMap(_.id)
         tagIdOpt map { tagId =>
@@ -317,7 +317,7 @@ class KeepsCommander @Inject() (
     val keeps = newKeeps ++ existingKeeps
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
     val addedToCollection = collection flatMap {
-      case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
+      case Left(collectionId) => db.readOnlyMaster { implicit s => collectionRepo.getOpt(collectionId) }
       case Right(name) => Some(getOrCreateTag(userId, name))
     } map { coll =>
       addToCollection(coll.id.get, keeps).size
@@ -440,7 +440,7 @@ class KeepsCommander @Inject() (
 
   def editKeepTagBulk(collectionId: ExternalId[Collection], selection: BulkKeepSelection, userId: Id[User], isAdd: Boolean)
                     (implicit context: HeimdalContext): Int = {
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndExternalId(userId, collectionId) map { collection =>
         val keeps = getKeepsInBulkSelection(selection, userId)
         (keeps, collection)
@@ -504,7 +504,7 @@ class KeepsCommander @Inject() (
 
   def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection = {
     val normalizedName = name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength)
-    val collection = db.readOnly { implicit s =>
+    val collection = db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndName(userId, normalizedName, excludeState = None)
     }
     collection match {
@@ -544,7 +544,7 @@ class KeepsCommander @Inject() (
   }
 
   def tagsByUrl(url: String, userId: Id[User]): Seq[Collection] = {
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       for {
         uri <- normalizedURIInterner.getByUri(url).toSeq
         keep <- keepRepo.getByUriAndUser(uri.id.get, userId).toSeq

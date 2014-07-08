@@ -82,13 +82,13 @@ class UrlController @Inject() (
   }
 
   def documentIntegrity(page: Int = 0, size: Int = 50) = AdminHtmlAction.authenticated { implicit request =>
-    val dupes = db.readOnly { implicit conn =>
+    val dupes = db.readOnlyMaster { implicit conn =>
       duplicateDocumentRepo.getActive(page, size)
     }
 
     val groupedDupes = dupes.groupBy { case d => d.uri1Id }.toSeq.sortWith((a,b) => a._1.id < b._1.id)
 
-    val loadedDupes = db.readOnly { implicit session =>
+    val loadedDupes = db.readOnlyMaster { implicit session =>
       groupedDupes map  { d =>
         val dupeRecords = d._2.map { sd =>
           DisplayedDuplicate(sd.id.get, sd.uri2Id, uriRepo.get(sd.uri2Id).url, sd.percentMatch)
@@ -124,7 +124,7 @@ class UrlController @Inject() (
   def normalizationView(page: Int = 0) = AdminHtmlAction.authenticated { request =>
     implicit val playRequest = request.request
     val PAGE_SIZE = 50
-    val (pendingCount, appliedCount, applied) = db.readOnly{ implicit s =>
+    val (pendingCount, appliedCount, applied) = db.readOnlyMaster{ implicit s =>
       val activeCount = changedUriRepo.countState(ChangedURIStates.ACTIVE)
       val appliedCount = changedUriRepo.countState(ChangedURIStates.APPLIED)
       val applied = changedUriRepo.page(page, PAGE_SIZE).map{ change =>
@@ -171,7 +171,7 @@ class UrlController @Inject() (
 
     if (mode == "preview") {
 
-      val urls = db.readOnly { implicit s =>
+      val urls = db.readOnlyMaster { implicit s =>
         if (regex.isDomainRegex) urlRepo.getByDomainRegex(regex.domainRegex.get)
         else if (regex.isUrlRegex) urlRepo.getByURLRegex(regex.urlRegex.get)
         else Seq()
@@ -193,9 +193,9 @@ class UrlController @Inject() (
 
   def renormalizationView(page: Int = 0) = AdminHtmlAction.authenticated { request =>
     val PAGE_SIZE = 200
-    val (renorms, totalCount) = db.readOnly{ implicit s => (renormRepo.pageView(page, PAGE_SIZE), renormRepo.activeCount())}
+    val (renorms, totalCount) = db.readOnlyMaster{ implicit s => (renormRepo.pageView(page, PAGE_SIZE), renormRepo.activeCount())}
     val pageCount = (totalCount*1.0 / PAGE_SIZE).ceil.toInt
-    val info = db.readOnly{ implicit s =>
+    val info = db.readOnlyMaster{ implicit s =>
       renorms.map{ renorm => (
         renorm.state.toString,
         urlRepo.get(renorm.urlId).url,
@@ -221,7 +221,7 @@ class UrlController @Inject() (
       case None => Future.successful(Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"A normalization candidate could not be constructed for $candidateUrl."))
       case Some(candidate) =>
         val referenceUrl = body("referenceUrl")
-        db.readOnly { implicit session => normalizedURIInterner.getByUri(referenceUrl) } match {
+        db.readOnlyMaster { implicit session => normalizedURIInterner.getByUri(referenceUrl) } match {
           case None => Future.successful(Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"$referenceUrl could not be found."))
           case Some(oldUri) =>
             val correctedNormalization = body.get("correctNormalization").flatMap {
@@ -240,7 +240,7 @@ class UrlController @Inject() (
   }
 
   def getPatterns = AdminHtmlAction.authenticated { implicit request =>
-    val (patterns, proxies) = db.readOnly { implicit session =>
+    val (patterns, proxies) = db.readOnlyMaster { implicit session =>
       (urlPatternRuleRepo.all.sortBy(_.id.get.id), httpProxyRepo.all())
     }
     Ok(html.admin.urlPatternRules(patterns, proxies))
@@ -297,7 +297,7 @@ class UrlController @Inject() (
   }
 
   def fixRedirectedUriStates(doIt: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
-    val problematicUris = db.readOnly { implicit session => uriRepo.toBeRemigrated() }
+    val problematicUris = db.readOnlyMaster { implicit session => uriRepo.toBeRemigrated() }
     if (doIt) db.readWrite { implicit session =>
       problematicUris.foreach { uri =>
         changedUriRepo.save(ChangedURI(oldUriId = uri.id.get, newUriId = uri.redirect.get))

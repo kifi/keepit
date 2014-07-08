@@ -17,7 +17,7 @@ DomainTest extends Specification with ShoeboxTestInjector {
         val d2 = Domain(hostname = "facebook.com", autoSensitive = Some(false))
         val d3 = Domain(hostname = "yahoo.com", autoSensitive = Some(false))
 
-        inject[Database].readOnly { implicit c =>
+        inject[Database].readOnlyMaster { implicit c =>
           domainRepo.get("google.com") === None
           domainRepo.get("facebook.com") === None
           domainRepo.get("yahoo.com") === None
@@ -25,7 +25,7 @@ DomainTest extends Specification with ShoeboxTestInjector {
         val Seq(sd1, sd2, sd3) = inject[Database].readWrite { implicit c =>
           Seq(d1, d2, d3).map(domainRepo.save(_))
         }
-        inject[Database].readOnly { implicit c =>
+        inject[Database].readOnlyMaster { implicit c =>
           domainRepo.get("google.com").get === sd1
           domainRepo.get("facebook.com").get === sd2
           domainRepo.get("yahoo.com").get === sd3

@@ -1,8 +1,11 @@
 package com.keepit.commanders
 
+import com.keepit.common.controller.{FakeActionAuthenticatorModule, FakeActionAuthenticator, ActionAuthenticator}
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.time._
+import com.keepit.controllers.website.KeepsController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
@@ -10,8 +13,11 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import com.keepit.shoebox.FakeKeepImportsModule
+import com.keepit.shoebox.{FakeShoeboxServiceModule, FakeKeepImportsModule}
 import com.keepit.common.store.ShoeboxFakeStoreModule
+import play.api.libs.json.{JsArray, JsString, Json}
+import play.api.test.FakeRequest
+import play.api.test.Helpers._
 
 class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
@@ -20,7 +26,10 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
                 FakeExternalServiceModule() ::
                 FakeSearchServiceClientModule() ::
                 FakeCortexServiceClientModule() ::
-                FakeScrapeSchedulerModule() :: Nil
+                FakeScrapeSchedulerModule() ::
+                FakeShoeboxServiceModule() ::
+                FakeActionAuthenticatorModule() ::
+                Nil
 
   "KeepsCommander" should {
     "export keeps" in {
@@ -60,7 +69,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = col1.id.get))
         }
 
-        val keepExports = db.readOnly { implicit s => keepRepo.getKeepExports(Id[User](1)) }
+        val keepExports = db.readOnlyMaster { implicit s => keepRepo.getKeepExports(Id[User](1)) }
         keepExports.length === 3
         keepExports(0) === KeepExport(title = Some("k3"), createdAt = t1.plusMinutes(6), url = site3)
         keepExports(1) === KeepExport(title = Some("k2"), createdAt = t1.plusMinutes(9), url = site2)

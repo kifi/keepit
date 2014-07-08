@@ -53,7 +53,7 @@ class HomeController @Inject() (
   extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
-    db.readOnly { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
+    db.readOnlyMaster { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
   }
 
   private def setHasSeenInstall()(implicit request: AuthenticatedRequest[_]): Unit = {
@@ -225,7 +225,7 @@ class HomeController @Inject() (
   def pendingHome()(implicit request: AuthenticatedRequest[_]) = {
     val user = request.user
 
-    val (email, friendsOnKifi) = db.readOnly { implicit session =>
+    val (email, friendsOnKifi) = db.readOnlyMaster { implicit session =>
       val email = emailRepo.getAllByUser(user.id.get).sortBy(a => a.id.get.id).lastOption.map(_.address)
       val friendsOnKifi = userConnectionRepo.getConnectedUsers(user.id.get).map { u =>
         val user = userRepo.get(u)

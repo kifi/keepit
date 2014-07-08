@@ -215,7 +215,7 @@ private[classify] class DomainTagImportActor @Inject() (
       log.info("'%s': getting associated domains".format(tagName.name))
       val toSave = new mutable.ArrayBuffer[Domain]
       domainNames.grouped(GROUP_SIZE).foreach { batch =>
-        val domains = db.readOnly { implicit s => domainRepo.getAllByName(batch) }
+        val domains = db.readOnlyMaster { implicit s => domainRepo.getAllByName(batch) }
         domainIdsToAdd ++= domains.map(_.id.get)
         toSave ++= (batch.toSet -- domains.map(_.hostname)).map(h => Domain(hostname = h))
       }
@@ -232,14 +232,14 @@ private[classify] class DomainTagImportActor @Inject() (
 
     def findRelationshipsToUpdate() {
       log.info("'%s': getting associated domain tag relationships".format(tagName.name))
-      val domainTagRels = db.readOnly { implicit s =>
+      val domainTagRels = db.readOnlyMaster { implicit s =>
         domainToTagRepo.getByTag(tagId, excludeState = None)
       }
       val toActivate = new mutable.ArrayBuffer[Id[DomainToTag]]
       val toDeactivate = new mutable.ArrayBuffer[Id[DomainToTag]]
       log.info("'%s': finding changed domain tag relationships".format(tagName.name))
       domainTagRels.grouped(GROUP_SIZE).foreach { batch =>
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           batch.foreach { dtt =>
             val shouldBeActive = domainIdsToAdd.contains(dtt.domainId)
             // this already exists in the db; just update it instead of adding it

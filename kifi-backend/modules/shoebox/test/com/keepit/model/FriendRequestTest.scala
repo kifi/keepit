@@ -18,7 +18,7 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
           friendRequestRepo.save(FriendRequest(senderId = users(0), recipientId = users(1), messageHandle = None)),
           friendRequestRepo.save(FriendRequest(senderId = users(0), recipientId = users(2), messageHandle = None))
         )}
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           friendRequestRepo.getBySender(users(0)).map(_.recipientId) must haveTheSameElementsAs(Seq(users(1), users(2)))
           friendRequestRepo.getByRecipient(users(1)).map(_.senderId) must haveTheSameElementsAs(Seq(users(0)))
           friendRequestRepo.getByRecipient(users(2)).map(_.senderId) must haveTheSameElementsAs(Seq(users(0)))
@@ -27,7 +27,7 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           friendRequestRepo.save(fr1.copy(state = FriendRequestStates.ACCEPTED))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           friendRequestRepo.getBySender(users(0)).map(_.recipientId) must haveTheSameElementsAs(Seq(users(2)))
           friendRequestRepo.getByRecipient(users(1)) must beEmpty
           friendRequestRepo.getCountByRecipient(users(2)) must_== 1
@@ -37,7 +37,7 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           friendRequestRepo.save(fr2.copy(state = FriendRequestStates.IGNORED))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           friendRequestRepo.getBySender(users(0)) must beEmpty
           friendRequestRepo.getBySender(users(0), states = Set(FriendRequestStates.ACCEPTED,
             FriendRequestStates.IGNORED)).map(_.recipientId) must haveTheSameElementsAs(Seq(users(1), users(2)))
@@ -60,7 +60,7 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
           friendRequestRepo.save(FriendRequest(senderId = users(0), recipientId = users(2), messageHandle = Some(Id[MessageHandle](22))))
         )}
         eliza.unsentNotificationIds.size === 0
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           friendRequestRepo.get(fr1.id.get).messageHandle.get.id === 1
           friendRequestRepo.get(fr2.id.get).messageHandle.get.id === 22
         }

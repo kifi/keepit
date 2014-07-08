@@ -26,7 +26,7 @@ class CortexURITest extends Specification with CortexTestInjector{
          )
         }
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.getMaxSeq.value === 0L
         }
 
@@ -34,7 +34,7 @@ class CortexURITest extends Specification with CortexTestInjector{
           uris.foreach{ uriRepo.save(_)}
         }
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.getSince(SequenceNumber[CortexURI](5), 10).map{_.uriId.id} === Range(6, 11).toList
           uriRepo.getMaxSeq.value === 10L
         }

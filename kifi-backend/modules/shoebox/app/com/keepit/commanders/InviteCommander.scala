@@ -232,7 +232,7 @@ class InviteCommander @Inject() (
 
   private def notifyClientsOfConnection(user1Id: Id[User], user2Id: Id[User]) = {
     delay {
-      val (user1, user2) = db.readOnly { implicit session => basicUserRepo.load(user1Id) -> basicUserRepo.load(user2Id) }
+      val (user1, user2) = db.readOnlyMaster { implicit session => basicUserRepo.load(user1Id) -> basicUserRepo.load(user2Id) }
       eliza.sendToUser(user1Id, Json.arr("new_friends", Set(user2)))
       eliza.sendToUser(user2Id, Json.arr("new_friends", Set(user1)))
     }
@@ -270,7 +270,7 @@ class InviteCommander @Inject() (
 
   private def sendEmailInvitation(inviteInfo:InviteInfo): InviteStatus = {
     val invite = getInvitation(inviteInfo)
-    val invitingUser = db.readOnly { implicit session => userRepo.get(inviteInfo.userId) }
+    val invitingUser = db.readOnlyMaster { implicit session => userRepo.get(inviteInfo.userId) }
     val c = inviteInfo.friend.right.get
     val acceptLink = baseUrl + routes.InviteController.acceptInvite(invite.externalId).url
 
@@ -303,7 +303,7 @@ class InviteCommander @Inject() (
   private def sendInvitationForLinkedIn(inviteInfo: InviteInfo): Future[InviteStatus] = {
     val invite = getInvitation(inviteInfo)
     val userId = inviteInfo.userId
-    val me = db.readOnly { implicit s => socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.LINKEDIN).get }
+    val me = db.readOnlyMaster { implicit s => socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.LINKEDIN).get }
     val socialUserInfo = inviteInfo.friend.left.get
     val path = routes.InviteController.acceptInvite(invite.externalId).url
     val subject = inviteInfo.subject.getOrElse(s"Kifi -- ${me.fullName.split(' ')(0)} invites you to Kifi") // todo: same for email
@@ -376,7 +376,7 @@ class InviteCommander @Inject() (
       val friendId = activeInvite.recipientSocialUserId.get
       log.info(s"[confirmFacebookInvite(${id})] Confirmed ${inviteStatus}")
       countInvitationsSent(userId, Left(friendId), existingInvitation).map { invitationsSent =>
-        val friendSocialUserInfo = db.readOnly { implicit session => socialUserInfoRepo.get(friendId) }
+        val friendSocialUserInfo = db.readOnlyMaster { implicit session => socialUserInfoRepo.get(friendId) }
         val inviteInfo = InviteInfo(userId, Left(friendSocialUserInfo), invitationsSent + 1, None, None, source)
         reportSentInvitation(activeInvite, inviteInfo)
       }
@@ -401,7 +401,7 @@ class InviteCommander @Inject() (
   private def getInviteInfo(userId: Id[User], fullSocialId: FullSocialId, subject: Option[String], message: Option[String], source: String): Future[InviteInfo] = {
     val (friendFuture, invitationsSentFuture) = fullSocialId.identifier match {
       case Left(socialId) =>
-        val friendSocialUserInfo =  db.readOnly() { implicit session => socialUserInfoRepo.get(socialId, fullSocialId.network) }
+        val friendSocialUserInfo =  db.readOnlyMaster { implicit session => socialUserInfoRepo.get(socialId, fullSocialId.network) }
         val invitationsSentFuture = countInvitationsSent(userId, Left(friendSocialUserInfo.id.get))
         (Future.successful(Left(friendSocialUserInfo)), invitationsSentFuture)
       case Right(emailAddress) => {
@@ -420,7 +420,7 @@ class InviteCommander @Inject() (
   private def countInvitationsSent(userId: Id[User], friendId: Either[Id[SocialUserInfo], EmailAddress], knownInvitation: Option[Invitation] = None): Future[Int] = {
     // Optimization to avoid calling ABook in the most common cases (ie first time social invites)
     val mayHaveBeenInvitedAlready = friendId match {
-      case Left(socialUserId) => (knownInvitation orElse db.readOnly { implicit session =>
+      case Left(socialUserId) => (knownInvitation orElse db.readOnlyMaster { implicit session =>
         invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, socialUserId)
       }).exists(_.state != InvitationStates.INACTIVE)
       case Right(emailAddress) => knownInvitation.isEmpty || knownInvitation.get.state != InvitationStates.INACTIVE
@@ -429,7 +429,7 @@ class InviteCommander @Inject() (
   }
 
   private def getInvitation(inviteInfo: InviteInfo): Invitation = {
-    val existingInvitation = db.readOnly() { implicit session =>
+    val existingInvitation = db.readOnlyMaster { implicit session =>
       inviteInfo.friend match {
         case Left(friendSocialUserInfo) => invitationRepo.getBySenderIdAndRecipientSocialUserId(inviteInfo.userId, friendSocialUserInfo.id.get)
         case Right(friendEContact) => invitationRepo.getBySenderIdAndRecipientEmailAddress(inviteInfo.userId, friendEContact.email)
@@ -502,7 +502,7 @@ class InviteCommander @Inject() (
   def getRipestInvitees(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Invitee]] = {
     abook.getRipestFruits(userId, page, pageSize).map { ripestFruits =>
       val (emailConnections, socialConnections) = (ripestFruits.partition(_.connectionType == SocialNetworks.EMAIL))
-      db.readOnly { implicit session =>
+      db.readOnlyMaster { implicit session =>
         val lastInvitedAtByEmailAddress = invitationRepo.getLastInvitedAtBySenderIdAndRecipientEmailAddresses(userId, emailConnections.flatMap(_.friendEmailAddress))
         val lastInvitedAtBySocialUserId = invitationRepo.getLastInvitedAtBySenderIdAndRecipientSocialUserIds(userId, socialConnections.flatMap(_.friendSocialId))
         ripestFruits.map { richConnection => richConnection.connectionType match {

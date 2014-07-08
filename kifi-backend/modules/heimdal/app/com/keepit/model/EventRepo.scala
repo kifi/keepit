@@ -1,14 +1,16 @@
-package com.keepit.heimdal
+package com.keepit.model
 
-import scala.concurrent.{Promise, Future}
-import reactivemongo.bson._
-import play.modules.reactivemongo.json.ImplicitBSONHandlers.JsValueReader
-import play.api.libs.json.{Json, JsArray}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import reactivemongo.core.commands.PipelineOperator
-import com.keepit.common.time._
-import com.keepit.heimdal.CustomBSONHandlers.{BSONDateTimeHandler, BSONEventTypeHandler, BSONEventContextHandler}
 import com.keepit.common.logging.Logging
+import com.keepit.common.time._
+import CustomBSONHandlers.{BSONDateTimeHandler, BSONEventContextHandler, BSONEventTypeHandler}
+import com.keepit.heimdal._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{JsArray, Json}
+import play.modules.reactivemongo.json.ImplicitBSONHandlers.JsValueReader
+import reactivemongo.bson._
+import reactivemongo.core.commands.PipelineOperator
+
+import scala.concurrent.{Future, Promise}
 
 trait EventRepo[E <: HeimdalEvent] {
   def persist(event: E) : Unit

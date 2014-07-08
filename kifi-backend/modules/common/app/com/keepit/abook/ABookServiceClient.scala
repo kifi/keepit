@@ -64,6 +64,7 @@ trait ABookServiceClient extends ServiceClient {
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int]
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
   def validateAllContacts(readOnly: Boolean): Unit
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean]
   def getContactNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]]
   def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact]
   def contactTypeahead(userId: Id[User], query: String, maxHits: Option[Int] = None): Future[Seq[TypeaheadHit[RichContact]]]
@@ -271,6 +272,10 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.validateAllContacts(readOnly))
   }
 
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = {
+    call(ABook.internal.hideEmailFromUser(userId, email)).map(_.json.as[Boolean])
+  }
+
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
@@ -331,9 +336,12 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def validateAllContacts(readOnly: Boolean = true): Unit = ???
 
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = ???
+
   def getContactNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]] = Future.successful(None)
 
   def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact] = ???
 
   def contactTypeahead(userId: Id[User], query: String, maxHits: Option[Int]): Future[Seq[TypeaheadHit[RichContact]]] = Future.successful(Seq.empty)
+
 }

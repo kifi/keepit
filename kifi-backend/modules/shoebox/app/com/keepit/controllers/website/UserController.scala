@@ -25,7 +25,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 import java.util.concurrent.atomic.AtomicBoolean
 import com.keepit.eliza.ElizaServiceClient
-import play.api.mvc.Request
+import play.api.mvc.{Request, MaxSizeExceeded}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
 import play.api.data.Form
@@ -37,7 +37,6 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsBoolean
 import scala.Some
 import play.api.libs.json.JsUndefined
-import play.api.mvc.MaxSizeExceeded
 import play.api.libs.json.JsNumber
 import com.keepit.common.mail.EmailAddress
 import play.api.libs.json.JsObject
@@ -73,7 +72,7 @@ class UserController @Inject() (
 
   def friends(page: Int, pageSize: Int) = JsonAction.authenticated { request =>
     val (connectionsPage, total) = userCommander.getConnectionsPage(request.userId, page, pageSize)
-    val friendsJsons = db.readOnly { implicit s =>
+    val friendsJsons = db.readOnlyMaster { implicit s =>
       connectionsPage.map { case ConnectionInfo(friend, friendId, unfriended, unsearched) =>
         Json.toJson(friend).asInstanceOf[JsObject] ++ Json.obj(
           "searchFriend" -> unsearched,
@@ -89,7 +88,7 @@ class UserController @Inject() (
   }
 
   def friendCount() = JsonAction.authenticated { request =>
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       Ok(Json.obj(
         "friends" -> userConnectionRepo.getConnectionCount(request.userId),
         "requests" -> friendRequestRepo.getCountByRecipient(request.userId)
@@ -197,7 +196,7 @@ class UserController @Inject() (
   }
 
   def getEmailInfo(email: EmailAddress) = JsonAction.authenticated(allowPending = true) { implicit request =>
-    db.readOnly { implicit session =>
+    db.readOnlyMaster { implicit session =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailRecord) =>
           val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, "pending_primary_email")
@@ -234,7 +233,7 @@ class UserController @Inject() (
   }
 
   private def getUserInfo[T](userId: Id[User]) = {
-    val user = db.readOnly { implicit session => userRepo.get(userId) }
+    val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
     val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
     val json = toJson(pimpedUser.basicUser).as[JsObject] ++
@@ -252,34 +251,25 @@ class UserController @Inject() (
     ))
   }
 
-  private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "onboarding_seen")
+  private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "onboarding_seen", "show_delighted_question")
 
-  def getPrefs() = JsonAction.authenticated { request =>
-    Ok(db.readOnly { implicit s =>
-      val values = userValueRepo.getValues(request.userId, SitePrefNames.toSeq: _*)
-      JsObject(SitePrefNames.toSeq.map { name =>
-        name -> values(name).map(value => {
-          if (value == "false") JsBoolean(false)
-          else if (value == "true") JsBoolean(true)
-          else if (value == "null") JsNull
-          else JsString(value)
-        }).getOrElse(JsNull)
-      })
-    })
+  def getPrefs() = JsonAction.authenticatedAsync { request =>
+    // Make sure the user's last active date has been updated before returning the result
+    userCommander.setLastUserActive(request.userId) map { _ =>
+      Ok(userCommander.getPrefs(SitePrefNames, request.userId))
+    } recover {
+      // todo(martin) - Remove this. This is to make sure I don't break prod for the moment
+      case t: Throwable => {
+        airbrakeNotifier.notify(s"Exception occurred in setLastUserActive for user ${request.userId}", t)
+        Ok(userCommander.getPrefs(SitePrefNames, request.userId))
+      }
+    }
   }
 
   def savePrefs() = JsonAction.authenticatedParseJson { request =>
     val o = request.request.body.as[JsObject]
     if (o.keys.subsetOf(SitePrefNames)) {
-      db.readWrite(attempts = 3) { implicit s =>
-        o.fields.foreach { case (name, value) =>
-          if (value == JsNull || value.isInstanceOf[JsUndefined]) {
-            userValueRepo.clearValue(request.userId, name)
-          } else {
-            userValueRepo.setValue(request.userId, name, value.as[String])
-          }
-        }
-      }
+      userCommander.savePrefs(SitePrefNames, request.userId, o)
       Ok(o)
     } else {
       BadRequest(Json.obj("error" -> ((SitePrefNames -- o.keys).mkString(", ") + " not recognized")))
@@ -287,7 +277,7 @@ class UserController @Inject() (
   }
 
   def getInviteCounts() = JsonAction.authenticated { request =>
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       val availableInvites = userValueRepo.getValue(request.userId, UserValues.availableInvites)
       val invitesLeft = availableInvites - invitationRepo.getByUser(request.userId).length
       Ok(Json.obj(
@@ -394,7 +384,7 @@ class UserController @Inject() (
     val networks = Seq("facebook", "linkedin")
 
     val networkStatuses = Future {
-      JsObject(db.readOnly { implicit session =>
+      JsObject(db.readOnlyMaster { implicit session =>
         networks.map { network =>
           userValueRepo.getValueStringOpt(request.userId, s"import_in_progress_${network}").flatMap { r =>
             if (r == "false") {
@@ -438,7 +428,7 @@ class UserController @Inject() (
     val importHasHappened = new AtomicBoolean(false)
     val finishedImportAnnounced = new AtomicBoolean(false)
     def check(): Option[JsValue] = {
-      val v = db.readOnly { implicit session =>
+      val v = db.readOnlyMaster { implicit session =>
         userValueRepo.getValueStringOpt(request.userId, s"import_in_progress_${network}")
       }
       if (v.isEmpty && clock.now.minusSeconds(20).compareTo(startTime) > 0) {
@@ -464,7 +454,7 @@ class UserController @Inject() (
     def poller(): Future[Option[JsValue]] = PlayPromise.timeout(check, 2 seconds)
     def script(msg: JsValue) = Html(s"<script>$callback(${msg.toString});</script>")
 
-    db.readOnly { implicit session =>
+    db.readOnlyMaster { implicit session =>
       socialUserRepo.getByUser(request.userId).find(_.networkType.name == network)
     } match {
       case Some(sui) =>

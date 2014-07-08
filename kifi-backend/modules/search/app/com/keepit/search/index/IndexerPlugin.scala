@@ -80,8 +80,6 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, 
   val indexingInterval = 1 minute
 
   override def onStart() {
-    log.info(s"starting $name")
-
     val rnd = new Random
 
     scheduleTaskOnAllMachines(actor.system, (20 + rnd.nextInt(20)) seconds, indexingInterval, actor.ref, UpdateIndex)
@@ -96,8 +94,8 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, 
   }
 
   override def onStop() {
-    log.info(s"stopping $name")
     indexer.close()
+    super.onStop()
   }
 
   def update(): Unit = {

@@ -79,7 +79,7 @@ class SliderHistoryTrackerImpl(sliderHistoryRepo: SliderHistoryRepo, db: Databas
   }
 
   def getMultiHashFilter(userId: Id[User]) = {
-    db.readOnly { implicit session =>
+    db.readOnlyMaster { implicit session =>
       sliderHistoryRepo.getByUserId(userId) match {
         case Some(sliderHistory) =>
           new MultiHashFilter(sliderHistory.tableSize, sliderHistory.filter, sliderHistory.numHashFuncs, sliderHistory.minHits)

@@ -1,15 +1,17 @@
-package com.keepit.heimdal
+package com.keepit.model
 
-import reactivemongo.bson.BSONDocument
-import reactivemongo.api.collections.default.BSONCollection
-
+import com.keepit.common.KestrelCombinator
+import com.keepit.common.cache.{CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics}
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
-import scala.concurrent.duration.Duration
-import com.keepit.common.KestrelCombinator
+import com.keepit.heimdal.{EventType, EventDescriptor, MixpanelClient, AnonymousEvent}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.bson.BSONDocument
+
+import scala.concurrent.duration.Duration
 
 trait AnonymousEventLoggingRepo extends EventRepo[AnonymousEvent]
 

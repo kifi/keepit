@@ -64,7 +64,7 @@ class EContactTypeahead @Inject() (
 
   def refreshAll():Future[Unit] = {
     log.info("[refreshAll] begin re-indexing ...")
-    val abookInfos = db.readOnly { implicit ro =>
+    val abookInfos = db.readOnlyMaster { implicit ro =>
       abookInfoRepo.all() // only retrieve users with existing abooks (todo: deal with deletes)
     }
     log.info(s"[refreshAll] ${abookInfos.length} to be re-indexed; abooks=${abookInfos.take(20).mkString(",")} ...")
@@ -75,7 +75,7 @@ class EContactTypeahead @Inject() (
   }
 
   override protected def getAllInfosForUser(id: Id[User]): Seq[EContact] = {
-    db.readOnly(attempts = 2) { implicit ro =>
+    db.readOnlyMaster(attempts = 2) { implicit ro =>
       econtactRepo.getByUserId(id)
     }.filter(EContactTypeaheadBase.isLikelyHuman)
   }
@@ -83,7 +83,7 @@ class EContactTypeahead @Inject() (
   override protected def getInfos(ids: Seq[Id[EContact]]): Seq[EContact] = {
     if (ids.isEmpty) Seq.empty[EContact]
     else {
-      db.readOnly(attempts = 2) { implicit ro =>
+      db.readOnlyMaster(attempts = 2) { implicit ro =>
         econtactRepo.bulkGetByIds(ids).valuesIterator.toSeq
       }
     }

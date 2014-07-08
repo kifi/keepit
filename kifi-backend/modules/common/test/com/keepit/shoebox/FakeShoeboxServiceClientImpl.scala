@@ -500,7 +500,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def saveScrapeInfo(info: ScrapeInfo): Future[ScrapeInfo] = ???
 
-  def savePageInfo(pageInfo: PageInfo): Future[PageInfo] = ???
+  def savePageInfo(pageInfo: PageInfo): Future[Unit] = ???
 
   def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo] = ???
 

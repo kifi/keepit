@@ -22,7 +22,7 @@ class HttpProxyTest extends Specification with ShoeboxTestInjector {
 
         httpProxyCache.get(HttpProxyAllKey()).isDefined === false
 
-        db.readOnly { implicit session => httpProxyRepo.allActive().length === 1 }
+        db.readOnlyMaster { implicit session => httpProxyRepo.allActive().length === 1 }
         httpProxyCache.get(HttpProxyAllKey()).isDefined
         httpProxyCache.get(HttpProxyAllKey()).get.length === 1
 

@@ -1,11 +1,11 @@
-package com.keepit.heimdal
+package com.keepit.model
 
+import com.keepit.common.akka.SafeFuture
+import com.keepit.heimdal.{EventDescriptor, EventType, HeimdalEvent}
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.{BSONDocument, Macros}
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
 import scala.concurrent.Future
-import com.keepit.common.akka.SafeFuture
 import CustomBSONHandlers._
 
 trait EventDescriptorRepo[E <: HeimdalEvent] {

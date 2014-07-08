@@ -133,12 +133,13 @@ package object time {
   lazy val START_OF_TIME = parseStandardTime("0000-01-01 00:00:00.000 -0800")
   lazy val END_OF_TIME = parseStandardTime("9999-01-01 00:00:00.000 -0800")
 
-  implicit class RichDateTime(val date: DateTime) extends AnyVal {
+  implicit class RichDateTime(val date: DateTime) extends AnyVal with Ordered[DateTime] {
     def toLocalDateInZone(implicit zone: DateTimeZone): LocalDate = date.withZone(zone).toLocalDate
     def toLocalTimeInZone(implicit zone: DateTimeZone): LocalTime = date.withZone(zone).toLocalTime
     def toHttpHeaderString: String = HTTP_HEADER_DATETIME_FORMAT.print(date)
     def toStandardTimeString: String = STANDARD_DATETIME_FORMAT.print(date)
     def toStandardDateString: String = STANDARD_DATE_FORMAT.print(date)
+    def compare(that: DateTime): Int = dateTimeOrdering.compare(date, that)
   }
 
   implicit class RichLocalDate(val date: LocalDate) extends AnyVal {

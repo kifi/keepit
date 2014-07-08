@@ -131,7 +131,7 @@ class AuthCommander @Inject()(
 
     val userIdFromEmailIdentity = for {
       identity <- identityOpt
-      socialUserInfo <- db.readOnly { implicit s =>
+      socialUserInfo <- db.readOnlyMaster { implicit s =>
         socialUserInfoRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO)
       }
       userId <- socialUserInfo.userId
@@ -142,7 +142,7 @@ class AuthCommander @Inject()(
 
     val confusedCompilerUserId = userIdFromEmailIdentity getOrElse {
       val userIdOpt = for {
-        socialUserInfo <- db.readOnly { implicit s => socialUserInfoRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO) }
+        socialUserInfo <- db.readOnlyMaster { implicit s => socialUserInfoRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO) }
         userId <- socialUserInfo.userId
       } yield userId
       userIdOpt.get
@@ -173,7 +173,7 @@ class AuthCommander @Inject()(
       val (emailPassIdentity, userId) = saveUserPasswordIdentity(None, Some(socialIdentity),
         email = sfi.email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
 
-      val user = db.readOnly { implicit session =>
+      val user = db.readOnlyMaster { implicit session =>
         userRepo.get(userId)
       }
 
@@ -194,14 +194,14 @@ class AuthCommander @Inject()(
     log.info(s"[finalizeEmailPassAccount] efi=$efi, userId=$userId, extUserId=$externalUserId, identity=$identityOpt, inviteExtId=$inviteExtIdOpt")
 
     val resultFuture = SafeFuture {
-      val identity = db.readOnly { implicit session =>
+      val identity = db.readOnlyMaster { implicit session =>
         socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap(_.credentials)
       } getOrElse identityOpt.get
 
       val passwordInfo = identity.passwordInfo.get
       val email = identity.email.get
       val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
-      val user = db.readOnly(userRepo.get(userId)(_))
+      val user = db.readOnlyMaster(userRepo.get(userId)(_))
 
       reportUserRegistration(user, inviteExtIdOpt)
 
@@ -209,7 +209,7 @@ class AuthCommander @Inject()(
     }
 
     val imageFuture = SafeFuture {
-      val user = db.readOnly(userRepo.get(userId)(_))
+      val user = db.readOnlyMaster(userRepo.get(userId)(_))
       val cropAttributes = parseCropForm(efi.picHeight, efi.picWidth, efi.cropX, efi.cropY, efi.cropSize) tap (r => log.info(s"Cropped attributes for ${userId}: " + r))
       efi.picToken.map { token =>
         s3ImageStore.copyTempFileToUserPic(userId, externalUserId, token, cropAttributes)
@@ -242,7 +242,7 @@ class AuthCommander @Inject()(
   def loginWithTrustedSocialIdentity(identityId: IdentityId)(implicit request: RequestHeader): SimpleResult = {
     log.info(s"[loginWithTrustedSocialIdentity(${identityId})]")
     UserService.find(identityId) flatMap { identity =>
-      db.readOnly(attempts = 2) { implicit s =>
+      db.readOnlyMaster(attempts = 2) { implicit s =>
         socialUserInfoRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId))
       } map { su => (su.userId, identity) }
     } map { case (userId, identity) =>

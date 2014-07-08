@@ -223,7 +223,7 @@ class UriIntegrityActor @Inject()(
     if (toMerge.size == 0){
       log.debug("no active changed_uris were founded. Check if we have applied changed_uris generated during urlRenormalization")
       val lowSeq = centralConfig(URIMigrationSeqNumKey) getOrElse SequenceNumber.ZERO
-      val applied = db.readOnly{ implicit s => changedUriRepo.getChangesSince(lowSeq, batchSize, state = ChangedURIStates.APPLIED)}
+      val applied = db.readOnlyMaster{ implicit s => changedUriRepo.getChangesSince(lowSeq, batchSize, state = ChangedURIStates.APPLIED)}
       if (applied.size == batchSize){   // make sure a full batch of applied ones
         applied.sortBy(_.seq).lastOption.map{ x => centralConfig.update(URIMigrationSeqNumKey, x.seq) }
         log.info(s"${applied.size} applied changed_uris are found!")
@@ -240,7 +240,7 @@ class UriIntegrityActor @Inject()(
           db.readWrite{ implicit s => changedUriRepo.save((change.withState(ChangedURIStates.ACTIVE)))}   // bump up seqNum. Will be retried.
 
           try{
-            db.readOnly{ implicit s => List(uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId)) foreach {uriRepo.deleteCache} }
+            db.readOnlyMaster{ implicit s => List(uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId)) foreach {uriRepo.deleteCache} }
           } catch{
             case e: Exception => airbrake.notify(s"error in getting uri ${change.oldUriId} or ${change.newUriId} from db by id.")
           }
@@ -256,7 +256,7 @@ class UriIntegrityActor @Inject()(
   private def getOverDueList(fetchSize: Int = -1) = {
     val lowSeq = centralConfig(URIMigrationSeqNumKey) getOrElse SequenceNumber.ZERO
     log.info(s"batch uri migration: fetching tasks from seqNum ${lowSeq}")
-    db.readOnly{ implicit s => changedUriRepo.getChangesSince(lowSeq, fetchSize, state = ChangedURIStates.ACTIVE)}
+    db.readOnlyMaster{ implicit s => changedUriRepo.getChangesSince(lowSeq, fetchSize, state = ChangedURIStates.ACTIVE)}
   }
 
   private def batchURLMigration(batchSize: Int) = {
@@ -283,7 +283,7 @@ class UriIntegrityActor @Inject()(
 
   private def getOverDueURLMigrations(fetchSize: Int = -1) = {
     val lowSeq = centralConfig(URLMigrationSeqNumKey) getOrElse SequenceNumber.ZERO
-    db.readOnly{ implicit s => renormRepo.getChangesSince(lowSeq, fetchSize, state = RenormalizedURLStates.ACTIVE)}
+    db.readOnlyMaster{ implicit s => renormRepo.getChangesSince(lowSeq, fetchSize, state = RenormalizedURLStates.ACTIVE)}
   }
 
   private def fixDuplicateKeeps(): Unit = {
@@ -292,7 +292,7 @@ class UriIntegrityActor @Inject()(
     log.debug(s"start deduping keeps: fetching tasks from seqNum ${seq}")
     try {
       var dedupedSuccessCount = 0
-      val keeps = db.readOnly{ implicit s => keepRepo.getBookmarksChanged(seq, 1000) }
+      val keeps = db.readOnlyMaster{ implicit s => keepRepo.getBookmarksChanged(seq, 1000) }
       if (keeps.nonEmpty) {
         db.readWriteBatch(keeps, 3){ (session, keep) =>
           normalizedURIInterner.getByUri(keep.url)(session) match {
@@ -351,13 +351,9 @@ class UriIntegrityPluginImpl @Inject() (
 ) extends UriIntegrityPlugin with Logging {
   override def enabled = true
   override def onStart() {
-    log.info("starting UriIntegrityPluginImpl")
     scheduleTaskOnLeader(actor.system, 1 minutes, 45 seconds, actor.ref, BatchURIMigration(50))
     scheduleTaskOnLeader(actor.system, 1 minutes, 60 seconds, actor.ref, BatchURLMigration(100))
     scheduleTaskOnLeader(actor.system, 1 minutes, 60 seconds, actor.ref, FixDuplicateKeeps())
-  }
-  override def onStop() {
-    log.info("stopping UriIntegrityPluginImpl")
   }
 
   def handleChangedUri(change: UriChangeMessage) = {

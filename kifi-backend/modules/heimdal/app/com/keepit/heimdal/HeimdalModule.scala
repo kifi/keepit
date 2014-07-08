@@ -14,4 +14,5 @@ abstract class HeimdalModule(
   // Service clients
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val secureSocialModule = RemoteSecureSocialModule()
+  val heimdalSlickModule = HeimdalSlickModule()
 }

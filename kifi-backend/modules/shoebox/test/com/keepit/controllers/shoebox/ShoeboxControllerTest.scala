@@ -100,7 +100,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
         val (user1965, friends) = setupSomeUsers()
         val users = user1965::friends
         val basicUserRepo = inject[BasicUserRepo]
-        val basicUsersJson = inject[Database].readOnly { implicit s =>
+        val basicUsersJson = inject[Database].readOnlyMaster { implicit s =>
           users.map{ u => (u.id.get.id.toString -> Json.toJson(basicUserRepo.load(u.id.get))) }.toMap
         }
 

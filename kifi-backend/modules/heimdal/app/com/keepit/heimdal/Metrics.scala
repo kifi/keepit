@@ -1,12 +1,13 @@
 package com.keepit.heimdal
 
+import com.keepit.model.CustomBSONHandlers
 import org.joda.time.DateTime
 
 import scala.concurrent.duration.Duration
 
 import reactivemongo.bson.{BSONValue, BSONDouble, BSONString, BSONDocument, BSONArray, BSONDateTime, BSONLong}
 import reactivemongo.core.commands.{PipelineOperator, Match, GroupField, SumValue, Unwind, Sort, Descending, AddToSet}
-import com.keepit.heimdal.CustomBSONHandlers.BSONContextDataHandler
+import CustomBSONHandlers.BSONContextDataHandler
 
 sealed trait ComparisonOperator {
   def toBSONMatchFragment: BSONValue

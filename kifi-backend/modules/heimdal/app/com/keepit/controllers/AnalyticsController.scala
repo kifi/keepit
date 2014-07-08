@@ -1,26 +1,21 @@
-package com.keepit.heimdal.controllers
-
-import com.keepit.common.controller.HeimdalServiceController
-import com.keepit.heimdal._
-import com.keepit.common.time._
-import com.keepit.common.akka.SafeFuture
-import org.joda.time.DateTime
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.heimdal.SpecificEventSet
-import com.keepit.model.User
-import com.keepit.common.db.{ExternalId, Id}
-
-//Might want to change this to a custom play one
-
-import play.api.mvc.Action
-import play.api.libs.json.{JsNumber, Json, JsObject}
+package com.keepit.controllers
 
 import com.google.inject.Inject
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.controller.HeimdalServiceController
+import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.time._
+import com.keepit.model._
+import com.keepit.heimdal.{SpecificEventSet, _}
+import com.keepit.model.User
+import org.joda.time.DateTime
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{JsNumber, JsObject, Json}
+import play.api.mvc.Action
+import views.html
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future, Promise}
-
-import views.html
 
 
 class AnalyticsController @Inject() (

@@ -30,7 +30,7 @@ class UrlTest extends Specification with ShoeboxTestInjector {
           (url1, nuri1, url2, nuri2, nuri3, nuri4)
         }
 
-        inject[Database].readOnly{ implicit session =>
+        inject[Database].readOnlyMaster{ implicit session =>
           println(repo.all)
           repo.get("http://cnn.com", nuri4.id.get).isDefined === false
           repo.get("http://www.google.com/#1", nuri1.id.get).isDefined === true

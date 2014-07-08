@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import com.keepit.test.ShoeboxApplication
 import com.keepit.test.ShoeboxApplicationInjector
 import play.api.test.Helpers.running
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.{ActorPlugin, TestActorSystemModule}
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
@@ -74,7 +74,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
 
         // initial state
         cleaner.cleanNormalizedURIsByChangedURIs(readOnly = false)
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.SCRAPED
@@ -98,7 +98,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           uris.drop(1).map{ uri => changedURIRepo.save(ChangedURI(oldUriId = uri.id.get, newUriId = uris(0).id.get, state=ChangedURIStates.APPLIED)) }
         }
         cleaner.cleanNormalizedURIsByChangedURIs(readOnly = false)
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
@@ -163,7 +163,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         }
 
         // initial states
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
@@ -178,7 +178,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         }
 
         cleaner.clean(readOnly = false)
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
@@ -202,7 +202,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           Seq(bmRepo.save(Keep(title = Some("Yahoo"), userId = user.id.get, url = urls(2).url, urlId = urls(2).id.get,  uriId = uris(2).id.get, source = hover)))
         }
         cleaner.clean(readOnly = false)
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
@@ -220,11 +220,11 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         bms ++= db.readWrite { implicit session =>
           Seq(bmRepo.save(Keep(title = Some("AltaVista"), userId = user.id.get, url = urls(3).url, urlId = urls(3).id.get,  uriId = uris(3).id.get, source = hover)))
         }
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.get(uris(3).id.get).state === NormalizedURIStates.INACTIVE
         }
         cleaner.clean(readOnly = false)
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
@@ -243,7 +243,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           bms.foreach{ bm => bmRepo.save(bm.copy(state = KeepStates.INACTIVE)) }
         }
         cleaner.clean(readOnly = false)
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
@@ -270,7 +270,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           )
         }
         cleaner.clean(readOnly = false)
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
@@ -291,7 +291,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           bmRepo.save(obms(0).copy(state = KeepStates.INACTIVE))
         }
         cleaner.clean(readOnly = false)
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
@@ -311,7 +311,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
           bmRepo.save(obms(1).copy(state = KeepStates.INACTIVE))
         }
         cleaner.clean(readOnly = false)
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.ACTIVE
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
@@ -378,7 +378,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         }
 
         // initial state
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.SCRAPED
@@ -404,7 +404,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         }
 
         cleaner.cleanNormalizedURIsByNormalizedURIs(readOnly = false)
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.get(uris(0).id.get).state === NormalizedURIStates.SCRAPED
           uriRepo.get(uris(1).id.get).state === NormalizedURIStates.SCRAPE_FAILED
           uriRepo.get(uris(2).id.get).state === NormalizedURIStates.ACTIVE
