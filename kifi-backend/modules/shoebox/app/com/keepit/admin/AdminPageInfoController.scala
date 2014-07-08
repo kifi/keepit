@@ -17,14 +17,14 @@ class AdminPageInfoController @Inject()
   extends AdminController(actionAuthenticator) {
 
   def pageInfo(id:Id[PageInfo]) = AdminHtmlAction.authenticated { request =>
-    val pageInfo = db.readOnly { implicit ro =>
+    val pageInfo = db.readOnlyMaster { implicit ro =>
       pageInfoRepo.get(id)
     }
     Ok(html.admin.pageInfo(pageInfo))
   }
 
   def pageInfos(page:Int, size:Int) = AdminHtmlAction.authenticated { request =>
-    val pageInfos = db.readOnly { implicit ro =>
+    val pageInfos = db.readOnlyMaster { implicit ro =>
       pageInfoRepo.page(page, size).sortBy(_.id.get.id)
     }
     // add pagination

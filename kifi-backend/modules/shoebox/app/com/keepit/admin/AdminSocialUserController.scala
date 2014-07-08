@@ -47,7 +47,7 @@ class AdminSocialUserController @Inject() (
   }
 
   def disconnectSocialUser(suiId: Id[SocialUserInfo], revoke: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
-    val sui = db.readOnly(socialUserInfoRepo.get(suiId)(_))
+    val sui = db.readOnlyMaster(socialUserInfoRepo.get(suiId)(_))
     if (revoke) {
       socialGraphPlugin.asyncRevokePermissions(sui)
     }
@@ -61,7 +61,7 @@ class AdminSocialUserController @Inject() (
   }
 
   def refreshSocialInfo(socialUserInfoId: Id[SocialUserInfo]) = AdminHtmlAction.authenticated { implicit request =>
-    val socialUserInfo = db.readOnly { implicit s => socialUserInfoRepo.get(socialUserInfoId) }
+    val socialUserInfo = db.readOnlyMaster { implicit s => socialUserInfoRepo.get(socialUserInfoId) }
     if (socialUserInfo.credentials.isEmpty) throw new Exception("can't fetch user info for user with missing credentials: %s".format(socialUserInfo))
     socialGraphPlugin.asyncFetch(socialUserInfo)
     Redirect(com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfoId))
@@ -71,7 +71,7 @@ class AdminSocialUserController @Inject() (
     val user: Id[User] = if (userId==0) request.userId else Id[User](userId)
     val howManyReally = if (howMany==0) 20 else howMany
     abook.ripestFruit(user, howManyReally).map{ socialIds =>
-      val socialUsers = db.readOnly { implicit session => socialIds.map(socialUserInfoRepo.get(_)) }
+      val socialUsers = db.readOnlyMaster { implicit session => socialIds.map(socialUserInfoRepo.get(_)) }
       Ok(html.admin.socialUsers(socialUsers, 0))
     }
   }

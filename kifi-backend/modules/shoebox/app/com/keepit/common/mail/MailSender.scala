@@ -55,7 +55,7 @@ private[mail] class MailSenderActor @Inject() (
 
   def receive() = {
     case ProcessOutbox =>
-      val emailsToSend = db.readOnly { implicit s =>
+      val emailsToSend = db.readOnlyMaster { implicit s =>
           mailRepo.outbox() flatMap { email =>
             try {
               Some(mailRepo.get(email))
@@ -84,7 +84,7 @@ private[mail] class MailSenderActor @Inject() (
   }
 
   def takeOutOptOuts(mail: ElectronicMail) = { // say that 3 times fast
-    val (newTo, newCC) = db.readOnly { implicit session =>
+    val (newTo, newCC) = db.readOnlyMaster { implicit session =>
       val newTo = mail.to.filterNot(addressHasOptedOut(_, mail.category))
       val newCC = mail.cc.filterNot(addressHasOptedOut(_, mail.category))
       (newTo, newCC)
@@ -121,7 +121,7 @@ private[mail] class MailSenderActor @Inject() (
         contextBuilder += ("action", "sent")
         contextBuilder.addEmailInfo(email)
 
-        val (to, cc) = db.readOnly { implicit session =>
+        val (to, cc) = db.readOnlyMaster { implicit session =>
           val cc: Seq[Either[Id[User], String]] = email.cc.flatMap { address => emailAddressRepo.getByAddress(address) match {
             case Seq() => Seq(Right(address.address))
             case emailAddresses => emailAddresses.map { emailAddress => Left(emailAddress.userId) }

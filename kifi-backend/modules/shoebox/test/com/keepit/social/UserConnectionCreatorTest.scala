@@ -62,7 +62,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
 
         connections.size === 12
 
-        inject[Database].readOnly { implicit s =>
+        inject[Database].readOnlyMaster { implicit s =>
           val fortyTwoConnections = inject[SocialConnectionRepo].getFortyTwoUserConnections(user.id.get)
           val userConnections = inject[UserConnectionRepo].getConnectedUsers(user.id.get)
           val connectionCount = inject[UserConnectionRepo].getConnectionCount(user.id.get)
@@ -120,7 +120,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
         val connectionsAfter = inject[UserConnectionCreator]
             .createConnections(socialUserInfo, extractedFriends2.map(_.socialId), SocialNetworks.FACEBOOK)
 
-        inject[Database].readOnly { implicit s =>
+        inject[Database].readOnlyMaster { implicit s =>
           val fortyTwoConnections = inject[SocialConnectionRepo].getFortyTwoUserConnections(user.id.get)
           val userConnections = inject[UserConnectionRepo].getConnectedUsers(user.id.get)
           val connectionCount = inject[UserConnectionRepo].getConnectionCount(user.id.get)

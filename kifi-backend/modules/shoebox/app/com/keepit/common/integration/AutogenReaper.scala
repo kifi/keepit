@@ -73,7 +73,7 @@ private[integration] class AutogenReaper @Inject() (
       for (threshold <- Play.maybeApplication map { app => // todo: inject
         if (Play.isDev) currentDateTime.minusSeconds(15) else currentDateTime.minusMinutes(15)
       }) {
-        val dues = db.readOnly { implicit rw =>
+        val dues = db.readOnlyMaster { implicit rw =>
           // a variant of this could live in UserCommander
           val generated = userExperimentRepo.getByType(ExperimentType.AUTO_GEN)
           val dues = generated filter (e => e.updatedAt.isBefore(threshold))
@@ -118,7 +118,7 @@ private[integration] class AutogenReaper @Inject() (
           }
         }
         for (exp <- dues) {
-          val user = db.readOnly{ implicit s => userRepo.get(exp.userId) }
+          val user = db.readOnlyMaster{ implicit s => userRepo.get(exp.userId) }
           log.info(s"[reap] processing $user")
 
           db.readWrite { implicit s =>

@@ -314,7 +314,7 @@ class ABookCommander @Inject() (
   }
 
   def getContactNameByEmail(userId: Id[User], email: EmailAddress): Option[String] = {
-    db.readOnly { implicit session =>
+    db.readOnlyMaster { implicit session =>
       econtactRepo.getByUserIdAndEmail(userId, email).collectFirst { case contact if contact.name.isDefined => contact.name.get }
     }
   }

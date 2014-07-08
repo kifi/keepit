@@ -24,7 +24,7 @@ class UserToDomainTest extends Specification with ShoeboxTestInjector {
            repo.save(UserToDomain(None, u2.id.get, d2.id.get, UserToDomainKinds.NEVER_SHOW, None)))
         }
 
-        inject[Database].readOnly{ implicit session =>
+        inject[Database].readOnlyMaster{ implicit session =>
           repo.get(u1.id.get, d1.id.get, UserToDomainKinds.NEVER_SHOW) === Some(u1d1)
           repo.get(u1.id.get, d2.id.get, UserToDomainKinds.NEVER_SHOW) === Some(u1d2)
           repo.get(u2.id.get, d1.id.get, UserToDomainKinds.NEVER_SHOW) === None

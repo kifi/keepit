@@ -132,7 +132,7 @@ class AdminUserController @Inject() (
       userSessionRepo.invalidateByUser(fromUserId)
     }
 
-    for (su <- db.readOnly { implicit s => socialUserInfoRepo.getByUser(toUserId) }) {
+    for (su <- db.readOnlyMaster { implicit s => socialUserInfoRepo.getByUser(toUserId) }) {
       socialGraphPlugin.asyncFetch(su)
     }
 
@@ -142,7 +142,7 @@ class AdminUserController @Inject() (
   def moreUserInfoView(userId: Id[User], showPrivates:Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactsF = if (showPrivates) abookClient.getEContacts(userId, 40000000) else Future.successful(Seq.empty[EContact])
-    val (user, socialUserInfos, socialConnections) = db.readOnly { implicit s =>
+    val (user, socialUserInfos, socialConnections) = db.readOnlyMaster { implicit s =>
       val user = userRepo.get(userId)
       val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
@@ -199,7 +199,7 @@ class AdminUserController @Inject() (
       doUserViewById(Id[User](id), showPrivates)
     } orElse {
       ExternalId.asOpt[User](userIdStr) flatMap { userExtId =>
-        db.readOnly { implicit session =>
+        db.readOnlyMaster { implicit session =>
           userRepo.getOpt(userExtId)
         }
       } map { user =>
@@ -209,7 +209,7 @@ class AdminUserController @Inject() (
   }
 
   private def doUserViewById(userId: Id[User], showPrivates: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): Future[SimpleResult] = {
-    db.readOnly { implicit session =>
+    db.readOnlyMaster { implicit session =>
       userRepo.getOpt(userId)
     } map { user =>
       doUserView(user, showPrivates)
@@ -222,7 +222,7 @@ class AdminUserController @Inject() (
     val econtactCountF = abookClient.getEContactCount(userId)
     val econtactsF = if (showPrivateContacts) abookClient.getEContacts(userId, 500) else Future.successful(Seq.empty[EContact])
 
-    val (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnly {implicit s =>
+    val (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyMaster {implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
       val socialUsers = socialUserInfoRepo.getByUser(userId)
       val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
@@ -235,7 +235,7 @@ class AdminUserController @Inject() (
       (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
-    val experiments = db.readOnly { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
+    val experiments = db.readOnlyMaster { implicit s => userExperimentRepo.getUserExperiments(user.id.get) }
 
     for {
       abookInfos <- abookInfoF
@@ -254,7 +254,7 @@ class AdminUserController @Inject() (
       log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing user $userId's private keeps and contacts")
     }
 
-    val (user, bookmarks) = db.readOnly {implicit s =>
+    val (user, bookmarks) = db.readOnlyMaster {implicit s =>
       val user = userRepo.get(userId)
       val bookmarks = keepRepo.getByUser(userId, Some(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
@@ -268,9 +268,9 @@ class AdminUserController @Inject() (
       case cid if cid.toLong > 0 => Id[Collection](cid.toLong)
     }
     val bookmarkFilter = collectionFilter.map { collId =>
-      db.readOnly { implicit s => keepToCollectionRepo.getKeepsInCollection(collId) }
+      db.readOnlyMaster { implicit s => keepToCollectionRepo.getKeepsInCollection(collId) }
     }
-    val filteredBookmarks = db.readOnly { implicit s =>
+    val filteredBookmarks = db.readOnlyMaster { implicit s =>
       val query = bookmarkSearch.getOrElse("").toLowerCase()
       (if (query.trim.length == 0) {
         bookmarks
@@ -282,7 +282,7 @@ class AdminUserController @Inject() (
           (mark, uri, colls)
       }
     }
-    val collections = db.readOnly { implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId) }
+    val collections = db.readOnlyMaster { implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId) }
 
     Ok(html.admin.userKeeps(user, bookmarks.size, filteredBookmarks, bookmarkSearch, collections, collectionFilter))
   }
@@ -323,7 +323,7 @@ class AdminUserController @Inject() (
 
   def userStatisticsPage(page: Int = 0, userViewType: UserViewType) = {
     val PAGE_SIZE: Int = 50
-    val (users, userCount) = db.readOnly { implicit s =>
+    val (users, userCount) = db.readOnlyMaster { implicit s =>
       userViewType match {
         case AllUsersViewType => (userRepo.pageIncluding(UserStates.ACTIVE)(page, PAGE_SIZE) map userStatistics,
                                   userRepo.countIncluding(UserStates.ACTIVE))
@@ -337,7 +337,7 @@ class AdminUserController @Inject() (
     }
 
     val newUsers = userViewType match {
-      case RegisteredUsersViewType => db.readOnly { implicit s => Some(userRepo.countNewUsers) }
+      case RegisteredUsersViewType => db.readOnlyMaster { implicit s => Some(userRepo.countNewUsers) }
       case _ => None
     }
 
@@ -372,7 +372,7 @@ class AdminUserController @Inject() (
       case None => Redirect(routes.AdminUserController.usersView(0))
       case Some(queryText) =>
         val userIds = Await.result(searchClient.searchUsers(userId = None, query = queryText, maxHits = 100), 15 seconds).hits.map{_.id}
-        val users = db.readOnly { implicit s =>
+        val users = db.readOnlyMaster { implicit s =>
           userIds map userRepo.get map userStatistics
         }
         val userThreadStats = (users.par.map { u =>
@@ -506,7 +506,7 @@ class AdminUserController @Inject() (
             userValueRepo.clearValue(userId, name).toString
           })
         case (Some(name), _, _) => // get it
-          db.readOnly { implicit session =>
+          db.readOnlyMaster { implicit session =>
             userValueRepo.getValueStringOpt(userId, name)
           }
         case _=>
@@ -548,7 +548,7 @@ class AdminUserController @Inject() (
   }
 
   def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
-    val socialUserInfos = db.readOnly {implicit s =>
+    val socialUserInfos = db.readOnlyMaster {implicit s =>
       val user = userRepo.get(userId)
       socialUserInfoRepo.getByUser(user.id.get)
     }
@@ -591,7 +591,7 @@ class AdminUserController @Inject() (
       users =>
         eliza.sendGlobalNotification(users.toSet, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category)
     } getOrElse {
-      val users = db.readOnly {
+      val users = db.readOnlyMaster {
         implicit session => userRepo.getAllIds()
       } //Note: Need to revisit when we have >50k users.
       eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category)
@@ -610,7 +610,7 @@ class AdminUserController @Inject() (
 
   def resetMixpanelProfile(userId: Id[User]) = AdminHtmlAction.authenticatedAsync { implicit request =>
     SafeFuture {
-      val user = db.readOnly { implicit session => userRepo.get(userId) }
+      val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
       doResetMixpanelProfile(user)
       Redirect(routes.AdminUserController.userView(userId))
     }
@@ -618,7 +618,7 @@ class AdminUserController @Inject() (
 
   def deleteAllMixpanelProfiles() = AdminHtmlAction.authenticatedAsync { implicit request =>
     SafeFuture {
-      val allUsers = db.readOnly { implicit s => userRepo.all }
+      val allUsers = db.readOnlyMaster { implicit s => userRepo.all }
       allUsers.foreach(user => heimdal.deleteUser(user.id.get))
       Ok("All user profiles have been deleted from Mixpanel")
     }
@@ -626,7 +626,7 @@ class AdminUserController @Inject() (
 
   def resetAllMixpanelProfiles() = AdminHtmlAction.authenticatedAsync { implicit request =>
     SafeFuture {
-      val allUsers = db.readOnly { implicit s => userRepo.all }
+      val allUsers = db.readOnlyMaster { implicit s => userRepo.all }
       allUsers.foreach(doResetMixpanelProfile)
       Ok("All user profiles have been reset in Mixpanel")
     }
@@ -639,7 +639,7 @@ class AdminUserController @Inject() (
       heimdal.deleteUser(userId)
     else {
       val properties = new HeimdalContextBuilder
-      db.readOnly { implicit session =>
+      db.readOnlyMaster { implicit session =>
         properties += ("$first_name", user.firstName)
         properties += ("$last_name", user.lastName)
         properties += ("$created", user.createdAt)
@@ -668,7 +668,7 @@ class AdminUserController @Inject() (
 
   def bumpUpSeqNumForConnections() = AdminHtmlAction.authenticatedAsync { implicit request =>
     SafeFuture{
-      val conns = db.readOnly{ implicit s =>
+      val conns = db.readOnlyMaster{ implicit s =>
         userConnectionRepo.all()
       }
 
@@ -678,7 +678,7 @@ class AdminUserController @Inject() (
         }
       }
 
-      val friends = db.readOnly{ implicit s =>
+      val friends = db.readOnlyMaster{ implicit s =>
         searchFriendRepo.all()
       }
 

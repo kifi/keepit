@@ -116,7 +116,7 @@ class ABookController @Inject() (
   def getEContactsByIds() = Action(parse.tolerantJson) { request =>
     val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
     val contactIds = jsArray.value map { x => Id[EContact](x.as[Long]) }
-    val contacts = db.readOnly { implicit ro =>
+    val contacts = db.readOnlyMaster { implicit ro =>
       econtactRepo.getByIds(contactIds)
     }
     Ok(Json.toJson[Seq[EContact]](contacts))
@@ -172,7 +172,7 @@ class ABookController @Inject() (
   }
 
   def getABookInfoByExternalId(externalId: ExternalId[ABookInfo]) = Action { request =>
-    db.readOnly { implicit session =>
+    db.readOnlyMaster { implicit session =>
       Ok(Json.toJson(abookInfoRepo.getByExternalId(externalId)))
     }
   }

@@ -41,7 +41,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
       withDb(modules: _*) { implicit injector =>
         val (commander) = inject[ABookCommander] //setup()
 
-      db.readOnly(inject[ABookInfoRepo].count(_))
+      db.readOnlyMaster(inject[ABookInfoRepo].count(_))
         // empty abook upload
         val emptyABookRawInfo = ABookRawInfo(None, ABookOrigins.IOS, None, None, None, JsArray(Seq.empty))
         val emptyABookOpt = commander.processUpload(u42, ABookOrigins.IOS, None, None, Json.toJson(emptyABookRawInfo))
@@ -173,7 +173,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         val result1 = commander.hideEmailFromUser(u42, e1Res.email)
         result1 === true
 
-        db.readOnly { implicit session =>
+        db.readOnlyMaster { implicit session =>
             val e2 = econRepo.get(e1Res.id.get)
             e2.state should_== EContactStates.HIDDEN
         }

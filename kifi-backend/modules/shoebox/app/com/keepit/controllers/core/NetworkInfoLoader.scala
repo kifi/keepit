@@ -30,7 +30,7 @@ class NetworkInfoLoader @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo) extends Logging {
 
   private def load(mySocialUsers: Seq[SocialUserInfo], friendId: Id[User]): Map[SocialNetworkType, NetworkInfo] = timing(s"loadNetworkInfo friendId($friendId) mySocialUsers:(len=${mySocialUsers.length})") {
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       for (su <- socialUserInfoRepo.getByUser(friendId)) yield {
         su.networkType -> NetworkInfo(
           profileUrl = su.getProfileUrl,
@@ -44,7 +44,7 @@ class NetworkInfoLoader @Inject() (
   }
 
   def load(userId: Id[User], friendId: ExternalId[User]): Map[SocialNetworkType, NetworkInfo] = {
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       userRepo.getOpt(friendId).map(f => socialUserInfoRepo.getByUser(userId) -> f.id.get)
     } map { case (sus, fid) => load(sus, fid) } getOrElse Map.empty
   }

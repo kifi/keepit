@@ -38,11 +38,11 @@ class LocalUserExperimentCommander @Inject() (
   extends UserExperimentCommander with Logging {
 
   def getExperimentGenerators() : Future[Seq[ProbabilisticExperimentGenerator]] = Future {
-    db.readOnly { implicit session => generatorRepo.allActive() }
+    db.readOnlyMaster { implicit session => generatorRepo.allActive() }
   }
 
   def getExperimentsByUser(userId: Id[User]): Set[ExperimentType] = {
-    val staticExperiments = db.readOnly { implicit session => userExperimentRepo.getUserExperiments(userId) }
+    val staticExperiments = db.readOnlyMaster { implicit session => userExperimentRepo.getUserExperiments(userId) }
     addDynamicExperiments(userId, staticExperiments)
   }
 

@@ -74,7 +74,7 @@ class TypeaheadCommander @Inject()(
 
   def queryContactsWithInviteStatus(userId: Id[User], search: Option[String], limit: Int): Future[Seq[(RichContact, Boolean)]] = {
     queryContacts(userId, search, limit) map { contacts =>
-      val allEmailInvites = db.readOnly { implicit ro =>
+      val allEmailInvites = db.readOnlyMaster { implicit ro =>
         invitationRepo.getEmailInvitesBySenderId(userId)
       }
       val invitesMap = allEmailInvites.map{ inv => inv.recipientEmailAddress.get -> inv }.toMap // overhead
@@ -106,7 +106,7 @@ class TypeaheadCommander @Inject()(
         res
       }
       case None => {
-        val infos = db.readOnly { implicit s =>
+        val infos = db.readOnlyMaster { implicit s =>
           socialConnectionRepo.getSocialConnectionInfosByUser(userId).filterKeys(networkType => network.forall(_ == networkType.name))
         }
         infos.values.flatten.toVector
@@ -116,7 +116,7 @@ class TypeaheadCommander @Inject()(
 
     val paged = filtered.take(limit)
 
-    db.readOnly { implicit ro =>
+    db.readOnlyMaster { implicit ro =>
       val allInvites = invitationRepo.getSocialInvitesBySenderId(userId)
       val invitesMap = allInvites.map{ inv => inv.recipientSocialUserId.get -> inv }.toMap // overhead
       val resWithStatus = paged map { sci =>
@@ -316,7 +316,7 @@ class TypeaheadCommander @Inject()(
   }
 
   private def joinWithInviteStatus(userId:Id[User], top: Seq[(SocialNetworkType, TypeaheadHit[_])], emailInvitesMap: Map[EmailAddress, Invitation], socialInvitesMap: Map[Id[SocialUserInfo], Invitation], pictureUrl: Boolean): Seq[ConnectionWithInviteStatus] = {
-    val frMap = if (top.exists(t => t._1 == SocialNetworks.FORTYTWO_NF)) db.readOnly { implicit ro =>
+    val frMap = if (top.exists(t => t._1 == SocialNetworks.FORTYTWO_NF)) db.readOnlyMaster { implicit ro =>
       friendRequestRepo.getBySender(userId).map{ fr => fr.recipientId -> fr }.toMap
     } else Map.empty[Id[User], FriendRequest]
 

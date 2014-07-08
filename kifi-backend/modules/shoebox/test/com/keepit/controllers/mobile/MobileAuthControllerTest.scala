@@ -91,13 +91,13 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
           {"installation":"${existing.externalId}","newInstallation":false}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           installationRepo.count === 1
           installationRepo.all().head.version.toString === "1.2.3"
         }
       }
       {
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           installationRepo.get(existing.externalId).version.toString === "1.2.3"
           installationRepo.get(existing.externalId) === existing
         }
@@ -180,13 +180,13 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
           {"installation":"${existing.externalId}","newInstallation":false}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
-        db.readOnly {implicit s =>
+        db.readOnlyMaster {implicit s =>
           installationRepo.count === 1
           installationRepo.all().head.version.toString === "1.2.3"
         }
       }
       {
-        db.readOnly {implicit s =>
+        db.readOnlyMaster {implicit s =>
           installationRepo.get(existing.externalId).version.toString === "1.2.3"
           installationRepo.get(existing.externalId) === existing
         }

@@ -38,7 +38,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           uriTopicRepo.save(feat2)
         }
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriTopicRepo.getFeature(Id[NormalizedURI](1), ModelVersion[DenseLDA](1)).get.value.toList === List(0.3f, 0.5f, 0.1f, 0.1f)
           uriTopicRepo.getUpdateTimeAndState(Id[NormalizedURI](1), ModelVersion[DenseLDA](1)).get._2 === URILDATopicStates.ACTIVE
 
@@ -96,7 +96,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           }
         }
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriTopicRepo.getHighestSeqNumber(ModelVersion[DenseLDA](1)).value === 5
           uriTopicRepo.getHighestSeqNumber(ModelVersion[DenseLDA](2)).value === 10
           uriTopicRepo.getHighestSeqNumber(ModelVersion[DenseLDA](3)).value === 0

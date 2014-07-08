@@ -30,7 +30,7 @@ class AdminDashboardController @Inject() (
 
   implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
 
-  private lazy val userCountByDate = calcCountByDate(db.readOnly(implicit session => userRepo.allActiveTimes).map(_.toLocalDateInZone))
+  private lazy val userCountByDate = calcCountByDate(db.readOnlyMaster(implicit session => userRepo.allActiveTimes).map(_.toLocalDateInZone))
 
   private def calcCountByDate(dates: => Seq[LocalDate]) = {
     val day0 = if(dates.isEmpty) currentDate else dates.min

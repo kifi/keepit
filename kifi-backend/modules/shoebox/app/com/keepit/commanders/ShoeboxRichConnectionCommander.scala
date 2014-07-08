@@ -133,7 +133,7 @@ class ShoeboxRichConnectionCommander @Inject() (
 
   def block(userId: Id[User], fullSocialId: FullSocialId): Unit = {
     val friendId = fullSocialId.identifier.left.map { socialId =>
-      db.readOnly { implicit session =>
+      db.readOnlyMaster { implicit session =>
         socialUserInfoRepo.get.get(socialId, fullSocialId.network).id.get
       }
     }

@@ -28,7 +28,7 @@ class SliderRuleTest extends Specification with ShoeboxTestInjector {
         foo.rules.map(_.id) === Seq(r1.id, r2.id)
         bar.rules.map(_.id) === Seq(r3.id, r4.id)
 
-        inject[Database].readOnly{ implicit session =>
+        inject[Database].readOnlyMaster{ implicit session =>
           repo.getGroup("foo") must be(foo)  // in-memory cache should work
           repo.getGroup("bar") must be(bar)
         }

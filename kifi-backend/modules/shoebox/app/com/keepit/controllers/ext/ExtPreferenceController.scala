@@ -51,13 +51,13 @@ class ExtPreferenceController @Inject() (
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
   def normalize(url: String) = JsonAction.authenticated { request =>
-    val normalizedUrl: String = db.readOnly { implicit session => normalizedURIInterner.normalize(url) getOrElse url }
+    val normalizedUrl: String = db.readOnlyMaster { implicit session => normalizedURIInterner.normalize(url) getOrElse url }
     val json = Json.arr(normalizedUrl)
     Ok(json)
   }
 
   def getRules(version: String) = JsonAction.authenticated { request =>
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       val group = sliderRuleRepo.getGroup("default")
       if (version != group.version) {
         Ok(Json.obj("slider_rules" -> group.compactJson, "url_patterns" -> urlPatternRepo.getActivePatterns()))

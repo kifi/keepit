@@ -96,14 +96,14 @@ class SlickTest extends Specification with DbTestInjector {
           repo.getCurrentSeqNum().value === 2
         }
 
-        inject[Database].readOnly{ implicit session =>
+        inject[Database].readOnlyMaster{ implicit session =>
           repo.count(session) === 2
           val a = repo.getByName("A")
           a.size === 1
           a.head.name === "A"
         }
 
-        inject[Database].readOnly{ implicit session =>
+        inject[Database].readOnlyMaster{ implicit session =>
           val a = repo.getByNameSqlInterpulation("A")
           a.size === 1
           a.head === "A"
@@ -117,11 +117,11 @@ class SlickTest extends Specification with DbTestInjector {
           repo.count(session) === 2
         }
 
-        inject[Database].readOnly{ implicit session =>
+        inject[Database].readOnlyMaster{ implicit session =>
           repo.count(session) === 2
         }(Database.Slave, Location.capture)
 
-        inject[Database].readOnly{ implicit session =>
+        inject[Database].readOnlyMaster{ implicit session =>
           repo.getByNameSqlInterpulationSqlInjection("A';drop table foo;select * from foo where name ='") must throwA[JdbcSQLException]
         }
 
@@ -157,7 +157,7 @@ class SlickTest extends Specification with DbTestInjector {
           session.rollback()
         }
 
-        db.readOnly{ implicit session =>
+        db.readOnlyMaster{ implicit session =>
           q.firstOption === None
         }
 
@@ -171,7 +171,7 @@ class SlickTest extends Specification with DbTestInjector {
           session.rollback()
         }
 
-        db.readOnly{ implicit session =>
+        db.readOnlyMaster{ implicit session =>
           q.firstOption === Some(1)
         }
 
@@ -185,7 +185,7 @@ class SlickTest extends Specification with DbTestInjector {
           case _: Throwable => //ignore
         }
 
-        db.readOnly{ implicit session =>
+        db.readOnlyMaster{ implicit session =>
           q.firstOption === Some(1)
         }
 
@@ -193,7 +193,7 @@ class SlickTest extends Specification with DbTestInjector {
           rows.map(s => s).delete
         }
 
-        db.readOnly{ implicit session =>
+        db.readOnlyMaster{ implicit session =>
           q.firstOption === None
         }
       }
@@ -249,7 +249,7 @@ class SlickTest extends Specification with DbTestInjector {
           (repo.save(Bar(name = "A")), repo.save(Bar(name = "B")))
         }
 
-        inject[Database].readOnly{ implicit session =>
+        inject[Database].readOnlyMaster{ implicit session =>
           repo.count(session) === 2
           repo.get(b1.externalId) === b1
           repo.get(b2.externalId) === b2

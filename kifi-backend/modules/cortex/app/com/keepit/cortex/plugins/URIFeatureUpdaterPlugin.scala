@@ -32,7 +32,7 @@ class URIPullerImpl @Inject()(
 
   // scraped uris only
   def getSince(lowSeq: SequenceNumber[NormalizedURI], limit: Int): Seq[NormalizedURI] = {
-    db.readOnly{ implicit s =>
+    db.readOnlyMaster{ implicit s =>
       uriRepo.getSince(lowSeq, limit).filter(_.state.value == NormalizedURIStates.SCRAPED.value).map{convertToNormalizedURI(_)}
     }
   }

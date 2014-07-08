@@ -158,7 +158,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
 
   def scrapeBasicArticle(url: String, extractorProviderType:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     require(url != null, "[scrapeBasicArticle] <url> cannot be null")
-    val proxyOpt = db.readOnly { implicit s =>
+    val proxyOpt = db.readOnlyMaster { implicit s =>
       urlPatternRuleRepo.getProxy(url)
     }
     log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
@@ -168,7 +168,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
   def getSignature(url: String, extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = {
     Try {
       val uri = java.net.URI.create(url) // given current impl of HttpFetcher, java.net.URI is needed
-      val proxyOpt = db.readOnly { implicit s => urlPatternRuleRepo.getProxy(url) }
+      val proxyOpt = db.readOnlyMaster { implicit s => urlPatternRuleRepo.getProxy(url) }
       log.info(s"[getSignature] invoke (remote) Scraper service; url=$url uri=$uri proxy=$proxyOpt extractorProviderType=$extractorProviderType")
       scraperClient.getSignature(url, proxyOpt, extractorProviderType)
     } recover {

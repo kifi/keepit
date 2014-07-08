@@ -37,7 +37,7 @@ class PageCommander @Inject() (
 
   private def getKeepersFuture(userId: Id[User], uri: NormalizedURI): Future[(Seq[BasicUser], Int)] = {
     searchClient.sharingUserInfo(userId, uri.id.get).map{ sharingUserInfo =>
-      val keepers: Seq[BasicUser] = db.readOnly { implicit session =>
+      val keepers: Seq[BasicUser] = db.readOnlyMaster { implicit session =>
         basicUserRepo.loadAll(sharingUserInfo.sharingUserIds).values.toSeq
       }
       (keepers, sharingUserInfo.keepersEdgeSetSize)
@@ -47,7 +47,7 @@ class PageCommander @Inject() (
   def getPageDetails(url: String, userId: Id[User], experiments: Set[ExperimentType]): KeeperInfo = {
     if (url.isEmpty) throw new Exception(s"empty url for user $userId")
 
-    val (nUriStr, nUri, keepersFutureOpt, domain, keep, tags, position, neverOnSite, host) = db.readOnly { implicit session =>
+    val (nUriStr, nUri, keepersFutureOpt, domain, keep, tags, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
       val (nUriStr, nUri) = normalizedURIInterner.getByUriOrPrenormalize(url) match {
         case Success(Left(nUri)) => (nUri.url, Some(nUri))
         case Success(Right(pUri)) => (pUri, None)
@@ -90,7 +90,7 @@ class PageCommander @Inject() (
 
   def isSensitiveURI(uri: String): Boolean = {
      val host: Option[String] = URI.parse(uri).get.host.map(_.name)
-     val domain: Option[Domain] = db.readOnly {implicit s => host.flatMap(domainRepo.get(_))}
+     val domain: Option[Domain] = db.readOnlyMaster {implicit s => host.flatMap(domainRepo.get(_))}
      domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false
   }
 }

@@ -61,7 +61,7 @@ class MobileAuthController @Inject() (
 
   private def registerMobileVersion[T <: KifiVersion with Ordered[T]](installationIdOpt: Option[ExternalId[KifiInstallation]], version: T, agent: UserAgent, userId: Id[User], platform: KifiInstallationPlatform) = {
     val (installation, newInstallation) = installationIdOpt map {id =>
-      db.readOnly { implicit s => installationRepo.get(id) }
+      db.readOnlyMaster { implicit s => installationRepo.get(id) }
     } match {
       case None =>
         db.readWrite { implicit s =>

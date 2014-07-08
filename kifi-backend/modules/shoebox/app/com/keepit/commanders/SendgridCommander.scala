@@ -71,7 +71,7 @@ class SendgridCommander @Inject() (
       }
 
       val relevantUsers = if (NotificationCategory.User.all.contains(email.category)) {
-        db.readOnly{ implicit s => emailAddressRepo.getByAddress(address).map(_.userId).toSet }(Database.Slave, captureLocation)
+        db.readOnlyMaster{ implicit s => emailAddressRepo.getByAddress(address).map(_.userId).toSet }(Database.Slave, captureLocation)
       } else Set.empty
 
       if (relevantUsers.nonEmpty) relevantUsers.foreach { userId =>
@@ -86,7 +86,7 @@ class SendgridCommander @Inject() (
     val emailOpt = timing(s"sendgrid (fetch email for alert) eventType(${event.event}}) mailId(${event.mailId}}) ") {
       for {
         mailId <- event.mailId
-        mail <- db.readOnly{ implicit s => electronicMailRepo.getOpt(mailId) }(Database.Slave, captureLocation)
+        mail <- db.readOnlyMaster{ implicit s => electronicMailRepo.getOpt(mailId) }(Database.Slave, captureLocation)
       } yield mail
     }
     emailAlert(event, emailOpt)
