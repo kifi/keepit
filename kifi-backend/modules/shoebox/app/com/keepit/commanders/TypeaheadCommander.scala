@@ -324,7 +324,7 @@ class TypeaheadCommander @Inject()(
       case (snType, hit) =>
         snType match {
           case SocialNetworks.EMAIL =>
-            val e = hit.info.asInstanceOf[EContact]
+            val e = hit.info.asInstanceOf[RichContact]
             val (status, lastSentAt) = emailInvitesMap.get(e.email) map { inv => inviteStatus(inv) } getOrElse ("", None)
             ConnectionWithInviteStatus(e.name.getOrElse(""), hit.score, SocialNetworks.EMAIL.name, None, emailId(e.email), status, None, lastSentAt)
           case SocialNetworks.FACEBOOK | SocialNetworks.LINKEDIN =>
