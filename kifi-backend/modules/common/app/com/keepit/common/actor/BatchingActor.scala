@@ -73,7 +73,7 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
     scheduledFlush.foreach(_.cancel())
     scheduledFlush = None
     val thisBatchId = batchId.incrementAndGet
-    log.info(s"Processing ${events.size} events: $events")
+    log.info(s"Processing ${events.size} events: ${events.toString.take(200)}")
     events.zipWithIndex map { case (event, i) => verifyEventStaleTime(event, batchingConf.StaleEventFlushTime, s"flushed (${i+1}/${events.size} in batch #$thisBatchId)") }
     var future = processBatch(events)
     events = Vector.empty
