@@ -183,6 +183,16 @@ class ABookCommander @Inject() (
     }
   }
 
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Boolean = {
+    val result = db.readWrite {
+      implicit session =>
+        econtactRepo.hideEmailFromUser(userId, email)
+    }
+    econtactTypeahead.refresh(userId)
+    log.info(s"[hideEmailFromUser($userId, $email)] res=$result")
+    result
+  }
+
   def getEContactsDirect(userId: Id[User], maxRows: Int): JsArray = {
     val ts = System.currentTimeMillis
     val jsonBuilder = mutable.ArrayBuilder.make[JsValue]

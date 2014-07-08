@@ -1,5 +1,7 @@
 package com.keepit.common.healthcheck
 
+import org.joda.time.{Days, LocalDate, DateTime}
+
 import scala.collection.mutable.{HashMap => MMap}
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -45,6 +47,7 @@ case object CheckDiskSpace
 case object ErrorCount
 case object ResetErrorCount
 case object GetErrors
+case object CheckUpdateStatusOfService
 
 case class HealthcheckHost(host: String) extends AnyVal {
   override def toString = host
@@ -69,6 +72,13 @@ class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, 
     val subjectWithNumerics = s"[RPT-ERR][${services.currentService}] ${last.message.getOrElse("")} ${last.rootException}"
     val subject = "([0-9]+)".r.replaceAllIn(subjectWithNumerics, "*").abbreviate(512)
     val body = views.html.email.healthcheckMail(history, services.started.withZone(zones.PT).toStandardTimeString, host.host).body
+    sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
+      subject = subject, htmlBody = body, category = NotificationCategory.System.HEALTHCHECK))
+  }
+
+  def sendOutOfDateMail() {
+    val subject = s"${services.currentService} out of date for 3 days"
+    val body = s"None"
     sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
       subject = subject, htmlBody = body, category = NotificationCategory.System.HEALTHCHECK))
   }
@@ -122,6 +132,13 @@ class HealthcheckActor @Inject() (
       } else if (usableDiskSpace < 2 * GB) { // less then 2gb of available disk space
         self ! AirbrakeError(message = Some(s"machine has only ${(usableDiskSpace * 1d) / GB}gb free of usable disk space"))
       }
+    case CheckUpdateStatusOfService =>
+      val currentDate: DateTime = currentDateTime
+      val lastCompilationDate: DateTime = services.compilationTime
+      val betweenDays = Days.daysBetween(currentDate, lastCompilationDate).getDays
+      if (betweenDays >= 3) {
+        new SendHealthcheckMail(null, host, emailSender, services).sendOutOfDateMail()
+      }
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -155,6 +172,7 @@ class HealthcheckPluginImpl @Inject() (
   override def onStart() {
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 30 minutes, actor.ref, ReportErrorsAction)
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 60 minutes, actor.ref, CheckDiskSpace)
+    scheduleTaskOnAllMachines(actor.system, 3 days, 1 days, actor.ref, CheckUpdateStatusOfService)
   }
 
   def errorCount(): Int = Await.result((actor.ref ? ErrorCount).mapTo[Int], 1 seconds)
@@ -207,3 +225,4 @@ class HealthcheckPluginImpl @Inject() (
     super.warmUp(benchmarkRunner)
   }
 }
+
