@@ -2,34 +2,37 @@
 
 
 ##########################################
-#INTERNAL ROUTES/Eliza
+#INTERNAL ROUTES/Heimdal
 ##########################################
 
-GET   /internal/heimdal/:repo/adhocMetric       @com.keepit.heimdal.controllers.AnalyticsController.adhocMetric(repo: String, from: String ?= "", to: String ?= "now", events: String ?="all", groupBy: String ?="_", breakDown : String ?= "false", mode: String ?= "count", filter: String ?="none", as: String?="pie")
+GET   /internal/heimdal/:repo/adhocMetric              @com.keepit.controllers.AnalyticsController.adhocMetric(repo: String, from: String ?= "", to: String ?= "now", events: String ?="all", groupBy: String ?="_", breakDown : String ?= "false", mode: String ?= "count", filter: String ?="none", as: String?="pie")
 
-GET   /internal/heimdal/:repo/rawEvents         @com.keepit.heimdal.controllers.AnalyticsController.rawEvents(repo:String, events: String ?="all", limit: Int ?= 10, window: Int ?= 24)
+GET   /internal/heimdal/:repo/rawEvents                @com.keepit.controllers.AnalyticsController.rawEvents(repo:String, events: String ?="all", limit: Int ?= 10, window: Int ?= 24)
 
-GET   /internal/heimdal/:repo/createMetric      @com.keepit.heimdal.controllers.AnalyticsController.createMetric(repo: String, name: String ?= "default", start: String ?= "2013-10-1", window: Int ?= 24, step: Int ?=24, description: String ?= "No Description Given.", events: String ?= "all", groupBy: String ?="_", breakDown: String ?="false", mode: String ?= "count", filter: String ?= "none", uniqueField: String ?= "_")
+GET   /internal/heimdal/:repo/createMetric             @com.keepit.controllers.AnalyticsController.createMetric(repo: String, name: String ?= "default", start: String ?= "2013-10-1", window: Int ?= 24, step: Int ?=24, description: String ?= "No Description Given.", events: String ?= "all", groupBy: String ?="_", breakDown: String ?="false", mode: String ?= "count", filter: String ?= "none", uniqueField: String ?= "_")
 
-GET  /internal/heimdal/updateMetrics                 @com.keepit.heimdal.controllers.AnalyticsController.updateMetrics()
+GET  /internal/heimdal/updateMetrics                   @com.keepit.controllers.AnalyticsController.updateMetrics()
 
-GET  /internal/heimdal/:repo/getAvailableMetrics @com.keepit.heimdal.controllers.AnalyticsController.getAvailableMetrics(repo: String)
+GET  /internal/heimdal/:repo/getAvailableMetrics       @com.keepit.controllers.AnalyticsController.getAvailableMetrics(repo: String)
 
-GET  /internal/heimdal/:repo/getMetric           @com.keepit.heimdal.controllers.AnalyticsController.getMetric(repo: String, name: String ?= "all", as: String ?="line")
+GET  /internal/heimdal/:repo/getMetric                 @com.keepit.controllers.AnalyticsController.getMetric(repo: String, name: String ?= "all", as: String ?="line")
 
-GET  /internal/heimdal/:repo/getMetricData       @com.keepit.heimdal.controllers.AnalyticsController.getMetricData(repo: String, name: String)
+GET  /internal/heimdal/:repo/getMetricData             @com.keepit.controllers.AnalyticsController.getMetricData(repo: String, name: String)
 
-GET  /internal/heimdal/:repo/eventDescriptors    @com.keepit.heimdal.controllers.AnalyticsController.getEventDescriptors(repo: String)
+GET  /internal/heimdal/:repo/eventDescriptors          @com.keepit.controllers.AnalyticsController.getEventDescriptors(repo: String)
 
-POST /internal/heimdal/:repo/eventDescriptors    @com.keepit.heimdal.controllers.AnalyticsController.updateEventDescriptors(repo: String)
+POST /internal/heimdal/:repo/eventDescriptors          @com.keepit.controllers.AnalyticsController.updateEventDescriptors(repo: String)
 
-GET /internal/heimdal/user/delete               @com.keepit.heimdal.controllers.AnalyticsController.deleteUser(userId: Id[User])
+GET /internal/heimdal/user/delete                      @com.keepit.controllers.AnalyticsController.deleteUser(userId: Id[User])
 
-POST /internal/heimdal/user/set               @com.keepit.heimdal.controllers.AnalyticsController.setUserProperties(userId: Id[User])
+POST /internal/heimdal/user/set                        @com.keepit.controllers.AnalyticsController.setUserProperties(userId: Id[User])
 
-POST /internal/heimdal/user/increment               @com.keepit.heimdal.controllers.AnalyticsController.incrementUserProperties(userId: Id[User])
+POST /internal/heimdal/user/increment                  @com.keepit.controllers.AnalyticsController.incrementUserProperties(userId: Id[User])
 
-GET /internal/heimdal/user/alias             @com.keepit.heimdal.controllers.AnalyticsController.setUserAlias(userId: Id[User], externalId: ExternalId[User])
+GET /internal/heimdal/user/alias                       @com.keepit.controllers.AnalyticsController.setUserAlias(userId: Id[User], externalId: ExternalId[User])
+
+GET /internal/heimdal/user/lastDelightedAnswerDate     @com.keepit.controllers.DelightedController.getLastDelightedAnswerDate(userId: Id[User])
+
 ->  / common.Routes
 
 

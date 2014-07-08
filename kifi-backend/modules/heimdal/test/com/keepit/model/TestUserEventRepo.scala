@@ -1,4 +1,6 @@
-package com.keepit.heimdal
+package com.keepit.model
+
+import com.keepit.heimdal._
 
 class TestUserEventLoggingRepo extends DevUserEventLoggingRepo {
 

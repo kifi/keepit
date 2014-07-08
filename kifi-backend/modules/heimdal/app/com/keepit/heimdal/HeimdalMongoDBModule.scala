@@ -1,5 +1,6 @@
 package com.keepit.heimdal
 
+import com.keepit.model._
 import reactivemongo.api.MongoDriver
 
 import com.keepit.common.healthcheck.AirbrakeNotifier

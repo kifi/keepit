@@ -1,19 +1,22 @@
-package com.keepit.heimdal
+package com.keepit.model
 
+import com.keepit.common.cache.{CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key}
+import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import reactivemongo.bson.{BSONDocument, BSONLong}
 import reactivemongo.api.collections.default.BSONCollection
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
+import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics}
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.KestrelCombinator
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.model.{Gender, KifiInstallation, User}
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.usersegment.UserSegment
+import com.keepit.heimdal.{HeimdalContext, UserEvent}
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.heimdal._
+
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
-import com.keepit.common.usersegment.UserSegment
 
 
 trait UserEventLoggingRepo extends EventRepo[UserEvent] {

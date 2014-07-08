@@ -1,7 +1,4 @@
-package com.keepit.heimdal
-
-import reactivemongo.bson.BSONDocument
-import reactivemongo.api.collections.default.BSONCollection
+package com.keepit.model
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics}
@@ -10,6 +7,10 @@ import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.common.KestrelCombinator
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.bson.BSONDocument
+import com.keepit.heimdal._
+
 import scala.concurrent.Future
 
 trait NonUserEventLoggingRepo extends EventRepo[NonUserEvent]

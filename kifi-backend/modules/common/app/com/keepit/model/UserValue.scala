@@ -66,6 +66,10 @@ object UserValues {
     def parse(valOpt: Option[String]): String = valOpt.getOrElse(default)
   }
 
+  case class UserValueDateTimeHandler(override val name: String, default: DateTime) extends UserValueHandler[DateTime] {
+    def parse(valOpt: Option[String]): DateTime = valOpt.map(parseStandardTime(_)).getOrElse(default)
+  }
+
   case class UserValueJsValueHandler(override val name: String, default: JsValue) extends UserValueHandler[JsValue] {
     def parse(valOpt: Option[String]): JsValue = valOpt.map(Json.parse).getOrElse(default)
   }
@@ -80,6 +84,9 @@ object UserValues {
   val availableInvites = UserValueIntHandler("availableInvites", 1000)
   val hasSeenInstall = UserValueBooleanHandler("has_seen_install", false)
   val welcomeEmailSent = UserValueBooleanHandler("welcomeEmailSent", false)
+
+  val showDelightedQuestion = UserValueBooleanHandler("show_delighted_question", false)
+  val lastActive = UserValueDateTimeHandler("last_active", START_OF_TIME)
 
   val tagOrdering = UserValueJsValueHandler("user_collection_ordering", JsArray())
 }

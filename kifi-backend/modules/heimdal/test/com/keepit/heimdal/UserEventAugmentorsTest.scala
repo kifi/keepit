@@ -1,5 +1,6 @@
 package com.keepit.heimdal
 
+import com.keepit.model.{UserIdAugmentor, UserValuesAugmentor, ExtensionVersionAugmentor, EventAugmentor}
 import org.specs2.mutable.Specification
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import scala.concurrent.{Await, Future}

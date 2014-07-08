@@ -1,6 +1,5 @@
 package com.keepit.commanders
 
-
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -777,6 +776,53 @@ class UserCommander @Inject() (
     userImageUrlCache.getOrElseFuture(UserImageUrlCacheKey(userId, width)) {
       s3ImageStore.getPictureUrl(Some(width), user, user.pictureName.getOrElse("0"))
     }
+  }
+
+  def getPrefs(prefSet: Set[String], userId: Id[User]): JsObject = {
+    db.readOnly { implicit s =>
+      val values = userValueRepo.getValues(userId, prefSet.toSeq: _*)
+      JsObject(prefSet.toSeq.map { name =>
+        name -> values(name).map(value => {
+          if (value == "false") JsBoolean(false)
+          else if (value == "true") JsBoolean(true)
+          else if (value == "null") JsNull
+          else JsString(value)
+        }).getOrElse(JsNull)
+      })
+    }
+  }
+
+  def savePrefs(prefSet: Set[String], userId: Id[User], o: JsObject) = {
+    db.readWrite(attempts = 3) { implicit s =>
+      o.fields.foreach { case (name, value) =>
+        if (value == JsNull || value.isInstanceOf[JsUndefined]) {
+          userValueRepo.clearValue(userId, name)
+        } else {
+          userValueRepo.setValue(userId, name, value.as[String])
+        }
+      }
+    }
+  }
+
+  val DELIGHTED_MIN_INTERVAL = 30 // days
+  val DELIGHTED_INITIAL_DELAY = 7 // days
+
+  def setLastUserActive(userId: Id[User]): Future[Unit] = {
+    val time = clock.now
+    val userCreationDate = db.readWrite { implicit s =>
+      userValueRepo.setValue(userId, "last_active", time)
+      userRepo.get(userId).createdAt
+    }
+
+    // Check if user should be shown Delighted question
+    if (time.minusDays(DELIGHTED_INITIAL_DELAY) > userCreationDate) {
+      heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
+        val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
+        if (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate) {
+          db.readWrite { implicit s => userValueRepo.setValue(userId, "show_delighted_question", true) }
+        }
+      }
+    } else Future.successful()
   }
 }
 

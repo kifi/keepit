@@ -252,7 +252,7 @@ object ApplicationBuild extends Build {
 
   lazy val heimdal = play.Project("heimdal", appVersion, heimdalDependencies, path=file("modules/heimdal")).settings(
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-heimdal.conf"): _*
-  ).dependsOn(common % "test->test;compile->compile")
+  ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val abook = play.Project("abook", appVersion, abookDependencies, path=file("modules/abook")).settings(
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-abook.conf"): _*

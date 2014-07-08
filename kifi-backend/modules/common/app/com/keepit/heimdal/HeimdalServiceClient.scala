@@ -49,6 +49,8 @@ trait HeimdalServiceClient extends ServiceClient {
   def setUserProperties(userId: Id[User], properties: (String, ContextData)*): Unit
 
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit
+
+  def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]]
 }
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
@@ -139,4 +141,10 @@ class HeimdalServiceClientImpl @Inject() (
 
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit =
     call(Heimdal.internal.setUserAlias(userId: Id[User], externalId: ExternalId[User]), callTimeouts = longTimeout)
+
+  def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]] = {
+    call(Heimdal.internal.getLastDelightedAnswerDate(userId)).map { response =>
+      Json.parse(response.body).asOpt[DateTime]
+    }
+  }
 }
