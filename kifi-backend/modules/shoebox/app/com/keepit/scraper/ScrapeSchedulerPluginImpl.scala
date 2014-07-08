@@ -40,8 +40,10 @@ private[scraper] class ScrapeScheduler @Inject() (
 ) extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
-    case CheckOverdues => checkOverdues()
-    case CheckOverdueCount => checkOverdueCount()
+    case CheckOverdues =>
+      checkOverdues()
+    case CheckOverdueCount =>
+      checkOverdueCount()
     case m => throw new UnsupportedActorMessage(m)
   }
 
@@ -129,10 +131,6 @@ class ScrapeSchedulerPluginImpl @Inject() (
     log.info(s"[onStart] starting ScraperPluginImpl with scraperConfig=$scraperConfig}")
     scheduleTaskOnLeader(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, CheckOverdues)
     scheduleTaskOnLeader(actor.system, 30 seconds, scraperConfig.checkOverdueCountFrequency minutes, actor.ref, CheckOverdueCount)
-  }
-  override def onStop() {
-    log.info(s"[onStop] ScrapeScheduler stopped")
-    super.onStop()
   }
 
   def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit = {

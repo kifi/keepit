@@ -41,7 +41,7 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
       inject[UrlPatternRuleRepo].loadCache()
     }
     val uriIntegrityPlugin = inject[UriIntegrityPlugin]
-    val id = Await.result(normalizationService.update(NormalizationReference(uri), candidates: _*), 1 seconds)
+    val id = Await.result(normalizationService.update(NormalizationReference(uri), candidates: _*), 5 seconds)
     uriIntegrityPlugin.batchURIMigration()
     id.map { db.readOnly { implicit session => uriRepo.get(_) }}
   }

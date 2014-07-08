@@ -1,5 +1,6 @@
 package com.keepit.common.healthcheck
 
+import com.google.inject.Provider
 import com.keepit.common.logging.Logging
 import java.lang.management.ManagementFactory
 import java.lang.management.MemoryNotificationInfo
@@ -20,13 +21,13 @@ object MemoryUsageMonitor {
 
   def apply(warn: (MemoryPoolMXBean, Long, Long, Int) => Unit): MemoryUsageMonitor = new MemoryUsageMonitorImpl(warn)
 
-  def apply(airbrakeNotifier: AirbrakeNotifier): MemoryUsageMonitor = {
+  def apply(airbrakeNotifierProvider: Provider[AirbrakeNotifier]): MemoryUsageMonitor = {
     val monitor = apply{ (pool, threshold, maxHeapSize, count) =>
       if (count > 1) { // at least two incidents in a row
-        airbrakeNotifier.notify(s"LOW MEMORY!!! - pool=[${pool.getName}] threshold=$threshold maxHeapSize=$maxHeapSize count=$count")
+        airbrakeNotifierProvider.get.notify(s"LOW MEMORY!!! - pool=[${pool.getName}] threshold=$threshold maxHeapSize=$maxHeapSize count=$count")
       }
     }
-    if (monitor.monitoredPools.isEmpty) airbrakeNotifier.notify(s"found no memory pool to monitor")
+    if (monitor.monitoredPools.isEmpty) airbrakeNotifierProvider.get.notify(s"found no memory pool to monitor")
     monitor
   }
 }

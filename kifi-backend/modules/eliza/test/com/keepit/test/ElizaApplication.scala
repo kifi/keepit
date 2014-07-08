@@ -21,7 +21,6 @@ class ElizaApplication(overridingModules: Module*)(implicit path: File = new Fil
     Seq(
       FakeHttpClientModule(),
       TestABookServiceClientModule(),
-      TestHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
       FakeAirbrakeModule(),
       FakeMemoryUsageModule(),

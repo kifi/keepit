@@ -20,8 +20,6 @@ class ReKeepStatsUpdaterPluginImpl @Inject() (
   actor: ActorInstance[ReKeepStatsUpdater],
   val scheduling: SchedulingProperties) extends Logging with ReKeepStatsUpdaterPlugin with SchedulerPlugin {
 
-  log.info(s"<ctr> ReKeepStatsUpdaterPlugin created")
-
   override def enabled: Boolean = true
   override def onStart() {
     scheduleTaskOnLeader(actor.system, 15 minutes, 30 minutes, actor.ref, UpdateStats) // tweak
