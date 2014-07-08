@@ -92,7 +92,7 @@ class HeimdalServiceClientImpl @Inject() (
 
   override def onStop() {
     val res = actor.ref ? FlushEventQueueAndClose
-    Await.result(res, Duration(30, SECONDS))
+    Await.result(res, Duration(5, SECONDS))
     super.onStop()
   }
 
