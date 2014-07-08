@@ -98,8 +98,10 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     }
 
     Try(injector.instance[ActorPlugin].onStart()) // start actor system
-    injector.instance[AppScope].onStart(app)
-    pluginsStarted = true
+    if (app.mode != Mode.Test) {
+      injector.instance[AppScope].onStart(app)
+      pluginsStarted = true
+    }
 
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
       statsd.incrementOne("deploys", ALWAYS)
