@@ -126,7 +126,6 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
         val bmRepo = inject[KeepRepo]
-        val actorSystem = inject[ActorPlugin].enabled
         val cleaner = inject[OrphanCleaner]
 
         val (user, other) = db.readWrite { implicit session =>

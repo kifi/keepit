@@ -16,7 +16,7 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import play.api.test.Helpers._
 import com.keepit.common.mail.FakeMailModule
 
-class SocialConnectionTest extends Specification with ShoeboxApplicationInjector {
+class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
   val socialConnectionTestModules = Seq(FakeHttpClientModule(), ShoeboxFakeStoreModule(), TestShoeboxServiceClientModule(), FakeElizaServiceClientModule(), FakeMailModule())
 
@@ -31,7 +31,7 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
   "SocialConnection" should {
 
     "give Kifi user's connections (min set)" in {
-      running(new ShoeboxApplication(socialConnectionTestModules:_*)) {
+      withDb(socialConnectionTestModules: _*) { implicit injector =>
 
         val socialUser = inject[Database].readWrite { implicit s =>
           val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
@@ -105,7 +105,7 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
       }
     }
     "give Kifi user's connections (min set) w/o non active connections" in {
-      running(new ShoeboxApplication(socialConnectionTestModules:_*)) {
+      withDb(socialConnectionTestModules: _*) { implicit injector =>
 
         val socialUser = inject[Database].readWrite { implicit s =>
           val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
@@ -185,7 +185,7 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
     }
 
     "give Kifi user's connections (min set) with pagination" in {
-      running(new ShoeboxApplication(socialConnectionTestModules:_*)) {
+      withDb(socialConnectionTestModules: _*) { implicit injector =>
 
         val socialUser = inject[Database].readWrite { implicit s =>
           val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
