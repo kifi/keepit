@@ -31,6 +31,11 @@ class SpellIndexerPluginImpl @Inject()(
 
   override def onStart() {
     scheduleTaskOnAllMachines(actor.system, 2 minute, 12 hour, actor.ref, BuildDict)
+    log.info("starting SpellDictionaryPluginImpl")
+  }
+  override def onStop() {
+    log.info("stopping SpellDictionaryPluginImpl")
+    cancelTasks()
   }
 
 }

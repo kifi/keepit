@@ -27,8 +27,13 @@ trait SequencingPlugin extends SchedulerPlugin {
   val interval: FiniteDuration = 5 seconds
 
   override def onStart() {
+    log.info(s"starting $name")
     scheduleTaskOnLeader(actor.system, 30 seconds, interval, actor.ref, SequencingPluginMessages.Process)
     scheduleTaskOnAllMachines(actor.system, 100 seconds, 180 seconds, actor.ref, SequencingPluginMessages.SanityCheck)
+  }
+
+  override def onStop() {
+    log.info(s"stopping $name")
   }
 }
 

@@ -41,10 +41,14 @@ private class CortexDataIngestionPluginImpl @Inject()(
   val name: String = getClass.toString
 
   override def onStart() {
+    log.info(s"starting $name")
     scheduleTaskOnLeader(actor.system, 1 minute, 1 minute, actor.ref, UpdateURI)
     scheduleTaskOnLeader(actor.system, 1 minute, 1 minute, actor.ref, UpdateKeep)
   }
 
+  override def onStop() {
+    log.info(s"stopping $name")
+  }
 }
 
 class CortexDataIngestionActor @Inject()(

@@ -1,7 +1,6 @@
 package com.keepit.common.net
 
 import com.google.inject.Provider
-import play.api.Play
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -243,7 +242,7 @@ case class HttpClientImpl(
         dataSize = res.bytes.length))
 
     e.waitTime map { waitTime =>
-      if (waitTime > callTimeouts.maxWaitTime.get && Play.maybeApplication.map(_.mode) == Some(play.api.Mode.Prod)) {
+      if (waitTime > callTimeouts.maxWaitTime.get) {
         val initTime = request.initTime.toInt
         val exception = request.tracer.withCause(LongWaitException(request, res, initTime, waitTime - initTime, e.duration, remoteTime, midFlightRequests.count, midFlightRequests.topRequests, remoteMidFlightRequestCount))
         airbrake.get.notify(

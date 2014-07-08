@@ -5,12 +5,10 @@ import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
 import akka.actor.{Cancellable, Scheduler}
-import scala.concurrent.Future
 import scala.concurrent.duration.{FiniteDuration, Duration}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.reflect._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.strings._
 
 object FlushEventQueueAndClose
 object FlushPlease
@@ -28,9 +26,9 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
   protected val scheduler: Scheduler
   protected val batchingConf: BatchingActorConfiguration[_ <: BatchingActor[E]]
   protected def getEventTime(event: E): DateTime
-  protected def processBatch(events: Seq[E]): Future[_]
+  protected def processBatch(events: Seq[E]): Unit
   object FlushEventQueue
-  final def flushPlease() = if (!flushIsPending.getAndSet(true)) { self ! FlushEventQueue; Future.successful(()) } else Future.successful(())
+  final def flushPlease() = if (!flushIsPending.getAndSet(true)) { self ! FlushEventQueue }
 
   private val batchId: AtomicInteger = new AtomicInteger(0)
   private var events: Vector[E] = Vector.empty
@@ -63,22 +61,21 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
       }
     case FlushEventQueueAndClose =>
       closing = true
-      sender ! flush().map(_ => ())
+      flushPlease()
     case FlushEventQueue =>
       flushIsPending.set(false)
       flush()
     case FlushPlease => flushPlease()
   }
 
-  private def flush(): Future[_] = {
+  private def flush(): Unit = {
     scheduledFlush.foreach(_.cancel())
     scheduledFlush = None
     val thisBatchId = batchId.incrementAndGet
-    log.info(s"Processing ${events.size} events: ${events.toString.abbreviate(200)}")
+    log.info(s"Processing ${events.size} events: $events")
     events.zipWithIndex map { case (event, i) => verifyEventStaleTime(event, batchingConf.StaleEventFlushTime, s"flushed (${i+1}/${events.size} in batch #$thisBatchId)") }
-    var future = processBatch(events)
+    processBatch(events)
     events = Vector.empty
-    future
   }
 
   private def verifyEventStaleTime(event: E, timeout: Duration, action: String): Unit = {
