@@ -1,5 +1,6 @@
 package com.keepit.heimdal
 
+import com.keepit.model.{MetricDescriptorRepo, UserEventLoggingRepo, MetricRepoFactory, MetricData}
 import org.joda.time.DateTime
 
 import com.keepit.common.time._

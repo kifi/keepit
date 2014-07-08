@@ -1,5 +1,6 @@
-package com.keepit.heimdal.controllers
+package com.keepit.controllers
 
+import com.keepit.model._
 import org.specs2.mutable._
 
 import com.keepit.common.db.LargeString._
