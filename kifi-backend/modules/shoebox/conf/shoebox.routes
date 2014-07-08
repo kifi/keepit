@@ -248,6 +248,7 @@ POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsControl
 
 GET     /site/collections/all       @com.keepit.controllers.website.KeepsController.allCollections(sort: String ?= "last_kept")
 POST    /site/collections/ordering  @com.keepit.controllers.website.KeepsController.updateCollectionOrdering()
+POST    /site/collections/reorderTag  @com.keepit.controllers.website.KeepsController.updateCollectionIndexOrdering()
 POST    /site/collections/create    @com.keepit.controllers.website.KeepsController.saveCollection(id = "")
 POST    /site/collections/:id/update @com.keepit.controllers.website.KeepsController.saveCollection(id: String)
 POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsController.deleteCollection(id: ExternalId[Collection])
