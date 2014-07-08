@@ -38,11 +38,11 @@ object UserAgent extends Logging {
   private def normalizeChrome(str: String): String = if (str == "Chromium") "Chrome" else str
 
   def fromString(userAgent: String): UserAgent = {
-    val agent: SFUserAgent = parser.parse(userAgent)
     userAgent match {
       case iPhonePattern(appName, appVersion, buildSuffix, device, os, osVersion) =>
         UserAgent(userAgent, appName, os, device, KifiIphoneAppTypeName, appVersion)
       case _ =>
+        val agent: SFUserAgent = parser.parse(userAgent)
         UserAgent(trim(userAgent),
           normalizeChrome(normalize(agent.getName)),
           normalize(agent.getOperatingSystem.getFamilyName),

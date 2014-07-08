@@ -121,7 +121,10 @@ class ExtDeepLinkController @Inject() (
     val token = DeepLinkToken(tokenString)
     val result: Option[SimpleResult] = getDeepLinkAndUrl(token) map {
       case (deepLink, uri) =>
-        if (isKifiIphoneApp) {
+        if (deepLink.deepLocator.value.endsWith("#compose")) {
+          log.info(s"iphone app cannot yet handle #compose")
+          Redirect(uri.url)
+        } else if (isKifiIphoneApp) {
           log.info(s"handling request from iphone app")
           Redirect(uri.url)
         } else if (isIphone) {

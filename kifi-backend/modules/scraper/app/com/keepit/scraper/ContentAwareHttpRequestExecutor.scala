@@ -20,7 +20,7 @@ import com.keepit.common.logging.Logging
 class ContentAwareHttpRequestExecutor extends HttpRequestExecutor with Logging {
 
   override def canResponseHaveBody(request: HttpRequest, response: HttpResponse): Boolean = {
-    val contentTypes = request.getHeaders("Content-Type").map(_.getValue)
+    val contentTypes = response.getHeaders("Content-Type").map(_.getValue)
     val isGood = super.canResponseHaveBody(request, response) && parsableContent(contentTypes)
     if (!isGood) log.warn(s"dropping scrape candidate with content types: ${contentTypes.mkString(",")} coming from $response")
     isGood
