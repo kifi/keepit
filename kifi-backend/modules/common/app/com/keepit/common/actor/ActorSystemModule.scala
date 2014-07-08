@@ -3,7 +3,7 @@ package com.keepit.common.actor
 import net.codingwell.scalaguice.ScalaModule
 import akka.actor.{Scheduler, ActorSystem}
 import com.keepit.inject.AppScoped
-import com.google.inject.Provides
+import com.google.inject.{Singleton, Provides}
 import play.api.Play
 import play.api.Play._
 import com.keepit.common.zookeeper.{DiscoveryModule, ServiceDiscovery}
@@ -26,6 +26,7 @@ case class ProdActorSystemModule() extends ActorSystemModule {
     new SchedulingPropertiesImpl(serviceDiscovery, !(DiscoveryModule.isCanary)) // can allow some (e.g. heimdal) to run on canary later
 
   @Provides
+  @Singleton
   def actorPluginProvider: ActorPlugin =
     new ActorPlugin(ActorSystem("prod-actor-system",
       Play.current.configuration.underlying,
