@@ -53,6 +53,24 @@ class KeepsController @Inject() (
     ))
   }
 
+
+  def updateCollectionIndexOrdering() = JsonAction.authenticatedParseJson { request =>
+    val (id, currInd) = {
+      val json = request.body
+      val tagId = (json \ "tagId").as[ExternalId[Collection]]
+      val currentIndex = (json \ "newIndex").as[Int]
+      (tagId, currentIndex)
+    }
+
+    val newCollectionIds = db.readWrite { implicit s =>
+      collectionCommander.setCollectionIndexOrdering(request.userId, id, currInd)
+    }
+
+    Ok(Json.obj(
+      "newCollection" -> newCollectionIds.map{ id => Json.toJson(id) }
+    ))
+  }
+
   def getScreenshotUrl() = JsonAction.authenticatedParseJsonAsync { request =>
     val urlOpt = (request.body \ "url").asOpt[String]
     val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]

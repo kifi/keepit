@@ -7,6 +7,7 @@ import com.keepit.heimdal.HeimdalContext
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.scraper.FakeScrapeSchedulerModule
+import play.api.libs.json.Json
 import scala.Some
 import com.keepit.model.KeepToCollection
 import com.keepit.normalizer.NormalizationService
@@ -105,6 +106,70 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
         db.readOnly { implicit s =>
           collectionRepo.get(collections(2).id.get).state.value === "inactive"
 //          keepRepo.getByUser(user.id.get, None, None, Some(collections(2).id.get), 1000) === 0
+        }
+      }
+    }
+
+    "reorder tags" in {
+      withDb(modules: _*) { implicit injector =>
+
+        val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val userValueRepo = inject[UserValueRepo]
+        val CollectionOrderingKey = "user_collection_ordering"
+
+        val (user, oldOrdering, tagA, tagB, tagC, tagD) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "Mario", lastName = "Luigi", createdAt = t1))
+
+          val tagA = Collection(userId = user1.id.get, name = "tagA")
+          val tagB = Collection(userId = user1.id.get, name = "tagB")
+          val tagC = Collection(userId = user1.id.get, name = "tagC")
+          val tagD = Collection(userId = user1.id.get, name = "tagD")
+
+          val collections = collectionRepo.save(tagA) ::
+            collectionRepo.save(tagB) ::
+            collectionRepo.save(tagC) ::
+            collectionRepo.save(tagD) ::
+            Nil
+          val collectionIds = collections.map(_.externalId).toSeq
+
+          userValueRepo.save(UserValue(userId = user1.id.get, name = CollectionOrderingKey, value = Json.stringify(Json.toJson(collectionIds))))
+          (user1, collectionIds, tagA, tagB, tagC, tagD)
+        }
+
+        // First check collections were placed in DB correctly
+        db.readOnly { implicit s =>
+          val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user.id.get).map(_.externalId)
+          allCollectionIds === oldOrdering
+        }
+
+        // Move tagA to index 2 (move tag towards tail)
+        db.readWrite { implicit s =>
+          inject[CollectionCommander].setCollectionIndexOrdering(user.id.get, tagA.externalId, 2)
+        }
+        db.readOnly { implicit s =>
+          val ordering = userValueRepo.getUserValue(user.id.get, CollectionOrderingKey).get
+          val newOrdering = tagB.externalId :: tagC.externalId :: tagA.externalId :: tagD.externalId :: Nil
+          ordering.value === Json.stringify(Json.toJson(newOrdering))
+        }
+
+        // Move tagA to index 0 (move tag to head)
+        db.readWrite { implicit session =>
+          inject[CollectionCommander].setCollectionIndexOrdering(user.id.get, tagA.externalId, 0)
+        }
+        db.readOnly { implicit s =>
+          val ordering = userValueRepo.getUserValue(user.id.get, CollectionOrderingKey).get
+          val newOrdering = tagA.externalId :: tagB.externalId :: tagC.externalId :: tagD.externalId :: Nil
+          ordering.value === Json.stringify(Json.toJson(newOrdering))
+        }
+
+        // Move tagA to index 3 (move tag to tail)
+        db.readWrite { implicit s =>
+          inject[CollectionCommander].setCollectionIndexOrdering(user.id.get, tagA.externalId, 3)
+        }
+        db.readOnly { implicit s =>
+          val ordering = userValueRepo.getUserValue(user.id.get, CollectionOrderingKey).get
+          val newOrdering = tagB.externalId :: tagC.externalId :: tagD.externalId :: tagA.externalId :: Nil
+          ordering.value === Json.stringify(Json.toJson(newOrdering))
         }
       }
     }
