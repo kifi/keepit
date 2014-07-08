@@ -21,6 +21,7 @@ POST     /internal/abook/:userId/internKifiContact             @com.keepit.abook
 
 GET      /internal/abook/:userId/getOAuth2Token                 @com.keepit.abook.ABookController.getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo])
 GET      /internal/abook/:userId/queryEContacts                 @com.keepit.abook.ABookController.queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String])
+GET      /internal/abook/:userId/contactTypeahead               @com.keepit.abook.ABookController.contactTypeahead(userId: Id[User], q: String, maxHits: Option[Int])
 
 GET      /internal/abook/:userId/prefixSearch                   @com.keepit.abook.ABookController.prefixSearch(userId:Id[User], query:String)
 GET      /internal/abook/:userId/prefixQuery                    @com.keepit.abook.ABookController.prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String])
