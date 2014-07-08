@@ -113,14 +113,6 @@ class ABookController @Inject() (
     Ok(Json.toJson(abookInfoRepoEntryOpt))
   }
 
-  def getEContactById(contactId:Id[EContact]) = Action { request =>
-    // todo: parse email
-    abookCommander.getEContactByIdDirect(contactId) match {
-      case Some(js) => Ok(js)
-      case _ => Ok(JsNull)
-    }
-  }
-
   def getEContactsByIds() = Action(parse.tolerantJson) { request =>
     val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
     val contactIds = jsArray.value map { x => Id[EContact](x.as[Long]) }
@@ -320,5 +312,20 @@ class ABookController @Inject() (
   def validateAllContacts(readOnly: Boolean) = Action { request =>
     SafeFuture { abookCommander.validateAllContacts(readOnly) }
     Ok
+  }
+
+  def getContactNameByEmail(userId: Id[User]) = Action(parse.json) { request =>
+    val email = request.body.as[EmailAddress]
+    val name = abookCommander.getContactNameByEmail(userId, email)
+    Ok(Json.toJson(name))
+  }
+
+  def internKifiContact(userId:Id[User]) = Action(parse.json) { request =>
+    val contact = request.body.as[BasicContact]
+    log.info(s"[internKifiContact] userId=$userId contact=$contact")
+
+    val eContact = abookCommander.internContact(userId, contact) // todo(Léo): migrate to internKifiContact
+    val richContact = EContact.toRichContact(eContact)
+    Ok(Json.toJson(richContact))
   }
 }
