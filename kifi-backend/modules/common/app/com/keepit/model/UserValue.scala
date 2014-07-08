@@ -80,7 +80,6 @@ object UserValues {
   val hasSeenInstall = UserValueBooleanHandler("has_seen_install", false)
   val welcomeEmailSent = UserValueBooleanHandler("welcomeEmailSent", false)
 
-  val lastDelightedVote = UserValueDateTimeHandler("last_delighted_vote", START_OF_TIME)
   val showDelightedQuestion = UserValueBooleanHandler("show_delighted_question", false)
   val lastActive = UserValueDateTimeHandler("last_active", START_OF_TIME)
 

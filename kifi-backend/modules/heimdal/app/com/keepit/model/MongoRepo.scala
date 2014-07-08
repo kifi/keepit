@@ -1,21 +1,17 @@
-package com.keepit.heimdal
+package com.keepit.model
 
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
+
+import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
+import com.keepit.common.logging.Logging
+import org.joda.time.DateTime
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson._
-import reactivemongo.core.commands.{PipelineOperator, Aggregate, LastError}
+import reactivemongo.core.commands.{Aggregate, LastError, PipelineOperator}
+import com.keepit.heimdal._
 
 import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import reactivemongo.bson.BSONDouble
-import reactivemongo.bson.BSONString
-import reactivemongo.api.collections.default.BSONCollection
-import org.joda.time.DateTime
-import com.keepit.common.logging.Logging
-
-//Might want to change this to a custom play one
-import java.util.concurrent.atomic.{AtomicLong, AtomicBoolean}
-
-import play.modules.statsd.api.Statsd
 
 case class MongoInsertBufferFullException() extends java.lang.Throwable
 

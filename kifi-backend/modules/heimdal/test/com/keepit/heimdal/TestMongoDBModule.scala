@@ -1,6 +1,7 @@
 package com.keepit.heimdal
 
 import com.google.inject.{Provides, Singleton}
+import com.keepit.model.{AnonymousEventLoggingRepo, UserEventLoggingRepo, SystemEventLoggingRepo, NonUserEventLoggingRepo}
 
 
 case class TestMongoModule() extends MongoModule {

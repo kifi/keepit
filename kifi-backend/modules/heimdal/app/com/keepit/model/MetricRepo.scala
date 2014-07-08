@@ -1,17 +1,13 @@
-package com.keepit.heimdal
-
-import org.joda.time.DateTime
+package com.keepit.model
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
-
+import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{JsObject, JsNull, JsArray, Json, Writes, JsValue}
-
-import reactivemongo.bson.{BSONDocument, BSONDateTime, BSONArray, BSONBoolean}
+import play.api.libs.json.{JsValue, Json, Writes}
 import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.bson.{BSONArray, BSONBoolean, BSONDateTime, BSONDocument}
 
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
+import scala.concurrent.Future
 
 
 case class MetricData(dt: DateTime, data: Seq[BSONDocument])

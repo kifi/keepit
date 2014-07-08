@@ -253,9 +253,14 @@ class UserController @Inject() (
 
   private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "onboarding_seen", "show_delighted_question")
 
-  def getPrefs() = JsonAction.authenticated { request =>
-    userCommander.setLastUserActive(request.userId)
-    Ok(userCommander.getPrefs(SitePrefNames, request.userId))
+  def getPrefs() = JsonAction.authenticatedAsync { request =>
+    // Make sure the user's last active date has been updated before returning the result
+    userCommander.setLastUserActive(request.userId) map { _ =>
+      Ok(userCommander.getPrefs(SitePrefNames, request.userId))
+    } recover {
+      // todo(martin) - Remove this. This is to make sure I don't break prod for the moment
+      case _ => Ok(userCommander.getPrefs(SitePrefNames, request.userId))
+    }
   }
 
   def savePrefs() = JsonAction.authenticatedParseJson { request =>

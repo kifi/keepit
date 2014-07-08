@@ -98,7 +98,8 @@ class ExtPreferenceController @Inject() (
     val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val encryptedIp: String = scala.util.Try(crypt.crypt(ipkey, ip)).getOrElse("")
     val userId = request.user.id.get
-    userCommander.setLastUserActive(userId)
+    userCommander.setLastUserActive(userId) // The extension doesn't display Delighted surveys for the moment, so we
+                                            // don't need to wait for that Future to complete before we move on
     loadUserPrefs(userId, request.experiments) map {prefs =>
       if (version == 1) {
         Ok(Json.arr("prefs", prefs, encryptedIp))

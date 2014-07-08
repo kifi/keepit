@@ -1,5 +1,7 @@
 package com.keepit.heimdal
 
+import com.keepit.model.{DevAnonymousEventLoggingRepo, DevUserEventLoggingRepo, DevSystemEventLoggingRepo, DevNonUserEventLoggingRepo}
+
 class TestUserEventLoggingRepo extends DevUserEventLoggingRepo {
 
   var events: Vector[UserEvent] = Vector()
