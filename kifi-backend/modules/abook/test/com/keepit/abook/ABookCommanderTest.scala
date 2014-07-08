@@ -173,7 +173,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         val e1Res = commander.internContact(u42, e1)
 
         val result1 = commander.hideEmailFromUser(u42, e1Res.email)
-        result1 should be > 0
+        result1 === true
 
         db.readOnly { implicit session =>
             val e2 = econRepo.get(e1Res.id.get)
@@ -181,7 +181,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         }
 
         val result2 = commander.hideEmailFromUser(u42, EmailAddress("nonexist@email.com"))
-        result2 should_== 0
+        result2 === false
 
       }
     }
