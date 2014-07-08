@@ -309,4 +309,13 @@ class ABookController @Inject() (
     val richContact = EContact.toRichContact(eContact)
     Ok(Json.toJson(richContact))
   }
+
+  def contactTypeahead(userId: Id[User], q: String, maxHits: Option[Int]) = Action.async { request =>
+    typeahead.asyncTopN(userId, q, maxHits).map { econtactHitsOption =>
+      val hits = econtactHitsOption.getOrElse(Seq.empty).map { econtactHit =>
+        TypeaheadHit(econtactHit.score, econtactHit.name, econtactHit.ordinal, EContact.toRichContact(econtactHit.info))
+      }
+      Ok(Json.toJson(hits))
+    }
+  }
 }
