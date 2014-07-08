@@ -71,11 +71,13 @@ angular.module('kifi.tagService', [
 
     function reorderTag(srcTag, index) {
       var oldIndex = _.indexOf(allTags, srcTag);
-      allTags.splice(index, 0, srcTag); // add to array
-      allTags.splice(oldIndex, 1);      // remove from array
-      api.refreshList();
-      var currentIndex = _.indexOf(allTags, srcTag);
-      persistTagOrdering(srcTag.id, currentIndex);
+      if (oldIndex !== -1) {
+        allTags.splice(index, 0, srcTag); // add to array
+        allTags.splice(oldIndex, 1);      // remove from array
+        api.refreshList();
+        var currentIndex = _.indexOf(allTags, srcTag);
+        persistTagOrdering(srcTag.id, currentIndex);
+      }
       $analytics.eventTrack('user_clicked_page', {
         'action': 'reorderTag',
         'path': $location.path()
