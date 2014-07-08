@@ -81,6 +81,7 @@ object EContactTypeaheadBase {
   }
 }
 
+// todo(Léo) ** Not In Use ** - Remove if the performance hit from encapsulating EContactTypeahead in ABook does not prove problematic
 // "Remote"; uses abookServiceClient
 class EContactTypeahead @Inject() (
   override val airbrake:AirbrakeNotifier,

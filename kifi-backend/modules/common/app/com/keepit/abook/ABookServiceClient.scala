@@ -28,7 +28,7 @@ import com.keepit.abook.model.RichSocialConnection
 import com.keepit.common.mail.{EmailAddress, BasicContact}
 import com.keepit.typeahead.TypeaheadHit
 
-case class RichContact(email: EmailAddress, name: Option[String] = None, firstName: Option[String] = None, lastName: Option[String] = None, userId: Option[Id[User]])
+case class RichContact(email: EmailAddress, name: Option[String] = None, firstName: Option[String] = None, lastName: Option[String] = None, userId: Option[Id[User]] = None)
 object RichContact {
   implicit val format = Json.format[RichContact]
 }
@@ -50,10 +50,8 @@ trait ABookServiceClient extends ServiceClient {
   def getEContacts(userId:Id[User], maxRows:Int):Future[Seq[EContact]]
   def getEContactCount(userId:Id[User]):Future[Int]
   def getEContactsByIds(contactIds:Seq[Id[EContact]]):Future[Seq[EContact]]
-  def getEContactByEmail(userId:Id[User], email: EmailAddress):Future[Option[EContact]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
-  def internContact(userId:Id[User], contact: BasicContact):Future[EContact]
   def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
   def prefixSearch(userId:Id[User], query:String):Future[Seq[EContact]]
   def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
@@ -69,6 +67,7 @@ trait ABookServiceClient extends ServiceClient {
   def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean]
   def getContactNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]]
   def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact]
+  def contactTypeahead(userId: Id[User], query: String, maxHits: Option[Int] = None): Future[Seq[TypeaheadHit[RichContact]]]
 }
 
 
@@ -148,12 +147,6 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def getEContactByEmail(userId: Id[User], email: EmailAddress): Future[Option[EContact]] = {
-    call(ABook.internal.getEContactByEmail(userId, email), callTimeouts = longTimeout).map { r =>
-      Json.fromJson[Option[EContact]](r.json).get
-    }
-  }
-
   def getContactNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]] = {
     call(ABook.internal.getContactNameByEmail(userId), Json.toJson(email), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Option[String]](r.json).get
@@ -179,12 +172,6 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.getOAuth2Token(userId, abookId)).map { r =>
       if (r.json == null) None // TODO: revisit
       else r.json.as[Option[OAuth2Token]]
-    }
-  }
-
-  def internContact(userId:Id[User], contact: BasicContact):Future[EContact] = {
-    call(ABook.internal.internContact(userId), Json.toJson(contact)).map { r =>
-      r.json.as[EContact]
     }
   }
 
@@ -218,6 +205,12 @@ class ABookServiceClientImpl @Inject() (
         case Status.OK => Json.fromJson[Seq[EContact]](r.json).get
         case _ => throw new IllegalStateException(s"[prefixQuery($userId,$limit,$search,$after)] failed with ${r.status}; body=${r.body}")
       }
+    }
+  }
+
+  def contactTypeahead(userId: Id[User], query: String, maxHits: Option[Int]): Future[Seq[TypeaheadHit[RichContact]]] = {
+    call(ABook.internal.contactTypeahead(userId, query, maxHits)).map { r =>
+      r.json.as[Seq[TypeaheadHit[RichContact]]]
     }
   }
 
@@ -311,18 +304,13 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getEContactCount(userId: Id[User]): Future[Int] = ???
 
-
   def getEContactsByIds(contactIds: Seq[Id[EContact]]): Future[Seq[EContact]] = ???
-
-  def getEContactByEmail(userId: Id[User], email: EmailAddress): Future[Option[EContact]] = ???
 
   def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = ???
 
   def uploadContacts(userId: Id[User], origin: ABookOriginType, data: JsValue): Future[Try[ABookInfo]] = ???
 
   def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = ???
-
-  def internContact(userId: Id[User], contact: BasicContact): Future[EContact] = ???
 
   def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = ???
 
@@ -353,5 +341,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getContactNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]] = Future.successful(None)
 
   def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact] = ???
+
+  def contactTypeahead(userId: Id[User], query: String, maxHits: Option[Int]): Future[Seq[TypeaheadHit[RichContact]]] = Future.successful(Seq.empty)
 
 }

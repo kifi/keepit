@@ -5,13 +5,14 @@ import com.google.inject.Inject
 import com.keepit.commanders.TypeaheadCommander
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
+
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.EContact
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json._
+import play.api.libs.json.{Json, JsArray, JsObject, JsString, JsValue}
+import com.keepit.abook.RichContact
 
-import scala.Some
 
 class ExtNonUserSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -24,13 +25,13 @@ class ExtNonUserSearchController @Inject() (
 
   def findPeopleToMessage(q: String, n: Int) = JsonAction.authenticatedAsync { request =>
     new SafeFuture({
-      typeaheadCommander.queryContacts(request.userId, Some(q), n, _.contactUserId.isEmpty)
+      typeaheadCommander.queryNonUserContacts(request.userId, q, n)
     }) map { contacts =>
       Ok(JsArray(contacts.map(serializeContact)))
     }
   }
 
-  def serializeContact(contact: EContact): JsObject = {
+  def serializeContact(contact: RichContact): JsObject = {
     JsObject(Seq[(String, JsValue)](
       "email" -> Json.toJson(contact.email)) ++
       contact.name.map {name => "name" -> JsString(name)})

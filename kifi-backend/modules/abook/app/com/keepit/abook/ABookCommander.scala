@@ -193,22 +193,6 @@ class ABookCommander @Inject() (
     result
   }
 
-  def getEContactByIdDirect(contactId:Id[EContact]):Option[JsValue] = {
-    val econtactOpt = db.readOnly(attempts = 2) { implicit s =>
-      econtactRepo.getById(contactId)
-    }
-    log.info(s"[getEContactByIdDirect($contactId)] res=$econtactOpt")
-    econtactOpt map { Json.toJson(_) }
-  }
-
-  def getEContactByEmailDirect(userId:Id[User], email: EmailAddress):Option[JsValue] = {
-    val econtactOpt = db.readOnly(attempts = 2) { implicit s =>
-      econtactRepo.getByUserIdAndEmail(userId, email)
-    }
-    log.info(s"[getEContactDirect($userId,$email)] res=$econtactOpt")
-    econtactOpt map { Json.toJson(_) }
-  }
-
   def getEContactsDirect(userId: Id[User], maxRows: Int): JsArray = {
     val ts = System.currentTimeMillis
     val jsonBuilder = mutable.ArrayBuilder.make[JsValue]

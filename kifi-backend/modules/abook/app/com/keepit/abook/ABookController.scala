@@ -122,13 +122,6 @@ class ABookController @Inject() (
     Ok(Json.toJson[Seq[EContact]](contacts))
   }
 
-  def getEContactByEmail(userId:Id[User], email: EmailAddress) = Action { request =>
-    abookCommander.getEContactByEmailDirect(userId, email) match {
-      case Some(js) => Ok(js)
-      case _ => Ok(JsNull)
-    }
-  }
-
   def hideEmailFromUser(userId:Id[User], email: EmailAddress) = Action { request =>
     Ok(JsBoolean(abookCommander.hideEmailFromUser(userId, email)))
   }
@@ -222,14 +215,6 @@ class ABookController @Inject() (
       } yield oauth2Token
     }
     Ok(Json.toJson(tokenOpt))
-  }
-
-  def internContact(userId:Id[User]) = Action(parse.json) { request =>
-    val contact = request.body.as[BasicContact]
-    log.info(s"[internContact] userId=$userId contact=$contact")
-
-    val eContact = abookCommander.internContact(userId, contact)
-    Ok(Json.toJson(eContact))
   }
 
   // todo(ray): move to commander
@@ -327,5 +312,14 @@ class ABookController @Inject() (
     val eContact = abookCommander.internContact(userId, contact) // todo(Léo): migrate to internKifiContact
     val richContact = EContact.toRichContact(eContact)
     Ok(Json.toJson(richContact))
+  }
+
+  def contactTypeahead(userId: Id[User], q: String, maxHits: Option[Int]) = Action.async { request =>
+    typeahead.asyncTopN(userId, q, maxHits).map { econtactHitsOption =>
+      val hits = econtactHitsOption.getOrElse(Seq.empty).map { econtactHit =>
+        TypeaheadHit(econtactHit.score, econtactHit.name, econtactHit.ordinal, EContact.toRichContact(econtactHit.info))
+      }
+      Ok(Json.toJson(hits))
+    }
   }
 }
