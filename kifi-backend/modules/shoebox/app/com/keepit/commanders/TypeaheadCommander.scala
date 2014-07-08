@@ -60,7 +60,7 @@ class TypeaheadCommander @Inject()(
   private def emailId(email: EmailAddress) = s"email/${email.address}"
   private def socialId(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
 
-  def queryContacts(userId: Id[User], search: Option[String], limit: Int): Future[Seq[RichContact]] = {
+  private def queryContacts(userId: Id[User], search: Option[String], limit: Int): Future[Seq[RichContact]] = {
     search match {
       case Some(query) => abookServiceClient.contactTypeahead(userId, query, Some(limit)).map { hits => hits.map(_.info) }
       case None => Future.successful(Seq.empty) //todo(Léo): check with mobile about this
@@ -72,7 +72,7 @@ class TypeaheadCommander @Inject()(
     queryContacts(userId, Some(query), 2 * limit).map { contacts => contacts.filter(_.userId.isEmpty).take(limit) }
   }
 
-  def queryContactsWithInviteStatus(userId: Id[User], search: Option[String], limit: Int): Future[Seq[(RichContact, Boolean)]] = {
+  private def queryContactsWithInviteStatus(userId: Id[User], search: Option[String], limit: Int): Future[Seq[(RichContact, Boolean)]] = {
     queryContacts(userId, search, limit) map { contacts =>
       val allEmailInvites = db.readOnly { implicit ro =>
         invitationRepo.getEmailInvitesBySenderId(userId)
@@ -93,7 +93,7 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  def querySocial(userId:Id[User], search:Option[String], network:Option[String], limit:Int):Seq[(SocialUserBasicInfo, String)] = {
+  private def querySocial(userId:Id[User], search:Option[String], network:Option[String], limit:Int):Seq[(SocialUserBasicInfo, String)] = {
     val filtered = search match {
       case Some(query) if query.trim.length > 0 => {
         implicit val hitOrdering = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
@@ -166,14 +166,14 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  val snMap:Map[SocialNetworkType, Int] = Map(SocialNetworks.FACEBOOK -> 0, SocialNetworks.LINKEDIN -> 1, SocialNetworks.FORTYTWO -> 2, SocialNetworks.EMAIL -> 3, SocialNetworks.FORTYTWO_NF -> 4)
+  private val snMap:Map[SocialNetworkType, Int] = Map(SocialNetworks.FACEBOOK -> 0, SocialNetworks.LINKEDIN -> 1, SocialNetworks.FORTYTWO -> 2, SocialNetworks.EMAIL -> 3, SocialNetworks.FORTYTWO_NF -> 4)
 
-  val snOrd = new Ordering[SocialNetworkType] {
+  private val snOrd = new Ordering[SocialNetworkType] {
     def compare(x: SocialNetworkType, y: SocialNetworkType) = if (x == y) 0 else snMap(x) compare snMap(y)
   }
 
   //  val genericOrdering = TypeaheadHit.defaultOrdering[_]
-  def genericOrdering[_] = new Ordering[TypeaheadHit[_]] {
+  private def genericOrdering[_] = new Ordering[TypeaheadHit[_]] {
     def compare(x: TypeaheadHit[_], y: TypeaheadHit[_]): Int = {
       var cmp = (x.score compare y.score)
       if (cmp == 0) {
@@ -186,7 +186,7 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  val hitOrd = new Ordering[(SocialNetworkType, TypeaheadHit[_])] {
+  private val hitOrd = new Ordering[(SocialNetworkType, TypeaheadHit[_])] {
     val genOrd = genericOrdering
     def compare(x: (SocialNetworkType, TypeaheadHit[_]), y: (SocialNetworkType, TypeaheadHit[_])): Int = {
       if (x._2.score == y._2.score) {
