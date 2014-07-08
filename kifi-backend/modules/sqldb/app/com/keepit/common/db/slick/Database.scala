@@ -41,7 +41,7 @@ class SlickSessionProviderImpl extends SlickSessionProvider {
 
 case class DbExecutionContext(context: ExecutionContext)
 
-case class SlickDatabaseWrapper (slickDatabase: SlickDatabase, masterSlave: Database.DBMasterReplica)
+case class SlickDatabaseWrapper (slickDatabase: SlickDatabase, masterReplica: Database.DBMasterReplica)
 
 class ExecutionSkipped extends Exception("skipped. try again! (this is not a real exception)")
 
@@ -88,9 +88,9 @@ class Database @Inject() (
   def readOnlyReplica[T](f: ROSession => T)(implicit location: Location): T = readOnly(Replica)(f)(location)
   def readOnlyReplica[T](attempts: Int)(f: ROSession => T)(implicit location: Location): T = readOnly(attempts, Replica)(f)(location)
 
-  private def readOnly[T](f: ROSession => T, dbMasterSlave: DBMasterReplica, location: Location): T = readOnly(dbMasterSlave)(f)(location)
+  private def readOnly[T](f: ROSession => T, dbMasterReplica: DBMasterReplica, location: Location): T = readOnly(dbMasterReplica)(f)(location)
 
-  private def resolveDb(dbMasterSlave: DBMasterReplica) = dbMasterSlave match {
+  private def resolveDb(dbMasterReplica: DBMasterReplica) = dbMasterReplica match {
     case Master =>
       SlickDatabaseWrapper(db.masterDb, Master)
     case Replica =>
@@ -102,18 +102,18 @@ class Database @Inject() (
       }
   }
 
-  private def readOnly[T](dbMasterSlave: DBMasterReplica = Master)(f: ROSession => T)(implicit location: Location): T = enteringSession {
-    val ro = new ROSession(dbMasterSlave, {
-      val handle = resolveDb(dbMasterSlave)
+  private def readOnly[T](dbMasterReplica: DBMasterReplica = Master)(f: ROSession => T)(implicit location: Location): T = enteringSession {
+    val ro = new ROSession(dbMasterReplica, {
+      val handle = resolveDb(dbMasterReplica)
       sessionProvider.createReadOnlySession(handle.slickDatabase)
     }, location)
     try f(ro) finally ro.close()
   }
 
-  private def readOnly[T](attempts: Int, dbMasterSlave: DBMasterReplica = Master)(f: ROSession => T)(implicit location: Location): T = enteringSession { // retry by default with implicit override?
+  private def readOnly[T](attempts: Int, dbMasterReplica: DBMasterReplica = Master)(f: ROSession => T)(implicit location: Location): T = enteringSession { // retry by default with implicit override?
     1 to attempts - 1 foreach { attempt =>
       try {
-        return readOnly(f, dbMasterSlave, location)
+        return readOnly(f, dbMasterReplica, location)
       } catch {
         case t: SQLException =>
           val throwableName = t.getClass.getSimpleName
@@ -121,7 +121,7 @@ class Database @Inject() (
           statsd.incrementOne(s"db.fail.attempt.$attempt.$throwableName", ALWAYS)
       }
     }
-    readOnly(f, dbMasterSlave, location)
+    readOnly(f, dbMasterReplica, location)
   }
 
   private def createReadWriteSession(location: Location) = new RWSession({//always master
