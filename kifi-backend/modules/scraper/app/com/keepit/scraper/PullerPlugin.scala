@@ -22,6 +22,8 @@ class PullerPluginImpl @Inject() (
   val scheduling: SchedulingProperties
 ) extends Logging with PullerPlugin with SchedulerPlugin {
 
+  log.info(s"<ctr> PullerPlugin created")
+
   override def enabled: Boolean = true
   override def onStart() {
     if (Play.maybeApplication.isDefined) {
@@ -31,6 +33,10 @@ class PullerPluginImpl @Inject() (
     } else {
       log.error(s"[onStart] PullerPlugin NOT started -- play app is not ready")
     }
+  }
+  override def onStop() {
+    log.info(s"[PullerPlugin] stopped")
+    super.onStop
   }
 
   override def pull() { actor.ref ! Pull }

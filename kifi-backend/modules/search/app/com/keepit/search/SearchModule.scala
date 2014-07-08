@@ -1,15 +1,16 @@
 package com.keepit.search
 
 import com.keepit.common.cache.CacheModule
+import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.common.store.StoreModule
-import com.keepit.eliza.ElizaServiceClientModule
-import com.keepit.heimdal.HeimdalServiceClientModule
 import com.keepit.inject.{CommonServiceModule, ConfigurationModule}
-import com.keepit.search.index.IndexModule
+import com.keepit.shoebox.ProdShoeboxServiceClientModule
+import com.keepit.eliza.ProdElizaServiceClientModule
+import com.keepit.heimdal.ProdHeimdalServiceClientModule
 import com.keepit.search.spellcheck.SpellCorrectorModule
 import com.keepit.search.tracker.TrackingModule
-import com.keepit.shoebox.ShoeboxServiceClientModule
-import com.keepit.social.RemoteSecureSocialModule
+import com.keepit.search.index.IndexModule
+import com.keepit.common.aws.AwsModule
 
 abstract class SearchModule(
 
@@ -24,12 +25,13 @@ abstract class SearchModule(
 
 ) extends ConfigurationModule with CommonServiceModule {
   // Service clients
-  val searchServiceClientModule: SearchServiceClientModule
-  val shoeboxServiceClientModule: ShoeboxServiceClientModule
-  val elizaServiceClientModule: ElizaServiceClientModule
-  val heimdalServiceClientModule: HeimdalServiceClientModule
+  val searchServiceClientModule = ProdSearchServiceClientModule()
+  val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
+  val elizaServiceClientModule = ProdElizaServiceClientModule()
+  val heimdalServiceClientModule = ProdHeimdalServiceClientModule()
 
   val secureSocialModule = RemoteSecureSocialModule()
+
   val searchConfigModule = SearchConfigModule()
 
 }
