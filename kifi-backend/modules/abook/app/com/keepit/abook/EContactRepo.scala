@@ -22,6 +22,7 @@ trait EContactRepo extends Repo[EContact] {
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getByUserId(userId: Id[User])(implicit session:RSession):Seq[EContact]
   def getEContactCount(userId: Id[User])(implicit session:RSession):Int
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Boolean
   def insertAll(userId:Id[User], contacts: Seq[BasicContact])(implicit session:RWSession): Unit
   def internContact(userId:Id[User], contact: BasicContact)(implicit session: RWSession): EContact
   def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
@@ -134,6 +135,15 @@ class EContactRepoImpl @Inject() (
       updatedContacts.foreach(invalidateCache)
     }
     updated
+  }
+
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Boolean = {
+    val updated = (for { row <- rows if row.userId === userId && row.email === email } yield row.state).update(EContactStates.HIDDEN)
+    if (updated > 0) {
+      val updatedContacts = for { row <- rows if row.userId === userId && row.email === email } yield row
+      updatedContacts.foreach(invalidateCache)
+    }
+    updated > 0
   }
 
   //used only for full resync

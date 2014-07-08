@@ -10,8 +10,9 @@ import scala.concurrent.duration._
 import com.keepit.common.logging.{LogPrefix, Logging}
 import com.keepit.common.concurrent.{FutureHelpers, ExecutionContext}
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import scala.collection.mutable.ArrayBuffer
 import Logging.LoggerWithPrefix
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 trait Typeahead[E, I] extends Logging {
 
@@ -166,6 +167,13 @@ object TypeaheadHit {
       cmp
     }
   }
+
+  implicit def format[I](implicit infoFormat: Format[I]): Format[TypeaheadHit[I]] = (
+    (__ \ 'score).format[Int] and
+    (__ \ 'name).format[String] and
+    (__ \ 'ordinal).format[Int] and
+    (__ \ 'info).format(infoFormat)
+  )(TypeaheadHit.apply, unlift(TypeaheadHit.unapply))
 }
 
 case class TypeaheadHit[I](score: Int, name: String, ordinal: Int, info: I)
