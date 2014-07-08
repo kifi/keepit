@@ -10,6 +10,7 @@ import com.kifi.franz.SQSQueue
 
 import com.google.inject.{Inject, Singleton, Provider}
 import com.keepit.common.actor.{BatchingActor, BatchingActorConfiguration}
+import scala.concurrent.Future
 import scala.concurrent.duration._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.reflect.ClassTag
@@ -167,7 +168,7 @@ class SocialConnectionModificationActor @Inject() (
   def getEventTime(modification: SocialConnectionModification) = modification.modif.model.updatedAt
   def processBatch(modifications: Seq[SocialConnectionModification]) = if (richConnectionCommander.sendSocialConnections(batchingConf.MaxBatchSize) == batchingConf.MaxBatchSize) {
     flushPlease()
-  }
+  } else Future.successful(())
 }
 
 case class UserConnectionModification(modif: RepoModification[UserConnection]) extends RepoModificationEvent[UserConnection]
@@ -180,7 +181,7 @@ class UserConnectionModificationActor @Inject() (
   def getEventTime(modification: UserConnectionModification) = modification.modif.model.updatedAt
   def processBatch(modifications: Seq[UserConnectionModification]) = if (richConnectionCommander.sendUserConnections(batchingConf.MaxBatchSize) == batchingConf.MaxBatchSize) {
     flushPlease()
-  }
+  } else Future.successful(())
 }
 
 case class SocialUserInfoModification(modif: RepoModification[SocialUserInfo]) extends RepoModificationEvent[SocialUserInfo]
@@ -193,7 +194,7 @@ class SocialUserInfoModificationActor @Inject() (
   def getEventTime(modification: SocialUserInfoModification) = modification.modif.model.updatedAt
   def processBatch(modifications: Seq[SocialUserInfoModification]) = if (richConnectionCommander.sendSocialUsers(batchingConf.MaxBatchSize) == batchingConf.MaxBatchSize) {
     flushPlease()
-  }
+  } else Future.successful(())
 }
 
 case class InvitationModification(modif: RepoModification[Invitation]) extends RepoModificationEvent[Invitation]
@@ -206,5 +207,5 @@ class InvitationModificationActor @Inject() (
   def getEventTime(modification: InvitationModification) = modification.modif.model.updatedAt
   def processBatch(modifications: Seq[InvitationModification]) = if (richConnectionCommander.sendInvitations(batchingConf.MaxBatchSize) == batchingConf.MaxBatchSize) {
     flushPlease()
-  }
+  } else Future.successful(())
 }

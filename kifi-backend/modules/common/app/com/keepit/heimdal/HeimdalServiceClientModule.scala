@@ -14,14 +14,7 @@ import play.api.Play._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.plugin.SchedulingProperties
 
-trait HeimdalServiceClientModule extends ScalaModule
-
-case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
-
-  def configure() {
-    install(HeimdalQueueProdModule())
-  }
-
+trait HeimdalServiceClientModule extends ScalaModule {
   @Provides
   @AppScoped
   def heimdalServiceClient (
@@ -49,3 +42,17 @@ case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
 
   }
 }
+
+case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
+  def configure() {
+    install(HeimdalQueueProdModule())
+  }
+}
+
+case class DevHeimdalServiceClientModule() extends HeimdalServiceClientModule {
+
+  def configure() {
+    install(HeimdalQueueDevModule())
+  }
+}
+
