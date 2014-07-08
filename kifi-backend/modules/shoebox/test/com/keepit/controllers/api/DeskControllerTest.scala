@@ -31,6 +31,7 @@ class DeskControllerTest extends Specification with ShoeboxApplicationInjector {
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeMailModule(),
+    TestHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     TestScraperServiceClientModule()

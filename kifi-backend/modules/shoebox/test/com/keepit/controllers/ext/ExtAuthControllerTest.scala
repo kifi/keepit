@@ -38,6 +38,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
     ShoeboxFakeStoreModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
+    TestHeimdalServiceClientModule(),
     TestMailModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),

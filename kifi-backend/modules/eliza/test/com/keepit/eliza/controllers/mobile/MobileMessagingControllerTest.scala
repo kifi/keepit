@@ -15,7 +15,7 @@ import play.api.test.Helpers._
 import play.api.libs.json.Json
 import akka.actor.ActorSystem
 import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.{TestActorSystemModule, StandaloneTestActorSystemModule}
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.controller.FakeActionAuthenticatorModule
 import play.api.libs.json.JsArray
@@ -39,8 +39,9 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
       FakeSearchServiceClientModule(),
       ElizaCacheModule(),
       FakeShoeboxServiceModule(),
+      TestHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
-      StandaloneTestActorSystemModule(),
+      TestActorSystemModule(),
       TestABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeActionAuthenticatorModule(),

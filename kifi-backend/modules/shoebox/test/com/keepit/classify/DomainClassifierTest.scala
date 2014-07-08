@@ -26,6 +26,7 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with SpecificationLike
     FakeMailModule(),
     TestAnalyticsModule(),
     ShoeboxFakeStoreModule(),
+    TestHeimdalServiceClientModule(),
     FakeDomainTagImporterModule(),
     TestActorSystemModule(Some(system)),
     FakeShoeboxServiceModule(),

@@ -44,6 +44,7 @@ class UserControllerTest extends Specification with ApplicationInjector {
     TestMailModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
+    TestHeimdalServiceClientModule(),
     FakeShoeboxSecureSocialModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),

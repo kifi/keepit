@@ -69,6 +69,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         TestScrapeSchedulerConfigModule(),
         FakeElizaServiceClientModule(),
         FakeAirbrakeModule(),
+        TestHeimdalServiceClientModule(),
         TestABookServiceClientModule(),
         TestScraperServiceClientModule(),
         KeepImportsModule(),

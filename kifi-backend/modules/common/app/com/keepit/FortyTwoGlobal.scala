@@ -24,6 +24,7 @@ import play.api.mvc.Results._
 import play.api.mvc._
 import play.modules.statsd.api.StatsdFilter
 import play.utils.Threads
+import scala.util.Try
 import scala.util.control.NonFatal
 import com.amazonaws.services.elasticloadbalancing.model._
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
@@ -96,7 +97,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       Some(serviceDiscovery)
     }
 
-    injector.instance[ActorPlugin].onStart() // start actor system
+    Try(injector.instance[ActorPlugin].onStart()) // start actor system
     injector.instance[AppScope].onStart(app)
     pluginsStarted = true
 
@@ -208,7 +209,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       try {
         if (pluginsStarted) {
           injector.instance[AppScope].onStop(app)
-          injector.instance[ActorPlugin].onStop()
+          Try(injector.instance[ActorPlugin].onStop())
           pluginsStarted = false
         }
       } catch {

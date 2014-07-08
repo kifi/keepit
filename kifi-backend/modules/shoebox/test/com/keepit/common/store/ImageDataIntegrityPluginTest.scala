@@ -41,6 +41,7 @@ class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specifica
         TestActorSystemModule(Some(system)),
         FakeShoeboxSecureSocialModule(),
         FakeSocialGraphModule(),
+        TestHeimdalServiceClientModule(),
         TestMailModule(),
         FakeExternalServiceModule(),
         FakeCortexServiceClientModule(),

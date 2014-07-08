@@ -26,6 +26,7 @@ class SearchApplication(overridingModules: Module*)(implicit path: File = new Fi
   extends TestApplicationFromGlobal(path, new TestGlobal(
     Seq(
       FakeHttpClientModule(),
+      TestHeimdalServiceClientModule(),
       FakeAirbrakeModule(),
       FakeMemoryUsageModule(),
       FakeClockModule(),

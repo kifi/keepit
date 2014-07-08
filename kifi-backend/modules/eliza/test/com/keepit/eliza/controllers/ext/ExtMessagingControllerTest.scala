@@ -10,7 +10,7 @@ import com.keepit.test.{DbTestInjector}
 import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl}
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.{TestActorSystemModule, StandaloneTestActorSystemModule}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.model.User
 import com.keepit.social.BasicUser
@@ -45,14 +45,15 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
       FakeSearchServiceClientModule(),
       ElizaCacheModule(),
       FakeShoeboxServiceModule(),
+      TestHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
-      StandaloneTestActorSystemModule(),
       TestABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeActionAuthenticatorModule(),
       TestCryptoModule(),
       TestScraperServiceClientModule(),
-      ElizaFakeStoreModule()
+      ElizaFakeStoreModule(),
+      TestActorSystemModule()
     )
   }
 

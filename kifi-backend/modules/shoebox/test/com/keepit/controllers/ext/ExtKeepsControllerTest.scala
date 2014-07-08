@@ -36,6 +36,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
     TestActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
+    TestHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     TestScraperServiceClientModule()

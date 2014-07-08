@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import com.keepit.test.ShoeboxApplication
 import com.keepit.test.ShoeboxApplicationInjector
 import play.api.test.Helpers.running
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.{ActorPlugin, TestActorSystemModule}
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
@@ -126,6 +126,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector{
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
         val bmRepo = inject[KeepRepo]
+        val actorSystem = inject[ActorPlugin].enabled
         val cleaner = inject[OrphanCleaner]
 
         val (user, other) = db.readWrite { implicit session =>

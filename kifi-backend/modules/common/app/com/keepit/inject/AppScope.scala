@@ -6,8 +6,7 @@ import com.google.inject.Scope
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.SchedulerPlugin
-import play.api.Application
-import play.api.Plugin
+import play.api.{Mode, Application, Plugin}
 import play.utils.Threads
 import scala.collection.concurrent
 import scala.concurrent.Future
@@ -37,9 +36,10 @@ class AppScope extends Scope with Logging {
     println(s"[$identifier] scope starting...")
     require(!started, "AppScope has already been started")
     this.app = app
-    val startedPlugins = pluginsToStart.map { p => startPlugin(p) }
-
-    log.info(s"[$identifier] Plugins started!\nSummary: " + startedPlugins.map(t => s"${t._1.getClass.getSimpleName} (${t._2}ms)").mkString(", "))
+    if (app.mode != Mode.Test) {
+      val startedPlugins = pluginsToStart.map { p => startPlugin(p) }
+      log.info(s"[$identifier] Plugins started!\nSummary: " + startedPlugins.map(t => s"${t._1.getClass.getSimpleName} (${t._2}ms)").mkString(", "))
+    }
 
     pluginsToStart = Nil
     started = true
@@ -136,7 +136,7 @@ class AppScope extends Scope with Logging {
           Try(Await.result(instFuture, Duration(10, scala.concurrent.duration.SECONDS)).asInstanceOf[T]) match {
             case Success(res) => res
             case Failure(ex) =>
-              throw new Exception(s"Timed out creating guice: $key", ex)
+              throw new Exception(s"Guice problem getting: $key", ex)
           }
         }
         log.debug(s"instance of key $key is $instance")
