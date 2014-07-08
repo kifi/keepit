@@ -263,7 +263,7 @@ object ABook extends Service {
     })
     def getRipestFruits(userId: Id[User], page: Int, pageSize: Int) = ServiceRoute(GET, s"/internal/abook/$userId/ripestFruits", Param("page", page), Param("pageSize", pageSize))
     def validateAllContacts(readOnly: Boolean) = ServiceRoute(GET, s"/internal/abook/validateAllContacts", Param("readOnly", readOnly))
-    def getNameByEmail(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/getNameByEmail")
+    def getContactNameByEmail(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/getContactNameByEmail")
     def internKifiContact(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/internKifiContact")
   }
 }

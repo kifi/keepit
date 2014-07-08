@@ -311,9 +311,9 @@ class ABookController @Inject() (
     Ok
   }
 
-  def getNameByEmail(userId: Id[User]) = Action(parse.json) { request =>
+  def getContactNameByEmail(userId: Id[User]) = Action(parse.json) { request =>
     val email = request.body.as[EmailAddress]
-    val name = abookCommander.getNameByEmail(userId, email)
+    val name = abookCommander.getContactNameByEmail(userId, email)
     Ok(Json.toJson(name))
   }
 

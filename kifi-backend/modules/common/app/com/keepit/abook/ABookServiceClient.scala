@@ -26,6 +26,12 @@ import scala.util.{Success, Failure, Try}
 import play.api.http.Status
 import com.keepit.abook.model.RichSocialConnection
 import com.keepit.common.mail.{EmailAddress, BasicContact}
+import com.keepit.typeahead.TypeaheadHit
+
+case class RichContact(email: EmailAddress, name: Option[String] = None, firstName: Option[String] = None, lastName: Option[String] = None, userId: Option[Id[User]])
+object RichContact {
+  implicit val format = Json.format[RichContact]
+}
 
 trait ABookServiceClient extends ServiceClient {
 
@@ -60,7 +66,7 @@ trait ABookServiceClient extends ServiceClient {
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int]
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
   def validateAllContacts(readOnly: Boolean): Unit
-  def getNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]]
+  def getContactNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]]
   def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact]
 }
 

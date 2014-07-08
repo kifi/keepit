@@ -148,7 +148,7 @@ class InviteController @Inject() (db: Database,
                 val name = db.readOnly(socialUserInfoRepo.get(socialUserId)(_).fullName)
                 Future.successful(Some(name))
               case (_, Some(emailAddress)) =>
-                abookServiceClient.getNameByEmail(senderUserId, emailAddress).map(_ orElse Some(""))
+                abookServiceClient.getContactNameByEmail(senderUserId, emailAddress).map(_ orElse Some(""))
               case _ =>
                 Future.successful(None)
             }
