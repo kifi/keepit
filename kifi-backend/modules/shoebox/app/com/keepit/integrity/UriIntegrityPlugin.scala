@@ -351,9 +351,13 @@ class UriIntegrityPluginImpl @Inject() (
 ) extends UriIntegrityPlugin with Logging {
   override def enabled = true
   override def onStart() {
+    log.info("starting UriIntegrityPluginImpl")
     scheduleTaskOnLeader(actor.system, 1 minutes, 45 seconds, actor.ref, BatchURIMigration(50))
     scheduleTaskOnLeader(actor.system, 1 minutes, 60 seconds, actor.ref, BatchURLMigration(100))
     scheduleTaskOnLeader(actor.system, 1 minutes, 60 seconds, actor.ref, FixDuplicateKeeps())
+  }
+  override def onStop() {
+    log.info("stopping UriIntegrityPluginImpl")
   }
 
   def handleChangedUri(change: UriChangeMessage) = {

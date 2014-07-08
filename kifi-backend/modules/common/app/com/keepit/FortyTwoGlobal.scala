@@ -1,8 +1,6 @@
 package com.keepit
 
 import java.io.File
-import akka.actor.ActorSystem
-import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.strings._
@@ -36,8 +34,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   //used to identify instance of applciation. used to debug intest mode
   val globalId: ExternalId[FortyTwoGlobal] = ExternalId()
   log.debug(s"########## starting FortyTwoGlobal $globalId")
-
-  @volatile private var pluginsStarted: Boolean = false
 
   override def getControllerInstance[A](clazz: Class[A]) = try {
     injector.getInstance(clazz)
@@ -83,7 +79,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     }
     val services = injector.instance[FortyTwoServices]
     val startMessage = ">>>>>>>>>> FortyTwo [%s] service %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
-        this.getClass.getSimpleName, services.currentService, services.currentVersion, services.compilationTime, services.baseUrl)
+        this, services.currentService, services.currentVersion, services.compilationTime, services.baseUrl)
     log.info(s"[${currentDateTime.toStandardTimeString}] " + startMessage)
 
     val disableRegistration = sys.props.getOrElse("service.register.disable", "false").toBoolean // directly use sys.props to be consistent; uptake injected config later
@@ -96,10 +92,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       Some(serviceDiscovery)
     }
 
-    injector.instance[ActorPlugin].onStart() // start actor system
     injector.instance[AppScope].onStart(app)
-    pluginsStarted = true
-
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
       statsd.incrementOne("deploys", ALWAYS)
       injector.instance[AirbrakeNotifier].reportDeployment()
@@ -206,11 +199,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         }
       }
       try {
-        if (pluginsStarted) {
-          injector.instance[AppScope].onStop(app)
-          injector.instance[ActorPlugin].onStop()
-          pluginsStarted = false
-        }
+        if (mode == Mode.Prod)
+        injector.instance[AppScope].onStop(app)
       } catch {
         case e: Throwable =>
           val errorMessage = "====================== error during onStop ==============================="
@@ -231,7 +221,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
     val serviceDiscovery = injector.instance[ServiceDiscovery]
     announceStopping(app)
-    val stopMessage = s"[${currentDateTime.toStandardTimeString}] <<<<<<<<<< Stopping " + this.getClass.getSimpleName
+    val stopMessage = s"[${currentDateTime.toStandardTimeString}] <<<<<<<<<< Stopping " + this
     println(stopMessage)
     log.info(stopMessage)
     serviceDiscovery.unRegister()
