@@ -77,7 +77,7 @@ class EContactTypeahead @Inject() (
   override protected def getAllInfosForUser(id: Id[User]): Seq[EContact] = {
     db.readOnlyMaster(attempts = 2) { implicit ro =>
       econtactRepo.getByUserId(id)
-    }.filter(EContactTypeaheadBase.isLikelyHuman)
+    }.filter(EContactTypeahead.isLikelyHuman)
   }
 
   override protected def getInfos(ids: Seq[Id[EContact]]): Seq[EContact] = {
@@ -90,7 +90,7 @@ class EContactTypeahead @Inject() (
   }
 }
 
-object EContactTypeaheadBase {
+object EContactTypeahead {
   // might also consider these indicators in the future:
   // support feedback comment notification tickets? bugs? buganizer system nobody lists? announce(ments?)?
   // discuss help careers jobs reports? bounces? updates?

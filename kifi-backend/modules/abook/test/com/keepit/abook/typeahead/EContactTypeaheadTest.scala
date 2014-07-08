@@ -45,7 +45,7 @@ class EContactTypeaheadTest extends Specification {
   }
 
   private def human(addr: String): Boolean = {
-    EContactTypeaheadBase.isLikelyHuman(EContact(userId = null, email = EmailAddress(addr)))
+    EContactTypeahead.isLikelyHuman(EContact(userId = null, email = EmailAddress(addr)))
   }
 
 }
