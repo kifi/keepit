@@ -316,4 +316,13 @@ class ABookController @Inject() (
     val name = abookCommander.getNameByEmail(userId, email)
     Ok(Json.toJson(name))
   }
+
+  def internKifiContact(userId:Id[User]) = Action(parse.json) { request =>
+    val contact = request.body.as[BasicContact]
+    log.info(s"[internKifiContact] userId=$userId contact=$contact")
+
+    val eContact = abookCommander.internContact(userId, contact) // todo(Léo): migrate to internKifiContact
+    val richContact = EContact.toRichContact(eContact)
+    Ok(Json.toJson(richContact))
+  }
 }
