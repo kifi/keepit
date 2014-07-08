@@ -5,8 +5,7 @@ import play.api.Play._
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.abook.store.{InMemoryABookRawInfoStoreImpl, S3ABookRawInfoStoreImpl, ABookRawInfoStore}
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.aws.AwsModule
-import com.keepit.typeahead.abook.{InMemoryEContactTypeaheadStore, S3EContactTypeaheadStore, EContactTypeaheadStore}
+import com.keepit.abook.typeahead.{InMemoryEContactTypeaheadStore, S3EContactTypeaheadStore, EContactTypeaheadStore}
 
 case class ABookProdStoreModule() extends ProdStoreModule {
   def configure() {

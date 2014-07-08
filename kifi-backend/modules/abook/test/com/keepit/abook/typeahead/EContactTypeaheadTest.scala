@@ -1,4 +1,4 @@
-package com.keepit.typeahead.abook
+package com.keepit.abook.typeahead
 
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.EContact

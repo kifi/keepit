@@ -7,7 +7,7 @@ import com.keepit.social.BasicUserUserIdCache
 import com.keepit.search.{ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache}
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
-import com.keepit.typeahead.abook.EContactTypeaheadCache
+import com.keepit.abook.typeahead.EContactTypeaheadCache
 
 case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
 
