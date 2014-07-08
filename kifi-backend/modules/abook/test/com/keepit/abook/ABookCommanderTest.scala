@@ -16,8 +16,6 @@ import play.api.libs.json.JsString
 import scala.Some
 import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.{AirbrakeNotifier, FakeAirbrakeModule}
-import com.keepit.typeahead.abook.{EContactTypeaheadStore, EContactTypeahead}
-import com.keepit.abook.typeahead.EContactABookTypeahead
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.mail.BasicContact
 
