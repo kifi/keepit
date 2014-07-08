@@ -22,7 +22,7 @@ import com.keepit.common.performance._
 import com.keepit.abook.model.EmailAccountRepo
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.mail.{BasicContact, EmailAddress}
-import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.abook.typeahead.EContactTypeahead
 
 
 trait ContactsUpdaterPlugin extends Plugin {
@@ -69,7 +69,7 @@ class ContactsUpdater @Inject() (
   abookInfoRepo:ABookInfoRepo,
   econtactRepo:EContactRepo,
   emailAccountRepo: EmailAccountRepo,
-  typeahead: EContactABookTypeahead,
+  typeahead: EContactTypeahead,
   airbrake:AirbrakeNotifier,
   abookUploadConf:ABookUploadConf,
   shoeboxClient: ShoeboxServiceClient) extends Logging {

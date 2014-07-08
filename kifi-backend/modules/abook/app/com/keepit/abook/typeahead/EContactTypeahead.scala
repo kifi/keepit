@@ -16,10 +16,9 @@ import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.logging.{Logging, AccessLog}
 import com.keepit.common.cache.{Key, BinaryCacheImpl, FortyTwoCachePlugin, CacheStatistics}
 import com.keepit.serializer.ArrayBinaryFormat
-import scala.Some
 import com.keepit.common.store.S3Bucket
 
-class EContactABookTypeahead @Inject() (
+class EContactTypeahead @Inject() (
   db:Database,
   override val airbrake:AirbrakeNotifier,
   cache: EContactTypeaheadCache,
