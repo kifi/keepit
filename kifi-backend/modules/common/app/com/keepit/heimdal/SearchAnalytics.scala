@@ -182,9 +182,13 @@ class SearchAnalytics @Inject() (
       contextBuilder += ("titleMatches", hitContext.titleMatches)
       contextBuilder += ("urlMatches", hitContext.urlMatches)
 
-      val queryTermsCount = contextBuilder.data.get("queryTerms").collect { case ContextDoubleData(count) => count.toInt }.get
-      contextBuilder += ("titleMatchQueryRatio", hitContext.titleMatches.toDouble / queryTermsCount)
-      contextBuilder += ("urlMatchQueryRatio", hitContext.urlMatches.toDouble / queryTermsCount)
+      contextBuilder.data.get("queryTerms").collect { case ContextDoubleData(count) => count.toInt } match {
+        case None =>
+          log.warn(s"[clickedSearchResult($userId)] Failed to get queryTermsCount; data(queryTerms)=${contextBuilder.data.get("queryTerms")}")
+        case Some(queryTermsCount) =>
+          contextBuilder += ("titleMatchQueryRatio", hitContext.titleMatches.toDouble / queryTermsCount)
+          contextBuilder += ("urlMatchQueryRatio", hitContext.urlMatches.toDouble / queryTermsCount)
+      }
     }
 
     heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.CLICKED_SEARCH_RESULT, clickedAt))
