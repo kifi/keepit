@@ -22,8 +22,6 @@ class PullerPluginImpl @Inject() (
   val scheduling: SchedulingProperties
 ) extends Logging with PullerPlugin with SchedulerPlugin {
 
-  log.info(s"<ctr> PullerPlugin created")
-
   override def enabled: Boolean = true
   override def onStart() {
     if (Play.maybeApplication.isDefined) {

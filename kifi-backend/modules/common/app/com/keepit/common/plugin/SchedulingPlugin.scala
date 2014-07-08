@@ -76,7 +76,7 @@ trait SchedulerPlugin extends Plugin with Logging {
         }
       }
     } else {
-      log.info(s"permanently disable scheduling for task: $taskName")
+      log.debug(s"permanently disable scheduling for task: $taskName")
     }
   }
 
@@ -90,7 +90,7 @@ trait SchedulerPlugin extends Plugin with Logging {
         }
       }
     } else {
-      log.info(s"permanently disable scheduling for task: $taskName")
+      log.debug(s"permanently disable scheduling for task: $taskName")
     }
   }
 

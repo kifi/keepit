@@ -19,11 +19,16 @@ trait ConfigurationModule extends AbstractModuleAccessor with Logging {
   final def configure() {
     log.debug(s"Configuring $this")
     preConfigure()
+    val cache = scala.collection.mutable.HashSet[String]()
+
     for (field <- getClass.getMethods if classOf[ScalaModule] isAssignableFrom field.getReturnType) {
       val startTime = System.currentTimeMillis
-      val module = field.invoke(this).asInstanceOf[ScalaModule]
-      install0(module)
-      log.debug(s"Installing ${module.getClass.getSimpleName}: took ${System.currentTimeMillis-startTime}ms")
+      if (!cache.contains(field.getName)) {
+        val module = field.invoke(this).asInstanceOf[ScalaModule]
+        log.debug(s"Installing ${module.getClass.getSimpleName}: took ${System.currentTimeMillis-startTime}ms")
+        install0(module)
+        cache.add(field.getName)
+      }
     }
   }
 
