@@ -60,15 +60,15 @@ class SocialUserTypeahead @Inject() (
     val builder = new mutable.ArrayBuffer[SocialUserBasicInfo]
     db.readOnly { implicit session =>
       val infos = socialUserRepo.getSocialUserBasicInfosByUser(id) // todo: filter out fortytwo?
-      log.debug(s"[social.getAllInfosForUser($id)] res(len=${infos.length}):${infos.mkString(",")}")
+      log.info(s"[social.getAllInfosForUser($id)] res(len=${infos.length}):${infos.mkString(",")}")
       for (info <- infos) {
         val connInfos = socialConnRepo.getSocialUserConnections(info.id)
-        log.debug(s"[social.getConns($id)] (${info.id},${info.networkType}).conns(len=${connInfos.length}):${connInfos.mkString(",")}")
+        log.info(s"[social.getConns($id)] (${info.id},${info.networkType}).conns(len=${connInfos.length}):${connInfos.mkString(",")}")
         builder ++= connInfos.map { SocialUserBasicInfo.fromSocialUser(_) } // conversion overhead
       }
     }
     val res = builder.result
-    log.debug(s"[social.getAllInfosForUser($id)] res(len=${res.length}): ${res.mkString(",")}")
+    log.info(s"[social.getAllInfosForUser($id)] res(len=${res.length}): ${res.mkString(",")}")
     res
   }
 

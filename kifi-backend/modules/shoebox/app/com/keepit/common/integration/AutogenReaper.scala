@@ -24,6 +24,8 @@ class AutogenReaperPluginImpl @Inject() (
   val scheduling: SchedulingProperties //only on leader
 ) extends Logging with AutogenReaperPlugin with SchedulerPlugin {
 
+  log.info(s"<ctr> ReaperPlugin created")
+
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
@@ -32,6 +34,10 @@ class AutogenReaperPluginImpl @Inject() (
       log.info(s"[onStart] ReaperPlugin started with initDelay=$initDelay freq=$freq")
       scheduleTaskOnLeader(actor.system, initDelay, freq, actor.ref, Reap)
     }
+  }
+  override def onStop() {
+    log.info(s"[AutogenReaperPlugin] stopped")
+    super.onStop
   }
 
   override def reap() { actor.ref ! Reap }
