@@ -26,6 +26,12 @@ import scala.util.{Success, Failure, Try}
 import play.api.http.Status
 import com.keepit.abook.model.RichSocialConnection
 import com.keepit.common.mail.{EmailAddress, BasicContact}
+import com.keepit.typeahead.TypeaheadHit
+
+case class RichContact(email: EmailAddress, name: Option[String] = None, firstName: Option[String] = None, lastName: Option[String] = None, userId: Option[Id[User]])
+object RichContact {
+  implicit val format = Json.format[RichContact]
+}
 
 trait ABookServiceClient extends ServiceClient {
 
@@ -43,7 +49,6 @@ trait ABookServiceClient extends ServiceClient {
   def getABookInfoByExternalId(id: ExternalId[ABookInfo]):Future[Option[ABookInfo]]
   def getEContacts(userId:Id[User], maxRows:Int):Future[Seq[EContact]]
   def getEContactCount(userId:Id[User]):Future[Int]
-  def getEContactById(contactId:Id[EContact]):Future[Option[EContact]]
   def getEContactsByIds(contactIds:Seq[Id[EContact]]):Future[Seq[EContact]]
   def getEContactByEmail(userId:Id[User], email: EmailAddress):Future[Option[EContact]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
@@ -61,6 +66,8 @@ trait ABookServiceClient extends ServiceClient {
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int]
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
   def validateAllContacts(readOnly: Boolean): Unit
+  def getContactNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]]
+  def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact]
 }
 
 
@@ -134,12 +141,6 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def getEContactById(contactId: Id[EContact]): Future[Option[EContact]] = {
-    call(ABook.internal.getEContactById(contactId)).map { r =>
-      Json.fromJson[Option[EContact]](r.json).get
-    }
-  }
-
   override def getEContactsByIds(contactIds: Seq[Id[EContact]]): Future[Seq[EContact]] = {
     call(ABook.internal.getEContactsByIds(), JsArray(contactIds.map(c => JsNumber(c.id)))).map { r =>
       Json.fromJson[Seq[EContact]](r.json).get
@@ -149,6 +150,12 @@ class ABookServiceClientImpl @Inject() (
   def getEContactByEmail(userId: Id[User], email: EmailAddress): Future[Option[EContact]] = {
     call(ABook.internal.getEContactByEmail(userId, email), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Option[EContact]](r.json).get
+    }
+  }
+
+  def getContactNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]] = {
+    call(ABook.internal.getContactNameByEmail(userId), Json.toJson(email), callTimeouts = longTimeout).map { r =>
+      Json.fromJson[Option[String]](r.json).get
     }
   }
 
@@ -177,6 +184,12 @@ class ABookServiceClientImpl @Inject() (
   def internContact(userId:Id[User], contact: BasicContact):Future[EContact] = {
     call(ABook.internal.internContact(userId), Json.toJson(contact)).map { r =>
       r.json.as[EContact]
+    }
+  }
+
+  def internKifiContact(userId:Id[User], contact: BasicContact):Future[RichContact] = {
+    call(ABook.internal.internKifiContact(userId), Json.toJson(contact)).map { r =>
+      r.json.as[RichContact]
     }
   }
 
@@ -293,8 +306,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getEContactCount(userId: Id[User]): Future[Int] = ???
 
-  def getEContactById(contactId: Id[EContact]): Future[Option[EContact]] = ???
-
   def getEContactsByIds(contactIds: Seq[Id[EContact]]): Future[Seq[EContact]] = ???
 
   def getEContactByEmail(userId: Id[User], email: EmailAddress): Future[Option[EContact]] = ???
@@ -330,4 +341,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]] = ???
 
   def validateAllContacts(readOnly: Boolean = true): Unit = ???
+
+  def getContactNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]] = Future.successful(None)
+
+  def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact] = ???
 }
