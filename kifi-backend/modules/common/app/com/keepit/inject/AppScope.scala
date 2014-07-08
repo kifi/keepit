@@ -14,7 +14,7 @@ import scala.concurrent.Future
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.concurrent.Promise
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits._
 import java.util.concurrent.atomic.AtomicInteger
@@ -37,18 +37,25 @@ class AppScope extends Scope with Logging {
     println(s"[$identifier] scope starting...")
     require(!started, "AppScope has already been started")
     this.app = app
-    pluginsToStart foreach { p => startPlugin(p) }
+    val startedPlugins = pluginsToStart.map { p => startPlugin(p) }
+
+    log.info(s"[$identifier] Plugins started!\nSummary: " + startedPlugins.map(t => s"${t._1.getClass.getSimpleName} (${t._2}ms)").mkString(", "))
+
     pluginsToStart = Nil
     started = true
   }
 
-  private[this] def startPlugin(plugin: Plugin): Unit = {
-    log.info(s"[$identifier] starting plugin: $plugin")
+  case class PluginMeasurement(plugin: Plugin, time: Long)
+
+  private[this] def startPlugin(plugin: Plugin): (Plugin, Long) = {
+    log.debug(s"[$identifier] starting plugin: ${plugin.getClass.getSimpleName}")
     // start plugin, explicitly using the app classloader
+    val t = System.currentTimeMillis
     Threads.withContextClassLoader(app.classloader) {
       plugin.onStart()
     }
     plugins = plugin :: plugins
+    (plugin, System.currentTimeMillis - t)
   }
 
   def onStop(app: Application): Unit = {
@@ -60,10 +67,11 @@ class AppScope extends Scope with Logging {
     else {
       require(!stopped, s"[$identifier] AppScope has already been stopped")
       // stop plugins, explicitly using the app classloader
-      Threads.withContextClassLoader(app.classloader) {
-        for (plugin <- plugins) {
-          SafeFuture {
-            log.info("stopping plugin: " + plugin)
+      val stoppedPlugins = Threads.withContextClassLoader(app.classloader) {
+        plugins.map { plugin =>
+          log.debug("stopping plugin: " + plugin.getClass.getSimpleName)
+          val t = System.currentTimeMillis
+          try {
             plugin match {
               case p: SchedulerPlugin =>
                 p.cancelTasks()
@@ -71,9 +79,18 @@ class AppScope extends Scope with Logging {
               case p =>
                 p.onStop()
             }
+            (plugin, System.currentTimeMillis - t, None)
+          } catch {
+            case ex: Throwable => // We can't email out, but log it
+              (plugin, System.currentTimeMillis - t, Some(ex))
           }
         }
       }
+      val (successes, failures) = stoppedPlugins.partition(_._3.isEmpty)
+      val successStr = "Successes: " + successes.map(t => s"${t._1.getClass.getSimpleName} (${t._2}ms)").mkString(", ")
+      val failuresStr = "Failures: " + failures.map(t => s"${t._1.getClass.getSimpleName} (${t._2}ms)\n${t._3.get.toString}").mkString("\n\t")
+
+      log.info(s"[$identifier] Plugins stopped!\n$successStr\n$failuresStr")
       log.info(s"[$identifier] scope stopped!")
       plugins = Nil
       stopped = true
@@ -116,7 +133,11 @@ class AppScope extends Scope with Logging {
               promise.complete(Try(createInstance(key, unscoped)))
               promise.future
           }
-          Await.result(instFuture, Duration.Inf).asInstanceOf[T]
+          Try(Await.result(instFuture, Duration(10, scala.concurrent.duration.SECONDS)).asInstanceOf[T]) match {
+            case Success(res) => res
+            case Failure(ex) =>
+              throw new Exception(s"Timed out creating guice: $key", ex)
+          }
         }
         log.debug(s"instance of key $key is $instance")
         instance

@@ -1,6 +1,12 @@
 package com.keepit.dev
 
+import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.common.mail._
+import com.keepit.cortex.ProdCortexServiceClientModule
+import com.keepit.eliza.ProdElizaServiceClientModule
+import com.keepit.graph.ProdGraphServiceClientModule
+import com.keepit.heimdal.{DevHeimdalServiceClientModule, ProdHeimdalServiceClientModule}
+import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox._
 import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.classify.DevDomainTagImporterModule
@@ -10,7 +16,7 @@ import com.keepit.common.analytics.DevAnalyticsModule
 import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.common.integration.DevReaperModule
-import com.keepit.scraper.DevScrapeSchedulerModule
+import com.keepit.scraper.{ProdScraperServiceClientModule, DevScrapeSchedulerModule}
 import com.keepit.common.queue.{ProdSimpleQueueModule, DevSimpleQueueModule}
 import com.keepit.queue.DevNormalizationUpdateJobQueueModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
@@ -34,4 +40,14 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule()),
   externalServiceModule = DevExternalServiceModule(),
   rekeepStatsUpdaterModule = DevReKeepStatsUpdaterModule()
-) with CommonDevModule
+) with CommonDevModule {
+  // Service clients
+  val searchServiceClientModule = ProdSearchServiceClientModule()
+  val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
+  val elizaServiceClientModule = ProdElizaServiceClientModule()
+  val heimdalServiceClientModule = DevHeimdalServiceClientModule()
+  val abookServiceClientModule = ProdABookServiceClientModule()
+  val scraperServiceClientModule = ProdScraperServiceClientModule()
+  val cortexServiceClientModule = ProdCortexServiceClientModule()
+  val graphServiceClientModule = ProdGraphServiceClientModule()
+}
