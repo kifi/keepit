@@ -320,30 +320,26 @@ class TypeaheadCommander @Inject()(
       friendRequestRepo.getBySender(userId).map{ fr => fr.recipientId -> fr }.toMap
     } else Map.empty[Id[User], FriendRequest]
 
-    top map {
-      case (snType, hit) =>
-        snType match {
-          case SocialNetworks.EMAIL =>
-            val e = hit.info.asInstanceOf[RichContact]
-            val (status, lastSentAt) = emailInvitesMap.get(e.email) map { inv => inviteStatus(inv) } getOrElse ("", None)
-            ConnectionWithInviteStatus(e.name.getOrElse(""), hit.score, SocialNetworks.EMAIL.name, None, emailId(e.email), status, None, lastSentAt)
-          case SocialNetworks.FACEBOOK | SocialNetworks.LINKEDIN =>
-            val sci = hit.info.asInstanceOf[SocialUserBasicInfo]
-            val (status, lastSentAt) = socialInvitesMap.get(sci.id) map { inv => inviteStatus(inv) } getOrElse ("", None)
-            ConnectionWithInviteStatus(sci.fullName, hit.score, sci.networkType.name, if (pictureUrl) sci.getPictureUrl(75, 75) else None, socialId(sci), status, None, lastSentAt)
-          case SocialNetworks.FORTYTWO =>
-            val u = hit.info.asInstanceOf[User]
-            val picUrl = if (pictureUrl) {
-              u.pictureName.map{ pn => s"$pn.jpg" } // old bug
-            } else None
-            ConnectionWithInviteStatus(u.fullName, hit.score, SocialNetworks.FORTYTWO.name, picUrl, s"fortytwo/${u.externalId}", "joined")
-          case SocialNetworks.FORTYTWO_NF =>
-            val bu = hit.info.asInstanceOf[BasicUserWithUserId] // todo: uptake User API from search
-            val name = s"${bu.firstName} ${bu.lastName}".trim // if not good enough, lookup User
-            val picUrl = if (pictureUrl) Some(bu.pictureName) else None
-            val frOpt = frMap.get(bu.userId)
-            ConnectionWithInviteStatus(name, hit.score, snType.name, picUrl, s"fortytwo/${bu.externalId}", frOpt.map(_ => "requested").getOrElse("joined"), None, frOpt.map(_.createdAt))
-        }
+    top collect {
+      case (_, TypeaheadHit(score, _, _, e: RichContact)) =>
+        val (status, lastSentAt) = emailInvitesMap.get(e.email) map { inv => inviteStatus(inv) } getOrElse ("", None)
+        ConnectionWithInviteStatus(e.name.getOrElse(""), score, SocialNetworks.EMAIL.name, None, emailId(e.email), status, None, lastSentAt)
+
+      case (_, TypeaheadHit(score, _, _, sci: SocialUserBasicInfo)) =>
+        val (status, lastSentAt) = socialInvitesMap.get(sci.id) map { inv => inviteStatus(inv) } getOrElse ("", None)
+        ConnectionWithInviteStatus(sci.fullName, score, sci.networkType.name, if (pictureUrl) sci.getPictureUrl(75, 75) else None, socialId(sci), status, None, lastSentAt)
+
+      case (_, TypeaheadHit(score, _, _, u: User))  =>
+        val picUrl = if (pictureUrl) {
+          u.pictureName.map{ pn => s"$pn.jpg" } // old bug
+        } else None
+        ConnectionWithInviteStatus(u.fullName, score, SocialNetworks.FORTYTWO.name, picUrl, s"fortytwo/${u.externalId}", "joined")
+
+      case (snType, TypeaheadHit(score, _, _, bu: BasicUserWithUserId))  => // todo(Ray): uptake User API from search
+        val name = s"${bu.firstName} ${bu.lastName}".trim // if not good enough, lookup User
+        val picUrl = if (pictureUrl) Some(bu.pictureName) else None
+        val frOpt = frMap.get(bu.userId)
+        ConnectionWithInviteStatus(name, score, snType.name, picUrl, s"fortytwo/${bu.externalId}", frOpt.map(_ => "requested").getOrElse("joined"), None, frOpt.map(_.createdAt))
     }
   }
 
