@@ -28,7 +28,7 @@ import com.keepit.abook.model.RichSocialConnection
 import com.keepit.common.mail.{EmailAddress, BasicContact}
 import com.keepit.typeahead.TypeaheadHit
 
-case class RichContact(email: EmailAddress, name: Option[String] = None, firstName: Option[String] = None, lastName: Option[String] = None, userId: Option[Id[User]])
+case class RichContact(email: EmailAddress, name: Option[String] = None, firstName: Option[String] = None, lastName: Option[String] = None, userId: Option[Id[User]] = None)
 object RichContact {
   implicit val format = Json.format[RichContact]
 }
