@@ -138,7 +138,7 @@ class ABookController @Inject() (
   }
 
   def hideEmailFromUser(userId:Id[User], email: EmailAddress) = Action { request =>
-    Ok(JsNumber(abookCommander.hideEmailFromUser(userId, email)))
+    Ok(JsBoolean(abookCommander.hideEmailFromUser(userId, email)))
   }
 
   def getEContacts(userId:Id[User], maxRows:Int) = Action { request =>

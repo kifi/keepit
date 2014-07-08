@@ -386,7 +386,7 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Int] = {
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = {
     abookServiceClient.hideEmailFromUser(userId, email)
   }
 

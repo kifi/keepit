@@ -37,7 +37,7 @@ class ExtNonUserSearchController @Inject() (
   }
 
   def hideEmailFromUser(email: String) = JsonAction.authenticatedAsync { request =>
-    new SafeFuture[Int]({
+    new SafeFuture[Boolean]({
       typeaheadCommander.hideEmailFromUser(request.userId, EmailAddress(email))
     }) map { result =>
       Ok(Json.toJson(result))

@@ -183,14 +183,14 @@ class ABookCommander @Inject() (
     }
   }
 
-  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Int = {
-    val result = db.readWrite(attempts = 2) {
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Boolean = {
+    val result = db.readWrite {
       implicit session =>
         econtactRepo.hideEmailFromUser(userId, email)
     }
     econtactTypeahead.refresh(userId)
     log.info(s"[hideEmailFromUser($userId, $email)] res=$result")
-    result
+    if (result > 0) true else false
   }
 
   def getEContactByIdDirect(contactId:Id[EContact]):Option[JsValue] = {
