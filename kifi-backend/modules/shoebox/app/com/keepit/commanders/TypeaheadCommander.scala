@@ -85,7 +85,7 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  def queryContactsInviteStatus(userId: Id[User], search: Option[String], limit: Int): Future[Seq[ConnectionWithInviteStatus]] = {
+  private def queryContactsInviteStatus(userId: Id[User], search: Option[String], limit: Int): Future[Seq[ConnectionWithInviteStatus]] = {
     queryContactsWithInviteStatus(userId, search, limit) map { contacts =>
       contacts.map { case (c, invited) =>
         ConnectionWithInviteStatus(c.name.getOrElse(""), -1, SocialNetworks.EMAIL.name, None, emailId(c.email), if (invited) "invited" else "")

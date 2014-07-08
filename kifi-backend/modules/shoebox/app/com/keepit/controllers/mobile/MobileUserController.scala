@@ -117,12 +117,6 @@ class MobileUserController @Inject() (
     }
   }
 
-  def queryContacts(search: Option[String], limit: Int, pictureUrl:Boolean = false) = JsonAction.authenticatedAsync { request =>
-    typeaheadCommander.queryContactsInviteStatus(request.userId, search, limit) map { r =>
-      Ok(Json.toJson(r))
-    }
-  }
-
   def friend(externalId: ExternalId[User]) = JsonAction.authenticated { request =>
     val (success, code) = userCommander.friend(request.userId, externalId)
     val res = Json.obj("code" -> code)
