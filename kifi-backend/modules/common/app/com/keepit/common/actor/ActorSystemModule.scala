@@ -36,7 +36,7 @@ case class ProdActorSystemModule() extends ActorSystemModule {
 case class DevActorSystemModule() extends ActorSystemModule {
 
   def configure() {
-    bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
+    bind[ActorSystem].toProvider[ActorPlugin]
   }
 
   @Provides

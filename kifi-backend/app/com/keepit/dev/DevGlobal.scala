@@ -4,6 +4,7 @@ import com.google.inject.Module
 import com.google.inject.util.Modules
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.akka.{SlowRunningExecutionContext, SafeFuture}
+import com.keepit.common.concurrent.ForkJoinExecContextPlugin
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.service.ServiceType
 import com.keepit.search.{SearchServices, SearchProdModule}
@@ -57,6 +58,10 @@ object DevGlobal extends FortyTwoGlobal(Dev)
 
     app.configuration.getString("services.bootstrap") match {
       case Some("false") =>
+      case Some("async") =>
+        Future {
+          startServices()
+        }(play.api.libs.concurrent.Execution.Implicits.defaultContext)
       case _ =>
         startServices()
     }

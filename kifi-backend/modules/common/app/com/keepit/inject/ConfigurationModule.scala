@@ -12,6 +12,7 @@ import com.keepit.common.aws.AwsModule
 
 abstract class AbstractModuleAccessor extends ScalaModule {
   protected def install0(module: ScalaModule) = install(module)
+
 }
 
 trait ConfigurationModule extends AbstractModuleAccessor with Logging {

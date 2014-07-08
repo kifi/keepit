@@ -14,7 +14,7 @@ import scala.concurrent.Future
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.concurrent.Promise
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits._
 import java.util.concurrent.atomic.AtomicInteger
@@ -133,7 +133,11 @@ class AppScope extends Scope with Logging {
               promise.complete(Try(createInstance(key, unscoped)))
               promise.future
           }
-          Await.result(instFuture, Duration.Inf).asInstanceOf[T]
+          Try(Await.result(instFuture, Duration(10, scala.concurrent.duration.SECONDS)).asInstanceOf[T]) match {
+            case Success(res) => res
+            case Failure(ex) =>
+              throw new Exception(s"Timed out creating guice: $key", ex)
+          }
         }
         log.debug(s"instance of key $key is $instance")
         instance
