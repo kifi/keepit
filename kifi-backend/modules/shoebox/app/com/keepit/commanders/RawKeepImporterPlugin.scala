@@ -67,7 +67,7 @@ private class RawKeepImporterActor @Inject() (
   }
 
   def fetchOldBatch() = {
-    db.readOnly { implicit session =>
+    db.readOnlyMaster { implicit session =>
       rawKeepRepo.getOldUnprocessed(batchSize, clock.now.minusMinutes(20))
     }
   }
@@ -97,7 +97,7 @@ private class RawKeepImporterActor @Inject() (
       if (successes.nonEmpty) {
         if (source == KeepSource.bookmarkImport && installationId.isDefined) {
           // User selected to import Léo
-          val tagName = db.readOnly { implicit session =>
+          val tagName = db.readOnlyMaster { implicit session =>
             "Imported" + kifiInstallationRepo.getOpt(installationId.get).map(v => s" from ${v.userAgent.name}").getOrElse("")
           }
           val tag = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
@@ -142,7 +142,7 @@ private class RawKeepImporterActor @Inject() (
       }
       log.info(s"[RawKeepImporterActor] Interned ${successes.length + failures.length} keeps. ${successes.length} successes, ${failures.length} failures.")
 
-      val (doneOpt, totalOpt) = db.readOnly { implicit session =>
+      val (doneOpt, totalOpt) = db.readOnlyMaster { implicit session =>
         (userValueRepo.getValueStringOpt(userId, "bookmark_import_done").map(_.toInt),
           userValueRepo.getValueStringOpt(userId, "bookmark_import_total").map(_.toInt))
       }
@@ -168,7 +168,7 @@ private class RawKeepImporterActor @Inject() (
 
   def getHeimdalContext(userId: Id[User], importId: String): Option[HeimdalContext] = {
     Try {
-      db.readOnly { implicit session =>
+      db.readOnlyMaster { implicit session =>
         userValueRepo.getValueStringOpt(userId, s"bookmark_import_${importId}_context")
       }.map { jsonStr =>
         Json.fromJson[HeimdalContext](Json.parse(jsonStr)).asOpt

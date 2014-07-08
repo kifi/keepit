@@ -41,7 +41,7 @@ class ShoeboxRichConnectionCommander @Inject() (
   private val sqsEmailAddressSeq = Name[SequenceNumber[UserEmailAddress]]("sqs_email_address")
 
   def sendSocialConnections(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
-    val (updateRichConnections, socialConnectionCount, highestSeq) = db.readOnly() { implicit session =>
+    val (updateRichConnections, socialConnectionCount, highestSeq) = db.readOnlyMaster { implicit session =>
       val currentSeq = systemValueRepo.getSequenceNumber(sqsSocialConnectionSeq) getOrElse SequenceNumber.ZERO
       val socialConnections = socialConnectionRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
       val updateRichConnections = socialConnections.map { case socialConnection =>
@@ -67,7 +67,7 @@ class ShoeboxRichConnectionCommander @Inject() (
   }
 
   def sendUserConnections(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
-    val userConnections = db.readOnly() { implicit session =>
+    val userConnections = db.readOnlyMaster { implicit session =>
       val currentSeq = systemValueRepo.getSequenceNumber(sqsUserConnectionSeq) getOrElse SequenceNumber.ZERO
       userConnectionRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
     }
@@ -90,7 +90,7 @@ class ShoeboxRichConnectionCommander @Inject() (
   }
 
   def sendSocialUsers(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
-    val socialUserInfos = db.readOnly() { implicit session =>
+    val socialUserInfos = db.readOnlyMaster { implicit session =>
       val currentSeq = systemValueRepo.getSequenceNumber(sqsSocialUserInfoSeq) getOrElse SequenceNumber.ZERO
       socialUserInfoRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
     }
@@ -109,7 +109,7 @@ class ShoeboxRichConnectionCommander @Inject() (
   }
 
   def sendInvitations(maxBatchSize: Int): Int = if (!serviceDiscovery.isLeader()) 0 else {
-    val invitations = db.readOnly() { implicit session =>
+    val invitations = db.readOnlyMaster { implicit session =>
       val currentSeq = systemValueRepo.getSequenceNumber(sqsInvitationSeq) getOrElse SequenceNumber.ZERO
       invitationRepo.get.getBySequenceNumber(currentSeq, maxBatchSize)
     }
@@ -134,7 +134,7 @@ class ShoeboxRichConnectionCommander @Inject() (
 
   def block(userId: Id[User], fullSocialId: FullSocialId): Unit = {
     val friendId = fullSocialId.identifier.left.map { socialId =>
-      db.readOnly { implicit session =>
+      db.readOnlyMaster { implicit session =>
         socialUserInfoRepo.get.get(socialId, fullSocialId.network).id.get
       }
     }

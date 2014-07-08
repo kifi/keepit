@@ -54,7 +54,7 @@ class KeepToCollectionTest  extends Specification with ShoeboxTestInjector {
           (bookmark1, bookmark2, collections)
         }
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           val uris = keepToCollectionRepo.getUriIdsInCollection(collections(0).id.get)
           uris.length === 2
           uris === Seq(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))

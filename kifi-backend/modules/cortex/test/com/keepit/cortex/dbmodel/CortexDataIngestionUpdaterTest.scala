@@ -31,7 +31,7 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
         var updates = Await.result(updater.updateURIRepo(100), FiniteDuration(5, SECONDS))
         updates === 3
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           cortexURIRepo.all.size === 3
           cortexURIRepo.getSince(SequenceNumber[CortexURI](-1), 100).map{_.seq.value} === List(1, 2, 3)
         }
@@ -40,7 +40,7 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
         updates = Await.result(updater.updateURIRepo(100), FiniteDuration(5, SECONDS))
         updates === 1
 
-        var changed = db.readOnly{ implicit s =>
+        var changed = db.readOnlyMaster{ implicit s =>
           cortexURIRepo.all.size === 3
           cortexURIRepo.getSince(SequenceNumber[CortexURI](3), 100)
         }.headOption.get
@@ -58,7 +58,7 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
 
         Await.result(updater.updateKeepRepo(100), FiniteDuration(5, SECONDS)) === 2
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           cortexKeepRepo.all.map{_.source} === List(KeepSource.keeper, KeepSource.bookmarkImport)
         }
 

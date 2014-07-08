@@ -53,13 +53,13 @@ class ExtPreferenceController @Inject() (
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
   def normalize(url: String) = JsonAction.authenticated { request =>
-    val normalizedUrl: String = db.readOnly { implicit session => normalizedURIInterner.normalize(url) getOrElse url }
+    val normalizedUrl: String = db.readOnlyMaster { implicit session => normalizedURIInterner.normalize(url) getOrElse url }
     val json = Json.arr(normalizedUrl)
     Ok(json)
   }
 
   def getRules(version: String) = JsonAction.authenticated { request =>
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       val group = sliderRuleRepo.getGroup("default")
       if (version != group.version) {
         Ok(Json.obj("slider_rules" -> group.compactJson, "url_patterns" -> urlPatternRepo.getActivePatterns()))
@@ -134,8 +134,8 @@ class ExtPreferenceController @Inject() (
   }
 
   private def loadUserPrefs(userId: Id[User], experiments: Set[ExperimentType]): Future[UserPrefs] = {
-    val userValsFuture = db.readOnlyAsync { implicit s => userValueRepo.getValues(userId, UserValues.UserInitPrefs: _*) }
-    val messagingEmailsFuture = db.readOnlyAsync { implicit s => notifyPreferenceRepo.canNotify(userId, NotificationCategory.User.MESSAGE) }
+    val userValsFuture = db.readOnlyMasterAsync { implicit s => userValueRepo.getValues(userId, UserValues.UserInitPrefs: _*) }
+    val messagingEmailsFuture = db.readOnlyMasterAsync { implicit s => notifyPreferenceRepo.canNotify(userId, NotificationCategory.User.MESSAGE) }
     for {
       userVals <- userValsFuture
       messagingEmails <- messagingEmailsFuture

@@ -23,7 +23,7 @@ class ElectronicMailTest extends Specification with ShoeboxTestInjector {
                       Nil
           mails map {mail => electronicMailRepo.save(mail) }
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           electronicMailRepo.page(0, 10).size === 3
           electronicMailRepo.page(0, 2).size === 3
           mails foreach { mail =>

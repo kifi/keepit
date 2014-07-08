@@ -33,7 +33,7 @@ class LDADbUpdaterTest extends Specification with CortexTestInjector with LDADbT
         val updater = new LDADbUpdaterImpl(uriRep, db, uriRepo, topicRepo, commitRepo)
         updater.update
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           topicRepo.all.size === num
           commitRepo.getByModelAndVersion(StatModelName.LDA, uriRep.version.version).get.seq === 5L
           (0 until num).foreach{ i =>
@@ -66,7 +66,7 @@ class LDADbUpdaterTest extends Specification with CortexTestInjector with LDADbT
         val updater = new LDADbUpdaterImpl(uriRep, db, uriRepo, topicRepo, commitRepo)
         updater.update
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           topicRepo.all.size === num
           commitRepo.getByModelAndVersion(StatModelName.LDA, uriRep.version.version).get.seq === 2L
           topicRepo.getByURI(uris(1).id.get, version).get.state === URILDATopicStates.ACTIVE
@@ -79,7 +79,7 @@ class LDADbUpdaterTest extends Specification with CortexTestInjector with LDADbT
 
         updater.update
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           topicRepo.all.size === num
           commitRepo.getByModelAndVersion(StatModelName.LDA, uriRep.version.version).get.seq === 3L
           topicRepo.getByURI(uris(1).id.get, version).get.state === URILDATopicStates.INACTIVE
@@ -103,7 +103,7 @@ class LDADbUpdaterTest extends Specification with CortexTestInjector with LDADbT
         val updater = new LDADbUpdaterImpl(uriRep, db, uriRepo, topicRepo, commitRepo)
         updater.update
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           topicRepo.all.size === num
           commitRepo.getByModelAndVersion(StatModelName.LDA, uriRep.version.version).get.seq === 2L
           topicRepo.getByURI(uris(1).id.get, version).get.state === URILDATopicStates.NOT_APPLICABLE
@@ -125,7 +125,7 @@ class LDADbUpdaterTest extends Specification with CortexTestInjector with LDADbT
         val updater = new LDADbUpdaterImpl(uriRep, db, uriRepo, topicRepo, commitRepo)
         updater.update
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           topicRepo.all.size === 0
           commitRepo.getByModelAndVersion(StatModelName.LDA, uriRep.version.version).get.seq === 2L
         }

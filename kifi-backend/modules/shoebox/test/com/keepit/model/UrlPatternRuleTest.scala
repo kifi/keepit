@@ -27,7 +27,7 @@ class UrlPatternRuleTest extends Specification with ShoeboxTestInjector {
           urlPatternRuleRepo.save(UrlPatternRule(pattern = "^https*://.*.google.com.*/ServiceLogin.*$", isUnscrapable = true))
         }
 
-        db.readOnly { implicit session =>
+        db.readOnlyMaster { implicit session =>
           urlPatternRuleCache.get(UrlPatternRuleAllKey()).get.isEmpty === false
           urlPatternRuleRepo.rules().rules.length === 2
           urlPatternRuleCache.get(UrlPatternRuleAllKey()).isDefined === true
@@ -38,7 +38,7 @@ class UrlPatternRuleTest extends Specification with ShoeboxTestInjector {
           urlPatternRuleRepo.save(UrlPatternRule(pattern = "^https*://app.asana.com.*$", isUnscrapable = true))
         }
 
-        db.readOnly { implicit session =>
+        db.readOnlyMaster { implicit session =>
           urlPatternRuleCache.get(UrlPatternRuleAllKey()).get.isEmpty === false
         }
         urlPatternRuleRepo.rules.isUnscrapable("http://www.google.com/") === false

@@ -106,8 +106,8 @@ class MessagingController @Inject() (
     //currently only verifies
     SafeFuture{
       log.warn("Starting notification verification!")
-      val userThreads : Seq[UserThread] = db.readOnly{ implicit session => userThreadRepo.all }
-      val nUrls : Map[Id[MessageThread], Option[String]] = db.readOnly{ implicit session => threadRepo.all } map { thread => (thread.id.get, thread.url) } toMap
+      val userThreads : Seq[UserThread] = db.readOnlyMaster{ implicit session => userThreadRepo.all }
+      val nUrls : Map[Id[MessageThread], Option[String]] = db.readOnlyMaster{ implicit session => threadRepo.all } map { thread => (thread.id.get, thread.url) } toMap
 
       userThreads.foreach{ userThread =>
         if (userThread.uriId.isDefined) {

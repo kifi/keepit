@@ -20,7 +20,7 @@ class PhraseController @Inject() (
   val pageSize = 50
 
   def displayPhrases(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
-    val (phrasesOpt, count) = db.readOnly { implicit session =>
+    val (phrasesOpt, count) = db.readOnlyMaster { implicit session =>
       val count = 10//phraseRepo.count
       val phrasesOpt = if(!PhraseImporter.isInProgress) {
         Some(phraseRepo.page(page, pageSize))

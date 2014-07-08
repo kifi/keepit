@@ -27,7 +27,7 @@ abstract class DbSequenceAssigner[M <: ModelWithSeqNumber[M]](
 
   override def sanityCheck(): Unit = {
     val minDeferredSeqNumOpt = try {
-      db.readOnly{ implicit session => repo.minDeferredSequenceNumber() }
+      db.readOnlyMaster{ implicit session => repo.minDeferredSequenceNumber() }
     } catch {
       case e: UnsupportedOperationException =>
         reportUnsupported(e)

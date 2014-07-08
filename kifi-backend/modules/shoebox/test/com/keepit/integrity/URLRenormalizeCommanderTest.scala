@@ -41,7 +41,7 @@ class URLRenormalizeCommanderTest extends Specification with ShoeboxApplicationI
         }
 
         commander.doRenormalize(readOnly = false, clearSeq = false, regex = DomainOrURLRegex(None, None))
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           changedUriRepo.all().size === 1
           val changedUri = changedUriRepo.all().head
           changedUri.oldUriId === uri0.id.get
