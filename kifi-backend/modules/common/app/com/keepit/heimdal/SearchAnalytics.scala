@@ -196,6 +196,7 @@ class SearchAnalytics @Inject() (
   }
 
   private def getArticleSearchResult(uuid: ExternalId[ArticleSearchResult], maxAttempt: Int = 3): Option[ArticleSearchResult] = {
+    // view => lazy; see http://www.scala-lang.org/docu/files/collections-api/collections_42.html
     (0 until maxAttempt).view.map{ i =>
       if (i != 0) log.warn(s"getArticleSearchResult($uuid) attempt#$i failed to retrieve from S3")
       articleSearchResultStore.get(uuid)
