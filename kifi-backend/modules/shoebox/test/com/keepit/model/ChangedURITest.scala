@@ -14,7 +14,7 @@ class ChangedURITest extends Specification with ShoeboxTestInjector{
        withDb() { implicit injector =>
          val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
-         db.readOnly{ implicit s =>
+         db.readOnlyMaster{ implicit s =>
            changedURIRepo.getHighestSeqNum() === Some(SequenceNumber.ZERO)
          }
 
@@ -26,7 +26,7 @@ class ChangedURITest extends Specification with ShoeboxTestInjector{
            }
          }
 
-         var changes = db.readOnly{ implicit s =>
+         var changes = db.readOnlyMaster{ implicit s =>
            changedURIRepo.getChangesSince(SequenceNumber.ZERO, -1, ChangedURIStates.ACTIVE)
          }
          changes.size === 5
@@ -39,13 +39,13 @@ class ChangedURITest extends Specification with ShoeboxTestInjector{
            }
          }
 
-         changes = db.readOnly{ implicit s =>
+         changes = db.readOnlyMaster{ implicit s =>
            changedURIRepo.getChangesSince(lastSeq, -1, ChangedURIStates.ACTIVE)
          }
 
          changes.size === 3
 
-         db.readOnly { implicit s =>
+         db.readOnlyMaster { implicit s =>
            changedURIRepo.getHighestSeqNum() === Some(SequenceNumber(8))
            changedURIRepo.getChangesSince(SequenceNumber(0), -1, ChangedURIStates.ACTIVE).map{_.seq.value}.toArray === (1 to 8).toArray
            changedURIRepo.getChangesBetween(SequenceNumber(2), SequenceNumber(6), ChangedURIStates.ACTIVE).map(_.seq.value).toArray === (3 to 6).toArray

@@ -81,8 +81,8 @@ class Database @Inject() (
   def readWriteAsync[T](f: RWSession => T)(implicit location: Location): Future[T] = future { readWrite(f)(location) }
   def readWriteAsync[T](attempts: Int)(f: RWSession => T)(implicit location: Location): Future[T] = future { readWrite(attempts)(f)(location) }
 
-  def readOnly[T](f: ROSession => T)(implicit dbMasterSlave: DBMasterSlave = Master, location: Location): T = readOnly(dbMasterSlave)(f)(location)
-
+  def readOnlyMaster[T](f: ROSession => T)(implicit dbMasterSlave: DBMasterSlave = Master, location: Location): T = readOnly(dbMasterSlave)(f)(location)
+ //asdfasdf
   private def resolveDb(dbMasterSlave: DBMasterSlave) = dbMasterSlave match {
     case Master =>
       SlickDatabaseWrapper(db.masterDb, Master)
@@ -106,7 +106,7 @@ class Database @Inject() (
   def readOnly[T](attempts: Int, dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T)(implicit location: Location): T = enteringSession { // retry by default with implicit override?
     1 to attempts - 1 foreach { attempt =>
       try {
-        return readOnly(f)(dbMasterSlave, location)
+        return readOnlyMaster(f)(dbMasterSlave, location)
       } catch {
         case t: SQLException =>
           val throwableName = t.getClass.getSimpleName
@@ -114,7 +114,7 @@ class Database @Inject() (
           statsd.incrementOne(s"db.fail.attempt.$attempt.$throwableName", ALWAYS)
       }
     }
-    readOnly(f)(dbMasterSlave, location)
+    readOnlyMaster(f)(dbMasterSlave, location)
   }
 
   private def createReadWriteSession(location: Location) = new RWSession({//always master

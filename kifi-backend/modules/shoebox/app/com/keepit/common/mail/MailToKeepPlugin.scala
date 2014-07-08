@@ -165,7 +165,7 @@ class MailToKeepMessageParser @Inject() (
   }
 
   def getUser(senderAddress: EmailAddress): Option[User] = {
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       emailAddressRepo.getVerifiedOwner(senderAddress).map { userId =>
         userRepo.get(userId)
       }

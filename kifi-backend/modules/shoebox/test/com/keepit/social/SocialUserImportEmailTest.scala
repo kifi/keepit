@@ -32,7 +32,7 @@ class SocialUserImportEmailTest extends Specification with ShoeboxTestInjector {
     val email = inject[FacebookSocialGraph].extractEmails(json)
       .map(em => inject[SocialUserImportEmail].importEmail(user.id.get, em)).head
     email.address === emailAddress
-    db.readOnly{ implicit session =>
+    db.readOnlyMaster{ implicit session =>
       emailAddressRepo.get(email.id.get).address === emailAddress
     }
   }

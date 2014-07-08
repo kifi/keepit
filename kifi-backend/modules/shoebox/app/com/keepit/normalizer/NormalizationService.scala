@@ -91,7 +91,7 @@ class NormalizationServiceImpl @Inject() (
     allCandidates.filter(isRelevant(currentReference, _))
   }
 
-  private def findVariations(referenceUrl: String): Seq[(Normalization, NormalizedURI)] = db.readOnly { implicit session =>
+  private def findVariations(referenceUrl: String): Seq[(Normalization, NormalizedURI)] = db.readOnlyMaster { implicit session =>
     for {
       (normalization, urlVariation) <- SchemeNormalizer.generateVariations(referenceUrl)
       uri <- normalizedURIRepo.getByNormalizedUrl(urlVariation)
@@ -116,7 +116,7 @@ class NormalizationServiceImpl @Inject() (
           assert(weakerCandidates.isEmpty || weakerCandidates.head.normalization <= strongerCandidate.normalization, s"Normalization candidates ${weakerCandidates.head} and $strongerCandidate have not been sorted properly for ${currentReference}")
           assert(currentReference.normalization.isEmpty || currentReference.normalization.get <= strongerCandidate.normalization, s"Normalization candidate $strongerCandidate has not been filtered properly for $currentReference")
 
-          db.readOnly { implicit session =>
+          db.readOnlyMaster { implicit session =>
             action(strongerCandidate) match {
               case Accept => Future.successful((Some(strongerCandidate), weakerCandidates))
               case Reject => findCandidate(weakerCandidates)
@@ -198,7 +198,7 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
-  private def getURIsToBeFurtherUpdated(currentReference: NormalizationReference, newReference: NormalizationReference): Set[NormalizedURI] = db.readOnly { implicit session =>
+  private def getURIsToBeFurtherUpdated(currentReference: NormalizationReference, newReference: NormalizationReference): Set[NormalizedURI] = db.readOnlyMaster { implicit session =>
     val haveBeenUpdated = Set(currentReference.url, newReference.url)
     val toBeUpdated = for {
       url <- haveBeenUpdated

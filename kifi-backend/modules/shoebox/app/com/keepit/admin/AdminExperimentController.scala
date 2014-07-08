@@ -31,13 +31,13 @@ class AdminExperimentController @Inject() (
 
 
   def overview = AdminHtmlAction.authenticated { request =>
-    val (totalUserCount, experimentsWithCount) = db.readOnly { implicit session =>
+    val (totalUserCount, experimentsWithCount) = db.readOnlyMaster { implicit session =>
       (userRepo.countIncluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED),
       experimentRepo.getDistinctExperimentsWithCounts().toMap)
     }
 
     val experimentInfos = (ExperimentType._ALL.zip(ExperimentType._ALL.map(_ => 0)).toMap ++ experimentsWithCount).map{ case (experimentType, userCount) =>
-      db.readOnly { implicit session =>
+      db.readOnlyMaster { implicit session =>
         val defaultDensity = generatorRepo.getByName(Name[ProbabilisticExperimentGenerator](experimentType.value + "-default"), None).map(_.density.density.map{
           case (cond, prob) => (cond.value, prob)
         })

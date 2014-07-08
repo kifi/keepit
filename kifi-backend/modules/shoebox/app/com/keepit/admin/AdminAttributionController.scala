@@ -38,7 +38,7 @@ class AdminAttributionController @Inject()(
   implicit val execCtx = fj
 
   def keepDiscoveriesView(page:Int, size:Int, showImage:Boolean) = AdminHtmlAction.authenticated { request =>
-    val (t, count) = db.readOnly { implicit ro =>
+    val (t, count) = db.readOnlyMaster { implicit ro =>
       val t = keepDiscoveryRepo.page(page, size, Set(KeepDiscoveryStates.INACTIVE)).map { c =>
         val rc = RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, userRepo.get(c.keeperId), keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
         val pageInfoOpt = pageInfoRepo.getByUri(c.uriId)
@@ -55,7 +55,7 @@ class AdminAttributionController @Inject()(
   }
 
   def rekeepsView(page:Int, size:Int, showImage:Boolean) = AdminHtmlAction.authenticated { request =>
-    val (t, count) = db.readOnly { implicit ro =>
+    val (t, count) = db.readOnlyMaster { implicit ro =>
       val t = rekeepRepo.page(page, size, Set(ReKeepStates.INACTIVE)).map { k =>
         val rk = RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, userRepo.get(k.keeperId), keepRepo.get(k.keepId), uriRepo.get(k.uriId), userRepo.get(k.srcUserId), keepRepo.get(k.srcKeepId), k.attributionFactor)
         val pageInfoOpt = pageInfoRepo.getByUri(k.uriId)
@@ -72,7 +72,7 @@ class AdminAttributionController @Inject()(
   }
 
   private def getKeepInfos(userId:Id[User]):(User, Seq[RichKeepDiscovery], Seq[RichReKeep], Seq[RichReKeep]) = {
-    db.readOnly { implicit ro =>
+    db.readOnlyMaster { implicit ro =>
       val u = userRepo.get(userId)
       val rc = keepDiscoveryRepo.getDiscoveriesByKeeper(userId).take(10) map { c =>
         RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, u, keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)

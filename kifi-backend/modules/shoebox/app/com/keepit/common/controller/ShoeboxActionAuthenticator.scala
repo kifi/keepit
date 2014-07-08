@@ -49,13 +49,13 @@ class ShoeboxActionAuthenticator @Inject() (
     val socialUser = request.user
     val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
     val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
-    val experiments = db.readOnly { implicit s => getExperiments(userId) }
+    val experiments = db.readOnlyMaster { implicit s => getExperiments(userId) }
     val newSession =
       if (session.get(ActionAuthenticator.FORTYTWO_USER_ID) == Some(userId.toString)) None
       else Some(session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString))
     impersonatedUserIdOpt match {
       case Some(impExternalUserId) =>
-        val (impExperiments, impSocialUser, impUserId) = db.readOnly { implicit session =>
+        val (impExperiments, impSocialUser, impUserId) = db.readOnlyMaster { implicit session =>
           val impUserId = userRepo.get(impExternalUserId).id.get
           if (!isAdmin(experiments)) throw new IllegalStateException("non admin user %s tries to impersonate to %s".format(userId, impUserId))
           val impSocialUserInfo = socialUserInfoRepo.getByUser(impUserId).head
@@ -78,7 +78,7 @@ class ShoeboxActionAuthenticator @Inject() (
     val result = request.user match {
       case Some(identity) =>
         val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
-        val uidOpt = db.readOnly { implicit s =>
+        val uidOpt = db.readOnlyMaster { implicit s =>
           loadUserId(userIdOpt, SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId))
         }
         uidOpt match {
@@ -105,14 +105,14 @@ class ShoeboxActionAuthenticator @Inject() (
 
   private[controller] def isAdmin(experiments: Set[ExperimentType]) = experiments.contains(ExperimentType.ADMIN)
 
-  private[controller] def isAdmin(userId: Id[User]) = db.readOnly { implicit session =>
+  private[controller] def isAdmin(userId: Id[User]) = db.readOnlyMaster { implicit session =>
     userExperimentCommander.userHasExperiment(userId, ExperimentType.ADMIN)
   }
 
   private def executeAction[T](action: AuthenticatedRequest[T] => Future[SimpleResult], userId: Id[User], identity: Identity,
      experiments: Set[ExperimentType], kifiInstallationId: Option[ExternalId[KifiInstallation]],
      newSession: Option[Session], request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
-    val user = db.readOnly(implicit s => userRepo.get(userId))
+    val user = db.readOnlyMaster(implicit s => userRepo.get(userId))
     if (user.state == UserStates.BLOCKED ||
       user.state == UserStates.INACTIVE ||
       (!allowPending && (user.state == UserStates.PENDING || user.state == UserStates.INCOMPLETE_SIGNUP))) {

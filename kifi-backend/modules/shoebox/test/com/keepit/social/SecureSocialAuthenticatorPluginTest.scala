@@ -87,7 +87,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxAppl
           // we should have an old session in the cache and we shouldn't care about updating the last used time
           plugin.save(authenticator.copy(lastUsed = authenticator.lastUsed.plusDays(1)))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           userSessionRepo.get(id).userId.get === user.id.get
         }
       }

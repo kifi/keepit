@@ -42,7 +42,7 @@ class AdminBookmarksController @Inject() (
   implicit val dbMasterSlave = Database.Slave
 
   private def editBookmark(bookmark: Keep)(implicit request: AuthenticatedRequest[AnyContent]) = {
-    db.readOnly { implicit session =>
+    db.readOnlyMaster { implicit session =>
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
       val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
@@ -61,7 +61,7 @@ class AdminBookmarksController @Inject() (
 
   def whoKeptMyKeeps = AdminHtmlAction.authenticated { implicit request =>
     val since = clock.now.minusDays(7)
-    val richWhoKeptMyKeeps = db.readOnly { implicit session =>
+    val richWhoKeptMyKeeps = db.readOnlyMaster { implicit session =>
       var maxUsers = 30
       var whoKeptMyKeeps = keepRepo.whoKeptMyKeeps(request.userId, since, maxUsers)
 
@@ -84,14 +84,14 @@ class AdminBookmarksController @Inject() (
 
 
   def edit(id: Id[Keep]) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val bookmark = db.readOnly { implicit session =>
+    val bookmark = db.readOnlyMaster { implicit session =>
       keepRepo.get(id)
     }
     editBookmark(bookmark)
   }
 
   def editFirstBookmarkForUri(id: Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val bookmarkOpt = db.readOnly { implicit session =>
+    val bookmarkOpt = db.readOnlyMaster { implicit session =>
       keepRepo.getByUri(id).headOption
     }
     bookmarkOpt match {
@@ -164,16 +164,16 @@ class AdminBookmarksController @Inject() (
     val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
 
     def bookmarksInfos() = {
-      future { timing(s"load $PAGE_SIZE bookmarks") { db.readOnly { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } } } flatMap { bookmarks =>
-        val usersFuture = future { timing("load user") { db.readOnly { implicit s =>
+      future { timing(s"load $PAGE_SIZE bookmarks") { db.readOnlyMaster { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } } } flatMap { bookmarks =>
+        val usersFuture = future { timing("load user") { db.readOnlyMaster { implicit s =>
           bookmarks map (_.userId) map { id =>
             userMap.getOrElseUpdate(id, userRepo.get(id))
           }
         }}}
-        val urisFuture = future { timing("load uris") { db.readOnly { implicit s =>
+        val urisFuture = future { timing("load uris") { db.readOnlyMaster { implicit s =>
           bookmarks map (_.uriId) map uriRepo.get
         }}}
-        val scrapesFuture = future { timing("load scrape info") { db.readOnly { implicit s =>
+        val scrapesFuture = future { timing("load scrape info") { db.readOnlyMaster { implicit s =>
           bookmarks map (_.uriId) map scrapeRepo.getByUriId
         }}}
 
@@ -190,10 +190,10 @@ class AdminBookmarksController @Inject() (
 
     val bookmarkTotalCountFuture = getBookmarkCountsFuture
 
-    val bookmarkTodayAllCountsFuture = future { timing("load bookmarks counts from today") { db.readOnly { implicit s =>
+    val bookmarkTodayAllCountsFuture = future { timing("load bookmarks counts from today") { db.readOnlyMaster { implicit s =>
       keepRepo.getAllCountsByTimeAndSource(clock.now().minusDays(1), clock.now())
     }}}
-    val privateKeeperKeepCountFuture = future { timing("load private keeper counts from today") { db.readOnly { implicit s =>
+    val privateKeeperKeepCountFuture = future { timing("load private keeper counts from today") { db.readOnlyMaster { implicit s =>
       keepRepo.getPrivateCountByTimeAndSource(clock.now().minusDays(1), clock.now(), KeepSource.keeper)
     }}}
 
@@ -233,7 +233,7 @@ class AdminBookmarksController @Inject() (
 
   def userBookmarkKeywords = AdminHtmlAction.authenticatedAsync { request =>
     val user = request.userId
-    val uris = db.readOnly{ implicit s =>
+    val uris = db.readOnlyMaster{ implicit s =>
       keepRepo.getLatestKeepsURIByUser(user, 500, includePrivate = false)
     }.sortBy(x => x.id)    // sorting helps s3 performance
 
@@ -257,7 +257,7 @@ class AdminBookmarksController @Inject() (
   def bookmarksKeywordsPageView(page: Int = 0) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val PAGE_SIZE = 25
 
-    val bmsFut = future{ db.readOnly { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } }
+    val bmsFut = future{ db.readOnlyMaster { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } }
     val bookmarkTotalCountFuture = getBookmarkCountsFuture()
 
     bmsFut.flatMap{ bms =>

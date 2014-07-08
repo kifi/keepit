@@ -38,7 +38,7 @@ class UriNormalizationUpdater @Inject() (
 
   centralConfig.onChange(URIMigrationSeqNumKey)(checkAndUpdate)
 
-  def localSequenceNumber(): SequenceNumber[ChangedURI] = db.readOnly{ implicit session => renormRepo.getCurrentSequenceNumber() }
+  def localSequenceNumber(): SequenceNumber[ChangedURI] = db.readOnlyMaster{ implicit session => renormRepo.getCurrentSequenceNumber() }
 
   def checkAndUpdate(remoteSequenceNumberOpt: Option[SequenceNumber[ChangedURI]]) : Unit = synchronized {
     var localSeqNum = localSequenceNumber()
@@ -62,7 +62,7 @@ class UriNormalizationUpdater @Inject() (
   }
 
   private def applyUpdates(updates: Seq[(Id[NormalizedURI], NormalizedURI)], reapply: Boolean = false) : Unit = {
-    val userThreadUpdates = db.readOnly { implicit session => updates.map{ //Note: This will need to change when we have detached threads!
+    val userThreadUpdates = db.readOnlyMaster { implicit session => updates.map{ //Note: This will need to change when we have detached threads!
         case (oldId, newNUri) => (userThreadRepo.getByUriId(oldId), newNUri.url)
       }
     }

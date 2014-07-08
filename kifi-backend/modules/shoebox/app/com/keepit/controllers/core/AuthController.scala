@@ -92,7 +92,7 @@ class AuthController @Inject() (
   }, unauthenticatedAction = { implicit request =>
     if (request.identityOpt.isDefined) {
       // User tried to log in (not sign up) with social network.
-      request.identityOpt.get.email.flatMap(e => db.readOnly(emailAddressRepo.getByAddressOpt(EmailAddress(e))(_))) match {
+      request.identityOpt.get.email.flatMap(e => db.readOnlyMaster(emailAddressRepo.getByAddressOpt(EmailAddress(e))(_))) match {
         case Some(addr) =>
           // A user with this email address exists in the system, but it is not yet linked to this social identity.
           Ok(views.html.auth.connectToAuthenticate(
@@ -151,7 +151,7 @@ class AuthController @Inject() (
   // --
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
-    db.readOnly { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
+    db.readOnlyMaster { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
   }
 
   def loginPage() = HtmlAction(allowPending = true)(authenticatedAction = { request =>
@@ -186,7 +186,7 @@ class AuthController @Inject() (
   private def doSignupPage(implicit request: Request[_]): SimpleResult = {
     def emailAddressMatchesSomeKifiUser(identity: Identity): Boolean = {
       identity.email.flatMap { addr =>
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           emailAddressRepo.getByAddressOpt(EmailAddress(addr))
         }
       }.isDefined
