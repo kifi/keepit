@@ -116,7 +116,7 @@ class ABookController @Inject() (
   def getEContactsByIds() = Action(parse.tolerantJson) { request =>
     val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
     val contactIds = jsArray.value map { x => Id[EContact](x.as[Long]) }
-    val contacts = db.readOnly { implicit ro =>
+    val contacts = db.readOnlyMaster { implicit ro =>
       econtactRepo.getByIds(contactIds)
     }
     Ok(Json.toJson[Seq[EContact]](contacts))
@@ -139,28 +139,28 @@ class ABookController @Inject() (
   }
 
   def getAllABookInfos() = Action { request =>
-    val abookInfos = db.readOnly(attempts = 2) { implicit session =>
+    val abookInfos = db.readOnlyMaster(attempts = 2) { implicit session =>
       abookInfoRepo.all()
     }
     Ok(Json.toJson(abookInfos))
   }
 
   def getPagedABookInfos(page:Int, size:Int) = Action { request =>
-    val abookInfos = db.readOnly(attempts = 2) { implicit session =>
+    val abookInfos = db.readOnlyMaster(attempts = 2) { implicit session =>
       abookInfoRepo.page(page, size)
     }
     Ok(Json.toJson(abookInfos))
   }
 
   def getABooksCount() = Action { request =>
-    val count = db.readOnly(attempts = 2) { implicit session =>
+    val count = db.readOnlyMaster(attempts = 2) { implicit session =>
       abookInfoRepo.count
     }
     Ok(JsNumber(count))
   }
 
   def getABookInfos(userId:Id[User]) = Action { request =>
-    val abookInfos = db.readOnly(attempts = 2) { implicit session =>
+    val abookInfos = db.readOnlyMaster(attempts = 2) { implicit session =>
       abookInfoRepo.findByUserId(userId)
     }
     Ok(Json.toJson(abookInfos))
@@ -172,7 +172,7 @@ class ABookController @Inject() (
   }
 
   def getABookInfoByExternalId(externalId: ExternalId[ABookInfo]) = Action { request =>
-    db.readOnly { implicit session =>
+    db.readOnlyMaster { implicit session =>
       Ok(Json.toJson(abookInfoRepo.getByExternalId(externalId)))
     }
   }
@@ -180,7 +180,7 @@ class ABookController @Inject() (
   // retrieve from S3
   def getContactsRawInfo(userId:Id[User],origin:ABookOriginType) = Action { request =>
     val abookInfos = {
-      val abooks = db.readOnly(attempts = 2) { implicit session =>
+      val abooks = db.readOnlyMaster(attempts = 2) { implicit session =>
         abookInfoRepo.findByUserIdAndOrigin(userId, origin)
       }
       abooks.map{ abookInfo =>
@@ -199,7 +199,7 @@ class ABookController @Inject() (
   }
 
   def getEContactCount(userId:Id[User]) = Action { request =>
-    val count = db.readOnly(attempts = 2) { implicit s =>
+    val count = db.readOnlyMaster(attempts = 2) { implicit s =>
       econtactRepo.getEContactCount(userId)
     }
     Ok(JsNumber(count))
@@ -207,7 +207,7 @@ class ABookController @Inject() (
 
   def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]) = Action { request =>
     log.info(s"[getOAuth2Token] userId=$userId, abookId=$abookId")
-    val tokenOpt = db.readOnly(attempts = 2) { implicit s =>
+    val tokenOpt = db.readOnlyMaster(attempts = 2) { implicit s =>
       for {
         abookInfo <- abookInfoRepo.getById(abookId)
         oauth2TokenId <- abookInfo.oauth2TokenId
@@ -220,7 +220,7 @@ class ABookController @Inject() (
   // todo(ray): move to commander
   def prefixQueryDirect(userId:Id[User], limit:Int, search: Option[String], after:Option[String]): Seq[EContact] = timing(s"prefixQueryDirect($userId,$limit,$search,$after)") {
     @inline def mkId(email: EmailAddress) = s"email/${email.address}"
-    val contacts = db.readOnly(attempts = 2) { implicit s =>
+    val contacts = db.readOnlyMaster(attempts = 2) { implicit s =>
       econtactRepo.getByUserId(userId)
     }
     val filtered = search match {
@@ -255,7 +255,7 @@ class ABookController @Inject() (
     if (query.trim.length > 0) {
       typeahead.search(userId, query) getOrElse Seq.empty[EContact]
     } else {
-      db.readOnly(attempts = 2) { implicit ro =>
+      db.readOnlyMaster(attempts = 2) { implicit ro =>
         econtactRepo.getByUserId(userId)
       }
     }

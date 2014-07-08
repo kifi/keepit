@@ -25,7 +25,7 @@ class UserBookmarkClicksTest extends Specification with ShoeboxTestInjector{
         }
 
         (userIds zip uriIds) foreach { case (userId, uriId) =>
-          val record = db.readOnly{ implicit s =>
+          val record = db.readOnlyMaster{ implicit s =>
             repo.getByUserUri(userId, uriId)
           }
 

@@ -31,7 +31,7 @@ class SocialUserImportFriends @Inject() (
 
   def importFriends(socialUserInfo: SocialUserInfo, friends: Seq[SocialUserInfo]): Seq[SocialUserInfo] = {
     val deDuped = deDupe(friends)
-    val socialUserInfosNeedToUpdate = db.readOnly { implicit s =>
+    val socialUserInfosNeedToUpdate = db.readOnlyMaster { implicit s =>
       deDuped.flatMap { case friend =>
         getIfUpdateNeeded(friend)
       }

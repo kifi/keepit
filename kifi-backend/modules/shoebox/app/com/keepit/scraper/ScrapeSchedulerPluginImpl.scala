@@ -17,7 +17,7 @@ import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
-import com.keepit.common.db.slick.Database.Slave
+import com.keepit.common.db.slick.Database.Replica
 import org.joda.time.DateTime
 import scala.util.Try
 
@@ -50,7 +50,7 @@ private[scraper] class ScrapeScheduler @Inject() (
   implicit val config = scraperConfig
 
   def checkOverdues(): Unit = {
-    val assignedOverdues = db.readOnly(attempts = 2, dbMasterSlave = Slave) { implicit s =>
+    val assignedOverdues = db.readOnlyReplica(attempts = 2) { implicit s =>
       scrapeInfoRepo.getAssignedList(due = currentDateTime.minusMinutes(config.pendingOverdueThreshold))
     }
     log.info(s"[checkOverdues]: assigned-overdues=${assignedOverdues.length}")
@@ -100,7 +100,7 @@ private[scraper] class ScrapeScheduler @Inject() (
   }
 
   def checkOverdueCount(): Unit = {
-    val overdueCount = db.readOnly(attempts = 2, dbMasterSlave = Slave) { implicit s => scrapeInfoRepo.getOverdueCount() }
+    val overdueCount = db.readOnlyReplica(attempts = 2) { implicit s => scrapeInfoRepo.getOverdueCount() }
     val msg = s"[checkOverdueCount]: overdue-count=${overdueCount}"
     if (overdueCount > config.overdueCountThreshold) {
       log.warn(msg)
@@ -156,7 +156,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
 
   def scrapeBasicArticle(url: String, extractorProviderType:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     require(url != null, "[scrapeBasicArticle] <url> cannot be null")
-    val proxyOpt = db.readOnly { implicit s =>
+    val proxyOpt = db.readOnlyMaster { implicit s =>
       urlPatternRuleRepo.getProxy(url)
     }
     log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
@@ -166,7 +166,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
   def getSignature(url: String, extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = {
     Try {
       val uri = java.net.URI.create(url) // given current impl of HttpFetcher, java.net.URI is needed
-      val proxyOpt = db.readOnly { implicit s => urlPatternRuleRepo.getProxy(url) }
+      val proxyOpt = db.readOnlyMaster { implicit s => urlPatternRuleRepo.getProxy(url) }
       log.info(s"[getSignature] invoke (remote) Scraper service; url=$url uri=$uri proxy=$proxyOpt extractorProviderType=$extractorProviderType")
       scraperClient.getSignature(url, proxyOpt, extractorProviderType)
     } recover {

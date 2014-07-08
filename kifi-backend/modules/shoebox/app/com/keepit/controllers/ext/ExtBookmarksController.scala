@@ -93,7 +93,7 @@ class ExtBookmarksController @Inject() (
   }
 
   def tags() = JsonAction.authenticated { request =>
-    val tags = db.readOnly { implicit s =>
+    val tags = db.readOnlyMaster { implicit s =>
       collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(request.userId)
     }
     Ok(Json.toJson(tags.map(SendableTag.from)))
@@ -108,7 +108,7 @@ class ExtBookmarksController @Inject() (
   // deprecated: use unkeep
   def remove() = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       normalizedURIInterner.getByUri(url).flatMap { uri =>
         keepRepo.getByUriAndUser(uri.id.get, request.userId)
       }
@@ -147,7 +147,7 @@ class ExtBookmarksController @Inject() (
     val privateKeep =  (json \ "private").asOpt[Boolean]
     val title = (json \ "title").asOpt[String]
 
-    val bookmarkOpt = db.readOnly { implicit s =>
+    val bookmarkOpt = db.readOnlyMaster { implicit s =>
       normalizedURIInterner.getByUri(url).flatMap { uri =>
         keepRepo.getByUriAndUser(uri.id.get, request.userId)
       }

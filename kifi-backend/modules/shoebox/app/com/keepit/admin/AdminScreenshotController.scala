@@ -31,7 +31,7 @@ class AdminScreenshotController @Inject() (
   extends AdminController(actionAuthenticator) {
 
   def updateUri(uriId: Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val normUri = db.readOnly { implicit session =>
+    val normUri = db.readOnlyMaster { implicit session =>
       uriRepo.get(uriId)
     }
     uriSummaryCommander.updateScreenshots(normUri).map { imageInfoOpt =>
@@ -42,11 +42,11 @@ class AdminScreenshotController @Inject() (
 }
 
   def updateUser(userId: Id[User], drop: Int = 0, take: Int = 999999) = AdminHtmlAction.authenticated { implicit request =>
-    val uris = db.readOnly { implicit session =>
+    val uris = db.readOnlyMaster { implicit session =>
       keepRepo.getByUser(userId).map(_.uriId)
     }
     uris.drop(drop).take(take).grouped(100).foreach { uriGroup =>
-      db.readOnly { implicit session =>
+      db.readOnlyMaster { implicit session =>
         uriGroup.map { uriId =>
           val normUri = uriRepo.get(uriId)
           uriSummaryCommander.updateScreenshots(normUri)
@@ -62,7 +62,7 @@ class AdminScreenshotController @Inject() (
   }
 
   def imageInfos() = AdminHtmlAction.authenticated { request =>
-    val imageInfos = db.readOnly { implicit ro =>
+    val imageInfos = db.readOnlyMaster { implicit ro =>
       imageInfoRepo.page(page = 0, size = 50).sortBy(_.id.get.id)
     }
     // add pagination
@@ -71,7 +71,7 @@ class AdminScreenshotController @Inject() (
 
   def imagesForUri(uriId:Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { request =>
     Try {
-      db.readOnly { implicit ro =>
+      db.readOnlyMaster { implicit ro =>
         uriRepo.get(uriId)
       }
     } match {
@@ -89,7 +89,7 @@ class AdminScreenshotController @Inject() (
     try {
       val uriIds = compareForm.bindFromRequest.get.split(',').map(s => Id[NormalizedURI](s.toLong)).toSeq
       val tuplesF = uriIds map { uriId =>
-        val (uri, pageInfoOpt) = db.readOnly { implicit ro =>
+        val (uri, pageInfoOpt) = db.readOnlyMaster { implicit ro =>
           val uri = uriRepo.get(uriId)
           val pageInfoOpt = pageInfoRepo.getByUri(uriId)
           (uri, pageInfoOpt)
@@ -113,7 +113,7 @@ class AdminScreenshotController @Inject() (
     val urlOpt = (request.body \ "url").asOpt[String]
     log.info(s"[getImageInfo] body=${request.body} url=${urlOpt}")
     val resOpt = urlOpt map { url =>
-      val images = db.readOnly { implicit ro => normalizedURIInterner.getByUri(url) } match {
+      val images = db.readOnlyMaster { implicit ro => normalizedURIInterner.getByUri(url) } match {
         case Some(uri) =>
           scraper.getEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
             infos.map { Json.toJson(_) }
@@ -130,7 +130,7 @@ class AdminScreenshotController @Inject() (
     log.info(s"[getImageInfos] body=${request.body} urls=${urlsOpt}")
     urlsOpt match {
       case Some(urls) =>
-        val uris = db.readOnly { implicit ro =>
+        val uris = db.readOnlyMaster { implicit ro =>
           urls.map(url => url -> normalizedURIInterner.getByUri(url))
         }
         val imgRes = uris map { case (url, uriOpt) =>

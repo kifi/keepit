@@ -55,7 +55,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
           (user1, collections, bookmark1, bookmark2)
         }
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           val tagId = collections(0).id.get
           collectionRepo.get(tagId).state.value === "active"
           val bookmarksWithTags = keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
@@ -63,26 +63,26 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
           (bookmarksWithTags map {b => b.id.get}).toSet === Set(bookmark1.id.get, bookmark2.id.get)
         }
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.get(collections(1).id.get).state.value === "active"
           val bookmarksWithTags = keepRepo.getByUserAndCollection(user.id.get, collections(1).id.get, None, None, 1000)
           bookmarksWithTags.size === 1
           bookmarksWithTags.head.id.get === bookmark1.id.get
         }
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.get(collections(2).id.get).state.value === "active"
 //          keepRepo.getByUser(user.id.get, None, None, Some(collections(2).id.get), 1000) === 0
         }
 
         inject[CollectionCommander].deleteCollection(collections(0))
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.get(collections(0).id.get).state.value === "inactive"
 //          keepRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000) === 0
         }
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.get(collections(1).id.get).state.value === "active"
 //          val bookmarksWithTags = keepRepo.getByUser(user.id.get, None, None, Some(collections(1).id.get), 1000)
 //          bookmarksWithTags.size === 1
@@ -91,19 +91,19 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
 
         inject[CollectionCommander].deleteCollection(collections(1))
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.get(collections(1).id.get).state.value === "inactive"
 //          keepRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000) === 0
         }
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.get(collections(1).id.get).state.value === "inactive"
 //          keepRepo.getByUser(user.id.get, None, None, Some(collections(1).id.get), 1000) === 0
         }
 
         inject[CollectionCommander].deleteCollection(collections(2))
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.get(collections(2).id.get).state.value === "inactive"
 //          keepRepo.getByUser(user.id.get, None, None, Some(collections(2).id.get), 1000) === 0
         }
@@ -137,7 +137,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
         }
 
         // First check collections were placed in DB correctly
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user.id.get).map(_.externalId)
           allCollectionIds === oldOrdering
         }
@@ -146,7 +146,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           inject[CollectionCommander].setCollectionIndexOrdering(user.id.get, tagA.externalId, 2)
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           val ordering = userValueRepo.getUserValue(user.id.get, CollectionOrderingKey).get
           val newOrdering = tagB.externalId :: tagC.externalId :: tagA.externalId :: tagD.externalId :: Nil
           ordering.value === Json.stringify(Json.toJson(newOrdering))
@@ -156,7 +156,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit session =>
           inject[CollectionCommander].setCollectionIndexOrdering(user.id.get, tagA.externalId, 0)
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           val ordering = userValueRepo.getUserValue(user.id.get, CollectionOrderingKey).get
           val newOrdering = tagA.externalId :: tagB.externalId :: tagC.externalId :: tagD.externalId :: Nil
           ordering.value === Json.stringify(Json.toJson(newOrdering))
@@ -166,7 +166,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           inject[CollectionCommander].setCollectionIndexOrdering(user.id.get, tagA.externalId, 3)
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           val ordering = userValueRepo.getUserValue(user.id.get, CollectionOrderingKey).get
           val newOrdering = tagB.externalId :: tagC.externalId :: tagD.externalId :: tagA.externalId :: Nil
           ordering.value === Json.stringify(Json.toJson(newOrdering))

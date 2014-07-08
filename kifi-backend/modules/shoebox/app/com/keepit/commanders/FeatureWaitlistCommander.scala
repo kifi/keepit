@@ -36,7 +36,7 @@ class FeatureWaitlistCommander @Inject() (db: Database, waitlistRepo: FeatureWai
   }
 
   def waitList(email: String, feature: String, userAgent: String, extIdOpt: Option[ExternalId[FeatureWaitlistEntry]] = None) : ExternalId[FeatureWaitlistEntry] = {
-    val existingOpt : Option[FeatureWaitlistEntry] = extIdOpt.flatMap{ db.readOnly{ implicit session => waitlistRepo.getOpt(_) } }
+    val existingOpt : Option[FeatureWaitlistEntry] = extIdOpt.flatMap{ db.readOnlyMaster{ implicit session => waitlistRepo.getOpt(_) } }
     val extId = existingOpt.map{ existing =>
       db.readWrite{ implicit session => waitlistRepo.save(existing.copy(email=email, feature=feature, userAgent=userAgent)) }.externalId
     } getOrElse {

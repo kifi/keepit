@@ -25,7 +25,7 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
           expRepo.save(UserExperiment(userId = shanee.id.get, experimentType = ExperimentType.ADMIN))
         }
 
-        inject[Database].readOnly { implicit session =>
+        inject[Database].readOnlyMaster { implicit session =>
           expRepo.get(shanee.id.get, ExperimentType.ADMIN) must beSome
           expRepo.get(shanee.id.get, ExperimentType.FAKE) must beNone
           expRepo.get(santa.id.get, ExperimentType.ADMIN) must beNone
@@ -105,11 +105,11 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
 
         val (savedFirstGen, savedSecondGen) = db.readWrite { implicit session => (repo.save(firstGen), repo.save(secondGen)) }
 
-        val allGen = db.readOnly { implicit session => repo.allActive() }
+        val allGen = db.readOnlyMaster { implicit session => repo.allActive() }
         allGen === Seq(savedFirstGen, savedSecondGen)
         cache.get(ProbabilisticExperimentGeneratorAllKey) === Some(allGen)
 
-       db.readOnly { implicit session => repo.getByName(savedFirstGen.name) } === Some(savedFirstGen)
+       db.readOnlyMaster { implicit session => repo.getByName(savedFirstGen.name) } === Some(savedFirstGen)
       }
     }
 

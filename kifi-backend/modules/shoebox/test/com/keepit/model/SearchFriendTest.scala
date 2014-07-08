@@ -66,7 +66,7 @@ class SearchFriendTest extends Specification with ShoeboxTestInjector {
           searchFriendRepo.excludeFriend(users(0), users(1))
         }
         sessionProvider.doWithoutCreatingSessions {
-          db.readOnly { implicit s =>
+          db.readOnlyMaster { implicit s =>
             searchFriendRepo.getSearchFriends(users(0)) === Set(users(2))
           }
         }
@@ -77,7 +77,7 @@ class SearchFriendTest extends Specification with ShoeboxTestInjector {
           searchFriendRepo.getSearchFriends(users(0)) === Set(users(2))
         }
         sessionProvider.doWithoutCreatingSessions {
-          db.readOnly { implicit s => searchFriendRepo.getSearchFriends(users(0)) } === Set(users(2))
+          db.readOnlyMaster { implicit s => searchFriendRepo.getSearchFriends(users(0)) } === Set(users(2))
         }
       }
     }

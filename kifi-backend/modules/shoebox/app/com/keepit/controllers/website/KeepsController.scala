@@ -75,7 +75,7 @@ class KeepsController @Inject() (
     val urlOpt = (request.body \ "url").asOpt[String]
     val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
     urlOpt.map { url =>
-      db.readOnlyAsync { implicit session =>
+      db.readOnlyMasterAsync { implicit session =>
         normalizedURIInterner.getByUri(url)
       } map { uriOpt =>
         uriOpt flatMap { uriSummaryCommander.getScreenshotURL(_) } match {
@@ -85,7 +85,7 @@ class KeepsController @Inject() (
       }
     }.orElse {
       urlsOpt.map { urls =>
-        db.readOnlyAsync { implicit session =>
+        db.readOnlyMasterAsync { implicit session =>
           urls.map( url => url -> normalizedURIInterner.getByUri(url) )
         } map { case uris =>
           val results = uris.map { case (uri, ssOpt) =>
@@ -120,7 +120,7 @@ class KeepsController @Inject() (
     urlOpt match {
       case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_argument")))
       case Some(url) => {
-        val (uriOpt, pageInfoOpt) = db.readOnly{ implicit ro =>
+        val (uriOpt, pageInfoOpt) = db.readOnlyMaster{ implicit ro =>
           val uriOpt = normalizedURIInterner.getByUri(url)
           val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
           (uriOpt, pageInfoOpt)
@@ -141,13 +141,13 @@ class KeepsController @Inject() (
     urlsOpt match {
       case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_arguments")))
       case Some(urls) => {
-        val tuples = db.readOnly { implicit ro =>
+        val tuples = db.readOnlyMaster { implicit ro =>
           urls.map { s =>
             s -> normalizedURIInterner.getByUri(s)
           }
         }
         val tuplesF = tuples map { case (url, uriOpt) =>
-          val (uriOpt, pageInfoOpt) = db.readOnly{ implicit ro =>
+          val (uriOpt, pageInfoOpt) = db.readOnlyMaster{ implicit ro =>
             val uriOpt = normalizedURIInterner.getByUri(url)
             val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
             (uriOpt, pageInfoOpt)
@@ -166,7 +166,7 @@ class KeepsController @Inject() (
   }
 
   def exportKeeps() = AnyAction.authenticated { request =>
-    val exports : Seq[KeepExport] = db.readOnly { implicit ro =>
+    val exports : Seq[KeepExport] = db.readOnlyMaster { implicit ro =>
       keepRepo.getKeepExports(request.userId)
     }
 
@@ -289,7 +289,7 @@ class KeepsController @Inject() (
         }
       }
     } else {
-      db.readOnly { implicit s => keepRepo.getOpt(id) } filter { _.isActive } map { b =>
+      db.readOnlyMaster { implicit s => keepRepo.getOpt(id) } filter { _.isActive } map { b =>
         Future.successful(Ok(Json.toJson(KeepInfo.fromBookmark(b))))
       }
     }
@@ -305,7 +305,7 @@ class KeepsController @Inject() (
 
     toBeUpdated match {
       case None | Some((None, None)) => BadRequest(Json.obj("error" -> "Could not parse JSON keep info from body"))
-      case Some((isPrivate, title)) => db.readOnly { implicit s => keepRepo.getOpt(id) } map { bookmark =>
+      case Some((isPrivate, title)) => db.readOnlyMaster { implicit s => keepRepo.getOpt(id) } map { bookmark =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         bookmarksCommander.updateKeep(bookmark, isPrivate, title) getOrElse bookmark
       } match {
@@ -337,7 +337,7 @@ class KeepsController @Inject() (
   }
 
   def allCollections(sort: String) = JsonAction.authenticatedAsync { request =>
-    val numKeepsFuture = SafeFuture { db.readOnly { implicit s => keepRepo.getCountByUser(request.userId) } }
+    val numKeepsFuture = SafeFuture { db.readOnlyMaster { implicit s => keepRepo.getCountByUser(request.userId) } }
     val collectionsFuture = SafeFuture { collectionCommander.allCollections(sort, request.userId) }
     for {
       numKeeps <- numKeepsFuture
@@ -359,7 +359,7 @@ class KeepsController @Inject() (
   }
 
   def deleteCollection(id: ExternalId[Collection]) = JsonAction.authenticated { request =>
-    db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { coll =>
+    db.readOnlyMaster { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { coll =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
       collectionCommander.deleteCollection(coll)
       Ok(Json.obj("deleted" -> coll.name))
@@ -369,7 +369,7 @@ class KeepsController @Inject() (
   }
 
   def undeleteCollection(id: ExternalId[Collection]) = JsonAction.authenticated { request =>
-    db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id, Some(CollectionStates.ACTIVE)) } map { coll =>
+    db.readOnlyMaster { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id, Some(CollectionStates.ACTIVE)) } map { coll =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
       collectionCommander.undeleteCollection(coll)
       Ok(Json.obj("undeleted" -> coll.name))
@@ -380,9 +380,9 @@ class KeepsController @Inject() (
 
   def removeKeepsFromCollection(id: ExternalId[Collection]) = JsonAction.authenticated { request =>
     implicit val externalIdFormat = ExternalId.format[Keep]
-    db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { collection =>
+    db.readOnlyMaster { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { collection =>
       request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Keep]]](_).asOpt) map { keepExtIds =>
-        val keeps = db.readOnly { implicit s => keepExtIds.flatMap(keepRepo.getOpt(_)) }
+        val keeps = db.readOnlyMaster { implicit s => keepExtIds.flatMap(keepRepo.getOpt(_)) }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val removed = bookmarksCommander.removeFromCollection(collection, keeps)
         Ok(Json.obj("removed" -> removed.size))
@@ -396,11 +396,11 @@ class KeepsController @Inject() (
 
   def keepToCollection(id: ExternalId[Collection]) = JsonAction.authenticated { request =>
     implicit val externalIdFormat = ExternalId.format[Keep]
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       collectionRepo.getByUserAndExternalId(request.userId, id)
     } map { collection =>
       request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Keep]]](_).asOpt) map { keepExtIds =>
-        val keeps = db.readOnly { implicit session => keepExtIds.map(keepRepo.get) }
+        val keeps = db.readOnlyMaster { implicit session => keepExtIds.map(keepRepo.get) }
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val added = bookmarksCommander.addToCollection(collection.id.get, keeps)
         Ok(Json.obj("added" -> added.size))
@@ -414,12 +414,12 @@ class KeepsController @Inject() (
 
   def numKeeps() = JsonAction.authenticated { request =>
     Ok(Json.obj(
-      "numKeeps" -> db.readOnly { implicit s => keepRepo.getCountByUser(request.userId) }
+      "numKeeps" -> db.readOnlyMaster { implicit s => keepRepo.getCountByUser(request.userId) }
     ))
   }
 
   def importStatus() = JsonAction.authenticated { request =>
-    val values = db.readOnly { implicit session =>
+    val values = db.readOnlyMaster { implicit session =>
       userValueRepo.getValues(request.user.id.get, "bookmark_import_last_start", "bookmark_import_done", "bookmark_import_total")
     }
     val lastStartOpt = values("bookmark_import_last_start")

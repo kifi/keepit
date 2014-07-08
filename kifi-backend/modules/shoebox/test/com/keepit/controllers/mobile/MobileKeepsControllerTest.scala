@@ -143,12 +143,12 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         (user1, bookmark1, bookmark2, collections)
       }
 
-      val bookmarksWithTags = db.readOnly { implicit s =>
+      val bookmarksWithTags = db.readOnlyMaster { implicit s =>
         keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
       }
       bookmarksWithTags.size === 1
 
-      db.readOnly {implicit s =>
+      db.readOnlyMaster {implicit s =>
         keepRepo.getByUser(user.id.get, None, None, 100).size === 2
         val uris = uriRepo.all
         println(uris mkString "\n")
@@ -166,7 +166,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 
       Json.parse(contentAsString(result)) must equalTo(Json.obj())
 
-      val bookmarks = db.readOnly { implicit s =>
+      val bookmarks = db.readOnlyMaster { implicit s =>
         keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
       }
       bookmarks.size === 0
@@ -209,7 +209,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         (user1, bookmark1, bookmark2, collections)
       }
 
-      db.readOnly {implicit s =>
+      db.readOnlyMaster {implicit s =>
         keepRepo.getByUser(user.id.get, None, None, 100).size === 2
         val uris = uriRepo.all
         println(uris mkString "\n")
@@ -236,7 +236,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         keeps.size === 2
       }
 
-      val bookmarks = db.readOnly { implicit s =>
+      val bookmarks = db.readOnlyMaster { implicit s =>
         keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
       }
 
@@ -270,7 +270,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         (user1, collections)
       }
 
-      db.readOnly {implicit s =>
+      db.readOnlyMaster {implicit s =>
         keepRepo.getByUser(user.id.get, None, None, 100).size === 0
         val uris = uriRepo.all
         uris.size === 0
@@ -296,7 +296,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         keeps.size === 1
       }
 
-      val bookmarks = db.readOnly { implicit s =>
+      val bookmarks = db.readOnlyMaster { implicit s =>
         keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
       }
       bookmarks.size === 1
@@ -462,7 +462,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 
       val (keeps4, _) = bookmarkInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
 
-      val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnly {implicit s =>
+      val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnlyMaster {implicit s =>
         val keeps = keepRepo.getByUser(u1.id.get, None, None, 100)
         val clickCount = keepDiscoveryRepo.getDiscoveryCountByKeeper(u1.id.get)
         val clicks = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u1.id.get)
@@ -606,7 +606,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 
       val (keeps4, _) = bookmarkInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
 
-      val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnly {implicit s =>
+      val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnlyMaster {implicit s =>
         val keeps = keepRepo.getByUser(u1.id.get, None, None, 100)
         val clickCount = keepDiscoveryRepo.getDiscoveryCountByKeeper(u1.id.get)
         val clicks = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u1.id.get)

@@ -117,7 +117,7 @@ class InviteController @Inject() (db: Database,
   }
 
   def refreshAllSocialInfo() = HtmlAction.authenticatedAsync { implicit request =>
-    val info = db.readOnly { implicit s =>
+    val info = db.readOnlyMaster { implicit s =>
       socialUserInfoRepo.getByUser(request.userId)
     }
     implicit val duration = 5.minutes
@@ -129,7 +129,7 @@ class InviteController @Inject() (db: Database,
   def acceptInvite(id: ExternalId[Invitation]) = HtmlAction.async(allowPending = true)(authenticatedAction = { implicit request =>
     resolve(Redirect(com.keepit.controllers.core.routes.AuthController.signupPage))
   }, unauthenticatedAction = { implicit request =>
-      val (invitation, inviterUserOpt) = db.readOnly { implicit session =>
+      val (invitation, inviterUserOpt) = db.readOnlyMaster { implicit session =>
         invitationRepo.getOpt(id).map {
           case invite if invite.senderUserId.isDefined =>
             (Some(invite), Some(userRepo.get(invite.senderUserId.get)))
@@ -145,7 +145,7 @@ class InviteController @Inject() (db: Database,
             val senderUserId = invite.senderUserId.get
             val nameOpt = (invite.recipientSocialUserId, invite.recipientEmailAddress) match {
               case (Some(socialUserId), _) =>
-                val name = db.readOnly(socialUserInfoRepo.get(socialUserId)(_).fullName)
+                val name = db.readOnlyMaster(socialUserInfoRepo.get(socialUserId)(_).fullName)
                 Future.successful(Some(name))
               case (_, Some(emailAddress)) =>
                 abookServiceClient.getContactNameByEmail(senderUserId, emailAddress).map(_ orElse Some(""))

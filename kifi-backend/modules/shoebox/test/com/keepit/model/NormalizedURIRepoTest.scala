@@ -197,7 +197,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
   "internByUri" should {
     "Find an existing uri without creating a new one" in {
       withDb() { implicit injector =>
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           uriRepo.count === 0
         }
         val xkcd = db.readWrite { implicit s =>
@@ -210,7 +210,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           normalizedURIInterner.internByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/") === xkcd
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           uriRepo.count === 1
         }
       }
@@ -223,7 +223,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
           normalizedURIInterner.getByUri("http://www.arte.tv/fr/3482046.html").isEmpty === true
           normalizedURIInterner.internByUri("http://www.arte.tv/fr/3482046.html")
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           uriRepo.count === 1
           blowup.url === "http://www.arte.tv/fr/3482046.html"
         }
@@ -241,7 +241,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
           uriRepo.save(uri1.withRedirect(uri2.id.get, t))
           (uri0, uri1, uri2)
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           val updated = uriRepo.get(uri1.id.get)
           updated.redirect === uri2.id
           updated.redirectTime === Some(t)

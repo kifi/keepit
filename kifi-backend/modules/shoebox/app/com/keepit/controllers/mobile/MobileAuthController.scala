@@ -61,7 +61,7 @@ class MobileAuthController @Inject() (
 
   private def registerMobileVersion[T <: KifiVersion with Ordered[T]](installationIdOpt: Option[ExternalId[KifiInstallation]], version: T, agent: UserAgent, userId: Id[User], platform: KifiInstallationPlatform) = {
     val (installation, newInstallation) = installationIdOpt map {id =>
-      db.readOnly { implicit s => installationRepo.get(id) }
+      db.readOnlyMaster { implicit s => installationRepo.get(id) }
     } match {
       case None =>
         db.readWrite { implicit s =>
@@ -123,7 +123,7 @@ class MobileAuthController @Inject() (
                     .withCookies(authenticator.toCookie)
               )
             case Some(identity) => // social user exists
-              db.readOnly(attempts = 2) { implicit s =>
+              db.readOnlyMaster(attempts = 2) { implicit s =>
                 socialUserInfoRepo.getOpt(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)) flatMap (_.userId)
               } match {
                 case None => // kifi user does not exist
@@ -221,7 +221,7 @@ class MobileAuthController @Inject() (
       provider   <- Registry.providers.get(providerName)
       oauth2Info <- request.body.asOpt[OAuth2Info]
     } yield {
-      val suiOpt = db.readOnly(attempts = 2) { implicit s =>
+      val suiOpt = db.readOnlyMaster(attempts = 2) { implicit s =>
         socialUserInfoRepo.getByUser(request.userId)
       } find (_.networkType == SocialNetworkType(providerName)) headOption
 

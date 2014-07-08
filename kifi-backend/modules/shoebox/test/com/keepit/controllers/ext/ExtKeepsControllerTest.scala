@@ -82,12 +82,12 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
           (user1, k1, collections)
         }
 
-        val bookmarksWithTags = db.readOnly { implicit s =>
+        val bookmarksWithTags = db.readOnlyMaster { implicit s =>
           keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
         }
         bookmarksWithTags.size === 1
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(user.id.get, None, None, 100).size === 2
           val uris = uriRepo.all
           println(uris mkString "\n")
@@ -106,7 +106,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
         val expected = Json.obj("id" -> k1.externalId, "title" -> "G1", "url" -> "http://www.google.com", "isPrivate" -> false)
         Json.parse(contentAsString(result)) must equalTo(expected)
 
-        val bookmarks = db.readOnly { implicit s =>
+        val bookmarks = db.readOnlyMaster { implicit s =>
           keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
         }
         bookmarks.size === 0
@@ -148,12 +148,12 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
           (user1, collections)
         }
 
-        val bookmarksWithTags = db.readOnly { implicit s =>
+        val bookmarksWithTags = db.readOnlyMaster { implicit s =>
           keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
         }
         bookmarksWithTags.size === 1
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(user.id.get, None, None, 100).size === 2
           val uris = uriRepo.all
           println(uris mkString "\n")
@@ -171,7 +171,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
 
         Json.parse(contentAsString(result)) must equalTo(Json.obj())
 
-        val bookmarks = db.readOnly { implicit s =>
+        val bookmarks = db.readOnlyMaster { implicit s =>
           keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
         }
         bookmarks.size === 0
@@ -214,7 +214,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
           (user1, bookmark1, bookmark2, collections)
         }
 
-        db.readOnly {implicit s =>
+        db.readOnlyMaster {implicit s =>
           keepRepo.getByUser(user.id.get, None, None, 100).size === 2
           val uris = uriRepo.all
           println(uris mkString "\n")
@@ -239,7 +239,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
           keeps.size === 2
         }
 
-        val bookmarks = db.readOnly { implicit s =>
+        val bookmarks = db.readOnlyMaster { implicit s =>
           keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
         }
         bookmarks.size === 1
@@ -272,7 +272,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
           (user1, collections)
         }
 
-        db.readOnly {implicit s =>
+        db.readOnlyMaster {implicit s =>
           keepRepo.getByUser(user.id.get, None, None, 100).size === 0
           val uris = uriRepo.all
           uris.size === 0
@@ -296,7 +296,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
           keeps.size === 1
         }
 
-        val bookmarks = db.readOnly { implicit s =>
+        val bookmarks = db.readOnlyMaster { implicit s =>
           keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
         }
         bookmarks.size === 1

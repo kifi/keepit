@@ -6,7 +6,7 @@ import com.keepit.graph.GraphServiceClient
 import com.keepit.model._
 import com.keepit.graph.wander.{Wanderlust}
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.slick.Database.Slave
+import com.keepit.common.db.slick.Database.Replica
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.time._
 import play.api.mvc.{SimpleResult}
@@ -27,15 +27,15 @@ class WanderingAdminController @Inject() (
   private def doWander(wanderlust: Wanderlust): Future[(Seq[(User, Int)], Seq[(SocialUserInfo, Int)], Seq[(NormalizedURI, Int)], Seq[(String, Int)])] = {
     graphClient.wander(wanderlust).map { collisions =>
 
-      val sortedUsers = db.readOnly(dbMasterSlave = Slave) { implicit session =>
+      val sortedUsers = db.readOnlyReplica { implicit session =>
         collisions.users.map { case (userId, count) => userRepo.get(userId) -> count }
       }.toSeq.sortBy(- _._2)
 
-      val sortedSocialUsers = db.readOnly(dbMasterSlave = Slave) { implicit session =>
+      val sortedSocialUsers = db.readOnlyReplica { implicit session =>
         collisions.socialUsers.map { case (socialUserInfoId, count) => socialUserRepo.get(socialUserInfoId) -> count }
       }.toSeq.sortBy(- _._2)
 
-      val sortedUris = db.readOnly(dbMasterSlave = Slave) { implicit session =>
+      val sortedUris = db.readOnlyReplica { implicit session =>
         collisions.uris.map { case (uriId, count) => uriRepo.get(uriId) -> count }
       }.filter(_._1.restriction.isEmpty).toSeq.sortBy(- _._2)
 

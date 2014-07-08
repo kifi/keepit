@@ -33,7 +33,7 @@ class MobileDiscoveryController @Inject() (
       val relevantUris = if (limit > 0) sortedUriCollisions.take(limit) else sortedUriCollisions
       val (uriIds, scores) = relevantUris.unzip
       val sharingInfosFuture = searchClient.sharingUserInfo(userId, uriIds)
-      val uris = db.readOnly { implicit session => uriIds.map(uriRepo.get) }
+      val uris = db.readOnlyMaster { implicit session => uriIds.map(uriRepo.get) }
       val pageInfosFuture = Future.sequence(uris.map { uri =>
         if (withPageInfo) {
           val request = URISummaryRequest(
@@ -54,7 +54,7 @@ class MobileDiscoveryController @Inject() (
         pageInfos <- pageInfosFuture
       } yield {
 
-        val idToBasicUser = db.readOnly { implicit s =>
+        val idToBasicUser = db.readOnlyMaster { implicit s =>
           basicUserRepo.loadAll(sharingInfos.flatMap(_.sharingUserIds).toSet)
         }
 

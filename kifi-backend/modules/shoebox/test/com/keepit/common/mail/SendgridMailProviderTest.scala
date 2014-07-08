@@ -36,7 +36,7 @@ class SendgridMailProviderTest extends Specification with ShoeboxTestInjector {
 
 //         usually using instance[PostOffice].sendMail(mail
 //        instance[SendgridMailProvider].sendMailToSendgrid(mail)
-        inject[Database].readOnly { implicit s =>
+        inject[Database].readOnlyMaster { implicit s =>
           val loaded = inject[ElectronicMailRepo].get(mail.id.get)
           loaded.from === mail.from
           loaded.fromName === mail.fromName
