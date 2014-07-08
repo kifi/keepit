@@ -132,10 +132,6 @@ class ScrapeSchedulerPluginImpl @Inject() (
     scheduleTaskOnLeader(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, CheckOverdues)
     scheduleTaskOnLeader(actor.system, 30 seconds, scraperConfig.checkOverdueCountFrequency minutes, actor.ref, CheckOverdueCount)
   }
-  override def onStop() {
-    log.info(s"[onStop] ScrapeScheduler stopped")
-    super.onStop()
-  }
 
   def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit = {
     require(uri != null && !uri.id.isEmpty, "[scheduleScrape] <uri> cannot be null and <uri.id> cannot be empty")

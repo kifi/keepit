@@ -83,7 +83,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     }
     val services = injector.instance[FortyTwoServices]
     val startMessage = ">>>>>>>>>> FortyTwo [%s] service %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
-        this, services.currentService, services.currentVersion, services.compilationTime, services.baseUrl)
+        this.getClass.getSimpleName, services.currentService, services.currentVersion, services.compilationTime, services.baseUrl)
     log.info(s"[${currentDateTime.toStandardTimeString}] " + startMessage)
 
     val disableRegistration = sys.props.getOrElse("service.register.disable", "false").toBoolean // directly use sys.props to be consistent; uptake injected config later
@@ -232,7 +232,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
     val serviceDiscovery = injector.instance[ServiceDiscovery]
     announceStopping(app)
-    val stopMessage = s"[${currentDateTime.toStandardTimeString}] <<<<<<<<<< Stopping " + this
+    val stopMessage = s"[${currentDateTime.toStandardTimeString}] <<<<<<<<<< Stopping " + this.getClass.getSimpleName
     println(stopMessage)
     log.info(stopMessage)
     serviceDiscovery.unRegister()

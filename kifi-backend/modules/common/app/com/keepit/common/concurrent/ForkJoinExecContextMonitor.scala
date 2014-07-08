@@ -49,8 +49,4 @@ class ForkJoinExecContextPluginImpl @Inject() (
     log.info(s"[onStart] starting ForkJoinExecContextPluginImpl")
     scheduleTaskOnAllMachines(actor.system, 45 seconds, 5 seconds, actor.ref, CheckFJContext)
   }
-  override def onStop() {
-    log.info(s"[onStop] ForkJoinExecContextPluginImpl stopped")
-    super.onStop()
-  }
 }

@@ -36,7 +36,6 @@ class AutogenReaperPluginImpl @Inject() (
     }
   }
   override def onStop() {
-    log.info(s"[AutogenReaperPlugin] stopped")
     super.onStop
   }
 

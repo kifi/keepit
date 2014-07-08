@@ -34,10 +34,6 @@ class PullerPluginImpl @Inject() (
       log.error(s"[onStart] PullerPlugin NOT started -- play app is not ready")
     }
   }
-  override def onStop() {
-    log.info(s"[PullerPlugin] stopped")
-    super.onStop
-  }
 
   override def pull() { actor.ref ! Pull }
 }
