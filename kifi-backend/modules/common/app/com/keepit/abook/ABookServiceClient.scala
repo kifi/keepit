@@ -60,6 +60,7 @@ trait ABookServiceClient extends ServiceClient {
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int]
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
   def validateAllContacts(readOnly: Boolean): Unit
+  def getNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]]
 }
 
 

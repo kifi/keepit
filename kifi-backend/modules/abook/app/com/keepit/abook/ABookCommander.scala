@@ -310,4 +310,10 @@ class ABookCommander @Inject() (
       subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = NotificationCategory.System.ADMIN
     ))
   }
+
+  def getNameByEmail(userId: Id[User], email: EmailAddress): Option[String] = {
+    db.readOnly { implicit session =>
+      econtactRepo.getByUserIdAndEmail(userId, email).collectFirst { case contact if contact.name.isDefined => contact.name.get }
+    }
+  }
 }

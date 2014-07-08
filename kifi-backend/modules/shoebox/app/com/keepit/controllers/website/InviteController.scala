@@ -146,11 +146,11 @@ class InviteController @Inject() (db: Database,
             val nameOpt = (invite.recipientSocialUserId, invite.recipientEmailAddress) match {
               case (Some(socialUserId), _) =>
                 val name = db.readOnly(socialUserInfoRepo.get(socialUserId)(_).fullName)
-                Promise.successful(Option(name)).future
+                Future.successful(Some(name))
               case (_, Some(emailAddress)) =>
-                abookServiceClient.getEContactByEmail(senderUserId, emailAddress).map { cOpt => cOpt.map(_.name.getOrElse("")) }
+                abookServiceClient.getNameByEmail(senderUserId, emailAddress).map(_ orElse Some(""))
               case _ =>
-                Promise.successful(None).future
+                Future.successful(None)
             }
             nameOpt.map {
               case Some(name) =>

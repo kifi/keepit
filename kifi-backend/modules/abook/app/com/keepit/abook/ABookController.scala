@@ -310,4 +310,10 @@ class ABookController @Inject() (
     SafeFuture { abookCommander.validateAllContacts(readOnly) }
     Ok
   }
+
+  def getNameByEmail(userId: Id[User]) = Action(parse.json) { request =>
+    val email = request.body.as[EmailAddress]
+    val name = abookCommander.getNameByEmail(userId, email)
+    Ok(Json.toJson(name))
+  }
 }
