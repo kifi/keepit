@@ -259,7 +259,10 @@ class UserController @Inject() (
       Ok(userCommander.getPrefs(SitePrefNames, request.userId))
     } recover {
       // todo(martin) - Remove this. This is to make sure I don't break prod for the moment
-      case _ => Ok(userCommander.getPrefs(SitePrefNames, request.userId))
+      case t: Throwable => {
+        airbrakeNotifier.notify(s"Exception occurred in setLastUserActive for user ${request.userId}", t)
+        Ok(userCommander.getPrefs(SitePrefNames, request.userId))
+      }
     }
   }
 

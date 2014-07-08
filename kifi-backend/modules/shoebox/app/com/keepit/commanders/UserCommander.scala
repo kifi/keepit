@@ -808,21 +808,21 @@ class UserCommander @Inject() (
   val DELIGHTED_INITIAL_DELAY = 7 // days
 
   def setLastUserActive(userId: Id[User]): Future[Unit] = {
-    db.readWrite { implicit s =>
-      val time = clock.now
+    val time = clock.now
+    val userCreationDate = db.readWrite { implicit s =>
       userValueRepo.setValue(userId, "last_active", time)
-
-      // Check if user should be shown Delighted question
-      val userCreationDate = userRepo.get(userId).createdAt
-      if (time.minusDays(DELIGHTED_INITIAL_DELAY) > userCreationDate) {
-        heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
-          val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
-          if (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate) {
-            userValueRepo.setValue(userId, "show_delighted_question", true)
-          }
-        }
-      } else Future.successful()
+      userRepo.get(userId).createdAt
     }
+
+    // Check if user should be shown Delighted question
+    if (time.minusDays(DELIGHTED_INITIAL_DELAY) > userCreationDate) {
+      heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
+        val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
+        if (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate) {
+          db.readWrite { implicit s => userValueRepo.setValue(userId, "show_delighted_question", true) }
+        }
+      }
+    } else Future.successful()
   }
 }
 
