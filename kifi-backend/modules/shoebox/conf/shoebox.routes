@@ -99,6 +99,7 @@ POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceCon
 GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/contacts               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToMessage(q: String, n: Int ?= 4)
 GET     /ext/nonusers               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToInvite(q: String, n: Int ?= 4)
+POST    /ext/hideEmailFromUser      @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser(q: String)
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
@@ -155,6 +156,7 @@ POST    /m/1/password/forgot                    @com.keepit.controllers.mobile.M
 POST    /m/1/password/change                    @com.keepit.controllers.mobile.MobileUserController.changePassword()
 
 POST    /m/1/iphone/version/register            @com.keepit.controllers.mobile.MobileAuthController.registerIPhoneVersion()
+POST    /m/1/android/version/register           @com.keepit.controllers.mobile.MobileAuthController.registerAndroidVersion()
 
 GET     /m/1/user/connections/all               @com.keepit.controllers.mobile.MobileUserController.queryAll(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= false)
 GET     /m/1/user/connections/social            @com.keepit.controllers.mobile.MobileUserController.querySocial(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= false)
@@ -247,6 +249,7 @@ POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsControl
 
 GET     /site/collections/all       @com.keepit.controllers.website.KeepsController.allCollections(sort: String ?= "last_kept")
 POST    /site/collections/ordering  @com.keepit.controllers.website.KeepsController.updateCollectionOrdering()
+POST    /site/collections/reorderTag  @com.keepit.controllers.website.KeepsController.updateCollectionIndexOrdering()
 POST    /site/collections/create    @com.keepit.controllers.website.KeepsController.saveCollection(id = "")
 POST    /site/collections/:id/update @com.keepit.controllers.website.KeepsController.saveCollection(id: String)
 POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsController.deleteCollection(id: ExternalId[Collection])

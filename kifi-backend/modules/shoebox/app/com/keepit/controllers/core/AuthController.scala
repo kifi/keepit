@@ -160,10 +160,9 @@ class AuthController @Inject() (
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
-      // All devices for which preview website is enabled can login, however they may not be able to
-      // access kifi.com or preview.kifi.com after logging in (redirected to "unsupported" page).
-      // Remove this when preview experiment is over.
-      if (!agent.isWebsiteEnabled && !agent.isPreviewWebsiteEnabled) {
+      if (agent.isOldIE) {
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
+      } else if (!agent.screenCanFitWebApp) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else None
     }.flatten.getOrElse(Ok(views.html.auth.authGrey("login")))
@@ -196,9 +195,9 @@ class AuthController @Inject() (
     val agentOpt = request.headers.get("User-Agent").map { agent =>
       UserAgent.fromString(agent)
     }
-    if (agentOpt.exists(ua => ua.name == "IE" || ua.name == "Safari")) {
+    if (agentOpt.exists(_.isOldIE)) {
       Redirect(com.keepit.controllers.website.routes.HomeController.unsupported())
-    } else if (agentOpt.exists(!_.isWebsiteEnabled)) {
+    } else if (agentOpt.exists(!_.screenCanFitWebApp)) {
       Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding())
     } else {
       (request.userOpt, request.identityOpt) match {

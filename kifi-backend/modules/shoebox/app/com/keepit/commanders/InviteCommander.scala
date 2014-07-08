@@ -30,7 +30,7 @@ import play.api.libs.functional.syntax._
 import scala.concurrent.Future
 import scala.util.Try
 import com.keepit.common.queue.{RecordInvitation, CancelInvitation}
-import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.{RichContact, ABookServiceClient}
 
 import akka.actor.Scheduler
 import org.joda.time.DateTime
@@ -75,7 +75,7 @@ object Invitee {
     )(Invitee.apply, unlift(Invitee.unapply))
 }
 
-case class InviteInfo(userId: Id[User], friend: Either[SocialUserInfo, EContact], invitationNumber: Int, subject: Option[String], message: Option[String], source: String)
+case class InviteInfo(userId: Id[User], friend: Either[SocialUserInfo, RichContact], invitationNumber: Int, subject: Option[String], message: Option[String], source: String)
 
 case class InviteStatus(sent: Boolean, savedInvite: Option[Invitation], code: String)
 
@@ -276,7 +276,7 @@ class InviteCommander @Inject() (
 
     val message = inviteInfo.message.getOrElse(s"${invitingUser.firstName} ${invitingUser.lastName} is waiting for you to join Kifi").replace("\n", "<br />")
     val subject = inviteInfo.subject.getOrElse("Join me on kifi")
-    log.info(s"[sendEmailInvitation(${inviteInfo.userId},${c.id.get},${c.email}})] sending with subject=$subject message=$message")
+    log.info(s"[sendEmailInvitation(${inviteInfo.userId},${c}})] sending with subject=$subject message=$message")
     val inviterImage = s3ImageStore.avatarUrlByExternalId(Some(200), invitingUser.externalId, invitingUser.pictureName.getOrElse("0"), Some("https"))
     val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(c.email))}"
 
@@ -295,7 +295,7 @@ class InviteCommander @Inject() (
       )
       postOffice.sendMail(electronicMail)
       val savedInvite = invitationRepo.save(invite.withState(InvitationStates.ACTIVE).withLastSentTime(clock.now()))
-      log.info(s"[sendEmailInvitation(${inviteInfo.userId},${c.id.get},${c.email}})] invitation sent")
+      log.info(s"[sendEmailInvitation(${inviteInfo.userId},${c},})] invitation sent")
       InviteStatus.sent(savedInvite)
     }
   }
@@ -405,9 +405,9 @@ class InviteCommander @Inject() (
         val invitationsSentFuture = countInvitationsSent(userId, Left(friendSocialUserInfo.id.get))
         (Future.successful(Left(friendSocialUserInfo)), invitationsSentFuture)
       case Right(emailAddress) => {
-        val friendEContactFuture = abook.internContact(userId, BasicContact(emailAddress, fullSocialId.name)).map(Right(_))
+        val friendRichContactFuture = abook.internKifiContact(userId, BasicContact(emailAddress, fullSocialId.name)).map(Right(_))
         val invitationsSentFuture = countInvitationsSent(userId, Right(emailAddress))
-        (friendEContactFuture, invitationsSentFuture)
+        (friendRichContactFuture, invitationsSentFuture)
       }
     }
 

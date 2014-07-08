@@ -183,20 +183,14 @@ class ABookCommander @Inject() (
     }
   }
 
-  def getEContactByIdDirect(contactId:Id[EContact]):Option[JsValue] = {
-    val econtactOpt = db.readOnly(attempts = 2) { implicit s =>
-      econtactRepo.getById(contactId)
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Boolean = {
+    val result = db.readWrite {
+      implicit session =>
+        econtactRepo.hideEmailFromUser(userId, email)
     }
-    log.info(s"[getEContactByIdDirect($contactId)] res=$econtactOpt")
-    econtactOpt map { Json.toJson(_) }
-  }
-
-  def getEContactByEmailDirect(userId:Id[User], email: EmailAddress):Option[JsValue] = {
-    val econtactOpt = db.readOnly(attempts = 2) { implicit s =>
-      econtactRepo.getByUserIdAndEmail(userId, email)
-    }
-    log.info(s"[getEContactDirect($userId,$email)] res=$econtactOpt")
-    econtactOpt map { Json.toJson(_) }
+    econtactTypeahead.refresh(userId)
+    log.info(s"[hideEmailFromUser($userId, $email)] res=$result")
+    result
   }
 
   def getEContactsDirect(userId: Id[User], maxRows: Int): JsArray = {
@@ -317,5 +311,11 @@ class ABookCommander @Inject() (
     shoebox.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
       subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = NotificationCategory.System.ADMIN
     ))
+  }
+
+  def getContactNameByEmail(userId: Id[User], email: EmailAddress): Option[String] = {
+    db.readOnly { implicit session =>
+      econtactRepo.getByUserIdAndEmail(userId, email).collectFirst { case contact if contact.name.isDefined => contact.name.get }
+    }
   }
 }

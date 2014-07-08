@@ -34,7 +34,6 @@ import views.html
 import com.keepit.typeahead.{TypeaheadHit, PrefixFilter}
 import scala.collection.mutable
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
-import com.keepit.typeahead.abook.EContactTypeahead
 import securesocial.core.Registry
 import com.keepit.common.healthcheck.SystemAdminMailSender
 
@@ -97,7 +96,6 @@ class AdminUserController @Inject() (
     basicUserRepo: BasicUserRepo,
     userCredRepo: UserCredRepo,
     userCommander: UserCommander,
-    econtactTypeahead: EContactTypeahead,
     socialUserTypeahead: SocialUserTypeahead,
     systemAdminMailSender: SystemAdminMailSender,
     eliza: ElizaServiceClient,
@@ -712,18 +710,10 @@ class AdminUserController @Inject() (
   }
 
   private def prefixContactSearchDirect(userId:Id[User], query:String):Future[Seq[EContact]] = {
-    implicit val ord = TypeaheadHit.defaultOrdering[EContact]
-    val localF = econtactTypeahead.asyncSearch(userId, query) map { resOpt =>
-      val res = resOpt getOrElse Seq.empty[EContact]
-      log.info(s"[prefixContactSearchDirect($userId)-LOCAL] res=(${res.length});${res.take(10).mkString(",")}")
-      res
-    }
-    val abookF = abookClient.prefixSearch(userId, query) map { res =>
+    abookClient.prefixSearch(userId, query) map { res =>
       log.info(s"[prefixContactSearchDirect($userId)-ABOOK] res=(${res.length});${res.take(10).mkString(",")}")
       res
     }
-    val resF = Future.firstCompletedOf(Seq(localF, abookF))
-    resF
   }
 
   def prefixContactSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>

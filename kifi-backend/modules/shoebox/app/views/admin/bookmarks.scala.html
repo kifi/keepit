@@ -88,7 +88,10 @@
       <td>@keyword.bestGuess.mkString(" ")</td>
       <td>
         @{bookmark.source.value match {
-          case "INIT_LOAD" | "bookmarkImport" => {
+          case "INIT_LOAD" => {
+            <span class="label">Init Load</span>
+          }
+          case "bookmarkImport" | "bookmarkFileImport" | "Instapaper" | "Pocket" | "Kippt" => {
             <span class="label">Bookmark Import</span>
           }
           case "HOVER_KEEP" | "keeper"=> {

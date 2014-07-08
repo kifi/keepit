@@ -16,10 +16,8 @@ import play.api.libs.json.JsString
 import scala.Some
 import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.{AirbrakeNotifier, FakeAirbrakeModule}
-import com.keepit.typeahead.abook.{EContactTypeaheadStore, EContactTypeahead}
-import com.keepit.abook.typeahead.EContactABookTypeahead
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.common.mail.BasicContact
+import com.keepit.common.mail.{EmailAddress, BasicContact}
 
 class ABookCommanderTest extends Specification with DbTestInjector with ABookTestHelper {
 
@@ -163,6 +161,29 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         gBookRawInfoSeq2.length === 2
       }
     }
+
+    "handle hiding given email from current user" in  {
+      withDb(modules: _*) { implicit injector =>
+        val (commander) = inject[ABookCommander]
+        val (econRepo) = inject[EContactRepo] // setup()
+
+        val e1 = BasicContact.fromString("Douglas Adams <doug@kifi.com>").get
+        val e1Res = commander.internContact(u42, e1)
+
+        val result1 = commander.hideEmailFromUser(u42, e1Res.email)
+        result1 === true
+
+        db.readOnly { implicit session =>
+            val e2 = econRepo.get(e1Res.id.get)
+            e2.state should_== EContactStates.HIDDEN
+        }
+
+        val result2 = commander.hideEmailFromUser(u42, EmailAddress("nonexist@email.com"))
+        result2 === false
+
+      }
+    }
+
   }
 }
 

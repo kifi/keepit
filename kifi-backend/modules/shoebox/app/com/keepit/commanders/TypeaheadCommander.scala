@@ -6,10 +6,10 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.{LogPrefix, Logging}
 import com.keepit.common.performance.timing
 import com.keepit.model._
-import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.{RichContact, ABookServiceClient}
 import com.keepit.typeahead.socialusers.{KifiUserTypeahead, SocialUserTypeahead}
 import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.social.{BasicUserWithUserId, BasicUser, SocialNetworkType, SocialNetworks}
+import com.keepit.social.{BasicUserWithUserId, SocialNetworkType, SocialNetworks}
 import scala.concurrent.Future
 import play.api.libs.json._
 import com.keepit.typeahead.TypeaheadHit
@@ -17,9 +17,8 @@ import play.api.libs.functional.syntax._
 import com.keepit.model.SocialUserConnectionsKey
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.akka.SafeFuture
-import com.keepit.typeahead.abook.EContactTypeahead
 import com.keepit.search.SearchServiceClient
-import com.keepit.common.mail.{EmailAddress, SystemEmailAddress, ElectronicMail}
+import com.keepit.common.mail.EmailAddress
 import Logging.LoggerWithPrefix
 import scala.collection.mutable.{TreeSet, ArrayBuffer}
 import org.joda.time.DateTime
@@ -52,7 +51,6 @@ class TypeaheadCommander @Inject()(
   abookServiceClient: ABookServiceClient,
   socialUserTypeahead: SocialUserTypeahead,
   kifiUserTypeahead: KifiUserTypeahead,
-  econtactTypeahead: EContactTypeahead,
   searchClient: SearchServiceClient,
   systemAdminMailSender:SystemAdminMailSender
 ) extends Logging {
@@ -62,18 +60,19 @@ class TypeaheadCommander @Inject()(
   private def emailId(email: EmailAddress) = s"email/${email.address}"
   private def socialId(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
 
-  def queryContacts(userId: Id[User], search: Option[String], limit: Int): Future[Seq[EContact]] = {
-    abookServiceClient.prefixQuery(userId, limit, search, None)
-  }
-
-  def queryContacts(userId: Id[User], search: Option[String], limit: Int, filter: (EContact) => Boolean): Future[Seq[EContact]] = {
-    // TODO(jared,ray): filter in the abook service instead for efficiency and correctness
-    abookServiceClient.prefixQuery(userId, 2 * limit, search, None) map { contacts =>
-      contacts.filter(filter).take(limit)
+  def queryContacts(userId: Id[User], search: Option[String], limit: Int): Future[Seq[RichContact]] = {
+    search match {
+      case Some(query) => abookServiceClient.contactTypeahead(userId, query, Some(limit)).map { hits => hits.map(_.info) }
+      case None => Future.successful(Seq.empty) //todo(Léo): check with mobile about this
     }
   }
 
-  def queryContactsWithInviteStatus(userId: Id[User], search: Option[String], limit: Int): Future[Seq[(EContact, Boolean)]] = {
+  def queryNonUserContacts(userId: Id[User], query: String, limit: Int): Future[Seq[RichContact]] = {
+    // TODO(jared,ray): filter in the abook service instead for efficiency and correctness
+    queryContacts(userId, Some(query), 2 * limit).map { contacts => contacts.filter(_.userId.isEmpty).take(limit) }
+  }
+
+  def queryContactsWithInviteStatus(userId: Id[User], search: Option[String], limit: Int): Future[Seq[(RichContact, Boolean)]] = {
     queryContacts(userId, search, limit) map { contacts =>
       val allEmailInvites = db.readOnly { implicit ro =>
         invitationRepo.getEmailInvitesBySenderId(userId)
@@ -212,17 +211,17 @@ class TypeaheadCommander @Inject()(
 
   private def fetchAll(socialF: Future[Option[Seq[TypeaheadHit[SocialUserBasicInfo]]]],
                        kifiF: Future[Option[Seq[TypeaheadHit[User]]]],
-                       abookF: Future[Option[Seq[TypeaheadHit[EContact]]]],
+                       abookF: Future[Seq[TypeaheadHit[RichContact]]],
                        nfUsersF: Future[Seq[TypeaheadHit[BasicUserWithUserId]]]) = {
     for {
       socialHitsOpt <- socialF
       kifiHitsOpt <- kifiF
-      abookHitsOpt <- abookF
+      abookHits <- abookF
       nfUserHits <- nfUsersF
     } yield {
       val socialHitsTup = socialHitsOpt.getOrElse(Seq.empty).map(h => (h.info.networkType, h))
       val kifiHitsTup = kifiHitsOpt.getOrElse(Seq.empty).map(h => (SocialNetworks.FORTYTWO, h))
-      val abookHitsTup = abookHitsOpt.getOrElse(Seq.empty).map(h => (SocialNetworks.EMAIL, h))
+      val abookHitsTup = abookHits.map(h => (SocialNetworks.EMAIL, h))
       val nfUserHitsTup = nfUserHits.map(h => (SocialNetworks.FORTYTWO_NF, h))
       log.infoP(s"social.len=${socialHitsTup.length} kifi.len=${kifiHitsTup.length} abook.len=${abookHitsTup.length} nf.len=${nfUserHits.length}")
       val sorted = (socialHitsTup ++ kifiHitsTup ++ abookHitsTup ++ nfUserHitsTup).sorted(hitOrd)
@@ -241,7 +240,7 @@ class TypeaheadCommander @Inject()(
       }
     }
     val kifiF = kifiUserTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[User])
-    val abookF = econtactTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[EContact])
+    val abookF = if (q.length < 2) Future.successful(Seq.empty) else abookServiceClient.contactTypeahead(userId, q, limit)
     val nfUsersF = if (q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeaheadWithUserId(userId, q, limit.getOrElse(100), filter = "nf")
 
     limit match {
@@ -265,12 +264,11 @@ class TypeaheadCommander @Inject()(
                 log.infoP(s"short-circuit (social+kifi) res=${res.mkString(",")}")
                 Future.successful(Option(res))
               } else {
-                abookF flatMap { abookHitsOpt =>
-                  val abookRes = abookHitsOpt.getOrElse(Seq.empty)
+                abookF flatMap { abookRes =>
                   val filteredABookHits = if (!dedupEmail) abookRes else {
                     val kifiUsers = kifiRes.map(h => h.info.id.get -> h).toMap
                     abookRes.filterNot { h =>
-                      h.info.contactUserId.exists { uId => // todo: confirm this field is updated properly
+                      h.info.userId.exists { uId => // todo: confirm this field is updated properly
                         kifiUsers.get(uId).exists { userHit =>
                           if (userHit.score <= h.score) {
                             log.infoP(s"DUP econtact (${h.info.email}) discarded; userHit=${userHit.info} econtactHit=${h.info}")
@@ -326,7 +324,7 @@ class TypeaheadCommander @Inject()(
       case (snType, hit) =>
         snType match {
           case SocialNetworks.EMAIL =>
-            val e = hit.info.asInstanceOf[EContact]
+            val e = hit.info.asInstanceOf[RichContact]
             val (status, lastSentAt) = emailInvitesMap.get(e.email) map { inv => inviteStatus(inv) } getOrElse ("", None)
             ConnectionWithInviteStatus(e.name.getOrElse(""), hit.score, SocialNetworks.EMAIL.name, None, emailId(e.email), status, None, lastSentAt)
           case SocialNetworks.FACEBOOK | SocialNetworks.LINKEDIN =>
@@ -384,6 +382,10 @@ class TypeaheadCommander @Inject()(
         }
       }
     }
+  }
+
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = {
+    abookServiceClient.hideEmailFromUser(userId, email)
   }
 
 }

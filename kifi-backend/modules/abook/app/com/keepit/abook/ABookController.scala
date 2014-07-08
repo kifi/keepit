@@ -113,14 +113,6 @@ class ABookController @Inject() (
     Ok(Json.toJson(abookInfoRepoEntryOpt))
   }
 
-  def getEContactById(contactId:Id[EContact]) = Action { request =>
-    // todo: parse email
-    abookCommander.getEContactByIdDirect(contactId) match {
-      case Some(js) => Ok(js)
-      case _ => Ok(JsNull)
-    }
-  }
-
   def getEContactsByIds() = Action(parse.tolerantJson) { request =>
     val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
     val contactIds = jsArray.value map { x => Id[EContact](x.as[Long]) }
@@ -130,13 +122,9 @@ class ABookController @Inject() (
     Ok(Json.toJson[Seq[EContact]](contacts))
   }
 
-  def getEContactByEmail(userId:Id[User], email: EmailAddress) = Action { request =>
-    abookCommander.getEContactByEmailDirect(userId, email) match {
-      case Some(js) => Ok(js)
-      case _ => Ok(JsNull)
-    }
+  def hideEmailFromUser(userId:Id[User], email: EmailAddress) = Action { request =>
+    Ok(JsBoolean(abookCommander.hideEmailFromUser(userId, email)))
   }
-
 
   def getEContacts(userId:Id[User], maxRows:Int) = Action { request =>
     val res = {
@@ -229,14 +217,6 @@ class ABookController @Inject() (
     Ok(Json.toJson(tokenOpt))
   }
 
-  def internContact(userId:Id[User]) = Action(parse.json) { request =>
-    val contact = request.body.as[BasicContact]
-    log.info(s"[internContact] userId=$userId contact=$contact")
-
-    val eContact = abookCommander.internContact(userId, contact)
-    Ok(Json.toJson(eContact))
-  }
-
   // todo(ray): move to commander
   def prefixQueryDirect(userId:Id[User], limit:Int, search: Option[String], after:Option[String]): Seq[EContact] = timing(s"prefixQueryDirect($userId,$limit,$search,$after)") {
     @inline def mkId(email: EmailAddress) = s"email/${email.address}"
@@ -317,5 +297,29 @@ class ABookController @Inject() (
   def validateAllContacts(readOnly: Boolean) = Action { request =>
     SafeFuture { abookCommander.validateAllContacts(readOnly) }
     Ok
+  }
+
+  def getContactNameByEmail(userId: Id[User]) = Action(parse.json) { request =>
+    val email = request.body.as[EmailAddress]
+    val name = abookCommander.getContactNameByEmail(userId, email)
+    Ok(Json.toJson(name))
+  }
+
+  def internKifiContact(userId:Id[User]) = Action(parse.json) { request =>
+    val contact = request.body.as[BasicContact]
+    log.info(s"[internKifiContact] userId=$userId contact=$contact")
+
+    val eContact = abookCommander.internContact(userId, contact) // todo(Léo): migrate to internKifiContact
+    val richContact = EContact.toRichContact(eContact)
+    Ok(Json.toJson(richContact))
+  }
+
+  def contactTypeahead(userId: Id[User], q: String, maxHits: Option[Int]) = Action.async { request =>
+    typeahead.asyncTopN(userId, q, maxHits).map { econtactHitsOption =>
+      val hits = econtactHitsOption.getOrElse(Seq.empty).map { econtactHit =>
+        TypeaheadHit(econtactHit.score, econtactHit.name, econtactHit.ordinal, EContact.toRichContact(econtactHit.info))
+      }
+      Ok(Json.toJson(hits))
+    }
   }
 }

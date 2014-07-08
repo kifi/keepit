@@ -6,7 +6,7 @@ import com.keepit.common.routes.Heimdal
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{CallTimeouts, HttpClient}
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.common.actor.{BatchingActor, BatchingActorConfiguration, ActorInstance}
+import com.keepit.common.actor.{FlushEventQueueAndClose, BatchingActor, BatchingActorConfiguration, ActorInstance}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.common.time.Clock
@@ -53,9 +53,6 @@ trait HeimdalServiceClient extends ServiceClient {
   def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]]
 }
 
-object FlushEventQueue
-object FlushEventQueueAndClose
-
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
   val MaxBatchSize = 20
   val LowWatermarkBatchSize = 10
@@ -77,7 +74,7 @@ class HeimdalClientActor @Inject() (
   val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
 
   val batchingConf = HeimdalBatchingConfiguration
-  def processBatch(events: Seq[HeimdalEvent]): Unit = heimdalEventQueue.send(events)
+  def processBatch(events: Seq[HeimdalEvent]): Future[_] = heimdalEventQueue.send(events)
   def getEventTime(event: HeimdalEvent): DateTime = event.time
 }
 

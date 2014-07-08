@@ -104,7 +104,7 @@ class UserConnectionCreator @Inject() (
                 None
             }
           case (friend, None) =>
-            log.info(s"a new connection was created between $socialUserInfo and ${friend.id.get}")
+            log.debug(s"a new connection was created between $socialUserInfo and ${friend.id.get}")
             try {
               Some(socialConnectionRepo.save(SocialConnection(socialUser1 = socialUserInfo.id.get, socialUser2 = friend.id.get)))
             } catch {

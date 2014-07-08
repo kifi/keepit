@@ -6,6 +6,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.cache.{StringCacheImpl, FortyTwoCachePlugin, Key}
+import play.api.libs.json.{JsArray, Json, JsValue}
 import scala.concurrent.duration.Duration
 import com.keepit.model.UserValues.UserValueStringHandler
 
@@ -69,6 +70,10 @@ object UserValues {
     def parse(valOpt: Option[String]): DateTime = valOpt.map(parseStandardTime(_)).getOrElse(default)
   }
 
+  case class UserValueJsValueHandler(override val name: String, default: JsValue) extends UserValueHandler[JsValue] {
+    def parse(valOpt: Option[String]): JsValue = valOpt.map(Json.parse).getOrElse(default)
+  }
+
   val lookHereMode = UserValueBooleanHandler("ext_look_here_mode", true)
   val enterToSend = UserValueBooleanHandler("enter_to_send", true)
   val maxResults = UserValueIntHandler("ext_max_results", 1)
@@ -83,4 +88,5 @@ object UserValues {
   val showDelightedQuestion = UserValueBooleanHandler("show_delighted_question", false)
   val lastActive = UserValueDateTimeHandler("last_active", START_OF_TIME)
 
+  val tagOrdering = UserValueJsValueHandler("user_collection_ordering", JsArray())
 }
