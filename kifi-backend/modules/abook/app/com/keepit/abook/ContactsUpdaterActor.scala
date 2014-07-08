@@ -88,7 +88,7 @@ class ContactsUpdater @Inject() (
     )
 
   private def existingEmailSet(userId: Id[User], origin: ABookOriginType, abookInfo: ABookInfo): mutable.Set[EmailAddress] = timing(s"existingEmailSet($userId,$origin,$abookInfo)") {
-    val existingContacts = db.readOnly(attempts = 2) { implicit s =>
+    val existingContacts = db.readOnlyMaster(attempts = 2) { implicit s =>
         econtactRepo.getByUserId(userId) // optimistic; gc; h2-iter issue
     }
     val existingEmailSet = new mutable.HashSet[EmailAddress] ++ existingContacts.map(_.email)

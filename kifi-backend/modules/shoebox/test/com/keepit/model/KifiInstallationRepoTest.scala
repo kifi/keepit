@@ -23,7 +23,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
           (user, installExt)
         }
 
-        db.readOnly {implicit s =>
+        db.readOnlyMaster {implicit s =>
           installationRepo.get(installExt.id.get) === installExt
           val all = installationRepo.all(user.id.get)
           all.size === 1
@@ -44,7 +44,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
             platform = KifiInstallationPlatform.Extension))
         }
 
-        db.readOnly {implicit s =>
+        db.readOnlyMaster {implicit s =>
           val all = installationRepo.all(user.id.get)
           all.size === 2
           val versions = installationRepo.getLatestActiveExtensionVersions(20)
@@ -76,7 +76,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
         installExt.platform === KifiInstallationPlatform.Extension
 
         //we're not mixing iphone and extension platforms!
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           val all = installationRepo.all(user.id.get)
           all.size === 4
           val versions = installationRepo.getLatestActiveExtensionVersions(20)

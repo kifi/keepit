@@ -134,7 +134,7 @@ class UrbanAirshipImpl @Inject()(
       }
     }
     future {
-      val devices = db.readOnly { implicit s => deviceRepo.getByUserId(userId) }
+      val devices = db.readOnlyMaster { implicit s => deviceRepo.getByUserId(userId) }
       devices foreach updateDeviceState
     }
     device
@@ -145,7 +145,7 @@ class UrbanAirshipImpl @Inject()(
     // UserNotifyPreferenceRepo.canSend(userId, someIdentifierRepresentingMobileNotificationType)
     log.info(s"Notifying user: $userId")
     for {
-      d <- db.readOnly { implicit s => deviceRepo.getByUserId(userId) }
+      d <- db.readOnlyMaster { implicit s => deviceRepo.getByUserId(userId) }
       device <- updateDeviceState(d) if device.state == DeviceStates.ACTIVE
     } {
       sendNotification(false, device, notification)

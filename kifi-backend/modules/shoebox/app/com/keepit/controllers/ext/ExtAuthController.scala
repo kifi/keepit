@@ -97,7 +97,7 @@ class ExtAuthController @Inject() (
 
         if (isInstall) {
           contextBuilder += ("action", "installedExtension")
-          val installedExtensions = db.readOnly { implicit session => installationRepo.all(user.id.get, Some(KifiInstallationStates.INACTIVE)).length }
+          val installedExtensions = db.readOnlyMaster { implicit session => installationRepo.all(user.id.get, Some(KifiInstallationStates.INACTIVE)).length }
           contextBuilder += ("installation", installedExtensions)
           heimdal.setUserProperties(userId, "installedExtensions" -> ContextDoubleData(installedExtensions))
         } else
@@ -150,7 +150,7 @@ class ExtAuthController @Inject() (
   }
 
   def whois = JsonAction.authenticated { request =>
-    val user = db.readOnly(implicit s => userRepo.get(request.userId))
+    val user = db.readOnlyMaster(implicit s => userRepo.get(request.userId))
     Ok(Json.obj("externalUserId" -> user.externalId.toString))
   }
 }

@@ -47,7 +47,7 @@ class UserConnectionCreator @Inject() (
     }
   }
 
-  def getConnectionsLastUpdated(userId: Id[User]): Option[DateTime] = db.readOnly { implicit s =>
+  def getConnectionsLastUpdated(userId: Id[User]): Option[DateTime] = db.readOnlyMaster { implicit s =>
     userValueRepo.getValueStringOpt(userId, UserConnectionCreator.UpdatedUserConnectionsKey) map parseStandardTime
   }
 

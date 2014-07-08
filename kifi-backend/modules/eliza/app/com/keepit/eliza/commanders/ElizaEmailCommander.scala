@@ -88,7 +88,7 @@ class ElizaEmailCommander @Inject() (
     muteUrl: Option[String] = None,
     readTimeMinutes: Option[Int] = None): ThreadEmailInfo = {
 
-    val (nuts, starterUserId) = db.readOnly { implicit session => (
+    val (nuts, starterUserId) = db.readOnlyMaster { implicit session => (
       nonUserThreadRepo.getByMessageThreadId(thread.id.get),
       userThreadRepo.getThreadStarter(thread.id.get)
     )}
@@ -191,7 +191,7 @@ class ElizaEmailCommander @Inject() (
 
   def notifyEmailUsers(thread: MessageThread): Unit = if (thread.participants.exists(_.allNonUsers.nonEmpty)) {
     getThreadEmailData(thread) map { threadEmailData =>
-      val nuts = db.readOnly { implicit session =>
+      val nuts = db.readOnlyMaster { implicit session =>
         nonUserThreadRepo.getByMessageThreadId(thread.id.get)
       }
 
@@ -207,7 +207,7 @@ class ElizaEmailCommander @Inject() (
 
   def notifyAddedEmailUsers(thread: MessageThread, addedNonUsers: Seq[NonUserParticipant]): Unit = if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
     getThreadEmailData(thread) map { threadEmailData =>
-      val nuts = db.readOnly { implicit session => //redundant right now but I assume we will want to let everyone in the thread know that someone was added?
+      val nuts = db.readOnlyMaster { implicit session => //redundant right now but I assume we will want to let everyone in the thread know that someone was added?
         nonUserThreadRepo.getByMessageThreadId(thread.id.get).map { nut =>
           nut.participant.identifier -> nut
         }.toMap
@@ -273,7 +273,7 @@ class ElizaEmailCommander @Inject() (
   }
 
   def getEmailPreview(msgExtId: ExternalId[Message]): Future[Html] = {
-    val (msg, thread) = db.readOnly{ implicit session =>
+    val (msg, thread) = db.readOnlyMaster{ implicit session =>
       val msg = messageRepo.get(msgExtId)
       val thread = threadRepo.get(msg.thread)
       (msg, thread)

@@ -76,7 +76,7 @@ class AuthHelper @Inject() (
 
   private def checkForExistingUser(emailString: String): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
     val email = EmailAddress(emailString)
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       socialRepo.getOpt(SocialId(emailString), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
         emailAddressRepo.getByAddressOpt(email).map {
           case emailAddr if emailAddr.state == UserEmailAddressStates.VERIFIED =>
@@ -107,7 +107,7 @@ class AuthHelper @Inject() (
           Authenticator.create(identity).fold(
             error => Status(INTERNAL_SERVER_ERROR)("0"),
             authenticator => {
-              val finalized = db.readOnly { implicit session =>
+              val finalized = db.readOnlyMaster { implicit session =>
                 userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
               }
               if (finalized) {
@@ -194,7 +194,7 @@ class AuthHelper @Inject() (
 
   private val socialFinalizeAccountForm = Form[SocialFinalizeInfo](
     mapping(
-      "email" -> email.verifying("known_email_address", email => db.readOnly { implicit s =>
+      "email" -> email.verifying("known_email_address", email => db.readOnlyMaster { implicit s =>
         userCredRepo.findByEmailOpt(email).isEmpty
       }),
       "firstName" -> nonEmptyText,
@@ -253,7 +253,7 @@ class AuthHelper @Inject() (
 
   private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddress])] = {
     val email = EmailAddress(emailAddrStr)
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       val emailAddrOpt = emailAddressRepo.getByAddressOpt(email, excludeState = None)  // TODO: exclude INACTIVE records
       emailAddrOpt.map(_.userId) orElse socialRepo.getOpt(SocialId(emailAddrStr), SocialNetworks.FORTYTWO).flatMap(_.userId) map { userId =>
         emailAddrOpt.filter(_.verified) map { _ =>
@@ -268,7 +268,7 @@ class AuthHelper @Inject() (
 
   def doForgotPassword(implicit request: Request[JsValue]): SimpleResult = {
     (request.body \ "email").asOpt[String] map { emailAddrStr =>
-      db.readOnly { implicit session =>
+      db.readOnlyMaster { implicit session =>
         getResetEmailAddresses(emailAddrStr)
       } match {
         case Some((userId, verifiedEmailAddressOpt)) =>
@@ -338,7 +338,7 @@ class AuthHelper @Inject() (
   }
 
   private def authenticateUser[T](userId: Id[User], onError: Error => T, onSuccess: Authenticator => T) = {
-    val identity = db.readOnly { implicit session =>
+    val identity = db.readOnlyMaster { implicit session =>
       val suis = socialRepo.getByUser(userId)
       val sui = socialRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).getOrElse(suis.head)
       sui.credentials.get

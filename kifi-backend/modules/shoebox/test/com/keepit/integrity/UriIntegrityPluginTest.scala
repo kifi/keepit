@@ -53,7 +53,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         val (uris, urls, bms) = setup()
 
         // check init status
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           uriRepo.getByState(NormalizedURIStates.ACTIVE, -1).size === 2
           uriRepo.getByState(NormalizedURIStates.SCRAPED, -1).size === 2
 
@@ -72,7 +72,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         plugin.batchURIMigration()
 
         // check redirection
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
 
           urlRepo.getByNormUri(uris(1).id.get).head.url === urls(0).url
@@ -91,7 +91,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
         plugin.handleChangedUri(URLMigration(urls(2), uris(3).id.get))
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
           urlRepo.getByNormUri(uris(2).id.get).head.url === urls(1).url
           urlRepo.getByNormUri(uris(3).id.get).head.url === urls(2).url
@@ -183,7 +183,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
         val (uris, betterUris, bms, betterBms) = setup()
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           keepToCollectionRepo.getByKeep(bms(0).id.get).size === 1
           keepToCollectionRepo.getByKeep(bms(1).id.get).size === 1
           keepToCollectionRepo.getByKeep(bms(2).id.get).size === 1
@@ -199,7 +199,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
         plugin.batchURIMigration()
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           keepToCollectionRepo.getByKeep(bms(0).id.get).size === 0
           keepToCollectionRepo.getByKeep(bms(1).id.get).size === 0
           keepToCollectionRepo.getByKeep(bms(2).id.get).size === 0

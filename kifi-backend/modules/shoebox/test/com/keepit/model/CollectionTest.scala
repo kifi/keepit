@@ -71,7 +71,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll2.id.get))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Apparel", "Cooking", "Scala")
           collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Apparel", "Cooking", "Scala")
           keepRepo.getByUserAndCollection(user1.id.get, coll1.id.get, None, None, 5) must haveLength(2)
@@ -91,10 +91,10 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll3.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.getBookmarkCounts(Set(coll1.id.get, coll2.id.get, coll3.id.get)) === Map(coll1.id.get -> 2, coll2.id.get -> 0, coll3.id.get -> 1)
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.getKeepsInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
           keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Scala", "Apparel")
@@ -104,18 +104,18 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           keepRepo.save(bookmark1.withActive(false))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.count(coll1.id.get) === 1
         }
         db.readWrite { implicit s =>
           keepToCollectionRepo.getCollectionsForKeep(bookmark1.id.get).foreach(collectionRepo.collectionChanged(_))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.getBookmarkCount(coll1.id.get) === 1
           collectionRepo.getBookmarkCounts(Set(coll1.id.get, coll2.id.get, coll3.id.get)) === Map(coll1.id.get -> 1, coll2.id.get -> 0, coll3.id.get -> 1)
         }
         sessionProvider.doWithoutCreatingSessions {
-          db.readOnly { implicit s =>
+          db.readOnlyMaster { implicit s =>
             collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
             collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
           }
@@ -168,7 +168,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
             Set(coll1.id.get, coll2.id.get, coll3.id.get)
         }
         sessionProvider.doWithoutCreatingSessions {
-          db.readOnly { implicit s =>
+          db.readOnlyMaster { implicit s =>
             keepToCollectionRepo.getCollectionsForKeep(bookmark1.id.get).toSet ===
               Set(coll1.id.get, coll2.id.get, coll3.id.get)
           }
@@ -204,13 +204,13 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
           seq
         }
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.getCollectionsChanged(SequenceNumber(newSeqNum), 1000).map(_.id.get) === Seq(coll1.id.get)
         }
         db.readWrite { implicit s =>
           keepRepo.save(bookmark1.withNormUriId(bookmark2.uriId))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.getCollectionsChanged(SequenceNumber(latestSeqNum), 1000).map(_.id.get) === Seq(coll1.id.get)
         }
       }
@@ -221,7 +221,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
         implicit val applicationInjector = current.global.asInstanceOf[FortyTwoGlobal].injector
         // TODO: figure out why this works but not withDb() - this is not even using the application injector
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.getByUserAndName(user1.id.get, "scala") ===
               collectionRepo.getByUserAndName(user1.id.get, "Scala")
         }

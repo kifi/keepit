@@ -136,7 +136,7 @@ class DomainClassifierImpl @Inject()(
       Right(true)
     } else {
       val domainName = domainParts.dropWhile(_ == "www").mkString(".")
-      val domainOpt = db.readOnly { implicit s => domainRepo.get(domainName) }
+      val domainOpt = db.readOnlyMaster { implicit s => domainRepo.get(domainName) }
       domainOpt.flatMap { domain =>
         domain.sensitive.orElse(db.readWrite { implicit s => updater.calculateSensitivity(domain) })
       } match {

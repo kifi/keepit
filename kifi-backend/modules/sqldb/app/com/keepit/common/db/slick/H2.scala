@@ -14,7 +14,7 @@ trait TableInitListener {
 }
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
-class H2(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
+class H2(val masterDb: SlickDatabase, val replicaDb: Option[SlickDatabase])
     extends DataBaseComponent with Logging {
   println("initiating H2 driver")
   val Driver = H2Driver

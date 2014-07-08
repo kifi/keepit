@@ -13,7 +13,7 @@ class DelightedController @Inject() (
   delightedAnswerRepo: DelightedAnswerRepo) extends HeimdalServiceController {
 
   def getLastDelightedAnswerDate(userId: Id[User]) = Action { request =>
-    val lastDelightedAnswerDate = db.readOnly { implicit s =>
+    val lastDelightedAnswerDate = db.readOnlyMaster { implicit s =>
       delightedAnswerRepo.getLastAnswerDateForUser(userId)
     }
     Ok(Json.toJson(lastDelightedAnswerDate))

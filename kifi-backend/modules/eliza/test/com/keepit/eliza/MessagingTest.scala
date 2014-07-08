@@ -182,7 +182,7 @@ class MessagingTest extends Specification with DbTestInjector {
         val messagingCommander = inject[MessagingCommander]
         val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "https://kifi.com"), Some("title"), "Search!", None)
 
-        val user2Threads = db.readOnly { implicit ro => userThreadRepo.getUserThreads(user2, thread1.uriId.get)  }
+        val user2Threads = db.readOnlyMaster { implicit ro => userThreadRepo.getUserThreads(user2, thread1.uriId.get)  }
         user2Threads.size === 1
         messagingCommander.setLastSeen(user2, user2Threads.head.threadId)
 

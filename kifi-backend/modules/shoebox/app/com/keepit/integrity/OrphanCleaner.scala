@@ -24,8 +24,6 @@ class OrphanCleaner @Inject() (
   airbrake: AirbrakeNotifier
   ) extends Logging {
 
-  implicit val dbMasterSlave = Database.Slave // use a slave for scanning part
-
   case class OrphanCleanerSequenceNumberKey[T](seqKey: String) extends SequenceNumberCentralConfigKey[T] {
     val longKey = new LongCentralConfigKey {
       def key: String = seqKey
@@ -108,7 +106,7 @@ class OrphanCleaner @Inject() (
 
     log.info("start processing RenormalizedURL")
     while (!done) {
-      val renormalizedURLs = db.readOnly{ implicit s => renormalizedURLRepo.getChangesSince(seq, 10) } // get applied changes
+      val renormalizedURLs = db.readOnlyReplica{ implicit s => renormalizedURLRepo.getChangesSince(seq, 10) } // get applied changes
       done = renormalizedURLs.isEmpty
 
       def collector(renormalizedURL: RenormalizedURL, result: (Boolean, Boolean)): Unit = {
@@ -137,7 +135,7 @@ class OrphanCleaner @Inject() (
 
     log.info("start processing ChangedURIs")
     while (!done) {
-      val changedURIs = db.readOnly{ implicit s => changedURIRepo.getChangesSince(seq, 10) } // get applied changes
+      val changedURIs = db.readOnlyReplica{ implicit s => changedURIRepo.getChangesSince(seq, 10) } // get applied changes
       done = changedURIs.isEmpty
 
       def collector(changedUri: ChangedURI, result: (Boolean, Boolean)): Unit = {
@@ -166,7 +164,7 @@ class OrphanCleaner @Inject() (
 
     log.info("start processing Bookmarks")
     while (!done) {
-      val bookmarks = db.readOnly{ implicit s => keepRepo.getBookmarksChanged(seq, 10) }
+      val bookmarks = db.readOnlyReplica { implicit s => keepRepo.getBookmarksChanged(seq, 10) }
       done = bookmarks.isEmpty
 
       def collector(bookmark: Keep, result: (Boolean, Boolean)): Unit = {
@@ -200,7 +198,7 @@ class OrphanCleaner @Inject() (
 
     log.info("start processing NormalizedURIs")
     while (!done) {
-      val normalizedURIs = db.readOnly{ implicit s => nuriRepo.getChanged(seq, Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED), 10) }
+      val normalizedURIs = db.readOnlyReplica { implicit s => nuriRepo.getChanged(seq, Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED), 10) }
       done = normalizedURIs.isEmpty
 
       def collector(uri: NormalizedURI, result: (Boolean, Boolean)): Unit = {
