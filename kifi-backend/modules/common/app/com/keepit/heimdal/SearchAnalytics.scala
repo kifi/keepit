@@ -196,18 +196,7 @@ class SearchAnalytics @Inject() (
   }
 
   private def getArticleSearchResult(uuid: ExternalId[ArticleSearchResult], maxAttempt: Int = 3): Option[ArticleSearchResult] = {
-    var attempt = 1
-    while (attempt < maxAttempt) {
-      try {
-        return Some(articleSearchResultStore.get(uuid).get)
-      } catch {
-        case ex: Exception =>
-          log.warn(s"getArticleSearchResult($uuid) failed to retrieve from store. Exception: $ex")
-      } finally {
-        attempt += 1
-      }
-    }
-    articleSearchResultStore.get(uuid)
+    (0 until 3).view.map{ i => articleSearchResultStore.get(uuid) }.collectFirst{ case Some(x) => x }
   }
 
   private def processBasicSearchContext(userId: Id[User], searchContext: BasicSearchContext, contextBuilder: HeimdalContextBuilder): Unit = {
