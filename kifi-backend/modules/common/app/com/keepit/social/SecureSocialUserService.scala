@@ -78,11 +78,7 @@ class SecureSocialUserService(implicit val application: Application) extends Use
 
   override def onStop() {
     Registry.eventListeners.unRegister(secureSocialEventListener.id)
-    try {
-      super.onStop()
-      } catch {
-        case ex: Throwable => println("SECURE SOCIAL SUCKS!")
-      }
+    cancellable.map( _.cancel() )
   }
 }
 
