@@ -7,7 +7,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.{State, ExternalId, Id, SequenceNumber}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{EmailAddress, ElectronicMail}
-import com.keepit.common.net.{CallTimeouts, HttpClient}
+import com.keepit.common.net.{SlowJsonParsingException, CallTimeouts, HttpClient}
 import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.service.{ServiceClient, ServiceType}
@@ -95,9 +95,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def saveScrapeInfo(info:ScrapeInfo):Future[ScrapeInfo]
   def saveNormalizedURI(uri:NormalizedURI):Future[NormalizedURI]
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
-  def savePageInfo(pageInfo:PageInfo):Future[PageInfo]
-  def getImageInfo(id:Id[ImageInfo]):Future[ImageInfo]
-  def saveImageInfo(imgInfo:ImageInfo):Future[ImageInfo]
+  def savePageInfo(pageInfo:PageInfo): Future[Unit]
+  def getImageInfo(id:Id[ImageInfo]): Future[ImageInfo]
+  def saveImageInfo(imgInfo:ImageInfo): Future[ImageInfo]
   def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?,updatedAt: => DateTime = ?,externalId: => ExternalId[NormalizedURI] = ?,title: => Option[String] = ?,url: => String = ?,urlHash: => UrlHash = UrlHash(?),state: => State[NormalizedURI] = ?,seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1),screenshotUpdatedAt: => Option[DateTime] = ?,restriction: => Option[Restriction] = ?,normalization: => Option[Normalization] = ?,redirect: => Option[Id[NormalizedURI]] = ?,redirectTime: => Option[DateTime] = ?): Future[Unit]
   def recordPermanentRedirect(uri:NormalizedURI, redirect:HttpRedirect):Future[NormalizedURI]
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
@@ -579,9 +579,14 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def savePageInfo(pageInfo:PageInfo):Future[PageInfo] = {
+  def savePageInfo(pageInfo:PageInfo): Future[Unit] = {
     call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
-      r.json.as[PageInfo]
+      r.json.validate[PageInfo] match { // debugging odd parsing error; will be removed
+        case JsSuccess(pi, _) =>
+          log.info(s"[savePageInfo($pageInfo)] res=$pi")
+        case JsError(errors) =>
+          log.warn(s"[savePageInfo($pageInfo)] Failed to parse JSON ${r.json}; errors=$errors")
+      }
     }
   }
 
