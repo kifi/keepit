@@ -23,7 +23,7 @@ import play.api.libs.ws.{Response, WS}
 import play.api.http.Status
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.xml.Elem
-import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.abook.typeahead.EContactTypeahead
 import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail, BasicContact, EmailAddress}
 import com.keepit.shoebox.ShoeboxServiceClient
 
@@ -31,7 +31,7 @@ class ABookCommander @Inject() (
   db:Database,
   airbrake:AirbrakeNotifier,
   s3:ABookRawInfoStore,
-  econtactTypeahead:EContactABookTypeahead,
+  econtactTypeahead:EContactTypeahead,
   abookInfoRepo:ABookInfoRepo,
   econtactRepo:EContactRepo,
   contactsUpdater:ContactsUpdaterPlugin,

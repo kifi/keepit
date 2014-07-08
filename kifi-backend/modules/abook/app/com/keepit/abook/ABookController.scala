@@ -17,7 +17,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.util.{Success, Failure}
 import com.keepit.common.logging.{LogPrefix, Logging}
-import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.abook.typeahead.EContactTypeahead
 import com.keepit.typeahead.{PrefixFilter, TypeaheadHit}
 import scala.concurrent.Future
 import com.keepit.common.akka.SafeFuture
@@ -60,7 +60,7 @@ class ABookController @Inject() (
   abookInfoRepo:ABookInfoRepo,
   econtactRepo:EContactRepo,
   oauth2TokenRepo:OAuth2TokenRepo,
-  typeahead:EContactABookTypeahead,
+  typeahead:EContactTypeahead,
   abookCommander:ABookCommander,
   contactsUpdater:ContactsUpdaterPlugin,
   richConnectionCommander: LocalRichConnectionCommander
