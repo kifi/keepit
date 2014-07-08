@@ -61,6 +61,7 @@ trait ABookServiceClient extends ServiceClient {
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
   def validateAllContacts(readOnly: Boolean): Unit
   def getNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]]
+  def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact]
 }
 
 
@@ -146,6 +147,12 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
+  def getNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]] = {
+    call(ABook.internal.getNameByEmail(userId), Json.toJson(email), callTimeouts = longTimeout).map { r =>
+      Json.fromJson[Option[String]](r.json).get
+    }
+  }
+
   def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = {
     call(ABook.internal.getABookRawInfos(userId), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Seq[ABookRawInfo]](r.json).get
@@ -171,6 +178,12 @@ class ABookServiceClientImpl @Inject() (
   def internContact(userId:Id[User], contact: BasicContact):Future[EContact] = {
     call(ABook.internal.internContact(userId), Json.toJson(contact)).map { r =>
       r.json.as[EContact]
+    }
+  }
+
+  def internKifiContact(userId:Id[User], contact: BasicContact):Future[RichContact] = {
+    call(ABook.internal.internKifiContact(userId), Json.toJson(contact)).map { r =>
+      r.json.as[RichContact]
     }
   }
 
@@ -324,4 +337,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]] = ???
 
   def validateAllContacts(readOnly: Boolean = true): Unit = ???
+
+  def getNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]] = Future.successful(None)
+
+  def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact] = ???
 }
