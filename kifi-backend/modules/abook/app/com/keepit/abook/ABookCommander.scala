@@ -190,7 +190,7 @@ class ABookCommander @Inject() (
     }
     econtactTypeahead.refresh(userId)
     log.info(s"[hideEmailFromUser($userId, $email)] res=$result")
-    result > 0
+    result
   }
 
   def getEContactByIdDirect(contactId:Id[EContact]):Option[JsValue] = {
