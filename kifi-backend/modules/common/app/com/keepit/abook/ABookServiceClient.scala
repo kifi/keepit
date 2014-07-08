@@ -153,8 +153,8 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def getNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]] = {
-    call(ABook.internal.getNameByEmail(userId), Json.toJson(email), callTimeouts = longTimeout).map { r =>
+  def getContactNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]] = {
+    call(ABook.internal.getContactNameByEmail(userId), Json.toJson(email), callTimeouts = longTimeout).map { r =>
       Json.fromJson[Option[String]](r.json).get
     }
   }
@@ -306,8 +306,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getEContactCount(userId: Id[User]): Future[Int] = ???
 
-  def getEContactById(contactId: Id[EContact]): Future[Option[EContact]] = ???
-
   def getEContactsByIds(contactIds: Seq[Id[EContact]]): Future[Seq[EContact]] = ???
 
   def getEContactByEmail(userId: Id[User], email: EmailAddress): Future[Option[EContact]] = ???
@@ -344,7 +342,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def validateAllContacts(readOnly: Boolean = true): Unit = ???
 
-  def getNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]] = Future.successful(None)
+  def getContactNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]] = Future.successful(None)
 
   def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact] = ???
 }
