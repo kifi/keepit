@@ -122,14 +122,6 @@ class ABookController @Inject() (
     Ok(Json.toJson[Seq[EContact]](contacts))
   }
 
-  def getEContactByEmail(userId:Id[User], email: EmailAddress) = Action { request =>
-    abookCommander.getEContactByEmailDirect(userId, email) match {
-      case Some(js) => Ok(js)
-      case _ => Ok(JsNull)
-    }
-  }
-
-
   def getEContacts(userId:Id[User], maxRows:Int) = Action { request =>
     val res = {
       abookCommander.getEContactsDirect(userId, maxRows)
@@ -219,14 +211,6 @@ class ABookController @Inject() (
       } yield oauth2Token
     }
     Ok(Json.toJson(tokenOpt))
-  }
-
-  def internContact(userId:Id[User]) = Action(parse.json) { request =>
-    val contact = request.body.as[BasicContact]
-    log.info(s"[internContact] userId=$userId contact=$contact")
-
-    val eContact = abookCommander.internContact(userId, contact)
-    Ok(Json.toJson(eContact))
   }
 
   // todo(ray): move to commander
