@@ -23,7 +23,6 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
   val domainTagImporterTestModules = Seq(
     FakeMailModule(),
     TestAnalyticsModule(),
-    TestHeimdalServiceClientModule(),
     ShoeboxFakeStoreModule(),
     FakeDomainTagImporterModule(),
     TestActorSystemModule(Some(system)),

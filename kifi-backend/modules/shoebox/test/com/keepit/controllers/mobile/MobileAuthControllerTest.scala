@@ -41,7 +41,6 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     TestScraperServiceClientModule()

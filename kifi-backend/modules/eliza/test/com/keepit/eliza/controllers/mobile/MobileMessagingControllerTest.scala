@@ -39,7 +39,6 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
       FakeSearchServiceClientModule(),
       ElizaCacheModule(),
       FakeShoeboxServiceModule(),
-      TestHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
       StandaloneTestActorSystemModule(),
       TestABookServiceClientModule(),

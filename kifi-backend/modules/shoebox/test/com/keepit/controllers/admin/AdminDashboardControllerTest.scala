@@ -36,7 +36,6 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
     ShoeboxFakeStoreModule(),
     FakeSocialGraphModule(),
     FakeAirbrakeModule(),
-    TestHeimdalServiceClientModule(),
     TestMailModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),

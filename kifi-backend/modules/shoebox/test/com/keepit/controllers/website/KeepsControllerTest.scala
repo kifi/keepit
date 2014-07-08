@@ -52,7 +52,6 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     TestActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
     TestScraperServiceClientModule(),
     FakeCortexServiceClientModule()

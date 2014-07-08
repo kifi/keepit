@@ -19,7 +19,7 @@ case class TestActorSystemModule(systemOption: Option[ActorSystem] = None) exten
     install(FakeSchedulerModule())
     bind[ActorBuilder].to[TestActorBuilderImpl]
     bind[Scheduler].to[FakeScheduler]
-    bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
+    bind[ActorSystem].toProvider[ActorPlugin]
   }
 
   @Provides

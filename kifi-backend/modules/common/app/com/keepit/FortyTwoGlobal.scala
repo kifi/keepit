@@ -96,7 +96,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       Some(serviceDiscovery)
     }
 
-    injector.instance[ActorPlugin].onStart() // start actor system
+    // todo: Tell Andrew to fix this
+    try { injector.instance[ActorPlugin].onStart() } catch { case ex: Throwable => } // start actor system
     injector.instance[AppScope].onStart(app)
     pluginsStarted = true
 
@@ -192,23 +193,23 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
   def announceStopping(app: Application): Unit = if(!announcedStopping) synchronized {
     if(!announcedStopping) {//double check on entering sync block
-      injector.instance[ShutdownCommander].shutdown()
-      if (mode == Mode.Prod) {
-        try {
-          val serviceDiscovery = injector.instance[ServiceDiscovery]
-          serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
-          println(s"[${currentDateTime.toStandardTimeString}] [announceStopping] let clients and ELB know we're stopping")
-          Thread.sleep(18000)
-          injector.instance[HealthcheckPlugin].reportStop()
-          println(s"[${currentDateTime.toStandardTimeString}] [announceStopping] moving on")
-        } catch {
-          case t: Throwable => println(s"[${currentDateTime.toStandardTimeString}] error announcing service stop via explicit shutdown hook: $t")
-        }
-      }
       try {
+        injector.instance[ShutdownCommander].shutdown()
+        if (mode == Mode.Prod) {
+          try {
+            val serviceDiscovery = injector.instance[ServiceDiscovery]
+            serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
+            println(s"[${currentDateTime.toStandardTimeString}] [announceStopping] let clients and ELB know we're stopping")
+            Thread.sleep(18000)
+            injector.instance[HealthcheckPlugin].reportStop()
+            println(s"[${currentDateTime.toStandardTimeString}] [announceStopping] moving on")
+          } catch {
+            case t: Throwable => println(s"[${currentDateTime.toStandardTimeString}] error announcing service stop via explicit shutdown hook: $t")
+          }
+        }
         if (pluginsStarted) {
           injector.instance[AppScope].onStop(app)
-          injector.instance[ActorPlugin].onStop()
+          try { injector.instance[ActorPlugin].onStop() } catch { case ex: Throwable => }
           pluginsStarted = false
         }
       } catch {

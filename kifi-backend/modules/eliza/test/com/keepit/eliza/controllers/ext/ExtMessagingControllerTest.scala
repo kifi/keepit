@@ -45,7 +45,6 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
       FakeSearchServiceClientModule(),
       ElizaCacheModule(),
       FakeShoeboxServiceModule(),
-      TestHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
       StandaloneTestActorSystemModule(),
       TestABookServiceClientModule(),
