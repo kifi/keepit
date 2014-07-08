@@ -48,7 +48,6 @@ class LocalRichConnectionCommander @Inject() (
     if (serviceDiscovery.isLeader()) {
       log.info("RConn: I'm the leader, let's go")
       processQueueItems()
-      //oneTimeAbookDataSync() //uncomment this line to enable historical EContact -> WTI data sync
     } else {
       log.info("RConn: I'm not the leader, nothing to do yet")
       scheduler.scheduleOnce(1 minute){
@@ -153,30 +152,4 @@ class LocalRichConnectionCommander @Inject() (
     }
   }
 
-  //Dead code for now. Will be removed as soon as WTI is fully stable
-  var syncIsRunning = false
-  def oneTimeAbookDataSync(): Unit = {
-    log.info("Maybe starting ecsync")
-    if (!syncIsRunning) synchronized {
-      SafeFuture("abook sync"){
-        log.info("Starting ecsync")
-        if (!syncIsRunning) {
-          syncIsRunning = true;
-          val superDuperMaximumId = 1000000
-          var maxSeen = 0L
-          var notDone = true
-          while (notDone) {
-            var batch : Seq[EContact] = db.readOnly { implicit session => eContactRepo.get.getIdRangeBatch(Id[EContact](maxSeen), Id[EContact](superDuperMaximumId), 10000) }
-            var localMaxSeen = 0L
-            log.info(s"processing ecsync batch with ${batch.length} contacts")
-            batch.foreach { eContact =>
-              localMaxSeen = math.max(eContact.id.get.id, localMaxSeen)
-              processEContact(eContact)
-            }
-            maxSeen = math.max(localMaxSeen, maxSeen+10000)
-          }
-        }
-      }
-    }
-  }
 }
