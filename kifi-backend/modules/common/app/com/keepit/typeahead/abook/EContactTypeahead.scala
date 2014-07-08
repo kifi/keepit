@@ -81,46 +81,6 @@ object EContactTypeaheadBase {
   }
 }
 
-// todo(Léo) ** Not In Use ** - Remove if the performance hit from encapsulating EContactTypeahead in ABook does not prove problematic
-// "Remote"; uses abookServiceClient
-class EContactTypeahead @Inject() (
-  override val airbrake:AirbrakeNotifier,
-  cache: EContactTypeaheadCache,
-  store: EContactTypeaheadStore,
-  econtactCache: EContactCache,
-  abookClient:ABookServiceClient
-) extends EContactTypeaheadBase(airbrake, cache, store) {
-
-  override protected def asyncGetAllInfosForUser(id: Id[User]):Future[Seq[EContact]] = abookClient.getEContacts(id, MYSQL_MAX_ROWS) // MySQL limit
-
-  override protected def asyncGetInfos(ids:Seq[Id[EContact]]):Future[Seq[EContact]] = {
-    implicit val fj = ExecutionContext.fj
-    if (ids.isEmpty) Future.successful(Seq.empty[EContact])
-    else {
-      val cacheF = econtactCache.bulkGetOrElseFuture(ids.map(EContactKey(_)).toSet) { keys =>
-        val missing = keys.map(_.id)
-        log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-S3] missing(len=${missing.size}):${missing.take(10).mkString(",")}")
-        val res = abookClient.getEContactsByIds(missing.toSeq).map { res =>
-          res.map(e => EContactKey(e.id.get) -> e).toMap
-        }
-        res
-       }
-      val localF = cacheF map { res =>
-        val v = res.valuesIterator.toVector
-        log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-S3] res=$v")
-        v
-      }
-      val abookF = abookClient.getEContactsByIds(ids) map { res =>
-        log.info(s"[asyncGetInfos(${ids.length};${ids.take(10).mkString(",")})-ABOOK] res=(${res.length});${res.take(10).mkString(",")}")
-        res
-      }
-      Future.firstCompletedOf(Seq(localF, abookF))
-    }
-  }
-
-  def refreshAll(): Future[Unit] = abookClient.refreshAllFilters()
-}
-
 trait EContactTypeaheadStore extends PrefixFilterStore[User]
 
 class S3EContactTypeaheadStore @Inject()(
