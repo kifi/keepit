@@ -209,7 +209,9 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       try {
         if (pluginsStarted) {
           injector.instance[AppScope].onStop(app)
-          //Try(injector.instance[ActorPlugin].onStop())
+          if (app.mode != Mode.Test) {
+            Try(injector.instance[ActorPlugin].onStop())
+          }
           pluginsStarted = false
         }
       } catch {
