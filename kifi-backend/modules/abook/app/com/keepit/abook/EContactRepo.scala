@@ -140,7 +140,7 @@ class EContactRepoImpl @Inject() (
   def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Boolean = {
     val updated = (for { row <- rows if row.userId === userId && row.email === email } yield row.state).update(EContactStates.HIDDEN)
     if (updated > 0) {
-      val updatedContacts = for { row <- rows if row.email === email } yield row
+      val updatedContacts = for { row <- rows if row.userId === userId && row.email === email } yield row
       updatedContacts.foreach(invalidateCache)
     }
     updated > 0
