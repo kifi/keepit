@@ -61,10 +61,17 @@ class TransactionalCachingTest extends Specification {
   val txnCache1 = new TxnCache1(cache1)
   val txnCache2 = new TxnCache2(cache2)
 
-  implicit private val txn = new TransactionalCaching with Logging
+  private val masterTxn = new TransactionalCaching with Logging {
+    val isReadOnly = false
+  }
+
+  private val replicaTxn = new TransactionalCaching with Logging {
+    val isReadOnly = true
+  }
 
   "TransactionalCaching" should {
     "rollback cache data" in {
+      implicit val txn = masterTxn
       txn.beginCacheTransaction()
 
       txnCache1.set(TestKey1(1), "foo")
@@ -83,7 +90,21 @@ class TransactionalCachingTest extends Specification {
       cache2.get(TestKey2(1)) === None
     }
 
+    "don't write when readOnly txn" in {
+      implicit val txn = replicaTxn
+
+      txnCache1.set(TestKey1(1), "foo")
+      txnCache2.set(TestKey2(1), "bar")
+
+      txnCache1.get(TestKey1(1)) === None
+      txnCache2.get(TestKey2(1)) === None
+      cache1.get(TestKey1(1)) === None
+      cache2.get(TestKey2(1)) === None
+
+    }
+
     "commit cache data" in {
+      implicit val txn = masterTxn
       txn.beginCacheTransaction()
 
       txnCache1.set(TestKey1(1), "foo")
@@ -120,6 +141,7 @@ class TransactionalCachingTest extends Specification {
     }
 
     "remove cache data" in {
+      implicit val txn = masterTxn
       cache1.clear()
       cache2.clear()
       cache1.set(TestKey1(1), "foo")
@@ -162,6 +184,7 @@ class TransactionalCachingTest extends Specification {
     }
 
     "bulkGet cache data" in {
+      implicit val txn = masterTxn
       cache1.clear()
       cache2.clear()
 
@@ -201,6 +224,7 @@ class TransactionalCachingTest extends Specification {
     }
 
     "perform getOrElse" in {
+      implicit val txn = masterTxn
       cache1.clear()
       txn.beginCacheTransaction()
 
@@ -224,6 +248,7 @@ class TransactionalCachingTest extends Specification {
     }
 
     "skip the trasactional layer in directCacheAccess method" in {
+      implicit val txn = masterTxn
       cache1.clear()
 
       txnCache1.direct.remove(TestKey1(1))
