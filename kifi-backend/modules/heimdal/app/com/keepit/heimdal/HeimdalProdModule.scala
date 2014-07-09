@@ -10,7 +10,8 @@ import com.keepit.common.cache.HeimdalCacheModule
 case class HeimdalProdModule() extends HeimdalModule(
   cacheModule = HeimdalCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   mongoModule = ProdMongoModule(),
-  heimdalQueueModule = HeimdalQueueProdModule()
+  heimdalQueueModule = HeimdalQueueProdModule(),
+  delightedModule = ProdDelightedModule()
 ) with CommonProdModule {
   val discoveryModule = new ProdDiscoveryModule(ServiceType.HEIMDAL, ServiceType.SHOEBOX :: Nil)
 }

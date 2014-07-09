@@ -1,5 +1,6 @@
 package com.keepit.heimdal
 
+import com.keepit.common.mail.EmailAddress
 import com.keepit.model.User
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.service.ServiceType
@@ -46,4 +47,6 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = {}
 
   def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]] = Future.successful(None)
+
+  def postDelightedAnswer(userId: Id[User], email: EmailAddress, score: Int, comment: Option[String]): Future[Boolean] = Future.successful(true)
 }
