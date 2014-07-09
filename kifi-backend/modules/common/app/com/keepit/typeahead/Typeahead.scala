@@ -30,13 +30,9 @@ trait Typeahead[E, I] extends Logging {
 
   protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[E]]
 
-  protected def getInfos(ids: Seq[Id[E]]): Seq[I]
+  protected def asyncGetInfos(ids: Seq[Id[E]]): Future[Seq[I]]
 
-  protected def getAllInfosForUser(id: Id[User]): Seq[I]
-
-  protected def asyncGetInfos(ids: Seq[Id[E]]): Future[Seq[I]] = SafeFuture { getInfos(ids) }(ExecutionContext.fj)
-
-  protected def asyncGetAllInfosForUser(id: Id[User]): Future[Seq[I]] = SafeFuture { getAllInfosForUser(id) }(ExecutionContext.fj)
+  protected def asyncGetAllInfosForUser(id: Id[User]): Future[Seq[I]]
 
   protected def extractId(info: I): Id[E]
 
@@ -87,18 +83,17 @@ trait Typeahead[E, I] extends Logging {
     }(ExecutionContext.fj)
   }
 
-  def build(id: Id[User]): Future[PrefixFilter[E]] = {
+  protected def build(id: Id[User]): Future[PrefixFilter[E]] = {
     consolidateBuildReq(id){ id =>
-      SafeFuture {
-        timing(s"buildFilter($id)") {
-          val builder = new PrefixFilterBuilder[E]
-          val allInfos = getAllInfosForUser(id)
+      timing(s"buildFilter($id)") {
+        val builder = new PrefixFilterBuilder[E]
+        asyncGetAllInfosForUser(id).map { allInfos =>
           allInfos.foreach(info => builder.add(extractId(info), extractName(info)))
           val filter = builder.build
           log.info(s"[buildFilter($id)] allInfos(len=${allInfos.length})(${allInfos.take(10).mkString(",")}) filter.len=${filter.data.length}")
           filter
-        }
-      }(ExecutionContext.fj)
+        }(ExecutionContext.fj)
+      }
     }
   }
 

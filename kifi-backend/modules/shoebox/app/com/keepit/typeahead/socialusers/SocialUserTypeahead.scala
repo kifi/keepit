@@ -1,5 +1,6 @@
 package com.keepit.typeahead.socialusers
 
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.BinaryCacheImpl
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.cache.FortyTwoCachePlugin
@@ -32,6 +33,8 @@ class SocialUserTypeahead @Inject() (
   socialUserRepo: SocialUserInfoRepo
 ) extends Typeahead[SocialUserInfo, SocialUserBasicInfo] with Logging {
 
+  implicit val fj = ExecutionContext.fj
+
   protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[SocialUserInfo]] = {
     cache.getOrElseFuture(SocialUserTypeaheadKey(userId)) {
       val res = store.getWithMetadata(userId)
@@ -47,16 +50,16 @@ class SocialUserTypeahead @Inject() (
     }.map{ new PrefixFilter[SocialUserInfo](_) }(ExecutionContext.fj)
   }
 
-  override protected def getInfos(ids: Seq[Id[SocialUserInfo]]): Seq[SocialUserBasicInfo] = {
-    if (ids.isEmpty) Seq.empty[SocialUserBasicInfo]
+  protected def asyncGetInfos(ids: Seq[Id[SocialUserInfo]]): Future[Seq[SocialUserBasicInfo]] = {
+    if (ids.isEmpty) Future.successful(Seq.empty[SocialUserBasicInfo])
     else {
-      db.readOnlyMaster { implicit session =>
+      db.readOnlyMasterAsync { implicit session =>
         socialUserRepo.getSocialUserBasicInfos(ids).valuesIterator.toVector // do NOT use toSeq (=> toStream (lazy))
       }
     }
   }
 
-  override protected def getAllInfosForUser(id: Id[User]): Seq[SocialUserBasicInfo] = {
+  protected def asyncGetAllInfosForUser(id: Id[User]): Future[Seq[SocialUserBasicInfo]] = SafeFuture {
     val builder = new mutable.ArrayBuffer[SocialUserBasicInfo]
     db.readOnlyMaster { implicit session =>
       val infos = socialUserRepo.getSocialUserBasicInfosByUser(id) // todo: filter out fortytwo?
