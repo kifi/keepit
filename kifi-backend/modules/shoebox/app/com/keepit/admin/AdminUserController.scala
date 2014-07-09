@@ -707,10 +707,10 @@ class AdminUserController @Inject() (
     }
   }
 
-  private def prefixContactSearchDirect(userId:Id[User], query:String):Future[Seq[EContact]] = {
-    abookClient.prefixSearch(userId, query) map { res =>
+  private def prefixContactSearchDirect(userId:Id[User], query:String):Future[Seq[RichContact]] = {
+    abookClient.contactTypeahead(userId, query) map { res =>
       log.info(s"[prefixContactSearchDirect($userId)-ABOOK] res=(${res.length});${res.take(10).mkString(",")}")
-      res
+      res.map(_.info)
     }
   }
 
@@ -719,7 +719,7 @@ class AdminUserController @Inject() (
       if (res.isEmpty)
         Ok(s"No contact match found for $query")
       else
-        Ok(res.map{ e => s"EContact: id=${e.id} email=${e.email} name=${e.name} <br/>" }.mkString(""))
+        Ok(res.map{ e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}" }.mkString("<br/>"))
     }
   }
 
@@ -732,10 +732,12 @@ class AdminUserController @Inject() (
           if (contactRes.isEmpty)
             Ok(s"No match found for $query")
           else
-            Ok(contactRes.map{ e => s"e.id=${e.id} name=${e.name}" }.mkString("<br/>"))
+            Ok(contactRes.map{ e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}"}.mkString("<br/>"))
         case Some(socialRes) =>
-          Ok(socialRes.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString("") +
-             contactRes.map{ e => s"EContact: id=${e.id} email=${e.email} name=${e.name} <br/>" }.mkString(""))
+          Ok((
+            socialRes.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType}" } ++
+            contactRes.map{ e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}"}
+          ).mkString("<br/>"))
       }
     }
   }

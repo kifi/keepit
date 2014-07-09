@@ -215,22 +215,6 @@ class ABookController @Inject() (
     Ok(Json.toJson(eContacts))
   }
 
-  implicit val ord = TypeaheadHit.defaultOrdering[EContact]
-  def prefixSearchDirect(userId:Id[User], query:String):Seq[EContact] = { // todo(ray): move to commander
-    if (query.trim.length > 0) {
-      typeahead.search(userId, query) getOrElse Seq.empty[EContact]
-    } else {
-      db.readOnlyMaster(attempts = 2) { implicit ro =>
-        econtactRepo.getByUserId(userId)
-      }
-    }
-  }
-
-  def prefixSearch(userId:Id[User], query:String) = Action { request =>
-    val res = prefixSearchDirect(userId, query)
-    Ok(Json.toJson(res))
-  }
-
   def refreshPrefixFilter(userId:Id[User]) = Action.async { request =>
     typeahead.refresh(userId) map { filter =>
       log.info(s"[refreshPrefixFilter($userId)] updated; filter=$filter")
@@ -280,6 +264,7 @@ class ABookController @Inject() (
   }
 
   def contactTypeahead(userId: Id[User], q: String, maxHits: Option[Int]) = Action.async { request =>
+    implicit val ord = TypeaheadHit.defaultOrdering[EContact]
     typeahead.asyncTopN(userId, q, maxHits).map { econtactHitsOption =>
       val hits = econtactHitsOption.getOrElse(Seq.empty).map { econtactHit =>
         TypeaheadHit(econtactHit.score, econtactHit.name, econtactHit.ordinal, EContact.toRichContact(econtactHit.info))

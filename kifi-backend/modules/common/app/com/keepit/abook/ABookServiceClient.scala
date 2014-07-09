@@ -52,7 +52,6 @@ trait ABookServiceClient extends ServiceClient {
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
   def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
-  def prefixSearch(userId:Id[User], query:String):Future[Seq[EContact]]
   def refreshPrefixFilter(userId:Id[User]):Future[Unit]
   def refreshPrefixFiltersByIds(userIds:Seq[Id[User]]):Future[Unit]
   def refreshAllFilters():Future[Unit]
@@ -183,15 +182,6 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def prefixSearch(userId: Id[User], query: String): Future[Seq[EContact]] = {
-    call(ABook.internal.prefixSearch(userId, query)).map { r =>
-      r.status match {
-        case Status.OK => Json.fromJson[Seq[EContact]](r.json).get
-        case _ => throw new IllegalStateException(s"[prefixSearch($userId,$query)] failed with ${r.status}; body=${r.body}")
-      }
-    }
-  }
-
   def contactTypeahead(userId: Id[User], query: String, maxHits: Option[Int]): Future[Seq[TypeaheadHit[RichContact]]] = {
     call(ABook.internal.contactTypeahead(userId, query, maxHits)).map { r =>
       r.json.as[Seq[TypeaheadHit[RichContact]]]
@@ -301,8 +291,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = ???
 
   def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = ???
-
-  def prefixSearch(userId: Id[User], query: String): Future[Seq[EContact]] = ???
 
   def refreshPrefixFilter(userId: Id[User]): Future[Unit] = ???
 
