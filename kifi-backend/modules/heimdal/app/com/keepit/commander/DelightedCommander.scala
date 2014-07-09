@@ -3,13 +3,16 @@ package com.keepit.commander
 import com.google.inject.{Inject, ImplementedBy}
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model._
 import com.keepit.common.collection._
 import com.ning.http.client.Realm.AuthScheme
 import org.joda.time.DateTime
 import play.api.libs.json.{JsString, JsValue, Json}
-import play.api.libs.ws.{WS, Response}
+import play.api.libs.ws.WS.WSRequestHolder
+import play.api.libs.ws.WS
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import play.api.http.Status
@@ -27,10 +30,14 @@ class DelightedCommanderImpl @Inject() (
   db: Database,
   delightedUserRepo: DelightedUserRepo,
   delightedAnswerRepo: DelightedAnswerRepo,
-  delightedConfig: DelightedConfig) extends DelightedCommander {
+  systemValueRepo: SystemValueRepo,
+  delightedConfig: DelightedConfig,
+  airbrake: AirbrakeNotifier) extends DelightedCommander with Logging {
 
-  private def delightedRequest(route: String, data: Map[String, Seq[String]]): Future[Response] = {
-    WS.url(delightedConfig.url + route).withAuth(delightedConfig.apiKey, "", AuthScheme.BASIC).post(data)
+  private val LAST_DELIGHTED_FETCH_TIME = Name[SystemValue]("last_delighted_fetch_time")
+
+  private def delightedRequest(route: String): WSRequestHolder = {
+    WS.url(delightedConfig.url + route).withAuth(delightedConfig.apiKey, "", AuthScheme.BASIC)
   }
 
   def getLastDelightedAnswerDate(userId: Id[User]): Option[DateTime] = {
@@ -45,7 +52,7 @@ class DelightedCommanderImpl @Inject() (
           "score" -> Seq(score.toString)
         ).withOpt("comment" -> comment.map(Seq(_)))
 
-        delightedRequest("/v1/survey_responses.json", data).map { response =>
+        delightedRequest("/v1/survey_responses.json").post(data).map { response =>
           if (response.status == Status.OK || response.status == Status.CREATED) {
             delightedAnswerFromResponse(response.json) map { delightedAnswer =>
               db.readWrite { implicit s => delightedAnswerRepo.save(delightedAnswer) }
@@ -58,7 +65,34 @@ class DelightedCommanderImpl @Inject() (
   }
 
   def fetchNewDelightedAnswers() = {
-    // todo(martin) fetch last delighted answers
+    val previousDate = db.readOnlyReplica { implicit s => systemValueRepo.getValue(LAST_DELIGHTED_FETCH_TIME) }
+    val data = Map("per_page" -> "100").withOpt("since" -> previousDate)
+    delightedRequest("/v1/survey_responses.json").withQueryString(data.toList: _*).get() map { response =>
+      val jsonValues = response.json.asOpt[Seq[JsValue]].getOrElse {
+        airbrake.notify(s"Could not parse response from Delighted: ${response.body}")
+        Seq()
+      }
+      val newAnswers = jsonValues flatMap { value =>
+        delightedAnswerFromResponse(value) match {
+          case Some(answer) => db.readWrite { implicit s =>
+            val existing = delightedAnswerRepo.getByDelightedExtAnswerId(answer.delightedExtAnswerId)
+            if (existing.isEmpty) {
+              delightedAnswerRepo.save(answer)
+              Some(answer)
+            } else None
+          }
+          case None => {
+            airbrake.notify(s"Could not parse Delighted answer: ${value}")
+            None
+          }
+        }
+      }
+      log.info(s"Fetched ${newAnswers.length} new answers from Delighted")
+      jsonValues.toStream.reverse.flatMap(value => (value \ "created_at").asOpt[String]).headOption map { mostRecentTimeStamp =>
+        log.info(s"New most recent timestamp for Delighted answer: $mostRecentTimeStamp")
+        db.readWrite { implicit s => systemValueRepo.setValue(LAST_DELIGHTED_FETCH_TIME, mostRecentTimeStamp) }
+      }
+    }
   }
 
   private def delightedAnswerFromResponse(json: JsValue): Option[DelightedAnswer] = {
@@ -89,7 +123,7 @@ class DelightedCommanderImpl @Inject() (
         "send" -> Seq("false"),
         "properties[customer_id]" -> Seq(externalId.id)
       )
-      delightedRequest("/v1/people.json", data).map { response =>
+      delightedRequest("/v1/people.json").post(data).map { response =>
         if (response.status == Status.OK || response.status == Status.CREATED) {
           (response.json \ "id").asOpt[String] map { id =>
             val user = DelightedUser(

@@ -10,6 +10,7 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[DelightedAnswerRepoImpl])
 trait DelightedAnswerRepo extends Repo[DelightedAnswer] {
   def getLastAnswerDateForUser(userId: Id[User])(implicit session: RSession): Option[DateTime]
+  def getByDelightedExtAnswerId(delightedExtAnswerId: String)(implicit session: RSession): Option[DelightedAnswer]
 }
 
 @Singleton
@@ -41,5 +42,9 @@ class DelightedAnswerRepoImpl @Inject() (
       u <- delightedUserRepo.rows
       a <- rows if a.delightedUserId === u.id
     } yield a.date).max).first
+  }
+
+  def getByDelightedExtAnswerId(delightedExtAnswerId: String)(implicit session: RSession): Option[DelightedAnswer] = {
+    (for { u <- rows if u.delightedExtAnswerId === delightedExtAnswerId } yield u).firstOption
   }
 }
