@@ -53,7 +53,7 @@ trait HeimdalServiceClient extends ServiceClient {
 
   def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]]
 
-  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]): Future[Boolean]
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, score: Int, comment: Option[String]): Future[Boolean]
 }
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
@@ -151,12 +151,12 @@ class HeimdalServiceClientImpl @Inject() (
     }
   }
 
-  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]): Future[Boolean] = {
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, score: Int, comment: Option[String]): Future[Boolean] = {
     if (score < 0 || score > 10) return {
-      airbrakeNotifier.notify(s"Invalid score $score for user $userId with email ${email.address} (comment: $comment)")
+      airbrakeNotifier.notify(s"Invalid score $score for user $userId with email ${email} (comment: $comment)")
       Future.successful(false)
     }
-    call(Heimdal.internal.postDelightedAnswer(userId, email, name, score, comment)).map { response =>
+    call(Heimdal.internal.postDelightedAnswer(userId, externalId, email, name, score, comment)).map { response =>
       Json.parse(response.body) match {
         case JsString(s) if s == "success" => true
         case json =>

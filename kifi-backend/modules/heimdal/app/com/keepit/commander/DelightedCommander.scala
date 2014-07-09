@@ -1,7 +1,7 @@
 package com.keepit.commander
 
 import com.google.inject.{Inject, ImplementedBy}
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model._
@@ -19,7 +19,8 @@ case class DelightedConfig(url: String, apiKey: String)
 @ImplementedBy(classOf[DelightedCommanderImpl])
 trait DelightedCommander {
   def getLastDelightedAnswerDate(userId: Id[User]): Option[DateTime]
-  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]): Future[JsValue]
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, score: Int, comment: Option[String]): Future[JsValue]
+  def fetchNewDelightedAnswers()
 }
 
 class DelightedCommanderImpl @Inject() (
@@ -36,8 +37,8 @@ class DelightedCommanderImpl @Inject() (
     db.readOnlyMaster { implicit s => delightedAnswerRepo.getLastAnswerDateForUser(userId) }
   }
 
-  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]): Future[JsValue] = {
-    getOrCreateDelightedUser(userId, email, name) flatMap { userOpt =>
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, score: Int, comment: Option[String]): Future[JsValue] = {
+    getOrCreateDelightedUser(userId, externalId, email, name) flatMap { userOpt =>
       userOpt map { user =>
         val data = Map(
           "person" -> Seq(user.delightedExtUserId),
@@ -54,6 +55,10 @@ class DelightedCommanderImpl @Inject() (
         }
       } getOrElse Future.successful(Json.obj("error" -> "Error retrieving Delighted user"))
     }
+  }
+
+  def fetchNewDelightedAnswers() = {
+    // todo(martin) fetch last delighted answers
   }
 
   private def delightedAnswerFromResponse(json: JsValue): Option[DelightedAnswer] = {
@@ -74,14 +79,15 @@ class DelightedCommanderImpl @Inject() (
     }
   }
 
-  private def getOrCreateDelightedUser(userId: Id[User], email: EmailAddress, name: String): Future[Option[DelightedUser]] = {
+  private def getOrCreateDelightedUser(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Option[DelightedUser]] = {
     db.readOnlyMaster {
       implicit s => delightedUserRepo.getByUserId(userId)
     } map { user => Future.successful(Some(user)) } getOrElse {
       val data = Map(
-        "email" -> Seq(email.address),
+        "email" -> Seq(email.map(_.address).getOrElse(s"delighted+$externalId@kifi.com")),
         "name" -> Seq(name),
-        "send" -> Seq("false")
+        "send" -> Seq("false"),
+        "properties[customer_id]" -> Seq(externalId.id)
       )
       delightedRequest("/v1/people.json", data).map { response =>
         if (response.status == Status.OK || response.status == Status.CREATED) {
@@ -89,7 +95,7 @@ class DelightedCommanderImpl @Inject() (
             val user = DelightedUser(
               delightedExtUserId = id,
               userId = userId,
-              email = (response.json \ "email").asOpt[EmailAddress] getOrElse email
+              email = email
             )
             db.readWrite { implicit s => delightedUserRepo.save(user) }
           }
@@ -103,6 +109,8 @@ class DevDelightedCommander extends DelightedCommander {
 
   def getLastDelightedAnswerDate(userId: Id[User]): Option[DateTime] = None
 
-  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]): Future[JsValue] =
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, score: Int, comment: Option[String]): Future[JsValue] =
     Future.successful(JsString("success"))
+
+  def fetchNewDelightedAnswers() = ()
 }
