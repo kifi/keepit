@@ -5,7 +5,6 @@ import play.api.mvc.QueryStringBindable
 import scala.util.Try
 
 case class EmailAddress(address: String) {
-  if (!EmailAddress.isValid(address)) { throw new IllegalArgumentException(s"Invalid email address: $address") }
   override def toString = address
   def equalsIgnoreCase(other: EmailAddress): Boolean = compareToIgnoreCase(other) == 0
   def compareToIgnoreCase(other: EmailAddress): Int = address.compareToIgnoreCase(other.address)
@@ -37,11 +36,15 @@ object EmailAddress {
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
 
   private def isValid(address: String): Boolean = emailRegex.findFirstIn(address).isDefined
-  private def canonicalize(address: String): EmailAddress = {
+  private def canonicalize(address: String): String = {
     val (localAt, host) = address.splitAt(address.lastIndexOf('@') + 1)
-    EmailAddress(localAt + host.toLowerCase)
+    localAt + host.toLowerCase
   }
-  def validate(address: String): Try[EmailAddress] = Try { canonicalize(address) }
+  def validate(address: String): Try[EmailAddress] = Try {
+    val canonicalAddress = canonicalize(address)
+    if (!isValid(canonicalAddress)) { throw new IllegalArgumentException(s"Invalid email address: $canonicalAddress") }
+    EmailAddress(canonicalAddress)
+  }
 }
 
 object SystemEmailAddress {
