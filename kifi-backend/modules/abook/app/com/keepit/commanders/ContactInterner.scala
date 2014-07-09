@@ -9,8 +9,6 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.abook.typeahead.EContactTypeahead
-import com.keepit.abook.model.EmailAccount
-import scala.Some
 
 @Singleton
 class ContactInterner @Inject() (
@@ -68,7 +66,7 @@ class ContactInterner @Inject() (
   // todo(Léo): have email.id in EContact once EContact has been moved to ABook...
   private def insertNewContact(userId: Id[User], abookId: Id[ABookInfo], contact: BasicContact)(implicit session: RWSession): EContact = {
     val emailAccount = emailAccountRepo.internByAddress(contact.email)
-    val newContact = makeNewContact(userId, abookId, emailAccount, contact)
+    val newContact = EContact.make(userId, abookId, emailAccount, contact)
     econtactRepo.save(newContact)
   }
 
@@ -79,12 +77,8 @@ class ContactInterner @Inject() (
     val newContacts = contacts.map { contact =>
       val lowerCaseAddress = contact.email.address.toLowerCase()
       val emailAccount = emailAccountsByLowerCasedAddress(lowerCaseAddress)
-      makeNewContact(userId, abookId, emailAccount, contact)
+      EContact.make(userId, abookId, emailAccount, contact)
     }
     econtactRepo.insertAll(newContacts)
-  }
-
-  private def makeNewContact(userId: Id[User], abookId: Id[ABookInfo], emailAccount: EmailAccount, contact: BasicContact): EContact = {
-    EContact(userId = userId, abookId = Some(abookId), email = emailAccount.address, contactUserId = emailAccount.userId).updateWith(contact)
   }
 }

@@ -40,12 +40,13 @@ class EContactRepoImpl @Inject() (
   class EContactTable(tag: Tag) extends RepoTable[EContact](db, tag, "econtact") {
     def userId     = column[Id[User]]("user_id", O.NotNull)
     def abookId     = column[Id[ABookInfo]]("abook_id", O.Nullable)
+    def emailAccountId = column[Id[EmailAccount]]("email_account_id", O.Nullable)
     def email      = column[EmailAddress]("email", O.NotNull)
+    def contactUserId = column[Id[User]]("contact_user_id", O.Nullable)
     def name       = column[String]("name", O.Nullable)
     def firstName  = column[String]("first_name", O.Nullable)
     def lastName   = column[String]("last_name", O.Nullable)
-    def contactUserId = column[Id[User]]("contact_user_id", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, abookId.?, email, name.?, firstName.?, lastName.?, contactUserId.?, state) <> ((EContact.apply _).tupled, EContact.unapply _)
+    def * = (id.?, createdAt, updatedAt, userId, abookId.?, emailAccountId.?, email, contactUserId.?, name.?, firstName.?, lastName.?, state) <> ((EContact.apply _).tupled, EContact.unapply _)
   }
 
   def table(tag: Tag) = new EContactTable(tag)

@@ -2,7 +2,7 @@ package com.keepit.abook.model
 
 import org.specs2.mutable.Specification
 import com.keepit.abook.ABookTestInjector
-import com.keepit.model.{Invitation, SocialUserInfo, User}
+import com.keepit.model.{SocialUserInfo, User}
 import com.keepit.common.db.Id
 import com.keepit.social.{SocialId, SocialNetworks}
 import com.keepit.common.mail.EmailAddress
@@ -45,7 +45,7 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
       fullName = "Marvin"
     )
 
-    val contact42 = EContact(userId = kifiLéo, abookId = Some(Id(1)), email = EmailAddress("grassfed42@organicintegers.com"), name = Some("FortyTwo"))
+    val contact42 = EContact(userId = kifiLéo, abookId = Some(Id(1)), emailAccountId = Some(Id(42)), email = EmailAddress("grassfed42@organicintegers.com"), name = Some("FortyTwo"))
 
     "intern and retrieve rich social network connections" in {
       val léoToMarvin = db.readWrite { implicit session =>
