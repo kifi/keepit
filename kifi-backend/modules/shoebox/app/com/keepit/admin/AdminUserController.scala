@@ -708,7 +708,7 @@ class AdminUserController @Inject() (
   }
 
   private def prefixContactSearchDirect(userId:Id[User], query:String):Future[Seq[RichContact]] = {
-    abookClient.contactTypeahead(userId, query) map { res =>
+    abookClient.prefixQuery(userId, query) map { res =>
       log.info(s"[prefixContactSearchDirect($userId)-ABOOK] res=(${res.length});${res.take(10).mkString(",")}")
       res.map(_.info)
     }

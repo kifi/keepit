@@ -178,7 +178,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         contacts.length  === 4
 
         // get 0
-        resultQ = controller.contactTypeahead(Id[User](1), "lolcat", Some(10))(FakeRequest())
+        resultQ = controller.prefixQuery(Id[User](1), "lolcat", Some(10))(FakeRequest())
         status(resultQ) must equalTo(OK)
         contentType(resultQ) must beSome("application/json")
         content = contentAsString(resultQ)
@@ -190,7 +190,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         hits.length  === 0
 
         // search
-        resultQ = controller.contactTypeahead(Id[User](1), "ray", Some(10))(FakeRequest())
+        resultQ = controller.prefixQuery(Id[User](1), "ray", Some(10))(FakeRequest())
         status(resultQ) must equalTo(OK)
         contentType(resultQ) must beSome("application/json")
         content = contentAsString(resultQ)
@@ -202,7 +202,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         hits.length  === 1
 
         // limit
-        resultQ = controller.contactTypeahead(Id[User](1), "fo", Some(3))(FakeRequest())
+        resultQ = controller.prefixQuery(Id[User](1), "fo", Some(3))(FakeRequest())
         status(resultQ) must equalTo(OK)
         contentType(resultQ) must beSome("application/json")
         content = contentAsString(resultQ)

@@ -21,7 +21,8 @@ GET      /internal/abook/:userId/getContacts                    @com.keepit.aboo
 
 GET      /internal/abook/:userId/getOAuth2Token                 @com.keepit.abook.ABookController.getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo])
 GET      /internal/abook/:userId/queryEContacts                 @com.keepit.abook.ABookController.queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String])
-GET      /internal/abook/:userId/contactTypeahead               @com.keepit.abook.ABookController.contactTypeahead(userId: Id[User], q: String, maxHits: Option[Int])
+GET      /internal/abook/:userId/contactTypeahead               @com.keepit.abook.ABookController.prefixQuery(userId: Id[User], q: String, maxHits: Option[Int])
+GET      /internal/abook/:userId/prefixQuery                    @com.keepit.abook.ABookController.prefixQuery(userId: Id[User], q: String, maxHits: Option[Int])
 
 GET      /internal/abook/:userId/refreshPrefixFilter            @com.keepit.abook.ABookController.refreshPrefixFilter(userId:Id[User])
 POST     /internal/abook/refreshPrefixFiltersByIds              @com.keepit.abook.ABookController.refreshPrefixFiltersByIds

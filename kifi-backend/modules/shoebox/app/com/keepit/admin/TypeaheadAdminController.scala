@@ -93,7 +93,7 @@ class TypeaheadAdminController @Inject() (
   }
 
   def contactSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
-    abookServiceClient.contactTypeahead(userId, query, None) map { hits =>
+    abookServiceClient.prefixQuery(userId, query, None) map { hits =>
       log.info(s"[contactSearch($userId,$query)-LOCAL] res=(${hits.length});${hits.take(10).mkString(",")}")
       Ok(Json.toJson(hits))
     }

@@ -62,7 +62,7 @@ class TypeaheadCommander @Inject()(
 
   private def queryContacts(userId: Id[User], search: Option[String], limit: Int): Future[Seq[RichContact]] = {
     search match {
-      case Some(query) => abookServiceClient.contactTypeahead(userId, query, Some(limit)).map { hits => hits.map(_.info) }
+      case Some(query) => abookServiceClient.prefixQuery(userId, query, Some(limit)).map { hits => hits.map(_.info) }
       case None => abookServiceClient.getContactsByUser(userId, pageSize = Some(limit))
     }
   }
@@ -240,7 +240,7 @@ class TypeaheadCommander @Inject()(
       }
     }
     val kifiF = kifiUserTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[User])
-    val abookF = if (q.length < 2) Future.successful(Seq.empty) else abookServiceClient.contactTypeahead(userId, q, limit)
+    val abookF = if (q.length < 2) Future.successful(Seq.empty) else abookServiceClient.prefixQuery(userId, q, limit)
     val nfUsersF = if (q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeaheadWithUserId(userId, q, limit.getOrElse(100), filter = "nf")
 
     limit match {

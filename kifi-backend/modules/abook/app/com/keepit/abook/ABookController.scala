@@ -263,7 +263,7 @@ class ABookController @Inject() (
     Ok(Json.toJson(richContact))
   }
 
-  def contactTypeahead(userId: Id[User], q: String, maxHits: Option[Int]) = Action.async { request =>
+  def prefixQuery(userId: Id[User], q: String, maxHits: Option[Int]) = Action.async { request =>
     implicit val ord = TypeaheadHit.defaultOrdering[EContact]
     typeahead.asyncTopN(userId, q, maxHits).map { econtactHitsOption =>
       val hits = econtactHitsOption.getOrElse(Seq.empty).map { econtactHit =>
