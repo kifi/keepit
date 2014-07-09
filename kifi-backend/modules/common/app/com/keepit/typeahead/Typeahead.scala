@@ -71,7 +71,7 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
-  def topN(infos:Seq[I], queryTerms:Array[String], limit:Option[Int])(implicit ord:Ordering[TypeaheadHit[I]]):Option[Seq[TypeaheadHit[I]]] = {
+  private[this] def topN(infos:Seq[I], queryTerms:Array[String], limit:Option[Int])(implicit ord:Ordering[TypeaheadHit[I]]): Option[Seq[TypeaheadHit[I]]] = {
     if (queryTerms.length > 0) {
       var ordinal = 0
       val hits = infos.map{ info =>
@@ -89,14 +89,10 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
-  def asyncSearch(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Future[Option[Seq[I]]] = {
+  def search(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Future[Seq[I]] = {
     asyncTopN(userId, query, None).map { o =>
-      o map { s => s.map(_.info) }
+      o map { s => s.map(_.info) } getOrElse Seq.empty
     }(ExecutionContext.fj)
-  }
-
-  def search(infos: Seq[I], queryTerms: Array[String])(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]] = timing(s"search(${queryTerms.mkString(",")},#infos=${infos.length})") {
-    topN(infos, queryTerms, None) map { s => s.map(_.info) }
   }
 
   def build(id: Id[User]): Future[PrefixFilter[E]] = {
