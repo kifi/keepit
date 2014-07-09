@@ -8,6 +8,7 @@ import java.util.Locale
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.DateTimeFormat
 import com.typesafe.sbteclipse.core.EclipsePlugin.EclipseKeys
+import com.typesafe.sbt.SbtScalariform._
 
 object ApplicationBuild extends Build {
 
@@ -282,7 +283,7 @@ object ApplicationBuild extends Build {
         Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
       },
       commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) }
-    )
+    ).settings(scalariformSettings: _*)
     .dependsOn(
       common % "test->test;compile->compile",
       shoebox % "test->test;compile->compile",
