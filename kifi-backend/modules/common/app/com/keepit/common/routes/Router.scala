@@ -228,7 +228,7 @@ object Heimdal extends Service {
     def setUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/set", Param("userId", userId))
     def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = ServiceRoute(GET, "/internal/heimdal/user/alias", Param("userId", userId), Param("externalId", externalId))
     def getLastDelightedAnswerDate(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/user/lastDelightedAnswerDate", Param("userId", userId))
-    def postDelightedAnswer(userId: Id[User], email: EmailAddress, score: Int, comment: Option[String]) = ServiceRoute(POST, s"/internal/heimdal/user/postDelightedAnswer", Param("userId", userId), Param("email", email), Param("score", score), Param("comment", comment))
+    def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]) = ServiceRoute(POST, s"/internal/heimdal/user/postDelightedAnswer", Param("userId", userId), Param("email", email), Param("name", name), Param("score", score), Param("comment", comment))
   }
 }
 

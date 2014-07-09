@@ -830,7 +830,7 @@ class UserCommander @Inject() (
   def postDelightedAnswer(userId: Id[User], score: Int, comment: Option[String]): Future[Boolean] = {
     val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
     user.primaryEmail map { email =>
-      heimdalClient.postDelightedAnswer(userId, email, score, comment)
+      heimdalClient.postDelightedAnswer(userId, email, user.fullName, score, comment)
     } getOrElse {
       airbrake.notify(s"Attempted to post a Delighted answer for user $userId with no primary email")
       Future.successful(false)

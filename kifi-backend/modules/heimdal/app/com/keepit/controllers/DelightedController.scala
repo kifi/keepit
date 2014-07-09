@@ -17,7 +17,7 @@ class DelightedController @Inject() (
     Ok(Json.toJson(delightedCommander.getLastDelightedAnswerDate(userId)))
   }
 
-  def postDelightedAnswer(userId: Id[User], email: EmailAddress, score: Int, comment: Option[String]) = Action.async { request =>
-    delightedCommander.postDelightedAnswer(userId, email, score, comment) map (Ok(_))
+  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]) = Action.async { request =>
+    delightedCommander.postDelightedAnswer(userId, email, name, score, comment) map (Ok(_))
   }
 }

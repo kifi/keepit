@@ -19,7 +19,7 @@ case class DelightedConfig(url: String, apiKey: String)
 @ImplementedBy(classOf[DelightedCommanderImpl])
 trait DelightedCommander {
   def getLastDelightedAnswerDate(userId: Id[User]): Option[DateTime]
-  def postDelightedAnswer(userId: Id[User], email: EmailAddress, score: Int, comment: Option[String]): Future[JsValue]
+  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]): Future[JsValue]
 }
 
 class DelightedCommanderImpl @Inject() (
@@ -36,8 +36,8 @@ class DelightedCommanderImpl @Inject() (
     db.readOnlyMaster { implicit s => delightedAnswerRepo.getLastAnswerDateForUser(userId) }
   }
 
-  def postDelightedAnswer(userId: Id[User], email: EmailAddress, score: Int, comment: Option[String]): Future[JsValue] = {
-    getOrCreateDelightedUser(userId, email) flatMap { userOpt =>
+  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]): Future[JsValue] = {
+    getOrCreateDelightedUser(userId, email, name) flatMap { userOpt =>
       userOpt map { user =>
         val data = Map(
           "person" -> Seq(user.delightedExtUserId),
@@ -74,12 +74,13 @@ class DelightedCommanderImpl @Inject() (
     }
   }
 
-  private def getOrCreateDelightedUser(userId: Id[User], email: EmailAddress): Future[Option[DelightedUser]] = {
+  private def getOrCreateDelightedUser(userId: Id[User], email: EmailAddress, name: String): Future[Option[DelightedUser]] = {
     db.readOnlyMaster {
       implicit s => delightedUserRepo.getByUserId(userId)
     } map { user => Future.successful(Some(user)) } getOrElse {
       val data = Map(
         "email" -> Seq(email.address),
+        "name" -> Seq(name),
         "send" -> Seq("false")
       )
       delightedRequest("/v1/people.json", data).map { response =>
@@ -102,6 +103,6 @@ class DevDelightedCommander extends DelightedCommander {
 
   def getLastDelightedAnswerDate(userId: Id[User]): Option[DateTime] = None
 
-  def postDelightedAnswer(userId: Id[User], email: EmailAddress, score: Int, comment: Option[String]): Future[JsValue] =
+  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]): Future[JsValue] =
     Future.successful(JsString("success"))
 }

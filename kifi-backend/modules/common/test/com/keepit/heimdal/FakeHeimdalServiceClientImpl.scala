@@ -48,5 +48,5 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]] = Future.successful(None)
 
-  def postDelightedAnswer(userId: Id[User], email: EmailAddress, score: Int, comment: Option[String]): Future[Boolean] = Future.successful(true)
+  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]): Future[Boolean] = Future.successful(true)
 }
