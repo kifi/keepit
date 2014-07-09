@@ -1,6 +1,6 @@
 package com.keepit.dev
 
-import com.keepit.heimdal.{HeimdalQueueDevModule, HeimdalModule, DevMongoModule}
+import com.keepit.heimdal.{ HeimdalQueueDevModule, HeimdalModule, DevMongoModule }
 import com.keepit.inject.CommonDevModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.common.cache.HeimdalCacheModule

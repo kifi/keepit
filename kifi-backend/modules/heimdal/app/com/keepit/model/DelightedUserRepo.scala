@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.Id
@@ -11,7 +11,7 @@ trait DelightedUserRepo extends Repo[DelightedUser]
 
 @Singleton
 class DelightedUserRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock)
-  extends DbRepo[DelightedUser] with DelightedUserRepo {
+    extends DbRepo[DelightedUser] with DelightedUserRepo {
 
   import db.Driver.simple._
 
