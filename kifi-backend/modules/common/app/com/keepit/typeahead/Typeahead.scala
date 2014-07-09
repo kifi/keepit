@@ -95,10 +95,6 @@ trait Typeahead[E, I] extends Logging {
     }(ExecutionContext.fj)
   }
 
-  def search(infos: Seq[I], queryTerms: Array[String])(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]] = timing(s"search(${queryTerms.mkString(",")},#infos=${infos.length})") {
-    topN(infos, queryTerms, None) map { s => s.map(_.info) }
-  }
-
   def build(id: Id[User]): Future[PrefixFilter[E]] = {
     consolidateBuildReq(id){ id =>
       SafeFuture {
