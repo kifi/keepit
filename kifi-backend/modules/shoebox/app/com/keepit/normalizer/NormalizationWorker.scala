@@ -43,7 +43,7 @@ class NormalizationWorker @Inject()(
         for (m <- messages) {
           log.debug(s"[consume] received msg $m")
           m.consume { task =>
-            val nuri = db.readOnly { implicit ro =>
+            val nuri = db.readOnlyMaster { implicit ro =>
               nuriRepo.get(task.uriId)
             }
             val ref = NormalizationReference(nuri, task.isNew)

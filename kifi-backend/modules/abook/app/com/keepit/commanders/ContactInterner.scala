@@ -9,13 +9,13 @@ import com.keepit.common.mail.BasicContact
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.abook.typeahead.EContactTypeahead
 
 @Singleton
 class ContactInterner @Inject() (
   emailAccountRepo: EmailAccountRepo,
   econtactRepo: EContactRepo,
-  econtactTypeahead: EContactABookTypeahead,
+  econtactTypeahead: EContactTypeahead,
   db: Database
 ) extends Logging {
 

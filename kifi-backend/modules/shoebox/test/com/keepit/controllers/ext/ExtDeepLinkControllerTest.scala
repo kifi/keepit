@@ -50,12 +50,12 @@ class ExtDeepLinkControllerTest extends Specification with ApplicationInjector {
           status(result) must equalTo(OK)
         }
 
-        val deepLinks = db.readOnly {implicit s => deepLinkRepo.all()}
+        val deepLinks = db.readOnlyMaster {implicit s => deepLinkRepo.all()}
         deepLinks.size === 1
         val deepLink = deepLinks.head
         deepLink.deepLocator.value === "/my/location"
 
-        db.readOnly {implicit s => deepLinkRepo.getByLocatorAndUser(deepLink.deepLocator, deepLink.recipientUserId.get)} === deepLink
+        db.readOnlyMaster {implicit s => deepLinkRepo.getByLocatorAndUser(deepLink.deepLocator, deepLink.recipientUserId.get)} === deepLink
 
         {
           val path = com.keepit.controllers.ext.routes.ExtDeepLinkController.handle(deepLink.token.value).toString()

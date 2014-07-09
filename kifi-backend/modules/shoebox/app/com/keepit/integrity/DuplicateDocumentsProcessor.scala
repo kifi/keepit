@@ -33,10 +33,10 @@ class DuplicateDocumentsProcessor @Inject()(
 
   def handleDuplicates(dupId: Either[Id[DuplicateDocument], Id[NormalizedURI]], dupAction: HandleDuplicatesAction) = {
     val dups = dupId match {
-      case Left(id) => db.readOnly{ implicit s =>
+      case Left(id) => db.readOnlyMaster{ implicit s =>
         List(duplicateDocumentRepo.get(id))     // handle one
       }
-      case Right(id) => db.readOnly{ implicit s =>
+      case Right(id) => db.readOnlyMaster{ implicit s =>
         duplicateDocumentRepo.getSimilarTo(id)  // handle all
       }
     }

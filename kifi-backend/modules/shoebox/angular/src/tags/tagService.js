@@ -60,21 +60,24 @@ angular.module('kifi.tagService', [
       return post;
     }
 
-    function persistOrdering() {
-      $http.post(routeService.tagOrdering, _.pluck(allTags, 'id')).then(function () {
-      });
+    function persistTagOrdering(id, newInd) {
+      var payload = {
+        tagId: id,
+        newIndex: newInd
+      };
+      $http.post(routeService.reorderTag, payload).then(function () {});
       api.fetchAll();
     }
 
     function reorderTag(srcTag, index) {
-      var newSrcTag = _.clone(srcTag);
-      var srcTagId = srcTag.id;
-      newSrcTag.id = -1;
-      allTags.splice(index, 0, newSrcTag);
-      _.remove(allTags, function (tag) { return tag.id === srcTagId; });
-      api.refreshList();
-      newSrcTag.id = srcTagId;
-      persistOrdering();
+      var oldIndex = _.indexOf(allTags, srcTag);
+      if (oldIndex !== -1) {
+        allTags.splice(index, 0, srcTag); // add to array
+        allTags.splice(oldIndex, 1);      // remove from array
+        api.refreshList();
+        var currentIndex = _.indexOf(allTags, srcTag);
+        persistTagOrdering(srcTag.id, currentIndex);
+      }
       $analytics.eventTrack('user_clicked_page', {
         'action': 'reorderTag',
         'path': $location.path()
@@ -160,6 +163,7 @@ angular.module('kifi.tagService', [
           var tag = res.data;
 
           tag.keeps = tag.keeps || 0;
+          tag.isNew = true;
           tag.lowerName = tag.name.toLowerCase();
           tagsById[tag.id] = tag;
           allTags.unshift(tag);
@@ -208,7 +212,7 @@ angular.module('kifi.tagService', [
             api.refreshList();
           }
           $rootScope.$emit('tags.unremove', tag.id);
-          persistOrdering();
+          persistTagOrdering(tag.id, index);
           return tag;
         });
         $analytics.eventTrack('user_clicked_page', {

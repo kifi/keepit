@@ -43,7 +43,7 @@ class ExtEventController @Inject() (
       val metaData = (o \ "metaData").asOpt[JsObject].getOrElse(Json.obj())
       val prevEvents = (o \ "prevEvents").asOpt[Seq[String]].getOrElse(Seq.empty).map(ExternalId[Event])
       val experiments = (o \ "experiments").as[Seq[ExperimentType]].toSet
-      val user = db.readOnly { implicit s => userRepo.get(userId) }
+      val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
       val event = Events.userEvent(eventFamily, eventName, user, experiments, installId, metaData, prevEvents, eventTime)
       log.debug(s"Created new event: $event")
 

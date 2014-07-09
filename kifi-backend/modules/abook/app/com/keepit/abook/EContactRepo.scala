@@ -14,21 +14,15 @@ import scala.slick.util.CloseableIterator
 
 @ImplementedBy(classOf[EContactRepoImpl])
 trait EContactRepo extends Repo[EContact] {
-  def getById(econtactId:Id[EContact])(implicit session:RSession): Option[EContact]
-  def getByIds(econtactIds:Seq[Id[EContact]])(implicit session:RSession):Seq[EContact]
   def bulkGetByIds(ids:Seq[Id[EContact]])(implicit session:RSession):Map[Id[EContact], EContact]
-  def getByIdsIter(ids:Traversable[Id[EContact]])(implicit session:RSession): CloseableIterator[EContact]
   def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Seq[EContact]
-  def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getByUserId(userId: Id[User])(implicit session:RSession):Seq[EContact]
   def getEContactCount(userId: Id[User])(implicit session:RSession):Int
   def insertAll(contacts: Seq[EContact])(implicit session:RWSession): Int
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Boolean
   def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
   def getByAbookIdAndEmail(abookId: Id[ABookInfo], email: EmailAddress)(implicit session: RSession): Option[EContact]
   def getByAbookId(abookId: Id[ABookInfo])(implicit session: RSession): Seq[EContact]
-
-  //used only for full resync
-  def getIdRangeBatch(minId: Id[EContact], maxId: Id[EContact], maxBatchSize: Int)(implicit session: RSession): Seq[EContact]
 }
 
 @Singleton
@@ -67,15 +61,7 @@ class EContactRepoImpl @Inject() (
     log.info(s"[invalidateCache] processed $e") // todo(ray): typeahead invalidation (rare; upper layer)
   }
 
-  def getById(econtactId:Id[EContact])(implicit session:RSession):Option[EContact] = {
-    (for(f <- rows if f.id === econtactId) yield f).firstOption
-  }
-
-  def getByIds(ids:Seq[Id[EContact]])(implicit session:RSession):Seq[EContact] = {
-    (for(f <- rows if f.id.inSet(ids)) yield f).list
-  }
-
-  def getByIdsIter(ids:Traversable[Id[EContact]])(implicit session:RSession):CloseableIterator[EContact] = {
+  private def getByIdsIter(ids:Traversable[Id[EContact]])(implicit session:RSession):CloseableIterator[EContact] = {
     (for(f <- rows if f.id.inSet(ids)) yield f).iterator
   }
 
@@ -135,9 +121,12 @@ class EContactRepoImpl @Inject() (
     updated
   }
 
-  //used only for full resync
-  def getIdRangeBatch(minId: Id[EContact], maxId: Id[EContact], maxBatchSize: Int)(implicit session: RSession): Seq[EContact] = {
-    (for (row <- rows if row.id > minId && row.id <= maxId) yield row).sortBy(r => r.id).take(maxBatchSize).list
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Boolean = {
+    val updated = (for { row <- rows if row.userId === userId && row.email === email } yield row.state).update(EContactStates.HIDDEN)
+    if (updated > 0) {
+      val updatedContacts = for { row <- rows if row.userId === userId && row.email === email } yield row
+      updatedContacts.foreach(invalidateCache)
+    }
+    updated > 0
   }
-
 }

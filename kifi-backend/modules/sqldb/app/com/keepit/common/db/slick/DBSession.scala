@@ -15,7 +15,7 @@ import com.keepit.common.util.TrackingId
 import com.keepit.macros.Location
 
 object DBSession {
-  abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session, location: Location) extends Session with Logging with TransactionalCaching {
+  abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterReplica, _session: => Session, location: Location) extends Session with Logging with TransactionalCaching {
     def database = _session.database
     private var open = false
     private var wasOpened = false
@@ -123,8 +123,8 @@ object DBSession {
         _session.forParameters(rsType, rsConcurrency, rsHoldability)
   }
 
-  abstract class RSession(name: String, masterSlave: Database.DBMasterSlave, roSession: => Session, location: Location) extends SessionWrapper(name, masterSlave, roSession, location)
-  class ROSession(masterSlave: Database.DBMasterSlave, roSession: => Session, location: Location) extends RSession("RO", masterSlave, roSession, location)
+  abstract class RSession(name: String, masterSlave: Database.DBMasterReplica, roSession: => Session, location: Location) extends SessionWrapper(name, masterSlave, roSession, location)
+  class ROSession(masterSlave: Database.DBMasterReplica, roSession: => Session, location: Location) extends RSession("RO", masterSlave, roSession, location)
   class RWSession(rwSession: => Session, location: Location) extends RSession("RW", Database.Master, rwSession, location) //RWSession is always reading from master
 //
 //  implicit def roToSession(roSession: ROSession): Session = roSession.session

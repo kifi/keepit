@@ -143,12 +143,12 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         (user1, bookmark1, bookmark2, collections)
       }
 
-      val bookmarksWithTags = db.readOnly { implicit s =>
+      val bookmarksWithTags = db.readOnlyMaster { implicit s =>
         keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
       }
       bookmarksWithTags.size === 1
 
-      db.readOnly {implicit s =>
+      db.readOnlyMaster {implicit s =>
         keepRepo.getByUser(user.id.get, None, None, 100).size === 2
         val uris = uriRepo.all
         println(uris mkString "\n")
@@ -166,7 +166,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 
       Json.parse(contentAsString(result)) must equalTo(Json.obj())
 
-      val bookmarks = db.readOnly { implicit s =>
+      val bookmarks = db.readOnlyMaster { implicit s =>
         keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
       }
       bookmarks.size === 0
@@ -209,7 +209,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         (user1, bookmark1, bookmark2, collections)
       }
 
-      db.readOnly {implicit s =>
+      db.readOnlyMaster {implicit s =>
         keepRepo.getByUser(user.id.get, None, None, 100).size === 2
         val uris = uriRepo.all
         println(uris mkString "\n")
@@ -236,7 +236,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         keeps.size === 2
       }
 
-      val bookmarks = db.readOnly { implicit s =>
+      val bookmarks = db.readOnlyMaster { implicit s =>
         keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
       }
 
@@ -270,7 +270,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         (user1, collections)
       }
 
-      db.readOnly {implicit s =>
+      db.readOnlyMaster {implicit s =>
         keepRepo.getByUser(user.id.get, None, None, 100).size === 0
         val uris = uriRepo.all
         uris.size === 0
@@ -296,7 +296,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         keeps.size === 1
       }
 
-      val bookmarks = db.readOnly { implicit s =>
+      val bookmarks = db.readOnlyMaster { implicit s =>
         keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
       }
       bookmarks.size === 1
@@ -435,12 +435,12 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val (kc0, kc1, kc2) = db.readWrite { implicit rw =>
         val kifiHitCache = inject[KifiHitCache]
         val origin = "https://www.google.com"
-        val kc0 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId))
+        val kc0 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId))
         // u2 -> 42 (u1)
         kifiHitCache.set(KifiHitKey(u2.id.get, keeps1(0).uriId), SanitizedKifiHit(kc0.hitUUID, origin, raw1(0).url, kc0.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId), Seq.empty, None, 0, 0)))
 
         val ts = currentDateTime
-        val uuid = ExternalId[SanitizedKifiHit]()
+        val uuid = ExternalId[ArticleSearchResult]()
         val kc1 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId))
         val kc2 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId))
         // u3 -> kifi (u1, u2) [rekeep]
@@ -454,7 +454,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val kc3 = db.readWrite { implicit rw =>
         val kifiHitCache = inject[KifiHitCache]
         val origin = "https://www.google.com"
-        val kc3 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
+        val kc3 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
         // u4 -> kifi (u3) [rekeep]
         kifiHitCache.set(KifiHitKey(u4.id.get, keeps3(0).uriId), SanitizedKifiHit(kc3.hitUUID, origin, raw3(0).url, kc3.uriId, KifiHitContext(false, false, 0, Seq(u3.externalId), Seq.empty, None, 0, 0)))
         kc3
@@ -462,7 +462,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 
       val (keeps4, _) = bookmarkInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
 
-      val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnly {implicit s =>
+      val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnlyMaster {implicit s =>
         val keeps = keepRepo.getByUser(u1.id.get, None, None, 100)
         val clickCount = keepDiscoveryRepo.getDiscoveryCountByKeeper(u1.id.get)
         val clicks = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u1.id.get)
@@ -579,12 +579,12 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val (kc0, kc1, kc2) = db.readWrite { implicit rw =>
         val kifiHitCache = inject[KifiHitCache]
         val origin = "https://www.google.com"
-        val kc0 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId))
+        val kc0 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId))
         // u2 -> 42 (u1)
         kifiHitCache.set(KifiHitKey(u2.id.get, keeps1(0).uriId), SanitizedKifiHit(kc0.hitUUID, origin, raw1(0).url, kc0.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId), Seq.empty, None, 0, 0)))
 
         val ts = currentDateTime
-        val uuid = ExternalId[SanitizedKifiHit]()
+        val uuid = ExternalId[ArticleSearchResult]()
         val kc1 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId))
         val kc2 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId))
         // u3 -> kifi (u1, u2) [rekeep]
@@ -598,7 +598,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val kc3 = db.readWrite { implicit rw =>
         val kifiHitCache = inject[KifiHitCache]
         val origin = "https://www.google.com"
-        val kc3 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[SanitizedKifiHit](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
+        val kc3 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
         // u4 -> kifi (u3) [rekeep]
         kifiHitCache.set(KifiHitKey(u4.id.get, keeps3(0).uriId), SanitizedKifiHit(kc3.hitUUID, origin, raw3(0).url, kc3.uriId, KifiHitContext(false, false, 0, Seq(u3.externalId), Seq.empty, None, 0, 0)))
         kc3
@@ -606,7 +606,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 
       val (keeps4, _) = bookmarkInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
 
-      val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnly {implicit s =>
+      val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnlyMaster {implicit s =>
         val keeps = keepRepo.getByUser(u1.id.get, None, None, 100)
         val clickCount = keepDiscoveryRepo.getDiscoveryCountByKeeper(u1.id.get)
         val clicks = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u1.id.get)

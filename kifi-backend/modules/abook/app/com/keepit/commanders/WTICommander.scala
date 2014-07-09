@@ -13,8 +13,8 @@ import com.keepit.common.mail.EmailAddress
 @Singleton
 class WTICommander @Inject() (richSocialConnectionRepo: RichSocialConnectionRepo, db: Database) extends Logging {
 
-  def ripestFruit(userId: Id[User], howMany: Int): Seq[Id[SocialUserInfo]] = db.readOnly { implicit session => richSocialConnectionRepo.dedupedWTIForUser(userId, howMany) }
-  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]) = db.readOnly { implicit session => richSocialConnectionRepo.countInvitationsSent(userId, friend) }
+  def ripestFruit(userId: Id[User], howMany: Int): Seq[Id[SocialUserInfo]] = db.readOnlyMaster { implicit session => richSocialConnectionRepo.dedupedWTIForUser(userId, howMany) }
+  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]) = db.readOnlyMaster { implicit session => richSocialConnectionRepo.countInvitationsSent(userId, friend) }
   def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Unit = db.readWrite { implicit session => richSocialConnectionRepo.block(userId, friend) }
-  def getRipestFruitsByCommonKifiFriendsCount(userId: Id[User], page: Int, pageSize: Int): Seq[RichSocialConnection] = db.readOnly { implicit session => richSocialConnectionRepo.getRipestFruitsByCommonKifiFriendsCount(userId, page, pageSize) }
+  def getRipestFruitsByCommonKifiFriendsCount(userId: Id[User], page: Int, pageSize: Int): Seq[RichSocialConnection] = db.readOnlyMaster { implicit session => richSocialConnectionRepo.getRipestFruitsByCommonKifiFriendsCount(userId, page, pageSize) }
 }

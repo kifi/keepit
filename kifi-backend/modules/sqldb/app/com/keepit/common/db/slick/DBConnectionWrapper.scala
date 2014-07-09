@@ -9,7 +9,7 @@ import java.util.concurrent.Executor
 import com.keepit.common.time._
 import com.keepit.common.strings._
 
-class DBConnectionWrapper(conn: Connection, dbLog: Logger, clock: Clock, masterSlave: Database.DBMasterSlave, sessionId:String) extends Connection {
+class DBConnectionWrapper(conn: Connection, dbLog: Logger, clock: Clock, masterSlave: Database.DBMasterReplica, sessionId:String) extends Connection {
   def createStatement(): Statement = {
     dbLog.info(s"t:${clock.now}\tsessionId:$sessionId\tdb:$masterSlave\ttype:CREATE_EMPTY_STMT")
     conn.createStatement()

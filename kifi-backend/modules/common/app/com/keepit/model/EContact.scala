@@ -9,9 +9,10 @@ import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin, CacheSt
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.common.mail.{BasicContact, EmailAddress}
+import com.keepit.abook.RichContact
 
 object EContactStates extends States[EContact] {
-  val PARSE_FAILURE = State[EContact]("parse_failure")
+  val HIDDEN = State[EContact]("hidden")
 }
 
 case class EContact(
@@ -65,6 +66,8 @@ object EContact {
       (__ \ 'contactUserId).formatNullable(Id.format[User]) and
       (__ \ 'state).format(State.format[EContact])
     )(EContact.apply, unlift(EContact.unapply))
+
+  def toRichContact(econtact: EContact): RichContact = RichContact(econtact.email, econtact.name, econtact.firstName, econtact.lastName, econtact.contactUserId)
 }
 
 class EContactCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)

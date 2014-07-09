@@ -23,7 +23,7 @@ class RenormalizedURLTest extends Specification with ShoeboxTestInjector{
 
         implicit def intToSeq(x : Int) = SequenceNumber(x)
 
-        val records = db.readOnly{ implicit s =>
+        val records = db.readOnlyMaster{ implicit s =>
           val records = repo.getChangesBetween(SequenceNumber(0), SequenceNumber(5), state = RenormalizedURLStates.ACTIVE)
           records.size === 5
           records

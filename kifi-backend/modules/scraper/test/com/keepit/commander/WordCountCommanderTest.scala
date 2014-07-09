@@ -60,11 +60,12 @@ class WordCountCommanderTest extends Specification with ApplicationInjector{
       running(new TestApplication(TestScraperServiceModule())){
         val store = inject[ArticleStore]
         val countCache = inject[NormalizedURIWordCountCache]
+        val sumCache = inject[URISummaryCache]
         val uids = (1 to 3).map{ i => Id[NormalizedURI](i)}
         val a1 = mkArticle(uids(0), title = "", content = "1 2 3 4 5")
         store.+=(uids(0), a1)
 
-        val wcCommander = new WordCountCommanderImpl(store, countCache, fakeScrapeProcessor)
+        val wcCommander = new WordCountCommanderImpl(store, countCache, sumCache, fakeScrapeProcessor)
         Await.result(wcCommander.getWordCount(uids(0), url = Some("")), Duration(1, SECONDS)) === 5
 
         // delete article, then get word count from cache

@@ -58,7 +58,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
             .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].calculateSensitivity)
         }
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           domainRepo.get("apple.com").get.sensitive === Some(true)
           domainRepo.get("amazon.com").get.sensitive === Some(false)
           domainRepo.get("google.com").get.sensitive === Some(false)
@@ -92,7 +92,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
               .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].calculateSensitivity)
         }
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           domainRepo.get("apple.com").get.sensitive === Some(false)
           domainRepo.get("amazon.com").get.sensitive === Some(false)
           domainRepo.get("google.com").get.sensitive === Some(false)
@@ -121,7 +121,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
           domainRepo.get("cnn.com").get.sensitive === Some(false)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(Some(true)))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           domainRepo.get("cnn.com").get.sensitive === Some(true)
         }
 
@@ -133,7 +133,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
           domainRepo.get("cnn.com").get.sensitive === Some(true)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(None))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           domainRepo.get("cnn.com").get.sensitive === Some(false)
         }
       }

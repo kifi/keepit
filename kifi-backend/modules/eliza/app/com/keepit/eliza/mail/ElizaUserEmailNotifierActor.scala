@@ -36,7 +36,7 @@ class ElizaUserEmailNotifierActor @Inject() (
   protected def getParticipantThreadsToProcess(): Seq[UserThread] = {
     val now = clock.now
     val lastNotifiedBefore = now.minus(MIN_TIME_BETWEEN_NOTIFICATIONS.toMillis)
-    val unseenUserThreads = db.readOnly { implicit session =>
+    val unseenUserThreads = db.readOnlyMaster { implicit session =>
       userThreadRepo.getUserThreadsForEmailing(lastNotifiedBefore)
     }
     val notificationUpdatedAts = unseenUserThreads.map { t => t.id.get -> t.notificationUpdatedAt } toMap;
@@ -50,7 +50,7 @@ class ElizaUserEmailNotifierActor @Inject() (
   protected def emailUnreadMessagesForParticipantThreadBatch(batch: ParticipantThreadBatch[UserThread]): Future[Unit] = {
     val userThreads = batch.participantThreads
     val threadId = batch.threadId
-    val thread = db.readOnly { implicit session => threadRepo.get(threadId) }
+    val thread = db.readOnlyMaster { implicit session => threadRepo.get(threadId) }
     val allUserIds = thread.participants.map(_.allUsers).getOrElse(Set()).toSeq
     val allUsersFuture : Future[Map[Id[User], User]] = new SafeFuture(
       shoebox.getUsers(allUserIds).map( s => s.map(u => u.id.get -> u).toMap)

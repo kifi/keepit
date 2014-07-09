@@ -17,14 +17,17 @@ sealed trait KifiInstallationPlatform {
 object KifiInstallationPlatform {
 
   sealed trait IPhonePlatform extends KifiInstallationPlatform
+  sealed trait AndroidPlatform extends KifiInstallationPlatform
   sealed trait ExtPlatform extends KifiInstallationPlatform
 
   object Extension extends ExtPlatform { val name = "extension" }
   object IPhone extends IPhonePlatform { val name = "iphone" }
+  object Android extends AndroidPlatform { val name = "android" }
 
   def apply(name: String): KifiInstallationPlatform = name.toLowerCase match {
     case Extension.name => Extension
     case IPhone.name => IPhone
+    case Android.name => Android
   }
 }
 
@@ -56,6 +59,10 @@ trait KifiVersion {
 
 case class KifiIPhoneVersion(major: Short, minor: Short, patch: Short, build: Int = 0) extends KifiVersion with Ordered[KifiIPhoneVersion] {
   def compare(that: KifiIPhoneVersion) = compareIt(that)
+}
+
+case class KifiAndroidVersion(major: Short, minor: Short, patch: Short, build: Int = 0) extends KifiVersion with Ordered[KifiAndroidVersion] {
+  def compare(that: KifiAndroidVersion) = compareIt(that)
 }
 
 case class KifiExtVersion(major: Short, minor: Short, patch: Short, build: Int = 0) extends KifiVersion with Ordered[KifiExtVersion] {
@@ -109,7 +116,7 @@ object KifiIPhoneVersion {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, KifiIPhoneVersion]] = {
       stringBinder.bind(key, params) map {
         case Right(version) => Right(KifiIPhoneVersion(version))
-        case _ => Left("Unable to bind a KifiVersion")
+        case _ => Left("Unable to bind a KifiIPhoneVersion")
       }
     }
     override def unbind(key: String, kifiVersion: KifiIPhoneVersion): String = {
@@ -119,6 +126,34 @@ object KifiIPhoneVersion {
 
   implicit def litteral = new JavascriptLitteral[KifiIPhoneVersion] {
     def to(value: KifiIPhoneVersion) = value.toString
+  }
+}
+
+object KifiAndroidVersion {
+
+  def apply(version: String): KifiAndroidVersion = {
+    version match {
+      case KifiVersion.R(major, minor, patch, build) =>
+        KifiAndroidVersion(major.toShort, minor.toShort, patch.toShort, Option(build).map(_.toInt).getOrElse(0))
+      case _ =>
+        throw new IllegalArgumentException("Invalid kifi Android version: " + version)
+    }
+  }
+
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[KifiAndroidVersion] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, KifiAndroidVersion]] = {
+      stringBinder.bind(key, params) map {
+        case Right(version) => Right(KifiAndroidVersion(version))
+        case _ => Left("Unable to bind a KifiAndroidVersion")
+      }
+    }
+    override def unbind(key: String, kifiVersion: KifiAndroidVersion): String = {
+      stringBinder.unbind(key, kifiVersion.toString)
+    }
+  }
+
+  implicit def litteral = new JavascriptLitteral[KifiAndroidVersion] {
+    def to(value: KifiAndroidVersion) = value.toString
   }
 }
 
@@ -136,6 +171,7 @@ case class KifiInstallation (
 
   version match {
     case KifiIPhoneVersion(_, _, _, _) => require(platform == KifiInstallationPlatform.IPhone)
+    case KifiAndroidVersion(_, _, _, _) => require(platform == KifiInstallationPlatform.Android)
     case KifiExtVersion(_, _, _, _) => require(platform == KifiInstallationPlatform.Extension)
   }
 

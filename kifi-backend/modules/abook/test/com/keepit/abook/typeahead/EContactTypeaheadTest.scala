@@ -1,4 +1,4 @@
-package com.keepit.typeahead.abook
+package com.keepit.abook.typeahead
 
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.EContact
@@ -45,7 +45,7 @@ class EContactTypeaheadTest extends Specification {
   }
 
   private def human(addr: String): Boolean = {
-    EContactTypeaheadBase.isLikelyHuman(EContact(userId = null, abookId = null, email = EmailAddress(addr)))
+    EContactTypeahead.isLikelyHuman(EContact(userId = null, email = EmailAddress(addr)))
   }
 
 }

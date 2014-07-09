@@ -41,14 +41,10 @@ private class CortexDataIngestionPluginImpl @Inject()(
   val name: String = getClass.toString
 
   override def onStart() {
-    log.info(s"starting $name")
     scheduleTaskOnLeader(actor.system, 1 minute, 1 minute, actor.ref, UpdateURI)
     scheduleTaskOnLeader(actor.system, 1 minute, 1 minute, actor.ref, UpdateKeep)
   }
 
-  override def onStop() {
-    log.info(s"stopping $name")
-  }
 }
 
 class CortexDataIngestionActor @Inject()(
@@ -102,7 +98,7 @@ private class CortexDataIngestionUpdater @Inject()(
   private val DB_BATCH_SIZE = 50
 
   def updateURIRepo(fetchSize: Int): Future[Int] = {
-    val seq = db.readOnly{ implicit s => uriRepo.getMaxSeq}
+    val seq = db.readOnlyMaster{ implicit s => uriRepo.getMaxSeq}
 
     shoebox.getIndexable(seq, fetchSize).map { uris =>
       uris.map { CortexURI.fromURI(_) } grouped (DB_BATCH_SIZE) foreach { uris =>
@@ -121,7 +117,7 @@ private class CortexDataIngestionUpdater @Inject()(
 
   def updateKeepRepo(fetchSize: Int): Future[Int] = {
 
-    val seq = db.readOnly{ implicit s => keepRepo.getMaxSeq}
+    val seq = db.readOnlyMaster{ implicit s => keepRepo.getMaxSeq}
 
     shoebox.getBookmarksChanged(seq, fetchSize).map { keeps =>
       keeps.map { CortexKeep.fromKeep(_) } grouped (DB_BATCH_SIZE) foreach { keeps =>

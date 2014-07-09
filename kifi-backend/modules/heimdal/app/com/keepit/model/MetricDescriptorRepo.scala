@@ -1,8 +1,8 @@
-package com.keepit.heimdal
+package com.keepit.model
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
-
 import reactivemongo.core.commands.{LastError, PipelineOperator}
+import com.keepit.heimdal.MetricDescriptor
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.{BSONDocument, BSONArray, Macros}
 import CustomBSONHandlers._

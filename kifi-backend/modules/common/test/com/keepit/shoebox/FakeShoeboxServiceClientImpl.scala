@@ -408,13 +408,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(fewerUris map { u => IndexableUri(u) })
   }
 
-  def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1) : Future[Seq[UriIdAndSeq]] = {
-    val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
-    val uris = allNormalizedURIs.values.filter(x => x.seq > seqNum && scrapedStates.contains(x.state)).toSeq.sortBy(_.seq)
-    val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris) map { u => UriIdAndSeq(u.id.get, u.seq)}
-    Future.successful(fewerUris)
-  }
-
   def getHighestUriSeq(): Future[SequenceNumber[NormalizedURI]] = {
     val seq = allNormalizedURIs.values.map{_.seq}
     Future.successful(if (seq.isEmpty) SequenceNumber.ZERO else seq.max)
@@ -507,7 +500,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def saveScrapeInfo(info: ScrapeInfo): Future[ScrapeInfo] = ???
 
-  def savePageInfo(pageInfo: PageInfo): Future[PageInfo] = ???
+  def savePageInfo(pageInfo: PageInfo): Future[Unit] = ???
 
   def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo] = ???
 

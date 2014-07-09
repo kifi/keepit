@@ -2,9 +2,6 @@ package com.keepit.abook
 
 import org.specs2.mutable._
 import com.keepit.test.DbTestInjector
-import com.google.inject.Injector
-import com.keepit.common.db.slick.Database
-import com.keepit.abook.store.ABookRawInfoStore
 import com.keepit.model._
 import com.keepit.common.db.{TestDbInfo, Id}
 import play.api.libs.json._
@@ -15,11 +12,9 @@ import com.keepit.common.cache.ABookCacheModule
 import play.api.libs.json.JsString
 import scala.Some
 import com.keepit.common.db.TestSlickModule
-import com.keepit.common.healthcheck.{AirbrakeNotifier, FakeAirbrakeModule}
-import com.keepit.typeahead.abook.{EContactTypeaheadStore, EContactTypeahead}
-import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.common.mail.BasicContact
+import com.keepit.common.mail.{EmailAddress, BasicContact}
 
 class ABookCommanderTest extends Specification with DbTestInjector with ABookTestHelper {
 
@@ -43,8 +38,8 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
       withDb(modules: _*) { implicit injector =>
         val (commander) = inject[ABookCommander] //setup()
 
-      db.readOnly(inject[ABookInfoRepo].count(_))
         // EMPTY IOS IMPORT
+      db.readOnlyMaster(inject[ABookInfoRepo].count(_))
         val emptyABookRawInfo = ABookRawInfo(None, ABookOrigins.IOS, None, None, None, JsArray(Seq.empty))
         val emptyABookOpt = commander.processUpload(u42, ABookOrigins.IOS, None, None, Json.toJson(emptyABookRawInfo))
         emptyABookOpt.isEmpty === true
@@ -98,11 +93,9 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         val gBookRawInfoSeq = gbookInfoSeqOpt.get
         gBookRawInfoSeq.length === 2
 
-        val econtactsJsArr = commander.getEContactsDirect(u42, 500)
-        val econtactsSeqOpt = econtactsJsArr.validate[Seq[EContact]].asOpt
-        econtactsSeqOpt.isEmpty === false
-        val econtacts = econtactsSeqOpt.get.groupBy(_.abookId.get)
-        econtacts(gbookInfo.id.get).length === 4
+        val eContacts = commander.getContactsByUser(u42)
+        eContacts.isEmpty === false
+        eContacts.length === 4 // distinct
 
         // INTERN KIFI CONTACTS
 
@@ -149,6 +142,29 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         gBookRawInfoSeq2.length === 2
       }
     }
+
+    "handle hiding given email from current user" in  {
+      withDb(modules: _*) { implicit injector =>
+        val (commander) = inject[ABookCommander]
+        val (econRepo) = inject[EContactRepo] // setup()
+
+        val e1 = BasicContact.fromString("Douglas Adams <doug@kifi.com>").get
+        val e1Res = commander.internKifiContact(u42, e1)
+
+        val result1 = commander.hideEmailFromUser(u42, e1Res.email)
+        result1 === true
+
+        db.readOnlyMaster { implicit session =>
+            val e2 = econRepo.get(e1Res.id.get)
+            e2.state should_== EContactStates.HIDDEN
+        }
+
+        val result2 = commander.hideEmailFromUser(u42, EmailAddress("nonexist@email.com"))
+        result2 === false
+
+      }
+    }
+
   }
 }
 

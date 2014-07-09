@@ -23,17 +23,16 @@ import play.api.libs.ws.{Response, WS}
 import play.api.http.Status
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.xml.Elem
-import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.abook.typeahead.EContactTypeahead
 import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail, BasicContact, EmailAddress}
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.abook.model.EmailAccountRepo
-import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.commanders.ContactInterner
 
 class ABookCommander @Inject() (
   db:Database,
   airbrake:AirbrakeNotifier,
   s3:ABookRawInfoStore,
+  econtactTypeahead:EContactTypeahead,
   abookInfoRepo:ABookInfoRepo,
   econtactRepo:EContactRepo,
   abookImporter:ABookImporterPlugin,
@@ -51,7 +50,7 @@ class ABookCommander @Inject() (
   }
 
   def getABookInfo(userId:Id[User], id:Id[ABookInfo]):Option[ABookInfo] = {
-    db.readOnly(attempts = 2) { implicit s =>
+    db.readOnlyMaster(attempts = 2) { implicit s =>
       abookInfoRepo.getByUserIdAndABookId(userId, id)
     }
   }
@@ -173,7 +172,7 @@ class ABookCommander @Inject() (
         }
         (true, updated)
       } else {
-        val isOverdue = db.readOnly(attempts = 2) { implicit s =>
+        val isOverdue = db.readOnlyMaster(attempts = 2) { implicit s =>
           abookInfoRepo.isOverdue(savedABookInfo.id.get, currentDateTime.minusMinutes(10))
         }
         log.warnP(s"$savedABookInfo already in PENDING state; overdue=$isOverdue")
@@ -188,39 +187,18 @@ class ABookCommander @Inject() (
     }
   }
 
-  def getEContactByIdDirect(contactId:Id[EContact]):Option[JsValue] = {
-    val econtactOpt = db.readOnly(attempts = 2) { implicit s =>
-      econtactRepo.getById(contactId)
-    }
-    log.info(s"[getEContactByIdDirect($contactId)] res=$econtactOpt")
-    econtactOpt map { Json.toJson(_) }
-  }
-
-  def getEContactByEmailDirect(userId:Id[User], email: EmailAddress): Option[JsValue] = {
-    val econtactOpt = db.readOnly(attempts = 2) { implicit s =>
-      val all = econtactRepo.getByUserIdAndEmail(userId, email)
-      all.find(_.name.isDefined) orElse all.headOption
-    }
-    log.info(s"[getEContactDirect($userId,$email)] res=$econtactOpt")
-    econtactOpt map { Json.toJson(_) }
-  }
-
-  def getEContactsDirect(userId: Id[User], maxRows: Int): JsArray = {
-    val ts = System.currentTimeMillis
-    val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
-    db.readOnly(attempts = 2) {
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Boolean = {
+    val result = db.readWrite {
       implicit session =>
-        econtactRepo.getByUserIdIter(userId, maxRows).foreach {
-          jsonBuilder += Json.toJson(_)
-        } // TODO: paging & caching
+        econtactRepo.hideEmailFromUser(userId, email)
     }
-    val contacts = jsonBuilder.result
-    log.info(s"[getEContacts($userId, $maxRows)] # of contacts returned: ${contacts.length} time-lapsed: ${System.currentTimeMillis - ts}")
-    JsArray(contacts)
+    econtactTypeahead.refresh(userId)
+    log.info(s"[hideEmailFromUser($userId, $email)] res=$result")
+    result
   }
 
   def getABookRawInfosDirect(userId: Id[User]): JsValue = {
-    val abookInfos = db.readOnly(attempts = 2) {
+    val abookInfos = db.readOnlyMaster(attempts = 2) {
       implicit session =>
         abookInfoRepo.findByUserId(userId)
     }
@@ -280,5 +258,16 @@ class ABookCommander @Inject() (
     shoebox.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
       subject = title, htmlBody = msg.replaceAll("\n","\n<br>"), category = NotificationCategory.System.ADMIN
     ))
+  }
+
+  def getContactNameByEmail(userId: Id[User], email: EmailAddress): Option[String] = {
+    db.readOnlyMaster { implicit session =>
+      econtactRepo.getByUserIdAndEmail(userId, email).collectFirst { case contact if contact.name.isDefined => contact.name.get }
+    }
+  }
+
+  def getContactsByUser(userId: Id[User], page: Int = 0, pageSize: Option[Int] = None): Seq[EContact] = {
+    val allContacts = db.readOnlyReplica { implicit session => econtactRepo.getByUserId(userId) }
+    pageSize.collect { case size if page >= 0 => allContacts.sortBy(_.id.get.id).drop(page * size).take(size) } getOrElse allContacts
   }
 }

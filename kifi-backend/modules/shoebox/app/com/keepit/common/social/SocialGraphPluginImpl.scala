@@ -55,12 +55,12 @@ private[social] class SocialGraphActor @Inject() (
 
     case RefreshAll =>
       log.info("going to check which SocialUserInfo was not fetched lately")
-      val needToBeRefreshed = db.readOnly { implicit s => socialRepo.getNeedToBeRefreshed }
+      val needToBeRefreshed = db.readOnlyMaster { implicit s => socialRepo.getNeedToBeRefreshed }
       log.info(s"find ${needToBeRefreshed.size} users that need to be refreshed")
       needToBeRefreshed.foreach(self ! FetchUserInfoQuietly(_))
 
     case FetchAll =>
-      val unprocessedUsers = db.readOnly {implicit s =>
+      val unprocessedUsers = db.readOnlyMaster {implicit s =>
         socialRepo.getUnprocessed()
       }
       unprocessedUsers foreach { user =>
@@ -68,7 +68,7 @@ private[social] class SocialGraphActor @Inject() (
       }
 
     case FetchUserInfo(socialUserInfoId) =>
-      val socialUserInfo = db.readOnly { implicit session =>
+      val socialUserInfo = db.readOnlyMaster { implicit session =>
         socialRepo.get(socialUserInfoId)
       }
       fetchUserInfo(socialUserInfo)
@@ -138,7 +138,7 @@ private[social] class SocialGraphActor @Inject() (
   }
 
   private def isImportAlreadyInProcess(userId: Id[User], networkType: SocialNetworkType): Boolean = {
-    val stateOpt = db.readOnly { implicit session =>
+    val stateOpt = db.readOnlyMaster { implicit session =>
       userValueRepo.getUserValue(userId, s"import_in_progress_${networkType.name}")
     }
     stateOpt match {
@@ -166,11 +166,7 @@ class SocialGraphPluginImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    log.info("starting SocialGraphPluginImpl")
     scheduleTaskOnLeader(actor.system, 10 seconds, 1 minute, actor.ref, FetchAndRefreshAll)
-  }
-  override def onStop() {
-    log.info("stopping SocialGraphPluginImpl")
   }
 
   def asyncRevokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {

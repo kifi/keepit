@@ -39,7 +39,7 @@ class MessageSearchCommander @Inject() (
       }
     }
     resultExtIdsFut.flatMap{ protoExtIds =>
-      val notifs = db.readOnly { implicit session =>
+      val notifs = db.readOnlyMaster { implicit session =>
         val threads = protoExtIds.map{ s => threadRepo.get(ExternalId[MessageThread](s))}
         threads.map{ thread =>
           userThreadRepo.getNotificationByThread(userId, thread.id.get)

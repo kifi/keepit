@@ -1,6 +1,6 @@
 package com.keepit.controllers.internal
 
-import com.keepit.common.db.slick.Database.Slave
+import com.keepit.common.db.slick.Database.Replica
 import com.keepit.common.db.SequenceNumber
 import play.api.libs.json.{JsNumber, JsObject, JsArray, Json}
 import com.google.inject.Inject
@@ -30,14 +30,14 @@ class ShoeboxDataPipeController @Inject() (
   ) extends ShoeboxServiceController with Logging {
 
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
-    val uris = db.readOnly(2, Slave) { implicit s =>
+    val uris = db.readOnlyReplica(2) { implicit s =>
       normUriRepo.getIndexable(seqNum, fetchSize)
     }
     Ok(Json.toJson(uris))
   }
 
   def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
-    val uris = db.readOnly(2, Slave) { implicit s =>
+    val uris = db.readOnlyReplica(2) { implicit s =>
       normUriRepo.getIndexable(seqNum, fetchSize)
     }
     val indexables = uris map { u => IndexableUri(u) }
@@ -46,57 +46,49 @@ class ShoeboxDataPipeController @Inject() (
 
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
     val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
-    val uris = db.readOnly(2, Slave) { implicit s =>
+    val uris = db.readOnlyReplica(2) { implicit s =>
       normUriRepo.getChanged(seqNum, includeStates = scrapedStates,  limit = fetchSize)
     }
     val indexables = uris map { u => IndexableUri(u) }
     Ok(Json.toJson(indexables))
   }
 
-  // deprecate this soon
-  def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
-    val uris = db.readOnly(2, Slave) { implicit s =>
-      normUriRepo.getIdAndSeqChanged(seqNum, limit = fetchSize)
-    }
-    Ok(ScalaMessagePack.write(UriIdAndSeqBatch(uris))).as(ContentTypes.BINARY)
-  }
-
   def getHighestUriSeq() = Action { request =>
-    val seq = db.readOnly(2, Slave) { implicit s =>
+    val seq = db.readOnlyReplica(2) { implicit s =>
       normUriRepo.getCurrentSeqNum()
     }
     Ok(SequenceNumber.format.writes(seq))
   }
 
   def getCollectionsChanged(seqNum: SequenceNumber[Collection], fetchSize: Int) = Action { request =>
-    Ok(Json.toJson(db.readOnly(2, Slave) { implicit s =>
+    Ok(Json.toJson(db.readOnlyReplica(2) { implicit s =>
       collectionRepo.getCollectionsChanged(seqNum, fetchSize)
     }))
   }
 
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int) = Action { request =>
-    val phrases = db.readOnly(2, Slave) { implicit s =>
+    val phrases = db.readOnlyReplica(2) { implicit s =>
       phraseRepo.getPhrasesChanged(seqNum, fetchSize)
     }
     Ok(Json.toJson(phrases))
   }
 
   def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int) = Action { request =>
-    val bookmarks = db.readOnly(2, Slave) { implicit session =>
+    val bookmarks = db.readOnlyReplica(2) { implicit session =>
       keepRepo.getBookmarksChanged(seqNum, fetchSize)
     }
     Ok(Json.toJson(bookmarks))
   }
 
   def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int) = Action { request =>
-    val users = db.readOnly(2, Slave) { implicit s =>
+    val users = db.readOnlyReplica(2) { implicit s =>
       userRepo.getUsersSince(seqNum, fetchSize)
     }
     Ok(JsArray(users.map{ u => Json.toJson(u)}))
   }
 
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]) = Action { request =>
-    val changes = db.readOnly(2, Slave) { implicit s =>
+    val changes = db.readOnlyReplica(2) { implicit s =>
       changedUriRepo.getChangesBetween(lowSeq, highSeq).map{ change =>
         (change.oldUriId, normUriRepo.get(change.newUriId))
       }
@@ -108,21 +100,21 @@ class ShoeboxDataPipeController @Inject() (
   }
 
   def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int) = Action { request =>
-    val changes = db.readOnly(2, Slave) { implicit s =>
+    val changes = db.readOnlyReplica(2) { implicit s =>
       userConnRepo.getUserConnectionChanged(seqNum, fetchSize)
     }
     Ok(Json.toJson(changes))
   }
 
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int) = Action { request =>
-    val changes = db.readOnly(2, Slave){ implicit s =>
+    val changes = db.readOnlyReplica(2){ implicit s =>
       searchFriendRepo.getSearchFriendsChanged(seqNum, fetchSize)
     }
     Ok(Json.toJson(changes))
   }
 
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int) = Action { request =>
-    val indexableSocialConnections = db.readOnly(2, Slave) { implicit session =>
+    val indexableSocialConnections = db.readOnlyReplica(2) { implicit session =>
       socialConnectionRepo.getConnAndNetworkBySeqNumber(seqNum, fetchSize).map { case (firstUserId, secondUserId, state, seq, networkType) =>
         IndexableSocialConnection(firstUserId, secondUserId, networkType, state, seq)
       }
@@ -132,13 +124,13 @@ class ShoeboxDataPipeController @Inject() (
   }
 
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int) = Action { request =>
-    val socialUserInfos = db.readOnly(2, Slave) { implicit session => socialUserInfoRepo.getBySequenceNumber(seqNum, fetchSize) }
+    val socialUserInfos = db.readOnlyReplica(2) { implicit session => socialUserInfoRepo.getBySequenceNumber(seqNum, fetchSize) }
     val json = Json.toJson(socialUserInfos)
     Ok(json)
   }
 
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int) = Action { request =>
-    val modifiedEmails = db.readOnly(2, Slave) { implicit session => emailAddressRepo.getBySequenceNumber(SequenceNumber[UserEmailAddress](seqNum.value), fetchSize) }
+    val modifiedEmails = db.readOnlyReplica(2) { implicit session => emailAddressRepo.getBySequenceNumber(SequenceNumber[UserEmailAddress](seqNum.value), fetchSize) }
     val updates = modifiedEmails.map { email =>
       EmailAccountUpdate(email.address, email.userId, email.verified, email.state == UserEmailAddressStates.INACTIVE, SequenceNumber(email.seq.value))
     }

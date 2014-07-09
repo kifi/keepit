@@ -17,7 +17,6 @@ import com.keepit.common.plugin.SchedulingProperties
 trait HeimdalServiceClientModule extends ScalaModule
 
 case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
-
   def configure() {
     install(HeimdalQueueProdModule())
   }
@@ -25,12 +24,12 @@ case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
   @Provides
   @AppScoped
   def heimdalServiceClient (
-    client: HttpClient,
-    serviceDiscovery: ServiceDiscovery,
-    airbrakeNotifier: AirbrakeNotifier,
-    actor: ActorInstance[HeimdalClientActor],
-    clock: Clock,
-    scheduling: SchedulingProperties): HeimdalServiceClient = {
+   client: HttpClient,
+   serviceDiscovery: ServiceDiscovery,
+   airbrakeNotifier: AirbrakeNotifier,
+   actor: ActorInstance[HeimdalClientActor],
+   clock: Clock,
+   scheduling: SchedulingProperties): HeimdalServiceClient = {
 
     val heimdal = new HeimdalServiceClientImpl(
       airbrakeNotifier,
@@ -49,3 +48,38 @@ case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
 
   }
 }
+
+case class DevHeimdalServiceClientModule() extends HeimdalServiceClientModule {
+
+  def configure() {
+    install(HeimdalQueueDevModule())
+  }
+
+  @Provides
+  @AppScoped
+  def heimdalServiceClient (
+   client: HttpClient,
+   serviceDiscovery: ServiceDiscovery,
+   airbrakeNotifier: AirbrakeNotifier,
+   actor: ActorInstance[HeimdalClientActor],
+   clock: Clock,
+   scheduling: SchedulingProperties): HeimdalServiceClient = {
+
+    val heimdal = new HeimdalServiceClientImpl(
+      airbrakeNotifier,
+      client,
+      serviceDiscovery.serviceCluster(ServiceType.HEIMDAL),
+      actor,
+      clock,
+      scheduling
+    )
+
+    if (!heimdal.enabled){
+      heimdal.onStart()
+    }
+
+    heimdal
+
+  }
+}
+

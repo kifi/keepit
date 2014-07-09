@@ -1,6 +1,7 @@
 package com.keepit.abook
 
 
+import com.keepit.common.mail.EmailAddress
 import org.specs2.mutable._
 import com.keepit.common.db.slick.Database
 import com.keepit.abook.store.ABookRawInfoStore
@@ -20,6 +21,7 @@ import play.api.db.DB
 import java.sql.Driver
 import scala.concurrent.Await
 import com.keepit.common.queue.FakeSimpleQueueModule
+import com.keepit.typeahead.TypeaheadHit
 
 
 class ABookControllerTest extends Specification with ABookApplicationInjector with ABookTestHelper {
@@ -104,52 +106,65 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         abookInfo.state === ABookInfoStates.ACTIVE
 
         // get all
-        var resultQ = controller.prefixQuery(Id[User](1), 10, None, None)(FakeRequest())
+        var resultQ = controller.getContactsByUser(Id[User](1), pageSize = Some(10))(FakeRequest())
         status(resultQ) must equalTo(OK)
         contentType(resultQ) must beSome("application/json")
         var content = contentAsString(resultQ)
         content !== null
-        var econtacts = Json.fromJson[Seq[EContact]](Json.parse(content)).get
-        println(s"[query-all] result(${econtacts.length}):${econtacts.mkString(",")}")
-        econtacts !== null
-        econtacts.isEmpty !== true
-        econtacts.length  === 4
+        var contacts = Json.fromJson[Seq[RichContact]](Json.parse(content)).get
+        println(s"[query-all] result(${contacts.length}):${contacts.mkString(",")}")
+        contacts !== null
+        contacts.isEmpty !== true
+        contacts.length  === 4
 
         // get 0
-        resultQ = controller.prefixQuery(Id[User](1), 10, Some("lolcat"), None)(FakeRequest())
+        resultQ = controller.prefixQuery(Id[User](1), "lolcat", Some(10))(FakeRequest())
         status(resultQ) must equalTo(OK)
         contentType(resultQ) must beSome("application/json")
         content = contentAsString(resultQ)
         content !== null
-        econtacts = Json.fromJson[Seq[EContact]](Json.parse(content)).get
-        println(s"[query-0] result(${econtacts.length}):${econtacts.mkString(",")}")
-        econtacts !== null
-        econtacts.isEmpty === true
-        econtacts.length  === 0
+        var hits = Json.fromJson[Seq[TypeaheadHit[RichContact]]](Json.parse(content)).get
+        println(s"[query-0] result(${hits.length}):${hits.mkString(",")}")
+        hits !== null
+        hits.isEmpty === true
+        hits.length  === 0
 
         // search
-        resultQ = controller.prefixQuery(Id[User](1), 10, Some("ray"), None)(FakeRequest())
+        resultQ = controller.prefixQuery(Id[User](1), "ray", Some(10))(FakeRequest())
         status(resultQ) must equalTo(OK)
         contentType(resultQ) must beSome("application/json")
         content = contentAsString(resultQ)
         content !== null
-        econtacts = Json.fromJson[Seq[EContact]](Json.parse(content)).get
-        println(s"[query-search] result(${econtacts.length}):${econtacts.mkString(",")}")
-        econtacts !== null
-        econtacts.isEmpty !== true
-        econtacts.length  === 1
+        hits = Json.fromJson[Seq[TypeaheadHit[RichContact]]](Json.parse(content)).get
+        println(s"[query-search] result(${hits.length}):${hits.mkString(",")}")
+        hits !== null
+        hits.isEmpty !== true
+        hits.length  === 1
 
         // limit
-        resultQ = controller.prefixQuery(Id[User](1), 3, Some("fo"), None)(FakeRequest())
+        resultQ = controller.prefixQuery(Id[User](1), "fo", Some(3))(FakeRequest())
         status(resultQ) must equalTo(OK)
         contentType(resultQ) must beSome("application/json")
         content = contentAsString(resultQ)
         content !== null
-        econtacts = Json.fromJson[Seq[EContact]](Json.parse(content)).get
-        println(s"[query-limit] result(${econtacts.length}):${econtacts.mkString(",")}")
-        econtacts !== null
-        econtacts.isEmpty !== true
-        econtacts.length  === 3
+        hits = Json.fromJson[Seq[TypeaheadHit[RichContact]]](Json.parse(content)).get
+        println(s"[query-limit] result(${hits.length}):${hits.mkString(",")}")
+        hits !== null
+        hits.isEmpty !== true
+        hits.length  === 3
+      }
+    }
+
+    "support hide email from user" in {
+      running(new ABookApplication(modules:_*)) {
+        val hideEmailRoute = com.keepit.abook.routes.ABookController.hideEmailFromUser(Id[User](1), EmailAddress("tan@kifi.com"))
+        hideEmailRoute.toString === "/internal/abook/1/hideEmailFromUser?email=tan%40kifi.com"
+        val controller = inject[ABookController] // setup
+        val result = controller.hideEmailFromUser(Id[User](1), EmailAddress("tan@kifi.com"))(FakeRequest())
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+        var content = contentAsString(result)
+        content !== null
       }
     }
 

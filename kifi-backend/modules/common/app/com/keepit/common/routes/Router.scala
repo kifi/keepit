@@ -90,7 +90,6 @@ object Shoebox extends Service {
     def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexable", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableUris", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getScrapedUris", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
-    def getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getScrapedUriIdAndSeq", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getHighestUriSeq() = ServiceRoute(GET, "/internal/shoebox/database/getHighestUriSeq")
     def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getUserIndexable", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getActiveExperiments() = ServiceRoute(GET, "/internal/shoebox/database/getActiveExperiments")
@@ -228,6 +227,7 @@ object Heimdal extends Service {
     def incrementUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/increment", Param("userId", userId))
     def setUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/set", Param("userId", userId))
     def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = ServiceRoute(GET, "/internal/heimdal/user/alias", Param("userId", userId), Param("externalId", externalId))
+    def getLastDelightedAnswerDate(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/user/lastDelightedAnswerDate", Param("userId", userId))
   }
 }
 
@@ -242,16 +242,9 @@ object ABook extends Service {
     def getABooksCount() = ServiceRoute(GET, s"/internal/abooksCount/")
     def getABookInfo(userId:Id[User], id:Id[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookInfo", Param("userId", userId), Param("id", id))
     def getABookInfoByExternalId(id: ExternalId[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/getABookInfoByExternalId", Param("externalId", id))
-    def getEContacts(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContacts", Param("maxRows", maxRows))
     def getEContactCount(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContactCount")
-    def getEContactById(contactId:Id[EContact]) = ServiceRoute(GET, s"/internal/abook/getEContactById", Param("contactId", contactId))
-    def getEContactsByIds() = ServiceRoute(POST, s"/internal/abook/getEContactsByIds")
-    def getEContactByEmail(userId:Id[User], email: EmailAddress) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContactByEmail", Param("email", email))
     def getABookRawInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookRawInfos")
     def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getOAuth2Token", Param("abookId", abookId))
-    def internContact(userId:Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/internContact")
-    def prefixSearch(userId:Id[User], query:String) = ServiceRoute(GET, s"/internal/abook/${userId.id}/prefixSearch", Param("query", query))
-    def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/prefixQuery", Param("limit", limit), Param("search", search), Param("after", after))
     def refreshPrefixFilter(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/refreshPrefixFilter")
     def refreshPrefixFiltersByIds() = ServiceRoute(POST, s"/internal/abook/refreshPrefixFiltersByIds")
     def refreshAllPrefixFilters() = ServiceRoute(GET, s"/internal/abook/refreshAllPrefixFilters")
@@ -264,6 +257,11 @@ object ABook extends Service {
     })
     def getRipestFruits(userId: Id[User], page: Int, pageSize: Int) = ServiceRoute(GET, s"/internal/abook/$userId/ripestFruits", Param("page", page), Param("pageSize", pageSize))
     def validateAllContacts(readOnly: Boolean) = ServiceRoute(GET, s"/internal/abook/validateAllContacts", Param("readOnly", readOnly))
+    def hideEmailFromUser(userId: Id[User], email: EmailAddress) = ServiceRoute(POST, s"/internal/abook/${userId.id}/hideEmailFromUser", Param("email", email))
+    def getContactNameByEmail(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/getContactNameByEmail")
+    def internKifiContact(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/internKifiContact")
+    def prefixQuery(userId: Id[User], query: String, maxHits: Option[Int]) = ServiceRoute(GET, s"/internal/abook/${userId}/prefixQuery", Param("q", query), Param("maxHits", maxHits))
+    def getContactsByUser(userId: Id[User], page: Int, pageSize: Option[Int]) = ServiceRoute(GET, s"/internal/abook/${userId}/getContacts", Param("page", page), Param("pageSize", pageSize))
   }
 }
 

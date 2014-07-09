@@ -1,5 +1,6 @@
 package com.keepit.heimdal
 
+import com.keepit.common.logging.Logging
 import com.keepit.model.{NormalizedURI, Collection, User}
 import com.keepit.search._
 import com.google.inject.{Singleton, Inject}
@@ -113,7 +114,7 @@ object KifiHitContext {
 }
 
 case class SanitizedKifiHit(
-  uuid:ExternalId[SanitizedKifiHit],
+  uuid:ExternalId[ArticleSearchResult],
   origin:String,
   url:String,
   uriId:Id[NormalizedURI],
@@ -122,7 +123,7 @@ case class SanitizedKifiHit(
 
 object SanitizedKifiHit {
   implicit val format = (
-    (__ \ 'uuid).format(ExternalId.format[SanitizedKifiHit]) and
+    (__ \ 'uuid).format(ExternalId.format[ArticleSearchResult]) and
     (__ \ 'origin).format[String] and
     (__ \ 'url).format[String] and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
@@ -135,7 +136,7 @@ class SearchAnalytics @Inject() (
   articleSearchResultStore: ArticleSearchResultStore,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   heimdal: HeimdalServiceClient,
-  airbrake: AirbrakeNotifier) {
+  airbrake: AirbrakeNotifier) extends Logging {
 
   def searched(
     userId: Id[User],
@@ -181,9 +182,13 @@ class SearchAnalytics @Inject() (
       contextBuilder += ("titleMatches", hitContext.titleMatches)
       contextBuilder += ("urlMatches", hitContext.urlMatches)
 
-      val queryTermsCount = contextBuilder.data.get("queryTerms").collect { case ContextDoubleData(count) => count.toInt }.get
-      contextBuilder += ("titleMatchQueryRatio", hitContext.titleMatches.toDouble / queryTermsCount)
-      contextBuilder += ("urlMatchQueryRatio", hitContext.urlMatches.toDouble / queryTermsCount)
+      contextBuilder.data.get("queryTerms").collect { case ContextDoubleData(count) => count.toInt } match {
+        case None =>
+          log.warn(s"[clickedSearchResult($userId)] Failed to get queryTermsCount; data(queryTerms)=${contextBuilder.data.get("queryTerms")}")
+        case Some(queryTermsCount) =>
+          contextBuilder += ("titleMatchQueryRatio", hitContext.titleMatches.toDouble / queryTermsCount)
+          contextBuilder += ("urlMatchQueryRatio", hitContext.urlMatches.toDouble / queryTermsCount)
+      }
     }
 
     heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.CLICKED_SEARCH_RESULT, clickedAt))
@@ -194,74 +199,69 @@ class SearchAnalytics @Inject() (
     }
   }
 
-  private def getArticleSearchResult(uuid: ExternalId[ArticleSearchResult], maxAttempt: Int = 3): ArticleSearchResult = {
-    var attempt = 1
-    while (attempt < maxAttempt) {
-      try {
-        return articleSearchResultStore.get(uuid).get
-      } catch {
-        case ex: Exception =>
-      } finally {
-        attempt += 1
-      }
-    }
-    articleSearchResultStore.get(uuid).get
+  private def getArticleSearchResult(uuid: ExternalId[ArticleSearchResult], maxAttempt: Int = 3): Option[ArticleSearchResult] = {
+    (0 until maxAttempt).iterator.map{ i =>
+      if (i != 0) log.warn(s"getArticleSearchResult($uuid) attempt#$i failed to retrieve from S3")
+      articleSearchResultStore.get(uuid)
+    }.collectFirst{ case Some(x) => x }
   }
 
   private def processBasicSearchContext(userId: Id[User], searchContext: BasicSearchContext, contextBuilder: HeimdalContextBuilder): Unit = {
-    val latestSearchResult = getArticleSearchResult(searchContext.uuid)
-    val initialSearchId = articleSearchResultStore.getInitialSearchId(latestSearchResult)
-    val initialSearchResult = getArticleSearchResult(initialSearchId)
+    for {
+      latestSearchResult <- getArticleSearchResult(searchContext.uuid)
+      initialSearchId = articleSearchResultStore.getInitialSearchId(latestSearchResult)
+      initialSearchResult <- getArticleSearchResult(initialSearchId)
+    } yield {
+      // Search Context
+      addOriginInformation(contextBuilder, searchContext.origin)
+      contextBuilder += ("sessionId", searchContext.sessionId)
+      searchContext.refinement.foreach { refinement => contextBuilder += ("refinement", refinement) }
+      contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
 
-    // Search Context
-    addOriginInformation(contextBuilder, searchContext.origin)
-    contextBuilder += ("sessionId", searchContext.sessionId)
-    searchContext.refinement.foreach { refinement => contextBuilder += ("refinement", refinement) }
-    contextBuilder += ("searchId", obfuscate(initialSearchId, userId))
+      // Search Parameters
+      searchContext.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
+      contextBuilder += ("queryTerms", initialSearchResult.query.split(" ").length)
+      contextBuilder += ("queryCharacters", initialSearchResult.query.length)
+      contextBuilder += ("language", initialSearchResult.lang)
+      searchContext.filterByPeople.foreach { filter => contextBuilder += ("filterByPeople", filter) }
+      searchContext.filterByTime.foreach { filter => contextBuilder += ("filterByTime", filter) }
 
-    // Search Parameters
-    searchContext.searchExperiment.foreach { id => contextBuilder += ("searchExperiment", id.id) }
-    contextBuilder += ("queryTerms", initialSearchResult.query.split(" ").length)
-    contextBuilder += ("queryCharacters", initialSearchResult.query.length)
-    contextBuilder += ("language", initialSearchResult.lang)
-    searchContext.filterByPeople.foreach { filter => contextBuilder += ("filterByPeople", filter) }
-    searchContext.filterByTime.foreach { filter => contextBuilder += ("filterByTime", filter) }
+      // Kifi Results
 
-    // Kifi Results
+      val topKeeps = initialSearchResult.hits.map(keep)
+      contextBuilder += ("topKifiResults", topKeeps.length)
+      contextBuilder += ("topKeeps", topKeeps)
+      contextBuilder += ("ownTopKeeps", topKeeps.count(_ == own))
+      contextBuilder += ("friendsTopKeeps", topKeeps.count(_ == friends))
+      contextBuilder += ("othersTopKeeps", topKeeps.count(_ == others))
 
-    val topKeeps = initialSearchResult.hits.map(keep)
-    contextBuilder += ("topKifiResults", topKeeps.length)
-    contextBuilder += ("topKeeps", topKeeps)
-    contextBuilder += ("ownTopKeeps", topKeeps.count(_ == own))
-    contextBuilder += ("friendsTopKeeps", topKeeps.count(_ == friends))
-    contextBuilder += ("othersTopKeeps", topKeeps.count(_ == others))
+      searchContext.maxResults.foreach { maxResults =>
+        val initialKeeps = topKeeps take maxResults
+        contextBuilder += ("maxResults", maxResults)
+        contextBuilder += ("initialKifiResults", initialKeeps.length)
+        contextBuilder += ("initialKeeps", initialKeeps)
+        contextBuilder += ("initialOwnKeeps", initialKeeps.count(_ == own))
+        contextBuilder += ("initialFriendsKeeps", initialKeeps.count(_ == friends))
+        contextBuilder += ("initialOthersKeeps", initialKeeps.count(_ == others))
+      }
 
-    searchContext.maxResults.foreach { maxResults =>
-      val initialKeeps = topKeeps take maxResults
-      contextBuilder += ("maxResults", maxResults)
-      contextBuilder += ("initialKifiResults", initialKeeps.length)
-      contextBuilder += ("initialKeeps", initialKeeps)
-      contextBuilder += ("initialOwnKeeps", initialKeeps.count(_ == own))
-      contextBuilder += ("initialFriendsKeeps", initialKeeps.count(_ == friends))
-      contextBuilder += ("initialOthersKeeps", initialKeeps.count(_ == others))
+      contextBuilder += ("moreResultsRequests", latestSearchResult.pageNumber)
+      contextBuilder += ("displayedKifiResults", searchContext.kifiResults)
+      searchContext.kifiResultsClicked.foreach { count => contextBuilder += ("kifiResultsClicked", count) }
+      searchContext.thirdPartyResultsClicked.foreach { count => contextBuilder += ("thirdPartyResultsClicked", count) }
+
+      // Kifi Performance
+
+      contextBuilder += ("kifiExpanded", searchContext.kifiExpanded)
+      contextBuilder += ("kifiRelevant", initialSearchResult.toShow)
+      contextBuilder += ("kifiLate", initialSearchResult.toShow && !searchContext.kifiExpanded)
+      contextBuilder += ("kifiProcessingTime", initialSearchResult.millisPassed)
+      searchContext.kifiTime.foreach { kifiLatency => contextBuilder += ("kifiLatency", kifiLatency) }
+      searchContext.kifiShownTime.foreach { kifiShown => contextBuilder += ("kifiShownTime", kifiShown) }
+      searchContext.thirdPartyShownTime.foreach { thirdPartyShown => contextBuilder += ("thirdPartyShownTime", thirdPartyShown) }
+      for { kifiShown <- searchContext.kifiShownTime; thirdPartyShown <- searchContext.thirdPartyShownTime } yield { contextBuilder += ("kifiDelay", kifiShown - thirdPartyShown) }
+      for { kifiShown <- searchContext.kifiShownTime; kifiLatency <- searchContext.kifiTime } yield { contextBuilder += ("kifiRenderingTime", kifiShown - kifiLatency)}
     }
-
-    contextBuilder += ("moreResultsRequests", latestSearchResult.pageNumber)
-    contextBuilder += ("displayedKifiResults", searchContext.kifiResults)
-    searchContext.kifiResultsClicked.foreach { count => contextBuilder += ("kifiResultsClicked", count) }
-    searchContext.thirdPartyResultsClicked.foreach { count => contextBuilder += ("thirdPartyResultsClicked", count) }
-
-    // Kifi Performance
-
-    contextBuilder += ("kifiExpanded", searchContext.kifiExpanded)
-    contextBuilder += ("kifiRelevant", initialSearchResult.toShow)
-    contextBuilder += ("kifiLate", initialSearchResult.toShow && !searchContext.kifiExpanded)
-    contextBuilder += ("kifiProcessingTime", initialSearchResult.millisPassed)
-    searchContext.kifiTime.foreach { kifiLatency => contextBuilder += ("kifiLatency", kifiLatency) }
-    searchContext.kifiShownTime.foreach { kifiShown => contextBuilder += ("kifiShownTime", kifiShown) }
-    searchContext.thirdPartyShownTime.foreach { thirdPartyShown => contextBuilder += ("thirdPartyShownTime", thirdPartyShown) }
-    for { kifiShown <- searchContext.kifiShownTime; thirdPartyShown <- searchContext.thirdPartyShownTime } yield { contextBuilder += ("kifiDelay", kifiShown - thirdPartyShown) }
-    for { kifiShown <- searchContext.kifiShownTime; kifiLatency <- searchContext.kifiTime } yield { contextBuilder += ("kifiRenderingTime", kifiShown - kifiLatency)}
   }
 
   private def obfuscate(searchId: ExternalId[ArticleSearchResult], userId: Id[User]): String = {

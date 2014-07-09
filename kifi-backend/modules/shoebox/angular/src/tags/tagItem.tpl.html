@@ -12,10 +12,10 @@
       </div>
       <div class="kf-tag-tool kf-tag-dropdown-toggle" ng-click="toggleDropdown($event)"></div>
       <div class="kf-tag-tool kf-tag-handle" ng-if="watchTagReorder()"></div>
-      <ul class="kf-dropdown-menu" ng-show="isDropdownOpen" ng-click="cancelNavigation($event)">
+      <ul class="kf-dropdown-menu" ng-if="isDropdownOpen" ng-click="cancelNavigation($event)">
         <li>
           <a href="javascript:" ng-mousedown="setRenaming()">Rename</a>
-      </li>
+        </li>
         <li>
           <a href="javascript:" ng-mousedown="removeTag(tag)">Remove</a>
         </li>

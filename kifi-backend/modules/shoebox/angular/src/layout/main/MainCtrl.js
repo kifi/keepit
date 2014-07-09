@@ -156,7 +156,7 @@ angular.module('kifi.layout.main', [
       }
 
       $analytics.eventTrack('user_clicked_page', {
-        'type': 'bookmarkImport',
+        'type': 'browserImport',
         'action': makePublic ? 'ImportPublic' : 'ImportPrivate'
       });
 

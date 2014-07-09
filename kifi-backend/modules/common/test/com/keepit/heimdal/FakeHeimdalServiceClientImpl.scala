@@ -5,6 +5,7 @@ import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.service.ServiceType
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.zookeeper.ServiceCluster
+import org.joda.time.DateTime
 
 import scala.concurrent.{Future, Promise}
 
@@ -43,4 +44,6 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def setUserProperties(userId: Id[User], properties: (String, ContextData)*): Unit = {}
 
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = {}
+
+  def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]] = Future.successful(None)
 }

@@ -48,7 +48,7 @@ class ExtDeepLinkController @Inject() (
     val req = request.body.asInstanceOf[JsObject]
     val locator = (req \ "locator").as[String]
     val recipient = Id[User]((req \ "recipient").as[Long])
-    val link = db.readOnly { implicit session =>
+    val link = db.readOnlyMaster { implicit session =>
       try {
         deepLinkRepo.getByLocatorAndUser(DeepLocator(locator), recipient).token.value
       } catch {
@@ -121,7 +121,10 @@ class ExtDeepLinkController @Inject() (
     val token = DeepLinkToken(tokenString)
     val result: Option[SimpleResult] = getDeepLinkAndUrl(token) map {
       case (deepLink, uri) =>
-        if (isKifiIphoneApp) {
+        if (deepLink.deepLocator.value.endsWith("#compose")) {
+          log.info(s"iphone app cannot yet handle #compose")
+          Redirect(uri.url)
+        } else if (isKifiIphoneApp) {
           log.info(s"handling request from iphone app")
           Redirect(uri.url)
         } else if (isIphone) {
@@ -133,7 +136,7 @@ class ExtDeepLinkController @Inject() (
   }
 
   private def getDeepLinkAndUrl(token: DeepLinkToken): Option[(DeepLink, NormalizedURI)] = {
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       for {
         deepLink <- deepLinkRepo.getByToken(token)
         uriId <- deepLink.uriId

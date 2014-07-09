@@ -6,12 +6,11 @@ package com.keepit.scraper
 import java.io.IOException
 import com.keepit.model._
 import com.keepit.common.db.Id
-import com.keepit.common.service.{ServiceClient, ServiceType}
+import com.keepit.common.service.{RequestConsolidator, ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{CallTimeouts, HttpClient}
 import com.keepit.common.zookeeper.ServiceCluster
-import scala.concurrent.Future
 import com.google.inject.Inject
 import com.google.inject.util.Providers
 import com.keepit.common.routes.{Common, Scraper}
@@ -24,6 +23,8 @@ import org.joda.time.DateTime
 import akka.actor.Scheduler
 import com.keepit.scraper.embedly.EmbedlyInfo
 import com.keepit.common.store.ImageSize
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 
 case class ScrapeTuple(uri:NormalizedURI, articleOpt:Option[Article])
@@ -154,7 +155,9 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
-  def getSignature(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = {
+  private[this] val consolidateGetSignatureReq = new RequestConsolidator[String, Option[Signature]](30 seconds)
+
+  def getSignature(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = consolidateGetSignatureReq(url) { url =>
     call(Scraper.internal.getSignature, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name))).map{ r =>
       r.json.asOpt[String].map(Signature(_))
     }

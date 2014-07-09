@@ -15,7 +15,7 @@ trait DataBaseComponent {
   // A database instance to which connections can be created.
   // Encapsulates either a DataSource or parameters for DriverManager.getConnection().
   val masterDb: SlickDatabase
-  val slaveDb: Option[SlickDatabase]
+  val replicaDb: Option[SlickDatabase]
 
   def getSequence[T](name: String): DbSequence[T]
 

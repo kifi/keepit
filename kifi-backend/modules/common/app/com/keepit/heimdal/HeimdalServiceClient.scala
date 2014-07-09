@@ -6,7 +6,7 @@ import com.keepit.common.routes.Heimdal
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{CallTimeouts, HttpClient}
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.common.actor.{BatchingActor, BatchingActorConfiguration, ActorInstance}
+import com.keepit.common.actor.{FlushEventQueueAndClose, BatchingActor, BatchingActorConfiguration, ActorInstance}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import com.keepit.common.time.Clock
@@ -49,10 +49,9 @@ trait HeimdalServiceClient extends ServiceClient {
   def setUserProperties(userId: Id[User], properties: (String, ContextData)*): Unit
 
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit
-}
 
-object FlushEventQueue
-object FlushEventQueueAndClose
+  def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]]
+}
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
   val MaxBatchSize = 20
@@ -75,7 +74,7 @@ class HeimdalClientActor @Inject() (
   val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
 
   val batchingConf = HeimdalBatchingConfiguration
-  def processBatch(events: Seq[HeimdalEvent]): Unit = heimdalEventQueue.send(events)
+  def processBatch(events: Seq[HeimdalEvent]): Future[_] = heimdalEventQueue.send(events)
   def getEventTime(event: HeimdalEvent): DateTime = event.time
 }
 
@@ -93,7 +92,7 @@ class HeimdalServiceClientImpl @Inject() (
 
   override def onStop() {
     val res = actor.ref ? FlushEventQueueAndClose
-    Await.result(res, Duration(30, SECONDS))
+    Await.result(res, Duration(5, SECONDS))
     super.onStop()
   }
 
@@ -142,4 +141,10 @@ class HeimdalServiceClientImpl @Inject() (
 
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit =
     call(Heimdal.internal.setUserAlias(userId: Id[User], externalId: ExternalId[User]), callTimeouts = longTimeout)
+
+  def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]] = {
+    call(Heimdal.internal.getLastDelightedAnswerDate(userId)).map { response =>
+      Json.parse(response.body).asOpt[DateTime]
+    }
+  }
 }

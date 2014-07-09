@@ -25,26 +25,20 @@ function ReconnectingWebSocket(url, opts) {
     log('#0bf', '[RWS.close]');
     disconnect('close');
     this.send = this.close = outbox = null;
-    window.removeEventListener('online', onOnlineConnect);
   };
 
   connect();
 
   function connect(retryPolicy, elapsedRetryDelayMs) {
+    log('#0bf', '[RWS.connect]');
     clearTimers();
-    if (navigator.onLine) {
-      log('#0bf', '[RWS.connect]');
-      ws = new WebSocket(url);
-      ws.onopen = onOpen;
-      ws.onclose = onClose;
-      ws.onerror = onError;
-      timers.disconnect = setTimeout(
-        disconnect.bind(null, 'connect', o.openTimeoutMs, retryPolicy, elapsedRetryDelayMs),
-        o.openTimeoutMs);  // expecting onOpen
-    } else {
-      log('#0bf', '[RWS.connect] offline');
-      window.addEventListener('online', onOnlineConnect);
-    }
+    ws = new WebSocket(url);
+    ws.onopen = onOpen;
+    ws.onclose = onClose.bind(null, retryPolicy, elapsedRetryDelayMs);
+    ws.onerror = onError;
+    timers.disconnect = setTimeout(
+      disconnect.bind(null, 'connect', o.openTimeoutMs, retryPolicy, elapsedRetryDelayMs),
+      o.openTimeoutMs);  // expecting onOpen
   }
 
   function disconnect(why, msWaited, retryPolicy, prevRetryDelayMs) {
@@ -57,23 +51,32 @@ function ReconnectingWebSocket(url, opts) {
     }
     clearTimers();
     if (retryDelayMs) {
+      window.addEventListener('online', onOnlineConnect);
       timers.connect = setTimeout(connect.bind(null, retryPolicy, retryDelayMs), retryDelayMs);
       o.onDisconnect(why, msWaited / 1000);
+    } else {
+      window.removeEventListener('online', onOnlineConnect);
     }
   }
 
   function onOpen() {
     log('#0bf', '[RWS.onopen]');
+    ws.onclose = onClose;
     ws.onmessage = onMessage1;
     clearTimers();
+    window.removeEventListener('online', onOnlineConnect);
     timers.disconnect = setTimeout(
       disconnect.bind(null, 'stillborn', o.helloTimeoutMs),
       o.helloTimeoutMs);
   }
 
-  function onClose() {
+  function onClose(retryPolicy, elapsedRetryDelayMs) {
     log('#0bf', '[RWS.onclose]');
-    disconnect('onclose');
+    if (elapsedRetryDelayMs) {
+      disconnect('onclose', null, retryPolicy, elapsedRetryDelayMs);
+    } else {
+      disconnect('onclose');
+    }
   }
 
   function onError(e) {
@@ -126,9 +129,9 @@ function ReconnectingWebSocket(url, opts) {
 
   function onOnlineConnect() {
     log('#0bf', '[RWS.onOnlineConnect]');
-    window.removeEventListener('online', onOnlineConnect);
-    clearTimers();
-    timers.connect = setTimeout(connect, 200);  // patience, Danielson
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      disconnect('online');  // reattempts connect soon
+    }
   }
 
   function ping() {

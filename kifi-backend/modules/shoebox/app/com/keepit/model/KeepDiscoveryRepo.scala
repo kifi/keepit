@@ -5,12 +5,12 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.google.inject.{Singleton, ImplementedBy, Inject}
+import com.keepit.search.ArticleSearchResult
 import org.joda.time.DateTime
-import com.keepit.heimdal.SanitizedKifiHit
 
 @ImplementedBy(classOf[KeepDiscoveryRepoImpl])
 trait KeepDiscoveryRepo extends Repo[KeepDiscovery] {
-  def getDiscoveriesByUUID(uuid:ExternalId[SanitizedKifiHit])(implicit r:RSession):Seq[KeepDiscovery]
+  def getDiscoveriesByUUID(uuid:ExternalId[ArticleSearchResult])(implicit r:RSession):Seq[KeepDiscovery]
   def getByKeepId(keepId:Id[Keep])(implicit r:RSession):Seq[KeepDiscovery]
   def getDiscoveriesByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusMonths(1))(implicit r:RSession):Seq[KeepDiscovery]
   def getDiscoveryCountByKeeper(userId:Id[User], since:DateTime = currentDateTime.minusMonths(1))(implicit r:RSession):Int
@@ -28,8 +28,8 @@ class KeepDiscoveryRepoImpl @Inject() (
   import db.Driver.simple._
 
   type RepoImpl = KeepDiscoveriesTable
-  class KeepDiscoveriesTable(tag: Tag) extends RepoTable[KeepDiscovery](db, tag, "keep_click") {
-    def hitUUID = column[ExternalId[SanitizedKifiHit]]("hit_uuid", O.NotNull)
+  class KeepDiscoveriesTable(tag: Tag) extends RepoTable[KeepDiscovery](db, tag, "keep_click") { // todo(ray): rename => keep_discovery
+    def hitUUID = column[ExternalId[ArticleSearchResult]]("hit_uuid", O.NotNull)
     def numKeepers = column[Int]("num_keepers", O.NotNull)
     def keeperId = column[Id[User]]("keeper_id", O.NotNull)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
@@ -44,7 +44,7 @@ class KeepDiscoveryRepoImpl @Inject() (
   override def deleteCache(model: KeepDiscovery)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: KeepDiscovery)(implicit session: RSession): Unit = {}
 
-  def getDiscoveriesByUUID(uuid: ExternalId[SanitizedKifiHit])(implicit r: RSession): Seq[KeepDiscovery] = {
+  def getDiscoveriesByUUID(uuid: ExternalId[ArticleSearchResult])(implicit r: RSession): Seq[KeepDiscovery] = {
     (for (r <- rows if (r.hitUUID === uuid && r.state === KeepDiscoveryStates.ACTIVE)) yield r).list()
   }
 

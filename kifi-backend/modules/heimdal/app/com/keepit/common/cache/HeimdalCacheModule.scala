@@ -1,12 +1,13 @@
 package com.keepit.common.cache
 
+import com.keepit.model.{AnonymousEventDescriptorNameCache, UserEventDescriptorNameCache, SystemEventDescriptorNameCache, NonUserEventDescriptorNameCache}
+
 import scala.concurrent.duration._
 import com.keepit.common.logging.AccessLog
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.search.ActiveExperimentsCache
-import com.keepit.heimdal.{NonUserEventDescriptorNameCache, AnonymousEventDescriptorNameCache, UserEventDescriptorNameCache, SystemEventDescriptorNameCache}
 import com.keepit.common.usersegment.UserSegmentCache
 
 case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {

@@ -19,13 +19,13 @@ class URISummaryController @Inject() (
   db: Database) extends ShoeboxServiceController {
 
   def updateUriScreenshotsForUriId(id: Id[NormalizedURI]) = Action { request =>
-    val nUri = db.readOnly{ implicit session => normalizedUriRepo.get(id) }
+    val nUri = db.readOnlyMaster{ implicit session => normalizedUriRepo.get(id) }
     uriSummaryCommander.updateScreenshots(nUri)
     Status(202)("0")
   }
 
   def getUriImageForUriId(id: Id[NormalizedURI]) = Action.async { request =>
-    val nUri = db.readOnly{ implicit session => normalizedUriRepo.get(id) }
+    val nUri = db.readOnlyMaster{ implicit session => normalizedUriRepo.get(id) }
     val urlFut = uriSummaryCommander.getURIImage(nUri)
     urlFut map { urlOpt => Ok(Json.toJson(urlOpt)) }
   }
@@ -41,7 +41,7 @@ class URISummaryController @Inject() (
     val waiting = (request.body \ "waiting").asOpt[Boolean].getOrElse(false)
     val silent = (request.body \ "silent").asOpt[Boolean].getOrElse(false)
     val uriIds = Json.fromJson[Seq[Id[NormalizedURI]]](uriIdsJson).get
-    val nUris = db.readOnly{ implicit session =>
+    val nUris = db.readOnlyMaster{ implicit session =>
       uriIds map (normalizedUriRepo.get(_))
     }
     val uriSummariesFut = if (withDescription && !silent) {
