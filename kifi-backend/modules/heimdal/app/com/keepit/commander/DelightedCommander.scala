@@ -12,6 +12,7 @@ import play.api.libs.json.{JsString, JsValue, Json}
 import play.api.libs.ws.{WS, Response}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
+import play.api.http.Status
 
 case class DelightedConfig(url: String, apiKey: String)
 
@@ -36,8 +37,6 @@ class DelightedCommanderImpl @Inject() (
   }
 
   def postDelightedAnswer(userId: Id[User], email: EmailAddress, score: Int, comment: Option[String]): Future[JsValue] = {
-    import play.api.http.Status
-
     getOrCreateDelightedUser(userId, email) flatMap { userOpt =>
       userOpt map { user =>
         val data = Map(
@@ -76,8 +75,6 @@ class DelightedCommanderImpl @Inject() (
   }
 
   private def getOrCreateDelightedUser(userId: Id[User], email: EmailAddress): Future[Option[DelightedUser]] = {
-    import play.api.http.Status
-
     db.readOnlyMaster {
       implicit s => delightedUserRepo.getByUserId(userId)
     } map { user => Future.successful(Some(user)) } getOrElse {

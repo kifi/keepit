@@ -152,7 +152,10 @@ class HeimdalServiceClientImpl @Inject() (
   }
 
   def postDelightedAnswer(userId: Id[User], email: EmailAddress, score: Int, comment: Option[String]): Future[Boolean] = {
-    if (score < 0 || score > 10) return Future.successful(false)
+    if (score < 0 || score > 10) return {
+      airbrakeNotifier.notify(s"Invalid score $score for user $userId with email ${email.address} (comment: $comment)")
+      Future.successful(false)
+    }
     call(Heimdal.internal.postDelightedAnswer(userId, email, score, comment)).map { response =>
       Json.parse(response.body) match {
         case JsString(s) if s == "success" => true

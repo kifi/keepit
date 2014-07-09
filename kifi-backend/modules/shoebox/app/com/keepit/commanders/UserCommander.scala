@@ -828,7 +828,7 @@ class UserCommander @Inject() (
   }
 
   def postDelightedAnswer(userId: Id[User], score: Int, comment: Option[String]): Future[Boolean] = {
-    val user = db.readOnly { implicit s => userRepo.get(userId) }
+    val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
     user.primaryEmail map { email =>
       heimdalClient.postDelightedAnswer(userId, email, score, comment)
     } getOrElse {
