@@ -19,6 +19,7 @@ sealed trait EmailAccountUpdaterActorMessage
 object EmailAccountUpdaterActorMessage {
   case class FetchEmailUpdates(fetchSize: Int) extends EmailAccountUpdaterActorMessage
   case class ProcessEmailUpdates(updates: Seq[EmailAccountUpdate], fetchSize: Int) extends EmailAccountUpdaterActorMessage
+  case object CancelUpdate
 }
 
 class EmailAccountUpdaterActor @Inject() (
@@ -44,12 +45,12 @@ class EmailAccountUpdaterActor @Inject() (
         }
         case Failure(_) => {
           log.error(s"Failed to fetch EmailAccountUpdates.")
-          updating = false
+          self ! CancelUpdate
         }
       }
     }
 
-    case ProcessEmailUpdates(updates, fetchSize) => try {
+    case ProcessEmailUpdates(updates, fetchSize) => {
       if (updates.nonEmpty) db.readWrite(attempts = 2) { implicit session =>
         updates.sortBy(_.seq).foreach {
 
@@ -78,6 +79,8 @@ class EmailAccountUpdaterActor @Inject() (
       if (updates.length < fetchSize) { updating = false }
       else { self ! FetchEmailUpdates(fetchSize) }
     }
+
+    case CancelUpdate => { updating = false }
 
     case m => throw new UnsupportedActorMessage(m)
   }
