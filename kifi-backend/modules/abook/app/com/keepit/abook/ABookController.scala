@@ -313,4 +313,16 @@ class ABookController @Inject() (
       Ok(Json.toJson(hits))
     }
   }
+
+  def getContactsByUser(userId: Id[User], page: Option[Int], pageSize: Option[Int]) = Action { request =>
+    val allContacts = db.readOnlyReplica { implicit session => econtactRepo.getByUserId(userId) }
+    val relevantContacts = {
+      for {
+        p <- page
+        s <- pageSize
+      } yield allContacts.sortBy(_.id.get.id).drop(p * s).take(s)
+    } getOrElse allContacts
+    val richContacts = relevantContacts.map(EContact.toRichContact)
+    Ok(Json.toJson(richContacts))
+  }
 }

@@ -265,6 +265,7 @@ object ABook extends Service {
     def getContactNameByEmail(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/getContactNameByEmail")
     def internKifiContact(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/internKifiContact")
     def contactTypeahead(userId: Id[User], query: String, maxHits: Option[Int]) = ServiceRoute(GET, s"/internal/abook/${userId}/contactTypeahead", Param("q", query), Param("maxHits", maxHits))
+    def getContactsByUser(userId: Id[User], page: Option[Int], pageSize: Option[Int]) = ServiceRoute(GET, s"/internal/abook/${userId}/getContacts", Param("page", page), Param("pageSize", pageSize))
   }
 }
 

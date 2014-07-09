@@ -67,6 +67,7 @@ trait ABookServiceClient extends ServiceClient {
   def getContactNameByEmail(userId:Id[User], email: EmailAddress): Future[Option[String]]
   def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact]
   def contactTypeahead(userId: Id[User], query: String, maxHits: Option[Int] = None): Future[Seq[TypeaheadHit[RichContact]]]
+  def getContactsByUser(userId: Id[User], page: Option[Int] = None, pageSize: Option[Int] = None): Future[Seq[RichContact]]
 }
 
 
@@ -207,6 +208,12 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
+  def getContactsByUser(userId: Id[User], page: Option[Int], pageSize: Option[Int]): Future[Seq[RichContact]] = {
+    call(ABook.internal.getContactsByUser(userId, page, pageSize)).map { r =>
+      r.json.as[Seq[RichContact]]
+    }
+  }
+
   def refreshPrefixFilter(userId: Id[User]): Future[Unit] = {
     call(ABook.internal.refreshPrefixFilter(userId)).map { r =>
       r.status match {
@@ -335,4 +342,5 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def contactTypeahead(userId: Id[User], query: String, maxHits: Option[Int]): Future[Seq[TypeaheadHit[RichContact]]] = Future.successful(Seq.empty)
 
+  def getContactsByUser(userId: Id[User], page: Option[Int], pageSize: Option[Int]): Future[Seq[RichContact]] = Future.successful(Seq.empty)
 }
