@@ -214,18 +214,18 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  private def fetchAll(socialF: Future[Option[Seq[TypeaheadHit[SocialUserBasicInfo]]]],
-                       kifiF: Future[Option[Seq[TypeaheadHit[User]]]],
+  private def fetchAll(socialF: Future[Seq[TypeaheadHit[SocialUserBasicInfo]]],
+                       kifiF: Future[Seq[TypeaheadHit[User]]],
                        abookF: Future[Seq[TypeaheadHit[RichContact]]],
                        nfUsersF: Future[Seq[TypeaheadHit[BasicUserWithUserId]]]) = {
     for {
-      socialHitsOpt <- socialF
-      kifiHitsOpt <- kifiF
+      socialHits <- socialF
+      kifiHits <- kifiF
       abookHits <- abookF
       nfUserHits <- nfUsersF
     } yield {
-      val socialHitsTup = socialHitsOpt.getOrElse(Seq.empty).map(h => (h.info.networkType, h))
-      val kifiHitsTup = kifiHitsOpt.getOrElse(Seq.empty).map(h => (SocialNetworks.FORTYTWO, h))
+      val socialHitsTup = socialHits.map(h => (h.info.networkType, h))
+      val kifiHitsTup = kifiHits.map(h => (SocialNetworks.FORTYTWO, h))
       val abookHitsTup = abookHits.map(h => (SocialNetworks.EMAIL, h))
       val nfUserHitsTup = nfUserHits.map(h => (SocialNetworks.FORTYTWO_NF, h))
       log.infoP(s"social.len=${socialHitsTup.length} kifi.len=${kifiHitsTup.length} abook.len=${abookHitsTup.length} nf.len=${nfUserHits.length}")
@@ -237,14 +237,12 @@ class TypeaheadCommander @Inject()(
 
   private def aggregate(userId: Id[User], q: String, limit: Option[Int], dedupEmail:Boolean): Future[Option[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = {
     implicit val prefix = LogPrefix(s"aggregate($userId,$q,$limit)")
-    val socialF = socialUserTypeahead.asyncTopN(userId, q, limit map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { resOpt =>
-      resOpt map { res =>
-        res.collect {
-          case hit if includeHit(hit) => hit
-        }
+    val socialF = socialUserTypeahead.topN(userId, q, limit map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { res =>
+      res.collect {
+        case hit if includeHit(hit) => hit
       }
     }
-    val kifiF = kifiUserTypeahead.asyncTopN(userId, q, limit)(TypeaheadHit.defaultOrdering[User])
+    val kifiF = kifiUserTypeahead.topN(userId, q, limit)(TypeaheadHit.defaultOrdering[User])
     val abookF = if (q.length < 2) Future.successful(Seq.empty) else abookServiceClient.prefixQuery(userId, q, limit)
     val nfUsersF = if (q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeaheadWithUserId(userId, q, limit.getOrElse(100), filter = "nf")
 
@@ -252,16 +250,15 @@ class TypeaheadCommander @Inject()(
       case None => fetchAll(socialF, kifiF, abookF, nfUsersF)
       case Some(n) =>
         val zHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])] // can use minHeap
-        socialF flatMap { socialHitsOpt =>
-          val socialHits = socialHitsOpt.getOrElse(Seq.empty).map(h => (h.info.networkType, h)).sorted(hitOrd)
+        socialF flatMap { socialRes =>
+          val socialHits = socialRes.map(h => (h.info.networkType, h)).sorted(hitOrd)
           zHits ++= socialHits.takeWhile(t => t._2.score == 0)
           val topF = if (zHits.length >= n) {
             val res = zHits.take(n)
             log.infoP(s"short-circuit (social) res=${res.mkString(",")}")
             Future.successful(Option(res))
           } else {
-            kifiF flatMap { kifiHitsOpt =>
-              val kifiRes = kifiHitsOpt.getOrElse(Seq.empty)
+            kifiF flatMap { kifiRes =>
               val kifiHits  = kifiRes.map(h => (SocialNetworks.FORTYTWO, h)).sorted(hitOrd)
               zHits ++= kifiHits.takeWhile(t => t._2.score == 0)
               if (zHits.length >= n) {
