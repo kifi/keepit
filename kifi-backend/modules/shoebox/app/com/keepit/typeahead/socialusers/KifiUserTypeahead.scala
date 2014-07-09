@@ -66,7 +66,7 @@ class KifiUserTypeahead @Inject()(
     }
   }
 
-  protected def asyncGetOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[User]] = {
+  protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[User]] = {
     implicit val ctx = ExecutionContext.fj
     cache.getOrElseFuture(KifiUserTypeaheadKey(userId)) {
       val res = store.getWithMetadata(userId)

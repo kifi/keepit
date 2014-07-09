@@ -32,7 +32,7 @@ class SocialUserTypeahead @Inject() (
   socialUserRepo: SocialUserInfoRepo
 ) extends Typeahead[SocialUserInfo, SocialUserBasicInfo] with Logging {
 
-  protected def asyncGetOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[SocialUserInfo]] = {
+  protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[SocialUserInfo]] = {
     cache.getOrElseFuture(SocialUserTypeaheadKey(userId)) {
       val res = store.getWithMetadata(userId)
       res match {

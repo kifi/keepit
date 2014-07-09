@@ -22,20 +22,13 @@ trait Typeahead[E, I] extends Logging {
 
   protected val consolidateFetchReq = new RequestConsolidator[Id[User], Option[PrefixFilter[E]]](15 seconds)
 
-  def getPrefixFilter(userId: Id[User]): Option[PrefixFilter[E]] = {
-    try {
-      val future = consolidateFetchReq(userId) { id =>
-        asyncGetOrCreatePrefixFilter(id).map(Some(_))(ExecutionContext.fj)
-      }
-      Await.result(future, Duration.Inf)
-    } catch {
-      case t:Throwable =>
-        airbrake.notify(s"[getPrefixFilter($userId)] Caught Exception $t; cause=${t.getCause}",t)
-        None
+  private[this] def getPrefixFilter(userId: Id[User]): Future[Option[PrefixFilter[E]]] = {
+    consolidateFetchReq(userId) { id =>
+      getOrCreatePrefixFilter(id).map(Some(_))(ExecutionContext.fj)
     }
   }
 
-  protected def asyncGetOrCreatePrefixFilter(userId: Id[User]):Future[PrefixFilter[E]]
+  protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[E]]
 
   protected def getInfos(ids: Seq[Id[E]]): Seq[I]
 
@@ -50,24 +43,25 @@ trait Typeahead[E, I] extends Logging {
   protected def extractName(info: I): String
 
   def topN(userId: Id[User], query: String, limit:Option[Int])(implicit ord: Ordering[TypeaheadHit[I]]): Future[Seq[TypeaheadHit[I]]] = {
-    if (query.trim.length > 0) {
-      getPrefixFilter(userId) match {
-        case None =>
-          log.warn(s"[asyncTopN($userId,$query)] NO FILTER found")
-          Future.successful(Seq.empty)
-        case Some(filter) =>
-          if (filter.isEmpty) {
-            log.info(s"[asyncTopN($userId,$query)] filter is EMPTY")
+    if (query.trim.length <= 0) Future.successful(Seq.empty) else {
+      implicit val fj = ExecutionContext.fj
+      getPrefixFilter(userId) flatMap { prefixFilterOpt =>
+        prefixFilterOpt match {
+          case None =>
+            log.warn(s"[asyncTopN($userId,$query)] NO FILTER found")
             Future.successful(Seq.empty)
-          } else {
-            val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-            asyncGetInfos(filter.filterBy(queryTerms)).map { infos =>
-              topNWithInfos(infos, queryTerms, limit)
-            }(ExecutionContext.fj)
-          }
+          case Some(filter) =>
+            if (filter.isEmpty) {
+              log.info(s"[asyncTopN($userId,$query)] filter is EMPTY")
+              Future.successful(Seq.empty)
+            } else {
+              val queryTerms = PrefixFilter.normalize(query).split("\\s+")
+              asyncGetInfos(filter.filterBy(queryTerms)).map { infos =>
+                topNWithInfos(infos, queryTerms, limit)
+              }
+            }
+        }
       }
-    } else {
-      Future.successful(Seq.empty)
     }
   }
 

@@ -47,7 +47,7 @@ class EContactTypeahead @Inject() (
     }(ExecutionContext.fj)
   }
 
-  protected def asyncGetOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[EContact]] = {
+  protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[EContact]] = {
     cache.getOrElseFuture(EContactTypeaheadKey(userId)) {
       val res = store.getWithMetadata(userId)
       res match {
