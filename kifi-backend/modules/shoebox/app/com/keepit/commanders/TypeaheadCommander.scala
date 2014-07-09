@@ -93,54 +93,62 @@ class TypeaheadCommander @Inject()(
     }
   }
 
-  private def querySocial(userId:Id[User], search:Option[String], network:Option[String], limit:Int):Seq[(SocialUserBasicInfo, String)] = {
-    val filtered = search match {
+  private def querySocial(userId:Id[User], search:Option[String], network:Option[String], limit:Int): Future[Seq[(SocialUserBasicInfo, String)]] = {
+    val filteredF = search match {
       case Some(query) if query.trim.length > 0 => {
         implicit val hitOrdering = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
-        val infos = socialUserTypeahead.search(userId, query) getOrElse Seq.empty[SocialUserBasicInfo]
-        val res = network match {
-          case Some(networkType) => infos.filter(info => info.networkType.name == networkType)
-          case None => infos.filter(info => info.networkType.name != SocialNetworks.FORTYTWO) // backward compatibility
+        socialUserTypeahead.asyncSearch(userId, query) map { infosOpt =>
+          val infos = infosOpt getOrElse Seq.empty
+          val res = network match {
+            case Some(networkType) => infos.filter(info => info.networkType.name == networkType)
+            case None => infos.filter(info => info.networkType.name != SocialNetworks.FORTYTWO) // backward compatibility
+          }
+          log.info(s"[querySocialConnections($userId,$search,$network,$limit)] res=${res.mkString(",")}")
+          res
         }
-        log.info(s"[querySocialConnections($userId,$search,$network,$limit)] res=${res.mkString(",")}")
-        res
       }
       case None => {
-        val infos = db.readOnlyMaster { implicit s =>
+        db.readOnlyMasterAsync { implicit s =>
           socialConnectionRepo.getSocialConnectionInfosByUser(userId).filterKeys(networkType => network.forall(_ == networkType.name))
+        } map { infos =>
+          infos.values.flatten.toVector
         }
-        infos.values.flatten.toVector
+
       }
     }
-    log.info(s"[queryConnections($userId,$search,$network,$limit)] filteredConns(len=${filtered.length});${filtered.take(20).mkString(",")}")
+    filteredF map { filtered =>
+      log.info(s"[queryConnections($userId,$search,$network,$limit)] filteredConns(len=${filtered.length});${filtered.take(20).mkString(",")}")
 
-    val paged = filtered.take(limit)
+      val paged = filtered.take(limit)
 
-    db.readOnlyMaster { implicit ro =>
-      val allInvites = invitationRepo.getSocialInvitesBySenderId(userId)
-      val invitesMap = allInvites.map{ inv => inv.recipientSocialUserId.get -> inv }.toMap // overhead
+      db.readOnlyMaster { implicit ro =>
+        val allInvites = invitationRepo.getSocialInvitesBySenderId(userId)
+        val invitesMap = allInvites.map { inv => inv.recipientSocialUserId.get -> inv}.toMap // overhead
       val resWithStatus = paged map { sci =>
-        val status = sci.userId match {
-          case Some(userId) => "joined"
-          case None => invitesMap.get(sci.id) collect {
-            case inv if inv.state == InvitationStates.ACCEPTED || inv.state == InvitationStates.JOINED =>
-              // This is a hint that that cache may be stale as userId should be set
-              socialUserInfoRepo.getByUser(userId).foreach { socialUser =>
-                socialUserConnectionsCache.remove(SocialUserConnectionsKey(socialUser.id.get))
-              }
-              "joined"
-            case inv if inv.state != InvitationStates.INACTIVE => "invited"
-          } getOrElse ""
+          val status = sci.userId match {
+            case Some(userId) => "joined"
+            case None => invitesMap.get(sci.id) collect {
+              case inv if inv.state == InvitationStates.ACCEPTED || inv.state == InvitationStates.JOINED =>
+                // This is a hint that that cache may be stale as userId should be set
+                socialUserInfoRepo.getByUser(userId).foreach { socialUser =>
+                  socialUserConnectionsCache.remove(SocialUserConnectionsKey(socialUser.id.get))
+                }
+                "joined"
+              case inv if inv.state != InvitationStates.INACTIVE => "invited"
+            } getOrElse ""
+          }
+          (sci, status)
         }
-        (sci, status)
+        resWithStatus
       }
-      resWithStatus
     }
   }
 
-  private def querySocialInviteStatus(userId:Id[User], search:Option[String], network:Option[String], limit:Int, pictureUrl:Boolean):Seq[ConnectionWithInviteStatus] = {
-    querySocial(userId, search, network, limit) map { case (c, s) =>
-      ConnectionWithInviteStatus(c.fullName, -1, c.networkType.name, if (pictureUrl) c.getPictureUrl(75, 75) else None, socialId(c), s)
+  private def querySocialInviteStatus(userId:Id[User], search:Option[String], network:Option[String], limit:Int, pictureUrl:Boolean): Future[Seq[ConnectionWithInviteStatus]] = {
+    querySocial(userId, search, network, limit) map { infos =>
+      infos.map { case (c, s) =>
+        ConnectionWithInviteStatus(c.fullName, -1, c.networkType.name, if (pictureUrl) c.getPictureUrl(75, 75) else None, socialId(c), s)
+      }
     }
   }
 
@@ -152,9 +160,7 @@ class TypeaheadCommander @Inject()(
 
     val socialF = {
       if (network.isEmpty || network.exists(_ != "email")) {
-        SafeFuture {
-          querySocialInviteStatus(userId, search, network, limit, pictureUrl)
-        }
+        querySocialInviteStatus(userId, search, network, limit, pictureUrl)
       } else Future.successful(Seq.empty[ConnectionWithInviteStatus])
     }
 

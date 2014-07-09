@@ -49,26 +49,6 @@ trait Typeahead[E, I] extends Logging {
 
   protected def extractName(info: I): String
 
-  def search(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]] = timing(s"search($userId,$query)") {
-    if (query.trim.length > 0) {
-      getPrefixFilter(userId) match {
-        case None =>
-          log.warn(s"[search($userId,$query)] NO FILTER found")
-          None
-        case Some(filter) =>
-          if (filter.isEmpty) {
-            log.info(s"[search($userId,$query)] filter is EMPTY")
-            None
-          } else {
-            val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-            search(getInfos(filter.filterBy(queryTerms)), queryTerms)
-          }
-      }
-    } else {
-      None
-    }
-  }
-
   def asyncTopN(userId: Id[User], query: String, limit:Option[Int])(implicit ord: Ordering[TypeaheadHit[I]]): Future[Option[Seq[TypeaheadHit[I]]]] = {
     if (query.trim.length > 0) {
       getPrefixFilter(userId) match {

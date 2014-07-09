@@ -80,16 +80,20 @@ class TypeaheadAdminController @Inject() (
     }
   }
 
-  def userSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticated { request =>
+  def userSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
     implicit val ord = TypeaheadHit.defaultOrdering[User]
-    val res = kifiUserTypeahead.search(userId, query) getOrElse Seq.empty[User]
-    Ok(res.map{ info => s"KifiUser: id=${info.id} name=${info.fullName} <br/>" }.mkString(""))
+    kifiUserTypeahead.asyncSearch(userId, query) map { resOpt =>
+      val res = resOpt getOrElse Seq.empty[User]
+      Ok(res.map { info => s"KifiUser: id=${info.id} name=${info.fullName} <br/>"}.mkString(""))
+    }
   }
 
-  def socialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticated { request =>
+  def socialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
     implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
-    val res = socialUserTypeahead.search(userId, query) getOrElse Seq.empty[SocialUserBasicInfo]
-    Ok(res.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString(""))
+    socialUserTypeahead.asyncSearch(userId, query) map { resOpt =>
+      val res = resOpt getOrElse Seq.empty[SocialUserBasicInfo]
+      Ok(res.map { info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>"}.mkString(""))
+    }
   }
 
   def contactSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
