@@ -1,6 +1,9 @@
 # ABOOK
 
 # --- !Ups
+
+-- ALTER TABLE email_account_sequence MODIFY id bigint(20);
+
 ALTER TABLE econtact ADD COLUMN abook_id bigint(20) NULL;
 ALTER TABLE econtact ADD COLUMN email_account_id bigint(20) NULL;
 
