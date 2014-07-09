@@ -690,20 +690,22 @@ class AdminUserController @Inject() (
   }
 
   // ad hoc testing only during dev phase
-  private def prefixSocialSearchDirect(userId:Id[User], query:String):Option[Seq[SocialUserBasicInfo]] = {
+  private def prefixSocialSearchDirect(userId:Id[User], query:String): Future[Option[Seq[SocialUserBasicInfo]]] = {
     implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
-    val resOpt = socialUserTypeahead.search(userId, query)
-    log.info(s"[prefixSearch($userId,$query)]: res=$resOpt")
-    resOpt
+    socialUserTypeahead.asyncSearch(userId, query) map { resOpt =>
+      log.info(s"[prefixSearch($userId,$query)]: res=$resOpt")
+      resOpt
+    }
   }
 
-  def prefixSocialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticated { request =>
-    val resOpt = prefixSocialSearchDirect(userId, query)
-    resOpt match {
-      case None =>
-        Ok(s"No social match found for $query")
-      case Some(res) =>
-        Ok(res.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString(""))
+  def prefixSocialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
+    prefixSocialSearchDirect(userId, query) map { resOpt =>
+      resOpt match {
+        case None =>
+          Ok(s"No social match found for $query")
+        case Some(res) =>
+          Ok(res.map { info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>"}.mkString(""))
+      }
     }
   }
 
@@ -724,20 +726,21 @@ class AdminUserController @Inject() (
   }
 
   def prefixSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
-    val contactResF = prefixContactSearchDirect(userId, query)
-    val socialResOpt = prefixSocialSearchDirect(userId, query)
-    contactResF map { contactRes =>
+    for {
+      contactRes <- prefixContactSearchDirect(userId, query)
+      socialResOpt <- prefixSocialSearchDirect(userId, query)
+    } yield {
       socialResOpt match {
         case None =>
           if (contactRes.isEmpty)
             Ok(s"No match found for $query")
           else
-            Ok(contactRes.map{ e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}"}.mkString("<br/>"))
+            Ok(contactRes.map { e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}"}.mkString("<br/>"))
         case Some(socialRes) =>
           Ok((
-            socialRes.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType}" } ++
-            contactRes.map{ e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}"}
-          ).mkString("<br/>"))
+            socialRes.map { info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType}"} ++
+              contactRes.map { e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}"}
+            ).mkString("<br/>"))
       }
     }
   }
