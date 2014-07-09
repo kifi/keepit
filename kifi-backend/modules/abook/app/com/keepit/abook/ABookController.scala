@@ -113,15 +113,6 @@ class ABookController @Inject() (
     Ok(Json.toJson(abookInfoRepoEntryOpt))
   }
 
-  def getEContactsByIds() = Action(parse.tolerantJson) { request =>
-    val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
-    val contactIds = jsArray.value map { x => Id[EContact](x.as[Long]) }
-    val contacts = db.readOnlyMaster { implicit ro =>
-      econtactRepo.getByIds(contactIds)
-    }
-    Ok(Json.toJson[Seq[EContact]](contacts))
-  }
-
   def hideEmailFromUser(userId:Id[User], email: EmailAddress) = Action { request =>
     Ok(JsBoolean(abookCommander.hideEmailFromUser(userId, email)))
   }
@@ -217,53 +208,11 @@ class ABookController @Inject() (
     Ok(Json.toJson(tokenOpt))
   }
 
-  // todo(ray): move to commander
-  def prefixQueryDirect(userId:Id[User], limit:Int, search: Option[String], after:Option[String]): Seq[EContact] = timing(s"prefixQueryDirect($userId,$limit,$search,$after)") {
-    @inline def mkId(email: EmailAddress) = s"email/${email.address}"
-    val contacts = db.readOnlyMaster(attempts = 2) { implicit s =>
-      econtactRepo.getByUserId(userId)
-    }
-    val filtered = search match {
-      case Some(query) if query.trim.length > 0 => prefixSearchDirect(userId, query)
-      case _ => contacts
-    }
-    val paged = after match {
-      case Some(a) if a.trim.length > 0 => filtered.dropWhile(e => (mkId(e.email) != a)) match { // todo: revisit Option param handling
-        case hd +: tl => tl
-        case tl => tl
-      }
-      case _ => filtered
-    }
-    val eContacts = paged.take(limit)
-    log.info(s"[queryEContacts(id=$userId, limit=$limit, search=$search after=$after)] res(len=${eContacts.length}):${eContacts.mkString.take(200)}")
-    eContacts
-  }
-  def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]) = Action { request =>
-    val eContacts = prefixQueryDirect(userId, limit, search, after)
-    Ok(Json.toJson(eContacts))
-  }
-
   // todo: removeme (inefficient)
   def queryEContacts(userId:Id[User], limit:Int, search: Option[String], after:Option[String]) = Action { request =>
     val eContacts = abookCommander.queryEContacts(userId, limit, search, after)
     log.info(s"[queryEContacts] userId=$userId search=$search after=$after limit=$limit res(len=${eContacts.length}):${eContacts.mkString}")
     Ok(Json.toJson(eContacts))
-  }
-
-  implicit val ord = TypeaheadHit.defaultOrdering[EContact]
-  def prefixSearchDirect(userId:Id[User], query:String):Seq[EContact] = { // todo(ray): move to commander
-    if (query.trim.length > 0) {
-      typeahead.search(userId, query) getOrElse Seq.empty[EContact]
-    } else {
-      db.readOnlyMaster(attempts = 2) { implicit ro =>
-        econtactRepo.getByUserId(userId)
-      }
-    }
-  }
-
-  def prefixSearch(userId:Id[User], query:String) = Action { request =>
-    val res = prefixSearchDirect(userId, query)
-    Ok(Json.toJson(res))
   }
 
   def refreshPrefixFilter(userId:Id[User]) = Action.async { request =>
@@ -314,12 +263,20 @@ class ABookController @Inject() (
     Ok(Json.toJson(richContact))
   }
 
-  def contactTypeahead(userId: Id[User], q: String, maxHits: Option[Int]) = Action.async { request =>
+  def prefixQuery(userId: Id[User], q: String, maxHits: Option[Int]) = Action.async { request =>
+    implicit val ord = TypeaheadHit.defaultOrdering[EContact]
     typeahead.asyncTopN(userId, q, maxHits).map { econtactHitsOption =>
       val hits = econtactHitsOption.getOrElse(Seq.empty).map { econtactHit =>
         TypeaheadHit(econtactHit.score, econtactHit.name, econtactHit.ordinal, EContact.toRichContact(econtactHit.info))
       }
       Ok(Json.toJson(hits))
     }
+  }
+
+  def getContactsByUser(userId: Id[User], page: Int = 0, pageSize: Option[Int]) = Action { request =>
+    val allContacts = db.readOnlyReplica { implicit session => econtactRepo.getByUserId(userId) }
+    val relevantContacts = pageSize.collect { case size if page >= 0 => allContacts.sortBy(_.id.get.id).drop(page * size).take(size) } getOrElse allContacts
+    val richContacts = relevantContacts.map(EContact.toRichContact)
+    Ok(Json.toJson(richContacts))
   }
 }

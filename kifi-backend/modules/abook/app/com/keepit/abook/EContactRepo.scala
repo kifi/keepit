@@ -15,9 +15,7 @@ import scala.slick.util.CloseableIterator
 @ImplementedBy(classOf[EContactRepoImpl])
 trait EContactRepo extends Repo[EContact] {
   def getById(econtactId:Id[EContact])(implicit session:RSession): Option[EContact]
-  def getByIds(econtactIds:Seq[Id[EContact]])(implicit session:RSession):Seq[EContact]
   def bulkGetByIds(ids:Seq[Id[EContact]])(implicit session:RSession):Map[Id[EContact], EContact]
-  def getByIdsIter(ids:Traversable[Id[EContact]])(implicit session:RSession): CloseableIterator[EContact]
   def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Option[EContact]
   def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
   def getByUserId(userId: Id[User])(implicit session:RSession):Seq[EContact]
@@ -70,11 +68,7 @@ class EContactRepoImpl @Inject() (
     (for(f <- rows if f.id === econtactId) yield f).firstOption
   }
 
-  def getByIds(ids:Seq[Id[EContact]])(implicit session:RSession):Seq[EContact] = {
-    (for(f <- rows if f.id.inSet(ids)) yield f).list
-  }
-
-  def getByIdsIter(ids:Traversable[Id[EContact]])(implicit session:RSession):CloseableIterator[EContact] = {
+  private def getByIdsIter(ids:Traversable[Id[EContact]])(implicit session:RSession):CloseableIterator[EContact] = {
     (for(f <- rows if f.id.inSet(ids)) yield f).iterator
   }
 
