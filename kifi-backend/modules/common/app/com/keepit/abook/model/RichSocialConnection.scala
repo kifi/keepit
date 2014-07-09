@@ -56,5 +56,3 @@ object RichSocialConnection {
     (__ \ 'blocked).format[Boolean]
   )(RichSocialConnection.apply, unlift(RichSocialConnection.unapply))
 }
-
-case class Invitee()

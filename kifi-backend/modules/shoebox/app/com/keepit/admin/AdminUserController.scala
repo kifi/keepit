@@ -5,7 +5,7 @@ import scala.concurrent.duration.{Duration, DurationInt}
 import scala.util.Try
 
 import com.google.inject.Inject
-import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.{RichContact, ABookServiceClient}
 import com.keepit.commanders.{AuthCommander, UserCommander}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{AdminController, ActionAuthenticator, AuthenticatedRequest}
@@ -139,7 +139,7 @@ class AdminUserController @Inject() (
 
   def moreUserInfoView(userId: Id[User], showPrivates:Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
-    val econtactsF = if (showPrivates) abookClient.getEContacts(userId, 40000000) else Future.successful(Seq.empty[EContact])
+    val contactsF = if (showPrivates) abookClient.getContactsByUser(userId) else Future.successful(Seq.empty[RichContact])
     val (user, socialUserInfos, socialConnections) = db.readOnlyReplica { implicit s =>
       val user = userRepo.get(userId)
       val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
@@ -151,8 +151,8 @@ class AdminUserController @Inject() (
     }
     for {
       abookInfos <- abookInfoF
-      econtacts <- econtactsF
-    } yield Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, socialConnections, abookInfos, econtacts))
+      contacts <- contactsF
+    } yield Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, socialConnections, abookInfos, contacts))
   }
 
   def updateCollectionsForBookmark(id: Id[Keep]) = AdminHtmlAction.authenticated { implicit request =>
@@ -218,7 +218,7 @@ class AdminUserController @Inject() (
     var userId = user.id.get
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
-    val econtactsF = if (showPrivateContacts) abookClient.getEContacts(userId, 500) else Future.successful(Seq.empty[EContact])
+    val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, page = Some(0), pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
 
     val (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica {implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
@@ -238,11 +238,11 @@ class AdminUserController @Inject() (
     for {
       abookInfos <- abookInfoF
       econtactCount <- econtactCountF
-      econtacts <- econtactsF
+      contacts <- contactsF
     } yield {
       Ok(html.admin.user(user, bookmarkCount, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
-        econtacts, invitedByUsers))
+        contacts, invitedByUsers))
     }
   }
 
