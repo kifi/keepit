@@ -97,8 +97,7 @@ class TypeaheadCommander @Inject()(
     val filteredF = search match {
       case Some(query) if query.trim.length > 0 => {
         implicit val hitOrdering = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
-        socialUserTypeahead.asyncSearch(userId, query) map { infosOpt =>
-          val infos = infosOpt getOrElse Seq.empty
+        socialUserTypeahead.search(userId, query) map { infos =>
           val res = network match {
             case Some(networkType) => infos.filter(info => info.networkType.name == networkType)
             case None => infos.filter(info => info.networkType.name != SocialNetworks.FORTYTWO) // backward compatibility

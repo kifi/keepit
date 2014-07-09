@@ -89,9 +89,9 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
-  def asyncSearch(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Future[Option[Seq[I]]] = {
+  def search(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Future[Seq[I]] = {
     asyncTopN(userId, query, None).map { o =>
-      o map { s => s.map(_.info) }
+      o map { s => s.map(_.info) } getOrElse Seq.empty
     }(ExecutionContext.fj)
   }
 
