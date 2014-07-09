@@ -1,11 +1,11 @@
-package com.keepit.abook
+package com.keepit.abook.model
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{BasicContact, EmailAddress}
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.performance._
 import com.keepit.common.time._
 import com.keepit.model._

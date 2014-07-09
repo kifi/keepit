@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.{Singleton, Inject}
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.abook.model.{EmailAccount, EmailAccountUpdateSequenceNumberRepo, EmailAccountRepo}
+import com.keepit.abook.model.{EContactRepo, EmailAccount, EmailAccountUpdateSequenceNumberRepo, EmailAccountRepo}
 import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
 import com.keepit.common.logging.Logging
 import com.keepit.model.EmailAccountUpdate
@@ -13,7 +13,6 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.abook.EContactRepo
 
 sealed trait EmailAccountUpdaterActorMessage
 object EmailAccountUpdaterActorMessage {

@@ -7,7 +7,7 @@ import org.joda.time.DateTime
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.db.{State, Id}
-import com.keepit.model.{User, EContact, NormalizedURI}
+import com.keepit.model.{User, NormalizedURI}
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.social.{NonUserKind, NonUserKinds}

@@ -27,6 +27,7 @@ import com.keepit.abook.typeahead.EContactTypeahead
 import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail, BasicContact, EmailAddress}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.commanders.ContactInterner
+import com.keepit.abook.model.{EContactRepo, EContactStates, EContact}
 
 class ABookCommander @Inject() (
   db:Database,

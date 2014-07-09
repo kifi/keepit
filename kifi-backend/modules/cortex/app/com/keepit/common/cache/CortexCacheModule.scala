@@ -144,11 +144,6 @@ case class CortexCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   def probabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (outerRepo, Duration.Inf))
 
-  @Singleton
-  @Provides
-  def econtactCache(stats:CacheStatistics, accessLog:AccessLog, innerRepo:InMemoryCachePlugin, outerRepo:FortyTwoCachePlugin) =
-    new EContactCache(stats, accessLog, (outerRepo, 15 minutes))
-
   @Provides @Singleton
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new VerifiedEmailUserIdCache(stats, accessLog, (outerRepo, 7 days))

@@ -2,7 +2,7 @@ package com.keepit.abook
 
 import com.keepit.inject.InjectorProvider
 import com.google.inject.Injector
-import com.keepit.abook.model.RichSocialConnectionRepo
+import com.keepit.abook.model.{EContactRepo, RichSocialConnectionRepo}
 
 trait ABookInjectionHelpers { self: InjectorProvider =>
   def abookInfoRepo(implicit injector:Injector) = inject[ABookInfoRepo]

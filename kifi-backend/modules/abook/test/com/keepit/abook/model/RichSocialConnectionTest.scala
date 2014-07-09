@@ -2,7 +2,7 @@ package com.keepit.abook.model
 
 import org.specs2.mutable.Specification
 import com.keepit.abook.ABookTestInjector
-import com.keepit.model.{Invitation, EContact, SocialUserInfo, User}
+import com.keepit.model.{Invitation, SocialUserInfo, User}
 import com.keepit.common.db.Id
 import com.keepit.social.{SocialId, SocialNetworks}
 import com.keepit.common.mail.EmailAddress

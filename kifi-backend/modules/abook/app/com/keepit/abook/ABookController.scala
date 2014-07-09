@@ -26,6 +26,7 @@ import java.text.Normalizer
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.commanders.LocalRichConnectionCommander
 import com.keepit.common.mail.{BasicContact, EmailAddress}
+import com.keepit.abook.model.{EContactRepo, EContact}
 
 // provider-specific
 class ABookOwnerInfo(val id:Option[String], val email:Option[String] = None)

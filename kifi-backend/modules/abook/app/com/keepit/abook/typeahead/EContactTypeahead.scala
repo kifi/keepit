@@ -2,10 +2,10 @@ package com.keepit.abook.typeahead
 
 import com.google.inject.Inject
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.{User, EContact}
+import com.keepit.model.{User}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.abook.{ABookInfoRepo, EContactRepo}
+import com.keepit.abook.{ABookInfoRepo}
 import scala.concurrent.{Future}
 import com.keepit.common.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
@@ -17,6 +17,7 @@ import com.keepit.common.logging.{Logging, AccessLog}
 import com.keepit.common.cache.{Key, BinaryCacheImpl, FortyTwoCachePlugin, CacheStatistics}
 import com.keepit.serializer.ArrayBinaryFormat
 import com.keepit.common.store.S3Bucket
+import com.keepit.abook.model.{EContactRepo, EContact}
 
 class EContactTypeahead @Inject() (
   db:Database,

@@ -1,15 +1,16 @@
 package com.keepit.commanders
 
 import com.google.inject.{Singleton, Inject}
-import com.keepit.abook.model.{EmailAccount, EmailAccountRepo}
-import com.keepit.abook.{EContactRepo}
+import com.keepit.abook.model._
 import com.keepit.common.db.Id
-import com.keepit.model.{EContactStates, ABookInfo, EContact, User}
+import com.keepit.model.{ABookInfo, User}
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.abook.typeahead.EContactTypeahead
+import com.keepit.abook.model.EmailAccount
+import scala.Some
 
 @Singleton
 class ContactInterner @Inject() (

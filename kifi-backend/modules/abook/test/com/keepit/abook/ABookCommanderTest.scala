@@ -15,6 +15,7 @@ import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.mail.{EmailAddress, BasicContact}
+import com.keepit.abook.model.{EContactStates, EContactRepo}
 
 class ABookCommanderTest extends Specification with DbTestInjector with ABookTestHelper {
 
@@ -95,7 +96,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
 
         val eContacts = commander.getContactsByUser(u42)
         eContacts.isEmpty === false
-        eContacts.length === 4 // distinct
+        eContacts.length === 8
 
         // INTERN KIFI CONTACTS
 
