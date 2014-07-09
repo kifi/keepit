@@ -19,10 +19,8 @@ class KeepsAbuseMonitor @Inject() (
 
   if (absoluteWarn >= absoluteError) throw new IllegalStateException(s"absolute warn $absoluteWarn is larger then error $absoluteError")
 
-  implicit val dbMasterSlave = Database.Slave
-
   def inspect(userId: Id[User], newKeepCount: Int): Unit = {
-    val existingBookmarksCount = db.readOnly { implicit s => keepRepo.getCountByUser(userId) }
+    val existingBookmarksCount = db.readOnlyReplica { implicit s => keepRepo.getCountByUser(userId) }
     val afterAdding = newKeepCount + existingBookmarksCount
     if (afterAdding > absoluteError) {
       throw new AbuseMonitorException(s"user $userId tried to add $newKeepCount keeps while having $existingBookmarksCount. max allowed is $absoluteError")

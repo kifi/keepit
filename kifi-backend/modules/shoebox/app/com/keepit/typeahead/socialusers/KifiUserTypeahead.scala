@@ -30,7 +30,7 @@ class KifiUserTypeahead @Inject()(
 ) extends Typeahead[User, User] with Logging { // User as info might be too heavy
 
   def refreshAll(): Future[Unit] = {
-    val userIds = db.readOnly { implicit ro =>
+    val userIds = db.readOnlyMaster { implicit ro =>
       userRepo.getAllActiveIds()
     }
     refreshByIds(userIds)
@@ -50,7 +50,7 @@ class KifiUserTypeahead @Inject()(
   protected def extractId(info: User): Id[User] = info.id.get
 
   protected def getAllInfosForUser(id: Id[User]): Seq[User] = {
-    val ids = db.readOnly { implicit ro =>
+    val ids = db.readOnlyMaster { implicit ro =>
       userConnectionRepo.getConnectedUsers(id)
     }
     log.info(s"[getAllInfosForUser($id)] connectedUsers:(len=${ids.size}):${ids.mkString(",")}")
@@ -60,7 +60,7 @@ class KifiUserTypeahead @Inject()(
   protected def getInfos(ids: Seq[Id[User]]): Seq[User] = {
     if (ids.isEmpty) Seq.empty
     else {
-      db.readOnly { implicit ro =>
+      db.readOnlyMaster { implicit ro =>
         userRepo.getUsers(ids).valuesIterator.toVector
       }
     }

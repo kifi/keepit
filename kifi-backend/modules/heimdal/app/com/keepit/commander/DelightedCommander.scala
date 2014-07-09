@@ -32,7 +32,7 @@ class DelightedCommanderImpl @Inject() (
   }
 
   def getLastDelightedAnswerDate(userId: Id[User]): Option[DateTime] = {
-    db.readOnly { implicit s => delightedAnswerRepo.getLastAnswerDateForUser(userId) }
+    db.readOnlyMaster { implicit s => delightedAnswerRepo.getLastAnswerDateForUser(userId) }
   }
 
   def postDelightedAnswer(userId: Id[User], email: EmailAddress, score: Int, comment: Option[String]): Future[JsValue] = {
@@ -63,7 +63,7 @@ class DelightedCommanderImpl @Inject() (
       delightedExtUserId <- (json \ "person").asOpt[String]
       score <- (json \ "score").asOpt[Int]
       date <- (json \ "created_at").asOpt[Int]
-      delightedUserId <- db.readOnly { implicit s => delightedUserRepo.getByDelightedExtUserId(delightedExtUserId).flatMap(_.id) }
+      delightedUserId <- db.readOnlyMaster { implicit s => delightedUserRepo.getByDelightedExtUserId(delightedExtUserId).flatMap(_.id) }
     } yield {
       DelightedAnswer(
         delightedExtAnswerId = delightedExtAnswerId,
@@ -78,7 +78,7 @@ class DelightedCommanderImpl @Inject() (
   private def getOrCreateDelightedUser(userId: Id[User], email: EmailAddress): Future[Option[DelightedUser]] = {
     import play.api.http.Status
 
-    db.readOnly {
+    db.readOnlyMaster {
       implicit s => delightedUserRepo.getByUserId(userId)
     } map { user => Future.successful(Some(user)) } getOrElse {
       val data = Map(

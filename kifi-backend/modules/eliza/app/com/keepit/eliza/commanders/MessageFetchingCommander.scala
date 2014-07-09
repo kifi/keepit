@@ -35,7 +35,7 @@ class MessageFetchingCommander @Inject() (
     modifyMessageWithAuxData(MessageWithBasicUser(id, createdAt, text, source, auxData, url, nUrl, user, participants))
   }
 
-  def getThreadMessages(thread: MessageThread) : Seq[Message] =  db.readOnly { implicit session =>
+  def getThreadMessages(thread: MessageThread) : Seq[Message] =  db.readOnlyMaster { implicit session =>
     log.info(s"[get_thread] trying to get thread messages for thread extId ${thread.externalId}")
     messageRepo.get(thread.id.get, 0)
   }
@@ -71,7 +71,7 @@ class MessageFetchingCommander @Inject() (
   }
 
   def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
-    val thread = db.readOnly(threadRepo.get(threadExtId)(_))
+    val thread = db.readOnlyMaster(threadRepo.get(threadExtId)(_))
     getThreadMessagesWithBasicUser(thread)
   }
 

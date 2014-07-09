@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import com.keepit.search.ArticleStore
 import views.html
-import com.keepit.common.db.slick.Database.Slave
+import com.keepit.common.db.slick.Database.Replica
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.scraper.ScrapeSchedulerPlugin
 import play.api.mvc.Action
@@ -33,7 +33,7 @@ class ScraperAdminController @Inject() (
   def searchScraper = AdminHtmlAction.authenticated { implicit request => Ok(html.admin.searchScraper()) }
 
   def scraperRequests(stateFilter: Option[String] = None) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val resultsFuture = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro => (
+    val resultsFuture = db.readOnlyReplicaAsync { implicit ro => (
       scrapeInfoRepo.getAssignedList(MAX_COUNT_DISPLAY),
       scrapeInfoRepo.getOverdueList(MAX_COUNT_DISPLAY),
       scrapeInfoRepo.getAssignedCount(),
@@ -70,12 +70,12 @@ class ScraperAdminController @Inject() (
 
   def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction.authenticated { implicit request =>
     val articleOption = articleStore.get(id)
-    val (uri, scrapeInfoOption) = db.readOnly { implicit s => (normalizedURIRepo.get(id), scrapeInfoRepo.getByUriId(id)) }
+    val (uri, scrapeInfoOption) = db.readOnlyMaster { implicit s => (normalizedURIRepo.get(id), scrapeInfoRepo.getByUriId(id)) }
     Ok(html.admin.article(articleOption, uri, scrapeInfoOption))
   }
 
   def getProxies = AdminHtmlAction.authenticated { implicit request =>
-    val proxies = db.readOnly { implicit session => httpProxyRepo.all() }
+    val proxies = db.readOnlyMaster { implicit session => httpProxyRepo.all() }
     Ok(html.admin.proxies(proxies))
   }
 

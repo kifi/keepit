@@ -22,7 +22,7 @@ import com.keepit.common.performance._
 import com.keepit.abook.model.EmailAccountRepo
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.mail.{BasicContact, EmailAddress}
-import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.abook.typeahead.EContactTypeahead
 
 
 trait ContactsUpdaterPlugin extends Plugin {
@@ -69,7 +69,7 @@ class ContactsUpdater @Inject() (
   abookInfoRepo:ABookInfoRepo,
   econtactRepo:EContactRepo,
   emailAccountRepo: EmailAccountRepo,
-  typeahead: EContactABookTypeahead,
+  typeahead: EContactTypeahead,
   airbrake:AirbrakeNotifier,
   abookUploadConf:ABookUploadConf,
   shoeboxClient: ShoeboxServiceClient) extends Logging {
@@ -88,7 +88,7 @@ class ContactsUpdater @Inject() (
     )
 
   private def existingEmailSet(userId: Id[User], origin: ABookOriginType, abookInfo: ABookInfo): mutable.Set[EmailAddress] = timing(s"existingEmailSet($userId,$origin,$abookInfo)") {
-    val existingContacts = db.readOnly(attempts = 2) { implicit s =>
+    val existingContacts = db.readOnlyMaster(attempts = 2) { implicit s =>
         econtactRepo.getByUserId(userId) // optimistic; gc; h2-iter issue
     }
     val existingEmailSet = new mutable.HashSet[EmailAddress] ++ existingContacts.map(_.email)

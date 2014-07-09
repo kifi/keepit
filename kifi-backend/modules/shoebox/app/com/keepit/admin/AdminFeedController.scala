@@ -37,7 +37,7 @@ class AdminFeedController @Inject()(
       Ok(html.admin.feeds(userId, limit, feeds, elapsedSeconds))
     } else {
       val uriToFeed = feeds.map{ f => (f.uri.id.get, f)}.toMap
-      val userKeeps = db.readOnly{ implicit s =>
+      val userKeeps = db.readOnlyMaster{ implicit s =>
         keepRepo.getByUser(userId)
       }
 

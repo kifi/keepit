@@ -24,8 +24,6 @@ class AutogenReaperPluginImpl @Inject() (
   val scheduling: SchedulingProperties //only on leader
 ) extends Logging with AutogenReaperPlugin with SchedulerPlugin {
 
-  log.info(s"<ctr> ReaperPlugin created")
-
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
@@ -34,10 +32,6 @@ class AutogenReaperPluginImpl @Inject() (
       log.info(s"[onStart] ReaperPlugin started with initDelay=$initDelay freq=$freq")
       scheduleTaskOnLeader(actor.system, initDelay, freq, actor.ref, Reap)
     }
-  }
-  override def onStop() {
-    log.info(s"[AutogenReaperPlugin] stopped")
-    super.onStop
   }
 
   override def reap() { actor.ref ! Reap }
@@ -73,7 +67,7 @@ private[integration] class AutogenReaper @Inject() (
       for (threshold <- Play.maybeApplication map { app => // todo: inject
         if (Play.isDev) currentDateTime.minusSeconds(15) else currentDateTime.minusMinutes(15)
       }) {
-        val dues = db.readOnly { implicit rw =>
+        val dues = db.readOnlyMaster { implicit rw =>
           // a variant of this could live in UserCommander
           val generated = userExperimentRepo.getByType(ExperimentType.AUTO_GEN)
           val dues = generated filter (e => e.updatedAt.isBefore(threshold))
@@ -118,7 +112,7 @@ private[integration] class AutogenReaper @Inject() (
           }
         }
         for (exp <- dues) {
-          val user = db.readOnly{ implicit s => userRepo.get(exp.userId) }
+          val user = db.readOnlyMaster{ implicit s => userRepo.get(exp.userId) }
           log.info(s"[reap] processing $user")
 
           db.readWrite { implicit s =>

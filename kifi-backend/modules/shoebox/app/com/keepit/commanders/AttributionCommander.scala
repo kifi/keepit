@@ -8,7 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import com.keepit.common.db.Id
 import scala.collection.mutable
-import com.keepit.common.db.slick.Database.Slave
+import com.keepit.common.db.slick.Database.Replica
 import scala.concurrent.Future
 import com.keepit.common.concurrent.ExecutionContext._
 import scala.Some
@@ -34,7 +34,7 @@ class AttributionCommander @Inject() (
     require(keepIds.size >= 0 && keepIds.size <= 50, s"getUserReKeepsByDegree() illegal argument keepIds.size=${keepIds.size}")
     if (keepIds.isEmpty) Map.empty[Id[Keep], Seq[Set[Id[User]]]]
     else {
-      val keeps = db.readOnly(dbMasterSlave = Slave) { implicit ro => keepIds.map { keepRepo.get } }
+      val keeps = db.readOnlyReplica { implicit ro => keepIds.map { keepRepo.get } }
       val userKeeps = keeps.groupBy(_.userId)
 
       // sequential -- no need to overload shoebox
@@ -67,7 +67,7 @@ class AttributionCommander @Inject() (
         usersByDeg(i) = Set.empty[Id[User]]
       } else {
         log.info(s"getRKBD($keeperId,$keepId,$n) rekeepsByDeg(${i-1})=${rekeepsByDeg(i-1)}")
-        val currRekeeps = db.readOnly(dbMasterSlave = Slave) { implicit r => rekeepRepo.getReKeeps(rekeepsByDeg(i - 1)) }
+        val currRekeeps = db.readOnlyReplica { implicit r => rekeepRepo.getReKeeps(rekeepsByDeg(i - 1)) }
         val mergedKeepIds = currRekeeps.valuesIterator.foldLeft(Set.empty[Id[Keep]]) { (a, c) => a ++ c.map(_.srcKeepId)}
         val mergedUserIds = currRekeeps.valuesIterator.foldLeft(Set.empty[Id[User]]) { (a, c) => a ++ c.map(_.srcUserId)}
         rekeepsByDeg(i) = mergedKeepIds -- accKeepIds
@@ -82,7 +82,7 @@ class AttributionCommander @Inject() (
   }
 
   def updateUserReKeepStatus(userId:Id[User], n:Int = 3): Future[Seq[UserBookmarkClicks]] = { // expensive -- admin only
-    val rekeepCountsF = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro =>
+    val rekeepCountsF = db.readOnlyReplicaAsync { implicit ro =>
       rekeepRepo.getAllReKeepsByKeeper(userId).groupBy(_.keepId).map { case (keepId, rekeeps) =>
         (keepId, rekeeps.head.uriId) -> rekeeps.length
       }
@@ -122,7 +122,7 @@ class AttributionCommander @Inject() (
   }
 
   def updateAllReKeepStats(n:Int = 3): Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
-    val keepersF = db.readOnlyAsync(dbMasterSlave = Slave) { implicit ro =>
+    val keepersF = db.readOnlyReplicaAsync { implicit ro =>
       rekeepRepo.getAllKeepers()
     }
     keepersF flatMap { keepers =>

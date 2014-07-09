@@ -36,7 +36,7 @@ class DuplicateDocumentDetection @Inject() (
     "4k3jinEqzd67np/61CIsuYfehiUCvjwaL+3feeAe+OyBKmzWX9pOiBmttIu6uSSBVocxwdSxGnc4w6xO8cbPxL2K/lrNxL71Bwq51m4/B5fvhmNIhe81wb1cMO6w/Xo4mq8PA==" // Google docs
   */)
 
-  lazy val documentSignatures = db.readOnly { implicit session =>
+  lazy val documentSignatures = db.readOnlyMaster { implicit session =>
     scrapeInfoRepo.allActive.map { s =>
       if (IGNORED_DOCUMENTS.contains(s.signature)) None
       else Some((s.uriId, parseBase64Binary(s.signature)))
@@ -60,7 +60,7 @@ class DuplicateDocumentDetection @Inject() (
   }
 
   def processDocument(currentDoc: (Id[NormalizedURI], Array[Byte]), threshold: Double) = {
-    db.readOnly { implicit session =>
+    db.readOnlyMaster { implicit session =>
       documentSignatures.map { case (otherId, otherSig) =>
         if (currentDoc._1.id >= otherId.id) {
           None

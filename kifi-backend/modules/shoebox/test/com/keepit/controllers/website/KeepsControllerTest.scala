@@ -318,7 +318,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
 
         val (keeps4, _) = bookmarkInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
 
-        val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnly {implicit s =>
+        val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnlyMaster {implicit s =>
           val keeps = keepRepo.getByUser(u1.id.get, None, None, 100)
           val clickCount = keepDiscoveryRepo.getDiscoveryCountByKeeper(u1.id.get)
           val clicks = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u1.id.get)
@@ -462,7 +462,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
 
         val (keeps4, _) = bookmarkInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
 
-        val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnly {implicit s =>
+        val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnlyMaster {implicit s =>
           val keeps = keepRepo.getByUser(u1.id.get, None, None, 100)
           val clickCount = keepDiscoveryRepo.getDiscoveryCountByKeeper(u1.id.get)
           val clicks = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u1.id.get)

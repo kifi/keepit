@@ -10,7 +10,7 @@ import com.keepit.test.{DbTestInjector}
 import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl}
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.{TestActorSystemModule, StandaloneTestActorSystemModule}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.model.User
 import com.keepit.social.BasicUser
@@ -47,13 +47,13 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
       FakeShoeboxServiceModule(),
       TestHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
-      StandaloneTestActorSystemModule(),
       TestABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeActionAuthenticatorModule(),
       TestCryptoModule(),
       TestScraperServiceClientModule(),
-      ElizaFakeStoreModule()
+      ElizaFakeStoreModule(),
+      TestActorSystemModule()
     )
   }
 
@@ -83,11 +83,11 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
         val result = route(request).get
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
-        val messages = inject[Database].readOnly { implicit s => inject[MessageRepo].all }
+        val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all }
         messages.size === 1
         val message = messages.head
         println(s"message = $message")
-        val threads = inject[Database].readOnly { implicit s => inject[MessageThreadRepo].all }
+        val threads = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all }
         threads.size === 1
         val thread = threads.head
         println(s"thread = $thread")
@@ -180,8 +180,8 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
           """)
         status(route(FakeRequest("POST", "/eliza/messages").withJsonBody(createThreadJson)).get) must equalTo(OK)
 
-        val message = inject[Database].readOnly { implicit s => inject[MessageRepo].all } head
-        val thread = inject[Database].readOnly { implicit s => inject[MessageThreadRepo].all } head
+        val message = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all } head
+        val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all } head
 
         val path = com.keepit.eliza.controllers.ext.routes.ExtMessagingController.sendMessageReplyAction(thread.externalId).toString
         path === s"/eliza/messages/${thread.externalId}"
@@ -200,7 +200,7 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
-        val messages = inject[Database].readOnly { implicit s => inject[MessageRepo].all }
+        val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all }
         messages.size === 2
         val replys = messages filter {m => m.id != message.id}
         replys.size === 1

@@ -23,7 +23,7 @@ import play.api.libs.ws.{Response, WS}
 import play.api.http.Status
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.xml.Elem
-import com.keepit.abook.typeahead.EContactABookTypeahead
+import com.keepit.abook.typeahead.EContactTypeahead
 import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail, BasicContact, EmailAddress}
 import com.keepit.shoebox.ShoeboxServiceClient
 
@@ -31,7 +31,7 @@ class ABookCommander @Inject() (
   db:Database,
   airbrake:AirbrakeNotifier,
   s3:ABookRawInfoStore,
-  econtactTypeahead:EContactABookTypeahead,
+  econtactTypeahead:EContactTypeahead,
   abookInfoRepo:ABookInfoRepo,
   econtactRepo:EContactRepo,
   contactsUpdater:ContactsUpdaterPlugin,
@@ -48,7 +48,7 @@ class ABookCommander @Inject() (
   }
 
   def getABookInfo(userId:Id[User], id:Id[ABookInfo]):Option[ABookInfo] = {
-    db.readOnly(attempts = 2) { implicit s =>
+    db.readOnlyMaster(attempts = 2) { implicit s =>
       abookInfoRepo.getByUserIdAndABookId(userId, id)
     }
   }
@@ -168,7 +168,7 @@ class ABookCommander @Inject() (
         }
         (true, updated)
       } else {
-        val isOverdue = db.readOnly(attempts = 2) { implicit s =>
+        val isOverdue = db.readOnlyMaster(attempts = 2) { implicit s =>
           abookInfoRepo.isOverdue(savedABookInfo.id.get, currentDateTime.minusMinutes(10))
         }
         log.warnP(s"$savedABookInfo already in PENDING state; overdue=$isOverdue")
@@ -196,7 +196,7 @@ class ABookCommander @Inject() (
   def getEContactsDirect(userId: Id[User], maxRows: Int): JsArray = {
     val ts = System.currentTimeMillis
     val jsonBuilder = mutable.ArrayBuilder.make[JsValue]
-    db.readOnly(attempts = 2) {
+    db.readOnlyMaster(attempts = 2) {
       implicit session =>
         econtactRepo.getByUserIdIter(userId, maxRows).foreach {
           jsonBuilder += Json.toJson(_)
@@ -208,7 +208,7 @@ class ABookCommander @Inject() (
   }
 
   def getABookRawInfosDirect(userId: Id[User]): JsValue = {
-    val abookInfos = db.readOnly(attempts = 2) {
+    val abookInfos = db.readOnlyMaster(attempts = 2) {
       implicit session =>
         abookInfoRepo.findByUserId(userId)
     }
@@ -256,7 +256,7 @@ class ABookCommander @Inject() (
       }
     }
 
-    val contacts = db.readOnly(attempts = 2) { implicit s =>
+    val contacts = db.readOnlyMaster(attempts = 2) { implicit s =>
       econtactRepo.getByUserId(userId)
     }
     val filtered = contacts.filter(e => ((searchScore(e.name.getOrElse("")) > 0) || (searchScore(e.email.address) > 0)))
@@ -314,7 +314,7 @@ class ABookCommander @Inject() (
   }
 
   def getContactNameByEmail(userId: Id[User], email: EmailAddress): Option[String] = {
-    db.readOnly { implicit session =>
+    db.readOnlyMaster { implicit session =>
       econtactRepo.getByUserIdAndEmail(userId, email).collectFirst { case contact if contact.name.isDefined => contact.name.get }
     }
   }

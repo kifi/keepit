@@ -17,7 +17,7 @@ class FailedContentCheckTest extends Specification with ShoeboxTestInjector{
           failedContentCheckRepo.createOrIncrease(u2, u1)
         }
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster{ implicit s =>
           var r = failedContentCheckRepo.getByUrls(u1, u2)
           r.get.counts === 5
           r.get.state === FailedContentCheckStates.ACTIVE

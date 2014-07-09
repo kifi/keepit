@@ -36,7 +36,7 @@ class EmailAccountUpdaterActor @Inject() (
   def receive = {
 
     case FetchEmailUpdates(fetchSize: Int) => if (!updating) {
-      val seqNum = db.readOnly { implicit session => sequenceNumberRepo.get() }
+      val seqNum = db.readOnlyMaster { implicit session => sequenceNumberRepo.get() }
       shoebox.getEmailAccountUpdates(seqNum, fetchSize).onComplete {
         case Success(updates) => {
           log.info(s"${updates.length} EmailAccountUpdates were successfully fetched.")
@@ -91,7 +91,6 @@ class EmailAccountUpdaterPlugin @Inject() (
   import EmailAccountUpdaterActorMessage._
 
   override def onStart() {
-    log.info(s"starting $this")
     scheduleTaskOnLeader(actor.system, 2 minutes, 5 minutes, actor.ref, FetchEmailUpdates(100))
   }
 }

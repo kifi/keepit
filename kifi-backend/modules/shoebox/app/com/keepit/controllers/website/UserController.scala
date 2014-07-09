@@ -72,7 +72,7 @@ class UserController @Inject() (
 
   def friends(page: Int, pageSize: Int) = JsonAction.authenticated { request =>
     val (connectionsPage, total) = userCommander.getConnectionsPage(request.userId, page, pageSize)
-    val friendsJsons = db.readOnly { implicit s =>
+    val friendsJsons = db.readOnlyMaster { implicit s =>
       connectionsPage.map { case ConnectionInfo(friend, friendId, unfriended, unsearched) =>
         Json.toJson(friend).asInstanceOf[JsObject] ++ Json.obj(
           "searchFriend" -> unsearched,
@@ -88,7 +88,7 @@ class UserController @Inject() (
   }
 
   def friendCount() = JsonAction.authenticated { request =>
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       Ok(Json.obj(
         "friends" -> userConnectionRepo.getConnectionCount(request.userId),
         "requests" -> friendRequestRepo.getCountByRecipient(request.userId)
@@ -196,7 +196,7 @@ class UserController @Inject() (
   }
 
   def getEmailInfo(email: EmailAddress) = JsonAction.authenticated(allowPending = true) { implicit request =>
-    db.readOnly { implicit session =>
+    db.readOnlyMaster { implicit session =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailRecord) =>
           val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, "pending_primary_email")
@@ -233,7 +233,7 @@ class UserController @Inject() (
   }
 
   private def getUserInfo[T](userId: Id[User]) = {
-    val user = db.readOnly { implicit session => userRepo.get(userId) }
+    val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
     val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
     val json = toJson(pimpedUser.basicUser).as[JsObject] ++
@@ -277,7 +277,7 @@ class UserController @Inject() (
   }
 
   def getInviteCounts() = JsonAction.authenticated { request =>
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       val availableInvites = userValueRepo.getValue(request.userId, UserValues.availableInvites)
       val invitesLeft = availableInvites - invitationRepo.getByUser(request.userId).length
       Ok(Json.obj(
@@ -384,7 +384,7 @@ class UserController @Inject() (
     val networks = Seq("facebook", "linkedin")
 
     val networkStatuses = Future {
-      JsObject(db.readOnly { implicit session =>
+      JsObject(db.readOnlyMaster { implicit session =>
         networks.map { network =>
           userValueRepo.getValueStringOpt(request.userId, s"import_in_progress_${network}").flatMap { r =>
             if (r == "false") {
@@ -437,7 +437,7 @@ class UserController @Inject() (
     val importHasHappened = new AtomicBoolean(false)
     val finishedImportAnnounced = new AtomicBoolean(false)
     def check(): Option[JsValue] = {
-      val v = db.readOnly { implicit session =>
+      val v = db.readOnlyMaster { implicit session =>
         userValueRepo.getValueStringOpt(request.userId, s"import_in_progress_${network}")
       }
       if (v.isEmpty && clock.now.minusSeconds(20).compareTo(startTime) > 0) {
@@ -463,7 +463,7 @@ class UserController @Inject() (
     def poller(): Future[Option[JsValue]] = PlayPromise.timeout(check, 2 seconds)
     def script(msg: JsValue) = Html(s"<script>$callback(${msg.toString});</script>")
 
-    db.readOnly { implicit session =>
+    db.readOnlyMaster { implicit session =>
       socialUserRepo.getByUser(request.userId).find(_.networkType.name == network)
     } match {
       case Some(sui) =>

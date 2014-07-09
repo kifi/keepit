@@ -113,7 +113,7 @@ class SendgridMailProvider @Inject() (
    */
   def sendMail(mail: ElectronicMail) {
     if (mail.isReadyToSend) {
-      val checkAgain = db.readOnly(mailRepo.getOpt(mail.id.get)(_)).exists(_.isReadyToSend)
+      val checkAgain = db.readOnlyMaster(mailRepo.getOpt(mail.id.get)(_)).exists(_.isReadyToSend)
       if(checkAgain) {
         val now = clock.now
         airbrake.verify(mail.createdAt.isAfter(now.minusMinutes(10)),
@@ -200,7 +200,7 @@ class SendgridMailProvider @Inject() (
     Play.configuration.getString("fortytwo.username") getOrElse System.getProperty("user.name")
 
   private def mailError(mailId: ExternalId[ElectronicMail], message: String, transport: Transport): ElectronicMail = {
-    val mail = db.readOnly {implicit s =>
+    val mail = db.readOnlyMaster {implicit s =>
       mailRepo.get(mailId)
     }
     mailError(mail, message, transport)

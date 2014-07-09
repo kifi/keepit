@@ -51,7 +51,7 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   def find(id: IdentityId): Option[SocialUser] = reportExceptions {
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       socialUserInfoRepo.getOpt(SocialId(id.userId), SocialNetworkType(id.providerId))
     } match {
       case None if id.providerId == SocialNetworks.FORTYTWO.authProvider =>
@@ -59,7 +59,7 @@ class SecureSocialUserPluginImpl @Inject() (
         // Since we support multiple email addresses, if we do not
         // find a SUI with the correct email address, we go searching.
         val email = EmailAddress(id.userId)
-        db.readOnly { implicit session =>
+        db.readOnlyMaster { implicit session =>
           emailRepo.getByAddressOpt(email).flatMap { emailAddr =>
             // todo(andrew): Don't let unverified people log in. For now, we are, but come up with something better.
             socialUserInfoRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap { sui =>
@@ -160,7 +160,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
     log.debug(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId isComplete=$isComplete")
 
-    val (suiOpt, existingUserOpt) = db.readOnly { implicit session => (
+    val (suiOpt, existingUserOpt) = db.readOnlyMaster { implicit session => (
       socialUserInfoRepo.getOpt(socialId, socialNetworkType),
       userId orElse {
       // Automatically connect accounts with existing emails
@@ -199,7 +199,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
-        for (user <- userOpt; su <- db.readOnly { implicit session => socialUserInfoRepo.getByUser(user.id.get) }
+        for (user <- userOpt; su <- db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(user.id.get) }
             if su.networkType == socialUserInfo.networkType && su.id.get != socialUserInfo.id.get) {
           throw new IllegalStateException(
             s"Can't connect $socialUserInfo to user ${user.id.get}. " +
@@ -270,7 +270,7 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = reportExceptions {
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       providerId match {
         case UsernamePasswordProvider.UsernamePassword =>
           val cred = userCredRepo.findByEmailOpt(email)
@@ -329,7 +329,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     val snType = SocialNetworkType(authenticator.identityId.providerId) // userpass -> fortytwo
     val (socialId, provider) = (SocialId(authenticator.identityId.userId), snType)
     log.debug(s"[sessionFromAuthenticator] auth=$authenticator socialId=$socialId, provider=$provider")
-    val userId = db.readOnly {
+    val userId = db.readOnlyMaster {
       implicit s => socialUserInfoRepo.get(socialId, provider).userId // another dependency on socialUserInfo
     }
     UserSession(
@@ -358,7 +358,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
   private def internSession(newSession: UserSession): UserSession = loadSession(newSession) getOrElse persistSession(newSession)
 
   private def loadSession(newSession: UserSession): Option[UserSession] = timing(s"loadSession ${newSession.socialId}") {
-    db.readOnly { implicit s => //from cache
+    db.readOnlyMaster { implicit s => //from cache
       sessionRepo.getOpt(newSession.externalId)
     }
   }
@@ -387,7 +387,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     }
 
     val res = externalIdOpt flatMap { externalId =>
-      db.readOnly { implicit s =>
+      db.readOnlyMaster { implicit s =>
         val sess = sessionRepo.getOpt(externalId)
         log.debug(s"[find] sessionRepo.get($externalId)=$sess")
         sess
