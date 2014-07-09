@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.mail._
@@ -125,7 +126,8 @@ class UserCommander @Inject() (
   heimdalClient: HeimdalServiceClient,
   fortytwoConfig: FortyTwoConfig,
   bookmarkClicksRepo: UserBookmarkClicksRepo,
-  userImageUrlCache: UserImageUrlCache) extends Logging {
+  userImageUrlCache: UserImageUrlCache,
+  airbrake: AirbrakeNotifier) extends Logging {
 
   def updateUserDescription(userId: Id[User], description: String): Unit = {
     db.readWrite { implicit session =>
@@ -721,13 +723,13 @@ class UserCommander @Inject() (
 
   def setLastUserActive(userId: Id[User]): Future[Unit] = {
     val time = clock.now
-    val userCreationDate = db.readWrite { implicit s =>
+    val user = db.readWrite { implicit s =>
       userValueRepo.setValue(userId, "last_active", time)
-      userRepo.get(userId).createdAt
+      userRepo.get(userId)
     }
 
     // Check if user should be shown Delighted question
-    if (time.minusDays(DELIGHTED_INITIAL_DELAY) > userCreationDate) {
+    if (user.primaryEmail.nonEmpty && time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
       heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
         val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
         if (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate) {
@@ -735,6 +737,16 @@ class UserCommander @Inject() (
         }
       }
     } else Future.successful()
+  }
+
+  def postDelightedAnswer(userId: Id[User], score: Int, comment: Option[String]): Future[Boolean] = {
+    val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
+    user.primaryEmail map { email =>
+      heimdalClient.postDelightedAnswer(userId, email, user.fullName, score, comment)
+    } getOrElse {
+      airbrake.notify(s"Attempted to post a Delighted answer for user $userId with no primary email")
+      Future.successful(false)
+    }
   }
 }
 

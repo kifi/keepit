@@ -415,6 +415,15 @@ class UserController @Inject() (
     }
   }
 
+  def postDelightedAnswer = JsonAction.authenticatedParseJsonAsync { request =>
+    (request.body \ "score").asOpt[Int] map { score =>
+      val comment = (request.body \ "comment").asOpt[String]
+      userCommander.postDelightedAnswer(request.userId, score, comment) map { success =>
+        if (success) Ok else BadRequest
+      }
+    } getOrElse Future.successful(BadRequest)
+  }
+
   // todo(Andrew): Remove when ng is out
   def checkIfImporting(network: String, callback: String) = HtmlAction.authenticated { implicit request =>
     val startTime = clock.now

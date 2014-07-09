@@ -22,11 +22,12 @@ class DelightedAnswerRepoImpl @Inject() (
 
   type RepoImpl = DelightedAnswerTable
   class DelightedAnswerTable(tag: Tag) extends RepoTable[DelightedAnswer](db, tag, "delighted_answer") {
+    def delightedExtAnswerId = column[String]("delighted_ext_answer_id", O.NotNull)
     def delightedUserId = column[Id[DelightedUser]]("delighted_user_id", O.NotNull)
     def date = column[DateTime]("date", O.NotNull)
     def score = column[Int]("score", O.NotNull)
     def comment = column[String]("comment", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, delightedUserId, date, score, comment.?) <> ((DelightedAnswer.apply _).tupled, DelightedAnswer.unapply _)
+    def * = (id.?, createdAt, updatedAt, delightedExtAnswerId, delightedUserId, date, score, comment.?) <> ((DelightedAnswer.apply _).tupled, DelightedAnswer.unapply _)
   }
 
   def table(tag: Tag) = new DelightedAnswerTable(tag)
@@ -38,7 +39,7 @@ class DelightedAnswerRepoImpl @Inject() (
   def getLastAnswerDateForUser(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
     Query((for {
       u <- delightedUserRepo.rows
-      a <- rows if a.delightedUserId == u.id
+      a <- rows if a.delightedUserId === u.id
     } yield a.date).max).first
   }
 }
