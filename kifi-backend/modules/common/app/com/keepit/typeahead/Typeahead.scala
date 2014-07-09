@@ -14,16 +14,6 @@ import Logging.LoggerWithPrefix
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-trait TypeaheadSearch[E, I] {
-
-  def asyncSearch(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Future[Option[Seq[I]]]
-  def search(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]]
-  def search(infos: Seq[I], queryTerms: Array[String])(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]]
-  def asyncTopN(userId: Id[User], query: String, limit: Option[Int])(implicit ord: Ordering[TypeaheadHit[I]]): Future[Option[Seq[TypeaheadHit[I]]]]
-  def topN(infos:Seq[I], queryTerms:Array[String], limit: Option[Int])(implicit ord:Ordering[TypeaheadHit[I]]): Option[Seq[TypeaheadHit[I]]]
-
-}
-
 trait Typeahead[E, I] extends Logging {
 
   protected def airbrake: AirbrakeNotifier
