@@ -71,7 +71,7 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
-  def topN(infos:Seq[I], queryTerms:Array[String], limit:Option[Int])(implicit ord:Ordering[TypeaheadHit[I]]):Option[Seq[TypeaheadHit[I]]] = {
+  private[this] def topN(infos:Seq[I], queryTerms:Array[String], limit:Option[Int])(implicit ord:Ordering[TypeaheadHit[I]]): Option[Seq[TypeaheadHit[I]]] = {
     if (queryTerms.length > 0) {
       var ordinal = 0
       val hits = infos.map{ info =>
