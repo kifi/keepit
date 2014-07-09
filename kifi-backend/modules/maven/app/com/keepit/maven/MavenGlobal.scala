@@ -3,6 +3,8 @@ package com.keepit.maven
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{FortyTwoCachePlugin, InMemoryCachePlugin}
 import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.maven.model.RawSeedItemSequencingPlugin
+
 import play.api.Application
 import play.api.Mode.Prod
 
@@ -23,5 +25,6 @@ trait MavenServices { self: FortyTwoGlobal =>
     require(injector.instance[HealthcheckPlugin] != null)
     require(injector.instance[FortyTwoCachePlugin] != null)
     require(injector.instance[InMemoryCachePlugin] != null)
+    require(injector.instance[RawSeedItemSequencingPlugin] != null)
   }
 }
