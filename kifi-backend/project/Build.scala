@@ -9,6 +9,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.DateTimeFormat
 import com.typesafe.sbteclipse.core.EclipsePlugin.EclipseKeys
 import com.typesafe.sbt.SbtScalariform._
+import scalariform.formatter.preferences._
 
 object ApplicationBuild extends Build {
 
@@ -214,9 +215,11 @@ object ApplicationBuild extends Build {
     /*skip in update := true,
      *skip in update in (Compile, test) := true*/
     aggregate in update := false,
-    emojiLogs
+    emojiLogs,
     // incOptions := incOptions.value.withNameHashing(true) // see https://groups.google.com/forum/#!msg/play-framework/S_-wYW5Tcvw/OjJuB4iUwD8J
-  )
+    ScalariformKeys.preferences := ScalariformKeys.preferences.value
+      .setPreference(DoubleIndentClassDeclaration, false)
+  ) ++ scalariformSettings
 
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(
     libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.10.0"
@@ -283,7 +286,7 @@ object ApplicationBuild extends Build {
         Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
       },
       commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) }
-    ).settings(scalariformSettings: _*)
+    )
     .dependsOn(
       common % "test->test;compile->compile",
       shoebox % "test->test;compile->compile",
