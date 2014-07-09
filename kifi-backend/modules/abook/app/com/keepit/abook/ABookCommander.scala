@@ -269,6 +269,9 @@ class ABookCommander @Inject() (
 
   def getContactsByUser(userId: Id[User], page: Int = 0, pageSize: Option[Int] = None): Seq[EContact] = {
     val allContacts = db.readOnlyReplica { implicit session => econtactRepo.getByUserId(userId) }
-    pageSize.collect { case size if page >= 0 => allContacts.sortBy(_.id.get.id).drop(page * size).take(size) } getOrElse allContacts
+    val relevantContacts = pageSize.collect { case size if page >= 0 =>
+      allContacts.sortBy(_.id.get.id).drop(page * size).take(size)
+    }
+    relevantContacts getOrElse allContacts
   }
 }
