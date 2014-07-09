@@ -49,7 +49,6 @@ trait ABookServiceClient extends ServiceClient {
   def getABookInfoByExternalId(id: ExternalId[ABookInfo]):Future[Option[ABookInfo]]
   def getEContacts(userId:Id[User], maxRows:Int):Future[Seq[EContact]]
   def getEContactCount(userId:Id[User]):Future[Int]
-  def getEContactsByIds(contactIds:Seq[Id[EContact]]):Future[Seq[EContact]]
   def getABookRawInfos(userId:Id[User]):Future[Seq[ABookRawInfo]]
   def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]):Future[Option[OAuth2Token]]
   def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]):Future[Seq[EContact]]
@@ -138,12 +137,6 @@ class ABookServiceClientImpl @Inject() (
   def getEContactCount(userId: Id[User]): Future[Int] = {
     call(ABook.internal.getEContactCount(userId)).map { r =>
       Json.fromJson[Int](r.json).get
-    }
-  }
-
-  override def getEContactsByIds(contactIds: Seq[Id[EContact]]): Future[Seq[EContact]] = {
-    call(ABook.internal.getEContactsByIds(), JsArray(contactIds.map(c => JsNumber(c.id)))).map { r =>
-      Json.fromJson[Seq[EContact]](r.json).get
     }
   }
 
@@ -303,8 +296,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getEContacts(userId: Id[User], maxRows: Int): Future[Seq[EContact]] = Future.successful(Seq.empty[EContact])
 
   def getEContactCount(userId: Id[User]): Future[Int] = ???
-
-  def getEContactsByIds(contactIds: Seq[Id[EContact]]): Future[Seq[EContact]] = ???
 
   def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = ???
 

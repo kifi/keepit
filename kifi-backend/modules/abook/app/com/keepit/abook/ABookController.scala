@@ -113,15 +113,6 @@ class ABookController @Inject() (
     Ok(Json.toJson(abookInfoRepoEntryOpt))
   }
 
-  def getEContactsByIds() = Action(parse.tolerantJson) { request =>
-    val jsArray = request.body.asOpt[JsArray] getOrElse JsArray()
-    val contactIds = jsArray.value map { x => Id[EContact](x.as[Long]) }
-    val contacts = db.readOnlyMaster { implicit ro =>
-      econtactRepo.getByIds(contactIds)
-    }
-    Ok(Json.toJson[Seq[EContact]](contacts))
-  }
-
   def hideEmailFromUser(userId:Id[User], email: EmailAddress) = Action { request =>
     Ok(JsBoolean(abookCommander.hideEmailFromUser(userId, email)))
   }
