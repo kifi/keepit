@@ -218,7 +218,7 @@ class AdminUserController @Inject() (
     var userId = user.id.get
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
-    val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, page = Some(0), pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
+    val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
 
     val (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica {implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)

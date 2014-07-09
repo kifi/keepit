@@ -208,32 +208,6 @@ class ABookController @Inject() (
     Ok(Json.toJson(tokenOpt))
   }
 
-  // todo(ray): move to commander
-  def prefixQueryDirect(userId:Id[User], limit:Int, search: Option[String], after:Option[String]): Seq[EContact] = timing(s"prefixQueryDirect($userId,$limit,$search,$after)") {
-    @inline def mkId(email: EmailAddress) = s"email/${email.address}"
-    val contacts = db.readOnlyMaster(attempts = 2) { implicit s =>
-      econtactRepo.getByUserId(userId)
-    }
-    val filtered = search match {
-      case Some(query) if query.trim.length > 0 => prefixSearchDirect(userId, query)
-      case _ => contacts
-    }
-    val paged = after match {
-      case Some(a) if a.trim.length > 0 => filtered.dropWhile(e => (mkId(e.email) != a)) match { // todo: revisit Option param handling
-        case hd +: tl => tl
-        case tl => tl
-      }
-      case _ => filtered
-    }
-    val eContacts = paged.take(limit)
-    log.info(s"[queryEContacts(id=$userId, limit=$limit, search=$search after=$after)] res(len=${eContacts.length}):${eContacts.mkString.take(200)}")
-    eContacts
-  }
-  def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]) = Action { request =>
-    val eContacts = prefixQueryDirect(userId, limit, search, after)
-    Ok(Json.toJson(eContacts))
-  }
-
   // todo: removeme (inefficient)
   def queryEContacts(userId:Id[User], limit:Int, search: Option[String], after:Option[String]) = Action { request =>
     val eContacts = abookCommander.queryEContacts(userId, limit, search, after)
@@ -314,14 +288,9 @@ class ABookController @Inject() (
     }
   }
 
-  def getContactsByUser(userId: Id[User], page: Option[Int], pageSize: Option[Int]) = Action { request =>
+  def getContactsByUser(userId: Id[User], page: Int = 0, pageSize: Option[Int]) = Action { request =>
     val allContacts = db.readOnlyReplica { implicit session => econtactRepo.getByUserId(userId) }
-    val relevantContacts = {
-      for {
-        p <- page
-        s <- pageSize
-      } yield allContacts.sortBy(_.id.get.id).drop(p * s).take(s)
-    } getOrElse allContacts
+    val relevantContacts = pageSize.collect { case size if page >= 0 => allContacts.sortBy(_.id.get.id).drop(page * size).take(size) } getOrElse allContacts
     val richContacts = relevantContacts.map(EContact.toRichContact)
     Ok(Json.toJson(richContacts))
   }

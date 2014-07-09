@@ -17,14 +17,13 @@ GET      /internal/abook/:userId/getEContactCount               @com.keepit.aboo
 GET      /internal/abook/:userId/getABookRawInfos               @com.keepit.abook.ABookController.getABookRawInfos(userId:Id[User])
 POST     /internal/abook/:userId/getContactNameByEmail          @com.keepit.abook.ABookController.getContactNameByEmail(userId:Id[User])
 POST     /internal/abook/:userId/internKifiContact              @com.keepit.abook.ABookController.internKifiContact(userId:Id[User])
-GET      /internal/abook/:userId/getContacts                    @com.keepit.abook.ABookController.getContactsByUser(userId:Id[User], page: Option[Int], pageSize: Option[Int])
+GET      /internal/abook/:userId/getContacts                    @com.keepit.abook.ABookController.getContactsByUser(userId:Id[User], page: Int ?= 0, pageSize: Option[Int])
 
 GET      /internal/abook/:userId/getOAuth2Token                 @com.keepit.abook.ABookController.getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo])
 GET      /internal/abook/:userId/queryEContacts                 @com.keepit.abook.ABookController.queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String])
 GET      /internal/abook/:userId/contactTypeahead               @com.keepit.abook.ABookController.contactTypeahead(userId: Id[User], q: String, maxHits: Option[Int])
 
 GET      /internal/abook/:userId/prefixSearch                   @com.keepit.abook.ABookController.prefixSearch(userId:Id[User], query:String)
-GET      /internal/abook/:userId/prefixQuery                    @com.keepit.abook.ABookController.prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String])
 GET      /internal/abook/:userId/refreshPrefixFilter            @com.keepit.abook.ABookController.refreshPrefixFilter(userId:Id[User])
 POST     /internal/abook/refreshPrefixFiltersByIds              @com.keepit.abook.ABookController.refreshPrefixFiltersByIds
 GET      /internal/abook/refreshAllPrefixFilters                @com.keepit.abook.ABookController.refreshAllPrefixFilters

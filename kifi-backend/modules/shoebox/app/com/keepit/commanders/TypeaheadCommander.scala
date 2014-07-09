@@ -63,7 +63,7 @@ class TypeaheadCommander @Inject()(
   private def queryContacts(userId: Id[User], search: Option[String], limit: Int): Future[Seq[RichContact]] = {
     search match {
       case Some(query) => abookServiceClient.contactTypeahead(userId, query, Some(limit)).map { hits => hits.map(_.info) }
-      case None => abookServiceClient.getContactsByUser(userId, page = Some(0), pageSize = Some(limit))
+      case None => abookServiceClient.getContactsByUser(userId, pageSize = Some(limit))
     }
   }
 
