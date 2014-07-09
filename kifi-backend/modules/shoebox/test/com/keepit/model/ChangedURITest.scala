@@ -42,6 +42,7 @@ class ChangedURITest extends Specification with ShoeboxTestInjector{
          changes = db.readOnlyMaster{ implicit s =>
            changedURIRepo.getChangesSince(lastSeq, -1, ChangedURIStates.ACTIVE)
          }
+         //this is a test 123
 
          changes.size === 3
 
