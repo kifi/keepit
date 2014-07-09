@@ -781,6 +781,7 @@ class UserCommander @Inject() (
   }
 
   def getPrefs(prefSet: Set[String], userId: Id[User]): JsObject = {
+    // Reading from master because the value may have been updated just before
     db.readOnlyMaster { implicit s =>
       val values = userValueRepo.getValues(userId, prefSet.toSeq: _*)
       JsObject(prefSet.toSeq.map { name =>
@@ -828,7 +829,7 @@ class UserCommander @Inject() (
   }
 
   def postDelightedAnswer(userId: Id[User], score: Int, comment: Option[String]): Future[Boolean] = {
-    val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
+    val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
     heimdalClient.postDelightedAnswer(userId, user.externalId, user.primaryEmail, user.fullName, score, comment)
   }
 }

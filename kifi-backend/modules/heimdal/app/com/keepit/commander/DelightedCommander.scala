@@ -34,7 +34,7 @@ class DelightedCommanderImpl @Inject() (
   }
 
   def getLastDelightedAnswerDate(userId: Id[User]): Option[DateTime] = {
-    db.readOnlyMaster { implicit s => delightedAnswerRepo.getLastAnswerDateForUser(userId) }
+    db.readOnlyReplica { implicit s => delightedAnswerRepo.getLastAnswerDateForUser(userId) }
   }
 
   def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, score: Int, comment: Option[String]): Future[JsValue] = {
@@ -67,7 +67,7 @@ class DelightedCommanderImpl @Inject() (
       delightedExtUserId <- (json \ "person").asOpt[String]
       score <- (json \ "score").asOpt[Int]
       date <- (json \ "created_at").asOpt[Int]
-      delightedUserId <- db.readOnlyMaster { implicit s => delightedUserRepo.getByDelightedExtUserId(delightedExtUserId).flatMap(_.id) }
+      delightedUserId <- db.readOnlyReplica { implicit s => delightedUserRepo.getByDelightedExtUserId(delightedExtUserId).flatMap(_.id) }
     } yield {
       DelightedAnswer(
         delightedExtAnswerId = delightedExtAnswerId,
@@ -80,7 +80,7 @@ class DelightedCommanderImpl @Inject() (
   }
 
   private def getOrCreateDelightedUser(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Option[DelightedUser]] = {
-    db.readOnlyMaster {
+    db.readOnlyReplica {
       implicit s => delightedUserRepo.getByUserId(userId)
     } map { user => Future.successful(Some(user)) } getOrElse {
       val data = Map(
