@@ -199,7 +199,7 @@ object ApplicationBuild extends Build {
     Tests.Argument("failtrace", "true")
   )
 
-  lazy val commonSettings = Seq(
+  lazy val commonSettings = scalariformSettings ++ Seq(
     scalacOptions ++= _scalacOptions,
     routesImport ++= _routesImport,
     resolvers ++= commonResolvers,
@@ -218,8 +218,8 @@ object ApplicationBuild extends Build {
     emojiLogs,
     // incOptions := incOptions.value.withNameHashing(true) // see https://groups.google.com/forum/#!msg/play-framework/S_-wYW5Tcvw/OjJuB4iUwD8J
     ScalariformKeys.preferences := ScalariformKeys.preferences.value
-      .setPreference(DoubleIndentClassDeclaration, false)
-  ) ++ scalariformSettings
+      .setPreference(DoubleIndentClassDeclaration, true)
+  )
 
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(
     libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.10.0"
