@@ -117,13 +117,6 @@ class ABookController @Inject() (
     Ok(JsBoolean(abookCommander.hideEmailFromUser(userId, email)))
   }
 
-  def getEContacts(userId:Id[User], maxRows:Int) = Action { request =>
-    val res = {
-      abookCommander.getEContactsDirect(userId, maxRows)
-    }
-    Ok(res)
-  }
-
   def getABookRawInfos(userId:Id[User]) = Action { request =>
     val rawInfos = abookCommander.getABookRawInfosDirect(userId)
     Ok(rawInfos)
@@ -273,9 +266,8 @@ class ABookController @Inject() (
     }
   }
 
-  def getContactsByUser(userId: Id[User], page: Int = 0, pageSize: Option[Int]) = Action { request =>
-    val allContacts = db.readOnlyReplica { implicit session => econtactRepo.getByUserId(userId) }
-    val relevantContacts = pageSize.collect { case size if page >= 0 => allContacts.sortBy(_.id.get.id).drop(page * size).take(size) } getOrElse allContacts
+  def getContactsByUser(userId: Id[User], page: Int = 0, pageSize: Option[Int] = None) = Action { request =>
+    val relevantContacts = abookCommander.getContactsByUser(userId, page, pageSize)
     val richContacts = relevantContacts.map(EContact.toRichContact)
     Ok(Json.toJson(richContacts))
   }
