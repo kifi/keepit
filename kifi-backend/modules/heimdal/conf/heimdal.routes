@@ -33,6 +33,8 @@ GET /internal/heimdal/user/alias                       @com.keepit.controllers.A
 
 GET /internal/heimdal/user/lastDelightedAnswerDate     @com.keepit.controllers.DelightedController.getLastDelightedAnswerDate(userId: Id[User])
 
+POST /internal/heimdal/user/postDelightedAnswer        @com.keepit.controllers.DelightedController.postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String])
+
 ->  / common.Routes
 
 

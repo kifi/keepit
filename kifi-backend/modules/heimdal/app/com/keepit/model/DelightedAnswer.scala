@@ -8,6 +8,7 @@ case class DelightedAnswer(
   id: Option[Id[DelightedAnswer]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
+  delightedExtAnswerId: String, // Assigned by Delighted
   delightedUserId: Id[DelightedUser],
   date: DateTime,
   score: Int,
