@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
-import com.keepit.heimdal.BasicDelightedAnswer
+import com.keepit.heimdal.{DelightedAnswerSources, DelightedAnswerSource, BasicDelightedAnswer}
 import com.keepit.model._
 import com.keepit.common.collection._
 import com.ning.http.client.Realm.AuthScheme
@@ -105,12 +105,14 @@ class DelightedCommanderImpl @Inject() (
       date <- (json \ "created_at").asOpt[Int]
       delightedUserId <- db.readOnlyReplica { implicit s => delightedUserRepo.getByDelightedExtUserId(delightedExtUserId).flatMap(_.id) }
     } yield {
+      val source = (json \ "person_properties" \ "source").asOpt[DelightedAnswerSource] getOrElse DelightedAnswerSources.UNKNOWN
       DelightedAnswer(
         delightedExtAnswerId = delightedExtAnswerId,
         delightedUserId = delightedUserId,
         date = new DateTime(date * 1000L),
         score = score,
-        comment = (json \ "comment").asOpt[String]
+        comment = (json \ "comment").asOpt[String],
+        source = source
       )
     }
   }

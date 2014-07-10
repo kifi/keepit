@@ -23,6 +23,7 @@ CREATE TABLE delighted_answer (
     date datetime NOT NULL,
     score int NOT NULL,
     comment varchar(3072) NULL,
+    source varchar(32) NOT NULL,
 
     PRIMARY KEY (id),
     FOREIGN KEY (delighted_user_id)

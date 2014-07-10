@@ -2,6 +2,7 @@ package com.keepit.common.db.slick
 
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.keepit.heimdal.DelightedAnswerSource
 import com.keepit.model._
 import java.sql.{Clob, Date, Timestamp}
 import org.joda.time.{DateTime, LocalDate}
@@ -67,6 +68,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val hitUUIDTypeMapper = MappedColumnType.base[ExternalId[ArticleSearchResult], String](_.id, ExternalId[ArticleSearchResult])
   implicit val uriImageFormatTypeMapper = MappedColumnType.base[ImageProvider, String](_.value, ImageProvider.apply)
   implicit val uriImageSourceTypeMapper = MappedColumnType.base[ImageFormat, String](_.value, ImageFormat.apply)
+  implicit val delightedAnswerSourceTypeMapper = MappedColumnType.base[DelightedAnswerSource, String](_.value, DelightedAnswerSource.apply)
   implicit def experimentTypeProbabilityDensityMapper[T](implicit outcomeFormat: Format[T]) = MappedColumnType.base[ProbabilityDensity[T], String](
     obj => Json.stringify(ProbabilityDensity.format[T].writes(obj)),
     str => Json.parse(str).as(ProbabilityDensity.format[T])
