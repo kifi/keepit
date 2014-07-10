@@ -125,12 +125,7 @@ class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Arra
     wrappedSubReaders.foreach { r =>
       val reader = splitReaders(r.name)
       if (reader.numDocs() > 0) {
-        val image = remappers(r.name).image
-        val liveDocs = new Bits {
-          def get(index: Int) = image.contains(index)
-          def length(): Int = reader.maxDoc()
-        }
-        newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, reader), r.getIdMapper, liveDocs)
+        newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, reader), r.getIdMapper, reader.getLiveDocs)
       }
     }
     splitReaders.get("").foreach { subReader =>

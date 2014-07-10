@@ -15,8 +15,7 @@ object DocIdRemapper {
 abstract class DocIdRemapper {
   def remap(srcDocId: Int): Int
   def maxDoc(): Int
-  def numDocsRemapped(): Int = image.size
-  val image: Set[Int]
+  def numDocsRemapped(): Int
 }
 
 class DocIdRemapperWithDeletionCheck(srcMapper: IdMapper, dstMapper: IdMapper, liveDocs: Bits) extends DocIdRemapper {
@@ -26,16 +25,17 @@ class DocIdRemapperWithDeletionCheck(srcMapper: IdMapper, dstMapper: IdMapper, l
   }
   def maxDoc(): Int = dstMapper.maxDoc
 
-  lazy val image: Set[Int] = {
+  def numDocsRemapped(): Int = {
+    var numRemapped = 0
     var im = Set.empty[Int]
     var docid = 0
     val srcMaxDoc = srcMapper.maxDoc
     while (docid < srcMaxDoc) {
       val dstDocId = dstMapper.getDocId(srcMapper.getId(docid))
-      if (dstDocId >= 0 && liveDocs.get(dstDocId)) im += dstDocId
+      if (dstDocId >= 0 && liveDocs.get(dstDocId)) numRemapped += 1
       docid += 1
     }
-    im
+    numRemapped
   }
 }
 
@@ -45,16 +45,15 @@ class DocIdRemapperNoDeletionCheck(srcMapper: IdMapper, dstMapper: IdMapper) ext
   }
   def maxDoc(): Int = dstMapper.maxDoc
 
-  lazy val image: Set[Int] = {
-    var im = Set.empty[Int]
+  def numDocsRemapped(): Int = {
+    var numRemapped = 0
     var docid = 0
     val srcMaxDoc = srcMapper.maxDoc
     while (docid < srcMaxDoc) {
-      val dstDocId = dstMapper.getDocId(srcMapper.getId(docid))
-      if (dstDocId >= 0) im += dstDocId
+      if (dstMapper.getDocId(srcMapper.getId(docid)) >= 0) numRemapped += 1
       docid += 1
     }
-    im
+    numRemapped
   }
 }
 
