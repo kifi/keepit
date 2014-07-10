@@ -47,7 +47,7 @@ class EContactTypeahead @Inject() (
     }(ExecutionContext.fj)
   }
 
-  protected def asyncGetOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[EContact]] = {
+  protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[EContact]] = {
     cache.getOrElseFuture(EContactTypeaheadKey(userId)) {
       val res = store.getWithMetadata(userId)
       res match {
@@ -74,16 +74,15 @@ class EContactTypeahead @Inject() (
     }(ExecutionContext.fj)
   }
 
-  override protected def getAllInfosForUser(id: Id[User]): Seq[EContact] = {
-    db.readOnlyMaster(attempts = 2) { implicit ro =>
-      econtactRepo.getByUserId(id)
-    }.filter(EContactTypeahead.isLikelyHuman)
+  protected def getAllInfosForUser(id: Id[User]): Future[Seq[EContact]] = {
+    db.readOnlyMasterAsync { implicit ro =>
+      econtactRepo.getByUserId(id).filter(EContactTypeahead.isLikelyHuman)
+    }
   }
 
-  override protected def getInfos(ids: Seq[Id[EContact]]): Seq[EContact] = {
-    if (ids.isEmpty) Seq.empty[EContact]
-    else {
-      db.readOnlyMaster(attempts = 2) { implicit ro =>
+  protected def getInfos(ids: Seq[Id[EContact]]): Future[Seq[EContact]] = {
+    if (ids.isEmpty) Future.successful(Seq.empty[EContact]) else {
+      db.readOnlyMasterAsync { implicit ro =>
         econtactRepo.bulkGetByIds(ids).valuesIterator.toSeq
       }
     }

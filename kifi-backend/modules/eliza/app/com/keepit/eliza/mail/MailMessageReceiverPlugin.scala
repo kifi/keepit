@@ -110,10 +110,20 @@ class MailDiscussionMessageParser @Inject() (
   def getInfo(message: Message): Option[MailNotificationReply] = {
     try {
       getPublicId(message) flatMap { publicId =>
-        val contents = getText(message).map(MailDiscussionMessageParser.extractMessage)
-        if (contents.nonEmpty) {
-          Some(MailNotificationReply(getTimestamp(message), contents, publicId))
-        } else None
+        val rawContents = getText(message)
+        if (rawContents.nonEmpty && rawContents.get.length > 0){
+          val contents = rawContents.map(MailDiscussionMessageParser.extractMessage)
+          if (contents.nonEmpty && contents.get.length > 0) {
+            Some(MailNotificationReply(getTimestamp(message), contents, publicId))
+          } else {
+            airbrake.notify("External Messaging Reply Email empty after cleanup.")
+            None
+          }
+        } else {
+          airbrake.notify("Failed to extract any text from External Messaging Reply Email.")
+          None
+        }
+
       }
       } catch {
         case e: java.io.UnsupportedEncodingException => {

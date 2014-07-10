@@ -82,15 +82,15 @@ class TypeaheadAdminController @Inject() (
 
   def userSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
     implicit val ord = TypeaheadHit.defaultOrdering[User]
-    kifiUserTypeahead.search(userId, query) map { res =>
-      Ok(res.map { info => s"KifiUser: id=${info.id} name=${info.fullName} <br/>"}.mkString(""))
+    kifiUserTypeahead.topN(userId, query, None) map { res =>
+      Ok(res.map { hit => s"KifiUser: id=${hit.info.id} name=${hit.info.fullName} <br/>"}.mkString(""))
     }
   }
 
   def socialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
     implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
-    socialUserTypeahead.search(userId, query) map { res =>
-      Ok(res.map { info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>"}.mkString(""))
+    socialUserTypeahead.topN(userId, query, None) map { res =>
+      Ok(res.map { hit => s"SocialUser: id=${hit.info.id} name=${hit.info.fullName} network=${hit.info.networkType} <br/>"}.mkString(""))
     }
   }
 
