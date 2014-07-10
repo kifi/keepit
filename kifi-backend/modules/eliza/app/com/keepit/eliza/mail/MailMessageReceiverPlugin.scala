@@ -90,7 +90,7 @@ class MailDiscussionMessageParser @Inject() (
     db: Database,
     settings: MailDiscussionServerSettings,
     airbrake: AirbrakeNotifier,
-    implicit val publicIdConfiguration: PublicIdConfiguration) extends GenericMailParser {
+    implicit val publicIdConfiguration: PublicIdConfiguration) extends GenericMailParser with Logging {
 
   private val DiscussionEmail = raw"""^${settings.identifier}\+(\w+)@[\w\.]+$$""".r
 
@@ -114,6 +114,7 @@ class MailDiscussionMessageParser @Inject() (
             Some(MailNotificationReply(getTimestamp(message), contents, publicId))
           } else {
             airbrake.notify("External Messaging Reply Email empty after cleanup.")
+            log.error(s"External Messaging Reply Email empty after cleanup: ${rawContents.get}")
             None
           }
         } else {
