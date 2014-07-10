@@ -12,7 +12,7 @@ case class DelightedUser(
     delightedExtUserId: String, // Assigned by Delighted
     userId: Id[User],
     email: Option[EmailAddress],
-    lastAnswerDate: Option[DateTime]) extends Model[DelightedUser] {
+    userLastInteracted: Option[DateTime]) extends Model[DelightedUser] {
   def withId(id: Id[DelightedUser]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }

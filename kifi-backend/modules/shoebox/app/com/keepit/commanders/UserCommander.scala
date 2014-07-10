@@ -784,7 +784,9 @@ class UserCommander @Inject() (
         userRepo.get(userId)
       }
       val time = clock.now()
-      val shouldShowDelightedQuestionFut = if (user.primaryEmail.nonEmpty && time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
+      val from = time.minusDays(DELIGHTED_INITIAL_DELAY)
+      val to = user.createdAt
+      val shouldShowDelightedQuestionFut = if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
         heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
           val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
           time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate
@@ -828,7 +830,7 @@ class UserCommander @Inject() (
           if (value == JsNull || value.isInstanceOf[JsUndefined]) {
             userValueRepo.clearValue(userId, name)
           } else {
-            userValueRepo.setValue(userId, name, value.as[String])
+            userValueRepo.setValue(userId, name, value.toString)
           }
       }
     }

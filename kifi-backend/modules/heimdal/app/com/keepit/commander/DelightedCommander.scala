@@ -45,7 +45,7 @@ class DelightedCommanderImpl @Inject() (
   }
 
   def getUserLastInteractedDate(userId: Id[User]): Option[DateTime] = {
-    db.readOnlyReplica { implicit s => delightedUserRepo.getLastInteractedDate(userId) }
+    db.readOnlyReplica { implicit s => delightedUserRepo.getLastInteractedDateForUserId(userId) }
   }
 
   def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[JsValue] = {
@@ -89,11 +89,12 @@ class DelightedCommanderImpl @Inject() (
       }
       val newAnswers = jsonValues.flatMap(saveNewAnswerForResponse(_))
       log.info(s"Fetched ${newAnswers.length} new answers from Delighted")
+      // By default, answers are returned in ascending chronological order
       jsonValues.reverse.collectFirst {
-        case value if (value \ "created_at").asOpt[String].isDefined => (value \ "created_at").as[String]
+        case value if (value \ "created_at").asOpt[Long].isDefined => (value \ "created_at").as[Long]
       } map { mostRecentTimeStamp =>
         log.info(s"New most recent timestamp for Delighted answer: $mostRecentTimeStamp")
-        db.readWrite { implicit s => systemValueRepo.setValue(LAST_DELIGHTED_FETCH_TIME, mostRecentTimeStamp) }
+        db.readWrite { implicit s => systemValueRepo.setValue(LAST_DELIGHTED_FETCH_TIME, mostRecentTimeStamp.toString) }
       }
     }
   }
@@ -123,7 +124,7 @@ class DelightedCommanderImpl @Inject() (
           delightedAnswerRepo.save(answer)
           Some(answer)
         } else {
-          log.info(s"Delighted answer with id ${answer.id} already exists")
+          log.info(s"Delighted answer with id ${answer.delightedExtAnswerId} already exists")
           None
         }
       } getOrElse {
@@ -150,7 +151,7 @@ class DelightedCommanderImpl @Inject() (
               delightedExtUserId = id,
               userId = userId,
               email = email,
-              lastAnswerDate = None
+              userLastInteracted = None
             )
             db.readWrite { implicit s => delightedUserRepo.save(user) }
           }

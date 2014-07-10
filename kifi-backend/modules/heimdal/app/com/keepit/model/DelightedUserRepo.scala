@@ -12,7 +12,8 @@ import org.joda.time.DateTime
 trait DelightedUserRepo extends Repo[DelightedUser] {
   def getByDelightedExtUserId(delightedExtUserId: String)(implicit session: RSession): Option[DelightedUser]
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[DelightedUser]
-  def getLastInteractedDate(userId: Id[User])(implicit session: RSession): Option[DateTime]
+  def getLastInteractedDateForUserId(userId: Id[User])(implicit session: RSession): Option[DateTime]
+  def getLastInteractedDate(delightedUserId: Id[DelightedUser])(implicit session: RSession): Option[DateTime]
   def setLastInteractedDate(delightedUserId: Id[DelightedUser], lastAnswerDate: DateTime)(implicit session: RWSession): Unit
 }
 
@@ -45,8 +46,12 @@ class DelightedUserRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
     (for { u <- rows if u.userId === userId } yield u).firstOption
   }
 
-  def getLastInteractedDate(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
-    (for { u <- rows if u.userId === userId } yield u.userLastInteracted).firstOption
+  def getLastInteractedDateForUserId(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
+    (for { u <- rows if u.userId === userId } yield u).firstOption.flatMap(_.userLastInteracted)
+  }
+
+  def getLastInteractedDate(delightedUserId: Id[DelightedUser])(implicit session: RSession): Option[DateTime] = {
+    (for { u <- rows if u.id === delightedUserId } yield u).firstOption.flatMap(_.userLastInteracted)
   }
 
   def setLastInteractedDate(delightedUserId: Id[DelightedUser], lastAnswerDate: DateTime)(implicit session: RWSession): Unit = {
