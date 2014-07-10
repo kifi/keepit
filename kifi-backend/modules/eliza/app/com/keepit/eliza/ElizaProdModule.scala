@@ -1,7 +1,7 @@
 package com.keepit.eliza
 
 import com.keepit.abook.ProdABookServiceClientModule
-import com.keepit.common.cache.{EhCacheCacheModule, ElizaCacheModule, MemcachedCacheModule}
+import com.keepit.common.cache.{ EhCacheCacheModule, ElizaCacheModule, MemcachedCacheModule }
 import com.keepit.common.service.ServiceType
 import com.keepit.common.store.ElizaProdStoreModule
 import com.keepit.common.zookeeper.ProdDiscoveryModule

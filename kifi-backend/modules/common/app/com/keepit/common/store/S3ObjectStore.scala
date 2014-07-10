@@ -14,20 +14,20 @@ import play.api.Play.current
 import play.api.Play
 import java.io._
 import com.keepit.serializer.BinaryFormat
-import org.apache.commons.io.{IOUtils, FileUtils}
+import org.apache.commons.io.{ IOUtils, FileUtils }
 import com.keepit.common.time._
 
 case class S3Bucket(name: String)
 
-trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with MetadataAccess[A,B] with Logging {
+trait S3ObjectStore[A, B] extends ObjectStore[A, B] with MetadataAccess[A, B] with Logging {
 
   val bucketName: S3Bucket
   val amazonS3Client: AmazonS3
   val accessLog: AccessLog
 
-  protected def unpackValue(s3Obj : S3Object) : B
-  protected def packValue(value : B) : (InputStream, ObjectMetadata)
-  protected def idToKey(id: A) : String
+  protected def unpackValue(s3Obj: S3Object): B
+  protected def packValue(value: B): (InputStream, ObjectMetadata)
+  protected def idToKey(id: A): String
 
   implicit def bucketName(bucket: S3Bucket): String = bucket.name
 
@@ -36,20 +36,20 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with MetadataAccess[A,B] wi
     case false => ""
   }
 
-  protected def doWithS3Client[T](what: =>String)(body: AmazonS3 => T): T = try {
+  protected def doWithS3Client[T](what: => String)(body: AmazonS3 => T): T = try {
     body(amazonS3Client)
   } catch {
     case ex: Exception =>
-      log.error("failed: " + what , ex)
+      log.error("failed: " + what, ex)
       throw ex
   }
 
-  def += (kv: (A, B)) = {
+  def +=(kv: (A, B)) = {
     kv match {
       case (id, value) =>
         val timer = accessLog.timer(S3)
         val key = idToKey(id)
-        doWithS3Client("adding an item to S3Store"){ s3Client =>
+        doWithS3Client("adding an item to S3Store") { s3Client =>
           val (inputStream, metadata) = packValue(value)
           try {
             s3Client.putObject(bucketName, key, inputStream, metadata)
@@ -60,12 +60,12 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with MetadataAccess[A,B] wi
                              AWS Error Code: %s
                              Error Type: %s
                              Request ID: %s""".format(
-                  ase.getMessage(), ase.getStatusCode(), ase.getErrorCode(), ase.getErrorType(), ase.getRequestId())
+                ase.getMessage(), ase.getStatusCode(), ase.getErrorCode(), ase.getErrorType(), ase.getRequestId())
               throw new Exception("could not send object key: [%s]\nvalue: [%s]\nto bucket %s: %s".format(key, value, bucketName, error), ase)
             case e: Exception =>
               throw new Exception("could not send object key: [%s]\nvalue: [%s]\nto bucket %s".format(key, value, bucketName), e)
           } finally {
-            try { inputStream.close() } catch {case e: Exception => log.error("error closing content stream.", e)}
+            try { inputStream.close() } catch { case e: Exception => log.error("error closing content stream.", e) }
           }
         }
         accessLog.add(timer.done(space = bucketName.name, key = key, method = "PUT"))
@@ -73,10 +73,10 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with MetadataAccess[A,B] wi
     this
   }
 
-  def -= (id: A) = {
+  def -=(id: A) = {
     val timer = accessLog.timer(S3)
     val key = idToKey(id)
-    doWithS3Client("removing an item from S3BStore"){ s3Client => s3Client.deleteObject(bucketName, key) }
+    doWithS3Client("removing an item from S3BStore") { s3Client => s3Client.deleteObject(bucketName, key) }
     accessLog.add(timer.done(space = bucketName.name, key = key, method = "DEL"))
     this
   }
@@ -84,7 +84,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with MetadataAccess[A,B] wi
   def get(id: A): Option[B] = {
     val timer = accessLog.timer(S3)
     val key = idToKey(id)
-    val value = doWithS3Client[Option[B]]("getting an item from S3BStore"){ s3Client =>
+    val value = doWithS3Client[Option[B]]("getting an item from S3BStore") { s3Client =>
       val s3obj = try {
         Some(s3Client.getObject(bucketName, key))
       } catch {
@@ -99,7 +99,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with MetadataAccess[A,B] wi
   override def getWithMetadata(id: A): Option[(B, Option[ObjMetadata])] = { // WIP; dup code so get() not affected
     val timer = accessLog.timer(S3)
     val key = idToKey(id)
-    val t = doWithS3Client[Option[(B, Option[ObjMetadata])]]("getting an item from S3BStore"){ s3Client =>
+    val t = doWithS3Client[Option[(B, Option[ObjMetadata])]]("getting an item from S3BStore") { s3Client =>
       val s3obj = try {
         Some(s3Client.getObject(bucketName, key))
       } catch {
@@ -119,7 +119,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with MetadataAccess[A,B] wi
 
 class S3ObjectJsonParsinException(message: String) extends Exception(message)
 
-trait S3JsonStore[A,B] extends S3ObjectStore[A, B] {
+trait S3JsonStore[A, B] extends S3ObjectStore[A, B] {
 
   protected val formatter: Format[B]
 
@@ -151,11 +151,11 @@ trait S3JsonStore[A,B] extends S3ObjectStore[A, B] {
 
 }
 
-trait S3BlobStore[A,B] extends S3ObjectStore[A,B] {
+trait S3BlobStore[A, B] extends S3ObjectStore[A, B] {
 
-  protected def encodeValue(value: B) : Array[Byte]
+  protected def encodeValue(value: B): Array[Byte]
 
-  protected def decodeValue(data: Array[Byte]) : B
+  protected def decodeValue(data: Array[Byte]): B
 
   protected def packValue(value: B) = {
     val content = encodeValue(value)
@@ -179,8 +179,8 @@ trait S3BlobStore[A,B] extends S3ObjectStore[A,B] {
 
 trait BlobFormat[B] {
   val format: BinaryFormat[B]
-  protected def encodeValue(value: B) : Array[Byte] = format.writes(Some(value))
-  protected def decodeValue(data: Array[Byte]) : B = format.reads(data).get
+  protected def encodeValue(value: B): Array[Byte] = format.writes(Some(value))
+  protected def decodeValue(data: Array[Byte]): B = format.reads(data).get
 }
 
 trait S3InboxDirectory {

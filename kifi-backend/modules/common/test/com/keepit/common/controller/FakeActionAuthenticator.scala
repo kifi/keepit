@@ -1,14 +1,14 @@
 package com.keepit.common.controller
 
-import com.google.inject.{Inject, Singleton, Provides}
-import com.keepit.common.controller.FortyTwoCookies.{KifiInstallationCookie, ImpersonateCookie}
-import com.keepit.common.db.{ExternalId, State, Id}
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.google.inject.{ Inject, Singleton, Provides }
+import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie, ImpersonateCookie }
+import com.keepit.common.db.{ ExternalId, State, Id }
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
-import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.social.{ SocialNetworkType, SocialId }
 
 import play.api.mvc._
 import securesocial.core._
@@ -60,18 +60,18 @@ class FakeActionAuthenticator extends ActionAuthenticator with SecureSocial with
     onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
     onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult],
     onUnauthenticated: Request[T] => Future[SimpleResult]): Action[T] = Action.async(bodyParser) { request =>
-      try {
-        val user = fixedUser.getOrElse(User(id = Some(Id[User](1)), firstName = "Arthur", lastName = "Dent"))
-        log.debug("running action with fake auth of user $user, request on path ${request.path} api: $apiClient")
-        val res = onAuthenticated(AuthenticatedRequest[T](FakeIdentity(user), user.id.get, user, request, fixedExperiments, None, None))
-        log.debug("executed action with res: $res")
-        res
-      } catch {
-        case t: Throwable =>
-          t.printStackTrace()
-          log.error("action fail!", t)
-          throw t
-      }
+    try {
+      val user = fixedUser.getOrElse(User(id = Some(Id[User](1)), firstName = "Arthur", lastName = "Dent"))
+      log.debug("running action with fake auth of user $user, request on path ${request.path} api: $apiClient")
+      val res = onAuthenticated(AuthenticatedRequest[T](FakeIdentity(user), user.id.get, user, request, fixedExperiments, None, None))
+      log.debug("executed action with res: $res")
+      res
+    } catch {
+      case t: Throwable =>
+        t.printStackTrace()
+        log.error("action fail!", t)
+        throw t
+    }
   }
 
   private[controller] def isAdmin(experiments: Set[ExperimentType]) = false

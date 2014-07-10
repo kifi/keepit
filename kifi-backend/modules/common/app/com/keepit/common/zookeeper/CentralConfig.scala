@@ -1,10 +1,10 @@
 package com.keepit.common.zookeeper
 
-import com.google.inject.{Inject, Singleton}
-import org.apache.zookeeper.{CreateMode, KeeperException}
+import com.google.inject.{ Inject, Singleton }
+import org.apache.zookeeper.{ CreateMode, KeeperException }
 import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.collection.mutable.{ArrayBuffer, SynchronizedBuffer}
+import scala.collection.mutable.{ ArrayBuffer, SynchronizedBuffer }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.logging.Logging
@@ -28,8 +28,6 @@ import com.keepit.common.logging.Logging
 //
 // //****************************************************
 
-
-
 trait CentralConfigKey {
   val namespace: String
   def key: String
@@ -37,12 +35,10 @@ trait CentralConfigKey {
   def fullKey: String
 
   val rootPath = "/fortytwo/config"
-  def toNode : Node = Node(rootPath + "/" + fullKey)
+  def toNode: Node = Node(rootPath + "/" + fullKey)
 
   override def toString = fullKey
 }
-
-
 
 trait BooleanCentralConfigKey extends CentralConfigKey {
   override def fullKey: String = s"${namespace}/${key}.bool"
@@ -67,17 +63,17 @@ trait ConfigStore {
   def watch(key: CentralConfigKey, sessionOverride: Option[ZooKeeperSession] = None)(handler: Option[String] => Unit)
 }
 
-class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore with Logging{
-  import com.keepit.common.strings.{fromByteArray, toByteArray}
+class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore with Logging {
+  import com.keepit.common.strings.{ fromByteArray, toByteArray }
 
   private[this] val watches = new ArrayBuffer[(CentralConfigKey, Option[String] => Unit)] with SynchronizedBuffer[(CentralConfigKey, Option[String] => Unit)]
 
-  zkClient.onConnected{ zk =>
+  zkClient.onConnected { zk =>
     log.info(s"ZKX registering watches")
-    watches.foreach{ case (key, handler) => watch(key, Some(zk))(handler) }
+    watches.foreach { case (key, handler) => watch(key, Some(zk))(handler) }
   }
 
-  def get(key: CentralConfigKey): Option[String] = zkClient.session{ zk =>
+  def get(key: CentralConfigKey): Option[String] = zkClient.session { zk =>
     try {
       zk.getData(key.toNode)
     } catch {
@@ -91,8 +87,8 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore with Logging{
     }
   }
 
-  def set(key: CentralConfigKey, value: String): Unit = zkClient.session{ zk =>
-    try{
+  def set(key: CentralConfigKey, value: String): Unit = zkClient.session { zk =>
+    try {
       zk.setData(key.toNode, value)
     } catch {
       case e: KeeperException.NoNodeException => {
@@ -103,81 +99,78 @@ class ZkConfigStore(zkClient: ZooKeeperClient) extends ConfigStore with Logging{
   }
 
   def watch(key: CentralConfigKey, sessionOverride: Option[ZooKeeperSession] = None)(handler: Option[String] => Unit): Unit = {
-    zkClient.session{ zkM =>
+    zkClient.session { zkM =>
       val zk = sessionOverride.getOrElse(zkM)
       log.info(s"ZKX registering watch $key")
       watches += ((key, handler))
-      zk.watchNode[String](key.toNode, data => SafeFuture{ handler(data) })(fromByteArray)
+      zk.watchNode[String](key.toNode, data => SafeFuture { handler(data) })(fromByteArray)
     }
   }
 }
 
-
 class InMemoryConfigStore extends ConfigStore {
-  import scala.collection.mutable.{HashMap, ArrayBuffer, SynchronizedMap}
-  val db : SynchronizedMap[String, String] = new HashMap[String, String]() with SynchronizedMap[String, String]
-  val watches : HashMap[String, ArrayBuffer[Option[String] => Unit]] = new HashMap[String, ArrayBuffer[Option[String] => Unit]]() with SynchronizedMap[String, ArrayBuffer[Option[String] => Unit]]
+  import scala.collection.mutable.{ HashMap, ArrayBuffer, SynchronizedMap }
+  val db: SynchronizedMap[String, String] = new HashMap[String, String]() with SynchronizedMap[String, String]
+  val watches: HashMap[String, ArrayBuffer[Option[String] => Unit]] = new HashMap[String, ArrayBuffer[Option[String] => Unit]]() with SynchronizedMap[String, ArrayBuffer[Option[String] => Unit]]
 
   def get(key: CentralConfigKey): Option[String] = db.get(key.toNode.name)
 
-
-  def set(key: CentralConfigKey, value: String) : Unit = {
+  def set(key: CentralConfigKey, value: String): Unit = {
     db(key.toNode.name) = value
-    watches.get(key.toNode.name).foreach{ funs =>
+    watches.get(key.toNode.name).foreach { funs =>
       funs.foreach(_(Some(value)))
     }
   }
 
-  def watch(key: CentralConfigKey, sessionOverride: Option[ZooKeeperSession] = None)(handler: Option[String] => Unit) : Unit = {
+  def watch(key: CentralConfigKey, sessionOverride: Option[ZooKeeperSession] = None)(handler: Option[String] => Unit): Unit = {
     if (!watches.isDefinedAt(key.toNode.name)) watches(key.toNode.name) = new ArrayBuffer[Option[String] => Unit]()
     watches(key.toNode.name) += handler
   }
 }
 
-
 @Singleton
-class CentralConfig @Inject() (cs: ConfigStore) extends Logging{
+class CentralConfig @Inject() (cs: ConfigStore) extends Logging {
 
-  def apply(key: BooleanCentralConfigKey) : Option[Boolean] = cs.get(key).map(_.toBoolean)
+  def apply(key: BooleanCentralConfigKey): Option[Boolean] = cs.get(key).map(_.toBoolean)
 
-  def apply(key: LongCentralConfigKey) : Option[Long] = cs.get(key).map(_.toLong)
+  def apply(key: LongCentralConfigKey): Option[Long] = cs.get(key).map(_.toLong)
 
-  def apply(key: DoubleCentralConfigKey) : Option[Double] = cs.get(key).map(_.toDouble)
+  def apply(key: DoubleCentralConfigKey): Option[Double] = cs.get(key).map(_.toDouble)
 
-  def apply(key: StringCentralConfigKey) : Option[String] = cs.get(key)
+  def apply(key: StringCentralConfigKey): Option[String] = cs.get(key)
 
-  def apply[T](key: SequenceNumberCentralConfigKey[T]) : Option[SequenceNumber[T]] = apply(key.longKey).map(SequenceNumber[T](_))
+  def apply[T](key: SequenceNumberCentralConfigKey[T]): Option[SequenceNumber[T]] = apply(key.longKey).map(SequenceNumber[T](_))
 
-  def update(key: BooleanCentralConfigKey, value: Boolean) : Unit = cs.set(key, value.toString)
+  def update(key: BooleanCentralConfigKey, value: Boolean): Unit = cs.set(key, value.toString)
 
-  def update(key: LongCentralConfigKey, value: Long) : Unit = cs.set(key, value.toString)
+  def update(key: LongCentralConfigKey, value: Long): Unit = cs.set(key, value.toString)
 
-  def update(key: DoubleCentralConfigKey, value: Double) : Unit = cs.set(key, value.toString)
+  def update(key: DoubleCentralConfigKey, value: Double): Unit = cs.set(key, value.toString)
 
-  def update(key: StringCentralConfigKey, value: String) : Unit = cs.set(key,value)
+  def update(key: StringCentralConfigKey, value: String): Unit = cs.set(key, value)
 
   def update[T](key: SequenceNumberCentralConfigKey[T], value: SequenceNumber[T]): Unit = update(key.longKey, value.value)
 
-  def onChange(key: BooleanCentralConfigKey)(handler: Option[Boolean] => Unit) : Unit =
-    cs.watch(key){ stringValueOpt =>
+  def onChange(key: BooleanCentralConfigKey)(handler: Option[Boolean] => Unit): Unit =
+    cs.watch(key) { stringValueOpt =>
       log.info(s"ZKX Central Config watch fired on $key with boolean value $stringValueOpt")
       handler(stringValueOpt.map(_.toBoolean))
     }
 
-  def onChange(key: LongCentralConfigKey)(handler: Option[Long] => Unit) : Unit =
-    cs.watch(key){ stringValueOpt =>
+  def onChange(key: LongCentralConfigKey)(handler: Option[Long] => Unit): Unit =
+    cs.watch(key) { stringValueOpt =>
       log.info(s"ZKX Central Config watch fired on $key with long value $stringValueOpt")
       handler(stringValueOpt.map(_.toLong))
     }
 
-  def onChange(key: DoubleCentralConfigKey)(handler: Option[Double] => Unit) : Unit =
-    cs.watch(key){ stringValueOpt =>
+  def onChange(key: DoubleCentralConfigKey)(handler: Option[Double] => Unit): Unit =
+    cs.watch(key) { stringValueOpt =>
       log.info(s"ZKX Central Config watch fired on $key with double value $stringValueOpt")
       handler(stringValueOpt.map(_.toDouble))
     }
 
-  def onChange(key: StringCentralConfigKey)(handler: Option[String] => Unit) : Unit =
-    cs.watch(key){ stringValueOpt =>
+  def onChange(key: StringCentralConfigKey)(handler: Option[String] => Unit): Unit =
+    cs.watch(key) { stringValueOpt =>
       log.info(s"ZKX Central Config watch fired on $key with string value $stringValueOpt")
       handler(stringValueOpt)
     }

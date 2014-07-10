@@ -1,7 +1,7 @@
 package com.keepit.classify
 
 import net.codingwell.scalaguice.ScalaModule
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.google.common.io.Files
 
 trait DomainTagImporterModule extends ScalaModule {

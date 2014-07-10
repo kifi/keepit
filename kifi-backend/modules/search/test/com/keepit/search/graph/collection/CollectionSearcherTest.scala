@@ -11,7 +11,6 @@ import com.keepit.test.DeprecatedEmptyApplication
 
 import play.api.test.Helpers.running
 
-
 class CollectionSearcherTest extends Specification with GraphTestHelper {
   "collection searcher" should {
 
@@ -20,10 +19,10 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
         val (users, uris) = initData
 
         val usersWithCollection = users.take(2)
-        val expectedUriToUserEdges = uris.map{ (_, usersWithCollection) }
+        val expectedUriToUserEdges = uris.map { (_, usersWithCollection) }
         saveBookmarksByURI(expectedUriToUserEdges)
 
-        val collections = usersWithCollection.foldLeft(Map.empty[Id[User], Collection]){ (m, user) =>
+        val collections = usersWithCollection.foldLeft(Map.empty[Id[User], Collection]) { (m, user) =>
           val coll = saveCollection(user, s"${user.firstName} - Collection")
           val bookmarks = getBookmarksByUser(user.id.get)
           m + (user.id.get -> saveBookmarksToCollection(coll, bookmarks))
@@ -31,10 +30,10 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
         val indexer = mkCollectionIndexer()
         indexer.update()
 
-        val searcher =CollectionSearcher(indexer)
+        val searcher = CollectionSearcher(indexer)
 
         val positiveUsers = usersWithCollection.map(_.id.get).toSet
-        users.forall{ user =>
+        users.forall { user =>
           val answer = searcher.getUserToCollectionEdgeSet(user.id.get)
           val expected = collections.get(user.id.get).map(_.id.get).toSet
           answer.destIdSet === expected
@@ -47,10 +46,10 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
-        val expectedUriToUsers = uris.map{ uri => (uri, users.filter( _.id.get.id == uri.id.get.id)) }
+        val expectedUriToUsers = uris.map { uri => (uri, users.filter(_.id.get.id == uri.id.get.id)) }
         saveBookmarksByURI(expectedUriToUsers)
 
-        val collections = users.foldLeft(Map.empty[User, Collection]){ (m, user) =>
+        val collections = users.foldLeft(Map.empty[User, Collection]) { (m, user) =>
           val coll = saveCollection(user, s"${user.firstName} - Collection")
           val bookmarks = getBookmarksByUser(user.id.get)
 
@@ -59,13 +58,14 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
         val indexer = mkCollectionIndexer()
         indexer.update()
 
-        val searcher =CollectionSearcher(indexer)
+        val searcher = CollectionSearcher(indexer)
 
-        expectedUriToUsers.forall{ case (uri, users) =>
-          val answer = searcher.getUriToCollectionEdgeSet(uri.id.get)
-          val expected = users.flatMap{ user => collections.get(user) }.map(_.id.get).toSet
-          answer.destIdSet === expected
-          true
+        expectedUriToUsers.forall {
+          case (uri, users) =>
+            val answer = searcher.getUriToCollectionEdgeSet(uri.id.get)
+            val expected = users.flatMap { user => collections.get(user) }.map(_.id.get).toSet
+            answer.destIdSet === expected
+            true
         } === true
       }
     }
@@ -74,10 +74,10 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
-        val expectedUriToUsers = uris.map{ uri => (uri, users.filter{ _.id.get.id <= uri.id.get.id }) }
+        val expectedUriToUsers = uris.map { uri => (uri, users.filter { _.id.get.id <= uri.id.get.id }) }
         saveBookmarksByURI(expectedUriToUsers)
 
-        val collections = users.map{ user =>
+        val collections = users.map { user =>
           val coll = saveCollection(user, s"${user.firstName} - Collection")
           val bookmarks = getBookmarksByUser(user.id.get)
 
@@ -86,12 +86,13 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
         val indexer = mkCollectionIndexer()
         indexer.update()
 
-        val searcher =CollectionSearcher(indexer)
+        val searcher = CollectionSearcher(indexer)
 
-        collections.forall{ case (coll, bookmarks) =>
-          val answer = searcher.getCollectionToUriEdgeSet(coll.id.get)
-          answer.destIdSet === bookmarks.map(_.uriId).toSet
-          true
+        collections.forall {
+          case (coll, bookmarks) =>
+            val answer = searcher.getCollectionToUriEdgeSet(coll.id.get)
+            answer.destIdSet === bookmarks.map(_.uriId).toSet
+            true
         } === true
       }
     }
@@ -100,10 +101,10 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
-        val expectedUriToUsers = uris.map{ uri => (uri, users.filter( _.id.get.id == uri.id.get.id)) }
+        val expectedUriToUsers = uris.map { uri => (uri, users.filter(_.id.get.id == uri.id.get.id)) }
         saveBookmarksByURI(expectedUriToUsers)
 
-        val collections = users.foldLeft(Map.empty[User, Collection]){ (m, user) =>
+        val collections = users.foldLeft(Map.empty[User, Collection]) { (m, user) =>
           val coll = saveCollection(user, s"${user.firstName} - Collection")
           val bookmarks = getBookmarksByUser(user.id.get)
 
@@ -112,22 +113,22 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
         val indexer = mkCollectionIndexer()
         indexer.update()
 
-        val searcher =CollectionSearcher(indexer)
+        val searcher = CollectionSearcher(indexer)
 
-        expectedUriToUsers.forall{ case (uri, users) =>
-          val uriToColl = searcher.getUriToCollectionEdgeSet(uri.id.get)
-          val expectedFromUri = users.flatMap{ user => collections.get(user) }.map(_.id.get).toSet
-          users.forall{ user =>
-            val userToColl = searcher.getUserToCollectionEdgeSet(user.id.get)
-            val expectedFromUser = collections.get(user).map(_.id.get).toSet
+        expectedUriToUsers.forall {
+          case (uri, users) =>
+            val uriToColl = searcher.getUriToCollectionEdgeSet(uri.id.get)
+            val expectedFromUri = users.flatMap { user => collections.get(user) }.map(_.id.get).toSet
+            users.forall { user =>
+              val userToColl = searcher.getUserToCollectionEdgeSet(user.id.get)
+              val expectedFromUser = collections.get(user).map(_.id.get).toSet
 
-            searcher.intersect(userToColl, uriToColl).destIdSet === (expectedFromUri intersect expectedFromUser)
-            true
-          }
+              searcher.intersect(userToColl, uriToColl).destIdSet === (expectedFromUri intersect expectedFromUser)
+              true
+            }
         } === true
       }
     }
-
 
   }
 }

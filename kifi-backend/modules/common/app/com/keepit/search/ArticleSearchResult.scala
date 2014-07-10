@@ -1,7 +1,7 @@
 package com.keepit.search
 
-import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.model.{User, NormalizedURI}
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.model.{ User, NormalizedURI }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import play.api.libs.json._
@@ -38,7 +38,7 @@ case class ArticleSearchResult(
   previousHits: Int,
   uuid: ExternalId[ArticleSearchResult] = ExternalId(),
   time: DateTime = currentDateTime,
-  svVariance: Float = -1.0f,			// semantic vector variance
+  svVariance: Float = -1.0f, // semantic vector variance
   svExistenceVar: Float = -1.0f,
   toShow: Boolean = true,
   collections: Set[Long] = Set.empty[Long],
@@ -68,9 +68,8 @@ object ArticleSearchResult extends Logging {
   )(ArticleSearchResult.apply, unlift(ArticleSearchResult.unapply))
 }
 
-
 class Scoring(val textScore: Float, var normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float, val usefulPage: Boolean) extends Equals {
-  def nonTextBoostFactor = (1.0d - (1.0d/(1.0d + (pow(4.0d * textScore, 4.0d))))).toFloat // don't boost too much by bookmark/recency if textScore is too low.
+  def nonTextBoostFactor = (1.0d - (1.0d / (1.0d + (pow(4.0d * textScore, 4.0d))))).toFloat // don't boost too much by bookmark/recency if textScore is too low.
   var boostedTextScore: Float = Float.NaN
   var boostedBookmarkScore: Float = Float.NaN
   var boostedRecencyScore: Float = Float.NaN
@@ -95,7 +94,7 @@ class Scoring(val textScore: Float, var normalizedTextScore: Float, val bookmark
     other match {
       case that: com.keepit.search.Scoring =>
         that.canEqual(Scoring.this) && textScore == that.textScore && normalizedTextScore == that.normalizedTextScore && bookmarkScore == that.bookmarkScore &&
-        recencyScore == that.recencyScore && usefulPage == that.usefulPage
+          recencyScore == that.recencyScore && usefulPage == that.usefulPage
       case _ => false
     }
   }
@@ -127,15 +126,15 @@ object Scoring extends Logging {
 
     def reads(json: JsValue): JsResult[Scoring] = JsSuccess({
       val score = new Scoring(
-        textScore  = (json \ "textScore").as[Float],
-        normalizedTextScore  = (json \ "normalizedTextScore").as[Float],
-        bookmarkScore  = (json \ "bookmarkScore").as[Float],
-        recencyScore  = (json \ "recencyScore").as[Float],
-        usefulPage  = (json \ "usefulPage").asOpt[Boolean].getOrElse(false)
+        textScore = (json \ "textScore").as[Float],
+        normalizedTextScore = (json \ "normalizedTextScore").as[Float],
+        bookmarkScore = (json \ "bookmarkScore").as[Float],
+        recencyScore = (json \ "recencyScore").as[Float],
+        usefulPage = (json \ "usefulPage").asOpt[Boolean].getOrElse(false)
       )
       score.boostedTextScore = (json \ "boostedTextScore").asOpt[Float].getOrElse(Float.NaN)
-      score.boostedBookmarkScore  = (json \ "boostedBookmarkScore").asOpt[Float].getOrElse(Float.NaN)
-      score.boostedRecencyScore  = (json \ "boostedRecencyScore").asOpt[Float].getOrElse(Float.NaN)
+      score.boostedBookmarkScore = (json \ "boostedBookmarkScore").asOpt[Float].getOrElse(Float.NaN)
+      score.boostedRecencyScore = (json \ "boostedRecencyScore").asOpt[Float].getOrElse(Float.NaN)
       score
     })
   }

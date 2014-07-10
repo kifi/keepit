@@ -24,12 +24,13 @@ trait FieldDecoder {
       case None =>
         Option(field.tokenStreamValue) match {
           case Some(ts) =>
-            decodeTokenStream(ts).map{ case (term, pos, payload) =>
-              payload match {
-                case "" => "%s @%d".format(term, pos)
-                case _ => "%s @%d [%s]".format(term, pos, payload)
-              }
-            }.mkString("tokenStream{", " / " , "}")
+            decodeTokenStream(ts).map {
+              case (term, pos, payload) =>
+                payload match {
+                  case "" => "%s @%d".format(term, pos)
+                  case _ => "%s @%d [%s]".format(term, pos, payload)
+                }
+            }.mkString("tokenStream{", " / ", "}")
           case _ => "unable to decode"
         }
     }
@@ -58,10 +59,10 @@ trait FieldDecoder {
   }
 
   def decodePayload(payload: BytesRef): String = {
-    payload.bytes.slice(payload.offset, payload.offset + payload.length).grouped(4).map{ toHexString(_) }.mkString(" ")
+    payload.bytes.slice(payload.offset, payload.offset + payload.length).grouped(4).map { toHexString(_) }.mkString(" ")
   }
 
-  def toHexString(bytes: Array[Byte]) = bytes.foldLeft(""){ (s, b) => s + "%02X".format(b.toInt & 0xFF) }
+  def toHexString(bytes: Array[Byte]) = bytes.foldLeft("") { (s, b) => s + "%02X".format(b.toInt & 0xFF) }
 
   def getAttribute[A <: Attribute](ts: TokenStream, clazz: Class[A]) = {
     ts.hasAttribute(clazz) match {
@@ -81,9 +82,10 @@ object DocUtil {
     override def apply(indexableField: IndexableField): String = {
       var seqno = -1
       def toString(ids: Array[Long], timestamps: Array[Long]) = {
-        ids.zip(timestamps).map{ case (id, timestamp) =>
-          seqno += 1
-          "#%d: %d [%s]".format(seqno, id, new DateTime(Util.unitToMillis(timestamp), DEFAULT_DATE_TIME_ZONE).toStandardTimeString)
+        ids.zip(timestamps).map {
+          case (id, timestamp) =>
+            seqno += 1
+            "#%d: %d [%s]".format(seqno, id, new DateTime(Util.unitToMillis(timestamp), DEFAULT_DATE_TIME_ZONE).toStandardTimeString)
         }.mkString(", ")
       }
       val binaryValue = indexableField.binaryValue
@@ -97,7 +99,7 @@ object DocUtil {
     override def apply(indexableField: IndexableField): String = {
       var seqno = -1
       def toString(ids: Array[Long]) = {
-        ids.map{ id =>
+        ids.map { id =>
           seqno += 1
           "#%d: %d".format(seqno, id)
         }.mkString(", ")
@@ -114,18 +116,19 @@ object DocUtil {
       val field = indexableField.asInstanceOf[Field]
       Option(field.tokenStreamValue) match {
         case Some(ts) =>
-          decodeTokenStream(ts).map{ case (term, pos, payload) =>
-            payload match {
-              case "" => "#%d: %s @%d".format(pos / LineField.MAX_POSITION_PER_LINE, term, pos % LineField.MAX_POSITION_PER_LINE)
-              case _ => "#%d: %s @%d [%s]".format(pos / LineField.MAX_POSITION_PER_LINE, term, pos % LineField.MAX_POSITION_PER_LINE, payload)
-            }
+          decodeTokenStream(ts).map {
+            case (term, pos, payload) =>
+              payload match {
+                case "" => "#%d: %s @%d".format(pos / LineField.MAX_POSITION_PER_LINE, term, pos % LineField.MAX_POSITION_PER_LINE)
+                case _ => "#%d: %s @%d [%s]".format(pos / LineField.MAX_POSITION_PER_LINE, term, pos % LineField.MAX_POSITION_PER_LINE, payload)
+              }
           }.mkString(" / ")
         case _ => "unable to decode"
       }
     }
   }
 
-  def binaryDocValFieldDecoder(decode: (Array[Byte], Int, Int)=>String): FieldDecoder = new FieldDecoder {
+  def binaryDocValFieldDecoder(decode: (Array[Byte], Int, Int) => String): FieldDecoder = new FieldDecoder {
     override def apply(indexableField: IndexableField): String = {
       val binaryValue = indexableField.binaryValue
       decode(binaryValue.bytes, binaryValue.offset, binaryValue.length)

@@ -1,7 +1,7 @@
 package com.keepit.common.mail
 
 import net.codingwell.scalaguice.ScalaModule
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.amazonaws.auth.BasicAWSCredentials
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.amazonaws.services.simpleemail.AmazonSimpleEmailServiceClient
@@ -35,7 +35,7 @@ class DevAmazonMailModule extends AmazonMailModule {
   @Singleton
   @Provides
   def amazonSimpleMailProvider(): AmazonSimpleMailProvider =
-    new AmazonSimpleMailProvider(){
+    new AmazonSimpleMailProvider() {
       def sendMail(mail: ElectronicMail): Unit = println(mail)
     }
 

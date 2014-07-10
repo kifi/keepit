@@ -1,15 +1,14 @@
 package com.keepit.maven
 
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.cache.{FortyTwoCachePlugin, InMemoryCachePlugin}
+import com.keepit.common.cache.{ FortyTwoCachePlugin, InMemoryCachePlugin }
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.maven.model.RawSeedItemSequencingPlugin
 
 import play.api.Application
 import play.api.Mode.Prod
 
-
-object MavenGlobal extends FortyTwoGlobal(Prod) with MavenServices{
+object MavenGlobal extends FortyTwoGlobal(Prod) with MavenServices {
   val module = MavenProdModule()
 
   override def onStart(app: Application) {
@@ -21,7 +20,7 @@ object MavenGlobal extends FortyTwoGlobal(Prod) with MavenServices{
 }
 
 trait MavenServices { self: FortyTwoGlobal =>
-  def startMavenServices(){
+  def startMavenServices() {
     require(injector.instance[HealthcheckPlugin] != null)
     require(injector.instance[FortyTwoCachePlugin] != null)
     require(injector.instance[InMemoryCachePlugin] != null)

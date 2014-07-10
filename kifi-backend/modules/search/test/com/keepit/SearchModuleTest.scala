@@ -2,15 +2,15 @@ package com.keepit.search
 
 import com.keepit.common.zookeeper._
 import com.keepit.common.net._
-import com.keepit.common.controller.{ServiceController, SearchServiceController}
+import com.keepit.common.controller.{ ServiceController, SearchServiceController }
 import com.keepit.common.logging.Logging
-import com.keepit.test.{SearchApplicationInjector, DeprecatedSearchApplication}
+import com.keepit.test.{ SearchApplicationInjector, DeprecatedSearchApplication }
 import org.specs2.mutable.Specification
 import play.api.Play.current
 import play.api.mvc.Controller
 import play.api.test.Helpers.running
 import scala.collection.JavaConversions._
-import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
+import com.keepit.common.akka.{ FortyTwoActor, AlertingActor }
 import net.spy.memcached.MemcachedClient
 import scala.reflect.ManifestFactory.classType
 import com.keepit.heimdal.HeimdalQueueDevModule

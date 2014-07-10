@@ -15,8 +15,7 @@ import org.apache.lucene.search.Weight
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.ToStringUtils
-import java.util.{Set => JSet}
-
+import java.util.{ Set => JSet }
 
 class ConditionalQuery(val source: Query, val condition: Query) extends Query {
 
@@ -111,9 +110,9 @@ class ConditionalWeight(query: ConditionalQuery, searcher: Searcher) extends Wei
     val sourceScorer = sourceWeight.scorer(context, true, false, acceptDocs)
     if (sourceScorer == null) null
     else {
-     val conditionScorer = conditionWeight.scorer(context, true, false, acceptDocs)
-     if (conditionScorer == null) null
-     else new ConditionalScorer(this, sourceScorer, conditionScorer)
+      val conditionScorer = conditionWeight.scorer(context, true, false, acceptDocs)
+      if (conditionScorer == null) null
+      else new ConditionalScorer(this, sourceScorer, conditionScorer)
     }
   }
 }

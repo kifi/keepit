@@ -1,6 +1,6 @@
 package com.keepit.graph
 
-import com.google.inject.{Singleton, Provides}
+import com.google.inject.{ Singleton, Provides }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceDiscovery

@@ -39,10 +39,10 @@ class ShardTest extends Specification {
     }
 
     "be converted to spec string" in {
-      ShardSpec.toString[Any](Set(shard(0,1))) === "0/1"
+      ShardSpec.toString[Any](Set(shard(0, 1))) === "0/1"
 
       val parser = new ShardSpecParser
-      parser.parse[Any](ShardSpec.toString[Any](Set(shard(0,3), shard(2,3)))) === Set(shard(0,3), shard(2,3))
+      parser.parse[Any](ShardSpec.toString[Any](Set(shard(0, 3), shard(2, 3)))) === Set(shard(0, 3), shard(2, 3))
 
       ShardSpec.toString[Any](Set()) must throwA[Exception]
     }

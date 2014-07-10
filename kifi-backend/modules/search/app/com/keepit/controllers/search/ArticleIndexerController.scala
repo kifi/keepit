@@ -17,11 +17,11 @@ import views.html
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class ArticleIndexerController @Inject()(
-    phraseIndexer: PhraseIndexer,
-    indexerPlugin: ArticleIndexerPlugin,
-    shoeboxClient: ShoeboxServiceClient)
-  extends SearchServiceController {
+class ArticleIndexerController @Inject() (
+  phraseIndexer: PhraseIndexer,
+  indexerPlugin: ArticleIndexerPlugin,
+  shoeboxClient: ShoeboxServiceClient)
+    extends SearchServiceController {
 
   def index() = Action { implicit request =>
     indexerPlugin.update()

@@ -3,11 +3,11 @@ package com.keepit.inject
 import _root_.net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.logging.Logging
 import com.keepit.common.crypto.ShoeboxCryptoModule
-import com.keepit.common.actor.{ActorSystemModule, ProdActorSystemModule, DevActorSystemModule}
-import com.keepit.common.zookeeper.{DiscoveryModule, DevDiscoveryModule}
+import com.keepit.common.actor.{ ActorSystemModule, ProdActorSystemModule, DevActorSystemModule }
+import com.keepit.common.zookeeper.{ DiscoveryModule, DevDiscoveryModule }
 import com.keepit.common.healthcheck.ProdHealthCheckModule
 import com.keepit.common.net.ProdHttpClientModule
-import com.keepit.common.healthcheck.{ProdAirbrakeModule, DevAirbrakeModule, ProdMemoryUsageModule, DevMemoryUsageModule}
+import com.keepit.common.healthcheck.{ ProdAirbrakeModule, DevAirbrakeModule, ProdMemoryUsageModule, DevMemoryUsageModule }
 import com.keepit.common.aws.AwsModule
 
 abstract class AbstractModuleAccessor extends ScalaModule {
@@ -26,7 +26,7 @@ trait ConfigurationModule extends AbstractModuleAccessor with Logging {
       val startTime = System.currentTimeMillis
       if (!cache.contains(field.getName)) {
         val module = field.invoke(this).asInstanceOf[ScalaModule]
-        log.debug(s"Installing ${module.getClass.getSimpleName}: took ${System.currentTimeMillis-startTime}ms")
+        log.debug(s"Installing ${module.getClass.getSimpleName}: took ${System.currentTimeMillis - startTime}ms")
         install0(module)
         cache.add(field.getName)
       }

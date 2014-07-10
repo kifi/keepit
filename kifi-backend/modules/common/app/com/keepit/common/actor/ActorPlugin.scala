@@ -2,7 +2,7 @@ package com.keepit.common.actor
 
 import akka.actor.ActorSystem
 import com.google.inject.Provider
-import play.api.{Play, Plugin}
+import play.api.{ Play, Plugin }
 import com.keepit.common.logging.Logging
 
 /**
@@ -14,7 +14,7 @@ import com.keepit.common.logging.Logging
  * other services or plugins that need to use actors.
  */
 class ActorPlugin(system: ActorSystem)
-  extends Plugin with Provider[ActorSystem] with Logging {
+    extends Plugin with Provider[ActorSystem] with Logging {
 
   def get: ActorSystem = system
 

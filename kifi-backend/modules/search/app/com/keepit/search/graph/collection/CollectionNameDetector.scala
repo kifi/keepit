@@ -10,17 +10,17 @@ import org.apache.lucene.index.AtomicReader
 
 class CollectionNameDetector(indexReader: AtomicReader, collectionIdList: Array[Long]) {
 
-  def detectAll(terms: IndexedSeq[Term], partialMatch: Boolean): Set[(Int,Int, Long)] = {
+  def detectAll(terms: IndexedSeq[Term], partialMatch: Boolean): Set[(Int, Int, Long)] = {
     var result = Set.empty[(Int, Int, Long)] // (position, length, collectionId)
     if (partialMatch) {
-      detectPartialMatch(terms){ (position, length, collectionId) => result += ((position, length, collectionId)) }
+      detectPartialMatch(terms) { (position, length, collectionId) => result += ((position, length, collectionId)) }
     } else {
-      detectInternal(terms){ (position, length, collectionId) => result += ((position, length, collectionId)) }
+      detectInternal(terms) { (position, length, collectionId) => result += ((position, length, collectionId)) }
     }
     result
   }
 
-  private def detectPartialMatch(terms: IndexedSeq[Term])(f: (Int, Int, Long)=>Unit): Unit = {
+  private def detectPartialMatch(terms: IndexedSeq[Term])(f: (Int, Int, Long) => Unit): Unit = {
     val numTerms = terms.size
     var index = 0
     while (index < numTerms) {
@@ -33,7 +33,7 @@ class CollectionNameDetector(indexReader: AtomicReader, collectionIdList: Array[
     }
   }
 
-  private def detectInternal(terms: IndexedSeq[Term])(f: (Int, Int, Long)=>Unit): Unit = {
+  private def detectInternal(terms: IndexedSeq[Term])(f: (Int, Int, Long) => Unit): Unit = {
     val numTerms = terms.size
     val pq = new PQ(terms.size)
 
@@ -57,7 +57,7 @@ class CollectionNameDetector(indexReader: AtomicReader, collectionIdList: Array[
     findCollectionNames(pq, f)
   }
 
-  private def findCollectionNames(pq: PQ, onMatch: (Int, Int, Long)=>Unit): Unit = {
+  private def findCollectionNames(pq: PQ, onMatch: (Int, Int, Long) => Unit): Unit = {
     var count = pq.size
 
     if (count > 0) {
@@ -108,7 +108,7 @@ class CollectionNameDetector(indexReader: AtomicReader, collectionIdList: Array[
       doc
     }
 
-    def checkPosition(phraseStart: Int, wordOffset: Int, doc: Int, onMatch: (Int, Int, Long)=>Unit): Boolean = {
+    def checkPosition(phraseStart: Int, wordOffset: Int, doc: Int, onMatch: (Int, Int, Long) => Unit): Boolean = {
       if (index == (phraseStart + wordOffset)) {
         var freq = tp.freq()
         while (freq > 0) {
@@ -117,7 +117,7 @@ class CollectionNameDetector(indexReader: AtomicReader, collectionIdList: Array[
           if (pos > wordOffset) return false
           if (pos == wordOffset) {
             if ((data & 1) == 1) {
-              onMatch(phraseStart, wordOffset+1, collectionIdList(doc)) // one phrase matched
+              onMatch(phraseStart, wordOffset + 1, collectionIdList(doc)) // one phrase matched
               return false // no need to continue
             }
             return true // position matched, continue if the next word is at the same doc

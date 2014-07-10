@@ -1,7 +1,7 @@
 package com.keepit.common.net
 
 import org.specs2.mutable.Specification
-import java.net.{URI => JavaURI}
+import java.net.{ URI => JavaURI }
 
 class URITest extends Specification {
   "URI" should {
@@ -38,7 +38,7 @@ class URITest extends Specification {
           host.get.domain === Seq("com", "nba", "premium")
           port === -1
           path === Some("/pr/leaguepass/app/2012/console.html")
-          query.get.params === Seq(  // alphabetized by parameter name
+          query.get.params === Seq( // alphabetized by parameter name
             Param("TinedSid", Some("Gaa419b-25665208-1262918951531-1")),
             Param("debug", Some("false")),
             Param("nsfg", Some("1355463185%7Cbilling.lpbchoice_LAL_LAC_NYK_MIA_OKC%5Ebilling.lpbchoice%5EgiBJ5TL8HJT8eLc6")),
@@ -71,9 +71,9 @@ class URITest extends Specification {
       }
       success
     }
-//    "throw URISyntaxException upon .get after failed parse" in {
-//      URI.parse("http://ho\tst").get must throwA[java.net.URISyntaxException]
-//    }
+    //    "throw URISyntaxException upon .get after failed parse" in {
+    //      URI.parse("http://ho\tst").get must throwA[java.net.URISyntaxException]
+    //    }
     "compare equal to equal URIs" in {
       val uri1 = URI.parse("http://google.com/").get
       val uri2 = URI.parse("http://google.com/").get

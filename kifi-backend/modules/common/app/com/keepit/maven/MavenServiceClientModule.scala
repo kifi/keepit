@@ -2,7 +2,7 @@ package com.keepit.maven
 
 import net.codingwell.scalaguice.ScalaModule
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceDiscovery

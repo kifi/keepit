@@ -2,9 +2,9 @@ package com.keepit.search
 
 import java.io.InputStreamReader
 import java.io.Reader
-import java.lang.{Double => JDouble}
+import java.lang.{ Double => JDouble }
 import java.util.jar.JarFile
-import java.util.{HashMap => JHashMap}
+import java.util.{ HashMap => JHashMap }
 
 import scala.collection.JavaConversions._
 
@@ -12,7 +12,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.langdetector.DetectorFactory
 import com.keepit.search.langdetector.LangDetectException
 import com.keepit.common.strings._
-
 
 object LangDetector extends Logging {
   initialize
@@ -26,7 +25,7 @@ object LangDetector extends Logging {
     path = path.substring(0, path.indexOf("!"))
     log.debug("loading language detection profiles from %s".format(path))
     val jarFile = new JarFile(path)
-    val profiles = jarFile.entries.filter{ _.getName.startsWith("profiles/") }.map{ entry =>
+    val profiles = jarFile.entries.filter { _.getName.startsWith("profiles/") }.map { entry =>
       val reader = new InputStreamReader(jarFile.getInputStream(entry), UTF8)
       readerToString(reader) // this should never fail. if fails, lang-detect won't work correctly. let it throw exception.
     }.toList
@@ -38,8 +37,8 @@ object LangDetector extends Logging {
 
   val uniformPriorMap = {
     val langList = DetectorFactory.getLangList
-    val prob = 1.0f/langList.size()
-    langList.foldLeft(Map.empty[String, Double]){ (m, lang) => m + (lang -> prob)}
+    val prob = 1.0f / langList.size()
+    langList.foldLeft(Map.empty[String, Double]) { (m, lang) => m + (lang -> prob) }
   }
 
   val biasedProbability = 0.5d
@@ -47,11 +46,11 @@ object LangDetector extends Logging {
     val langList = DetectorFactory.getLangList
     val langListSize = langList.size
     val prob = (1.0d - biasedProbability) / (langListSize - 1)
-    langList.foldLeft(Map.empty[String, Double]){ (m, lang) => m + (lang -> prob) }
+    langList.foldLeft(Map.empty[String, Double]) { (m, lang) => m + (lang -> prob) }
   }
 
   private def makePriorMap(given: Map[Lang, Double]): JHashMap[String, JDouble] = {
-    val givenMap = given.map{ case (k, v) => k.lang -> v }
+    val givenMap = given.map { case (k, v) => k.lang -> v }
     val siz = given.size
     val sum = given.values.sum
     val langList = DetectorFactory.getLangList
@@ -59,7 +58,7 @@ object LangDetector extends Logging {
     val prob = (1.0d - sum) / (langListSize - siz)
 
     new JHashMap(
-      langList.foldLeft(Map.empty[String, JDouble]){ (m, lang) =>
+      langList.foldLeft(Map.empty[String, JDouble]) { (m, lang) =>
         m + (lang -> new JDouble(givenMap.getOrElse(lang, prob)))
       }
     )
@@ -78,7 +77,7 @@ object LangDetector extends Logging {
   private def makeDetector(text: String, priorMap: Map[Lang, Double] = Map()) = {
     val detector = DetectorFactory.create()
     // limit the iteration in the detection process when the text is short
-    val iterationLimit = (detector.getIterationLimit.toDouble * (1.0d - (1.0d / (1.0d - ((text.length + 1).toDouble / 30.0d))))).toInt			//TODO: this hyperbolic function has problems. need to modify this.
+    val iterationLimit = (detector.getIterationLimit.toDouble * (1.0d - (1.0d / (1.0d - ((text.length + 1).toDouble / 30.0d))))).toInt //TODO: this hyperbolic function has problems. need to modify this.
     detector.setIterationLimit(iterationLimit)
     detector.setProbabilityThreshold(0.0d)
     detector.setPriorMap(makePriorMap(priorMap))
@@ -101,20 +100,20 @@ object LangDetector extends Logging {
     }
   }
 
-  def detectShortText(text:String, lang: Lang): Lang = {
+  def detectShortText(text: String, lang: Lang): Lang = {
     detectShortText(text, Map(lang -> biasedProbability), lang)
   }
 
-  def detectShortText(text:String, priorMap: Map[Lang, Double] = Map(), default: Lang = Lang("en")): Lang = {
+  def detectShortText(text: String, priorMap: Map[Lang, Double] = Map(), default: Lang = Lang("en")): Lang = {
     val detector = DetectorFactory.create()
     detector.append(text)
     detector.setPriorMap(makePriorMap(priorMap))
-    try{
-      detector.detectForShort() match{
+    try {
+      detector.detectForShort() match {
         case "unknown" => default
         case lang => Lang(lang)
       }
-    } catch{
+    } catch {
       case e: LangDetectException => default
     }
   }
@@ -125,7 +124,7 @@ object LangDetector extends Logging {
 
   def probabilities(text: String, priorMap: Map[Lang, Double] = Map()): Seq[(Lang, Double)] = {
     try {
-      makeDetector(text, priorMap).getProbabilities().map{ language => (Lang(language.lang), language.prob) }.toSeq
+      makeDetector(text, priorMap).getProbabilities().map { language => (Lang(language.lang), language.prob) }.toSeq
     } catch {
       case e: LangDetectException => Seq.empty[(Lang, Double)] // no text?
     }

@@ -1,6 +1,6 @@
 package com.keepit.common.actor
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{ ActorRef, ActorSystem }
 import com.google.inject.Provider
 import com.keepit.common.akka.AlertingActor
 import akka.testkit.TestActorRef

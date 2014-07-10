@@ -1,9 +1,9 @@
 package com.keepit.graph.wander
 
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.graph.manager.GraphManager
 import com.keepit.graph.model._
-import com.keepit.model.{URISummary, SocialUserInfo, NormalizedURI, User}
+import com.keepit.model.{ URISummary, SocialUserInfo, NormalizedURI, User }
 import com.keepit.common.db.Id
 import scala.collection.mutable
 import com.keepit.graph.model.VertexKind.VertexType
@@ -30,7 +30,7 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
       val tauOption: Option[Double] = wanderlust.halfLife.map(_.toMillis)
       val decay: TimestampEdgeReader => Double = {
         case outdatedEdge: TimestampEdgeReader if (outdatedEdge.timestamp < from) => 0
-        case decayingEdge: TimestampEdgeReader => tauOption.map(tau => Math.exp(- (now - decayingEdge.timestamp) / tau)) getOrElse 1.0
+        case decayingEdge: TimestampEdgeReader => tauOption.map(tau => Math.exp(-(now - decayingEdge.timestamp) / tau)) getOrElse 1.0
       }
 
       val mayTraverse: (VertexReader, VertexReader, EdgeReader) => Boolean = {
@@ -58,7 +58,7 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
 
     val users = mutable.Map[Id[User], Int]()
     val socialUsers = mutable.Map[Id[SocialUserInfo], Int]()
-    val uris =  mutable.Map[Id[NormalizedURI], Int]()
+    val uris = mutable.Map[Id[NormalizedURI], Int]()
     val extra = mutable.Map[String, Int]()
 
     val collisions = journal.getVisited()
@@ -75,7 +75,7 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     Collisions(users.toMap, socialUsers.toMap, uris.toMap, extra.toMap)
   }
 
-  private def collectNeighbors(vertexReader: GlobalVertexReader)(vertexId: VertexId,  neighborKinds: Set[VertexType]): Set[VertexId] = {
+  private def collectNeighbors(vertexReader: GlobalVertexReader)(vertexId: VertexId, neighborKinds: Set[VertexType]): Set[VertexId] = {
     vertexReader.moveTo(vertexId)
     val neighbors = mutable.Set[VertexId]()
     while (vertexReader.edgeReader.moveToNextComponent()) {

@@ -1,8 +1,8 @@
 package com.keepit.scraper
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.{HttpClientImpl, HttpClient}
+import com.keepit.common.net.{ HttpClientImpl, HttpClient }
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
 import play.api.Play._
@@ -31,7 +31,6 @@ case class ProdScraperServiceClientModule() extends ScraperServiceClientModule {
   }
 
 }
-
 
 case class TestScraperServiceClientModule() extends ScraperServiceClientModule {
 

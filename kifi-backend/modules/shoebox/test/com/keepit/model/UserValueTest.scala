@@ -4,7 +4,7 @@ import org.specs2.mutable._
 
 import com.keepit.common.db._
 import com.keepit.test._
-import com.keepit.model.UserValues.{UserValueIntHandler, UserValueStringHandler}
+import com.keepit.model.UserValues.{ UserValueIntHandler, UserValueStringHandler }
 
 class UserValueTest extends Specification with ShoeboxTestInjector {
 

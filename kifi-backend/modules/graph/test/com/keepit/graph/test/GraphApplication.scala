@@ -2,15 +2,15 @@ package com.keepit.graph.test
 
 import com.google.inject.Module
 import java.io.File
-import com.keepit.test.{TestGlobal, TestApplicationFromGlobal}
+import com.keepit.test.{ TestGlobal, TestApplicationFromGlobal }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.common.healthcheck.{FakeHealthcheckModule, FakeMemoryUsageModule, FakeAirbrakeModule}
+import com.keepit.common.healthcheck.{ FakeHealthcheckModule, FakeMemoryUsageModule, FakeAirbrakeModule }
 import com.keepit.common.time.FakeClockModule
-import com.keepit.inject.{EmptyInjector, ApplicationInjector, TestFortyTwoModule}
+import com.keepit.inject.{ EmptyInjector, ApplicationInjector, TestFortyTwoModule }
 import com.keepit.common.zookeeper.FakeDiscoveryModule
-import com.keepit.common.cache.{HashMapMemoryCacheModule}
+import com.keepit.common.cache.{ HashMapMemoryCacheModule }
 import play.api.Mode
 import com.google.inject.util.Modules
 import com.keepit.shoebox.TestShoeboxServiceClientModule

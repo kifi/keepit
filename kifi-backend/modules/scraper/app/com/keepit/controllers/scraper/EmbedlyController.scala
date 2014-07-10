@@ -9,21 +9,19 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 
+class EmbedlyController @Inject() (
+  embedly: EmbedlyClient)
+    extends ScraperServiceController {
 
-class EmbedlyController @Inject()(
-  embedly: EmbedlyClient
-)
-extends ScraperServiceController{
-
-  def getImbedlyInfo() = Action.async(parse.tolerantJson){ request =>
+  def getImbedlyInfo() = Action.async(parse.tolerantJson) { request =>
     val url = (request.body \ "url").as[String]
     val infoFut = embedly.getEmbedlyInfo(url)
-    infoFut.map{ infoOpt =>
+    infoFut.map { infoOpt =>
       Ok(Json.toJson(infoOpt))
     }
   }
 
-  def getImageInfos() = Action.async(parse.tolerantJson){ request =>
+  def getImageInfos() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
     val uriId = (json \ "uriId").as[Long]
     val url = (json \ "url").as[String]

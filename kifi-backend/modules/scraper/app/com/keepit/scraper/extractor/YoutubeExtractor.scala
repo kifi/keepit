@@ -1,14 +1,14 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.scraper.{HttpFetcher, ScraperConfig}
-import com.keepit.common.net.{Host, URI}
+import com.keepit.scraper.{ HttpFetcher, ScraperConfig }
+import com.keepit.common.net.{ Host, URI }
 import com.keepit.search.Lang
-import org.jsoup.nodes.{Element, Document}
+import org.jsoup.nodes.{ Element, Document }
 import java.net.URLEncoder
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import org.apache.commons.lang3.StringEscapeUtils
 import scala.collection.JavaConversions._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import com.keepit.model.HttpProxy
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -82,8 +82,8 @@ class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetch
 
   private def getProxy(url: String) = syncGetProxyP(url)
 
-  private[extractor] def getProxyP(url: String):Future[Option[HttpProxy]] = shoeboxServiceClient.getProxyP(url)
-  private[extractor] def syncGetProxyP(url: String):Option[HttpProxy] = Await.result(getProxyP(url), 10 seconds)
+  private[extractor] def getProxyP(url: String): Future[Option[HttpProxy]] = shoeboxServiceClient.getProxyP(url)
+  private[extractor] def syncGetProxyP(url: String): Option[HttpProxy] = Await.result(getProxyP(url), 10 seconds)
 }
 
 class YoutubeTrackListExtractor(trackListUrl: String) extends JsoupBasedExtractor(trackListUrl, Int.MaxValue) {

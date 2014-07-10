@@ -1,11 +1,11 @@
 package com.keepit.commanders
 
-import com.keepit.abook.model.{RichSocialConnection, RichSocialConnectionRepo}
-import com.keepit.model.{SocialUserInfo, User}
+import com.keepit.abook.model.{ RichSocialConnection, RichSocialConnectionRepo }
+import com.keepit.model.{ SocialUserInfo, User }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress

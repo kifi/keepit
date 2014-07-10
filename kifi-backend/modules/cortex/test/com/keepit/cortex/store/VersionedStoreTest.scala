@@ -6,8 +6,7 @@ import com.keepit.cortex.core.ModelVersion
 import play.api.libs.json._
 import com.keepit.cortex.core.Versionable
 
-
-class VersionedStoreTest extends Specification{
+class VersionedStoreTest extends Specification {
   "ModelVersion" should {
     "serialize" in {
       class FakeModel extends StatModel

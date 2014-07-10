@@ -11,7 +11,7 @@ import java.util.Arrays
 
 class SemanticVector(val bytes: Array[Byte]) extends AnyVal {
 
-    // hamming distance
+  // hamming distance
   def distance(other: SemanticVector) = SemanticVector.distance(bytes, other.bytes)
 
   // similarity of two vectors (-1.0 to 1.0) ~ cosine distance
@@ -20,7 +20,7 @@ class SemanticVector(val bytes: Array[Byte]) extends AnyVal {
 
   def set(data: Array[Byte], offset: Int, length: Int) = System.arraycopy(data, offset, bytes, 0, length)
 
-  def toBinary = bytes.map{ x => String.format("%8s",  (x & 0xFF).toBinaryString).replace(' ', '0') }.mkString(" ")
+  def toBinary = bytes.map { x => String.format("%8s", (x & 0xFF).toBinaryString).replace(' ', '0') }.mkString(" ")
 }
 
 object SemanticVector {
@@ -46,7 +46,7 @@ object SemanticVector {
   }
   private[this] val similarityScore = {
     val half = vectorSize.toFloat / 2.0f
-    (0 to vectorSize).map{ distance => 1.0f - (distance.toFloat / half) }.toArray
+    (0 to vectorSize).map { distance => 1.0f - (distance.toFloat / half) }.toArray
   }
 
   // hamming distance
@@ -147,8 +147,8 @@ class SemanticVectorBuilder(windowSize: Int) {
   private[this] val activeTermPos = mutable.Map[String, Int]()
 
   private[this] var headPos = 0
-  private[this] var tailPos = - windowSize
-  private[this] var midPos = - (windowSize / 2)
+  private[this] var tailPos = -windowSize
+  private[this] var midPos = -(windowSize / 2)
   private[this] var headSketch = emptySketch
   private[this] var tailSketch = emptySketch
 
@@ -167,8 +167,8 @@ class SemanticVectorBuilder(windowSize: Int) {
 
   def clear {
     headPos = 0
-    tailPos = - windowSize
-    midPos = - (windowSize / 2)
+    tailPos = -windowSize
+    midPos = -(windowSize / 2)
     headSketch.clear()
     tailSketch.clear()
   }
@@ -282,14 +282,14 @@ class SemanticVectorComposer {
     while (i < length) {
       val b = vector(i + offset)
       val j = i * 8
-      counters(j    ) += ((b >> 7) & 0x1) * weight
+      counters(j) += ((b >> 7) & 0x1) * weight
       counters(j + 1) += ((b >> 6) & 0x1) * weight
       counters(j + 2) += ((b >> 5) & 0x1) * weight
       counters(j + 3) += ((b >> 4) & 0x1) * weight
       counters(j + 4) += ((b >> 3) & 0x1) * weight
       counters(j + 5) += ((b >> 2) & 0x1) * weight
       counters(j + 6) += ((b >> 1) & 0x1) * weight
-      counters(j + 7) += ((b     ) & 0x1) * weight
+      counters(j + 7) += ((b) & 0x1) * weight
       i += 1
     }
     cnt += weight
@@ -302,7 +302,7 @@ class SemanticVectorComposer {
     val sketch = emptySketch
     var i = 0
     while (i < vectorSize) {
-      sketch.vec(i) = ((counters(i).toFloat/cnt.toFloat) - 0.5f)
+      sketch.vec(i) = ((counters(i).toFloat / cnt.toFloat) - 0.5f)
       i += 1
     }
     sketch

@@ -7,7 +7,7 @@ import com.keepit.common.net.URI
 
 class DefaultExtractorTest extends Specification {
 
-  def setup(url: String, file: String, maxContentChars:Option[Int] = None): DefaultExtractor = {
+  def setup(url: String, file: String, maxContentChars: Option[Int] = None): DefaultExtractor = {
     val uri = URI.parse(url).get
     val stream = new FileInputStream("test/com/keepit/scraper/extractor/" + file)
     val extractor = maxContentChars match {

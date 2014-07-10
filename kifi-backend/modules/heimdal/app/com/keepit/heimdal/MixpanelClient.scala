@@ -3,11 +3,11 @@ package com.keepit.heimdal
 import play.api.libs.json._
 import org.apache.commons.codec.binary.Base64
 import play.api.libs.ws.WS
-import com.keepit.model.{Gender, User}
+import com.keepit.model.{ Gender, User }
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.{ ExternalId, Id }
 
 class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
 
@@ -72,14 +72,12 @@ class MixpanelClient(projectToken: String, shoebox: ShoeboxServiceClient) {
     sendData("http://api.mixpanel.com/track", data)
   }
 
-
   private def sendData(url: String, data: JsObject) = {
     val request = WS.url(url).withQueryString(("data", Base64.encodeBase64String(Json.stringify(data).getBytes)))
     new SafeFuture(
       request.get().map {
         case response if response.body == "0\n" => throw new Exception(s"Mixpanel endpoint $url refused data: $data")
         case response => response
-      }
-    , Some("Mixpanel Event Forwarding"))
+      }, Some("Mixpanel Event Forwarding"))
   }
 }

@@ -3,12 +3,12 @@ package com.keepit.eliza.controllers
 import com.keepit.common.strings._
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.db.Id
-import com.keepit.model.{KifiExtVersion, User, SocialUserInfo, ExperimentType}
+import com.keepit.model.{ KifiExtVersion, User, SocialUserInfo, ExperimentType }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworkType
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.RatherInsecureDESCrypt
@@ -19,21 +19,21 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import scala.util.Random
 
-import play.api.mvc.{WebSocket,RequestHeader}
-import play.api.libs.iteratee.{Enumerator,Iteratee, Concurrent}
+import play.api.mvc.{ WebSocket, RequestHeader }
+import play.api.libs.iteratee.{ Enumerator, Iteratee, Concurrent }
 import play.api.mvc.WebSocket.FrameFormatter
-import play.api.libs.json.{Json, JsValue}
+import play.api.libs.json.{ Json, JsValue }
 
 import akka.actor.ActorSystem
 
-import securesocial.core.{Authenticator, UserService, SecureSocial}
+import securesocial.core.{ Authenticator, UserService, SecureSocial }
 
 import org.joda.time.DateTime
 import play.api.libs.json.JsArray
 import com.keepit.social.SocialId
 import com.keepit.common.net.UserAgent
 import com.keepit.common.store.KifInstallationStore
-import com.keepit.common.logging.{AccessLogTimer, AccessLog}
+import com.keepit.common.logging.{ AccessLogTimer, AccessLog }
 import com.keepit.common.logging.Access.WS_IN
 import org.apache.commons.lang3.RandomStringUtils
 
@@ -48,8 +48,7 @@ case class SocketInfo(
   userAgent: String,
   var ip: Option[String],
   id: Long = Random.nextLong(),
-  trackingId: String = RandomStringUtils.randomAlphanumeric(5)
-)
+  trackingId: String = RandomStringUtils.randomAlphanumeric(5))
 
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
@@ -67,9 +66,9 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   val kifInstallationStore: KifInstallationStore
   val accessLog: AccessLog
 
-  protected def onConnect(socket: SocketInfo) : Unit
-  protected def onDisconnect(socket: SocketInfo) : Unit
-  protected def websocketHandlers(socket: SocketInfo) : Map[String, Seq[JsValue] => Unit]
+  protected def onConnect(socket: SocketInfo): Unit
+  protected def onDisconnect(socket: SocketInfo): Unit
+  protected def websocketHandlers(socket: SocketInfo): Map[String, Seq[JsValue] => Unit]
 
   protected val crypt = new RatherInsecureDESCrypt
   protected val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
@@ -100,7 +99,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     Cont[JsArray, Unit](i => step(i))
   }
 
-
   implicit val jsonFrame: FrameFormatter[JsArray] = {
     FrameFormatter.stringFrame.transform(
       out => {
@@ -113,7 +111,6 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         }
       })
   }
-
 
   // A hack which allows us to pass the SecureSocial session ID (sid) by query string.
   // This is mainly a workaround for the mobile client, since the library we use doesn't support cookies
@@ -131,11 +128,11 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     }
 
   private def authenticate(implicit request: RequestHeader): Option[Future[StreamSession]] = {
-    for {  // Options
+    for { // Options
       auth <- getAuthenticatorFromRequest()
       identityId <- UserService.find(auth.identityId).map(_.identityId)
     } yield {
-      (for {  // Futures
+      (for { // Futures
         socialUser <- shoebox.getSocialUserInfoByNetworkAndSocialId(SocialId(identityId.userId), SocialNetworkType(identityId.providerId)).map(_.get)
         experiments <- userExperimentCommander.getExperimentsByUser(socialUser.userId.get)
       } yield {
@@ -171,7 +168,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         case Some(streamSessionFuture) => streamSessionFuture.map { streamSession =>
           implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
 
-          val ipOpt : Option[String] = eipOpt.flatMap{ eip =>
+          val ipOpt: Option[String] = eipOpt.flatMap { eip =>
             crypt.decrypt(ipkey, eip).toOption
           }
           val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
@@ -198,7 +195,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     SafeFuture {
       val context = authenticatedWebSocketsContextBuilder(socketInfo, Some(request)).build
       val lastTracked = websocketRouter.socketLastTracked(socketInfo.userId)
-      if (lastTracked.isEmpty ||  lastTracked.get.isBefore(currentDateTime.minusHours(8))) {
+      if (lastTracked.isEmpty || lastTracked.get.isBefore(currentDateTime.minusHours(8))) {
         websocketRouter.setSocketLastTracked(socketInfo.userId)
         heimdal.trackEvent(UserEvent(socketInfo.userId, context, UserEventTypes.CONNECTED, tStart))
       }
@@ -246,7 +243,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           false
         }
       }.getOrElse(true)
-    } else {  // TODO: iPhone, Android
+    } else { // TODO: iPhone, Android
       false
     }
   }
@@ -265,7 +262,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     contextBuilder.addUserAgent(socketInfo.userAgent)
     request.foreach(contextBuilder.addRequestInfo)
     socketInfo.ip.foreach(contextBuilder.addRemoteAddress)
-    socketInfo.extVersion.foreach{ version => contextBuilder += ("extensionVersion", version) }
+    socketInfo.extVersion.foreach { version => contextBuilder += ("extensionVersion", version) }
     contextBuilder
   }
 }

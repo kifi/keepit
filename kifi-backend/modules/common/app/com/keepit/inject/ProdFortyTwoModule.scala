@@ -2,7 +2,7 @@ package com.keepit.inject
 
 import net.codingwell.scalaguice.ScalaModule
 
-import com.google.inject.{Provides, Singleton, Provider}
+import com.google.inject.{ Provides, Singleton, Provider }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import play.api.Play

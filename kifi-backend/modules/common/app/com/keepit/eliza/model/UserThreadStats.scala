@@ -1,7 +1,7 @@
 package com.keepit.eliza.model
 
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 
 import scala.concurrent.duration._
 
@@ -24,9 +24,9 @@ object UserThreadStats {
 case class UserThreadStatsForUserIdKey(userId: Id[User]) extends Key[UserThreadStats] {
   override val version = 0
   val namespace = "thread_stats_for_user"
-  def toKey():String = userId.id.toString
+  def toKey(): String = userId.id.toString
 }
 
 class UserThreadStatsForUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[UserThreadStatsForUserIdKey, UserThreadStats](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[UserThreadStatsForUserIdKey, UserThreadStats](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 

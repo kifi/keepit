@@ -1,20 +1,20 @@
 package com.keepit.common.images
 
 import java.io.InputStream
-import scala.util.{Success, Failure, Try}
+import scala.util.{ Success, Failure, Try }
 import com.keepit.common.store.ImageUtils
 import javax.imageio.ImageIO
 import scala.concurrent.Future
 import java.awt.image.BufferedImage
 import play.api.libs.ws.WS
 import play.api.http.Status
-import com.keepit.common.logging.{Access, AccessLog, Logging}
+import com.keepit.common.logging.{ Access, AccessLog, Logging }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
 import java.security.cert.CertificateExpiredException
 import java.nio.channels.ClosedChannelException
-import java.net.{URISyntaxException, ConnectException}
+import java.net.{ URISyntaxException, ConnectException }
 import com.keepit.common.net.URI
 import org.jboss.netty.channel.ConnectTimeoutException
 import java.security.GeneralSecurityException
@@ -29,8 +29,7 @@ trait ImageFetcher {
 @Singleton
 class ImageFetcherImpl @Inject() (
     airbrake: AirbrakeNotifier,
-    accessLog: AccessLog
-  ) extends ImageFetcher with Logging {
+    accessLog: AccessLog) extends ImageFetcher with Logging {
 
   private def withInputStream[T, I <: java.io.InputStream](is: I)(f: I => T): T = {
     try {
@@ -49,7 +48,7 @@ class ImageFetcherImpl @Inject() (
       case Success(uriObj) => uriObj
       case Failure(e) => {
         log.error(s"Url [$url] parsing error, ignoring image", e)
-        return Future.successful(None)//just ignore
+        return Future.successful(None) //just ignore
       }
     }
     WS.url(uriObj.toString).withRequestTimeout(120000).get map { resp =>
@@ -73,10 +72,10 @@ class ImageFetcherImpl @Inject() (
       }
     } recover {
       case e @ (
-        _ : TimeoutException |
-        _ : ConnectTimeoutException |
-        _ : GeneralSecurityException |
-        _ : IOException) => {
+        _: TimeoutException |
+        _: ConnectTimeoutException |
+        _: GeneralSecurityException |
+        _: IOException) => {
         timer.done(url = url, error = e.toString)
         log.warn(s"Can't connect to $url, next time it may work", trace.withCause(e))
         None

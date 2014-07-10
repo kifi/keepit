@@ -12,15 +12,14 @@ import com.keepit.model.DuplicateDocumentStates
 import com.keepit.model.NormalizedURI
 
 @Singleton
-class DuplicateDocumentsProcessor @Inject()(
-  actionAuthenticator: ActionAuthenticator,
-  db: Database,
-  duplicateDocumentRepo: DuplicateDocumentRepo,
-  uriIntegrityPlugin: UriIntegrityPlugin
-) extends Logging {
+class DuplicateDocumentsProcessor @Inject() (
+    actionAuthenticator: ActionAuthenticator,
+    db: Database,
+    duplicateDocumentRepo: DuplicateDocumentRepo,
+    uriIntegrityPlugin: UriIntegrityPlugin) extends Logging {
 
   def mergeUris(old: Id[NormalizedURI], intoNew: Id[NormalizedURI]) = {
-      uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = old, newUri = intoNew))
+    uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = old, newUri = intoNew))
   }
 
   private def typedAction(dupAction: HandleDuplicatesAction) = {
@@ -33,11 +32,11 @@ class DuplicateDocumentsProcessor @Inject()(
 
   def handleDuplicates(dupId: Either[Id[DuplicateDocument], Id[NormalizedURI]], dupAction: HandleDuplicatesAction) = {
     val dups = dupId match {
-      case Left(id) => db.readOnlyMaster{ implicit s =>
-        List(duplicateDocumentRepo.get(id))     // handle one
+      case Left(id) => db.readOnlyMaster { implicit s =>
+        List(duplicateDocumentRepo.get(id)) // handle one
       }
-      case Right(id) => db.readOnlyMaster{ implicit s =>
-        duplicateDocumentRepo.getSimilarTo(id)  // handle all
+      case Right(id) => db.readOnlyMaster { implicit s =>
+        duplicateDocumentRepo.getSimilarTo(id) // handle all
       }
     }
 

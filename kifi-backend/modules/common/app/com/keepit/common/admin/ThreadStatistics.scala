@@ -24,7 +24,7 @@ case class ThreadStatistics(name: String, state: String, stackInfo: Seq[StackTra
   def stateContains(filter: String) = state.toLowerCase.contains(filter.toLowerCase)
 
   def toTSV(largestName: Int = 0, charsPerTab: Int = 8) = {
-    val nameTabs = "\t" * ((-(largestName % charsPerTab)+(name.length % charsPerTab)+largestName-name.length)/charsPerTab)
+    val nameTabs = "\t" * ((-(largestName % charsPerTab) + (name.length % charsPerTab) + largestName - name.length) / charsPerTab)
     val stateTabs = "\t" * (if (state.length < 8) 1 else 0)
     s"$name$nameTabs\t$state$stateTabs\t${cpuInfo.toTSV()}${stackInfo.map(_.toTSV).mkString("")}"
   }
@@ -39,39 +39,40 @@ object ThreadStatistics {
 
     val cpuUsage = sampleThreadCPU(threads, cpuSampleMs)
 
-    threads.map { case (thread, stackTrace) =>
-      val threadName = thread.getName
-      val isOurCodeInThisStack = stackTrace.filter(s => (s.getClassName + s.getMethodName).toLowerCase.contains("com.keepit")).nonEmpty
+    threads.map {
+      case (thread, stackTrace) =>
+        val threadName = thread.getName
+        val isOurCodeInThisStack = stackTrace.filter(s => (s.getClassName + s.getMethodName).toLowerCase.contains("com.keepit")).nonEmpty
 
-      if ((!onlyShowUs || isOurCodeInThisStack)
-        && (threadName.toLowerCase.contains(nameFilter.toLowerCase) && thread.getState.toString.toLowerCase.contains(stateFilter.toLowerCase))
-        && (stackFilter.isEmpty || stackTrace.filter(s => (s.getClassName + s.getMethodName).toLowerCase.contains(stateFilter.toLowerCase)).nonEmpty)) {
+        if ((!onlyShowUs || isOurCodeInThisStack)
+          && (threadName.toLowerCase.contains(nameFilter.toLowerCase) && thread.getState.toString.toLowerCase.contains(stateFilter.toLowerCase))
+          && (stackFilter.isEmpty || stackTrace.filter(s => (s.getClassName + s.getMethodName).toLowerCase.contains(stateFilter.toLowerCase)).nonEmpty)) {
 
-        val cpuShare = cpuUsage.get(thread.getId()).map(_._1).getOrElse(0.0)
+          val cpuShare = cpuUsage.get(thread.getId()).map(_._1).getOrElse(0.0)
 
-        val cpuInfo = new ThreadCPUInfo(cpuShare, cpuUsage.get(thread.getId()).map(_._2).flatten)
+          val cpuInfo = new ThreadCPUInfo(cpuShare, cpuUsage.get(thread.getId()).map(_._2).flatten)
 
-        val header = f"${thread.getName}\t${thread.getState.toString}\t$cpuShare%1.2fPER".replaceAll("PER", "%")
-        val stackInfos = if(!hideStack) {
-          val _stackTrace = if (short) {
-            val filtered = Seq("java.lang.Thread", "sun.misc", "java.util.concurrent", "scala.concurrent", "akka.util.internal", "sun.nio.ch", "java.lang.Object", "java.lang.ref", "org.jboss.netty")
-            stackTrace.collectFirst {
-              case st if st.getClassName.contains("com.keepit") => Seq(st)
-            }.orElse(stackTrace.collectFirst {
-              case st if filtered.filter(st.getClassName.startsWith).isEmpty => Seq(st)
-            }).getOrElse(Seq())
-          } else stackTrace.toSeq
+          val header = f"${thread.getName}\t${thread.getState.toString}\t$cpuShare%1.2fPER".replaceAll("PER", "%")
+          val stackInfos = if (!hideStack) {
+            val _stackTrace = if (short) {
+              val filtered = Seq("java.lang.Thread", "sun.misc", "java.util.concurrent", "scala.concurrent", "akka.util.internal", "sun.nio.ch", "java.lang.Object", "java.lang.ref", "org.jboss.netty")
+              stackTrace.collectFirst {
+                case st if st.getClassName.contains("com.keepit") => Seq(st)
+              }.orElse(stackTrace.collectFirst {
+                case st if filtered.filter(st.getClassName.startsWith).isEmpty => Seq(st)
+              }).getOrElse(Seq())
+            } else stackTrace.toSeq
 
-          _stackTrace.map { st =>
-            val matches = if (stackNoCaseMatch(st, stackFilter)) "*"
-            else if (isOurCodeInThisStack && stackNoCaseMatch(st, "com.keepit")) "#"
-            else ""
-            new StackTraceInfo(st.getClassName, st.getMethodName, st.getLineNumber, matches)
-          }.toSeq
-        } else Seq()
-        Some(new ThreadStatistics(thread.getName, thread.getState.toString, stackInfos, cpuInfo, thread.getId))
+            _stackTrace.map { st =>
+              val matches = if (stackNoCaseMatch(st, stackFilter)) "*"
+              else if (isOurCodeInThisStack && stackNoCaseMatch(st, "com.keepit")) "#"
+              else ""
+              new StackTraceInfo(st.getClassName, st.getMethodName, st.getLineNumber, matches)
+            }.toSeq
+          } else Seq()
+          Some(new ThreadStatistics(thread.getName, thread.getState.toString, stackInfos, cpuInfo, thread.getId))
 
-      } else None
+        } else None
     }.flatten.toSeq
   }
 
@@ -96,7 +97,7 @@ object ThreadStatistics {
       _initialTimes.toMap
     }
 
-    val totalCPUTime1 = initialTimes.map(r => if(r._2>0) r._2 else 0).sum
+    val totalCPUTime1 = initialTimes.map(r => if (r._2 > 0) r._2 else 0).sum
 
     if (cpuSampleMs.isDefined) {
       Thread.sleep(cpuSampleMs.get)
@@ -116,17 +117,19 @@ object ThreadStatistics {
         if (initialTimes(r._1) > 0L && r._2 > 0L) r._2 - initialTimes(r._1)
         else 0
       }.sum
-      threads.map { case (thread, st) =>
-        val tid = thread.getId()
-        val tCpu = {
-          if (newTimes.get(tid).getOrElse(0L) > 0L && initialTimes.get(tid).getOrElse(0L) > 0L) {
-           Some(((newTimes.get(tid).getOrElse(0L) - initialTimes.get(tid).getOrElse(0L)).toDouble / totalDiff) * 100)
-          } else None
-        }
-        tid -> ((initialTimes(tid).toDouble / totalCPUTime1) * 100, tCpu)
+      threads.map {
+        case (thread, st) =>
+          val tid = thread.getId()
+          val tCpu = {
+            if (newTimes.get(tid).getOrElse(0L) > 0L && initialTimes.get(tid).getOrElse(0L) > 0L) {
+              Some(((newTimes.get(tid).getOrElse(0L) - initialTimes.get(tid).getOrElse(0L)).toDouble / totalDiff) * 100)
+            } else None
+          }
+          tid -> ((initialTimes(tid).toDouble / totalCPUTime1) * 100, tCpu)
       }
-    } else threads.map { case (thread, _) =>
-      thread.getId -> ((initialTimes(thread.getId).toDouble / totalCPUTime1) * 100, None)
+    } else threads.map {
+      case (thread, _) =>
+        thread.getId -> ((initialTimes(thread.getId).toDouble / totalCPUTime1) * 100, None)
     }
   }
 }

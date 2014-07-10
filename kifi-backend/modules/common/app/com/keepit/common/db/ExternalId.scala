@@ -2,7 +2,7 @@ package com.keepit.common.db
 
 import java.util.UUID
 import play.api.libs.json._
-import play.api.mvc.{PathBindable, QueryStringBindable}
+import play.api.mvc.{ PathBindable, QueryStringBindable }
 
 case class ExternalId[T](id: String) {
   if (!ExternalId.UUIDPattern.pattern.matcher(id).matches()) {
@@ -14,7 +14,7 @@ case class ExternalId[T](id: String) {
 object ExternalId {
   implicit def format[T]: Format[ExternalId[T]] = Format(
     __.read[String].map(ExternalId(_)),
-    new Writes[ExternalId[T]]{ def writes(o: ExternalId[T]) = JsString(o.id)}
+    new Writes[ExternalId[T]] { def writes(o: ExternalId[T]) = JsString(o.id) }
   )
 
   val UUIDPattern = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}".r

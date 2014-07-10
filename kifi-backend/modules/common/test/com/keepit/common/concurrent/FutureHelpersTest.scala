@@ -2,7 +2,7 @@ package com.keepit.common.concurrent
 
 import org.specs2.mutable.Specification
 import java.util.concurrent.atomic.AtomicInteger
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration.Duration
 import com.keepit.common.logging.Logging
 import scala.collection.mutable

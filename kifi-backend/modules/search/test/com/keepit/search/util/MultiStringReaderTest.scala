@@ -3,8 +3,8 @@ package com.keepit.search.util
 import org.specs2.mutable._
 
 class MultiStringReaderTest extends Specification {
-  val chars = Array("a","b","c","","d","e","f", "h", "i", "j", "k")
-  var strings = (0 until 10).map(i =>  chars(i % chars.length) * 10).toArray
+  val chars = Array("a", "b", "c", "", "d", "e", "f", "h", "i", "j", "k")
+  var strings = (0 until 10).map(i => chars(i % chars.length) * 10).toArray
 
   "MultiStringReader" should {
     "read all strings by read()" in {
@@ -21,7 +21,7 @@ class MultiStringReaderTest extends Specification {
     }
     "read all strings by read(buf)" in {
       val expected = strings.mkString("")
-      (1 to 110).forall{ bufSize =>
+      (1 to 110).forall { bufSize =>
         val reader = new MultiStringReader(strings)
         val result = new StringBuilder()
         val readBuf = new Array[Char](bufSize)
@@ -37,7 +37,7 @@ class MultiStringReaderTest extends Specification {
     }
     "read all strings by read(buf, off, len)" in {
       val expected = strings.mkString("")
-      (1 to 110).forall{ bufSize =>
+      (1 to 110).forall { bufSize =>
         val reader = new MultiStringReader(strings)
         val result = new StringBuilder()
         val readBuf = new Array[Char](bufSize + 3)

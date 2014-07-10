@@ -13,7 +13,7 @@ import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
 import org.apache.lucene.util.Bits
-import java.util.{Set => JSet}
+import java.util.{ Set => JSet }
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
 import collection.JavaConversions._
@@ -149,10 +149,10 @@ class TextQuery extends Query with Logging {
 }
 
 class TextWeight(
-  query: TextQuery,
-  personalWeight: Weight,
-  regularWeight: Weight,
-  semanticWeight: Weight) extends Weight with Logging {
+    query: TextQuery,
+    personalWeight: Weight,
+    regularWeight: Weight,
+    semanticWeight: Weight) extends Weight with Logging {
 
   override def getQuery() = query
   override def scoresDocsOutOfOrder() = false
@@ -206,7 +206,6 @@ class TextWeight(
     result
   }
 
-
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
     val personalScorer = if (personalWeight != null) personalWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs) else null
     val regularScorer = if (regularWeight != null) regularWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs) else null
@@ -218,7 +217,7 @@ class TextWeight(
         val n = if (semanticScorer != null) {
           semanticScorer.getChildren().map(scorer => scorer.child.asInstanceOf[SemanticVectorScorer].getNumPayloadsUsed).foldLeft(0)(_ max _)
         } else 0
-        val adjust = 1.0/(1 + pow(1.5, 5 - n))
+        val adjust = 1.0 / (1 + pow(1.5, 5 - n))
         query.getSemanticBoost * adjust.toFloat
       }
 
@@ -284,9 +283,9 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
   override def freq(): Int = 1
 
   override def cost(): Long = {
-    (if (personalScorer == null) 0L else  personalScorer.cost)
-    + (if (regularScorer  == null) 0L else regularScorer.cost)
-    + (if (semanticScorer == null) 0L else semanticScorer.cost)
+    (if (personalScorer == null) 0L else personalScorer.cost)
+    +(if (regularScorer == null) 0L else regularScorer.cost)
+    +(if (semanticScorer == null) 0L else semanticScorer.cost)
   }
 }
 

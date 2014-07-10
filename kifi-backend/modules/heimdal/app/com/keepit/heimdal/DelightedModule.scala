@@ -1,7 +1,7 @@
 package com.keepit.heimdal
 
-import com.google.inject.{Provides, Singleton}
-import com.keepit.commander.{DevDelightedCommander, DelightedCommander, DelightedConfig}
+import com.google.inject.{ Provides, Singleton }
+import com.keepit.commander.{ DevDelightedCommander, DelightedCommander, DelightedConfig }
 import net.codingwell.scalaguice.ScalaModule
 import play.api.Play._
 

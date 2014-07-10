@@ -1,9 +1,8 @@
 package com.keepit.graph.manager
 
-import com.keepit.cortex.core.{ModelVersion, StatModel}
+import com.keepit.cortex.core.{ ModelVersion, StatModel }
 import com.keepit.common.db.SequenceNumber
-import com.keepit.cortex.models.lda.{LDATopic, DenseLDA}
-
+import com.keepit.cortex.models.lda.{ LDATopic, DenseLDA }
 
 case class CortexSequenceNumber[M <: StatModel, T](modelVersion: ModelVersion[M], seq: SequenceNumber[T]) {
   def toLong: Long = CortexSequenceNumber.toLong(this)
@@ -30,7 +29,7 @@ object CortexSequenceNumber {
   }
 }
 
-case class LDATopicId(version: ModelVersion[DenseLDA], topic: LDATopic)  {
+case class LDATopicId(version: ModelVersion[DenseLDA], topic: LDATopic) {
   def toLong: Long = LDATopicId.toLong(this)
   override def toString = version + "::" + topic
 }

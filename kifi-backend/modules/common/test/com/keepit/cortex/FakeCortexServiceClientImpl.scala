@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.models.lda.{UriSparseLDAFeatures, DenseLDA}
+import com.keepit.cortex.models.lda.{ UriSparseLDAFeatures, DenseLDA }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.service.ServiceType
@@ -16,7 +16,7 @@ import com.keepit.cortex.models.lda.LDATopicConfiguration
 import com.keepit.cortex.models.lda.LDATopicInfo
 
 class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends CortexServiceClient {
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), ()=>{})
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   override def word2vecWordSimilarity(word1: String, word2: String): Future[Option[Float]] = ???

@@ -28,8 +28,8 @@ class GeckoboardPublisherTest extends Specification with TestInjector {
     }
 
     "send" in {
-      class MyWidget ()
-        extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-12ed349c-eee7-4564-b8b5-754d9ed0aeeb")) {
+      class MyWidget()
+          extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-12ed349c-eee7-4564-b8b5-754d9ed0aeeb")) {
 
         def data(): NumberAndSecondaryStat = NumberAndSecondaryStat(10, 15)
       }

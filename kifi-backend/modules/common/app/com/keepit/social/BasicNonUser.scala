@@ -3,7 +3,6 @@ package com.keepit.social
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-
 case class NonUserKind(name: String)
 object NonUserKind {
   implicit val nonUserKindFormat = new Format[NonUserKind] {
@@ -29,12 +28,12 @@ case class BasicNonUser(kind: NonUserKind, id: String, firstName: Option[String]
 
 object BasicNonUser {
   // The following formatter can be replaced with the functional Play formatter once we can break backwards compatibility.
-//  (
-//    (__ \ 'kind).format[NonUserKind] and
-//      (__ \ 'id).format[String] and
-//      (__ \ 'firstName).formatNullable[String] and
-//      (__ \ 'lastName).formatNullable[String]
-//    )(BasicNonUser.apply, unlift(BasicNonUser.unapply))
+  //  (
+  //    (__ \ 'kind).format[NonUserKind] and
+  //      (__ \ 'id).format[String] and
+  //      (__ \ 'firstName).formatNullable[String] and
+  //      (__ \ 'lastName).formatNullable[String]
+  //    )(BasicNonUser.apply, unlift(BasicNonUser.unapply))
 
   // Be aware that BasicUserLikeEntity uses the `kind` field to detect if its a BasicUser or BasicNonUser
   implicit val nonUserKindFormat = NonUserKind.nonUserKindFormat

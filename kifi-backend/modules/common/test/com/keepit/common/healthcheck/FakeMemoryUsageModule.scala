@@ -1,6 +1,6 @@
 package com.keepit.common.healthcheck
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import java.lang.management.MemoryPoolMXBean
 
 case class FakeMemoryUsageModule() extends MemoryUsageModule {

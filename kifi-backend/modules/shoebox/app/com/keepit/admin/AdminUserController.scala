@@ -1,14 +1,14 @@
 package com.keepit.controllers.admin
 
-import scala.concurrent.{Await, Future, Promise}
-import scala.concurrent.duration.{Duration, DurationInt}
+import scala.concurrent.{ Await, Future, Promise }
+import scala.concurrent.duration.{ Duration, DurationInt }
 import scala.util.Try
 
 import com.google.inject.Inject
-import com.keepit.abook.{RichContact, ABookServiceClient}
-import com.keepit.commanders.{AuthCommander, UserCommander}
+import com.keepit.abook.{ RichContact, ABookServiceClient }
+import com.keepit.commanders.{ AuthCommander, UserCommander }
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{AdminController, ActionAuthenticator, AuthenticatedRequest}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator, AuthenticatedRequest }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -20,42 +20,42 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.UserThreadStats
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.model.{UserEmailAddress, KifiInstallation, KeepToCollection, SocialConnection, UserExperiment}
+import com.keepit.model.{ UserEmailAddress, KifiInstallation, KeepToCollection, SocialConnection, UserExperiment }
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{BasicUser, SocialId, SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore}
+import com.keepit.social.{ BasicUser, SocialId, SocialNetworks, SocialGraphPlugin, SocialUserRawInfoStore }
 
 import play.api.data._
 import play.api.data.Forms._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import play.api.mvc.{AnyContent, SimpleResult}
+import play.api.mvc.{ AnyContent, SimpleResult }
 
 import views.html
-import com.keepit.typeahead.{TypeaheadHit, PrefixFilter}
+import com.keepit.typeahead.{ TypeaheadHit, PrefixFilter }
 import scala.collection.mutable
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
 import securesocial.core.Registry
 import com.keepit.common.healthcheck.SystemAdminMailSender
 
 case class UserStatistics(
-    user: User,
-    connections: Int,
-    invitations: Int,
-    invitedBy: Seq[User],
-    socialUsers: Seq[SocialUserInfo],
-    privateKeeps: Int,
-    publicKeeps: Int,
-    experiments: Set[ExperimentType],
-    kifiInstallations: Seq[KifiInstallation])
+  user: User,
+  connections: Int,
+  invitations: Int,
+  invitedBy: Seq[User],
+  socialUsers: Seq[SocialUserInfo],
+  privateKeeps: Int,
+  publicKeeps: Int,
+  experiments: Set[ExperimentType],
+  kifiInstallations: Seq[KifiInstallation])
 
 case class UserStatisticsPage(
-  userViewType: UserViewType,
-  users: Seq[UserStatistics],
-  userThreadStats: Map[Id[User], Future[UserThreadStats]],
-  page: Int,
-  userCount: Int,
-  pageSize: Int,
-  newUsers: Option[Int]) {
+    userViewType: UserViewType,
+    users: Seq[UserStatistics],
+    userThreadStats: Map[Id[User], Future[UserThreadStats]],
+    page: Int,
+    userCount: Int,
+    pageSize: Int,
+    newUsers: Option[Int]) {
 
   def getUserThreadStats(user: User): UserThreadStats = Await.result(userThreadStats(user.id.get), Duration.Inf)
 }
@@ -137,16 +137,16 @@ class AdminUserController @Inject() (
     Redirect(routes.AdminUserController.userView(toUserId))
   }
 
-  def moreUserInfoView(userId: Id[User], showPrivates:Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def moreUserInfoView(userId: Id[User], showPrivates: Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
     val contactsF = if (showPrivates) abookClient.getContactsByUser(userId) else Future.successful(Seq.empty[RichContact])
     val (user, socialUserInfos, socialConnections) = db.readOnlyReplica { implicit s =>
       val user = userRepo.get(userId)
-      val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
+      val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a, b) => a.fullName < b.fullName)
       val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
       (user, socialUserInfos, socialConnections)
     }
-    val rawInfos = socialUserInfos map {info =>
+    val rawInfos = socialUserInfos map { info =>
       socialUserRawInfoStore.get(info.id.get)
     }
     for {
@@ -220,13 +220,13 @@ class AdminUserController @Inject() (
     val econtactCountF = abookClient.getEContactCount(userId)
     val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
 
-    val (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica {implicit s =>
+    val (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
       val socialUsers = socialUserInfoRepo.getByUser(userId)
       val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
         userRepo.get(userId)
       }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
-      val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
+      val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a, b) => a.updatedAt.isBefore(b.updatedAt))
       val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
       val emails = emailRepo.getAllByUser(userId)
       val invitedByUsers = invitedBy(socialUsers, emails)
@@ -246,22 +246,21 @@ class AdminUserController @Inject() (
     }
   }
 
-
   private def doUserKeepsView(userId: Id[User], showPrivates: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): SimpleResult = {
     if (showPrivates) {
       log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing user $userId's private keeps and contacts")
     }
 
-    val (user, bookmarks) = db.readOnlyReplica {implicit s =>
+    val (user, bookmarks) = db.readOnlyReplica { implicit s =>
       val user = userRepo.get(userId)
       val bookmarks = keepRepo.getByUser(userId, Some(KeepStates.INACTIVE)).filter(b => showPrivates || !b.isPrivate)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       (user, (bookmarks, uris).zipped.toList.seq)
     }
 
-    val form = request.request.body.asFormUrlEncoded.map{ req => req.map(r => (r._1 -> r._2.head)) }
+    val form = request.request.body.asFormUrlEncoded.map { req => req.map(r => (r._1 -> r._2.head)) }
 
-    val bookmarkSearch = form.flatMap{ _.get("bookmarkSearch") }
+    val bookmarkSearch = form.flatMap { _.get("bookmarkSearch") }
     val collectionFilter = form.flatMap(_.get("collectionFilter")).collect {
       case cid if cid.toLong > 0 => Id[Collection](cid.toLong)
     }
@@ -273,7 +272,7 @@ class AdminUserController @Inject() (
       (if (query.trim.length == 0) {
         bookmarks
       } else {
-        bookmarks.filter{ case (b, u) => b.title.exists{ t => t.toLowerCase().indexOf(query) >= 0 } }
+        bookmarks.filter { case (b, u) => b.title.exists { t => t.toLowerCase().indexOf(query) >= 0 } }
       }) collect {
         case (mark, uri) if bookmarkFilter.isEmpty || bookmarkFilter.get.contains(mark.id.get) =>
           val colls = keepToCollectionRepo.getCollectionsForKeep(mark.id.get).map(collectionRepo.get).map(_.name)
@@ -303,7 +302,7 @@ class AdminUserController @Inject() (
   }
 
   private def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
-    val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
+    val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
     val (privateKeeps, publicKeeps) = keepRepo.getPrivatePublicCountByUser(user.id.get)
     val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
     val emails = emailRepo.getAllByUser(user.id.get)
@@ -324,13 +323,13 @@ class AdminUserController @Inject() (
     val (users, userCount) = db.readOnlyReplica { implicit s =>
       userViewType match {
         case AllUsersViewType => (userRepo.pageIncluding(UserStates.ACTIVE)(page, PAGE_SIZE) map userStatistics,
-                                  userRepo.countIncluding(UserStates.ACTIVE))
+          userRepo.countIncluding(UserStates.ACTIVE))
         case RegisteredUsersViewType => (userRepo.pageIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, PAGE_SIZE) map userStatistics,
-                                         userRepo.countIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
+          userRepo.countIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
         case FakeUsersViewType => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN)(page, PAGE_SIZE) map userStatistics,
-                                   userRepo.countIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
+          userRepo.countIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE, ExperimentType.AUTO_GEN))
         case ByExperimentUsersViewType(exp) => (userRepo.pageIncludingWithExp(UserStates.ACTIVE)(exp)(page, PAGE_SIZE) map userStatistics,
-                                                userRepo.countIncludingWithExp(UserStates.ACTIVE)(exp))
+          userRepo.countIncludingWithExp(UserStates.ACTIVE)(exp))
       }
     }
 
@@ -364,12 +363,12 @@ class AdminUserController @Inject() (
   }
 
   def searchUsers() = AdminHtmlAction.authenticated { implicit request =>
-    val form = request.request.body.asFormUrlEncoded.map{ req => req.map(r => (r._1 -> r._2.head)) }
-    val searchTerm = form.flatMap{ _.get("searchTerm") }
+    val form = request.request.body.asFormUrlEncoded.map { req => req.map(r => (r._1 -> r._2.head)) }
+    val searchTerm = form.flatMap { _.get("searchTerm") }
     searchTerm match {
       case None => Redirect(routes.AdminUserController.usersView(0))
       case Some(queryText) =>
-        val userIds = Await.result(searchClient.searchUsers(userId = None, query = queryText, maxHits = 100), 15 seconds).hits.map{_.id}
+        val userIds = Await.result(searchClient.searchUsers(userId = None, query = queryText, maxHits = 100), 15 seconds).hits.map { _.id }
         val users = db.readOnlyReplica { implicit s =>
           userIds map userRepo.get map userStatistics
         }
@@ -393,7 +392,7 @@ class AdminUserController @Inject() (
       case _ => None
     }).flatten
 
-    db.readWrite{ implicit session =>
+    db.readWrite { implicit session =>
       val oldEmails = emailRepo.getAllByUser(userId).toSet
       val newEmails = (emailList map { address =>
         val email = emailRepo.getByAddressOpt(address)
@@ -417,7 +416,7 @@ class AdminUserController @Inject() (
 
   def setInvitesCount(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     val count = request.request.body.asFormUrlEncoded.get("allowedInvites").headOption.getOrElse("1000")
-    db.readWrite{ implicit session =>
+    db.readWrite { implicit session =>
       userValueRepo.setValue(userId, UserValues.availableInvites.name, count)
     }
     Redirect(routes.AdminUserController.userView(userId))
@@ -507,7 +506,7 @@ class AdminUserController @Inject() (
           db.readOnlyReplica { implicit session =>
             userValueRepo.getValueStringOpt(userId, name)
           }
-        case _=>
+        case _ =>
           None.asInstanceOf[Option[String]]
       }
     }.flatten
@@ -546,7 +545,7 @@ class AdminUserController @Inject() (
   }
 
   def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
-    val socialUserInfos = db.readOnlyReplica {implicit s =>
+    val socialUserInfos = db.readOnlyReplica { implicit s =>
       val user = userRepo.get(userId)
       socialUserInfoRepo.getByUser(user.id.get)
     }
@@ -581,8 +580,8 @@ class AdminUserController @Inject() (
     val (title, bodyHtml, linkText, url, image, sticky, whichUsers, categoryOpt) = notifyForm.bindFromRequest.get
     val category = categoryOpt.map(NotificationCategory.apply) getOrElse NotificationCategory.User.ANNOUNCEMENT
 
-    val usersOpt : Option[Seq[Id[User]]] = whichUsers.flatMap(s => if(s == "") None else Some(s) ).map(_.split("[\\s,;]").filter(_ != "").map(u => Id[User](u.toLong)).toSeq)
-    val isSticky : Boolean = sticky.isDefined
+    val usersOpt: Option[Seq[Id[User]]] = whichUsers.flatMap(s => if (s == "") None else Some(s)).map(_.split("[\\s,;]").filter(_ != "").map(u => Id[User](u.toLong)).toSeq)
+    val isSticky: Boolean = sticky.isDefined
 
     log.info("Sending global notification via Eliza!")
     usersOpt.map {
@@ -595,13 +594,12 @@ class AdminUserController @Inject() (
       eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category)
     }
 
-
     Redirect(routes.AdminUserController.notification())
   }
 
   def bumpUserSeq() = AdminHtmlAction.authenticated { implicit request =>
-    db.readWrite{ implicit s =>
-      userRepo.all.sortBy(_.id.get.id).foreach{ u => userRepo.save(u) }
+    db.readWrite { implicit s =>
+      userRepo.all.sortBy(_.id.get.id).foreach { u => userRepo.save(u) }
     }
     Ok("OK. Bumping up user sequence numbers")
   }
@@ -665,24 +663,24 @@ class AdminUserController @Inject() (
   }
 
   def bumpUpSeqNumForConnections() = AdminHtmlAction.authenticatedAsync { implicit request =>
-    SafeFuture{
-      val conns = db.readOnlyReplica{ implicit s =>
+    SafeFuture {
+      val conns = db.readOnlyReplica { implicit s =>
         userConnectionRepo.all()
       }
 
-      conns.grouped(100).foreach{ cs =>
-        db.readWrite{ implicit s =>
-          cs.foreach{ c => userConnectionRepo.save(c)}
+      conns.grouped(100).foreach { cs =>
+        db.readWrite { implicit s =>
+          cs.foreach { c => userConnectionRepo.save(c) }
         }
       }
 
-      val friends = db.readOnlyReplica{ implicit s =>
+      val friends = db.readOnlyReplica { implicit s =>
         searchFriendRepo.all()
       }
 
-      friends.grouped(100).foreach{ fs =>
-        db.readWrite{ implicit s =>
-          fs.foreach{f => searchFriendRepo.save(f)}
+      friends.grouped(100).foreach { fs =>
+        db.readWrite { implicit s =>
+          fs.foreach { f => searchFriendRepo.save(f) }
         }
       }
       Ok("bump up seqNum for userConnRepo and searchFriendRepo")
@@ -690,138 +688,127 @@ class AdminUserController @Inject() (
   }
 
   // ad hoc testing only during dev phase
-  private def prefixSocialSearchDirect(userId:Id[User], query:String): Future[Option[Seq[SocialUserBasicInfo]]] = {
+  private def prefixSocialSearchDirect(userId: Id[User], query: String): Future[Seq[SocialUserBasicInfo]] = {
     implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
-    socialUserTypeahead.asyncSearch(userId, query) map { resOpt =>
-      log.info(s"[prefixSearch($userId,$query)]: res=$resOpt")
-      resOpt
+    socialUserTypeahead.topN(userId, query, None).map { hits => hits.map(_.info) }
+  }
+
+  def prefixSocialSearch(userId: Id[User], query: String) = AdminHtmlAction.authenticatedAsync { request =>
+    prefixSocialSearchDirect(userId, query) map { res =>
+      Ok(res.map { info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString(""))
     }
   }
 
-  def prefixSocialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
-    prefixSocialSearchDirect(userId, query) map { resOpt =>
-      resOpt match {
-        case None =>
-          Ok(s"No social match found for $query")
-        case Some(res) =>
-          Ok(res.map { info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>"}.mkString(""))
-      }
-    }
-  }
-
-  private def prefixContactSearchDirect(userId:Id[User], query:String):Future[Seq[RichContact]] = {
+  private def prefixContactSearchDirect(userId: Id[User], query: String): Future[Seq[RichContact]] = {
     abookClient.prefixQuery(userId, query) map { res =>
       log.info(s"[prefixContactSearchDirect($userId)-ABOOK] res=(${res.length});${res.take(10).mkString(",")}")
       res.map(_.info)
     }
   }
 
-  def prefixContactSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
+  def prefixContactSearch(userId: Id[User], query: String) = AdminHtmlAction.authenticatedAsync { request =>
     prefixContactSearchDirect(userId, query) map { res =>
       if (res.isEmpty)
         Ok(s"No contact match found for $query")
       else
-        Ok(res.map{ e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}" }.mkString("<br/>"))
+        Ok(res.map { e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}" }.mkString("<br/>"))
     }
   }
 
-  def prefixSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
+  def prefixSearch(userId: Id[User], query: String) = AdminHtmlAction.authenticatedAsync { request =>
     for {
       contactRes <- prefixContactSearchDirect(userId, query)
-      socialResOpt <- prefixSocialSearchDirect(userId, query)
+      socialRes <- prefixSocialSearchDirect(userId, query)
     } yield {
-      socialResOpt match {
-        case None =>
-          if (contactRes.isEmpty)
-            Ok(s"No match found for $query")
-          else
-            Ok(contactRes.map { e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}"}.mkString("<br/>"))
-        case Some(socialRes) =>
-          Ok((
-            socialRes.map { info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType}"} ++
-              contactRes.map { e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}"}
-            ).mkString("<br/>"))
-      }
+      Ok((
+        socialRes.map { info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType}" } ++
+        contactRes.map { e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}" }
+      ).mkString("<br/>"))
     }
   }
 
-  def fixMissingFortyTwoSocialConnections(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
-    val toBeCreated = db.readWrite { implicit session =>
-      userConnectionRepo.all().collect { case activeConnection if {
-        val user1State = userRepo.get(activeConnection.user1).state
-        val user2State = userRepo.get(activeConnection.user2).state
-        activeConnection.state == UserConnectionStates.ACTIVE && (user1State == UserStates.ACTIVE || user1State == UserStates.BLOCKED) && (user2State == UserStates.ACTIVE || user2State == UserStates.BLOCKED)
-      } =>
-        val fortyTwoUser1 = socialUserInfoRepo.getByUser(activeConnection.user1).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
-        val fortyTwoUser2 = socialUserInfoRepo.getByUser(activeConnection.user2).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
-        if (socialConnectionRepo.getConnectionOpt(fortyTwoUser1, fortyTwoUser2).isEmpty) {
-          if (!readOnly) { socialConnectionRepo.save(SocialConnection(socialUser1 = fortyTwoUser1, socialUser2 = fortyTwoUser2)) }
-          Some((activeConnection.user1, fortyTwoUser1, activeConnection.user2, fortyTwoUser2))
-        } else None
-      }.flatten
-    }
-
-    implicit val socialUserInfoIdFormat = Id.format[SocialUserInfo]
-    implicit val userIdFormat = Id.format[User]
-    val json = JsArray(toBeCreated.map { case (user1, fortyTwoUser1, user2, fortyTwoUser2) => Json.obj("user1" -> user1, "fortyTwoUser1" -> fortyTwoUser1, "user2" -> user2, "fortyTwoUser2" -> fortyTwoUser2)})
-    val title = "FortyTwo Connections to be created"
-    val msg = toBeCreated.mkString("\n")
-    systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.LÉO),
-      subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
-    Ok(json)
-  }}
-
-  def deactivate(userId: Id[User]) = AdminHtmlAction.authenticatedAsync { request => SafeFuture {
-    // todo(Léo): this procedure is incomplete (e.g. does not deal with ABook or Eliza), and should probably be moved to UserCommander and unified with AutoGen Reaper
-    val doIt = request.body.asFormUrlEncoded.get.get("doIt").exists(_.head == "true")
-    val json = db.readWrite { implicit session =>
-      if (doIt) {
-
-        // Social Graph
-        userConnectionRepo.deactivateAllConnections(userId) // User Connections
-        socialUserInfoRepo.getByUser(userId).foreach { sui =>
-          socialConnectionRepo.deactivateAllConnections(sui.id.get) // Social Connections
-          invitationRepo.getByRecipientSocialUserId(sui.id.get).foreach(invitation => invitationRepo.save(invitation.withState(InvitationStates.INACTIVE)))
-          socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId(ExternalId[Nothing]().id))) // Social User Infos
-          socialUserInfoRepo.deleteCache(sui)
-        }
-
-        // URI Graph
-        keepRepo.getByUser(userId).foreach { bookmark => keepRepo.save(bookmark.withActive(false)) }
-        collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
-
-        // Personal Info
-        userSessionRepo.invalidateByUser(userId) // User Session
-        kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
-        userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
-        emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
-        userRepo.save(userRepo.get(userId).withState(UserStates.INACTIVE).copy(primaryEmail = None)) // User
+  def fixMissingFortyTwoSocialConnections(readOnly: Boolean = true) = AdminHtmlAction.authenticatedAsync { request =>
+    SafeFuture {
+      val toBeCreated = db.readWrite { implicit session =>
+        userConnectionRepo.all().collect {
+          case activeConnection if {
+            val user1State = userRepo.get(activeConnection.user1).state
+            val user2State = userRepo.get(activeConnection.user2).state
+            activeConnection.state == UserConnectionStates.ACTIVE && (user1State == UserStates.ACTIVE || user1State == UserStates.BLOCKED) && (user2State == UserStates.ACTIVE || user2State == UserStates.BLOCKED)
+          } =>
+            val fortyTwoUser1 = socialUserInfoRepo.getByUser(activeConnection.user1).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
+            val fortyTwoUser2 = socialUserInfoRepo.getByUser(activeConnection.user2).find(_.networkType == SocialNetworks.FORTYTWO).get.id.get
+            if (socialConnectionRepo.getConnectionOpt(fortyTwoUser1, fortyTwoUser2).isEmpty) {
+              if (!readOnly) { socialConnectionRepo.save(SocialConnection(socialUser1 = fortyTwoUser1, socialUser2 = fortyTwoUser2)) }
+              Some((activeConnection.user1, fortyTwoUser1, activeConnection.user2, fortyTwoUser2))
+            } else None
+        }.flatten
       }
 
-      val user = userRepo.get(userId)
-      val emails = emailRepo.getAllByUser(userId)
-      val credentials = userCredRepo.findByUserIdOpt(userId)
-      val installations = kifiInstallationRepo.all(userId)
-      val tags = collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId)
-      val keeps = keepRepo.getByUser(userId)
-      val socialUsers = socialUserInfoRepo.getByUser(userId)
-      val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId)
-      val userConnections = userConnectionRepo.getConnectedUsers(userId)
+      implicit val socialUserInfoIdFormat = Id.format[SocialUserInfo]
       implicit val userIdFormat = Id.format[User]
-      Json.obj(
-        "user" -> user,
-        "emails" -> emails.map(_.address),
-        "credentials" -> credentials.map(_.credentials),
-        "installations" -> JsObject(installations.map(installation => installation.userAgent.name -> JsString(installation.version.toString))),
-        "tags" -> tags,
-        "keeps" -> keeps,
-        "socialUsers" -> socialUsers,
-        "socialConnections" -> JsObject(socialConnections.toSeq.map { case (network, connections) => network.name -> Json.toJson(connections) }),
-        "userConnections" -> userConnections
-      )
+      val json = JsArray(toBeCreated.map { case (user1, fortyTwoUser1, user2, fortyTwoUser2) => Json.obj("user1" -> user1, "fortyTwoUser1" -> fortyTwoUser1, "user2" -> user2, "fortyTwoUser2" -> fortyTwoUser2) })
+      val title = "FortyTwo Connections to be created"
+      val msg = toBeCreated.mkString("\n")
+      systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.LÉO),
+        subject = title, htmlBody = msg, category = NotificationCategory.System.ADMIN))
+      Ok(json)
     }
-    Ok(json)
-  }}
+  }
+
+  def deactivate(userId: Id[User]) = AdminHtmlAction.authenticatedAsync { request =>
+    SafeFuture {
+      // todo(Léo): this procedure is incomplete (e.g. does not deal with ABook or Eliza), and should probably be moved to UserCommander and unified with AutoGen Reaper
+      val doIt = request.body.asFormUrlEncoded.get.get("doIt").exists(_.head == "true")
+      val json = db.readWrite { implicit session =>
+        if (doIt) {
+
+          // Social Graph
+          userConnectionRepo.deactivateAllConnections(userId) // User Connections
+          socialUserInfoRepo.getByUser(userId).foreach { sui =>
+            socialConnectionRepo.deactivateAllConnections(sui.id.get) // Social Connections
+            invitationRepo.getByRecipientSocialUserId(sui.id.get).foreach(invitation => invitationRepo.save(invitation.withState(InvitationStates.INACTIVE)))
+            socialUserInfoRepo.save(sui.withState(SocialUserInfoStates.INACTIVE).copy(userId = None, credentials = None, socialId = SocialId(ExternalId[Nothing]().id))) // Social User Infos
+            socialUserInfoRepo.deleteCache(sui)
+          }
+
+          // URI Graph
+          keepRepo.getByUser(userId).foreach { bookmark => keepRepo.save(bookmark.withActive(false)) }
+          collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
+
+          // Personal Info
+          userSessionRepo.invalidateByUser(userId) // User Session
+          kifiInstallationRepo.all(userId).foreach { installation => kifiInstallationRepo.save(installation.withState(KifiInstallationStates.INACTIVE)) } // Kifi Installations
+          userCredRepo.findByUserIdOpt(userId).foreach { userCred => userCredRepo.save(userCred.copy(state = UserCredStates.INACTIVE)) } // User Credentials
+          emailRepo.getAllByUser(userId).foreach { email => emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE)) } // Email addresses
+          userRepo.save(userRepo.get(userId).withState(UserStates.INACTIVE).copy(primaryEmail = None)) // User
+        }
+
+        val user = userRepo.get(userId)
+        val emails = emailRepo.getAllByUser(userId)
+        val credentials = userCredRepo.findByUserIdOpt(userId)
+        val installations = kifiInstallationRepo.all(userId)
+        val tags = collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId)
+        val keeps = keepRepo.getByUser(userId)
+        val socialUsers = socialUserInfoRepo.getByUser(userId)
+        val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId)
+        val userConnections = userConnectionRepo.getConnectedUsers(userId)
+        implicit val userIdFormat = Id.format[User]
+        Json.obj(
+          "user" -> user,
+          "emails" -> emails.map(_.address),
+          "credentials" -> credentials.map(_.credentials),
+          "installations" -> JsObject(installations.map(installation => installation.userAgent.name -> JsString(installation.version.toString))),
+          "tags" -> tags,
+          "keeps" -> keeps,
+          "socialUsers" -> socialUsers,
+          "socialConnections" -> JsObject(socialConnections.toSeq.map { case (network, connections) => network.name -> Json.toJson(connections) }),
+          "userConnections" -> userConnections
+        )
+      }
+      Ok(json)
+    }
+  }
 
   def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminJsonAction.authenticated { request =>
     log.info(s"About to deactivate UserEmailAddress $id")

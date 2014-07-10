@@ -5,7 +5,6 @@ import play.api.http.ContentTypes
 import play.api.mvc._
 import play.api.libs.json._
 
-
 abstract class WebsiteController(val actionAuthenticator: ActionAuthenticator) extends ServiceController with ActionsBuilder {
 
   object JsonAction extends Actions.AuthenticatedActions with Actions.NonAuthenticatedActions {

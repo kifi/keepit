@@ -1,9 +1,9 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{State, Id}
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.time._
 import com.keepit.common.mail.ElectronicMailCategory
 
@@ -36,21 +36,21 @@ class UserNotifyPreferenceRepoImpl @Inject() (val db: DataBaseComponent, val clo
   override def invalidateCache(model: UserNotifyPreference)(implicit session: RSession): Unit = {}
 
   def getByUser(userId: Id[User], excludeState: Option[State[UserNotifyPreference]] = Some(UserNotifyPreferenceStates.INACTIVE))(implicit session: RSession): Seq[UserNotifyPreference] = {
-    (for(f <- rows if f.userId === userId && f.state =!= excludeState.orNull) yield f).list
+    (for (f <- rows if f.userId === userId && f.state =!= excludeState.orNull) yield f).list
   }
 
   def canNotify(userId: Id[User], name: ElectronicMailCategory)(implicit session: RSession): Boolean =
     canNotify(userId, "email_" + name.category)
 
   def canNotify(userId: Id[User], name: String)(implicit session: RSession): Boolean = {
-    (for(f <- rows if f.userId === userId && f.name === name && f.state === UserNotifyPreferenceStates.ACTIVE) yield f.canSend).firstOption.getOrElse(true)
+    (for (f <- rows if f.userId === userId && f.name === name && f.state === UserNotifyPreferenceStates.ACTIVE) yield f.canSend).firstOption.getOrElse(true)
   }
 
   def setNotifyPreference(userId: Id[User], name: ElectronicMailCategory, canSend: Boolean)(implicit session: RWSession): Unit =
     setNotifyPreference(userId, "email_" + name.category, canSend)
 
   def setNotifyPreference(userId: Id[User], name: String, canSend: Boolean)(implicit session: RWSession): Unit = {
-    val updated = (for(f <- rows if f.userId === userId && f.name === name) yield (f.state, f.updatedAt, f.canSend))
+    val updated = (for (f <- rows if f.userId === userId && f.name === name) yield (f.state, f.updatedAt, f.canSend))
       .update(UserNotifyPreferenceStates.ACTIVE, clock.now, canSend)
     if (updated == 0) {
       save(UserNotifyPreference(userId = userId, name = name, canSend = canSend))

@@ -3,9 +3,9 @@ package com.keepit.common.mail
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
 import scala.util.Try
+import play.api.data.{ Forms, Mapping }
 
 case class EmailAddress(address: String) {
-  if (!EmailAddress.isValid(address)) { throw new IllegalArgumentException(s"Invalid email address: $address") }
   override def toString = address
   def equalsIgnoreCase(other: EmailAddress): Boolean = compareToIgnoreCase(other) == 0
   def compareToIgnoreCase(other: EmailAddress): Int = address.compareToIgnoreCase(other.address)
@@ -33,15 +33,21 @@ object EmailAddress {
     }
   }
 
+  implicit val formMapping: Mapping[EmailAddress] = Forms.email.verifying("invalid_email_address", validate(_).isSuccess).transform(validate(_).get, _.address)
+
   // Regex from http://www.whatwg.org/specs/web-apps/current-work/multipage/states-of-the-type-attribute.html
   private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
 
   private def isValid(address: String): Boolean = emailRegex.findFirstIn(address).isDefined
-  private def canonicalize(address: String): EmailAddress = {
+  private def canonicalize(address: String): String = {
     val (localAt, host) = address.splitAt(address.lastIndexOf('@') + 1)
-    EmailAddress(localAt + host.toLowerCase)
+    localAt + host.toLowerCase
   }
-  def validate(address: String): Try[EmailAddress] = Try { canonicalize(address) }
+  def validate(address: String): Try[EmailAddress] = Try {
+    val canonicalAddress = canonicalize(address)
+    if (!isValid(canonicalAddress)) { throw new IllegalArgumentException(s"Invalid email address: $canonicalAddress") }
+    EmailAddress(canonicalAddress)
+  }
 }
 
 object SystemEmailAddress {
@@ -64,7 +70,7 @@ object SystemEmailAddress {
   val NOTIFY = EmailAddress("42.notify@gmail.com")
   val SENDGRID = EmailAddress("sendgrid@42go.com")
   val SUPPORT = EmailAddress("support@kifi.com")
-  val OLD_SUPPORT = EmailAddress("support@42go.com")//keep for serialization of mail
+  val OLD_SUPPORT = EmailAddress("support@42go.com") //keep for serialization of mail
 
   val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, ANDREW, YINGJIE, LÉO, STEPHEN, RAY, MARTIN)
   val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, NOTIFICATIONS, ENG, CONGRATS, EDUARDO, EFFI, NOTIFY, SENDGRID)

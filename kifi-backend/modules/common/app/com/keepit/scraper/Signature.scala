@@ -17,14 +17,14 @@ object Signature {
 
   def apply(arr: Array[Byte]) = new Signature(arr)
   def apply(base64: String) = new Signature(parseBase64Binary(base64))
-  def apply(fields: Seq[String]): Signature = fields.foldLeft(new SignatureBuilder){ (builder, text) => builder.add(text) }.build
+  def apply(fields: Seq[String]): Signature = fields.foldLeft(new SignatureBuilder) { (builder, text) => builder.add(text) }.build
 }
 
 class Signature(val bytes: Array[Byte]) {
 
   def similarTo(other: Signature): Double = {
     if (bytes.length == other.bytes.length) {
-      bytes.zip(other.bytes).filter{ pair => pair._1 == pair._2 }.size.toDouble / 100.0d
+      bytes.zip(other.bytes).filter { pair => pair._1 == pair._2 }.size.toDouble / 100.0d
     } else {
       0.0d
     }
@@ -66,7 +66,7 @@ class SignatureBuilder(windowSize: Int = 20) {
         ptr += 1
         canceler = window(ptr % windowSize)
         window(ptr % windowSize) = h
-        updateSketch(h ^ ((canceler << cancelerShift)|(canceler >>> (32 - cancelerShift))))
+        updateSketch(h ^ ((canceler << cancelerShift) | (canceler >>> (32 - cancelerShift))))
         ptr
       }
       ts.end()
@@ -77,8 +77,8 @@ class SignatureBuilder(windowSize: Int = 20) {
   }
 
   def build() = {
-     // borrowing the idea from b-bit minwise hash. we take the lowest 8 bits to save space.
-    Signature(sketch.map{ _.toByte }.toArray)
+    // borrowing the idea from b-bit minwise hash. we take the lowest 8 bits to save space.
+    Signature(sketch.map { _.toByte }.toArray)
   }
 
   private def hash(arr: Array[Char], len: Int) = {

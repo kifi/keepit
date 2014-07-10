@@ -2,8 +2,8 @@ package com.keepit.common.cache
 
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
-import com.google.inject.{Provides, Singleton}
-import net.spy.memcached.{AddrUtil, MemcachedClient}
+import com.google.inject.{ Provides, Singleton }
+import net.spy.memcached.{ AddrUtil, MemcachedClient }
 import play.api.Play
 import play.api.Play._
 
@@ -32,7 +32,7 @@ case class EhCacheCacheModule() extends CachePluginModule {
   }
 }
 
-case class HashMapMemoryCacheModule(bindsFortyTwoCache:Boolean = true) extends CachePluginModule {
+case class HashMapMemoryCacheModule(bindsFortyTwoCache: Boolean = true) extends CachePluginModule {
   def configure {
     if (bindsFortyTwoCache) // make optional to facilitate local testing
       bind[FortyTwoCachePlugin].to[HashMapMemoryCache]

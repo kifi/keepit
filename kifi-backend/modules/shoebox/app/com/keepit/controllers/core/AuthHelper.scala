@@ -4,10 +4,10 @@ import com.keepit.common.net.UserAgent
 import com.keepit.common.performance._
 import com.google.inject.Inject
 import play.api.mvc._
-import play.api.http.{Status, HeaderNames}
-import play.api.libs.json.{Json, JsValue}
+import play.api.http.{ Status, HeaderNames }
+import play.api.libs.json.{ Json, JsValue }
 import securesocial.core._
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.commanders._
@@ -21,7 +21,7 @@ import com.keepit.common.time._
 import play.api.Play._
 import play.api.data._
 import play.api.data.Forms._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 import scala.util.Failure
 import scala.Some
@@ -44,40 +44,38 @@ import com.keepit.inject.FortyTwoConfig
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
-  def validatePwd(pwd:Array[Char]) = (pwd.nonEmpty && pwd.length >= PWD_MIN_LEN)
+  def validatePwd(pwd: Array[Char]) = (pwd.nonEmpty && pwd.length >= PWD_MIN_LEN)
 }
 
 class AuthHelper @Inject() (
-  db: Database,
-  clock: Clock,
-  airbrakeNotifier:AirbrakeNotifier,
-  authCommander: AuthCommander,
-  userRepo: UserRepo,
-  userCredRepo: UserCredRepo,
-  socialRepo: SocialUserInfoRepo,
-  emailAddressRepo: UserEmailAddressRepo,
-  userValueRepo: UserValueRepo,
-  passwordResetRepo: PasswordResetRepo,
-  kifiInstallationRepo: KifiInstallationRepo, // todo: factor out
-  s3ImageStore: S3ImageStore,
-  postOffice: LocalPostOffice,
-  inviteCommander: InviteCommander,
-  userCommander: UserCommander,
-  heimdalContextBuilder: HeimdalContextBuilderFactory,
-  secureSocialClientIds: SecureSocialClientIds,
-  fortytwoConfig: FortyTwoConfig
-) extends HeaderNames with Results with Status with Logging {
+    db: Database,
+    clock: Clock,
+    airbrakeNotifier: AirbrakeNotifier,
+    authCommander: AuthCommander,
+    userRepo: UserRepo,
+    userCredRepo: UserCredRepo,
+    socialRepo: SocialUserInfoRepo,
+    emailAddressRepo: UserEmailAddressRepo,
+    userValueRepo: UserValueRepo,
+    passwordResetRepo: PasswordResetRepo,
+    kifiInstallationRepo: KifiInstallationRepo, // todo: factor out
+    s3ImageStore: S3ImageStore,
+    postOffice: LocalPostOffice,
+    inviteCommander: InviteCommander,
+    userCommander: UserCommander,
+    heimdalContextBuilder: HeimdalContextBuilderFactory,
+    secureSocialClientIds: SecureSocialClientIds,
+    fortytwoConfig: FortyTwoConfig) extends HeaderNames with Results with Status with Logging {
 
-  def authHandler(request:Request[_], res: SimpleResult)(f : => (Seq[Cookie], Session) => SimpleResult) = {
+  def authHandler(request: Request[_], res: SimpleResult)(f: => (Seq[Cookie], Session) => SimpleResult) = {
     val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
     val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
     f(resCookies, resSession)
   }
 
-  private def checkForExistingUser(emailString: String): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
-    val email = EmailAddress(emailString)
+  private def checkForExistingUser(email: EmailAddress): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
     db.readOnlyMaster { implicit s =>
-      socialRepo.getOpt(SocialId(emailString), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
+      socialRepo.getOpt(SocialId(email.address), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
         emailAddressRepo.getByAddressOpt(email).map {
           case emailAddr if emailAddr.state == UserEmailAddressStates.VERIFIED =>
             (true, socialRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).headOption)
@@ -92,7 +90,7 @@ class AuthHelper @Inject() (
     }
   }
 
-  def handleEmailPasswordSuccessForm(emailAddress: String, password:Array[Char])(implicit request:Request[_]) = timing(s"handleEmailPasswordSuccess($emailAddress)") {
+  def handleEmailPasswordSuccessForm(emailAddress: EmailAddress, password: Array[Char])(implicit request: Request[_]) = timing(s"handleEmailPasswordSuccess($emailAddress)") {
     require(AuthHelper.validatePwd(password), "invalid password")
     val hasher = Registry.hashers.currentHasher
     val tupleOpt: Option[(Boolean, SocialUserInfo)] = checkForExistingUser(emailAddress)
@@ -111,7 +109,7 @@ class AuthHelper @Inject() (
                 userRepo.get(sui.userId.get).state != UserStates.INCOMPLETE_SIGNUP
               }
               if (finalized) {
-                Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))  // todo(ray): uri not relevant for mobile
+                Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String])) // todo(ray): uri not relevant for mobile
                   .withSession(session - SecureSocial.OriginalUrlKey + (FORTYTWO_USER_ID -> sui.userId.get.toString))
                   .withCookies(authenticator.toCookie)
               } else {
@@ -142,11 +140,9 @@ class AuthHelper @Inject() (
 
   val emailPasswordForm = Form[EmailPassword](
     mapping(
-      "email" -> email,
+      "email" -> EmailAddress.formMapping,
       "password" -> text.verifying("password_too_short", pw => AuthHelper.validatePwd(pw.toCharArray))
-    )
-      ((email, pwd) => EmailPassword(email, pwd.toCharArray))
-      ((ep:EmailPassword) => Some(ep.email, new String(ep.password)))
+    )((validEmail, pwd) => EmailPassword(validEmail, pwd.toCharArray))((ep: EmailPassword) => Some(ep.email, new String(ep.password)))
   )
 
   /**
@@ -164,11 +160,10 @@ class AuthHelper @Inject() (
 
   private val url = fortytwoConfig.applicationBaseUrl
 
-  def finishSignup(user: User, emailString: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): SimpleResult = timing(s"[finishSignup(${user.id}, $emailString}]") {
-    val emailAddress = EmailAddress(emailString)
+  def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): SimpleResult = timing(s"[finishSignup(${user.id}, $emailAddress}]") {
     if (!emailConfirmedAlready) {
       val unverifiedEmail = newIdentity.email.map(EmailAddress(_)).getOrElse(emailAddress)
-      SafeFuture { userCommander.sendWelcomeEmail(user, withVerification=true, Some(unverifiedEmail)) }
+      SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = true, Some(unverifiedEmail)) }
     } else {
       db.readWrite { implicit session =>
         emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
@@ -176,7 +171,7 @@ class AuthHelper @Inject() (
         }
         userValueRepo.clearValue(user.id.get, "pending_primary_email")
       }
-      SafeFuture { userCommander.sendWelcomeEmail(user, withVerification=false) }
+      SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = false) }
     }
 
     val uri = request.session.get(SecureSocial.OriginalUrlKey) getOrElse {
@@ -194,8 +189,8 @@ class AuthHelper @Inject() (
 
   private val socialFinalizeAccountForm = Form[SocialFinalizeInfo](
     mapping(
-      "email" -> email.verifying("known_email_address", email => db.readOnlyMaster { implicit s =>
-        userCredRepo.findByEmailOpt(email).isEmpty
+      "email" -> EmailAddress.formMapping.verifying("known_email_address", email => db.readOnlyMaster { implicit s =>
+        userCredRepo.findByEmailOpt(email.address).isEmpty
       }),
       "firstName" -> nonEmptyText,
       "lastName" -> nonEmptyText,
@@ -206,23 +201,23 @@ class AuthHelper @Inject() (
       "cropX" -> optional(number),
       "cropY" -> optional(number),
       "cropSize" -> optional(number)
-    ) ((email, fName, lName, pwd, picToken, picH, picW, cX, cY, cS) =>
-        SocialFinalizeInfo(email = email, firstName = fName, lastName = lName, password = pwd.toCharArray, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS))
-      ((sfi:SocialFinalizeInfo) =>
+    )((email, fName, lName, pwd, picToken, picH, picW, cX, cY, cS) =>
+        SocialFinalizeInfo(email = email, firstName = fName, lastName = lName, password = pwd.toCharArray, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS))((sfi: SocialFinalizeInfo) =>
         Some(sfi.email, sfi.firstName, sfi.lastName, new String(sfi.password), sfi.picToken, sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize))
   )
   def doSocialFinalizeAccountAction(implicit request: Request[JsValue]): SimpleResult = {
     socialFinalizeAccountForm.bindFromRequest.fold(
-    formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
-    { case sfi:SocialFinalizeInfo =>
-      require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
-      val identity = request.identityOpt.get
-      val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
-      val emailConfirmedBySocialNetwork = identity.email.exists(_.trim == sfi.email.trim)
-      finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
-    })
+      formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
+      {
+        case sfi: SocialFinalizeInfo =>
+          require(request.identityOpt.isDefined, "A social identity should be available in order to finalize social account")
+          val identity = request.identityOpt.get
+          val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
+          implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+          val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
+          val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail }.exists(_.equalsIgnoreCase(sfi.email))
+          finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
+      })
   }
 
   private val userPassFinalizeAccountForm = Form[EmailPassFinalizeInfo](mapping(
@@ -238,15 +233,17 @@ class AuthHelper @Inject() (
   def doUserPassFinalizeAccountAction(implicit request: AuthenticatedRequest[JsValue]): Future[SimpleResult] = {
     userPassFinalizeAccountForm.bindFromRequest.fold(
       formWithErrors => Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth"))),
-      { case efi:EmailPassFinalizeInfo =>
-        val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
-        implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-        val sw = new Stopwatch(s"[finalizeEmailPasswordAcct(${request.userId})]")
-        authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map { case (user, email, newIdentity) =>
-          sw.stop()
-          sw.logTime()
-          finishSignup(user, email, newIdentity, emailConfirmedAlready = false)
-        }
+      {
+        case efi: EmailPassFinalizeInfo =>
+          val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
+          implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+          val sw = new Stopwatch(s"[finalizeEmailPasswordAcct(${request.userId})]")
+          authCommander.finalizeEmailPassAccount(efi, request.userId, request.user.externalId, request.identityOpt, inviteExtIdOpt).map {
+            case (user, email, newIdentity) =>
+              sw.stop()
+              sw.logTime()
+              finishSignup(user, email, newIdentity, emailConfirmedAlready = false)
+          }
       }
     )
   }
@@ -254,7 +251,7 @@ class AuthHelper @Inject() (
   private def getResetEmailAddresses(emailAddrStr: String): Option[(Id[User], Option[EmailAddress])] = {
     val email = EmailAddress(emailAddrStr)
     db.readOnlyMaster { implicit s =>
-      val emailAddrOpt = emailAddressRepo.getByAddressOpt(email, excludeState = None)  // TODO: exclude INACTIVE records
+      val emailAddrOpt = emailAddressRepo.getByAddressOpt(email, excludeState = None) // TODO: exclude INACTIVE records
       emailAddrOpt.map(_.userId) orElse socialRepo.getOpt(SocialId(emailAddrStr), SocialNetworks.FORTYTWO).flatMap(_.userId) map { userId =>
         emailAddrOpt.filter(_.verified) map { _ =>
           (userId, None)
@@ -275,7 +272,7 @@ class AuthHelper @Inject() (
           val emailAddresses = Set(EmailAddress(emailAddrStr)) ++ verifiedEmailAddressOpt
           db.readWrite { implicit session =>
             emailAddresses.map { resetEmailAddress =>
-            // TODO: Invalidate both reset tokens the first time one is used.
+              // TODO: Invalidate both reset tokens the first time one is used.
               val reset = passwordResetRepo.createNewResetToken(userId, resetEmailAddress)
               val resetUrl = s"$url${routes.AuthController.setPasswordPage(reset.token)}"
               postOffice.sendMail(ElectronicMail(
@@ -297,7 +294,6 @@ class AuthHelper @Inject() (
       }
     } getOrElse BadRequest("0")
   }
-
 
   def doSetPassword(implicit request: Request[JsValue]): SimpleResult = {
     (for {
@@ -355,8 +351,9 @@ class AuthHelper @Inject() (
         }
         val user = userRepo.get(address.userId)
         val (verifiedEmailOpt, isVerifiedForTheFirstTime) = emailAddressRepo.verify(address.userId, code)
-        verifiedEmailOpt.collect { case verifiedEmail if isVerifiedForTheFirstTime && (user.primaryEmail.isEmpty || isPendingPrimaryEmail) =>
-          userCommander.updateUserPrimaryEmail(verifiedEmail)
+        verifiedEmailOpt.collect {
+          case verifiedEmail if isVerifiedForTheFirstTime && (user.primaryEmail.isEmpty || isPendingPrimaryEmail) =>
+            userCommander.updateUserPrimaryEmail(verifiedEmail)
         }
 
         (verifiedEmailOpt.isDefined, isVerifiedForTheFirstTime) match {
@@ -419,7 +416,5 @@ class AuthHelper @Inject() (
       case None => Forbidden(JsNumber(0))
     }
   }
-
-
 
 }

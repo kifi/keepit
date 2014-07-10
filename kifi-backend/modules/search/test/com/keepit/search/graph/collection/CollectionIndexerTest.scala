@@ -33,17 +33,18 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
         val collectionDir = new VolatileIndexDirectory()
         val collectionIndexer = mkCollectionIndexer(collectionDir)
 
-        val expectedUriToUserEdges = uris.map{ (_, users) } // all users have all uris
+        val expectedUriToUserEdges = uris.map { (_, users) } // all users have all uris
         saveBookmarksByURI(expectedUriToUserEdges)
         collectionIndexer.update() === 0
 
-        val collections = users.zipWithIndex.map{ case (user, idx) =>
-          val coll = saveCollection(user, s"${user.firstName} - Collection")
-          val bookmark = {
-            val uri = uris(idx % numURIs)
-            getBookmarkByUriAndUser(uri.id.get, user.id.get)
-          }
-          saveBookmarksToCollection(coll, Seq(bookmark.get))
+        val collections = users.zipWithIndex.map {
+          case (user, idx) =>
+            val coll = saveCollection(user, s"${user.firstName} - Collection")
+            val bookmark = {
+              val uri = uris(idx % numURIs)
+              getBookmarkByUriAndUser(uri.id.get, user.id.get)
+            }
+            saveBookmarksToCollection(coll, Seq(bookmark.get))
         }
         collectionIndexer.update() === collections.size
         collectionIndexer.sequenceNumber.value === (collections.size * 2)
@@ -63,10 +64,10 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
         val collectionIndexer = mkCollectionIndexer()
 
         val usersWithCollection = users.take(2)
-        val expectedUriToUserEdges = uris.map{ (_, usersWithCollection) }
+        val expectedUriToUserEdges = uris.map { (_, usersWithCollection) }
         saveBookmarksByURI(expectedUriToUserEdges)
 
-        val collections = usersWithCollection.map{ user =>
+        val collections = usersWithCollection.map { user =>
           val coll = saveCollection(user, s"${user.firstName} - Collection")
           val bookmarks = getBookmarksByUser(user.id.get)
           saveBookmarksToCollection(coll, bookmarks)
@@ -77,9 +78,9 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
         val searcher = collectionIndexer.getSearcher
 
         val positiveUsers = usersWithCollection.map(_.id.get).toSet
-        users.forall{ user =>
+        users.forall { user =>
           var hits = Set.empty[Long]
-          searcher.doSearch(new TermQuery(new Term(CollectionFields.userField, user.id.get.toString))){ (scorer, reader) =>
+          searcher.doSearch(new TermQuery(new Term(CollectionFields.userField, user.id.get.toString))) { (scorer, reader) =>
             val mapper = reader.getIdMapper
             var doc = scorer.nextDoc()
             while (doc != NO_MORE_DOCS) {
@@ -99,10 +100,10 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
 
         val collectionIndexer = mkCollectionIndexer()
 
-        val expectedUriToUsers = uris.map{ uri => (uri, users.filter( _.id.get.id == uri.id.get.id)) }
+        val expectedUriToUsers = uris.map { uri => (uri, users.filter(_.id.get.id == uri.id.get.id)) }
         saveBookmarksByURI(expectedUriToUsers)
 
-        val collections = users.foldLeft(Map.empty[User, Collection]){ (m, user) =>
+        val collections = users.foldLeft(Map.empty[User, Collection]) { (m, user) =>
           val coll = saveCollection(user, s"${user.firstName} - Collection")
           val bookmarks = getBookmarksByUser(user.id.get)
           m + (user -> saveBookmarksToCollection(coll, bookmarks))
@@ -112,20 +113,21 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
 
         val searcher = collectionIndexer.getSearcher
 
-        expectedUriToUsers.forall{ case (uri, expectedUsers) =>
-          var hits = Set.empty[Long]
-          searcher.doSearch(new TermQuery(new Term(CollectionFields.uriField, uri.id.get.toString))){ (scorer, reader) =>
-            val mapper = reader.getIdMapper
-            var doc = scorer.nextDoc()
-            while (doc != NO_MORE_DOCS) {
-              hits += mapper.getId(doc)
-              doc = scorer.nextDoc()
+        expectedUriToUsers.forall {
+          case (uri, expectedUsers) =>
+            var hits = Set.empty[Long]
+            searcher.doSearch(new TermQuery(new Term(CollectionFields.uriField, uri.id.get.toString))) { (scorer, reader) =>
+              val mapper = reader.getIdMapper
+              var doc = scorer.nextDoc()
+              while (doc != NO_MORE_DOCS) {
+                hits += mapper.getId(doc)
+                doc = scorer.nextDoc()
+              }
             }
-          }
-          hits.size === expectedUsers.size
-          expectedUsers.foreach{ u => hits.exists(_ == collections(u).id.get.id) === true }
+            hits.size === expectedUsers.size
+            expectedUsers.foreach { u => hits.exists(_ == collections(u).id.get.id) === true }
 
-          true
+            true
         } === true
       }
     }
@@ -136,10 +138,10 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
 
         val collectionIndexer = mkCollectionIndexer()
 
-        val expectedUriToUsers = uris.map{ uri => (uri, users.filter{ _.id.get.id <= uri.id.get.id }) }
+        val expectedUriToUsers = uris.map { uri => (uri, users.filter { _.id.get.id <= uri.id.get.id }) }
         saveBookmarksByURI(expectedUriToUsers)
 
-        val collections = users.map{ user =>
+        val collections = users.map { user =>
           val coll = saveCollection(user, s"${user.firstName} - Collection")
           val bookmarks = getBookmarksByUser(user.id.get)
           (user, saveBookmarksToCollection(coll, bookmarks), bookmarks)
@@ -149,10 +151,11 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
 
         val searcher = new BaseGraphSearcher(collectionIndexer.getSearcher)
 
-        collections.forall{ case (user, coll, bookmarks) =>
-          val uriList = searcher.getURIList(CollectionFields.uriListField, searcher.getDocId(coll.id.get.id))
-          (user.id.get, uriList.ids.toSet) === (user.id.get, bookmarks.map(_.uriId.id).toSet)
-          true
+        collections.forall {
+          case (user, coll, bookmarks) =>
+            val uriList = searcher.getURIList(CollectionFields.uriListField, searcher.getDocId(coll.id.get.id))
+            (user.id.get, uriList.ids.toSet) === (user.id.get, bookmarks.map(_.uriId.id).toSet)
+            true
         } === true
       }
     }
@@ -163,10 +166,10 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
 
         val collectionIndexer = mkCollectionIndexer()
 
-        val expectedUriToUsers = uris.map{ uri => (uri, users.filter{ _.id.get.id <= uri.id.get.id }) }
+        val expectedUriToUsers = uris.map { uri => (uri, users.filter { _.id.get.id <= uri.id.get.id }) }
         saveBookmarksByURI(expectedUriToUsers)
 
-        val collections = users.map{ user =>
+        val collections = users.map { user =>
           val coll = saveCollection(user, s"${user.firstName} - Collection")
           val bookmarks = getBookmarksByUser(user.id.get)
           (user, saveBookmarksToCollection(coll, bookmarks), bookmarks)
@@ -176,11 +179,12 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
 
         val searcher = collectionIndexer.getSearcher
 
-        collections.forall{ case (user, coll, bookmarks) =>
-          val extIdOpt = searcher.getDecodedDocValue[String](CollectionFields.externalIdField, coll.id.get.id)(fromByteArray)
-          extIdOpt must beSome[String]
-          extIdOpt.get === coll.externalId.id
-          true
+        collections.forall {
+          case (user, coll, bookmarks) =>
+            val extIdOpt = searcher.getDecodedDocValue[String](CollectionFields.externalIdField, coll.id.get.id)(fromByteArray)
+            extIdOpt must beSome[String]
+            extIdOpt.get === coll.externalId.id
+            true
         } === true
       }
     }
@@ -191,14 +195,15 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
 
         val collectionIndexer = mkCollectionIndexer()
 
-        val expectedUriToUsers = uris.map{ uri => (uri, users.filter{ _.id.get.id <= uri.id.get.id }) }
+        val expectedUriToUsers = uris.map { uri => (uri, users.filter { _.id.get.id <= uri.id.get.id }) }
         saveBookmarksByURI(expectedUriToUsers)
 
         val user = users.head
         val bookmarks = getBookmarksByUser(user.id.get)
         val collNames = Seq("Design", "Flat Design", "Web Design", "Design Web", "Web")
-        val collections = (collNames zip bookmarks).map{ case (name, bookmark) =>
-          saveCollection(user, name) tap { saveBookmarksToCollection(_, Seq(bookmark)) }
+        val collections = (collNames zip bookmarks).map {
+          case (name, bookmark) =>
+            saveCollection(user, name) tap { saveBookmarksToCollection(_, Seq(bookmark)) }
         }
         collectionIndexer.update()
         collectionIndexer.numDocs === collections.size
@@ -235,14 +240,15 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
 
         val collectionIndexer = mkCollectionIndexer()
 
-        val expectedUriToUsers = uris.map{ uri => (uri, users.filter{ _.id.get.id <= uri.id.get.id }) }
+        val expectedUriToUsers = uris.map { uri => (uri, users.filter { _.id.get.id <= uri.id.get.id }) }
         saveBookmarksByURI(expectedUriToUsers)
 
         val user = users.head
         val bookmarks = getBookmarksByUser(user.id.get)
         val collNames = Seq("Design", "Flat Design", "Web Search", "Spider Web", "Web")
-        val collections = (collNames zip bookmarks).map{ case (name, bookmark) =>
-          saveCollection(user, name) tap { saveBookmarksToCollection(_, Seq(bookmark)) }
+        val collections = (collNames zip bookmarks).map {
+          case (name, bookmark) =>
+            saveCollection(user, name) tap { saveBookmarksToCollection(_, Seq(bookmark)) }
         }
         collectionIndexer.update()
         collectionIndexer.numDocs === collections.size
@@ -293,7 +299,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
         val collectionIndexer = mkCollectionIndexer()
         val (col, bm) = CollectionIndexer.fetchData(collection.id.get, user.id.get, shoeboxClient)
         val doc = collectionIndexer.buildIndexable(col, bm).buildDocument
-        doc.getFields.forall{ f => collectionIndexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
+        doc.getFields.forall { f => collectionIndexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
       }
     }
   }

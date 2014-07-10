@@ -2,28 +2,27 @@ package com.keepit.heimdal
 
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.User
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.service.ServiceType
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.zookeeper.ServiceCluster
 import org.joda.time.DateTime
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ Future, Promise }
 
-import play.api.libs.json.{JsArray, Json, JsObject}
+import play.api.libs.json.{ JsArray, Json, JsObject }
 
 import com.google.inject.util.Providers
 import com.keepit.common.actor.FakeScheduler
 
-
-class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends HeimdalServiceClient{
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), ()=>{})
+class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends HeimdalServiceClient {
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
-  var eventsRecorded : Int = 0
+  var eventsRecorded: Int = 0
 
-  def trackEvent(event: HeimdalEvent): Unit = synchronized{
-    eventsRecorded =  eventsRecorded + 1
+  def trackEvent(event: HeimdalEvent): Unit = synchronized {
+    eventsRecorded = eventsRecorded + 1
   }
 
   def eventCount: Int = eventsRecorded
@@ -48,5 +47,5 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]] = Future.successful(None)
 
-  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]): Future[Boolean] = Future.successful(true)
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Boolean] = Future.successful(true)
 }

@@ -3,7 +3,7 @@ package com.keepit.social.providers
 import com.keepit.social.UserIdentityProvider
 
 import play.api.libs.ws.Response
-import play.api.{Application, Logger}
+import play.api.{ Application, Logger }
 import securesocial.core._
 
 /**

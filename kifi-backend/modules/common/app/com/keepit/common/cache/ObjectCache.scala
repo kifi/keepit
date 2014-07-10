@@ -9,7 +9,7 @@ trait ObjectCache[K <: Key[T], T] {
   val minTTL: Duration
   val maxTTL: Duration
 
-  outerCache map {outer => require(maxTTL <= outer.minTTL)}
+  outerCache map { outer => require(maxTTL <= outer.minTTL) }
 
   protected[cache] def getFromInnerCache(key: K): ObjectState[T]
   protected[cache] def setInnerCache(key: K, value: Option[T]): Unit
@@ -17,12 +17,12 @@ trait ObjectCache[K <: Key[T], T] {
   def remove(key: K): Unit
 
   def set(key: K, value: T): Unit = {
-    outerCache map {outer => outer.set(key, value)}
+    outerCache map { outer => outer.set(key, value) }
     setInnerCache(key, Some(value))
   }
 
-  def set(key: K, valueOpt: Option[T]) : Unit = {
-    outerCache map {outer => outer.set(key, valueOpt)}
+  def set(key: K, valueOpt: Option[T]): Unit = {
+    outerCache map { outer => outer.set(key, valueOpt) }
     setInnerCache(key, valueOpt)
   }
 
@@ -76,7 +76,7 @@ trait ObjectCache[K <: Key[T], T] {
       case Some(value) => Promise.successful(value).future
       case None =>
         val valueFuture = orElse
-        valueFuture.onSuccess{ case value => set(key, value) }
+        valueFuture.onSuccess { case value => set(key, value) }
         valueFuture
     }
   }
@@ -86,7 +86,7 @@ trait ObjectCache[K <: Key[T], T] {
       case Found(valueOpt) => Promise.successful(valueOpt).future
       case _ =>
         val valueOptFuture = orElse
-        valueOptFuture.onSuccess{ case valueOpt => set(key, valueOpt) }
+        valueOptFuture.onSuccess { case valueOpt => set(key, valueOpt) }
         valueOptFuture
     }
   }
@@ -101,12 +101,12 @@ trait ObjectCache[K <: Key[T], T] {
 
     outerCache match {
       case Some(cache) =>
-        val missing = keys -- result.iterator.collect{
+        val missing = keys -- result.iterator.collect {
           case (key, Found(_)) => key
-          case (key, Removed()) => key  // if removed at a transaction local cache, do not call outer cache
+          case (key, Removed()) => key // if removed at a transaction local cache, do not call outer cache
         }
         if (missing.nonEmpty) {
-          cache.internalBulkGet(missing).foreach{ kv =>
+          cache.internalBulkGet(missing).foreach { kv =>
             result += kv
             kv match {
               case (key, Found(valueOpt)) => setInnerCache(key, valueOpt)
@@ -120,7 +120,7 @@ trait ObjectCache[K <: Key[T], T] {
   }
 
   def bulkGet(keys: Set[K]): Map[K, Option[T]] = {
-    internalBulkGet(keys).mapValues{ state =>
+    internalBulkGet(keys).mapValues { state =>
       state match {
         case Found(valueOpt) => valueOpt
         case _ => None
@@ -131,15 +131,16 @@ trait ObjectCache[K <: Key[T], T] {
   def bulkGetOrElse(keys: Set[K])(orElse: Set[K] => Map[K, T]): Map[K, T] = {
     var missing = Set.empty[K]
     var result = Map.empty[K, T]
-    internalBulkGet(keys).map{ case(key , state) =>
-      state match {
-        case Found(Some(value)) => result += (key -> value)
-        case _ => missing += key
-      }
+    internalBulkGet(keys).map {
+      case (key, state) =>
+        state match {
+          case Found(Some(value)) => result += (key -> value)
+          case _ => missing += key
+        }
     }
     if (missing.nonEmpty) {
       val valueMap = orElse(missing)
-      valueMap.foreach{ case (key, value) => set(key, value) }
+      valueMap.foreach { case (key, value) => set(key, value) }
       result ++ valueMap
     } else {
       result
@@ -149,15 +150,16 @@ trait ObjectCache[K <: Key[T], T] {
   def bulkGetOrElseOpt(keys: Set[K])(orElse: Set[K] => Map[K, Option[T]]): Map[K, Option[T]] = {
     var missing = Set.empty[K]
     var result = Map.empty[K, Option[T]]
-    internalBulkGet(keys).map{ case(key , state) =>
-      state match {
-        case Found(valueOpt) => result += (key -> valueOpt)
-        case _ => missing += key
-      }
+    internalBulkGet(keys).map {
+      case (key, state) =>
+        state match {
+          case Found(valueOpt) => result += (key -> valueOpt)
+          case _ => missing += key
+        }
     }
     if (missing.nonEmpty) {
       val valueMap = orElse(missing)
-      valueMap.foreach{ case (key, valueOpt) => set(key, valueOpt) }
+      valueMap.foreach { case (key, valueOpt) => set(key, valueOpt) }
       result ++ valueMap
     } else {
       result
@@ -167,15 +169,16 @@ trait ObjectCache[K <: Key[T], T] {
   def bulkGetOrElseFuture(keys: Set[K])(orElse: Set[K] => Future[Map[K, T]]): Future[Map[K, T]] = {
     var missing = Set.empty[K]
     var result = Map.empty[K, T]
-    internalBulkGet(keys).map{ case(key , state) =>
-      state match {
-        case Found(Some(value)) => result += (key -> value)
-        case _ => missing += key
-      }
+    internalBulkGet(keys).map {
+      case (key, state) =>
+        state match {
+          case Found(Some(value)) => result += (key -> value)
+          case _ => missing += key
+        }
     }
     if (missing.nonEmpty) {
-      orElse(missing).map{ valueMap =>
-        valueMap.foreach{ case (key, value) => set(key, value) }
+      orElse(missing).map { valueMap =>
+        valueMap.foreach { case (key, value) => set(key, value) }
         result ++ valueMap
       }
     } else {
@@ -186,15 +189,16 @@ trait ObjectCache[K <: Key[T], T] {
   def bulkGetOrElseFutureOpt(keys: Set[K])(orElse: Set[K] => Future[Map[K, Option[T]]]): Future[Map[K, Option[T]]] = {
     var missing = Set.empty[K]
     var result = Map.empty[K, Option[T]]
-    internalBulkGet(keys).map{ case(key , state) =>
-      state match {
-        case Found(valueOpt) => result += (key -> valueOpt)
-        case _ => missing += key
-      }
+    internalBulkGet(keys).map {
+      case (key, state) =>
+        state match {
+          case Found(valueOpt) => result += (key -> valueOpt)
+          case _ => missing += key
+        }
     }
     if (missing.nonEmpty) {
-      orElse(missing).map{ valueMap =>
-        valueMap.foreach{ case (key, valueOpt) => set(key, valueOpt) }
+      orElse(missing).map { valueMap =>
+        valueMap.foreach { case (key, valueOpt) => set(key, valueOpt) }
         result ++ valueMap
       }
     } else {

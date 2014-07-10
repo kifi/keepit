@@ -33,27 +33,26 @@ object ElectronicMailCategory {
   }
 }
 
-case class ElectronicMail (
-  id: Option[Id[ElectronicMail]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  externalId: ExternalId[ElectronicMail] = ExternalId(),
-  senderUserId: Option[Id[User]] = None,
-  from: EmailAddress,
-  fromName: Option[String] = None,
-  to: Seq[EmailAddress] = Seq[EmailAddress](),
-  cc: Seq[EmailAddress] = Seq[EmailAddress](),
-  subject: String,
-  state: State[ElectronicMail] = ElectronicMailStates.PREPARING,
-  htmlBody: LargeString,
-  textBody: Option[LargeString] = None,
-  responseMessage: Option[String] = None,
-  timeSubmitted: Option[DateTime] = None,
-  messageId: Option[ElectronicMailMessageId] = None, //of the format 475082848.3.1353745094337.JavaMail.eishay@eishay-mbp.local
-  inReplyTo: Option[ElectronicMailMessageId] = None,
-  category: ElectronicMailCategory, //type of mail in free form, will be use for tracking
-  extraHeaders: Option[Map[String, String]] = None
-) extends ModelWithExternalId[ElectronicMail] {
+case class ElectronicMail(
+    id: Option[Id[ElectronicMail]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    externalId: ExternalId[ElectronicMail] = ExternalId(),
+    senderUserId: Option[Id[User]] = None,
+    from: EmailAddress,
+    fromName: Option[String] = None,
+    to: Seq[EmailAddress] = Seq[EmailAddress](),
+    cc: Seq[EmailAddress] = Seq[EmailAddress](),
+    subject: String,
+    state: State[ElectronicMail] = ElectronicMailStates.PREPARING,
+    htmlBody: LargeString,
+    textBody: Option[LargeString] = None,
+    responseMessage: Option[String] = None,
+    timeSubmitted: Option[DateTime] = None,
+    messageId: Option[ElectronicMailMessageId] = None, //of the format 475082848.3.1353745094337.JavaMail.eishay@eishay-mbp.local
+    inReplyTo: Option[ElectronicMailMessageId] = None,
+    category: ElectronicMailCategory, //type of mail in free form, will be use for tracking
+    extraHeaders: Option[Map[String, String]] = None) extends ModelWithExternalId[ElectronicMail] {
 
   def clean(): ElectronicMail = copy(subject = subject.trimAndRemoveLineBreaks())
 
@@ -73,8 +72,8 @@ case class ElectronicMail (
   def prepareToSend(): ElectronicMail = state match {
     case ElectronicMailStates.PREPARING => copy(
       state = ElectronicMailStates.READY_TO_SEND,
-      htmlBody = htmlBody.value.take(8*1024*1024),
-      textBody = textBody.map(_.value.take(8*1024*1024)))
+      htmlBody = htmlBody.value.take(8 * 1024 * 1024),
+      textBody = textBody.map(_.value.take(8 * 1024 * 1024)))
     case _ => throw new Exception("mail %s in bad state, can't prepare to send".format(this))
   }
 
@@ -105,30 +104,30 @@ object ElectronicMail {
   implicit val emailExternalIdFormat = ExternalId.format[ElectronicMail]
   implicit val idFormat = Id.format[ElectronicMail]
   implicit val emailMessageIdFormat: Format[ElectronicMailMessageId] =
-    Format(__.read[String].map(s => ElectronicMailMessageId(s)), new Writes[ElectronicMailMessageId]{ def writes(o: ElectronicMailMessageId) = JsString(o.id) })
+    Format(__.read[String].map(s => ElectronicMailMessageId(s)), new Writes[ElectronicMailMessageId] { def writes(o: ElectronicMailMessageId) = JsString(o.id) })
   implicit val emailCategoryFormat: Format[ElectronicMailCategory] =
-    Format(__.read[String].map(s => ElectronicMailCategory(s)), new Writes[ElectronicMailCategory]{ def writes(o: ElectronicMailCategory) = JsString(o.category) })
+    Format(__.read[String].map(s => ElectronicMailCategory(s)), new Writes[ElectronicMailCategory] { def writes(o: ElectronicMailCategory) = JsString(o.category) })
 
   implicit val emailFormat = (
-      (__ \ 'id).formatNullable(Id.format[ElectronicMail]) and
-      (__ \ 'createdAt).format(DateTimeJsonFormat) and
-      (__ \ 'updatedAt).format(DateTimeJsonFormat) and
-      (__ \ 'externalId).format(ExternalId.format[ElectronicMail]) and
-      (__ \ 'senderUserId).formatNullable(Id.format[User]) and
-      (__ \ 'from).format[EmailAddress] and
-      (__ \ 'fromName).formatNullable[String] and
-      (__ \ 'to).format[Seq[EmailAddress]] and
-      (__ \ 'cc).format[Seq[EmailAddress]] and
-      (__ \ 'subject).format[String] and
-      (__ \ 'state).format(State.format[ElectronicMail]) and
-      (__ \ 'htmlBody).format[LargeString] and
-      (__ \ 'textBody).formatNullable[LargeString] and
-      (__ \ 'responseMessage).formatNullable[String] and
-      (__ \ 'timeSubmitted).formatNullable[DateTime] and
-      (__ \ 'messageId).formatNullable[ElectronicMailMessageId] and
-      (__ \ 'inReplyTo).formatNullable[ElectronicMailMessageId] and
-      (__ \ 'category).format[ElectronicMailCategory] and
-      (__ \ 'extraHeaders).formatNullable[Map[String,String]]
+    (__ \ 'id).formatNullable(Id.format[ElectronicMail]) and
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
+    (__ \ 'externalId).format(ExternalId.format[ElectronicMail]) and
+    (__ \ 'senderUserId).formatNullable(Id.format[User]) and
+    (__ \ 'from).format[EmailAddress] and
+    (__ \ 'fromName).formatNullable[String] and
+    (__ \ 'to).format[Seq[EmailAddress]] and
+    (__ \ 'cc).format[Seq[EmailAddress]] and
+    (__ \ 'subject).format[String] and
+    (__ \ 'state).format(State.format[ElectronicMail]) and
+    (__ \ 'htmlBody).format[LargeString] and
+    (__ \ 'textBody).formatNullable[LargeString] and
+    (__ \ 'responseMessage).formatNullable[String] and
+    (__ \ 'timeSubmitted).formatNullable[DateTime] and
+    (__ \ 'messageId).formatNullable[ElectronicMailMessageId] and
+    (__ \ 'inReplyTo).formatNullable[ElectronicMailMessageId] and
+    (__ \ 'category).format[ElectronicMailCategory] and
+    (__ \ 'extraHeaders).formatNullable[Map[String, String]]
   )(ElectronicMail.apply, unlift(ElectronicMail.unapply))
 }
 

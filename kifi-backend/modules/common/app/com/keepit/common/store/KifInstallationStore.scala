@@ -1,17 +1,16 @@
 package com.keepit.common.store
 
 import com.keepit.common.logging.AccessLog
-import com.keepit.model.{KifiExtVersion, KifiVersion}
+import com.keepit.model.{ KifiExtVersion, KifiVersion }
 import com.amazonaws.services.s3._
 import play.api.libs.json._
-import java.util.concurrent.{Callable, TimeUnit}
-import com.google.common.cache.{CacheLoader, CacheBuilder}
+import java.util.concurrent.{ Callable, TimeUnit }
+import com.google.common.cache.{ CacheLoader, CacheBuilder }
 import play.api.libs.json.JsSuccess
-import com.google.common.util.concurrent.{ListenableFutureTask, ListenableFuture}
+import com.google.common.util.concurrent.{ ListenableFutureTask, ListenableFuture }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.PimpMyFuture._
 import play.api.libs.concurrent.Execution.Implicits._
-
 
 case class KifiInstallationDetails(gold: KifiExtVersion, killed: Seq[KifiExtVersion])
 
@@ -23,7 +22,7 @@ trait KifInstallationStore extends ObjectStore[String, KifiInstallationDetails] 
 }
 
 class S3KifInstallationStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val formatter: Format[KifiInstallationDetails] = S3KifInstallationStoreImpl.detailsFormat)
-  extends S3JsonStore[String, KifiInstallationDetails] with KifInstallationStore {
+    extends S3JsonStore[String, KifiInstallationDetails] with KifInstallationStore {
   private val s3Get = (id: String) => super.get(id)
   private val kifiInstallationKey = "browser_extension"
 

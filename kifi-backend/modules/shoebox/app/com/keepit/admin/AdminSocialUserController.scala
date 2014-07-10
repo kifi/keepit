@@ -3,14 +3,14 @@ package com.keepit.controllers.admin
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
 
 import views.html
-import com.keepit.social.{SocialGraphPlugin, SocialUserRawInfoStore}
+import com.keepit.social.{ SocialGraphPlugin, SocialUserRawInfoStore }
 
 class AdminSocialUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -32,7 +32,7 @@ class AdminSocialUserController @Inject() (
   def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction.authenticatedAsync { implicit request =>
     for {
       socialUserInfo <- db.readOnlyMasterAsync { implicit s => socialUserInfoRepo.get(socialUserId) }
-      socialConnections <- db.readOnlyMasterAsync { implicit s => socialConnectionRepo.getSocialUserConnections(socialUserId).sortWith((a,b) => a.fullName < b.fullName) }
+      socialConnections <- db.readOnlyMasterAsync { implicit s => socialConnectionRepo.getSocialUserConnections(socialUserId).sortWith((a, b) => a.fullName < b.fullName) }
     } yield {
       val rawInfo = socialUserRawInfoStore.get(socialUserInfo.id.get)
       Ok(html.admin.socialUser(socialUserInfo, socialConnections, rawInfo))
@@ -68,9 +68,9 @@ class AdminSocialUserController @Inject() (
   }
 
   def ripestFruitView(userId: Long, howMany: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val user: Id[User] = if (userId==0) request.userId else Id[User](userId)
-    val howManyReally = if (howMany==0) 20 else howMany
-    abook.ripestFruit(user, howManyReally).map{ socialIds =>
+    val user: Id[User] = if (userId == 0) request.userId else Id[User](userId)
+    val howManyReally = if (howMany == 0) 20 else howMany
+    abook.ripestFruit(user, howManyReally).map { socialIds =>
       val socialUsers = db.readOnlyMaster { implicit session => socialIds.map(socialUserInfoRepo.get(_)) }
       Ok(html.admin.socialUsers(socialUsers, 0))
     }

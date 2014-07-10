@@ -13,7 +13,7 @@ import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.user._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.inject._
-import com.keepit.search.index.{IndexDirectory, VolatileIndexDirectory, DefaultAnalyzer}
+import com.keepit.search.index.{ IndexDirectory, VolatileIndexDirectory, DefaultAnalyzer }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.test.Helpers._
 
@@ -49,9 +49,9 @@ trait GraphTestHelper extends ApplicationInjector {
     )
 
     val uris = saveURIs(
-      (1 to bigDataSize).map{ i =>
+      (1 to bigDataSize).map { i =>
         NormalizedURI.withHash(title = Some(s"${i}"), normalizedUrl = s"http://www.keepit.com/article${i}", state = SCRAPED)
-      } :_*
+      }: _*
     )
     (users, uris)
   }
@@ -60,45 +60,46 @@ trait GraphTestHelper extends ApplicationInjector {
 
   def saveUsers(users: User*) = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    fakeShoeboxServiceClient.saveUsers(users:_*)
+    fakeShoeboxServiceClient.saveUsers(users: _*)
   }
   def saveURIs(uris: NormalizedURI*) = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    fakeShoeboxServiceClient.saveURIs(uris:_*)
+    fakeShoeboxServiceClient.saveURIs(uris: _*)
   }
 
   def setupArticleStore(uris: Seq[NormalizedURI]) = {
-    uris.zipWithIndex.foldLeft(new FakeArticleStore){ case (store, (uri, idx)) =>
-      store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs".format(idx)))
-      store
+    uris.zipWithIndex.foldLeft(new FakeArticleStore) {
+      case (store, (uri, idx)) =>
+        store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs".format(idx)))
+        store
     }
   }
 
   def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
     Article(
-        id = normalizedUriId,
-        title = title,
-        description = None,
-        canonicalUrl = None,
-        alternateUrls = Set.empty,
-        keywords = None,
-        media = None,
-        content = content,
-        scrapedAt = currentDateTime,
-        httpContentType = Some("text/html"),
-        httpOriginalContentCharset = Option("UTF-8"),
-        state = SCRAPED,
-        message = None,
-        titleLang = Some(Lang("en")),
-        contentLang = Some(Lang("en")))
+      id = normalizedUriId,
+      title = title,
+      description = None,
+      canonicalUrl = None,
+      alternateUrls = Set.empty,
+      keywords = None,
+      media = None,
+      content = content,
+      scrapedAt = currentDateTime,
+      httpContentType = Some("text/html"),
+      httpOriginalContentCharset = Option("UTF-8"),
+      state = SCRAPED,
+      message = None,
+      titleLang = Some(Lang("en")),
+      contentLang = Some(Lang("en")))
   }
 
   def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], mixPrivate: Boolean = false, uniqueTitle: Option[String] = None): List[Keep] = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     val edges = for ((uri, users) <- edgesByURI; user <- users) yield (uri, user, uniqueTitle)
-    val (privateEdges, publicEdges) = edges.partition {case (uri, user, _) => (uri.id.get.id + user.id.get.id) % 2 == 0}
+    val (privateEdges, publicEdges) = edges.partition { case (uri, user, _) => (uri.id.get.id + user.id.get.id) % 2 == 0 }
     val bookmarks = fakeShoeboxServiceClient.saveBookmarksByEdges(privateEdges, isPrivate = mixPrivate && true, source = source) ++
-    fakeShoeboxServiceClient.saveBookmarksByEdges(publicEdges, isPrivate = mixPrivate && false, source = source)
+      fakeShoeboxServiceClient.saveBookmarksByEdges(publicEdges, isPrivate = mixPrivate && false, source = source)
     bookmarks.toList
   }
 
@@ -120,7 +121,7 @@ trait GraphTestHelper extends ApplicationInjector {
 
   def saveBookmarksToCollection(collection: Collection, bookmarks: Seq[Keep]): Collection = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    fakeShoeboxServiceClient.saveBookmarksToCollection(collection.id.get, bookmarks:_*)
+    fakeShoeboxServiceClient.saveBookmarksToCollection(collection.id.get, bookmarks: _*)
     fakeShoeboxServiceClient.getCollection(collection.id.get)
   }
 
@@ -140,7 +141,6 @@ trait GraphTestHelper extends ApplicationInjector {
     val userGraphsSearcherFactory = new UserGraphsSearcherFactory(userGraphIndexer, searchFriendIndexer)
     (userGraphIndexer, searchFriendIndexer, userGraphsSearcherFactory)
   }
-
 
   def addConnections(connections: Map[Id[User], Set[Id[User]]]) {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]

@@ -2,8 +2,8 @@ package com.keepit.controllers.search
 
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
-import com.keepit.common.db.{SequenceNumber, Id}
-import com.keepit.model.{Collection, NormalizedURI, User}
+import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.model.{ Collection, NormalizedURI, User }
 import com.keepit.search.graph.URIGraphPlugin
 import org.apache.lucene.document.Document
 import play.api.libs.json._
@@ -14,7 +14,7 @@ import com.keepit.search.graph.collection.CollectionGraphPlugin
 import com.keepit.search.graph.collection.CollectionIndexer
 import com.keepit.search.sharding._
 
-class URIGraphController @Inject()(
+class URIGraphController @Inject() (
     activeShards: ActiveShards,
     uriGraphPlugin: URIGraphPlugin,
     collectionGraphPlugin: CollectionGraphPlugin,
