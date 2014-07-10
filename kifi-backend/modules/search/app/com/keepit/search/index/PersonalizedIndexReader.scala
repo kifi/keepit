@@ -16,7 +16,9 @@ import org.apache.lucene.util.Bits
 import scala.collection.JavaConversions._
 import java.util.{ Iterator => JIterator }
 
-class PersonalizedIndexReader(mainReader: AtomicReader, personalReader: CachingIndexReader) extends AtomicReader with Logging {
+class PersonalizedIndexReader private (mainReader: AtomicReader, personalReader: CachingIndexReader, deletions: Boolean, liveDocs: Bits) extends AtomicReader with Logging {
+  def this(mainReader: AtomicReader, personalReader: CachingIndexReader) = this(mainReader, personalReader, mainReader.hasDeletions, mainReader.getLiveDocs)
+  def this(mainReader: AtomicReader, personalReader: CachingIndexReader, liveDocs: Bits) = this(mainReader, personalReader, liveDocs != null, liveDocs)
 
   private[this] val mainFields: Fields = mainReader.fields
   private[this] val personalFields: Fields = personalReader.fields
@@ -51,7 +53,7 @@ class PersonalizedIndexReader(mainReader: AtomicReader, personalReader: CachingI
     }.toArray
     new FieldInfos(infos)
   }
-  override def getLiveDocs(): Bits = mainReader.getLiveDocs
+  override def getLiveDocs(): Bits = liveDocs
   override def getNormValues(field: String): NumericDocValues = mainReader.getNormValues(field)
 
   override def getTermVectors(doc: Int) = throw new UnsupportedOperationException()
@@ -59,7 +61,7 @@ class PersonalizedIndexReader(mainReader: AtomicReader, personalReader: CachingI
   override def getBinaryDocValues(field: String): BinaryDocValues = null
   override def getSortedDocValues(field: String): SortedDocValues = null
   override def getSortedSetDocValues(field: String): SortedSetDocValues = null
-  override def hasDeletions() = mainReader.hasDeletions()
+  override def hasDeletions() = deletions
   override def document(doc: Int, visitor: StoredFieldVisitor) = throw new UnsupportedOperationException()
   override def getDocsWithField(field: String) = throw new UnsupportedOperationException()
   protected def doClose() {}
