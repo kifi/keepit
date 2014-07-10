@@ -3,7 +3,7 @@ package com.keepit.graph.common.cache
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.logging.AccessLog
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
-import com.keepit.graph.model.UserScoreCache
+import com.keepit.graph.model.UserConnectionSocialScoreCache
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
@@ -161,5 +161,5 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def userScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserScoreCache(stats, accessLog, (innerRepo, 1 second), (outerRepo, 1 hour))
+    new UserConnectionSocialScoreCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 5 hours))
 }

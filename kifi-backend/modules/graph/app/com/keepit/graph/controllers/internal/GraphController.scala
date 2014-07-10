@@ -48,8 +48,8 @@ class GraphController @Inject() (
     Ok(json)
   }
 
-  def getListOfUriAndScorePairs(userId:Id[User]) = Action { request =>
-    val urisList = graphCommander.getListOfUriAndScorePairs(userId)
+  def getListOfUriAndScorePairs(userId:Id[User], num:Int) = Action { request =>
+    val urisList = graphCommander.getListOfUriAndScorePairs(userId, num)
     val json = Json.toJson(urisList)
     Ok(json)
   }
