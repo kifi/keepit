@@ -28,7 +28,7 @@ import scala.collection.SortedMap
 import java.util.Comparator
 import java.util.{ Iterator => JIterator }
 
-class CachingIndexReader(val index: CachedIndex, liveDocs: FixedBitSet = null) extends AtomicReader with Logging {
+class CachingIndexReader(val index: CachedIndex) extends AtomicReader with Logging {
 
   def split(remappers: Map[String, DocIdRemapper]): Map[String, CachingIndexReader] = {
     val (subReaders, remainder) = remappers.foldLeft((Map.empty[String, CachingIndexReader], index)) {
@@ -48,9 +48,7 @@ class CachingIndexReader(val index: CachedIndex, liveDocs: FixedBitSet = null) e
     if (remainder.isEmpty) {
       subReaders
     } else {
-      val bits = new FixedBitSet(maxDoc)
-      remainder.foreach { (_, _, list) => list.dlist.foreach { case (d, _) => bits.set(d) } }
-      subReaders + ("" -> new CachingIndexReader(remainder, bits))
+      subReaders + ("" -> new CachingIndexReader(remainder))
     }
   }
 
@@ -60,6 +58,12 @@ class CachingIndexReader(val index: CachedIndex, liveDocs: FixedBitSet = null) e
   override def fields() = index.fields
 
   override def getFieldInfos(): FieldInfos = index.fieldInfos
+
+  lazy private val liveDocs = {
+    val bits = new FixedBitSet(maxDoc)
+    index.foreach { (_, _, list) => list.dlist.foreach { case (d, _) => bits.set(d) } }
+    bits
+  }
   override def getLiveDocs(): Bits = liveDocs
 
   override def getTermVectors(doc: Int) = throw new UnsupportedOperationException()
