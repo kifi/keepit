@@ -74,10 +74,9 @@ class AuthHelper @Inject() (
     f(resCookies, resSession)
   }
 
-  private def checkForExistingUser(emailString: String): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
-    val email = EmailAddress(emailString)
+  private def checkForExistingUser(email: EmailAddress): Option[(Boolean, SocialUserInfo)] = timing("existing user") {
     db.readOnlyMaster { implicit s =>
-      socialRepo.getOpt(SocialId(emailString), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
+      socialRepo.getOpt(SocialId(email.address), SocialNetworks.FORTYTWO).map(s => (true, s)) orElse {
         emailAddressRepo.getByAddressOpt(email).map {
           case emailAddr if emailAddr.state == UserEmailAddressStates.VERIFIED =>
             (true, socialRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).headOption)
@@ -92,7 +91,7 @@ class AuthHelper @Inject() (
     }
   }
 
-  def handleEmailPasswordSuccessForm(emailAddress: String, password:Array[Char])(implicit request:Request[_]) = timing(s"handleEmailPasswordSuccess($emailAddress)") {
+  def handleEmailPasswordSuccessForm(emailAddress: EmailAddress, password:Array[Char])(implicit request:Request[_]) = timing(s"handleEmailPasswordSuccess($emailAddress)") {
     require(AuthHelper.validatePwd(password), "invalid password")
     val hasher = Registry.hashers.currentHasher
     val tupleOpt: Option[(Boolean, SocialUserInfo)] = checkForExistingUser(emailAddress)
@@ -142,10 +141,10 @@ class AuthHelper @Inject() (
 
   val emailPasswordForm = Form[EmailPassword](
     mapping(
-      "email" -> email,
+      "email" -> EmailAddress.formMapping,
       "password" -> text.verifying("password_too_short", pw => AuthHelper.validatePwd(pw.toCharArray))
     )
-      ((email, pwd) => EmailPassword(email, pwd.toCharArray))
+      ((validEmail, pwd) => EmailPassword(validEmail, pwd.toCharArray))
       ((ep:EmailPassword) => Some(ep.email, new String(ep.password)))
   )
 
@@ -164,8 +163,7 @@ class AuthHelper @Inject() (
 
   private val url = fortytwoConfig.applicationBaseUrl
 
-  def finishSignup(user: User, emailString: String, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): SimpleResult = timing(s"[finishSignup(${user.id}, $emailString}]") {
-    val emailAddress = EmailAddress(emailString)
+  def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): SimpleResult = timing(s"[finishSignup(${user.id}, $emailAddress}]") {
     if (!emailConfirmedAlready) {
       val unverifiedEmail = newIdentity.email.map(EmailAddress(_)).getOrElse(emailAddress)
       SafeFuture { userCommander.sendWelcomeEmail(user, withVerification=true, Some(unverifiedEmail)) }
@@ -194,8 +192,8 @@ class AuthHelper @Inject() (
 
   private val socialFinalizeAccountForm = Form[SocialFinalizeInfo](
     mapping(
-      "email" -> email.verifying("known_email_address", email => db.readOnlyMaster { implicit s =>
-        userCredRepo.findByEmailOpt(email).isEmpty
+      "email" -> EmailAddress.formMapping.verifying("known_email_address", email => db.readOnlyMaster { implicit s =>
+        userCredRepo.findByEmailOpt(email.address).isEmpty
       }),
       "firstName" -> nonEmptyText,
       "lastName" -> nonEmptyText,
@@ -220,7 +218,7 @@ class AuthHelper @Inject() (
       val inviteExtIdOpt: Option[ExternalId[Invitation]] = request.cookies.get("inv").flatMap(v => ExternalId.asOpt[Invitation](v.value))
       implicit val context = heimdalContextBuilder.withRequestInfo(request).build
       val (user, emailPassIdentity) = authCommander.finalizeSocialAccount(sfi, identity, inviteExtIdOpt)
-      val emailConfirmedBySocialNetwork = identity.email.exists(_.trim == sfi.email.trim)
+      val emailConfirmedBySocialNetwork = identity.email.map(EmailAddress.validate).collect { case Success(validEmail) => validEmail }.exists(_.equalsIgnoreCase(sfi.email))
       finishSignup(user, sfi.email, emailPassIdentity, emailConfirmedAlready = emailConfirmedBySocialNetwork)
     })
   }

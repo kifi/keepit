@@ -30,16 +30,16 @@ import securesocial.core.{Authenticator, AuthenticationMethod, Events, Identity,
 import securesocial.core.{LoginEvent, OAuth1Provider, PasswordInfo, Registry, SecureSocial, SocialUser, UserService}
 import securesocial.core.providers.utils.GravatarHelper
 
-case class EmailPassword(email: String, password: Array[Char])
+case class EmailPassword(email: EmailAddress, password: Array[Char])
 object EmailPassword {
   implicit val format = (
-      (__ \ 'email).format[String] and
+      (__ \ 'email).format[EmailAddress] and
       (__ \ 'password).format[String].inmap((s:String) => s.toCharArray, unlift((c:Array[Char]) => Some(c.toString)))
   )(EmailPassword.apply, unlift(EmailPassword.unapply))
 }
 
 case class SocialFinalizeInfo(
-  email: String,
+  email: EmailAddress,
   firstName: String,
   lastName: String,
   password: Array[Char],
@@ -52,7 +52,7 @@ case class SocialFinalizeInfo(
 
 object SocialFinalizeInfo {
   implicit val format = (
-      (__ \ 'email).format[String] and
+      (__ \ 'email).format[EmailAddress] and
       (__ \ 'firstName).format[String] and
       (__ \ 'lastName).format[String] and
       (__ \ 'password).format[String].inmap((s:String) => s.toCharArray, unlift((c:Array[Char]) => Some(c.toString))) and
@@ -106,20 +106,20 @@ class AuthCommander @Inject()(
 ) extends Logging {
 
   def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
-                               email: String, passwordInfo: PasswordInfo,
+                               email: EmailAddress, passwordInfo: PasswordInfo,
                                firstName: String = "", lastName: String = "", isComplete: Boolean): (UserIdentity, Id[User]) = timing(s"[saveUserPasswordIdentity($userIdOpt, $email)]") {
     log.info(s"[saveUserPassIdentity] userId=$userIdOpt identityOpt=$identityOpt email=$email pInfo=$passwordInfo isComplete=$isComplete")
-    val fName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email)
+    val fName = User.sanitizeName(if (isComplete || firstName.nonEmpty) firstName else email.address)
     val lName = User.sanitizeName(lastName)
     val newIdentity = UserIdentity(
       userId = userIdOpt,
       socialUser = SocialUser(
-        identityId = IdentityId(email, SocialNetworks.FORTYTWO.authProvider),
+        identityId = IdentityId(email.address, SocialNetworks.FORTYTWO.authProvider),
         firstName = fName,
         lastName = lName,
         fullName = s"$fName $lName",
-        email = Some(email),
-        avatarUrl = GravatarHelper.avatarFor(email),
+        email = Some(email.address),
+        avatarUrl = GravatarHelper.avatarFor(email.address),
         authMethod = AuthenticationMethod.UserPassword,
         passwordInfo = Some(passwordInfo)
       ),
@@ -189,7 +189,7 @@ class AuthCommander @Inject()(
       (user, emailPassIdentity)
     }
 
-  def finalizeEmailPassAccount(efi: EmailPassFinalizeInfo, userId: Id[User], externalUserId: ExternalId[User], identityOpt: Option[Identity], inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit context: HeimdalContext): Future[(User, String, Identity)] = {
+  def finalizeEmailPassAccount(efi: EmailPassFinalizeInfo, userId: Id[User], externalUserId: ExternalId[User], identityOpt: Option[Identity], inviteExtIdOpt: Option[ExternalId[Invitation]])(implicit context: HeimdalContext): Future[(User, EmailAddress, Identity)] = {
     require(userId != null && externalUserId != null, "userId and externalUserId cannot be null")
     log.info(s"[finalizeEmailPassAccount] efi=$efi, userId=$userId, extUserId=$externalUserId, identity=$identityOpt, inviteExtId=$inviteExtIdOpt")
 
@@ -199,7 +199,7 @@ class AuthCommander @Inject()(
       } getOrElse identityOpt.get
 
       val passwordInfo = identity.passwordInfo.get
-      val email = identity.email.get
+      val email = EmailAddress.validate(identity.email.get).get
       val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
       val user = db.readOnlyMaster(userRepo.get(userId)(_))
 
