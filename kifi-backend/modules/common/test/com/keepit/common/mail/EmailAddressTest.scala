@@ -20,11 +20,11 @@ class EmailAddressTest extends Specification {
       EmailAddress("ninja_turtle_babe2126@hotmail.com").address === "ninja_turtle_babe2126@hotmail.com"
     }
     "reject invalid email addresses" in {
-      EmailAddress("a") must throwAn[IllegalArgumentException]
-      EmailAddress("@") must throwAn[IllegalArgumentException]
-      EmailAddress("@a") must throwAn[IllegalArgumentException]
-      EmailAddress("a@") must throwAn[IllegalArgumentException]
-      EmailAddress("\"a\"@b") must throwAn[IllegalArgumentException]
+      EmailAddress.validate("a") must beFailedTry.withThrowable[IllegalArgumentException]
+      EmailAddress.validate("@") must beFailedTry.withThrowable[IllegalArgumentException]
+      EmailAddress.validate("@a") must beFailedTry.withThrowable[IllegalArgumentException]
+      EmailAddress.validate("a@") must beFailedTry.withThrowable[IllegalArgumentException]
+      EmailAddress.validate("\"a\"@b") must beFailedTry.withThrowable[IllegalArgumentException]
     }
     "canonicalize (lowercase) domains when reading from JSON" in {
       readFromJson("a@b") === JsSuccess(EmailAddress("a@b"))

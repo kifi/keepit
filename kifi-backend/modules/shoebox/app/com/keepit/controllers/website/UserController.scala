@@ -255,22 +255,15 @@ class UserController @Inject() (
   private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "onboarding_seen", "show_delighted_question")
 
   def getPrefs() = JsonAction.authenticatedAsync { request =>
-    // Make sure the user's last active date has been updated before returning the result
-    userCommander.setLastUserActive(request.userId) map { _ =>
-      Ok(userCommander.getPrefs(SitePrefNames, request.userId))
-    } recover {
-      // todo(martin) - Remove this. This is to make sure I don't break prod for the moment
-      case t: Throwable => {
-        airbrakeNotifier.notify(s"Exception occurred in setLastUserActive for user ${request.userId}", t)
-        Ok(userCommander.getPrefs(SitePrefNames, request.userId))
-      }
-    }
+    // The prefs endpoint is used as an indicator that the user is active
+    userCommander.setLastUserActive(request.userId)
+    userCommander.getPrefs(SitePrefNames, request.userId) map (Ok(_))
   }
 
   def savePrefs() = JsonAction.authenticatedParseJson { request =>
     val o = request.request.body.as[JsObject]
     if (o.keys.subsetOf(SitePrefNames)) {
-      userCommander.savePrefs(SitePrefNames, request.userId, o)
+      userCommander.savePrefs(request.userId, o)
       Ok(o)
     } else {
       BadRequest(Json.obj("error" -> ((SitePrefNames -- o.keys).mkString(", ") + " not recognized")))
@@ -433,9 +426,10 @@ class UserController @Inject() (
     } getOrElse Future.successful(BadRequest)
   }
 
-  def cancelDelightedSurvey = JsonAction.authenticated { implicit request =>
-    // todo(martin) implement
-    Ok
+  def cancelDelightedSurvey = JsonAction.authenticatedAsync { implicit request =>
+    userCommander.cancelDelightedSurvey(request.userId) map { success =>
+      if (success) Ok else BadRequest
+    }
   }
 
   // todo(Andrew): Remove when ng is out
