@@ -1,7 +1,7 @@
 package com.keepit.common.store
 
-import com.google.inject.{Provider, Singleton, Provides}
-import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3}
+import com.google.inject.{ Provider, Singleton, Provides }
+import com.amazonaws.services.s3.{ AmazonS3Client, AmazonS3 }
 import com.keepit.common.logging.AccessLog
 import play.api.Play.current
 import com.amazonaws.auth.BasicAWSCredentials
@@ -51,10 +51,10 @@ case class ElizaDevStoreModule() extends StoreModule {
   @Singleton
   @Provides
   def articleStore(amazonS3ClientProvider: Provider[AmazonS3], accessLog: AccessLog): ArticleStore =
-    whenConfigured("amazon.s3.article.bucket"){
+    whenConfigured("amazon.s3.article.bucket") {
       val bucketName = S3Bucket(current.configuration.getString("amazon.s3.install.bucket").get)
       new S3ArticleStoreImpl(bucketName, amazonS3ClientProvider.get, accessLog)
-  }.getOrElse(new InMemoryArticleStoreImpl())
+    }.getOrElse(new InMemoryArticleStoreImpl())
 
   @Singleton
   @Provides

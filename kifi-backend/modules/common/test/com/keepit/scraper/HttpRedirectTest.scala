@@ -1,7 +1,7 @@
 package com.keepit.scraper
 
 import org.specs2.mutable.Specification
-import org.apache.http.HttpStatus.{SC_MOVED_PERMANENTLY => MOVED, SC_MOVED_TEMPORARILY => TEMP_MOVED}
+import org.apache.http.HttpStatus.{ SC_MOVED_PERMANENTLY => MOVED, SC_MOVED_TEMPORARILY => TEMP_MOVED }
 import HttpRedirect._
 
 class HttpRedirectTest extends Specification {
@@ -31,14 +31,14 @@ class HttpRedirectTest extends Specification {
 
       resolvePermanentRedirects("http://www.oracle.com/technology/index.html", withOneTemporaryRedirect) === Some("https://www.oracle.com/technology/index.html")
 
-      val withOneRelativeRedirect= Seq(
+      val withOneRelativeRedirect = Seq(
         HttpRedirect(MOVED, "http://www.oracle.com/technology/index.html", "https://www.oracle.com/technology/index.html"),
         HttpRedirect(MOVED, "https://www.oracle.com/technology/index.html", "/technetwork/index.html")
       )
 
       resolvePermanentRedirects("http://www.oracle.com/technology/index.html", withOneRelativeRedirect) === Some("https://www.oracle.com/technology/index.html")
 
-      val withOneRecoverableRelativeRedirect= Seq(
+      val withOneRecoverableRelativeRedirect = Seq(
         HttpRedirect(MOVED, "http://www.oracle.com/technology/index.html", "https://www.oracle.com/technology/index.html"),
         HttpRedirect(MOVED, "https://www.oracle.com/technology/index.html", "/technetwork/index.html"),
         HttpRedirect(MOVED, "/technetwork/index.html", "http://www.oracle.com/technetwork/index.html")

@@ -1,11 +1,11 @@
 package com.keepit.common.akka
 
-import scala.concurrent.{ExecutionContext, CanAwait, Awaitable, Future}
+import scala.concurrent.{ ExecutionContext, CanAwait, Awaitable, Future }
 import scala.concurrent.duration.Duration
 import scala.util.Try
-import play.api.{Logger}
+import play.api.{ Logger }
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import play.api.Play.current
 
 class SafeFuture[+T](future: Future[T], name: Option[String] = None)(implicit executor: ExecutionContext) extends Future[T] {
@@ -43,5 +43,4 @@ object SafeFuture {
   def apply[T](func: => T)(implicit executor: ExecutionContext) = new SafeFuture(Future { func })
   def apply[T](name: String)(func: => T)(implicit executor: ExecutionContext) = new SafeFuture(Future { func }, Some(name))
 }
-
 

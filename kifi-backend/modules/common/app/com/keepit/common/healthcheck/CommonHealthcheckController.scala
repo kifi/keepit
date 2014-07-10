@@ -14,7 +14,7 @@ import com.keepit.common.service._
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.common.cache.FortyTwoCachePlugin
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.google.inject.Inject
 
 case class BenchmarkResults(cpu: Long, cpuPar: Long, memcacheRead: Double)
@@ -44,19 +44,19 @@ class BenchmarkRunner @Inject() (cache: FortyTwoCachePlugin) {
 
   private def cpuBenchmarkTime(): Long = {
     val start = System.currentTimeMillis
-    (0 to 100) map { i => calc()}
+    (0 to 100) map { i => calc() }
     System.currentTimeMillis - start
   }
 
   private def cpuParBenchmarkTime(): Long = {
     val start = System.currentTimeMillis
-    (0 to 100).par map { i => calc()}
+    (0 to 100).par map { i => calc() }
     System.currentTimeMillis - start
   }
 
   private def calc() {
     var a = 1.1d
-    while (a < 10000000d) {a = (a + 0.000001d) * 1.000001}
+    while (a < 10000000d) { a = (a + 0.000001d) * 1.000001 }
   }
 
   private def memcachedBenchmarkTime(): Double = {

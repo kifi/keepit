@@ -1,6 +1,6 @@
 package com.keepit.graph.wander
 
-import com.keepit.graph.model.{VertexDataReader, VertexKind, VertexReader, VertexId}
+import com.keepit.graph.model.{ VertexDataReader, VertexKind, VertexReader, VertexId }
 import com.keepit.common.math.ProbabilityDensity
 
 trait Teleporter {

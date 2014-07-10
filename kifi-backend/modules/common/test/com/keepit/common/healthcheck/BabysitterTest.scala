@@ -17,7 +17,7 @@ class BabysitterTest extends Specification with DeprecatedTestInjector {
 
   "Babysitter" should {
     "do nothing if code executes quickly" in {
-      withInjector(realBabysitterModule, FakeAirbrakeModule())  { implicit injector =>
+      withInjector(realBabysitterModule, FakeAirbrakeModule()) { implicit injector =>
         inject[Babysitter].watch(BabysitterTimeout(Duration(1, "seconds"), Duration(1, "seconds"))) {
           // So fast!
         }
@@ -33,7 +33,7 @@ class BabysitterTest extends Specification with DeprecatedTestInjector {
           // So slow!
         }
 
-        1===1
+        1 === 1
       }
     }
   }

@@ -26,7 +26,7 @@ class DataBaseComponentTest extends Specification with DbTestInjector {
         }
       }
     }
-/*
+    /*
     "execute all read-write sessions inside a transaction" in {
       withDb() { implicit injector: Injector =>
         db.readWrite { implicit s =>
@@ -127,14 +127,14 @@ class DataBaseComponentTest extends Specification with DbTestInjector {
         })
 
         result.size === 3000
-        result.foreach{ case (d, r) =>
-          if (d >= 2014){
-            r.isFailure === true
-          }
-          else {
-            r.isSuccess === true
-            d * 10 === r.get
-          }
+        result.foreach {
+          case (d, r) =>
+            if (d >= 2014) {
+              r.isFailure === true
+            } else {
+              r.isSuccess === true
+              d * 10 === r.get
+            }
         }
       }
     }
@@ -160,7 +160,7 @@ class DataBaseComponentTest extends Specification with DbTestInjector {
         executed.sum === 5
         success.max === 1
         success.count(_ > 0) === 2
-        (0 until 5).foreach{ i => result(i).isSuccess === (success(i) > 0) }
+        (0 until 5).foreach { i => result(i).isSuccess === (success(i) > 0) }
 
         willSuccess = Array(false, false, false, false, false)
         success = Array(0, 0, 0, 0, 0)
@@ -168,7 +168,7 @@ class DataBaseComponentTest extends Specification with DbTestInjector {
         result = exec(5)
         result.size === 5
         success.count(_ > 0) === 4
-        (0 until 5).foreach{ i => result(i).isSuccess === (success(i) > 0) }
+        (0 until 5).foreach { i => result(i).isSuccess === (success(i) > 0) }
       }
     }
 
@@ -192,7 +192,7 @@ class DataBaseComponentTest extends Specification with DbTestInjector {
         executed.max === 1
         executed.sum === 3
         success.count(_ > 0) === 0
-        (0 until 5).foreach{ i => result(i).isSuccess === (success(i) > 0) }
+        (0 until 5).foreach { i => result(i).isSuccess === (success(i) > 0) }
 
         willSuccess = Array(false, false, false, false, false)
         success = Array(0, 0, 0, 0, 0)
@@ -202,7 +202,7 @@ class DataBaseComponentTest extends Specification with DbTestInjector {
         executed.max === 1
         executed.sum === 5
         success.count(_ > 0) === 0
-        (0 until 5).foreach{ i => result(i).isSuccess === (success(i) > 0) }
+        (0 until 5).foreach { i => result(i).isSuccess === (success(i) > 0) }
       }
     }
   }

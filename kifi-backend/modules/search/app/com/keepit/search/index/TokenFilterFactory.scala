@@ -20,7 +20,7 @@ import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.analysis.tokenattributes.TypeAttribute
 import org.apache.lucene.analysis.tokenattributes.TypeAttributeImpl
 import org.apache.lucene.analysis.tr.TurkishAnalyzer
-import org.apache.lucene.analysis.{Analyzer=>LAnalyzer}
+import org.apache.lucene.analysis.{ Analyzer => LAnalyzer }
 import org.apache.lucene.analysis.TokenFilter
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.core.StopFilter
@@ -85,16 +85,16 @@ class StopFilterFactories {
       load(stopSet)
     } catch {
       case ex: IOException =>
-      // default set should always be present as it is part of the distribution (JAR)
-      throw new RuntimeException("Unable to load default stopword set");
+        // default set should always be present as it is part of the distribution (JAR)
+        throw new RuntimeException("Unable to load default stopword set");
     } finally {
       IOUtils.close(reader)
     }
   }
 
-  private def loadFrom[A <: LAnalyzer](implicit m : ClassTag[A]): TokenFilterFactory = loadFrom[A](false, "stopwords.txt", "#")
+  private def loadFrom[A <: LAnalyzer](implicit m: ClassTag[A]): TokenFilterFactory = loadFrom[A](false, "stopwords.txt", "#")
 
-  private def loadFrom[A](ignoreCase: Boolean, file: String, comment: String)(implicit m : ClassTag[A]): TokenFilterFactory = {
+  private def loadFrom[A](ignoreCase: Boolean, file: String, comment: String)(implicit m: ClassTag[A]): TokenFilterFactory = {
     var reader: Reader = null
     try {
       val file = "stopwords.txt"
@@ -123,7 +123,7 @@ class StemFilterFactories {
   val Romanian = snowball[RomanianStemmer]
   val Turkish = snowball[TurkishStemmer]
 
-  private def snowball[S <: SnowballProgram](implicit m : ClassTag[S]) = {
+  private def snowball[S <: SnowballProgram](implicit m: ClassTag[S]) = {
     val snowballConstructor = m.runtimeClass.getConstructor().asInstanceOf[Constructor[SnowballProgram]]
     new TokenFilterFactory {
       def apply(tokenStream: TokenStream) = new SnowballFilter(tokenStream, snowballConstructor.newInstance())
@@ -141,7 +141,7 @@ object WrapperTokenFilterFactory {
 }
 
 class FrenchElisionFilter(tokenStream: TokenStream)
-extends TokenFilter(new ElisionFilter(tokenStream, FrenchAnalyzer.DEFAULT_ARTICLES)) {
+    extends TokenFilter(new ElisionFilter(tokenStream, FrenchAnalyzer.DEFAULT_ARTICLES)) {
   override def incrementToken() = input.incrementToken()
 }
 
@@ -157,7 +157,7 @@ class SymbolDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStre
 
   val alphanum = "<ALPHANUM>"
 
-  override def incrementToken() : Boolean = {
+  override def incrementToken(): Boolean = {
     while (bufLen - tokenStart > 0) { // has more chars in buffer
       if (getConstituent) {
         posIncrAttr.setPositionIncrement(1)
@@ -175,7 +175,7 @@ class SymbolDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStre
     var i = tokenStart
     var hasToken = false
     while (i < bufLen && buffer(i) != '.' && buffer(i) != '_') i += 1
-    if ( i - tokenStart > 0) {
+    if (i - tokenStart > 0) {
       termAttr.copyBuffer(buffer, tokenStart, i - tokenStart)
       hasToken = true
     }
@@ -196,7 +196,7 @@ class SymbolDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStre
       i += 1
     }
 
-    if (cnt == 0 || cnt == len/2 || cnt == len) {
+    if (cnt == 0 || cnt == len / 2 || cnt == len) {
       false // regular word or acronym
     } else {
       if (tokenType(typeAttr) == alphanum) {
@@ -204,7 +204,7 @@ class SymbolDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStre
         if (buffer.length < src.length) buffer = new Array[Char](src.length) // resize buffer
         Array.copy(src, 0, buffer, 0, len)
         bufLen = len
-        true  // something like a file name
+        true // something like a file name
       } else {
         false // probably a number
       }

@@ -1,6 +1,6 @@
 package com.keepit.shoebox
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.db.slick._
 import com.keepit.commanders.KeepsAbuseMonitor
 import com.keepit.model.KeepRepo
@@ -23,5 +23,4 @@ case class AbuseControlModule() extends ScalaModule {
       airbrake = airbrake)
 
 }
-
 

@@ -4,13 +4,13 @@ import com.google.inject.Provider
 
 import com.keepit.common.controller.CommonHeaders
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 
 import com.ning.http.util.AsyncHttpProviderUtils.parseCharset
 
-import java.io.{FileOutputStream, File}
+import java.io.{ FileOutputStream, File }
 import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets.{UTF_8, ISO_8859_1}
+import java.nio.charset.StandardCharsets.{ UTF_8, ISO_8859_1 }
 
 import org.apache.commons.io.IOUtils
 
@@ -21,9 +21,8 @@ import play.mvc.Http.Status
 import scala.util.Try
 import scala.xml._
 
-
 case class SlowJsonParsingException(request: Request, response: ClientResponse, time: Long, tracking: JsonParserTrackingErrorMessage)
-    extends Exception(s"[${request.httpUri.service}] Slow JSON parsing on ${request.httpUri.summary} tracking-id:${request.trackingId} time:${time}ms data-size:${response.bytes.length} ${tracking.message}"){
+    extends Exception(s"[${request.httpUri.service}] Slow JSON parsing on ${request.httpUri.summary} tracking-id:${request.trackingId} time:${time}ms data-size:${response.bytes.length} ${tracking.message}") {
   override def toString(): String = getMessage
 }
 

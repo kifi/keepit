@@ -17,11 +17,9 @@ class UserIndexerPluginImpl @Inject() (
   actor: ActorInstance[UserIndexerActor],
   indexer: UserIndexer,
   serviceDiscovery: ServiceDiscovery,
-  val scheduling: SchedulingProperties
-) extends IndexerPluginImpl[User, UserIndexer, UserIndexerActor](indexer, actor, serviceDiscovery) with UserIndexerPlugin
+  val scheduling: SchedulingProperties) extends IndexerPluginImpl[User, UserIndexer, UserIndexerActor](indexer, actor, serviceDiscovery) with UserIndexerPlugin
 
 class UserIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,
-  indexer: UserIndexer
-) extends IndexerActor[User, UserIndexer](airbrake, indexer)
+  indexer: UserIndexer) extends IndexerActor[User, UserIndexer](airbrake, indexer)
 

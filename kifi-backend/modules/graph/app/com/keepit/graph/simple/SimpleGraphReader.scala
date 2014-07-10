@@ -63,7 +63,8 @@ class SimpleOutgoingEdgeReader(owner: VertexReader, edges: => Map[(VertexType, E
   def degree = edges(component).size
   def moveToNextEdge(): Boolean = destinations match {
     case None => throw new UninitializedReaderException(s"$this is not initialized over a valid component")
-    case Some(iterator) if iterator.hasNext => currentDestination = Some(iterator.next()); true
+    case Some(iterator) if iterator.hasNext =>
+      currentDestination = Some(iterator.next()); true
     case _ => false
   }
   def reset(): Unit = {

@@ -1,11 +1,11 @@
 package com.keepit.abook.model
 
 import com.keepit.abook.RichContact
-import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics}
-import com.keepit.common.db.{ModelWithState, Id, State, States}
+import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
+import com.keepit.common.db.{ ModelWithState, Id, State, States }
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.mail.{BasicContact, EmailAddress}
-import com.keepit.model.{ABookInfo, User}
+import com.keepit.common.mail.{ BasicContact, EmailAddress }
+import com.keepit.model.{ ABookInfo, User }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -13,19 +13,18 @@ import scala.concurrent.duration.Duration
 import com.keepit.common.time._
 
 case class EContact(
-  id: Option[Id[EContact]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  userId:    Id[User],
-  abookId:   Option[Id[ABookInfo]],
-  emailAccountId: Option[Id[EmailAccount]],
-  email:     EmailAddress,
-  contactUserId: Option[Id[User]] = None,
-  name:      Option[String] = None,
-  firstName: Option[String] = None,
-  lastName:  Option[String] = None,
-  state:     State[EContact] = EContactStates.ACTIVE
-) extends ModelWithState[EContact] {
+    id: Option[Id[EContact]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    userId: Id[User],
+    abookId: Option[Id[ABookInfo]],
+    emailAccountId: Option[Id[EmailAccount]],
+    email: EmailAddress,
+    contactUserId: Option[Id[User]] = None,
+    name: Option[String] = None,
+    firstName: Option[String] = None,
+    lastName: Option[String] = None,
+    state: State[EContact] = EContactStates.ACTIVE) extends ModelWithState[EContact] {
   def withId(id: Id[EContact]) = this.copy(id = Some(id))
   def withName(name: Option[String]) = this.copy(name = name)
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -56,19 +55,19 @@ object EContactStates extends States[EContact] {
 
 object EContact {
   implicit val format = (
-      (__ \ 'id).formatNullable(Id.format[EContact]) and
-      (__ \ 'createdAt).format[DateTime] and
-      (__ \ 'updatedAt).format[DateTime] and
-      (__ \ 'userId).format(Id.format[User]) and
-      (__ \ 'abookId).formatNullable(Id.format[ABookInfo]) and
-      (__ \ 'emailAccountId).formatNullable(Id.format[EmailAccount]) and
-      (__ \ 'email).format[EmailAddress] and
-      (__ \ 'contactUserId).formatNullable(Id.format[User]) and
-      (__ \ 'name).formatNullable[String] and
-      (__ \ 'firstName).formatNullable[String] and
-      (__ \ 'lastName).formatNullable[String] and
-      (__ \ 'state).format(State.format[EContact])
-    )(EContact.apply, unlift(EContact.unapply))
+    (__ \ 'id).formatNullable(Id.format[EContact]) and
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'userId).format(Id.format[User]) and
+    (__ \ 'abookId).formatNullable(Id.format[ABookInfo]) and
+    (__ \ 'emailAccountId).formatNullable(Id.format[EmailAccount]) and
+    (__ \ 'email).format[EmailAddress] and
+    (__ \ 'contactUserId).formatNullable(Id.format[User]) and
+    (__ \ 'name).formatNullable[String] and
+    (__ \ 'firstName).formatNullable[String] and
+    (__ \ 'lastName).formatNullable[String] and
+    (__ \ 'state).format(State.format[EContact])
+  )(EContact.apply, unlift(EContact.unapply))
 
   def toRichContact(econtact: EContact): RichContact = RichContact(econtact.email, econtact.name, econtact.firstName, econtact.lastName, econtact.contactUserId)
 

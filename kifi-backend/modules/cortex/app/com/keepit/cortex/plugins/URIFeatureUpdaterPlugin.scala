@@ -2,7 +2,7 @@ package com.keepit.cortex.plugins
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core._
@@ -20,10 +20,9 @@ import com.keepit.model.NormalizedURIStates
 trait URIPuller extends DataPuller[NormalizedURI]
 
 @Singleton
-class URIPullerImpl @Inject()(
-  db: Database,
-  uriRepo: CortexURIRepo
-) extends URIPuller{
+class URIPullerImpl @Inject() (
+    db: Database,
+    uriRepo: CortexURIRepo) extends URIPuller {
 
   // temp solution for type match.
   private def convertToNormalizedURI(uri: CortexURI): NormalizedURI = {
@@ -32,18 +31,17 @@ class URIPullerImpl @Inject()(
 
   // scraped uris only
   def getSince(lowSeq: SequenceNumber[NormalizedURI], limit: Int): Seq[NormalizedURI] = {
-    db.readOnlyMaster{ implicit s =>
-      uriRepo.getSince(lowSeq, limit).filter(_.state.value == NormalizedURIStates.SCRAPED.value).map{convertToNormalizedURI(_)}
+    db.readOnlyMaster { implicit s =>
+      uriRepo.getSince(lowSeq, limit).filter(_.state.value == NormalizedURIStates.SCRAPED.value).map { convertToNormalizedURI(_) }
     }
   }
 }
 
 abstract class URIFeatureUpdater[M <: StatModel, FT <: FeatureRepresentation[NormalizedURI, M]](
-  representer: FeatureRepresenter[NormalizedURI, M, FT],
-  featureStore: VersionedStore[Id[NormalizedURI], M, FT],
-  commitInfoStore: CommitInfoStore[NormalizedURI, M],
-  dataPuller: DataPuller[NormalizedURI]
-) extends FeatureUpdater[Id[NormalizedURI], NormalizedURI, M, FT](representer, featureStore, commitInfoStore, dataPuller){
+    representer: FeatureRepresenter[NormalizedURI, M, FT],
+    featureStore: VersionedStore[Id[NormalizedURI], M, FT],
+    commitInfoStore: CommitInfoStore[NormalizedURI, M],
+    dataPuller: DataPuller[NormalizedURI]) extends FeatureUpdater[Id[NormalizedURI], NormalizedURI, M, FT](representer, featureStore, commitInfoStore, dataPuller) {
 
   protected def getSeqNumber(uri: NormalizedURI): SequenceNumber[NormalizedURI] = uri.seq
   protected def genFeatureKey(uri: NormalizedURI): Id[NormalizedURI] = uri.id.get

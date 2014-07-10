@@ -1,6 +1,6 @@
 package com.keepit.graph.wander
 
-import com.keepit.graph.model.{VertexId, VertexReader}
+import com.keepit.graph.model.{ VertexId, VertexReader }
 import scala.collection.mutable
 import com.keepit.graph.model.EdgeKind.EdgeType
 

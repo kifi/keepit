@@ -10,13 +10,12 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class SimpleGraphManager(
-  val simpleGraph: SimpleGraph,
-  var state: GraphUpdaterState,
-  graphDirectory: SimpleGraphDirectory,
-  graphUpdater: GraphUpdater,
-  serviceDiscovery: ServiceDiscovery,
-  airbrake: AirbrakeNotifier
-) extends GraphManager with Logging {
+    val simpleGraph: SimpleGraph,
+    var state: GraphUpdaterState,
+    graphDirectory: SimpleGraphDirectory,
+    graphUpdater: GraphUpdater,
+    serviceDiscovery: ServiceDiscovery,
+    airbrake: AirbrakeNotifier) extends GraphManager with Logging {
 
   def readOnly[T](f: GraphReader => T): T = simpleGraph.readOnly(f)
 
@@ -32,7 +31,7 @@ class SimpleGraphManager(
     simpleGraph.synchronized { graphDirectory.persist(simpleGraph, state) }
     val end = System.currentTimeMillis
     val persistingHeapSize = currentHeapSize()
-    log.info(s"Simple Graph has been persisted in ${ (end - start) / 1000} seconds - Current Heap Size: ${FileUtils.byteCountToDisplaySize(persistingHeapSize)}")
+    log.info(s"Simple Graph has been persisted in ${(end - start) / 1000} seconds - Current Heap Size: ${FileUtils.byteCountToDisplaySize(persistingHeapSize)}")
     if (serviceDiscovery.myStatus.exists(_ == ServiceStatus.BACKING_UP)) {
       val start = System.currentTimeMillis
       graphDirectory.synchronized {
@@ -44,7 +43,7 @@ class SimpleGraphManager(
         }
       }
       val end = System.currentTimeMillis
-      log.info(s"Simple Graph directory has been backed up in ${ (end - start) / 1000} seconds")
+      log.info(s"Simple Graph directory has been backed up in ${(end - start) / 1000} seconds")
     }
   }
 

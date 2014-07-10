@@ -3,7 +3,7 @@ package com.keepit.abook
 import org.specs2.mutable._
 import com.keepit.test.DbTestInjector
 import com.keepit.model._
-import com.keepit.common.db.{TestDbInfo, Id}
+import com.keepit.common.db.{ TestDbInfo, Id }
 import play.api.libs.json._
 import play.api.libs.json.JsArray
 import com.keepit.common.time.FakeClockModule
@@ -14,12 +14,12 @@ import scala.Some
 import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.common.mail.{EmailAddress, BasicContact}
-import com.keepit.abook.model.{EContactStates, EContactRepo}
+import com.keepit.common.mail.{ EmailAddress, BasicContact }
+import com.keepit.abook.model.{ EContactStates, EContactRepo }
 
 class ABookCommanderTest extends Specification with DbTestInjector with ABookTestHelper {
 
-  implicit def strSeqToJsArray(s:Seq[String]):JsArray = JsArray(s.map(JsString(_)))
+  implicit def strSeqToJsArray(s: Seq[String]): JsArray = JsArray(s.map(JsString(_)))
 
   val modules = Seq(
     FakeABookStoreModule(),
@@ -40,20 +40,20 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         val (commander) = inject[ABookCommander] //setup()
 
         // EMPTY IOS IMPORT
-      db.readOnlyMaster(inject[ABookInfoRepo].count(_))
+        db.readOnlyMaster(inject[ABookInfoRepo].count(_))
         val emptyABookRawInfo = ABookRawInfo(None, ABookOrigins.IOS, None, None, None, JsArray(Seq.empty))
         val emptyABookOpt = commander.processUpload(u42, ABookOrigins.IOS, None, None, Json.toJson(emptyABookRawInfo))
         emptyABookOpt.isEmpty === true
 
         // NON EMPTY IOS IMPORT
-        var abookInfo:ABookInfo = try {
+        var abookInfo: ABookInfo = try {
           val info1 = commander.processUpload(u42, ABookOrigins.IOS, None, None, iosUploadJson).get
-//          val info2 = commander.processUpload(u42, ABookOrigins.IOS, None, None, iosUploadJson) // should have no impact
+          //          val info2 = commander.processUpload(u42, ABookOrigins.IOS, None, None, iosUploadJson) // should have no impact
           info1.state !== ABookInfoStates.UPLOAD_FAILURE
-//          info2.state !== ABookInfoStates.UPLOAD_FAILURE
+          //          info2.state !== ABookInfoStates.UPLOAD_FAILURE
           info1
         } catch {
-          case e:Exception => {
+          case e: Exception => {
             e.printStackTrace(System.out)
             throw e
           }
@@ -83,7 +83,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
 
         // GMAIL IMPORT
 
-        val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson).get
+        val gbookInfo: ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson).get
         gbookInfo.id.get === Id[ABookInfo](2)
         gbookInfo.origin === ABookOrigins.GMAIL
         gbookInfo.userId === u42
@@ -120,7 +120,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
     "handle imports from multiple gmail accounts" in {
       withDb(modules: _*) { implicit injector =>
         val (commander) = inject[ABookCommander] // setup()
-        val gbookInfo:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson).get
+        val gbookInfo: ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner), None, gmailUploadJson).get
         gbookInfo.id.get === Id[ABookInfo](1)
         gbookInfo.origin === ABookOrigins.GMAIL
         gbookInfo.userId === u42
@@ -131,7 +131,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         val gBookRawInfoSeq = gbookInfoSeqOpt.get
         gBookRawInfoSeq.length === 1
 
-        val gbookInfo2:ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner2), None, gmailUploadJson2).get
+        val gbookInfo2: ABookInfo = commander.processUpload(u42, ABookOrigins.GMAIL, Some(gmailOwner2), None, gmailUploadJson2).get
         gbookInfo2.id.get === Id[ABookInfo](2)
         gbookInfo2.origin === ABookOrigins.GMAIL
         gbookInfo2.userId === u42
@@ -144,7 +144,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
       }
     }
 
-    "handle hiding given email from current user" in  {
+    "handle hiding given email from current user" in {
       withDb(modules: _*) { implicit injector =>
         val (commander) = inject[ABookCommander]
         val (econRepo) = inject[EContactRepo] // setup()
@@ -156,8 +156,8 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         result1 === true
 
         db.readOnlyMaster { implicit session =>
-            val e2 = econRepo.get(e1Res.id.get)
-            e2.state should_== EContactStates.HIDDEN
+          val e2 = econRepo.get(e1Res.id.get)
+          e2.state should_== EContactStates.HIDDEN
         }
 
         val result2 = commander.hideEmailFromUser(u42, EmailAddress("nonexist@email.com"))

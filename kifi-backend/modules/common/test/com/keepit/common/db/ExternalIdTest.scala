@@ -6,7 +6,7 @@ import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
-import scala.collection.mutable.{Map => MutableMap}
+import scala.collection.mutable.{ Map => MutableMap }
 
 class ExternalIdTest extends Specification {
 

@@ -42,7 +42,6 @@ object EventFamilies {
   val DOMAIN_TAG_IMPORT = ServerEventFamily("domain_tag_import")
   val SERVER_SEARCH = ServerEventFamily("server_search")
 
-
   def apply(event: String): EventFamily = {
     event.toLowerCase.trim match {
       case SLIDER.name => SLIDER
@@ -71,19 +70,18 @@ case class Event(
   externalId: ExternalId[Event] = ExternalId[Event](),
   metaData: EventMetadata,
   createdAt: DateTime,
-  serverVersion: String
-)
+  serverVersion: String)
 
 object Events {
   def serverVersion(implicit fortyTwoServices: FortyTwoServices) = fortyTwoServices.currentService + ":" + fortyTwoServices.currentVersion
 
   def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Set[ExperimentType],
-      installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)(implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
+    installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)(implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
     Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = clock.now,
       serverVersion = serverVersion(fortyTwoServices))
 
   def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Set[ExperimentType],
-      installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]], createdAt: DateTime)(implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
+    installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]], createdAt: DateTime)(implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
     Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = createdAt,
       serverVersion = serverVersion(fortyTwoServices))
 

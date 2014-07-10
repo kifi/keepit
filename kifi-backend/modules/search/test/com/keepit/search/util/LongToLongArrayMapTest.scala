@@ -37,8 +37,8 @@ class LongToLongArrayMapTest extends Specification {
       val s = LongToLongArrayMap.fromSorted(sortedKey, sortedVal)
 
       s.size === 10
-      positive.keySet.forall{ s.isDefinedAt(_) } === true
-      negative.forall{ ! s.isDefinedAt(_) } === true
+      positive.keySet.forall { s.isDefinedAt(_) } === true
+      negative.forall { !s.isDefinedAt(_) } === true
       s === positive
 
       // update
@@ -54,8 +54,8 @@ class LongToLongArrayMapTest extends Specification {
       // key set
       val ks = s.keySet
       ks.size === 10
-      positive.keySet.forall{ ks.contains(_) } === true
-      negative.forall{ ! ks.contains(_) } === true
+      positive.keySet.forall { ks.contains(_) } === true
+      negative.forall { !ks.contains(_) } === true
       ks === positive.keySet
     }
 
@@ -63,8 +63,8 @@ class LongToLongArrayMapTest extends Specification {
       val s = LongToLongArrayMap.from(unsortedKey, unsortedVal)
 
       s.size === 10
-      positive.keySet.forall{ s.isDefinedAt(_) } === true
-      negative.forall{ ! s.isDefinedAt(_) } === true
+      positive.keySet.forall { s.isDefinedAt(_) } === true
+      negative.forall { !s.isDefinedAt(_) } === true
       s === positive
 
       // update
@@ -80,8 +80,8 @@ class LongToLongArrayMapTest extends Specification {
       // key set
       val ks = s.keySet
       ks.size === 10
-      positive.keySet.forall{ ks.contains(_) } === true
-      negative.forall{ ! ks.contains(_) } === true
+      positive.keySet.forall { ks.contains(_) } === true
+      negative.forall { !ks.contains(_) } === true
       ks === positive.keySet
     }
   }

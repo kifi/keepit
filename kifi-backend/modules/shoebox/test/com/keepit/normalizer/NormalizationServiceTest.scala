@@ -4,19 +4,19 @@ import org.specs2.mutable.SpecificationLike
 import com.keepit.test.ShoeboxTestInjector
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.scraper.{Signature, BasicArticle, FakeScrapeSchedulerModule}
+import com.keepit.scraper.{ Signature, BasicArticle, FakeScrapeSchedulerModule }
 import com.keepit.model._
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 import com.keepit.akka.TestKitScope
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.inject.TestFortyTwoModule
 import com.keepit.integrity.UriIntegrityPlugin
 import com.google.inject.Injector
-import com.keepit.scraper.extractor.{ExtractorProviderType, Extractor}
+import com.keepit.scraper.extractor.{ ExtractorProviderType, Extractor }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.shoebox.{ShoeboxSlickModule, FakeKeepImportsModule}
+import com.keepit.shoebox.{ ShoeboxSlickModule, FakeKeepImportsModule }
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.inject.TestFortyTwoModule
 import com.keepit.scraper.FakeScrapeSchedulerModule
@@ -33,7 +33,7 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
     case (url @ "http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "17558679", signature = Signature(Seq("17558679")), destinationUrl = url)
     case (url @ "http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content", signature = Signature(Seq("some content")), destinationUrl = url)
     case (url @ "http://www.linkedin.com/in/leo", None) => BasicArticle("leo", "some content", signature = Signature(Seq("some content")), destinationUrl = url)
-    case (url @ "http://www.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "136123062",  signature = Signature(Seq("136123062")), destinationUrl = url)
+    case (url @ "http://www.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "136123062", signature = Signature(Seq("136123062")), destinationUrl = url)
   }
 
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {
@@ -43,7 +43,7 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
     val uriIntegrityPlugin = inject[UriIntegrityPlugin]
     val id = Await.result(normalizationService.update(NormalizationReference(uri), candidates: _*), 5 seconds)
     uriIntegrityPlugin.batchURIMigration()
-    id.map { db.readOnlyMaster { implicit session => uriRepo.get(_) }}
+    id.map { db.readOnlyMaster { implicit session => uriRepo.get(_) } }
   }
 
   val modules = Seq(
@@ -63,7 +63,7 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
 
   "NormalizationService" should {
 
-    withDb(modules:_*) { implicit injector =>
+    withDb(modules: _*) { implicit injector =>
 
       "normalize a new http:// url to HTTP" in {
         val httpUri = db.readWrite { implicit session => uriRepo.save(NormalizedURI.withHash("http://vimeo.com/48578814")) }
@@ -188,7 +188,7 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
 
       "shutdown shared actor system" in {
         system.shutdown()
-        1===1
+        1 === 1
       }
     }
   }

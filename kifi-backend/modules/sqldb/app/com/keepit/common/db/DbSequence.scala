@@ -1,6 +1,6 @@
 package com.keepit.common.db
 
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import scalax.io.JavaConverters._
 import scala.util.matching.Regex
 import play.api.libs.json._

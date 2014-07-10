@@ -10,7 +10,6 @@ import com.keepit.test.TestApplication
 import play.api.test.Helpers.running
 import com.keepit.search.util.IdFilterCompressor
 
-
 class UserSearchFilterTest extends Specification with ApplicationInjector {
 
   private def setup(implicit client: FakeShoeboxServiceClientImpl) = {
@@ -21,7 +20,7 @@ class UserSearchFilterTest extends Specification with ApplicationInjector {
       User(firstName = "alpha", lastName = "two"),
       User(firstName = "alpha", lastName = "three")
     )
-    val ids = users.map{_.id.get}
+    val ids = users.map { _.id.get }
     val conn = Map(ids(0) -> Set(ids(1), ids(3)))
     client.saveConnections(conn)
     users

@@ -1,13 +1,13 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ShoeboxServiceController, WebsiteController, ActionAuthenticator}
+import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.db.Id
 
-import play.api.mvc.{SimpleResult, Action, Request}
-import play.api.libs.json.{Json, JsString, JsObject}
+import play.api.mvc.{ SimpleResult, Action, Request }
+import play.api.libs.json.{ Json, JsString, JsObject }
 import com.keepit.common.net.UserAgent
 import scala.Some
 import com.keepit.model.DeepLink
@@ -32,15 +32,17 @@ class ExtDeepLinkController @Inject() (
     val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
     val locator = (req \ "locator").as[String]
 
-    db.readWrite{ implicit session => deepLinkRepo.save(
-      DeepLink(
-        initiatorUserId = initiator,
-        recipientUserId = Some(recipient),
-        uriId = Some(uriId),
-        urlId = None,
-        deepLocator = DeepLocator(locator)
+    db.readWrite { implicit session =>
+      deepLinkRepo.save(
+        DeepLink(
+          initiatorUserId = initiator,
+          recipientUserId = Some(recipient),
+          uriId = Some(uriId),
+          urlId = None,
+          deepLocator = DeepLocator(locator)
+        )
       )
-    )}
+    }
     Ok("")
   }
 
@@ -75,24 +77,25 @@ class ExtDeepLinkController @Inject() (
   def handle(tokenString: String) = HtmlAction(
     authenticatedAction = { request =>
       val token = DeepLinkToken(tokenString)
-      getDeepLinkAndUrl(token) map { case (deepLink, uri) =>
-        val (isIphone, isKifiIphoneApp) = mobileCheck(request.request)
-        if (isKifiIphoneApp) {
-          log.info(s"redirecting user ${request.userId} on iphone app")
-          Redirect(uri.url)
-        } else if (isIphone) {
-          log.info(s"user ${request.userId} on iphone")
-          doHandleMobile(request, tokenString)
-        } else {
-          deepLink.recipientUserId match {
-            case None | Some(request.userId) =>
-              log.info(s"sending user ${request.userId} to $uri")
-              Ok(views.html.deeplink(uri.url, deepLink.deepLocator.value))
-            case _ =>
-              log.info(s"sending wrong user ${request.userId} to $uri")
-              Redirect(uri.url)
+      getDeepLinkAndUrl(token) map {
+        case (deepLink, uri) =>
+          val (isIphone, isKifiIphoneApp) = mobileCheck(request.request)
+          if (isKifiIphoneApp) {
+            log.info(s"redirecting user ${request.userId} on iphone app")
+            Redirect(uri.url)
+          } else if (isIphone) {
+            log.info(s"user ${request.userId} on iphone")
+            doHandleMobile(request, tokenString)
+          } else {
+            deepLink.recipientUserId match {
+              case None | Some(request.userId) =>
+                log.info(s"sending user ${request.userId} to $uri")
+                Ok(views.html.deeplink(uri.url, deepLink.deepLocator.value))
+              case _ =>
+                log.info(s"sending wrong user ${request.userId} to $uri")
+                Redirect(uri.url)
+            }
           }
-        }
       } getOrElse NotFound
     },
     unauthenticatedAction = { request =>

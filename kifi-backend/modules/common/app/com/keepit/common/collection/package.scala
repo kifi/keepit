@@ -8,7 +8,7 @@ package object collection {
      * For each value, if the Option is None, the pair is dropped.
      */
     def withOpt(optElems: (A, Option[B])*) = {
-      this.x ++ optElems.collect{ case (a, b) if b.nonEmpty => (a, b.get) }.toMap
+      this.x ++ optElems.collect { case (a, b) if b.nonEmpty => (a, b.get) }.toMap
     }
   }
 }

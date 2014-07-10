@@ -7,7 +7,7 @@ import com.keepit.cortex.core.ModelVersion
 import com.keepit.common.store.ObjectStore
 import com.keepit.common.store.InMemoryObjectStore
 
-case class VersionedStoreKey[K, M <: StatModel](key: K, version: ModelVersion[M]){
+case class VersionedStoreKey[K, M <: StatModel](key: K, version: ModelVersion[M]) {
   def toKey(): String = "version_" + version.version + "/" + key.toString
 }
 
@@ -25,11 +25,11 @@ trait VersionedStore[K, M <: StatModel, V <: Versionable[M]] {
   def -=(key: K, version: ModelVersion[M]): this.type
 
   def batchGet(keys: Seq[K], version: ModelVersion[M]): Seq[Option[V]] = {
-    keys.par.map{ k => get(k, version)}.seq
+    keys.par.map { k => get(k, version) }.seq
   }
 }
 
-trait VersionedS3Store[K, M <: StatModel, V <: Versionable[M]] extends VersionedStore[K, M, V] with S3ObjectStore[VersionedStoreKey[K, M], V]{
+trait VersionedS3Store[K, M <: StatModel, V <: Versionable[M]] extends VersionedStore[K, M, V] with S3ObjectStore[VersionedStoreKey[K, M], V] {
 
   override def get(key: K, version: ModelVersion[M]): Option[V] = {
     val vkey = toVersionedKey(key, version)
@@ -47,7 +47,7 @@ trait VersionedS3Store[K, M <: StatModel, V <: Versionable[M]] extends Versioned
   }
 }
 
-trait VersionedInMemoryStore [K, M <: StatModel, V <: Versionable[M]] extends VersionedStore[K, M, V] with InMemoryObjectStore[VersionedStoreKey[K, M], V] {
+trait VersionedInMemoryStore[K, M <: StatModel, V <: Versionable[M]] extends VersionedStore[K, M, V] with InMemoryObjectStore[VersionedStoreKey[K, M], V] {
   override def get(key: K, version: ModelVersion[M]): Option[V] = {
     val vkey = toVersionedKey(key, version)
     super.get(vkey)

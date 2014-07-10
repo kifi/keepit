@@ -7,12 +7,11 @@ import com.keepit.common.db.slick.DbExecutionContext
 import com.keepit.common.db.slick.DbInfo
 import com.keepit.common.db.slick.SlickModule
 import scala.util._
-import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
-
+import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 
 import net.codingwell.scalaguice.ScalaModule
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.db.slick._
 import play.api.db.DB
 import play.api.Play

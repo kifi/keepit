@@ -4,7 +4,7 @@ import org.joda.time.DateTime
 
 import com.google.inject.Inject
 
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -12,10 +12,10 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
-import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.social.{ SocialNetworkType, SocialId }
 
 import play.api.libs.json.Json
-import com.keepit.heimdal.{ContextDoubleData, HeimdalServiceClient}
+import com.keepit.heimdal.{ ContextDoubleData, HeimdalServiceClient }
 import com.keepit.common.performance.timing
 
 object UserConnectionCreator {
@@ -23,20 +23,20 @@ object UserConnectionCreator {
 }
 
 class UserConnectionCreator @Inject() (
-    db: Database,
-    socialRepo: SocialUserInfoRepo,
-    socialConnectionRepo: SocialConnectionRepo,
-    userConnectionRepo: UserConnectionRepo,
-    userValueRepo: UserValueRepo,
-    clock: Clock,
-    airbrake: AirbrakeNotifier,
-    basicUserRepo: BasicUserRepo,
-    eliza: ElizaServiceClient,
-    heimdal: HeimdalServiceClient)
-  extends Logging {
+  db: Database,
+  socialRepo: SocialUserInfoRepo,
+  socialConnectionRepo: SocialConnectionRepo,
+  userConnectionRepo: UserConnectionRepo,
+  userValueRepo: UserValueRepo,
+  clock: Clock,
+  airbrake: AirbrakeNotifier,
+  basicUserRepo: BasicUserRepo,
+  eliza: ElizaServiceClient,
+  heimdal: HeimdalServiceClient)
+    extends Logging {
 
   def createConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
-      network: SocialNetworkType): Seq[SocialConnection] = timing(s"createConnections($socialUserInfo, $network) socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
+    network: SocialNetworkType): Seq[SocialConnection] = timing(s"createConnections($socialUserInfo, $network) socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     if (socialIds.isEmpty) {
       Seq.empty
     } else {
@@ -76,7 +76,7 @@ class UserConnectionCreator @Inject() (
   }
 
   private def extractFriendsWithConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
-      network: SocialNetworkType)(implicit s: RSession): Seq[(SocialUserInfo, Option[SocialConnection])] = timing(s"extractFriendsWithConnections($socialUserInfo, $network): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
+    network: SocialNetworkType)(implicit s: RSession): Seq[(SocialUserInfo, Option[SocialConnection])] = timing(s"extractFriendsWithConnections($socialUserInfo, $network): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     for {
       socialId <- socialIds
       sui <- socialRepo.getOpt(socialId, network)
@@ -86,7 +86,7 @@ class UserConnectionCreator @Inject() (
   }
 
   private def createNewConnections(socialUserInfo: SocialUserInfo, allSocialIds: Seq[SocialId],
-      network: SocialNetworkType): Seq[SocialConnection] = timing(s"createNewConnections($socialUserInfo, $network): allSocialIds(${allSocialIds.length}):${allSocialIds.mkString(",")}") {
+    network: SocialNetworkType): Seq[SocialConnection] = timing(s"createNewConnections($socialUserInfo, $network): allSocialIds(${allSocialIds.length}):${allSocialIds.mkString(",")}") {
     log.debug(s"looking for new (or reactive) connections for user ${socialUserInfo.fullName}")
     allSocialIds.grouped(100).flatMap { socialIds =>
       db.readWrite { implicit s =>
@@ -120,7 +120,7 @@ class UserConnectionCreator @Inject() (
   }
 
   private def disableOldConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
-      network: SocialNetworkType): Seq[SocialConnection] = timing(s"disableOldConnections($socialUserInfo, $network): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
+    network: SocialNetworkType): Seq[SocialConnection] = timing(s"disableOldConnections($socialUserInfo, $network): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     log.debug(s"looking for connections to disable for ${socialUserInfo.fullName}")
     db.readWrite { implicit s =>
       val existingSocialUserInfoIds = socialConnectionRepo.getUserConnections(socialUserInfo.userId.get) collect {

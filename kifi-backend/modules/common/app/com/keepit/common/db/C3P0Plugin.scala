@@ -15,7 +15,7 @@ import com.mchange.v2.c3p0.DataSources
 import play.api.Mode
 import com.keepit.FortyTwoGlobal
 
-class C3P0Plugin(app: Application) extends DBPlugin{
+class C3P0Plugin(app: Application) extends DBPlugin {
   lazy val dbConfig = app.configuration.getConfig("db").getOrElse(Configuration.empty)
   private def dbURL(conn: Connection): String = {
     val u = conn.getMetaData.getURL
@@ -83,10 +83,9 @@ class C3P0Plugin(app: Application) extends DBPlugin{
     }
   }
 
-
 }
 
-class  C3P0Api(configuration: Configuration, classloader: ClassLoader) extends DBApi {
+class C3P0Api(configuration: Configuration, classloader: ClassLoader) extends DBApi {
   private val dbNames = configuration.subKeys
   private def error(db: String, message: String = "") = throw configuration.reportError(db, message)
 
@@ -135,7 +134,6 @@ class  C3P0Api(configuration: Configuration, classloader: ClassLoader) extends D
 
     val logger = Logger("com.c3p0")
 
-
     val PostgresFullUrl = "^postgres://([a-zA-Z0-9_]+):([^@]+)@([^/]+)/([^\\s]+)$".r
     val MysqlFullUrl = "^mysql://([a-zA-Z0-9_]+):([^@]+)@([^/]+)/([^\\s]+)$".r
     val MysqlCustomProperties = ".*\\?(.*)".r
@@ -168,7 +166,6 @@ class  C3P0Api(configuration: Configuration, classloader: ClassLoader) extends D
     datasource.setMaxPoolSize(conf.getInt("maxPoolSize").getOrElse(40))
     datasource.setMaxIdleTime(conf.getInt("maxIdleTime").getOrElse(60))
 
-
     // Bind in JNDI
     conf.getString("jndiName").map { name =>
       JNDI.initialContext.rebind(name, datasource)
@@ -180,7 +177,7 @@ class  C3P0Api(configuration: Configuration, classloader: ClassLoader) extends D
   }
   def shutdownPool(ds: DataSource) = {
     ds match {
-      case ds: ComboPooledDataSource => DataSources.destroy( ds );
+      case ds: ComboPooledDataSource => DataSources.destroy(ds);
       case _ => error(" - could not recognize DataSource, therefore unable to shutdown this pool")
     }
   }

@@ -3,16 +3,16 @@ package com.keepit.controllers.admin
 import com.keepit.common.db.Id
 import com.keepit.common.db.LargeString._
 import com.keepit.model._
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
-import play.api.libs.json.{JsValue, JsArray, Json}
+import play.api.libs.json.{ JsValue, JsArray, Json }
 import play.api.data._
 import play.api.data.Forms._
 import views.html
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 import com.keepit.commanders.URISummaryCommander
 import com.keepit.scraper.ScraperServiceClient
 import com.keepit.normalizer.NormalizedURIInterner
@@ -28,7 +28,7 @@ class AdminScreenshotController @Inject() (
   imageInfoRepo: ImageInfoRepo,
   normalizedURIInterner: NormalizedURIInterner,
   uriRepo: NormalizedURIRepo)
-  extends AdminController(actionAuthenticator) {
+    extends AdminController(actionAuthenticator) {
 
   def updateUri(uriId: Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val normUri = db.readOnlyMaster { implicit session =>
@@ -39,7 +39,7 @@ class AdminScreenshotController @Inject() (
       val success = imageInfoOpt.nonEmpty
       Ok("Done: " + success + s"\n<br><br>\n<a href='$screenshotUrl'>link</a>")
     }
-}
+  }
 
   def updateUser(userId: Id[User], drop: Int = 0, take: Int = 999999) = AdminHtmlAction.authenticated { implicit request =>
     val uris = db.readOnlyMaster { implicit session =>
@@ -69,7 +69,7 @@ class AdminScreenshotController @Inject() (
     Ok(html.admin.imageInfos(imageInfos))
   }
 
-  def imagesForUri(uriId:Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { request =>
+  def imagesForUri(uriId: Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { request =>
     Try {
       db.readOnlyMaster { implicit ro =>
         uriRepo.get(uriId)
@@ -103,7 +103,7 @@ class AdminScreenshotController @Inject() (
         Ok(html.admin.imagesCompare(tuples))
       }
     } catch {
-      case t:Throwable =>
+      case t: Throwable =>
         t.printStackTrace
         Future.successful(BadRequest("Invalid Arguments"))
     }
@@ -120,7 +120,7 @@ class AdminScreenshotController @Inject() (
           }
         case None => Future.successful(Seq.empty[JsValue])
       }
-      images.map{ js => Ok(JsArray(js)) }
+      images.map { js => Ok(JsArray(js)) }
     }
     resOpt.getOrElse(Future.successful(NotFound(Json.obj("code" -> "not_found"))))
   }
@@ -133,15 +133,16 @@ class AdminScreenshotController @Inject() (
         val uris = db.readOnlyMaster { implicit ro =>
           urls.map(url => url -> normalizedURIInterner.getByUri(url))
         }
-        val imgRes = uris map { case (url, uriOpt) =>
-          uriOpt match {
-            case Some(uri) =>
-            val jsF = scraper.getEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
-              Json.obj("url" -> url, "images" -> Json.toJson(infos))
+        val imgRes = uris map {
+          case (url, uriOpt) =>
+            uriOpt match {
+              case Some(uri) =>
+                val jsF = scraper.getEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
+                  Json.obj("url" -> url, "images" -> Json.toJson(infos))
+                }
+                jsF
+              case None => Future.successful(Json.obj("url" -> url, "images" -> JsArray(Seq.empty[JsValue])))
             }
-            jsF
-            case None => Future.successful(Json.obj("url" -> url, "images" -> JsArray(Seq.empty[JsValue])))
-          }
         }
         Future.sequence(imgRes) map { imgRes =>
           Ok(Json.obj("urls" -> JsArray(imgRes)))

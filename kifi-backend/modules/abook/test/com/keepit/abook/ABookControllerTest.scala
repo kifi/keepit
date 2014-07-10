@@ -1,28 +1,26 @@
 package com.keepit.abook
 
-
 import com.keepit.common.mail.EmailAddress
 import org.specs2.mutable._
 import com.keepit.common.db.slick.Database
 import com.keepit.abook.store.ABookRawInfoStore
 import com.keepit.model._
-import com.keepit.common.db.{ExternalId, TestDbInfo, Id}
+import com.keepit.common.db.{ ExternalId, TestDbInfo, Id }
 import play.api.libs.json._
-import com.keepit.common.actor.{TestActorSystemModule, StandaloneTestActorSystemModule}
+import com.keepit.common.actor.{ TestActorSystemModule, StandaloneTestActorSystemModule }
 import play.api.libs.json.JsArray
-import com.keepit.common.cache.{HashMapMemoryCacheModule, ABookCacheModule}
+import com.keepit.common.cache.{ HashMapMemoryCacheModule, ABookCacheModule }
 import scala.Some
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import akka.actor.ActorSystem
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import play.api.test.{FakeHeaders, FakeRequest}
+import play.api.test.{ FakeHeaders, FakeRequest }
 import play.api.test.Helpers._
 import play.api.db.DB
 import java.sql.Driver
 import scala.concurrent.Await
 import com.keepit.common.queue.FakeSimpleQueueModule
 import com.keepit.typeahead.TypeaheadHit
-
 
 class ABookControllerTest extends Specification with ABookApplicationInjector with ABookTestHelper {
 
@@ -36,7 +34,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
   "abook controller" should {
 
     "support mobile (ios) upload" in {
-      running(new ABookApplication(modules:_*)) {
+      running(new ABookApplication(modules: _*)) {
         val uploadRoute = com.keepit.abook.routes.ABookController.uploadContacts(Id[User](1), ABookOrigins.IOS).url
         uploadRoute === "/internal/abook/ios/uploadContacts?userId=1"
         val payload = iosUploadJson
@@ -58,21 +56,21 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         // sanity check
         var nWait = 0
         while (abookInfo.state != ABookInfoStates.ACTIVE && nWait < 10) {
-           nWait += 1
-           result = controller.getABookInfo(Id[User](1), abookInfo.id.get)(FakeRequest())
-           status(result) must equalTo(OK)
-           contentType(result) must beSome("application/json")
-           val s = contentAsString(result)
-           s !== null
-           abookInfo = Json.fromJson[ABookInfo](Json.parse(s)).get
-           Thread.sleep(200)
+          nWait += 1
+          result = controller.getABookInfo(Id[User](1), abookInfo.id.get)(FakeRequest())
+          status(result) must equalTo(OK)
+          contentType(result) must beSome("application/json")
+          val s = contentAsString(result)
+          s !== null
+          abookInfo = Json.fromJson[ABookInfo](Json.parse(s)).get
+          Thread.sleep(200)
         }
         abookInfo.state === ABookInfoStates.ACTIVE
+      }
     }
-  }
 
     "support prefixQuery" in {
-      running(new ABookApplication(modules:_*)) {
+      running(new ABookApplication(modules: _*)) {
         val uploadRoute = com.keepit.abook.routes.ABookController.uploadContacts(Id[User](1), ABookOrigins.IOS).url
         uploadRoute === "/internal/abook/ios/uploadContacts?userId=1"
         val payload = iosUploadJson
@@ -115,7 +113,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         println(s"[query-all] result(${contacts.length}):${contacts.mkString(",")}")
         contacts !== null
         contacts.isEmpty !== true
-        contacts.length  === 4
+        contacts.length === 4
 
         // get 0
         resultQ = controller.prefixQuery(Id[User](1), "lolcat", Some(10))(FakeRequest())
@@ -127,7 +125,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         println(s"[query-0] result(${hits.length}):${hits.mkString(",")}")
         hits !== null
         hits.isEmpty === true
-        hits.length  === 0
+        hits.length === 0
 
         // search
         resultQ = controller.prefixQuery(Id[User](1), "ray", Some(10))(FakeRequest())
@@ -139,7 +137,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         println(s"[query-search] result(${hits.length}):${hits.mkString(",")}")
         hits !== null
         hits.isEmpty !== true
-        hits.length  === 1
+        hits.length === 1
 
         // limit
         resultQ = controller.prefixQuery(Id[User](1), "fo", Some(3))(FakeRequest())
@@ -151,12 +149,12 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         println(s"[query-limit] result(${hits.length}):${hits.mkString(",")}")
         hits !== null
         hits.isEmpty !== true
-        hits.length  === 3
+        hits.length === 3
       }
     }
 
     "support hide email from user" in {
-      running(new ABookApplication(modules:_*)) {
+      running(new ABookApplication(modules: _*)) {
         val hideEmailRoute = com.keepit.abook.routes.ABookController.hideEmailFromUser(Id[User](1), EmailAddress("tan@kifi.com"))
         hideEmailRoute.toString === "/internal/abook/1/hideEmailFromUser?email=tan%40kifi.com"
         val controller = inject[ABookController] // setup

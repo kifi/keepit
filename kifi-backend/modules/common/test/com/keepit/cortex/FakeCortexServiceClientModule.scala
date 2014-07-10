@@ -1,11 +1,10 @@
 package com.keepit.cortex
 
-
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 case class FakeCortexServiceClientModule() extends CortexServiceClientModule {
-  def configure(){}
+  def configure() {}
 
   @Singleton
   @Provides

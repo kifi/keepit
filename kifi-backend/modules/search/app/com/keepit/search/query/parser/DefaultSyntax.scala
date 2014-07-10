@@ -94,7 +94,7 @@ trait DefaultSyntax extends QueryParser {
   private def parse(result: List[QuerySpec]): List[QuerySpec] = {
     buf match {
       case "" => result.reverse
-      case _ => parse(parseFieldQuery()::result)
+      case _ => parse(parseFieldQuery() :: result)
     }
   }
 
@@ -111,7 +111,7 @@ trait DefaultSyntax extends QueryParser {
   override protected def buildQuery(querySpecList: List[QuerySpec]): Option[Query] = {
     val clauses = querySpecList.foldLeft(ArrayBuffer.empty[BooleanClause]) { (clauses, spec) =>
       val query = getFieldQuery(spec.field, spec.term, spec.quoted)
-      query.foreach{ query => clauses += new BooleanClause(query, spec.occur) }
+      query.foreach { query => clauses += new BooleanClause(query, spec.occur) }
       clauses
     }
     getBooleanQuery(clauses)

@@ -4,7 +4,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
-import com.keepit.model.{NormalizedURI, User, Collection}
+import com.keepit.model.{ NormalizedURI, User, Collection }
 import com.keepit.search.Searcher
 import com.keepit.search.line.LineIndexReader
 import com.keepit.search.util.LongArraySet
@@ -54,7 +54,7 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
   def getExternalId(id: Id[Collection]): Option[ExternalId[Collection]] = getExternalId(id.id)
 
   def getExternalId(id: Long): Option[ExternalId[Collection]] = {
-    searcher.getDecodedDocValue[String](externalIdField, id)(fromByteArray).map{ ExternalId[Collection](_) }
+    searcher.getDecodedDocValue[String](externalIdField, id)(fromByteArray).map { ExternalId[Collection](_) }
   }
 
   def getName(id: Id[Collection]): String = getName(id.id)
@@ -64,7 +64,7 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
   }
 
   def getCollections(userId: Id[User]): Seq[(Id[Collection], String)] = {
-    getUserToCollectionEdgeSet(userId).destIdSet.iterator.map{ id => (id, getName(id)) }.toSeq
+    getUserToCollectionEdgeSet(userId).destIdSet.iterator.map { id => (id, getName(id)) }.toSeq
   }
 }
 
@@ -106,7 +106,7 @@ class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, collectionNa
   }
 
   private[this] def detectCollectionNames(stems: IndexedSeq[Term], partialMatch: Boolean, field: String, doc: Int, collectionIdList: Array[Long], reader: AtomicReader): Set[(Int, Int, Long)] = {
-    val terms = stems.map{ t => new Term(field, t.text()) }
+    val terms = stems.map { t => new Term(field, t.text()) }
     val r = LineIndexReader(reader, doc, terms.toSet, collectionIdList.length, None)
     val detector = new CollectionNameDetector(r, collectionIdList)
     detector.detectAll(terms, partialMatch)
@@ -121,8 +121,8 @@ object CollectionToUriEdgeSet {
     new CollectionToUriEdgeSet(sourceId) with LongArraySetEdgeSet[Collection, NormalizedURI] {
       override protected val longArraySet = set
 
-      override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet){
-        override protected def createdAtByIndex(idx:Int): Long = {
+      override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
+        override protected def createdAtByIndex(idx: Int): Long = {
           val datetime = uriList.createdAt(idx)
           Util.unitToMillis(datetime)
         }

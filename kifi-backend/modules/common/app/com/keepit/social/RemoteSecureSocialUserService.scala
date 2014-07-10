@@ -1,13 +1,13 @@
 package com.keepit.social
 
 import com.keepit.inject.AppScoped
-import com.google.inject.{Provides, Singleton, Inject}
+import com.google.inject.{ Provides, Singleton, Inject }
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.akka.MonitoredAwait
 import play.api.Application
 import securesocial.core._
-import com.keepit.model.{UserSessionStates, UserSession}
+import com.keepit.model.{ UserSessionStates, UserSession }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import scala.Some
@@ -15,21 +15,21 @@ import securesocial.core.IdentityId
 import securesocial.core.providers.Token
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.controller.{RemoteActionAuthenticator, ActionAuthenticator}
-import securesocial.controllers.{TemplatesPlugin, DefaultTemplatesPlugin}
+import com.keepit.common.controller.{ RemoteActionAuthenticator, ActionAuthenticator }
+import securesocial.controllers.{ TemplatesPlugin, DefaultTemplatesPlugin }
 
 @AppScoped
-class RemoteSecureSocialAuthenticatorPlugin @Inject()(
-     shoeboxClient: ShoeboxServiceClient,
-     airbrake: AirbrakeNotifier,
-     monitoredAwait: MonitoredAwait,
-     app: Application
-  ) extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin {
+class RemoteSecureSocialAuthenticatorPlugin @Inject() (
+    shoeboxClient: ShoeboxServiceClient,
+    airbrake: AirbrakeNotifier,
+    monitoredAwait: MonitoredAwait,
+    app: Application) extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin {
 
   private def reportExceptions[T](f: => T): Either[Error, T] =
-    try Right(f) catch { case ex: Throwable =>
-      airbrake.notify(ex)
-      Left(new Error(ex))
+    try Right(f) catch {
+      case ex: Throwable =>
+        airbrake.notify(ex)
+        Left(new Error(ex))
     }
 
   private def authenticatorFromSession(session: UserSession): Authenticator = Authenticator(
@@ -40,7 +40,7 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject()(
     expirationDate = session.expires
   )
 
-  def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptions { }
+  def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptions {}
   def find(id: String): Either[Error, Option[Authenticator]] = reportExceptions {
     val externalIdOpt = try {
       Some(ExternalId[UserSession](id))
@@ -55,20 +55,20 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject()(
       }
     }
   }
-  def delete(id: String): Either[Error, Unit] = reportExceptions { }
+  def delete(id: String): Either[Error, Unit] = reportExceptions {}
 }
 
 @Singleton
 class RemoteSecureSocialUserPlugin @Inject() (
-     airbrake: AirbrakeNotifier,
-     shoeboxClient: ShoeboxServiceClient,
-     monitoredAwait: MonitoredAwait
-  ) extends UserService with SecureSocialUserPlugin with Logging {
+    airbrake: AirbrakeNotifier,
+    shoeboxClient: ShoeboxServiceClient,
+    monitoredAwait: MonitoredAwait) extends UserService with SecureSocialUserPlugin with Logging {
 
   private def reportExceptions[T](f: => T): T =
-    try f catch { case ex: Throwable =>
-      airbrake.notify(ex)
-      throw ex
+    try f catch {
+      case ex: Throwable =>
+        airbrake.notify(ex)
+        throw ex
     }
 
   private var maybeSocialGraphPlugin: Option[SocialGraphPlugin] = None
@@ -113,8 +113,7 @@ case class RemoteSecureSocialModule() extends SecureSocialModule {
     shoeboxClient: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier,
     monitoredAwait: MonitoredAwait,
-    app: play.api.Application
-  ): SecureSocialAuthenticatorPlugin = {
+    app: play.api.Application): SecureSocialAuthenticatorPlugin = {
     new RemoteSecureSocialAuthenticatorPlugin(shoeboxClient, airbrake, monitoredAwait, app)
   }
 
@@ -123,8 +122,7 @@ case class RemoteSecureSocialModule() extends SecureSocialModule {
   def secureSocialUserPlugin(
     airbrake: AirbrakeNotifier,
     shoeboxClient: ShoeboxServiceClient,
-    monitoredAwait: MonitoredAwait
-  ): SecureSocialUserPlugin = {
+    monitoredAwait: MonitoredAwait): SecureSocialUserPlugin = {
     new RemoteSecureSocialUserPlugin(airbrake, shoeboxClient, monitoredAwait)
   }
 

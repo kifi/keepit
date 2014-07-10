@@ -24,12 +24,12 @@ class CRPImpl() extends CRP {
     var pNew = 1f / (1 + ncluster)
 
     var i = 0
-    while( i < N ){
+    while (i < N) {
       var maxSim = -1 * Float.MaxValue
       var maxIdx = 0
       val v = points(i)
 
-      for ( j <- (0 until ncluster)){
+      for (j <- (0 until ncluster)) {
         val sim = MatrixUtils.cosineDistance(clusterSums(j), v)
         if (sim > maxSim) {
           maxIdx = j
@@ -38,7 +38,7 @@ class CRPImpl() extends CRP {
       }
 
       // if v is not strongly associated with any existing clusters, create a new one with probability pNew
-      if (maxSim < pNew && Random.nextFloat() < pNew){
+      if (maxSim < pNew && Random.nextFloat() < pNew) {
         val newClusterSum = new Array[Float](dim)
         System.arraycopy(v, 0, newClusterSum, 0, dim)
 
@@ -51,13 +51,13 @@ class CRPImpl() extends CRP {
         pNew = 1f / (1 + ncluster)
 
       } else {
-        (0 until dim).foreach{ k => clusterSums(maxIdx)(k) += v(k)}
+        (0 until dim).foreach { k => clusterSums(maxIdx)(k) += v(k) }
         clusterIds(maxIdx).append(i)
       }
 
       i += 1
     }
 
-    CRPClusterResult(clusterSums.toArray, clusterIds.map{_.toArray}.toArray)
+    CRPClusterResult(clusterSums.toArray, clusterIds.map { _.toArray }.toArray)
   }
 }

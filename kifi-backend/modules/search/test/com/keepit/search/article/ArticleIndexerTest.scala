@@ -17,7 +17,7 @@ import org.specs2.mutable._
 import org.specs2.specification.Scope
 import play.api.test.Helpers._
 import scala.collection.JavaConversions._
-import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
+import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient }
 import com.keepit.search.SearchConfig
 import com.google.inject.Singleton
 import com.keepit.search.index.DefaultAnalyzer
@@ -258,7 +258,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       store += (uri1.id.get -> mkArticle(uri1.id.get, "title1 titles", "content1 alldocs body soul"))
 
       val doc = indexer.buildIndexable(IndexableUri(uri1)).buildDocument
-      doc.getFields.forall{ f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
+      doc.getFields.forall { f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
     })
 
     "delete documents with inactive, active, unscrapable, or scrape_later state" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
@@ -298,10 +298,10 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       import com.keepit.search.article.ArticleRecordSerializer._
 
       val searcher = indexer.getSearcher
-      Seq(uri1, uri2, uri3).map{ uri =>
+      Seq(uri1, uri2, uri3).map { uri =>
         val recOpt: Option[ArticleRecord] = searcher.getDecodedDocValue("rec", uri.id.get.id)
         recOpt must beSome[ArticleRecord]
-        recOpt.map{ rec =>
+        recOpt.map { rec =>
           rec.title === uri.title.get
           rec.url === uri.url
         }

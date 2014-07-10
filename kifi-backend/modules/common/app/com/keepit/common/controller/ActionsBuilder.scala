@@ -1,10 +1,10 @@
 package com.keepit.common.controller
 
 import com.keepit.common.concurrent.ExecutionContext
-import securesocial.core.{SecureSocial, SecuredRequest}
+import securesocial.core.{ SecureSocial, SecuredRequest }
 import scala.concurrent.Future
 import play.api.mvc._
-import play.api.libs.json.{JsValue, JsNumber}
+import play.api.libs.json.{ JsValue, JsNumber }
 import play.api.i18n.Messages
 import securesocial.core.SecuredRequest
 
@@ -35,10 +35,9 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
     p
   }
 
-  private def ActionHandlerAsync[T](parser: BodyParser[T], apiClient: Boolean, allowPending: Boolean, authFilter: AuthenticatedRequest[T] => Boolean)
-                                   (onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
-                                    onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult] = unhandledUnAuthenticated[T]("onSocial", apiClient),
-                                    onUnauthenticated: Request[T] => Future[SimpleResult] = unhandledUnAuthenticated[T]("onUnauth", apiClient)): Action[T] = {
+  private def ActionHandlerAsync[T](parser: BodyParser[T], apiClient: Boolean, allowPending: Boolean, authFilter: AuthenticatedRequest[T] => Boolean)(onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
+    onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult] = unhandledUnAuthenticated[T]("onSocial", apiClient),
+    onUnauthenticated: Request[T] => Future[SimpleResult] = unhandledUnAuthenticated[T]("onUnauth", apiClient)): Action[T] = {
 
     val filteredAuthenticatedRequest: AuthenticatedRequest[T] => Future[SimpleResult] = { request =>
       if (authFilter(request)) {

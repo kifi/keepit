@@ -24,32 +24,31 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.typeahead.PrefixFilter
 import com.keepit.search.feed.FeedCommander
 
-class SearchController @Inject()(
+class SearchController @Inject() (
     searcherFactory: MainSearcherFactory,
     userSearchFilterFactory: UserSearchFilterFactory,
     searchCommander: SearchCommander,
     feedCommander: FeedCommander,
-    userExperimentCommander: RemoteUserExperimentCommander
-  ) extends SearchServiceController {
+    userExperimentCommander: RemoteUserExperimentCommander) extends SearchServiceController {
 
-  def distSearch() = Action(parse.tolerantJson){ request =>
+  def distSearch() = Action(parse.tolerantJson) { request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
     val searchRequest = (json \ "request")
 
     // keep the following in sync with SearchServiceClientImpl
-    val userId  = (searchRequest \ "userId").as[Long]
-    val lang1   = (searchRequest \ "lang1").as[String]
-    val lang2   = (searchRequest \ "lang2").asOpt[String]
-    val query   = (searchRequest \ "query").as[String]
-    val filter  = (searchRequest \ "filter").asOpt[String]
+    val userId = (searchRequest \ "userId").as[Long]
+    val lang1 = (searchRequest \ "lang1").as[String]
+    val lang2 = (searchRequest \ "lang2").asOpt[String]
+    val query = (searchRequest \ "query").as[String]
+    val filter = (searchRequest \ "filter").asOpt[String]
     val maxHits = (searchRequest \ "maxHits").as[Int]
     val context = (searchRequest \ "context").asOpt[String]
-    val start   = (searchRequest \ "start").asOpt[String]
-    val end     = (searchRequest \ "end").asOpt[String]
-    val tz      = (searchRequest \ "tz").asOpt[String]
-    val coll    = (searchRequest \ "coll").asOpt[String]
-    val debug   = (searchRequest \ "debug").asOpt[String]
+    val start = (searchRequest \ "start").asOpt[String]
+    val end = (searchRequest \ "end").asOpt[String]
+    val tz = (searchRequest \ "tz").asOpt[String]
+    val coll = (searchRequest \ "coll").asOpt[String]
+    val debug = (searchRequest \ "debug").asOpt[String]
 
     val id = Id[User](userId)
     val userExperiments = Await.result(userExperimentCommander.getExperimentsByUser(id), 5 seconds)
@@ -74,22 +73,22 @@ class SearchController @Inject()(
     Ok(result.json)
   }
 
-  def distLangFreqs() = Action(parse.tolerantJson){ request =>
+  def distLangFreqs() = Action(parse.tolerantJson) { request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
     val userId = Id[User]((json \ "request").as[Long])
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    Ok(Json.toJson(searchCommander.distLangFreqs(shards, userId).map{ case (lang, freq) => lang.lang -> freq }))
+    Ok(Json.toJson(searchCommander.distLangFreqs(shards, userId).map { case (lang, freq) => lang.lang -> freq }))
   }
 
-  def distFeeds() = Action(parse.tolerantJson){ request =>
+  def distFeeds() = Action(parse.tolerantJson) { request =>
     val json = request.body
     val shardSpec = (json \ "shards").as[String]
     val searchRequest = (json \ "request")
 
     // keep the following in sync with SearchServiceClientImpl
     val userId = (searchRequest \ "userId").as[Long]
-    val limit  = (searchRequest \ "limit").as[Int]
+    val limit = (searchRequest \ "limit").as[Int]
 
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
     Ok(Json.toJson(feedCommander.distFeeds(shards, Id[User](userId), limit)))
@@ -101,28 +100,28 @@ class SearchController @Inject()(
     Ok
   }
 
-  def searchWithConfig() = Action(parse.tolerantJson){ request =>
+  def searchWithConfig() = Action(parse.tolerantJson) { request =>
     val js = request.body
     val userId = Id[User]((js \ "userId").as[Long])
     val query = (js \ "query").as[String]
     val maxHits = (js \ "maxHits").as[Int]
     val predefinedConfig = (js \ "config").as[Map[String, String]]
     val res = searchCommander.search(userId, acceptLangs = Seq(), experiments = Set.empty, query = query, filter = None, maxHits = maxHits, lastUUIDStr = None, context = None, predefinedConfig = Some(SearchConfig(predefinedConfig)), start = None, end = None, tz = None, coll = None)
-    Ok(JsArray(res.hits.map{ x =>
+    Ok(JsArray(res.hits.map { x =>
       val id = x.uriId.id
       val title = x.bookmark.title.getOrElse("")
       val url = x.bookmark.url
-      Json.obj("uriId" -> id, "title" -> title, "url" -> url )
+      Json.obj("uriId" -> id, "title" -> title, "url" -> url)
     }))
   }
 
-  def searchUsers() = Action(parse.tolerantJson){ request =>
+  def searchUsers() = Action(parse.tolerantJson) { request =>
     val UserSearchRequest(userId, queryText, maxHits, context, filter) = Json.fromJson[UserSearchRequest](request.body).get
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
     val userFilter = filter match {
       case "f" if userId.isDefined => userSearchFilterFactory.friendsOnly(userId.get, Some(context))
-      case "nf"if userId.isDefined => userSearchFilterFactory.nonFriendsOnly(userId.get, Some(context))
+      case "nf" if userId.isDefined => userSearchFilterFactory.nonFriendsOnly(userId.get, Some(context))
       case _ => userSearchFilterFactory.default(userId, Some(context))
     }
     val res = parser.parse(queryText) match {
@@ -136,15 +135,15 @@ class SearchController @Inject()(
     filter match {
       case Some("f") => userSearchFilterFactory.friendsOnly(userId.get, context)
       case Some("nf") => userSearchFilterFactory.nonFriendsOnly(userId.get, context)
-      case _ => userSearchFilterFactory.default(userId, context, excludeSelf = true)      // may change this later
+      case _ => userSearchFilterFactory.default(userId, context, excludeSelf = true) // may change this later
     }
   }
 
-  def userTypeahead() = Action(parse.json){ request =>
+  def userTypeahead() = Action(parse.json) { request =>
     val UserSearchRequest(userIdOpt, queryText, maxHits, context, filter) = Json.fromJson[UserSearchRequest](request.body).get
     val userId = userIdOpt.get
     log.info(s"user search: userId = ${userId}")
-    val excludedExperiments = Seq("fake")   // TODO(yingjie): Address admins differently
+    val excludedExperiments = Seq("fake") // TODO(yingjie): Address admins differently
     val searchFilter = createFilter(Some(userId), Some(filter), None)
     val searcher = searcherFactory.getUserSearcher
     val parser = new UserQueryParser(DefaultAnalyzer.defaultAnalyzer)
@@ -157,7 +156,7 @@ class SearchController @Inject()(
   }
 
   def sharingUserInfo(userId: Id[User]) = Action.async(parse.json) { implicit request =>
-    SafeFuture{
+    SafeFuture {
       val uriIds = request.body.as[Seq[Long]].map(Id[NormalizedURI](_))
       val info = searchCommander.sharingUserInfo(userId, uriIds)
       Ok(Json.toJson(info))

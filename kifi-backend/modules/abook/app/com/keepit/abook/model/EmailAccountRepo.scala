@@ -1,13 +1,13 @@
 package com.keepit.abook.model
 
-import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.google.inject.{ Inject, ImplementedBy, Singleton }
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
-import com.keepit.common.plugin.{SequencingActor, SchedulingProperties, SequencingPlugin}
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.duration._
@@ -23,9 +23,8 @@ trait EmailAccountRepo extends Repo[EmailAccount] with SeqNumberFunction[EmailAc
 
 @Singleton
 class EmailAccountRepoImpl @Inject() (
-  val db: DataBaseComponent,
-  val clock: Clock
-) extends DbRepo[EmailAccount] with SeqNumberDbFunction[EmailAccount] with EmailAccountRepo {
+    val db: DataBaseComponent,
+    val clock: Clock) extends DbRepo[EmailAccount] with SeqNumberDbFunction[EmailAccount] with EmailAccountRepo {
 
   import db.Driver.simple._
 
@@ -51,7 +50,7 @@ class EmailAccountRepoImpl @Inject() (
   override def invalidateCache(emailAccount: EmailAccount)(implicit session: RSession): Unit = {}
 
   def getByAddress(address: EmailAddress)(implicit session: RSession): Option[EmailAccount] = {
-    (for(row <- rows if row.address === address) yield row).firstOption
+    (for (row <- rows if row.address === address) yield row).firstOption
   }
 
   def internByAddress(address: EmailAddress)(implicit session: RWSession): EmailAccount = {
@@ -62,14 +61,14 @@ class EmailAccountRepoImpl @Inject() (
   }
 
   def internByAddresses(addresses: EmailAddress*)(implicit session: RWSession): Seq[EmailAccount] = {
-    val existingAccounts = (for(row <- rows if row.address inSet(addresses)) yield row).list
+    val existingAccounts = (for (row <- rows if row.address inSet (addresses)) yield row).list
     val lowerCasedExistingAddresses = existingAccounts.map(_.address.address.toLowerCase)
     val allByLowerCasedAddress = addresses.map { address => address.address.toLowerCase -> address }.toMap
     val toBeInserted = (allByLowerCasedAddress -- lowerCasedExistingAddresses).values.map(address => EmailAccount(address = address)).toSeq
     if (toBeInserted.isEmpty) { existingAccounts }
     else {
       rows.insertAll(toBeInserted: _*)
-      (for(row <- rows if row.address inSet(addresses)) yield row).list
+      (for (row <- rows if row.address inSet (addresses)) yield row).list
     }
   }
 
@@ -90,9 +89,8 @@ class EmailAccountRepoImpl @Inject() (
 trait EmailAccountSequencingPlugin extends SequencingPlugin
 
 class EmailAccountSequencingPluginImpl @Inject() (
-  override val actor: ActorInstance[EmailAccountSequencingActor],
-  override val scheduling: SchedulingProperties
-  ) extends EmailAccountSequencingPlugin {
+    override val actor: ActorInstance[EmailAccountSequencingActor],
+    override val scheduling: SchedulingProperties) extends EmailAccountSequencingPlugin {
 
   override val interval: FiniteDuration = 20 seconds
 }
@@ -103,5 +101,4 @@ class EmailAccountSequenceNumberAssigner @Inject() (db: Database, repo: EmailAcc
 
 class EmailAccountSequencingActor @Inject() (
   assigner: EmailAccountSequenceNumberAssigner,
-  airbrake: AirbrakeNotifier
-) extends SequencingActor(assigner, airbrake)
+  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)

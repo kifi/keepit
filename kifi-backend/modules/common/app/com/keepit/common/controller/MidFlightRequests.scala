@@ -1,7 +1,7 @@
 package com.keepit.common.controller
 
 import com.google.common.collect.MapMaker
-import com.google.inject.{Provider, Inject, Singleton}
+import com.google.inject.{ Provider, Inject, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.mvc.RequestHeader
 import java.util.concurrent.ConcurrentMap
@@ -50,9 +50,9 @@ class MidFlightRequests @Inject() (
   }
 
   def topRequests: String = {
-    val paths = currentRequests.keySet().toList map {rh => rh.path}
+    val paths = currentRequests.keySet().toList map { rh => rh.path }
     val countedPaths = paths.foldLeft(Map.empty[String, Int]) { (m, x) => m + ((x, m.getOrElse(x, 0) + 1)) }
-    countedPaths.toList.sortWith{case t => t._1._2 > t._2._2}.map{t => s"${t._2}:${t._1}"}.mkString(",")
+    countedPaths.toList.sortWith { case t => t._1._2 > t._2._2 }.map { t => s"${t._2}:${t._1}" }.mkString(",")
   }
 
   def goingOut(rh: RequestHeader): Long = currentRequests.remove(rh)

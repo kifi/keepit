@@ -3,9 +3,9 @@ package com.keepit.eliza.model
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
-import com.keepit.model.{User, NormalizedURI}
+import com.keepit.model.{ User, NormalizedURI }
 import play.api.libs.json._
-import com.keepit.social.{BasicNonUser, NonUserKinds, NonUserKind}
+import com.keepit.social.{ BasicNonUser, NonUserKinds, NonUserKind }
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
@@ -57,25 +57,22 @@ case class NonUserEmailParticipant(address: EmailAddress) extends NonUserPartici
 }
 
 case class NonUserThread(
-  id: Option[Id[NonUserThread]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  createdBy: Id[User],
-  participant: NonUserParticipant,
-  threadId: Id[MessageThread],
-  uriId: Option[Id[NormalizedURI]],
-  notifiedCount: Int,
-  lastNotifiedAt: Option[DateTime],
-  threadUpdatedByOtherAt: Option[DateTime],
-  muted: Boolean = false,
-  state: State[NonUserThread] = NonUserThreadStates.ACTIVE,
-  accessToken: ThreadAccessToken = ThreadAccessToken()
-) extends ModelWithState[NonUserThread] with ParticipantThread {
+    id: Option[Id[NonUserThread]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    createdBy: Id[User],
+    participant: NonUserParticipant,
+    threadId: Id[MessageThread],
+    uriId: Option[Id[NormalizedURI]],
+    notifiedCount: Int,
+    lastNotifiedAt: Option[DateTime],
+    threadUpdatedByOtherAt: Option[DateTime],
+    muted: Boolean = false,
+    state: State[NonUserThread] = NonUserThreadStates.ACTIVE,
+    accessToken: ThreadAccessToken = ThreadAccessToken()) extends ModelWithState[NonUserThread] with ParticipantThread {
   def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withState(state: State[NonUserThread]) = copy(state = state)
 }
-
-
 
 object NonUserThreadStates extends States[NonUserThread]

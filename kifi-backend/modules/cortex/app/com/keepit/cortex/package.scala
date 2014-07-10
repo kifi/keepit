@@ -4,7 +4,6 @@ import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.cortex.models.word2vec.Word2Vec
 
-
 package object cortex {
 
   val S3_CORTEX_BUCKET = "amazon.s3.cortex.bucket"
@@ -47,7 +46,7 @@ package object cortex {
   }
 
   object PublishedModels {
-    val denseLDAVersion = ModelVersion[DenseLDA](1)       // doesn't have to sync with cortex lda version
+    val denseLDAVersion = ModelVersion[DenseLDA](1) // doesn't have to sync with cortex lda version
     val defaultSparsity = 5
   }
 

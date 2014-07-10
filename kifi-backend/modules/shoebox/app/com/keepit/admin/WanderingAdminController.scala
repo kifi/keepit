@@ -1,45 +1,44 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.model._
-import com.keepit.graph.wander.{Wanderlust}
+import com.keepit.graph.wander.{ Wanderlust }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.Database.Replica
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.time._
-import play.api.mvc.{SimpleResult}
-import scala.concurrent.{Future, Promise}
-import scala.util.{Failure, Success}
+import play.api.mvc.{ SimpleResult }
+import scala.concurrent.{ Future, Promise }
+import scala.util.{ Failure, Success }
 import scala.concurrent.duration._
 
 class WanderingAdminController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
-  graphClient: GraphServiceClient,
-  db: Database,
-  userRepo: UserRepo,
-  socialUserRepo: SocialUserInfoRepo,
-  uriRepo: NormalizedURIRepo,
-  clock: Clock
-) extends AdminController(actionAuthenticator) {
+    actionAuthenticator: ActionAuthenticator,
+    graphClient: GraphServiceClient,
+    db: Database,
+    userRepo: UserRepo,
+    socialUserRepo: SocialUserInfoRepo,
+    uriRepo: NormalizedURIRepo,
+    clock: Clock) extends AdminController(actionAuthenticator) {
 
   private def doWander(wanderlust: Wanderlust): Future[(Seq[(User, Int)], Seq[(SocialUserInfo, Int)], Seq[(NormalizedURI, Int)], Seq[(String, Int)])] = {
     graphClient.wander(wanderlust).map { collisions =>
 
       val sortedUsers = db.readOnlyReplica { implicit session =>
         collisions.users.map { case (userId, count) => userRepo.get(userId) -> count }
-      }.toSeq.sortBy(- _._2)
+      }.toSeq.sortBy(-_._2)
 
       val sortedSocialUsers = db.readOnlyReplica { implicit session =>
         collisions.socialUsers.map { case (socialUserInfoId, count) => socialUserRepo.get(socialUserInfoId) -> count }
-      }.toSeq.sortBy(- _._2)
+      }.toSeq.sortBy(-_._2)
 
       val sortedUris = db.readOnlyReplica { implicit session =>
         collisions.uris.map { case (uriId, count) => uriRepo.get(uriId) -> count }
-      }.filter(_._1.restriction.isEmpty).toSeq.sortBy(- _._2)
+      }.filter(_._1.restriction.isEmpty).toSeq.sortBy(-_._2)
 
-      val sortedExtras = collisions.extra.toSeq.sortBy(- _._2)
+      val sortedExtras = collisions.extra.toSeq.sortBy(-_._2)
 
       (sortedUsers, sortedSocialUsers, sortedUris, sortedExtras)
     }

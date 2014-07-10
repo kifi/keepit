@@ -1,15 +1,14 @@
 package com.keepit.shoebox
 
 import scala.util._
-import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
+import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 
-
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.db.slick._
 import play.api.db.DB
 import play.api.Play
 import akka.actor.ActorSystem
-import com.keepit.model.{UrlPatternRuleRepoImpl, UrlPatternRuleRepo}
+import com.keepit.model.{ UrlPatternRuleRepoImpl, UrlPatternRuleRepo }
 
 case class ShoeboxDbInfo() extends DbInfo {
   def masterDatabase = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))

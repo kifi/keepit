@@ -2,12 +2,12 @@ package com.keepit.common
 
 import java.util.Locale
 import org.joda.time.format._
-import org.joda.time.{DateTime, DateTimeZone, LocalDate, LocalTime}
-import com.google.inject.{ImplementedBy, Singleton}
+import org.joda.time.{ DateTime, DateTimeZone, LocalDate, LocalTime }
+import com.google.inject.{ ImplementedBy, Singleton }
 import play.api.libs.json.JsError
 import play.api.libs.json.JsString
 import play.api.libs.json.JsSuccess
-import play.api.libs.json.{JsValue, Format}
+import play.api.libs.json.{ JsValue, Format }
 import play.api.libs.json.JsNumber
 
 package object time {
@@ -61,7 +61,7 @@ package object time {
       Array[DateTimeParser](
         ISODateTimeFormat.dateTime.getParser,
         DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS Z").getParser))
-    .toFormatter.withLocale(Locale.ENGLISH).withZone(DEFAULT_DATE_TIME_ZONE)
+      .toFormatter.withLocale(Locale.ENGLISH).withZone(DEFAULT_DATE_TIME_ZONE)
 
   val STANDARD_DATE_FORMAT = ISODateTimeFormat.date.withLocale(Locale.ENGLISH).withZone(DEFAULT_DATE_TIME_ZONE)
 

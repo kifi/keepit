@@ -2,7 +2,7 @@ package com.keepit.common.zookeeper
 
 import net.codingwell.scalaguice.ScalaModule
 
-import com.google.inject.{Singleton, Provides, Provider}
+import com.google.inject.{ Singleton, Provides, Provider }
 
 import akka.actor.Scheduler
 
@@ -14,17 +14,16 @@ import com.keepit.common.KestrelCombinator
 import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
-
 import play.api.Play.current
 
 import scala.Some
-import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.{ Await, Future, Promise }
 import scala.collection.JavaConversions._
 import play.api.libs.ws.WS
 import scala.concurrent.duration._
-import com.keepit.common.actor.{DevActorSystemModule, ProdActorSystemModule}
+import com.keepit.common.actor.{ DevActorSystemModule, ProdActorSystemModule }
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest
-import com.amazonaws.services.ec2.{AmazonEC2, AmazonEC2Client}
+import com.amazonaws.services.ec2.{ AmazonEC2, AmazonEC2Client }
 import com.amazonaws.auth.BasicAWSCredentials
 
 trait DiscoveryModule extends ScalaModule
@@ -32,7 +31,7 @@ trait DiscoveryModule extends ScalaModule
 object DiscoveryModule {
 
   lazy val isCanary = current.configuration.getBoolean("service.canary").getOrElse(false) // for "canary/sandbox" instance
-  lazy val isLocal  = current.configuration.getBoolean("service.local").getOrElse(false) // for "local-prod" testing -- can be removed when things settle down
+  lazy val isLocal = current.configuration.getBoolean("service.local").getOrElse(false) // for "local-prod" testing -- can be removed when things settle down
 
   val LOCAL_AMZN_INFO = AmazonInstanceInfo(AmazonInstanceId("i-f168c1a8"),
     localHostname = "localhost",
@@ -85,7 +84,7 @@ class ProdDiscoveryModule(serviceType: ServiceType, servicesToListenOn: Seq[Serv
         tag <- instance.getTags
       } yield tag
       val name = tags.find(_.getKey == "Name") map (_.getValue)
-      val service = tags.find(_.getKey == "Service") map (_.getValue )
+      val service = tags.find(_.getKey == "Service") map (_.getValue)
       val loadBalancer = tags.find(_.getKey == "ELB") map (_.getValue)
 
       AmazonInstanceInfo(
@@ -117,13 +116,13 @@ class ProdDiscoveryModule(serviceType: ServiceType, servicesToListenOn: Seq[Serv
   @Provides
   def zooKeeperClient(): ZooKeeperClient = {
     val servers = current.configuration.getString("zookeeper.servers").get
-    new ZooKeeperClientImpl(servers, 2000, Some({zk1 => println(s"in callback, got $zk1")}))
+    new ZooKeeperClientImpl(servers, 2000, Some({ zk1 => println(s"in callback, got $zk1") }))
   }
 
   @Singleton
   @Provides
   def serviceDiscovery(zk: ZooKeeperClient, airbrake: Provider[AirbrakeNotifier], services: FortyTwoServices,
-                       amazonInstanceInfo: AmazonInstanceInfo, scheduler: Scheduler): ServiceDiscovery = {
+    amazonInstanceInfo: AmazonInstanceInfo, scheduler: Scheduler): ServiceDiscovery = {
     val isCanary = DiscoveryModule.isCanary
     if (serviceType == ServiceType.SHOEBOX && isCanary) {
       new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = isCanary, servicesToListenOn = servicesToListenOn :+ ServiceType.SHOEBOX)
@@ -153,7 +152,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
   @Provides
   @Singleton
   def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo, airbrake: Provider[AirbrakeNotifier], scheduler: Scheduler): ServiceCluster =
-    new ServiceCluster(serviceType, airbrake, scheduler, ()=>{}) tap { cluster =>
+    new ServiceCluster(serviceType, airbrake, scheduler, () => {}) tap { cluster =>
       cluster.register(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true, RemoteService(amazonInstanceInfo, ServiceStatus.UP, serviceType)))
     }
 
@@ -168,7 +167,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
       def register() = thisInstance.get
       def isLeader() = true
-      def changeStatus(newStatus: ServiceStatus): Unit = {state = Some(newStatus)}
+      def changeStatus(newStatus: ServiceStatus): Unit = { state = Some(newStatus) }
       def startSelfCheck(): Future[Boolean] = Promise[Boolean].success(true).future
       def forceUpdate(): Unit = {}
       def myStatus: Option[ServiceStatus] = state

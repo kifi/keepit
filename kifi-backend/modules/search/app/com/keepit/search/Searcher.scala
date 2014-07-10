@@ -1,6 +1,5 @@
 package com.keepit.search
 
-
 import com.keepit.search.semantic._
 import com.keepit.search.semantic.SemanticVector.Sketch
 import com.keepit.search.query.QueryUtil._
@@ -22,7 +21,6 @@ import org.apache.lucene.search.Filter
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.Weight
 
-
 object Searcher {
   def apply(indexReader: DirectoryReader) = new Searcher(WrappedIndexReader(indexReader))
   def reopen(oldSearcher: Searcher) = {
@@ -40,7 +38,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
   // search: hits are ordered by score
   def search(query: Query): Seq[SearcherHit] = {
     val hitBuf = new ArrayBuffer[SearcherHit]()
-    doSearch(query){ (scorer, reader) =>
+    doSearch(query) { (scorer, reader) =>
       val idMapper = reader.getIdMapper
       var doc = scorer.nextDoc()
       while (doc != NO_MORE_DOCS) {
@@ -62,8 +60,8 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
   }
 
   def doSearch(weight: Weight)(f: (Scorer, WrappedSubReader) => Unit) {
-    if(weight != null) {
-      indexReader.getContext.leaves.foreach{ subReaderContext =>
+    if (weight != null) {
+      indexReader.getContext.leaves.foreach { subReaderContext =>
         val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
         val scorer = weight.scorer(subReaderContext, true, false, subReader.getLiveDocs)
         if (scorer != null) {
@@ -77,8 +75,8 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     val rewrittenQuery = rewrite(query)
     if (rewrittenQuery != null) {
       val weight = createNormalizedWeight(rewrittenQuery)
-      if(weight != null) {
-        indexReader.getContext.leaves.foreach{ subReaderContext =>
+      if (weight != null) {
+        indexReader.getContext.leaves.foreach { subReaderContext =>
           val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
           val scorer = weight.scorer(subReaderContext, true, false, subReader.getLiveDocs)
           val iterator = filter.getDocIdSet(subReaderContext, subReader.getLiveDocs).iterator
@@ -90,16 +88,15 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     }
   }
 
-
   def foreachReader(f: WrappedSubReader => Unit) {
-    indexReader.getContext.leaves.foreach{ subReaderContext =>
+    indexReader.getContext.leaves.foreach { subReaderContext =>
       val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
       f(subReader)
     }
   }
 
   def findDocIdAndAtomicReaderContext(id: Long): Option[(Int, AtomicReaderContext)] = {
-    indexReader.getContext.leaves.foreach{ subReaderContext =>
+    indexReader.getContext.leaves.foreach { subReaderContext =>
       val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
       val liveDocs = subReader.getLiveDocs
       val docid = subReader.getIdMapper.getDocId(id)
@@ -108,29 +105,31 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     None
   }
 
-  def getDecodedDocValue[T](field: String, id: Long)(implicit decode: (Array[Byte], Int, Int)=>T): Option[T] = {
-    findDocIdAndAtomicReaderContext(id).flatMap { case (docid, context) =>
-      val reader = context.reader
-      var docValues = reader.getBinaryDocValues(field)
-      if (docValues != null) {
-        var ref = new BytesRef()
-        docValues.get(docid, ref)
-        Some(decode(ref.bytes, ref.offset, ref.length))
-      } else {
-        None
-      }
+  def getDecodedDocValue[T](field: String, id: Long)(implicit decode: (Array[Byte], Int, Int) => T): Option[T] = {
+    findDocIdAndAtomicReaderContext(id).flatMap {
+      case (docid, context) =>
+        val reader = context.reader
+        var docValues = reader.getBinaryDocValues(field)
+        if (docValues != null) {
+          var ref = new BytesRef()
+          docValues.get(docid, ref)
+          Some(decode(ref.bytes, ref.offset, ref.length))
+        } else {
+          None
+        }
     }
   }
 
   def getLongDocValue(field: String, id: Long): Option[Long] = {
-    findDocIdAndAtomicReaderContext(id).flatMap { case (docid, context) =>
-      val reader = context.reader
-      var docValues = reader.getNumericDocValues(field)
-      if (docValues != null) {
-        Some(docValues.get(docid))
-      } else {
-        None
-      }
+    findDocIdAndAtomicReaderContext(id).flatMap {
+      case (docid, context) =>
+        val reader = context.reader
+        var docValues = reader.getNumericDocValues(field)
+        if (docValues != null) {
+          Some(docValues.get(docid))
+        } else {
+          None
+        }
     }
   }
 
@@ -151,10 +150,10 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
 
   protected def getSemanticVectorComposer(term: Term) = {
     val composer = new SemanticVectorComposer
-    indexReader.getContext.leaves.foreach{ subReaderContext =>
+    indexReader.getContext.leaves.foreach { subReaderContext =>
       val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
       val tp = subReader.termPositionsEnum(term)
-      if (tp != null){
+      if (tp != null) {
         while (tp.nextDoc < NO_MORE_DOCS) {
           var freq = tp.freq()
           numPayloadsMap += term -> freq
@@ -180,7 +179,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
   }
 
   def getSemanticVectorSketch(terms: Set[Term]): Sketch = {
-    terms.foldLeft(SemanticVector.emptySketch){ (sketch, term) =>
+    terms.foldLeft(SemanticVector.emptySketch) { (sketch, term) =>
       SemanticVector.updateSketch(sketch, getSemanticVectorSketch(term))
       sketch
     }

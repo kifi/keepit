@@ -1,27 +1,27 @@
 package com.keepit.abook
 
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.model._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.{ExternalId, Model, Id}
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.{ ExternalId, Model, Id }
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 
 @ImplementedBy(classOf[ABookInfoRepoImpl])
 trait ABookInfoRepo extends Repo[ABookInfo] {
-  def getById(id:Id[ABookInfo])(implicit session:RSession):Option[ABookInfo]
-  def getByExternalId(externalId:ExternalId[ABookInfo])(implicit session:RSession):Option[ABookInfo]
-  def getByUserIdAndABookId(userId:Id[User], id:Id[ABookInfo])(implicit session:RSession):Option[ABookInfo]
-  def findByUserIdOriginAndOwnerId(userId:Id[User], origin:ABookOriginType, ownerId:Option[String])(implicit session:RSession):Option[ABookInfo]
-  def findByUserIdAndOrigin(userId:Id[User], origin:ABookOriginType)(implicit session:RSession):Seq[ABookInfo]
-  def findByUserId(userId:Id[User])(implicit session:RSession):Seq[ABookInfo]
-  def isOverdue(id:Id[ABookInfo], due:DateTime = currentDateTime)(implicit session:RSession):Boolean
+  def getById(id: Id[ABookInfo])(implicit session: RSession): Option[ABookInfo]
+  def getByExternalId(externalId: ExternalId[ABookInfo])(implicit session: RSession): Option[ABookInfo]
+  def getByUserIdAndABookId(userId: Id[User], id: Id[ABookInfo])(implicit session: RSession): Option[ABookInfo]
+  def findByUserIdOriginAndOwnerId(userId: Id[User], origin: ABookOriginType, ownerId: Option[String])(implicit session: RSession): Option[ABookInfo]
+  def findByUserIdAndOrigin(userId: Id[User], origin: ABookOriginType)(implicit session: RSession): Seq[ABookInfo]
+  def findByUserId(userId: Id[User])(implicit session: RSession): Seq[ABookInfo]
+  def isOverdue(id: Id[ABookInfo], due: DateTime = currentDateTime)(implicit session: RSession): Boolean
   def internKifiABook(userId: Id[User])(implicit session: RWSession): ABookInfo
 }
 
-class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) extends DbRepo[ABookInfo] with ABookInfoRepo with Logging {
+class ABookInfoRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[ABookInfo] with ABookInfoRepo with Logging {
 
   import db.Driver.simple._
 
@@ -47,7 +47,7 @@ class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ex
     (for { c <- rows if c.id === id } yield c).firstOption
   }
 
-  def getByExternalId(externalId:ExternalId[ABookInfo])(implicit session:RSession):Option[ABookInfo] = {
+  def getByExternalId(externalId: ExternalId[ABookInfo])(implicit session: RSession): Option[ABookInfo] = {
     (for { c <- rows if c.externalId === externalId } yield c).firstOption
   }
 
@@ -55,12 +55,12 @@ class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ex
     (for { c <- rows if c.userId === userId && c.id === id } yield c).firstOption
   }
 
-  def findByUserIdOriginAndOwnerId(userId: Id[User], origin: ABookOriginType, ownerId:Option[String])(implicit session:RSession): Option[ABookInfo] = {
-    val q = for { c <- rows if c.userId === userId && c.origin === origin && c.ownerId === ownerId} yield c // assumption: NULL === None
+  def findByUserIdOriginAndOwnerId(userId: Id[User], origin: ABookOriginType, ownerId: Option[String])(implicit session: RSession): Option[ABookInfo] = {
+    val q = for { c <- rows if c.userId === userId && c.origin === origin && c.ownerId === ownerId } yield c // assumption: NULL === None
     q.firstOption
   }
 
-  def findByUserIdAndOrigin(userId: Id[User], origin: ABookOriginType)(implicit session:RSession): Seq[ABookInfo] = {
+  def findByUserIdAndOrigin(userId: Id[User], origin: ABookOriginType)(implicit session: RSession): Seq[ABookInfo] = {
     val q = for { c <- rows if c.userId === userId && c.origin === origin } yield c
     q.list
   }
@@ -71,7 +71,7 @@ class ABookInfoRepoImpl @Inject() (val db:DataBaseComponent, val clock:Clock) ex
   }
 
   def isOverdue(id: Id[ABookInfo], due: DateTime)(implicit session: RSession): Boolean = {
-    (for{ c <- rows if c.id === id && c.updatedAt >= due} yield c).firstOption.isDefined
+    (for { c <- rows if c.id === id && c.updatedAt >= due } yield c).firstOption.isDefined
   }
 
   def internKifiABook(userId: Id[User])(implicit session: RWSession): ABookInfo = {

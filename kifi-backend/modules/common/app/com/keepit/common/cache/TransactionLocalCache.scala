@@ -1,6 +1,6 @@
 package com.keepit.common.cache
 
-import com.keepit.serializer.{SafeLocalSerializer, NoCopyLocalSerializer, LocalSerializer, Serializer}
+import com.keepit.serializer.{ SafeLocalSerializer, NoCopyLocalSerializer, LocalSerializer, Serializer }
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
 import scala.concurrent.Future
@@ -8,20 +8,19 @@ import play.api.libs.json._
 import com.keepit.common.performance._
 import com.keepit.common.logging.Logging
 
-class TransactionLocalCache[K <: Key[T], T] private(
-  override val minTTL: Duration,
-  override val maxTTL: Duration,
-  override val outerCache: Option[ObjectCache[K, T]],
-  underlying: ObjectCache[K, T],
-  serializer: Serializer[T],
-  localSerializerOpt: Option[LocalSerializer[T]]
-) extends ObjectCache[K, T] with Logging {
+class TransactionLocalCache[K <: Key[T], T] private (
+    override val minTTL: Duration,
+    override val maxTTL: Duration,
+    override val outerCache: Option[ObjectCache[K, T]],
+    underlying: ObjectCache[K, T],
+    serializer: Serializer[T],
+    localSerializerOpt: Option[LocalSerializer[T]]) extends ObjectCache[K, T] with Logging {
 
   // outerCache is wrapped in ReadOnlyCacheWrapper to block updates silently
-  def this(underlying: ObjectCache[K, T], serializer: Serializer[T], localSerializerOpt:Option[LocalSerializer[T]]) =
+  def this(underlying: ObjectCache[K, T], serializer: Serializer[T], localSerializerOpt: Option[LocalSerializer[T]]) =
     this(Duration.Inf, Duration.Inf, Some(new ReadOnlyCacheWrapper(underlying)), underlying, serializer, localSerializerOpt)
 
-  val localSerializer:LocalSerializer[T] = localSerializerOpt.getOrElse(SafeLocalSerializer(serializer))
+  val localSerializer: LocalSerializer[T] = localSerializerOpt.getOrElse(SafeLocalSerializer(serializer))
 
   sealed trait LocalObjectState
   case class LFound(value: Any) extends LocalObjectState
@@ -47,7 +46,7 @@ class TransactionLocalCache[K <: Key[T], T] private(
   }
 
   protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, ObjectState[T]] = {
-    keys.foldLeft(Map.empty[K, ObjectState[T]]){ (result, key) =>
+    keys.foldLeft(Map.empty[K, ObjectState[T]]) { (result, key) =>
       txnLocalStore.get(key) match {
         case Some(state) =>
           state match {
@@ -66,19 +65,20 @@ class TransactionLocalCache[K <: Key[T], T] private(
 
   def flush(): Unit = {
     // all changes made in the transaction are going to be flushed directly to the underlying cache
-    txnLocalStore.foreach{ case (key, state) =>
-      state match {
-        case LFound(serialized) => {
-          val v = timing(s"TLCache-reads($key,${state.toString.take(500)})", 50) {
-            localSerializer.localReads(serialized)
+    txnLocalStore.foreach {
+      case (key, state) =>
+        state match {
+          case LFound(serialized) => {
+            val v = timing(s"TLCache-reads($key,${state.toString.take(500)})", 50) {
+              localSerializer.localReads(serialized)
+            }
+            timing(s"TLCache-writes($key,${state.toString.take(500)},$v)", 50) {
+              underlying.set(key, v)
+            }
           }
-          timing(s"TLCache-writes($key,${state.toString.take(500)},$v)", 50) {
-            underlying.set(key, v)
-          }
+          case LRemoved() => underlying.remove(key)
+          case state => throw new Exception(s"this state ($state) should not be in the cache")
         }
-        case LRemoved() => underlying.remove(key)
-        case state => throw new Exception(s"this state ($state) should not be in the cache")
-      }
     }
   }
 }
@@ -89,9 +89,9 @@ class ReadOnlyCacheWrapper[K <: Key[T], T](underlying: ObjectCache[K, T]) extend
 
   protected[cache] def getFromInnerCache(key: K): ObjectState[T] = underlying.getFromInnerCache(key)
 
-  protected[cache] def setInnerCache(key: K, valueOpt: Option[T]) = { } // ignore silently
+  protected[cache] def setInnerCache(key: K, valueOpt: Option[T]) = {} // ignore silently
 
   protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, ObjectState[T]] = underlying.bulkGetFromInnerCache(keys)
 
-  def remove(key: K): Unit = { } // ignore silently
+  def remove(key: K): Unit = {} // ignore silently
 }

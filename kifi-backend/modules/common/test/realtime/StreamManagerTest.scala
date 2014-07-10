@@ -38,7 +38,7 @@ class StreamManagerTest extends SpecificationWithJUnit {
       println(Await.result(promise, Duration(1, SECONDS)))
 
 */
-      1===1
+      1 === 1
     }
 
   }

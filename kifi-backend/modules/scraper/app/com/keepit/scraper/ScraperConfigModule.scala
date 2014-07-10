@@ -1,8 +1,8 @@
 package com.keepit.scraper
 
 import net.codingwell.scalaguice.ScalaModule
-import com.google.inject.{Provides, Singleton}
-import play.api.{Play, Configuration}
+import com.google.inject.{ Provides, Singleton }
+import play.api.{ Play, Configuration }
 
 trait ScraperConfigModule extends ScalaModule {
 

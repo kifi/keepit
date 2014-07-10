@@ -3,12 +3,12 @@ package com.keepit.controllers.admin
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
 
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 
 import play.api.Play.current
 import views.html
 
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.google.inject.Inject
 import play.api.mvc.Action
 

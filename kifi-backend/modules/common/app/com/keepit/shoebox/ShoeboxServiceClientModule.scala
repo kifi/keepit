@@ -1,6 +1,6 @@
 package com.keepit.shoebox
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -16,7 +16,7 @@ case class ProdShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
 
   @Singleton
   @Provides
-  def shoeboxServiceClient (
+  def shoeboxServiceClient(
     client: HttpClient,
     cacheProvider: ShoeboxCacheProvider,
     serviceDiscovery: ServiceDiscovery,

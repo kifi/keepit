@@ -4,10 +4,10 @@ import com.google.inject.Inject
 
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier, HealthcheckPlugin }
 import com.keepit.common.time._
 import com.keepit.commanders.KeepInterner
 import com.keepit.heimdal._
@@ -18,7 +18,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import scala.Some
 import play.api.libs.json.JsNumber
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 import com.keepit.normalizer.NormalizedURIInterner
 
 private case class SendableBookmark(
@@ -26,8 +26,7 @@ private case class SendableBookmark(
   title: Option[String],
   url: String,
   isPrivate: Boolean,
-  state: State[Keep]
-)
+  state: State[Keep])
 
 private object SendableBookmark {
   private implicit val externalIdFormat = ExternalId.format[Keep]
@@ -57,7 +56,7 @@ class ExtBookmarksController @Inject() (
   searchClient: SearchServiceClient,
   normalizedURIInterner: NormalizedURIInterner,
   clock: Clock)
-    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController{
+    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def removeTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
@@ -144,7 +143,7 @@ class ExtBookmarksController @Inject() (
   def updateKeepInfo() = JsonAction.authenticatedParseJson { request =>
     val json = request.body
     val url = (json \ "url").as[String]
-    val privateKeep =  (json \ "private").asOpt[Boolean]
+    val privateKeep = (json \ "private").asOpt[Boolean]
     val title = (json \ "title").asOpt[String]
 
     val bookmarkOpt = db.readOnlyMaster { implicit s =>

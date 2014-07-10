@@ -2,7 +2,7 @@ package com.keepit.common.mail
 
 import org.specs2.mutable.Specification
 
-import play.api.libs.json.{JsString, JsSuccess, JsError}
+import play.api.libs.json.{ JsString, JsSuccess, JsError }
 import play.api.mvc.QueryStringBindable
 
 class EmailAddressTest extends Specification {

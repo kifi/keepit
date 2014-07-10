@@ -6,5 +6,5 @@ import com.keepit.learning.porndetector.PornWordLikelihood
 case class FakePornWordLikelihoodStore() extends PornWordLikelihoodStore {
   override def get(key: String) = Some(PornWordLikelihood(Map("a" -> 1f)))
   def -=(key: String) = null
-  def +=(kv: (String,PornWordLikelihood)) = null
+  def +=(kv: (String, PornWordLikelihood)) = null
 }

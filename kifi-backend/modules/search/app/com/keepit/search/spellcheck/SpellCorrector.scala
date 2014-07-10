@@ -1,6 +1,6 @@
 package com.keepit.search.spellcheck
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 
 @ImplementedBy(classOf[SpellCorrectorImpl])
@@ -8,7 +8,7 @@ trait SpellCorrector {
   def getScoredSuggestions(input: String, numSug: Int, enableBoost: Boolean): Array[ScoredSuggest]
 }
 
-class SpellCorrectorImpl(spellIndexer: SpellIndexer, suggestionProviderFlag: String, enableAdjScore: Boolean, orderedAdjScore: Boolean = false) extends SpellCorrector{
+class SpellCorrectorImpl(spellIndexer: SpellIndexer, suggestionProviderFlag: String, enableAdjScore: Boolean, orderedAdjScore: Boolean = false) extends SpellCorrector {
   val spellChecker = spellIndexer.getSpellChecker
   val stopwords = StandardAnalyzer.STOP_WORDS_SET
   def suggestionProvider = {
@@ -28,18 +28,18 @@ class SpellCorrectorImpl(spellIndexer: SpellIndexer, suggestionProviderFlag: Str
 
   private def boost(input: String, suggests: Array[ScoredSuggest]): Array[ScoredSuggest] = {
     val deco = new ScoreDecorator(input)
-    suggests.map{deco.decorate(_)}.sortBy(_.score*(-1.0))
+    suggests.map { deco.decorate(_) }.sortBy(_.score * (-1.0))
   }
 
   private def makeVariations(input: String, numSug: Int): SpellVariations = {
     val terms = input.trim().split(" ")
-    val variations = terms.map{ getSimilarTerms(_, numSug.min(10))}.toList        // need a limit here
+    val variations = terms.map { getSimilarTerms(_, numSug.min(10)) }.toList // need a limit here
     SpellVariations(variations)
   }
 
   private def getSimilarTerms(term: String, numSug: Int): Array[String] = {
-    val similar = spellChecker.suggestSimilar(term, numSug)       // this never includes the original term
-    if (spellChecker.exist(term) || stopwords.contains(term) || similar.isEmpty) Array(term) ++ similar.take(3)   // add 3 just in case misspelling words were indexed
+    val similar = spellChecker.suggestSimilar(term, numSug) // this never includes the original term
+    if (spellChecker.exist(term) || stopwords.contains(term) || similar.isEmpty) Array(term) ++ similar.take(3) // add 3 just in case misspelling words were indexed
     else similar
   }
 }
@@ -47,14 +47,14 @@ class SpellCorrectorImpl(spellIndexer: SpellIndexer, suggestionProviderFlag: Str
 class MetaphoneBooster {
   val mdist = new MetaphoneDistance()
   def similarity(a: Array[String], b: Array[String]): Float = {
-    (a zip b).map{ case (x, y) => mdist.getDistance(x, y) }.foldLeft(1f)(_*_)
+    (a zip b).map { case (x, y) => mdist.getDistance(x, y) }.foldLeft(1f)(_ * _)
   }
 }
 
 class CompositeBooster {
   val comp = new CompositeDistance()
   def similarity(a: Array[String], b: Array[String]): Float = {
-    (a zip b).map{ case (x, y) => comp.getDistance(x, y) }.foldLeft(1f)(_*_)
+    (a zip b).map { case (x, y) => comp.getDistance(x, y) }.foldLeft(1f)(_ * _)
   }
 }
 

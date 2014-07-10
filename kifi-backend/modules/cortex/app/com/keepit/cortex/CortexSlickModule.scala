@@ -1,14 +1,13 @@
 package com.keepit.cortex
 
-import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
+import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 
-import com.google.inject.{Provides, Singleton}
-import com.keepit.common.db.slick.{DbExecutionContext, DbInfo, SlickModule}
+import com.google.inject.{ Provides, Singleton }
+import com.keepit.common.db.slick.{ DbExecutionContext, DbInfo, SlickModule }
 
 import akka.actor.ActorSystem
 import play.api.Play
 import play.api.db.DB
-
 
 case class CortexDbInfo() extends DbInfo {
   def masterDatabase = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))

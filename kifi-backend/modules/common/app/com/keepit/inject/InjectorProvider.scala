@@ -33,7 +33,7 @@ sealed trait InjectorProvider {
   }
 
   def withInjector[T](overridingModules: Module*)(f: Injector => T) = {
-    val customModules = Modules.`override`(module).`with`(overridingModules:_*)
+    val customModules = Modules.`override`(module).`with`(overridingModules: _*)
     val injector = createInjector(customModules)
 
     f(injector)

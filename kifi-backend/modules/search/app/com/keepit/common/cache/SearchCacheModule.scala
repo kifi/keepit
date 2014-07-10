@@ -1,7 +1,7 @@
 package com.keepit.common.cache
 
 import scala.concurrent.duration._
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
 import com.keepit.search._
 import com.keepit.social.BasicUserUserIdCache
@@ -12,7 +12,7 @@ import com.keepit.search.tracker.ClickHistoryBuilder
 import com.keepit.search.tracker.ProbablisticLRUChunkCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 
-case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
+case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
 
   @Singleton
   @Provides

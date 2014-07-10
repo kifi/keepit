@@ -1,21 +1,21 @@
 package com.keepit.eliza.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick.{Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent}
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.db.slick.{ Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
-import com.keepit.model.{DeepLocator, User, NormalizedURI}
+import com.keepit.common.db.{ ModelWithExternalId, Id, ExternalId }
+import com.keepit.model.{ DeepLocator, User, NormalizedURI }
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import com.keepit.common.time.{DateTimeJsonFormat}
+import com.keepit.common.time.{ DateTimeJsonFormat }
 
 import scala.util.hashing.MurmurHash3
 import scala.concurrent.duration.Duration
-import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin}
+import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin }
 import com.keepit.common.strings.StringWithNoLineBreaks
 
 class MessageThreadParticipants(val userParticipants: Map[Id[User], DateTime], val nonUserParticipants: Map[NonUserParticipant, DateTime]) {
@@ -91,11 +91,11 @@ object MessageThreadParticipants {
   }
 
   def apply(initialUserParticipants: Set[Id[User]]): MessageThreadParticipants = {
-    new MessageThreadParticipants(initialUserParticipants.map{userId => (userId, currentDateTime)}.toMap, Map.empty[NonUserParticipant, DateTime])
+    new MessageThreadParticipants(initialUserParticipants.map { userId => (userId, currentDateTime) }.toMap, Map.empty[NonUserParticipant, DateTime])
   }
 
   def apply(initialUserParticipants: Set[Id[User]], initialNonUserPartipants: Set[NonUserParticipant]): MessageThreadParticipants = {
-    new MessageThreadParticipants(initialUserParticipants.map{userId => (userId, currentDateTime)}.toMap, initialNonUserPartipants.map { nup => (nup, currentDateTime) }.toMap)
+    new MessageThreadParticipants(initialUserParticipants.map { userId => (userId, currentDateTime) }.toMap, initialNonUserPartipants.map { nup => (nup, currentDateTime) }.toMap)
   }
 
   def apply(userParticipants: Map[Id[User], DateTime], nonUserParticipants: Map[NonUserParticipant, DateTime]): MessageThreadParticipants = {
@@ -104,19 +104,18 @@ object MessageThreadParticipants {
 }
 
 case class MessageThread(
-    id: Option[Id[MessageThread]] = None,
-    createdAt: DateTime = currentDateTime,
-    updateAt: DateTime = currentDateTime,
-    externalId: ExternalId[MessageThread] = ExternalId(),
-    uriId: Option[Id[NormalizedURI]],
-    url: Option[String],
-    nUrl: Option[String],
-    pageTitle: Option[String],
-    participants: Option[MessageThreadParticipants],
-    participantsHash: Option[Int],
-    replyable: Boolean
-  )
-  extends ModelWithExternalId[MessageThread] {
+  id: Option[Id[MessageThread]] = None,
+  createdAt: DateTime = currentDateTime,
+  updateAt: DateTime = currentDateTime,
+  externalId: ExternalId[MessageThread] = ExternalId(),
+  uriId: Option[Id[NormalizedURI]],
+  url: Option[String],
+  nUrl: Option[String],
+  pageTitle: Option[String],
+  participants: Option[MessageThreadParticipants],
+  participantsHash: Option[Int],
+  replyable: Boolean)
+    extends ModelWithExternalId[MessageThread] {
   def deepLocator: DeepLocator = DeepLocator(s"/messages/$externalId")
 
   def clean(): MessageThread = copy(pageTitle = pageTitle.map(_.trimAndRemoveLineBreaks()))
@@ -138,11 +137,9 @@ case class MessageThread(
 
   def containsUser(user: Id[User]): Boolean = participants.exists(_.contains(user))
   def containsNonUser(nonUser: NonUserParticipant): Boolean = participants.exists(_.contains(nonUser))
-  def allParticipantsExcept(user: Id[User]): Set[Id[User]] = participants.map(_.allUsersExcept(user)).getOrElse(Set[Id[User]]())  //Todo: add in nonuser participants?
+  def allParticipantsExcept(user: Id[User]): Set[Id[User]] = participants.map(_.allUsersExcept(user)).getOrElse(Set[Id[User]]()) //Todo: add in nonuser participants?
   def allParticipants: Set[Id[User]] = participants.map(_.allUsers).getOrElse(Set[Id[User]]())
 }
-
-
 
 object MessageThread {
   implicit def format = (
@@ -167,5 +164,5 @@ case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) ext
 }
 
 class MessageThreadExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[MessageThreadExternalIdKey, MessageThread](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[MessageThreadExternalIdKey, MessageThread](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 

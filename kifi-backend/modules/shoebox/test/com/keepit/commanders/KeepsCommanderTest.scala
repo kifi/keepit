@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.keepit.common.controller.{FakeActionAuthenticatorModule, FakeActionAuthenticator, ActionAuthenticator}
+import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeActionAuthenticator, ActionAuthenticator }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
@@ -13,23 +13,23 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import com.keepit.shoebox.{FakeShoeboxServiceModule, FakeKeepImportsModule}
+import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import play.api.libs.json.{JsArray, JsString, Json}
+import play.api.libs.json.{ JsArray, JsString, Json }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
   def modules = FakeKeepImportsModule() ::
-                ShoeboxFakeStoreModule() ::
-                FakeExternalServiceModule() ::
-                FakeSearchServiceClientModule() ::
-                FakeCortexServiceClientModule() ::
-                FakeScrapeSchedulerModule() ::
-                FakeShoeboxServiceModule() ::
-                FakeActionAuthenticatorModule() ::
-                Nil
+    ShoeboxFakeStoreModule() ::
+    FakeExternalServiceModule() ::
+    FakeSearchServiceClientModule() ::
+    FakeCortexServiceClientModule() ::
+    FakeScrapeSchedulerModule() ::
+    FakeShoeboxServiceModule() ::
+    FakeActionAuthenticatorModule() ::
+    Nil
 
   "KeepsCommander" should {
     "export keeps" in {

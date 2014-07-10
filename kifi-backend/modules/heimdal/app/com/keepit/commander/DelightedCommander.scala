@@ -1,6 +1,6 @@
 package com.keepit.commander
 
-import com.google.inject.{Inject, ImplementedBy}
+import com.google.inject.{ Inject, ImplementedBy }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
@@ -8,8 +8,8 @@ import com.keepit.model._
 import com.keepit.common.collection._
 import com.ning.http.client.Realm.AuthScheme
 import org.joda.time.DateTime
-import play.api.libs.json.{JsString, JsValue, Json}
-import play.api.libs.ws.{WS, Response}
+import play.api.libs.json.{ JsString, JsValue, Json }
+import play.api.libs.ws.{ WS, Response }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import play.api.http.Status
@@ -23,10 +23,10 @@ trait DelightedCommander {
 }
 
 class DelightedCommanderImpl @Inject() (
-  db: Database,
-  delightedUserRepo: DelightedUserRepo,
-  delightedAnswerRepo: DelightedAnswerRepo,
-  delightedConfig: DelightedConfig) extends DelightedCommander {
+    db: Database,
+    delightedUserRepo: DelightedUserRepo,
+    delightedAnswerRepo: DelightedAnswerRepo,
+    delightedConfig: DelightedConfig) extends DelightedCommander {
 
   private def delightedRequest(route: String, data: Map[String, Seq[String]]): Future[Response] = {
     WS.url(delightedConfig.url + route).withAuth(delightedConfig.apiKey, "", AuthScheme.BASIC).post(data)

@@ -20,5 +20,4 @@ object TrackingId {
     new String(buf)
   }
 
-
 }

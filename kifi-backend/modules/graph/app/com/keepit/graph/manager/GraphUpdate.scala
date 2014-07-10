@@ -1,10 +1,10 @@
 package com.keepit.graph.manager
 
-import com.keepit.common.db.{State, Id, SequenceNumber}
+import com.keepit.common.db.{ State, Id, SequenceNumber }
 import com.keepit.common.reflection.CompanionTypeSystem
 import com.keepit.model._
 import com.keepit.social.SocialNetworkType
-import com.keepit.cortex.models.lda.{UriSparseLDAFeatures, DenseLDA, SparseTopicRepresentation}
+import com.keepit.cortex.models.lda.{ UriSparseLDAFeatures, DenseLDA, SparseTopicRepresentation }
 import com.keepit.cortex.core.ModelVersion
 import org.joda.time.DateTime
 
@@ -90,7 +90,7 @@ case class SparseLDAGraphUpdate(modelVersion: ModelVersion[DenseLDA], uriFeature
   val seq = kind.seq(CortexSequenceNumber(modelVersion, uriFeatures.uriSeq).toLong)
 }
 
-case object SparseLDAGraphUpdate extends GraphUpdateKind[SparseLDAGraphUpdate]{
+case object SparseLDAGraphUpdate extends GraphUpdateKind[SparseLDAGraphUpdate] {
   val code = "sparse_lda_graph_update"
 }
 

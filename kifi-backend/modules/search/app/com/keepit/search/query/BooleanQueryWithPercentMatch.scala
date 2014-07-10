@@ -18,7 +18,7 @@ import org.apache.lucene.util.Bits.MatchNoBits
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import scala.math._
-import java.util.{List => JList}
+import java.util.{ List => JList }
 import com.keepit.common.logging.Logging
 
 trait PercentMatchQuery extends Query {
@@ -38,12 +38,12 @@ object BooleanQueryWithPercentMatch {
   def apply(clauses: JList[BooleanClause], percentMatch: Float, disableCoord: Boolean) = {
     val query = new BooleanQueryWithPercentMatch(disableCoord)
     query.setPercentMatch(percentMatch)
-    clauses.foreach{ clause => query.add(clause) }
+    clauses.foreach { clause => query.add(clause) }
     query
   }
 }
 
-class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) with PercentMatchQuery{
+class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) with PercentMatchQuery {
 
   override def rewrite(reader: IndexReader): Query = {
     if (clauses.size() == 1) { // optimize 1-clause queries
@@ -51,7 +51,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
       if (!c.isProhibited()) {
         var query = c.getQuery().rewrite(reader)
         if (getBoost() != 1.0f) {
-           // if rewrite was no-op then clone before boost
+          // if rewrite was no-op then clone before boost
           if (query eq c.getQuery()) query = query.clone().asInstanceOf[Query]
           query.setBoost(getBoost() * query.getBoost())
         }
@@ -77,7 +77,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
   override def clone(): BooleanQuery = {
     val clone = new BooleanQueryWithPercentMatch(disableCoord)
     clone.setPercentMatch(percentMatch)
-    clauses.foreach{ c => clone.add(c) }
+    clauses.foreach { c => clone.add(c) }
     clone.setBoost(getBoost)
     clone.setMinimumNumberShouldMatch(getMinimumNumberShouldMatch)
     clone
@@ -93,23 +93,23 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
         var sum = 0.0d
         var sumOnReq = 0.0f
         var sumOnOpt = 0.0f
-        clauses.zip(weights).foreach{ case (c, w) =>
-          if (c.isProhibited()) {
-            prohibitedWeights += w
-          } else {
-            val value = w.getValueForNormalization().toDouble
-            val sqrtValue = sqrt(value).toFloat
+        clauses.zip(weights).foreach {
+          case (c, w) =>
+            if (c.isProhibited()) {
+              prohibitedWeights += w
+            } else {
+              val value = w.getValueForNormalization().toDouble
+              val sqrtValue = sqrt(value).toFloat
 
-            if (c.isRequired()) {
-              sumOnReq += sqrtValue
-              requiredWeights += w
+              if (c.isRequired()) {
+                sumOnReq += sqrtValue
+                requiredWeights += w
+              } else {
+                sumOnOpt += sqrtValue
+                optionalWeights += ((w, sqrtValue))
+              }
+              sum += value
             }
-            else {
-              sumOnOpt += sqrtValue
-              optionalWeights += ((w, sqrtValue))
-            }
-            sum += value
-          }
         }
         (sum.toFloat * getBoost() * getBoost(), sumOnReq, sumOnOpt)
       }
@@ -120,7 +120,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
       private[this] val coordFactorForRequired = if (disableCoord) 1.0f else similarity.coord(requiredWeights.length, requiredWeights.length)
       private[this] val coordFactorForOptional = {
         val maxCoord = requiredWeights.length + optionalWeights.length
-        (0 to optionalWeights.length).map{ i => if (disableCoord) 1.0f else similarity.coord(i + requiredWeights.length, maxCoord) }.toArray
+        (0 to optionalWeights.length).map { i => if (disableCoord) 1.0f else similarity.coord(i + requiredWeights.length, maxCoord) }.toArray
       }
 
       override def getValueForNormalization(): Float = normalizationValue
@@ -149,9 +149,10 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
 
         val optional = if (optionalWeights.isEmpty) Seq.empty[BooleanScoreDoc] else {
           val buf = new ArrayBuffer[BooleanScoreDoc]
-          optionalWeights.foreach { case (w, value) =>
-            val subScorer = w.scorer(context, true, false, acceptDocs)
-            if (subScorer != null) buf += new BooleanScoreDoc(subScorer, value)
+          optionalWeights.foreach {
+            case (w, value) =>
+              val subScorer = w.scorer(context, true, false, acceptDocs)
+              if (subScorer != null) buf += new BooleanScoreDoc(subScorer, value)
           }
           buf
         }
@@ -160,16 +161,16 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
           // no required and optional clauses.
           null
         } else {
-          val hotDocSet = hotDocs.map{ f => f.getDocIdSet(context, acceptDocs).bits() }.getOrElse(new MatchNoBits(context.reader.maxDoc))
+          val hotDocSet = hotDocs.map { f => f.getDocIdSet(context, acceptDocs).bits() }.getOrElse(new MatchNoBits(context.reader.maxDoc))
 
           BooleanScorer(this, disableCoord, similarity, threshold, thresholdForHotDocs, coordFactorForRequired, coordFactorForOptional,
-                        required, totalValueOnRequired, optional, totalValueOnOptional, prohibited, hotDocSet)
+            required, totalValueOnRequired, optional, totalValueOnOptional, prohibited, hotDocSet)
         }
       }
 
       override def explain(context: AtomicReaderContext, doc: Int): Explanation = {
-        val hotDocSet = hotDocs.map{ f => f.getDocIdSet(context, context.reader.getLiveDocs).bits }.getOrElse(new MatchNoBits(context.reader.maxDoc))
-        val maxCoord = clauses.filterNot{ _.isProhibited }.size
+        val hotDocSet = hotDocs.map { f => f.getDocIdSet(context, context.reader.getLiveDocs).bits }.getOrElse(new MatchNoBits(context.reader.maxDoc))
+        val maxCoord = clauses.filterNot { _.isProhibited }.size
 
         val sumExpl = new ComplexExplanation()
 
@@ -177,7 +178,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
         var sum = 0.0f
         var fail = false
         var overlapValue = totalValueOnRequired
-        requiredWeights.foreach{ w =>
+        requiredWeights.foreach { w =>
           val e = w.explain(context, doc)
           if (e.isMatch()) {
             sumExpl.addDetail(e)
@@ -189,7 +190,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
             fail = true
           }
         }
-        prohibitedWeights.foreach{ w =>
+        prohibitedWeights.foreach { w =>
           val e = w.explain(context, doc)
           if (e.isMatch()) {
             val r = new Explanation(0.0f, s"match on prohibited clause (${w.getQuery().toString()})")
@@ -198,14 +199,15 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
             fail = true
           }
         }
-        optionalWeights.foreach{ case (w, v) =>
-          val e = w.explain(context, doc)
-          if (e.isMatch()) {
-            sumExpl.addDetail(e)
-            coord += 1
-            sum += e.getValue()
-            overlapValue += v
-          }
+        optionalWeights.foreach {
+          case (w, v) =>
+            val e = w.explain(context, doc)
+            if (e.isMatch()) {
+              sumExpl.addDetail(e)
+              coord += 1
+              sum += e.getValue()
+              overlapValue += v
+            }
         }
 
         if (fail) {
@@ -229,14 +231,13 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
             if (hotDocSet.get(doc)) new Explanation(1.0f, "hot") else new Explanation(0.0f, "")
         }
 
-        sumExpl.setDescription(s"percentMatch(${overlapValue/totalValue*100}% = ${overlapValue}/${totalValue}, ${hot.getDescription}), sum of:")
+        sumExpl.setDescription(s"percentMatch(${overlapValue / totalValue * 100}% = ${overlapValue}/${totalValue}, ${hot.getDescription}), sum of:")
 
         if (disableCoord) {
           sumExpl
-        }
-        else {
+        } else {
           val coordFactor = similarity.coord(coord, maxCoord)
-          val result = new ComplexExplanation(sumExpl.isMatch(), sum*coordFactor, "product of:")
+          val result = new ComplexExplanation(sumExpl.isMatch(), sum * coordFactor, "product of:")
           result.addDetail(sumExpl)
           result.addDetail(new Explanation(coordFactor, s"coord(${coord}/${maxCoord})"))
           result
@@ -249,10 +250,10 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
     obj match {
       case other: BooleanQueryWithPercentMatch =>
         (percentMatch == other.getPercentMatch &&
-         getBoost == other.getBoost &&
-         clauses.equals(other.clauses) &&
-         getMinimumNumberShouldMatch == other.getMinimumNumberShouldMatch &&
-         disableCoord == other.disableCoord)
+          getBoost == other.getBoost &&
+          clauses.equals(other.clauses) &&
+          getMinimumNumberShouldMatch == other.getMinimumNumberShouldMatch &&
+          disableCoord == other.disableCoord)
       case _ => false
     }
   }
@@ -262,12 +263,12 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
 
 object BooleanScorer {
   def apply(weight: Weight, disableCoord: Boolean, similarity: Similarity, threshold: Float, thresholdForHotDocs: Float,
-            coordFactorForRequired: Float,
-            coordFactorForOptional: Array[Float],
-            required: Seq[Scorer], requiredValue: Float,
-            optional: Seq[BooleanScoreDoc], optionalValue: Float,
-            prohibited: Seq[Scorer],
-            hotDocSet: Bits) = {
+    coordFactorForRequired: Float,
+    coordFactorForOptional: Array[Float],
+    required: Seq[Scorer], requiredValue: Float,
+    optional: Seq[BooleanScoreDoc], optionalValue: Float,
+    prohibited: Seq[Scorer],
+    hotDocSet: Bits) = {
     def conjunction() = {
       val sorted = required.sortBy(_.cost())
       new BooleanAndScorer(weight, coordFactorForRequired, sorted.toArray, requiredValue)
@@ -384,8 +385,8 @@ class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Sc
 trait BooleanOrScorer extends Scorer
 
 class BooleanOrScorerImpl(weight: Weight, scorers: Seq[BooleanScoreDoc], coordFactors: Array[Float],
-                      threshold: Float, thresholdForHotDocs: Float, maxOverlapValue: Float, hotDocSet: Bits)
-extends Scorer(weight) with BooleanOrScorer with Logging {
+  threshold: Float, thresholdForHotDocs: Float, maxOverlapValue: Float, hotDocSet: Bits)
+    extends Scorer(weight) with BooleanOrScorer with Logging {
 
   private[this] var doc = -1
   private[this] var matchValue = 0.0f
@@ -489,7 +490,7 @@ class BooleanNotScorer(weight: Weight, scorer: Scorer, prohibited: Array[Scorer]
   override def cost(): Long = scorer.cost()
 
   private def isProhibited = {
-    prohibited.exists{ n =>
+    prohibited.exists { n =>
       if (n.docID < doc) n.advance(doc)
       (n.docID == doc)
     }

@@ -11,8 +11,7 @@ import play.api.libs.json._
 import com.keepit.cortex.models.lda.LDATopicFeature
 import com.keepit.cortex.core.StatModelName
 
-
-trait CortexTypeMappers {  self: {val db: DataBaseComponent} =>
+trait CortexTypeMappers { self: { val db: DataBaseComponent } =>
   import db.Driver.simple._
 
   implicit def modelVersionMapper[M <: StatModel] = MappedColumnType.base[ModelVersion[M], Int](_.version, ModelVersion[M])
@@ -22,12 +21,12 @@ trait CortexTypeMappers {  self: {val db: DataBaseComponent} =>
   implicit def ldaTopicMapper = MappedColumnType.base[LDATopic, Int](_.index, LDATopic(_))
 
   implicit def ldaTopicFeatureMapper = MappedColumnType.base[LDATopicFeature, Blob](
-    { feat => new SerialBlob(FloatArrayFormmater.toBinary(feat.value))},
+    { feat => new SerialBlob(FloatArrayFormmater.toBinary(feat.value)) },
     { blob => val len = blob.length().toInt; val arr = FloatArrayFormmater.fromBinary(blob.getBytes(0, len)); LDATopicFeature(arr) }
   )
 
   implicit def sparseTopicRepresentationMapper = MappedColumnType.base[SparseTopicRepresentation, String](
     { topic => Json.stringify(Json.toJson(topic)) },
-    { jstr =>  Json.parse(jstr).as[SparseTopicRepresentation] }
+    { jstr => Json.parse(jstr).as[SparseTopicRepresentation] }
   )
 }

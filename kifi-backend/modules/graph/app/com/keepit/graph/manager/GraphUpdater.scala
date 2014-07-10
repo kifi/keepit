@@ -93,7 +93,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
   }
 
   private def processKeepGraphUpdate(update: KeepGraphUpdate)(implicit writer: GraphWriter) = {
-    val keepVertexId: VertexDataId[KeepReader] =  update.id
+    val keepVertexId: VertexDataId[KeepReader] = update.id
     val uriVertexId: VertexDataId[UriReader] = update.uriId
     val userVertexId: VertexDataId[UserReader] = update.userId
 
@@ -118,7 +118,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
   private def processLDAUpdate(update: SparseLDAGraphUpdate)(implicit writer: GraphWriter) = {
 
     def removeOldURITopicsIfExists(uriVertexId: VertexDataId[UriReader], numTopics: Int): Unit = {
-      (0 until numTopics).foreach{ i =>
+      (0 until numTopics).foreach { i =>
         val topicId = LDATopicId(update.modelVersion, LDATopic(i))
         writer.removeEdgeIfExists(uriVertexId, topicId, WeightedEdgeReader)
         writer.removeEdgeIfExists(topicId, uriVertexId, WeightedEdgeReader)
@@ -130,13 +130,14 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
 
     val uriData = UriData(uriVertexId)
 
-    update.uriFeatures.features.topics foreach { case (topic, score) =>
-      val topicId = LDATopicId(update.modelVersion, topic)
-      val topicVertexId: VertexDataId[LDATopicReader] = topicId
-      writer.saveVertex(LDATopicData(topicVertexId))
-      writer.saveVertex(uriData)
-      writer.saveEdge(uriVertexId, topicVertexId, WeightedEdgeData(score))
-      writer.saveEdge(topicVertexId, uriVertexId, WeightedEdgeData(score))
+    update.uriFeatures.features.topics foreach {
+      case (topic, score) =>
+        val topicId = LDATopicId(update.modelVersion, topic)
+        val topicVertexId: VertexDataId[LDATopicReader] = topicId
+        writer.saveVertex(LDATopicData(topicVertexId))
+        writer.saveVertex(uriData)
+        writer.saveEdge(uriVertexId, topicVertexId, WeightedEdgeData(score))
+        writer.saveEdge(topicVertexId, uriVertexId, WeightedEdgeData(score))
     }
   }
 

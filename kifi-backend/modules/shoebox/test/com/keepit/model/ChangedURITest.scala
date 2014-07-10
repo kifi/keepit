@@ -8,49 +8,49 @@ import com.keepit.common.db.SequenceNumber
 import org.joda.time.DateTime
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 
-class ChangedURITest extends Specification with ShoeboxTestInjector{
+class ChangedURITest extends Specification with ShoeboxTestInjector {
   "ChangedURIRepo" should {
     "work" in {
-       withDb() { implicit injector =>
-         val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+      withDb() { implicit injector =>
+        val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
-         db.readOnlyMaster{ implicit s =>
-           changedURIRepo.getHighestSeqNum() === Some(SequenceNumber.ZERO)
-         }
+        db.readOnlyMaster { implicit s =>
+          changedURIRepo.getHighestSeqNum() === Some(SequenceNumber.ZERO)
+        }
 
-         db.readWrite { implicit s =>
-           (1 to 5).map{ i =>
-             val tmp = ChangedURI(oldUriId = Id[NormalizedURI](i), newUriId = Id[NormalizedURI](i+100))
-             Thread.sleep(2)
-             changedURIRepo.save(tmp)
-           }
-         }
+        db.readWrite { implicit s =>
+          (1 to 5).map { i =>
+            val tmp = ChangedURI(oldUriId = Id[NormalizedURI](i), newUriId = Id[NormalizedURI](i + 100))
+            Thread.sleep(2)
+            changedURIRepo.save(tmp)
+          }
+        }
 
-         var changes = db.readOnlyMaster{ implicit s =>
-           changedURIRepo.getChangesSince(SequenceNumber.ZERO, -1, ChangedURIStates.ACTIVE)
-         }
-         changes.size === 5
-         val lastSeq = changes.last.seq
-         db.readWrite { implicit s =>
-           (6 to 8).map{ i =>
-             val tmp = ChangedURI(oldUriId = Id[NormalizedURI](i), newUriId = Id[NormalizedURI](i+100))
-             Thread.sleep(2)
-             changedURIRepo.save(tmp)
-           }
-         }
+        var changes = db.readOnlyMaster { implicit s =>
+          changedURIRepo.getChangesSince(SequenceNumber.ZERO, -1, ChangedURIStates.ACTIVE)
+        }
+        changes.size === 5
+        val lastSeq = changes.last.seq
+        db.readWrite { implicit s =>
+          (6 to 8).map { i =>
+            val tmp = ChangedURI(oldUriId = Id[NormalizedURI](i), newUriId = Id[NormalizedURI](i + 100))
+            Thread.sleep(2)
+            changedURIRepo.save(tmp)
+          }
+        }
 
-         changes = db.readOnlyMaster{ implicit s =>
-           changedURIRepo.getChangesSince(lastSeq, -1, ChangedURIStates.ACTIVE)
-         }
+        changes = db.readOnlyMaster { implicit s =>
+          changedURIRepo.getChangesSince(lastSeq, -1, ChangedURIStates.ACTIVE)
+        }
 
-         changes.size === 3
+        changes.size === 3
 
-         db.readOnlyMaster { implicit s =>
-           changedURIRepo.getHighestSeqNum() === Some(SequenceNumber(8))
-           changedURIRepo.getChangesSince(SequenceNumber(0), -1, ChangedURIStates.ACTIVE).map{_.seq.value}.toArray === (1 to 8).toArray
-           changedURIRepo.getChangesBetween(SequenceNumber(2), SequenceNumber(6), ChangedURIStates.ACTIVE).map(_.seq.value).toArray === (3 to 6).toArray
-         }
-       }
+        db.readOnlyMaster { implicit s =>
+          changedURIRepo.getHighestSeqNum() === Some(SequenceNumber(8))
+          changedURIRepo.getChangesSince(SequenceNumber(0), -1, ChangedURIStates.ACTIVE).map { _.seq.value }.toArray === (1 to 8).toArray
+          changedURIRepo.getChangesBetween(SequenceNumber(2), SequenceNumber(6), ChangedURIStates.ACTIVE).map(_.seq.value).toArray === (3 to 6).toArray
+        }
+      }
     }
   }
 }

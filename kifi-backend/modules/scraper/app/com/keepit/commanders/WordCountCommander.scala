@@ -1,10 +1,10 @@
 package com.keepit.commanders
 
 import scala.concurrent.Future
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.db.Id
-import com.keepit.model.{NormalizedURI, NormalizedURIWordCountCache, NormalizedURIWordCountKey}
+import com.keepit.model.{ NormalizedURI, NormalizedURIWordCountCache, NormalizedURIWordCountKey }
 import com.keepit.scraper.ScraperServiceClient
 import com.keepit.search.ArticleStore
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -19,12 +19,11 @@ trait WordCountCommander {
   def getReadTimeMinutes(id: Id[NormalizedURI], url: Option[String]): Future[Option[Int]]
 }
 
-class WordCountCommanderImpl @Inject()(
-  articleStore: ArticleStore,
-  wordCountCache: NormalizedURIWordCountCache,
-  uriSummaryCache: URISummaryCache,
-  scrapeProcessor: ScrapeProcessor
-) extends WordCountCommander with Logging{
+class WordCountCommanderImpl @Inject() (
+    articleStore: ArticleStore,
+    wordCountCache: NormalizedURIWordCountCache,
+    uriSummaryCache: URISummaryCache,
+    scrapeProcessor: ScrapeProcessor) extends WordCountCommander with Logging {
 
   implicit def toWordCountKey(id: Id[NormalizedURI]): NormalizedURIWordCountKey = NormalizedURIWordCountKey(id)
   implicit def toURISummaryKey(id: Id[NormalizedURI]): URISummaryKey = URISummaryKey(id)
@@ -44,7 +43,7 @@ class WordCountCommanderImpl @Inject()(
   }
 
   private def getFromArticleStore(id: Id[NormalizedURI]): Option[Int] = {
-    articleStore.get(id).map{ article =>
+    articleStore.get(id).map { article =>
       val wc = wordCount(article.content)
       updateCache(id, wc)
       log.info(s"get from article store. set word count cache for ${id.id}: $wc")
@@ -53,7 +52,7 @@ class WordCountCommanderImpl @Inject()(
   }
 
   private def getFromScraper(id: Id[NormalizedURI], url: String): Future[Int] = {
-    scrapeProcessor.fetchBasicArticle(url, None, None).map{ articleOpt =>
+    scrapeProcessor.fetchBasicArticle(url, None, None).map { articleOpt =>
       val wc = articleOpt match {
         case None => -1
         case Some(basicArticle) => wordCount(basicArticle.content)
@@ -68,7 +67,7 @@ class WordCountCommanderImpl @Inject()(
     val wcOpt = getFromCache(id) orElse getFromArticleStore(id)
     wcOpt match {
       case Some(wc) => Future.successful(wc)
-      case None => if(url.isDefined) getFromScraper(id, url.get) else Future.successful(0)
+      case None => if (url.isDefined) getFromScraper(id, url.get) else Future.successful(0)
     }
   }
 

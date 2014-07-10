@@ -1,9 +1,9 @@
 package com.keepit.commanders
 
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.abook.model._
 import com.keepit.common.db.Id
-import com.keepit.model.{ABookInfo, User}
+import com.keepit.model.{ ABookInfo, User }
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
@@ -12,13 +12,12 @@ import com.keepit.abook.typeahead.EContactTypeahead
 
 @Singleton
 class ContactInterner @Inject() (
-  emailAccountRepo: EmailAccountRepo,
-  econtactRepo: EContactRepo,
-  econtactTypeahead: EContactTypeahead,
-  db: Database
-) extends Logging {
+    emailAccountRepo: EmailAccountRepo,
+    econtactRepo: EContactRepo,
+    econtactTypeahead: EContactTypeahead,
+    db: Database) extends Logging {
 
-  def internContact(userId:Id[User], abookId: Id[ABookInfo], contact: BasicContact): EContact = {
+  def internContact(userId: Id[User], abookId: Id[ABookInfo], contact: BasicContact): EContact = {
     val (econtact, inserted, updated) = db.readWrite { implicit session =>
       econtactRepo.getByAbookIdAndEmail(abookId, contact.email) match {
         case None => (insertNewContact(userId, abookId, contact), true, false)
@@ -42,9 +41,10 @@ class ContactInterner @Inject() (
       }
 
       val inserted = insertNewContacts(userId, abookId, toBeInsertedByLowerCasedAddress.values.toSeq)
-      val updated = toBeUpdatedByLowerCasedAddress.count { case (lowerCasedAddress, contact) =>
-        val existingContact = existingByLowerCasedAddress(lowerCasedAddress)
-        updateExistingContact(userId, existingContact, contact).isDefined
+      val updated = toBeUpdatedByLowerCasedAddress.count {
+        case (lowerCasedAddress, contact) =>
+          val existingContact = existingByLowerCasedAddress(lowerCasedAddress)
+          updateExistingContact(userId, existingContact, contact).isDefined
       }
 
       (inserted, updated)

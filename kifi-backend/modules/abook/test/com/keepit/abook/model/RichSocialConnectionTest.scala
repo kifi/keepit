@@ -2,12 +2,12 @@ package com.keepit.abook.model
 
 import org.specs2.mutable.Specification
 import com.keepit.abook.ABookTestInjector
-import com.keepit.model.{SocialUserInfo, User}
+import com.keepit.model.{ SocialUserInfo, User }
 import com.keepit.common.db.Id
-import com.keepit.social.{SocialId, SocialNetworks}
+import com.keepit.social.{ SocialId, SocialNetworks }
 import com.keepit.common.mail.EmailAddress
 
-class RichSocialConnectionTest extends Specification with ABookTestInjector  {
+class RichSocialConnectionTest extends Specification with ABookTestInjector {
 
   "RichSocialConnectionRepo" should withDb() { implicit injector =>
 
@@ -175,8 +175,8 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector  {
     }
 
     "have correct queries" in { //This is for running straight up sql queries to make sure they are correctly formatted
-      db.readOnlyMaster { implicit session => richConnectionRepo.dedupedWTIForUser(Id[User](243), 50)}
-      1===1
+      db.readOnlyMaster { implicit session => richConnectionRepo.dedupedWTIForUser(Id[User](243), 50) }
+      1 === 1
     }
   }
 }

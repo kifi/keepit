@@ -18,12 +18,12 @@ trait ArticleSearchResultStore extends ObjectStore[ExternalId[ArticleSearchResul
 }
 
 class S3ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, initialSearchIdCache: InitialSearchIdCache, articleCache: ArticleSearchResultCache)
-  extends S3JsonStore[ExternalId[ArticleSearchResult], ArticleSearchResult] with ArticleSearchResultStore {
+    extends S3JsonStore[ExternalId[ArticleSearchResult], ArticleSearchResult] with ArticleSearchResultStore {
 
   val formatter = ArticleSearchResult.format
   override def getInitialSearchId(uuid: ExternalId[ArticleSearchResult]): ExternalId[ArticleSearchResult] = initialSearchIdCache.getOrElse(InitialSearchIdSearchIdKey(uuid)) { super.getInitialSearchId(uuid) }
-  override def get(uuid : ExternalId[ArticleSearchResult]): Option[ArticleSearchResult] =  articleCache.getOrElseOpt(ArticleSearchResultIdKey(uuid)) { super.get(uuid) }
-  override def += (uuidAndArticle: (ExternalId[ArticleSearchResult], ArticleSearchResult)) = {
+  override def get(uuid: ExternalId[ArticleSearchResult]): Option[ArticleSearchResult] = articleCache.getOrElseOpt(ArticleSearchResultIdKey(uuid)) { super.get(uuid) }
+  override def +=(uuidAndArticle: (ExternalId[ArticleSearchResult], ArticleSearchResult)) = {
     val (uuid, article) = uuidAndArticle
     articleCache.set(ArticleSearchResultIdKey(uuid), article)
     super.+=(uuidAndArticle)
@@ -39,7 +39,7 @@ case class InitialSearchIdSearchIdKey(uuid: ExternalId[ArticleSearchResult]) ext
 }
 
 class InitialSearchIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[InitialSearchIdSearchIdKey, ExternalId[ArticleSearchResult]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(ExternalId.format[ArticleSearchResult])
+  extends JsonCacheImpl[InitialSearchIdSearchIdKey, ExternalId[ArticleSearchResult]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(ExternalId.format[ArticleSearchResult])
 
 case class ArticleSearchResultIdKey(uuid: ExternalId[ArticleSearchResult]) extends Key[ArticleSearchResult] {
   override val version = 1
@@ -48,4 +48,4 @@ case class ArticleSearchResultIdKey(uuid: ExternalId[ArticleSearchResult]) exten
 }
 
 class ArticleSearchResultCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[ArticleSearchResultIdKey, ArticleSearchResult](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[ArticleSearchResultIdKey, ArticleSearchResult](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

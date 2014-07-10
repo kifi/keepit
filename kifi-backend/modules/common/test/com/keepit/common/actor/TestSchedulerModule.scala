@@ -1,8 +1,8 @@
 package com.keepit.common.actor
 
-import akka.actor.{Cancellable, Scheduler, ActorSystem}
+import akka.actor.{ Cancellable, Scheduler, ActorSystem }
 import com.google.inject.Provides
-import com.keepit.common.plugin.{SchedulingPropertiesImpl, SchedulingProperties}
+import com.keepit.common.plugin.{ SchedulingPropertiesImpl, SchedulingProperties }
 import com.keepit.inject.AppScoped
 import play.api.Play.current
 import scala.concurrent.future

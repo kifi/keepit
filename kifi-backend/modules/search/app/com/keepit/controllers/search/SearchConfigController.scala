@@ -13,7 +13,7 @@ import play.api.mvc.Action
 
 class SearchConfigController @Inject() (configManager: SearchConfigManager) extends SearchServiceController {
 
-  def getSearchDefaultConfig = Action{ request =>
+  def getSearchDefaultConfig = Action { request =>
     Ok(Json.toJson(configManager.defaultConfig.params))
   }
 

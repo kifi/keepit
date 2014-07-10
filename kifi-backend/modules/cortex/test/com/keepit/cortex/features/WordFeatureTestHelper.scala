@@ -11,16 +11,16 @@ trait WordFeatureTestHelper {
   val mapper = Map("apple" -> halfHalf, "orange" -> fruit, "banana" -> fruit, "intel" -> company, "amd" -> company)
 
   class FakeWordModel extends StatModel
-  val fakeWordRep = new HashMapWordRepresenter[FakeWordModel](2, mapper){
+  val fakeWordRep = new HashMapWordRepresenter[FakeWordModel](2, mapper) {
     val version = ModelVersion[FakeWordModel](1)
   }
 
-  val fakeDocRep = new NaiveSumDocRepresenter[FakeWordModel](fakeWordRep){
+  val fakeDocRep = new NaiveSumDocRepresenter[FakeWordModel](fakeWordRep) {
     override val minValidTerms = 1
 
     def normalize(vec: Array[Float]): Array[Float] = {
       val s = vec.sum
-      vec.map{ x => x/s}
+      vec.map { x => x / s }
     }
   }
 

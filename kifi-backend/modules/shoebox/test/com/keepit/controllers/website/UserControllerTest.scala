@@ -2,7 +2,6 @@ package com.keepit.controllers.website
 
 import org.specs2.mutable.Specification
 
-
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
@@ -10,7 +9,7 @@ import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
 import com.keepit.test.ShoeboxApplication
 
-import play.api.libs.json.{Json}
+import play.api.libs.json.{ Json }
 import play.api.test.Helpers._
 import play.api.test._
 import com.keepit.heimdal.TestHeimdalServiceClientModule
@@ -20,9 +19,9 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.common.mail.TestMailModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{FakeShoeboxSecureSocialModule, FakeSocialGraphModule}
+import com.keepit.common.social.{ FakeShoeboxSecureSocialModule, FakeSocialGraphModule }
 import com.keepit.search.TestSearchServiceClientModule
-import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
+import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
 
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -50,7 +49,7 @@ class UserControllerTest extends Specification with ApplicationInjector {
   "UserController" should {
 
     "get currentUser" in {
-      running(new ShoeboxApplication(controllerTestModules:_*)) {
+      running(new ShoeboxApplication(controllerTestModules: _*)) {
         val user = inject[Database].readWrite { implicit session =>
           val user = inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith"))
           inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = ExperimentType.ADMIN))

@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.db.slick.DbRepo
 import com.keepit.common.db.slick.DBSession
@@ -19,7 +19,7 @@ class HttpProxyRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val httpProxyAllCache: HttpProxyAllCache)
-  extends DbRepo[HttpProxy] with HttpProxyRepo {
+    extends DbRepo[HttpProxy] with HttpProxyRepo {
 
   import db.Driver.simple._
 
@@ -52,7 +52,7 @@ class HttpProxyRepoImpl @Inject() (
   def allActive()(implicit session: RSession): Seq[HttpProxy] =
     allMemCache.getOrElse {
       val result = httpProxyAllCache.getOrElse(HttpProxyAllKey()) {
-        (for(f <- rows if f.state === HttpProxyStates.ACTIVE) yield f).list
+        (for (f <- rows if f.state === HttpProxyStates.ACTIVE) yield f).list
       }
       allMemCache = Some(result)
       result.sortBy(_.id.get.id)

@@ -22,7 +22,7 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
       None // all clause words were filtered away by the analyzer.
     } else {
       val query = new BooleanQuery(true) // always disable coord
-      clauses.foreach{ clause => query.add(clause) }
+      clauses.foreach { clause => query.add(clause) }
       Some(query)
     }
   }

@@ -32,7 +32,7 @@ class Timer(startTime: Long = System.currentTimeMillis()) {
  * Signatures and default values copied from
  * https://github.com/typesafehub/play-plugins/blob/master/statsd/src/main/scala/play/modules/statsd/api/StatsdClient.scala
  */
-class LoggingStatsdClient(log: Logger)  {
+class LoggingStatsdClient(log: Logger) {
   private lazy val random = new Random()
   private def nextFloat(): Float = random.nextFloat()
 
@@ -120,10 +120,10 @@ class LoggingStatsdClient(log: Logger)  {
 
 object Logging {
   implicit class LoggerWithPrefix(val log: Logger) extends AnyVal {
-    def traceP(message: => String)(implicit prefix:LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) log.trace(message) else log.trace(s"[$prefix] $message")
-    def debugP(message: => String)(implicit prefix:LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) log.debug(message) else log.debug(s"[$prefix] $message")
-    def infoP(message: => String)(implicit prefix:LogPrefix = LogPrefix.EMPTY)  = if (prefix == LogPrefix.EMPTY) log.info(message) else log.info(s"[$prefix] $message")
-    def warnP(message: => String)(implicit prefix:LogPrefix = LogPrefix.EMPTY)  = if (prefix == LogPrefix.EMPTY) log.warn(message) else log.warn(s"[$prefix] $message")
-    def errorP(message: => String)(implicit prefix:LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) log.error(message) else log.error(s"[$prefix] $message")
+    def traceP(message: => String)(implicit prefix: LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) log.trace(message) else log.trace(s"[$prefix] $message")
+    def debugP(message: => String)(implicit prefix: LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) log.debug(message) else log.debug(s"[$prefix] $message")
+    def infoP(message: => String)(implicit prefix: LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) log.info(message) else log.info(s"[$prefix] $message")
+    def warnP(message: => String)(implicit prefix: LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) log.warn(message) else log.warn(s"[$prefix] $message")
+    def errorP(message: => String)(implicit prefix: LogPrefix = LogPrefix.EMPTY) = if (prefix == LogPrefix.EMPTY) log.error(message) else log.error(s"[$prefix] $message")
   }
 }

@@ -5,10 +5,8 @@ import com.keepit.common.controller.SearchServiceController
 import com.keepit.search.user.UserIndexerPlugin
 import play.api.mvc.Action
 
-
-class UserIndexController @Inject()(
-  indexer: UserIndexerPlugin
-) extends SearchServiceController {
+class UserIndexController @Inject() (
+    indexer: UserIndexerPlugin) extends SearchServiceController {
   def reindex() = Action { implicit request =>
     indexer.reindex()
     Ok

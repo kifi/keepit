@@ -1,16 +1,16 @@
 package com.keepit.graph.common.cache
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.logging.AccessLog
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
-import com.keepit.search.{ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache}
+import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
 import com.keepit.common.usersegment.UserSegmentCache
 import scala.concurrent.duration._
 import com.keepit.common.cache._
 
-case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
+case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
 
   @Singleton
   @Provides

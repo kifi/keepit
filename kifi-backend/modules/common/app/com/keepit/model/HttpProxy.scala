@@ -14,17 +14,16 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 case class HttpProxy(
-  id: Option[Id[HttpProxy]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  state: State[HttpProxy] = HttpProxyStates.ACTIVE,
-  alias: String,
-  hostname: String,
-  port: Int,
-  scheme: String,
-  username: Option[String],
-  password: Option[String]
-  ) extends ModelWithState[HttpProxy] {
+    id: Option[Id[HttpProxy]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    state: State[HttpProxy] = HttpProxyStates.ACTIVE,
+    alias: String,
+    hostname: String,
+    port: Int,
+    scheme: String,
+    username: Option[String],
+    password: Option[String]) extends ModelWithState[HttpProxy] {
 
   def withId(id: Id[HttpProxy]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -35,16 +34,16 @@ case class HttpProxy(
 object HttpProxy {
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[HttpProxy]) and
-      (__ \ 'createdAt).format(DateTimeJsonFormat) and
-      (__ \ 'updatedAt).format(DateTimeJsonFormat) and
-      (__ \ 'state).format(State.format[HttpProxy]) and
-      (__ \ 'alias).format[String] and
-      (__ \ 'hostname).format[String] and
-      (__ \ 'port).format[Int] and
-      (__ \ 'scheme).format[String] and
-      (__ \ 'username).formatNullable[String] and
-      (__ \ 'password).formatNullable[String]
-    )(HttpProxy.apply, unlift(HttpProxy.unapply))
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
+    (__ \ 'state).format(State.format[HttpProxy]) and
+    (__ \ 'alias).format[String] and
+    (__ \ 'hostname).format[String] and
+    (__ \ 'port).format[Int] and
+    (__ \ 'scheme).format[String] and
+    (__ \ 'username).formatNullable[String] and
+    (__ \ 'password).formatNullable[String]
+  )(HttpProxy.apply, unlift(HttpProxy.unapply))
 }
 
 case class HttpProxyAllKey() extends Key[Seq[HttpProxy]] {
@@ -54,6 +53,6 @@ case class HttpProxyAllKey() extends Key[Seq[HttpProxy]] {
 }
 
 class HttpProxyAllCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[HttpProxyAllKey, Seq[HttpProxy]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[HttpProxyAllKey, Seq[HttpProxy]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 object HttpProxyStates extends States[HttpProxy]

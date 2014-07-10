@@ -1,7 +1,7 @@
 package com.keepit.scraper
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ScraperServiceController, ActionAuthenticator}
+import com.keepit.common.controller.{ ScraperServiceController, ActionAuthenticator }
 import com.keepit.model._
 import play.api.mvc.Action
 import play.api.libs.json._
@@ -15,14 +15,13 @@ import com.keepit.common.performance.timing
 import com.keepit.common.net.URI
 
 class ScraperController @Inject() (
-  airbrake: AirbrakeNotifier,
-  actionAuthenticator:ActionAuthenticator,
-  scrapeProcessor: ScrapeProcessor
-) extends ScraperServiceController with Logging {
+    airbrake: AirbrakeNotifier,
+    actionAuthenticator: ActionAuthenticator,
+    scrapeProcessor: ScrapeProcessor) extends ScraperServiceController with Logging {
 
   def getBasicArticle() = Action.async(parse.json) { request =>
     log.info(s"getBasicArticle body=${request.body}")
-    processBasicArticleRequest(request.body).map{ articleOption =>
+    processBasicArticleRequest(request.body).map { articleOption =>
       val json = Json.toJson(articleOption)
       val url = (request.body \ "url").as[String]
       log.info(s"[getBasicArticle($url})] result: $json")

@@ -14,18 +14,15 @@ import com.keepit.model.Phrase
 trait PhraseIndexerPlugin extends IndexerPlugin[Phrase, PhraseIndexer]
 
 class PhraseIndexerPluginImpl @Inject() (
-  actor: ActorInstance[PhraseIndexerActor],
-  indexer: PhraseIndexer,
-  serviceDiscovery: ServiceDiscovery,
-  val scheduling: SchedulingProperties
-) extends IndexerPluginImpl[Phrase, PhraseIndexer, PhraseIndexerActor](indexer, actor, serviceDiscovery) with PhraseIndexerPlugin {
+    actor: ActorInstance[PhraseIndexerActor],
+    indexer: PhraseIndexer,
+    serviceDiscovery: ServiceDiscovery,
+    val scheduling: SchedulingProperties) extends IndexerPluginImpl[Phrase, PhraseIndexer, PhraseIndexerActor](indexer, actor, serviceDiscovery) with PhraseIndexerPlugin {
 
   override val indexingInterval = 10 minutes
 }
 
-
 class PhraseIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,
-  indexer: PhraseIndexer
-) extends IndexerActor[Phrase, PhraseIndexer](airbrake, indexer)
+  indexer: PhraseIndexer) extends IndexerActor[Phrase, PhraseIndexer](airbrake, indexer)
 

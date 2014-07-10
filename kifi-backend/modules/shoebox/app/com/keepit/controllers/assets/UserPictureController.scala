@@ -4,16 +4,16 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.Try
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ShoeboxServiceController, WebsiteController, ActionAuthenticator}
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.store.{S3ImageConfig, S3UserPictureConfig, S3ImageStore}
+import com.keepit.common.store.{ S3ImageConfig, S3UserPictureConfig, S3ImageStore }
 import com.keepit.model._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 
 import play.api.mvc.Action
 import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.model.{ListObjectsRequest, CopyObjectRequest}
+import com.amazonaws.services.s3.model.{ ListObjectsRequest, CopyObjectRequest }
 import com.keepit.common.akka.SafeFuture
 import scala.concurrent.duration.Duration
 import java.util.concurrent.TimeUnit
@@ -25,7 +25,7 @@ class UserPictureController @Inject() (
   userRepo: UserRepo,
   imageStore: S3ImageStore,
   val config: S3ImageConfig)
-  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def getPic(size: String, id: ExternalId[User], picName: String) = Action.async { request =>
     val trimmedName = if (picName.endsWith(".jpg")) picName.dropRight(4) else picName

@@ -1,7 +1,7 @@
 package com.keepit.normalizer
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{Query, URI}
+import com.keepit.common.net.{ Query, URI }
 import com.keepit.model.Normalization
 
 object DefaultNormalizer extends StaticNormalizer with Logging {
@@ -18,14 +18,13 @@ object DefaultNormalizer extends StaticNormalizer with Logging {
     uri match {
       case URI(scheme, userInfo, host, port, path, query, fragment) if scheme.exists(validSchemes.contains(_)) =>
         try {
-          val newQuery = query.flatMap{ query =>
-            val newParams = query.params.filter{ param => !stopParams.contains(param.name) }
+          val newQuery = query.flatMap { query =>
+            val newParams = query.params.filter { param => !stopParams.contains(param.name) }
             if (newParams.isEmpty) None else Some(Query(newParams))
           }
-          if (fragment.isDefined && fragment.get != "/" && (fragment.get.contains("/") || fragment.get.contains("%2F"))){
+          if (fragment.isDefined && fragment.get != "/" && (fragment.get.contains("/") || fragment.get.contains("%2F"))) {
             URI(scheme, userInfo, host, port, path, newQuery, fragment)
-          }
-          else URI(scheme, userInfo, host, port, path, newQuery, None)
+          } else URI(scheme, userInfo, host, port, path, newQuery, None)
         } catch {
           case e: Exception =>
             log.warn("uri normalization failed: [%s] caused by [%s]".format(uri.raw, e.getMessage))
