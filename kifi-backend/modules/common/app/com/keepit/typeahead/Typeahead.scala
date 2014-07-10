@@ -18,16 +18,6 @@ trait Typeahead[E, I] extends Logging {
 
   protected def airbrake: AirbrakeNotifier
 
-  protected val consolidateBuildReq = new RequestConsolidator[Id[User], PrefixFilter[E]](10 minutes)
-
-  protected val consolidateFetchReq = new RequestConsolidator[Id[User], Option[PrefixFilter[E]]](15 seconds)
-
-  private[this] def getPrefixFilter(userId: Id[User]): Future[Option[PrefixFilter[E]]] = {
-    consolidateFetchReq(userId) { id =>
-      getOrCreatePrefixFilter(id).map(Some(_))(ExecutionContext.fj)
-    }
-  }
-
   protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[E]]
 
   protected def getInfos(ids: Seq[Id[E]]): Future[Seq[I]]
@@ -61,6 +51,14 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
+  private[this] val consolidateFetchReq = new RequestConsolidator[Id[User], Option[PrefixFilter[E]]](15 seconds)
+
+  private[this] def getPrefixFilter(userId: Id[User]): Future[Option[PrefixFilter[E]]] = {
+    consolidateFetchReq(userId) { id =>
+      getOrCreatePrefixFilter(id).map(Some(_))(ExecutionContext.fj)
+    }
+  }
+
   private[this] def topNWithInfos(infos:Seq[I], queryTerms:Array[String], limit:Option[Int])(implicit ord:Ordering[TypeaheadHit[I]]): Seq[TypeaheadHit[I]] = {
     if (queryTerms.length <= 0) Seq.empty else {
       var ordinal = 0
@@ -77,11 +75,7 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
-  def search(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Future[Seq[I]] = {
-    topN(userId, query, None).map { o =>
-      o map { _.info }
-    }(ExecutionContext.fj)
-  }
+  private[this] val consolidateBuildReq = new RequestConsolidator[Id[User], PrefixFilter[E]](10 minutes)
 
   protected def build(id: Id[User]): Future[PrefixFilter[E]] = {
     consolidateBuildReq(id){ id =>
