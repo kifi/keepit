@@ -2,7 +2,6 @@ package com.keepit.heimdal
 
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.commander.{ DevDelightedCommander, DelightedCommander, DelightedConfig }
-import com.keepit.inject.AppScoped
 import net.codingwell.scalaguice.ScalaModule
 import play.api.Play._
 
@@ -24,6 +23,5 @@ case class DevDelightedModule() extends DelightedModule {
 
   def configure() = {
     bind[DelightedCommander].to[DevDelightedCommander]
-    bind[DelightedPlugin].to[DevDelightedPlugin].in[AppScoped]
   }
 }
