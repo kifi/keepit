@@ -23,7 +23,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     def search(query: Query): Map[Long, Float] = {
       var result = Map.empty[Long, Float]
       val (indexReader, idMapper) = uriGraphSearcher.openPersonalIndex(query)
-      val ir = new WrappedSubReader("", indexReader, idMapper, indexReader.getLiveDocs)
+      val ir = new WrappedSubReader("", indexReader, idMapper)
       val searcher = new Searcher(new WrappedIndexReader(null, Array(ir)))
       val weight = searcher.createNormalizedWeight(query)
       val scorer = weight.scorer(ir.getContext, true, true, ir.getLiveDocs)

@@ -60,9 +60,12 @@ class CachingIndexReader(val index: CachedIndex) extends AtomicReader with Loggi
   override def getFieldInfos(): FieldInfos = index.fieldInfos
 
   lazy private val liveDocs = {
-    val bits = new FixedBitSet(maxDoc)
-    index.foreach { (_, _, list) => list.dlist.foreach { case (d, _) => bits.set(d) } }
-    bits
+    var docs = Set.empty[Int]
+    index.foreach { (_, _, list) => list.dlist.foreach { case (d, _) => docs += d } }
+    new Bits {
+      def get(index: Int) = docs.contains(index)
+      def length() = maxDoc
+    }
   }
   override def getLiveDocs(): Bits = liveDocs
 

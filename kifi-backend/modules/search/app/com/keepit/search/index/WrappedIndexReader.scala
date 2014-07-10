@@ -10,7 +10,6 @@ import org.apache.lucene.index.NumericDocValues
 import org.apache.lucene.index.BinaryDocValues
 import org.apache.lucene.index.SortedDocValues
 import org.apache.lucene.index.SortedSetDocValues
-import org.apache.lucene.util.Bits
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import org.apache.lucene.index.SlowCompositeReaderWrapper
@@ -39,8 +38,8 @@ object WrappedIndexReader {
           val segmentName = segmentReader.getSegmentName
           val oldIdMapper = oldIdMappers.get(segmentName)
           val newSubReader = oldIdMapper match {
-            case Some(oldIdMapper) => new WrappedSubReader(segmentName, segmentReader, oldIdMapper, segmentReader.getLiveDocs)
-            case None => new WrappedSubReader(segmentName, segmentReader, ArrayIdMapper(segmentReader), segmentReader.getLiveDocs)
+            case Some(oldIdMapper) => new WrappedSubReader(segmentName, segmentReader, oldIdMapper)
+            case None => new WrappedSubReader(segmentName, segmentReader, ArrayIdMapper(segmentReader))
           }
           buf += newSubReader
         case subReader =>
@@ -90,7 +89,7 @@ class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Arra
 
   lazy val asAtomicReader: WrappedSubReader = {
     val compositeReader = SlowCompositeReaderWrapper.wrap(this)
-    new WrappedSubReader("", compositeReader, getIdMapper, compositeReader.getLiveDocs)
+    new WrappedSubReader("", compositeReader, getIdMapper)
   }
 
   def outerjoin(indexReader: CachingIndexReader, idMapper: IdMapper): WrappedIndexReader = {
@@ -98,10 +97,10 @@ class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Arra
     val splitReaders = indexReader.split(remappers)
     var newSubReaders = ArrayBuffer.empty[WrappedSubReader]
     wrappedSubReaders.foreach { r =>
-      newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, splitReaders(r.name)), r.getIdMapper, r.getLiveDocs)
+      newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, splitReaders(r.name)), r.getIdMapper)
     }
     splitReaders.get("").foreach { subReader =>
-      newSubReaders += new WrappedSubReader("", subReader, idMapper, subReader.getLiveDocs)
+      newSubReaders += new WrappedSubReader("", subReader, idMapper)
     }
 
     new WrappedIndexReader(inner, newSubReaders.toArray)
@@ -112,7 +111,7 @@ class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Arra
     val splitReaders = indexReader.split(remappers)
     var newSubReaders = ArrayBuffer.empty[WrappedSubReader]
     wrappedSubReaders.foreach { r =>
-      newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, splitReaders(r.name)), r.getIdMapper, r.getLiveDocs)
+      newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, splitReaders(r.name)), r.getIdMapper)
     }
 
     new WrappedIndexReader(inner, newSubReaders.toArray)
@@ -124,12 +123,12 @@ class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Arra
     var newSubReaders = ArrayBuffer.empty[WrappedSubReader]
     wrappedSubReaders.foreach { r =>
       val reader = splitReaders(r.name)
-      if (reader.numDocs() > 0) {
-        newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, reader), r.getIdMapper, reader.getLiveDocs)
+      if (!reader.index.isEmpty) {
+        newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, reader, reader.getLiveDocs), r.getIdMapper)
       }
     }
     splitReaders.get("").foreach { subReader =>
-      newSubReaders += new WrappedSubReader("", subReader, idMapper, subReader.getLiveDocs)
+      newSubReaders += new WrappedSubReader("", subReader, idMapper)
     }
 
     new WrappedIndexReader(inner, newSubReaders.toArray)
@@ -137,7 +136,7 @@ class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Arra
 
 }
 
-class WrappedSubReader(val name: String, val inner: AtomicReader, idMapper: IdMapper, liveDocs: Bits) extends AtomicReader {
+class WrappedSubReader(val name: String, val inner: AtomicReader, idMapper: IdMapper) extends AtomicReader {
   def getIdMapper = idMapper
 
   override def getNumericDocValues(field: String): NumericDocValues = inner.getNumericDocValues(field)
@@ -152,7 +151,7 @@ class WrappedSubReader(val name: String, val inner: AtomicReader, idMapper: IdMa
   override def maxDoc() = inner.maxDoc()
   override def numDocs() = inner.numDocs()
   override def fields() = inner.fields()
-  override def getLiveDocs() = liveDocs
+  override def getLiveDocs() = inner.getLiveDocs
   override def getDocsWithField(field: String) = inner.getDocsWithField(field)
   protected def doClose() = {}
 }
