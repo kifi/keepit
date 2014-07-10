@@ -4,7 +4,7 @@ import com.keepit.common.controller.{ ShoeboxServiceController, MobileController
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.heimdal.{DelightedAnswerSources, BasicDelightedAnswer}
+import com.keepit.heimdal.{ DelightedAnswerSources, BasicDelightedAnswer }
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.commanders._

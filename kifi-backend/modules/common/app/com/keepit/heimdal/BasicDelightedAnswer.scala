@@ -9,7 +9,7 @@ case class DelightedAnswerSource(value: String)
 object DelightedAnswerSource {
   implicit val format: Format[DelightedAnswerSource] = Format(
     __.read[String].map(s => DelightedAnswerSource(s)),
-    new Writes[DelightedAnswerSource]{ def writes(o: DelightedAnswerSource) = JsString(o.value) }
+    new Writes[DelightedAnswerSource] { def writes(o: DelightedAnswerSource) = JsString(o.value) }
   )
 }
 
