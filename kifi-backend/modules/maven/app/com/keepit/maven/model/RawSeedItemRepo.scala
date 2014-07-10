@@ -1,33 +1,29 @@
 package com.keepit.maven.model
 
-
-import com.keepit.common.db.slick.{DbRepo, SeqNumberFunction, SeqNumberDbFunction, DataBaseComponent, Database}
-import com.keepit.common.db.{Id, DbSequenceAssigner}
-import com.keepit.model.{User, NormalizedURI}
+import com.keepit.common.db.slick.{ DbRepo, SeqNumberFunction, SeqNumberDbFunction, DataBaseComponent, Database }
+import com.keepit.common.db.{ Id, DbSequenceAssigner }
+import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.common.time.Clock
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
-import com.keepit.common.plugin.{SequencingActor, SchedulingProperties, SequencingPlugin}
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import scala.concurrent.duration._
 
-import com.google.inject.{ImplementedBy, Singleton, Inject}
+import com.google.inject.{ ImplementedBy, Singleton, Inject }
 
 import org.joda.time.DateTime
 
-
 @ImplementedBy(classOf[RawSeedItemRepoImpl])
-trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeedItem]{
+trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeedItem] {
 }
-
-
 
 @Singleton
 class RawSeedItemRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock)
-extends DbRepo[RawSeedItem] with RawSeedItemRepo with SeqNumberDbFunction[RawSeedItem] {
+    extends DbRepo[RawSeedItem] with RawSeedItemRepo with SeqNumberDbFunction[RawSeedItem] {
 
   import db.Driver.simple._
 
@@ -42,10 +38,10 @@ extends DbRepo[RawSeedItem] with RawSeedItemRepo with SeqNumberDbFunction[RawSee
     def lastSeen = column[DateTime]("last_seen", O.NotNull)
     def priorScore = column[Float]("prior_score", O.Nullable)
     def timesKept = column[Int]("times_kept", O.NotNull)
-    def * = (id.?,createdAt,updatedAt,seq,uriId,userId.?,firstKept,lastKept,lastSeen,priorScore.?,timesKept) <> ((RawSeedItem.apply _).tupled, RawSeedItem.unapply _)
+    def * = (id.?, createdAt, updatedAt, seq, uriId, userId.?, firstKept, lastKept, lastSeen, priorScore.?, timesKept) <> ((RawSeedItem.apply _).tupled, RawSeedItem.unapply _)
   }
 
-  def table(tag:Tag) = new RawSeedItemTable(tag)
+  def table(tag: Tag) = new RawSeedItemTable(tag)
   initTable()
 
   def deleteCache(model: RawSeedItem)(implicit session: RSession): Unit = {}
@@ -58,14 +54,11 @@ extends DbRepo[RawSeedItem] with RawSeedItemRepo with SeqNumberDbFunction[RawSee
 
 }
 
-
-
 trait RawSeedItemSequencingPlugin extends SequencingPlugin
 
 class RawSeedItemSequencingPluginImpl @Inject() (
-  override val actor: ActorInstance[RawSeedItemSequencingActor],
-  override val scheduling: SchedulingProperties
-  ) extends RawSeedItemSequencingPlugin {
+    override val actor: ActorInstance[RawSeedItemSequencingActor],
+    override val scheduling: SchedulingProperties) extends RawSeedItemSequencingPlugin {
 
   override val interval: FiniteDuration = 60 seconds
 }
@@ -76,5 +69,4 @@ class RawSeedItemSequenceNumberAssigner @Inject() (db: Database, repo: RawSeedIt
 
 class RawSeedItemSequencingActor @Inject() (
   assigner: RawSeedItemSequenceNumberAssigner,
-  airbrake: AirbrakeNotifier
-) extends SequencingActor(assigner, airbrake)
+  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)
