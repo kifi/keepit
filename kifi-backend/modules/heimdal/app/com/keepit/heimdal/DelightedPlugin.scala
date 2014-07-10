@@ -1,6 +1,7 @@
 package com.keepit.heimdal
 
 import com.keepit.commander.DelightedCommander
+import com.keepit.inject.AppScoped
 
 import scala.concurrent.duration._
 
@@ -10,7 +11,6 @@ import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
-import play.api.Plugin
 
 private case object FetchNewDelightedAnswers
 
@@ -27,27 +27,23 @@ class DelightedAnswerReceiverActor @Inject() (
 }
 
 @ImplementedBy(classOf[DelightedPluginImpl])
-trait DelightedPlugin extends Plugin {
-  def fetchNewDelightedAnswers()
+trait DelightedPlugin extends SchedulerPlugin {
+  def fetchNewDelightedAnswers(): Unit
 }
 
+@AppScoped
 class DelightedPluginImpl @Inject() (
     actor: ActorInstance[DelightedAnswerReceiverActor],
     val scheduling: SchedulingProperties //only on leader
-    ) extends DelightedPlugin with SchedulerPlugin {
+    ) extends DelightedPlugin with Logging {
 
   override def enabled: Boolean = true
+  override def onStart() {
+    log.info("Starting DelightedPluginImpl")
+    scheduleTaskOnLeader(actor.system, 10 seconds, 15 seconds, actor.ref, FetchNewDelightedAnswers)
+  }
 
   def fetchNewDelightedAnswers() {
     actor.ref ! FetchNewDelightedAnswers
-  }
-  override def onStart() {
-    scheduleTaskOnLeader(actor.system, 10 seconds, 15 seconds, actor.ref, FetchNewDelightedAnswers)
-  }
-}
-
-class DevDelightedPlugin @Inject() extends DelightedPlugin with Logging {
-  def fetchNewDelightedAnswers() {
-    log.info("Fake fetching new delighted answers")
   }
 }

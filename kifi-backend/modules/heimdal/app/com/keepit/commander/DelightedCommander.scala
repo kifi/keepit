@@ -143,12 +143,12 @@ class DelightedCommanderImpl @Inject() (
   }
 }
 
-class DevDelightedCommander extends DelightedCommander {
+class DevDelightedCommander extends DelightedCommander with Logging {
 
   def getLastDelightedAnswerDate(userId: Id[User]): Option[DateTime] = None
 
   def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[JsValue] =
     Future.successful(JsString("success"))
 
-  def fetchNewDelightedAnswers() = ()
+  def fetchNewDelightedAnswers() = log.info("Fake fetching new Delighted answers")
 }
