@@ -14,6 +14,7 @@ import play.api.libs.json.Json.toJson
 
 import com.google.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.Future
 import scala.util.{Success, Failure}
 import securesocial.core.{SecureSocial, Authenticator}
 import play.api.libs.json.JsSuccess
@@ -117,16 +118,6 @@ class MobileUserController @Inject() (
     }
   }
 
-  def querySocial(search: Option[String], network: Option[String], limit: Int, pictureUrl:Boolean = false) = JsonAction.authenticated { request =>
-    Ok(Json.toJson(typeaheadCommander.querySocialInviteStatus(request.userId, search, network, limit, pictureUrl)))
-  }
-
-  def queryContacts(search: Option[String], limit: Int, pictureUrl:Boolean = false) = JsonAction.authenticatedAsync { request =>
-    typeaheadCommander.queryContactsInviteStatus(request.userId, search, limit) map { r =>
-      Ok(Json.toJson(r))
-    }
-  }
-
   def friend(externalId: ExternalId[User]) = JsonAction.authenticated { request =>
     val (success, code) = userCommander.friend(request.userId, externalId)
     val res = Json.obj("code" -> code)
@@ -155,6 +146,15 @@ class MobileUserController @Inject() (
   def outgoingFriendRequests = JsonAction.authenticated { request =>
     val users = userCommander.outgoingFriendRequests(request.userId)
     Ok(Json.toJson(users))
+  }
+
+  def postDelightedAnswer = JsonAction.authenticatedParseJsonAsync { request =>
+    (request.body \ "score").asOpt[Int] map { score =>
+      val comment = (request.body \ "comment").asOpt[String]
+      userCommander.postDelightedAnswer(request.userId, score, comment) map { success =>
+        if (success) Ok else BadRequest
+      }
+    } getOrElse Future.successful(BadRequest)
   }
 
   def disconnect(networkString: String) = JsonAction.authenticated(parser = parse.anyContent) { implicit request =>

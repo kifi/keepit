@@ -49,50 +49,30 @@ trait Typeahead[E, I] extends Logging {
 
   protected def extractName(info: I): String
 
-  def search(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]] = timing(s"search($userId,$query)") {
-    if (query.trim.length > 0) {
-      getPrefixFilter(userId) match {
-        case None =>
-          log.warn(s"[search($userId,$query)] NO FILTER found")
-          None
-        case Some(filter) =>
-          if (filter.isEmpty) {
-            log.info(s"[search($userId,$query)] filter is EMPTY")
-            None
-          } else {
-            val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-            search(getInfos(filter.filterBy(queryTerms)), queryTerms)
-          }
-      }
-    } else {
-      None
-    }
-  }
-
-  def asyncTopN(userId: Id[User], query: String, limit:Option[Int])(implicit ord: Ordering[TypeaheadHit[I]]): Future[Option[Seq[TypeaheadHit[I]]]] = {
+  def topN(userId: Id[User], query: String, limit:Option[Int])(implicit ord: Ordering[TypeaheadHit[I]]): Future[Seq[TypeaheadHit[I]]] = {
     if (query.trim.length > 0) {
       getPrefixFilter(userId) match {
         case None =>
           log.warn(s"[asyncTopN($userId,$query)] NO FILTER found")
-          Future.successful(None)
+          Future.successful(Seq.empty)
         case Some(filter) =>
           if (filter.isEmpty) {
             log.info(s"[asyncTopN($userId,$query)] filter is EMPTY")
-            Future.successful(None)
+            Future.successful(Seq.empty)
           } else {
             val queryTerms = PrefixFilter.normalize(query).split("\\s+")
             asyncGetInfos(filter.filterBy(queryTerms)).map { infos =>
-              topN(infos, queryTerms, limit)
+              topNWithInfos(infos, queryTerms, limit)
             }(ExecutionContext.fj)
           }
       }
     } else {
-      Future.successful(None)
+      Future.successful(Seq.empty)
     }
   }
 
-  def topN(infos:Seq[I], queryTerms:Array[String], limit:Option[Int])(implicit ord:Ordering[TypeaheadHit[I]]):Option[Seq[TypeaheadHit[I]]] = {
-    if (queryTerms.length > 0) {
+  private[this] def topNWithInfos(infos:Seq[I], queryTerms:Array[String], limit:Option[Int])(implicit ord:Ordering[TypeaheadHit[I]]): Seq[TypeaheadHit[I]] = {
+    if (queryTerms.length <= 0) Seq.empty else {
       var ordinal = 0
       val hits = infos.map{ info =>
         ordinal += 1
@@ -103,20 +83,14 @@ trait Typeahead[E, I] extends Logging {
       }.sorted
       val top = limit map (n => hits.take(n)) getOrElse hits
       top.foreach { s => log.info(s"[topN(${queryTerms.mkString(",")},$limit,#infos=${infos.length})] top=${top.mkString(",")}")}
-      Some(top)
-    } else {
-      None
+      top
     }
   }
 
-  def asyncSearch(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Future[Option[Seq[I]]] = {
-    asyncTopN(userId, query, None).map { o =>
-      o map { s => s.map(_.info) }
+  def search(userId: Id[User], query: String)(implicit ord: Ordering[TypeaheadHit[I]]): Future[Seq[I]] = {
+    topN(userId, query, None).map { o =>
+      o map { _.info }
     }(ExecutionContext.fj)
-  }
-
-  def search(infos: Seq[I], queryTerms: Array[String])(implicit ord: Ordering[TypeaheadHit[I]]): Option[Seq[I]] = timing(s"search(${queryTerms.mkString(",")},#infos=${infos.length})") {
-    topN(infos, queryTerms, None) map { s => s.map(_.info) }
   }
 
   def build(id: Id[User]): Future[PrefixFilter[E]] = {

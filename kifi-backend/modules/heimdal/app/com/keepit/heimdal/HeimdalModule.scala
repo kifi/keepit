@@ -9,7 +9,8 @@ abstract class HeimdalModule(
   // Common Functional Modules
   val cacheModule: CacheModule,
   val mongoModule: MongoModule,
-  val heimdalQueueModule: HeimdalQueueModule
+  val heimdalQueueModule: HeimdalQueueModule,
+  val delightedModule: DelightedModule
 ) extends ConfigurationModule with CommonServiceModule  {
   // Service clients
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()

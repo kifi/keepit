@@ -1,5 +1,6 @@
 package com.keepit.heimdal
 
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Heimdal
@@ -18,7 +19,7 @@ import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 
-import play.api.libs.json.{JsNumber, JsArray, Json, JsObject}
+import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
@@ -51,6 +52,8 @@ trait HeimdalServiceClient extends ServiceClient {
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit
 
   def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]]
+
+  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]): Future[Boolean]
 }
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
@@ -145,6 +148,23 @@ class HeimdalServiceClientImpl @Inject() (
   def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]] = {
     call(Heimdal.internal.getLastDelightedAnswerDate(userId)).map { response =>
       Json.parse(response.body).asOpt[DateTime]
+    }
+  }
+
+  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]): Future[Boolean] = {
+    if (score < 0 || score > 10) return {
+      airbrakeNotifier.notify(s"Invalid score $score for user $userId with email ${email.address} (comment: $comment)")
+      Future.successful(false)
+    }
+    call(Heimdal.internal.postDelightedAnswer(userId, email, name, score, comment)).map { response =>
+      Json.parse(response.body) match {
+        case JsString(s) if s == "success" => true
+        case json =>
+          (json \ "error").asOpt[String].map { msg =>
+            log.warn(s"Error posting delighted answer for user $userId, score $score, comment: $comment: $msg")
+          }
+          false
+        }
     }
   }
 }

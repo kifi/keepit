@@ -93,12 +93,9 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
         val gBookRawInfoSeq = gbookInfoSeqOpt.get
         gBookRawInfoSeq.length === 2
 
-        val econtactsJsArr = commander.getEContactsDirect(u42, 500)
-        val econtactsSeqOpt = econtactsJsArr.validate[Seq[EContact]].asOpt
-        econtactsSeqOpt.isEmpty === false
-        val econtactsSeq = econtactsSeqOpt.get
-        econtactsSeq.isEmpty === false
-        econtactsSeq.length === 4 // distinct
+        val eContacts = commander.getContactsByUser(u42)
+        eContacts.isEmpty === false
+        eContacts.length === 4 // distinct
 
         // todo: remove queryEContacts
         var qRes = commander.queryEContacts(u42, 10, None, None)

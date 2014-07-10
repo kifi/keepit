@@ -5,7 +5,7 @@ import scala.concurrent.duration.{Duration, DurationInt}
 import scala.util.Try
 
 import com.google.inject.Inject
-import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.{RichContact, ABookServiceClient}
 import com.keepit.commanders.{AuthCommander, UserCommander}
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{AdminController, ActionAuthenticator, AuthenticatedRequest}
@@ -139,7 +139,7 @@ class AdminUserController @Inject() (
 
   def moreUserInfoView(userId: Id[User], showPrivates:Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
-    val econtactsF = if (showPrivates) abookClient.getEContacts(userId, 40000000) else Future.successful(Seq.empty[EContact])
+    val contactsF = if (showPrivates) abookClient.getContactsByUser(userId) else Future.successful(Seq.empty[RichContact])
     val (user, socialUserInfos, socialConnections) = db.readOnlyReplica { implicit s =>
       val user = userRepo.get(userId)
       val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
@@ -151,8 +151,8 @@ class AdminUserController @Inject() (
     }
     for {
       abookInfos <- abookInfoF
-      econtacts <- econtactsF
-    } yield Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, socialConnections, abookInfos, econtacts))
+      contacts <- contactsF
+    } yield Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, socialConnections, abookInfos, contacts))
   }
 
   def updateCollectionsForBookmark(id: Id[Keep]) = AdminHtmlAction.authenticated { implicit request =>
@@ -218,7 +218,7 @@ class AdminUserController @Inject() (
     var userId = user.id.get
     val abookInfoF = abookClient.getABookInfos(userId)
     val econtactCountF = abookClient.getEContactCount(userId)
-    val econtactsF = if (showPrivateContacts) abookClient.getEContacts(userId, 500) else Future.successful(Seq.empty[EContact])
+    val contactsF = if (showPrivateContacts) abookClient.getContactsByUser(userId, pageSize = Some(500)) else Future.successful(Seq.empty[RichContact])
 
     val (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica {implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
@@ -238,11 +238,11 @@ class AdminUserController @Inject() (
     for {
       abookInfos <- abookInfoF
       econtactCount <- econtactCountF
-      econtacts <- econtactsF
+      contacts <- contactsF
     } yield {
       Ok(html.admin.user(user, bookmarkCount, experiments, socialUsers,
         fortyTwoConnections, kifiInstallations, allowedInvites, emails, abookInfos, econtactCount,
-        econtacts, invitedByUsers))
+        contacts, invitedByUsers))
     }
   }
 
@@ -690,27 +690,21 @@ class AdminUserController @Inject() (
   }
 
   // ad hoc testing only during dev phase
-  private def prefixSocialSearchDirect(userId:Id[User], query:String):Option[Seq[SocialUserBasicInfo]] = {
+  private def prefixSocialSearchDirect(userId:Id[User], query:String): Future[Seq[SocialUserBasicInfo]] = {
     implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
-    val resOpt = socialUserTypeahead.search(userId, query)
-    log.info(s"[prefixSearch($userId,$query)]: res=$resOpt")
-    resOpt
+    socialUserTypeahead.search(userId, query)
   }
 
-  def prefixSocialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticated { request =>
-    val resOpt = prefixSocialSearchDirect(userId, query)
-    resOpt match {
-      case None =>
-        Ok(s"No social match found for $query")
-      case Some(res) =>
-        Ok(res.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString(""))
+  def prefixSocialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
+    prefixSocialSearchDirect(userId, query) map { res =>
+      Ok(res.map { info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>"}.mkString(""))
     }
   }
 
-  private def prefixContactSearchDirect(userId:Id[User], query:String):Future[Seq[EContact]] = {
-    abookClient.prefixSearch(userId, query) map { res =>
+  private def prefixContactSearchDirect(userId:Id[User], query:String):Future[Seq[RichContact]] = {
+    abookClient.prefixQuery(userId, query) map { res =>
       log.info(s"[prefixContactSearchDirect($userId)-ABOOK] res=(${res.length});${res.take(10).mkString(",")}")
-      res
+      res.map(_.info)
     }
   }
 
@@ -719,24 +713,19 @@ class AdminUserController @Inject() (
       if (res.isEmpty)
         Ok(s"No contact match found for $query")
       else
-        Ok(res.map{ e => s"EContact: id=${e.id} email=${e.email} name=${e.name} <br/>" }.mkString(""))
+        Ok(res.map{ e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}" }.mkString("<br/>"))
     }
   }
 
   def prefixSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
-    val contactResF = prefixContactSearchDirect(userId, query)
-    val socialResOpt = prefixSocialSearchDirect(userId, query)
-    contactResF map { contactRes =>
-      socialResOpt match {
-        case None =>
-          if (contactRes.isEmpty)
-            Ok(s"No match found for $query")
-          else
-            Ok(contactRes.map{ e => s"e.id=${e.id} name=${e.name}" }.mkString("<br/>"))
-        case Some(socialRes) =>
-          Ok(socialRes.map{ info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType} <br/>" }.mkString("") +
-             contactRes.map{ e => s"EContact: id=${e.id} email=${e.email} name=${e.name} <br/>" }.mkString(""))
-      }
+    for {
+      contactRes <- prefixContactSearchDirect(userId, query)
+      socialRes <- prefixSocialSearchDirect(userId, query)
+    } yield {
+      Ok((
+        socialRes.map { info => s"SocialUser: id=${info.id} name=${info.fullName} network=${info.networkType}"} ++
+          contactRes.map { e => s"Contact: email=${e.email} name=${e.name} userId=${e.userId}"}
+        ).mkString("<br/>"))
     }
   }
 
