@@ -11,6 +11,7 @@ import com.keepit.common.performance.timing
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.commanders._
+import com.keepit.heimdal.{DelightedAnswerSources, BasicDelightedAnswer}
 import com.keepit.model._
 import play.api.libs.json.Json.toJson
 import com.keepit.abook.{ABookUploadConf, ABookServiceClient}
@@ -42,6 +43,7 @@ import com.keepit.common.mail.EmailAddress
 import play.api.libs.json.JsObject
 import com.keepit.search.SearchServiceClient
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.common.http._
 
 class UserController @Inject() (
   db: Database,
@@ -423,12 +425,17 @@ class UserController @Inject() (
   }
 
   def postDelightedAnswer = JsonAction.authenticatedParseJsonAsync { request =>
-    (request.body \ "score").asOpt[Int] map { score =>
-      val comment = (request.body \ "comment").asOpt[String]
-      userCommander.postDelightedAnswer(request.userId, score, comment) map { success =>
+    implicit val source = DelightedAnswerSources.fromUserAgent(request.userAgentOpt)
+    Json.fromJson[BasicDelightedAnswer](request.body) map { answer =>
+      userCommander.postDelightedAnswer(request.userId, answer) map { success =>
         if (success) Ok else BadRequest
       }
     } getOrElse Future.successful(BadRequest)
+  }
+
+  def cancelDelightedSurvey = JsonAction.authenticated { implicit request =>
+    // todo(martin) implement
+    Ok
   }
 
   // todo(Andrew): Remove when ng is out

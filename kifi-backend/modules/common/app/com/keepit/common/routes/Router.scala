@@ -1,6 +1,7 @@
 package com.keepit.common.routes
 
 import com.keepit.common.db.{SequenceNumber, ExternalId, Id, State}
+import com.keepit.heimdal.BasicDelightedAnswer
 import com.keepit.model._
 import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
@@ -228,7 +229,7 @@ object Heimdal extends Service {
     def setUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/set", Param("userId", userId))
     def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = ServiceRoute(GET, "/internal/heimdal/user/alias", Param("userId", userId), Param("externalId", externalId))
     def getLastDelightedAnswerDate(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/user/lastDelightedAnswerDate", Param("userId", userId))
-    def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, score: Int, comment: Option[String]) = ServiceRoute(POST, s"/internal/heimdal/user/postDelightedAnswer", Param("userId", userId), Param("externalId", externalId), Param("email", email), Param("name", name), Param("score", score), Param("comment", comment))
+    def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String) = ServiceRoute(POST, s"/internal/heimdal/user/postDelightedAnswer", Param("userId", userId), Param("externalId", externalId), Param("email", email), Param("name", name))
   }
 }
 

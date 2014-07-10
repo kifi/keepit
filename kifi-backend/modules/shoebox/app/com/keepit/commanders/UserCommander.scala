@@ -19,7 +19,7 @@ import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.{ContextStringData, HeimdalServiceClient, HeimdalContextBuilder}
+import com.keepit.heimdal._
 import com.keepit.search.SearchServiceClient
 import com.keepit.typeahead.PrefixFilter
 import com.keepit.typeahead.PrefixMatching
@@ -42,7 +42,6 @@ import scala.Some
 import com.keepit.model.UserEmailAddress
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.social.UserIdentity
-import com.keepit.heimdal.ContextStringData
 import play.api.libs.json.JsSuccess
 import com.keepit.model.SocialUserConnectionsKey
 import com.keepit.common.mail.EmailAddress
@@ -828,9 +827,9 @@ class UserCommander @Inject() (
     } else Future.successful()
   }
 
-  def postDelightedAnswer(userId: Id[User], score: Int, comment: Option[String]): Future[Boolean] = {
+  def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Boolean] = {
     val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
-    heimdalClient.postDelightedAnswer(userId, user.externalId, user.primaryEmail, user.fullName, score, comment)
+    heimdalClient.postDelightedAnswer(userId, user.externalId, user.primaryEmail, user.fullName, answer)
   }
 }
 

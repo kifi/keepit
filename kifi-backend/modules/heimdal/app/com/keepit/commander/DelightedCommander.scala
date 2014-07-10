@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
+import com.keepit.heimdal.BasicDelightedAnswer
 import com.keepit.model._
 import com.keepit.common.collection._
 import com.ning.http.client.Realm.AuthScheme
@@ -22,7 +23,7 @@ case class DelightedConfig(url: String, apiKey: String)
 @ImplementedBy(classOf[DelightedCommanderImpl])
 trait DelightedCommander {
   def getLastDelightedAnswerDate(userId: Id[User]): Option[DateTime]
-  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, score: Int, comment: Option[String]): Future[JsValue]
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[JsValue]
   def fetchNewDelightedAnswers()
 }
 
@@ -44,13 +45,14 @@ class DelightedCommanderImpl @Inject() (
     db.readOnlyReplica { implicit s => delightedAnswerRepo.getLastAnswerDateForUser(userId) }
   }
 
-  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, score: Int, comment: Option[String]): Future[JsValue] = {
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[JsValue] = {
     getOrCreateDelightedUser(userId, externalId, email, name) flatMap { userOpt =>
       userOpt map { user =>
         val data = Map(
           "person" -> Seq(user.delightedExtUserId),
-          "score" -> Seq(score.toString)
-        ).withOpt("comment" -> comment.map(Seq(_)))
+          "score" -> Seq(answer.score.toString),
+          "person_properties[source]" -> Seq(answer.source.value)
+        ).withOpt("comment" -> answer.comment.map(Seq(_)))
 
         delightedRequest("/v1/survey_responses.json").post(data).map { response =>
           if (response.status == Status.OK || response.status == Status.CREATED) {
@@ -143,7 +145,7 @@ class DevDelightedCommander extends DelightedCommander {
 
   def getLastDelightedAnswerDate(userId: Id[User]): Option[DateTime] = None
 
-  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, score: Int, comment: Option[String]): Future[JsValue] =
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[JsValue] =
     Future.successful(JsString("success"))
 
   def fetchNewDelightedAnswers() = ()

@@ -4,6 +4,7 @@ import com.keepit.common.controller.{ShoeboxServiceController, MobileController,
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
+import com.keepit.heimdal.{DelightedAnswerSources, BasicDelightedAnswer}
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.commanders._
@@ -24,6 +25,7 @@ import scala.Some
 import com.keepit.commanders.ConnectionInfo
 import scala.util.Success
 import play.api.libs.json.JsObject
+import com.keepit.common.http._
 
 class MobileUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -149,12 +151,17 @@ class MobileUserController @Inject() (
   }
 
   def postDelightedAnswer = JsonAction.authenticatedParseJsonAsync { request =>
-    (request.body \ "score").asOpt[Int] map { score =>
-      val comment = (request.body \ "comment").asOpt[String]
-      userCommander.postDelightedAnswer(request.userId, score, comment) map { success =>
+    implicit val source = DelightedAnswerSources.fromUserAgent(request.userAgentOpt)
+    Json.fromJson[BasicDelightedAnswer](request.body) map { answer =>
+      userCommander.postDelightedAnswer(request.userId, answer) map { success =>
         if (success) Ok else BadRequest
       }
     } getOrElse Future.successful(BadRequest)
+  }
+
+  def cancelDelightedSurvey = JsonAction.authenticated { implicit request =>
+    // todo(martin) implement
+    Ok
   }
 
   def disconnect(networkString: String) = JsonAction.authenticated(parser = parse.anyContent) { implicit request =>
