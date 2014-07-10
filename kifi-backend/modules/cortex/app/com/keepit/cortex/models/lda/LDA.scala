@@ -1,6 +1,6 @@
 package com.keepit.cortex.models.lda
 
-import com.keepit.cortex.core.{BinaryFormatter, StatModel, Versionable}
+import com.keepit.cortex.core.{ BinaryFormatter, StatModel, Versionable }
 import com.keepit.cortex.store.StoreUtil
 import play.api.libs.json._
 

@@ -86,4 +86,3 @@ class GithubExtractorTest extends Specification {
   }
 }
 
-

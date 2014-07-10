@@ -1,6 +1,6 @@
 package com.keepit.search.result
 
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URISanitizer
 import com.keepit.model._
@@ -31,8 +31,7 @@ object KifiSearchResult extends Logging {
     experimentId: Option[Id[SearchConfigExperiment]],
     context: String,
     collections: Seq[ExternalId[Collection]],
-    experts: Seq[JsObject]
-  ): KifiSearchResult = {
+    experts: Seq[JsObject]): KifiSearchResult = {
     try {
       new KifiSearchResult(JsObject(List(
         "uuid" -> JsString(uuid.toString),
@@ -74,16 +73,15 @@ object KifiSearchHit extends Logging {
     isMyBookmark: Boolean,
     isPrivate: Boolean,
     users: Seq[BasicUser],
-    score: Float
-  ): KifiSearchHit = {
+    score: Float): KifiSearchHit = {
     try {
       new KifiSearchHit(JsObject(List(
-          "count" -> JsNumber(count),
-          "bookmark" -> hit.json,
-          "users" -> Json.toJson(users),
-          "score" -> JsNumber(score),
-          "isMyBookmark" -> JsBoolean(isMyBookmark),
-          "isPrivate" -> JsBoolean(isPrivate)
+        "count" -> JsNumber(count),
+        "bookmark" -> hit.json,
+        "users" -> Json.toJson(users),
+        "score" -> JsNumber(score),
+        "isMyBookmark" -> JsBoolean(isMyBookmark),
+        "isPrivate" -> JsBoolean(isPrivate)
       )))
     } catch {
       case e: Throwable =>
@@ -95,7 +93,7 @@ object KifiSearchHit extends Logging {
 
 class PartialSearchResult(val json: JsValue) extends AnyVal {
   def hits: Seq[DetailedSearchHit] = (json \ "hits").as[JsArray] match {
-    case JsArray(hits) => hits.map{ json => new DetailedSearchHit(json.as[JsObject]) }
+    case JsArray(hits) => hits.map { json => new DetailedSearchHit(json.as[JsObject]) }
     case _ => Seq.empty
   }
   def myTotal: Int = (json \ "myTotal").as[Int]
@@ -115,7 +113,7 @@ object PartialSearchResult extends Logging {
     friendStats: FriendStats,
     svVariance: Float, // TODO: remove
     show: Boolean // TODO: remove
-  ): PartialSearchResult = {
+    ): PartialSearchResult = {
     try {
       new PartialSearchResult(JsObject(List(
         "hits" -> JsArray(hits.map(_.json)),
@@ -154,7 +152,7 @@ class DetailedSearchHit(val json: JsObject) extends AnyVal {
   def isFriendsBookmark: Boolean = (json \ "isFriendsBookmark").as[Boolean]
   def isPrivate: Boolean = (json \ "isPrivate").as[Boolean]
   def bookmarkCount: Int = (json \ "bookmarkCount").as[Int]
-  def users: Seq[Id[User]] = (json \ "users").asOpt[Seq[Long]].map{ users => users.map{ id => Id[User](id.toLong) } }.getOrElse(Seq.empty)
+  def users: Seq[Id[User]] = (json \ "users").asOpt[Seq[Long]].map { users => users.map { id => Id[User](id.toLong) } }.getOrElse(Seq.empty)
   def score: Float = (json \ "score").as[Float]
   def scoring: Scoring = (json \ "scoring").as[Scoring]
   def bookmark: BasicSearchHit = new BasicSearchHit((json \ "bookmark").as[JsObject])
@@ -180,8 +178,7 @@ object DetailedSearchHit extends Logging {
     isPrivate: Boolean,
     users: Seq[Id[User]],
     score: Float,
-    scoring: Scoring
-  ): DetailedSearchHit = {
+    scoring: Scoring): DetailedSearchHit = {
     try {
       new DetailedSearchHit(JsObject(List(
         "uriId" -> JsNumber(uriId),
@@ -207,7 +204,7 @@ class BasicSearchHit(val json: JsObject) extends AnyVal {
   def url: String = (json \ "url").as[String]
   def titleMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "title")
   def urlMatches: Seq[(Int, Int)] = readMatches(json \ "matches" \ "url")
-  def collections: Option[Seq[ExternalId[Collection]]] = (json \ "tags").asOpt[JsArray].map{ case JsArray(ids) => ids.map(id => ExternalId[Collection](id.as[String])) }
+  def collections: Option[Seq[ExternalId[Collection]]] = (json \ "tags").asOpt[JsArray].map { case JsArray(ids) => ids.map(id => ExternalId[Collection](id.as[String])) }
   def bookmarkId: Option[ExternalId[Keep]] = (json \ "id").asOpt[String].flatMap(ExternalId.asOpt[Keep])
 
   def addMatches(titleMatches: Option[Seq[(Int, Int)]], urlMatches: Option[Seq[(Int, Int)]]): BasicSearchHit = {
@@ -246,8 +243,8 @@ class BasicSearchHit(val json: JsObject) extends AnyVal {
 
   private def readMatches(matches: JsValue): Seq[(Int, Int)] = {
     matches.asOpt[JsArray] map {
-     case JsArray(pairs) => pairs.map { case JsArray(Seq(JsNumber(start), JsNumber(len))) => (start.toInt, (start + len).toInt) }
-    } getOrElse(Seq.empty)
+      case JsArray(pairs) => pairs.map { case JsArray(Seq(JsNumber(start), JsNumber(len))) => (start.toInt, (start + len).toInt) }
+    } getOrElse (Seq.empty)
   }
 }
 
@@ -258,18 +255,17 @@ object BasicSearchHit extends Logging {
     collections: Option[Seq[ExternalId[Collection]]] = None,
     bookmarkId: Option[ExternalId[Keep]] = None,
     titleMatches: Option[Seq[(Int, Int)]] = None,
-    urlMatches: Option[Seq[(Int, Int)]] = None
-  ): BasicSearchHit = {
+    urlMatches: Option[Seq[(Int, Int)]] = None): BasicSearchHit = {
     try {
       var json = Json.obj(
         "title" -> title,
         "url" -> url
       )
-      bookmarkId.foreach{ id => json = json + ("id" -> JsString(id.id)) }
+      bookmarkId.foreach { id => json = json + ("id" -> JsString(id.id)) }
 
       var h = new BasicSearchHit(json)
       h = h.addMatches(titleMatches, urlMatches)
-      collections.foreach{ c => h = h.addCollections(c) }
+      collections.foreach { c => h = h.addCollections(c) }
       h
     } catch {
       case e: Throwable =>

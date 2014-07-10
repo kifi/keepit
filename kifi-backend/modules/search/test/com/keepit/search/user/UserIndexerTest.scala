@@ -2,7 +2,7 @@ package com.keepit.search.user
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
-import com.keepit.search.index.{VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer}
+import com.keepit.search.index.{ VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.inject._
 import com.keepit.test._
@@ -14,10 +14,9 @@ import com.keepit.search.util.IdFilterCompressor
 import com.keepit.typeahead.PrefixFilter
 import com.keepit.common.mail.EmailAddress
 
-
 class UserIndexerTest extends Specification with ApplicationInjector {
   private def setup(implicit client: FakeShoeboxServiceClientImpl) = {
-    val users = (0 until 4).map{ i =>
+    val users = (0 until 4).map { i =>
       User(firstName = s"firstName${i}", lastName = s"lastName${i}", pictureName = Some(s"picName${i}"))
     } :+ User(firstName = "Woody", lastName = "Allen", pictureName = Some("face"))
 
@@ -30,13 +29,13 @@ class UserIndexerTest extends Specification with ApplicationInjector {
 
     client.addEmails(emails: _*)
 
-    val exps = Seq( UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("admin")),
-        UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can_connect")),
-        UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can message all users")),
-        UserExperiment(userId = usersWithId(1).id.get, experimentType = ExperimentType("fake")),
-        UserExperiment(userId = usersWithId(2).id.get, experimentType = ExperimentType("admin"))
+    val exps = Seq(UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("admin")),
+      UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can_connect")),
+      UserExperiment(userId = usersWithId(0).id.get, experimentType = ExperimentType("can message all users")),
+      UserExperiment(userId = usersWithId(1).id.get, experimentType = ExperimentType("fake")),
+      UserExperiment(userId = usersWithId(2).id.get, experimentType = ExperimentType("admin"))
     )
-    exps.foreach{client.saveUserExperiment(_)}
+    exps.foreach { client.saveUserExperiment(_) }
 
     usersWithId
   }
@@ -49,7 +48,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
 
   "UserIndxer" should {
     "persist sequence number" in {
-      running(new TestApplication(FakeShoeboxServiceModule())){
+      running(new TestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer()
@@ -65,7 +64,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
   }
 
   "search users by name prefix" in {
-    running(new TestApplication(FakeShoeboxServiceModule())){
+    running(new TestApplication(FakeShoeboxServiceModule())) {
       val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
       setup(client)
       val indexer = mkUserIndexer()
@@ -88,7 +87,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
   }
 
   "search user by exact email address" in {
-    running(new TestApplication(FakeShoeboxServiceModule())){
+    running(new TestApplication(FakeShoeboxServiceModule())) {
       val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
       setup(client)
       val indexer = mkUserIndexer()
@@ -104,7 +103,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     }
 
     "store and retreive correct info" in {
-      running(new TestApplication(FakeShoeboxServiceModule())){
+      running(new TestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer()
@@ -123,13 +122,13 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         val query2 = parser.parse("firstNa")
         val hits2 = searcher.search(query2.get, 5, filter).hits
         hits2.size === 4
-        hits2.map{_.basicUser.firstName} === (0 to 3).map{ i => s"firstName${i}"}.toArray
-        hits2.map{_.id.id}.seq === (1 to 4)
+        hits2.map { _.basicUser.firstName } === (0 to 3).map { i => s"firstName${i}" }.toArray
+        hits2.map { _.id.id }.seq === (1 to 4)
       }
     }
 
     "paginate" in {
-      running(new TestApplication(FakeShoeboxServiceModule())){
+      running(new TestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer()
@@ -204,7 +203,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     }
 
     "search using prefix field" in {
-      running(new TestApplication(FakeShoeboxServiceModule())){
+      running(new TestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         client.saveUsers(
           User(firstName = s"abc", lastName = s"def"),
@@ -243,7 +242,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
         hits.hits(1).basicUser.firstName === "uvw"
 
         query = parser.parseWithUserExperimentConstrains("xyzzzzzzzzzzz", Seq(), useLucenePrefixQuery = false)
-        queryTerms = PrefixFilter.tokenize("xyzzzzzzzzzzz")               // longer than UserIndexer.PREFIX_MAX_LEN, should do additional filtering
+        queryTerms = PrefixFilter.tokenize("xyzzzzzzzzzzz") // longer than UserIndexer.PREFIX_MAX_LEN, should do additional filtering
         hits = searcher.search(query.get, 10, filter, queryTerms)
         hits.hits.size === 1
         hits.hits(0).basicUser.firstName === "xyzzzzzzzzzzzzz"
@@ -251,7 +250,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     }
 
     "search using prefix field when first name or last name have multiple tokens" in {
-      running(new TestApplication(FakeShoeboxServiceModule())){
+      running(new TestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         client.saveUsers(
           User(firstName = s"abc", lastName = s"def ghi"),

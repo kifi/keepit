@@ -2,9 +2,9 @@ package com.keepit.eliza.controllers.ext
 
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
-import com.keepit.eliza.commanders.{MessagingCommander, ElizaEmailCommander}
+import com.keepit.eliza.commanders.{ MessagingCommander, ElizaEmailCommander }
 import com.keepit.common.db.ExternalId
-import com.keepit.common.controller.{ElizaServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.controller.{ ElizaServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
@@ -16,7 +16,7 @@ import com.keepit.common.mail.RemotePostOffice
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import play.api.libs.json.{JsSuccess, Json, JsValue, JsObject}
+import play.api.libs.json.{ JsSuccess, Json, JsValue, JsObject }
 
 import akka.actor.ActorSystem
 
@@ -40,8 +40,7 @@ class ExtMessagingController @Inject() (
     protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,
     protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
-    val accessLog: AccessLog
-  ) extends BrowserExtensionController(actionAuthenticator) with ElizaServiceController {
+    val accessLog: AccessLog) extends BrowserExtensionController(actionAuthenticator) with ElizaServiceController {
 
   def sendMessageAction() = JsonAction.authenticatedParseJsonAsync { request =>
     val o = request.body
@@ -65,14 +64,15 @@ class ExtMessagingController @Inject() (
     contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
 
     val messageSubmitResponse = messagingCommander.sendMessageAction(title, text, source,
-      validUserRecipients, validEmailRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
-      Ok(Json.obj(
-        "id" -> message.externalId.id,
-        "parentId" -> message.threadExtId.id,
-        "createdAt" -> message.createdAt,
-        "threadInfo" -> threadInfoOpt,
-        "messages" -> messages.reverse))
-    }
+      validUserRecipients, validEmailRecipients, url, urls, request.userId, contextBuilder.build) map {
+        case (message, threadInfoOpt, messages) =>
+          Ok(Json.obj(
+            "id" -> message.externalId.id,
+            "parentId" -> message.threadExtId.id,
+            "createdAt" -> message.createdAt,
+            "threadInfo" -> threadInfoOpt,
+            "messages" -> messages.reverse))
+      }
 
     messageSubmitResponse // todo(Martin, Jared, Léo): return meaningful error about invalid participants
 

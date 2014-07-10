@@ -2,13 +2,13 @@ package com.keepit.eliza.mail
 
 import scala.concurrent.duration._
 
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 
 import javax.mail._
 import play.api.Plugin
@@ -25,16 +25,15 @@ import scala.util.matching.Regex
 private case object FetchNewDiscussionReplies
 
 case class MailDiscussionServerSettings(
-  identifier: String,
-  domain: String,
-  password: String,
-  server: String,
-  protocol: String
-) {
+    identifier: String,
+    domain: String,
+    password: String,
+    server: String,
+    protocol: String) {
   val username: String = identifier + "@" + domain
 }
 
-case class MailNotificationReply(timestamp:DateTime, content:Option[String], token:String)
+case class MailNotificationReply(timestamp: DateTime, content: Option[String], token: String)
 
 object MailNotificationReply {
   implicit val format = (
@@ -45,11 +44,10 @@ object MailNotificationReply {
 }
 
 class MailDiscussionReceiverActor @Inject() (
-  airbrake: AirbrakeNotifier,
-  settings: MailDiscussionServerSettings,
-  messageParser: MailDiscussionMessageParser,
-  mailNotificationReplyQueue: SQSQueue[MailNotificationReply]
-  ) extends FortyTwoActor(airbrake) with Logging {
+    airbrake: AirbrakeNotifier,
+    settings: MailDiscussionServerSettings,
+    messageParser: MailDiscussionMessageParser,
+    mailNotificationReplyQueue: SQSQueue[MailNotificationReply]) extends FortyTwoActor(airbrake) with Logging {
 
   private lazy val mailSession: Session = {
     val props = System.getProperties()
@@ -89,11 +87,10 @@ class MailDiscussionReceiverActor @Inject() (
 }
 
 class MailDiscussionMessageParser @Inject() (
-  db: Database,
-  settings: MailDiscussionServerSettings,
-  airbrake: AirbrakeNotifier,
-  implicit val publicIdConfiguration: PublicIdConfiguration
-  ) extends GenericMailParser {
+    db: Database,
+    settings: MailDiscussionServerSettings,
+    airbrake: AirbrakeNotifier,
+    implicit val publicIdConfiguration: PublicIdConfiguration) extends GenericMailParser {
 
   private val DiscussionEmail = raw"""^${settings.identifier}\+(\w+)@[\w\.]+$$""".r
 
@@ -110,17 +107,27 @@ class MailDiscussionMessageParser @Inject() (
   def getInfo(message: Message): Option[MailNotificationReply] = {
     try {
       getPublicId(message) flatMap { publicId =>
-        val contents = getText(message).map(MailDiscussionMessageParser.extractMessage)
-        if (contents.nonEmpty) {
-          Some(MailNotificationReply(getTimestamp(message), contents, publicId))
-        } else None
-      }
-      } catch {
-        case e: java.io.UnsupportedEncodingException => {
-          airbrake.notify("Unsupported Encoding in External Messaging Reply Email.", e)
+        val rawContents = getText(message)
+        if (rawContents.nonEmpty && rawContents.get.length > 0) {
+          val contents = rawContents.map(MailDiscussionMessageParser.extractMessage)
+          if (contents.nonEmpty && contents.get.length > 0) {
+            Some(MailNotificationReply(getTimestamp(message), contents, publicId))
+          } else {
+            airbrake.notify("External Messaging Reply Email empty after cleanup.")
+            None
+          }
+        } else {
+          airbrake.notify("Failed to extract any text from External Messaging Reply Email.")
           None
         }
+
       }
+    } catch {
+      case e: java.io.UnsupportedEncodingException => {
+        airbrake.notify("Unsupported Encoding in External Messaging Reply Email.", e)
+        None
+      }
+    }
 
   }
 }
@@ -128,13 +135,13 @@ class MailDiscussionMessageParser @Inject() (
 object MailDiscussionMessageParser {
   val SIGNATURES = Seq("Sent from my iPhone")
   val EXTRACTORS = Seq(
-    raw"<[\s\S]+@[\s\S]+>[^\n]*:",               // Gmail (US)
-    raw"\([\s\S]+@[\s\S]+\)[^\n]*:",             // Gmail (other cases)
+    raw"<[\s\S]+@[\s\S]+>[^\n]*:", // Gmail (US)
+    raw"\([\s\S]+@[\s\S]+\)[^\n]*:", // Gmail (other cases)
     raw"From:[\s\S]+@[\s\S]+To:[\s\S]+@[\s\S]+", // Outlook (US)
-    raw"----- Original Message -----"            // Zimbra
+    raw"----- Original Message -----" // Zimbra
   )
   def extractMessage(content: String): String = {
-    val mainText = EXTRACTORS.foldLeft(content){ (extracted, extractor) =>
+    val mainText = EXTRACTORS.foldLeft(content) { (extracted, extractor) =>
       val newExtracted = (new Regex(raw"[^\n]*$extractor")).split(content)(0).trim
       if (newExtracted.length < extracted.length) newExtracted else extracted
     }
@@ -147,10 +154,10 @@ trait MailMessageReceiverPlugin extends Plugin {
   def fetchNewDiscussionMessages()
 }
 
-class MailMessageReceiverPluginImpl @Inject()(
-  actor: ActorInstance[MailDiscussionReceiverActor],
-  val scheduling: SchedulingProperties //only on leader
-) extends MailMessageReceiverPlugin with SchedulerPlugin {
+class MailMessageReceiverPluginImpl @Inject() (
+    actor: ActorInstance[MailDiscussionReceiverActor],
+    val scheduling: SchedulingProperties //only on leader
+    ) extends MailMessageReceiverPlugin with SchedulerPlugin {
 
   override def enabled: Boolean = true
 

@@ -1,7 +1,7 @@
 package com.keepit.scraper
 
 import org.apache.http.protocol.HttpRequestExecutor
-import org.apache.http.{HttpResponse, HttpRequest}
+import org.apache.http.{ HttpResponse, HttpRequest }
 import com.keepit.common.logging.Logging
 
 /**

@@ -12,12 +12,12 @@ import com.keepit.search.PersonalizedSearcher
 import com.keepit.search.TstIndexer
 import com.keepit.search.Tst
 
-
 class SemanticVarianceTest extends Specification {
 
   val indexer = new TstIndexer(new VolatileIndexDirectory)
-  Array("abc def", "abc def", "abc def", "abc ghi", "abc jkl").zip(Array("", "", "", "mno", "mno")).zipWithIndex.map{ case ((text, fallbackText), id) =>
-    indexer.index(Id[Tst](id), text, fallbackText)
+  Array("abc def", "abc def", "abc def", "abc ghi", "abc jkl").zip(Array("", "", "", "mno", "mno")).zipWithIndex.map {
+    case ((text, fallbackText), id) =>
+      indexer.index(Id[Tst](id), text, fallbackText)
   }
 
   "SemanticVariance" should {

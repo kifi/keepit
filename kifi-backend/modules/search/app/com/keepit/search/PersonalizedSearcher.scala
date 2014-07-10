@@ -12,10 +12,10 @@ import com.keepit.search.semantic._
 
 object PersonalizedSearcher {
   def apply(indexReader: WrappedIndexReader,
-            myUris: Set[Long],
-            collectionSearcher: CollectionSearcherWithUser = null,
-            nonPersonalizedContextVectorFuture: Option[Future[SemanticVector]] = None,
-            useNonPersonalizedContextVector: Boolean = false) = {
+    myUris: Set[Long],
+    collectionSearcher: CollectionSearcherWithUser = null,
+    nonPersonalizedContextVectorFuture: Option[Future[SemanticVector]] = None,
+    useNonPersonalizedContextVector: Boolean = false) = {
 
     new PersonalizedSearcher(
       indexReader,
@@ -31,12 +31,11 @@ class PersonalizedSearcher(
   myUris: Set[Long],
   val collectionSearcher: CollectionSearcherWithUser,
   nonPersonalizedContextVectorFuture: Option[Future[SemanticVector]] = None,
-  useNonPersonalizedContextVector: Boolean = false
-)
-extends Searcher(indexReader) with SearchSemanticContext with Logging {
+  useNonPersonalizedContextVector: Boolean = false)
+    extends Searcher(indexReader) with SearchSemanticContext with Logging {
 
   override def getContextVector: SemanticVector = {
-    if (useNonPersonalizedContextVector){
+    if (useNonPersonalizedContextVector) {
       Await.result(nonPersonalizedContextVectorFuture.get, 1 second)
     } else super.getContextVector
   }

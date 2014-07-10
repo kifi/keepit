@@ -4,7 +4,7 @@ import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model._
 import scala.concurrent._
 import com.google.inject.Injector
-import com.keepit.common.store.{S3URIImageStore, FakeS3URIImageStore, ImageSize}
+import com.keepit.common.store.{ S3URIImageStore, FakeS3URIImageStore, ImageSize }
 import com.keepit.scraper.embedly._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.db.Id
@@ -16,15 +16,15 @@ import org.specs2.mutable.Specification
 import org.specs2.matcher.MatchResult
 import scala.Some
 import com.keepit.common.pagepeeker.PagePeekerImage
-import scala.util.{Success, Try}
+import scala.util.{ Success, Try }
 import akka.actor.Scheduler
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.scraper.FakeScraperServiceClientImpl
 import com.keepit.scraper.ScraperServiceClient
-import com.google.inject.{Singleton, Provides}
+import com.google.inject.{ Singleton, Provides }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.search.{ArticleStore, InMemoryArticleStoreImpl}
+import com.keepit.search.{ ArticleStore, InMemoryArticleStoreImpl }
 
 object URISummaryCommanderTestDummyValues {
   val dummyImage = ImageInfo(
@@ -48,7 +48,7 @@ object URISummaryCommanderTestDummyValues {
 
 class URISummaryCommanderTestPagePeekerClient extends PagePeekerClient {
   override def getScreenshotData(normalizedUri: NormalizedURI): Future[Option[Seq[PagePeekerImage]]] =
-    future{Some(Seq(PagePeekerImage(URISummaryCommanderTestDummyValues.dummyBufferedImage, ImageSize(1000, 1000))))}
+    future { Some(Seq(PagePeekerImage(URISummaryCommanderTestDummyValues.dummyBufferedImage, ImageSize(1000, 1000)))) }
 }
 
 class URISummaryCommanderTestImageFetcher extends ImageFetcher {
@@ -205,27 +205,31 @@ class URISummaryCommanderTest extends Specification with ShoeboxTestInjector {
 
         // fetch image from embedly
         val result7Fut = URISummaryCommander.getURISummaryForRequest(embedlyRequest) map { _.imageUrl }
-        result7Fut must beLike({ case Some(result: String) =>
-          result === URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl
+        result7Fut must beLike({
+          case Some(result: String) =>
+            result === URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl
         }: Partial).await
 
         // fetch image from pagepeeker
         val result8Fut = URISummaryCommander.getURISummaryForRequest(pagePeekerRequest) map { _.imageUrl }
-        result8Fut must beLike({ case Some(result: String) =>
-          result === FakeS3URIImageStore.placeholderImageURL
+        result8Fut must beLike({
+          case Some(result: String) =>
+            result === FakeS3URIImageStore.placeholderImageURL
         }: Partial).await
 
         // find any kind of image
         val embedlyRequestWithAny = embedlyRequest.copy(imageType = ImageType.ANY)
         val embedlyImageFut = URISummaryCommander.getURISummaryForRequest(embedlyRequestWithAny) map { _.imageUrl }
-        embedlyImageFut must beLike({ case Some(result: String) =>
-          result === URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl
+        embedlyImageFut must beLike({
+          case Some(result: String) =>
+            result === URISummaryCommanderTestDummyValues.dummyEmbedlyImageUrl
         }: Partial).await
 
         val pagePeekerRequestWithAny = pagePeekerRequest.copy(imageType = ImageType.ANY)
         val pagePeekerResultFut = URISummaryCommander.getURISummaryForRequest(pagePeekerRequestWithAny) map { _.imageUrl }
-        pagePeekerResultFut must beLike({ case Some(result: String) =>
-          result === FakeS3URIImageStore.placeholderImageURL
+        pagePeekerResultFut must beLike({
+          case Some(result: String) =>
+            result === FakeS3URIImageStore.placeholderImageURL
         }: Partial).await
       }
     }

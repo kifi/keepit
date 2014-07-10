@@ -35,7 +35,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
 
   "The domain tag importer" should {
     "load domain sensitivity from a map of tags to domains" in {
-      running(new ShoeboxApplication(domainTagImporterTestModules:_*)) {
+      running(new ShoeboxApplication(domainTagImporterTestModules: _*)) {
         val db = inject[Database]
         val tagRepo = inject[DomainTagRepo]
         val domainTagImporter = inject[DomainTagImporterImpl]
@@ -58,7 +58,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
             .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].calculateSensitivity)
         }
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           domainRepo.get("apple.com").get.sensitive === Some(true)
           domainRepo.get("amazon.com").get.sensitive === Some(false)
           domainRepo.get("google.com").get.sensitive === Some(false)
@@ -69,7 +69,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
       }
     }
     "properly remove domain tags" in {
-      running(new ShoeboxApplication(domainTagImporterTestModules:_*)) {
+      running(new ShoeboxApplication(domainTagImporterTestModules: _*)) {
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val db = inject[Database]
@@ -89,10 +89,10 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
 
         db.readWrite { implicit s =>
           Seq("apple.com", "amazon.com", "google.com", "methvin.net", "42go.com")
-              .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].calculateSensitivity)
+            .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].calculateSensitivity)
         }
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           domainRepo.get("apple.com").get.sensitive === Some(false)
           domainRepo.get("amazon.com").get.sensitive === Some(false)
           domainRepo.get("google.com").get.sensitive === Some(false)
@@ -102,7 +102,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
       }
     }
     "respect manual overrides" in {
-      running(new ShoeboxApplication(domainTagImporterTestModules:_*)) {
+      running(new ShoeboxApplication(domainTagImporterTestModules: _*)) {
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val db = inject[Database]
@@ -121,19 +121,19 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
           domainRepo.get("cnn.com").get.sensitive === Some(false)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(Some(true)))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           domainRepo.get("cnn.com").get.sensitive === Some(true)
         }
 
         domainTagImporter.applyTagToDomains(DomainTagName("stuff"), Set("apple.com", "microsoft.com", "cnn.com").toSeq)
         db.readWrite { implicit s =>
           Seq("apple.com", "microsoft.com", "cnn.com")
-              .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].calculateSensitivity)
+            .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].calculateSensitivity)
 
           domainRepo.get("cnn.com").get.sensitive === Some(true)
           domainRepo.save(domainRepo.get("cnn.com").get.withManualSensitive(None))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           domainRepo.get("cnn.com").get.sensitive === Some(false)
         }
       }

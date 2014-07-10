@@ -2,7 +2,7 @@ package com.keepit.common.social
 
 import net.codingwell.scalaguice.ScalaMultibinder
 import com.keepit.inject.AppScoped
-import com.keepit.social.{SocialGraphPlugin, SocialGraphModule, SocialGraph}
+import com.keepit.social.{ SocialGraphPlugin, SocialGraphModule, SocialGraph }
 
 case class ProdSocialGraphModule() extends SocialGraphModule {
   def configure() {

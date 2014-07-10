@@ -35,8 +35,8 @@ class BooleanQueryWithPercentMatchTest extends Specification {
   val ramDir = new RAMDirectory
   val indexReader = {
     val writer = new IndexWriter(ramDir, config)
-    (0 until 10).foreach{ d =>
-      val text = ("%s %s %s".format("aaa "* (d % 5), "bbb "*(d % 3) , "ccc "*(d % 2)))
+    (0 until 10).foreach { d =>
+      val text = ("%s %s %s".format("aaa " * (d % 5), "bbb " * (d % 3), "ccc " * (d % 2)))
       val doc = new Document()
       doc.add(new Field("B", text, TextField.TYPE_NOT_STORED))
       writer.addDocument(doc)
@@ -55,7 +55,6 @@ class BooleanQueryWithPercentMatchTest extends Specification {
   searcher.setSimilarity(new DefaultSimilarity {
     override def queryNorm(sumOfSquaredWeights: Float) = 1.0f
   })
-
 
   val aaa = new Term("B", "aaa")
   val bbb = new Term("B", "bbb")
@@ -90,7 +89,7 @@ class BooleanQueryWithPercentMatchTest extends Specification {
       q.add(new TermQuery(bbb), Occur.SHOULD)
       doQuery(q).map(_._1) === Seq(1, 2, 3, 4, 5, 6, 7, 8, 9)
 
-      q setPercentMatch(50.0f)
+      q setPercentMatch (50.0f)
       doQuery(q).map(_._1) === Seq(1, 2, 4, 5, 7, 8) // docs with bbb
 
       q = new BooleanQueryWithPercentMatch(false)
@@ -128,7 +127,7 @@ class BooleanQueryWithPercentMatchTest extends Specification {
       q.add(new TermQuery(bbb), Occur.MUST)
       doQuery(q).map(_._1) === Seq(1, 2, 4, 7, 8)
 
-      q setPercentMatch(50.0f)
+      q setPercentMatch (50.0f)
       doQuery(q).map(_._1) === Seq(1, 2, 4, 7, 8)
 
       q = new BooleanQueryWithPercentMatch(false)

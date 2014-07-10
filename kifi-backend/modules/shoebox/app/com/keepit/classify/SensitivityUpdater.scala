@@ -2,7 +2,7 @@ package com.keepit.classify
 
 import org.joda.time.DateTime
 
-import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.google.inject.{ Inject, ImplementedBy, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 
@@ -14,8 +14,7 @@ trait SensitivityUpdater {
 }
 
 @Singleton
-class SensitivityUpdaterImpl @Inject()
-    (domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo) extends SensitivityUpdater {
+class SensitivityUpdaterImpl @Inject() (domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo) extends SensitivityUpdater {
 
   def calculateSensitivity(domain: Domain)(implicit session: RWSession): Option[Boolean] = {
     val tags = tagRepo.getTags(domainToTagRepo.getByDomain(domain.id.get).map(_.tagId))

@@ -34,18 +34,18 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
     var done = false
     var iter = 0
 
-    while (!done){
+    while (!done) {
       val fieldName = addNumberSuffix(field, iter)
       val docValues = reader.getBinaryDocValues(fieldName)
-      if (docValues != null){
+      if (docValues != null) {
         var ref = new BytesRef()
         docValues.get(docid, ref)
-        if (ref.length > 0){
-          if (ref.length == MAX_BINARY_FIELD_LENGTH){
+        if (ref.length > 0) {
+          if (ref.length == MAX_BINARY_FIELD_LENGTH) {
             bytesRefs.append(new BytesRef(ref.bytes, ref.offset, ref.length - 1)) //last byte is EOF symbol and is dropped. We still have something left
-          } else{
-            bytesRefs.append(ref)                                                 // all bytes are good
-            done = true                                                           // nothing left
+          } else {
+            bytesRefs.append(ref) // all bytes are good
+            done = true // nothing left
           }
         } else {
           log.error(s"missing uri list data: $fieldName")
@@ -64,7 +64,7 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
         val allBytes = new Array[Byte](counts)
 
         var offset = 0
-        bytesRefs.foreach{ ref =>
+        bytesRefs.foreach { ref =>
           System.arraycopy(ref.bytes, ref.offset, allBytes, offset, ref.length)
           offset += ref.length
         }

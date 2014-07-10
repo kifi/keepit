@@ -1,14 +1,14 @@
 package com.keepit.scraper
 
-import play.api.{Play, Plugin}
+import play.api.{ Play, Plugin }
 import play.api.Play.current
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.logging.Logging
 import scala.concurrent.duration._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
+import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
 
 trait PullerPlugin extends Plugin {
   def pull()
@@ -17,12 +17,9 @@ trait PullerPlugin extends Plugin {
 case class Pull()
 
 class PullerPluginImpl @Inject() (
-  actor: ActorInstance[Puller],
-  scraperConfig: ScraperConfig,
-  val scheduling: SchedulingProperties
-) extends Logging with PullerPlugin with SchedulerPlugin {
-
-  log.info(s"<ctr> PullerPlugin created")
+    actor: ActorInstance[Puller],
+    scraperConfig: ScraperConfig,
+    val scheduling: SchedulingProperties) extends Logging with PullerPlugin with SchedulerPlugin {
 
   override def enabled: Boolean = true
   override def onStart() {
@@ -34,18 +31,13 @@ class PullerPluginImpl @Inject() (
       log.error(s"[onStart] PullerPlugin NOT started -- play app is not ready")
     }
   }
-  override def onStop() {
-    log.info(s"[PullerPlugin] stopped")
-    super.onStop
-  }
 
   override def pull() { actor.ref ! Pull }
 }
 
 class Puller @Inject() (
-  airbrake:AirbrakeNotifier,
-  scrapeProcessor:ScrapeProcessor
-) extends FortyTwoActor(airbrake) with Logging {
+    airbrake: AirbrakeNotifier,
+    scrapeProcessor: ScrapeProcessor) extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case Pull => scrapeProcessor.pull

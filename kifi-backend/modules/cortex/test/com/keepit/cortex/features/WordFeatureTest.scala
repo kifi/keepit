@@ -18,7 +18,7 @@ class WordFeatureTest extends Specification with WordFeatureTestHelper {
       fakeDocRep.apply(doc).get.vectorize === Array(1f, 0f)
 
       doc = Document("apple intel".split(" "))
-      fakeDocRep.apply(doc).get.vectorize === Array(1.5f/2, 0.5f/2)
+      fakeDocRep.apply(doc).get.vectorize === Array(1.5f / 2, 0.5f / 2)
 
       doc = Document("@%#%#^ *&^&**".split(" "))
       fakeDocRep.apply(doc) === None

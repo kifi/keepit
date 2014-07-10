@@ -8,7 +8,7 @@ import com.keepit.common.cache._
 import com.keepit.common.db._
 import com.keepit.common.healthcheck._
 import com.keepit.common.mail.TestAmazonMailModule
-import com.keepit.common.net.{FakeClientResponse, HttpUri}
+import com.keepit.common.net.{ FakeClientResponse, HttpUri }
 import com.keepit.common.time._
 import com.keepit.common.zookeeper._
 import com.keepit.inject._
@@ -17,7 +17,7 @@ import com.keepit.shoebox._
 import akka.actor.ActorSystem
 import java.io.File
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.store.{DevStoreModule, ProdStoreModule}
+import com.keepit.common.store.{ DevStoreModule, ProdStoreModule }
 import com.keepit.search.SearchConfigModule
 import com.keepit.common.net.FakeHttpClientModule
 

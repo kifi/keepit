@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
@@ -19,15 +19,14 @@ import views.html
 case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
 
 case class MinimalHit(rank: Int, title: String, url: String)
-case class ConfigIdAndHits(id: Long, hits: Seq[MinimalHit] )
+case class ConfigIdAndHits(id: Long, hits: Seq[MinimalHit])
 case class BlindTestReturn(msg: String, result1: Option[ConfigIdAndHits], result2: Option[ConfigIdAndHits])
 
-object BlindTestReturn{
+object BlindTestReturn {
   implicit def minimalHitFormat = Json.format[MinimalHit]
   implicit def configIdAndHitFormat = Json.format[ConfigIdAndHits]
   implicit def format = Json.format[BlindTestReturn]
 }
-
 
 class AdminSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
@@ -38,8 +37,7 @@ class AdminSearchController @Inject() (
     searchConfigRepo: SearchConfigExperimentRepo,
     searchClient: SearchServiceClient,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
-    heimdal: HeimdalServiceClient
-  ) extends AdminController(actionAuthenticator) with Logging {
+    heimdal: HeimdalServiceClient) extends AdminController(actionAuthenticator) with Logging {
 
   val rand = new Random()
 
@@ -48,7 +46,7 @@ class AdminSearchController @Inject() (
   }
 
   private def getConfigsForBlindTest: Seq[SearchConfigExperiment] = {
-    db.readOnly{ implicit s =>
+    db.readOnlyMaster { implicit s =>
       searchConfigRepo.getActive()
     }.filter(_.description.contains("[blind test]"))
   }
@@ -56,7 +54,7 @@ class AdminSearchController @Inject() (
   private def fakeGetConfigsForBlindTest: Seq[SearchConfigExperiment] = {
     val config = Await.result(searchClient.getSearchDefaultConfig, 1 second)
     Seq(SearchConfigExperiment(id = Some(Id[SearchConfigExperiment](42)), config = config),
-        SearchConfigExperiment(id = Some(Id[SearchConfigExperiment](24)), config = config))
+      SearchConfigExperiment(id = Some(Id[SearchConfigExperiment](24)), config = config))
   }
 
   def blindTestVoted() = AdminHtmlAction.authenticated { request =>
@@ -87,18 +85,18 @@ class AdminSearchController @Inject() (
     val id2 = body.get("id2").get.toLong
     val shuffle = body.get("shuffle").get.toBoolean
 
-    val (config1, config2) = db.readOnly{ implicit s =>
+    val (config1, config2) = db.readOnlyMaster { implicit s =>
       (searchConfigRepo.get(Id[SearchConfigExperiment](id1)), searchConfigRepo.get(Id[SearchConfigExperiment](id2)))
     }
 
-//    val configs = fakeGetConfigsForBlindTest
-//    val (config1, config2) = (configs(0), configs(1))
+    //    val configs = fakeGetConfigsForBlindTest
+    //    val (config1, config2) = (configs(0), configs(1))
 
     val hitsFuture = Future.sequence(Seq(searchClient.searchWithConfig(Id[User](userId), query, maxHits, config1.config),
-                     searchClient.searchWithConfig(Id[User](userId), query, maxHits, config2.config)))
+      searchClient.searchWithConfig(Id[User](userId), query, maxHits, config2.config)))
     val hits = Await.result(hitsFuture, 1 seconds)
-    val (hits1, hits2) = (hits(0).zipWithIndex.map{ case ((uriId, title, url), idx) => MinimalHit(idx + 1, title, url) },
-        hits(1).zipWithIndex.map{ case ((uriId, title, url), idx) => MinimalHit(idx + 1, title, url) })
+    val (hits1, hits2) = (hits(0).zipWithIndex.map { case ((uriId, title, url), idx) => MinimalHit(idx + 1, title, url) },
+      hits(1).zipWithIndex.map { case ((uriId, title, url), idx) => MinimalHit(idx + 1, title, url) })
 
     val rv = if (shuffle && rand.nextInt() % 2 == 1) {
       BlindTestReturn("OK", Some(ConfigIdAndHits(id2, hits2)), Some(ConfigIdAndHits(id1, hits1)))
@@ -122,7 +120,7 @@ class AdminSearchController @Inject() (
   def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminHtmlAction.authenticated { implicit request =>
 
     val result = articleSearchResultStore.get(id).get
-    val metas: Seq[ArticleSearchResultHitMeta] = db.readOnly { implicit s =>
+    val metas: Seq[ArticleSearchResultHitMeta] = db.readOnlyMaster { implicit s =>
       result.hits.zip(result.scorings) map { tuple =>
         val hit = tuple._1
         val scoring = tuple._2

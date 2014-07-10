@@ -18,8 +18,8 @@ object SemanticVariance {
     var i = 0
     if (numVects > 0) {
       while (i < SemanticVector.vectorSize) {
-        val p = (composer.getCount(i).toFloat / numVects)  // empirical probability that position i takes value 1
-        sumOfVar += p * (1 - p)                        // variance of Bernoulli distribution.
+        val p = (composer.getCount(i).toFloat / numVects) // empirical probability that position i takes value 1
+        sumOfVar += p * (1 - p) // variance of Bernoulli distribution.
         i += 1
       }
       sumOfVar / SemanticVector.vectorSize.toFloat
@@ -37,15 +37,15 @@ object SemanticVariance {
     val uriIdFilter = new IdSetFilter(ids)
     var composer = new SemanticVectorComposer
 
-    textQueries.foreach{ q =>
+    textQueries.foreach { q =>
       val extractorQuery = q.getSemanticVectorExtractorQuery()
-      personalizedSearcher.doSearch(extractorQuery, uriIdFilter){ (scorer, iterator, reader) =>
+      personalizedSearcher.doSearch(extractorQuery, uriIdFilter) { (scorer, iterator, reader) =>
         if (scorer != null && iterator != null) {
           val extractor = scorer.asInstanceOf[SemanticVectorExtractorScorer]
           while (iterator.nextDoc() < NO_MORE_DOCS) {
             val doc = iterator.docID()
             if (extractor.docID < doc) extractor.advance(doc)
-            if (extractor.docID == doc) extractor.processSemanticVector{ (term: Term, bytes: Array[Byte], offset: Int, length: Int) =>
+            if (extractor.docID == doc) extractor.processSemanticVector { (term: Term, bytes: Array[Byte], offset: Int, length: Int) =>
               composer.add(bytes, offset, length, 1)
             }
           }

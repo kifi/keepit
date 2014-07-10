@@ -3,14 +3,14 @@ package com.keepit.common.store
 import scala.concurrent.duration._
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
 import com.keepit.common.plugin._
-import com.keepit.model.{UserPictureRepo, UserStates, UserRepo, User}
+import com.keepit.model.{ UserPictureRepo, UserStates, UserRepo, User }
 import akka.actor.ActorSystem
 import play.api.Plugin
 import play.api.http.Status.OK
@@ -27,8 +27,7 @@ private[store] class ImageDataIntegrityActor @Inject() (
     store: S3ImageStore,
     client: HttpClient,
     userPictureRepo: UserPictureRepo,
-    airbrake: AirbrakeNotifier
-  ) extends FortyTwoActor(airbrake) with Logging {
+    airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
 
   val TWO_MINUTES = 2 * 60 * 1000
   private val httpClient: HttpClient = client.withTimeout(CallTimeouts(responseTimeout = Some(TWO_MINUTES)))
@@ -39,9 +38,11 @@ private[store] class ImageDataIntegrityActor @Inject() (
         log.info("Not verifying pictures since we are not storing images in S3")
       } else {
         log.info("Verifying pictures for all users")
-        for (user <- db.readOnly { implicit s =>
-          userRepo.allExcluding(UserStates.BLOCKED, UserStates.INACTIVE)
-        }) yield {
+        for (
+          user <- db.readOnlyMaster { implicit s =>
+            userRepo.allExcluding(UserStates.BLOCKED, UserStates.INACTIVE)
+          }
+        ) yield {
           for (((url, response), cloudfrontInfo) <- findPictures(user)) {
             if (response.status != OK) {
               log.warn(s"S3 request for avatar at $url returned ${response.status}")
@@ -61,9 +62,9 @@ private[store] class ImageDataIntegrityActor @Inject() (
 
   private type ImageResponseInfo = ((String, ClientResponse), Option[(String, ClientResponse)])
   private def findPictures(user: User): Seq[ImageResponseInfo] = {
-    val urls: Seq[(String, String)] =  {
+    val urls: Seq[(String, String)] = {
       S3UserPictureConfig.ImageSizes.map { size =>
-        val pics = db.readOnly { implicit session =>
+        val pics = db.readOnlyMaster { implicit session =>
           userPictureRepo.getByUser(user.id.get)
         }
         pics.map { pic =>
@@ -73,7 +74,7 @@ private[store] class ImageDataIntegrityActor @Inject() (
       }.flatten
     }
 
-     for ((s3url, cfUrl) <- urls) yield {
+    for ((s3url, cfUrl) <- urls) yield {
       get(s3url) match {
         case resp if resp.status == OK => (s3url -> resp, Some(cfUrl -> get(cfUrl)))
         case resp => (s3url -> resp, None)
@@ -91,11 +92,11 @@ trait ImageDataIntegrityPlugin extends Plugin {
   def verifyAll()
 }
 
-class ImageDataIntegrityPluginImpl @Inject()(
+class ImageDataIntegrityPluginImpl @Inject() (
     system: ActorSystem,
     actor: ActorInstance[ImageDataIntegrityActor],
     val scheduling: SchedulingProperties //only on leader
-  ) extends SchedulerPlugin with ImageDataIntegrityPlugin {
+    ) extends SchedulerPlugin with ImageDataIntegrityPlugin {
   def verifyAll() {
     actor.ref ! VerifyAllPictures
   }

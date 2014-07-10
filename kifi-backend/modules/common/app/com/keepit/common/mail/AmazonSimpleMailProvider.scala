@@ -20,8 +20,8 @@ trait AmazonSimpleMailProvider {
  * http://docs.aws.amazon.com/ses/latest/DeveloperGuide/send-email-formatted.html
  */
 class AmazonSimpleMailProviderImpl(
-     client: AmazonSimpleEmailServiceClient)
-  extends AmazonSimpleMailProvider with Logging {
+  client: AmazonSimpleEmailServiceClient)
+    extends AmazonSimpleMailProvider with Logging {
 
   private def isSystemEmail(mail: ElectronicMail): Boolean =
     NotificationCategory.System.all.contains(NotificationCategory.fromElectronicMailCategory(mail.category))

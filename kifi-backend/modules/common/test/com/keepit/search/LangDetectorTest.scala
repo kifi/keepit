@@ -6,7 +6,6 @@ import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 
-
 class LangDetectorTest extends Specification {
 
   "LangDetector" should {

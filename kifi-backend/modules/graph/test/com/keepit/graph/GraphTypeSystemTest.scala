@@ -2,7 +2,7 @@ package com.keepit.graph
 
 import org.specs2.mutable.Specification
 import com.keepit.graph.manager.GraphUpdateKind
-import com.keepit.graph.model.{EdgeKind, EdgeDataReader, VertexKind, VertexDataReader}
+import com.keepit.graph.model.{ EdgeKind, EdgeDataReader, VertexKind, VertexDataReader }
 
 class GraphTypeSystemTest extends Specification {
 

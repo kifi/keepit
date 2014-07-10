@@ -5,20 +5,20 @@ import com.keepit.model.{NormalizedURI, User}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-case class UserScoreData(userId: Id[User], num: Int)
+case class UserScoreData(userId: Id[User], score: Int)
 
 object UserScoreData {
   implicit val format = (
     (__ \ 'userId).format(Id.format[User]) and
-    (__ \ 'number).format[Int]
+    (__ \ 'score).format[Int]
   )(UserScoreData.apply, unlift(UserScoreData.unapply))
 }
 
-case class UriScoreData(uriId: Id[NormalizedURI], num: Int)
+case class UriScoreData(uriId: Id[NormalizedURI], score: Int)
 
 object UriScoreData {
   implicit val format = (
       (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-      (__ \ 'number).format[Int]
+      (__ \ 'score).format[Int]
     )(UriScoreData.apply, unlift(UriScoreData.unapply))
 }

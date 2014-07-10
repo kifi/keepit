@@ -2,15 +2,15 @@ package com.keepit.test
 
 import com.keepit.eliza.FakeElizaServiceClientModule
 import play.api.Mode
-import com.keepit.inject.{TestFortyTwoModule, ApplicationInjector, EmptyInjector}
+import com.keepit.inject.{ TestFortyTwoModule, ApplicationInjector, EmptyInjector }
 import com.keepit.common.db.TestDbInfo
 import java.io.File
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.db.TestSlickModule
-import com.keepit.common.healthcheck.{FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule}
+import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
 import com.google.inject.util.Modules
 import com.google.inject.Module
-import com.keepit.common.cache.{HashMapMemoryCacheModule, ElizaCacheModule}
+import com.keepit.common.cache.{ HashMapMemoryCacheModule, ElizaCacheModule }
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
@@ -21,7 +21,6 @@ class ElizaApplication(overridingModules: Module*)(implicit path: File = new Fil
     Seq(
       FakeHttpClientModule(),
       TestABookServiceClientModule(),
-      TestHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
       FakeAirbrakeModule(),
       FakeMemoryUsageModule(),

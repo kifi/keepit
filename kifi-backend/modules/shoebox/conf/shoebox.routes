@@ -133,6 +133,7 @@ POST    /m/1/collections/create             @com.keepit.controllers.mobile.Mobil
 GET     /m/1/collections/all                @com.keepit.controllers.mobile.MobileBookmarksController.allCollections(sort: String ?= "last_kept")
 GET     /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.currentUser()
 POST    /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.updateCurrentUser()
+GET     /m/1/user/prefs                     @com.keepit.controllers.mobile.MobileUserController.getPrefs()
 GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileBookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileBookmarksController.addTag(id: ExternalId[Collection])
 POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileBookmarksController.removeTag(id: ExternalId[Collection])
@@ -158,8 +159,6 @@ POST    /m/1/iphone/version/register            @com.keepit.controllers.mobile.M
 POST    /m/1/android/version/register           @com.keepit.controllers.mobile.MobileAuthController.registerAndroidVersion()
 
 GET     /m/1/user/connections/all               @com.keepit.controllers.mobile.MobileUserController.queryAll(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= false)
-GET     /m/1/user/connections/social            @com.keepit.controllers.mobile.MobileUserController.querySocial(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= false)
-GET     /m/1/user/connections/email             @com.keepit.controllers.mobile.MobileUserController.queryContacts(search: Option[String], limit: Int ?= 50000000)
 
 GET     /m/1/contacts/search                    @com.keepit.controllers.mobile.MobileContactsController.search(q: String, n: Int ?= 4)
 
@@ -170,6 +169,8 @@ POST    /m/1/user/:id/friend                    @com.keepit.controllers.mobile.M
 POST    /m/1/user/:id/ignoreRequest             @com.keepit.controllers.mobile.MobileUserController.ignoreFriendRequest(id: ExternalId[User])
 GET     /m/1/user/outgoingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.outgoingFriendRequests
 GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.incomingFriendRequests
+POST    /m/1/user/delighted/answer              @com.keepit.controllers.mobile.MobileUserController.postDelightedAnswer()
+POST    /m/1/user/delighted/cancel              @com.keepit.controllers.mobile.MobileUserController.cancelDelightedSurvey()
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
@@ -248,6 +249,7 @@ POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsControl
 
 GET     /site/collections/all       @com.keepit.controllers.website.KeepsController.allCollections(sort: String ?= "last_kept")
 POST    /site/collections/ordering  @com.keepit.controllers.website.KeepsController.updateCollectionOrdering()
+POST    /site/collections/reorderTag  @com.keepit.controllers.website.KeepsController.updateCollectionIndexOrdering()
 POST    /site/collections/create    @com.keepit.controllers.website.KeepsController.saveCollection(id = "")
 POST    /site/collections/:id/update @com.keepit.controllers.website.KeepsController.saveCollection(id: String)
 POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsController.deleteCollection(id: ExternalId[Collection])
@@ -277,6 +279,8 @@ GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
 POST    /site/user/invite           @com.keepit.controllers.website.InviteController.inviteV2()
+POST    /site/user/delighted/answer @com.keepit.controllers.website.UserController.postDelightedAnswer()
+POST    /site/user/delighted/cancel @com.keepit.controllers.website.UserController.cancelDelightedSurvey()
 
 GET     /site/user/connections/all/search    @com.keepit.controllers.website.TypeaheadController.searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
 

@@ -1,11 +1,11 @@
 package com.keepit.normalizer
 
-import com.keepit.common.net.{Param, Query, Host, URI}
+import com.keepit.common.net.{ Param, Query, Host, URI }
 
 object QuoraNormalizer extends StaticNormalizer {
   def isDefinedAt(uri: URI) = {
     uri.host match {
-      case Some(Host("com", "quora", _*))=> true
+      case Some(Host("com", "quora", _*)) => true
       case _ => false
     }
   }

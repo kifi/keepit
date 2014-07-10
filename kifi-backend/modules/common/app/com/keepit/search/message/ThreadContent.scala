@@ -1,25 +1,22 @@
 package com.keepit.search.message
 
-
-import com.keepit.common.db.{Id, SequenceNumber}
-import com.keepit.social.{BasicUserLikeEntity}
+import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.social.{ BasicUserLikeEntity }
 import com.keepit.model.User
 
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-
 import org.joda.time.DateTime
-
 
 sealed trait ThreadContentUpdateMode
 case object DIFF extends ThreadContentUpdateMode //not supported yet
 case object FULL extends ThreadContentUpdateMode
 
 object ThreadContentUpdateMode {
-  implicit val format = new Format[ThreadContentUpdateMode]{
+  implicit val format = new Format[ThreadContentUpdateMode] {
 
-    def reads(json: JsValue) : JsResult[ThreadContentUpdateMode] = json match {
+    def reads(json: JsValue): JsResult[ThreadContentUpdateMode] = json match {
       case JsString("FULL") => JsSuccess(FULL)
       case JsString("DIFF") => JsSuccess(DIFF)
       case _ => JsError()
@@ -45,8 +42,7 @@ case class ThreadContent(
   pageTitleOpt: Option[String],
   digest: String,
   content: Seq[String],
-  participantIds: Seq[Id[User]]
-)
+  participantIds: Seq[Id[User]])
 
 object ThreadContent {
 

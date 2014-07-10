@@ -3,7 +3,7 @@ package com.keepit.common.aws
 import com.google.inject.Inject
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
 import com.keepit.common.amazon.AmazonInstanceInfo
-import com.amazonaws.services.elasticloadbalancing.model.{RegisterInstancesWithLoadBalancerRequest, InstanceState, Instance, DescribeInstanceHealthRequest}
+import com.amazonaws.services.elasticloadbalancing.model.{ RegisterInstancesWithLoadBalancerRequest, InstanceState, Instance, DescribeInstanceHealthRequest }
 import scala.collection.JavaConversions._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
@@ -17,7 +17,7 @@ trait FortyTwoElasticLoadBalancingClient {
 class FortyTwoElasticLoadBalancingClientImpl @Inject() (
   loadBalancingClient: AmazonElasticLoadBalancingClient,
   airbrake: AirbrakeNotifier)
-  extends FortyTwoElasticLoadBalancingClient with Logging {
+    extends FortyTwoElasticLoadBalancingClient with Logging {
 
   def registerInstance(instance: AmazonInstanceInfo): Unit = {
     val instanceId = instance.instanceId
@@ -27,7 +27,7 @@ class FortyTwoElasticLoadBalancingClientImpl @Inject() (
         loadBalancingClient.registerInstancesWithLoadBalancer(request)
         log.info(s"[${currentDateTime.toStandardTimeString}] Registered instance $instanceId with load balancer $loadBalancer")
       } catch {
-        case t:Throwable => airbrake.panic(s"[${currentDateTime.toStandardTimeString}] Error registering instance $instanceId with load balancer $loadBalancer: $t")
+        case t: Throwable => airbrake.panic(s"[${currentDateTime.toStandardTimeString}] Error registering instance $instanceId with load balancer $loadBalancer: $t")
       }
     } getOrElse log.info(s"[${currentDateTime.toStandardTimeString}] No load balancer registered for instance $instanceId")
   }
@@ -41,7 +41,7 @@ class FortyTwoElasticLoadBalancingClientImpl @Inject() (
         log.info(s"Instance $instanceId in state ${state.getState} for load balancer $loadBalancer")
         Some(state)
       } catch {
-        case t:Throwable => {
+        case t: Throwable => {
           airbrake.notify(s"Failed to check status of instance ${instanceId} with load balancer $loadBalancer: $t")
           None
         }

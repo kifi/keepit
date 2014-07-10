@@ -1,18 +1,16 @@
 package com.keepit.search.message
 
-import com.keepit.search.query.parser.{QueryParser, DefaultSyntax, PercentMatch, QueryParserException}
+import com.keepit.search.query.parser.{ QueryParser, DefaultSyntax, PercentMatch, QueryParserException }
 import com.keepit.search.query.QueryUtil.copy
 
-import org.apache.lucene.search.{Query, TermQuery, PhraseQuery, DisjunctionMaxQuery}
+import org.apache.lucene.search.{ Query, TermQuery, PhraseQuery, DisjunctionMaxQuery }
 import org.apache.lucene.analysis.Analyzer
 
-
 class MessageQueryParser(
-  analyzer: Analyzer,
-  stemmingAnalyzer: Analyzer
-) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch {
+    analyzer: Analyzer,
+    stemmingAnalyzer: Analyzer) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch {
 
-  def copyFieldQuery(query:Query, field: String) = {
+  def copyFieldQuery(query: Query, field: String) = {
     query match {
       case null => null
       case query: TermQuery => copy(query, field)
@@ -21,24 +19,23 @@ class MessageQueryParser(
     }
   }
 
-
   override def getFieldQuery(field: String, queryText: String, quoted: Boolean): Option[Query] = {
     val disjunct = new DisjunctionMaxQuery(0.5f)
 
-    super.getFieldQuery(ThreadIndexFields.contentField, queryText, quoted).foreach{ query =>
+    super.getFieldQuery(ThreadIndexFields.contentField, queryText, quoted).foreach { query =>
       disjunct.add(query)
       disjunct.add(copyFieldQuery(query, ThreadIndexFields.titleField))
       disjunct.add(copyFieldQuery(query, ThreadIndexFields.participantNameField))
       disjunct.add(copyFieldQuery(query, ThreadIndexFields.urlKeywordField))
     }
 
-    getStemmedFieldQuery(ThreadIndexFields.contentStemmedField, queryText).foreach{ query =>
-      if(!quoted) {
+    getStemmedFieldQuery(ThreadIndexFields.contentStemmedField, queryText).foreach { query =>
+      if (!quoted) {
         disjunct.add(query)
         disjunct.add(copyFieldQuery(query, ThreadIndexFields.titleStemmedField))
       }
     }
-    if (disjunct.iterator().hasNext) Some(disjunct) else None  
+    if (disjunct.iterator().hasNext) Some(disjunct) else None
 
   }
 

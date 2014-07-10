@@ -100,7 +100,7 @@ class PrenormalizerTest extends Specification {
       prenormalize("http://keepitfindit.com/p?a=1&c=3&b=2&a=0") === "http://keepitfindit.com/p?a=0&b=2&c=3"
       prenormalize("http://keepitfindit.com/p?a=1=1") === "http://keepitfindit.com/p?a=1=1"
       val escapedEqual = java.net.URLEncoder.encode("=", "UTF-8")
-      prenormalize("http://keepitfindit.com/p?a=1"+escapedEqual+"1") === "http://keepitfindit.com/p?a=1=1"
+      prenormalize("http://keepitfindit.com/p?a=1" + escapedEqual + "1") === "http://keepitfindit.com/p?a=1=1"
       prenormalize("http://keepitfindit.com?foo=1") === "http://keepitfindit.com/?foo=1"
       prenormalize("http://keepitfindit.com?&foo=1") === "http://keepitfindit.com/?foo=1"
 
@@ -184,7 +184,7 @@ class PrenormalizerTest extends Specification {
         "http://www.amazon.com/dp/B00BHJRYYS"
       prenormalize("http://www.amazon.com/gp/product/1849515522/ref=sr_1_1?ie=UTF8&qid=1355167842&sr=8-1&keywords=play+scala") ===
         "http://www.amazon.com/dp/1849515522"
-        // - product reviews
+      // - product reviews
       prenormalize("http://www.amazon.com/Play-Framework-Cookbook-Alexander-Reelsen/product-reviews/1849515522/ref=cm_cr_dp_synop?ie=UTF8&showViewpoints=0&sortBy=bySubmissionDateDescending#R1JYRF9OJ74H7G") ===
         "http://www.amazon.com/product-reviews/1849515522"
       prenormalize("http://www.amazon.com/gp/aw/cr/B00FTR018U/ref=mw_dp_cr?qid=1394812947&sr=8-2") ===
@@ -204,13 +204,13 @@ class PrenormalizerTest extends Specification {
       // LinkedIn
       // -profile
       var path = "http://www.linkedin.com/profile/view?goback=.npv_7564203_*1_*1_name_A1Fh_*1_en*4US_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1" +
-          ".fps_PBCK_*1_*1_*1_*1_*1_*1_*1_2759913_*1_Y_*1_*1_*1_false_1_R_*1_*51_*1_*51_true_*1_*2_*2_*2_*2_*2_2759913_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2.npv_211337229" +
-          "_*1_*1_OUT*4OF*4NETWORK_2n*5d_*1_en*4US_*1_*1_*1_8ae3c0d1*59183*5411e*5a560*5a95d61f20602*50_3_7_ps_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1&id=12345678"
+        ".fps_PBCK_*1_*1_*1_*1_*1_*1_*1_2759913_*1_Y_*1_*1_*1_false_1_R_*1_*51_*1_*51_true_*1_*2_*2_*2_*2_*2_2759913_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2.npv_211337229" +
+        "_*1_*1_OUT*4OF*4NETWORK_2n*5d_*1_en*4US_*1_*1_*1_8ae3c0d1*59183*5411e*5a560*5a95d61f20602*50_3_7_ps_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1_*1&id=12345678"
       prenormalize(path) === "http://www.linkedin.com/profile/view?id=12345678"
 
       path = "http://www.linkedin.com/profile/view?authToken=xXmj&authType=NAME_SEARCH&goback=.fps_PBCK_*1_John_Smith_*1_*1_*1_*1_*2_*1_Y_*1_*1_*1_false_1_R_*1_*51_*1_*51_true_" +
-          "*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2&locale=en_US&pvs=ps&srchid=717d2924-e9c4-40b7-8352-be3d67e2cddf-0&id=12345678" +
-          "&srchindex=1&srchtotal=3&trk=pp_profile_name_link"
+        "*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2_*2&locale=en_US&pvs=ps&srchid=717d2924-e9c4-40b7-8352-be3d67e2cddf-0&id=12345678" +
+        "&srchindex=1&srchtotal=3&trk=pp_profile_name_link"
 
       prenormalize(path) === "http://www.linkedin.com/profile/view?id=12345678"
 
@@ -243,7 +243,6 @@ class PrenormalizerTest extends Specification {
 
       path = "https://touch.www.linkedin.com/?as=false&can=https%253A%252F%252Fwww.linkedin.com%252Fpub%252Fleslie-chang%252F1a%252F769%252Fb82&dl=no&rs=false&sessionid=4907903918014464#profile/67575122"
       prenormalize(path) === "https://www.linkedin.com/pub/leslie-chang/1a/769/b82"
-
 
       //Wikipedia
 

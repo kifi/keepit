@@ -1,16 +1,16 @@
 package com.keepit.commanders
 
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.abook.model.{EmailAccount, EmailAccountUpdateSequenceNumberRepo, EmailAccountRepo}
-import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
+import com.keepit.abook.model.{ EmailAccount, EmailAccountUpdateSequenceNumberRepo, EmailAccountRepo }
+import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
 import com.keepit.common.logging.Logging
 import com.keepit.model.EmailAccountUpdate
 import com.keepit.common.db.slick.Database
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.abook.EContactRepo
@@ -22,13 +22,12 @@ object EmailAccountUpdaterActorMessage {
 }
 
 class EmailAccountUpdaterActor @Inject() (
-  shoebox: ShoeboxServiceClient,
-  emailAccountRepo: EmailAccountRepo,
-  contactRepo: EContactRepo,
-  sequenceNumberRepo: EmailAccountUpdateSequenceNumberRepo,
-  db: Database,
-  airbrake: AirbrakeNotifier
-) extends FortyTwoActor(airbrake) with Logging {
+    shoebox: ShoeboxServiceClient,
+    emailAccountRepo: EmailAccountRepo,
+    contactRepo: EContactRepo,
+    sequenceNumberRepo: EmailAccountUpdateSequenceNumberRepo,
+    db: Database,
+    airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
   import EmailAccountUpdaterActorMessage._
 
   private var updating = false
@@ -36,7 +35,7 @@ class EmailAccountUpdaterActor @Inject() (
   def receive = {
 
     case FetchEmailUpdates(fetchSize: Int) => if (!updating) {
-      val seqNum = db.readOnly { implicit session => sequenceNumberRepo.get() }
+      val seqNum = db.readOnlyMaster { implicit session => sequenceNumberRepo.get() }
       shoebox.getEmailAccountUpdates(seqNum, fetchSize).onComplete {
         case Success(updates) => {
           log.info(s"${updates.length} EmailAccountUpdates were successfully fetched.")
@@ -85,13 +84,11 @@ class EmailAccountUpdaterActor @Inject() (
 
 @Singleton
 class EmailAccountUpdaterPlugin @Inject() (
-  actor: ActorInstance[EmailAccountUpdaterActor],
-  val scheduling: SchedulingProperties
-) extends SchedulerPlugin {
+    actor: ActorInstance[EmailAccountUpdaterActor],
+    val scheduling: SchedulingProperties) extends SchedulerPlugin {
   import EmailAccountUpdaterActorMessage._
 
   override def onStart() {
-    log.info(s"starting $this")
     scheduleTaskOnLeader(actor.system, 2 minutes, 5 minutes, actor.ref, FetchEmailUpdates(100))
   }
 }

@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.keepit.heimdal._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -8,10 +8,10 @@ import play.api.libs.json._
 
 import views.html
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ Future, Promise }
 import com.google.inject.Inject
 import com.keepit.common.db.Id
-import scala.collection.mutable.{ListBuffer, Map => MutableMap}
+import scala.collection.mutable.{ ListBuffer, Map => MutableMap }
 import play.api.libs.json.JsArray
 import scala.util.Failure
 import play.api.libs.json.JsString
@@ -20,16 +20,18 @@ import play.api.libs.json.JsNumber
 import scala.util.Success
 import play.api.libs.json.JsObject
 
-case class MetricAuxInfo(helpText: String, legend: Map[String,String], shift: Map[String, Int] = Map[String, Int](), totalable : Boolean = true, resolution: Int = 1)
+case class MetricAuxInfo(helpText: String, legend: Map[String, String], shift: Map[String, Int] = Map[String, Int](), totalable: Boolean = true, resolution: Int = 1)
 object MetricAuxInfo {
   def augmentMetricData(metricData: JsObject, auxInfo: MetricAuxInfo): JsObject = {
-    metricData.deepMerge{Json.obj(
-      "help" -> auxInfo.helpText,
-      "legend" -> JsObject(auxInfo.legend.mapValues(Json.toJson(_)).toSeq),
-      "shift" -> JsObject(auxInfo.shift.mapValues(Json.toJson(_)).toSeq),
-      "totalable" -> auxInfo.totalable,
-      "resolution" -> auxInfo.resolution
-    )}
+    metricData.deepMerge {
+      Json.obj(
+        "help" -> auxInfo.helpText,
+        "legend" -> JsObject(auxInfo.legend.mapValues(Json.toJson(_)).toSeq),
+        "shift" -> JsObject(auxInfo.shift.mapValues(Json.toJson(_)).toSeq),
+        "totalable" -> auxInfo.totalable,
+        "resolution" -> auxInfo.resolution
+      )
+    }
   }
 
   def ungroupMetricById[T](ids: Seq[Option[Id[T]]], metricGroupedById: JsObject): Map[Option[Id[T]], JsObject] = {
@@ -67,10 +69,9 @@ object MetricAuxInfo {
 case class MetricWithAuxInfo(data: JsObject, auxInfo: MetricAuxInfo)
 
 class AdminAnalyticsController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
-    heimdal: HeimdalServiceClient
-  )
-  extends AdminController(actionAuthenticator) {
+  actionAuthenticator: ActionAuthenticator,
+  heimdal: HeimdalServiceClient)
+    extends AdminController(actionAuthenticator) {
 
   val installMetrics = Map[String, MetricAuxInfo](
     "invites_sent_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Invites Sent"), Map("Invites Sent" -> 462)),
@@ -97,23 +98,23 @@ class AdminAnalyticsController @Inject() (
       "public" -> 31450,
       "private" -> 22407,
       "total" -> 53857
-    ), resolution=7),
+    ), resolution = 7),
     "private_keeps_weekly" -> MetricAuxInfo("nothing yet", Map(), Map(
       "INIT_LOAD" -> 20461,
       "HOVER_KEEP" -> 1804,
       "SITE" -> 33,
       "total" -> 22407
-    ), resolution=7),
+    ), resolution = 7),
     "public_keeps_weekly" -> MetricAuxInfo("nothing yet", Map(), Map(
       "HOVER_KEEP" -> 23967,
       "SITE" -> 467,
       "total" -> 31450
-    ), resolution=7)
+    ), resolution = 7)
   )
 
   val messageMetrics = Map[String, MetricAuxInfo](
-    "messagers_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"), totalable=false),
-    "messagers_weekly" -> MetricAuxInfo("nothing yet", Map(), totalable=false),
+    "messagers_daily" -> MetricAuxInfo("nothing yet", Map("null" -> "Users"), totalable = false),
+    "messagers_weekly" -> MetricAuxInfo("nothing yet", Map(), totalable = false),
     "message_breakdown_weekly" -> MetricAuxInfo("nothing yet", Map())
   )
 
@@ -125,7 +126,7 @@ class AdminAnalyticsController @Inject() (
     )),
     "total_searches_daily" -> MetricAuxInfo("nothing yet", Map(
       "null" -> "Total Searches"
-    ), totalable=false)
+    ), totalable = false)
   )
 
   val keeperFraction = Map[String, MetricAuxInfo](
@@ -149,20 +150,21 @@ class AdminAnalyticsController @Inject() (
     "messagerFraction" -> messagerFraction
   )
 
-  private def userMetricData : Future[Map[String, JsArray]] = {
-    val innerFutures = metrics.mapValues{ groupMap =>
-      Future.sequence(groupMap.toSeq.map{ case (metricName, auxInfo) =>
-        heimdal.getMetricData[UserEvent](metricName).map{MetricAuxInfo.augmentMetricData(_, auxInfo)}
+  private def userMetricData: Future[Map[String, JsArray]] = {
+    val innerFutures = metrics.mapValues { groupMap =>
+      Future.sequence(groupMap.toSeq.map {
+        case (metricName, auxInfo) =>
+          heimdal.getMetricData[UserEvent](metricName).map { MetricAuxInfo.augmentMetricData(_, auxInfo) }
       })
     }
     val keys: Seq[String] = innerFutures.keys.toSeq
-    val valuesFuture: Future[Seq[JsArray]] = Future.sequence(innerFutures.values.toSeq).map{ values =>
-      values.map{ sectionData =>
+    val valuesFuture: Future[Seq[JsArray]] = Future.sequence(innerFutures.values.toSeq).map { values =>
+      values.map { sectionData =>
         Json.toJson(sectionData).as[JsArray]
       }
     }
     val promise = Promise[Map[String, JsArray]]();
-    valuesFuture.onComplete{
+    valuesFuture.onComplete {
       case Success(v) => promise.success(keys.zip(v).toMap)
       case Failure(e) => promise.failure(e)
     }
@@ -171,27 +173,28 @@ class AdminAnalyticsController @Inject() (
 
   def index() = AdminHtmlAction.authenticatedAsync { request =>
     heimdal.updateMetrics()
-    userMetricData.map{ dataMap =>
+    userMetricData.map { dataMap =>
       Ok(html.admin.analyticsDashboardView(dataMap.mapValues(Json.stringify(_))))
     }
   }
 
   def getEventDescriptors() = AdminHtmlAction.authenticatedAsync { request =>
-      Future.sequence(HeimdalEventCompanion.all.toSeq.map { companion =>
-        heimdal.getEventDescriptors(companion).map { descriptors =>
-          companion.typeCode -> descriptors
-        }
-      }).map { descriptorsByRepo => Ok(html.admin.eventDescriptors(descriptorsByRepo: _*)) }
+    Future.sequence(HeimdalEventCompanion.all.toSeq.map { companion =>
+      heimdal.getEventDescriptors(companion).map { descriptors =>
+        companion.typeCode -> descriptors
+      }
+    }).map { descriptorsByRepo => Ok(html.admin.eventDescriptors(descriptorsByRepo: _*)) }
   }
 
   def updateEventDescriptors() = AdminHtmlAction.authenticatedAsync { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
-    val descriptorsWithCode = body.keys.collect { case key if key.endsWith(":description") =>
-      val Seq(code, name, _): Seq[String] = key.split(":")
-      val description = Some(body(s"$code:$name:description")).filter(_.nonEmpty)
-      val mixpanel = body.contains(s"$code:$name:mixpanel")
-      val eventName = EventType(name)
-      code -> EventDescriptor(eventName, description, mixpanel)
+    val descriptorsWithCode = body.keys.collect {
+      case key if key.endsWith(":description") =>
+        val Seq(code, name, _): Seq[String] = key.split(":")
+        val description = Some(body(s"$code:$name:description")).filter(_.nonEmpty)
+        val mixpanel = body.contains(s"$code:$name:mixpanel")
+        val eventName = EventType(name)
+        code -> EventDescriptor(eventName, description, mixpanel)
     }
 
     Future.sequence(
@@ -201,8 +204,8 @@ class AdminAnalyticsController @Inject() (
     ).map(_ => Redirect(routes.AdminAnalyticsController.getEventDescriptors()))
   }
 
-  def getEvents(repo:String, events: Option[String], limit: Int, window: Int) = AdminHtmlAction.authenticatedAsync { request =>
-    val eventNames= events.map(_.split(",")).getOrElse(Array.empty).map(EventType.apply)
+  def getEvents(repo: String, events: Option[String], limit: Int, window: Int) = AdminHtmlAction.authenticatedAsync { request =>
+    val eventNames = events.map(_.split(",")).getOrElse(Array.empty).map(EventType.apply)
     heimdal.getRawEvents(window, limit, eventNames: _*)(HeimdalEventCompanion.byTypeCode(repo)).map(Ok(_))
   }
 }

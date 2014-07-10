@@ -3,19 +3,20 @@ package com.keepit.common.db.slick
 import java.sql._
 import scala.collection.mutable
 import scala.concurrent._
-import scala.util.{Success, Failure, Try}
+import scala.util.{ Success, Failure, Try }
 import play.api.Logger
 import com.keepit.common.time._
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
-import scala.slick.jdbc.{ResultSetConcurrency, ResultSetType, ResultSetHoldability}
+import scala.slick.jdbc.{ ResultSetConcurrency, ResultSetType, ResultSetHoldability }
 import scala.slick.jdbc.JdbcBackend.Session
 import scala.slick.driver.JdbcProfile
 import com.keepit.common.util.TrackingId
 import com.keepit.macros.Location
+import com.keepit.common.db.slick.Database.Master
 
 object DBSession {
-  abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterSlave, _session: => Session, location: Location) extends Session with Logging with TransactionalCaching {
+  abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterReplica, _session: => Session, location: Location) extends Session with Logging with TransactionalCaching {
     def database = _session.database
     private var open = false
     private var wasOpened = false
@@ -33,8 +34,9 @@ object DBSession {
     }
     lazy val clock = new SystemClock
     val sessionId = TrackingId.get
-    def runningTime():Long = System.currentTimeMillis - startTime
-    def timeCheck():Unit = {
+    val isReadOnly = masterSlave != Master
+    def runningTime(): Long = System.currentTimeMillis - startTime
+    def timeCheck(): Unit = {
       val t = runningTime()
       if (t > 5000) { // tweak
         val msg = s"DBSession($sessionId,$name,$masterSlave) takes too long: $t ms"
@@ -70,7 +72,7 @@ object DBSession {
       requireTransaction
       transactionFuture = transactionFuture.map(_.andThen { case Success(_) => f })
     }
-    def onTransactionFailure [U](f: PartialFunction[Throwable, U])(implicit executor: ExecutionContext): Unit = {
+    def onTransactionFailure[U](f: PartialFunction[Throwable, U])(implicit executor: ExecutionContext): Unit = {
       requireTransaction
       transactionFuture = transactionFuture.map(_.andThen { case Failure(throwable) => f(throwable) })
     }
@@ -120,13 +122,13 @@ object DBSession {
 
     override def forParameters(rsType: ResultSetType = resultSetType, rsConcurrency: ResultSetConcurrency = resultSetConcurrency,
       rsHoldability: ResultSetHoldability = resultSetHoldability) =
-        _session.forParameters(rsType, rsConcurrency, rsHoldability)
+      _session.forParameters(rsType, rsConcurrency, rsHoldability)
   }
 
-  abstract class RSession(name: String, masterSlave: Database.DBMasterSlave, roSession: => Session, location: Location) extends SessionWrapper(name, masterSlave, roSession, location)
-  class ROSession(masterSlave: Database.DBMasterSlave, roSession: => Session, location: Location) extends RSession("RO", masterSlave, roSession, location)
+  abstract class RSession(name: String, masterSlave: Database.DBMasterReplica, roSession: => Session, location: Location) extends SessionWrapper(name, masterSlave, roSession, location)
+  class ROSession(masterSlave: Database.DBMasterReplica, roSession: => Session, location: Location) extends RSession("RO", masterSlave, roSession, location)
   class RWSession(rwSession: => Session, location: Location) extends RSession("RW", Database.Master, rwSession, location) //RWSession is always reading from master
-//
-//  implicit def roToSession(roSession: ROSession): Session = roSession.session
-//  implicit def rwToSession(rwSession: RWSession): Session = rwSession.session
+  //
+  //  implicit def roToSession(roSession: ROSession): Session = roSession.session
+  //  implicit def rwToSession(rwSession: RWSession): Session = rwSession.session
 }

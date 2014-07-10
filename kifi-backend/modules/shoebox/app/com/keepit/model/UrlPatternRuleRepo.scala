@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.common.db.slick.DBSession.RSession
@@ -18,8 +18,8 @@ class UrlPatternRuleRepoImpl @Inject() (
   val clock: Clock,
   val urlPatternRuleAllCache: UrlPatternRuleAllCache,
   httpProxyRepo: HttpProxyRepo)
-  extends DbRepo[UrlPatternRule] with UrlPatternRuleRepo {
-    import db.Driver.simple._
+    extends DbRepo[UrlPatternRule] with UrlPatternRuleRepo {
+  import db.Driver.simple._
   import DBSession._
 
   type RepoImpl = UrlPatternRuleTable
@@ -50,7 +50,7 @@ class UrlPatternRuleRepoImpl @Inject() (
 
   def loadCache()(implicit session: RSession): Unit = {
     val result = urlPatternRuleAllCache.getOrElse(UrlPatternRuleAllKey()) {
-      (for(f <- rows if f.state === UrlPatternRuleStates.ACTIVE) yield f).list
+      (for (f <- rows if f.state === UrlPatternRuleStates.ACTIVE) yield f).list
     }
     val sortedResult = result.sortBy(_.id.get.id)
     allMemCache = Some(UrlPatternRules(sortedResult))

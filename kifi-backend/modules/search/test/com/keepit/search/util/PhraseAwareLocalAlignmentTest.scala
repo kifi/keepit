@@ -8,7 +8,7 @@ import scala.util.Random
 import LocalAlignment._
 
 class PhraseAwareLocalAlignmentTest extends Specification {
-  val toId: Map[String, Int] = Map("a"->10, "b"->20, "c"->30, "d"->40, "e"->50)
+  val toId: Map[String, Int] = Map("a" -> 10, "b" -> 20, "c" -> 30, "d" -> 40, "e" -> 50)
 
   val dict0 = Seq(
     (Seq("b", "c") map toId, PhraseMatch(0, 2)),
@@ -53,34 +53,34 @@ class PhraseAwareLocalAlignmentTest extends Specification {
 
       var localAlignment = new PhraseAwareLocalAlignment(pm0, 0.0f, dummy, 0.5f)
       localAlignment.begin()
-      doc.zipWithIndex.foreach{ case (t, i) => localAlignment.update(toId(t), i) }
+      doc.zipWithIndex.foreach { case (t, i) => localAlignment.update(toId(t), i) }
       localAlignment.end()
-      dummy.positions === Set((toId("b"), 0, 0.5f), (toId("a"), 1, 0.5f),  (toId("b"), 2, 1.0f), (toId("c"), 3, 1.0f), (toId("d"), 4, 1.0f), (toId("e"), 5, 0.5f))
+      dummy.positions === Set((toId("b"), 0, 0.5f), (toId("a"), 1, 0.5f), (toId("b"), 2, 1.0f), (toId("c"), 3, 1.0f), (toId("d"), 4, 1.0f), (toId("e"), 5, 0.5f))
 
       localAlignment = new PhraseAwareLocalAlignment(pm1, 0.0f, dummy, 0.5f)
       localAlignment.begin()
-      doc.zipWithIndex.foreach{ case (t, i) => localAlignment.update(toId(t), i) }
+      doc.zipWithIndex.foreach { case (t, i) => localAlignment.update(toId(t), i) }
       localAlignment.end()
-      dummy.positions === Set((toId("b"), 0, 0.5f), (toId("a"), 1, 0.5f),  (toId("b"), 2, 1.0f), (toId("c"), 3, 1.0f), (toId("d"), 4, 1.0f), (toId("e"), 5, 1.0f))
+      dummy.positions === Set((toId("b"), 0, 0.5f), (toId("a"), 1, 0.5f), (toId("b"), 2, 1.0f), (toId("c"), 3, 1.0f), (toId("d"), 4, 1.0f), (toId("e"), 5, 1.0f))
 
       localAlignment = new PhraseAwareLocalAlignment(pm2, 0.0f, dummy, 0.5f)
       localAlignment.begin()
-      doc.zipWithIndex.foreach{ case (t, i) => localAlignment.update(toId(t), i) }
+      doc.zipWithIndex.foreach { case (t, i) => localAlignment.update(toId(t), i) }
       localAlignment.end()
-      dummy.positions === Set((toId("b"), 0, 0.5f), (toId("a"), 1, 1.0f),  (toId("b"), 2, 1.0f), (toId("c"), 3, 0.5f), (toId("d"), 4, 1.0f), (toId("e"), 5, 1.0f))
+      dummy.positions === Set((toId("b"), 0, 0.5f), (toId("a"), 1, 1.0f), (toId("b"), 2, 1.0f), (toId("c"), 3, 0.5f), (toId("d"), 4, 1.0f), (toId("e"), 5, 1.0f))
 
       localAlignment = new PhraseAwareLocalAlignment(pm3, 0.0f, dummy, 0.5f)
       localAlignment.begin()
-      doc.zipWithIndex.foreach{ case (t, i) => localAlignment.update(toId(t), i) }
+      doc.zipWithIndex.foreach { case (t, i) => localAlignment.update(toId(t), i) }
       localAlignment.end()
-      dummy.positions === Set((toId("b"), 0, 0.5f), (toId("a"), 1, 0.5f),  (toId("b"), 2, 1.0f), (toId("c"), 3, 1.0f), (toId("d"), 4, 1.0f), (toId("e"), 5, 1.0f))
+      dummy.positions === Set((toId("b"), 0, 0.5f), (toId("a"), 1, 0.5f), (toId("b"), 2, 1.0f), (toId("c"), 3, 1.0f), (toId("d"), 4, 1.0f), (toId("e"), 5, 1.0f))
 
       localAlignment = new PhraseAwareLocalAlignment(pm4, 0.0f, dummy, 0.5f)
       localAlignment.begin()
-      doc.zipWithIndex.foreach{ case (t, i) => localAlignment.update(toId(t), i) }
+      doc.zipWithIndex.foreach { case (t, i) => localAlignment.update(toId(t), i) }
       localAlignment.end()
-      dummy.positions === Set((toId("b"), 0, 0.5f), (toId("a"), 1, 1.0f),  (toId("b"), 2, 0.5f), (toId("c"), 3, 0.5f), (toId("d"), 4, 0.5f), (toId("e"), 5, 1.0f))
-}
+      dummy.positions === Set((toId("b"), 0, 0.5f), (toId("a"), 1, 1.0f), (toId("b"), 2, 0.5f), (toId("c"), 3, 0.5f), (toId("d"), 4, 0.5f), (toId("e"), 5, 1.0f))
+    }
   }
 }
 

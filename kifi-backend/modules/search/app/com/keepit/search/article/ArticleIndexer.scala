@@ -21,12 +21,11 @@ import com.keepit.search.IndexInfo
 import com.keepit.search.sharding.Shard
 import com.keepit.search.util.MultiStringReader
 
-
 class ArticleIndexer(
-    indexDirectory: IndexDirectory,
-    articleStore: ArticleStore,
-    override val airbrake: AirbrakeNotifier)
-  extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory) {
+  indexDirectory: IndexDirectory,
+  articleStore: ArticleStore,
+  override val airbrake: AirbrakeNotifier)
+    extends Indexer[NormalizedURI, NormalizedURI, ArticleIndexer](indexDirectory) {
 
   import ArticleIndexer.ArticleIndexable
 
@@ -39,7 +38,7 @@ class ArticleIndexer(
 
   def update(name: String, uris: Seq[IndexableUri], shard: Shard[NormalizedURI]): Int = updateLock.synchronized {
     doUpdate("ArticleIndex" + name) {
-      uris.foreach{ u =>
+      uris.foreach { u =>
         if (!shard.contains(u.id.get)) throw new Exception(s"URI (id=${u.id.get}) does not belong to this shard ($shard)")
       }
       uris.iterator.map(buildIndexable)
@@ -68,13 +67,12 @@ object ArticleIndexer extends Logging {
   def shouldDelete(uri: IndexableUri): Boolean = toBeDeletedStates.contains(uri.state)
 
   class ArticleIndexable(
-    override val id: Id[NormalizedURI],
-    override val sequenceNumber: SequenceNumber[NormalizedURI],
-    override val isDeleted: Boolean,
-    val uri: IndexableUri,
-    articleStore: ArticleStore,
-    airbrake: AirbrakeNotifier
-  ) extends Indexable[NormalizedURI, NormalizedURI] {
+      override val id: Id[NormalizedURI],
+      override val sequenceNumber: SequenceNumber[NormalizedURI],
+      override val isDeleted: Boolean,
+      val uri: IndexableUri,
+      articleStore: ArticleStore,
+      airbrake: AirbrakeNotifier) extends Indexable[NormalizedURI, NormalizedURI] {
     implicit def toReader(text: String) = new StringReader(text)
 
     private def getArticle(id: Id[NormalizedURI], maxRetry: Int, minSleepTime: Long): Option[Article] = {
@@ -105,7 +103,7 @@ object ArticleIndexer extends Logging {
       val doc = super.buildDocument
       getArticle(id = uri.id.get, maxRetry = 5, minSleepTime = 1000) match {
         case Some(article) =>
-          uri.restriction.map{ reason =>
+          uri.restriction.map { reason =>
             doc.add(buildKeywordField(ArticleVisibility.restrictedTerm.field(), ArticleVisibility.restrictedTerm.text()))
           }
           val titleLang = article.titleLang.getOrElse(DefaultAnalyzer.defaultLang)
@@ -137,12 +135,13 @@ object ArticleIndexer extends Logging {
           doc.add(buildSemanticVectorField("sv", builder))
 
           val parsedURI = URI.parse(uri.url)
-          parsedURI.foreach{ uri =>
-            uri.host.foreach{ case Host(domain @ _*) =>
-              if (domain.nonEmpty) {
-                // index domain name
-                doc.add(buildIteratorField("site", (1 to domain.size).iterator){ n => domain.take(n).reverse.mkString(".") })
-              }
+          parsedURI.foreach { uri =>
+            uri.host.foreach {
+              case Host(domain @ _*) =>
+                if (domain.nonEmpty) {
+                  // index domain name
+                  doc.add(buildIteratorField("site", (1 to domain.size).iterator) { n => domain.take(n).reverse.mkString(".") })
+                }
             }
           }
 
@@ -154,7 +153,7 @@ object ArticleIndexer extends Logging {
           }
 
           // media keyword field
-          article.media.foreach{ media =>
+          article.media.foreach { media =>
             doc.add(buildTextField("media", media, DefaultAnalyzer.defaultAnalyzer))
           }
 

@@ -25,21 +25,19 @@ import com.keepit.cortex.store.CommitInfo
 import com.keepit.cortex.store.CommitInfoKey
 import com.keepit.common.logging.Logging
 
-
-trait FeatureUpdatePlugin[T, M <: StatModel] extends SchedulerPlugin{
+trait FeatureUpdatePlugin[T, M <: StatModel] extends SchedulerPlugin {
   val startTime: FiniteDuration = 30 seconds
   val updateFrequency: FiniteDuration = 2 minutes
   def update(): Unit
 }
 
-object FeaturePluginMessages{
+object FeaturePluginMessages {
   case object Update
 }
 
 abstract class BaseFeatureUpdatePlugin[K, T, M <: StatModel, FT <: FeatureRepresentation[T, M]](
-  actor: ActorInstance[FeatureUpdateActor[K, T, M, FT]],
-  serviceDiscovery: ServiceDiscovery
-) extends FeatureUpdatePlugin[T, M]{
+    actor: ActorInstance[FeatureUpdateActor[K, T, M, FT]],
+    serviceDiscovery: ServiceDiscovery) extends FeatureUpdatePlugin[T, M] {
 
   import FeaturePluginMessages._
 
@@ -48,12 +46,7 @@ abstract class BaseFeatureUpdatePlugin[K, T, M <: StatModel, FT <: FeatureRepres
   val name: String = getClass.toString
 
   override def onStart() {
-    log.info(s"starting $name")
     scheduleTaskOnLeader(actor.system, startTime, updateFrequency, actor.ref, Update)
-  }
-
-  override def onStop() {
-    log.info(s"stopping $name")
   }
 
   override def update(): Unit = {
@@ -63,9 +56,8 @@ abstract class BaseFeatureUpdatePlugin[K, T, M <: StatModel, FT <: FeatureRepres
 }
 
 abstract class FeatureUpdateActor[K, T, M <: StatModel, FT <: FeatureRepresentation[T, M]](
-  airbrake: AirbrakeNotifier,
-  updater: FeatureUpdater[K, T, M, FT]
-) extends FortyTwoActor(airbrake) {
+    airbrake: AirbrakeNotifier,
+    updater: FeatureUpdater[K, T, M, FT]) extends FortyTwoActor(airbrake) {
   import FeaturePluginMessages._
 
   def receive() = {
@@ -77,14 +69,12 @@ trait DataPuller[T] {
   def getSince(lowSeq: SequenceNumber[T], limit: Int): Seq[T]
 }
 
-
 // K: key for versionedStore
 abstract class FeatureUpdater[K, T, M <: StatModel, FT <: FeatureRepresentation[T, M]](
-  representer: FeatureRepresenter[T, M, FT],
-  featureStore: VersionedStore[K, M, FT],
-  commitInfoStore: CommitInfoStore[T, M],
-  dataPuller: DataPuller[T]
-) extends Logging {
+    representer: FeatureRepresenter[T, M, FT],
+    featureStore: VersionedStore[K, M, FT],
+    commitInfoStore: CommitInfoStore[T, M],
+    dataPuller: DataPuller[T]) extends Logging {
 
   // abstract methods
   protected def getSeqNumber(datum: T): SequenceNumber[T]
@@ -126,15 +116,16 @@ abstract class FeatureUpdater[K, T, M <: StatModel, FT <: FeatureRepresentation[
 
     if (ents.isEmpty) return
 
-    val maxSeq = ents.map{ent => getSeqNumber(ent)}.max
-    val entsAndFeat = ents.map{ ent => (genFeatureKey(ent), representer.apply(ent))}
-    entsAndFeat.foreach{ case (k, vOpt) =>
-      vOpt.foreach{ v =>
-        featureStore.+=(k, representer.version, v)
-      }
+    val maxSeq = ents.map { ent => getSeqNumber(ent) }.max
+    val entsAndFeat = ents.map { ent => (genFeatureKey(ent), representer.apply(ent)) }
+    entsAndFeat.foreach {
+      case (k, vOpt) =>
+        vOpt.foreach { v =>
+          featureStore.+=(k, representer.version, v)
+        }
     }
 
-    log.info(s"update time elapse: ${(System.currentTimeMillis - t1)/1000f} seconds")
+    log.info(s"update time elapse: ${(System.currentTimeMillis - t1) / 1000f} seconds")
 
     val commitSeq = FeatureStoreSequenceNumber[T, M](maxSeq.value)
     commit(commitSeq)

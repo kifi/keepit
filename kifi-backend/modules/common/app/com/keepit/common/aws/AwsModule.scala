@@ -1,7 +1,7 @@
 package com.keepit.common.aws
 
 import net.codingwell.scalaguice.ScalaModule
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.amazonaws.auth.BasicAWSCredentials
 import play.api.Play._
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient

@@ -5,7 +5,7 @@ import com.keepit.common.logging.Logging
 object URISanitizer extends Logging {
 
   private[this] val parser = new URIParserGrammar {
-    import URIParserUtil.{encodeNonASCII, decodePercentEncode, pathReservedChars, paramNameReservedChars, paramValueReservedChars, fragmentReservedChars}
+    import URIParserUtil.{ encodeNonASCII, decodePercentEncode, pathReservedChars, paramNameReservedChars, paramValueReservedChars, fragmentReservedChars }
 
     override def normalizePathComponent(component: String) = encodeNonASCII(decodePercentEncode(component), pathReservedChars)
     override def normalizeParams(params: Seq[Param]): Seq[Param] = params

@@ -1,7 +1,7 @@
 package com.keepit.common.reflection
 
 import scala.reflect.runtime.universe._
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 object CompanionTypeSystem {
 
@@ -34,7 +34,7 @@ object CompanionTypeSystem {
           checkTypeMember(subclassCompanionType, fBoundedType, subclassType)
       }
       getCompanion(subclass).asInstanceOf[Companion]
-   }
+    }
   }
 
   private def getTypeWithTypeParameterOrElseCheckTypeMember(owner: Type, fBoundedType: TypeName, upperBound: Type, isSelfRecursive: Boolean): Option[Type => Type] = {
@@ -61,49 +61,50 @@ object CompanionTypeSystem {
     clazz.knownDirectSubclasses.map(_.asClass)
   }
 
-   private def checkTypeMember(owner: Type, name: TypeName, expectedType: Type): Unit = {
-     val typeMemberType = owner.member(name).typeSignature
-     require(typeMemberType =:= expectedType, s"Type member $name in $owner is $typeMemberType, must be $expectedType")
-   }
+  private def checkTypeMember(owner: Type, name: TypeName, expectedType: Type): Unit = {
+    val typeMemberType = owner.member(name).typeSignature
+    require(typeMemberType =:= expectedType, s"Type member $name in $owner is $typeMemberType, must be $expectedType")
+  }
 
-    private def checkExistentialTypeMember(owner: Type, name: TypeName, upperBound: Type, isSelfRecursive: Boolean): Unit = {
-      val typeMemberType = owner.member(name).typeSignature
-      require(typeMemberType.isInstanceOf[TypeBoundsApi], s"$typeMemberType is not a type bounds.")
-      val TypeBounds(lo, hi) = typeMemberType
-      require(hi =:= upperBound, s"Type member $name in $owner is $typeMemberType, upper type bound must be $upperBound")
-      if (isSelfRecursive) {
-        val selfType = owner.typeSymbol.asClass.thisPrefix
-        require(lo =:= selfType, s"Type member $name in $owner is $typeMemberType, lower type bound must be $selfType for it to be self-recursive.")
-      }
+  private def checkExistentialTypeMember(owner: Type, name: TypeName, upperBound: Type, isSelfRecursive: Boolean): Unit = {
+    val typeMemberType = owner.member(name).typeSignature
+    require(typeMemberType.isInstanceOf[TypeBoundsApi], s"$typeMemberType is not a type bounds.")
+    val TypeBounds(lo, hi) = typeMemberType
+    require(hi =:= upperBound, s"Type member $name in $owner is $typeMemberType, upper type bound must be $upperBound")
+    if (isSelfRecursive) {
+      val selfType = owner.typeSymbol.asClass.thisPrefix
+      require(lo =:= selfType, s"Type member $name in $owner is $typeMemberType, lower type bound must be $selfType for it to be self-recursive.")
+    }
+  }
+
+  private def refineExistentialTypeParameter(owner: Type, parameterName: TypeName, upperBound: Type, isSelfRecursive: Boolean): Type => Type = {
+    require(owner.isInstanceOf[ExistentialTypeApi], s"$owner is not existential.")
+
+    val clazz = owner.typeSymbol.asClass
+    val paramPosition = clazz.typeParams.indexWhere(_.name == parameterName)
+    require(paramPosition > -1, s"Type parameter $parameterName not found in $clazz of $owner")
+
+    val ExistentialType(existentialArgs, underlying) = owner
+    val TypeRef(_, _, args) = underlying
+    val existentialArgSymbol = args(paramPosition).typeSymbol
+    require(existentialArgs.contains(existentialArgSymbol), s"Argument $existentialArgSymbol for type parameter $parameterName in $owner is not existential.")
+
+    val existentialArgBounds = existentialArgSymbol.typeSignature
+    val TypeBounds(lo, hi) = existentialArgBounds
+    require(hi =:= upperBound, s"Existential argument for parameter $parameterName in $owner is $existentialArgSymbol: $existentialArgBounds, upper type bound must be $upperBound.")
+
+    if (isSelfRecursive) {
+      val selfType = clazz.thisPrefix
+      val selfTypeConstructor = selfType.typeConstructor
+      val isValidSelfType = selfTypeConstructor.isInstanceOf[RefinedTypeApi] && selfTypeConstructor.asInstanceOf[RefinedType].parents.exists(_.typeSymbol.name == parameterName)
+      require(isValidSelfType, s"Self type $selfType of $owner must be a subtype of $parameterName for it to be self-recursive.")
     }
 
-    private def refineExistentialTypeParameter(owner: Type, parameterName: TypeName, upperBound: Type, isSelfRecursive: Boolean): Type => Type = {
-      require(owner.isInstanceOf[ExistentialTypeApi], s"$owner is not existential.")
-
-      val clazz = owner.typeSymbol.asClass
-      val paramPosition = clazz.typeParams.indexWhere(_.name == parameterName)
-      require(paramPosition > -1, s"Type parameter $parameterName not found in $clazz of $owner")
-
-      val ExistentialType(existentialArgs, underlying) = owner
-      val TypeRef(_, _, args) = underlying
-      val existentialArgSymbol = args(paramPosition).typeSymbol
-      require(existentialArgs.contains(existentialArgSymbol), s"Argument $existentialArgSymbol for type parameter $parameterName in $owner is not existential.")
-
-      val existentialArgBounds = existentialArgSymbol.typeSignature
-      val TypeBounds(lo, hi) = existentialArgBounds
-      require(hi =:= upperBound, s"Existential argument for parameter $parameterName in $owner is $existentialArgSymbol: $existentialArgBounds, upper type bound must be $upperBound.")
-
-      if (isSelfRecursive) {
-        val selfType = clazz.thisPrefix
-        val selfTypeConstructor = selfType.typeConstructor
-        val isValidSelfType = selfTypeConstructor.isInstanceOf[RefinedTypeApi] && selfTypeConstructor.asInstanceOf[RefinedType].parents.exists(_.typeSymbol.name == parameterName)
-        require(isValidSelfType, s"Self type $selfType of $owner must be a subtype of $parameterName for it to be self-recursive.")
-      }
-
-      { case refinedArgument: Type =>
+    {
+      case refinedArgument: Type =>
         require(refinedArgument <:< hi, s"Argument $refinedArgument for parameter $parameterName in $owner must be a subtype of $hi from $existentialArgSymbol: $existentialArgBounds")
         require(lo <:< refinedArgument, s"Argument $refinedArgument for parameter $parameterName in $owner must be a supertype of $lo from $existentialArgSymbol: $existentialArgBounds")
-        underlying.substituteTypes(existentialArgSymbol::Nil, refinedArgument::Nil)
-      }
+        underlying.substituteTypes(existentialArgSymbol :: Nil, refinedArgument :: Nil)
     }
-   }
+  }
+}

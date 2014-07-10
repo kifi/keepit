@@ -1,8 +1,8 @@
 package com.keepit.common.store
 
-import com.google.inject.{Provides, Singleton}
-import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3}
-import com.keepit.common.healthcheck.{SystemAdminMailSender, AirbrakeNotifier}
+import com.google.inject.{ Provides, Singleton }
+import com.amazonaws.services.s3.{ AmazonS3Client, AmazonS3 }
+import com.keepit.common.healthcheck.{ SystemAdminMailSender, AirbrakeNotifier }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.time.Clock
 import play.api.Play._
@@ -44,7 +44,6 @@ case class ScraperProdStoreModule() extends ProdStoreModule {
     new S3URIImageStoreImpl(amazonS3Client, config, airbrake)
   }
 
-
 }
 
 case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule()) {
@@ -62,8 +61,8 @@ case class ScraperDevStoreModule() extends DevStoreModule(ScraperProdStoreModule
     whenConfigured("amazon.s3.bayes.porn.detector.bucket")(
       prodStoreModule.bayesPornDetectorStore(amazonS3ClientProvider.get, accessLog)
     ).getOrElse(new InMemoryPornWordLikelihoodStore() {
-      override def get(key: String) = Some(PornWordLikelihood(Map("a" -> 1f)))
-    })
+        override def get(key: String) = Some(PornWordLikelihood(Map("a" -> 1f)))
+      })
   }
 
   @Singleton

@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics}
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key, CacheStatistics }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
@@ -9,14 +9,13 @@ import scala.concurrent.duration._
 import com.keepit.serializer.TraversableFormat
 import play.api.libs.json._
 
-case class UserExperiment (
-  id: Option[Id[UserExperiment]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  userId: Id[User],
-  experimentType: ExperimentType,
-  state: State[UserExperiment] = UserExperimentStates.ACTIVE
-) extends ModelWithState[UserExperiment] {
+case class UserExperiment(
+    id: Option[Id[UserExperiment]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    userId: Id[User],
+    experimentType: ExperimentType,
+    state: State[UserExperiment] = UserExperimentStates.ACTIVE) extends ModelWithState[UserExperiment] {
   def withId(id: Id[UserExperiment]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[UserExperiment]) = this.copy(state = state)
@@ -31,7 +30,7 @@ object ExperimentType {
 
   implicit val format: Format[ExperimentType] = Format(
     __.read[String].map(ExperimentType(_)),
-    new Writes[ExperimentType]{ def writes(o: ExperimentType) = JsString(o.value)}
+    new Writes[ExperimentType] { def writes(o: ExperimentType) = JsString(o.value) }
   )
 
   val ADMIN = ExperimentType("admin")
@@ -73,4 +72,4 @@ case class UserExperimentUserIdKey(userId: Id[User]) extends Key[Seq[ExperimentT
 }
 
 class UserExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-    extends JsonCacheImpl[UserExperimentUserIdKey, Seq[ExperimentType]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq[ExperimentType])
+  extends JsonCacheImpl[UserExperimentUserIdKey, Seq[ExperimentType]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(TraversableFormat.seq[ExperimentType])

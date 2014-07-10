@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import play.api.libs.json._
-import play.api.mvc.{PathBindable, QueryStringBindable}
+import play.api.mvc.{ PathBindable, QueryStringBindable }
 
 case class Name[T](name: String) {
   override def toString = name
@@ -9,7 +9,7 @@ case class Name[T](name: String) {
 
 object Name {
   def format[T]: Format[Name[T]] =
-    Format(__.read[String].map(Name(_)), new Writes[Name[T]]{ def writes(o: Name[T]) = JsString(o.name) })
+    Format(__.read[String].map(Name(_)), new Writes[Name[T]] { def writes(o: Name[T]) = JsString(o.name) })
 
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[Name[T]] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, Name[T]]] = {

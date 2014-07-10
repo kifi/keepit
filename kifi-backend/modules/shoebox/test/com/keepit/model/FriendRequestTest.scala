@@ -6,7 +6,7 @@ import org.specs2.mutable.Specification
 
 import com.keepit.common.db.Id
 import com.keepit.test.ShoeboxTestInjector
-import com.keepit.eliza.{ElizaServiceClient, FakeElizaServiceClientImpl}
+import com.keepit.eliza.{ ElizaServiceClient, FakeElizaServiceClientImpl }
 
 class FriendRequestTest extends Specification with ShoeboxTestInjector {
 
@@ -14,11 +14,13 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
     "get active friend requests by sender and recipient" in {
       val users = (1 to 3).map(Id[User](_)).toSeq
       withDb() { implicit injector =>
-        val (fr1, fr2) = db.readWrite { implicit s => (
-          friendRequestRepo.save(FriendRequest(senderId = users(0), recipientId = users(1), messageHandle = None)),
-          friendRequestRepo.save(FriendRequest(senderId = users(0), recipientId = users(2), messageHandle = None))
-        )}
-        db.readOnly { implicit s =>
+        val (fr1, fr2) = db.readWrite { implicit s =>
+          (
+            friendRequestRepo.save(FriendRequest(senderId = users(0), recipientId = users(1), messageHandle = None)),
+            friendRequestRepo.save(FriendRequest(senderId = users(0), recipientId = users(2), messageHandle = None))
+          )
+        }
+        db.readOnlyMaster { implicit s =>
           friendRequestRepo.getBySender(users(0)).map(_.recipientId) must haveTheSameElementsAs(Seq(users(1), users(2)))
           friendRequestRepo.getByRecipient(users(1)).map(_.senderId) must haveTheSameElementsAs(Seq(users(0)))
           friendRequestRepo.getByRecipient(users(2)).map(_.senderId) must haveTheSameElementsAs(Seq(users(0)))
@@ -27,7 +29,7 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           friendRequestRepo.save(fr1.copy(state = FriendRequestStates.ACCEPTED))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           friendRequestRepo.getBySender(users(0)).map(_.recipientId) must haveTheSameElementsAs(Seq(users(2)))
           friendRequestRepo.getByRecipient(users(1)) must beEmpty
           friendRequestRepo.getCountByRecipient(users(2)) must_== 1
@@ -37,7 +39,7 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           friendRequestRepo.save(fr2.copy(state = FriendRequestStates.IGNORED))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           friendRequestRepo.getBySender(users(0)) must beEmpty
           friendRequestRepo.getBySender(users(0), states = Set(FriendRequestStates.ACCEPTED,
             FriendRequestStates.IGNORED)).map(_.recipientId) must haveTheSameElementsAs(Seq(users(1), users(2)))
@@ -55,12 +57,14 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val eliza = inject[ElizaServiceClient].asInstanceOf[FakeElizaServiceClientImpl]
         eliza.unsentNotificationIds.size === 0
-        val (fr1, fr2) = db.readWrite { implicit s => (
-          friendRequestRepo.save(FriendRequest(senderId = users(0), recipientId = users(1), messageHandle = Some(Id[MessageHandle](1)))),
-          friendRequestRepo.save(FriendRequest(senderId = users(0), recipientId = users(2), messageHandle = Some(Id[MessageHandle](22))))
-        )}
+        val (fr1, fr2) = db.readWrite { implicit s =>
+          (
+            friendRequestRepo.save(FriendRequest(senderId = users(0), recipientId = users(1), messageHandle = Some(Id[MessageHandle](1)))),
+            friendRequestRepo.save(FriendRequest(senderId = users(0), recipientId = users(2), messageHandle = Some(Id[MessageHandle](22))))
+          )
+        }
         eliza.unsentNotificationIds.size === 0
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           friendRequestRepo.get(fr1.id.get).messageHandle.get.id === 1
           friendRequestRepo.get(fr2.id.get).messageHandle.get.id === 22
         }

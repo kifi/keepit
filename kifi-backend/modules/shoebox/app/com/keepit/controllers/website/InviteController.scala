@@ -1,12 +1,12 @@
 package com.keepit.controllers.website
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ Future, Promise }
 import scala.concurrent.duration._
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ExternalId, State}
+import com.keepit.common.db.{ ExternalId, State }
 import com.keepit.model._
 import com.keepit.social._
 import com.keepit.common.akka.TimeoutFuture
@@ -18,28 +18,27 @@ import play.api.templates.Html
 import com.keepit.abook.ABookServiceClient
 import play.api.mvc.Cookie
 import com.keepit.model.Invitation
-import com.keepit.commanders.{FailedInvitationException, InviteStatus, FullSocialId, InviteCommander}
+import com.keepit.commanders.{ FailedInvitationException, InviteStatus, FullSocialId, InviteCommander }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import scala.util.{Success, Failure, Try}
+import scala.util.{ Success, Failure, Try }
 import play.api.libs.json.Json
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
 class InviteController @Inject() (db: Database,
-  userRepo: UserRepo,
-  socialUserRepo: SocialUserInfoRepo,
-  emailRepo: UserEmailAddressRepo,
-  userConnectionRepo: UserConnectionRepo,
-  invitationRepo: InvitationRepo,
-  socialUserInfoRepo: SocialUserInfoRepo,
-  socialGraphPlugin: SocialGraphPlugin,
-  actionAuthenticator: ActionAuthenticator,
-  abookServiceClient: ABookServiceClient,
-  inviteCommander: InviteCommander,
-  fortytwoConfig: FortyTwoConfig,
-  airbrake: AirbrakeNotifier
-) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    userRepo: UserRepo,
+    socialUserRepo: SocialUserInfoRepo,
+    emailRepo: UserEmailAddressRepo,
+    userConnectionRepo: UserConnectionRepo,
+    invitationRepo: InvitationRepo,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    socialGraphPlugin: SocialGraphPlugin,
+    actionAuthenticator: ActionAuthenticator,
+    abookServiceClient: ABookServiceClient,
+    inviteCommander: InviteCommander,
+    fortytwoConfig: FortyTwoConfig,
+    airbrake: AirbrakeNotifier) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def invite = HtmlAction.authenticated { implicit request =>
     Redirect("/friends/invite") // Can't use reverse routes because we need to send to this URL exactly
@@ -108,8 +107,7 @@ class InviteController @Inject() (db: Database,
     if (inviteStatus.sent) {
       log.info(s"[confirmInvite] Facebook invite sent: $inviteStatus")
       CloseWindow()
-    }
-    else {
+    } else {
       log.error(s"[confirmInvite] Unexpected error while processing Facebook invitation $id from $source: $inviteStatus $errorMsg }")
       airbrake.notify(new FailedInvitationException(inviteStatus, Some(id), None, None))
       Redirect(routes.HomeController.home)
@@ -117,7 +115,7 @@ class InviteController @Inject() (db: Database,
   }
 
   def refreshAllSocialInfo() = HtmlAction.authenticatedAsync { implicit request =>
-    val info = db.readOnly { implicit s =>
+    val info = db.readOnlyMaster { implicit s =>
       socialUserInfoRepo.getByUser(request.userId)
     }
     implicit val duration = 5.minutes
@@ -129,45 +127,45 @@ class InviteController @Inject() (db: Database,
   def acceptInvite(id: ExternalId[Invitation]) = HtmlAction.async(allowPending = true)(authenticatedAction = { implicit request =>
     resolve(Redirect(com.keepit.controllers.core.routes.AuthController.signupPage))
   }, unauthenticatedAction = { implicit request =>
-      val (invitation, inviterUserOpt) = db.readOnly { implicit session =>
-        invitationRepo.getOpt(id).map {
-          case invite if invite.senderUserId.isDefined =>
-            (Some(invite), Some(userRepo.get(invite.senderUserId.get)))
-          case invite =>
-            (Some(invite), None)
-        }.getOrElse((None, None))
-      }
-      invitation match {
-        case Some(invite) if invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE =>
-          if (request.identityOpt.isDefined || invite.senderUserId.isEmpty) {
-            resolve(Redirect(com.keepit.controllers.website.routes.HomeController.home).withCookies(Cookie("inv", invite.externalId.id)))
-          } else {
-            val senderUserId = invite.senderUserId.get
-            val nameOpt = (invite.recipientSocialUserId, invite.recipientEmailAddress) match {
-              case (Some(socialUserId), _) =>
-                val name = db.readOnly(socialUserInfoRepo.get(socialUserId)(_).fullName)
-                Future.successful(Some(name))
-              case (_, Some(emailAddress)) =>
-                abookServiceClient.getContactNameByEmail(senderUserId, emailAddress).map(_ orElse Some(""))
-              case _ =>
-                Future.successful(None)
-            }
-            nameOpt.map {
-              case Some(name) =>
-                val inviter = inviterUserOpt.get.firstName
-                Ok(views.html.marketing.landingNew(
-                    useCustomMetaData = true,
-                    pageUrl = fortytwoConfig.applicationBaseUrl + request.uri,
-                    titleText = s"$inviter sent you an invite to kifi",
-                    titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friend's keeps on top of search results."
-                )).withCookies(Cookie("inv", invite.externalId.id))
-              case None =>
-                log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
-                Redirect(com.keepit.controllers.website.routes.HomeController.home)
-            }
+    val (invitation, inviterUserOpt) = db.readOnlyMaster { implicit session =>
+      invitationRepo.getOpt(id).map {
+        case invite if invite.senderUserId.isDefined =>
+          (Some(invite), Some(userRepo.get(invite.senderUserId.get)))
+        case invite =>
+          (Some(invite), None)
+      }.getOrElse((None, None))
+    }
+    invitation match {
+      case Some(invite) if invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE =>
+        if (request.identityOpt.isDefined || invite.senderUserId.isEmpty) {
+          resolve(Redirect(com.keepit.controllers.website.routes.HomeController.home).withCookies(Cookie("inv", invite.externalId.id)))
+        } else {
+          val senderUserId = invite.senderUserId.get
+          val nameOpt = (invite.recipientSocialUserId, invite.recipientEmailAddress) match {
+            case (Some(socialUserId), _) =>
+              val name = db.readOnlyMaster(socialUserInfoRepo.get(socialUserId)(_).fullName)
+              Future.successful(Some(name))
+            case (_, Some(emailAddress)) =>
+              abookServiceClient.getContactNameByEmail(senderUserId, emailAddress).map(_ orElse Some(""))
+            case _ =>
+              Future.successful(None)
           }
-        case _ =>
-          resolve(Redirect(com.keepit.controllers.website.routes.HomeController.home))
-      }
+          nameOpt.map {
+            case Some(name) =>
+              val inviter = inviterUserOpt.get.firstName
+              Ok(views.html.marketing.landingNew(
+                useCustomMetaData = true,
+                pageUrl = fortytwoConfig.applicationBaseUrl + request.uri,
+                titleText = s"$inviter sent you an invite to kifi",
+                titleDesc = s"$inviter uses kifi to easily keep anything online - an article, video, picture, or email - then quickly find personal and friend's keeps on top of search results."
+              )).withCookies(Cookie("inv", invite.externalId.id))
+            case None =>
+              log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
+              Redirect(com.keepit.controllers.website.routes.HomeController.home)
+          }
+        }
+      case _ =>
+        resolve(Redirect(com.keepit.controllers.website.routes.HomeController.home))
+    }
   })
 }

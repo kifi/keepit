@@ -1,27 +1,28 @@
-package com.keepit.heimdal
-
-import reactivemongo.bson.BSONDocument
-import reactivemongo.api.collections.default.BSONCollection
+package com.keepit.model
 
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics}
+import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.common.KestrelCombinator
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.bson.BSONDocument
+import com.keepit.heimdal._
+
 import scala.concurrent.Future
 
 trait NonUserEventLoggingRepo extends EventRepo[NonUserEvent]
 
 class ProdNonUserEventLoggingRepo(val collection: BSONCollection, val mixpanel: MixpanelClient, val descriptors: NonUserEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
-  extends MongoEventRepo[NonUserEvent] with NonUserEventLoggingRepo {
+    extends MongoEventRepo[NonUserEvent] with NonUserEventLoggingRepo {
   val warnBufferSize = 500
   val maxBufferSize = 10000
 
   private val augmentors = Seq(NonUserIdentifierAugmentor)
 
-  def toBSON(event: NonUserEvent) : BSONDocument = BSONDocument(EventRepo.eventToBSONFields(event))
+  def toBSON(event: NonUserEvent): BSONDocument = BSONDocument(EventRepo.eventToBSONFields(event))
   def fromBSON(bson: BSONDocument): NonUserEvent = ???
 
   override def persist(nonUserEvent: NonUserEvent): Unit =
@@ -46,7 +47,7 @@ class ProdNonUserEventDescriptorRepo(val collection: BSONCollection, cache: NonU
 }
 
 class NonUserEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[NonUserEventDescriptorNameKey, EventDescriptor](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[NonUserEventDescriptorNameKey, EventDescriptor](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class NonUserEventDescriptorNameKey(name: EventType) extends Key[EventDescriptor] {
   override val version = 1

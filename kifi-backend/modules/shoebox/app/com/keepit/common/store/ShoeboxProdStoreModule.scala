@@ -1,13 +1,12 @@
 package com.keepit.common.store
 
 import com.amazonaws.services.s3.AmazonS3
-import com.google.inject.{Inject, Provider, Provides, Singleton}
+import com.google.inject.{ Inject, Provider, Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.AccessLog
 import com.keepit.inject.AppScoped
-import com.keepit.scraper.embedly.{EmbedlyStore, InMemoryEmbedlyStoreImpl, S3EmbedlyStoreImpl}
-import com.keepit.social.{InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore}
-import com.keepit.typeahead.abook.{EContactTypeaheadStore, InMemoryEContactTypeaheadStore, S3EContactTypeaheadStore}
+import com.keepit.scraper.embedly.{ EmbedlyStore, InMemoryEmbedlyStoreImpl, S3EmbedlyStoreImpl }
+import com.keepit.social.{ InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore }
 import com.keepit.typeahead.socialusers._
 
 import play.api.Play.current
@@ -50,13 +49,6 @@ case class ShoeboxProdStoreModule() extends ProdStoreModule {
   def kifiUserTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): KifiUserTypeaheadStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.typeahead.kifi.bucket").get)
     new S3KifiUserTypeaheadStore(bucketName, amazonS3Client, accessLog)
-  }
-
-  @Singleton
-  @Provides
-  def econtactTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): EContactTypeaheadStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.typeahead.contact.bucket").get)
-    new S3EContactTypeaheadStore(bucketName, amazonS3Client, accessLog)
   }
 
   @Singleton
@@ -105,14 +97,6 @@ case class ShoeboxDevStoreModule() extends DevStoreModule(ShoeboxProdStoreModule
     whenConfigured("amazon.s3.typeahead.kifi.bucket")(
       prodStoreModule.kifiUserTypeaheadStore(amazonS3Client, accessLog)
     ) getOrElse (new InMemoryKifiUserTypeaheadStoreImpl())
-  }
-
-  @Singleton
-  @Provides
-  def econtactTypeaheadStore(amazonS3Client: AmazonS3, accessLog: AccessLog): EContactTypeaheadStore = {
-    whenConfigured("amazon.s3.typeahead.contact.bucket")(
-      prodStoreModule.econtactTypeaheadStore(amazonS3Client, accessLog)
-    ) getOrElse (new InMemoryEContactTypeaheadStore())
   }
 
   @Singleton

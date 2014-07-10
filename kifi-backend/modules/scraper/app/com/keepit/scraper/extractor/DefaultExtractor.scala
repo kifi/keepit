@@ -7,7 +7,7 @@ import org.apache.tika.parser.html.BoilerpipeContentHandler
 import org.apache.tika.parser.html.DefaultHtmlMapper
 import org.apache.tika.parser.html.HtmlMapper
 import org.apache.tika.sax
-import org.apache.tika.sax.{WriteOutContentHandler, ContentHandlerDecorator}
+import org.apache.tika.sax.{ WriteOutContentHandler, ContentHandlerDecorator }
 import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
 import play.api.http.MimeTypes
@@ -24,7 +24,7 @@ object DefaultExtractorProvider extends ExtractorProvider {
     override def mapSafeElement(name: String) = {
       name.toLowerCase match {
         case "option" => "option"
-        case _ =>super.mapSafeElement(name)
+        case _ => super.mapSafeElement(name)
       }
     }
   })
@@ -43,29 +43,29 @@ class DefaultExtractor(url: String, maxContentChars: Int, htmlMapper: Option[Htm
   def getLinks(key: String): Set[String] = handler.links.getOrElse(key, Set.empty).toSet
 
   override def getKeywords(): Option[String] = {
-    val str = (handler.getKeywords.map{ _.mkString(", ") } ++ getValidatedMetaTagKeywords).mkString(" | ")
+    val str = (handler.getKeywords.map { _.mkString(", ") } ++ getValidatedMetaTagKeywords).mkString(" | ")
     if (str.length > 0) Some(str) else None
   }
 
   private def getValidatedMetaTagKeywords: Option[String] = {
-    getMetadata("keywords").flatMap{ meta =>
+    getMetadata("keywords").flatMap { meta =>
       import DefaultExtractor._
-      val phrases = specialRegex.split(meta).filter{ _.length > 0 }.toSeq
-      val allPhrases = phrases.foldLeft(phrases){ (phrases, onePhrase) => phrases ++ spaceRegex.split(onePhrase).filter{ _.length > 0 }.toSeq }
+      val phrases = specialRegex.split(meta).filter { _.length > 0 }.toSeq
+      val allPhrases = phrases.foldLeft(phrases) { (phrases, onePhrase) => phrases ++ spaceRegex.split(onePhrase).filter { _.length > 0 }.toSeq }
       val validator = new KeywordValidator(allPhrases)
 
       validator.startDocument()
 
-      getMetadata("title").foreach{ title =>
+      getMetadata("title").foreach { title =>
         validator.characters(title.toCharArray)
         validator.break()
       }
-      getMetadata("description").foreach{ description =>
+      getMetadata("description").foreach { description =>
         validator.characters(description.toCharArray)
         validator.break()
       }
-      handler.getKeywords.foreach{ keywords => // keywords from URI path
-        keywords.foreach{ keyword =>
+      handler.getKeywords.foreach { keywords => // keywords from URI path
+        keywords.foreach { keyword =>
           validator.characters(keyword.toCharArray)
           validator.break()
         }
@@ -86,13 +86,13 @@ class DefaultContentHandler(maxContentChars: Int, handler: ContentHandler, metad
 
   private[this] var keywordValidatorContentHandler: Option[KeywordValidatorContentHandler] = None
 
-  def getKeywords:Option[Seq[String]] = keywordValidatorContentHandler.map{ _.keywords }
+  def getKeywords: Option[Seq[String]] = keywordValidatorContentHandler.map { _.keywords }
 
   private[extractor] val links = new mutable.HashMap[String, mutable.Set[String]] with mutable.MultiMap[String, String]
 
   override def startDocument() {
     // enable boilerpipe only for HTML
-    Option(metadata.get("Content-Type")).foreach{ contentType =>
+    Option(metadata.get("Content-Type")).foreach { contentType =>
       if (contentType startsWith MimeTypes.HTML) {
         val keywordValidator = new KeywordValidator(URITokenizer.getTokens(uri))
         keywordValidatorContentHandler = Some(
@@ -143,7 +143,7 @@ class DefaultContentHandler(maxContentChars: Int, handler: ContentHandler, metad
     "link" -> startLink
   )
 
-  private val endElemProcs: Map[String, (String, String, String)=>Unit] = Map(
+  private val endElemProcs: Map[String, (String, String, String) => Unit] = Map(
     "a" -> endAnchor,
     "option" -> endOption
   )

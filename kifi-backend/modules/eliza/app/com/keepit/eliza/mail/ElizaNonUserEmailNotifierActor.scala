@@ -12,22 +12,21 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.time._
 
 class ElizaNonUserEmailNotifierActor @Inject() (
-  airbrake: AirbrakeNotifier,
-  db: Database,
-  clock: Clock,
-  elizaEmailCommander: ElizaEmailCommander,
-  nonUserThreadRepo: NonUserThreadRepo,
-  threadRepo: MessageThreadRepo
-) extends ElizaEmailNotifierActor[NonUserThread](airbrake) {
+    airbrake: AirbrakeNotifier,
+    db: Database,
+    clock: Clock,
+    elizaEmailCommander: ElizaEmailCommander,
+    nonUserThreadRepo: NonUserThreadRepo,
+    threadRepo: MessageThreadRepo) extends ElizaEmailNotifierActor[NonUserThread](airbrake) {
 
   import ElizaEmailNotifierActor._
 
   protected def emailUnreadMessagesForParticipantThreadBatch(batch: ParticipantThreadBatch[NonUserThread]): Future[Unit] = {
-    val thread = db.readOnly { implicit session => threadRepo.get(batch.threadId) }
+    val thread = db.readOnlyMaster { implicit session => threadRepo.get(batch.threadId) }
     elizaEmailCommander.getThreadEmailData(thread) flatMap { threadEmailData =>
       val notificationFutures = batch.participantThreads.map {
         case emailParticipantThread if emailParticipantThread.participant.kind == NonUserKinds.email => {
-          elizaEmailCommander.notifyEmailParticipant(emailParticipantThread, threadEmailData).recover{
+          elizaEmailCommander.notifyEmailParticipant(emailParticipantThread, threadEmailData).recover {
             case _ => ()
           }
         }
@@ -48,7 +47,7 @@ class ElizaNonUserEmailNotifierActor @Inject() (
     val now = clock.now
     val lastNotifiedBefore = now.minus(MIN_TIME_BETWEEN_NOTIFICATIONS.toMillis)
     val lastUpdatedByOtherAfter = now.minus(RECENT_ACTIVITY_WINDOW.toMillis)
-    val unseenNonUserThreads = db.readOnly { implicit session =>
+    val unseenNonUserThreads = db.readOnlyMaster { implicit session =>
       nonUserThreadRepo.getNonUserThreadsForEmailing(lastNotifiedBefore, lastUpdatedByOtherAfter)
     }
     unseenNonUserThreads

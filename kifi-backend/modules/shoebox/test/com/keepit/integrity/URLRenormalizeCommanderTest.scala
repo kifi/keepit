@@ -14,10 +14,10 @@ import com.keepit.shoebox.TestShoeboxServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.normalizer.NormalizedURIInterner
 
-class URLRenormalizeCommanderTest extends Specification with ShoeboxApplicationInjector{
+class URLRenormalizeCommanderTest extends Specification with ShoeboxApplicationInjector {
   "renormalizer" should {
     "word" in {
-      running(new ShoeboxApplication(TestActorSystemModule(), FakeHttpClientModule(), TestShoeboxServiceClientModule())){
+      running(new ShoeboxApplication(TestActorSystemModule(), FakeHttpClientModule(), TestShoeboxServiceClientModule())) {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
@@ -26,11 +26,11 @@ class URLRenormalizeCommanderTest extends Specification with ShoeboxApplicationI
         val renormRepo = inject[RenormalizedURLRepo]
         val centralConfig = inject[CentralConfig]
         val mailSender = inject[SystemAdminMailSender]
-        val commander = new URLRenormalizeCommander(db, null, mailSender, uriRepo, normalizedURIInterner, urlRepo, changedUriRepo, renormRepo, centralConfig )
+        val commander = new URLRenormalizeCommander(db, null, mailSender, uriRepo, normalizedURIInterner, urlRepo, changedUriRepo, renormRepo, centralConfig)
 
-        val (uri0, uri1, url0, url1, url2, url3) = db.readWrite{ implicit s =>
-          val uri0 = uriRepo.save(NormalizedURI.withHash("http://kifi.com/wrong", Some("kifi")).withState(NormalizedURIStates.SCRAPED))   // trigger 1 migration
-          val uri1 = uriRepo.save(NormalizedURI.withHash("http://kifi.com/wrong1", Some("kifi")).withState(NormalizedURIStates.SCRAPED))  // trigger splits
+        val (uri0, uri1, url0, url1, url2, url3) = db.readWrite { implicit s =>
+          val uri0 = uriRepo.save(NormalizedURI.withHash("http://kifi.com/wrong", Some("kifi")).withState(NormalizedURIStates.SCRAPED)) // trigger 1 migration
+          val uri1 = uriRepo.save(NormalizedURI.withHash("http://kifi.com/wrong1", Some("kifi")).withState(NormalizedURIStates.SCRAPED)) // trigger splits
 
           // all these are pointing to completely wrong uri
           val url0 = urlRepo.save(URLFactory("http://www.kifi.com/correct/", uri0.id.get))
@@ -41,7 +41,7 @@ class URLRenormalizeCommanderTest extends Specification with ShoeboxApplicationI
         }
 
         commander.doRenormalize(readOnly = false, clearSeq = false, regex = DomainOrURLRegex(None, None))
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster { implicit s =>
           changedUriRepo.all().size === 1
           val changedUri = changedUriRepo.all().head
           changedUri.oldUriId === uri0.id.get

@@ -1,12 +1,15 @@
-package com.keepit.heimdal
+package com.keepit.model
 
-import reactivemongo.bson.BSONDocument
-import reactivemongo.api.collections.default.BSONCollection
-
+import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics}
+import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
+import com.keepit.heimdal.SystemEvent
+import reactivemongo.api.collections.default.BSONCollection
+import reactivemongo.bson.BSONDocument
+import com.keepit.heimdal._
+
 import scala.concurrent.duration.Duration
 import com.keepit.common.KestrelCombinator
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -14,11 +17,11 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 trait SystemEventLoggingRepo extends EventRepo[SystemEvent]
 
 class ProdSystemEventLoggingRepo(val collection: BSONCollection, val mixpanel: MixpanelClient, val descriptors: SystemEventDescriptorRepo, protected val airbrake: AirbrakeNotifier)
-  extends MongoEventRepo[SystemEvent] with SystemEventLoggingRepo {
+    extends MongoEventRepo[SystemEvent] with SystemEventLoggingRepo {
   val warnBufferSize = 500
   val maxBufferSize = 10000
 
-  def toBSON(event: SystemEvent) : BSONDocument = BSONDocument(EventRepo.eventToBSONFields(event))
+  def toBSON(event: SystemEvent): BSONDocument = BSONDocument(EventRepo.eventToBSONFields(event))
   def fromBSON(bson: BSONDocument): SystemEvent = ???
 }
 
@@ -30,7 +33,7 @@ class ProdSystemEventDescriptorRepo(val collection: BSONCollection, cache: Syste
 }
 
 class SystemEventDescriptorNameCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SystemEventDescriptorNameKey, EventDescriptor](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[SystemEventDescriptorNameKey, EventDescriptor](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class SystemEventDescriptorNameKey(name: EventType) extends Key[EventDescriptor] {
   override val version = 1

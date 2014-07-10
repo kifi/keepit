@@ -1,7 +1,7 @@
 package com.keepit.common.crypto
 
-import javax.crypto.{SecretKey, Cipher, SecretKeyFactory}
-import javax.crypto.spec.{IvParameterSpec, DESKeySpec}
+import javax.crypto.{ SecretKey, Cipher, SecretKeyFactory }
+import javax.crypto.spec.{ IvParameterSpec, DESKeySpec }
 import scala.util.Try
 
 class RatherInsecureDESCrypt {
@@ -29,7 +29,7 @@ class RatherInsecureDESCrypt {
   }
 
   def decrypt(key: SecretKey, encrypted: String): Try[String] = Try {
-    val input =  CryptoSupport.fromBase64(encrypted)
+    val input = CryptoSupport.fromBase64(encrypted)
     val cipher = Cipher.getInstance("DES/CBC/PKCS5Padding")
     cipher.init(Cipher.DECRYPT_MODE, key, ivSpec)
     val decrypted = new Array[Byte](cipher.getOutputSize(input.length))

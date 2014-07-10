@@ -1,16 +1,16 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{SequenceNumber, State}
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.{ SequenceNumber, State }
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import scala.slick.util.CloseableIterator
 import com.keepit.common.time.Clock
 import com.keepit.search.Lang
 import scala.Some
 
 @ImplementedBy(classOf[PhraseRepoImpl])
-trait PhraseRepo extends Repo[Phrase] with SeqNumberFunction[Phrase]{
+trait PhraseRepo extends Repo[Phrase] with SeqNumberFunction[Phrase] {
   def get(phrase: String, lang: Lang, excludeState: Option[State[Phrase]] = Some(PhraseStates.INACTIVE))(implicit session: RSession): Option[Phrase]
   def insertAll(phrases: Seq[Phrase])(implicit session: RWSession): Option[Int]
   def allIterator(implicit session: RSession): CloseableIterator[Phrase]
@@ -18,14 +18,14 @@ trait PhraseRepo extends Repo[Phrase] with SeqNumberFunction[Phrase]{
 }
 
 @Singleton
-class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[Phrase] with PhraseRepo with SeqNumberDbFunction[Phrase]{
+class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[Phrase] with PhraseRepo with SeqNumberDbFunction[Phrase] {
 
   import db.Driver.simple._
 
   private val sequence = db.getSequence[Phrase]("phrase_sequence")
 
   type RepoImpl = PhraseTable
-  class PhraseTable(tag: Tag) extends RepoTable[Phrase](db, tag, "phrase") with SeqNumberColumn[Phrase]{
+  class PhraseTable(tag: Tag) extends RepoTable[Phrase](db, tag, "phrase") with SeqNumberColumn[Phrase] {
     def phrase = column[String]("phrase", O.NotNull)
     def source = column[String]("source", O.NotNull)
     def lang = column[Lang]("lang", O.NotNull)

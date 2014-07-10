@@ -13,17 +13,16 @@ import com.keepit.model.NormalizedURI
 import com.keepit.common.store.ImageSize
 import com.keepit.commanders.WordCountCommander
 
-class URISummaryController @Inject()(
-  summaryCmdr: ScraperURISummaryCommander,
-  wordCountCmdr: WordCountCommander
-) extends ScraperServiceController {
+class URISummaryController @Inject() (
+    summaryCmdr: ScraperURISummaryCommander,
+    wordCountCmdr: WordCountCommander) extends ScraperServiceController {
 
-  def getURISummaryFromEmbedly() = Action.async(parse.tolerantJson){ request =>
+  def getURISummaryFromEmbedly() = Action.async(parse.tolerantJson) { request =>
     val js = request.body
     val uri = (js \ "uri").as[NormalizedURI]
     val minSize = (js \ "minSize").as[ImageSize]
     val descOnly = (js \ "descriptionOnly").as[Boolean]
-    summaryCmdr.fetchFromEmbedly(uri, minSize, descOnly).map{ res =>
+    summaryCmdr.fetchFromEmbedly(uri, minSize, descOnly).map { res =>
       Ok(Json.toJson(res))
     }
   }

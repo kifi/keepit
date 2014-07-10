@@ -35,13 +35,13 @@ class URIGraphCommanderTest extends Specification with SearchApplicationInjector
         val uriGraphCommanderFactory = new URIGraphCommanderFactory(mainSearcherFactory)
         val uriGraphCommander = uriGraphCommanderFactory(users(0).id.get)
         val uriGraphCommander1 = uriGraphCommanderFactory(users(1).id.get)
-        val u0list = shards.map{ shard => (shard -> uriGraphCommander.getUserUriList(users(0).id.get, publicOnly = false, shard = shard)) }.toMap
-        val u1list = shards.map{ shard => (shard -> uriGraphCommander1.getUserUriList(users(1).id.get, publicOnly = false, shard = shard)) }.toMap
+        val u0list = shards.map { shard => (shard -> uriGraphCommander.getUserUriList(users(0).id.get, publicOnly = false, shard = shard)) }.toMap
+        val u1list = shards.map { shard => (shard -> uriGraphCommander1.getUserUriList(users(1).id.get, publicOnly = false, shard = shard)) }.toMap
         shards.size == 2
         shards(0).contains(Id[NormalizedURI](1)) === false
         shards(0).contains(Id[NormalizedURI](2)) === true
         u0list(shards(0)).publicList === None
-        u0list(shards(0)).privateList.get.ids.size === 0        // asymmetric behavior comes from URIGraphSearcher.getUserToUriEdgeSet()
+        u0list(shards(0)).privateList.get.ids.size === 0 // asymmetric behavior comes from URIGraphSearcher.getUserToUriEdgeSet()
         u0list(shards(1)).publicList.get.ids === Array(1, 3, 5)
         u0list(shards(1)).privateList.get.ids === Array(7, 9)
 
@@ -50,7 +50,7 @@ class URIGraphCommanderTest extends Specification with SearchApplicationInjector
         u1list(shards(1)).publicList === None
         u1list(shards(1)).privateList.get.ids.size === 0
 
-        shards.map{ shard => uriGraphCommander1.getUserUriList(users(0).id.get, publicOnly = false, shard = shard) } should throwAn[NotAuthorizedURIGraphQueryException]
+        shards.map { shard => uriGraphCommander1.getUserUriList(users(0).id.get, publicOnly = false, shard = shard) } should throwAn[NotAuthorizedURIGraphQueryException]
       }
     }
   }

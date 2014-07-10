@@ -1,14 +1,14 @@
 package com.keepit.integrity
 
-import com.keepit.common.zookeeper.{SequenceNumberCentralConfigKey, LongCentralConfigKey}
-import com.keepit.model.{RenormalizedURL, ChangedURI, Keep}
+import com.keepit.common.zookeeper.{ SequenceNumberCentralConfigKey, LongCentralConfigKey }
+import com.keepit.model.{ RenormalizedURL, ChangedURI, Keep }
 
 case object URIMigrationSeqNumKey extends SequenceNumberCentralConfigKey[ChangedURI] {
   val longKey = new LongCentralConfigKey {
     val name: String = "changed_uri_seq"
     val namespace = "changed_uri"
     def key: String = name
-   }
+  }
 }
 
 // keep track of processed url migration

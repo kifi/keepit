@@ -1,17 +1,17 @@
 package com.keepit.search
 
-import com.keepit.common.cache.{JsonCacheImpl, Key, FortyTwoCachePlugin}
+import com.keepit.common.cache.{ JsonCacheImpl, Key, FortyTwoCachePlugin }
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db.Id
-import com.keepit.common.db.{ModelWithState, State, States}
+import com.keepit.common.db.{ ModelWithState, State, States }
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.concurrent.duration._
 import com.keepit.common.cache.TransactionalCaching
-import com.keepit.model.{ProbabilisticExperimentGenerator, Name, ExperimentType}
+import com.keepit.model.{ ProbabilisticExperimentGenerator, Name, ExperimentType }
 import com.keepit.common.math.ProbabilityDensity
 
 case class SearchConfigExperiment(
@@ -22,8 +22,7 @@ case class SearchConfigExperiment(
     startedAt: Option[DateTime] = None,
     state: State[SearchConfigExperiment] = SearchConfigExperimentStates.CREATED,
     createdAt: DateTime = currentDateTime,
-    updatedAt: DateTime = currentDateTime
-    ) extends ModelWithState[SearchConfigExperiment] {
+    updatedAt: DateTime = currentDateTime) extends ModelWithState[SearchConfigExperiment] {
   def withId(id: Id[SearchConfigExperiment]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[SearchConfigExperiment]) = {
@@ -77,9 +76,9 @@ sealed trait ActiveExperimentsKey extends Key[Seq[SearchConfigExperiment]] {
 object ActiveExperimentsKey extends ActiveExperimentsKey
 
 class ActiveExperimentsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[ActiveExperimentsKey, Seq[SearchConfigExperiment]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*) {
-    def getOrElseUpdate(value: => Seq[SearchConfigExperiment])(implicit txn: TransactionalCaching): Seq[SearchConfigExperiment] = this.getOrElse(ActiveExperimentsKey)(value)
-    def remove()(implicit txn: TransactionalCaching): Unit = this.remove(ActiveExperimentsKey)
+    extends JsonCacheImpl[ActiveExperimentsKey, Seq[SearchConfigExperiment]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*) {
+  def getOrElseUpdate(value: => Seq[SearchConfigExperiment])(implicit txn: TransactionalCaching): Seq[SearchConfigExperiment] = this.getOrElse(ActiveExperimentsKey)(value)
+  def remove()(implicit txn: TransactionalCaching): Unit = this.remove(ActiveExperimentsKey)
 }
 
 object SearchConfigExperimentStates extends States[SearchConfigExperiment] {

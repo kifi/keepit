@@ -1,7 +1,7 @@
 package com.keepit.common.logging
 
 import play.api.Logger
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.time._
 import com.keepit.common.time.Clock
 import org.joda.time.format.DateTimeFormat
@@ -31,7 +31,7 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
   import AccessLogTimer.NoIntValue
 
   //since null.asInstanceOf[Int] is forced to be 0 instead of actually null
-  private def intOption(i: Int): Option[Int] = if(i == NoIntValue) None else Some(i)
+  private def intOption(i: Int): Option[Int] = if (i == NoIntValue) None else Some(i)
 
   val startTime = clock.now()
 
@@ -44,25 +44,25 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
 
   //using null for internal api to make the usage of the call much more friendly without having Some(foo) instead of just foo's
   def done(remoteTime: Int = NoIntValue,
-          parsingTime: Option[Int] = None,
-          statusCode: Int = NoIntValue,
-          result: String = null,
-          error: String = null,
-          remoteServiceType: String = null,
-          remoteUp: String = null,
-          remoteLeader: String = null,
-          remoteServiceId: String = null,
-          remoteHeaders: String = null,
-          remoteAddress: String = null,
-          query: String = null,
-          trackingId: String = null,
-          method: String = null,
-          currentRequestCount : Int = NoIntValue,
-          body: String = null,
-          key: String = null,
-          space: String = null,
-          url: String = null,
-          dataSize: Int = NoIntValue) = {
+    parsingTime: Option[Int] = None,
+    statusCode: Int = NoIntValue,
+    result: String = null,
+    error: String = null,
+    remoteServiceType: String = null,
+    remoteUp: String = null,
+    remoteLeader: String = null,
+    remoteServiceId: String = null,
+    remoteHeaders: String = null,
+    remoteAddress: String = null,
+    query: String = null,
+    trackingId: String = null,
+    method: String = null,
+    currentRequestCount: Int = NoIntValue,
+    body: String = null,
+    key: String = null,
+    space: String = null,
+    url: String = null,
+    dataSize: Int = NoIntValue) = {
     val now = clock.now()
     new AccessLogEvent(
       time = now,
@@ -92,29 +92,29 @@ case class AccessLogTimer(eventType: AccessLogEventType, clock: Clock) {
 }
 
 class AccessLogEvent(
-  val time: DateTime,
-  val duration: Int,
-  val parsingTime: Option[Int],
-  val eventType: AccessLogEventType,
-  val remoteTime: Option[Int],
-  val statusCode: Option[Int],
-  val result: Option[String],
-  val error: Option[String],
-  val remoteServiceType: Option[String],
-  val remoteUp: Option[String],
-  val remoteLeader: Option[String],
-  val remoteServiceId: Option[String],
-  val remoteHeaders: Option[String],
-  val remoteAddress: Option[String],
-  val query: Option[String],
-  val trackingId: Option[String],
-  val method: Option[String],
-  val currentRequestCount: Option[Int],
-  val body: Option[String],
-  val key: Option[String],
-  val space: Option[String],
-  val url: Option[String],
-  val dataSize: Option[Int]) {
+    val time: DateTime,
+    val duration: Int,
+    val parsingTime: Option[Int],
+    val eventType: AccessLogEventType,
+    val remoteTime: Option[Int],
+    val statusCode: Option[Int],
+    val result: Option[String],
+    val error: Option[String],
+    val remoteServiceType: Option[String],
+    val remoteUp: Option[String],
+    val remoteLeader: Option[String],
+    val remoteServiceId: Option[String],
+    val remoteHeaders: Option[String],
+    val remoteAddress: Option[String],
+    val query: Option[String],
+    val trackingId: Option[String],
+    val method: Option[String],
+    val currentRequestCount: Option[Int],
+    val body: Option[String],
+    val key: Option[String],
+    val space: Option[String],
+    val url: Option[String],
+    val dataSize: Option[Int]) {
 
   def waitTime: Option[Int] = remoteTime.map(t => duration - t - parsingTime.getOrElse(0))
 
@@ -138,30 +138,30 @@ class AccessLog @Inject() (clock: Clock) {
   def format(e: AccessLogEvent): String = {
     val line: List[Option[String]] =
       Some(s"t:${formatter.print(e.time)}") ::
-      Some(s"type:${e.eventType.name}") ::
-      Some(s"duration:${e.duration}") ::
-      e.currentRequestCount.map("currentRequestCount:" + _) ::
-      e.method.map("method:" + _) ::
-      e.trackingId.map("trackingId:" + _) ::
-      e.remoteAddress.map("remoteAddress:" + _) ::
-      e.key.map("key:" + _) ::
-      e.space.map("space:" + _) ::
-      e.remoteTime.map("remoteTime:" + _) ::
-      e.parsingTime.map("parsingTime:" + _) ::
-      e.remoteTime.map(t => "waitTime:" + (e.duration - t)) ::
-      e.statusCode.map("statusCode:" + _) ::
-      e.result.map("result:" + _) ::
-      e.remoteServiceType.map("remoteServiceType:" + _) ::
-      e.remoteServiceId.map("remoteServiceId:" + _) ::
-      e.remoteUp.map("remoteUp:" + _) ::
-      e.remoteLeader.map("remoteLeader:" + _) ::
-      e.remoteHeaders.map("remoteHeaders:" + _) ::
-      e.query.map("query:" + _) ::
-      e.url.map("url:" + _) ::
-      e.body.map("body:" + _) ::
-      e.dataSize.map("dataSize:" + _) ::
-      e.error.map("error:" + _) ::
-      Nil
+        Some(s"type:${e.eventType.name}") ::
+        Some(s"duration:${e.duration}") ::
+        e.currentRequestCount.map("currentRequestCount:" + _) ::
+        e.method.map("method:" + _) ::
+        e.trackingId.map("trackingId:" + _) ::
+        e.remoteAddress.map("remoteAddress:" + _) ::
+        e.key.map("key:" + _) ::
+        e.space.map("space:" + _) ::
+        e.remoteTime.map("remoteTime:" + _) ::
+        e.parsingTime.map("parsingTime:" + _) ::
+        e.remoteTime.map(t => "waitTime:" + (e.duration - t)) ::
+        e.statusCode.map("statusCode:" + _) ::
+        e.result.map("result:" + _) ::
+        e.remoteServiceType.map("remoteServiceType:" + _) ::
+        e.remoteServiceId.map("remoteServiceId:" + _) ::
+        e.remoteUp.map("remoteUp:" + _) ::
+        e.remoteLeader.map("remoteLeader:" + _) ::
+        e.remoteHeaders.map("remoteHeaders:" + _) ::
+        e.query.map("query:" + _) ::
+        e.url.map("url:" + _) ::
+        e.body.map("body:" + _) ::
+        e.dataSize.map("dataSize:" + _) ::
+        e.error.map("error:" + _) ::
+        Nil
     line.flatten.mkString("\t")
   }
 }

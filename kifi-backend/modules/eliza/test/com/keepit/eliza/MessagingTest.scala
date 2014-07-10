@@ -4,26 +4,26 @@ import org.specs2.mutable._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.Id
 import com.keepit.inject._
-import com.keepit.test.{DbTestInjector}
-import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl}
+import com.keepit.test.{ DbTestInjector }
+import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.social.BasicUser
-import com.keepit.realtime.{UrbanAirship, FakeUrbanAirship, FakeUrbanAirshipModule}
-import com.keepit.heimdal.{HeimdalContext, TestHeimdalServiceClientModule}
+import com.keepit.realtime.{ UrbanAirship, FakeUrbanAirship, FakeUrbanAirshipModule }
+import com.keepit.heimdal.{ HeimdalContext, TestHeimdalServiceClientModule }
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
-import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule}
+import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule }
 import com.keepit.eliza.controllers.WebSocketRouter
-import com.keepit.eliza.commanders.{MessageFetchingCommander, NotificationCommander, MessagingCommander}
+import com.keepit.eliza.commanders.{ MessageFetchingCommander, NotificationCommander, MessagingCommander }
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
 import com.keepit.common.crypto.TestCryptoModule
 import com.google.inject.Injector
 import play.api.test.Helpers._
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.{ Json, JsObject }
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import akka.actor.ActorSystem
@@ -32,7 +32,6 @@ import com.keepit.common.store.ElizaDevStoreModule
 import com.keepit.common.aws.AwsModule
 import com.keepit.common.store.FakeStoreModule
 import com.keepit.common.store.ElizaFakeStoreModule
-
 
 class MessagingTest extends Specification with DbTestInjector {
 
@@ -83,7 +82,7 @@ class MessagingTest extends Specification with DbTestInjector {
   "Messaging Contoller" should {
 
     "send correctly" in {
-      withDb(modules:_*) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
 
         val (user1, user2, user3, user2n3Seq, shoebox) = setup()
         val messagingCommander = inject[MessagingCommander]
@@ -95,8 +94,8 @@ class MessagingTest extends Specification with DbTestInjector {
 
         Await.result(notificationCommander.getLatestSendableNotifications(user1, 20), Duration(4, "seconds")).jsons.length === 1
 
-        val messageIds : Seq[Option[Id[Message]]] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_)).map(_.id)
-        val messageContents : Seq[String] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_)).map(_.messageText)
+        val messageIds: Seq[Option[Id[Message]]] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_)).map(_.id)
+        val messageContents: Seq[String] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_)).map(_.messageText)
 
         messageIds.contains(msg1.id) === true
         messageIds.contains(msg2.id) === true
@@ -107,16 +106,15 @@ class MessagingTest extends Specification with DbTestInjector {
       }
     }
 
-
     "merge and notify correctly" in {
-      withDb(modules:_*) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
 
         val (user1, user2, user3, user2n3Seq, shoebox) = setup()
         val messagingCommander = inject[MessagingCommander]
         val notificationCommander = inject[NotificationCommander]
         var notified = scala.collection.concurrent.TrieMap[Id[User], Int]()
 
-        inject[WebSocketRouter].onNotification{ (userId, notification) =>
+        inject[WebSocketRouter].onNotification { (userId, notification) =>
           // println(s"Got Notification $notification for $userId")
           if (notified.isDefinedAt(userId.get)) {
             notified(userId.get) = notified(userId.get) + 1
@@ -138,9 +136,9 @@ class MessagingTest extends Specification with DbTestInjector {
         notificationCommander.getUnreadThreadNotifications(user3).length === 1 //there was only one thread created due to merging
         messagingCommander.getUnreadUnmutedThreadCount(user3) === 1
 
-        val notifications : Seq[JsObject] = Await.result(notificationCommander.getLatestUnreadSendableNotifications(user3, 20), Duration(4, "seconds"))._1.jsons
+        val notifications: Seq[JsObject] = Await.result(notificationCommander.getLatestUnreadSendableNotifications(user3, 20), Duration(4, "seconds"))._1.jsons
         notifications.length === 1
-        val participants = (notifications.head \ "participants").as[Seq[BasicUser]].sortBy (_.lastName)
+        val participants = (notifications.head \ "participants").as[Seq[BasicUser]].sortBy(_.lastName)
         println(participants)
         participants.length === 3
         participants(0).lastName.endsWith(user1.id.toString) === true
@@ -151,12 +149,11 @@ class MessagingTest extends Specification with DbTestInjector {
         notificationCommander.getUnreadThreadNotifications(user3).length === 0
         messagingCommander.getUnreadUnmutedThreadCount(user3) === 0
 
-
       }
     }
 
     "add participants correctly" in {
-      withDb(modules:_*) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
 
         val (user1, user2, user3, user2n3Seq, shoebox) = setup()
         val messagingCommander = inject[MessagingCommander]
@@ -176,13 +173,13 @@ class MessagingTest extends Specification with DbTestInjector {
     }
 
     "process keepAttribution correctly" in {
-      withDb(modules:_*) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val (user1, user2, _, user2n3Seq, _) = setup()
         val userThreadRepo = inject[UserThreadRepo]
         val messagingCommander = inject[MessagingCommander]
         val (thread1, msg1) = messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, Json.obj("url" -> "https://kifi.com"), Some("title"), "Search!", None)
 
-        val user2Threads = db.readOnly { implicit ro => userThreadRepo.getUserThreads(user2, thread1.uriId.get)  }
+        val user2Threads = db.readOnlyMaster { implicit ro => userThreadRepo.getUserThreads(user2, thread1.uriId.get) }
         user2Threads.size === 1
         messagingCommander.setLastSeen(user2, user2Threads.head.threadId)
 

@@ -1,7 +1,7 @@
 package com.keepit.cortex.models.lda
 
 import com.amazonaws.services.s3.AmazonS3
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.S3Bucket
 import com.keepit.cortex._
@@ -10,12 +10,10 @@ import com.keepit.common.store.ProdOrElseDevStoreModule
 import com.keepit.common.store.StoreModule
 import com.keepit.common.logging.Logging
 
-
 trait LDAInfoStoreModule extends StoreModule
 
-case class LDAInfoStoreProdModule() extends LDAInfoStoreModule with Logging{
-  def configure(){}
-
+case class LDAInfoStoreProdModule() extends LDAInfoStoreModule with Logging {
+  def configure() {}
 
   @Singleton
   @Provides
@@ -50,11 +48,10 @@ case class LDAInfoStoreProdModule() extends LDAInfoStoreModule with Logging{
     }
   }
 
-
 }
 
-case class LDAInfoStoreDevModule() extends ProdOrElseDevStoreModule(LDAInfoStoreProdModule()) with LDAInfoStoreModule with Logging{
-  def configure(){}
+case class LDAInfoStoreDevModule() extends ProdOrElseDevStoreModule(LDAInfoStoreProdModule()) with LDAInfoStoreModule with Logging {
+  def configure() {}
 
   @Singleton
   @Provides
@@ -62,12 +59,12 @@ case class LDAInfoStoreDevModule() extends ProdOrElseDevStoreModule(LDAInfoStore
     whenConfigured(S3_CORTEX_BUCKET)(
       prodStoreModule.topicWordsStore(amazonS3Client, accessLog)
     ) getOrElse {
-      val topicWords = Array(Map("a" -> 0.1f, "b" -> 0.2f), Map("c" -> 0.4f, "d" -> 0.2f, "e" -> 0.005f))
-      val version = ModelVersions.denseLDAVersion
-      val store = new InMemoryLDATopicWordsStore
-      store.+=(MiscPrefix.LDA.topicWordsJsonFile, version, DenseLDATopicWords(topicWords))
-      store
-    }
+        val topicWords = Array(Map("a" -> 0.1f, "b" -> 0.2f), Map("c" -> 0.4f, "d" -> 0.2f, "e" -> 0.005f))
+        val version = ModelVersions.denseLDAVersion
+        val store = new InMemoryLDATopicWordsStore
+        store.+=(MiscPrefix.LDA.topicWordsJsonFile, version, DenseLDATopicWords(topicWords))
+        store
+      }
   }
 
   @Singleton
@@ -76,11 +73,11 @@ case class LDAInfoStoreDevModule() extends ProdOrElseDevStoreModule(LDAInfoStore
     whenConfigured(S3_CORTEX_BUCKET)(
       prodStoreModule.topicConfigsStore(amazonS3Client, accessLog)
     ) getOrElse {
-      val version = ModelVersions.denseLDAVersion
-      val store = new InMemoryLDAConfigStore
-      val config = Map("0" -> LDATopicConfiguration("foo", false), "1" -> LDATopicConfiguration("bar", false))
-      store.+=(MiscPrefix.LDA.topicConfigsJsonFile, version, LDATopicConfigurations(config))
-    }
+        val version = ModelVersions.denseLDAVersion
+        val store = new InMemoryLDAConfigStore
+        val config = Map("0" -> LDATopicConfiguration("foo", false), "1" -> LDATopicConfiguration("bar", false))
+        store.+=(MiscPrefix.LDA.topicConfigsJsonFile, version, LDATopicConfigurations(config))
+      }
   }
 
   @Singleton

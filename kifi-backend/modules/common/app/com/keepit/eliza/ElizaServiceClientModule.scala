@@ -1,6 +1,6 @@
 package com.keepit.eliza
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -17,7 +17,7 @@ case class ProdElizaServiceClientModule() extends ElizaServiceClientModule {
 
   @Singleton
   @Provides
-  def elizaServiceClient (
+  def elizaServiceClient(
     client: HttpClient,
     serviceDiscovery: ServiceDiscovery,
     airbrakeNotifier: AirbrakeNotifier,

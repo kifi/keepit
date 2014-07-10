@@ -52,7 +52,7 @@ object Util {
     // list size
     out.writeVInt(size)
     // encode list
-    arr.foreach{ v => out.writeVLong(v) }
+    arr.foreach { v => out.writeVLong(v) }
     baos.flush()
     baos.toByteArray()
   }

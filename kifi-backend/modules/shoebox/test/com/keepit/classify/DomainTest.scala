@@ -1,13 +1,11 @@
 package com.keepit.classify
 
-
 import org.specs2.mutable._
 import com.keepit.common.db.slick.Database
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model.Normalization
 
-class
-DomainTest extends Specification with ShoeboxTestInjector {
+class DomainTest extends Specification with ShoeboxTestInjector {
   "The domain repo" should {
     "save and retrieve domains by name and id" in {
       withDb() { implicit injector =>
@@ -17,7 +15,7 @@ DomainTest extends Specification with ShoeboxTestInjector {
         val d2 = Domain(hostname = "facebook.com", autoSensitive = Some(false))
         val d3 = Domain(hostname = "yahoo.com", autoSensitive = Some(false))
 
-        inject[Database].readOnly { implicit c =>
+        inject[Database].readOnlyMaster { implicit c =>
           domainRepo.get("google.com") === None
           domainRepo.get("facebook.com") === None
           domainRepo.get("yahoo.com") === None
@@ -25,7 +23,7 @@ DomainTest extends Specification with ShoeboxTestInjector {
         val Seq(sd1, sd2, sd3) = inject[Database].readWrite { implicit c =>
           Seq(d1, d2, d3).map(domainRepo.save(_))
         }
-        inject[Database].readOnly { implicit c =>
+        inject[Database].readOnlyMaster { implicit c =>
           domainRepo.get("google.com").get === sd1
           domainRepo.get("facebook.com").get === sd2
           domainRepo.get("yahoo.com").get === sd3

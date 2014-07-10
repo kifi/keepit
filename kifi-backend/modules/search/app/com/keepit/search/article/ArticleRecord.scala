@@ -36,8 +36,8 @@ object ArticleRecordSerializer {
     }
 
     ArticleRecord(
-      in.readString(),  // title
-      in.readString(),  // url
+      in.readString(), // title
+      in.readString(), // url
       Id[NormalizedURI](in.readVLong()))
   }
 }

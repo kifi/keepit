@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
@@ -38,15 +38,15 @@ class DeepLinkRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
   override def deleteCache(model: DeepLink)(implicit session: RSession): Unit = {}
 
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[DeepLink] =
-    (for(b <- rows if b.uriId === uriId) yield b).list
+    (for (b <- rows if b.uriId === uriId) yield b).list
 
   def getByUrl(urlId: Id[URL])(implicit session: RSession): Seq[DeepLink] =
-    (for(b <- rows if b.urlId === urlId) yield b).list
+    (for (b <- rows if b.urlId === urlId) yield b).list
 
   def getByToken(token: DeepLinkToken)(implicit session: RSession): Option[DeepLink] =
-    (for(b <- rows if b.token === token) yield b).firstOption
+    (for (b <- rows if b.token === token) yield b).firstOption
 
   def getByLocatorAndUser(locator: DeepLocator, recipientUserId: Id[User])(implicit session: RSession): DeepLink = {
-    (for(b <- rows if b.deepLocator === locator && b.recipientUserId === recipientUserId) yield b).first
+    (for (b <- rows if b.deepLocator === locator && b.recipientUserId === recipientUserId) yield b).first
   }
 }

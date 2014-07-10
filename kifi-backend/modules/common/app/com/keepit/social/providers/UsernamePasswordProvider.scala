@@ -4,17 +4,17 @@ import com.keepit.social.UserIdentityProvider
 
 import play.api.Application
 import play.api.libs.json.Json
-import play.api.mvc.{Request, Result}
+import play.api.mvc.{ Request, Result }
 import play.api.mvc.Results.Forbidden
 
-import securesocial.core.providers.{UsernamePasswordProvider => UPP}
+import securesocial.core.providers.{ UsernamePasswordProvider => UPP }
 import securesocial.core._
 import play.api.libs.ws.Response
 import securesocial.core.IdentityId
 import scala.Some
 
 class UsernamePasswordProvider(application: Application)
-  extends UPP(application) with UserIdentityProvider {
+    extends UPP(application) with UserIdentityProvider {
 
   override def doAuth[A]()(implicit request: Request[A]): Either[Result, SocialUser] = {
     UPP.loginForm.bindFromRequest().fold(

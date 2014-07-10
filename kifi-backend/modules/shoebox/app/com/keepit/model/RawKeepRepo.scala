@@ -1,10 +1,10 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
-import com.keepit.common.db.{ExternalId, State, Id}
-import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.db.{ ExternalId, State, Id }
+import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import play.api.libs.json.JsValue
 import scala.util.Try
 import scala.slick.jdbc.StaticQuery
@@ -41,9 +41,8 @@ class RawKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ex
   def table(tag: Tag) = new RawKeepTable(tag)
   initTable()
 
-  def deleteCache(model: com.keepit.model.RawKeep)(implicit session: com.keepit.common.db.slick.DBSession.RSession): Unit = { }
-  def invalidateCache(model: com.keepit.model.RawKeep)(implicit session: com.keepit.common.db.slick.DBSession.RSession): Unit = { }
-
+  def deleteCache(model: com.keepit.model.RawKeep)(implicit session: com.keepit.common.db.slick.DBSession.RSession): Unit = {}
+  def invalidateCache(model: com.keepit.model.RawKeep)(implicit session: com.keepit.common.db.slick.DBSession.RSession): Unit = {}
 
   private def sanitizeRawKeep(rawKeep: RawKeep): RawKeep = {
     val titleTrimmed = if (rawKeep.title.map(_.length).getOrElse(0) > 2048) {

@@ -3,12 +3,12 @@ package com.keepit.controllers.admin
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
 
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 
 import play.api.Play.current
 import views.html
 
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.google.inject.Inject
 import play.api.mvc.Action
 
@@ -22,7 +22,7 @@ class ElectronicMailController @Inject() (
 
   def electronicMailsView(page: Int = 0) = AdminHtmlAction.authenticated { request =>
     val PAGE_SIZE = 200
-    val (count, electronicMails) = db.readOnly { implicit s =>
+    val (count, electronicMails) = db.readOnlyMaster { implicit s =>
       val electronicMails = repo.page(page, PAGE_SIZE)
       val count = repo.count(s)
       (count, electronicMails)

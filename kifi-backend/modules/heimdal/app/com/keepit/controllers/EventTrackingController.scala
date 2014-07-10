@@ -1,30 +1,24 @@
-package com.keepit.heimdal.controllers
+package com.keepit.controllers
 
-import com.keepit.common.controller.HeimdalServiceController
-import com.keepit.common.time._
-import com.keepit.heimdal._
-import com.keepit.common.akka.SafeFuture
-import com.keepit.common.akka.SlowRunningExecutionContext
-
-import play.api.mvc.Action
-import play.api.libs.json.JsValue
-
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
-import play.api.libs.json.JsArray
-import scala.util.{Success, Failure}
-import scala.concurrent.duration._
-import com.kifi.franz.SQSQueue
+import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.heimdal._
+import com.keepit.model.{ AnonymousEventLoggingRepo, UserEventLoggingRepo, SystemEventLoggingRepo, NonUserEventLoggingRepo }
+import com.kifi.franz.SQSQueue
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{ JsArray, JsValue }
+
+import scala.concurrent.duration._
+import scala.util.{ Failure, Success }
 
 class EventTrackingController @Inject() (
-  userEventLoggingRepo: UserEventLoggingRepo,
-  systemEventLoggingRepo: SystemEventLoggingRepo,
-  anonymousEventLoggingRepo: AnonymousEventLoggingRepo,
-  nonUserEventLoggingRepo: NonUserEventLoggingRepo,
-  heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]],
-  airbrake: AirbrakeNotifier
-) extends HeimdalServiceController {
+    userEventLoggingRepo: UserEventLoggingRepo,
+    systemEventLoggingRepo: SystemEventLoggingRepo,
+    anonymousEventLoggingRepo: AnonymousEventLoggingRepo,
+    nonUserEventLoggingRepo: NonUserEventLoggingRepo,
+    heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]],
+    airbrake: AirbrakeNotifier) extends HeimdalServiceController {
 
   private[controllers] def trackInternalEvent(eventJs: JsValue): Unit = trackInternalEvent(eventJs.as[HeimdalEvent])
 
@@ -36,7 +30,7 @@ class EventTrackingController @Inject() (
   }
 
   def readIncomingEvent(): Unit = {
-    heimdalEventQueue.nextWithLock(1 minute).onComplete{
+    heimdalEventQueue.nextWithLock(1 minute).onComplete {
       case Success(result) => {
         try {
           result.map { sqsMessage =>

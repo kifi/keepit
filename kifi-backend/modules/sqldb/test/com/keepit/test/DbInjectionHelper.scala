@@ -1,18 +1,18 @@
 package com.keepit.test
 
 import com.keepit.inject._
-import com.keepit.common.db.slick.{SlickSessionProvider}
+import com.keepit.common.db.slick.{ SlickSessionProvider }
 import com.keepit.model._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.TestDbInfo
 import com.keepit.macros.Location
-import com.google.inject.{Injector, Module}
-import scala.slick.jdbc.{ResultSetConcurrency, ResultSetType}
-import scala.slick.driver.JdbcDriver.simple.{Database => SlickDatabase, _}
-import java.sql.{Driver, DriverManager}
+import com.google.inject.{ Injector, Module }
+import scala.slick.jdbc.{ ResultSetConcurrency, ResultSetType }
+import scala.slick.driver.JdbcDriver.simple.{ Database => SlickDatabase, _ }
+import java.sql.{ Driver, DriverManager }
 import com.keepit.common.logging.Logging
-import scala.slick.lifted.{RefTag, AbstractTable, BaseTag}
+import scala.slick.lifted.{ RefTag, AbstractTable, BaseTag }
 
 trait DbInjectionHelper extends Logging { self: InjectorProvider =>
 
@@ -22,7 +22,7 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
   DriverManager.registerDriver(new play.utils.ProxyDriver(Class.forName("org.h2.Driver").newInstance.asInstanceOf[Driver]))
 
   def withDb[T](overridingModules: Module*)(f: Injector => T) = {
-    withInjector(overridingModules:_*) { implicit injector =>
+    withInjector(overridingModules: _*) { implicit injector =>
       val h2 = inject[DataBaseComponent].asInstanceOf[H2]
       h2.initListener = Some(new TableInitListener {
         def init(tableName: String, ddl: { def createStatements: Iterator[String] }) = executeTableDDL(h2, tableName, ddl)
@@ -74,7 +74,6 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
 
   def executeTableDDL(db: H2, tableName: String, ddl: { def createStatements: Iterator[String] }): Unit = {
     log.info(s"initiating table [$tableName]")
-
 
     readWrite(db) { implicit session =>
       try {

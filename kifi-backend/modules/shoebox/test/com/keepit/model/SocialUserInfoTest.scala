@@ -4,14 +4,14 @@ import org.specs2.mutable._
 
 import com.google.inject.Injector
 import com.keepit.akka.TestAkkaSystem
-import com.keepit.common.db.{TestSlickSessionProvider, Id}
+import com.keepit.common.db.{ TestSlickSessionProvider, Id }
 import com.keepit.common.time._
 import com.keepit.test._
 
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import securesocial.core._
-import com.keepit.social.{SocialNetworks, SocialId}
+import com.keepit.social.{ SocialNetworks, SocialId }
 import org.joda.time._
 
 class SocialUserInfoTest extends Specification with ShoeboxTestInjector with TestAkkaSystem {
@@ -19,8 +19,8 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
   def setup()(implicit injector: Injector): User = {
     db.readWrite { implicit s =>
       val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
-                                  tokenType = None, expiresIn = None, refreshToken = None)
-      val socialUser = SocialUser(IdentityId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
+        tokenType = None, expiresIn = None, refreshToken = None)
+      val socialUser = SocialUser(IdentityId("100004067535411", "facebook"), "Boaz", "Tal", "Boaz Tal",
         Some("boaz.tal@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None,
         Some(oAuth2Info), None)
 
@@ -45,7 +45,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
     "serialize properly" in {
       val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
         tokenType = None, expiresIn = None, refreshToken = None)
-      val socialUser = SocialUser(IdentityId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
+      val socialUser = SocialUser(IdentityId("100004067535411", "facebook"), "Boaz", "Tal", "Boaz Tal",
         Some("boaz.tal@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None,
         Some(oAuth2Info), None)
       val sui = SocialUserInfo(userId = Option(Id(1)), fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED,
@@ -58,7 +58,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
     "serialize properly with null lastGraphRefresh" in {
       val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
         tokenType = None, expiresIn = None, refreshToken = None)
-      val socialUser = SocialUser(IdentityId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
+      val socialUser = SocialUser(IdentityId("100004067535411", "facebook"), "Boaz", "Tal", "Boaz Tal",
         Some("boaz.tal@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None,
         Some(oAuth2Info), None)
       val sui = SocialUserInfo(userId = Option(Id(1)), fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED,
@@ -72,7 +72,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
     "serialize properly with no lastGraphRefresh" in {
       val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
         tokenType = None, expiresIn = None, refreshToken = None)
-      val socialUser = SocialUser(IdentityId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
+      val socialUser = SocialUser(IdentityId("100004067535411", "facebook"), "Boaz", "Tal", "Boaz Tal",
         Some("boaz.tal@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None,
         Some(oAuth2Info), None)
       val sui = SocialUserInfo(userId = Option(Id(1)), fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED,
@@ -86,9 +86,9 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
     "use cache properly" in {
       withDb() { implicit injector =>
         val user = setup()
-        def isInCache = db.readOnly { implicit c => inject[SocialUserInfoRepoImpl].userCache.get(SocialUserInfoUserKey(user.id.get)).isDefined }
+        def isInCache = db.readOnlyMaster { implicit c => inject[SocialUserInfoRepoImpl].userCache.get(SocialUserInfoUserKey(user.id.get)).isDefined }
 
-        val origSocialUser = db.readOnly { implicit c =>
+        val origSocialUser = db.readOnlyMaster { implicit c =>
           socialUserInfoRepo.getByUser(user.id.get).head
         }
         isInCache === true
@@ -98,8 +98,8 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
         }
         isInCache must beFalse
 
-        val newSocialUser = db.readOnly { implicit c =>
-         socialUserInfoRepo.getByUser(user.id.get).head
+        val newSocialUser = db.readOnlyMaster { implicit c =>
+          socialUserInfoRepo.getByUser(user.id.get).head
         }
         isInCache === true
 
@@ -107,14 +107,14 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
 
         val networkCache = inject[SocialUserInfoRepoImpl].networkCache
         val cacheKey = SocialUserInfoNetworkKey(SocialNetworks.FACEBOOK, SocialId("eishay"))
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           networkCache.get(cacheKey) === None
           val sui = socialUserInfoRepo.get(SocialId("eishay"), SocialNetworks.FACEBOOK)
           sui.fullName === "John Smith"
           networkCache.get(cacheKey).isDefined === true
         }
         val socialUserOpt = inject[TestSlickSessionProvider].doWithoutCreatingSessions {
-          db.readOnly { implicit s => socialUserInfoRepo.getOpt(SocialId("eishay"), SocialNetworks.FACEBOOK) }
+          db.readOnlyMaster { implicit s => socialUserInfoRepo.getOpt(SocialId("eishay"), SocialNetworks.FACEBOOK) }
         }
         socialUserOpt.map(_.fullName) must beSome("John Smith")
       }
@@ -123,12 +123,12 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
     "get pages" in {
       withDb() { implicit injector =>
         setup()
-        val page0 = db.readOnly { implicit c =>
+        val page0 = db.readOnlyMaster { implicit c =>
           socialUserInfoRepo.page(0, 2)
         }
         page0.size === 2
         page0(0).fullName === "Bob User3"
-        val page2 = db.readOnly { implicit c =>
+        val page2 = db.readOnlyMaster { implicit c =>
           socialUserInfoRepo.page(2, 2)
         }
         page2.size === 2
@@ -139,7 +139,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
     "get large page" in {
       withDb() { implicit injector =>
         setup()
-        val page0 = db.readOnly { implicit s =>
+        val page0 = db.readOnlyMaster { implicit s =>
           socialUserInfoRepo.page(0, 2000)
         }
         page0.size === 6
@@ -149,12 +149,12 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
     "get larger page" in {
       withDb() { implicit injector =>
         setup()
-        val page0 = db.readOnly { implicit s =>
+        val page0 = db.readOnlyMaster { implicit s =>
           socialUserInfoRepo.page(0, 4)
         }
         page0(0).fullName === "Bob User3"
         page0.size === 4
-        val page1 = db.readOnly { implicit s =>
+        val page1 = db.readOnlyMaster { implicit s =>
           socialUserInfoRepo.page(1, 4)
         }
         page1.size === 2
@@ -163,7 +163,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
 
     "import friends" in {
       withDb(FakeClockModule()) { implicit injector =>
-        val none_unprocessed = db.readOnly { implicit s =>
+        val none_unprocessed = db.readOnlyMaster { implicit s =>
           socialUserInfoRepo.getUnprocessed()
         }
 
@@ -171,7 +171,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
 
         setup()
         inject[Clock].asInstanceOf[FakeClock] += Hours.ONE
-        val unprocessed = db.readOnly { implicit s =>
+        val unprocessed = db.readOnlyMaster { implicit s =>
           socialUserInfoRepo.getUnprocessed()
         }
 

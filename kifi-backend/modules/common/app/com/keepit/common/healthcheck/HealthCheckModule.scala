@@ -8,7 +8,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.zookeeper.DiscoveryModule
 import scala.sys.process._
-import com.keepit.common.mail.{ProdAmazonMailModule, AmazonSimpleMailProvider}
+import com.keepit.common.mail.{ ProdAmazonMailModule, AmazonSimpleMailProvider }
 import play.api.Play
 
 trait HealthCheckModule extends ScalaModule

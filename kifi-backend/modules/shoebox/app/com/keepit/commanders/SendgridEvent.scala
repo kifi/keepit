@@ -4,7 +4,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import com.keepit.common.db.ExternalId
-import com.keepit.common.mail.{EmailAddress, ElectronicMail}
+import com.keepit.common.mail.{ EmailAddress, ElectronicMail }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 
@@ -18,8 +18,7 @@ case class SendgridEvent(
   id: Option[String],
   useragent: Option[String],
   response: Option[String],
-  url: Option[String]
-)
+  url: Option[String])
 
 object SendgridEvent {
   implicit val sendgridEventReads = (

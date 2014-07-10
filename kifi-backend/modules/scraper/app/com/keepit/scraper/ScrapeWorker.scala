@@ -2,15 +2,15 @@ package com.keepit.scraper
 
 import com.google.inject._
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
+import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
 import com.keepit.model._
 import com.keepit.scraper.extractor._
-import com.keepit.search.{LangDetector, Article, ArticleStore}
+import com.keepit.search.{ LangDetector, Article, ArticleStore }
 import java.io.File
 import scala.concurrent.duration._
 import org.joda.time.Days
 import com.keepit.common.time._
-import com.keepit.common.net.{DirectUrl, HttpClient, URI}
+import com.keepit.common.net.{ DirectUrl, HttpClient, URI }
 import org.apache.http.HttpStatus
 import com.keepit.scraper.mediatypes.MediaTypes
 import scala.util.Success
@@ -25,26 +25,25 @@ import com.keepit.common.db.Id
 import com.keepit.scraper.embedly.EmbedlyCommander
 
 class ScrapeWorker(
-  airbrake: AirbrakeNotifier,
-  config: ScraperConfig,
-  schedulerConfig: ScraperSchedulerConfig,
-  httpFetcher: HttpFetcher,
-  httpClient: HttpClient,
-  extractorFactory: ExtractorFactory,
-  articleStore: ArticleStore,
-  pornDetectorFactory: PornDetectorFactory,
-  helper: SyncShoeboxDbCallbacks,
-  shoeboxClient: ShoeboxServiceClient,
-  wordCountCache: NormalizedURIWordCountCache,
-  uriSummaryCache: URISummaryCache,
-  embedlyCommander: EmbedlyCommander
-) extends Logging {
+    airbrake: AirbrakeNotifier,
+    config: ScraperConfig,
+    schedulerConfig: ScraperSchedulerConfig,
+    httpFetcher: HttpFetcher,
+    httpClient: HttpClient,
+    extractorFactory: ExtractorFactory,
+    articleStore: ArticleStore,
+    pornDetectorFactory: PornDetectorFactory,
+    helper: SyncShoeboxDbCallbacks,
+    shoeboxClient: ShoeboxServiceClient,
+    wordCountCache: NormalizedURIWordCountCache,
+    uriSummaryCache: URISummaryCache,
+    embedlyCommander: EmbedlyCommander) extends Logging {
 
   implicit val myConfig = config
   implicit val scheduleConfig = schedulerConfig
   val awaitTTL = (myConfig.syncAwaitTimeout seconds)
 
-  private[scraper] def safeProcessURI(uri: NormalizedURI, info:ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): Option[Article] = try {
+  private[scraper] def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Option[Article] = try {
     processURI(uri, info, pageInfoOpt, proxyOpt)
   } catch {
     case t: Throwable => {
@@ -52,7 +51,7 @@ class ScrapeWorker(
       airbrake.notify(t)
 
       recordScrapeFailed(uri)
-      helper.syncSaveScrapeInfo(info.withFailure())   // then update the scrape schedule
+      helper.syncSaveScrapeInfo(info.withFailure()) // then update the scrape schedule
       None
     }
   }
@@ -65,7 +64,7 @@ class ScrapeWorker(
     }
   }
 
-  private def shouldUpdateImage(uri:NormalizedURI, scrapedURI:NormalizedURI, pageInfoOpt:Option[PageInfo]):Boolean = {
+  private def shouldUpdateImage(uri: NormalizedURI, scrapedURI: NormalizedURI, pageInfoOpt: Option[PageInfo]): Boolean = {
     if (NormalizedURIStates.DO_NOT_SCRAPE.contains(scrapedURI.state)) {
       log.warn(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] DO_NOT_SCRAPE; skipped.")
       false
@@ -127,8 +126,7 @@ class ScrapeWorker(
     if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED)) {
       helper.syncSaveScrapeInfo(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
       None
-    }
-    else if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
+    } else if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
       helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
       log.debug(s"[processURI] (${latestUri.url}) no change detected")
       None
@@ -228,7 +226,7 @@ class ScrapeWorker(
     embedlyCommander.fetchEmbedlyInfo(uri.id.get, uri.url)
   }
 
-  private def processURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): Option[Article] = {
+  private def processURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Option[Article] = {
     log.debug(s"[processURI] scraping ${uri.url} $info")
     val fetchedArticle = fetchArticle(uri, info, proxyOpt)
     val latestUri = helper.syncGetNormalizedUri(uri).get
@@ -243,7 +241,7 @@ class ScrapeWorker(
     }
   }
 
-  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): ScraperResult = {
+  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): ScraperResult = {
     try {
       URI.parse(normalizedUri.url) match {
         case Success(uri) =>
@@ -288,14 +286,14 @@ class ScrapeWorker(
     }
   }
 
-  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): ScraperResult = {
+  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): ScraperResult = {
     val url = normalizedUri.url
     val extractor = extractorFactory(url)
     log.debug(s"[fetchArticle] url=${normalizedUri.url} ${extractor.getClass}")
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
 
     try {
-      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince, proxy = proxyOpt){ input => extractor.process(input) }
+      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince, proxy = proxyOpt) { input => extractor.process(input) }
 
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
@@ -447,7 +445,7 @@ class ScrapeWorker(
   }
 
   private def isNonSensitive(url: String): Future[Boolean] = {
-    shoeboxClient.getAllURLPatterns().map{ patterns =>
+    shoeboxClient.getAllURLPatterns().map { patterns =>
       val pat = patterns.find(rule => url.matches(rule.pattern))
       pat.exists(_.nonSensitive)
     }

@@ -1,7 +1,7 @@
 package com.keepit.common.db.slick
 
 import com.keepit.common.db.{ DbSequence, DatabaseDialect }
-import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
+import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 import scala.slick.driver.JdbcDriver
 
 //import scala.slick.session.{ Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
@@ -15,7 +15,7 @@ trait DataBaseComponent {
   // A database instance to which connections can be created.
   // Encapsulates either a DataSource or parameters for DriverManager.getConnection().
   val masterDb: SlickDatabase
-  val slaveDb: Option[SlickDatabase]
+  val replicaDb: Option[SlickDatabase]
 
   def getSequence[T](name: String): DbSequence[T]
 

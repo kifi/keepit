@@ -9,12 +9,12 @@ import play.api.Play.current
 import play.api.libs.json.JsValue
 import play.api.test.Helpers._
 import play.api.templates.Html
-import akka.actor.{ActorRef, Scheduler}
+import akka.actor.{ ActorRef, Scheduler }
 import akka.testkit.ImplicitSender
 import org.specs2.mutable.Specification
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.CreateMode._
-import scala.util.{Random, Try}
+import scala.util.{ Random, Try }
 import com.keepit.common.net.FakeHttpClient
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.net.FakeClientResponse
@@ -42,7 +42,7 @@ class ServiceDiscoveryTest extends Specification with DeprecatedTestInjector {
         val zkClient = inject[ZooKeeperClient]
         val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[AmazonInstanceInfo], inject[Scheduler], null, false, Nil)
         val registeredInstance = discovery.register()
-        zkClient.session{ zk => zk.getData[String](registeredInstance.node).get } === RemoteService.toJson(RemoteService(inject[AmazonInstanceInfo], ServiceStatus.STARTING, ServiceType.TEST_MODE))
+        zkClient.session { zk => zk.getData[String](registeredInstance.node).get } === RemoteService.toJson(RemoteService(inject[AmazonInstanceInfo], ServiceStatus.STARTING, ServiceType.TEST_MODE))
       }
     }
   }

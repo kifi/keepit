@@ -8,7 +8,6 @@ import com.keepit.search.feed.FeedCommander
 import play.api.mvc.Action
 import play.api.libs.json.Json
 
-
 class FeedController @Inject() (feedCommander: FeedCommander) extends SearchServiceController {
   def getFeeds(userId: Id[User], limit: Int) = Action { implicit request =>
     val feeds = feedCommander.getFeeds(userId, limit)

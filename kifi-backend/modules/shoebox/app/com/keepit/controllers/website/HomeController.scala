@@ -2,10 +2,10 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 
-import com.keepit.commanders.{InviteCommander, UserCommander}
+import com.keepit.commanders.{ InviteCommander, UserCommander }
 import com.keepit.common.KestrelCombinator
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController}
+import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
@@ -15,7 +15,7 @@ import com.keepit.controllers.core.AuthController
 import com.keepit.heimdal._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
+import com.keepit.social.{ SocialNetworks, SocialNetworkType, SocialGraphPlugin }
 
 import ActionAuthenticator.MaybeAuthenticatedRequest
 
@@ -27,7 +27,7 @@ import play.api.mvc._
 import play.api.mvc.DiscardingCookie
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import securesocial.core.{SecureSocial, Authenticator}
+import securesocial.core.{ SecureSocial, Authenticator }
 
 import scala.Some
 import scala.concurrent.Future
@@ -50,10 +50,10 @@ class HomeController @Inject() (
   inviteCommander: InviteCommander,
   heimdalServiceClient: HeimdalServiceClient,
   applicationConfig: FortyTwoConfig)
-  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
+    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
-    db.readOnly { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
+    db.readOnlyMaster { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
   }
 
   private def setHasSeenInstall()(implicit request: AuthenticatedRequest[_]): Unit = {
@@ -195,7 +195,6 @@ class HomeController @Inject() (
     heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("loaded_landing_page")))
   }
 
-
   def agent = Action { request =>
     val res = request.headers.get("User-Agent").map { ua =>
       val parsed = UserAgent.fromString(ua)
@@ -207,16 +206,16 @@ class HomeController @Inject() (
   def homeWithParam(id: String) = home
 
   def blog = HtmlAction[AnyContent](allowPending = true)(authenticatedAction = { request =>
-      request.headers.get(USER_AGENT) match {
-        case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
-        case _ => homeAuthed(request)
-      }
-    }, unauthenticatedAction = { request =>
-      request.headers.get(USER_AGENT) match {
-        case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
-        case _ => homeNotAuthed(request)
-      }
-    })
+    request.headers.get(USER_AGENT) match {
+      case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
+      case _ => homeAuthed(request)
+    }
+  }, unauthenticatedAction = { request =>
+    request.headers.get(USER_AGENT) match {
+      case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
+      case _ => homeNotAuthed(request)
+    }
+  })
 
   def kifiSiteRedirect(path: String) = Action {
     MovedPermanently(s"/$path")
@@ -225,11 +224,11 @@ class HomeController @Inject() (
   def pendingHome()(implicit request: AuthenticatedRequest[_]) = {
     val user = request.user
 
-    val (email, friendsOnKifi) = db.readOnly { implicit session =>
+    val (email, friendsOnKifi) = db.readOnlyMaster { implicit session =>
       val email = emailRepo.getAllByUser(user.id.get).sortBy(a => a.id.get.id).lastOption.map(_.address)
       val friendsOnKifi = userConnectionRepo.getConnectedUsers(user.id.get).map { u =>
         val user = userRepo.get(u)
-        if(user.state == UserStates.ACTIVE) Some(user.externalId)
+        if (user.state == UserStates.ACTIVE) Some(user.externalId)
         else None
       }.flatten
 
@@ -278,7 +277,7 @@ class HomeController @Inject() (
     suiOpt match {
       case None => code match {
         case "no_other_connected_network" => BadRequest("You must have at least one other network connected.")
-        case "not_connected_to_network"   => BadRequest(s"You are not connected to ${networkString}.")
+        case "not_connected_to_network" => BadRequest(s"You are not connected to ${networkString}.")
         case _ => Status(INTERNAL_SERVER_ERROR)("0")
       }
       case Some(newLoginUser) =>
