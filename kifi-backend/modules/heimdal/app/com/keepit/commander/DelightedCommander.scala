@@ -1,17 +1,17 @@
 package com.keepit.commander
 
-import com.google.inject.{Inject, ImplementedBy}
-import com.keepit.common.db.{ExternalId, Id}
+import com.google.inject.{ Inject, ImplementedBy }
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
-import com.keepit.heimdal.{DelightedAnswerSources, DelightedAnswerSource, BasicDelightedAnswer}
+import com.keepit.heimdal.{ DelightedAnswerSources, DelightedAnswerSource, BasicDelightedAnswer }
 import com.keepit.model._
 import com.keepit.common.collection._
 import com.ning.http.client.Realm.AuthScheme
 import org.joda.time.DateTime
-import play.api.libs.json.{JsString, JsValue, Json}
+import play.api.libs.json.{ JsString, JsValue, Json }
 import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws.WS
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -28,12 +28,12 @@ trait DelightedCommander {
 }
 
 class DelightedCommanderImpl @Inject() (
-  db: Database,
-  delightedUserRepo: DelightedUserRepo,
-  delightedAnswerRepo: DelightedAnswerRepo,
-  systemValueRepo: SystemValueRepo,
-  delightedConfig: DelightedConfig,
-  airbrake: AirbrakeNotifier) extends DelightedCommander with Logging {
+    db: Database,
+    delightedUserRepo: DelightedUserRepo,
+    delightedAnswerRepo: DelightedAnswerRepo,
+    systemValueRepo: SystemValueRepo,
+    delightedConfig: DelightedConfig,
+    airbrake: AirbrakeNotifier) extends DelightedCommander with Logging {
 
   private val LAST_DELIGHTED_FETCH_TIME = Name[SystemValue]("last_delighted_fetch_time")
 

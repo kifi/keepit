@@ -3,7 +3,7 @@ package com.keepit.controllers
 import com.google.inject.Inject
 import com.keepit.commander.DelightedCommander
 import com.keepit.common.controller.HeimdalServiceController
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
 import com.keepit.heimdal.BasicDelightedAnswer
@@ -15,8 +15,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 
 class DelightedController @Inject() (
-  delightedCommander: DelightedCommander,
-  airbrake: AirbrakeNotifier) extends HeimdalServiceController {
+    delightedCommander: DelightedCommander,
+    airbrake: AirbrakeNotifier) extends HeimdalServiceController {
 
   def getLastDelightedAnswerDate(userId: Id[User]) = Action { request =>
     Ok(Json.toJson(delightedCommander.getLastDelightedAnswerDate(userId)))
