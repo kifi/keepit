@@ -14,16 +14,16 @@ import java.util.zip.ZipFile
 import org.apache.poi.util.IOUtils
 import org.joda.time.format.DateTimeFormat
 
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.{ ImplementedBy, Inject }
 
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{SystemAdminMailSender, AirbrakeNotifier}
+import com.keepit.common.healthcheck.{ SystemAdminMailSender, AirbrakeNotifier }
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail}
+import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 import com.keepit.common.time._
 
 import akka.pattern.ask
@@ -82,52 +82,53 @@ private[classify] class DomainTagImportActor @Inject() (
         val outputFilename = FILE_FORMAT.format(clock.now.toString(DATE_FORMAT))
         val outputPath = new URI(s"${settings.localDir}/$outputFilename").normalize.getPath
         log.info(s"refetching all domains to $outputPath")
-        WS.url(settings.url).withRequestTimeout(120000).get().onSuccess { case res =>
-          persistEvent(IMPORT_START, new HeimdalContextBuilder)
-          val startTime = currentDateTime
-          systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
-            subject = "Domain import started", htmlBody = s"Domain import started at $startTime",
-            category = NotificationCategory.System.ADMIN))
-          val s = new FileOutputStream(outputPath)
-          try {
-            IOUtils.copy(res.getAHCResponse.getResponseBodyAsStream, s)
-          } finally {
-            s.close()
-          }
-          val zipFile = new ZipFile(outputPath)
-          val results = zipFile.entries.toSeq.collect {
-            case entry if entry.getName.endsWith("/domains") =>
-              entry.getName.split("/", 2) match {
-                case Array(categoryName, _) => (DomainTagName(categoryName), entry)
-                case _ => throw new IllegalStateException("Invalid domain format: " + entry.getName)
-              }
-          }.collect {
-            case (tagName, entry) if !DomainTagName.isBlacklisted(tagName) =>
-              val domains = Source.fromInputStream(zipFile.getInputStream(entry)).getLines()
-                .map(_.toLowerCase.trim).filter { domain =>
-                  val valid = Domain.isValid(domain)
-                  if (!valid) log.debug("'%s' is not a valid domain!" format domain)
-                  valid
-                }.toSet.toSeq
-              withSensitivityUpdate(applyTagToDomains(tagName, domains))
-          }
-          val (added, removed, total) =
-            (results.map(_.added).sum, results.map(_.removed).sum, results.map(_.total).sum)
+        WS.url(settings.url).withRequestTimeout(120000).get().onSuccess {
+          case res =>
+            persistEvent(IMPORT_START, new HeimdalContextBuilder)
+            val startTime = currentDateTime
+            systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
+              subject = "Domain import started", htmlBody = s"Domain import started at $startTime",
+              category = NotificationCategory.System.ADMIN))
+            val s = new FileOutputStream(outputPath)
+            try {
+              IOUtils.copy(res.getAHCResponse.getResponseBodyAsStream, s)
+            } finally {
+              s.close()
+            }
+            val zipFile = new ZipFile(outputPath)
+            val results = zipFile.entries.toSeq.collect {
+              case entry if entry.getName.endsWith("/domains") =>
+                entry.getName.split("/", 2) match {
+                  case Array(categoryName, _) => (DomainTagName(categoryName), entry)
+                  case _ => throw new IllegalStateException("Invalid domain format: " + entry.getName)
+                }
+            }.collect {
+              case (tagName, entry) if !DomainTagName.isBlacklisted(tagName) =>
+                val domains = Source.fromInputStream(zipFile.getInputStream(entry)).getLines()
+                  .map(_.toLowerCase.trim).filter { domain =>
+                    val valid = Domain.isValid(domain)
+                    if (!valid) log.debug("'%s' is not a valid domain!" format domain)
+                    valid
+                  }.toSet.toSeq
+                withSensitivityUpdate(applyTagToDomains(tagName, domains))
+            }
+            val (added, removed, total) =
+              (results.map(_.added).sum, results.map(_.removed).sum, results.map(_.total).sum)
 
-          val context = new HeimdalContextBuilder
-          context += ("numDomainsAdded", added)
-          context += ("numDomainsRemoved", removed)
-          context += ("totalDomains", total)
-          persistEvent(IMPORT_SUCCESS, context)
+            val context = new HeimdalContextBuilder
+            context += ("numDomainsAdded", added)
+            context += ("numDomainsRemoved", removed)
+            context += ("totalDomains", total)
+            persistEvent(IMPORT_SUCCESS, context)
 
-          val endTime = currentDateTime
-          systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
-            subject = "Domain import finished",
-            htmlBody =
+            val endTime = currentDateTime
+            systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
+              subject = "Domain import finished",
+              htmlBody =
                 s"Domain import started at $startTime and completed successfully at $endTime " +
-                s"with $added domain-tag pairs added, $removed domain-tag pairs removed, " +
-                s"and $total total domain-tag pairs.",
-            category = NotificationCategory.System.ADMIN))
+                  s"with $added domain-tag pairs added, $removed domain-tag pairs removed, " +
+                  s"and $total total domain-tag pairs.",
+              category = NotificationCategory.System.ADMIN))
         }
       } catch {
         case e: Exception => failWithException(IMPORT_FAILURE, e)

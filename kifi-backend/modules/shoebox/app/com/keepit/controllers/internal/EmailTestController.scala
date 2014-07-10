@@ -3,9 +3,8 @@ package com.keepit.controllers.internal
 import com.google.inject.Inject
 
 import com.keepit.common.controller.ShoeboxServiceController
-import com.keepit.common.mail.{PostOffice, LocalPostOffice, ElectronicMail, SystemEmailAddress, EmailAddress}
+import com.keepit.common.mail.{ PostOffice, LocalPostOffice, ElectronicMail, SystemEmailAddress, EmailAddress }
 import com.keepit.common.db.slick.Database
-
 
 import play.api.mvc.Action
 
@@ -16,8 +15,8 @@ class EmailTestController @Inject() (postOffice: LocalPostOffice, db: Database) 
 
   def sendableAction(name: String)(body: => Html) = Action { request =>
     val result = body
-    request.queryString.get("sendTo").flatMap(_.headOption).foreach{ email =>
-      db.readWrite{ implicit session =>
+    request.queryString.get("sendTo").flatMap(_.headOption).foreach { email =>
+      db.readWrite { implicit session =>
         postOffice.sendMail(ElectronicMail(
           senderUserId = None,
           from = SystemEmailAddress.ENG,
@@ -52,6 +51,5 @@ class EmailTestController @Inject() (postOffice: LocalPostOffice, db: Database) 
   def testEmail(name: String) = sendableAction(name) {
     templates(name)
   }
-
 
 }

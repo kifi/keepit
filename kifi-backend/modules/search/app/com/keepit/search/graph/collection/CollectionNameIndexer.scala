@@ -23,9 +23,9 @@ object CollectionNameFields {
 }
 
 class CollectionNameIndexer(
-    indexDirectory: IndexDirectory,
-    override val airbrake: AirbrakeNotifier)
-  extends Indexer[User, Collection, CollectionNameIndexer](indexDirectory, CollectionNameFields.decoders) {
+  indexDirectory: IndexDirectory,
+  override val airbrake: AirbrakeNotifier)
+    extends Indexer[User, Collection, CollectionNameIndexer](indexDirectory, CollectionNameFields.decoders) {
 
   override val commitBatchSize = 100
   private val fetchSize = commitBatchSize
@@ -39,7 +39,7 @@ class CollectionNameIndexer(
   def update(): Int = throw new UnsupportedOperationException("CollectionNameIndex should not be updated by update()")
 
   def update(name: String, collectionsChanged: Seq[Collection], collectionSearcher: CollectionSearcher): Int = updateLock.synchronized {
-    val usersChanged = collectionsChanged.foldLeft(Map.empty[Id[User], SequenceNumber[Collection]]){ (m, c) => m + (c.userId -> c.seq) }.toSeq.sortBy(_._2)
+    val usersChanged = collectionsChanged.foldLeft(Map.empty[Id[User], SequenceNumber[Collection]]) { (m, c) => m + (c.userId -> c.seq) }.toSeq.sortBy(_._2)
     doUpdate("CollectionNameIndex" + name) {
       usersChanged.iterator.map(buildIndexable(_, collectionSearcher))
     }
@@ -55,11 +55,10 @@ class CollectionNameIndexer(
   }
 
   class CollectionNameIndexable(
-    override val id: Id[User],
-    override val sequenceNumber: SequenceNumber[Collection],
-    override val isDeleted: Boolean,
-    val collections: Seq[(Id[Collection], String)]
-  ) extends Indexable[User, Collection] with LineFieldBuilder {
+      override val id: Id[User],
+      override val sequenceNumber: SequenceNumber[Collection],
+      override val isDeleted: Boolean,
+      val collections: Seq[(Id[Collection], String)]) extends Indexable[User, Collection] with LineFieldBuilder {
 
     override def buildDocument = {
       val doc = super.buildDocument
@@ -71,13 +70,13 @@ class CollectionNameIndexer(
 
       val nameList = buildNameList(sortedCollections.toSeq, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
 
-      val names = buildLineField(CollectionNameFields.nameField, nameList){ (fieldName, text, lang) =>
+      val names = buildLineField(CollectionNameFields.nameField, nameList) { (fieldName, text, lang) =>
         val analyzer = DefaultAnalyzer.getAnalyzer(lang)
         new PhraseTokenStream(fieldName, text, analyzer, removeSingleTerms = false)
       }
       doc.add(names)
 
-      val stemmedNames = buildLineField(CollectionNameFields.stemmedNameField, nameList){ (fieldName, text, lang) =>
+      val stemmedNames = buildLineField(CollectionNameFields.stemmedNameField, nameList) { (fieldName, text, lang) =>
         val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(lang)
         new PhraseTokenStream(fieldName, text, analyzer, removeSingleTerms = false)
       }
@@ -89,7 +88,7 @@ class CollectionNameIndexer(
     private def buildNameList(collections: Seq[(Id[Collection], String)], preferedLang: Lang): ArrayBuffer[(Int, String, Lang)] = {
       var lineNo = 0
       var names = new ArrayBuffer[(Int, String, Lang)]
-      collections.foreach{ c =>
+      collections.foreach { c =>
         val name = c._2
         val lang = LangDetector.detect(name, preferedLang)
         names += ((lineNo, name, lang))

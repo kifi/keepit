@@ -7,7 +7,7 @@ import com.keepit.common.store.ScraperTestStoreModule
 import com.keepit.common.concurrent.DevForkJoinContextMonitorModule
 import com.keepit.scraper.embedly.DevEmbedlyModule
 
-case class TestScraperServiceModule() extends ScraperServiceModule (
+case class TestScraperServiceModule() extends ScraperServiceModule(
   cacheModule = ScraperCacheModule(HashMapMemoryCacheModule()),
   storeModule = ScraperTestStoreModule(),
   fjMonitorModule = DevForkJoinContextMonitorModule(),

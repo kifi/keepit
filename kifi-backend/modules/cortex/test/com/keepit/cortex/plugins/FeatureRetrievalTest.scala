@@ -4,15 +4,14 @@ import org.specs2.mutable.Specification
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 
-
-class FeatureRetrievalTest extends Specification with FeaturePluginTestHelper{
+class FeatureRetrievalTest extends Specification with FeaturePluginTestHelper {
   "feature retrieval" should {
     "work" in {
 
       val (fooRepresenter, fooFeatStore, commitStore, fakePuller) = setup()
 
       val updater = new FeatureUpdater(
-          fooRepresenter, fooFeatStore, commitStore, fakePuller){
+        fooRepresenter, fooFeatStore, commitStore, fakePuller) {
         def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.get.id)
         def genFeatureKey(foo: Foo) = foo.id.get
       }
@@ -21,7 +20,7 @@ class FeatureRetrievalTest extends Specification with FeaturePluginTestHelper{
 
       val retriever = new FeatureRetrieval(
         fooFeatStore, commitStore, fakePuller
-      ){
+      ) {
         def genFeatureKey(foo: Foo) = foo.id.get
       }
 
@@ -39,10 +38,10 @@ class FeatureRetrievalTest extends Specification with FeaturePluginTestHelper{
     }
 
     "tricky retrieval works" in {
-       val (fooRepresenter, fooOddFeatStore, commitStore, fakePuller) = setup2()
+      val (fooRepresenter, fooOddFeatStore, commitStore, fakePuller) = setup2()
 
       val updater = new FeatureUpdater(
-          fooRepresenter, fooOddFeatStore, commitStore, fakePuller){
+        fooRepresenter, fooOddFeatStore, commitStore, fakePuller) {
         def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.get.id)
         def genFeatureKey(foo: Foo) = foo.id.get
       }
@@ -51,7 +50,7 @@ class FeatureRetrievalTest extends Specification with FeaturePluginTestHelper{
 
       val retriever = new FeatureRetrieval(
         fooOddFeatStore, commitStore, fakePuller
-      ){
+      ) {
         def genFeatureKey(foo: Foo) = foo.id.get
       }
 
@@ -60,20 +59,20 @@ class FeatureRetrievalTest extends Specification with FeaturePluginTestHelper{
       // tricky version is better
       var reps = retriever.getSince(SequenceNumber[Foo](0), 10, version)
       reps.size === 4
-      reps.map{ case (foo, _) => foo.id.get.id} === Range(1, 13, 3)
+      reps.map { case (foo, _) => foo.id.get.id } === Range(1, 13, 3)
 
       reps = retriever.trickyGetSince(SequenceNumber[Foo](0), 10, version)
       reps.size === 10
-      reps.map{ case (foo, _) => foo.id.get.id} === Range(1, 30, 3)
+      reps.map { case (foo, _) => foo.id.get.id } === Range(1, 30, 3)
 
       // exhausted
       reps = retriever.getSince(SequenceNumber[Foo](450), 100, version)
       reps.size === 17
-      reps.map{ case (foo, _) => foo.id.get.id} === Range(451, 500, 3)
+      reps.map { case (foo, _) => foo.id.get.id } === Range(451, 500, 3)
 
       reps = retriever.trickyGetSince(SequenceNumber[Foo](450), 100, version)
       reps.size === 17
-      reps.map{ case (foo, _) => foo.id.get.id} === Range(451, 500, 3)
+      reps.map { case (foo, _) => foo.id.get.id } === Range(451, 500, 3)
     }
   }
 }

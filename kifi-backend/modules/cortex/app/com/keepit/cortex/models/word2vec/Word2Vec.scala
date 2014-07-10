@@ -1,6 +1,6 @@
 package com.keepit.cortex.models.word2vec
 
-import com.keepit.cortex.core.{BinaryFormatter, FeatureRepresentation, StatModel}
+import com.keepit.cortex.core.{ BinaryFormatter, FeatureRepresentation, StatModel }
 import com.keepit.cortex.features.Document
 import java.io._
 import com.keepit.cortex.core.BinaryFeatureFormatter
@@ -13,7 +13,7 @@ trait Word2Vec extends StatModel {
 
 case class Word2VecImpl(val dimension: Int, val mapper: Map[String, Array[Float]]) extends Word2Vec
 
-object Word2VecFormatter extends BinaryFormatter[Word2Vec]{
+object Word2VecFormatter extends BinaryFormatter[Word2Vec] {
   def toBinary(word2vec: Word2Vec): Array[Byte] = {
     val writer = new Word2VecWriter()
     writer.toBinary(word2vec.dimension, word2vec.mapper)
@@ -26,11 +26,10 @@ object Word2VecFormatter extends BinaryFormatter[Word2Vec]{
 }
 
 case class RichWord2VecURIFeature(
-  dim: Int,
-  vec: Array[Float],
-  keywords: Array[String],
-  bagOfWords: Map[String, Int]
-) extends FeatureRepresentation[NormalizedURI, Word2Vec] {
+    dim: Int,
+    vec: Array[Float],
+    keywords: Array[String],
+    bagOfWords: Map[String, Int]) extends FeatureRepresentation[NormalizedURI, Word2Vec] {
   override def vectorize: Array[Float] = vec
 }
 
@@ -44,7 +43,6 @@ object RichWord2VecURIFeatureFormatter extends BinaryFeatureFormatter[RichWord2V
   }
 }
 
-
 object RichWord2VecURIFeatureFormat {
   private val FLOAT_SIZE = 4
   private val INT_SIZE = 4
@@ -54,8 +52,8 @@ object RichWord2VecURIFeatureFormat {
   private def numOfBytes(feat: RichWord2VecURIFeature): Int = {
     val intSize = 1 * INT_SIZE + feat.bagOfWords.size * INT_SIZE
     val floatSize = feat.dim * FLOAT_SIZE
-    val keywordSize = (feat.keywords.map{_.length}.sum + feat.keywords.size) * CHAR_SIZE   // keyword1 SEP keyword2 SEP ... keywordn SEP
-    val bagOfWordSize = (feat.bagOfWords.map{ case (token, cnt) => token.length}.sum + feat.bagOfWords.size) * CHAR_SIZE + feat.bagOfWords.size * INT_SIZE
+    val keywordSize = (feat.keywords.map { _.length }.sum + feat.keywords.size) * CHAR_SIZE // keyword1 SEP keyword2 SEP ... keywordn SEP
+    val bagOfWordSize = (feat.bagOfWords.map { case (token, cnt) => token.length }.sum + feat.bagOfWords.size) * CHAR_SIZE + feat.bagOfWords.size * INT_SIZE
 
     intSize + floatSize + keywordSize + bagOfWordSize
   }
@@ -64,22 +62,24 @@ object RichWord2VecURIFeatureFormat {
     val bs = new ByteArrayOutputStream(numOfBytes(feat))
     val os = new DataOutputStream(bs)
     os.writeInt(feat.dim)
-    feat.vec.foreach{os.writeFloat(_)}
+    feat.vec.foreach { os.writeFloat(_) }
 
     os.writeInt(feat.keywords.size)
-    feat.keywords.foreach{ word =>
-      word.toCharArray().foreach{os.writeChar(_)}
+    feat.keywords.foreach { word =>
+      word.toCharArray().foreach { os.writeChar(_) }
       os.writeChar(SEP)
     }
 
     os.writeInt(feat.bagOfWords.size)
-    feat.bagOfWords.map{ case (word, count) =>
-      os.writeInt(count)
+    feat.bagOfWords.map {
+      case (word, count) =>
+        os.writeInt(count)
     }
 
-    feat.bagOfWords.map{ case (word, count) =>
-      word.toCharArray().foreach{os.writeChar(_)}
-      os.writeChar(SEP)
+    feat.bagOfWords.map {
+      case (word, count) =>
+        word.toCharArray().foreach { os.writeChar(_) }
+        os.writeChar(SEP)
     }
 
     os.close()
@@ -94,7 +94,7 @@ object RichWord2VecURIFeatureFormat {
     val dim = is.readInt()
     val arr = new Array[Float](dim)
     var i = 0
-    while (i < dim){
+    while (i < dim) {
       arr(i) = is.readFloat()
       i += 1
     }
@@ -103,7 +103,7 @@ object RichWord2VecURIFeatureFormat {
     i = 0
     val builder = new StringBuilder()
     var ch = ' '
-    while( i < numKeyWords){
+    while (i < numKeyWords) {
       ch = is.readChar()
       if (ch == SEP) i += 1
       builder.append(ch)
@@ -114,7 +114,7 @@ object RichWord2VecURIFeatureFormat {
     val sizeBagOfWords = is.readInt()
     val counts = new Array[Int](sizeBagOfWords)
     i = 0
-    while (i < sizeBagOfWords){
+    while (i < sizeBagOfWords) {
       counts(i) = is.readInt()
       i += 1
     }
@@ -122,7 +122,7 @@ object RichWord2VecURIFeatureFormat {
     val builder2 = new StringBuilder()
     ch = ' '
     i = 0
-    while ( i < sizeBagOfWords){
+    while (i < sizeBagOfWords) {
       ch = is.readChar()
       if (ch == SEP) i += 1
       builder2.append(ch)

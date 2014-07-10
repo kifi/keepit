@@ -1,6 +1,5 @@
 package com.keepit.graph.model
 
-
 sealed trait VertexData[V <: VertexDataReader] { self: V =>
   def asReader: V = self
 }

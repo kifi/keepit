@@ -1,18 +1,17 @@
 package com.keepit.controllers.admin
 
-
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.time._
 import scala.concurrent.duration._
 import views.html
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.google.inject.Inject
 import com.keepit.integrity._
 import com.keepit.normalizer._
 import com.keepit.model.DuplicateDocument
-import com.keepit.common.healthcheck.{SystemAdminMailSender, BabysitterTimeout, AirbrakeNotifier}
+import com.keepit.common.healthcheck.{ SystemAdminMailSender, BabysitterTimeout, AirbrakeNotifier }
 import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.akka.MonitoredAwait
@@ -21,26 +20,26 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
 class UrlController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
-  db: Database,
-  systemAdminMailSender: SystemAdminMailSender,
-  uriRepo: NormalizedURIRepo,
-  urlRepo: URLRepo,
-  changedUriRepo: ChangedURIRepo,
-  duplicateDocumentRepo: DuplicateDocumentRepo,
-  urlRenormalizeCommander: URLRenormalizeCommander,
-  orphanCleaner: OrphanCleaner,
-  dupeDetect: DuplicateDocumentDetection,
-  duplicatesProcessor: DuplicateDocumentsProcessor,
-  uriIntegrityPlugin: UriIntegrityPlugin,
-  normalizationService: NormalizationService,
-  urlPatternRuleRepo: UrlPatternRuleRepo,
-  renormRepo: RenormalizedURLRepo,
-  centralConfig: CentralConfig,
-  httpProxyRepo: HttpProxyRepo,
-  monitoredAwait: MonitoredAwait,
-  normalizedURIInterner: NormalizedURIInterner,
-  airbrake: AirbrakeNotifier) extends AdminController(actionAuthenticator) {
+    actionAuthenticator: ActionAuthenticator,
+    db: Database,
+    systemAdminMailSender: SystemAdminMailSender,
+    uriRepo: NormalizedURIRepo,
+    urlRepo: URLRepo,
+    changedUriRepo: ChangedURIRepo,
+    duplicateDocumentRepo: DuplicateDocumentRepo,
+    urlRenormalizeCommander: URLRenormalizeCommander,
+    orphanCleaner: OrphanCleaner,
+    dupeDetect: DuplicateDocumentDetection,
+    duplicatesProcessor: DuplicateDocumentsProcessor,
+    uriIntegrityPlugin: UriIntegrityPlugin,
+    normalizationService: NormalizationService,
+    urlPatternRuleRepo: UrlPatternRuleRepo,
+    renormRepo: RenormalizedURLRepo,
+    centralConfig: CentralConfig,
+    httpProxyRepo: HttpProxyRepo,
+    monitoredAwait: MonitoredAwait,
+    normalizedURIInterner: NormalizedURIInterner,
+    airbrake: AirbrakeNotifier) extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -86,10 +85,10 @@ class UrlController @Inject() (
       duplicateDocumentRepo.getActive(page, size)
     }
 
-    val groupedDupes = dupes.groupBy { case d => d.uri1Id }.toSeq.sortWith((a,b) => a._1.id < b._1.id)
+    val groupedDupes = dupes.groupBy { case d => d.uri1Id }.toSeq.sortWith((a, b) => a._1.id < b._1.id)
 
     val loadedDupes = db.readOnlyMaster { implicit session =>
-      groupedDupes map  { d =>
+      groupedDupes map { d =>
         val dupeRecords = d._2.map { sd =>
           DisplayedDuplicate(sd.id.get, sd.uri2Id, uriRepo.get(sd.uri2Id).url, sd.percentMatch)
         }
@@ -124,15 +123,15 @@ class UrlController @Inject() (
   def normalizationView(page: Int = 0) = AdminHtmlAction.authenticated { request =>
     implicit val playRequest = request.request
     val PAGE_SIZE = 50
-    val (pendingCount, appliedCount, applied) = db.readOnlyMaster{ implicit s =>
+    val (pendingCount, appliedCount, applied) = db.readOnlyMaster { implicit s =>
       val activeCount = changedUriRepo.countState(ChangedURIStates.ACTIVE)
       val appliedCount = changedUriRepo.countState(ChangedURIStates.APPLIED)
-      val applied = changedUriRepo.page(page, PAGE_SIZE).map{ change =>
+      val applied = changedUriRepo.page(page, PAGE_SIZE).map { change =>
         (uriRepo.get(change.oldUriId), uriRepo.get(change.newUriId), change.updatedAt.date.toString())
       }
       (activeCount, appliedCount, applied)
     }
-    val pageCount = (appliedCount*1.0 / PAGE_SIZE).ceil.toInt
+    val pageCount = (appliedCount * 1.0 / PAGE_SIZE).ceil.toInt
     Ok(html.admin.normalization(applied, page, appliedCount, pendingCount, pageCount, PAGE_SIZE))
   }
 
@@ -157,11 +156,11 @@ class UrlController @Inject() (
     Ok(s"Ok. Redirections of all NormalizedURIs that were redirected to $toUriId is cleared. You should initiate renormalization.")
   }
 
-  def urlRenormalizeConsole() = AdminHtmlAction.authenticated{ request =>
+  def urlRenormalizeConsole() = AdminHtmlAction.authenticated { request =>
     Ok(html.admin.urlRenormalization())
   }
 
-  def urlRenormalizeConsoleSubmit() = AdminHtmlAction.authenticated{ request =>
+  def urlRenormalizeConsoleSubmit() = AdminHtmlAction.authenticated { request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val regexStr = body.get("regex").get
     val urlSelection = body.get("urlSelection").get
@@ -190,18 +189,19 @@ class UrlController @Inject() (
 
   }
 
-
   def renormalizationView(page: Int = 0) = AdminHtmlAction.authenticated { request =>
     val PAGE_SIZE = 200
-    val (renorms, totalCount) = db.readOnlyMaster{ implicit s => (renormRepo.pageView(page, PAGE_SIZE), renormRepo.activeCount())}
-    val pageCount = (totalCount*1.0 / PAGE_SIZE).ceil.toInt
-    val info = db.readOnlyMaster{ implicit s =>
-      renorms.map{ renorm => (
-        renorm.state.toString,
-        urlRepo.get(renorm.urlId).url,
-        uriRepo.get(renorm.oldUriId).url,
-        uriRepo.get(renorm.newUriId).url
-      )}
+    val (renorms, totalCount) = db.readOnlyMaster { implicit s => (renormRepo.pageView(page, PAGE_SIZE), renormRepo.activeCount()) }
+    val pageCount = (totalCount * 1.0 / PAGE_SIZE).ceil.toInt
+    val info = db.readOnlyMaster { implicit s =>
+      renorms.map { renorm =>
+        (
+          renorm.state.toString,
+          urlRepo.get(renorm.urlId).url,
+          uriRepo.get(renorm.oldUriId).url,
+          uriRepo.get(renorm.newUriId).url
+        )
+      }
     }
     Ok(html.admin.renormalizationView(info, page, totalCount, pageCount, PAGE_SIZE))
   }
@@ -235,7 +235,7 @@ class UrlController @Inject() (
               case Some(newUriId) => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} will be redirected to $newUriId")
               case None => Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"${oldUri.id.get}: ${oldUri.url} could not be redirected to $candidateUrl")
             }
-          }
+        }
     }
   }
 
@@ -256,7 +256,7 @@ class UrlController @Inject() (
           pattern = body("pattern_" + key),
           example = Some(body("example_" + key)).filter(!_.isEmpty),
           state = if (body.contains("active_" + key)) UrlPatternRuleStates.ACTIVE else UrlPatternRuleStates.INACTIVE,
-          isUnscrapable = body.contains("unscrapable_"+ key),
+          isUnscrapable = body.contains("unscrapable_" + key),
           useProxy = body("proxy_" + key) match {
             case "None" => None
             case proxy_id => Some(Id[HttpProxy](proxy_id.toLong))

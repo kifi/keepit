@@ -9,9 +9,7 @@ import com.keepit.cortex.plugins._
 import com.keepit.common.time._
 import org.joda.time.DateTime
 
-
-
-class CommitInfoStoreTest extends Specification{
+class CommitInfoStoreTest extends Specification {
   "CommitInfo" should {
     "serialize" in {
       class FakeModel extends StatModel

@@ -1,7 +1,7 @@
 package com.keepit.common.mail
 
 import com.keepit.FortyTwoGlobal
-import com.typesafe.plugin.{MailerAPI, MailerPlugin}
+import com.typesafe.plugin.{ MailerAPI, MailerPlugin }
 
 import play.api.Application
 

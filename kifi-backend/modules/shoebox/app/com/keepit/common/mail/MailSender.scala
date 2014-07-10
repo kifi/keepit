@@ -4,11 +4,11 @@ import scala.concurrent.duration._
 
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{SafeFuture, FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ SafeFuture, FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.model._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.heimdal._
@@ -23,9 +23,9 @@ trait MailSenderPlugin {
 }
 
 class MailSenderPluginImpl @Inject() (
-    actor: ActorInstance[MailSenderActor],
-    val scheduling: SchedulingProperties) //only on leader
-  extends Logging with MailSenderPlugin with SchedulerPlugin {
+  actor: ActorInstance[MailSenderActor],
+  val scheduling: SchedulingProperties) //only on leader
+    extends Logging with MailSenderPlugin with SchedulerPlugin {
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
@@ -40,30 +40,29 @@ class MailSenderPluginImpl @Inject() (
 private[mail] case class ProcessOutbox()
 private[mail] case class ProcessMail(mailId: ElectronicMail)
 
-
 private[mail] class MailSenderActor @Inject() (
-    db: Database,
-    mailRepo: ElectronicMailRepo,
-    emailOptOutRepo: EmailOptOutRepo,
-    userNotifyPreferenceRepo: UserNotifyPreferenceRepo,
-    emailAddressRepo: UserEmailAddressRepo,
-    airbrake: AirbrakeNotifier,
-    mailProvider: MailProvider,
-    heimdalContextBuiler: HeimdalContextBuilderFactory,
-    heimdal: HeimdalServiceClient)
-  extends FortyTwoActor(airbrake) with Logging {
+  db: Database,
+  mailRepo: ElectronicMailRepo,
+  emailOptOutRepo: EmailOptOutRepo,
+  userNotifyPreferenceRepo: UserNotifyPreferenceRepo,
+  emailAddressRepo: UserEmailAddressRepo,
+  airbrake: AirbrakeNotifier,
+  mailProvider: MailProvider,
+  heimdalContextBuiler: HeimdalContextBuilderFactory,
+  heimdal: HeimdalServiceClient)
+    extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case ProcessOutbox =>
       val emailsToSend = db.readOnlyMaster { implicit s =>
-          mailRepo.outbox() flatMap { email =>
-            try {
-              Some(mailRepo.get(email))
-            } catch {
-              case ex: Throwable =>
-                airbrake.notify(ex)
-                None
-            }
+        mailRepo.outbox() flatMap { email =>
+          try {
+            Some(mailRepo.get(email))
+          } catch {
+            case ex: Throwable =>
+              airbrake.notify(ex)
+              None
+          }
         }
       }
 
@@ -117,20 +116,24 @@ private[mail] class MailSenderActor @Inject() (
     if (notificationsToBeReported.contains(email.category)) {
       val sentAt = currentDateTime
       SafeFuture {
-        val contextBuilder =  heimdalContextBuiler()
+        val contextBuilder = heimdalContextBuiler()
         contextBuilder += ("action", "sent")
         contextBuilder.addEmailInfo(email)
 
         val (to, cc) = db.readOnlyMaster { implicit session =>
-          val cc: Seq[Either[Id[User], String]] = email.cc.flatMap { address => emailAddressRepo.getByAddress(address) match {
-            case Seq() => Seq(Right(address.address))
-            case emailAddresses => emailAddresses.map { emailAddress => Left(emailAddress.userId) }
-          }}
+          val cc: Seq[Either[Id[User], String]] = email.cc.flatMap { address =>
+            emailAddressRepo.getByAddress(address) match {
+              case Seq() => Seq(Right(address.address))
+              case emailAddresses => emailAddresses.map { emailAddress => Left(emailAddress.userId) }
+            }
+          }
 
-          val to: Seq[Either[Id[User], String]] = email.to.flatMap { address => emailAddressRepo.getByAddress(address) match {
-            case Seq() => Seq(Right(address.address))
-            case emailAddresses => emailAddresses.map { emailAddress => Left(emailAddress.userId) }
-          }}
+          val to: Seq[Either[Id[User], String]] = email.to.flatMap { address =>
+            emailAddressRepo.getByAddress(address) match {
+              case Seq() => Seq(Right(address.address))
+              case emailAddresses => emailAddresses.map { emailAddress => Left(emailAddress.userId) }
+            }
+          }
 
           (to, cc)
         }

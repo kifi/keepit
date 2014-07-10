@@ -1,12 +1,12 @@
 package com.keepit.common.actor
 
 import com.keepit.common.akka.FortyTwoActor
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
+import java.util.concurrent.atomic.{ AtomicBoolean, AtomicInteger }
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
-import akka.actor.{Cancellable, Scheduler}
+import akka.actor.{ Cancellable, Scheduler }
 import scala.concurrent.Future
-import scala.concurrent.duration.{FiniteDuration, Duration}
+import scala.concurrent.duration.{ FiniteDuration, Duration }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.reflect._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -38,7 +38,6 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
   private var scheduledFlush: Option[Cancellable] = None
   private val flushIsPending = new AtomicBoolean(false)
 
-
   def receive = {
     case event: E =>
       log.debug(s"Event added to queue: $event")
@@ -58,7 +57,7 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
           case s if s >= batchingConf.LowWatermarkBatchSize =>
             flushPlease() //flush with the events in the actor mailbox
           case _ =>
-            //ignore
+          //ignore
         }
       }
     case FlushEventQueueAndClose =>
@@ -75,7 +74,7 @@ abstract class BatchingActor[E](airbrake: AirbrakeNotifier)(implicit tag: ClassT
     scheduledFlush = None
     val thisBatchId = batchId.incrementAndGet
     log.info(s"Processing ${events.size} events: ${events.toString.abbreviate(200)}")
-    events.zipWithIndex map { case (event, i) => verifyEventStaleTime(event, batchingConf.StaleEventFlushTime, s"flushed (${i+1}/${events.size} in batch #$thisBatchId)") }
+    events.zipWithIndex map { case (event, i) => verifyEventStaleTime(event, batchingConf.StaleEventFlushTime, s"flushed (${i + 1}/${events.size} in batch #$thisBatchId)") }
     var future = processBatch(events)
     events = Vector.empty
     future

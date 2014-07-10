@@ -1,7 +1,7 @@
 package com.keepit.heimdal
 
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.cache.{InMemoryCachePlugin, FortyTwoCachePlugin}
+import com.keepit.common.cache.{ InMemoryCachePlugin, FortyTwoCachePlugin }
 import com.keepit.common.healthcheck._
 import play.api.Mode._
 import play.api._

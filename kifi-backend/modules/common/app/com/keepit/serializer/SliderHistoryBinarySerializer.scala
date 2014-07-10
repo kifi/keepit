@@ -4,7 +4,7 @@ import com.keepit.model.SliderHistory
 import play.api.libs.json._
 import com.keepit.common.time._
 import com.keepit.common.strings._
-import java.io.{DataOutputStream, DataInputStream, ByteArrayInputStream, ByteArrayOutputStream}
+import java.io.{ DataOutputStream, DataInputStream, ByteArrayInputStream, ByteArrayOutputStream }
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import com.keepit.model.SliderHistory
@@ -38,15 +38,15 @@ class SliderHistoryBinarySerializer extends BinaryFormat[SliderHistory] with Log
 
   private[this] def historyJsonWrites(history: SliderHistory): JsObject =
     JsObject(List(
-      "id"  -> history.id.map(u => JsNumber(u.id)).getOrElse(JsNull),
+      "id" -> history.id.map(u => JsNumber(u.id)).getOrElse(JsNull),
       "createdAt" -> Json.toJson(history.createdAt),
       "updatedAt" -> Json.toJson(history.updatedAt),
       "state" -> JsString(history.state.value),
-      "userId"  -> JsNumber(history.userId.id),
+      "userId" -> JsNumber(history.userId.id),
       "tableSize" -> JsNumber(history.tableSize),
       "numHashFuncs" -> JsNumber(history.numHashFuncs),
       "minHits" -> JsNumber(history.minHits),
-      "updatesCount"  -> JsNumber(history.updatesCount)
+      "updatesCount" -> JsNumber(history.updatesCount)
     )
     )
 

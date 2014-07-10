@@ -2,8 +2,8 @@ package com.keepit.common.store
 
 import play.api.Play.current
 import net.codingwell.scalaguice.ScalaModule
-import com.google.inject.{Provider, Provides, Singleton}
-import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3}
+import com.google.inject.{ Provider, Provides, Singleton }
+import com.amazonaws.services.s3.{ AmazonS3Client, AmazonS3 }
 import com.keepit.search._
 import com.amazonaws.auth.BasicAWSCredentials
 import com.keepit.common.logging.AccessLog

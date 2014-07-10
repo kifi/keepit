@@ -2,7 +2,7 @@ package com.keepit.controllers.mobile
 
 import play.api.libs.json._
 import com.google.inject.Inject
-import com.keepit.common.controller.{MobileController, SearchServiceController, ActionAuthenticator}
+import com.keepit.common.controller.{ MobileController, SearchServiceController, ActionAuthenticator }
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.search.result.DecoratedResult
@@ -12,9 +12,8 @@ import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.SearchCommander
 
 class MobileSearchController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
-  searchCommander: SearchCommander
-) extends MobileController(actionAuthenticator) with SearchServiceController with Logging {
+    actionAuthenticator: ActionAuthenticator,
+    searchCommander: SearchCommander) extends MobileController(actionAuthenticator) with SearchServiceController with Logging {
 
   def searchV1(
     query: String,
@@ -27,11 +26,10 @@ class MobileSearchController @Inject() (
     end: Option[String] = None,
     tz: Option[String] = None,
     coll: Option[String] = None,
-    withUriSummary: Boolean = false
-  ) = JsonAction.authenticated { request =>
+    withUriSummary: Boolean = false) = JsonAction.authenticated { request =>
 
     val userId = request.userId
-    val acceptLangs : Seq[String] = request.request.acceptLanguages.map(_.code)
+    val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
 
     val decoratedResult = searchCommander.search(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, start, end, tz, coll, None, withUriSummary)
 

@@ -1,13 +1,13 @@
 package com.keepit.common.analytics
 
-import com.google.inject.{ Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import com.keepit.normalizer.{NormalizedURIInterner, NormalizationCandidate}
+import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationCandidate }
 
 abstract class EventListener(userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo) extends Logging {
   def onEvent: PartialFunction[Event, Unit]
@@ -15,8 +15,8 @@ abstract class EventListener(userRepo: UserRepo, normalizedURIRepo: NormalizedUR
 
 @Singleton
 class EventHelper @Inject() (
-  actor: ActorInstance[EventHelperActor],
-  listeners: Set[EventListener]) {
+    actor: ActorInstance[EventHelperActor],
+    listeners: Set[EventListener]) {
   def newEvent(event: Event): Unit = actor.ref ! event
 
   def matchEvent(event: Event): Seq[String] =
@@ -27,7 +27,7 @@ class EventHelperActor @Inject() (
   airbrake: AirbrakeNotifier,
   listeners: Set[EventListener],
   eventStream: EventStream)
-  extends FortyTwoActor(airbrake) {
+    extends FortyTwoActor(airbrake) {
 
   def receive = {
     case event: Event =>
@@ -45,7 +45,7 @@ class SliderShownListener @Inject() (
   normalizedURIInterner: NormalizedURIInterner,
   db: Database,
   sliderHistoryTracker: SliderHistoryTracker)
-  extends EventListener(userRepo, normalizedURIRepo) {
+    extends EventListener(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SLIDER, "sliderShown", externalUser, _, experiments, metaData, _), _, _) =>

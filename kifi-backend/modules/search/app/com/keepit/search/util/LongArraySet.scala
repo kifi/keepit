@@ -10,7 +10,7 @@ abstract class LongArraySet(a: Array[Long]) extends Set[Long] with Logging {
 
   override def +(elem: Long): Set[Long] = iterator.toSet + elem
 
-  override def -(elem: Long): Set[Long] = iterator.filterNot{ _ == elem }.toSet
+  override def -(elem: Long): Set[Long] = iterator.filterNot { _ == elem }.toSet
 
   override def size = a.length
 
@@ -37,11 +37,11 @@ object LongArraySet {
       override def findIndex(key: Long): Int = Arrays.binarySearch(a, key)
       override def contains(key: Long): Boolean = (Arrays.binarySearch(a, key) >= 0)
       override def verify: Boolean = {
-          if ((1 until a.length).forall{ i => a(i - 1) <= a(i) }) true
-          else {
-            log.error("sorted source: verification failed, source not sorted")
-            false
-          }
+        if ((1 until a.length).forall { i => a(i - 1) <= a(i) }) true
+        else {
+          log.error("sorted source: verification failed, source not sorted")
+          false
+        }
       }
     }
   }
@@ -49,7 +49,6 @@ object LongArraySet {
   def from(a: Array[Long]): LongArraySet = {
     if (a.length == 0) empty else from(a, ReverseArrayMapper(a, 0.9d, -1L))
   }
-
 
   def from(a: Array[Long], mapper: ReverseArrayMapper): LongArraySet = {
     if (a.length != mapper.size) throw new Exception("array size not equal to mapper size")

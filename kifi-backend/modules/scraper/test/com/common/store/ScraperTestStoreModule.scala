@@ -2,7 +2,7 @@ package com.keepit.common.store
 
 import com.keepit.search._
 import com.keepit.scraper._
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import play.api.Play._
 import java.io.File
 import com.keepit.learning.porndetector.InMemoryPornWordLikelihoodStore

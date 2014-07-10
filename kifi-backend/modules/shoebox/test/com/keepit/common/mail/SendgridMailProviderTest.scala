@@ -13,12 +13,12 @@ class SendgridMailProviderTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val mail = inject[Database].readWrite { implicit s =>
           inject[ElectronicMailRepo].save(ElectronicMail(
-              from = SystemEmailAddress.ENG,
-              fromName = Some("Marvin"),
-              to = List(SystemEmailAddress.ENG),
-              subject = "Email from test case",
-              htmlBody = views.html.main("KiFi")(Html("<b>thanks</b>")).body,
-              category = NotificationCategory.System.HEALTHCHECK))
+            from = SystemEmailAddress.ENG,
+            fromName = Some("Marvin"),
+            to = List(SystemEmailAddress.ENG),
+            subject = "Email from test case",
+            htmlBody = views.html.main("KiFi")(Html("<b>thanks</b>")).body,
+            category = NotificationCategory.System.HEALTHCHECK))
         }
         mail.htmlBody.trim === """<!DOCTYPE html>
 
@@ -34,8 +34,8 @@ class SendgridMailProviderTest extends Specification with ShoeboxTestInjector {
     </body>
 </html>""".trim
 
-//         usually using instance[PostOffice].sendMail(mail
-//        instance[SendgridMailProvider].sendMailToSendgrid(mail)
+        //         usually using instance[PostOffice].sendMail(mail
+        //        instance[SendgridMailProvider].sendMailToSendgrid(mail)
         inject[Database].readOnlyMaster { implicit s =>
           val loaded = inject[ElectronicMailRepo].get(mail.id.get)
           loaded.from === mail.from

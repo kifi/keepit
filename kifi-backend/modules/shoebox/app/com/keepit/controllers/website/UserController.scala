@@ -1,8 +1,8 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.commanders.ConnectionInfo
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
@@ -14,11 +14,11 @@ import com.keepit.commanders._
 import com.keepit.heimdal.{DelightedAnswerSources, BasicDelightedAnswer}
 import com.keepit.model._
 import play.api.libs.json.Json.toJson
-import com.keepit.abook.{ABookUploadConf, ABookServiceClient}
+import com.keepit.abook.{ ABookUploadConf, ABookServiceClient }
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.concurrent.{Promise => PlayPromise}
+import play.api.libs.concurrent.{ Promise => PlayPromise }
 import play.api.libs.Comet
 import com.keepit.common.time._
 import play.api.templates.Html
@@ -26,13 +26,13 @@ import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 import java.util.concurrent.atomic.AtomicBoolean
 import com.keepit.eliza.ElizaServiceClient
-import play.api.mvc.{Request, MaxSizeExceeded}
+import play.api.mvc.{ Request, MaxSizeExceeded }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.store.{ImageCropAttributes, S3ImageStore}
+import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json._
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 import com.keepit.model.UserEmailAddress
 import play.api.libs.json.JsString
 import play.api.libs.json.JsBoolean
@@ -46,41 +46,41 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.http._
 
 class UserController @Inject() (
-  db: Database,
-  userRepo: UserRepo,
-  userExperimentCommander: LocalUserExperimentCommander,
-  basicUserRepo: BasicUserRepo,
-  userConnectionRepo: UserConnectionRepo,
-  emailRepo: UserEmailAddressRepo,
-  userValueRepo: UserValueRepo,
-  socialConnectionRepo: SocialConnectionRepo,
-  socialUserRepo: SocialUserInfoRepo,
-  invitationRepo: InvitationRepo,
-  networkInfoLoader: NetworkInfoLoader,
-  actionAuthenticator: ActionAuthenticator,
-  friendRequestRepo: FriendRequestRepo,
-  postOffice: LocalPostOffice,
-  userCommander: UserCommander,
-  elizaServiceClient: ElizaServiceClient,
-  clock: Clock,
-  s3ImageStore: S3ImageStore,
-  abookServiceClient: ABookServiceClient,
-  airbrakeNotifier: AirbrakeNotifier,
-  authCommander: AuthCommander,
-  searchClient: SearchServiceClient,
-  abookUploadConf: ABookUploadConf,
-  fortytwoConfig: FortyTwoConfig
-) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    db: Database,
+    userRepo: UserRepo,
+    userExperimentCommander: LocalUserExperimentCommander,
+    basicUserRepo: BasicUserRepo,
+    userConnectionRepo: UserConnectionRepo,
+    emailRepo: UserEmailAddressRepo,
+    userValueRepo: UserValueRepo,
+    socialConnectionRepo: SocialConnectionRepo,
+    socialUserRepo: SocialUserInfoRepo,
+    invitationRepo: InvitationRepo,
+    networkInfoLoader: NetworkInfoLoader,
+    actionAuthenticator: ActionAuthenticator,
+    friendRequestRepo: FriendRequestRepo,
+    postOffice: LocalPostOffice,
+    userCommander: UserCommander,
+    elizaServiceClient: ElizaServiceClient,
+    clock: Clock,
+    s3ImageStore: S3ImageStore,
+    abookServiceClient: ABookServiceClient,
+    airbrakeNotifier: AirbrakeNotifier,
+    authCommander: AuthCommander,
+    searchClient: SearchServiceClient,
+    abookUploadConf: ABookUploadConf,
+    fortytwoConfig: FortyTwoConfig) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = JsonAction.authenticated { request =>
     val (connectionsPage, total) = userCommander.getConnectionsPage(request.userId, page, pageSize)
     val friendsJsons = db.readOnlyMaster { implicit s =>
-      connectionsPage.map { case ConnectionInfo(friend, friendId, unfriended, unsearched) =>
-        Json.toJson(friend).asInstanceOf[JsObject] ++ Json.obj(
-          "searchFriend" -> unsearched,
-          "unfriended" -> unfriended,
-          "friendCount" -> userConnectionRepo.getConnectionCount(friendId)
-        )
+      connectionsPage.map {
+        case ConnectionInfo(friend, friendId, unfriended, unsearched) =>
+          Json.toJson(friend).asInstanceOf[JsObject] ++ Json.obj(
+            "searchFriend" -> unsearched,
+            "unfriended" -> unfriended,
+            "friendCount" -> userConnectionRepo.getConnectionCount(friendId)
+          )
       }
     }
     Ok(Json.obj(
@@ -142,14 +142,14 @@ class UserController @Inject() (
     db.readWrite { implicit s =>
       userRepo.getOpt(id) map { recipient =>
         friendRequestRepo.getBySenderAndRecipient(request.userId, recipient.id.get,
-            Set(FriendRequestStates.ACCEPTED, FriendRequestStates.ACTIVE)) map { friendRequest =>
-          if (friendRequest.state == FriendRequestStates.ACCEPTED) {
-            BadRequest(Json.obj("error" -> s"The friend request has already been accepted", "alreadyAccepted" -> true))
-          } else {
-            friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.INACTIVE))
-            Ok(Json.obj("success" -> true))
-          }
-        } getOrElse NotFound(Json.obj("error" -> s"There is no active friend request for user $id."))
+          Set(FriendRequestStates.ACCEPTED, FriendRequestStates.ACTIVE)) map { friendRequest =>
+            if (friendRequest.state == FriendRequestStates.ACCEPTED) {
+              BadRequest(Json.obj("error" -> s"The friend request has already been accepted", "alreadyAccepted" -> true))
+            } else {
+              friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.INACTIVE))
+              Ok(Json.obj("success" -> true))
+            }
+          } getOrElse NotFound(Json.obj("error" -> s"There is no active friend request for user $id."))
       } getOrElse BadRequest(Json.obj("error" -> s"User with id $id not found."))
     }
   }
@@ -191,7 +191,7 @@ class UserController @Inject() (
       BadRequest(Json.obj("error" -> "bad_new_password"))
     } else {
       userCommander.doChangePassword(request.userId, oldPassword, newPassword) match {
-        case Failure(e)  => Forbidden(Json.obj("error" -> e.getMessage))
+        case Failure(e) => Forbidden(Json.obj("error" -> e.getMessage))
         case Success(_) => Ok(Json.obj("success" -> true))
       }
     }
@@ -218,13 +218,12 @@ class UserController @Inject() (
     }
   }
 
-
   //private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   def updateCurrentUser() = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
     request.body.validate[UpdatableUserInfo] match {
       case JsSuccess(userData, _) => {
         userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmail, _))
-        userData.description.foreach{ description =>
+        userData.description.foreach { description =>
           userCommander.updateUserDescription(request.userId, description)
         }
         getUserInfo(request.userId)
@@ -239,9 +238,9 @@ class UserController @Inject() (
     val experiments = userExperimentCommander.getExperimentsByUser(userId)
     val pimpedUser = userCommander.getUserInfo(user)
     val json = toJson(pimpedUser.basicUser).as[JsObject] ++
-       toJson(pimpedUser.info).as[JsObject] ++
-       Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
-       Json.obj("experiments" -> experiments.map(_.value))
+      toJson(pimpedUser.info).as[JsObject] ++
+      Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
+      Json.obj("experiments" -> experiments.map(_.value))
     val (uniqueKeepsClicked, totalClicks) = userCommander.getHelpCounts(userId)
     val (clickCount, rekeepCount, rekeepTotalCount) = userCommander.getKeepAttributionCounts(userId)
     Ok(json ++ Json.obj(
@@ -301,8 +300,8 @@ class UserController @Inject() (
     Ok
   }
 
-  def uploadBinaryUserPicture() = JsonAction(allowPending = true, parser = parse.maxLength(1024*1024*15, parse.temporaryFile))(authenticatedAction = doUploadBinaryUserPicture(_), unauthenticatedAction = doUploadBinaryUserPicture(_))
-  def doUploadBinaryUserPicture(implicit request: Request[Either[MaxSizeExceeded,play.api.libs.Files.TemporaryFile]]) = {
+  def uploadBinaryUserPicture() = JsonAction(allowPending = true, parser = parse.maxLength(1024 * 1024 * 15, parse.temporaryFile))(authenticatedAction = doUploadBinaryUserPicture(_), unauthenticatedAction = doUploadBinaryUserPicture(_))
+  def doUploadBinaryUserPicture(implicit request: Request[Either[MaxSizeExceeded, play.api.libs.Files.TemporaryFile]]) = {
     request.body match {
       case Right(tempFile) =>
         s3ImageStore.uploadTemporaryPicture(tempFile.file) match {
@@ -334,14 +333,15 @@ class UserController @Inject() (
   )
   def setUserPicture() = JsonAction.authenticated(allowPending = true) { implicit request =>
     userPicForm.bindFromRequest.fold(
-    formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
-    { case UserPicInfo(picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
-        val cropAttributes = parseCropForm(picHeight, picWidth, cropX, cropY, cropSize)
-        picToken.map { token =>
-          s3ImageStore.copyTempFileToUserPic(request.user.id.get, request.user.externalId, token, cropAttributes)
-        }
-        Ok("0")
-    })
+      formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
+      {
+        case UserPicInfo(picToken, picHeight, picWidth, cropX, cropY, cropSize) =>
+          val cropAttributes = parseCropForm(picHeight, picWidth, cropX, cropY, cropSize)
+          picToken.map { token =>
+            s3ImageStore.copyTempFileToUserPic(request.user.id.get, request.user.externalId, token, cropAttributes)
+          }
+          Ok("0")
+      })
   }
   private def parseCropForm(picHeight: Option[Int], picWidth: Option[Int], cropX: Option[Int], cropY: Option[Int], cropSize: Option[Int]) = {
     for {
@@ -376,7 +376,7 @@ class UserController @Inject() (
   }
 
   // todo(ray):removeme
-  def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = JsonAction.authenticatedAsync {  request =>
+  def getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int) = JsonAction.authenticatedAsync { request =>
     userCommander.getAllConnections(request.userId, search, network, after, limit) map { r =>
       Ok(Json.toJson(r))
     }
@@ -457,8 +457,7 @@ class UserController @Inject() (
           else if (importHasHappened.get) {
             finishedImportAnnounced.set(true)
             Some(JsString("finished"))
-          }
-          else Some(JsBoolean(v.get.toBoolean))
+          } else Some(JsBoolean(v.get.toBoolean))
         } else {
           importHasHappened.set(true)
           Some(JsString(v.get))
@@ -476,7 +475,7 @@ class UserController @Inject() (
       case Some(sui) =>
         val firstResponse = Enumerator.enumerate(check().map(script).toSeq)
         val returnEnumerator = Enumerator.generateM(poller)
-        Status(200).chunked(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof )
+        Status(200).chunked(firstResponse andThen returnEnumerator &> Comet(callback = callback) andThen Enumerator(script(JsString("end"))) andThen Enumerator.eof)
       case None =>
         Ok(script(JsString("network_not_connected")))
     }
@@ -484,7 +483,7 @@ class UserController @Inject() (
 
   // todo(Andrew): Remove when ng is out
   // status update -- see ScalaComet & Andrew's gist -- https://gist.github.com/andrewconner/f6333839c77b7a1cf2da
-  def getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String]) = HtmlAction.authenticated { request =>
+  def getABookUploadStatus(id: Id[ABookInfo], callbackOpt: Option[String]) = HtmlAction.authenticated { request =>
     import ABookInfoStates._
     val ts = System.currentTimeMillis
     val callback = callbackOpt.getOrElse("parent.updateABookProgress")
@@ -512,7 +511,7 @@ class UserController @Inject() (
     }
     val returnEnumerator = Enumerator.generateM {
       Future.sequence(Seq(timeoutF, reqF)).map { res =>
-         res.collect { case Some(s:String) => s }.headOption
+        res.collect { case Some(s: String) => s }.headOption
       }
     }
     Status(200).chunked(returnEnumerator.andThen(Enumerator.eof))

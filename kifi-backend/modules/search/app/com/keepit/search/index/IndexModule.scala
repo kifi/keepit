@@ -14,13 +14,13 @@ import com.keepit.search.graph._
 import com.keepit.search.graph.collection._
 import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.user._
-import com.keepit.search.message.{MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl}
-import com.keepit.search.phrasedetector.{PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer}
+import com.keepit.search.message.{ MessageIndexer, MessageIndexerPlugin, MessageIndexerPluginImpl }
+import com.keepit.search.phrasedetector.{ PhraseIndexerPluginImpl, PhraseIndexerPlugin, PhraseIndexerImpl, PhraseIndexer }
 import com.keepit.search.sharding._
-import com.keepit.search.spellcheck.{SpellIndexerPlugin, SpellIndexerPluginImpl, SpellIndexer}
+import com.keepit.search.spellcheck.{ SpellIndexerPlugin, SpellIndexerPluginImpl, SpellIndexer }
 import com.keepit.search.user._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.google.inject.{Inject, Provides, Singleton}
+import com.google.inject.{ Inject, Provides, Singleton }
 import org.apache.commons.io.FileUtils
 import java.io.File
 import play.api.Play._
@@ -41,12 +41,13 @@ trait IndexModule extends ScalaModule with Logging {
           indexDirectory.restoreFromBackup()
           val t2 = currentDateTime.getMillis
           log.info(s"$d was restored from S3 in ${(t2 - t1) / 1000} seconds")
+        } catch {
+          case e: Exception => {
+            log.error(s"Could not restore $dir from S3}", e)
+            FileUtils.deleteDirectory(dir)
+            FileUtils.forceMkdir(dir)
+          }
         }
-        catch { case e: Exception => {
-          log.error(s"Could not restore $dir from S3}", e)
-          FileUtils.deleteDirectory(dir)
-          FileUtils.forceMkdir(dir)
-        }}
       }
       indexDirectory
     }
@@ -103,7 +104,7 @@ trait IndexModule extends ScalaModule with Logging {
       new ArticleIndexer(dir, articleStore, airbrake)
     }
 
-    val indexShards = activeShards.local.map{ shard => (shard, articleIndexer(shard)) }
+    val indexShards = activeShards.local.map { shard => (shard, articleIndexer(shard)) }
     new ShardedArticleIndexer(indexShards.toMap, articleStore, airbrake, shoeboxClient)
   }
 
@@ -121,7 +122,7 @@ trait IndexModule extends ScalaModule with Logging {
       new URIGraphIndexer(dir, store, airbrake)
     }
 
-    val indexShards = activeShards.local.map{ shard => (shard, uriGraphIndexer(shard, bookmarkStore(shard))) }
+    val indexShards = activeShards.local.map { shard => (shard, uriGraphIndexer(shard, bookmarkStore(shard))) }
     new ShardedURIGraphIndexer(indexShards.toMap, airbrake, shoeboxClient)
   }
 
@@ -139,7 +140,7 @@ trait IndexModule extends ScalaModule with Logging {
       new CollectionIndexer(dir, collectionNameIndexer, airbrake)
     }
 
-    val indexShards = activeShards.local.map{ shard => (shard, collectionIndexer(shard, collectionNameIndexer(shard))) }
+    val indexShards = activeShards.local.map { shard => (shard, collectionIndexer(shard, collectionNameIndexer(shard))) }
     new ShardedCollectionIndexer(indexShards.toMap, airbrake, shoeboxClient)
   }
 
@@ -155,7 +156,7 @@ trait IndexModule extends ScalaModule with Logging {
   @Provides
   def userGraphIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient): UserGraphIndexer = {
     val dir = getIndexDirectory("index.userGraph.directory", noShard, backup)
-     log.info(s"storing user graph index in $dir")
+    log.info(s"storing user graph index in $dir")
     new UserGraphIndexer(dir, airbrake, shoeboxClient)
   }
 
@@ -179,7 +180,7 @@ trait IndexModule extends ScalaModule with Logging {
   @Provides
   def phraseIndexer(backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): PhraseIndexer = {
     val dir = getIndexDirectory("index.phrase.directory", noShard, backup)
-    val dataDir = current.configuration.getString("index.config").map{ path =>
+    val dataDir = current.configuration.getString("index.config").map { path =>
       val configDir = new File(path).getCanonicalFile()
       new File(configDir, "phrase")
     }
@@ -202,10 +203,10 @@ case class ProdIndexModule() extends IndexModule {
 }
 
 case class DevIndexModule() extends IndexModule {
-  var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory]  // just in case we need to reference a volatileDir. e.g. in spellIndexer
+  var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory] // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
   protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory =
-    getArchivedIndexDirectory(current.configuration.getString(configName).map(_ + shard.indexNameSuffix), indexStore).getOrElse{
+    getArchivedIndexDirectory(current.configuration.getString(configName).map(_ + shard.indexNameSuffix), indexStore).getOrElse {
       volatileDirMap.getOrElse((configName, shard), {
         val newdir = new VolatileIndexDirectory()
         volatileDirMap += (configName, shard) -> newdir

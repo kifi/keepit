@@ -11,7 +11,6 @@ import com.keepit.search.SearchConfig
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.phrasedetector.PhraseDetector
 
-
 @Singleton
 class MainQueryParserFactory @Inject() (phraseDetector: PhraseDetector, monitoredAwait: MonitoredAwait) {
 

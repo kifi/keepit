@@ -43,7 +43,6 @@ object NotificationCategory {
     val fromFriends = Set(INVITATION, MESSAGE, FRIEND_REQUEST, FRIEND_ACCEPTED)
     val aboutFriends = Set(FRIEND_JOINED)
 
-
     // Formatting Categories used in the extension
     val triggered = Set(FRIEND_ACCEPTED, FRIEND_JOINED, FRIEND_REQUEST, WHO_KEPT_MY_KEEP)
     val global = Set(ANNOUNCEMENT)
@@ -74,6 +73,6 @@ object NotificationCategory {
   implicit def fromElectronicMailCategory(category: ElectronicMailCategory): NotificationCategory = NotificationCategory(category.category)
   implicit val format: Format[NotificationCategory] = Format(
     __.read[String].map(s => NotificationCategory(s)),
-    new Writes[NotificationCategory]{ def writes(o: NotificationCategory) = JsString(o.category) }
+    new Writes[NotificationCategory] { def writes(o: NotificationCategory) = JsString(o.category) }
   )
 }

@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching
-import com.keepit.common.concurrent.{FutureHelpers, ExecutionContext}
+import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -10,19 +10,19 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.scraper.ScrapeSchedulerPlugin
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 
-import com.google.inject.{Inject, Singleton}
-import com.keepit.normalizer.{NormalizedURIInterner, NormalizationCandidate}
+import com.google.inject.{ Inject, Singleton }
+import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationCandidate }
 import java.util.UUID
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.search.ArticleSearchResult
 import play.api.libs.json.Json
 import scala.concurrent.Future
-import scala.util.{Try, Success, Failure, Random}
+import scala.util.{ Try, Success, Failure, Random }
 
 case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
 
@@ -64,7 +64,7 @@ class KeepInterner @Inject() (
     log.info(s"[persistRawKeeps] persisting batch of ${rawKeeps.size} keeps")
     val newImportId = importId.getOrElse(UUID.randomUUID.toString)
 
-    val deduped = deDuplicateRawKeep(rawKeeps) map(_.copy(importId = Some(newImportId)))
+    val deduped = deDuplicateRawKeep(rawKeeps) map (_.copy(importId = Some(newImportId)))
 
     if (deduped.nonEmpty) {
       val userId = deduped.head.userId
@@ -83,7 +83,7 @@ class KeepInterner @Inject() (
       }
 
       deduped.grouped(500).toList.map { rawKeepGroup =>
-      // insertAll fails if any of the inserts failed
+        // insertAll fails if any of the inserts failed
         log.info(s"[persistRawKeeps] Persisting ${rawKeepGroup.length} raw keeps")
         val bulkAttempt = db.readWrite(attempts = 2) { implicit session =>
           rawKeepRepo.insertAll(rawKeepGroup)
@@ -107,7 +107,7 @@ class KeepInterner @Inject() (
     }
   }
 
-  def keepAttribution(userId:Id[User], newKeeps: Seq[Keep]): Future[Unit] = {
+  def keepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit] = {
     SafeFuture {
       val builder = collection.mutable.ArrayBuilder.make[Keep]
       newKeeps.foreach { keep =>
@@ -128,11 +128,12 @@ class KeepInterner @Inject() (
     implicit val dca = TransactionalCaching.Implicits.directCacheAccess
     kifiHitCache.get(KifiHitKey(userId, keep.uriId)) map { hit =>
       val res = db.readWrite { implicit rw =>
-        keepDiscoveryRepo.getDiscoveriesByUUID(hit.uuid) collect { case c if rekeepRepo.getReKeep(c.keeperId, c.uriId, userId).isEmpty =>
-          val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
-          val saved = rekeepRepo.save(rekeep)
-          log.info(s"[searchAttribution($userId,${keep.uriId})] rekeep=$saved; click=$c")
-          saved
+        keepDiscoveryRepo.getDiscoveriesByUUID(hit.uuid) collect {
+          case c if rekeepRepo.getReKeep(c.keeperId, c.uriId, userId).isEmpty =>
+            val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
+            val saved = rekeepRepo.save(rekeep)
+            log.info(s"[searchAttribution($userId,${keep.uriId})] rekeep=$saved; click=$c")
+            saved
         }
       }
       res
@@ -196,7 +197,7 @@ class KeepInterner @Inject() (
   }
 
   private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource,
-                                        mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None) = {
+    mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None) = {
     val (persisted, failed) = db.readWriteBatch(bms, attempts = 2) { (session, bm) =>
       internUriAndBookmark(bm, userId, source, mutatePrivacy, installationId)(session)
     } map {
@@ -207,7 +208,7 @@ class KeepInterner @Inject() (
 
     if (failed.nonEmpty) {
       airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks: look app.log for urls"), userId = Some(userId)))
-      failed.foreach{ f => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${f._1.url}") }
+      failed.foreach { f => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${f._1.url}") }
     }
     val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList
     (persisted.values.map(_.get).toSeq, failedRaws)
@@ -218,7 +219,7 @@ class KeepInterner @Inject() (
     if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
       import NormalizedURIStates._
       val uri = try {
-        normalizedURIInterner.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark):_*)
+        normalizedURIInterner.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark): _*)
       } catch {
         case t: Throwable => throw new Exception(s"error persisting raw bookmark $rawBookmark for user $userId, from $source", t)
       }
@@ -247,14 +248,14 @@ class KeepInterner @Inject() (
   }
 
   private def internKeep(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,
-      installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, title: Option[String], url: String)(implicit session: RWSession) = {
+    installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, title: Option[String], url: String)(implicit session: RWSession) = {
     val (isNewKeep, wasInactiveKeep, internedKeep) = keepRepo.getPrimaryByUriAndUser(uri.id.get, userId) match {
       case Some(bookmark) =>
         val wasInactiveKeep = !bookmark.isActive
         val keepWithPrivate = if (mutatePrivacy) bookmark.copy(isPrivate = isPrivate) else bookmark
         val keep = if (!bookmark.isActive) { keepWithPrivate.withUrl(url).withActive(isActive = true).copy(createdAt = clock.now) } else keepWithPrivate
         val keepWithTitle = keep.withTitle(title orElse bookmark.title orElse uri.title)
-        val persistedKeep = if(keepWithTitle != bookmark) keepRepo.save(keepWithTitle) else bookmark
+        val persistedKeep = if (keepWithTitle != bookmark) keepRepo.save(keepWithTitle) else bookmark
         (false, wasInactiveKeep, persistedKeep)
       case None =>
         val urlObj = urlRepo.get(url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))

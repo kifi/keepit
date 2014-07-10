@@ -1,7 +1,7 @@
 package com.keepit.common.cache
 
 import scala.concurrent.duration._
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.social.BasicUserUserIdCache

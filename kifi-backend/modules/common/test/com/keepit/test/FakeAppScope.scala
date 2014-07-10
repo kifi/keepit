@@ -18,6 +18,6 @@ class FakeAppScope extends Scope with Logging {
 
   def onStop(app: Application): Unit = println(s"[$identifier] scope stopping...")
 
-  def scope[T](key: Key[T], unscoped: Provider[T]): Provider[T] = 
+  def scope[T](key: Key[T], unscoped: Provider[T]): Provider[T] =
     throw new Exception("I'm a fake app scope, don't assign things to me please!")
 }

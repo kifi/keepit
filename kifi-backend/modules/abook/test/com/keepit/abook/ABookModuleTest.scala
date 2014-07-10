@@ -1,6 +1,6 @@
 package com.keepit.abook
 
-import com.keepit.test.{DeprecatedTestApplication, DeprecatedTestRemoteGlobal}
+import com.keepit.test.{ DeprecatedTestApplication, DeprecatedTestRemoteGlobal }
 import java.io.File
 import org.specs2.mutable.Specification
 import com.keepit.common.logging.Logging
@@ -8,7 +8,7 @@ import com.keepit.inject.ApplicationInjector
 import play.api.mvc.Controller
 import com.keepit.common.controller.ServiceController
 import com.keepit.common.net.FakeClientResponse
-import com.keepit.common.akka.{AlertingActor, FortyTwoActor}
+import com.keepit.common.akka.{ AlertingActor, FortyTwoActor }
 import net.spy.memcached.MemcachedClient
 import com.keepit.common.zookeeper.ServiceCluster
 import play.api.test.Helpers.running
@@ -17,7 +17,7 @@ import scala.reflect.ManifestFactory.classType
 import scala.collection.JavaConversions._
 
 class DeprecatedABookApplication(global: DeprecatedTestRemoteGlobal)
-  extends DeprecatedTestApplication(global, useDb = false, path = new File("./modules/abook/")) {
+    extends DeprecatedTestApplication(global, useDb = false, path = new File("./modules/abook/")) {
 }
 
 class ABookModuleTest extends Specification with Logging with ApplicationInjector {

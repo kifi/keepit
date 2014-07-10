@@ -6,7 +6,7 @@ import com.keepit.test._
 import org.specs2.mutable.Specification
 import com.keepit.common.db.slick._
 import org.joda.time.DateTime
-import com.keepit.common.db.{Model, Id}
+import com.keepit.common.db.{ Model, Id }
 
 class SlickStandaloneTest extends Specification with DbTestInjector {
 
@@ -15,9 +15,8 @@ class SlickStandaloneTest extends Specification with DbTestInjector {
     "using driver abstraction" in {
 
       case class Bar(
-        id: Option[Id[Bar]] = None,
-        name: String
-      ) extends Model[Bar] {
+          id: Option[Id[Bar]] = None,
+          name: String) extends Model[Bar] {
         def withId(id: Id[Bar]): Bar = this.copy(id = Some(id))
         def withUpdateTime(now: DateTime) = this
       }
@@ -29,7 +28,7 @@ class SlickStandaloneTest extends Specification with DbTestInjector {
       }
 
       class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] {
-                import DBSession._
+        import DBSession._
         import scala.slick.driver.H2Driver.simple._
 
         override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}
@@ -45,7 +44,7 @@ class SlickStandaloneTest extends Specification with DbTestInjector {
         def table(tag: Tag) = new BarTable(tag)
 
         def getByName(name: String)(implicit session: RSession): Seq[Bar] = {
-          val q = for ( f <- rows if columnExtensionMethods(f.name).is(valueToConstColumn(name))) yield (f)
+          val q = for (f <- rows if columnExtensionMethods(f.name).is(valueToConstColumn(name))) yield (f)
           q.list
         }
       }
@@ -53,17 +52,17 @@ class SlickStandaloneTest extends Specification with DbTestInjector {
       withDb() { implicit injector =>
         val repo: BarRepoImpl = new BarRepoImpl(db.db, new SystemClock())
         2 === 2
-        db.readWrite{ implicit session =>
+        db.readWrite { implicit session =>
           val fooA = repo.save(Bar(name = "A"))
           fooA.id.get.id === 1
         }
 
-        db.readWrite{ implicit session =>
+        db.readWrite { implicit session =>
           val fooB = repo.save(Bar(name = "B"))
           fooB.id.get.id === 2
         }
 
-        db.readWrite{ implicit session =>
+        db.readWrite { implicit session =>
           repo.all().size === 2
           repo.count(session) === 2
           val a = repo.getByName("A")

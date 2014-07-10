@@ -1,8 +1,8 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.heimdal.DelightedAnswerSource
@@ -16,9 +16,9 @@ trait DelightedAnswerRepo extends Repo[DelightedAnswer] {
 
 @Singleton
 class DelightedAnswerRepoImpl @Inject() (
-  val db: DataBaseComponent,
-  val clock: Clock,
-  delightedUserRepo: DelightedUserRepoImpl) extends DbRepo[DelightedAnswer] with DelightedAnswerRepo {
+    val db: DataBaseComponent,
+    val clock: Clock,
+    delightedUserRepo: DelightedUserRepoImpl) extends DbRepo[DelightedAnswer] with DelightedAnswerRepo {
 
   import db.Driver.simple._
 

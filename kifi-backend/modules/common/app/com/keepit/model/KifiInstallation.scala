@@ -4,7 +4,7 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.common.net.UserAgent
 import org.joda.time.DateTime
-import com.keepit.common.logging.{AccessLog, Logging}
+import com.keepit.common.logging.{ AccessLog, Logging }
 import play.api.mvc.QueryStringBindable
 import play.api.mvc.JavascriptLitteral
 import com.keepit.common.cache._
@@ -157,17 +157,16 @@ object KifiAndroidVersion {
   }
 }
 
-case class KifiInstallation (
-  id: Option[Id[KifiInstallation]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  userId: Id[User],
-  externalId: ExternalId[KifiInstallation] = ExternalId(),
-  version: KifiVersion,
-  userAgent: UserAgent,
-  platform: KifiInstallationPlatform,
-  state: State[KifiInstallation] = KifiInstallationStates.ACTIVE
-) extends ModelWithExternalId[KifiInstallation] with ModelWithState[KifiInstallation] {
+case class KifiInstallation(
+    id: Option[Id[KifiInstallation]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    userId: Id[User],
+    externalId: ExternalId[KifiInstallation] = ExternalId(),
+    version: KifiVersion,
+    userAgent: UserAgent,
+    platform: KifiInstallationPlatform,
+    state: State[KifiInstallation] = KifiInstallationStates.ACTIVE) extends ModelWithExternalId[KifiInstallation] with ModelWithState[KifiInstallation] {
 
   version match {
     case KifiIPhoneVersion(_, _, _, _) => require(platform == KifiInstallationPlatform.IPhone)
@@ -192,4 +191,4 @@ case class ExtensionVersionInstallationIdKey(externalId: ExternalId[KifiInstalla
 }
 
 class ExtensionVersionInstallationIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends StringCacheImpl[ExtensionVersionInstallationIdKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends StringCacheImpl[ExtensionVersionInstallationIdKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

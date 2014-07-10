@@ -1,10 +1,9 @@
 package com.keepit.search.tracker
 
 import net.codingwell.scalaguice.ScalaModule
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import play.api.Play._
 import java.io.File
-
 
 trait TrackingModule extends ScalaModule {
 

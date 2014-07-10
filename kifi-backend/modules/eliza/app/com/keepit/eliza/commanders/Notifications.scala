@@ -3,9 +3,9 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{BasicUserLikeEntity, BasicUser}
+import com.keepit.social.{ BasicUserLikeEntity, BasicUser }
 
-import play.api.libs.json.{JsValue, Json, JsObject}
+import play.api.libs.json.{ JsValue, Json, JsObject }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
@@ -13,7 +13,7 @@ import scala.concurrent.Future
 private[commanders] case class Notifications(jsons: Seq[JsObject])
 
 class NotificationUpdater @Inject() (
-  shoebox: ShoeboxServiceClient) {
+    shoebox: ShoeboxServiceClient) {
 
   def update(rawNotification: RawNotification): Future[JsObject] =
     updateSendableNotification(rawNotification).get
@@ -24,8 +24,9 @@ class NotificationUpdater @Inject() (
   private def updateBasicUser(basicUser: BasicUser): Future[BasicUser] = {
     shoebox.getUserOpt(basicUser.externalId) map { userOpt =>
       userOpt.map(BasicUser.fromUser).getOrElse(basicUser)
-    } recover { case _ =>
-      basicUser
+    } recover {
+      case _ =>
+        basicUser
     }
   }
 
@@ -33,8 +34,8 @@ class NotificationUpdater @Inject() (
     val author: Option[BasicUserLikeEntity] = (data \ "author").asOpt[BasicUserLikeEntity]
     val participantsOpt: Option[Seq[BasicUserLikeEntity]] = (data \ "participants").asOpt[Seq[BasicUserLikeEntity]]
     participantsOpt.map { participants =>
-      val updatedAuthorFuture : Future[Option[BasicUserLikeEntity]] =
-        author.map{ bule =>
+      val updatedAuthorFuture: Future[Option[BasicUserLikeEntity]] =
+        author.map { bule =>
           bule match {
             case bu: BasicUser => updateBasicUser(bu)
             case x => Future.successful(x)
@@ -43,7 +44,7 @@ class NotificationUpdater @Inject() (
           case None => Future.successful(None)
           case Some(fut) => fut.map(Some(_))
         }
-      val updatedParticipantsFuture : Future[Seq[BasicUserLikeEntity]]= Future.sequence(participants.map{ participant =>
+      val updatedParticipantsFuture: Future[Seq[BasicUserLikeEntity]] = Future.sequence(participants.map { participant =>
         val updatedParticipant: Future[BasicUserLikeEntity] = participant match {
           case p: BasicUser => updateBasicUser(p)
           case _ => Future.successful(participant)
@@ -65,7 +66,7 @@ class NotificationUpdater @Inject() (
   }
 
   private def updateSendableNotification(rawNotification: RawNotification): Option[Future[JsObject]] = {
-    @inline def updates(o: JsObject) = if (rawNotification._2)  // unread
+    @inline def updates(o: JsObject) = if (rawNotification._2) // unread
       Json.obj(
         "unread" -> true,
         "unreadMessages" -> math.max(1, (o \ "unreadMessages").asOpt[Int].getOrElse(0)),

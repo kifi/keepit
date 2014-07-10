@@ -161,7 +161,7 @@ class SimpleGraphTest() extends Specification {
 
       val newGraphEdgeReader = newGraphReader.getNewEdgeReader()
 
-      newGraphEdgeReader.moveTo(alfred, rearWindow,EmptyEdgeReader)
+      newGraphEdgeReader.moveTo(alfred, rearWindow, EmptyEdgeReader)
       newGraphEdgeReader.moveTo(alfred, vertigo, EmptyEdgeReader)
 
       "All good" === "All good"

@@ -1,6 +1,6 @@
 package com.keepit.search.index
 
-import com.keepit.common.db.{Id,SequenceNumber}
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.net._
 import com.keepit.search.semantic.SemanticVectorBuilder
 import org.apache.lucene.analysis.TokenStream
@@ -19,7 +19,6 @@ import org.apache.lucene.util.BytesRef
 import java.io.IOException
 import java.io.Reader
 import com.keepit.common.logging.Logging
-
 
 object Indexable {
   val textFieldType: FieldType = {
@@ -48,7 +47,7 @@ object Indexable {
     ft
   }
 
-  val MAX_BINARY_FIELD_LENGTH = 32766             // DON'T CHANGE THESE CONSTS UNLESS YOU KNOW WHAT YOU ARE DOING
+  val MAX_BINARY_FIELD_LENGTH = 32766 // DON'T CHANGE THESE CONSTS UNLESS YOU KNOW WHAT YOU ARE DOING
   val MAX_BINARY_FIELD_LENGTH_MINUS1 = 32765
   val END_OF_BINARY_FIELD = 0.toByte
 
@@ -57,7 +56,7 @@ object Indexable {
     if (n == 0) fieldName else s"${fieldName}_${n}"
   }
 
-  class IteratorTokenStream[A](iterator: Iterator[A], toToken: (A=>String)) extends TokenStream {
+  class IteratorTokenStream[A](iterator: Iterator[A], toToken: (A => String)) extends TokenStream {
     val termAttr = addAttribute(classOf[CharTermAttribute])
     val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute]);
 
@@ -76,8 +75,7 @@ object Indexable {
   }
 }
 
-
-trait Indexable[T, S] extends Logging{
+trait Indexable[T, S] extends Logging {
   import Indexable._
 
   val sequenceNumber: SequenceNumber[S]
@@ -140,7 +138,7 @@ trait Indexable[T, S] extends Logging{
     }
   }
 
-  def buildIteratorField[A](fieldName: String, iterator: Iterator[A], fieldType: FieldType = textFieldTypeNoNorm)(toToken: (A=>String)) = {
+  def buildIteratorField[A](fieldName: String, iterator: Iterator[A], fieldType: FieldType = textFieldTypeNoNorm)(toToken: (A => String)) = {
     new Field(fieldName, new IteratorTokenStream(iterator, toToken), fieldType)
   }
 
@@ -159,26 +157,27 @@ trait Indexable[T, S] extends Logging{
 
     if (rounds > 1) log.warn(s"\n==\nbuilding extra long binary docValues field: num of rounds: ${rounds}")
 
-    batches.zipWithIndex.map{ case (subBytes, idx) =>
-      val currentFieldName = addNumberSuffix(fieldName, idx)
-      if (idx == rounds - 1) new BinaryDocValuesField(currentFieldName, new BytesRef(subBytes))        // nothing left
-      else new BinaryDocValuesField(currentFieldName, new BytesRef(subBytes :+ END_OF_BINARY_FIELD))   // the extra byte indicates we have more
+    batches.zipWithIndex.map {
+      case (subBytes, idx) =>
+        val currentFieldName = addNumberSuffix(fieldName, idx)
+        if (idx == rounds - 1) new BinaryDocValuesField(currentFieldName, new BytesRef(subBytes)) // nothing left
+        else new BinaryDocValuesField(currentFieldName, new BytesRef(subBytes :+ END_OF_BINARY_FIELD)) // the extra byte indicates we have more
     }
   }
 
   def buildTokenizedDomainField(fieldName: String, host: Seq[String], analyzer: Analyzer = DefaultAnalyzer.defaultAnalyzer): Field = {
-    val text = host.map{ name => "-_".foldLeft(name){ (n, c) => n.replace(c, ' ') }}.mkString(" ")
+    val text = host.map { name => "-_".foldLeft(name) { (n, c) => n.replace(c, ' ') } }.mkString(" ")
     buildTextField(fieldName, text)
   }
 
   def urlToIndexableString(url: String): Option[String] = {
-    URI.parse(url).toOption.map{ u =>
+    URI.parse(url).toOption.map { u =>
       val host = u.host match {
         case Some(Host(domain @ _*)) => domain.mkString(" ")
         case _ => ""
       }
-      val path = u.path.map{ p =>
-        URIParserUtil.pathReservedChars.foldLeft(URIParserUtil.decodePercentEncode(p)){ (s, c) => s.replace(c.toString, " ") }
+      val path = u.path.map { p =>
+        URIParserUtil.pathReservedChars.foldLeft(URIParserUtil.decodePercentEncode(p)) { (s, c) => s.replace(c.toString, " ") }
       }
       host + " " + path
     }

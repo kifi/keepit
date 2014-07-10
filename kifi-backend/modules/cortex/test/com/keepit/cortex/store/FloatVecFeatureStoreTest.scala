@@ -13,7 +13,7 @@ class FloatVecFeatureStoreTest extends Specification {
 
       val version = ModelVersion[FakeModel](1)
 
-      class TestStore extends S3BlobFloatVecFeatureStore[Id[Foo], Foo, FakeModel]{
+      class TestStore extends S3BlobFloatVecFeatureStore[Id[Foo], Foo, FakeModel] {
         val accessLog = null
         val amazonS3Client = null
         val bucketName = null

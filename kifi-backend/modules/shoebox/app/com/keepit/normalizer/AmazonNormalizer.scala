@@ -1,6 +1,6 @@
 package com.keepit.normalizer
 
-import com.keepit.common.net.{Host, URI}
+import com.keepit.common.net.{ Host, URI }
 
 object AmazonNormalizer extends StaticNormalizer {
   val product = """.*/(dp|gp/product|gp/aw/d)(/[^/]+)(/.*)""".r

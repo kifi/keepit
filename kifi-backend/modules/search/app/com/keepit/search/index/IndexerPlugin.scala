@@ -63,10 +63,9 @@ trait IndexerPlugin[S, I <: Indexer[_, S, I]] extends SchedulerPlugin {
 }
 
 abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, I]](
-  indexer: IndexManager[S, I],
-  actor: ActorInstance[A],
-  serviceDiscovery: ServiceDiscovery
-) extends IndexerPlugin[S, I] {
+    indexer: IndexManager[S, I],
+    actor: ActorInstance[A],
+    serviceDiscovery: ServiceDiscovery) extends IndexerPlugin[S, I] {
 
   import IndexerPluginMessages._
 
@@ -132,9 +131,8 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, 
 }
 
 class IndexerActor[S, I <: Indexer[_, S, I]](
-  airbrake: AirbrakeNotifier,
-  indexer: IndexManager[S, I]
-) extends FortyTwoActor(airbrake) with Logging {
+    airbrake: AirbrakeNotifier,
+    indexer: IndexManager[S, I]) extends FortyTwoActor(airbrake) with Logging {
 
   import IndexerPluginMessages._
 

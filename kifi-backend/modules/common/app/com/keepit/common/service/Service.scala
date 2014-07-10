@@ -8,7 +8,7 @@ import java.util.Locale
 import play.api.Mode
 import play.api.Mode._
 import play.api.libs.json._
-import scala.concurrent.{Future, promise}
+import scala.concurrent.{ Future, promise }
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.inject.FortyTwoConfig
 
@@ -22,12 +22,12 @@ case class ServiceVersion(value: String) {
 }
 
 sealed abstract class ServiceType(val name: String, val shortName: String, val loadFactor: Int = 1, val isCanary: Boolean = false) {
-  def selfCheck() : Future[Boolean] = promise[Boolean].success(true).future
+  def selfCheck(): Future[Boolean] = promise[Boolean].success(true).future
   def healthyStatus(instance: AmazonInstanceInfo): ServiceStatus = ServiceStatus.UP
   override def toString: String = name
 
-  val minInstances  : Int = 1
-  val warnInstances : Int = 2
+  val minInstances: Int = 1
+  val warnInstances: Int = 2
 }
 
 object ServiceType {
@@ -69,23 +69,23 @@ object ServiceType {
   }
 
   // Possible initialization cycle/deadlock when one of the case objects above is first dereferenced before the ServiceType object
-  lazy val inProduction: List[ServiceType] =  SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: SCRAPER :: CORTEX :: GRAPH :: MAVEN :: Nil
+  lazy val inProduction: List[ServiceType] = SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: SCRAPER :: CORTEX :: GRAPH :: MAVEN :: Nil
   lazy val notInProduction: List[ServiceType] = DEV_MODE :: TEST_MODE :: C_SHOEBOX :: Nil
   lazy val all: List[ServiceType] = inProduction ::: notInProduction
   lazy val fromString: Map[String, ServiceType] = all.map(serviceType => serviceType.name -> serviceType).toMap
 
   implicit def format[T]: Format[ServiceType] = Format(
     __.read[String].map(fromString),
-    new Writes[ServiceType]{ def writes(o: ServiceType) = JsString(o.name)}
+    new Writes[ServiceType] { def writes(o: ServiceType) = JsString(o.name) }
   )
 }
 
 class FortyTwoServices(
-  clock: Clock,
-  playMode: Mode,
-  compilationTimeFile: Option[URL],
-  currentVersionFile: Option[URL],
-  fortytwoConfig: FortyTwoConfig) {
+    clock: Clock,
+    playMode: Mode,
+    compilationTimeFile: Option[URL],
+    currentVersionFile: Option[URL],
+    fortytwoConfig: FortyTwoConfig) {
 
   val started = clock.now
 
@@ -106,7 +106,7 @@ class FortyTwoServices(
     case _ if currentVersionFile.isEmpty => currentDateTime
     case _ =>
       val timeStr = io.Source.fromURL(compilationTimeFile.get).mkString
-	  DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z").withLocale(Locale.ENGLISH).withZone(zones.UTC).parseDateTime(timeStr)
+      DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z").withLocale(Locale.ENGLISH).withZone(zones.UTC).parseDateTime(timeStr)
   }
 
   lazy val baseUrl: String = fortytwoConfig.applicationBaseUrl

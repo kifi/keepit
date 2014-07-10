@@ -14,7 +14,7 @@ import securesocial.core.SecureSocial
 
 import views.html
 
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.google.inject.Inject
 
 class AdminHealthController @Inject() (
@@ -31,7 +31,7 @@ class AdminHealthController @Inject() (
     val cacheStats = globalCacheStatistics.getStatistics
     val (totalHits, totalMisses, totalSets) = (cacheStats.map(_._2).sum, cacheStats.map(_._3).sum, cacheStats.map(_._4).sum)
     Ok(html.admin.serverInfo(services.currentService, services.currentVersion, services.compilationTime.toStandardTimeString,
-        services.started.toStandardTimeString, errorCount, recentErrors, cacheStats, totalHits, totalMisses, totalSets))
+      services.started.toStandardTimeString, errorCount, recentErrors, cacheStats, totalHits, totalMisses, totalSets))
   }
 
   def getErrors() = AdminHtmlAction.authenticated { implicit request =>

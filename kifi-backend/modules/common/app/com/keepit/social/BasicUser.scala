@@ -5,12 +5,12 @@ import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.model._
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-import org.apache.lucene.store.{InputStreamDataInput, OutputStreamDataOutput}
+import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
 
 import scala.concurrent.duration.Duration
 import com.keepit.serializer.NoCopyLocalSerializer
@@ -42,10 +42,10 @@ object BasicUserLikeEntity {
 }
 
 case class BasicUser(
-  externalId: ExternalId[User],
-  firstName: String,
-  lastName: String,
-  pictureName: String) extends BasicUserLikeEntity {
+    externalId: ExternalId[User],
+    firstName: String,
+    lastName: String,
+    pictureName: String) extends BasicUserLikeEntity {
 
   override def asBasicUser = Some(this)
 }
@@ -55,10 +55,10 @@ object BasicUser {
 
   // Be aware that BasicUserLikeEntity uses the `kind` field to detect if its a BasicUser or BasicNonUser
   implicit val basicUserFormat = (
-      (__ \ 'id).format[ExternalId[User]] and
-      (__ \ 'firstName).format[String] and
-      (__ \ 'lastName).format[String] and
-      (__ \ 'pictureName).format[String]
+    (__ \ 'id).format[ExternalId[User]] and
+    (__ \ 'firstName).format[String] and
+    (__ \ 'lastName).format[String] and
+    (__ \ 'pictureName).format[String]
   )(BasicUser.apply, unlift(BasicUser.unapply))
 
   def fromUser(user: User): BasicUser = {
@@ -66,14 +66,14 @@ object BasicUser {
       externalId = user.externalId,
       firstName = user.firstName,
       lastName = user.lastName,
-      pictureName = user.pictureName.map(_+ ".jpg").getOrElse("0.jpg") // need support for default image
+      pictureName = user.pictureName.map(_ + ".jpg").getOrElse("0.jpg") // need support for default image
     )
   }
 
   def toByteArray(basicUser: BasicUser): Array[Byte] = {
     val bos = new ByteArrayOutputStream()
     val oos = new OutputStreamDataOutput(bos)
-    oos.writeByte(1)      // version
+    oos.writeByte(1) // version
     oos.writeString(basicUser.externalId.toString)
     oos.writeString(basicUser.firstName)
     oos.writeString(basicUser.lastName)
@@ -87,7 +87,7 @@ object BasicUser {
     val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
 
     val version = in.readByte().toInt
-    if (version != 1 ) {
+    if (version != 1) {
       throw new Exception(s"invalid data [version=${version}]")
     }
 
@@ -107,26 +107,25 @@ case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
 }
 
 class BasicUserUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends ImmutableJsonCacheImpl[BasicUserUserIdKey, BasicUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends ImmutableJsonCacheImpl[BasicUserUserIdKey, BasicUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class BasicUserWithUserId(
   userId: Id[User],
   externalId: ExternalId[User],
   firstName: String,
   lastName: String,
-  pictureName: String
-) extends BasicUserLikeEntity
+  pictureName: String) extends BasicUserLikeEntity
 
 object BasicUserWithUserId {
   implicit val userIdFormat = Id.format[User]
   implicit val userExternalIdFormat = ExternalId.format[User]
 
   implicit val basicUserWithUserIdFormat = (
-      (__ \ 'userId).format[Id[User]] and
-      (__ \'externalId).format[ExternalId[User]] and
-      (__ \ 'firstName).format[String] and
-      (__ \ 'lastName).format[String] and
-      (__ \ 'pictureName).format[String]
+    (__ \ 'userId).format[Id[User]] and
+    (__ \ 'externalId).format[ExternalId[User]] and
+    (__ \ 'firstName).format[String] and
+    (__ \ 'lastName).format[String] and
+    (__ \ 'pictureName).format[String]
   )(BasicUserWithUserId.apply, unlift(BasicUserWithUserId.unapply))
 
   def fromBasicUserAndId(user: BasicUser, id: Id[User]): BasicUserWithUserId = {

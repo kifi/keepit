@@ -2,7 +2,7 @@ package com.keepit.common
 
 import org.apache.commons.lang3.StringUtils
 import play.api.libs.json.Json.JsValueWrapper
-import play.api.libs.json.{Json, JsObject, JsNull, JsString, JsUndefined}
+import play.api.libs.json.{ Json, JsObject, JsNull, JsString, JsUndefined }
 
 package object strings {
   val UTF8 = "UTF-8"
@@ -14,7 +14,7 @@ package object strings {
     def abbreviate(count: Int): String = StringUtils.abbreviate(str, count)
   }
 
-  private val humanFriendlyCharacters = Array('a','b','c','d','e','f','g','h','j','k','m','n','p','q','r','s','t','w','x','y','z','2','3','4','5','6','7','8','9')
+  private val humanFriendlyCharacters = Array('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'j', 'k', 'm', 'n', 'p', 'q', 'r', 's', 't', 'w', 'x', 'y', 'z', '2', '3', '4', '5', '6', '7', '8', '9')
   def humanFriendlyToken(length: Int) = {
     def nextChar: Char = {
       val rnd = scala.util.Random.nextInt(humanFriendlyCharacters.length)
@@ -26,7 +26,6 @@ package object strings {
   implicit class StringWithNoLineBreaks(str: String) {
     def trimAndRemoveLineBreaks(): String = str.replaceAll("""[\t\n\x0B\f\r]""", " ").replaceAll("""[ ]{2,}""", " ").trim()
   }
-
 
   implicit class OptionWrappedMembersJsObject(obj: Seq[(String, Option[JsValueWrapper])]) {
     def stripOptions(): JsObject = {

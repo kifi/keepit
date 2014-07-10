@@ -21,7 +21,7 @@ class SimpleEdgeSetAccessor[S, D](override val edgeSet: EdgeSet[S, D]) extends E
   }
 }
 
-trait LongArrayBasedEdgeInfoAccessor[S, D] extends EdgeSetAccessor[S, D]{
+trait LongArrayBasedEdgeInfoAccessor[S, D] extends EdgeSetAccessor[S, D] {
   val longArraySet: LongArraySet
   protected var index: Int = -1
 
@@ -44,7 +44,7 @@ trait BookmarkInfoAccessor[S, D] extends EdgeSetAccessor[S, D] {
 }
 
 abstract class LuceneBackedBookmarkInfoAccessor[S, D](override val edgeSet: EdgeSet[S, D], override val longArraySet: LongArraySet)
-  extends LongArrayBasedEdgeInfoAccessor[S, D] with BookmarkInfoAccessor[S, D] with Logging{
+    extends LongArrayBasedEdgeInfoAccessor[S, D] with BookmarkInfoAccessor[S, D] with Logging {
 
   protected def createdAtByIndex(idx: Int): Long
   protected def isPublicByIndex(idx: Int): Boolean

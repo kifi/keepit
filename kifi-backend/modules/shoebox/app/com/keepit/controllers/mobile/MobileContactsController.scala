@@ -4,10 +4,10 @@ import com.google.inject.Inject
 
 import com.keepit.commanders.TypeaheadCommander
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ShoeboxServiceController, MobileController, ActionAuthenticator}
+import com.keepit.common.controller.{ ShoeboxServiceController, MobileController, ActionAuthenticator }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{JsArray, JsString}
+import play.api.libs.json.{ JsArray, JsString }
 import com.keepit.abook.RichContact
 
 class MobileContactsController @Inject() (
@@ -26,7 +26,7 @@ class MobileContactsController @Inject() (
   def serializeContact(contact: RichContact): JsArray = {
     JsArray(
       Seq(JsString(contact.email.address)) ++
-      contact.name.map(JsString))
+        contact.name.map(JsString))
   }
 
 }

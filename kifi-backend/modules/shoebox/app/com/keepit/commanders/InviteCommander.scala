@@ -4,20 +4,20 @@ import com.google.inject.Inject
 
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.ActionAuthenticator
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
 import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.social.{LinkedInSocialGraph, BasicUserRepo}
+import com.keepit.common.social.{ LinkedInSocialGraph, BasicUserRepo }
 import com.keepit.common.store.S3ImageStore
 import com.keepit.controllers.website.routes
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.social.{SocialNetworkType, SocialNetworks}
+import com.keepit.social.{ SocialNetworkType, SocialNetworks }
 import com.keepit.common.ImmediateMap
 
 import java.net.URLEncoder
@@ -29,8 +29,8 @@ import play.api.libs.functional.syntax._
 
 import scala.concurrent.Future
 import scala.util.Try
-import com.keepit.common.queue.{RecordInvitation, CancelInvitation}
-import com.keepit.abook.{RichContact, ABookServiceClient}
+import com.keepit.common.queue.{ RecordInvitation, CancelInvitation }
+import com.keepit.abook.{ RichContact, ABookServiceClient }
 
 import akka.actor.Scheduler
 import org.joda.time.DateTime
@@ -67,12 +67,12 @@ case class Invitee(name: String, fullSocialId: FullSocialId, pictureUrl: Option[
 
 object Invitee {
   implicit val format = (
-      (__ \ 'name).format[String] and
-      (__ \ 'fullSocialId).format[FullSocialId] and
-      (__ \ 'pictureUrl).formatNullable[String] and
-      (__ \ 'canBeInvited).format[Boolean] and
-      (__ \ 'lastInvitedAt).formatNullable(DateTimeJsonFormat)
-    )(Invitee.apply, unlift(Invitee.unapply))
+    (__ \ 'name).format[String] and
+    (__ \ 'fullSocialId).format[FullSocialId] and
+    (__ \ 'pictureUrl).formatNullable[String] and
+    (__ \ 'canBeInvited).format[Boolean] and
+    (__ \ 'lastInvitedAt).formatNullable(DateTimeJsonFormat)
+  )(Invitee.apply, unlift(Invitee.unapply))
 }
 
 case class InviteInfo(userId: Id[User], friend: Either[SocialUserInfo, RichContact], invitationNumber: Int, subject: Option[String], message: Option[String], source: String)
@@ -97,42 +97,44 @@ case class FailedInvitationException(inviteStatus: InviteStatus, inviteId: Optio
   extends Exception(s"Invitation $inviteId from user $userId to $friendFullSocialId was not processed correctly: ${inviteStatus}")
 
 class InviteCommander @Inject() (
-  db: Database,
-  airbrake: AirbrakeNotifier,
-  fortytwoConfig: FortyTwoConfig,
-  secureSocialClientIds: SecureSocialClientIds,
-  userRepo: UserRepo,
-  socialUserInfoRepo: SocialUserInfoRepo,
-  userConnectionRepo: UserConnectionRepo,
-  invitationRepo: InvitationRepo,
-  actionAuthenticator: ActionAuthenticator,
-  postOffice: LocalPostOffice,
-  emailAddressRepo: UserEmailAddressRepo,
-  socialConnectionRepo: SocialConnectionRepo,
-  eliza: ElizaServiceClient,
-  basicUserRepo: BasicUserRepo,
-  linkedIn: LinkedInSocialGraph,
-  eventContextBuilder: HeimdalContextBuilderFactory,
-  heimdal: HeimdalServiceClient,
-  abook: ABookServiceClient,
-  clock: Clock,
-  s3ImageStore: S3ImageStore,
-  emailOptOutCommander: EmailOptOutCommander,
-  shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander,
-  scheduler: Scheduler) extends Logging {
+    db: Database,
+    airbrake: AirbrakeNotifier,
+    fortytwoConfig: FortyTwoConfig,
+    secureSocialClientIds: SecureSocialClientIds,
+    userRepo: UserRepo,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    userConnectionRepo: UserConnectionRepo,
+    invitationRepo: InvitationRepo,
+    actionAuthenticator: ActionAuthenticator,
+    postOffice: LocalPostOffice,
+    emailAddressRepo: UserEmailAddressRepo,
+    socialConnectionRepo: SocialConnectionRepo,
+    eliza: ElizaServiceClient,
+    basicUserRepo: BasicUserRepo,
+    linkedIn: LinkedInSocialGraph,
+    eventContextBuilder: HeimdalContextBuilderFactory,
+    heimdal: HeimdalServiceClient,
+    abook: ABookServiceClient,
+    clock: Clock,
+    s3ImageStore: S3ImageStore,
+    emailOptOutCommander: EmailOptOutCommander,
+    shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander,
+    scheduler: Scheduler) extends Logging {
 
   private lazy val baseUrl = fortytwoConfig.applicationBaseUrl
 
   def markPendingInvitesAsAccepted(userId: Id[User], invId: Option[ExternalId[Invitation]]) = {
-    val anyPendingInvites = getOrCreateInvitesForUser(userId, invId).filter { case (invite, _) =>
-      Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)
+    val anyPendingInvites = getOrCreateInvitesForUser(userId, invId).filter {
+      case (invite, _) =>
+        Set(InvitationStates.INACTIVE, InvitationStates.ACTIVE).contains(invite.state)
     }
     db.readWrite { implicit s =>
-      val actuallyInvitedUser = anyPendingInvites.collectFirst { case (invite, _) if invite.senderUserId.isDefined =>
-        val user = userRepo.get(userId)
-        if (user.state == UserStates.PENDING) {
-          userRepo.save(user.withState(UserStates.ACTIVE))
-        } else user
+      val actuallyInvitedUser = anyPendingInvites.collectFirst {
+        case (invite, _) if invite.senderUserId.isDefined =>
+          val user = userRepo.get(userId)
+          if (user.state == UserStates.PENDING) {
+            userRepo.save(user.withState(UserStates.ACTIVE))
+          } else user
       }
 
       for ((invite, originalSocialNetwork) <- anyPendingInvites) {
@@ -261,14 +263,15 @@ class InviteCommander @Inject() (
       case _ => Future.successful(InviteStatus.unsupportedNetwork)
     }
 
-    inviteStatusFuture imap { case inviteStatus =>
-      log.info(s"[processInvite] Processed: $inviteStatus")
-      if (inviteStatus.sent) { reportSentInvitation(inviteStatus.savedInvite.get, inviteInfo) }
-      inviteStatus
+    inviteStatusFuture imap {
+      case inviteStatus =>
+        log.info(s"[processInvite] Processed: $inviteStatus")
+        if (inviteStatus.sent) { reportSentInvitation(inviteStatus.savedInvite.get, inviteInfo) }
+        inviteStatus
     }
   }
 
-  private def sendEmailInvitation(inviteInfo:InviteInfo): InviteStatus = {
+  private def sendEmailInvitation(inviteInfo: InviteInfo): InviteStatus = {
     val invite = getInvitation(inviteInfo)
     val invitingUser = db.readOnlyMaster { implicit session => userRepo.get(inviteInfo.userId) }
     val c = inviteInfo.friend.right.get
@@ -279,7 +282,6 @@ class InviteCommander @Inject() (
     log.info(s"[sendEmailInvitation(${inviteInfo.userId},${c}})] sending with subject=$subject message=$message")
     val inviterImage = s3ImageStore.avatarUrlByExternalId(Some(200), invitingUser.externalId, invitingUser.pictureName.getOrElse("0"), Some("https"))
     val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(c.email))}"
-
 
     db.readWrite { implicit session =>
       val electronicMail = ElectronicMail(
@@ -401,7 +403,7 @@ class InviteCommander @Inject() (
   private def getInviteInfo(userId: Id[User], fullSocialId: FullSocialId, subject: Option[String], message: Option[String], source: String): Future[InviteInfo] = {
     val (friendFuture, invitationsSentFuture) = fullSocialId.identifier match {
       case Left(socialId) =>
-        val friendSocialUserInfo =  db.readOnlyMaster { implicit session => socialUserInfoRepo.get(socialId, fullSocialId.network) }
+        val friendSocialUserInfo = db.readOnlyMaster { implicit session => socialUserInfoRepo.get(socialId, fullSocialId.network) }
         val invitationsSentFuture = countInvitationsSent(userId, Left(friendSocialUserInfo.id.get))
         (Future.successful(Left(friendSocialUserInfo)), invitationsSentFuture)
       case Right(emailAddress) => {
@@ -505,22 +507,24 @@ class InviteCommander @Inject() (
       db.readOnlyMaster { implicit session =>
         val lastInvitedAtByEmailAddress = invitationRepo.getLastInvitedAtBySenderIdAndRecipientEmailAddresses(userId, emailConnections.flatMap(_.friendEmailAddress))
         val lastInvitedAtBySocialUserId = invitationRepo.getLastInvitedAtBySenderIdAndRecipientSocialUserIds(userId, socialConnections.flatMap(_.friendSocialId))
-        ripestFruits.map { richConnection => richConnection.connectionType match {
-          case SocialNetworks.EMAIL =>
-            val emailAddress = richConnection.friendEmailAddress.get
-            val name = richConnection.friendName getOrElse emailAddress.address
-            val fullSocialId = FullSocialId(richConnection.connectionType, Right(emailAddress))
-            val canBeInvited = isInvitationAllowed(richConnection.invitationsSent + 1)
-            Invitee(name, fullSocialId, None, canBeInvited, lastInvitedAtByEmailAddress.get(emailAddress))
-          case _ =>
-            val socialUserId = richConnection.friendSocialId.get
-            val socialUserInfo = socialUserInfoRepo.get(socialUserId)
-            val name = richConnection.friendName getOrElse socialUserInfo.fullName
-            val fullSocialId = FullSocialId(richConnection.connectionType, Left(socialUserInfo.socialId))
-            val pictureUrl = socialUserInfo.getPictureUrl(80, 80)
-            val canBeInvited = isInvitationAllowed(richConnection.invitationsSent + 1)
-            Invitee(name, fullSocialId, pictureUrl, canBeInvited, lastInvitedAtBySocialUserId.get(socialUserId))
-        }}
+        ripestFruits.map { richConnection =>
+          richConnection.connectionType match {
+            case SocialNetworks.EMAIL =>
+              val emailAddress = richConnection.friendEmailAddress.get
+              val name = richConnection.friendName getOrElse emailAddress.address
+              val fullSocialId = FullSocialId(richConnection.connectionType, Right(emailAddress))
+              val canBeInvited = isInvitationAllowed(richConnection.invitationsSent + 1)
+              Invitee(name, fullSocialId, None, canBeInvited, lastInvitedAtByEmailAddress.get(emailAddress))
+            case _ =>
+              val socialUserId = richConnection.friendSocialId.get
+              val socialUserInfo = socialUserInfoRepo.get(socialUserId)
+              val name = richConnection.friendName getOrElse socialUserInfo.fullName
+              val fullSocialId = FullSocialId(richConnection.connectionType, Left(socialUserInfo.socialId))
+              val pictureUrl = socialUserInfo.getPictureUrl(80, 80)
+              val canBeInvited = isInvitationAllowed(richConnection.invitationsSent + 1)
+              Invitee(name, fullSocialId, pictureUrl, canBeInvited, lastInvitedAtBySocialUserId.get(socialUserId))
+          }
+        }
       }
     }
   }

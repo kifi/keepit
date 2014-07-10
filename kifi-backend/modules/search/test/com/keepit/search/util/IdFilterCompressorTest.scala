@@ -5,7 +5,7 @@ import scala.util.Random
 
 class IdFilterCompressorTest extends Specification {
   val rand = new Random
-  val idSet = (0 to 100).foldLeft(Set.empty[Long]){ (s, n) => s + rand.nextInt(1000).toLong }
+  val idSet = (0 to 100).foldLeft(Set.empty[Long]) { (s, n) => s + rand.nextInt(1000).toLong }
 
   "IdFilterCompressor" should {
     "comrpess/decompress id set" in {
@@ -40,8 +40,8 @@ class IdFilterCompressorTest extends Specification {
 
     "detect corrupted data" in {
       val base64 = IdFilterCompressor.fromSetToBase64(idSet)
-      val aChar = base64.charAt(base64.length/2)
-      val corrupted = base64.replace(aChar, if(aChar == 'A') 'a' else 'A')
+      val aChar = base64.charAt(base64.length / 2)
+      val corrupted = base64.replace(aChar, if (aChar == 'A') 'a' else 'A')
       IdFilterCompressor.fromBase64ToSet(corrupted) must throwA[IdFilterCompressorException]
     }
   }

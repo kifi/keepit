@@ -4,7 +4,7 @@ import com.keepit.common.strings._
 import org.specs2.mutable.Specification
 import org.apache.zookeeper.CreateMode._
 import org.apache.zookeeper.KeeperException
-import scala.util.{Random, Try}
+import scala.util.{ Random, Try }
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.CountDownLatch
 
@@ -14,8 +14,8 @@ class ZooKeeperClientTest extends Specification {
 
   def withZKSession[T](block: ZooKeeperSession => T)(implicit node: Node, cleanup: Boolean = true): T = {
     println(s"starting test with root path ${node.path}")
-    val zkClient = new ZooKeeperClientImpl("localhost", 20000, Some( {zk1 => println(s"in callback, got $zk1")} ))
-    zkClient.session{ zk =>
+    val zkClient = new ZooKeeperClientImpl("localhost", 20000, Some({ zk1 => println(s"in callback, got $zk1") }))
+    zkClient.session { zk =>
       try {
         zk.create(node)
         block(zk)
@@ -44,7 +44,7 @@ class ZooKeeperClientTest extends Specification {
       implicit val node = Node("/test" + Random.nextLong.abs)
       withZKSession { zk =>
         val testNode = zk.createChild(node, "testNode", "foo".getBytes)
-        zk.watchNode(testNode, { (data : Option[Array[Byte]]) =>
+        zk.watchNode(testNode, { (data: Option[Array[Byte]]) =>
           data match {
             case Some(d) => println("Data updated: %s".format(new String(d)))
             case None => println("Node deleted")
@@ -77,11 +77,10 @@ class ZooKeeperClientTest extends Specification {
         def awaitLatch = { latch.map(_.await) }
         val updateCount = new AtomicInteger(0)
 
-
         @volatile var childMap = Map.empty[Node, String]
         val parent = zk.createChild(node, "parent")
         mkLatch
-        zk.watchChildrenWithData[String](parent, { (children : Seq[(Node, String)]) =>
+        zk.watchChildrenWithData[String](parent, { (children: Seq[(Node, String)]) =>
           childMap = children.toMap
           updateCount.incrementAndGet()
           println(s"""#${updateCount.get} Children: ${children.mkString(", ")}""")
@@ -144,11 +143,10 @@ class ZooKeeperClientTest extends Specification {
         def awaitLatch = { latch.map(_.await) }
         val updateCount = new AtomicInteger(0)
 
-
         @volatile var childSet = Set.empty[Node]
         val parent = zk.createChild(node, "parent")
         mkLatch
-        zk.watchChildren(parent, { (children : Seq[Node]) =>
+        zk.watchChildren(parent, { (children: Seq[Node]) =>
           childSet = children.toSet
           updateCount.incrementAndGet()
           println(s"""#${updateCount.get} Children: ${children.mkString(", ")}""")
@@ -192,12 +190,11 @@ class ZooKeeperClientTest extends Specification {
       }
     }
 
-
     "SEQUENCE EPHEMERAL (Service Instances) nodes" in {
       implicit val node = Node("/test" + Random.nextLong.abs)
       withZKSession { zk =>
         val parent = zk.createChild(node, "parent")
-        zk.watchChildrenWithData[String](parent, { (children : Seq[(Node, String)]) =>
+        zk.watchChildrenWithData[String](parent, { (children: Seq[(Node, String)]) =>
           println("Service Instances: %s".format(children.mkString(", ")))
         })
         println("new node: " + zk.createChild(parent, "child", null, EPHEMERAL_SEQUENTIAL))

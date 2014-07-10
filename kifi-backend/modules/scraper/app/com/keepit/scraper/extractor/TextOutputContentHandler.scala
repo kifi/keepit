@@ -3,7 +3,6 @@ package com.keepit.scraper.extractor
 import org.apache.tika.sax.ContentHandlerDecorator
 import org.xml.sax.ContentHandler
 
-
 class TextOutputContentHandler(handler: ContentHandler) extends ContentHandlerDecorator(handler) {
 
   private[this] val newLine = Array('\n')
@@ -18,7 +17,7 @@ class TextOutputContentHandler(handler: ContentHandler) extends ContentHandlerDe
     characters(newLine, 0, 1)
   }
 
-  private[this] val endElemProcs: Map[String, (String, String, String)=>Unit] = Map(
+  private[this] val endElemProcs: Map[String, (String, String, String) => Unit] = Map(
     "title" -> endTitle,
     "p" -> endP
   )

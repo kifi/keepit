@@ -8,15 +8,15 @@ import org.specs2.mutable._
 
 import com.keepit.common.db.Id
 import com.keepit.inject._
-import com.keepit.model.{SocialUserInfoRepo, User, UserRepo, SocialUserInfo}
-import com.keepit.test.{ShoeboxTestInjector, TestInjector, DeprecatedEmptyApplication}
+import com.keepit.model.{ SocialUserInfoRepo, User, UserRepo, SocialUserInfo }
+import com.keepit.test.{ ShoeboxTestInjector, TestInjector, DeprecatedEmptyApplication }
 
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 import com.google.inject.Injector
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.social.{SocialNetworks, SocialId, SocialUserRawInfo, SocialUserRawInfoStore}
+import com.keepit.social.{ SocialNetworks, SocialId, SocialUserRawInfo, SocialUserRawInfoStore }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.FakeMailModule
 
@@ -26,10 +26,10 @@ class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector
     "import friends" in {
       withDb(FakeHttpClientModule(), ShoeboxFakeStoreModule(), FakeMailModule()) { implicit injector =>
         val graphs = List(
-            ("facebook_graph_andrew_min.json", 7),
-            ("facebook_graph_eishay_super_min.json", 5),
-            ("facebook_graph_eishay_no_friends.json", 0),
-            ("facebook_graph_shawn.json", 82)
+          ("facebook_graph_andrew_min.json", 7),
+          ("facebook_graph_eishay_super_min.json", 5),
+          ("facebook_graph_eishay_no_friends.json", 0),
+          ("facebook_graph_shawn.json", 82)
         )
         val socialUser = inject[Database].readWrite { implicit s =>
           val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))

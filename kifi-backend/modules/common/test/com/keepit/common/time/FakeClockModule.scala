@@ -3,7 +3,7 @@ package com.keepit.common.time
 import com.google.inject.Singleton
 import com.keepit.common.logging.Logging
 import scala.collection.mutable
-import org.joda.time.{ReadablePeriod, DateTime}
+import org.joda.time.{ ReadablePeriod, DateTime }
 import net.codingwell.scalaguice.ScalaModule
 
 case class FakeClockModule() extends ScalaModule {
@@ -44,9 +44,8 @@ class FakeClock extends Clock with Logging {
     timeFunction = { () => new DateTime(oldTimeFunction(), DEFAULT_DATE_TIME_ZONE).minus(p).getMillis }
   }
 
-  def push(t : DateTime): FakeClock = { stack push t.getMillis; this }
+  def push(t: DateTime): FakeClock = { stack push t.getMillis; this }
   def setTimeFunction(timeFunction: () => Long) { this.timeFunction = timeFunction }
   override def getMillis(): Long = timeFunction()
 }
-
 

@@ -26,29 +26,30 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.SortedMap
 import java.util.Comparator
-import java.util.{Iterator=>JIterator}
+import java.util.{ Iterator => JIterator }
 
 class CachingIndexReader(val index: CachedIndex, liveDocs: FixedBitSet = null) extends AtomicReader with Logging {
 
   def split(remappers: Map[String, DocIdRemapper]): Map[String, CachingIndexReader] = {
-    val (subReaders, remainder) = remappers.foldLeft((Map.empty[String, CachingIndexReader], index)){ case ((subReaders, index), (name, remapper)) =>
-      val numDocsRemapped = remapper.numDocsRemapped
-      val numDocsRemained = index.numDocs - numDocsRemapped
+    val (subReaders, remainder) = remappers.foldLeft((Map.empty[String, CachingIndexReader], index)) {
+      case ((subReaders, index), (name, remapper)) =>
+        val numDocsRemapped = remapper.numDocsRemapped
+        val numDocsRemained = index.numDocs - numDocsRemapped
 
-      var remapped = new CachedIndex(remapper.maxDoc, numDocsRemapped)
-      var remainder = new CachedIndex(maxDoc, numDocsRemained)
-      index.foreach{ (f, t, l) =>
-        val (list1, list2) = l.split(remapper)
-        remapped += (f, t, list1)
-        remainder += (f, t, list2)
-      }
-      (subReaders + (name -> new CachingIndexReader(remapped)), remainder)
+        var remapped = new CachedIndex(remapper.maxDoc, numDocsRemapped)
+        var remainder = new CachedIndex(maxDoc, numDocsRemained)
+        index.foreach { (f, t, l) =>
+          val (list1, list2) = l.split(remapper)
+          remapped += (f, t, list1)
+          remainder += (f, t, list2)
+        }
+        (subReaders + (name -> new CachingIndexReader(remapped)), remainder)
     }
     if (remainder.isEmpty) {
       subReaders
     } else {
       val bits = new FixedBitSet(maxDoc)
-      remainder.foreach{ (_, _, list) =>  list.dlist.foreach{ case (d, _) => bits.set(d) } }
+      remainder.foreach { (_, _, list) => list.dlist.foreach { case (d, _) => bits.set(d) } }
       subReaders + ("" -> new CachingIndexReader(remainder, bits))
     }
   }
@@ -78,7 +79,7 @@ class InvertedList(val dlist: ArrayBuffer[(Int, Array[Int])]) {
 
   def docFreq = dlist.length
 
-  def totalTermFreq = dlist.foldLeft(0){ case (sum, (doc, positions)) => sum + positions.length }
+  def totalTermFreq = dlist.foldLeft(0) { case (sum, (doc, positions)) => sum + positions.length }
 
   def iterator = dlist.iterator
 
@@ -96,9 +97,10 @@ class InvertedList(val dlist: ArrayBuffer[(Int, Array[Int])]) {
   }
 
   override def toString() = {
-    dlist.map{ case (doc, plist) =>
-      "[d=%d,p=%s]".format(doc, plist.mkString("(", "," ,")"))
-    }.mkString("InvertedList(", "," ,")")
+    dlist.map {
+      case (doc, plist) =>
+        "[d=%d,p=%s]".format(doc, plist.mkString("(", ",", ")"))
+    }.mkString("InvertedList(", ",", ")")
   }
 }
 
@@ -153,19 +155,21 @@ class CachedIndex(invertedLists: SortedMap[String, SortedMap[BytesRef, InvertedL
   }
 
   def foreach(f: (String, BytesRef, InvertedList) => Unit) = {
-    invertedLists.foreach{ case (field, terms) =>
-      terms.foreach{ case (text, list) => f(field, text, list) }
+    invertedLists.foreach {
+      case (field, terms) =>
+        terms.foreach { case (text, list) => f(field, text, list) }
     }
   }
 
-  def get(term: Term): Option[InvertedList] = invertedLists.get(term.field).flatMap{ _.get(term.bytes) }
+  def get(term: Term): Option[InvertedList] = invertedLists.get(term.field).flatMap { _.get(term.bytes) }
 
   def apply(term: Term): InvertedList = get(term).getOrElse(EmptyInvertedList)
 
   lazy val fieldInfos: FieldInfos = {
-    val infos = invertedLists.keys.zipWithIndex.map{ case (name, number) =>
-      new FieldInfo(name, true, number, false, true, false,
-                    IndexOptions.DOCS_AND_FREQS_AND_POSITIONS, null, null, null)
+    val infos = invertedLists.keys.zipWithIndex.map {
+      case (name, number) =>
+        new FieldInfo(name, true, number, false, true, false,
+          IndexOptions.DOCS_AND_FREQS_AND_POSITIONS, null, null, null)
     }.toArray
     new FieldInfos(infos)
   }
@@ -192,11 +196,11 @@ class CachedTerms(termMap: SortedMap[BytesRef, InvertedList], numDocs: Int) exte
   override def size(): Long = termMap.size.toLong
 
   override def getSumTotalTermFreq(): Long = {
-    termMap.values.foldLeft(0L){ (sum, list) => sum + list.totalTermFreq.toLong }
+    termMap.values.foldLeft(0L) { (sum, list) => sum + list.totalTermFreq.toLong }
   }
 
   override def getSumDocFreq(): Long = {
-    termMap.values.foldLeft(0L){ (sum, list) => sum + list.docFreq.toLong }
+    termMap.values.foldLeft(0L) { (sum, list) => sum + list.docFreq.toLong }
   }
 
   override def getDocCount(): Int = numDocs
@@ -255,7 +259,7 @@ class CachedTermsEnum(terms: SortedMap[BytesRef, InvertedList]) extends TermsEnu
     }
   }
 
-  override def  docsAndPositions(liveDocs: Bits, reuse: DocsAndPositionsEnum, flags: Int): DocsAndPositionsEnum = {
+  override def docsAndPositions(liveDocs: Bits, reuse: DocsAndPositionsEnum, flags: Int): DocsAndPositionsEnum = {
     currentEntry match {
       case Some((_, list)) => new CachedDocsAndPositionsEnum(list)
       case None => emptyDocsAndPositionsEnum

@@ -3,7 +3,7 @@ package com.keepit.dev
 import com.keepit.abook.ProdABookServiceClientModule
 import com.keepit.heimdal.DevHeimdalServiceClientModule
 import com.keepit.inject.CommonDevModule
-import com.keepit.eliza.{ProdElizaServiceClientModule, DevElizaExternalEmailModule, ElizaModule}
+import com.keepit.eliza.{ ProdElizaServiceClientModule, DevElizaExternalEmailModule, ElizaModule }
 import com.keepit.realtime.ElizaUrbanAirshipModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.common.cache.ElizaCacheModule

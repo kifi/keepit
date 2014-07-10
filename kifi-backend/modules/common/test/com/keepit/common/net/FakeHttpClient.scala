@@ -7,8 +7,7 @@ import play.api.libs.ws._
 import play.api.libs.json._
 
 class FakeHttpClient(
-    requestToResponse: Option[PartialFunction[HttpUri, FakeClientResponse]] = None
-  ) extends HttpClient {
+    requestToResponse: Option[PartialFunction[HttpUri, FakeClientResponse]] = None) extends HttpClient {
 
   override val defaultFailureHandler = ignoreFailure
 
@@ -17,11 +16,11 @@ class FakeHttpClient(
   override def delete(url: HttpUri, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = throw new Exception("this is a GET client")
   override def post(url: HttpUri, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = throw new Exception("this is a GET client")
   override def postXml(url: HttpUri, body: NodeSeq, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = throw new Exception("this is a POST client")
-  override def postText(url: HttpUri,body: String, onFailure: => FailureHandler): com.keepit.common.net.ClientResponse = ???
-  override def postTextFuture(url: HttpUri,body: String, onFailure: => FailureHandler): scala.concurrent.Future[com.keepit.common.net.ClientResponse] = ???
+  override def postText(url: HttpUri, body: String, onFailure: => FailureHandler): com.keepit.common.net.ClientResponse = ???
+  override def postTextFuture(url: HttpUri, body: String, onFailure: => FailureHandler): scala.concurrent.Future[com.keepit.common.net.ClientResponse] = ???
 
-  def posting(payload: String): FakeHttpPostClient = new FakeHttpPostClient(requestToResponse, {body =>
-    if(payload != body.toString()) throw new Exception("expected %s doesn't match payload %s".format(payload, body))
+  def posting(payload: String): FakeHttpPostClient = new FakeHttpPostClient(requestToResponse, { body =>
+    if (payload != body.toString()) throw new Exception("expected %s doesn't match payload %s".format(payload, body))
   })
   def posting(assertion: String => Unit): FakeHttpPostClient = new FakeHttpPostClient(requestToResponse, assertion)
 
@@ -45,7 +44,7 @@ class FakeHttpClient(
 }
 
 class FakeHttpPostClient(requestToResponse: Option[PartialFunction[HttpUri, FakeClientResponse]],
-  assertion: String => Unit) extends FakeHttpClient(requestToResponse) {
+    assertion: String => Unit) extends FakeHttpClient(requestToResponse) {
   override def post(url: HttpUri, body: JsValue, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse = {
     assertion(body.toString())
     assertUrl(url)

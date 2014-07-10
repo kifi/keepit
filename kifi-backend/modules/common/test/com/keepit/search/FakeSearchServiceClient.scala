@@ -1,6 +1,6 @@
 package com.keepit.search
 
-import com.keepit.common.healthcheck.{AirbrakeNotifier, BenchmarkResults}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, BenchmarkResults }
 import com.keepit.common.db.Id
 import com.keepit.model.Collection
 import play.api.templates.Html

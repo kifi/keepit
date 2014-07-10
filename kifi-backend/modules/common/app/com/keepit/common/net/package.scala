@@ -1,6 +1,6 @@
 package com.keepit.common
 
-import play.api.http.HeaderNames.{USER_AGENT, REFERER}
+import play.api.http.HeaderNames.{ USER_AGENT, REFERER }
 import play.api.mvc.RequestHeader
 
 package object net {

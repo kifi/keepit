@@ -10,14 +10,13 @@ import play.api.Play.current
 import play.api.mvc.Controller
 import play.api.test.Helpers.running
 import scala.collection.JavaConversions._
-import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
+import com.keepit.common.akka.{ FortyTwoActor, AlertingActor }
 import net.spy.memcached.MemcachedClient
 import com.keepit.inject.ApplicationInjector
 import scala.reflect.ManifestFactory.classType
 
 class HeimdalModuleTest extends Specification with Logging with ApplicationInjector {
 
-  
   private def isHeimdalController(clazz: Class[_]): Boolean = {
     if (classOf[Controller] isAssignableFrom clazz) {
       if (classOf[ServiceController] isAssignableFrom clazz) {
@@ -25,7 +24,6 @@ class HeimdalModuleTest extends Specification with Logging with ApplicationInjec
       } else throw new IllegalStateException(s"class $clazz is a controller that does not extends a service controller")
     } else false
   }
-
 
   "Module" should {
     "instantiate controllers" in {
@@ -51,5 +49,5 @@ class HeimdalModuleTest extends Specification with Logging with ApplicationInjec
       }
     }
   }
-  
+
 }

@@ -7,7 +7,7 @@ import com.keepit.search.index.Indexer
 import com.keepit.search.IndexInfo
 import com.keepit.common.logging.Logging
 
-trait ShardedIndexer[K, S, I <: Indexer[_, S, I]] extends IndexManager[S, I] with Logging{
+trait ShardedIndexer[K, S, I <: Indexer[_, S, I]] extends IndexManager[S, I] with Logging {
   val indexShards: Map[Shard[K], I]
   protected val updateLock = new AnyRef
   @volatile protected var closing = false
@@ -15,7 +15,7 @@ trait ShardedIndexer[K, S, I <: Indexer[_, S, I]] extends IndexManager[S, I] wit
   def commitSequenceNumber: SequenceNumber[S] = SequenceNumber(indexShards.valuesIterator.map(indexer => indexer.commitSequenceNumber.value).min)
 
   def committedAt: Option[String] = {
-    indexShards.valuesIterator.reduce{ (a, b) =>
+    indexShards.valuesIterator.reduce { (a, b) =>
       if (a.commitSequenceNumber.value < b.commitSequenceNumber.value) a else b
     }.committedAt
   }
@@ -32,8 +32,8 @@ trait ShardedIndexer[K, S, I <: Indexer[_, S, I]] extends IndexManager[S, I] wit
 
   private[this] lazy val catchUpSeqNum: SequenceNumber[S] = {
     val dbSeq = getDbHighestSeqNum()
-    val safeSeq = indexShards.valuesIterator.map{indexer =>  if (indexer.numDocs == 0) dbSeq else indexer.catchUpSeqNumber}.min
-    indexShards.valuesIterator.foreach{indexer => if (indexer.catchUpSeqNumber < safeSeq) indexer.catchUpSeqNumber_=(safeSeq) }
+    val safeSeq = indexShards.valuesIterator.map { indexer => if (indexer.numDocs == 0) dbSeq else indexer.catchUpSeqNumber }.min
+    indexShards.valuesIterator.foreach { indexer => if (indexer.catchUpSeqNumber < safeSeq) indexer.catchUpSeqNumber_=(safeSeq) }
     safeSeq
   }
   def catchUpSeqNumber = catchUpSeqNum
@@ -50,7 +50,7 @@ trait ShardedIndexer[K, S, I <: Indexer[_, S, I]] extends IndexManager[S, I] wit
   def getIndexer(shard: Shard[K]): I = indexShards(shard)
 
   def indexInfos(name: String): Seq[IndexInfo] = {
-    indexShards.flatMap{ case (shard, indexer) => indexer.indexInfos(shard.indexNameSuffix) }.toSeq
+    indexShards.flatMap { case (shard, indexer) => indexer.indexInfos(shard.indexNameSuffix) }.toSeq
   }
 
   def numDocs: Int = indexShards.valuesIterator.map(_.numDocs).sum

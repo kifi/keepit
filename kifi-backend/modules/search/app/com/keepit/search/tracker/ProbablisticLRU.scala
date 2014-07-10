@@ -23,15 +23,15 @@ import com.keepit.common.akka.SafeFuture
 case class ProbablisticLRUName(name: String)
 
 trait MultiChunkBuffer {
-  def getChunk(key: Long) : IntBufferWrapper
-  def getChunkFuture(key: Long) : Future[IntBufferWrapper] = Future.successful(getChunk(key))
-  def chunkSize : Int
+  def getChunk(key: Long): IntBufferWrapper
+  def getChunkFuture(key: Long): Future[IntBufferWrapper] = Future.successful(getChunk(key))
+  def chunkSize: Int
 }
 
 trait IntBufferWrapper {
   def get(pos: Int): Int
   def put(pos: Int, value: Int): Unit
-  def sync() : Unit
+  def sync(): Unit
 }
 
 trait SimpleLocalBuffer extends MultiChunkBuffer {
@@ -40,17 +40,17 @@ trait SimpleLocalBuffer extends MultiChunkBuffer {
 
   private[this] def intBuffer = byteBuffer.asIntBuffer
 
-  def chunkSize : Int = byteBuffer.getInt(0)
+  def chunkSize: Int = byteBuffer.getInt(0)
 
-  def getChunk(key: Long) : IntBufferWrapper = new IntBufferWrapper {
+  def getChunk(key: Long): IntBufferWrapper = new IntBufferWrapper {
 
-    def get(pos: Int) : Int = intBuffer.get(pos)
+    def get(pos: Int): Int = intBuffer.get(pos)
 
-    def put(pos: Int, value: Int) : Unit = synchronized {
+    def put(pos: Int, value: Int): Unit = synchronized {
       intBuffer.put(pos, value)
     }
 
-    def sync : Unit = synchronized {
+    def sync: Unit = synchronized {
       byteBuffer match {
         case mappedByteBuffer: MappedByteBuffer => mappedByteBuffer.force()
         case _ =>
@@ -61,10 +61,9 @@ trait SimpleLocalBuffer extends MultiChunkBuffer {
 
 }
 
-
 class FileResultClickTrackerBuffer(file: File, tableSize: Int) extends SimpleLocalBuffer {
 
-  protected val byteBuffer : ByteBuffer = {
+  protected val byteBuffer: ByteBuffer = {
     val bufferSize = tableSize * 4 + 4
     val isNew = !file.exists
     val raf = new RandomAccessFile(file, "rw")
@@ -80,10 +79,9 @@ class FileResultClickTrackerBuffer(file: File, tableSize: Int) extends SimpleLoc
 
 }
 
-
 class InMemoryResultClickTrackerBuffer(tableSize: Int) extends SimpleLocalBuffer {
 
-  protected val byteBuffer : ByteBuffer = {
+  protected val byteBuffer: ByteBuffer = {
     val bufferSize = tableSize * 4 + 4
     val _byteBuffer = ByteBuffer.allocate(bufferSize)
     _byteBuffer.putInt(0, tableSize)
@@ -92,24 +90,23 @@ class InMemoryResultClickTrackerBuffer(tableSize: Int) extends SimpleLocalBuffer
 
 }
 
-
-class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticLRUStore, val filterName: ProbablisticLRUName) extends MultiChunkBuffer with Logging {
+class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore: ProbablisticLRUStore, val filterName: ProbablisticLRUName) extends MultiChunkBuffer with Logging {
 
   private[this] val consolidateChunkReq = new RequestConsolidator[Int, IntBufferWrapper](3 second)
 
-  private def loadChunk(chunkId: Int) : Array[Int] = {
+  private def loadChunk(chunkId: Int): Array[Int] = {
     val fullId = FullFilterChunkId(filterName.name, chunkId)
     val key = ProbablisticLRUChunkKey(fullId)
     cache.getOrElseOpt(key)(dataStore.get(fullId)) match {
       case Some(intArray) => intArray
       case None =>
-        val intBuffer = new Array[Int](chunkSize+1)
-        intBuffer(0)=chunkSize
+        val intBuffer = new Array[Int](chunkSize + 1)
+        intBuffer(0) = chunkSize
         intBuffer
     }
   }
 
-  private def saveChunk(chunkId: Int, chunk: Array[Int]) : ProbablisticLRUChunkKey  = {
+  private def saveChunk(chunkId: Int, chunk: Array[Int]): ProbablisticLRUChunkKey = {
     val fullId = FullFilterChunkId(filterName.name, chunkId)
     val cacheKey = ProbablisticLRUChunkKey(fullId)
     cache.set(cacheKey, chunk)
@@ -117,11 +114,11 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
     cacheKey
   }
 
-  private def numChunks : Int = 4000
+  private def numChunks: Int = 4000
 
-  def chunkSize : Int = 4000
+  def chunkSize: Int = 4000
 
-  def warmCache() : Unit = (0 to numChunks).foreach{ chunkId =>
+  def warmCache(): Unit = (0 to numChunks).foreach { chunkId =>
     val chunk = loadChunk(chunkId)
     val cacheKey = saveChunk(chunkId, chunk).toString
     log.info(s"Warmed cache for $cacheKey.")
@@ -136,9 +133,9 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
 
       private[this] val dirtyEntries: AtomicReference[Set[Int]] = new AtomicReference(Set())
 
-      def get(pos: Int) : Int = thisChunk(pos)
+      def get(pos: Int): Int = thisChunk(pos)
 
-      def sync : Unit = SafeFuture {
+      def sync: Unit = SafeFuture {
         val entries = dirtyEntries.getAndSet(Set())
         if (entries.nonEmpty) {
           synchronized {
@@ -161,22 +158,17 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
 
   }
 
-  override def getChunkFuture(key: Long) : Future[IntBufferWrapper] = {
-    val chunkId = ((Math.abs(key) % chunkSize*numChunks) / chunkSize).toInt
-    consolidateChunkReq(chunkId){ cid =>
-      SafeFuture{ wrap(cid, loadChunk(cid)) }
+  override def getChunkFuture(key: Long): Future[IntBufferWrapper] = {
+    val chunkId = ((Math.abs(key) % chunkSize * numChunks) / chunkSize).toInt
+    consolidateChunkReq(chunkId) { cid =>
+      SafeFuture { wrap(cid, loadChunk(cid)) }
     }
   }
 }
 
+class S3BackedResultClickTrackerBuffer @Inject() (cache: ProbablisticLRUChunkCache, dataStore: ProbablisticLRUStore) extends S3BackedBuffer(cache, dataStore, ProbablisticLRUName("ResultClickTracker"))
 
-
-class S3BackedResultClickTrackerBuffer @Inject() (cache: ProbablisticLRUChunkCache, dataStore : ProbablisticLRUStore) extends S3BackedBuffer(cache, dataStore, ProbablisticLRUName("ResultClickTracker"))
-
-
-
-
-class ProbablisticLRU(buffer: MultiChunkBuffer, val numHashFuncs : Int, syncEvery : Int) {
+class ProbablisticLRU(buffer: MultiChunkBuffer, val numHashFuncs: Int, syncEvery: Int) {
 
   class Probe(key: Long, positions: Array[Int], values: Array[Int]) {
     def count(value: Long) = {
@@ -194,7 +186,6 @@ class ProbablisticLRU(buffer: MultiChunkBuffer, val numHashFuncs : Int, syncEver
     // 32-bit integer, excluding zero. zero is special
     (((value * position.toLong) ^ value) % 0xFFFFFFFFL + 1L).toInt
   }
-
 
   private[this] val rnd = new Random
 
@@ -215,7 +206,7 @@ class ProbablisticLRU(buffer: MultiChunkBuffer, val numHashFuncs : Int, syncEver
   }
 
   def getFuture(key: Long): Future[Probe] = {
-    buffer.getChunkFuture(key).map{ bufferChunk =>
+    buffer.getChunkFuture(key).map { bufferChunk =>
       val (p, h) = getValueHashes(key, bufferChunk)
       new Probe(key, p, h)
     }
@@ -223,9 +214,9 @@ class ProbablisticLRU(buffer: MultiChunkBuffer, val numHashFuncs : Int, syncEver
 
   def get(key: Long, values: Seq[Long]): Map[Long, Int] = {
     val probe = get(key)
-    values.foldLeft(Map.empty[Long, Int]){ (m, value) =>
+    values.foldLeft(Map.empty[Long, Int]) { (m, value) =>
       val c = probe.count(value)
-      if (c > 0)  m + (value -> c) else m
+      if (c > 0) m + (value -> c) else m
     }
   }
 
@@ -280,7 +271,7 @@ class ProbablisticLRU(buffer: MultiChunkBuffer, val numHashFuncs : Int, syncEver
   }
 
   protected def getValueHashesFuture(key: Long): Future[(Array[Int], Array[Int])] = {
-    buffer.getChunkFuture(key).map{ bufferChunk => getValueHashes(key, bufferChunk) }
+    buffer.getChunkFuture(key).map { bufferChunk => getValueHashes(key, bufferChunk) }
   }
 
   protected def getValueHashes(key: Long, bufferChunk: IntBufferWrapper): (Array[Int], Array[Int]) = {
@@ -304,6 +295,5 @@ class ProbablisticLRU(buffer: MultiChunkBuffer, val numHashFuncs : Int, syncEver
   @inline private[this] def init(k: Long) = k & 0x7FFFFFFFFFFFFFFFL
   @inline private[this] def next(v: Long) = (v * 0x5DEECE66DL + 0x123456789L) & 0x7FFFFFFFFFFFFFFFL // linear congruential generator
 }
-
 
 class ProbablisticLRUException(msg: String) extends Exception(msg)

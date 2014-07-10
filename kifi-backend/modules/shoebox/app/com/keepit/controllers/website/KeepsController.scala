@@ -7,7 +7,7 @@ import com.keepit.heimdal._
 import com.keepit.commanders._
 import com.keepit.commanders.KeepInfosWithCollection._
 import com.keepit.commanders.KeepInfo._
-import com.keepit.common.controller.{AuthenticatedRequest, ShoeboxServiceController, ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ AuthenticatedRequest, ShoeboxServiceController, ActionAuthenticator, WebsiteController }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
@@ -26,33 +26,31 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.normalizer.NormalizedURIInterner
 
 class KeepsController @Inject() (
-    db: Database,
-    userRepo: UserRepo,
-    keepRepo: KeepRepo,
-    collectionRepo: CollectionRepo,
-    uriRepo: NormalizedURIRepo,
-    pageInfoRepo: PageInfoRepo,
-    actionAuthenticator: ActionAuthenticator,
-    uriSummaryCommander: URISummaryCommander,
-    shoebox: ShoeboxServiceClient,
-    collectionCommander: CollectionCommander,
-    bookmarksCommander: KeepsCommander,
-    userValueRepo: UserValueRepo,
-    clock: Clock,
-    normalizedURIInterner: NormalizedURIInterner,
-    heimdalContextBuilder: HeimdalContextBuilderFactory
-  )
-  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+  db: Database,
+  userRepo: UserRepo,
+  keepRepo: KeepRepo,
+  collectionRepo: CollectionRepo,
+  uriRepo: NormalizedURIRepo,
+  pageInfoRepo: PageInfoRepo,
+  actionAuthenticator: ActionAuthenticator,
+  uriSummaryCommander: URISummaryCommander,
+  shoebox: ShoeboxServiceClient,
+  collectionCommander: CollectionCommander,
+  bookmarksCommander: KeepsCommander,
+  userValueRepo: UserValueRepo,
+  clock: Clock,
+  normalizedURIInterner: NormalizedURIInterner,
+  heimdalContextBuilder: HeimdalContextBuilderFactory)
+    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def updateCollectionOrdering() = JsonAction.authenticatedParseJson { request =>
     implicit val externalIdFormat = ExternalId.format[Collection]
     val orderedIds = request.body.as[Seq[ExternalId[Collection]]]
     val newCollectionIds = db.readWrite { implicit s => collectionCommander.setCollectionOrdering(request.userId, orderedIds) }
     Ok(Json.obj(
-      "collectionIds" -> newCollectionIds.map{ id => Json.toJson(id) }
+      "collectionIds" -> newCollectionIds.map { id => Json.toJson(id) }
     ))
   }
-
 
   def updateCollectionIndexOrdering() = JsonAction.authenticatedParseJson { request =>
     val (id, currInd) = {
@@ -67,7 +65,7 @@ class KeepsController @Inject() (
     }
 
     Ok(Json.obj(
-      "newCollection" -> newCollectionIds.map{ id => Json.toJson(id) }
+      "newCollection" -> newCollectionIds.map { id => Json.toJson(id) }
     ))
   }
 
@@ -86,12 +84,14 @@ class KeepsController @Inject() (
     }.orElse {
       urlsOpt.map { urls =>
         db.readOnlyMasterAsync { implicit session =>
-          urls.map( url => url -> normalizedURIInterner.getByUri(url) )
-        } map { case uris =>
-          val results = uris.map { case (uri, ssOpt) =>
-            uri -> (ssOpt.flatMap{uriSummaryCommander.getScreenshotURL(_)}.map(JsString).getOrElse(JsNull): JsValue)
-          }
-          Ok(Json.obj("urls" -> JsObject(results)))
+          urls.map(url => url -> normalizedURIInterner.getByUri(url))
+        } map {
+          case uris =>
+            val results = uris.map {
+              case (uri, ssOpt) =>
+                uri -> (ssOpt.flatMap { uriSummaryCommander.getScreenshotURL(_) }.map(JsString).getOrElse(JsNull): JsValue)
+            }
+            Ok(Json.obj("urls" -> JsObject(results)))
         }
       }
     }.getOrElse(Future.successful(BadRequest(JsString("0"))))
@@ -120,7 +120,7 @@ class KeepsController @Inject() (
     urlOpt match {
       case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_argument")))
       case Some(url) => {
-        val (uriOpt, pageInfoOpt) = db.readOnlyMaster{ implicit ro =>
+        val (uriOpt, pageInfoOpt) = db.readOnlyMaster { implicit ro =>
           val uriOpt = normalizedURIInterner.getByUri(url)
           val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
           (uriOpt, pageInfoOpt)
@@ -146,17 +146,18 @@ class KeepsController @Inject() (
             s -> normalizedURIInterner.getByUri(s)
           }
         }
-        val tuplesF = tuples map { case (url, uriOpt) =>
-          val (uriOpt, pageInfoOpt) = db.readOnlyMaster{ implicit ro =>
-            val uriOpt = normalizedURIInterner.getByUri(url)
-            val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
-            (uriOpt, pageInfoOpt)
-          }
-          uriOpt match {
-            case None => Future.successful(Json.obj("url" -> url, "code" -> "uri_not_found"))
-            case Some(uri) =>
-              toJsObject(url, uri, pageInfoOpt) // todo: batch
-          }
+        val tuplesF = tuples map {
+          case (url, uriOpt) =>
+            val (uriOpt, pageInfoOpt) = db.readOnlyMaster { implicit ro =>
+              val uriOpt = normalizedURIInterner.getByUri(url)
+              val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
+              (uriOpt, pageInfoOpt)
+            }
+            uriOpt match {
+              case None => Future.successful(Json.obj("url" -> url, "code" -> "uri_not_found"))
+              case Some(uri) =>
+                toJsObject(url, uri, pageInfoOpt) // todo: batch
+            }
         }
         Future.sequence(tuplesF) map { res =>
           Ok(Json.toJson(res))
@@ -166,7 +167,7 @@ class KeepsController @Inject() (
   }
 
   def exportKeeps() = AnyAction.authenticated { request =>
-    val exports : Seq[KeepExport] = db.readOnlyMaster { implicit ro =>
+    val exports: Seq[KeepExport] = db.readOnlyMaster { implicit ro =>
       keepRepo.getKeepExports(request.userId)
     }
 
@@ -193,8 +194,8 @@ class KeepsController @Inject() (
       }
     } catch {
       case e: Throwable =>
-      log.error(s"error keeping ${request.body}", e)
-      throw e
+        log.error(s"error keeping ${request.body}", e)
+        throw e
     }
   }
 

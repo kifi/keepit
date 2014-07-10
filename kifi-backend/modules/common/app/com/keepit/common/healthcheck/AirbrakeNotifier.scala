@@ -2,7 +2,7 @@ package com.keepit.common.healthcheck
 
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{AlertingActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ AlertingActor, UnsupportedActorMessage }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net._
 import com.keepit.model.User
@@ -18,11 +18,11 @@ case class AirbrakeErrorNotice(error: AirbrakeError, selfError: Boolean = false)
 object AirbrakeDeploymentNotice
 
 private[healthcheck] class AirbrakeNotifierActor @Inject() (
-    airbrakeSender: AirbrakeSender,
-    healthcheck: HealthcheckPlugin,
-    formatter: AirbrakeFormatter,
-    pagerDutySender: PagerDutySender)
-  extends AlertingActor with Logging {
+  airbrakeSender: AirbrakeSender,
+  healthcheck: HealthcheckPlugin,
+  formatter: AirbrakeFormatter,
+  pagerDutySender: PagerDutySender)
+    extends AlertingActor with Logging {
 
   def alert(reason: Throwable, message: Option[Any]) = self ! AirbrakeErrorNotice(error(reason, message), true)
 
@@ -109,17 +109,17 @@ class AirbrakeSender @Inject() (
 class PagerDutySender @Inject() (httpClient: HttpClient, serviceDiscovery: ServiceDiscovery) {
 
   def openIncident(description: String, exception: Throwable, signature: Option[String] = None, moreInfo: Option[String] = None): Unit = {
-    val incidentKey : String = signature.getOrElse(description)
+    val incidentKey: String = signature.getOrElse(description)
     val service = serviceDiscovery.thisService.name
-    val moreInfoMessage : String = moreInfo.getOrElse("See Airbrake/Healthcheck for more.")
+    val moreInfoMessage: String = moreInfo.getOrElse("See Airbrake/Healthcheck for more.")
     val payload = Json.obj(
-      "service_key"  -> "7785f2cc14ec44e49ae3bb8186400cc7",
-      "event_type"   -> "trigger",
-      "description"  -> s"[$service] $description".take(1000),
+      "service_key" -> "7785f2cc14ec44e49ae3bb8186400cc7",
+      "event_type" -> "trigger",
+      "description" -> s"[$service] $description".take(1000),
       "incident_key" -> incidentKey,
-      "details"      -> Json.obj(
+      "details" -> Json.obj(
         "exceptionInfo" -> exception.getMessage,
-        "moreInfo"      -> moreInfoMessage
+        "moreInfo" -> moreInfoMessage
       )
     )
     httpClient.postFuture(DirectUrl("https://events.pagerduty.com/generic/2010-04-15/create_event.json"), payload)
@@ -129,7 +129,7 @@ class PagerDutySender @Inject() (httpClient: HttpClient, serviceDiscovery: Servi
 trait AirbrakeNotifier extends Logging {
   def reportDeployment(): Unit
 
-  def verify(condition: => Boolean, message : => String): Boolean = {
+  def verify(condition: => Boolean, message: => String): Boolean = {
     val pass: Boolean = condition
     if (!pass) {
       log.error(s"[condition fail] $message")
@@ -160,7 +160,7 @@ trait AirbrakeNotifier extends Logging {
 }
 
 // apiKey is per service type (shoebox, search etc)
-class AirbrakeNotifierImpl (actor: ActorInstance[AirbrakeNotifierActor], isCanary:Boolean) extends AirbrakeNotifier with Logging {
+class AirbrakeNotifierImpl(actor: ActorInstance[AirbrakeNotifierActor], isCanary: Boolean) extends AirbrakeNotifier with Logging {
 
   def reportDeployment(): Unit = if (!isCanary) actor.ref ! AirbrakeDeploymentNotice
 
@@ -197,7 +197,7 @@ class AirbrakeNotifierImpl (actor: ActorInstance[AirbrakeNotifierActor], isCanar
   def panic(errorMessage: String, user: User): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage), userId = user.id, userName = Some(user.fullName)))
 
   def panic(error: AirbrakeError): AirbrakeError = {
-    notify(error.copy(panic=true))
+    notify(error.copy(panic = true))
   }
 
 }

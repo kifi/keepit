@@ -11,18 +11,18 @@ import org.specs2.mutable.Specification
 import play.api.Play.current
 import play.api.mvc.Controller
 import scala.collection.JavaConversions._
-import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
+import com.keepit.common.akka.{ FortyTwoActor, AlertingActor }
 import net.spy.memcached.MemcachedClient
 import com.keepit.inject.ApplicationInjector
 import scala.reflect.ManifestFactory.classType
-import com.keepit.test.{DeprecatedTestRemoteGlobal, DeprecatedTestApplication}
+import com.keepit.test.{ DeprecatedTestRemoteGlobal, DeprecatedTestApplication }
 import java.io.File
-import com.keepit.common.controller.{ScraperServiceController, ShoeboxServiceController, ServiceController}
+import com.keepit.common.controller.{ ScraperServiceController, ShoeboxServiceController, ServiceController }
 import com.keepit.common.concurrent.DevForkJoinContextMonitorModule
 import com.keepit.scraper.embedly.DevEmbedlyModule
 
 class DeprecatedScraperApplication(global: DeprecatedTestRemoteGlobal)
-  extends DeprecatedTestApplication(global, useDb = false, path = new File("./modules/scraper/")) {
+    extends DeprecatedTestApplication(global, useDb = false, path = new File("./modules/scraper/")) {
 }
 
 class ScraperModuleTest extends Specification with Logging with ApplicationInjector {
@@ -40,7 +40,7 @@ class ScraperModuleTest extends Specification with Logging with ApplicationInjec
   "Module" should {
     "instantiate controllers" in {
       running(new DeprecatedScraperApplication(global).
-          withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient)) {
+        withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient)) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
           case (_, _, ClassRoute(className)) => Class.forName(className)

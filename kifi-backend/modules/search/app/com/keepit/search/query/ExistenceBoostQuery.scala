@@ -91,7 +91,7 @@ class ExistenceBoostWeight(override val query: ExistenceBoostQuery, override val
 }
 
 class ExistenceBoostScorer(weight: ExistenceBoostWeight, textScorer: Scorer, boosterScorer: Scorer, mismatchWeight: Float)
-extends Scorer(weight) with Logging {
+    extends Scorer(weight) with Logging {
   private[this] var doc = -1
   private[this] var scoredDoc = -1
   private[this] var scr = 0.0f

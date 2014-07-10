@@ -16,7 +16,7 @@ abstract class LongToLongArrayMap(k: Array[Long], v: Array[Long]) extends Map[Lo
 
   override def +[V >: Long](kv: (Long, V)): Map[Long, V] = iterator.toMap + kv
 
-  override def -(k: Long): Map[Long, Long] = iterator.filterNot{ _._1 == k }.toMap
+  override def -(k: Long): Map[Long, Long] = iterator.filterNot { _._1 == k }.toMap
 
   override def size = k.length
 }
@@ -24,7 +24,7 @@ abstract class LongToLongArrayMap(k: Array[Long], v: Array[Long]) extends Map[Lo
 object LongToLongArrayMap {
 
   def fromSorted(k: Array[Long], v: Array[Long]): Map[Long, Long] = {
-    new  LongToLongArrayMap(k, v) {
+    new LongToLongArrayMap(k, v) {
 
       override def get(key: Long): Option[Long] = {
         val index = Arrays.binarySearch(k, key)

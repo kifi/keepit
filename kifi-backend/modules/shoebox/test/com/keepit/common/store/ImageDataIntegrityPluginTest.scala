@@ -3,21 +3,21 @@ package com.keepit.common.store
 import org.specs2.mutable.SpecificationLike
 
 import com.keepit.common.db.ExternalId
-import com.keepit.common.net.{FakeHttpClientModule, FakeClientResponse, DirectUrl}
+import com.keepit.common.net.{ FakeHttpClientModule, FakeClientResponse, DirectUrl }
 import com.keepit.inject._
-import com.keepit.model.{UserPictureSources, UserPicture, User}
-import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
+import com.keepit.model.{ UserPictureSources, UserPicture, User }
+import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import com.keepit.common.mail.TestMailModule
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
 import com.keepit.common.actor.TestActorSystemModule
-import com.keepit.common.social.{FakeSocialGraphModule, FakeShoeboxSecureSocialModule}
-import com.keepit.common.healthcheck.{FakeAirbrakeModule, FakeAirbrakeNotifier}
+import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxSecureSocialModule }
+import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeAirbrakeNotifier }
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.search.TestSearchServiceClientModule
-import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
+import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 
@@ -47,15 +47,15 @@ class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specifica
         FakeCortexServiceClientModule(),
         TestScraperServiceClientModule(),
         FakeHttpClientModule(Map(
-        DirectUrl("http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg") ->
-          FakeClientResponse("image", 200),
-        DirectUrl("http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg") ->
-          FakeClientResponse("image", 404),
-        DirectUrl("http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg") ->
-          FakeClientResponse("image", 400),
-        DirectUrl("http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg") ->
-          FakeClientResponse("image", 404)
-      )))){
+          DirectUrl("http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg") ->
+            FakeClientResponse("image", 200),
+          DirectUrl("http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg") ->
+            FakeClientResponse("image", 404),
+          DirectUrl("http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg") ->
+            FakeClientResponse("image", 400),
+          DirectUrl("http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg") ->
+            FakeClientResponse("image", 404)
+        )))) {
         db.readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Greg", lastName = "Methvin",
             externalId = ExternalId("59eba923-54cb-4257-9bb6-7c81d602bd76")))
@@ -68,17 +68,21 @@ class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specifica
         println("--------------------------")
         println(errors mkString "\n")
         println("--------------------------")
-        errors.exists { _.message.get contains
-          "http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg"
+        errors.exists {
+          _.message.get contains
+            "http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg"
         } === false
-        errors.exists { _.message.get contains
-          "http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg"
+        errors.exists {
+          _.message.get contains
+            "http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg"
         } === true
-        errors.exists { _.message.get contains
-          "http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg"
+        errors.exists {
+          _.message.get contains
+            "http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg"
         } === true
-        errors.exists { _.message.get contains
-          "http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg"
+        errors.exists {
+          _.message.get contains
+            "http://cloudfront/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/200/0.jpg"
         } === false
       }
     }

@@ -2,13 +2,13 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 
-import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
+import com.keepit.classify.{ Domain, DomainClassifier, DomainRepo }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URI
 import com.keepit.common.social._
 import com.keepit.model._
-import com.keepit.normalizer.{NormalizedURIInterner, NormalizationService}
+import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationService }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.keepit.common.logging.Logging
@@ -16,9 +16,9 @@ import com.keepit.common.logging.Logging
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 class PageCommander @Inject() (
     db: Database,
@@ -36,7 +36,7 @@ class PageCommander @Inject() (
     searchClient: SearchServiceClient) extends Logging {
 
   private def getKeepersFuture(userId: Id[User], uri: NormalizedURI): Future[(Seq[BasicUser], Int)] = {
-    searchClient.sharingUserInfo(userId, uri.id.get).map{ sharingUserInfo =>
+    searchClient.sharingUserInfo(userId, uri.id.get).map { sharingUserInfo =>
       val keepers: Seq[BasicUser] = db.readOnlyMaster { implicit session =>
         basicUserRepo.loadAll(sharingUserInfo.sharingUserIds).values.toSeq
       }
@@ -69,7 +69,7 @@ class PageCommander @Inject() (
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
       val (position, neverOnSite): (Option[JsObject], Boolean) = domain.map { dom =>
         (userToDomainRepo.get(userId, dom.id.get, UserToDomainKinds.KEEPER_POSITION).map(_.value.get.as[JsObject]),
-         userToDomainRepo.exists(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW))
+          userToDomainRepo.exists(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW))
       }.getOrElse((None, false))
       (nUriStr, nUri, getKeepersFutureOpt, domain, keep, tags, position, neverOnSite, host)
     }
@@ -78,7 +78,7 @@ class PageCommander @Inject() (
 
     val shown = nUri map { uri => historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id) } getOrElse false
 
-    val (keepers, keeps) = keepersFutureOpt.map{ future => Await.result(future, 10 seconds) } getOrElse (Seq[BasicUser](), 0)
+    val (keepers, keeps) = keepersFutureOpt.map { future => Await.result(future, 10 seconds) } getOrElse (Seq[BasicUser](), 0)
 
     KeeperInfo(
       nUriStr,
@@ -89,8 +89,8 @@ class PageCommander @Inject() (
   }
 
   def isSensitiveURI(uri: String): Boolean = {
-     val host: Option[String] = URI.parse(uri).get.host.map(_.name)
-     val domain: Option[Domain] = db.readOnlyMaster {implicit s => host.flatMap(domainRepo.get(_))}
-     domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false
+    val host: Option[String] = URI.parse(uri).get.host.map(_.name)
+    val domain: Option[Domain] = db.readOnlyMaster { implicit s => host.flatMap(domainRepo.get(_)) }
+    domain.flatMap(_.sensitive) orElse host.flatMap(domainClassifier.isSensitive(_).right.toOption) getOrElse false
   }
 }

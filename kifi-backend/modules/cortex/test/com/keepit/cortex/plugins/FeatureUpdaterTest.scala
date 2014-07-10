@@ -14,15 +14,14 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.store.VersionedStore
 import com.keepit.cortex.core.Versionable
 
-
-class FeatureUpdaterTest extends Specification with FeaturePluginTestHelper{
+class FeatureUpdaterTest extends Specification with FeaturePluginTestHelper {
   "feature updater" should {
     "keep track of commit data" in {
 
       val (fooRepresenter, fooFeatStore, commitStore, fakePuller) = setup()
 
       val updater = new FeatureUpdater(
-          fooRepresenter, fooFeatStore, commitStore, fakePuller){
+        fooRepresenter, fooFeatStore, commitStore, fakePuller) {
         def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.get.id)
         def genFeatureKey(foo: Foo) = foo.id.get
       }
@@ -38,7 +37,7 @@ class FeatureUpdaterTest extends Specification with FeaturePluginTestHelper{
 
       // as if we restart server. should continue with last seqNum
       val updater2 = new FeatureUpdater(
-          fooRepresenter, fooFeatStore, commitStore, fakePuller){
+        fooRepresenter, fooFeatStore, commitStore, fakePuller) {
         def getSeqNumber(foo: Foo) = SequenceNumber[Foo](foo.id.get.id)
         def genFeatureKey(foo: Foo) = foo.id.get
       }

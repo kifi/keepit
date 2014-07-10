@@ -2,8 +2,8 @@ package com.keepit.search.sharding
 
 import org.specs2.mutable._
 import com.keepit.common.db.Id
-import com.keepit.common.service.{ServiceType, ServiceStatus}
-import com.keepit.common.zookeeper.{RemoteService, Node, ServiceInstance}
+import com.keepit.common.service.{ ServiceType, ServiceStatus }
+import com.keepit.common.zookeeper.{ RemoteService, Node, ServiceInstance }
 
 class DispatcherTest extends Specification {
 
@@ -39,7 +39,7 @@ class DispatcherTest extends Specification {
     Shard[T](0, 12), Shard[T](1, 12), Shard[T](2, 12),
     Shard[T](3, 12), Shard[T](4, 12), Shard[T](5, 12),
     Shard[T](6, 12), Shard[T](7, 12), Shard[T](8, 12),
-    Shard[T](9, 12), Shard[T](10,12), Shard[T](11,12)
+    Shard[T](9, 12), Shard[T](10, 12), Shard[T](11, 12)
   )
   val myShardsArray = Array(
     Set(Shard[T](0, 12), Shard[T](3, 12), Shard[T](6, 12), Shard[T](9, 12)),
@@ -48,21 +48,22 @@ class DispatcherTest extends Specification {
 
   "Dispatcher" should {
     "dispatch the request to shards without duplicate" in {
-      (0 until 10).foreach{ i =>
+      (0 until 10).foreach { i =>
         var forceReloadCalled = false
         var processedShards = Set.empty[Shard[T]]
         var processedTotalCount = 0
         var instanceUsed = Set.empty[ServiceInstance]
         var callCount = 0
 
-        val disp = Dispatcher[T](allInstances, ()=>{ forceReloadCalled = true })
-        disp.dispatch(allShards){ (inst, shards) =>
+        val disp = Dispatcher[T](allInstances, () => { forceReloadCalled = true })
+        disp.dispatch(allShards) { (inst, shards) =>
           (inst, shards)
-        }.map{ case (inst, shards) =>
-          processedShards ++= shards
-          processedTotalCount += shards.size
-          instanceUsed += inst
-          callCount += 1
+        }.map {
+          case (inst, shards) =>
+            processedShards ++= shards
+            processedTotalCount += shards.size
+            instanceUsed += inst
+            callCount += 1
         }
 
         processedShards === allShards
@@ -70,7 +71,7 @@ class DispatcherTest extends Specification {
         instanceUsed.size === callCount
         forceReloadCalled === false
       }
-      1===1
+      1 === 1
     }
 
     "dispatch the request with maxShardsPerInstance" in {
@@ -79,13 +80,14 @@ class DispatcherTest extends Specification {
       var processedTotalCount = 0
       var instanceUsed = Set.empty[ServiceInstance]
 
-      val disp = Dispatcher[T](largeInstances, ()=>{ forceReloadCalled = true })
-      val plan = disp.dispatch(allShards, maxShardsPerInstance = 3){ (inst, shards) =>
+      val disp = Dispatcher[T](largeInstances, () => { forceReloadCalled = true })
+      val plan = disp.dispatch(allShards, maxShardsPerInstance = 3) { (inst, shards) =>
         (inst, shards)
-      }.map{ case (inst, shards) =>
-        processedShards ++= shards
-        processedTotalCount += shards.size
-        instanceUsed += inst
+      }.map {
+        case (inst, shards) =>
+          processedShards ++= shards
+          processedTotalCount += shards.size
+          instanceUsed += inst
       }
 
       plan.size === 4
@@ -98,17 +100,17 @@ class DispatcherTest extends Specification {
     "fail with insufficient instances" in {
       var forceReloadCalled = false
 
-      val disp = Dispatcher[T](insufficientInstances, ()=>{ forceReloadCalled = true })
+      val disp = Dispatcher[T](insufficientInstances, () => { forceReloadCalled = true })
 
-      disp.dispatch(allShards, maxShardsPerInstance = 3){ (inst, shards) => 1 } must throwA[DispatchFailedException]
+      disp.dispatch(allShards, maxShardsPerInstance = 3) { (inst, shards) => 1 } must throwA[DispatchFailedException]
       forceReloadCalled === true
     }
 
     "call the instance with a shard contains id" in {
       var forceReloadCalled = false
-      (0 until 10).foreach{ i =>
-        val disp = Dispatcher[T](allInstances, ()=>{ forceReloadCalled = true })
-        disp.call(Id[T](i)){ inst =>
+      (0 until 10).foreach { i =>
+        val disp = Dispatcher[T](allInstances, () => { forceReloadCalled = true })
+        disp.call(Id[T](i)) { inst =>
           (new ShardedServiceInstance[T](inst)).shards.exists(shard => shard.contains(Id[T](i))) === true
         }
       }
@@ -117,19 +119,19 @@ class DispatcherTest extends Specification {
 
     "call forceReload when no instance was found" in {
       var forceReloadCalled = false
-      val disp = Dispatcher[T](Vector[ServiceInstance](), ()=>{ forceReloadCalled = true })
-      try{ disp.dispatch(allShards){ (inst, shards) => 1 } } catch { case _: Throwable => }
+      val disp = Dispatcher[T](Vector[ServiceInstance](), () => { forceReloadCalled = true })
+      try { disp.dispatch(allShards) { (inst, shards) => 1 } } catch { case _: Throwable => }
 
       forceReloadCalled === true
     }
 
     "find safe sharding" in {
       var forceReloadCalled = false
-      val disp = Dispatcher[T](smallInstances ++ insufficientInstances, ()=>{ forceReloadCalled = true })
+      val disp = Dispatcher[T](smallInstances ++ insufficientInstances, () => { forceReloadCalled = true })
       var results = Set.empty[Int]
 
-      (0 until 10).foreach{ i =>
-        disp.dispatch(){ (inst, shards) => results ++= shards.map(_.numShards) }
+      (0 until 10).foreach { i =>
+        disp.dispatch() { (inst, shards) => results ++= shards.map(_.numShards) }
       }
 
       results === Set(12)

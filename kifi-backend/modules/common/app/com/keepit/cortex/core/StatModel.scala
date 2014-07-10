@@ -17,10 +17,10 @@ object StatModelName {
   val LDA = StatModelName("lda")
 }
 
-object ModelVersion{
+object ModelVersion {
   implicit def format[M <: StatModel]: Format[ModelVersion[M]] = Format(
     __.read[Int].map(ModelVersion(_)),
-    new Writes[ModelVersion[M]]{ def writes(o: ModelVersion[M]) = JsNumber(o.version) }
+    new Writes[ModelVersion[M]] { def writes(o: ModelVersion[M]) = JsNumber(o.version) }
   )
 
   implicit def queryStringBinder[M <: StatModel](implicit intBinder: QueryStringBindable[Int]) = new QueryStringBindable[ModelVersion[M]] {
@@ -38,7 +38,7 @@ object ModelVersion{
 
 trait Versionable[M <: StatModel]
 
-trait BinaryFormatter[M <: StatModel]{
+trait BinaryFormatter[M <: StatModel] {
   def toBinary(m: M): Array[Byte]
   def fromBinary(bytes: Array[Byte]): M
 }

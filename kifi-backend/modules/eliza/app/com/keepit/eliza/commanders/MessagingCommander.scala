@@ -4,17 +4,17 @@ import com.google.inject.Inject
 
 import com.keepit.abook.ABookServiceClient
 import com.keepit.eliza.model._
-import com.keepit.common.akka.{SafeFuture, TimeoutFuture}
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{BasicContact}
+import com.keepit.common.mail.{ BasicContact }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{BasicUser, NonUserKinds}
+import com.keepit.social.{ BasicUser, NonUserKinds }
 import com.keepit.common.concurrent.PimpMyFuture._
 
 import org.joda.time.DateTime
@@ -23,11 +23,11 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 
 import scala.Some
-import scala.concurrent.{Promise, Await, Future}
+import scala.concurrent.{ Promise, Await, Future }
 import scala.concurrent.duration._
 import java.util.concurrent.TimeoutException
 import com.keepit.common.db.slick.DBSession.RSession
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 
@@ -45,44 +45,45 @@ object MessagingCommander {
   val maxEmailRecipientsPerThreadErrorMessage = s"You have hit the limit on the number of emails you are able to send through Kifi."
 }
 
-
 class MessagingCommander @Inject() (
-  threadRepo: MessageThreadRepo,
-  userThreadRepo: UserThreadRepo,
-  nonUserThreadRepo: NonUserThreadRepo,
-  messageRepo: MessageRepo,
-  db: Database,
-  clock: Clock,
-  abookServiceClient: ABookServiceClient,
-  messagingAnalytics: MessagingAnalytics,
-  shoebox: ShoeboxServiceClient,
-  airbrake: AirbrakeNotifier,
-  basicMessageCommander: MessageFetchingCommander,
-  notificationCommander: NotificationCommander,
-  notificationUpdater: NotificationUpdater,
-  messageSearchHistoryRepo: MessageSearchHistoryRepo) extends Logging {
+    threadRepo: MessageThreadRepo,
+    userThreadRepo: UserThreadRepo,
+    nonUserThreadRepo: NonUserThreadRepo,
+    messageRepo: MessageRepo,
+    db: Database,
+    clock: Clock,
+    abookServiceClient: ABookServiceClient,
+    messagingAnalytics: MessagingAnalytics,
+    shoebox: ShoeboxServiceClient,
+    airbrake: AirbrakeNotifier,
+    basicMessageCommander: MessageFetchingCommander,
+    notificationCommander: NotificationCommander,
+    notificationUpdater: NotificationUpdater,
+    messageSearchHistoryRepo: MessageSearchHistoryRepo) extends Logging {
 
-  private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]) : Seq[ElizaThreadInfo]  = {
+  private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]): Seq[ElizaThreadInfo] = {
     //get all involved users
-    val allInvolvedUsers : Seq[Id[User]]= threads.flatMap{_.participants.map(_.allUsers).getOrElse(Set())}
+    val allInvolvedUsers: Seq[Id[User]] = threads.flatMap { _.participants.map(_.allUsers).getOrElse(Set()) }
     //get all basic users
-    val userId2BasicUser : Map[Id[User], BasicUser] = Await.result(shoebox.getBasicUsers(allInvolvedUsers.toSeq), 2 seconds) //Temporary
+    val userId2BasicUser: Map[Id[User], BasicUser] = Await.result(shoebox.getBasicUsers(allInvolvedUsers.toSeq), 2 seconds) //Temporary
     //get all messages
-    val messagesByThread : Map[Id[MessageThread], Seq[Message]] = threads.map{ thread =>
+    val messagesByThread: Map[Id[MessageThread], Seq[Message]] = threads.map { thread =>
       (thread.id.get, basicMessageCommander.getThreadMessages(thread))
     }.toMap
     //get user_threads
-    val userThreads : Map[Id[MessageThread], UserThread] = db.readOnlyMaster{ implicit session => threads.map{ thread =>
-      (thread.id.get, userThreadRepo.getUserThread(userId, thread.id.get))
-    }}.toMap
+    val userThreads: Map[Id[MessageThread], UserThread] = db.readOnlyMaster { implicit session =>
+      threads.map { thread =>
+        (thread.id.get, userThreadRepo.getUserThread(userId, thread.id.get))
+      }
+    }.toMap
 
-    threads.map{ thread =>
+    threads.map { thread =>
 
       val lastMessageOpt = messagesByThread(thread.id.get).collectFirst { case m if m.from.asUser.isDefined => m }
       if (lastMessageOpt.isEmpty) log.error(s"EMPTY THREAD! thread_id: ${thread.id.get} request_url: $requestUrl user: $userId")
       val lastMessage = lastMessageOpt.get
 
-      val messageTimes = messagesByThread(thread.id.get).take(10).map{ message =>
+      val messageTimes = messagesByThread(thread.id.get).take(10).map { message =>
         (message.externalId, message.createdAt)
       }.toMap
 
@@ -112,7 +113,7 @@ class MessagingCommander @Inject() (
           threadIds.map(threadRepo.get)
         }.filter(_.replyable)
         val unsortedInfos = buildThreadInfos(userId, threads, Some(url))
-        val infos = unsortedInfos sortWith { (a,b) =>
+        val infos = unsortedInfos sortWith { (a, b) =>
           a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
         }
         (nUri.url, infos)
@@ -125,7 +126,7 @@ class MessagingCommander @Inject() (
       userThreadRepo.getUserThreads(userId, uriId)
     }
     val otherStarters = threads.filter { userThread =>
-      userThread.lastSeen.exists( dt => dt.plusDays(3).isAfterNow ) // tweak
+      userThread.lastSeen.exists(dt => dt.plusDays(3).isAfterNow) // tweak
     } map { userThread =>
       db.readOnlyMaster { implicit session =>
         userThreadRepo.getThreadStarter(userThread.threadId)
@@ -143,7 +144,7 @@ class MessagingCommander @Inject() (
   }
 
   def deleteUserThreadsForMessageId(id: Id[Message]): Unit = {
-    val (threadExtId, userThreads) : (ExternalId[MessageThread],Seq[UserThread])= db.readOnlyMaster { implicit session =>
+    val (threadExtId, userThreads): (ExternalId[MessageThread], Seq[UserThread]) = db.readOnlyMaster { implicit session =>
       val message = messageRepo.get(id)
       val threadId = message.thread
       (message.threadExtId, userThreadRepo.getByThread(threadId))
@@ -151,7 +152,7 @@ class MessagingCommander @Inject() (
     if (userThreads.length != 1) {
       airbrake.notify(s"Trying to delete notification for thread $threadExtId with not exactly one participant. Not permitted.")
     } else {
-      userThreads.foreach{ userThread =>
+      userThreads.foreach { userThread =>
         db.readWrite { implicit session =>
           userThreadRepo.delete(userThread)
         }
@@ -174,16 +175,16 @@ class MessagingCommander @Inject() (
     "fd187ca1-2921-4c60-a8c0-955065d454ab", // jared (of the petker variety)
     "07170014-badc-4198-a462-6ba35d2ebb78", // david
     "228cdb45-e492-47f9-a0aa-1149ae963ce3", // aaron
-    "3e6f381a-044a-4adb-af5e-36642bdaaec8"  // tan
+    "3e6f381a-044a-4adb-af5e-36642bdaaec8" // tan
   )
-  val product = Seq (
+  val product = Seq(
     "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny
     "ae139ae4-49ad-4026-b215-1ece236f1322", // jen
-    "c1ce2ab6-8211-40f7-8187-1522086f0c2e"  // mark
+    "c1ce2ab6-8211-40f7-8187-1522086f0c2e" // mark
   )
   val family = engineers ++ product ++ Seq(
     "e890b13a-e33c-4110-bd11-ddd51ec4eceb", // two-meals
-    "f2f153db-6952-4b32-8854-8c0e452e1c64"  // lydia
+    "f2f153db-6952-4b32-8854-8c0e452e1c64" // lydia
   )
 
   private def constructUserRecipients(userExtIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
@@ -209,27 +210,27 @@ class MessagingCommander @Inject() (
   }
 
   private def updateMessageSearchHistoryWithEmailAddresses(userId: Id[User], nups: Seq[NonUserParticipant]) = {
-    SafeFuture("adding email address to message search history"){
-      db.readWrite{ implicit session =>
+    SafeFuture("adding email address to message search history") {
+      db.readWrite { implicit session =>
         val history = messageSearchHistoryRepo.getOrCreate(userId)
         if (!history.optOut) {
-          messageSearchHistoryRepo.save(history.withNewEmails(nups.filter(_.kind==NonUserKinds.email).map(_.identifier)))
+          messageSearchHistoryRepo.save(history.withNewEmails(nups.filter(_.kind == NonUserKinds.email).map(_.identifier)))
         }
       }
     }
   }
 
-  def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], urls: JsObject, titleOpt: Option[String], messageText: String, source: Option[MessageSource])(implicit context: HeimdalContext) : (MessageThread, Message) = {
+  def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], urls: JsObject, titleOpt: Option[String], messageText: String, source: Option[MessageSource])(implicit context: HeimdalContext): (MessageThread, Message) = {
     updateMessageSearchHistoryWithEmailAddresses(from, nonUserRecipients)
     val userParticipants = (from +: userRecipients).distinct
     val urlOpt = (urls \ "url").asOpt[String]
     val tStart = currentDateTime
-    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(url, scrapeWanted = true), 10 seconds)} // todo: Remove Await
+    val nUriOpt = urlOpt.map { url: String => Await.result(shoebox.internNormalizedURI(url, scrapeWanted = true), 10 seconds) } // todo: Remove Await
     statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis, ALWAYS)
     val uriIdOpt = nUriOpt.flatMap(_.id)
-    val (thread, isNew) = db.readWrite{ implicit session =>
+    val (thread, isNew) = db.readWrite { implicit session =>
       val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, urlOpt, uriIdOpt, nUriOpt.map(_.url), titleOpt.orElse(nUriOpt.flatMap(_.title)))
-      if (isNew){
+      if (isNew) {
         checkEmailParticipantRateLimits(from, thread, nonUserRecipients)
         nonUserRecipients.foreach { nonUser =>
           nonUserThreadRepo.save(NonUserThread(
@@ -255,56 +256,55 @@ class MessagingCommander @Inject() (
             started = userId == from
           ))
         }
-      }
-      else{
+      } else {
         log.info(s"Not actually a new thread. Merging.")
       }
       (thread, isNew)
     }
 
-
     //this is code for a special status message used in the client to do the email preview
     if (!nonUserRecipients.isEmpty) {
-      val message = db.readWrite { implicit session => messageRepo.save(Message(
-        from = MessageSender.System,
-        thread = thread.id.get,
-        threadExtId = thread.externalId,
-        messageText = "",
-        source = source,
-        auxData = Some(Json.arr("start_with_emails", from.id.toString,
-          userRecipients.map(u => Json.toJson(u.id)) ++ nonUserRecipients.map(Json.toJson(_))
-        )),
-        sentOnUrl = None,
-        sentOnUriId = None
-      ))}
+      val message = db.readWrite { implicit session =>
+        messageRepo.save(Message(
+          from = MessageSender.System,
+          thread = thread.id.get,
+          threadExtId = thread.externalId,
+          messageText = "",
+          source = source,
+          auxData = Some(Json.arr("start_with_emails", from.id.toString,
+            userRecipients.map(u => Json.toJson(u.id)) ++ nonUserRecipients.map(Json.toJson(_))
+          )),
+          sentOnUrl = None,
+          sentOnUriId = None
+        ))
+      }
     }
 
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt, nUriOpt, Some(isNew))
 
   }
 
-
   def sendMessageWithNonUserThread(nut: NonUserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
     log.info(s"Sending message from non-user with id ${nut.id} to thread ${nut.threadId}")
-    val thread = db.readOnlyMaster { implicit session => threadRepo.get(nut.threadId)}
+    val thread = db.readOnlyMaster { implicit session => threadRepo.get(nut.threadId) }
     sendMessage(MessageSender.NonUser(nut.participant), thread, messageText, source, urlOpt)
   }
 
   def sendMessageWithUserThread(userThread: UserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
     log.info(s"Sending message from user with id ${userThread.user} to thread ${userThread.threadId}")
-    val thread = db.readOnlyMaster { implicit session => threadRepo.get(userThread.threadId)}
+    val thread = db.readOnlyMaster { implicit session => threadRepo.get(userThread.threadId) }
     sendMessage(MessageSender.User(userThread.user), thread, messageText, source, urlOpt)
   }
 
   def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
-    val thread = db.readOnlyMaster{ implicit session =>
+    val thread = db.readOnlyMaster { implicit session =>
       threadRepo.get(threadId)
     }
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
   }
 
   def sendMessage(from: Id[User], threadId: Id[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[String])(implicit context: HeimdalContext): (MessageThread, Message) = {
-    val thread = db.readOnlyMaster{ implicit session =>
+    val thread = db.readOnlyMaster { implicit session =>
       threadRepo.get(threadId)
     }
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
@@ -313,15 +313,15 @@ class MessagingCommander @Inject() (
   private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[String], nUriOpt: Option[NormalizedURI] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
     from match {
       case MessageSender.User(id) =>
-        if (! thread.containsUser(id) || !thread.replyable) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${thread.id.get}")
+        if (!thread.containsUser(id) || !thread.replyable) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${thread.id.get}")
       case MessageSender.NonUser(nup) =>
-        if (! thread.containsNonUser(nup) || !thread.replyable) throw NotAuthorizedException(s"Non-User $nup not authorized to send message on thread ${thread.id.get}")
+        if (!thread.containsNonUser(nup) || !thread.replyable) throw NotAuthorizedException(s"Non-User $nup not authorized to send message on thread ${thread.id.get}")
       case MessageSender.System =>
         throw NotAuthorizedException("Wrong code path for system Messages.")
     }
 
     log.info(s"Sending message from $from to ${thread.participants}")
-    val message = db.readWrite{ implicit session =>
+    val message = db.readWrite { implicit session =>
       messageRepo.save(Message(
         id = None,
         from = from,
@@ -364,7 +364,7 @@ class MessagingCommander @Inject() (
     })
 
     // update user thread of the sender
-    from.asUser.map{ sender =>
+    from.asUser.map { sender =>
       setLastSeen(sender, thread.id.get, Some(message.createdAt))
       db.readWrite { implicit session => userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt) }
     }
@@ -381,7 +381,7 @@ class MessagingCommander @Inject() (
     val originalAuthor = threadActivity.filter(_.started).zipWithIndex.head._2
     val numAuthors = threadActivity.count(_.lastActive.isDefined)
 
-    val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants = threadActivity.map{ ta => id2BasicUser(ta.userId)} ++ basicNonUserParticipants)
+    val orderedMessageWithBasicUser = messageWithBasicUser.copy(participants = threadActivity.map { ta => id2BasicUser(ta.userId) } ++ basicNonUserParticipants)
 
     val usersToNotify = from match {
       case MessageSender.User(id) => thread.allParticipantsExcept(id)
@@ -435,8 +435,7 @@ class MessagingCommander @Inject() (
   def getUserThreadOptByAccessToken(token: ThreadAccessToken): Option[UserThread] =
     db.readOnlyMaster { implicit session => userThreadRepo.getByAccessToken(token) }
 
-
-  def getThreads(user: Id[User], url: Option[String]=None) : Seq[MessageThread] = {
+  def getThreads(user: Id[User], url: Option[String] = None): Seq[MessageThread] = {
     db.readOnlyMaster { implicit session =>
       val threadIds = userThreadRepo.getThreadIds(user)
       threadIds map threadRepo.get
@@ -451,7 +450,7 @@ class MessagingCommander @Inject() (
       newUserParticipants <- newUserParticipantsFuture
       newNonUserParticipants <- newNonUserParticipantsFuture
     } yield {
-      val resultInfoOpt = db.readWrite{ implicit session =>
+      val resultInfoOpt = db.readWrite { implicit session =>
 
         val oldThread = threadRepo.get(threadExtId)
 
@@ -487,17 +486,18 @@ class MessagingCommander @Inject() (
         }
       }
 
-      resultInfoOpt.exists { case (newUsers, newNonUsers, message, thread) =>
+      resultInfoOpt.exists {
+        case (newUsers, newNonUsers, message, thread) =>
 
-        SafeFuture {
-          db.readOnlyMaster { implicit session =>
-            messageRepo.refreshCache(thread.id.get)
+          SafeFuture {
+            db.readOnlyMaster { implicit session =>
+              messageRepo.refreshCache(thread.id.get)
+            }
           }
-        }
 
-        notificationCommander.notifyAddParticipants(newUsers, newNonUsers, thread, message, adderUserId)
-        messagingAnalytics.addedParticipantsToConversation(adderUserId, newUsers, newNonUsers, thread, context)
-        true
+          notificationCommander.notifyAddParticipants(newUsers, newNonUsers, thread, message, adderUserId)
+          messagingAnalytics.addedParticipantsToConversation(adderUserId, newUsers, newNonUsers, thread, context)
+          true
 
       }
 
@@ -511,7 +511,7 @@ class MessagingCommander @Inject() (
       val message = messageRepo.get(msgExtId)
       (message, threadRepo.get(message.thread))
     }
-    db.readWrite(attempts=2) { implicit session =>
+    db.readWrite(attempts = 2) { implicit session =>
       userThreadRepo.markRead(userId, thread.id.get, message)
     }
     messagingAnalytics.clearedNotification(userId, message, thread, context)
@@ -524,7 +524,7 @@ class MessagingCommander @Inject() (
       val message = messageRepo.get(msgExtId)
       (message, threadRepo.get(message.thread))
     }
-    val changed: Boolean = db.readWrite(attempts=2) { implicit session =>
+    val changed: Boolean = db.readWrite(attempts = 2) { implicit session =>
       userThreadRepo.markUnread(userId, thread.id.get)
     }
     if (changed) {
@@ -532,13 +532,13 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestampOpt: Option[DateTime] = None) : Unit = {
+  def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestampOpt: Option[DateTime] = None): Unit = {
     db.readWrite { implicit session =>
       userThreadRepo.setLastSeen(userId, threadId, timestampOpt.getOrElse(clock.now))
     }
   }
 
-  def setLastSeen(userId: Id[User], messageExtId: ExternalId[Message]) : Unit = {
+  def setLastSeen(userId: Id[User], messageExtId: ExternalId[Message]): Unit = {
     val message = db.readOnlyMaster { implicit session => messageRepo.get(messageExtId) }
     setLastSeen(userId, message.thread, Some(message.createdAt))
   }
@@ -594,9 +594,9 @@ class MessagingCommander @Inject() (
         }
       }
     } map { stateChanged =>
-    // TODO(martin) analytics for non users
+      // TODO(martin) analytics for non users
       stateChanged
-    } getOrElse(false)
+    } getOrElse (false)
   }
 
   def getChatter(userId: Id[User], urls: Seq[String]) = {
@@ -605,8 +605,9 @@ class MessagingCommander @Inject() (
       case ex: TimeoutException => Seq[(String, Option[NormalizedURI])]()
     }.map { res =>
       val urlMsgCount = db.readOnlyMaster { implicit session =>
-        res.filter(_._2.isDefined).map { case (url, nuri) =>
-          url -> userThreadRepo.getThreadIds(userId, Some(nuri.get.id.get))
+        res.filter(_._2.isDefined).map {
+          case (url, nuri) =>
+            url -> userThreadRepo.getThreadIds(userId, Some(nuri.get.id.get))
         }
       }
       Map(urlMsgCount: _*)
@@ -639,10 +640,11 @@ class MessagingCommander @Inject() (
         buildThreadInfos(userId, Seq(thread), Some(url)).headOption
       }.flatten
 
-      messageThreadFut.map { case (_, messages) =>
-        val tDiff = currentDateTime.getMillis - tStart.getMillis
-        statsd.timing(s"messaging.newMessage", tDiff, ALWAYS)
-        (message, threadInfoOpt, messages)
+      messageThreadFut.map {
+        case (_, messages) =>
+          val tDiff = currentDateTime.getMillis - tStart.getMillis
+          statsd.timing(s"messaging.newMessage", tDiff, ALWAYS)
+          (message, threadInfoOpt, messages)
       }
     }
     resFut.flatten
@@ -663,7 +665,7 @@ class MessagingCommander @Inject() (
     val distinctEmailRecipients = nonUsers.collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }.toSet
     val existingEmailParticipants = thread.participants.map(_.allNonUsers).getOrElse(Set.empty).collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }
 
-    val totalEmailParticipants =  (existingEmailParticipants ++ distinctEmailRecipients).size
+    val totalEmailParticipants = (existingEmailParticipants ++ distinctEmailRecipients).size
     val newEmailParticipants = totalEmailParticipants - existingEmailParticipants.size
 
     if (totalEmailParticipants > MessagingCommander.MAX_NON_USER_PARTICIPANTS_PER_THREAD) {

@@ -5,7 +5,7 @@ import com.keepit.common.mail._
 import com.keepit.cortex.ProdCortexServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.graph.ProdGraphServiceClientModule
-import com.keepit.heimdal.{DevHeimdalServiceClientModule, ProdHeimdalServiceClientModule}
+import com.keepit.heimdal.{ DevHeimdalServiceClientModule, ProdHeimdalServiceClientModule }
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox._
 import com.keepit.common.cache.ShoeboxCacheModule
@@ -16,8 +16,8 @@ import com.keepit.common.analytics.DevAnalyticsModule
 import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.common.integration.DevReaperModule
-import com.keepit.scraper.{ProdScraperServiceClientModule, DevScrapeSchedulerModule}
-import com.keepit.common.queue.{ProdSimpleQueueModule, DevSimpleQueueModule}
+import com.keepit.scraper.{ ProdScraperServiceClientModule, DevScrapeSchedulerModule }
+import com.keepit.common.queue.{ ProdSimpleQueueModule, DevSimpleQueueModule }
 import com.keepit.queue.DevNormalizationUpdateJobQueueModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
 import com.keepit.common.external.DevExternalServiceModule
@@ -33,7 +33,7 @@ case class ShoeboxDevModule() extends ShoeboxModule(
 
   // Shoebox Functional Modules
   analyticsModule = DevAnalyticsModule(),
-//  topicModelModule = DevTopicModelModule(),
+  //  topicModelModule = DevTopicModelModule(),
   domainTagImporterModule = DevDomainTagImporterModule(),
   scrapeSchedulerModule = DevScrapeSchedulerModule(),
   fjMonitorModule = ProdForkJoinContextMonitorModule(),

@@ -7,7 +7,7 @@ case class Restriction(context: String)
 object Restriction {
   implicit def format: Format[Restriction] = Format(
     __.read[String].map(Restriction(_)),
-    new Writes[Restriction]{ def writes(o: Restriction) = JsString(o.context) }
+    new Writes[Restriction] { def writes(o: Restriction) = JsString(o.context) }
   )
 
   def http(statusCode: Int): Restriction = Restriction(s"HTTP ${statusCode}")

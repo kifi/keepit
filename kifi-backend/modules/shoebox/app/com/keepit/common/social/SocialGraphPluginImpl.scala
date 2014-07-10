@@ -4,18 +4,18 @@ import com.keepit.model._
 import com.google.inject.Inject
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import akka.util.Timeout
-import scala.concurrent.{Promise, Future}
+import scala.concurrent.{ Promise, Future }
 import scala.concurrent.duration._
 import akka.pattern.ask
-import com.keepit.social.{SocialNetworkType, SocialGraphPlugin, SocialGraph, SocialUserRawInfoStore}
+import com.keepit.social.{ SocialNetworkType, SocialGraphPlugin, SocialGraph, SocialUserRawInfoStore }
 import com.keepit.model.SocialConnection
 import com.keepit.common.db.Id
-import com.keepit.heimdal.{ContextStringData, HeimdalServiceClient}
+import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient }
 import com.google.inject.Singleton
 import com.keepit.common.performance.timing
 import com.keepit.common.time.Clock
@@ -43,7 +43,7 @@ private[social] class SocialGraphActor @Inject() (
   userValueRepo: UserValueRepo,
   heimdal: HeimdalServiceClient,
   clock: Clock)
-  extends FortyTwoActor(airbrake) with Logging {
+    extends FortyTwoActor(airbrake) with Logging {
 
   private val networkTypeToGraph: Map[SocialNetworkType, SocialGraph] =
     graphs.map(graph => graph.networkType -> graph).toMap
@@ -60,7 +60,7 @@ private[social] class SocialGraphActor @Inject() (
       needToBeRefreshed.foreach(self ! FetchUserInfoQuietly(_))
 
     case FetchAll =>
-      val unprocessedUsers = db.readOnlyMaster {implicit s =>
+      val unprocessedUsers = db.readOnlyMaster { implicit s =>
         socialRepo.getUnprocessed()
       }
       unprocessedUsers foreach { user =>
@@ -92,31 +92,32 @@ private[social] class SocialGraphActor @Inject() (
           graph.fetchSocialUserRawInfo(socialUserInfo)
         }
       } yield {
-          markGraphImportUserValue(userId, socialUserInfo.networkType, "import_connections")
+        markGraphImportUserValue(userId, socialUserInfo.networkType, "import_connections")
 
-          val friendsSocialId = rawInfo.jsons.map { json =>
-            graph.extractEmails(json).map(email => socialUserImportEmail.importEmail(userId, email))
+        val friendsSocialId = rawInfo.jsons.map { json =>
+          graph.extractEmails(json).map(email => socialUserImportEmail.importEmail(userId, email))
 
-            val friends = graph.extractFriends(json)
-            socialUserImportFriends.importFriends(socialUserInfo, friends)
-            friends.map(_.socialId)
-          }.toList.flatten
+          val friends = graph.extractFriends(json)
+          socialUserImportFriends.importFriends(socialUserInfo, friends)
+          friends.map(_.socialId)
+        }.toList.flatten
 
-          val connections = socialUserCreateConnections.createConnections(socialUserInfo, friendsSocialId, graph.networkType)
+        val connections = socialUserCreateConnections.createConnections(socialUserInfo, friendsSocialId, graph.networkType)
 
-          val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
-          val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
-          db.readWrite { implicit c =>
-            latestUserValues.collect { case (key, value) if userValueRepo.getValueStringOpt(userId, key) != Some(value) =>
+        val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
+        val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
+        db.readWrite { implicit c =>
+          latestUserValues.collect {
+            case (key, value) if userValueRepo.getValueStringOpt(userId, key) != Some(value) =>
               userValueRepo.setValue(userId, key, value)
               heimdal.setUserProperties(userId, key -> ContextStringData(value))
-            }
-            socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
           }
-
-          socialUserTypeahead.refresh(userId)
-          connections
+          socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
         }
+
+        socialUserTypeahead.refresh(userId)
+        connections
+      }
       connectionsOpt getOrElse Seq.empty
     } catch {
       case ex: Exception =>
@@ -145,8 +146,8 @@ private[social] class SocialGraphActor @Inject() (
       case None => false
       case Some(stateValue) if stateValue.value == "false" => false
       case Some(stateValue) if stateValue.updatedAt.isBefore(clock.now.minusHours(1)) =>
-          markGraphImportUserValue(userId, networkType, "false")
-          false
+        markGraphImportUserValue(userId, networkType, "false")
+        false
       case _ => true
     }
   }
@@ -159,7 +160,7 @@ class SocialGraphPluginImpl @Inject() (
   serviceDiscovery: ServiceDiscovery,
   shoeboxServiceClient: ShoeboxServiceClient,
   val scheduling: SchedulingProperties) //only on leader
-  extends SocialGraphPlugin with Logging with SchedulerPlugin {
+    extends SocialGraphPlugin with Logging with SchedulerPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
@@ -181,7 +182,7 @@ class SocialGraphPluginImpl @Inject() (
     if (serviceDiscovery.isLeader()) {
       log.info(s"[SocialGraphPluginImpl] Need to refresh SocialUserInfoId(${socialUserInfo.id.get}). I'm leader.")
       actor.ref.ask(FetchUserInfo(socialUserInfo.id.get))(5 minutes).map(_ => ())(ExecutionContext.immediate)
-    } else if(broadcastToOthers) {
+    } else if (broadcastToOthers) {
       log.info(s"[SocialGraphPluginImpl] Need to refresh SocialUserInfoId(${socialUserInfo.id.get}). Sending to leader.")
       shoeboxServiceClient.triggerSocialGraphFetch(socialUserInfo.id.get)
     } else {

@@ -3,7 +3,7 @@ package com.keepit.common.akka
 import akka.actor.Actor
 import com.keepit.common.strings._
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 
 trait AlertingActor extends Actor {
   def alert(reason: Throwable, message: Option[Any])

@@ -3,11 +3,11 @@ package com.keepit.common.social
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
-import com.keepit.common.net.{FakeClientResponse, FakeHttpClientModule, HttpUri}
+import com.keepit.common.net.{ FakeClientResponse, FakeHttpClientModule, HttpUri }
 import com.keepit.model.SocialUserInfo
 import com.keepit.model.SocialUserInfoRepo
 import com.keepit.model.User
-import com.keepit.social.{SocialNetworks, SocialId}
+import com.keepit.social.{ SocialNetworks, SocialId }
 import com.keepit.test._
 
 import play.api.libs.json.Json
@@ -71,7 +71,7 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
         connections.length === 9
         connections exists { conn =>
           conn.fullName == "Eishay Smith" &&
-          conn.pictureUrl.get == "http://m3.licdn.com/mpr/mprx/0_pl4fenTiB2Pj0CawOvZpez9GBu6Sx3OwYK2Kez61eW-g85dIKBHi6vtjMGQtp60bjtVAbtNe8-mP"
+            conn.pictureUrl.get == "http://m3.licdn.com/mpr/mprx/0_pl4fenTiB2Pj0CawOvZpez9GBu6Sx3OwYK2Kez61eW-g85dIKBHi6vtjMGQtp60bjtVAbtNe8-mP"
         } must beTrue
       }
     }
@@ -105,7 +105,7 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
   }
 
   private val profileJson =
-"""
+    """
 {
   "emailAddress": "greg.methvin@gmail.com",
   "firstName": "Gregory",
@@ -119,7 +119,7 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxTestInjector {
 """
 
   private val connectionsJson =
-"""
+    """
 {
   "_count": 10,
   "_start": 0,

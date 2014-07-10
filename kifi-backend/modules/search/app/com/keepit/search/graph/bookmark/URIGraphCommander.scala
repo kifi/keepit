@@ -1,24 +1,24 @@
 package com.keepit.search.graph.bookmark
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
 import com.keepit.search.graph.URIList
 import com.keepit.search.sharding.Shard
-import com.keepit.search.{SharingUserInfo, MainSearcherFactory}
+import com.keepit.search.{ SharingUserInfo, MainSearcherFactory }
 
 case class UserURIList(publicList: Option[URIList], privateList: Option[URIList])
 case class RequestingUser(userId: Id[User])
 
 @Singleton
-class URIGraphCommanderFactory @Inject()(mainSearcherFactory: MainSearcherFactory) {
+class URIGraphCommanderFactory @Inject() (mainSearcherFactory: MainSearcherFactory) {
   def apply(userId: Id[User]): URIGraphCommander = {
     new URIGraphCommanderImpl(RequestingUser(userId), mainSearcherFactory)
   }
 }
 
-trait URIGraphCommander{
+trait URIGraphCommander {
   val requestingUser: RequestingUser
   def getUserUriList(userId: Id[User], publicOnly: Boolean, shard: Shard[NormalizedURI]): UserURIList
   def getUserUriLists(userIds: Set[Id[User]], publicOnly: Boolean, shard: Shard[NormalizedURI]): Map[Id[User], UserURIList]
@@ -26,9 +26,8 @@ trait URIGraphCommander{
 }
 
 class URIGraphCommanderImpl(
-  val requestingUser: RequestingUser,
-  val mainSearcherFactory: MainSearcherFactory
-) extends URIGraphCommander {
+    val requestingUser: RequestingUser,
+    val mainSearcherFactory: MainSearcherFactory) extends URIGraphCommander {
 
   private def getURIGraphSearcher(shard: Shard[NormalizedURI]) = mainSearcherFactory.getURIGraphSearcher(shard, requestingUser.userId)
 
@@ -43,7 +42,7 @@ class URIGraphCommanderImpl(
 
   def getUserUriLists(userIds: Set[Id[User]], publicOnly: Boolean, shard: Shard[NormalizedURI]): Map[Id[User], UserURIList] = {
     val searcher = getURIGraphSearcher(shard)
-    userIds.foldLeft(Map.empty[Id[User], UserURIList]){ case (m, userId) => m + (userId -> getURIList(userId, publicOnly, searcher)) }
+    userIds.foldLeft(Map.empty[Id[User], UserURIList]) { case (m, userId) => m + (userId -> getURIList(userId, publicOnly, searcher)) }
   }
 
   def getSharingUserInfo(uriId: Id[NormalizedURI], shard: Shard[NormalizedURI]): SharingUserInfo = {

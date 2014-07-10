@@ -1,10 +1,10 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{LargeString, State, Id}
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
-import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
+import com.keepit.common.db.{ LargeString, State, Id }
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import org.joda.time.DateTime
 import com.keepit.model.UserValues.UserValueHandler
 
@@ -56,7 +56,7 @@ class UserValueRepoImpl @Inject() (
   }
 
   private def getValueUnsafeNoCache[T](userId: Id[User], key: String)(implicit session: RSession): Option[String] = {
-    (for(f <- rows if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === key) yield f.value).firstOption.map(_.value)
+    (for (f <- rows if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === key) yield f.value).firstOption.map(_.value)
   }
 
   def getValueStringOpt(userId: Id[User], key: String)(implicit session: RSession): Option[String] = {
@@ -71,17 +71,18 @@ class UserValueRepoImpl @Inject() (
   }
 
   def getValues(userId: Id[User], names: String*)(implicit session: RSession): Map[String, Option[String]] =
-    valueCache.bulkGetOrElseOpt(names map { name => UserValueKey(userId, name)} toSet ) { missingNames =>
-      val missingValues = missingNames map {missingName =>
+    valueCache.bulkGetOrElseOpt(names map { name => UserValueKey(userId, name) } toSet) { missingNames =>
+      val missingValues = missingNames map { missingName =>
         missingName -> getValueUnsafeNoCache(userId, missingName.key)
       }
       missingValues.toMap
-    } map { case (k, v) =>
-      k.key -> v
+    } map {
+      case (k, v) =>
+        k.key -> v
     }
 
   def getUserValue(userId: Id[User], name: String)(implicit session: RSession): Option[UserValue] =
-    (for(f <- rows if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === name) yield f).firstOption
+    (for (f <- rows if f.state === UserValueStates.ACTIVE && f.userId === userId && f.name === name) yield f).firstOption
 
   def setValue[T](userId: Id[User], name: String, value: T)(implicit session: RWSession): T = {
     val stringValue = value.toString
@@ -90,8 +91,8 @@ class UserValueRepoImpl @Inject() (
       valueCache.remove(UserValueKey(userId, name))
       value
     } else {
-        save(UserValue(userId = userId, name = name, value = stringValue))
-        value
+      save(UserValue(userId = userId, name = name, value = stringValue))
+      value
     }
   }
 

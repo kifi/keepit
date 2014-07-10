@@ -1,7 +1,7 @@
 package com.keepit.common.healthcheck
 
 import com.keepit.common.controller.ReportedException
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.time._
 import com.keepit.common.strings._
 import org.joda.time.DateTime
@@ -9,7 +9,6 @@ import org.joda.time.DateTime
 import java.security.MessageDigest
 
 import org.apache.commons.codec.binary.Base64
-
 
 import play.api.mvc._
 import play.api.libs.ws.Response
@@ -58,8 +57,7 @@ case class AirbrakeError(
       System.err.println(s"[AirbrakeError] Depth was greater than $maxCauseDepth")
       exception.printStackTrace()
       throwable
-    }
-    else Option(throwable.getCause).map(c => findRootException(c, depth + 1)).getOrElse(throwable)
+    } else Option(throwable.getCause).map(c => findRootException(c, depth + 1)).getOrElse(throwable)
   }
 
   lazy val signature: AirbrakeErrorSignature = {
@@ -92,11 +90,13 @@ case class AirbrakeError(
     this.message.map { em =>
       message ++= s"""<br/><b>error message</b> <span style="color:red; font-size: 13px; font-style: italic;">[${em.replaceAll("\n", "\n<br/>")}]</span>"""
     }
-    params.map { case (name, values) =>
-      message ++= s"\n* Param:\n$name = ${values mkString ","}"
+    params.map {
+      case (name, values) =>
+        message ++= s"\n* Param:\n$name = ${values mkString ","}"
     }
-    headers.map { case (name, values) =>
-      message ++= s"\n* Header:\n$name = ${values mkString ","}"
+    headers.map {
+      case (name, values) =>
+        message ++= s"\n* Header:\n$name = ${values mkString ","}"
     }
 
     message ++= "<br/><b>Exception stack trace:\n</b><br/>"
@@ -148,29 +148,28 @@ object AirbrakeError {
 
   def incoming(request: RequestHeader, exception: Throwable = new DefaultAirbrakeException(), message: String, user: Option[User] = None, aggregateOnly: Boolean = false): AirbrakeError =
     new AirbrakeError(
-          exception = exception,
-          message = if (message.trim.isEmpty) None else Some(message.abbreviate(MaxMessageSize)),
-          userId = user.map(_.id).flatten,
-          userName = user.map(_.fullName),
-          url = Some(request.uri.abbreviate(MaxMessageSize)),
-          params = request.queryString,
-          method = Some(request.method),
-          headers = request.headers.toMap,
-          aggregateOnly = aggregateOnly)
+      exception = exception,
+      message = if (message.trim.isEmpty) None else Some(message.abbreviate(MaxMessageSize)),
+      userId = user.map(_.id).flatten,
+      userName = user.map(_.fullName),
+      url = Some(request.uri.abbreviate(MaxMessageSize)),
+      params = request.queryString,
+      method = Some(request.method),
+      headers = request.headers.toMap,
+      aggregateOnly = aggregateOnly)
 
   def outgoing(request: WSRequestHolder, response: Option[Response] = None, exception: Throwable = new DefaultAirbrakeException(), message: String = "", aggregateOnly: Boolean = false): AirbrakeError = {
     new AirbrakeError(
-          exception = exception,
-          message = if (message.trim.isEmpty) None else Some(message.abbreviate(MaxMessageSize)),
-          url = Some(request.url.abbreviate(MaxMessageSize)),
-          params = request.queryString,
-          headers = response map { r => ningHeadersToMap(r.getAHCResponse.getHeaders) } getOrElse request.headers.toMap,
-          aggregateOnly = aggregateOnly)
+      exception = exception,
+      message = if (message.trim.isEmpty) None else Some(message.abbreviate(MaxMessageSize)),
+      url = Some(request.url.abbreviate(MaxMessageSize)),
+      params = request.queryString,
+      headers = response map { r => ningHeadersToMap(r.getAHCResponse.getHeaders) } getOrElse request.headers.toMap,
+      aggregateOnly = aggregateOnly)
   }
 
   private def ningHeadersToMap(headers: FluentCaseInsensitiveStringsMap): Map[String, Seq[String]] =
     mapAsScalaMapConverter(headers).asScala.map(e => e._1 -> e._2.asScala.toSeq).toMap
-
 
   implicit def error(t: Throwable): AirbrakeError = AirbrakeError(t)
 }

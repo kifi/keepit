@@ -12,5 +12,5 @@ object LargeString {
 
   implicit def toStandardString(value: LargeString): String = value.value
   implicit def toLargeString(value: String): LargeString = LargeString(value)
-  implicit val format = Format(__.read[String].map(LargeString(_)), new Writes[LargeString]{ def writes(o: LargeString) = JsString(o.value) })
+  implicit val format = Format(__.read[String].map(LargeString(_)), new Writes[LargeString] { def writes(o: LargeString) = JsString(o.value) })
 }

@@ -1,16 +1,16 @@
 package com.keepit.reports
 
-import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
+import com.google.inject.{ ImplementedBy, Provider, Inject, Singleton }
 import com.keepit.common.geckoboard._
 import akka.actor._
 import akka.util.Timeout
 import com.keepit.model.KeepRepo
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.time._
 import com.keepit.inject._
@@ -35,10 +35,10 @@ trait GeckoboardReporterPlugin extends SchedulerPlugin {
 }
 
 class GeckoboardReporterPluginImpl @Inject() (
-    actor: ActorInstance[GeckoboardReporterActor],
-    quartz: ActorInstance[QuartzActor],
-    val scheduling: SchedulingProperties)
-extends GeckoboardReporterPlugin with Logging {
+  actor: ActorInstance[GeckoboardReporterActor],
+  quartz: ActorInstance[QuartzActor],
+  val scheduling: SchedulingProperties)
+    extends GeckoboardReporterPlugin with Logging {
 
   implicit val actorTimeout = Timeout(60 seconds)
 

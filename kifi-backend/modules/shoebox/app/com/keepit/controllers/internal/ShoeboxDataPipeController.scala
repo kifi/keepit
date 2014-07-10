@@ -2,7 +2,7 @@ package com.keepit.controllers.internal
 
 import com.keepit.common.db.slick.Database.Replica
 import com.keepit.common.db.SequenceNumber
-import play.api.libs.json.{JsNumber, JsObject, JsArray, Json}
+import play.api.libs.json.{ JsNumber, JsObject, JsArray, Json }
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import play.api.mvc.Action
@@ -11,7 +11,7 @@ import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
 import org.msgpack.ScalaMessagePack
 import play.api.http.ContentTypes
-import com.keepit.model.serialize.{UriIdAndSeqBatch, UriIdAndSeq}
+import com.keepit.model.serialize.{ UriIdAndSeqBatch, UriIdAndSeq }
 import com.keepit.model.serialize.UriIdAndSeqBatch
 
 class ShoeboxDataPipeController @Inject() (
@@ -26,8 +26,7 @@ class ShoeboxDataPipeController @Inject() (
     searchFriendRepo: SearchFriendRepo,
     socialConnectionRepo: SocialConnectionRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
-    emailAddressRepo: UserEmailAddressRepo
-  ) extends ShoeboxServiceController with Logging {
+    emailAddressRepo: UserEmailAddressRepo) extends ShoeboxServiceController with Logging {
 
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
     val uris = db.readOnlyReplica(2) { implicit s =>
@@ -47,7 +46,7 @@ class ShoeboxDataPipeController @Inject() (
   def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
     val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
     val uris = db.readOnlyReplica(2) { implicit s =>
-      normUriRepo.getChanged(seqNum, includeStates = scrapedStates,  limit = fetchSize)
+      normUriRepo.getChanged(seqNum, includeStates = scrapedStates, limit = fetchSize)
     }
     val indexables = uris map { u => IndexableUri(u) }
     Ok(Json.toJson(indexables))
@@ -84,17 +83,18 @@ class ShoeboxDataPipeController @Inject() (
     val users = db.readOnlyReplica(2) { implicit s =>
       userRepo.getUsersSince(seqNum, fetchSize)
     }
-    Ok(JsArray(users.map{ u => Json.toJson(u)}))
+    Ok(JsArray(users.map { u => Json.toJson(u) }))
   }
 
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]) = Action { request =>
     val changes = db.readOnlyReplica(2) { implicit s =>
-      changedUriRepo.getChangesBetween(lowSeq, highSeq).map{ change =>
+      changedUriRepo.getChangesBetween(lowSeq, highSeq).map { change =>
         (change.oldUriId, normUriRepo.get(change.newUriId))
       }
     }
-    val jsChanges = changes.map{ case (id, uri) =>
-      JsObject(List("id" -> JsNumber(id.id), "uri" -> Json.toJson(uri)))
+    val jsChanges = changes.map {
+      case (id, uri) =>
+        JsObject(List("id" -> JsNumber(id.id), "uri" -> Json.toJson(uri)))
     }
     Ok(JsArray(jsChanges))
   }
@@ -107,7 +107,7 @@ class ShoeboxDataPipeController @Inject() (
   }
 
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int) = Action { request =>
-    val changes = db.readOnlyReplica(2){ implicit s =>
+    val changes = db.readOnlyReplica(2) { implicit s =>
       searchFriendRepo.getSearchFriendsChanged(seqNum, fetchSize)
     }
     Ok(Json.toJson(changes))
@@ -115,8 +115,9 @@ class ShoeboxDataPipeController @Inject() (
 
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int) = Action { request =>
     val indexableSocialConnections = db.readOnlyReplica(2) { implicit session =>
-      socialConnectionRepo.getConnAndNetworkBySeqNumber(seqNum, fetchSize).map { case (firstUserId, secondUserId, state, seq, networkType) =>
-        IndexableSocialConnection(firstUserId, secondUserId, networkType, state, seq)
+      socialConnectionRepo.getConnAndNetworkBySeqNumber(seqNum, fetchSize).map {
+        case (firstUserId, secondUserId, state, seq, networkType) =>
+          IndexableSocialConnection(firstUserId, secondUserId, networkType, state, seq)
       }
     }
     val json = Json.toJson(indexableSocialConnections)

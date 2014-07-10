@@ -4,10 +4,10 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 import com.google.inject.Injector
-import com.keepit.common.db.{Id, SequenceNumber}
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.time._
 
-import com.keepit.test.{ShoeboxApplication, ShoeboxTestInjector}
+import com.keepit.test.{ ShoeboxApplication, ShoeboxTestInjector }
 
 import play.api.test.Helpers._
 import com.keepit.FortyTwoGlobal
@@ -18,7 +18,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
     val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
     val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
-    db.readWrite {implicit s =>
+    db.readWrite { implicit s =>
       val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner", createdAt = t1))
       val user2 = userRepo.save(User(firstName = "Eishay", lastName = "Smith", createdAt = t2))
 
@@ -47,10 +47,10 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
 
   "collections" should {
     "binary serialization" in {
-      val coll1 = Collection(id = Some(Id[Collection](1)),userId = Id[User](1), name = "Cooking")
-      val coll2 = Collection(id = Some(Id[Collection](2)),userId = Id[User](1), name = "Apparel")
-      val coll3 = Collection(id = Some(Id[Collection](3)),userId = Id[User](1), name = "Scala")
-      val coll4 = Collection(id = Some(Id[Collection](4)),userId = Id[User](1), name = "Java")
+      val coll1 = Collection(id = Some(Id[Collection](1)), userId = Id[User](1), name = "Cooking")
+      val coll2 = Collection(id = Some(Id[Collection](2)), userId = Id[User](1), name = "Apparel")
+      val coll3 = Collection(id = Some(Id[Collection](3)), userId = Id[User](1), name = "Scala")
+      val coll4 = Collection(id = Some(Id[Collection](4)), userId = Id[User](1), name = "Java")
       val collectionSummaries = Seq(coll1.summary, coll2.summary, coll3.summary, coll4.summary)
       val formatter = new CollectionSummariesFormat()
       val binary = formatter.writes(Some(collectionSummaries))
@@ -223,7 +223,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readOnlyMaster { implicit s =>
           collectionRepo.getByUserAndName(user1.id.get, "scala") ===
-              collectionRepo.getByUserAndName(user1.id.get, "Scala")
+            collectionRepo.getByUserAndName(user1.id.get, "Scala")
         }
       }
     }
