@@ -1,14 +1,11 @@
 package com.keepit.model
 
-import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
+import com.keepit.common.db.{ Id, LargeString, SequenceNumber, State }
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import org.joda.time.DateTime
-import com.keepit.common.db.slick.Repo
-import com.keepit.common.db.{ SequenceNumber, Id, LargeString, State }
-import com.keepit.common.db.slick.DataBaseComponent
-import com.keepit.common.db.slick.DbRepo
-import com.keepit.common.db.slick.DBSession
 
 @ImplementedBy(classOf[SystemValueRepoImpl])
 trait SystemValueRepo extends Repo[SystemValue] {
@@ -26,8 +23,8 @@ class SystemValueRepoImpl @Inject() (
   val valueCache: SystemValueCache,
   val clock: Clock)
     extends DbRepo[SystemValue] with SystemValueRepo {
+  import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
-  import DBSession._
 
   type RepoImpl = SystemValueTable
   case class SystemValueTable(tag: Tag) extends RepoTable[SystemValue](db, tag, "system_value") {

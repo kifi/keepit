@@ -251,9 +251,9 @@ class ABookController @Inject() (
 
   def prefixQuery(userId: Id[User], q: String, maxHits: Option[Int]) = Action.async { request =>
     implicit val ord = TypeaheadHit.defaultOrdering[EContact]
-    typeahead.asyncTopN(userId, q, maxHits).map { econtactHitsOption =>
-      val hits = econtactHitsOption.getOrElse(Seq.empty).map { econtactHit =>
-        TypeaheadHit(econtactHit.score, econtactHit.name, econtactHit.ordinal, EContact.toRichContact(econtactHit.info))
+    typeahead.topN(userId, q, maxHits).map { econtactHits =>
+      val hits = econtactHits.map { hit =>
+        TypeaheadHit(hit.score, hit.name, hit.ordinal, EContact.toRichContact(hit.info))
       }
       Ok(Json.toJson(hits))
     }

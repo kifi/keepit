@@ -1,6 +1,7 @@
 package com.keepit.typeahead.socialusers
 
 import com.google.inject.Inject
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.typeahead._
@@ -27,6 +28,7 @@ class KifiUserTypeahead @Inject() (
     userRepo: UserRepo,
     userConnectionRepo: UserConnectionRepo,
     UserCache: UserIdCache) extends Typeahead[User, User] with Logging { // User as info might be too heavy
+  implicit val fj = ExecutionContext.fj
 
   def refreshAll(): Future[Unit] = {
     val userIds = db.readOnlyMaster { implicit ro =>
@@ -48,15 +50,16 @@ class KifiUserTypeahead @Inject() (
 
   protected def extractId(info: User): Id[User] = info.id.get
 
-  protected def getAllInfosForUser(id: Id[User]): Seq[User] = {
-    val ids = db.readOnlyMaster { implicit ro =>
+  protected def getAllInfosForUser(id: Id[User]): Future[Seq[User]] = {
+    db.readOnlyMasterAsync { implicit ro =>
       userConnectionRepo.getConnectedUsers(id)
+    } flatMap { ids =>
+      log.info(s"[getAllInfosForUser($id)] connectedUsers:(len=${ids.size}):${ids.mkString(",")}")
+      getInfos(ids.toSeq)
     }
-    log.info(s"[getAllInfosForUser($id)] connectedUsers:(len=${ids.size}):${ids.mkString(",")}")
-    getInfos(ids.toSeq)
   }
 
-  protected def getInfos(ids: Seq[Id[User]]): Seq[User] = {
+  protected def getInfos(ids: Seq[Id[User]]): Future[Seq[User]] = SafeFuture {
     if (ids.isEmpty) Seq.empty
     else {
       db.readOnlyMaster { implicit ro =>
@@ -65,8 +68,7 @@ class KifiUserTypeahead @Inject() (
     }
   }
 
-  protected def asyncGetOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[User]] = {
-    implicit val ctx = ExecutionContext.fj
+  protected def getOrCreatePrefixFilter(userId: Id[User]): Future[PrefixFilter[User]] = {
     cache.getOrElseFuture(KifiUserTypeaheadKey(userId)) {
       val res = store.getWithMetadata(userId)
       res match {

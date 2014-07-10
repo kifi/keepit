@@ -16,7 +16,11 @@ abstract class TransactionalCache[K <: Key[T], T](cache: ObjectCache[K, T], seri
     if (txn.inCacheTransaction) {
       txn.getOrCreate(cacheName) { new TransactionLocalCache(cache, serializer, localSerializerOpt) }
     } else {
-      cache
+      if (txn.isReadOnly) {
+        new ReadOnlyCacheWrapper[K, T](cache, logging = true)
+      } else {
+        cache
+      }
     }
   }
 

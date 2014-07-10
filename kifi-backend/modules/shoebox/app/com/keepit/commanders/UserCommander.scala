@@ -20,6 +20,7 @@ import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient, HeimdalContextBuilder }
+import com.keepit.heimdal._
 import com.keepit.search.SearchServiceClient
 import com.keepit.typeahead.PrefixFilter
 import com.keepit.typeahead.PrefixMatching
@@ -42,7 +43,6 @@ import scala.Some
 import com.keepit.model.UserEmailAddress
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.social.UserIdentity
-import com.keepit.heimdal.ContextStringData
 import play.api.libs.json.JsSuccess
 import com.keepit.model.SocialUserConnectionsKey
 import com.keepit.common.mail.EmailAddress
@@ -689,6 +689,7 @@ class UserCommander @Inject() (
   }
 
   def getPrefs(prefSet: Set[String], userId: Id[User]): JsObject = {
+    // Reading from master because the value may have been updated just before
     db.readOnlyMaster { implicit s =>
       val values = userValueRepo.getValues(userId, prefSet.toSeq: _*)
       JsObject(prefSet.toSeq.map { name =>
@@ -736,14 +737,9 @@ class UserCommander @Inject() (
     } else Future.successful()
   }
 
-  def postDelightedAnswer(userId: Id[User], score: Int, comment: Option[String]): Future[Boolean] = {
-    val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
-    user.primaryEmail map { email =>
-      heimdalClient.postDelightedAnswer(userId, email, user.fullName, score, comment)
-    } getOrElse {
-      airbrake.notify(s"Attempted to post a Delighted answer for user $userId with no primary email")
-      Future.successful(false)
-    }
+  def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Boolean] = {
+    val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
+    heimdalClient.postDelightedAnswer(userId, user.externalId, user.primaryEmail, user.fullName, answer)
   }
 }
 

@@ -1,16 +1,18 @@
-# ABOOK
+# HEIMDAL
 
 # --- !Ups
 
--- ALTER TABLE email_account_sequence MODIFY id bigint(20);
+CREATE TABLE IF NOT EXISTS system_value (
+    id bigint(20) NOT NULL AUTO_INCREMENT,
+    name varchar(64) NOT NULL,
+    value TEXT NOT NULL,
+    state VARCHAR(20) NOT NULL,
+    created_at datetime NOT NULL,
+    updated_at datetime NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE INDEX system_value_name (name)
+);
 
-ALTER TABLE econtact ADD COLUMN abook_id bigint(20) NULL;
-ALTER TABLE econtact ADD COLUMN email_account_id bigint(20) NULL;
-
-DROP INDEX econtact_i_user_id_email IF EXISTS;
-CREATE UNIQUE INDEX econtact_i_abook_id_email ON econtact(abook_id, email);
-CREATE INDEX econtact_i_user_id ON econtact(user_id);
-
-insert into evolutions (name, description) values('190.sql', 'add abook_id, email_account_id to econtact');
+insert into evolutions (name, description) values('190.sql', 'adding system_value table to heimdal');
 
 # --- !Downs

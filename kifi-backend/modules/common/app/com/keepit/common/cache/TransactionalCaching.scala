@@ -6,6 +6,7 @@ import com.keepit.common.logging.Logging
 object TransactionalCaching {
   object Implicits {
     implicit val directCacheAccess = new TransactionalCaching with Logging {
+      val isReadOnly = false
       override def beginCacheTransaction() = {
         throw new Exception("transaction is not allowed")
       }
@@ -18,6 +19,7 @@ trait TransactionalCaching { self: Logging =>
 
   private[this] var inTxn: Boolean = false
   private[this] var bypassTransaction: Boolean = false
+  val isReadOnly: Boolean
 
   final def inCacheTransaction: Boolean = (inTxn && !bypassTransaction)
 

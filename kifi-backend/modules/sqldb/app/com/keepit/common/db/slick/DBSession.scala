@@ -13,6 +13,7 @@ import scala.slick.jdbc.JdbcBackend.Session
 import scala.slick.driver.JdbcProfile
 import com.keepit.common.util.TrackingId
 import com.keepit.macros.Location
+import com.keepit.common.db.slick.Database.Master
 
 object DBSession {
   abstract class SessionWrapper(val name: String, val masterSlave: Database.DBMasterReplica, _session: => Session, location: Location) extends Session with Logging with TransactionalCaching {
@@ -33,6 +34,7 @@ object DBSession {
     }
     lazy val clock = new SystemClock
     val sessionId = TrackingId.get
+    val isReadOnly = masterSlave != Master
     def runningTime(): Long = System.currentTimeMillis - startTime
     def timeCheck(): Unit = {
       val t = runningTime()

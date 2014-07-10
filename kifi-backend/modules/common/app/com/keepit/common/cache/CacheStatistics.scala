@@ -19,10 +19,12 @@ import play.api.Plugin
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 
+object CacheStatistics {
+  val cacheLog = Logger("com.keepit.cache")
+}
+
 class CacheStatistics @Inject() (global: GlobalCacheStatistics) extends Logging {
-
-  private val cacheLog = Logger("com.keepit.cache")
-
+  import CacheStatistics.cacheLog
   private def incrCount(key: String, m: ConcurrentMap[String, AtomicInteger]) {
     m.getOrElseUpdate(key, new AtomicInteger(0)).incrementAndGet()
   }

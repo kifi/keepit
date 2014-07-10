@@ -1,10 +1,8 @@
 package com.keepit.common.cache
 
-import com.keepit.serializer.{ SafeLocalSerializer, NoCopyLocalSerializer, LocalSerializer, Serializer }
+import com.keepit.serializer.{ SafeLocalSerializer, LocalSerializer, Serializer }
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
-import scala.concurrent.Future
-import play.api.libs.json._
 import com.keepit.common.performance._
 import com.keepit.common.logging.Logging
 
@@ -83,15 +81,20 @@ class TransactionLocalCache[K <: Key[T], T] private (
   }
 }
 
-class ReadOnlyCacheWrapper[K <: Key[T], T](underlying: ObjectCache[K, T]) extends ObjectCache[K, T] {
+class ReadOnlyCacheWrapper[K <: Key[T], T](underlying: ObjectCache[K, T], logging: Boolean = false) extends ObjectCache[K, T] {
+  import CacheStatistics.cacheLog
   val minTTL: Duration = Duration.Inf
   val maxTTL: Duration = Duration.Inf
 
   protected[cache] def getFromInnerCache(key: K): ObjectState[T] = underlying.getFromInnerCache(key)
 
-  protected[cache] def setInnerCache(key: K, valueOpt: Option[T]) = {} // ignore silently
+  protected[cache] def setInnerCache(key: K, valueOpt: Option[T]) = {
+    if (logging) cacheLog.warn(s"cache ignoring set key $key")
+  } // ignore silently
 
   protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, ObjectState[T]] = underlying.bulkGetFromInnerCache(keys)
 
-  def remove(key: K): Unit = {} // ignore silently
+  def remove(key: K): Unit = {
+    if (logging) cacheLog.warn(s"cache ignoring remove key $key")
+  } // ignore silently
 }

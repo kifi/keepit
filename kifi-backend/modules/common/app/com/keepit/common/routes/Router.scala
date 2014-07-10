@@ -1,6 +1,7 @@
 package com.keepit.common.routes
 
 import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
+import com.keepit.heimdal.BasicDelightedAnswer
 import com.keepit.model._
 import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
@@ -14,30 +15,33 @@ import com.keepit.common.mail.EmailAddress
 trait Service
 
 case class ServiceRoute(method: Method, path: String, params: Param*) {
-  def url = path + (if (params.nonEmpty) "?" + params.map({ p =>
-    URLEncoder.encode(p.key, UTF8) + (if (p.value.value != "") "=" + URLEncoder.encode(p.value.value, UTF8) else "")
-  }).mkString("&")
-  else "")
+  def url = {
+    val paramString = params.collect {
+      case Param(key, ParamValue(Some(value))) =>
+        URLEncoder.encode(key, UTF8) + "=" + URLEncoder.encode(value, UTF8)
+    }.mkString("&")
+    if (paramString.isEmpty) path else path + "?" + paramString
+  }
 }
 
-case class Param(key: String, value: ParamValue = ParamValue("")) {
-  override def toString(): String = s"key->${value.value}"
+case class Param(key: String, value: ParamValue = ParamValue(None)) {
+  override def toString(): String = s"key->${value.value.getOrElse("")}"
 }
 
-case class ParamValue(value: String)
+case class ParamValue(value: Option[String])
 
 object ParamValue {
-  implicit def stringToParam(i: String) = ParamValue(i)
-  implicit def longToParam(i: Long) = ParamValue(i.toString)
-  implicit def booleanToParam(b: Boolean) = ParamValue(b.toString)
-  implicit def intToParam(i: Int) = ParamValue(i.toString)
-  implicit def stateToParam[T](i: State[T]) = ParamValue(i.value)
-  implicit def externalIdToParam[T](i: ExternalId[T]) = ParamValue(i.id)
-  implicit def idToParam[T](i: Id[T]) = ParamValue(i.id.toString)
-  implicit def optionToParam[T](i: Option[T])(implicit e: T => ParamValue) = if (i.nonEmpty) e(i.get) else ParamValue("")
-  implicit def seqNumToParam[T](seqNum: SequenceNumber[T]) = ParamValue(seqNum.value.toString)
-  implicit def modelVersionToParam[M <: StatModel](modelVersion: ModelVersion[M]) = ParamValue(modelVersion.version.toString)
-  implicit def emailToParam(emailAddress: EmailAddress) = ParamValue(emailAddress.address)
+  implicit def stringToParam(i: String) = ParamValue(Some(i))
+  implicit def longToParam(i: Long) = ParamValue(Some(i.toString))
+  implicit def booleanToParam(b: Boolean) = ParamValue(Some(b.toString))
+  implicit def intToParam(i: Int) = ParamValue(Some(i.toString))
+  implicit def stateToParam[T](i: State[T]) = ParamValue(Some(i.value))
+  implicit def externalIdToParam[T](i: ExternalId[T]) = ParamValue(Some(i.id))
+  implicit def idToParam[T](i: Id[T]) = ParamValue(Some(i.id.toString))
+  implicit def optionToParam[T](i: Option[T])(implicit e: T => ParamValue) = i.map(e) getOrElse ParamValue(None)
+  implicit def seqNumToParam[T](seqNum: SequenceNumber[T]) = ParamValue(Some(seqNum.value.toString))
+  implicit def modelVersionToParam[M <: StatModel](modelVersion: ModelVersion[M]) = ParamValue(Some(modelVersion.version.toString))
+  implicit def emailToParam(emailAddress: EmailAddress) = ParamValue(Some(emailAddress.address))
 }
 
 abstract class Method(name: String)
@@ -229,7 +233,7 @@ object Heimdal extends Service {
     def setUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/set", Param("userId", userId))
     def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = ServiceRoute(GET, "/internal/heimdal/user/alias", Param("userId", userId), Param("externalId", externalId))
     def getLastDelightedAnswerDate(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/user/lastDelightedAnswerDate", Param("userId", userId))
-    def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]) = ServiceRoute(POST, s"/internal/heimdal/user/postDelightedAnswer", Param("userId", userId), Param("email", email), Param("name", name), Param("score", score), Param("comment", comment))
+    def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String) = ServiceRoute(POST, s"/internal/heimdal/user/postDelightedAnswer", Param("userId", userId), Param("externalId", externalId), Param("email", email), Param("name", name))
   }
 }
 
