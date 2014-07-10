@@ -8,23 +8,23 @@ import play.api.mvc.QueryStringBindable
 class EmailAddressTest extends Specification {
 
   "EmailAddress" should {
-    "accept valid email addresses without altering them" in {
-      EmailAddress("a@b").address === "a@b"
-      EmailAddress("a+b+c@d.com").address === "a+b+c@d.com"
-      EmailAddress("jmarlow+@cs.cmu.edu").address === "jmarlow+@cs.cmu.edu"
-      EmailAddress("TRACE@noreply.GiThUb.com").address === "TRACE@noreply.GiThUb.com"
-      EmailAddress("jobs-unsubscribe@perl.org").address === "jobs-unsubscribe@perl.org"
-      EmailAddress("arthur.droid@student.ecp.fr").address === "arthur.droid@student.ecp.fr"
-      EmailAddress("chris.o'donnell@hollywood.com").address === "chris.o'donnell@hollywood.com"
-      EmailAddress("Michelle.HernandezRosa@AMC.COM").address === "Michelle.HernandezRosa@AMC.COM"
-      EmailAddress("ninja_turtle_babe2126@hotmail.com").address === "ninja_turtle_babe2126@hotmail.com"
+    "accept valid email addresses without altering them (except for lowercasing domains)" in {
+      EmailAddress.validate("a@b").get.address === "a@b"
+      EmailAddress.validate("a+b+c@d.com").get.address === "a+b+c@d.com"
+      EmailAddress.validate("jmarlow+@cs.cmu.edu").get.address === "jmarlow+@cs.cmu.edu"
+      EmailAddress.validate("TRACE@noreply.GiThUb.com").get.address === "TRACE@noreply.github.com"
+      EmailAddress.validate("jobs-unsubscribe@perl.org").get.address === "jobs-unsubscribe@perl.org"
+      EmailAddress.validate("arthur.droid@student.ecp.fr").get.address === "arthur.droid@student.ecp.fr"
+      EmailAddress.validate("chris.o'donnell@hollywood.com").get.address === "chris.o'donnell@hollywood.com"
+      EmailAddress.validate("Michelle.HernandezRosa@AMC.COM").get.address === "Michelle.HernandezRosa@amc.com"
+      EmailAddress.validate("ninja_turtle_babe2126@hotmail.com").get.address === "ninja_turtle_babe2126@hotmail.com"
     }
     "reject invalid email addresses" in {
-      EmailAddress("a") must throwAn[IllegalArgumentException]
-      EmailAddress("@") must throwAn[IllegalArgumentException]
-      EmailAddress("@a") must throwAn[IllegalArgumentException]
-      EmailAddress("a@") must throwAn[IllegalArgumentException]
-      EmailAddress("\"a\"@b") must throwAn[IllegalArgumentException]
+      EmailAddress.validate("a").get must throwAn[IllegalArgumentException]
+      EmailAddress.validate("@").get must throwAn[IllegalArgumentException]
+      EmailAddress.validate("@a").get must throwAn[IllegalArgumentException]
+      EmailAddress.validate("a@").get must throwAn[IllegalArgumentException]
+      EmailAddress.validate("\"a\"@b").get must throwAn[IllegalArgumentException]
     }
     "canonicalize (lowercase) domains when reading from JSON" in {
       readFromJson("a@b") === JsSuccess(EmailAddress("a@b"))
