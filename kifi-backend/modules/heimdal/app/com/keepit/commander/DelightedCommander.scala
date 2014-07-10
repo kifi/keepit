@@ -89,7 +89,9 @@ class DelightedCommanderImpl @Inject() (
       }
       val newAnswers = jsonValues.flatMap(saveNewAnswerForResponse(_))
       log.info(s"Fetched ${newAnswers.length} new answers from Delighted")
-      jsonValues.toStream.reverse.flatMap(value => (value \ "created_at").asOpt[String]).headOption map { mostRecentTimeStamp =>
+      jsonValues.reverse.collectFirst {
+        case value if (value \ "created_at").asOpt[String].isDefined => (value \ "created_at").as[String]
+      } map { mostRecentTimeStamp =>
         log.info(s"New most recent timestamp for Delighted answer: $mostRecentTimeStamp")
         db.readWrite { implicit s => systemValueRepo.setValue(LAST_DELIGHTED_FETCH_TIME, mostRecentTimeStamp) }
       }
