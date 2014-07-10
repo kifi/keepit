@@ -108,23 +108,21 @@ class HomeController @Inject() (
     }.getOrElse(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
   }
 
-  // TODO: serve this to all iPhone requests at /mobile and remove this route + action
-  def iPhoneLandingTempForDev = Action { request =>
-    Ok(views.html.marketing.iPhoneLanding())
+  def iPhoneAppStoreRedirect = HtmlAction(authenticatedAction = iPhoneAppStoreRedirectWithTracking(_), unauthenticatedAction = iPhoneAppStoreRedirectWithTracking(_))
+  private def iPhoneAppStoreRedirectWithTracking(implicit request: RequestHeader): SimpleResult = {
+    val context = new HeimdalContextBuilder()
+    context.addRequestInfo(request)
+    context += ("type", "landing")
+    heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("visitor_viewed_page")))
+    Redirect("https://itunes.apple.com/app/id740232575")
   }
 
   def mobileLanding = HtmlAction(authenticatedAction = mobileLandingHandler(isLoggedIn = true)(_), unauthenticatedAction = mobileLandingHandler(isLoggedIn = false)(_))
   private def mobileLandingHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
-    val agentOpt = request.headers.get("User-Agent").map { agent =>
-      UserAgent.fromString(agent)
-    }
-    val ua = agentOpt.get.userAgent
-    val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
-    if (isIphone) {
-      Ok(views.html.marketing.iPhoneLanding())
+    if (request.headers.get("User-Agent").exists { ua => ua.contains("iPhone") && !ua.contains("iPad") }) {
+      iPhoneAppStoreRedirectWithTracking
     } else {
       Ok(views.html.marketing.mobileLanding(false, ""))
-
     }
   }
 
@@ -171,15 +169,13 @@ class HomeController @Inject() (
     } else {
       // TODO: Redirect to /login if the path is not /
       // Non-user landing page
-      val agentOpt = request.headers.get("User-Agent").map { agent =>
-        UserAgent.fromString(agent)
-      }
       temporaryReportLandingLoad()
+      val agentOpt = request.headers.get("User-Agent").map(UserAgent.fromString)
       if (agentOpt.exists(!_.screenCanFitWebApp)) {
         val ua = agentOpt.get.userAgent
         val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
         if (isIphone) {
-          Ok(views.html.marketing.iPhoneLanding())
+          iPhoneAppStoreRedirectWithTracking
         } else {
           Ok(views.html.marketing.mobileLanding(false, ""))
         }
