@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.time._
 import com.keepit.heimdal.{ DelightedAnswerSources, DelightedAnswerSource, BasicDelightedAnswer }
 import com.keepit.model._
 import com.keepit.common.collection._
@@ -22,9 +23,10 @@ case class DelightedConfig(url: String, apiKey: String)
 
 @ImplementedBy(classOf[DelightedCommanderImpl])
 trait DelightedCommander {
-  def getLastDelightedAnswerDate(userId: Id[User]): Option[DateTime]
+  def getUserLastInteractedDate(userId: Id[User]): Option[DateTime]
   def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[JsValue]
   def fetchNewDelightedAnswers()
+  def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Boolean]
 }
 
 class DelightedCommanderImpl @Inject() (
@@ -33,7 +35,8 @@ class DelightedCommanderImpl @Inject() (
     delightedAnswerRepo: DelightedAnswerRepo,
     systemValueRepo: SystemValueRepo,
     delightedConfig: DelightedConfig,
-    airbrake: AirbrakeNotifier) extends DelightedCommander with Logging {
+    airbrake: AirbrakeNotifier,
+    clock: Clock) extends DelightedCommander with Logging {
 
   private val LAST_DELIGHTED_FETCH_TIME = Name[SystemValue]("last_delighted_fetch_time")
 
@@ -41,8 +44,8 @@ class DelightedCommanderImpl @Inject() (
     WS.url(delightedConfig.url + route).withAuth(delightedConfig.apiKey, "", AuthScheme.BASIC)
   }
 
-  def getLastDelightedAnswerDate(userId: Id[User]): Option[DateTime] = {
-    db.readOnlyReplica { implicit s => delightedAnswerRepo.getLastAnswerDateForUser(userId) }
+  def getUserLastInteractedDate(userId: Id[User]): Option[DateTime] = {
+    db.readOnlyReplica { implicit s => delightedUserRepo.getLastInteractedDate(userId) }
   }
 
   def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[JsValue] = {
@@ -56,13 +59,23 @@ class DelightedCommanderImpl @Inject() (
 
         delightedRequest("/v1/survey_responses.json").post(data).map { response =>
           if (response.status == Status.OK || response.status == Status.CREATED) {
-            delightedAnswerFromResponse(response.json) map { delightedAnswer =>
-              db.readWrite { implicit s => delightedAnswerRepo.save(delightedAnswer) }
-              JsString("success")
-            } getOrElse Json.obj("error" -> "Error retrieving Delighted answer")
+            saveNewAnswerForResponse(response.json) match {
+              case Some(answer) => JsString("success")
+              case None => Json.obj("error" -> "Error retrieving Delighted answer")
+            }
           } else Json.obj("error" -> "Error sending answer to Delighted")
         }
       } getOrElse Future.successful(Json.obj("error" -> "Error retrieving Delighted user"))
+    }
+  }
+
+  def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Boolean] = {
+    getOrCreateDelightedUser(userId, externalId, email, name) map { userOpt =>
+      userOpt flatMap (_.id) map { delightedUserId =>
+        db.readWrite { implicit session =>
+          delightedUserRepo.setLastInteractedDate(delightedUserId, clock.now())
+        }
+      } nonEmpty
     }
   }
 
@@ -74,21 +87,7 @@ class DelightedCommanderImpl @Inject() (
         airbrake.notify(s"Could not parse response from Delighted: ${response.body}")
         Seq()
       }
-      val newAnswers = jsonValues flatMap { value =>
-        delightedAnswerFromResponse(value) match {
-          case Some(answer) => db.readWrite { implicit s =>
-            val existing = delightedAnswerRepo.getByDelightedExtAnswerId(answer.delightedExtAnswerId)
-            if (existing.isEmpty) {
-              delightedAnswerRepo.save(answer)
-              Some(answer)
-            } else None
-          }
-          case None => {
-            airbrake.notify(s"Could not parse Delighted answer: ${value}")
-            None
-          }
-        }
-      }
+      val newAnswers = jsonValues.flatMap(saveNewAnswerForResponse(_))
       log.info(s"Fetched ${newAnswers.length} new answers from Delighted")
       jsonValues.toStream.reverse.flatMap(value => (value \ "created_at").asOpt[String]).headOption map { mostRecentTimeStamp =>
         log.info(s"New most recent timestamp for Delighted answer: $mostRecentTimeStamp")
@@ -97,23 +96,38 @@ class DelightedCommanderImpl @Inject() (
     }
   }
 
-  private def delightedAnswerFromResponse(json: JsValue): Option[DelightedAnswer] = {
-    for {
-      delightedExtAnswerId <- (json \ "id").asOpt[String]
-      delightedExtUserId <- (json \ "person").asOpt[String]
-      score <- (json \ "score").asOpt[Int]
-      date <- (json \ "created_at").asOpt[Int]
-      delightedUserId <- db.readOnlyReplica { implicit s => delightedUserRepo.getByDelightedExtUserId(delightedExtUserId).flatMap(_.id) }
-    } yield {
-      val source = (json \ "person_properties" \ "source").asOpt[DelightedAnswerSource] getOrElse DelightedAnswerSources.UNKNOWN
-      DelightedAnswer(
-        delightedExtAnswerId = delightedExtAnswerId,
-        delightedUserId = delightedUserId,
-        date = new DateTime(date * 1000L),
-        score = score,
-        comment = (json \ "comment").asOpt[String],
-        source = source
-      )
+  private def saveNewAnswerForResponse(json: JsValue): Option[DelightedAnswer] = {
+    db.readWrite { implicit s =>
+      val answerOpt = for {
+        delightedExtAnswerId <- (json \ "id").asOpt[String]
+        delightedExtUserId <- (json \ "person").asOpt[String]
+        score <- (json \ "score").asOpt[Int]
+        date <- (json \ "created_at").asOpt[Int]
+        delightedUserId <- delightedUserRepo.getByDelightedExtUserId(delightedExtUserId).flatMap(_.id)
+      } yield {
+        val source = (json \ "person_properties" \ "source").asOpt[DelightedAnswerSource] getOrElse DelightedAnswerSources.UNKNOWN
+        DelightedAnswer(
+          delightedExtAnswerId = delightedExtAnswerId,
+          delightedUserId = delightedUserId,
+          date = new DateTime(date * 1000L),
+          score = score,
+          comment = (json \ "comment").asOpt[String],
+          source = source
+        )
+      }
+      answerOpt map { answer =>
+        val existing = delightedAnswerRepo.getByDelightedExtAnswerId(answer.delightedExtAnswerId)
+        if (existing.isEmpty) {
+          delightedAnswerRepo.save(answer)
+          Some(answer)
+        } else {
+          log.info(s"Delighted answer with id ${answer.id} already exists")
+          None
+        }
+      } getOrElse {
+        airbrake.notify(s"Could not parse Delighted answer: ${json}")
+        None
+      }
     }
   }
 
@@ -133,7 +147,8 @@ class DelightedCommanderImpl @Inject() (
             val user = DelightedUser(
               delightedExtUserId = id,
               userId = userId,
-              email = email
+              email = email,
+              lastAnswerDate = None
             )
             db.readWrite { implicit s => delightedUserRepo.save(user) }
           }
@@ -145,10 +160,12 @@ class DelightedCommanderImpl @Inject() (
 
 class DevDelightedCommander extends DelightedCommander {
 
-  def getLastDelightedAnswerDate(userId: Id[User]): Option[DateTime] = None
+  def getUserLastInteractedDate(userId: Id[User]): Option[DateTime] = None
 
   def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[JsValue] =
     Future.successful(JsString("success"))
 
   def fetchNewDelightedAnswers() = ()
+
+  def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Boolean] = Future.successful(true)
 }

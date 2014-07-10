@@ -775,22 +775,53 @@ class UserCommander @Inject() (
     }
   }
 
-  def getPrefs(prefSet: Set[String], userId: Id[User]): JsObject = {
+  private val SHOW_DELIGHTED_QUESTION_PREF = "show_delighted_question"
+
+  private def getPrefUpdates(prefSet: Set[String], userId: Id[User]): Future[JsObject] = {
+    if (prefSet.contains(SHOW_DELIGHTED_QUESTION_PREF)) {
+      // Check if user should be shown Delighted question
+      val user = db.readOnlyReplica { implicit s =>
+        userRepo.get(userId)
+      }
+      val time = clock.now()
+      val shouldShowDelightedQuestionFut = if (user.primaryEmail.nonEmpty && time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
+        heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
+          val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
+          time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate
+        }
+      } else Future.successful(false)
+      shouldShowDelightedQuestionFut map { shouldShowDelightedQuestion =>
+        Json.obj(SHOW_DELIGHTED_QUESTION_PREF -> shouldShowDelightedQuestion)
+      }
+    } else Future.successful(Json.obj())
+  }
+
+  private def readPrefs(prefSet: Set[String], userId: Id[User]): JsObject = {
     // Reading from master because the value may have been updated just before
-    db.readOnlyMaster { implicit s =>
-      val values = userValueRepo.getValues(userId, prefSet.toSeq: _*)
-      JsObject(prefSet.toSeq.map { name =>
-        name -> values(name).map(value => {
-          if (value == "false") JsBoolean(false)
-          else if (value == "true") JsBoolean(true)
-          else if (value == "null") JsNull
-          else JsString(value)
-        }).getOrElse(JsNull)
-      })
+    val values = db.readOnlyMaster { implicit s =>
+      userValueRepo.getValues(userId, prefSet.toSeq: _*)
+    }
+    JsObject(prefSet.toSeq.map { name =>
+      name -> values(name).map(value => {
+        if (value == "false") JsBoolean(false)
+        else if (value == "true") JsBoolean(true)
+        else if (value == "null") JsNull
+        else JsString(value)
+      }).getOrElse(JsNull)
+    })
+  }
+
+  def getPrefs(prefSet: Set[String], userId: Id[User]): Future[JsObject] = {
+    getPrefUpdates(prefSet, userId) map { updates =>
+      savePrefs(userId, updates)
+    } recover {
+      case t: Throwable => airbrake.notify(s"Error updating prefs for user $userId", t)
+    } map { _ =>
+      readPrefs(prefSet, userId)
     }
   }
 
-  def savePrefs(prefSet: Set[String], userId: Id[User], o: JsObject) = {
+  def savePrefs(userId: Id[User], o: JsObject) = {
     db.readWrite(attempts = 3) { implicit s =>
       o.fields.foreach {
         case (name, value) =>
@@ -806,27 +837,21 @@ class UserCommander @Inject() (
   val DELIGHTED_MIN_INTERVAL = 30 // days
   val DELIGHTED_INITIAL_DELAY = 7 // days
 
-  def setLastUserActive(userId: Id[User]): Future[Unit] = {
+  def setLastUserActive(userId: Id[User]): Unit = {
     val time = clock.now
-    val user = db.readWrite { implicit s =>
+    db.readWrite { implicit s =>
       userValueRepo.setValue(userId, "last_active", time)
-      userRepo.get(userId)
     }
-
-    // Check if user should be shown Delighted question
-    if (user.primaryEmail.nonEmpty && time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
-      heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
-        val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
-        if (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate) {
-          db.readWrite { implicit s => userValueRepo.setValue(userId, "show_delighted_question", true) }
-        }
-      }
-    } else Future.successful()
   }
 
   def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Boolean] = {
     val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
     heimdalClient.postDelightedAnswer(userId, user.externalId, user.primaryEmail, user.fullName, answer)
+  }
+
+  def cancelDelightedSurvey(userId: Id[User]): Future[Boolean] = {
+    val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
+    heimdalClient.cancelDelightedSurvey(userId, user.externalId, user.primaryEmail, user.fullName)
   }
 }
 

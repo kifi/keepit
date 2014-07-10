@@ -160,9 +160,10 @@ class MobileUserController @Inject() (
     } getOrElse Future.successful(BadRequest)
   }
 
-  def cancelDelightedSurvey = JsonAction.authenticated { implicit request =>
-    // todo(martin) implement
-    Ok
+  def cancelDelightedSurvey = JsonAction.authenticatedAsync { implicit request =>
+    userCommander.cancelDelightedSurvey(request.userId) map { success =>
+      if (success) Ok else BadRequest
+    }
   }
 
   def disconnect(networkString: String) = JsonAction.authenticated(parser = parse.anyContent) { implicit request =>
@@ -204,9 +205,8 @@ class MobileUserController @Inject() (
 
   def getPrefs() = JsonAction.authenticatedAsync { request =>
     // Make sure the user's last active date has been updated before returning the result
-    userCommander.setLastUserActive(request.userId) map { _ =>
-      Ok(userCommander.getPrefs(MobilePrefNames, request.userId))
-    }
+    userCommander.setLastUserActive(request.userId)
+    userCommander.getPrefs(MobilePrefNames, request.userId) map (Ok(_))
   }
 }
 
