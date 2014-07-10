@@ -7,6 +7,8 @@ import com.keepit.common.akka.{ SlowRunningExecutionContext, SafeFuture }
 import com.keepit.common.concurrent.ForkJoinExecContextPlugin
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.service.ServiceType
+import com.keepit.eliza.ElizaServices
+import com.keepit.heimdal.HeimdalServices
 import com.keepit.search.{ SearchServices, SearchProdModule }
 import com.keepit.shoebox.{ ShoeboxServices, ShoeboxProdModule }
 import net.codingwell.scalaguice.ScalaModule
@@ -25,7 +27,9 @@ object DevGlobal extends FortyTwoGlobal(Dev)
     with ScraperServices
     with ABookServices
     with CortexServices
-    with GraphServices {
+    with GraphServices
+    with HeimdalServices
+    with ElizaServices {
 
   def composeModules(modules: Seq[Module]): Module = {
     modules match {
@@ -53,6 +57,8 @@ object DevGlobal extends FortyTwoGlobal(Dev)
       startABookServices()
       startCortexServices()
       startGraphServices()
+      startElizaServices()
+      startHeimdalServices()
       log.info(s"Started services in ${System.currentTimeMillis - t}ms")
     }
 
