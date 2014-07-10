@@ -107,7 +107,7 @@ class MainSearcher(
 
   def getPersonalizedSearcher(query: Query, nonPersonalizedContextVector: Option[Future[SemanticVector]]) = {
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
-    val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
+    val indexReader = articleSearcher.indexReader.outerjoin(personalReader, personalIdMapper)
 
     PersonalizedSearcher(indexReader, socialGraphInfo.mySearchUris, collectionSearcher, nonPersonalizedContextVector, useNonPersonalizedContextVector)
   }
