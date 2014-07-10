@@ -692,7 +692,7 @@ class AdminUserController @Inject() (
   // ad hoc testing only during dev phase
   private def prefixSocialSearchDirect(userId:Id[User], query:String): Future[Seq[SocialUserBasicInfo]] = {
     implicit val ord = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
-    socialUserTypeahead.search(userId, query)
+    socialUserTypeahead.topN(userId, query, None).map{ hits => hits.map(_.info) }
   }
 
   def prefixSocialSearch(userId:Id[User], query:String) = AdminHtmlAction.authenticatedAsync { request =>
