@@ -50,7 +50,7 @@ class SocialUserTypeahead @Inject() (
     }.map{ new PrefixFilter[SocialUserInfo](_) }(ExecutionContext.fj)
   }
 
-  protected def asyncGetInfos(ids: Seq[Id[SocialUserInfo]]): Future[Seq[SocialUserBasicInfo]] = {
+  protected def getInfos(ids: Seq[Id[SocialUserInfo]]): Future[Seq[SocialUserBasicInfo]] = {
     if (ids.isEmpty) Future.successful(Seq.empty[SocialUserBasicInfo])
     else {
       db.readOnlyMasterAsync { implicit session =>
@@ -59,7 +59,7 @@ class SocialUserTypeahead @Inject() (
     }
   }
 
-  protected def asyncGetAllInfosForUser(id: Id[User]): Future[Seq[SocialUserBasicInfo]] = SafeFuture {
+  protected def getAllInfosForUser(id: Id[User]): Future[Seq[SocialUserBasicInfo]] = SafeFuture {
     val builder = new mutable.ArrayBuffer[SocialUserBasicInfo]
     db.readOnlyMaster { implicit session =>
       val infos = socialUserRepo.getSocialUserBasicInfosByUser(id) // todo: filter out fortytwo?
