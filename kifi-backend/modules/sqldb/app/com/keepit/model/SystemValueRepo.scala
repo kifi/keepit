@@ -1,14 +1,11 @@
 package com.keepit.model
 
-import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
+import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.keepit.common.db.slick.{DataBaseComponent, DbRepo, Repo}
+import com.keepit.common.db.{Id, LargeString, SequenceNumber, State}
+import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
 import org.joda.time.DateTime
-import com.keepit.common.db.slick.Repo
-import com.keepit.common.db.{ SequenceNumber, Id, LargeString, State }
-import com.keepit.common.db.slick.DataBaseComponent
-import com.keepit.common.db.slick.DbRepo
-import com.keepit.common.db.slick.DBSession
 
 @ImplementedBy(classOf[SystemValueRepoImpl])
 trait SystemValueRepo extends Repo[SystemValue] {
@@ -25,9 +22,9 @@ class SystemValueRepoImpl @Inject() (
   val db: DataBaseComponent,
   val valueCache: SystemValueCache,
   val clock: Clock)
-    extends DbRepo[SystemValue] with SystemValueRepo {
+  extends DbRepo[SystemValue] with SystemValueRepo {
+  import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
-  import DBSession._
 
   type RepoImpl = SystemValueTable
   case class SystemValueTable(tag: Tag) extends RepoTable[SystemValue](db, tag, "system_value") {
@@ -58,12 +55,12 @@ class SystemValueRepoImpl @Inject() (
 
   def getValue(name: Name[SystemValue])(implicit session: RSession): Option[String] = {
     //valueCache.getOrElseOpt(SystemValueKey(name)) {
-    (for (f <- rows if f.state === SystemValueStates.ACTIVE && f.name === name) yield f.value).firstOption.map(_.value)
+      (for(f <- rows if f.state === SystemValueStates.ACTIVE && f.name === name) yield f.value).firstOption.map(_.value)
     //}
   }
 
   def getSystemValue(name: Name[SystemValue])(implicit session: RSession): Option[SystemValue] =
-    (for (f <- rows if f.state === SystemValueStates.ACTIVE && f.name === name) yield f).firstOption
+    (for(f <- rows if f.state === SystemValueStates.ACTIVE && f.name === name) yield f).firstOption
 
   def setValue(name: Name[SystemValue], value: String)(implicit session: RWSession): String = {
     val updated = (for (v <- rows if v.name === name) yield (v.value, v.state, v.updatedAt)).update((value, SystemValueStates.ACTIVE, clock.now())) > 0
