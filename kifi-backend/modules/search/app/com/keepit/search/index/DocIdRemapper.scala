@@ -27,7 +27,6 @@ class DocIdRemapperWithDeletionCheck(srcMapper: IdMapper, dstMapper: IdMapper, l
 
   def numDocsRemapped(): Int = {
     var numRemapped = 0
-    var im = Set.empty[Int]
     var docid = 0
     val srcMaxDoc = srcMapper.maxDoc
     while (docid < srcMaxDoc) {
