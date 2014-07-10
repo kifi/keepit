@@ -5,12 +5,12 @@ import scala.concurrent.duration._
 
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
-import play.api.{Play, Plugin}
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import play.api.{ Play, Plugin }
 import play.api.Play.current
 import com.keepit.common.db.Id
 import com.keepit.common.time._
@@ -20,9 +20,9 @@ trait AutogenReaperPlugin extends Plugin {
 }
 
 class AutogenReaperPluginImpl @Inject() (
-  actor: ActorInstance[AutogenReaper],
-  val scheduling: SchedulingProperties //only on leader
-) extends Logging with AutogenReaperPlugin with SchedulerPlugin {
+    actor: ActorInstance[AutogenReaper],
+    val scheduling: SchedulingProperties //only on leader
+    ) extends Logging with AutogenReaperPlugin with SchedulerPlugin {
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
@@ -42,20 +42,19 @@ private[integration] case class Reap()
 case class AutogenReaperConf(deleteSocialUserInfo: Boolean, deleteUser: Boolean)
 
 private[integration] class AutogenReaper @Inject() (
-  db: Database,
-  userExperimentRepo: UserExperimentRepo,
-  userRepo: UserRepo,
-  userCredRepo: UserCredRepo,
-  userSessionRepo: UserSessionRepo,
-  invitationRepo: InvitationRepo,
-  socialUserInfoRepo: SocialUserInfoRepo,
-  emailAddressRepo: UserEmailAddressRepo,
-  keepRepo: KeepRepo,
-  collectionRepo: CollectionRepo,
-  k2cRepo: KeepToCollectionRepo,
-  airbrake: AirbrakeNotifier,
-  autogenReaperConf: AutogenReaperConf
-) extends FortyTwoActor(airbrake) with Logging {
+    db: Database,
+    userExperimentRepo: UserExperimentRepo,
+    userRepo: UserRepo,
+    userCredRepo: UserCredRepo,
+    userSessionRepo: UserSessionRepo,
+    invitationRepo: InvitationRepo,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    emailAddressRepo: UserEmailAddressRepo,
+    keepRepo: KeepRepo,
+    collectionRepo: CollectionRepo,
+    k2cRepo: KeepToCollectionRepo,
+    airbrake: AirbrakeNotifier,
+    autogenReaperConf: AutogenReaperConf) extends FortyTwoActor(airbrake) with Logging {
 
   val deleteSocialUserInfo = autogenReaperConf.deleteSocialUserInfo
   val deleteUser = autogenReaperConf.deleteUser
@@ -64,9 +63,11 @@ private[integration] class AutogenReaper @Inject() (
 
   def receive() = {
     case Reap =>
-      for (threshold <- Play.maybeApplication map { app => // todo: inject
-        if (Play.isDev) currentDateTime.minusSeconds(15) else currentDateTime.minusMinutes(15)
-      }) {
+      for (
+        threshold <- Play.maybeApplication map { app => // todo: inject
+          if (Play.isDev) currentDateTime.minusSeconds(15) else currentDateTime.minusMinutes(15)
+        }
+      ) {
         val dues = db.readOnlyMaster { implicit rw =>
           // a variant of this could live in UserCommander
           val generated = userExperimentRepo.getByType(ExperimentType.AUTO_GEN)
@@ -112,7 +113,7 @@ private[integration] class AutogenReaper @Inject() (
           }
         }
         for (exp <- dues) {
-          val user = db.readOnlyMaster{ implicit s => userRepo.get(exp.userId) }
+          val user = db.readOnlyMaster { implicit s => userRepo.get(exp.userId) }
           log.info(s"[reap] processing $user")
 
           db.readWrite { implicit s =>

@@ -22,7 +22,7 @@ import org.apache.lucene.analysis.hu.HungarianLightStemFilter
 import org.apache.lucene.analysis.id.IndonesianStemFilter
 import org.apache.lucene.analysis.in.IndicNormalizationFilter
 import org.apache.lucene.analysis.it.ItalianLightStemFilter
-import org.apache.lucene.analysis.ja.{JapaneseTokenizerFactory, JapaneseTokenizer, JapaneseKatakanaStemFilter, JapaneseReadingFormFilter}
+import org.apache.lucene.analysis.ja.{ JapaneseTokenizerFactory, JapaneseTokenizer, JapaneseKatakanaStemFilter, JapaneseReadingFormFilter }
 import org.apache.lucene.analysis.lv.LatvianStemFilter
 import org.apache.lucene.analysis.no.NorwegianLightStemFilter
 import org.apache.lucene.analysis.pt.PortugueseLightStemFilter
@@ -31,7 +31,7 @@ import org.apache.lucene.analysis.standard.StandardTokenizerFactory
 import org.apache.lucene.analysis.sv.SwedishLightStemFilter
 import org.apache.lucene.analysis.th.ThaiWordFilter
 import org.apache.lucene.analysis.tr.TurkishLowerCaseFilter
-import org.apache.lucene.analysis.{Analyzer=>LAnalyzer}
+import org.apache.lucene.analysis.{ Analyzer => LAnalyzer }
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents
 import org.apache.lucene.analysis.CharFilter
 import org.apache.lucene.analysis.core.LowerCaseFilter
@@ -47,7 +47,7 @@ import com.keepit.search.Lang
 import scala.reflect.ClassTag
 import java.io.Reader
 import java.io.StringReader
-import java.util.{HashMap=>JMap}
+import java.util.{ HashMap => JMap }
 
 object LuceneVersion {
   val version = Version.LUCENE_47
@@ -100,13 +100,14 @@ object DefaultAnalyzer {
     "sv" -> stdAnalyzer.withFilter[LowerCaseFilter].withStopFilter(_.Swedish),
     "th" -> stdAnalyzer.withFilter[LowerCaseFilter].withFilter[ThaiWordFilter].withStopFilter(_.Thai),
     "tr" -> stdAnalyzer.withFilter[TurkishLowerCaseFilter].withStopFilter(_.Turkish)
-  ).map{ case (lang, analyzer) =>
-    if (lang == "ja") {
-      lang -> analyzer.withLang(lang)
-    } else {
-      lang -> analyzer.withFilter[SymbolDecompounder].withLang(lang)
+  ).map {
+      case (lang, analyzer) =>
+        if (lang == "ja") {
+          lang -> analyzer.withLang(lang)
+        } else {
+          lang -> analyzer.withFilter[SymbolDecompounder].withLang(lang)
+        }
     }
-  }
 
   val langAnalyzerWithStemmer = Map[String, Analyzer](
     "ar" -> langAnalyzers("ar").withFilter[ArabicStemFilter],
@@ -139,13 +140,13 @@ object DefaultAnalyzer {
 }
 
 class Analyzer(tokenizerFactory: TokenizerFactory,
-               factories: List[TokenFilterFactory],
-               charFilterConstructor: Option[Constructor[CharFilter]],
-               val lang: Lang) extends LAnalyzer with Logging {
+    factories: List[TokenFilterFactory],
+    charFilterConstructor: Option[Constructor[CharFilter]],
+    val lang: Lang) extends LAnalyzer with Logging {
 
   def withLang(newLang: Lang): Analyzer = new Analyzer(tokenizerFactory, factories, charFilterConstructor, newLang)
 
-  def withFilter[T <: TokenFilter](implicit m : ClassTag[T]): Analyzer = {
+  def withFilter[T <: TokenFilter](implicit m: ClassTag[T]): Analyzer = {
     try {
       val constructor = m.runtimeClass.getConstructor(classOf[Version], classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
       withFilter(WrapperTokenFilterFactory(constructor, LuceneVersion.version))
@@ -155,18 +156,19 @@ class Analyzer(tokenizerFactory: TokenizerFactory,
           val constructor = m.runtimeClass.getConstructor(classOf[TokenStream]).asInstanceOf[Constructor[TokenStream]]
           withFilter(WrapperTokenFilterFactory(constructor))
         } catch {
-          case ex: NoSuchMethodException => log.error("failed to find a filter constructor: %s".format(m.runtimeClass.toString))
-          this
+          case ex: NoSuchMethodException =>
+            log.error("failed to find a filter constructor: %s".format(m.runtimeClass.toString))
+            this
         }
     }
   }
 
-  def withStopFilter(f: StopFilterFactories=>TokenFilterFactory): Analyzer = withFilter(f(TokenFilterFactories.stopFilter))
-  def withStemFilter(f: StemFilterFactories=>TokenFilterFactory): Analyzer = withFilter(f(TokenFilterFactories.stemFilter))
+  def withStopFilter(f: StopFilterFactories => TokenFilterFactory): Analyzer = withFilter(f(TokenFilterFactories.stopFilter))
+  def withStemFilter(f: StemFilterFactories => TokenFilterFactory): Analyzer = withFilter(f(TokenFilterFactories.stemFilter))
 
-  def withFilter(factory: TokenFilterFactory): Analyzer = new Analyzer(tokenizerFactory, factory::factories, charFilterConstructor, lang)
+  def withFilter(factory: TokenFilterFactory): Analyzer = new Analyzer(tokenizerFactory, factory :: factories, charFilterConstructor, lang)
 
-  def withCharFilter[T <: CharFilter](implicit m : ClassTag[T]): Analyzer = {
+  def withCharFilter[T <: CharFilter](implicit m: ClassTag[T]): Analyzer = {
     val constructor = m.runtimeClass.getConstructor(classOf[Reader]).asInstanceOf[Constructor[CharFilter]]
     new Analyzer(tokenizerFactory, factories, Some(constructor), lang)
   }
@@ -181,14 +183,14 @@ class Analyzer(tokenizerFactory: TokenizerFactory,
   override def createComponents(fieldName: String, reader: Reader): TokenStreamComponents = {
     val filters = factories.reverse
     val tokenizer = tokenizerFactory.create(reader)
-    val tokenStream = filters.foldLeft(tokenizer.asInstanceOf[TokenStream]){ (tokenStream, filter) => filter(tokenStream) }
+    val tokenStream = filters.foldLeft(tokenizer.asInstanceOf[TokenStream]) { (tokenStream, filter) => filter(tokenStream) }
     new TokenStreamComponents(tokenizer, tokenStream)
   }
 
   def createLazyTokenStream(field: String, text: String) = new LazyTokenStream(field, text, this)
   def createLazyTokenStream(field: String, textReader: Reader) = new LazyTokenStream(field, textReader, this)
 
-  def getStopWords: Option[CharArraySet] = factories.collectFirst{ case sf: StopFilterFactory => sf.stopWords }
+  def getStopWords: Option[CharArraySet] = factories.collectFirst { case sf: StopFilterFactory => sf.stopWords }
 }
 
 class LazyTokenStream(field: String, textReader: Reader, analyzer: Analyzer) extends TokenStream {

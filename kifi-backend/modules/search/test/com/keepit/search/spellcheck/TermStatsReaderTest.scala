@@ -11,7 +11,7 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.VolatileIndexDirectory
-import scala.math.{log, abs}
+import scala.math.{ log, abs }
 
 class TermStatsReaderTest extends Specification {
 
@@ -26,9 +26,9 @@ class TermStatsReaderTest extends Specification {
     doc
   }
 
-   def log2(x: Double) = log(x)/log(2)
+  def log2(x: Double) = log(x) / log(2)
 
-   def idf(docFreq: Int, numDocs: Int): Float = 1f + log2(numDocs.toFloat/(1f + docFreq)).toFloat
+  def idf(docFreq: Int, numDocs: Int): Float = 1f + log2(numDocs.toFloat / (1f + docFreq)).toFloat
 
   "TermStatsReader" should {
     "read simple stats" in {
@@ -36,13 +36,13 @@ class TermStatsReaderTest extends Specification {
       val config = new IndexWriterConfig(Version.LUCENE_47, analyzer)
 
       val indexWriter = new IndexWriter(articleIndexDir, config)
-      articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
+      articles.foreach { x => indexWriter.addDocument(mkDoc(x)) }
       indexWriter.close()
 
       val statsReader = new TermStatsReaderImpl(DirectoryReader.open(articleIndexDir), "c")
       var stats = statsReader.getSimpleTermStats("abc")
       stats.docFreq === 3
-      stats.docIds === Set(0,1,2)
+      stats.docIds === Set(0, 1, 2)
       abs(stats.idf - idf(3, 3)) < EPSILON === true
 
       stats = statsReader.getSimpleTermStats("xyz")
@@ -57,7 +57,7 @@ class TermStatsReaderTest extends Specification {
       val config = new IndexWriterConfig(Version.LUCENE_47, analyzer)
 
       val indexWriter = new IndexWriter(articleIndexDir, config)
-      articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
+      articles.foreach { x => indexWriter.addDocument(mkDoc(x)) }
       indexWriter.close()
 
       val indexReader = DirectoryReader.open(articleIndexDir)

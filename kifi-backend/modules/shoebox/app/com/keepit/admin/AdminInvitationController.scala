@@ -1,7 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
@@ -10,13 +10,12 @@ import com.keepit.commanders.UserCommander
 import views.html
 
 class AdminInvitationController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
-  db: Database,
-  invitationRepo: InvitationRepo,
-  socialUserRepo: SocialUserInfoRepo,
-  userRepo: UserRepo,
-  userCommander: UserCommander
-) extends AdminController(actionAuthenticator) {
+    actionAuthenticator: ActionAuthenticator,
+    db: Database,
+    invitationRepo: InvitationRepo,
+    socialUserRepo: SocialUserInfoRepo,
+    userRepo: UserRepo,
+    userCommander: UserCommander) extends AdminController(actionAuthenticator) {
 
   val pageSize = 50
 
@@ -66,7 +65,7 @@ class AdminInvitationController @Inject() (
       }
     }
 
-    if(result.isDefined) {
+    if (result.isDefined) {
       notifyAcceptedUser(result.get)
       Redirect(routes.AdminInvitationController.displayInvitations())
     } else {
@@ -80,10 +79,10 @@ class AdminInvitationController @Inject() (
       for (user <- socialUser.userId.map(userRepo.get)) yield {
         val invites = invitationRepo.getByRecipientSocialUserId(id) match {
           case Seq() => Seq(Invitation(
-                createdAt = user.createdAt,
-                senderUserId = None,
-                recipientSocialUserId = socialUser.id
-              ))
+            createdAt = user.createdAt,
+            senderUserId = None,
+            recipientSocialUserId = socialUser.id
+          ))
           case invites => invites
         }
         invites.foreach(invite => invitationRepo.save(invite.withState(InvitationStates.ADMIN_REJECTED)))

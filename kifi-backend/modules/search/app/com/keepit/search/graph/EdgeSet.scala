@@ -9,7 +9,7 @@ import org.apache.lucene.index.Term
 import com.keepit.search.util.LongArraySet
 import java.util.Arrays
 
-trait EdgeSet[S,D] {
+trait EdgeSet[S, D] {
   val sourceId: Id[S]
 
   def destIdSet: Set[Id[D]]
@@ -46,7 +46,7 @@ trait EdgeSet[S,D] {
 
       def nextDoc() = {
         curIdx += 1
-        curDoc = if(curIdx < docids.length) docids(curIdx) else NO_MORE_DOCS
+        curDoc = if (curIdx < docids.length) docids(curIdx) else NO_MORE_DOCS
         curDoc
       }
 
@@ -61,7 +61,7 @@ trait EdgeSet[S,D] {
 }
 
 // A set of db ids are given as the destination set. Need IdMapper to map them to Lucene DocIds. Dual of DocIdSetEdgeSet
-trait DbIdSetEdgeSet[S,D] extends EdgeSet[S, D] {
+trait DbIdSetEdgeSet[S, D] extends EdgeSet[S, D] {
   protected var cache: (Searcher, Array[Int]) = (null, null)
 
   protected def getDocIds(searcher: Searcher): Array[Int] = {
@@ -70,7 +70,7 @@ trait DbIdSetEdgeSet[S,D] extends EdgeSet[S, D] {
         curDocIds
       case _ =>
         val mapper = searcher.indexReader.asAtomicReader.getIdMapper
-        val docids = destIdSet.map{ id => mapper.getDocId(id.id) }.filter{ _ >= 0 }.toArray
+        val docids = destIdSet.map { id => mapper.getDocId(id.id) }.filter { _ >= 0 }.toArray
         Arrays.sort(docids)
         cache = (searcher, docids)
         docids
@@ -79,8 +79,6 @@ trait DbIdSetEdgeSet[S,D] extends EdgeSet[S, D] {
 
   override def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator = toDocIdSetIterator(getDocIds(searcher))
 }
-
-
 
 trait IdSetEdgeSet[S, D] extends DbIdSetEdgeSet[S, D] {
   override lazy val destIdLongSet: Set[Long] = destIdSet.map(_.id)
@@ -155,12 +153,11 @@ trait LuceneBackedEdgeSet[S, D] extends EdgeSet[S, D] {
   protected def createSourceTerm: Term = new Term(sourceFieldName, sourceId.toString)
 }
 
-
 class IdSetWrapper[T](inner: Set[Long]) extends Set[Id[T]] {
 
   override def contains(elem: Id[T]): Boolean = inner.contains(elem.id)
 
-  override def iterator: Iterator[Id[T]] = inner.iterator.map{ Id[T](_) }
+  override def iterator: Iterator[Id[T]] = inner.iterator.map { Id[T](_) }
 
   override def +(elem: Id[T]): Set[Id[T]] = new IdSetWrapper[T](inner + elem.id)
 

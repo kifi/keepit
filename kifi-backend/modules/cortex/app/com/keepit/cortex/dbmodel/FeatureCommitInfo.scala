@@ -10,13 +10,12 @@ import com.keepit.cortex.core.StatModel
 import com.keepit.common.db.SequenceNumber
 
 case class FeatureCommitInfo(
-  id: Option[Id[FeatureCommitInfo]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime= currentDateTime,
-  modelName: StatModelName,
-  modelVersion: Int,
-  seq: Long
-) extends Model[FeatureCommitInfo]{
+    id: Option[Id[FeatureCommitInfo]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    modelName: StatModelName,
+    modelVersion: Int,
+    seq: Long) extends Model[FeatureCommitInfo] {
   def withId(id: Id[FeatureCommitInfo]) = copy(id = Some(id))
   def withUpdateTime(time: DateTime) = copy(updatedAt = time)
   def withSeq(newSeq: Long) = copy(seq = newSeq)

@@ -1,7 +1,7 @@
 package com.keepit.shoebox
 
 import com.keepit.abook.ProdABookServiceClientModule
-import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, ShoeboxCacheModule}
+import com.keepit.common.cache.{ EhCacheCacheModule, MemcachedCacheModule, ShoeboxCacheModule }
 import com.keepit.cortex.ProdCortexServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.graph.ProdGraphServiceClientModule
@@ -14,8 +14,8 @@ import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.classify.ProdDomainTagImporterModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.common.integration.ProdReaperModule
-import com.keepit.scraper.{ProdScraperServiceClientModule, ProdScrapeSchedulerModule}
-import com.keepit.common.zookeeper.{DiscoveryModule, ProdDiscoveryModule}
+import com.keepit.scraper.{ ProdScraperServiceClientModule, ProdScrapeSchedulerModule }
+import com.keepit.common.zookeeper.{ DiscoveryModule, ProdDiscoveryModule }
 import com.keepit.common.service.ServiceType
 import com.keepit.common.queue.ProdSimpleQueueModule
 import com.keepit.queue.ProdNormalizationUpdateJobQueueModule
@@ -23,7 +23,7 @@ import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
 import com.keepit.common.external.ProdExternalServiceModule
 import com.keepit.signal.ProdReKeepStatsUpdaterModule
 
-case class ShoeboxProdModule() extends ShoeboxModule (
+case class ShoeboxProdModule() extends ShoeboxModule(
   secureSocialModule = ProdShoeboxSecureSocialModule(),
   mailModule = ProdMailModule(),
   reaperModule = ProdReaperModule(),

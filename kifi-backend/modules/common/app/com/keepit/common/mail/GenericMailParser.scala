@@ -1,7 +1,7 @@
 package com.keepit.common.mail
 
 import org.jsoup.Jsoup
-import javax.mail.{Multipart, Part}
+import javax.mail.{ Multipart, Part }
 import javax.mail.internet.InternetAddress
 
 class GenericMailParser {

@@ -6,11 +6,11 @@ import com.keepit.FortyTwoGlobal
 
 import play.api.Application
 import play.api.data.Form
-import play.api.mvc.{RequestHeader, Request}
+import play.api.mvc.{ RequestHeader, Request }
 import securesocial.controllers.PasswordChange.ChangeInfo
 import securesocial.controllers.Registration.RegistrationInfo
 import securesocial.controllers.TemplatesPlugin
-import securesocial.core.{SecuredRequest, Identity}
+import securesocial.core.{ SecuredRequest, Identity }
 import com.keepit.common.logging.Logging
 
 class SecureSocialTemplatesPlugin(app: Application) extends TemplatesPlugin with Logging {
@@ -30,7 +30,7 @@ class SecureSocialTemplatesPlugin(app: Application) extends TemplatesPlugin with
   def getNotAuthorizedPage[A](implicit request: Request[A]) =
     plugin.getNotAuthorizedPage
   def getSignUpEmail(token: String)(implicit request: RequestHeader) =
-   plugin.getSignUpEmail(token)
+    plugin.getSignUpEmail(token)
   def getAlreadyRegisteredEmail(user: Identity)(implicit request: RequestHeader) =
     plugin.getAlreadyRegisteredEmail(user)
   def getWelcomeEmail(user: Identity)(implicit request: RequestHeader) =

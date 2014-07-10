@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.cache.{InMemoryCachePlugin, FortyTwoCachePlugin}
+import com.keepit.common.cache.{ InMemoryCachePlugin, FortyTwoCachePlugin }
 import com.keepit.common.healthcheck._
 import com.keepit.search.message.MessageIndexerPlugin
 import com.keepit.search.graph.URIGraphPlugin

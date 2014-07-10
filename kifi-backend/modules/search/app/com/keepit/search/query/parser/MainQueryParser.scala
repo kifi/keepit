@@ -24,26 +24,24 @@ import com.keepit.search.query.TextQuery
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-
 class MainQueryParser(
-  analyzer: Analyzer,
-  stemmingAnalyzer: Analyzer,
-  override val altAnalyzer: Option[Analyzer],
-  override val altStemmingAnalyzer: Option[Analyzer],
-  proximityBoost: Float,
-  semanticBoost: Float,
-  phraseBoost: Float,
-  override val siteBoost: Float,
-  override val concatBoost: Float,
-  homePageBoost: Float,
-  override val useSemanticMatch: Boolean,
-  proximityGapPanelty: Float,
-  proximityThreshold: Float,
-  proximityPowerFactor: Float,
-  phraseDetector: PhraseDetector,
-  phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]],
-  monitoredAwait: MonitoredAwait
-) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch with QueryExpansion {
+    analyzer: Analyzer,
+    stemmingAnalyzer: Analyzer,
+    override val altAnalyzer: Option[Analyzer],
+    override val altStemmingAnalyzer: Option[Analyzer],
+    proximityBoost: Float,
+    semanticBoost: Float,
+    phraseBoost: Float,
+    override val siteBoost: Float,
+    override val concatBoost: Float,
+    homePageBoost: Float,
+    override val useSemanticMatch: Boolean,
+    proximityGapPanelty: Float,
+    proximityThreshold: Float,
+    proximityPowerFactor: Float,
+    phraseDetector: PhraseDetector,
+    phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]],
+    monitoredAwait: MonitoredAwait) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch with QueryExpansion {
 
   override val lang: Lang = analyzer.lang
 
@@ -57,7 +55,7 @@ class MainQueryParser(
   def parse(queryText: CharSequence, collectionSearchers: Seq[CollectionSearcherWithUser]): Option[Query] = {
     val tParse = System.currentTimeMillis
 
-    parsedQuery = super.parse(queryText).map{ query =>
+    parsedQuery = super.parse(queryText).map { query =>
       val numTextQueries = textQueries.size
       if (numTextQueries <= 0) query
       else if (numTextQueries > ProximityQuery.maxLength) query // too many terms, skip proximity and semantic vector
@@ -65,31 +63,32 @@ class MainQueryParser(
         val phrasesFuture = if (numTextQueries > 1 && phraseBoost > 0.0f) detectPhrases(queryText, lang) else null
 
         // detect collection names and augment TextQueries
-        val indexToTextQuery: IndexedSeq[TextQuery] = textQueries.flatMap{ t => t.stems.map{ s => t } }
-        collectionSearchers.foreach{ cs =>
-          cs.detectCollectionNames(phStemmedTerms, true).foreach{ case (index, length, collectionId) =>
-            collectionIds += collectionId
-            var i = index
-            val end = index + length
-            while (i < end) {
-              indexToTextQuery(i).addCollectionQuery(collectionId, 1.5f)
-              i += 1
-            }
+        val indexToTextQuery: IndexedSeq[TextQuery] = textQueries.flatMap { t => t.stems.map { s => t } }
+        collectionSearchers.foreach { cs =>
+          cs.detectCollectionNames(phStemmedTerms, true).foreach {
+            case (index, length, collectionId) =>
+              collectionIds += collectionId
+              var i = index
+              val end = index + length
+              while (i < end) {
+                indexToTextQuery(i).addCollectionQuery(collectionId, 1.5f)
+                i += 1
+              }
           }
         }
 
         if (semanticBoost > 0.0f) {
-          textQueries.foreach{ textQuery =>
+          textQueries.foreach { textQuery =>
             textQuery.setSemanticBoost(semanticBoost)
-            textQuery.stems.map{ stemTerm => textQuery.addSemanticVectorQuery("sv", stemTerm.text) }
+            textQuery.stems.map { stemTerm => textQuery.addSemanticVectorQuery("sv", stemTerm.text) }
           }
         }
 
         if (proximityBoost > 0.0f && numTextQueries > 1) {
-          val phrases = if (phrasesFuture != null ) monitoredAwait.result(phrasesFuture, 3 seconds, "phrase detection") else Set.empty[(Int, Int)]
+          val phrases = if (phrasesFuture != null) monitoredAwait.result(phrasesFuture, 3 seconds, "phrase detection") else Set.empty[(Int, Int)]
           val proxQ = new DisjunctionMaxQuery(0.0f)
           proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold, proximityPowerFactor))
-          proxQ.add(ProximityQuery(proxTermsFor("ts"), Set(), 0f, proximityGapPanelty, proximityThreshold, 1f))     // disable phrase scoring for title. penalty could be too big
+          proxQ.add(ProximityQuery(proxTermsFor("ts"), Set(), 0f, proximityGapPanelty, proximityThreshold, 1f)) // disable phrase scoring for title. penalty could be too big
           proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), Set(), 0f, proximityGapPanelty, proximityThreshold, 1f))
           new MultiplicativeBoostQuery(query, proxQ, proximityBoost)
         } else if (numTextQueries == 1 && phTerms.nonEmpty && homePageBoost > 0.0f) {
@@ -97,7 +96,7 @@ class MainQueryParser(
             new TermQuery(new Term("home_page", phTerms(0).text))
           } else {
             val hpQ = new PhraseQuery()
-            phTerms.foreach{ t => hpQ.add(new Term("home_page", t.text)) }
+            phTerms.foreach { t => hpQ.add(new Term("home_page", t.text)) }
             hpQ
           }
           new ExistenceBoostQuery(query, homePageQuery, homePageBoost)
@@ -112,16 +111,16 @@ class MainQueryParser(
   }
 
   private[this] lazy val phTerms: IndexedSeq[Term] = {
-    textQueries.flatMap{ _.terms }
+    textQueries.flatMap { _.terms }
   }
   private[this] lazy val phStemmedTerms: IndexedSeq[Term] = {
-    textQueries.flatMap{ _.stems }
+    textQueries.flatMap { _.stems }
   }
 
   private[this] def proxTermsFor(field: String): Seq[Seq[Term]] = {
-    textQueries.foldLeft(new ArrayBuffer[ArrayBuffer[Term]]){ (terms, q) =>
-      val concatTerms = q.concatStems.map{ new Term(field, _) }
-      q.stems.foreach{ t =>
+    textQueries.foldLeft(new ArrayBuffer[ArrayBuffer[Term]]) { (terms, q) =>
+      val concatTerms = q.concatStems.map { new Term(field, _) }
+      q.stems.foreach { t =>
         val buf = ArrayBuffer(new Term(field, t.text))
         buf ++= concatTerms
         terms += buf
@@ -131,11 +130,11 @@ class MainQueryParser(
   }
 
   def svTerms: Seq[Term] = {
-    textQueries.flatMap{ _.stems.map{ t => new Term("sv", t.text) } }
+    textQueries.flatMap { _.stems.map { t => new Term("sv", t.text) } }
   }
 
   private def detectPhrases(queryText: CharSequence, lang: Lang): Future[Set[(Int, Int)]] = {
-    phraseDetectionConsolidator((queryText, lang)){ _ =>
+    phraseDetectionConsolidator((queryText, lang)) { _ =>
       SafeFuture { phraseDetector.detectAll(phStemmedTerms) }
     }
   }

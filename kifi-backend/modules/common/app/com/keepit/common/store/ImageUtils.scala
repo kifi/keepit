@@ -2,7 +2,7 @@ package com.keepit.common.store
 
 import java.awt.image.BufferedImage
 import scala.util.Try
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 import javax.imageio.ImageIO
 import org.imgscalr._
 import play.api.libs.json._
@@ -48,9 +48,9 @@ object ImageUtils {
       val h = rawImage.getHeight
       val w = rawImage.getWidth
       if (h > w) {
-        Try(cropSquareImage(rawImage, 0, (h-w)/2, w))
+        Try(cropSquareImage(rawImage, 0, (h - w) / 2, w))
       } else {
-        Try(cropSquareImage(rawImage, (w-h)/2, 0, h))
+        Try(cropSquareImage(rawImage, (w - h) / 2, 0, h))
       }
     } else Try(rawImage)
     resizeImageKeepProportions(cropped.getOrElse(rawImage), size)
@@ -74,7 +74,7 @@ object ImageUtils {
     val imageRGB = new BufferedImage(image.getWidth, image.getHeight, BufferedImage.TYPE_INT_RGB)
     val g = imageRGB.createGraphics()
     g.setColor(Color.WHITE)
-    g.fillRect(0,0,image.getWidth,image.getHeight)
+    g.fillRect(0, 0, image.getWidth, image.getHeight)
     g.drawRenderedImage(image, null)
     g.dispose()
     imageRGB

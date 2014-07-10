@@ -9,7 +9,7 @@ trait LocalPostOffice {
 }
 
 class ShoeboxPostOfficeImpl @Inject() (mailRepo: ElectronicMailRepo)
-  extends LocalPostOffice with Logging {
+    extends LocalPostOffice with Logging {
 
   def sendMail(mail: ElectronicMail)(implicit session: RWSession): ElectronicMail = {
     val prepared =

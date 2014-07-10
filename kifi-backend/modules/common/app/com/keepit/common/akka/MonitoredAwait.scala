@@ -1,6 +1,6 @@
 package com.keepit.common.akka
 
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError, HealthcheckPlugin }
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import scala.concurrent.Await
@@ -20,7 +20,7 @@ class MonitoredAwait @Inject() (airbrake: AirbrakeNotifier, healthcheckPlugin: H
 class MonitoredAwaitLogging(airbrake: AirbrakeNotifier, healthcheckPlugin: HealthcheckPlugin) extends MonitoredAwait(airbrake, healthcheckPlugin) with Logging {
 
   override def logTime(tag: String, elapsedTimeNano: Long): Unit = {
-    log.info(s"$tag elapsed milliseconds: ${(elapsedTimeNano/1000000d)}")
+    log.info(s"$tag elapsed milliseconds: ${(elapsedTimeNano / 1000000d)}")
   }
 
   override lazy val logging: MonitoredAwait = this

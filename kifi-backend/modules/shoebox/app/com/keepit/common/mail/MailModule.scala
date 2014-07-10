@@ -1,9 +1,9 @@
 package com.keepit.common.mail
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import play.api.Play._
 import com.keepit.inject.AppScoped
-import com.keepit.common.healthcheck.{AirbrakeNotifier, SystemAdminMailSender, LocalSystemAdminMailSender}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender, LocalSystemAdminMailSender }
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.actor.ActorInstance

@@ -1,18 +1,18 @@
 package com.keepit.heimdal
 
 import com.keepit.common.mail.EmailAddress
-import com.keepit.common.service.{ServiceClient, ServiceType}
+import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Heimdal
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.{CallTimeouts, HttpClient}
+import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.common.actor.{FlushEventQueueAndClose, BatchingActor, BatchingActorConfiguration, ActorInstance}
+import com.keepit.common.actor.{ FlushEventQueueAndClose, BatchingActor, BatchingActorConfiguration, ActorInstance }
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.time.Clock
 
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 
 import akka.actor._
@@ -24,7 +24,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
 import com.keepit.model.User
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.{ ExternalId, Id }
 import org.joda.time.DateTime
 import com.kifi.franz.SQSQueue
 
@@ -53,7 +53,7 @@ trait HeimdalServiceClient extends ServiceClient {
 
   def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]]
 
-  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]): Future[Boolean]
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Boolean]
 }
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
@@ -70,8 +70,7 @@ class HeimdalClientActor @Inject() (
     serviceDiscovery: ServiceDiscovery,
     val clock: Clock,
     val scheduler: Scheduler,
-    heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]]
-) extends BatchingActor[HeimdalEvent](airbrakeNotifier) with ServiceClient with Logging {
+    heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]]) extends BatchingActor[HeimdalEvent](airbrakeNotifier) with ServiceClient with Logging {
 
   private final val serviceType = ServiceType.HEIMDAL
   val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
@@ -82,13 +81,13 @@ class HeimdalClientActor @Inject() (
 }
 
 class HeimdalServiceClientImpl @Inject() (
-    val airbrakeNotifier: AirbrakeNotifier,
-    val httpClient: HttpClient,
-    val serviceCluster: ServiceCluster,
-    actor: ActorInstance[HeimdalClientActor],
-    clock: Clock,
-    val scheduling: SchedulingProperties)
-  extends HeimdalServiceClient with SchedulerPlugin with Logging {
+  val airbrakeNotifier: AirbrakeNotifier,
+  val httpClient: HttpClient,
+  val serviceCluster: ServiceCluster,
+  actor: ActorInstance[HeimdalClientActor],
+  clock: Clock,
+  val scheduling: SchedulingProperties)
+    extends HeimdalServiceClient with SchedulerPlugin with Logging {
 
   implicit val actorTimeout = Timeout(30 seconds)
   val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
@@ -99,12 +98,12 @@ class HeimdalServiceClientImpl @Inject() (
     super.onStop()
   }
 
-  def trackEvent(event: HeimdalEvent) : Unit = {
+  def trackEvent(event: HeimdalEvent): Unit = {
     actor.ref ! event
   }
 
   def getMetricData[E <: HeimdalEvent: HeimdalEventCompanion](name: String): Future[JsObject] = {
-    call(Heimdal.internal.getMetricData(implicitly[HeimdalEventCompanion[E]].typeCode, name)).map{ response =>
+    call(Heimdal.internal.getMetricData(implicitly[HeimdalEventCompanion[E]].typeCode, name)).map { response =>
       Json.parse(response.body).as[JsObject]
     }
   }
@@ -151,20 +150,16 @@ class HeimdalServiceClientImpl @Inject() (
     }
   }
 
-  def postDelightedAnswer(userId: Id[User], email: EmailAddress, name: String, score: Int, comment: Option[String]): Future[Boolean] = {
-    if (score < 0 || score > 10) return {
-      airbrakeNotifier.notify(s"Invalid score $score for user $userId with email ${email.address} (comment: $comment)")
-      Future.successful(false)
-    }
-    call(Heimdal.internal.postDelightedAnswer(userId, email, name, score, comment)).map { response =>
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Boolean] = {
+    call(Heimdal.internal.postDelightedAnswer(userId, externalId, email, name), Json.toJson(answer)).map { response =>
       Json.parse(response.body) match {
         case JsString(s) if s == "success" => true
         case json =>
           (json \ "error").asOpt[String].map { msg =>
-            log.warn(s"Error posting delighted answer for user $userId, score $score, comment: $comment: $msg")
+            log.warn(s"Error posting delighted answer $answer for user $userId: $msg")
           }
           false
-        }
+      }
     }
   }
 }

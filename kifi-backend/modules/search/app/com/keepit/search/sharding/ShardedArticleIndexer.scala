@@ -12,11 +12,10 @@ import com.keepit.model.NormalizedURIStates
 import com.keepit.common.logging.Logging
 
 class ShardedArticleIndexer(
-  override val indexShards: Map[Shard[NormalizedURI], ArticleIndexer],
-  articleStore: ArticleStore,
-  override val airbrake: AirbrakeNotifier,
-  shoeboxClient : ShoeboxServiceClient
-) extends ShardedIndexer[NormalizedURI, NormalizedURI, ArticleIndexer] with Logging{
+    override val indexShards: Map[Shard[NormalizedURI], ArticleIndexer],
+    articleStore: ArticleStore,
+    override val airbrake: AirbrakeNotifier,
+    shoeboxClient: ShoeboxServiceClient) extends ShardedIndexer[NormalizedURI, NormalizedURI, ArticleIndexer] with Logging {
 
   private val fetchSize = 2000
 
@@ -26,18 +25,19 @@ class ShardedArticleIndexer(
     var total = 0
     var done = false
     while (!done && !closing) {
-      val uris =  if (sequenceNumber >= catchUpSeqNumber) Await.result(shoeboxClient.getIndexableUris(sequenceNumber, fetchSize), 180 seconds)
+      val uris = if (sequenceNumber >= catchUpSeqNumber) Await.result(shoeboxClient.getIndexableUris(sequenceNumber, fetchSize), 180 seconds)
       else {
         log.info(s"ShardedArticleIndexer in catch up mode: skip active uris until seq number passes ${catchUpSeqNumber.value}")
         val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber, fetchSize), 180 seconds).filter(_.seq <= catchUpSeqNumber)
-        if (uris.nonEmpty) uris else  { sequenceNumber = catchUpSeqNumber; return total }
+        if (uris.nonEmpty) uris else { sequenceNumber = catchUpSeqNumber; return total }
       }
       done = uris.isEmpty
 
-      indexShards.foldLeft(uris){ case (toBeIndexed, (shard, indexer)) =>
-        val (next, rest) = toBeIndexed.partition{ uri => shard.contains(uri.id.get) }
-        total += indexer.update(shard.indexNameSuffix, next, shard)
-        rest
+      indexShards.foldLeft(uris) {
+        case (toBeIndexed, (shard, indexer)) =>
+          val (next, rest) = toBeIndexed.partition { uri => shard.contains(uri.id.get) }
+          total += indexer.update(shard.indexNameSuffix, next, shard)
+          rest
       }
       if (!done) sequenceNumber = uris.last.seq
       if (sequenceNumber == catchUpSeqNumber) done = true
@@ -50,14 +50,15 @@ class ShardedArticleIndexer(
 
     var total = 0
     val uris = if (sequenceNumber >= catchUpSeqNumber) Await.result(shoeboxClient.getIndexableUris(sequenceNumber, fsize), 180 seconds)
-      else {
-        val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber, fsize), 180 seconds).filter(_.seq <= catchUpSeqNumber)
-        if (uris.nonEmpty) uris else { sequenceNumber = catchUpSeqNumber; return total }
-      }
-    indexShards.foldLeft(uris){ case (toBeIndexed, (shard, indexer)) =>
-      val (next, rest) = toBeIndexed.partition{ uri => shard.contains(uri.id.get) }
-      total += indexer.update(shard.indexNameSuffix, next, shard)
-      rest
+    else {
+      val uris = Await.result(shoeboxClient.getScrapedUris(sequenceNumber, fsize), 180 seconds).filter(_.seq <= catchUpSeqNumber)
+      if (uris.nonEmpty) uris else { sequenceNumber = catchUpSeqNumber; return total }
+    }
+    indexShards.foldLeft(uris) {
+      case (toBeIndexed, (shard, indexer)) =>
+        val (next, rest) = toBeIndexed.partition { uri => shard.contains(uri.id.get) }
+        total += indexer.update(shard.indexNameSuffix, next, shard)
+        rest
     }
     if (uris.nonEmpty) sequenceNumber = uris.last.seq
     total

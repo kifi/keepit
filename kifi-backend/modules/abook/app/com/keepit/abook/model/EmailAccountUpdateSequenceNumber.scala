@@ -1,20 +1,19 @@
 package com.keepit.abook.model
 
-import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.google.inject.{ Inject, ImplementedBy, Singleton }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
-import com.keepit.common.db.{Model, SequenceNumber, Id}
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.db.{ Model, SequenceNumber, Id }
 import org.joda.time.DateTime
 
 import com.keepit.common.time._
 import com.keepit.model.EmailAccountUpdate
 
 case class EmailAccountUpdateSequenceNumber(
-  id: Option[Id[EmailAccountUpdateSequenceNumber]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  seq: SequenceNumber[EmailAccountUpdate] = SequenceNumber.ZERO
-) extends Model[EmailAccountUpdateSequenceNumber] {
+    id: Option[Id[EmailAccountUpdateSequenceNumber]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    seq: SequenceNumber[EmailAccountUpdate] = SequenceNumber.ZERO) extends Model[EmailAccountUpdateSequenceNumber] {
   def withId(id: Id[EmailAccountUpdateSequenceNumber]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withSeq(newSeq: SequenceNumber[EmailAccountUpdate]) = this.copy(seq = newSeq)
@@ -28,9 +27,8 @@ trait EmailAccountUpdateSequenceNumberRepo extends Repo[EmailAccountUpdateSequen
 
 @Singleton
 class EmailAccountUpdateSequenceNumberRepoImpl @Inject() (
-  val db: DataBaseComponent,
-  val clock: Clock
-) extends DbRepo[EmailAccountUpdateSequenceNumber] with EmailAccountUpdateSequenceNumberRepo {
+    val db: DataBaseComponent,
+    val clock: Clock) extends DbRepo[EmailAccountUpdateSequenceNumber] with EmailAccountUpdateSequenceNumberRepo {
 
   import db.Driver.simple._
 
@@ -47,7 +45,7 @@ class EmailAccountUpdateSequenceNumberRepoImpl @Inject() (
   override def invalidateCache(emailAccountSeqNum: EmailAccountUpdateSequenceNumber)(implicit session: RSession): Unit = {}
 
   private def current()(implicit session: RSession): EmailAccountUpdateSequenceNumber = {
-    (for(row <- rows) yield row).firstOption getOrElse EmailAccountUpdateSequenceNumber()
+    (for (row <- rows) yield row).firstOption getOrElse EmailAccountUpdateSequenceNumber()
   }
 
   def get()(implicit session: RSession): SequenceNumber[EmailAccountUpdate] = { current().seq }

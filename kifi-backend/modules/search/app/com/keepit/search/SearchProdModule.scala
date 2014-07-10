@@ -1,6 +1,6 @@
 package com.keepit.search
 
-import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, SearchCacheModule}
+import com.keepit.common.cache.{ EhCacheCacheModule, MemcachedCacheModule, SearchCacheModule }
 import com.keepit.common.store.SearchProdStoreModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.heimdal.ProdHeimdalServiceClientModule
@@ -21,7 +21,7 @@ case class SearchProdModule() extends SearchModule(
   indexModule = ProdIndexModule(),
   trackingModule = ProdTrackingModule(),
   spellModule = SpellCorrectorModule()
-) with CommonProdModule  {
+) with CommonProdModule {
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()

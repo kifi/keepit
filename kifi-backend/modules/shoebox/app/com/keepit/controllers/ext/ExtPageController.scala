@@ -3,8 +3,8 @@ package com.keepit.controllers.ext
 import com.google.inject.Inject
 
 import com.keepit.commanders._
-import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.classify.{ Domain, DomainClassifier, DomainRepo }
+import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -26,7 +26,7 @@ import scala.concurrent.duration._
 class ExtPageController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   pageCommander: PageCommander)
-  extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def getPageDetails() = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]

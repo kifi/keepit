@@ -27,8 +27,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
 import com.keepit.search.semantic.SemanticContextAnalyzer
 
-
-class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) with PercentMatchQuery with Logging{
+class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends BooleanQuery(disableCoord) with PercentMatchQuery with Logging {
 
   override def rewrite(reader: IndexReader): Query = {
     if (clauses.size() == 1) { // optimize 1-clause queries
@@ -72,7 +71,7 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
 
     private[this] val (requiredWeights, optionalWeights, prohibitedWeights) = initWeights
 
-    val optionalSemanticMatchFuture = Future {computeOptionalClausesSemanticMatch}
+    val optionalSemanticMatchFuture = Future { computeOptionalClausesSemanticMatch }
     def optionalSemanticMatch = {
       val t = System.currentTimeMillis
       val res = Await.result(optionalSemanticMatchFuture, 100 milli)
@@ -163,7 +162,7 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
         }
       }
 
-      val totalMatchFactor = optionalSemanticMatch.foldLeft(1f)(_*_)
+      val totalMatchFactor = optionalSemanticMatch.foldLeft(1f)(_ * _)
       var matchedFactor = 1f
       var optionalScore = 0f
 
@@ -175,14 +174,15 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
       optionalExpl.addDetail(optionalSumExpl)
       optionalExpl.addDetail(semanticMatchExpl)
 
-      (optionalWeights zip optionalSemanticMatch).foreach{ case (w, m) =>
-        val e = w.explain(context, doc)
-        if (e.isMatch()){
-          optionalSumExpl.addDetail(e)
-          coord += 1
-          matchedFactor *= m
-          optionalScore += e.getValue()
-        }
+      (optionalWeights zip optionalSemanticMatch).foreach {
+        case (w, m) =>
+          val e = w.explain(context, doc)
+          if (e.isMatch()) {
+            optionalSumExpl.addDetail(e)
+            coord += 1
+            matchedFactor *= m
+            optionalScore += e.getValue()
+          }
       }
 
       var semanticMatch = totalMatchFactor / matchedFactor
@@ -197,7 +197,7 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
         sumExpl.setValue(0.0f)
         sumExpl.setDescription("Failure to meet condition(s) of required/prohibited clause(s)")
         return sumExpl
-      } else if (! (semanticMatch > percentMatch/100f || (hotDocSet.get(doc) && semanticMatch > percentMatchForHotDocs / 100f))) {
+      } else if (!(semanticMatch > percentMatch / 100f || (hotDocSet.get(doc) && semanticMatch > percentMatchForHotDocs / 100f))) {
         sumExpl.setDescription(s"below percentMatch threshold. semantic match = ${semanticMatch}")
         sumExpl.setMatch(false)
         sumExpl.setValue(0.0f)
@@ -264,9 +264,10 @@ class BooleanQueryWithSemanticMatch(val disableCoord: Boolean = false) extends B
 
       val optional = if (optionalWeights.isEmpty) Seq.empty[ScorerWithSemanicMatchFactor] else {
         val buf = new ArrayBuffer[ScorerWithSemanicMatchFactor]
-        (optionalWeights zip optionalSemanticMatch).foreach { case(w, semanticMatch) =>
-          val subScorer = w.scorer(context, true, false, acceptDocs)
-          if (subScorer != null) buf += ScorerWithSemanicMatchFactor(subScorer, semanticMatch)
+        (optionalWeights zip optionalSemanticMatch).foreach {
+          case (w, semanticMatch) =>
+            val subScorer = w.scorer(context, true, false, acceptDocs)
+            if (subScorer != null) buf += ScorerWithSemanicMatchFactor(subScorer, semanticMatch)
         }
         buf
       }

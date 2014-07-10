@@ -1,10 +1,8 @@
 package com.keepit.commanders
 
-
 import com.keepit.common.queue.RichConnectionUpdateMessage
 
 import scala.concurrent.Future
-
 
 trait RichConnectionCommander {
 

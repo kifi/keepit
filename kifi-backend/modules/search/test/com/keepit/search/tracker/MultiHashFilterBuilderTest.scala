@@ -14,8 +14,8 @@ class MultiHashFilterBuilderTest extends Specification {
   "MultiHashFilterBuilder" should {
 
     "do a basic serialization flow" in {
-      Seq(0, 1, 123, 1234).forall{ filterSize =>
-        val bytes =  (0 until filterSize).map{ i => rand.nextInt.toByte }.toArray
+      Seq(0, 1, 123, 1234).forall { filterSize =>
+        val bytes = (0 until filterSize).map { i => rand.nextInt.toByte }.toArray
         val filter = new MultiHashFilter[TestEntity](filterSize, bytes, 2, 1)
 
         val builder = TestFilterBuilder(filterSize, 2, 1)
@@ -29,7 +29,7 @@ class MultiHashFilterBuilderTest extends Specification {
 
     "serialize data starting with zero" in {
       val filterSize = 5
-      val bytes =  (0 until filterSize).map(_.toByte).toArray
+      val bytes = (0 until filterSize).map(_.toByte).toArray
       val filter = new MultiHashFilter[TestEntity](filterSize, bytes, 2, 1)
 
       val builder = TestFilterBuilder(filterSize, 2, 1)

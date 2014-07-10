@@ -1,9 +1,9 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import scala.Some
@@ -16,10 +16,10 @@ trait SliderHistoryRepo extends Repo[SliderHistory] {
 
 @Singleton
 class SliderHistoryRepoImpl @Inject() (
-    val db: DataBaseComponent,
-    val clock: Clock,
-    val browsingCache: SliderHistoryUserIdCache)
-  extends DbRepo[SliderHistory] with SliderHistoryRepo with Logging {
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val browsingCache: SliderHistoryUserIdCache)
+    extends DbRepo[SliderHistory] with SliderHistoryRepo with Logging {
 
   import db.Driver.simple._
 
@@ -52,7 +52,7 @@ class SliderHistoryRepoImpl @Inject() (
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[SliderHistory] =
     browsingCache.getOrElseOpt(SliderHistoryUserIdKey(userId)) {
-      (for(b <- rows if b.userId === userId && b.state === SliderHistoryStates.ACTIVE) yield b).firstOption
+      (for (b <- rows if b.userId === userId && b.state === SliderHistoryStates.ACTIVE) yield b).firstOption
     }
 
 }
@@ -68,7 +68,7 @@ class SliderHistoryTrackerImpl(sliderHistoryRepo: SliderHistoryRepo, db: Databas
     val filter = getMultiHashFilter(userId)
     filter.put(uriId.id)
 
-    db.readWrite(attempts=3){ implicit session =>
+    db.readWrite(attempts = 3) { implicit session =>
       sliderHistoryRepo.save(sliderHistoryRepo.getByUserId(userId) match {
         case Some(bh) =>
           bh.withFilter(filter.getFilter)

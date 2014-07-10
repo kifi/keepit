@@ -38,7 +38,7 @@ class TstIndexable(override val id: Id[Tst], val text: String, val personalText:
     val content = buildTextField("c", text)
     val personal = buildTextField("p", personalText)
     val builder = new SemanticVectorBuilder(60)
-    builder.load( analyzer.tokenStream("c", text) )
+    builder.load(analyzer.tokenStream("c", text))
     val semanticVector = buildSemanticVectorField("sv", builder)
     doc.add(content)
     doc.add(personal)

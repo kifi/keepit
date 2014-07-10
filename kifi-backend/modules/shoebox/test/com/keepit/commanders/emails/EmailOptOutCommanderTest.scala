@@ -2,7 +2,7 @@ package com.keepit.commanders.emails
 
 import org.specs2.mutable.Specification
 import com.keepit.test.ShoeboxTestInjector
-import com.keepit.common.mail.{EmailAddress, TestMailModule}
+import com.keepit.common.mail.{ EmailAddress, TestMailModule }
 
 class EmailOptOutCommanderTest extends Specification with ShoeboxTestInjector {
 

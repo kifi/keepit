@@ -22,7 +22,7 @@ object MemoryUsageMonitor {
   def apply(warn: (MemoryPoolMXBean, Long, Long, Int) => Unit): MemoryUsageMonitor = new MemoryUsageMonitorImpl(warn)
 
   def apply(airbrakeNotifierProvider: Provider[AirbrakeNotifier]): MemoryUsageMonitor = {
-    val monitor = apply{ (pool, threshold, maxHeapSize, count) =>
+    val monitor = apply { (pool, threshold, maxHeapSize, count) =>
       if (count > 1) { // at least two incidents in a row
         airbrakeNotifierProvider.get.notify(s"LOW MEMORY!!! - pool=[${pool.getName}] threshold=$threshold maxHeapSize=$maxHeapSize count=$count")
       }
@@ -40,7 +40,7 @@ trait MemoryUsageMonitor {
 class MemoryUsageMonitorImpl(warn: (MemoryPoolMXBean, Long, Long, Int) => Unit) extends MemoryUsageMonitor with Logging {
   import MemoryUsageMonitor._
 
-  override val monitoredPools = ManagementFactory.getMemoryPoolMXBeans.flatMap{ pool =>
+  override val monitoredPools = ManagementFactory.getMemoryPoolMXBeans.flatMap { pool =>
     if (pool.getType == MemoryType.HEAP && poolsToBeMonitored.contains(pool.getName)) {
       val maxHeapSize = pool.getUsage.getMax
       val threshold = (maxHeapSize.toDouble * percentThreshold).toLong
@@ -66,11 +66,11 @@ class MemoryUsageMonitorImpl(warn: (MemoryPoolMXBean, Long, Long, Int) => Unit) 
   def start(): Unit = {
     if (started.compareAndSet(false, true)) {
       def listener = new NotificationListener {
-        def handleNotification(notification: Notification , handback: Object) {
+        def handleNotification(notification: Notification, handback: Object) {
           val memPool = if (handback != null && handback.isInstanceOf[MemoryPool]) handback.asInstanceOf[MemoryPool] else null
           notification.getType match {
             case MemoryNotificationInfo.MEMORY_THRESHOLD_EXCEEDED =>
-              collectionUsageThresholdCount = 0  // clear since the memory usage was below threshold after the last GC
+              collectionUsageThresholdCount = 0 // clear since the memory usage was below threshold after the last GC
             case MemoryNotificationInfo.MEMORY_COLLECTION_THRESHOLD_EXCEEDED =>
               collectionUsageThresholdCount += 1
               warn(memPool.bean, memPool.threshold, memPool.maxHeapSize, collectionUsageThresholdCount)
@@ -80,7 +80,7 @@ class MemoryUsageMonitorImpl(warn: (MemoryPoolMXBean, Long, Long, Int) => Unit) 
       }
 
       val emitter = ManagementFactory.getMemoryMXBean.asInstanceOf[NotificationEmitter]
-      monitoredPools.foreach{ memPool => emitter.addNotificationListener(listener, null, memPool) }
+      monitoredPools.foreach { memPool => emitter.addNotificationListener(listener, null, memPool) }
     }
   }
 }

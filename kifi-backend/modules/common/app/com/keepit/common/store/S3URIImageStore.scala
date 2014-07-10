@@ -1,12 +1,12 @@
 package com.keepit.common.store
 
-import java.io.{ByteArrayOutputStream, ByteArrayInputStream}
+import java.io.{ ByteArrayOutputStream, ByteArrayInputStream }
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.logging.Logging
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
-import scala.util.{Failure, Success, Try}
-import com.keepit.model.{ImageFormat, ImageProvider, ImageInfo, NormalizedURI}
+import scala.util.{ Failure, Success, Try }
+import com.keepit.model.{ ImageFormat, ImageProvider, ImageInfo, NormalizedURI }
 import com.keepit.common.net.URI
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
@@ -28,7 +28,7 @@ class S3URIImageStoreImpl(override val s3Client: AmazonS3, config: S3ImageConfig
     log.info(s"Uploading screenshot of ${nUri.url} to S3 key $key")
     streamUpload(config.bucketName, key, new ByteArrayInputStream(bytes), "public, max-age=1800", bytes.length) flatMap { _ =>
       // Return the url of the image in S3
-      Try{(getImageURL(info, nUri).get, bytes.length)}
+      Try { (getImageURL(info, nUri).get, bytes.length) }
     }
   }
 

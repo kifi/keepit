@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.Id
@@ -15,7 +15,7 @@ trait DelightedUserRepo extends Repo[DelightedUser] {
 
 @Singleton
 class DelightedUserRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock)
-  extends DbRepo[DelightedUser] with DelightedUserRepo {
+    extends DbRepo[DelightedUser] with DelightedUserRepo {
 
   import db.Driver.simple._
 
@@ -23,8 +23,8 @@ class DelightedUserRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
   class DelightedUserTable(tag: Tag) extends RepoTable[DelightedUser](db, tag, "delighted_user") {
     def delightedExtUserId = column[String]("delighted_ext_user_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def email = column[EmailAddress]("email", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, delightedExtUserId, userId, email) <> ((DelightedUser.apply _).tupled, DelightedUser.unapply _)
+    def email = column[EmailAddress]("email", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, delightedExtUserId, userId, email.?) <> ((DelightedUser.apply _).tupled, DelightedUser.unapply _)
   }
 
   def table(tag: Tag) = new DelightedUserTable(tag)

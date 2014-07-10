@@ -1,16 +1,16 @@
 package com.keepit.eliza.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick.{Repo, DbRepo, DataBaseComponent}
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.common.db.{State, Id}
-import com.keepit.model.{User, EContact, NormalizedURI}
+import com.keepit.common.db.{ State, Id }
+import com.keepit.model.{ User, EContact, NormalizedURI }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.crypto.RatherInsecureDESCrypt
-import com.keepit.social.{NonUserKind, NonUserKinds}
+import com.keepit.social.{ NonUserKind, NonUserKinds }
 import scala.slick.jdbc.StaticQuery.interpolation
 
 @ImplementedBy(classOf[NonUserThreadRepoImpl])
@@ -42,9 +42,8 @@ trait NonUserThreadRepo extends Repo[NonUserThread] {
 @Singleton
 class NonUserThreadRepoImpl @Inject() (
   val clock: Clock,
-  val db: DataBaseComponent
-  )
-  extends DbRepo[NonUserThread] with NonUserThreadRepo with MessagingTypeMappers with Logging {
+  val db: DataBaseComponent)
+    extends DbRepo[NonUserThread] with NonUserThreadRepo with MessagingTypeMappers with Logging {
 
   import db.Driver.simple._
 
@@ -83,7 +82,6 @@ class NonUserThreadRepoImpl @Inject() (
   }
   def table(tag: Tag) = new NonUserThreadTable(tag)
 
-
   override def deleteCache(model: NonUserThread)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: NonUserThread)(implicit session: RSession): Unit = {}
 
@@ -97,8 +95,9 @@ class NonUserThreadRepoImpl @Inject() (
     (for (row <- rows if row.threadId === messageThreadId) yield row).list
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit =
-    updates.foreach{ case (oldId, newId) =>
-      (for (row <- rows if row.uriId === oldId) yield row.uriId).update(newId)
+    updates.foreach {
+      case (oldId, newId) =>
+        (for (row <- rows if row.uriId === oldId) yield row.uriId).update(newId)
     }
 
   def setMuteState(muteToken: String, muted: Boolean)(implicit session: RWSession): Boolean =
@@ -134,7 +133,7 @@ class NonUserThreadRepoImpl @Inject() (
   }
 
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[NonUserThread] = {
-    (for (row <- rows if row.accessToken===token) yield row).firstOption
+    (for (row <- rows if row.accessToken === token) yield row).firstOption
   }
 
   def getRecentRecipientsByUser(userId: Id[User], since: DateTime)(implicit session: RSession): Map[EmailAddress, Int] = {

@@ -1,9 +1,9 @@
 package com.keepit.common.db.slick
 
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
-import com.keepit.common.db.{DbSequence, SequenceNumber, SequenceNumberRange, MySqlDatabaseDialect}
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.{ DbSequence, SequenceNumber, SequenceNumberRange, MySqlDatabaseDialect }
 import scala.slick.driver.MySQLDriver
-import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
+import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 import com.keepit.common.logging.Logging
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
@@ -47,7 +47,7 @@ class MySQL(val masterDb: SlickDatabase, val replicaDb: Option[SlickDatabase])
         val res = SequenceNumberRange[T](start, end)
         val lapsed = System.currentTimeMillis - ts
         if (lapsed > 5000) { // may add airbrake later
-        val msg = s"nextRange($name) takes too long ($lapsed ms) res=$res"
+          val msg = s"nextRange($name) takes too long ($lapsed ms) res=$res"
           log.error(msg, new IllegalStateException(msg))
         }
         res

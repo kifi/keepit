@@ -10,7 +10,7 @@ import play.api.Play.current
 import play.api.mvc.Controller
 import play.api.test.Helpers.running
 import scala.collection.JavaConversions._
-import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
+import com.keepit.common.akka.{ FortyTwoActor, AlertingActor }
 import net.spy.memcached.MemcachedClient
 import com.keepit.inject.ApplicationInjector
 import scala.reflect.ManifestFactory.classType
@@ -50,5 +50,5 @@ class ElizaModuleTest extends Specification with Logging with ApplicationInjecto
       }
     }
   }
-  
+
 }

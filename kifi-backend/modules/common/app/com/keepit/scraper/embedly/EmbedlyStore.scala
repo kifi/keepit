@@ -4,11 +4,10 @@ import com.amazonaws.services.s3.AmazonS3
 import com.google.inject.Singleton
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.store.{InMemoryObjectStore, ObjectStore, S3Bucket, S3JsonStore}
+import com.keepit.common.store.{ InMemoryObjectStore, ObjectStore, S3Bucket, S3JsonStore }
 import com.keepit.model.NormalizedURI
 
 import play.api.libs.json.Format
-
 
 trait EmbedlyStore extends ObjectStore[Id[NormalizedURI], StoredEmbedlyInfo]
 

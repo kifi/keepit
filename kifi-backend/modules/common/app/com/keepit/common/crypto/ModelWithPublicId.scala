@@ -22,8 +22,10 @@ object ModelWithPublicId {
 
   def decode[T](publicId: String)(implicit config: PublicIdConfiguration, obj: ModelWithPublicId[T]): Try[Id[T]] = {
     val reg = raw"^${obj.prefix}(.*)$$".r
-    Try{reg.findFirstMatchIn(publicId).map(_.group(1)).map { identifier =>
-      (new TripleDES(config.key).decryptStrToLong(identifier, CipherConv.Base32Conv)) map Id[T] _ toOption
-    }.flatten.get}
+    Try {
+      reg.findFirstMatchIn(publicId).map(_.group(1)).map { identifier =>
+        (new TripleDES(config.key).decryptStrToLong(identifier, CipherConv.Base32Conv)) map Id[T] _ toOption
+      }.flatten.get
+    }
   }
 }

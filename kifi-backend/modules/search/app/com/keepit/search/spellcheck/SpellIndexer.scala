@@ -4,7 +4,7 @@ import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.MultiReader
-import org.apache.lucene.search.spell.{SpellChecker, HighFrequencyDictionary, LevensteinDistance, NGramDistance, StringDistance}
+import org.apache.lucene.search.spell.{ SpellChecker, HighFrequencyDictionary, LevensteinDistance, NGramDistance, StringDistance }
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
 import com.keepit.common.logging.Logging
@@ -13,8 +13,7 @@ import com.keepit.search.sharding.ShardedArticleIndexer
 
 case class SpellCheckerConfig(
   wordFreqThreshold: Float = 0.003f,
-  distance: String = "composite"
-)
+  distance: String = "composite")
 
 object SpellCheckerFactory {
   def apply(spellIndexDirectory: Directory, config: SpellCheckerConfig) = {
@@ -47,14 +46,13 @@ object SpellIndexer {
 }
 
 abstract class SpellIndexerImpl(
-  spellIndexDirectory: Directory,
-  spellConfig: SpellCheckerConfig
-) extends SpellIndexer with Logging{
+    spellIndexDirectory: Directory,
+    spellConfig: SpellCheckerConfig) extends SpellIndexer with Logging {
 
   var spellChecker = createChecker()
 
   override def getSpellChecker(): SpellChecker = spellChecker
-  private  def createChecker() =  SpellCheckerFactory(spellIndexDirectory, spellConfig)
+  private def createChecker() = SpellCheckerFactory(spellIndexDirectory, spellConfig)
   private def refreshSpellChecker = { spellChecker = createChecker() }
 
   override def getTermStatsReader() = new TermStatsReaderImpl(getIndexReader(), "c")
@@ -68,7 +66,7 @@ abstract class SpellIndexerImpl(
       val config = new IndexWriterConfig(Version.LUCENE_47, DefaultAnalyzer.defaultAnalyzer)
       spellChecker.indexDictionary(dict, config, true) // fullMerge = true
       val t2 = System.currentTimeMillis
-      log.info(s"spell-checker has built the dictionary ... Time elapsed: ${(t2 - t1)/1000.0 } seconds")
+      log.info(s"spell-checker has built the dictionary ... Time elapsed: ${(t2 - t1) / 1000.0} seconds")
     } finally {
       refreshSpellChecker
     }

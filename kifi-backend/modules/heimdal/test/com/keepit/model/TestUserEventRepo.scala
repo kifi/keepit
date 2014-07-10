@@ -10,7 +10,7 @@ class TestUserEventLoggingRepo extends DevUserEventLoggingRepo {
 
   def lastEvent(): UserEvent = events.head
 
-  override def persist(obj: UserEvent) : Unit = synchronized { events = events :+ obj }
+  override def persist(obj: UserEvent): Unit = synchronized { events = events :+ obj }
 }
 
 class TestSystemEventLoggingRepo extends DevSystemEventLoggingRepo {
@@ -21,7 +21,7 @@ class TestSystemEventLoggingRepo extends DevSystemEventLoggingRepo {
 
   def lastEvent(): SystemEvent = events.head
 
-  override def persist(obj: SystemEvent) : Unit = synchronized { events = events :+ obj }
+  override def persist(obj: SystemEvent): Unit = synchronized { events = events :+ obj }
 }
 
 class TestAnonymousEventLoggingRepo extends DevAnonymousEventLoggingRepo {
@@ -32,7 +32,7 @@ class TestAnonymousEventLoggingRepo extends DevAnonymousEventLoggingRepo {
 
   def lastEvent(): AnonymousEvent = events.head
 
-  override def persist(obj: AnonymousEvent) : Unit = synchronized { events = events :+ obj }
+  override def persist(obj: AnonymousEvent): Unit = synchronized { events = events :+ obj }
 }
 
 class TestNonUserEventLoggingRepo extends DevNonUserEventLoggingRepo {
@@ -43,5 +43,5 @@ class TestNonUserEventLoggingRepo extends DevNonUserEventLoggingRepo {
 
   def lastEvent(): NonUserEvent = events.head
 
-  override def persist(obj: NonUserEvent) : Unit = synchronized { events = events :+ obj }
+  override def persist(obj: NonUserEvent): Unit = synchronized { events = events :+ obj }
 }

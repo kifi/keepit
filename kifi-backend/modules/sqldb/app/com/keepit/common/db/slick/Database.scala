@@ -1,12 +1,12 @@
 package com.keepit.common.db.slick
 
-import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
+import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 import scala.slick.jdbc.JdbcBackend.Session
 import scala.slick.jdbc.ResultSetConcurrency
 
 import scala.concurrent._
 import scala.util.DynamicVariable
-import com.google.inject.{Singleton, ImplementedBy, Inject}
+import com.google.inject.{ Singleton, ImplementedBy, Inject }
 import com.keepit.common.db.DatabaseDialect
 import com.keepit.common.logging.Logging
 import com.keepit.macros.Location
@@ -41,7 +41,7 @@ class SlickSessionProviderImpl extends SlickSessionProvider {
 
 case class DbExecutionContext(context: ExecutionContext)
 
-case class SlickDatabaseWrapper (slickDatabase: SlickDatabase, masterReplica: Database.DBMasterReplica)
+case class SlickDatabaseWrapper(slickDatabase: SlickDatabase, masterReplica: Database.DBMasterReplica)
 
 class ExecutionSkipped extends Exception("skipped. try again! (this is not a real exception)")
 
@@ -57,8 +57,7 @@ class Database @Inject() (
     val db: DataBaseComponent,
     val dbExecutionContext: DbExecutionContext,
     val sessionProvider: SlickSessionProvider,
-    val playMode: Mode
-  ) extends Logging {
+    val playMode: Mode) extends Logging {
 
   import DBSession._
   import Database._
@@ -124,7 +123,7 @@ class Database @Inject() (
     readOnly(f, dbMasterReplica, location)
   }
 
-  private def createReadWriteSession(location: Location) = new RWSession({//always master
+  private def createReadWriteSession(location: Location) = new RWSession({ //always master
     sessionProvider.createReadWriteSession(db.masterDb)
   }, location)
 
@@ -148,7 +147,7 @@ class Database @Inject() (
   }
 
   private[this] val READ_WRITE_BATCH_SESSION_REFRESH_INTERVAL = 500
-  private[this] val READ_WRITE_SEQ_SESSION_REFRESH_INTERVAL   = 50
+  private[this] val READ_WRITE_SEQ_SESSION_REFRESH_INTERVAL = 50
 
   def readWriteSeq[D, T](batch: Seq[D])(f: (RWSession, D) => T)(implicit location: Location): Unit = {
     def sink(a: D, b: T): Unit = {}
@@ -156,10 +155,10 @@ class Database @Inject() (
   }
 
   def readWriteSeq[D, T](batch: Seq[D], collector: (D, T) => Unit)(f: (RWSession, D) => T)(implicit location: Location): Unit = {
-    batch.grouped(READ_WRITE_SEQ_SESSION_REFRESH_INTERVAL).foreach{ chunk =>
+    batch.grouped(READ_WRITE_SEQ_SESSION_REFRESH_INTERVAL).foreach { chunk =>
       val rw = createReadWriteSession(location)
       try {
-        chunk.foreach{ item => collector(item, rw.withTransaction{ f(rw, item) }) }
+        chunk.foreach { item => collector(item, rw.withTransaction { f(rw, item) }) }
       } finally { rw.close() }
     }
   }
@@ -168,13 +167,14 @@ class Database @Inject() (
     var successCnt = 0
     var failure: Failure[T] = null
 
-    val results = batch.grouped(READ_WRITE_BATCH_SESSION_REFRESH_INTERVAL).foldLeft(Map.empty[D, Try[T]]){ (results, chunk) =>
+    val results = batch.grouped(READ_WRITE_BATCH_SESSION_REFRESH_INTERVAL).foldLeft(Map.empty[D, Try[T]]) { (results, chunk) =>
       val rw = createReadWriteSession(location)
       try {
-        results ++ chunk.map{ item =>
+        results ++ chunk.map { item =>
           val oneResult = if (failure == null) {
             Try(rw.withTransaction { f(rw, item) }) match {
-              case s: Success[T] => successCnt += 1; s
+              case s: Success[T] =>
+                successCnt += 1; s
               case f: Failure[T] => failure = f; f
             }
           } else {
@@ -194,11 +194,11 @@ class Database @Inject() (
     1 to attempts - 1 foreach { attempt =>
       val partialResults = readWriteBatch(pending)(f)(location)
       results ++= partialResults
-      pending = batch.filter{ d =>
+      pending = batch.filter { d =>
         results(d) match {
-          case Failure(e: SQLException) => true                                // retry for other SQLException
-          case Failure(e: ExecutionSkipped) => true                            // retry skipped items
-          case _ => false                                                      // no retry for all other cases
+          case Failure(e: SQLException) => true // retry for other SQLException
+          case Failure(e: ExecutionSkipped) => true // retry skipped items
+          case _ => false // no retry for all other cases
         }
       }.toSeq
       if (pending.isEmpty) return results

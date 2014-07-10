@@ -1,24 +1,23 @@
 package com.keepit.eliza.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick.{Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent}
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.db.slick.{ Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import com.keepit.common.db.{ModelWithState, ModelWithExternalId, Id, ExternalId}
-import com.keepit.model.{User, NormalizedURI}
+import com.keepit.common.db.{ ModelWithState, ModelWithExternalId, Id, ExternalId }
+import com.keepit.model.{ User, NormalizedURI }
 import MessagingTypeMappers._
 import com.keepit.common.logging.Logging
-import com.keepit.common.cache.{CacheSizeLimitExceededException, JsonCacheImpl, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{ CacheSizeLimitExceededException, JsonCacheImpl, FortyTwoCachePlugin, Key }
 import scala.concurrent.duration.Duration
 import play.api.libs.json._
 import play.api.libs.json.util._
 import play.api.libs.functional.syntax._
 import scala.slick.lifted.Query
 import scala.slick.jdbc.StaticQuery
-
 
 sealed trait MessageSender {
   def isSystem: Boolean = false
@@ -27,7 +26,7 @@ sealed trait MessageSender {
 }
 
 object MessageSender {
-  implicit val format : Format[MessageSender] = new Format[MessageSender] {
+  implicit val format: Format[MessageSender] = new Format[MessageSender] {
 
     def reads(json: JsValue) = {
       val kind: String = (json \ "kind").as[String]
@@ -92,40 +91,39 @@ object MessageSource {
 }
 
 case class Message(
-    id: Option[Id[Message]] = None,
-    createdAt: DateTime = currentDateTime,
-    updatedAt: DateTime = currentDateTime,
-    externalId: ExternalId[Message] = ExternalId(),
-    from: MessageSender,
-    thread: Id[MessageThread],
-    threadExtId: ExternalId[MessageThread],
-    messageText: String,
-    source: Option[MessageSource],
-    auxData: Option[JsArray] = None,
-    sentOnUrl: Option[String],
-    sentOnUriId: Option[Id[NormalizedURI]]
-  )
-  extends ModelWithExternalId[Message] {
+  id: Option[Id[Message]] = None,
+  createdAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
+  externalId: ExternalId[Message] = ExternalId(),
+  from: MessageSender,
+  thread: Id[MessageThread],
+  threadExtId: ExternalId[MessageThread],
+  messageText: String,
+  source: Option[MessageSource],
+  auxData: Option[JsArray] = None,
+  sentOnUrl: Option[String],
+  sentOnUriId: Option[Id[NormalizedURI]])
+    extends ModelWithExternalId[Message] {
 
   def withId(id: Id[Message]): Message = this.copy(id = Some(id))
-  def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt=updateTime)
+  def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
 }
 
 object Message {
   implicit val format = (
-      (__ \ 'id).formatNullable(Id.format[Message]) and
-      (__ \ 'createdAt).format[DateTime] and
-      (__ \ 'updatedAt).format[DateTime] and
-      (__ \ 'externalId).format(ExternalId.format[Message]) and
-      (__ \ 'from).format[MessageSender] and
-      (__ \ 'thread).format(Id.format[MessageThread]) and
-      (__ \ 'threadExtId).format(ExternalId.format[MessageThread]) and
-      (__ \ 'messageText).format[String] and
-      (__ \ 'source).formatNullable[MessageSource] and
-      (__ \ 'auxData).formatNullable[JsArray] and
-      (__ \ 'sentOnUrl).formatNullable[String] and
-      (__ \ 'sentOnUriId).formatNullable(Id.format[NormalizedURI])
-    )(Message.apply, unlift(Message.unapply))
+    (__ \ 'id).formatNullable(Id.format[Message]) and
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'externalId).format(ExternalId.format[Message]) and
+    (__ \ 'from).format[MessageSender] and
+    (__ \ 'thread).format(Id.format[MessageThread]) and
+    (__ \ 'threadExtId).format(ExternalId.format[MessageThread]) and
+    (__ \ 'messageText).format[String] and
+    (__ \ 'source).formatNullable[MessageSource] and
+    (__ \ 'auxData).formatNullable[JsArray] and
+    (__ \ 'sentOnUrl).formatNullable[String] and
+    (__ \ 'sentOnUriId).formatNullable(Id.format[NormalizedURI])
+  )(Message.apply, unlift(Message.unapply))
 
   def fromDbTuple(
     id: Option[Id[Message]],
@@ -140,8 +138,7 @@ object Message {
     auxData: Option[JsArray],
     sentOnUrl: Option[String],
     sentOnUriId: Option[Id[NormalizedURI]],
-    nonUserSender: Option[JsValue]
-  ): Message = {
+    nonUserSender: Option[JsValue]): Message = {
     Message(
       id,
       createdAt,
@@ -158,7 +155,7 @@ object Message {
     )
   }
 
-  def toDbTuple(message: Message): Option[(Option[Id[Message]], DateTime, DateTime, ExternalId[Message], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String,Option[MessageSource],Option[JsArray],Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
+  def toDbTuple(message: Message): Option[(Option[Id[Message]], DateTime, DateTime, ExternalId[Message], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String, Option[MessageSource], Option[JsArray], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
     Some((
       message.id,
       message.createdAt,
@@ -177,9 +174,8 @@ object Message {
   }
 }
 
-case class MessagesForThread(val thread:Id[MessageThread], val messages:Seq[Message])
-{
-  override def equals(other:Any):Boolean = other match {
+case class MessagesForThread(val thread: Id[MessageThread], val messages: Seq[Message]) {
+  override def equals(other: Any): Boolean = other match {
     case mft: MessagesForThread => (thread.id == mft.thread.id && messages.size == mft.messages.size)
     case _ => false
   }
@@ -201,12 +197,12 @@ object MessagesForThread {
 
 }
 
-case class MessagesForThreadIdKey(threadId:Id[MessageThread]) extends Key[MessagesForThread] {
+case class MessagesForThreadIdKey(threadId: Id[MessageThread]) extends Key[MessagesForThread] {
   override val version = 5
   val namespace = "messages_for_thread_id"
-  def toKey():String = threadId.id.toString
+  def toKey(): String = threadId.id.toString
 }
 
 class MessagesForThreadIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[MessagesForThreadIdKey, MessagesForThread](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[MessagesForThreadIdKey, MessagesForThread](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 

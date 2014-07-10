@@ -9,18 +9,18 @@ import com.keepit.search.Lang
 
 case class LDAWordRepresenter(val version: ModelVersion[DenseLDA], lda: DenseLDA) extends HashMapWordRepresenter[DenseLDA](lda.dimension, lda.mapper)
 
-case class LDADocRepresenter @Inject()(wordRep: LDAWordRepresenter) extends NaiveSumDocRepresenter(wordRep){
+case class LDADocRepresenter @Inject() (wordRep: LDAWordRepresenter) extends NaiveSumDocRepresenter(wordRep) {
   override def normalize(vec: Array[Float]): Array[Float] = {
     val s = vec.sum
-    vec.map{ x => x/s}
+    vec.map { x => x / s }
   }
 }
 
-case class LDAURIRepresenter @Inject()(docRep: LDADocRepresenter, articleStore: ArticleStore) extends BaseURIFeatureRepresenter(docRep, articleStore) {
+case class LDAURIRepresenter @Inject() (docRep: LDADocRepresenter, articleStore: ArticleStore) extends BaseURIFeatureRepresenter(docRep, articleStore) {
 
   override def isDefinedAt(article: Article): Boolean = article.contentLang == Some(Lang("en"))
 
   override def toDocument(article: Article): Document = {
-    Document(article.content.toLowerCase.split(" "))    // TODO(yingjie): Lucene tokenize
+    Document(article.content.toLowerCase.split(" ")) // TODO(yingjie): Lucene tokenize
   }
 }

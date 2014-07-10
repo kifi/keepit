@@ -1,15 +1,15 @@
 package com.keepit.common.mail
 
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.logging.Logging
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.collection.mutable.Queue
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import scala.util.{Success, Failure}
+import scala.util.{ Success, Failure }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import scala.concurrent.duration._
 import akka.util.Timeout
 import play.api.Plugin
@@ -38,7 +38,7 @@ case object SendQueuedEmails extends PostOfficeMessage
 class RemotePostOfficeActor @Inject() (
   airbrake: AirbrakeNotifier,
   shoeboxClient: ShoeboxServiceClient)
-  extends FortyTwoActor(airbrake) {
+    extends FortyTwoActor(airbrake) {
 
   val mailQueue = Queue[ElectronicMail]()
   val Max8M = 8 * 1024 * 1024
@@ -46,13 +46,13 @@ class RemotePostOfficeActor @Inject() (
   def receive = {
     case SendEmail(mail: ElectronicMail) =>
       shoeboxClient.sendMail(mail.copy(htmlBody = mail.htmlBody.value.take(Max8M), textBody = mail.textBody.map(_.value.take(Max8M)))) onComplete {
-        case Success(result)  => if(!result) self ! QueueEmail(mail)
+        case Success(result) => if (!result) self ! QueueEmail(mail)
         case Failure(failure) => self ! QueueEmail(mail)
       }
     case QueueEmail(mail) =>
       mailQueue.enqueue(mail)
     case SendQueuedEmails =>
-      mailQueue.foreach( mail => self ! SendEmail(mail))
+      mailQueue.foreach(mail => self ! SendEmail(mail))
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -63,21 +63,21 @@ trait RemotePostOfficePlugin extends Plugin {
 }
 
 class RemotePostOfficePluginImpl @Inject() (
-    actor: ActorInstance[RemotePostOfficeActor],
-    val scheduling: SchedulingProperties)
-  extends RemotePostOfficePlugin with SchedulerPlugin {
+  actor: ActorInstance[RemotePostOfficeActor],
+  val scheduling: SchedulingProperties)
+    extends RemotePostOfficePlugin with SchedulerPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)
   override def enabled: Boolean = true
   override def onStart() {
-     scheduleTaskOnAllMachines(actor.system, 30 seconds, 3 minutes, actor.ref, SendQueuedEmails)
+    scheduleTaskOnAllMachines(actor.system, 30 seconds, 3 minutes, actor.ref, SendQueuedEmails)
   }
   def sendMail(mail: ElectronicMail) = actor.ref ! SendEmail(mail)
 }
 
 class RemotePostOfficeImpl @Inject() (
   remotePostOfficePlugin: RemotePostOfficePlugin)
-  extends RemotePostOffice with Logging {
+    extends RemotePostOffice with Logging {
 
   def queueMail(mail: ElectronicMail): ElectronicMail = {
     remotePostOfficePlugin.sendMail(mail)

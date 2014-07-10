@@ -1,12 +1,12 @@
 package com.keepit.search.phrasedetector
 
-import com.keepit.search.index.{Indexable, Indexer, IndexDirectory}
-import com.keepit.model.{Collection, Phrase}
+import com.keepit.search.index.{ Indexable, Indexer, IndexDirectory }
+import com.keepit.model.{ Collection, Phrase }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.logging.Logging
 import scala.concurrent.Await
-import com.keepit.common.db.{SequenceNumber, Id}
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.search.IndexInfo
 import com.keepit.search.Lang
 import scala.concurrent.duration._
@@ -16,9 +16,9 @@ abstract class PhraseIndexer(indexDirectory: IndexDirectory) extends Indexer[Phr
 }
 
 class PhraseIndexerImpl(
-  indexDirectory: IndexDirectory,
-  override val airbrake: AirbrakeNotifier,
-  shoeboxClient: ShoeboxServiceClient) extends PhraseIndexer(indexDirectory) with Logging  {
+    indexDirectory: IndexDirectory,
+    override val airbrake: AirbrakeNotifier,
+    shoeboxClient: ShoeboxServiceClient) extends PhraseIndexer(indexDirectory) with Logging {
 
   override val commitBatchSize = 1000
 
@@ -61,13 +61,12 @@ class PhraseIndexerImpl(
   }
 }
 
-
 class PhraseIndexable(
   override val id: Id[Phrase],
   override val sequenceNumber: SequenceNumber[Phrase],
   override val isDeleted: Boolean,
   phrase: String, lang: Lang)
-extends Indexable[Phrase, Phrase] with PhraseFieldBuilder {
+    extends Indexable[Phrase, Phrase] with PhraseFieldBuilder {
   override def buildDocument = {
     val doc = super.buildDocument
     doc.add(buildPhraseField("p", phrase, lang))

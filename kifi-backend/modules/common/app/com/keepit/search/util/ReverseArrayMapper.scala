@@ -89,7 +89,7 @@ object ReverseArrayMapper {
     val chains = new Array[Long](sz)
     val slots = new Array[ArrayStack[Int]](64)
     var i = 0
-    while(i < 64) {
+    while (i < 64) {
       slots(i) = new ArrayStack[Int]
       i += 1
     }

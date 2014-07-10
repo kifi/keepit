@@ -25,7 +25,7 @@ object WrappedIndexReader {
     val oldInner = oldReader.inner
     val newInner = DirectoryReader.openIfChanged(oldInner)
     if (newInner != null) {
-      val oldIdMappers = oldReader.wrappedSubReaders.foldLeft(Map.empty[String, IdMapper]){ (m, r) => m + (r.name -> r.getIdMapper) }
+      val oldIdMappers = oldReader.wrappedSubReaders.foldLeft(Map.empty[String, IdMapper]) { (m, r) => m + (r.name -> r.getIdMapper) }
       doOpen(newInner, oldIdMappers)
     } else {
       oldReader
@@ -33,14 +33,14 @@ object WrappedIndexReader {
   }
 
   private def doOpen(inner: DirectoryReader, oldIdMappers: Map[String, IdMapper]) = {
-    val subReaders = inner.getContext.leaves.foldLeft(new ArrayBuffer[WrappedSubReader]){ (buf, cx) =>
+    val subReaders = inner.getContext.leaves.foldLeft(new ArrayBuffer[WrappedSubReader]) { (buf, cx) =>
       cx.reader match {
         case segmentReader: SegmentReader =>
           val segmentName = segmentReader.getSegmentName
           val oldIdMapper = oldIdMappers.get(segmentName)
           val newSubReader = oldIdMapper match {
             case Some(oldIdMapper) => new WrappedSubReader(segmentName, segmentReader, oldIdMapper)
-            case None              => new WrappedSubReader(segmentName, segmentReader, ArrayIdMapper(segmentReader))
+            case None => new WrappedSubReader(segmentName, segmentReader, ArrayIdMapper(segmentReader))
           }
           buf += newSubReader
         case subReader =>
@@ -52,7 +52,7 @@ object WrappedIndexReader {
 }
 
 class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Array[WrappedSubReader])
-extends MultiReader(wrappedSubReaders.map{ _.asInstanceOf[IndexReader] }.toArray, false) {
+    extends MultiReader(wrappedSubReaders.map { _.asInstanceOf[IndexReader] }.toArray, false) {
 
   def getIdMapper: IdMapper = {
     new IdMapper {
@@ -84,20 +84,20 @@ extends MultiReader(wrappedSubReaders.map{ _.asInstanceOf[IndexReader] }.toArray
       }
 
       lazy private[this] val maxDocSum = wrappedSubReaders.map(_.maxDoc).sum
-      def maxDoc():Int = maxDocSum
+      def maxDoc(): Int = maxDocSum
     }
   }
 
   lazy val asAtomicReader: WrappedSubReader = new WrappedSubReader("", SlowCompositeReaderWrapper.wrap(this), getIdMapper)
 
   def outerjoin(indexReader: CachingIndexReader, idMapper: IdMapper): WrappedIndexReader = {
-    val remappers = wrappedSubReaders.foldLeft(Map.empty[String, DocIdRemapper]){ (m, r) => m + (r.name -> DocIdRemapper(idMapper, r.getIdMapper, r.inner)) }
+    val remappers = wrappedSubReaders.foldLeft(Map.empty[String, DocIdRemapper]) { (m, r) => m + (r.name -> DocIdRemapper(idMapper, r.getIdMapper, r.inner)) }
     val splitReaders = indexReader.split(remappers)
     var newSubReaders = ArrayBuffer.empty[WrappedSubReader]
-    wrappedSubReaders.foreach{ r =>
+    wrappedSubReaders.foreach { r =>
       newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, splitReaders(r.name)), r.getIdMapper)
     }
-    splitReaders.get("").foreach{ subReader =>
+    splitReaders.get("").foreach { subReader =>
       newSubReaders += new WrappedSubReader("", subReader, idMapper)
     }
 

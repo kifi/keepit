@@ -22,20 +22,21 @@ object HttpRedirect {
   import play.api.libs.json._
   implicit val format = (
     (__ \ 'statusCode).format[Int] and
-      (__ \ 'currentLocation).format[String] and
-      (__ \ 'newDestination).format[String]
-    )(HttpRedirect.apply _, unlift(HttpRedirect.unapply))
+    (__ \ 'currentLocation).format[String] and
+    (__ \ 'newDestination).format[String]
+  )(HttpRedirect.apply _, unlift(HttpRedirect.unapply))
 
   def resolvePermanentRedirects(origin: String, redirects: Seq[HttpRedirect]): Option[String] = {
     var absoluteDestination = origin
     var currentLocation = origin
-    redirects.takeWhile(_.isPermanent).foreach { case permanentRedirect =>
-      if (permanentRedirect.isLocatedAt(currentLocation)) {
-        currentLocation = permanentRedirect.newDestination
-        if (URI.isAbsolute(currentLocation)) {
-          absoluteDestination = currentLocation
+    redirects.takeWhile(_.isPermanent).foreach {
+      case permanentRedirect =>
+        if (permanentRedirect.isLocatedAt(currentLocation)) {
+          currentLocation = permanentRedirect.newDestination
+          if (URI.isAbsolute(currentLocation)) {
+            absoluteDestination = currentLocation
+          }
         }
-      }
     }
     if (origin != absoluteDestination) Some(absoluteDestination) else None
   }

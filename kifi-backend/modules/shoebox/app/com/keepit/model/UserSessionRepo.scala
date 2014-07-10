@@ -2,13 +2,13 @@ package com.keepit.model
 
 import org.joda.time.DateTime
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.social.{ SocialNetworkType, SocialId }
 
 @ImplementedBy(classOf[UserSessionRepoImpl])
 trait UserSessionRepo extends Repo[UserSession] with ExternalIdColumnFunction[UserSession] {
@@ -17,12 +17,11 @@ trait UserSessionRepo extends Repo[UserSession] with ExternalIdColumnFunction[Us
 
 @Singleton
 class UserSessionRepoImpl @Inject() (
-  val db: DataBaseComponent,
-  val clock: Clock,
-  val externalIdCache: UserSessionExternalIdCache
-) extends DbRepo[UserSession] with UserSessionRepo with ExternalIdColumnDbFunction[UserSession] with Logging {
+    val db: DataBaseComponent,
+    val clock: Clock,
+    val externalIdCache: UserSessionExternalIdCache) extends DbRepo[UserSession] with UserSessionRepo with ExternalIdColumnDbFunction[UserSession] with Logging {
 
-    import db.Driver.simple._
+  import db.Driver.simple._
 
   type RepoImpl = UserSessionTable
   class UserSessionTable(tag: Tag) extends RepoTable[UserSession](db, tag, "user_session") with ExternalIdColumn[UserSession] {

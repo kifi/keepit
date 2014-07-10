@@ -4,18 +4,18 @@ import org.apache.lucene.document.BinaryDocValuesField
 import org.apache.lucene.index.Term
 import org.apache.lucene.util.BytesRef
 import com.keepit.common.db._
-import com.keepit.common.healthcheck.{AirbrakeNotifier}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier }
 import com.keepit.common.strings._
 import com.keepit.model._
 import com.keepit.model.CollectionStates._
 import com.keepit.search.index._
 import com.keepit.search.index.DocUtil
-import com.keepit.search.index.{Indexable, Indexer}
+import com.keepit.search.index.{ Indexable, Indexer }
 import com.keepit.search.Searcher
 import com.keepit.search.graph.URIList
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{ Future, Await }
 import com.keepit.common.concurrent.ExecutionContext.immediate
 import com.keepit.search.IndexInfo
 import com.keepit.search.sharding.Shard
@@ -35,10 +35,10 @@ object CollectionFields {
 }
 
 class CollectionIndexer(
-    indexDirectory: IndexDirectory,
-    collectionNameIndexer: CollectionNameIndexer,
-    override val airbrake: AirbrakeNotifier)
-  extends Indexer[Collection, Collection, CollectionIndexer](indexDirectory, CollectionFields.decoders) {
+  indexDirectory: IndexDirectory,
+  collectionNameIndexer: CollectionNameIndexer,
+  override val airbrake: AirbrakeNotifier)
+    extends Indexer[Collection, Collection, CollectionIndexer](indexDirectory, CollectionFields.decoders) {
 
   import CollectionFields._
   import CollectionIndexer.CollectionIndexable
@@ -70,8 +70,9 @@ class CollectionIndexer(
 
   def update(name: String, data: Seq[(Collection, Seq[KeepUriAndTime])], shard: Shard[NormalizedURI]): Int = updateLock.synchronized {
     val cnt = doUpdate("CollectionIndex" + name) {
-      data.iterator.map{ case (collection, bookmarks) =>
-        buildIndexable(collection, bookmarks.filter(b => shard.contains(b.uriId)))
+      data.iterator.map {
+        case (collection, bookmarks) =>
+          buildIndexable(collection, bookmarks.filter(b => shard.contains(b.uriId)))
       }
     }
     collectionNameIndexer.update(name, data.map(_._1), new CollectionSearcher(getSearcher))
@@ -102,7 +103,7 @@ object CollectionIndexer {
 
   def fetchData(sequenceNumber: SequenceNumber[Collection], fetchSize: Int, shoeboxClient: ShoeboxServiceClient): Seq[(Collection, Seq[KeepUriAndTime])] = {
     val collections: Seq[Collection] = Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, fetchSize), 180 seconds)
-    collections.map{ collection =>
+    collections.map { collection =>
       val bookmarks = if (collection.state == CollectionStates.ACTIVE) {
         Await.result(shoeboxClient.getUriIdsInCollection(collection.id.get), 180 seconds)
       } else {
@@ -122,15 +123,12 @@ object CollectionIndexer {
     (collection, bookmarks)
   }
 
-
-
   class CollectionIndexable(
-    override val id: Id[Collection],
-    override val sequenceNumber: SequenceNumber[Collection],
-    override val isDeleted: Boolean,
-    val collection: Collection,
-    val normalizedUris: Seq[KeepUriAndTime]
-  ) extends Indexable[Collection, Collection] {
+      override val id: Id[Collection],
+      override val sequenceNumber: SequenceNumber[Collection],
+      override val isDeleted: Boolean,
+      val collection: Collection,
+      val normalizedUris: Seq[KeepUriAndTime]) extends Indexable[Collection, Collection] {
 
     override def buildDocument = {
       val doc = super.buildDocument
@@ -138,7 +136,7 @@ object CollectionIndexer {
       val collListBytes = URIList.toByteArray(normalizedUris)
       val collListFields = buildURIListField(uriListField, collListBytes)
       val collList = URIList(collListBytes)
-      collListFields.foreach{doc.add}
+      collListFields.foreach { doc.add }
 
       val uri = buildURIIdField(collList)
       doc.add(uri)
@@ -160,7 +158,7 @@ object CollectionIndexer {
     }
 
     private def buildURIIdField(uriList: URIList) = {
-      buildIteratorField(uriField, uriList.ids.iterator){ uriId => uriId.toString }
+      buildIteratorField(uriField, uriList.ids.iterator) { uriId => uriId.toString }
     }
   }
 }

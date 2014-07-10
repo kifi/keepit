@@ -2,10 +2,11 @@ package com.keepit.common.db.slick
 
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.keepit.heimdal.DelightedAnswerSource
 import com.keepit.model._
-import java.sql.{Clob, Date, Timestamp}
-import org.joda.time.{DateTime, LocalDate}
-import scala.slick.jdbc.{PositionedResult, GetResult, PositionedParameters, SetParameter}
+import java.sql.{ Clob, Date, Timestamp }
+import org.joda.time.{ DateTime, LocalDate }
+import scala.slick.jdbc.{ PositionedResult, GetResult, PositionedParameters, SetParameter }
 import play.api.libs.json._
 import com.keepit.common.net.UserAgent
 import com.keepit.classify.DomainTagName
@@ -13,7 +14,7 @@ import com.keepit.common.mail._
 import com.keepit.social.SocialNetworkType
 import securesocial.core.SocialUser
 import com.keepit.serializer.SocialUserSerializer
-import com.keepit.search.{ArticleSearchResult, SearchConfig, Lang}
+import com.keepit.search.{ ArticleSearchResult, SearchConfig, Lang }
 import javax.sql.rowset.serial.SerialClob
 import com.keepit.model.UrlHash
 import play.api.libs.json.JsArray
@@ -28,7 +29,7 @@ import com.keepit.common.math.ProbabilityDensity
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
-trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
+trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   import db.Driver.simple._
 
   implicit def idMapper[M <: Model[M]] = MappedColumnType.base[Id[M], Long](_.id, Id[M])
@@ -47,7 +48,7 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val electronicMailCategoryMapper = MappedColumnType.base[ElectronicMailCategory, String](_.category, ElectronicMailCategory.apply)
   implicit val userAgentMapper = MappedColumnType.base[UserAgent, String](_.userAgent, UserAgent.fromString)
   implicit val emailAddressMapper = MappedColumnType.base[EmailAddress, String](_.address, EmailAddress.apply)
-  implicit val seqEmailAddressMapper = MappedColumnType.base[Seq[EmailAddress], String](v => v.map {e => e.address} mkString(","), v => v.trim match {
+  implicit val seqEmailAddressMapper = MappedColumnType.base[Seq[EmailAddress], String](v => v.map { e => e.address } mkString (","), v => v.trim match {
     case "" => Nil
     case trimmed => trimmed.split(",") map { addr => EmailAddress(addr.trim) }
   })
@@ -61,12 +62,13 @@ trait FortyTwoGenericTypeMappers { self: {val db: DataBaseComponent} =>
   implicit val socialUserMapper = MappedColumnType.base[SocialUser, String](SocialUserSerializer.userSerializer.writes(_).toString, s => SocialUserSerializer.userSerializer.reads(Json.parse(s)).get)
   implicit val langTypeMapper = MappedColumnType.base[Lang, String](_.lang, Lang.apply)
   implicit val electronicMailMessageIdMapper = MappedColumnType.base[ElectronicMailMessageId, String](_.id, ElectronicMailMessageId.apply)
-  implicit val mapStringStringMapper = MappedColumnType.base[Map[String,String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
+  implicit val mapStringStringMapper = MappedColumnType.base[Map[String, String], String](v => Json.stringify(JsObject(v.mapValues(JsString.apply).toSeq)), Json.parse(_).as[JsObject].fields.toMap.mapValues(_.as[JsString].value))
   implicit val experimentTypeMapper = MappedColumnType.base[ExperimentType, String](_.value, ExperimentType.apply)
   implicit val scraperWorkerIdTypeMapper = MappedColumnType.base[Id[ScraperWorker], Long](_.id, value => Id[ScraperWorker](value)) // todo(martin): this one shouldn't be necessary
   implicit val hitUUIDTypeMapper = MappedColumnType.base[ExternalId[ArticleSearchResult], String](_.id, ExternalId[ArticleSearchResult])
   implicit val uriImageFormatTypeMapper = MappedColumnType.base[ImageProvider, String](_.value, ImageProvider.apply)
   implicit val uriImageSourceTypeMapper = MappedColumnType.base[ImageFormat, String](_.value, ImageFormat.apply)
+  implicit val delightedAnswerSourceTypeMapper = MappedColumnType.base[DelightedAnswerSource, String](_.value, DelightedAnswerSource.apply)
   implicit def experimentTypeProbabilityDensityMapper[T](implicit outcomeFormat: Format[T]) = MappedColumnType.base[ProbabilityDensity[T], String](
     obj => Json.stringify(ProbabilityDensity.format[T].writes(obj)),
     str => Json.parse(str).as(ProbabilityDensity.format[T])

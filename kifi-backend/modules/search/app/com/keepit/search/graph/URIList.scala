@@ -1,6 +1,6 @@
 package com.keepit.search.graph
 
-import com.keepit.model.{KeepUriAndTime, NormalizedURI, Keep}
+import com.keepit.model.{ KeepUriAndTime, NormalizedURI, Keep }
 import org.apache.lucene.store.InputStreamDataInput
 import org.apache.lucene.store.OutputStreamDataOutput
 import java.io.ByteArrayInputStream
@@ -41,9 +41,9 @@ object URIList {
     override def createdAt: Array[Long] = Array.empty[Long]
   }
 
-  def sortBookmarks(bookmarks: Seq[Keep]): (SortedBookmarks/*public*/, SortedBookmarks/*private*/) = {
+  def sortBookmarks(bookmarks: Seq[Keep]): (SortedBookmarks /*public*/ , SortedBookmarks /*private*/ ) = {
     // sort bookmarks by uriid. if there are duplicate uriIds, take most recent one
-    val sortedBookmarks = bookmarks.sortWith{ (a, b) =>
+    val sortedBookmarks = bookmarks.sortWith { (a, b) =>
       (a.uriId.id < b.uriId.id) || (a.uriId.id == b.uriId.id && a.createdAt.getMillis > b.createdAt.getMillis)
     }
     val privateBookmarks = new ArrayBuffer[Keep]
@@ -55,7 +55,7 @@ object URIList {
         else publicBookmarks += firstBookmark
         var prevUriId = firstBookmark.uriId
 
-        sortedBookmarks.tail.foreach{ b =>
+        sortedBookmarks.tail.foreach { b =>
           if (b.uriId != prevUriId) {
             if (b.isPrivate) privateBookmarks += b
             else publicBookmarks += b
@@ -69,7 +69,7 @@ object URIList {
 
   def toByteArray(uris: Seq[KeepUriAndTime]): Array[Byte] = {
     // sort bookmarks by uriid. if there are duplicate uriIds, take most recent one
-    val sortedBookmarks = uris.sortWith{ (a, b) =>
+    val sortedBookmarks = uris.sortWith { (a, b) =>
       (a.uriId.id < b.uriId.id) || (a.uriId.id == b.uriId.id && a.createdAt.getMillis > b.createdAt.getMillis)
     }
     val allBookmarks = new ArrayBuffer[KeepUriAndTime]
@@ -79,7 +79,7 @@ object URIList {
         allBookmarks += firstBookmark
         var prevUriId = firstBookmark.uriId
 
-        sortedBookmarks.tail.foreach{ b =>
+        sortedBookmarks.tail.foreach { b =>
           if (b.uriId != prevUriId) {
             allBookmarks += b
             prevUriId = b.uriId
@@ -90,7 +90,7 @@ object URIList {
     toByteArrayFromSorted(allBookmarks)
   }
 
-  def toByteArray(sortedBookmarks: SortedBookmarks): Array[Byte] = toByteArrayFromSorted(sortedBookmarks.toSeq map {b => KeepUriAndTime(b.uriId, b.createdAt) } )
+  def toByteArray(sortedBookmarks: SortedBookmarks): Array[Byte] = toByteArrayFromSorted(sortedBookmarks.toSeq map { b => KeepUriAndTime(b.uriId, b.createdAt) })
 
   private def toByteArrayFromSorted(sortedBookmarks: Seq[KeepUriAndTime]): Array[Byte] = {
     val size = sortedBookmarks.size
@@ -103,12 +103,12 @@ object URIList {
     out.writeVInt(size)
     // encode list
     var current = 0L
-    sortedBookmarks.foreach{ b =>
+    sortedBookmarks.foreach { b =>
       out.writeVLong(b.uriId.id - current)
       current = b.uriId.id
     }
     // encode createAt
-    sortedBookmarks.foreach{ b => out.writeVLong(Util.millisToUnit(b.createdAt.getMillis)) }
+    sortedBookmarks.foreach { b => out.writeVLong(Util.millisToUnit(b.createdAt.getMillis)) }
 
     baos.flush()
     baos.toByteArray()

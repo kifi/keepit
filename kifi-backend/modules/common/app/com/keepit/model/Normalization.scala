@@ -4,14 +4,14 @@ import play.api.libs.json._
 
 case class Normalization(scheme: String) extends Ordered[Normalization] {
   def priority = Normalization.priority(this)
-  def compare(that: Normalization) = - this.priority.compare(that.priority)
+  def compare(that: Normalization) = -this.priority.compare(that.priority)
 }
 
 object Normalization {
 
   implicit def format: Format[Normalization] = Format(
     __.read[String].map(Normalization(_)),
-    new Writes[Normalization]{ def writes(o: Normalization) = JsString(o.scheme) }
+    new Writes[Normalization] { def writes(o: Normalization) = JsString(o.scheme) }
   )
 
   val CANONICAL = Normalization("canonical")

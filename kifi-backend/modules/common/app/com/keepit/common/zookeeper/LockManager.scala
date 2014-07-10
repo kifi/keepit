@@ -3,11 +3,11 @@ package com.keepit.common.zookeeper
 import com.keepit.common.strings._
 import org.apache.zookeeper.CreateMode._
 import org.apache.zookeeper.KeeperException
-import scala.concurrent.{Await, ExecutionContext, Future, Promise}
+import scala.concurrent.{ Await, ExecutionContext, Future, Promise }
 import scala.concurrent.duration._
-import scala.util.{Try, Success, Failure}
+import scala.util.{ Try, Success, Failure }
 import scala.collection.concurrent.TrieMap
-import scala.collection.mutable.{Map=>MutableMap}
+import scala.collection.mutable.{ Map => MutableMap }
 import java.util.UUID
 
 trait Lock {
@@ -57,14 +57,14 @@ object LockManager {
   class LockRequestNotExistException(msg: String) extends LockFailureException(msg)
   class LockRequestFailedException(msg: String) extends LockFailureException(msg)
 
-  class LockBuilder(name: String, onGrantedHandler: Option[Lock=>Unit], onBlockingHandler: Option[Lock=>Unit]) {
+  class LockBuilder(name: String, onGrantedHandler: Option[Lock => Unit], onBlockingHandler: Option[Lock => Unit]) {
     def this(name: String) = this(name, None, None)
 
     // returns a new LockBuilder instance replacing the onGranted handler
-    def onGranted(handler: Lock=>Unit): LockBuilder = new LockBuilder(name, Some(handler), onBlockingHandler)
+    def onGranted(handler: Lock => Unit): LockBuilder = new LockBuilder(name, Some(handler), onBlockingHandler)
 
     // returns a new LockBuilder instance replacing the onBlocking handler
-    def onBlocking(handler: Lock=>Unit): LockBuilder = new LockBuilder(name, onGrantedHandler, Some(handler))
+    def onBlocking(handler: Lock => Unit): LockBuilder = new LockBuilder(name, onGrantedHandler, Some(handler))
 
     def build(implicit lockService: LockManager, executionContext: ExecutionContext): Lock = lockService.createLock(Node(name), onGrantedHandler, onBlockingHandler, executionContext)
   }
@@ -83,24 +83,24 @@ class LockManager(zkClient: ZooKeeperClient) {
         val newQueue = new LockQueue(node, zkClient)
         lockQueues.putIfAbsent(node, newQueue) match {
           case Some(queue) => queue.ensureStarted() // a race condition. ensure the queue is started
-          case None        => newQueue.ensureStarted()
+          case None => newQueue.ensureStarted()
         }
     }
   }
 
-  def createLock(node: Node, onGrantedHandler: Option[Lock=>Unit], onBlockingHandler: Option[Lock=>Unit], executionContext: ExecutionContext): Lock = {
+  def createLock(node: Node, onGrantedHandler: Option[Lock => Unit], onBlockingHandler: Option[Lock => Unit], executionContext: ExecutionContext): Lock = {
     new LockImpl(node, onGrantedHandler, onBlockingHandler, getQueue(node))(executionContext)
   }
 }
 
-class LockImpl(val node: Node, onGrantedHandler: Option[Lock=>Unit], onBlockingHandler: Option[Lock=>Unit], lockQueue: LockQueue)(implicit executionContext: ExecutionContext) extends Lock {
+class LockImpl(val node: Node, onGrantedHandler: Option[Lock => Unit], onBlockingHandler: Option[Lock => Unit], lockQueue: LockQueue)(implicit executionContext: ExecutionContext) extends Lock {
   import LockManager._
 
   val uuid = UUID.randomUUID.toString
 
   private[this] val mutex = new AnyRef
   private[this] var grantPromise: Promise[LockMode] = null // completed by the lock queue when granted
-  private[this] var readyFuture: Future[LockMode] = null   // completed when onGranted handler is done
+  private[this] var readyFuture: Future[LockMode] = null // completed when onGranted handler is done
   private[this] var onBlockingCalled = false
 
   def request(lockMode: LockMode): Lock = mutex.synchronized {
@@ -109,8 +109,8 @@ class LockImpl(val node: Node, onGrantedHandler: Option[Lock=>Unit], onBlockingH
     try {
       grantPromise = Promise[LockMode]
       readyFuture = onGrantedHandler match {
-        case Some(handler) => grantPromise.future.map(m => { Try{ handler(this) }; m })
-        case None          => grantPromise.future
+        case Some(handler) => grantPromise.future.map(m => { Try { handler(this) }; m })
+        case None => grantPromise.future
       }
       onBlockingCalled = false
       lockQueue.add(this, lockMode)
@@ -146,8 +146,8 @@ class LockImpl(val node: Node, onGrantedHandler: Option[Lock=>Unit], onBlockingH
     if (promise != null) {
       promise.future.value match {
         case Some(Success(mode)) => Some(mode)
-        case Some(Failure(ex))   => throw ex
-        case None                => None
+        case Some(Failure(ex)) => throw ex
+        case None => None
       }
     } else {
       throw new LockRequestNotExistException(s"name=$node")
@@ -179,7 +179,7 @@ class LockImpl(val node: Node, onGrantedHandler: Option[Lock=>Unit], onBlockingH
   private[zookeeper] def blocking() = mutex.synchronized {
     if (!onBlockingCalled && readyFuture != null) {
       onBlockingCalled = true
-      onBlockingHandler.map{ handler => readyFuture.map{ _ => Try{ handler(this) } } } // onBlocking won't be executed until onCompleted is finished
+      onBlockingHandler.map { handler => readyFuture.map { _ => Try { handler(this) } } } // onBlocking won't be executed until onCompleted is finished
     }
   }
 }
@@ -192,9 +192,9 @@ class LockQueue(lockNode: Node, zkClient: ZooKeeperClient) {
 
   def ensureStarted(): LockQueue = synchronized {
     if (!initialized) {
-      zkClient.session{ zk =>
+      zkClient.session { zk =>
         // make sure we have a lock node in zk. we should not do this as a part of instance creation to avoid duplicate watches
-        zk.get(lockNode).getOrElse{ zk.create(lockNode) }
+        zk.get(lockNode).getOrElse { zk.create(lockNode) }
         zk.watchChildren(lockNode, queueWatcher)
       }
       initialized = true
@@ -208,19 +208,20 @@ class LockQueue(lockNode: Node, zkClient: ZooKeeperClient) {
     if (registry.contains(uuid)) throw new LockRequestAlreadyPlacedException(s"name=lockNode")
 
     try {
-      val node = zkClient.session{ zk =>  zk.createChild(lockNode, s"${uuid}_${mode.name}_", null, EPHEMERAL_SEQUENTIAL) }
+      val node = zkClient.session { zk => zk.createChild(lockNode, s"${uuid}_${mode.name}_", null, EPHEMERAL_SEQUENTIAL) }
       registry += (uuid -> (lock, node))
     } catch {
       case ex: KeeperException.ConnectionLossException => registry += (uuid -> (lock, null)) // we may have created the request node successfully.
-      case ex: InterruptedException                    => registry += (uuid -> (lock, null)) // we may have created the request node successfully.
+      case ex: InterruptedException => registry += (uuid -> (lock, null)) // we may have created the request node successfully.
     }
   }
 
   def remove(lock: LockImpl): Unit = remove(lock.uuid)
 
   private def remove(uuid: String): Unit = synchronized {
-    registry.get(uuid).foreach{ case (_, node) =>
-      if (node != null) zkClient.session{ zk => zk.delete(node) }
+    registry.get(uuid).foreach {
+      case (_, node) =>
+        if (node != null) zkClient.session { zk => zk.delete(node) }
     }
     registry -= uuid
   }
@@ -234,25 +235,26 @@ class LockQueue(lockNode: Node, zkClient: ZooKeeperClient) {
       val mode = queue.head.mode
       val holders = mode match {
         case ExclusiveMode => queue.take(1)
-        case SharedMode    => queue.takeWhile(_.mode == SharedMode)
-        case _             => throw new IllegalStateException(s"illegal mode: $mode")
+        case SharedMode => queue.takeWhile(_.mode == SharedMode)
+        case _ => throw new IllegalStateException(s"illegal mode: $mode")
       }
       val isBlocking = (holders.size < queue.size)
-      holders.foreach{ holder =>
-        registry.get(holder.uuid).foreach{ case (lock, node) =>
-          if (holder.name == node.name) {
-            if (isBlocking) lock.blocking() // this sets up the future chain. onBlocking handler is invoked after onGranted handler
-            lock.granted(mode)
-          } else {
-            throw new IllegalStateException(s"inconsistent request node name: znode=${holder.name} registry=${node.name}")
-          }
+      holders.foreach { holder =>
+        registry.get(holder.uuid).foreach {
+          case (lock, node) =>
+            if (holder.name == node.name) {
+              if (isBlocking) lock.blocking() // this sets up the future chain. onBlocking handler is invoked after onGranted handler
+              lock.granted(mode)
+            } else {
+              throw new IllegalStateException(s"inconsistent request node name: znode=${holder.name} registry=${node.name}")
+            }
         }
       }
     }
   }
 
   private def syncRegistry(entries: Seq[Entry]) = synchronized {
-    entries.foreach{ entry =>
+    entries.foreach { entry =>
       registry.get(entry.uuid) match {
         case Some((lock, node)) =>
           if (node == null || node.name != entry.name) registry += (entry.uuid -> (lock, Node(lockNode, entry.name)))

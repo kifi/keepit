@@ -1,6 +1,6 @@
 package com.keepit.shoebox
 
-import com.keepit.common.healthcheck.{FakeAirbrakeNotifier, AirbrakeNotifier}
+import com.keepit.common.healthcheck.{ FakeAirbrakeNotifier, AirbrakeNotifier }
 import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
@@ -8,12 +8,12 @@ import com.keepit.common.db._
 import scala.concurrent.Future
 import com.keepit.search._
 import java.util.concurrent.atomic.AtomicInteger
-import collection.mutable.{Map => MutableMap}
-import com.keepit.social.{SocialNetworkType, BasicUser}
-import com.keepit.common.mail.{EmailAddress, ElectronicMail}
+import collection.mutable.{ Map => MutableMap }
+import com.keepit.social.{ SocialNetworkType, BasicUser }
+import com.keepit.common.mail.{ EmailAddress, ElectronicMail }
 import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
-import com.keepit.scraper.{ScrapeRequest, Signature, HttpRedirect}
+import com.keepit.scraper.{ ScrapeRequest, Signature, HttpRedirect }
 import com.google.inject.util.Providers
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.actor.FakeScheduler
@@ -28,7 +28,7 @@ import com.keepit.model.serialize.UriIdAndSeq
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), ()=>{})
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   // Fake ID counters
@@ -107,7 +107,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   // Fake data initialization methods
 
   def saveUsers(users: User*): Seq[User] = {
-    users.map {user =>
+    users.map { user =>
       val id = user.id.getOrElse(nextUserId())
       val updatedUser = user.withId(id).copy(seq = nextUserSeqNum)
       allUsers(id) = updatedUser
@@ -118,7 +118,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def saveURIs(uris: NormalizedURI*): Seq[NormalizedURI] = {
-    uris.map {uri =>
+    uris.map { uri =>
       val id = uri.id.getOrElse(nextUriId())
       val updatedUri = uri.withId(id).copy(seq = nextUriSeqNum())
       val updatedUrl = uriToUrl.getOrElse(id, URLFactory(url = updatedUri.url, normalizedUriId = updatedUri.id.get).withId(nextUrlId()))
@@ -130,55 +130,58 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def saveConnections(connections: Map[Id[User], Set[Id[User]]]) {
     // use directed edges to generate undirected edges
-    val edges = connections.map{ case (u, fs) => fs.map{ f => Array((u, f), (f, u))}.flatten }.flatten.toSet
-    edges.groupBy(_._1).map{case (u, fs) => allUserConnections(u) = fs.map{_._2}}
-    edges.foreach{ case (u1, u2) =>
-      if (u1.id < u2.id) {
-        val conn = getConnection(u1, u2)
-        if (conn.isEmpty){
-          val id = nextUserConnId
-          val seq = nextUserConnSeqNum
-          allConnections(id) = UserConnection(id = Some(id), user1 = u1, user2 = u2, seq = seq)
-        } else {
-          val c = conn.get
-          if (c.state != UserConnectionStates.ACTIVE){
-            allConnections(c.id.get) = c.copy(state = UserConnectionStates.ACTIVE, seq = nextUserConnSeqNum())
+    val edges = connections.map { case (u, fs) => fs.map { f => Array((u, f), (f, u)) }.flatten }.flatten.toSet
+    edges.groupBy(_._1).map { case (u, fs) => allUserConnections(u) = fs.map { _._2 } }
+    edges.foreach {
+      case (u1, u2) =>
+        if (u1.id < u2.id) {
+          val conn = getConnection(u1, u2)
+          if (conn.isEmpty) {
+            val id = nextUserConnId
+            val seq = nextUserConnSeqNum
+            allConnections(id) = UserConnection(id = Some(id), user1 = u1, user2 = u2, seq = seq)
+          } else {
+            val c = conn.get
+            if (c.state != UserConnectionStates.ACTIVE) {
+              allConnections(c.id.get) = c.copy(state = UserConnectionStates.ACTIVE, seq = nextUserConnSeqNum())
+            }
           }
         }
-      }
     }
   }
 
   def getConnection(user1: Id[User], user2: Id[User]): Option[UserConnection] = {
-    allConnections.map{case (id, c) => if (Set(user1, user2) == Set(c.user1, c.user2)) Some(c) else None}.flatten.headOption
+    allConnections.map { case (id, c) => if (Set(user1, user2) == Set(c.user1, c.user2)) Some(c) else None }.flatten.headOption
   }
 
   def deleteConnections(connections: Map[Id[User], Set[Id[User]]]) {
-    val edges = connections.map{ case (u, fs) => fs.map{ f => Array((u, f), (f, u))}.flatten }.flatten.toSet
-    edges.groupBy(_._1).map{case (u, fs) => allUserConnections(u) = allUserConnections.getOrElse(u, Set.empty) -- fs.map{_._2}}
+    val edges = connections.map { case (u, fs) => fs.map { f => Array((u, f), (f, u)) }.flatten }.flatten.toSet
+    edges.groupBy(_._1).map { case (u, fs) => allUserConnections(u) = allUserConnections.getOrElse(u, Set.empty) -- fs.map { _._2 } }
 
-    val pairs = connections.map{ case (uid, friends) => friends.map{f => (uid, f) }}.flatten.toSet
-    pairs.map{ case (u1, u2) =>
-      getConnection(u1, u2).foreach{ c =>
-        allConnections(c.id.get) = c.copy(state = UserConnectionStates.UNFRIENDED, seq = nextUserConnSeqNum)
-      }
+    val pairs = connections.map { case (uid, friends) => friends.map { f => (uid, f) } }.flatten.toSet
+    pairs.map {
+      case (u1, u2) =>
+        getConnection(u1, u2).foreach { c =>
+          allConnections(c.id.get) = c.copy(state = UserConnectionStates.UNFRIENDED, seq = nextUserConnSeqNum)
+        }
     }
   }
 
   def clearUserConnections(userIds: Id[User]*) {
-    userIds.map{ id =>
-      if (allUserConnections.get(id).isDefined){
-      allUserConnections(id).foreach{ friend =>
-        getConnection(id, friend).foreach{ conn =>
-          allConnections(conn.id.get) = conn.copy(state = UserConnectionStates.INACTIVE, seq = nextUserConnSeqNum)
-          allUserConnections(friend) = allUserConnections.getOrElse(friend, Set.empty) - id
+    userIds.map { id =>
+      if (allUserConnections.get(id).isDefined) {
+        allUserConnections(id).foreach { friend =>
+          getConnection(id, friend).foreach { conn =>
+            allConnections(conn.id.get) = conn.copy(state = UserConnectionStates.INACTIVE, seq = nextUserConnSeqNum)
+            allUserConnections(friend) = allUserConnections.getOrElse(friend, Set.empty) - id
+          }
         }
-      }}
+      }
       allUserConnections(id) = Set[Id[User]]()
     }
   }
 
-  def excludeFriend(userId: Id[User], friendId: Id[User]){
+  def excludeFriend(userId: Id[User], friendId: Id[User]) {
     allSearchFriends.values.filter(x => x.userId == userId && x.friendId == friendId).headOption match {
       case Some(r) if (r.state != SearchFriendStates.EXCLUDED) => allSearchFriends(r.id.get) = r.copy(state = SearchFriendStates.EXCLUDED, seq = nextSearchFriendSeqNum)
       case None => val id = nextSearchFriendId; allSearchFriends(id) = SearchFriend(id = Some(id), userId = userId, friendId = friendId, seq = nextSearchFriendSeqNum)
@@ -186,7 +189,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def saveBookmarks(bookmarks: Keep*): Seq[Keep] = {
-    bookmarks.map {b =>
+    bookmarks.map { b =>
       val id = b.id.getOrElse(nextBookmarkId())
       val updatedBookmark = b.withId(id).copy(seq = nextBookmarkSeqNum())
       allBookmarks(id) = updatedBookmark
@@ -196,7 +199,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def saveCollections(collections: Collection*): Seq[Collection] = {
-    collections.map {c =>
+    collections.map { c =>
       val id = c.id.getOrElse(nextCollectionId())
       val updatedCollection = c.withId(id).copy(seq = nextCollectionSeqNum())
       allCollections(id) = updatedCollection
@@ -210,11 +213,13 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def saveBookmarksByEdges(edges: Seq[(NormalizedURI, User, Option[String])], isPrivate: Boolean = false, source: KeepSource = KeepSource("fake")): Seq[Keep] = {
-    val bookmarks = edges.map { case (uri, user, optionalTitle) => {
-      val url = uriToUrl(uri.id.get)
-      KeepFactory(url.url, uri = uri, userId = user.id.get, title = optionalTitle orElse uri.title, url = url, source = source, isPrivate = isPrivate)
-    }}
-    saveBookmarks(bookmarks:_*)
+    val bookmarks = edges.map {
+      case (uri, user, optionalTitle) => {
+        val url = uriToUrl(uri.id.get)
+        KeepFactory(url.url, uri = uri, userId = user.id.get, title = optionalTitle orElse uri.title, url = url, source = source, isPrivate = isPrivate)
+      }
+    }
+    saveBookmarks(bookmarks: _*)
   }
 
   def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false, source: KeepSource = KeepSource("fake")): Seq[Keep] = {
@@ -246,13 +251,14 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def addEmails(emails: (Id[User], EmailAddress)*) = {
-    emails.foreach { case (userId, emailAddress) =>
-      allUserEmails(userId) = allUserEmails.getOrElse(userId, Set.empty) + emailAddress
+    emails.foreach {
+      case (userId, emailAddress) =>
+        allUserEmails(userId) = allUserEmails.getOrElse(userId, Set.empty) + emailAddress
     }
   }
 
   def saveFriendRequests(requests: FriendRequest*) = {
-    requests.map{ request =>
+    requests.map { request =>
       val id = request.id.getOrElse(nextFriendRequestId)
       val requestWithId = request.copy(id = Some(id))
       allFriendRequests(id) = requestWithId
@@ -263,7 +269,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   // ShoeboxServiceClient methods
 
   def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
-    val userOpt =  allUserExternalIds.get(id)
+    val userOpt = allUserExternalIds.get(id)
     Future.successful(userOpt)
   }
 
@@ -286,14 +292,13 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] = ???
 
-
   def internNormalizedURI(url: String, scrapeWanted: Boolean): Future[NormalizedURI] = {
     val uri = allNormalizedURIs.values.find(_.url == url).getOrElse {
       NormalizedURI(
         id = Some(Id[NormalizedURI](url.hashCode)),
-        url=url,
-        urlHash=UrlHash(url.hashCode.toString),
-        screenshotUpdatedAt=None
+        url = url,
+        urlHash = UrlHash(url.hashCode.toString),
+        screenshotUpdatedAt = None
       )
     }
     Future.successful(uri)
@@ -309,7 +314,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(bookmarks)
   }
 
-  def persistServerSearchEvent(metaData: JsObject): Unit ={
+  def persistServerSearchEvent(metaData: JsObject): Unit = {
     //EventPersister.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))
   }
 
@@ -319,8 +324,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getUserIdsByExternalIds(extIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
-    val ids = extIds.map{ id =>
-      allUserExternalIds.get(id).getOrElse{
+    val ids = extIds.map { id =>
+      allUserExternalIds.get(id).getOrElse {
         throw new Exception(s"can't find id $id in allUserExternalIds: $allUserExternalIds")
       }.id.get
     }
@@ -334,7 +339,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
         firstName = "Douglas",
         lastName = "Adams-clone-" + id.toString
       )
-      val user = allUsers.getOrElse( id,dummyUser)
+      val user = allUsers.getOrElse(id, dummyUser)
       id -> BasicUser.fromUser(user)
     }.toMap
     Future.successful(basicUsers)
@@ -347,14 +352,14 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
         firstName = "Douglas",
         lastName = "Adams-clone-" + id.toString
       )
-      val user = allUsers.getOrElse(id,dummyUser)
+      val user = allUsers.getOrElse(id, dummyUser)
       id -> BasicUser.fromUser(user)
     }.toMap
     Future.successful(basicUsers)
   }
 
   def getEmailAddressesForUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]] = {
-    val m = userIds.map{ id => id -> allUserEmails.getOrElse(id, Set.empty).toSeq}.toMap
+    val m = userIds.map { id => id -> allUserEmails.getOrElse(id, Set.empty).toSeq }.toMap
     Future.successful(m)
   }
 
@@ -379,7 +384,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getUriIdsInCollection(collectionId: Id[Collection]): Future[Seq[KeepUriAndTime]] = {
     val bookmarks = allCollectionBookmarks(collectionId).map(allBookmarks(_)).toSeq
-    Future.successful(bookmarks map {b => KeepUriAndTime(b.uriId, b.createdAt) })
+    Future.successful(bookmarks map { b => KeepUriAndTime(b.uriId, b.createdAt) })
   }
 
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
@@ -389,19 +394,19 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = ???
 
-  def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1) : Future[Seq[NormalizedURI]] = {
+  def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1): Future[Seq[NormalizedURI]] = {
     val uris = allNormalizedURIs.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq)
     val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
     Future.successful(fewerUris)
   }
 
-  def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1) : Future[Seq[IndexableUri]] = {
+  def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1): Future[Seq[IndexableUri]] = {
     val uris = allNormalizedURIs.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq)
     val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
     Future.successful(fewerUris map { u => IndexableUri(u) })
   }
 
-  def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1) : Future[Seq[IndexableUri]] = {
+  def getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int = -1): Future[Seq[IndexableUri]] = {
     val scrapedStates = Set(NormalizedURIStates.SCRAPED, NormalizedURIStates.SCRAPE_FAILED, NormalizedURIStates.UNSCRAPABLE)
     val uris = allNormalizedURIs.values.filter(x => x.seq > seqNum && scrapedStates.contains(x.state)).toSeq.sortBy(_.seq)
     val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
@@ -409,7 +414,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getHighestUriSeq(): Future[SequenceNumber[NormalizedURI]] = {
-    val seq = allNormalizedURIs.values.map{_.seq}
+    val seq = allNormalizedURIs.values.map { _.seq }
     Future.successful(if (seq.isEmpty) SequenceNumber.ZERO else seq.max)
   }
 
@@ -460,7 +465,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[ExperimentType]]] = {
-    val exps = userIds.map{ id =>
+    val exps = userIds.map { id =>
       val exps = allUserExperiments.getOrElse(id, Set.empty).filter(_.state == UserExperimentStates.ACTIVE).map(_.experimentType)
       id -> exps
     }.toMap
@@ -480,13 +485,13 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getUnfriends(userId: Id[User]): Future[Set[Id[User]]] = {
-    val unfriends = allSearchFriends.values.filter(x => x.userId == userId && x.state == SearchFriendStates.EXCLUDED).map{_.friendId}
+    val unfriends = allSearchFriends.values.filter(x => x.userId == userId && x.state == SearchFriendStates.EXCLUDED).map { _.friendId }
     Future.successful(unfriends.toSet)
   }
 
   def logEvent(userId: Id[User], event: JsObject) = {}
 
-  def createDeepLink(initiator: Option[Id[User]], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {}
+  def createDeepLink(initiator: Option[Id[User]], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator): Unit = {}
 
   def getDeepUrl(locator: DeepLocator, recipient: Id[User]): Future[String] = ???
 
@@ -511,19 +516,19 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = ???
 
   def updateNormalizedURI(uriId: => Id[NormalizedURI],
-                          createdAt: => DateTime,
-                          updatedAt: => DateTime,
-                          externalId: => ExternalId[NormalizedURI],
-                          title: => Option[String],
-                          url: => String,
-                          urlHash: => UrlHash,
-                          state: => State[NormalizedURI],
-                          seq: => SequenceNumber[NormalizedURI],
-                          screenshotUpdatedAt: => Option[DateTime],
-                          restriction: => Option[Restriction],
-                          normalization: => Option[Normalization],
-                          redirect: => Option[Id[NormalizedURI]],
-                          redirectTime: => Option[DateTime]): Future[Unit] = Future.successful(Unit)
+    createdAt: => DateTime,
+    updatedAt: => DateTime,
+    externalId: => ExternalId[NormalizedURI],
+    title: => Option[String],
+    url: => String,
+    urlHash: => UrlHash,
+    state: => State[NormalizedURI],
+    seq: => SequenceNumber[NormalizedURI],
+    screenshotUpdatedAt: => Option[DateTime],
+    restriction: => Option[Restriction],
+    normalization: => Option[Normalization],
+    redirect: => Option[Id[NormalizedURI]],
+    redirectTime: => Option[DateTime]): Future[Unit] = Future.successful(Unit)
 
   def scraped(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
 
@@ -586,7 +591,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
 
-  def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI],URISummary]] = Future.successful(Map.empty)
+  def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = Future.successful(Map.empty)
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = Future.successful("https://www.kifi.com/assets/img/ghost.200.png")
 

@@ -3,12 +3,12 @@ package com.keepit.dev
 import com.google.inject.Module
 import com.google.inject.util.Modules
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.akka.{SlowRunningExecutionContext, SafeFuture}
+import com.keepit.common.akka.{ SlowRunningExecutionContext, SafeFuture }
 import com.keepit.common.concurrent.ForkJoinExecContextPlugin
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.service.ServiceType
-import com.keepit.search.{SearchServices, SearchProdModule}
-import com.keepit.shoebox.{ShoeboxServices, ShoeboxProdModule}
+import com.keepit.search.{ SearchServices, SearchProdModule }
+import com.keepit.shoebox.{ ShoeboxServices, ShoeboxProdModule }
 import net.codingwell.scalaguice.ScalaModule
 import play.api.Application
 import play.api.Mode._
@@ -20,12 +20,12 @@ import com.keepit.graph.GraphServices
 import scala.concurrent.Future
 
 object DevGlobal extends FortyTwoGlobal(Dev)
-  with ShoeboxServices
-  with SearchServices
-  with ScraperServices
-  with ABookServices
-  with CortexServices
-  with GraphServices {
+    with ShoeboxServices
+    with SearchServices
+    with ScraperServices
+    with ABookServices
+    with CortexServices
+    with GraphServices {
 
   def composeModules(modules: Seq[Module]): Module = {
     modules match {
@@ -43,7 +43,7 @@ object DevGlobal extends FortyTwoGlobal(Dev)
 
   override def onStart(app: Application) {
     require(injector.instance[FortyTwoServices].currentService == ServiceType.DEV_MODE,
-        "DevGlobal can only be run on a dev service")
+      "DevGlobal can only be run on a dev service")
 
     def startServices() = {
       val t = System.currentTimeMillis
@@ -65,7 +65,6 @@ object DevGlobal extends FortyTwoGlobal(Dev)
       case _ =>
         startServices()
     }
-
 
     super.onStart(app)
   }

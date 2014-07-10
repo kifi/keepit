@@ -7,7 +7,6 @@ import scala.math._
 import java.util.Random
 import com.keepit.inject._
 
-
 class ProbablisticLRUTest extends Specification {
   val rand = new Random(123456789L)
 
@@ -37,7 +36,7 @@ class ProbablisticLRUTest extends Specification {
       lru.put(key, v2)
       ret = lru.get(key, values)
 
-      ret(v1) must be_<= (4)
+      ret(v1) must be_<=(4)
       ret(v2) === 4
 
       lru.put(key, v3)
@@ -54,7 +53,7 @@ class ProbablisticLRUTest extends Specification {
       lru.put(key, v1)
       ret = lru.get(key, values)
 
-      ret(v1) must be_>= (4)
+      ret(v1) must be_>=(4)
     }
 
     "put with different updateStrength" in {
@@ -75,7 +74,7 @@ class ProbablisticLRUTest extends Specification {
       ret = lru.get(key, values)
       ret = lru.get(key, values)
 
-      ret(v1) must be_<= (4)
+      ret(v1) must be_<=(4)
       ret = lru.get(key, values)
       ret(v2) === 4
 
@@ -95,10 +94,11 @@ class ProbablisticLRUTest extends Specification {
       val keys = for (i <- 0 until numPairs) yield rand.nextLong
       val values = for (i <- 0 until numPairs) yield rand.nextLong
 
-      keys.zip(values).foreach{ case (k, v) => lru.put(k, v) }
-      keys.zip(values).flatMap{ case (k, v) =>
-        val ret = lru.get(k, values)
-        if (!ret.isEmpty && ret.maxBy(_._2)._1 == v) None else Some(k)
+      keys.zip(values).foreach { case (k, v) => lru.put(k, v) }
+      keys.zip(values).flatMap {
+        case (k, v) =>
+          val ret = lru.get(k, values)
+          if (!ret.isEmpty && ret.maxBy(_._2)._1 == v) None else Some(k)
       } must beEmpty
     }
 

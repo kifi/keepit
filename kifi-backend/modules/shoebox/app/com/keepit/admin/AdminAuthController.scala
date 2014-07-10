@@ -6,9 +6,9 @@ import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.model._
 import com.keepit.common.db.slick._
 
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.google.inject.Inject
-import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail}
+import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 import com.keepit.common.healthcheck.SystemAdminMailSender
 
 class AdminAuthController @Inject() (
@@ -29,7 +29,7 @@ class AdminAuthController @Inject() (
     }
     log.info(s"impersonating user $user")
     systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
-      subject =  s"${request.user.firstName} impersonating user $user",
+      subject = s"${request.user.firstName} impersonating user $user",
       htmlBody = s"we know that ${request.user.firstName} ${request.user.lastName} is a good guy, won't abuse it",
       category = NotificationCategory.System.ADMIN))
     Ok(Json.obj("userId" -> id.toString)).withCookies(impersonateCookie.encodeAsCookie(Some(user.externalId)))

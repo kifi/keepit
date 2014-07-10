@@ -91,7 +91,7 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
 }
 
 class MultiplicativeBoostScorer(weight: MultiplicativeBoostWeight, textScorer: Scorer, boosterScorer: Scorer, boosterStrength: Float)
-extends Scorer(weight) with Logging {
+    extends Scorer(weight) with Logging {
   private[this] var doc = -1
   private[this] var scoredDoc = -1
   private[this] var scr = 0.0f
@@ -114,7 +114,7 @@ extends Scorer(weight) with Logging {
           if (boosterScorer.docID() == doc) {
             score *= (boosterScorer.score() * boosterStrength + (1.0f - boosterStrength))
           } else {
-            score *=  (1.0f - boosterStrength)     // boostscorer doesn't have this doc id.
+            score *= (1.0f - boosterStrength) // boostscorer doesn't have this doc id.
           }
         } else {
           score *= (1.0f - boosterStrength)

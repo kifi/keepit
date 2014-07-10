@@ -5,8 +5,8 @@ import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
 import com.keepit.test.TestInjector
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._
-import com.keepit.model.{ProbabilisticExperimentGeneratorAllCache, ExperimentType, User, UserExperiment}
-import com.keepit.shoebox.{FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
+import com.keepit.model.{ ProbabilisticExperimentGeneratorAllCache, ExperimentType, User, UserExperiment }
+import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl, ShoeboxServiceClient }
 import com.google.inject.Injector
 import com.keepit.common.usersegment.UserSegment
 import scala.concurrent.Await
@@ -14,8 +14,8 @@ import scala.concurrent.duration._
 import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.cache.{HashMapMemoryCache, CacheStatistics}
-import com.keepit.common.logging.{AccessLog, Logging}
+import com.keepit.common.cache.{ HashMapMemoryCache, CacheStatistics }
+import com.keepit.common.logging.{ AccessLog, Logging }
 
 class SearchConfigTest extends Specification with TestInjector {
 
@@ -56,14 +56,14 @@ class SearchConfigTest extends Specification with TestInjector {
             "percentMatch" -> "70",
             "tailCutting" -> "0.30"
           ), weight = 0.5, state = SearchConfigExperimentStates.ACTIVE
-        )),Duration(1, "minutes"))
+        )), Duration(1, "minutes"))
 
         val v2 = Await.result(fakeShoeboxServiceClient.saveExperiment(SearchConfigExperiment(config = SearchConfig(
-            "recencyBoost" -> "1.0",
-            "percentMatch" -> "90",
-            "tailCutting" -> "0.10"
-          ), weight = 0.5, state = SearchConfigExperimentStates.ACTIVE
-        )),Duration(1, "minutes"))
+          "recencyBoost" -> "1.0",
+          "percentMatch" -> "90",
+          "tailCutting" -> "0.10"
+        ), weight = 0.5, state = SearchConfigExperimentStates.ACTIVE
+        )), Duration(1, "minutes"))
 
         searchConfigManager.syncActiveExperiments
         val (c1, e1) = searchConfigManager.getConfig(andrew.id.get, Set(v1.experiment))
@@ -118,7 +118,7 @@ class SearchConfigTest extends Specification with TestInjector {
           "percentMatch" -> "700",
           "phraseBoost" -> "500.0"
         ), weight = 1, state = SearchConfigExperimentStates.ACTIVE
-        )),Duration(1, "minutes"))
+        )), Duration(1, "minutes"))
 
         searchConfigManager.syncActiveExperiments
         val (c1, _) = searchConfigManager.getConfig(greg.id.get, getUserExperiments(greg.id.get))

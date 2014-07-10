@@ -1,14 +1,14 @@
 package com.keepit.graph.common.store
 
-import com.google.inject.{Singleton, Provides}
+import com.google.inject.{ Singleton, Provides }
 import com.amazonaws.services.s3.AmazonS3
-import com.keepit.common.logging.{Logging, AccessLog}
+import com.keepit.common.logging.{ Logging, AccessLog }
 import play.api.Play._
 import java.io.File
 import org.apache.commons.io.FileUtils
 import com.keepit.graph.manager._
 import com.keepit.graph.manager.GraphStoreInbox
-import com.keepit.common.store.{DevStoreModule, S3Bucket, ProdStoreModule, StoreModule}
+import com.keepit.common.store.{ DevStoreModule, S3Bucket, ProdStoreModule, StoreModule }
 
 trait GraphStoreModule extends StoreModule with Logging
 

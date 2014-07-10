@@ -1,8 +1,8 @@
 package com.keepit.controllers.core
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
-import com.keepit.common.logging.{LogPrefix, Logging}
+import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
+import com.keepit.common.logging.{ LogPrefix, Logging }
 import java.net.URLEncoder
 import play.api.mvc._
 import play.api.libs.ws.WS
@@ -15,8 +15,8 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import java.security.SecureRandom
 import java.math.BigInteger
-import com.keepit.model.{ABookInfo, User, OAuth2Token}
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.model.{ ABookInfo, User, OAuth2Token }
+import com.keepit.common.db.{ ExternalId, Id }
 import scala.concurrent._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.util.Failure
@@ -25,12 +25,12 @@ import scala.util.Success
 import com.keepit.common.controller.AuthenticatedRequest
 import play.api.libs.ws.Response
 
-case class OAuth2Config(provider:String, authUrl:String, accessTokenUrl:String, clientId:String, clientSecret:String, scope:String)
+case class OAuth2Config(provider: String, authUrl: String, accessTokenUrl: String, clientId: String, clientSecret: String, scope: String)
 
 case class OAuth2CommonConfig(approvalPrompt: String)
 
 object OAuth2 {
-  val STATE_TOKEN_KEY="stateToken"
+  val STATE_TOKEN_KEY = "stateToken"
 }
 
 object OAuth2Providers { // TODO: wire-in (securesocial) config
@@ -40,7 +40,7 @@ object OAuth2Providers { // TODO: wire-in (securesocial) config
     accessTokenUrl = "https://accounts.google.com/o/oauth2/token",
     clientId = "572465886361.apps.googleusercontent.com", // "991651710157.apps.googleusercontent.com",
     clientSecret = "heYhp5R2Q0lH26VkrJ1NAMZr", // "vt9BrxsxM6iIG4EQNkm18L-m",
-    scope = "https://www.googleapis.com/auth/userinfo.email https://www.google.com/m8/feeds"// "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/plus.me"
+    scope = "https://www.googleapis.com/auth/userinfo.email https://www.google.com/m8/feeds" // "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/plus.me"
   )
   val FACEBOOK = OAuth2Config(
     provider = "facebook",
@@ -54,32 +54,30 @@ object OAuth2Providers { // TODO: wire-in (securesocial) config
 }
 
 case class OAuth2AccessTokenRequest(
-  clientId:String,
-  responseType:String, // code for server
-  scope:String,
-  redirectUri:String,
-  state:Option[String] = None,
-  prompt:Option[String] = None,
-  accessType:Option[String] = None, // online or offline
-  approvalPrompt:Option[String] = None, // force or auto
-  loginHint:Option[String] = None // email address or sub
-)
+  clientId: String,
+  responseType: String, // code for server
+  scope: String,
+  redirectUri: String,
+  state: Option[String] = None,
+  prompt: Option[String] = None,
+  accessType: Option[String] = None, // online or offline
+  approvalPrompt: Option[String] = None, // force or auto
+  loginHint: Option[String] = None // email address or sub
+  )
 
 case class OAuth2OfflineAccessTokenRequest(
-  refreshToken:String,
-  clientId:String,
-  clientSecret:String,
-  grantType:String = "refresh_token"
-)
+  refreshToken: String,
+  clientId: String,
+  clientSecret: String,
+  grantType: String = "refresh_token")
 
 case class OAuth2AccessTokenResponse(
-  accessToken:String,
-  expiresIn:Int = -1,
-  refreshToken:Option[String] = None,
-  tokenType:Option[String] = None,
-  idToken:Option[String] = None
-) {
-  def toOAuth2Token(userId:Id[User]):OAuth2Token =
+    accessToken: String,
+    expiresIn: Int = -1,
+    refreshToken: Option[String] = None,
+    tokenType: Option[String] = None,
+    idToken: Option[String] = None) {
+  def toOAuth2Token(userId: Id[User]): OAuth2Token =
     OAuth2Token(
       userId = userId,
       accessToken = accessToken,
@@ -95,7 +93,7 @@ object StateToken {
   implicit val formatStateToken: Format[StateToken] = (
     (__ \ 'token).format[String] and
     (__ \ 'redirectUrl).formatNullable[String]
-    )(StateToken.apply, unlift(StateToken.unapply))
+  )(StateToken.apply, unlift(StateToken.unapply))
 }
 
 object OAuth2AccessTokenResponse {
@@ -103,33 +101,32 @@ object OAuth2AccessTokenResponse {
   val EMPTY = OAuth2AccessTokenResponse("")
 
   implicit val format = (
-      (__ \ 'access_token).format[String] and
-      (__ \ 'expires_in).format[Int] and
-      (__ \ 'refresh_token).formatNullable[String] and
-      (__ \ 'token_type).formatNullable[String] and
-      (__ \ 'id_token).formatNullable[String]
+    (__ \ 'access_token).format[String] and
+    (__ \ 'expires_in).format[Int] and
+    (__ \ 'refresh_token).formatNullable[String] and
+    (__ \ 'token_type).formatNullable[String] and
+    (__ \ 'id_token).formatNullable[String]
   )(OAuth2AccessTokenResponse.apply, unlift(OAuth2AccessTokenResponse.unapply))
 
 }
 
 object OAuth2Controller {
-  implicit class RequestWithQueryVal[T](val underlying:Request[T]) extends AnyVal { // todo(ray): move to common
-    def queryVal(key:String) = underlying.queryString.get(key).flatMap(_.headOption)
+  implicit class RequestWithQueryVal[T](val underlying: Request[T]) extends AnyVal { // todo(ray): move to common
+    def queryVal(key: String) = underlying.queryString.get(key).flatMap(_.headOption)
   }
 }
 
 import Logging._
 import OAuth2._
 class OAuth2Controller @Inject() (
-  db: Database,
-  airbrake: AirbrakeNotifier,
-  actionAuthenticator:ActionAuthenticator,
-  abookServiceClient:ABookServiceClient,
-  oauth2CommonConfig: OAuth2CommonConfig
-) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
+    db: Database,
+    airbrake: AirbrakeNotifier,
+    actionAuthenticator: ActionAuthenticator,
+    abookServiceClient: ABookServiceClient,
+    oauth2CommonConfig: OAuth2CommonConfig) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   import OAuth2Providers._
-  def start(provider:String, stateTokenOpt:Option[String], approvalPromptOpt:Option[String]) = JsonAction.authenticated { implicit request =>
+  def start(provider: String, stateTokenOpt: Option[String], approvalPromptOpt: Option[String]) = JsonAction.authenticated { implicit request =>
     implicit val prefix = LogPrefix(s"oauth2.start(${request.userId},$provider,$stateTokenOpt,$approvalPromptOpt)")
     log.infoP(s"headers=${request.headers} session=${request.session}")
     val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE) // may enforce stricter check
@@ -150,22 +147,22 @@ class OAuth2Controller @Inject() (
           "login_hint" -> "email address",
           "approval_prompt" -> approvalPromptOpt.getOrElse(oauth2CommonConfig.approvalPrompt)
         )
-        val url = authUrl + params.foldLeft("?"){(a,c) => a + c._1 + "=" + URLEncoder.encode(c._2, "UTF-8") + "&"}
+        val url = authUrl + params.foldLeft("?") { (a, c) => a + c._1 + "=" + URLEncoder.encode(c._2, "UTF-8") + "&" }
         log.infoP(s"REDIRECT to: $url with params: $params")
         Redirect(authUrl, params.map(kv => (kv._1, Seq(kv._2)))).withSession(session + (STATE_TOKEN_KEY -> stateToken))
     }
   }
 
   // redirect/GET
-  def callback(provider:String) = JsonAction.authenticatedAsync { implicit request =>
-    implicit val prefix:LogPrefix = LogPrefix(s"oauth2.callback(${request.userId},$provider)")
+  def callback(provider: String) = JsonAction.authenticatedAsync { implicit request =>
+    implicit val prefix: LogPrefix = LogPrefix(s"oauth2.callback(${request.userId},$provider)")
     log.infoP(s"headers=${request.headers} session=${request.session}")
-    val redirectHome   = Redirect(com.keepit.controllers.website.routes.HomeController.home).withSession(session - STATE_TOKEN_KEY)
+    val redirectHome = Redirect(com.keepit.controllers.website.routes.HomeController.home).withSession(session - STATE_TOKEN_KEY)
     val redirectInvite = Redirect("/invite").withSession(session - STATE_TOKEN_KEY) // todo: make configurable
 
     val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)
     val stateOpt = request.queryString.get("state").flatMap(_.headOption)
-    val codeOpt  = request.queryString.get("code").flatMap(_.headOption)
+    val codeOpt = request.queryString.get("code").flatMap(_.headOption)
     val stateOptFromSession = request.session.get("stateToken") orElse Some("")
     log.infoP(s"code=$codeOpt state=$stateOpt stateFromSession=$stateOptFromSession")
 
@@ -190,7 +187,7 @@ class OAuth2Controller @Inject() (
       val call = WS.url(providerConfig.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
       log.infoP(s"POST to: ${providerConfig.accessTokenUrl} with params: $params")
 
-      val tokenRespOptF = call.map { resp:Response =>
+      val tokenRespOptF = call.map { resp: Response =>
         log.infoP(s"$provider's access token response: ${resp.body}")
         provider match {
           case "google" => resp.status match {
@@ -244,7 +241,7 @@ class OAuth2Controller @Inject() (
               case "facebook" => {
                 if (Play.maybeApplication.isDefined && !Play.isProd) {
                   val friendsUrl = "https://graph.facebook.com/me/friends"
-                  val friendsF = WS.url(friendsUrl).withQueryString(("access_token", tokenResp.accessToken),("fields","id,name,first_name,last_name,username,picture,email")).get
+                  val friendsF = WS.url(friendsUrl).withQueryString(("access_token", tokenResp.accessToken), ("fields", "id,name,first_name,last_name,username,picture,email")).get
                   friendsF.map { friendsResp =>
                     val friends = friendsResp.json
                     log.infoP("friends:\n${Json.prettyPrint(friends)}")
@@ -261,7 +258,7 @@ class OAuth2Controller @Inject() (
     }
   }
 
-  def accessTokenCallback(provider:String) = Action(parse.tolerantJson) { implicit request =>
+  def accessTokenCallback(provider: String) = Action(parse.tolerantJson) { implicit request =>
     log.info(s"[oauth2.accessTokenCallback]\n\trequest.hdrs=${request.headers}\n\trequest.session=${request.session}")
     val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)
     val json = request.body
@@ -278,11 +275,11 @@ class OAuth2Controller @Inject() (
     }
   }
 
-  def refreshContacts(abookId:Id[ABookInfo], provider:Option[String]) = JsonAction.authenticatedAsync { implicit request =>
+  def refreshContacts(abookId: Id[ABookInfo], provider: Option[String]) = JsonAction.authenticatedAsync { implicit request =>
     refreshContactsHelper(abookId, provider)
   }
 
-  private def refreshContactsHelper(abookId:Id[ABookInfo], provider:Option[String])(implicit request: AuthenticatedRequest[AnyContent]): Future[SimpleResult] = {
+  private def refreshContactsHelper(abookId: Id[ABookInfo], provider: Option[String])(implicit request: AuthenticatedRequest[AnyContent]): Future[SimpleResult] = {
     implicit val prefix = LogPrefix(s"oauth2.refreshContacts($abookId,$provider)")
     val redirectInvite = Redirect("/friends/invite/email").withSession(session - STATE_TOKEN_KEY)
     log.infoP(s"userId=${request.userId}")
@@ -306,12 +303,12 @@ class OAuth2Controller @Inject() (
               )
               val call = WS.url(GOOGLE.accessTokenUrl).post(params.map(kv => (kv._1, Seq(kv._2)))) // POST does not need url encoding
               val tokenRespOptF = call map { resp =>
-                  if (resp.status == OK) {
-                    val tokenResp = resp.json.asOpt[OAuth2AccessTokenResponse]
-                    log.infoP(s"tokenResp=$tokenResp")
-                    tokenResp
-                  } else None
-                }
+                if (resp.status == OK) {
+                  val tokenResp = resp.json.asOpt[OAuth2AccessTokenResponse]
+                  log.infoP(s"tokenResp=$tokenResp")
+                  tokenResp
+                } else None
+              }
               tokenRespOptF
             }
           }
@@ -340,7 +337,7 @@ class OAuth2Controller @Inject() (
     }
   }
 
-  def importContacts(provider:Option[String], approvalPromptOpt:Option[String], redirectUrl: Option[String] = None) = HtmlAction.authenticated { implicit request =>
+  def importContacts(provider: Option[String], approvalPromptOpt: Option[String], redirectUrl: Option[String] = None) = HtmlAction.authenticated { implicit request =>
     val stateToken = Json.toJson(StateToken(new BigInteger(130, new SecureRandom()).toString(32), redirectUrl)).toString()
     val route = routes.OAuth2Controller.start(provider.getOrElse("google"), Some(stateToken), approvalPromptOpt)
     log.info(s"[importContacts(${request.userId}, $provider, $approvalPromptOpt)] redirect to $route")

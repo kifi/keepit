@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.tracker._
 import com.keepit.heimdal._
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model.User
 import org.joda.time.DateTime
 import com.keepit.common.net.URI
@@ -14,22 +14,23 @@ import com.keepit.search.tracker.ClickedURI
 import play.api.libs.concurrent.Execution.Implicits._
 
 class SearchEventCommander @Inject() (
-  shoeboxClient: ShoeboxServiceClient,
-  clickHistoryTracker: ClickHistoryTracker,
-  resultClickedTracker: ResultClickTracker,
-  searchAnalytics: SearchAnalytics) extends Logging {
+    shoeboxClient: ShoeboxServiceClient,
+    clickHistoryTracker: ClickHistoryTracker,
+    resultClickedTracker: ResultClickTracker,
+    searchAnalytics: SearchAnalytics) extends Logging {
 
   def searched(userId: Id[User], searchedAt: DateTime, searchContext: BasicSearchContext, endedWith: String)(implicit context: HeimdalContext) = {
     searchAnalytics.searched(userId, searchedAt, searchContext, endedWith, context)
   }
 
   def clickedKifiResult(userId: Id[User], searchContext: BasicSearchContext, query: String, searchResultUrl: String, resultPosition: Int, isDemo: Boolean, clickedAt: DateTime, kifiHitContext: KifiHitContext)(implicit context: HeimdalContext) = {
-    shoeboxClient.getNormalizedURIByURL(searchResultUrl).onSuccess { case Some(uri) =>
-      val uriId = uri.id.get
-      resultClickedTracker.add(userId, query, uriId, resultPosition, kifiHitContext.isOwnKeep, isDemo)
-      clickHistoryTracker.add(userId, ClickedURI(uriId))
-      val hit = SanitizedKifiHit(searchContext.uuid, searchContext.origin, searchResultUrl, uriId, kifiHitContext)
-      shoeboxClient.kifiHit(userId, hit)
+    shoeboxClient.getNormalizedURIByURL(searchResultUrl).onSuccess {
+      case Some(uri) =>
+        val uriId = uri.id.get
+        resultClickedTracker.add(userId, query, uriId, resultPosition, kifiHitContext.isOwnKeep, isDemo)
+        clickHistoryTracker.add(userId, ClickedURI(uriId))
+        val hit = SanitizedKifiHit(searchContext.uuid, searchContext.origin, searchResultUrl, uriId, kifiHitContext)
+        shoeboxClient.kifiHit(userId, hit)
     }
     searchAnalytics.clickedSearchResult(userId, clickedAt, searchContext, SearchEngine.Kifi, resultPosition, Some(kifiHitContext), context)
   }

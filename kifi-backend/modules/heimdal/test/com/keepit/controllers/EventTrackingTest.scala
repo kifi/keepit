@@ -13,7 +13,7 @@ import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.heimdal._
 
 import play.api.test.Helpers._
-import play.api.libs.json.{Json}
+import play.api.libs.json.{ Json }
 import com.keepit.common.db.Id
 import akka.actor.ActorSystem
 import com.keepit.social.NonUserKinds
@@ -71,7 +71,7 @@ class EventTrackingTest extends Specification with TestInjector {
     }
 
     "store array" in {
-      withInjector(modules :_*) { implicit injector =>
+      withInjector(modules: _*) { implicit injector =>
         val (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, nonUserEventRepo, testContext) = setup()
         val events: Array[HeimdalEvent] = Array(
           UserEvent(Id(1), testContext, EventType("test_event")),

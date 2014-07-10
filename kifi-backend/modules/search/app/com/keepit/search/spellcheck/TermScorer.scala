@@ -1,7 +1,7 @@
 package com.keepit.search.spellcheck
 
 import scala.util.Random
-import scala.math.{exp, log => logE}
+import scala.math.{ exp, log => logE }
 import com.keepit.common.logging.Logging
 
 // enableAdjScore: terms closer to each other get boosted
@@ -19,25 +19,25 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean, orderedA
 
   def minPairTermsScore: Float = if (!enableAdjScore) 1f else MIN_ADJ_SCORE
 
-  private def log2(x: Double) = logE(x)/logE(2)
+  private def log2(x: Double) = logE(x) / logE(2)
 
   def gaussianScore(x: Float) = {
-    exp(-x*x/(2*SIGMA*SIGMA)) max MIN_ADJ_SCORE      // this close to 0 when x > 3*SIGMA. Add a smoother
+    exp(-x * x / (2 * SIGMA * SIGMA)) max MIN_ADJ_SCORE // this close to 0 when x > 3*SIGMA. Add a smoother
   }
 
-  def warmUpStatsMap(words: Set[String]) = words.foreach{getOrUpdateStats(_)}
+  def warmUpStatsMap(words: Set[String]) = words.foreach { getOrUpdateStats(_) }
 
-  private def getOrUpdateStats(word: String) = statsMap.getOrElse( word,
+  private def getOrUpdateStats(word: String) = statsMap.getOrElse(word,
     { val stat = statsReader.getSimpleTermStats(word); statsMap += (word -> stat); stat }
   )
 
   private def getOrUpdateJoint(key: (String, String)) = jointMap.getOrElse(key, {
-      val (a, b) = key
-      val (aStat, bStat) = (getOrUpdateStats(a), getOrUpdateStats(b))
-      val inter = aStat.docIds intersect bStat.docIds
-      jointMap += key -> inter
-      inter
-    }
+    val (a, b) = key
+    val (aStat, bStat) = (getOrUpdateStats(a), getOrUpdateStats(b))
+    val inter = aStat.docIds intersect bStat.docIds
+    jointMap += key -> inter
+    inter
+  }
   )
 
   private def getOrUpdateAdjScore(key: (String, String), inter: Set[Int]) = adjScoreMap.getOrElse(key, {
@@ -53,9 +53,9 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean, orderedA
     val subset = if (inter.size <= SAMPLE_SIZE) inter else rand.shuffle(inter).take(SAMPLE_SIZE)
     val liveDocs = TermStatsReader.genBits(subset)
     val (aMap, bMap) = (statsReader.getDocsAndPositions(a, liveDocs), statsReader.getDocsAndPositions(b, liveDocs))
-    assume (aMap.keySet == bMap.keySet)
+    assume(aMap.keySet == bMap.keySet)
     val scorer = new AdjacencyScorer
-    val dists = aMap.keySet.map{k => scorer.distance(aMap(k), bMap(k), earlyStopValue = 1, orderedAdj)}
+    val dists = aMap.keySet.map { k => scorer.distance(aMap(k), bMap(k), earlyStopValue = 1, orderedAdj) }
     log.info(s"adjScore: ${a}, ${b}, distances: ${dists.mkString(" ")}")
     val minDist = dists.foldLeft(Float.MaxValue)(_ min _)
     log.info(s"adjScore: ${a}, ${b}, min dist: ${minDist}, orderedAdj: ${orderedAdj}")
@@ -70,9 +70,9 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean, orderedA
   }
 
   def scorePairTerms(a: String, b: String): Float = {
-    val key = if (a <= b) (a,b) else (b, a)
+    val key = if (a <= b) (a, b) else (b, a)
     val inter = getOrUpdateJoint(key)
-    val pairScore = log2(1.0 + inter.size.max(1)).toFloat   // smooth
+    val pairScore = log2(1.0 + inter.size.max(1)).toFloat // smooth
     val adjBoost = if (enableAdjScore) {
       if (!orderedAdj) getOrUpdateAdjScore(key, inter) else getOrUpdateAdjScore((a, b), inter)
     } else 1f
@@ -83,6 +83,6 @@ class TermScorer(statsReader: TermStatsReader, enableAdjScore: Boolean, orderedA
   def scoreTripleTerms(a: String, b: String, c: String): Float = {
     val inter = getOrUpdateJoint(a, b) intersect getOrUpdateStats(c).docIds
     log.info(s"TermScorer: ${a}, ${b}, ${c} intersection freq: ${inter.size}")
-    log2(1 + inter.size).toFloat max 0.01f   // smooth
+    log2(1 + inter.size).toFloat max 0.01f // smooth
   }
 }

@@ -7,25 +7,25 @@ import play.api.test.Helpers._
 class PrefixMatchingTest extends Specification {
 
   val names = Seq(
-      "Alan Turing",
-      "Alan Kay",
-      "John McCarthy",
-      "Paul McCartney",
-      "John Lennon",
-      "Woody Allen",
-      "Allen Weiner"
+    "Alan Turing",
+    "Alan Kay",
+    "John McCarthy",
+    "Paul McCartney",
+    "John Lennon",
+    "Woody Allen",
+    "Allen Weiner"
   )
 
   def prefixMatch(names: Seq[String], query: String): Seq[String] = {
     var ordinal = 0
-    names.map{ name =>
+    names.map { name =>
       ordinal += 1
-      (name, PrefixMatching.distance(name, query).toDouble + 1.0d - (1.0d/ordinal))
-    }.collect{
+      (name, PrefixMatching.distance(name, query).toDouble + 1.0d - (1.0d / ordinal))
+    }.collect {
       case (name, score) if score < 1000000.0d => (name, score)
     }.toSeq
-    .sortBy(_._2)
-    .map(_._1)
+      .sortBy(_._2)
+      .map(_._1)
   }
 
   "PrefixMatching" should {

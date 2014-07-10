@@ -10,7 +10,7 @@ import play.api.mvc.Controller
 import play.api.test.Helpers._
 import scala.reflect.Manifest.classType
 import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.healthcheck.{DevAirbrakeModule, FakeMemoryUsageModule}
+import com.keepit.common.healthcheck.{ DevAirbrakeModule, FakeMemoryUsageModule }
 
 class DevModuleTest extends Specification with Logging with ApplicationInjector {
 
