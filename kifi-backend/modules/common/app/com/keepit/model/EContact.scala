@@ -13,7 +13,6 @@ import scala.util.{Failure, Try}
 import com.keepit.abook.RichContact
 
 object EContactStates extends States[EContact] {
-  val PARSE_FAILURE = State[EContact]("parse_failure")
   val HIDDEN = State[EContact]("hidden")
 }
 

@@ -20,7 +20,7 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def userThreadStatsForUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserThreadStatsForUserIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, Duration.Inf))
+    new UserThreadStatsForUserIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -149,7 +149,7 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def probabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (outerRepo, Duration.Inf))
+    new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (outerRepo, 30 days))
 
   @Provides @Singleton
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

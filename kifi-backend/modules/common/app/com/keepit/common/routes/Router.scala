@@ -15,29 +15,32 @@ import com.keepit.common.mail.EmailAddress
 trait Service
 
 case class ServiceRoute(method: Method, path: String, params: Param*) {
-  def url = path + (if(params.nonEmpty) "?" + params.map({ p =>
-    URLEncoder.encode(p.key, UTF8) + (if(p.value.value != "") "=" + URLEncoder.encode(p.value.value, UTF8) else "")
-  }).mkString("&") else "")
+  def url = {
+    val paramString = params.collect { case Param(key, ParamValue(Some(value))) =>
+      URLEncoder.encode(key, UTF8) + "=" + URLEncoder.encode(value, UTF8)
+    }.mkString("&")
+    if (paramString.isEmpty) path else path + "?" + paramString
+  }
 }
 
-case class Param(key: String, value: ParamValue = ParamValue("")) {
-  override def toString(): String = s"key->${value.value}"
+case class Param(key: String, value: ParamValue = ParamValue(None)) {
+  override def toString(): String = s"key->${value.value.getOrElse("")}"
 }
 
-case class ParamValue(value: String)
+case class ParamValue(value: Option[String])
 
 object ParamValue {
-  implicit def stringToParam(i: String) = ParamValue(i)
-  implicit def longToParam(i: Long) = ParamValue(i.toString)
-  implicit def booleanToParam(b: Boolean) = ParamValue(b.toString)
-  implicit def intToParam(i: Int) = ParamValue(i.toString)
-  implicit def stateToParam[T](i: State[T]) = ParamValue(i.value)
-  implicit def externalIdToParam[T](i: ExternalId[T]) = ParamValue(i.id)
-  implicit def idToParam[T](i: Id[T]) = ParamValue(i.id.toString)
-  implicit def optionToParam[T](i: Option[T])(implicit e: T => ParamValue) = if(i.nonEmpty) e(i.get) else ParamValue("")
-  implicit def seqNumToParam[T](seqNum: SequenceNumber[T]) = ParamValue(seqNum.value.toString)
-  implicit def modelVersionToParam[M <: StatModel](modelVersion: ModelVersion[M]) = ParamValue(modelVersion.version.toString)
-  implicit def emailToParam(emailAddress: EmailAddress) = ParamValue(emailAddress.address)
+  implicit def stringToParam(i: String) = ParamValue(Some(i))
+  implicit def longToParam(i: Long) = ParamValue(Some(i.toString))
+  implicit def booleanToParam(b: Boolean) = ParamValue(Some(b.toString))
+  implicit def intToParam(i: Int) = ParamValue(Some(i.toString))
+  implicit def stateToParam[T](i: State[T]) = ParamValue(Some(i.value))
+  implicit def externalIdToParam[T](i: ExternalId[T]) = ParamValue(Some(i.id))
+  implicit def idToParam[T](i: Id[T]) = ParamValue(Some(i.id.toString))
+  implicit def optionToParam[T](i: Option[T])(implicit e: T => ParamValue) = i.map(e) getOrElse ParamValue(None)
+  implicit def seqNumToParam[T](seqNum: SequenceNumber[T]) = ParamValue(Some(seqNum.value.toString))
+  implicit def modelVersionToParam[M <: StatModel](modelVersion: ModelVersion[M]) = ParamValue(Some(modelVersion.version.toString))
+  implicit def emailToParam(emailAddress: EmailAddress) = ParamValue(Some(emailAddress.address))
 }
 
 abstract class Method(name: String)
@@ -244,14 +247,10 @@ object ABook extends Service {
     def getABooksCount() = ServiceRoute(GET, s"/internal/abooksCount/")
     def getABookInfo(userId:Id[User], id:Id[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookInfo", Param("userId", userId), Param("id", id))
     def getABookInfoByExternalId(id: ExternalId[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/getABookInfoByExternalId", Param("externalId", id))
-    def getEContacts(userId:Id[User], maxRows:Int) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContacts", Param("maxRows", maxRows))
     def getEContactCount(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContactCount")
-    def getEContactsByIds() = ServiceRoute(POST, s"/internal/abook/getEContactsByIds")
     def getABookRawInfos(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookRawInfos")
     def getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getOAuth2Token", Param("abookId", abookId))
     def queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/queryEContacts", Param("limit", limit), Param("search", search), Param("after", after))
-    def prefixSearch(userId:Id[User], query:String) = ServiceRoute(GET, s"/internal/abook/${userId.id}/prefixSearch", Param("query", query))
-    def prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/prefixQuery", Param("limit", limit), Param("search", search), Param("after", after))
     def refreshPrefixFilter(userId:Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/refreshPrefixFilter")
     def refreshPrefixFiltersByIds() = ServiceRoute(POST, s"/internal/abook/refreshPrefixFiltersByIds")
     def refreshAllPrefixFilters() = ServiceRoute(GET, s"/internal/abook/refreshAllPrefixFilters")
@@ -267,7 +266,8 @@ object ABook extends Service {
     def hideEmailFromUser(userId: Id[User], email: EmailAddress) = ServiceRoute(POST, s"/internal/abook/${userId.id}/hideEmailFromUser", Param("email", email))
     def getContactNameByEmail(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/getContactNameByEmail")
     def internKifiContact(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/internKifiContact")
-    def contactTypeahead(userId: Id[User], query: String, maxHits: Option[Int]) = ServiceRoute(GET, s"/internal/abook/${userId}/contactTypeahead", Param("q", query), Param("maxHits", maxHits))
+    def prefixQuery(userId: Id[User], query: String, maxHits: Option[Int]) = ServiceRoute(GET, s"/internal/abook/${userId}/prefixQuery", Param("q", query), Param("maxHits", maxHits))
+    def getContactsByUser(userId: Id[User], page: Int, pageSize: Option[Int]) = ServiceRoute(GET, s"/internal/abook/${userId}/getContacts", Param("page", page), Param("pageSize", pageSize))
   }
 }
 
