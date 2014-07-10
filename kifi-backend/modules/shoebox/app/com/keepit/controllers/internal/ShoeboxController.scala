@@ -379,7 +379,7 @@ class ShoeboxController @Inject() (
     val toSave = db.readOnlyMaster { implicit ro => pageInfoRepo.getByUri(info.uriId) } map { p => info.withId(p.id.get) } getOrElse info
     val saved = scraperHelper.savePageInfo(toSave)
     log.debug(s"[savePageInfo] result=$saved")
-    Ok(Json.toJson(saved))
+    Ok
   }
 
   def saveScrapeInfo() = SafeAsyncAction(parse.tolerantJson) { request =>

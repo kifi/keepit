@@ -580,14 +580,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def savePageInfo(pageInfo: PageInfo): Future[Unit] = {
-    call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
-      r.json.validate[PageInfo] match { // debugging odd parsing error; will be removed
-        case JsSuccess(pi, _) =>
-          log.info(s"[savePageInfo($pageInfo)] res=$pi")
-        case JsError(errors) =>
-          log.warn(s"[savePageInfo($pageInfo)] Failed to parse JSON ${r.json}; errors=$errors")
-      }
-    }
+    call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r => Unit }
   }
 
   def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo] = {
