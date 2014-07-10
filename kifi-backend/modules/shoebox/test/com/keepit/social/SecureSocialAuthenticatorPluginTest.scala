@@ -3,14 +3,14 @@ package com.keepit.social
 import org.joda.time.DateTime
 import org.specs2.mutable._
 
-import com.keepit.common.db.{TestSlickSessionProvider, ExternalId}
+import com.keepit.common.db.{ TestSlickSessionProvider, ExternalId }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.{User, SocialUserInfo, UserSession}
-import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
+import com.keepit.model.{ User, SocialUserInfo, UserSession }
+import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 
 import play.api.Play.current
 import play.api.test.Helpers._
-import securesocial.core.{Authenticator, IdentityId}
+import securesocial.core.{ Authenticator, IdentityId }
 import com.keepit.common.time.FakeClock
 
 class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxApplicationInjector {

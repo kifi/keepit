@@ -7,7 +7,7 @@ import com.keepit.model.User
 import com.keepit.search.Scoring
 import scala.math.pow
 
-class ResultMergerTest extends Specification{
+class ResultMergerTest extends Specification {
 
   val detailedSearchHit1 = {
     DetailedSearchHit(
@@ -88,7 +88,7 @@ class ResultMergerTest extends Specification{
       isFriendsBookmark = true,
       isPrivate = false,
       users = Seq(Id[User](1), Id[User](2)),
-      score = 3f/3f * bookmarkBoost,
+      score = 3f / 3f * bookmarkBoost,
       scoring = new Scoring(3f, 3f, 0f, 0f, false)
     )
   }
@@ -102,7 +102,7 @@ class ResultMergerTest extends Specification{
       isFriendsBookmark = true,
       isPrivate = false,
       users = Seq(Id[User](2)),
-      score = 2f/3f,
+      score = 2f / 3f,
       scoring = new Scoring(2f, 2f, 0f, 0f, false)
     )
   }
@@ -121,10 +121,9 @@ class ResultMergerTest extends Specification{
     show = true
   )
 
-
   "result merger" should {
     "work" in {
-      val resultMerger = new ResultMerger(enableTailCutting = false , config = SearchConfig.defaultConfig)
+      val resultMerger = new ResultMerger(enableTailCutting = false, config = SearchConfig.defaultConfig)
       val merged = resultMerger.merge(shardResults, maxHits = 2)
 
       merged.hits === expectedMerge.hits

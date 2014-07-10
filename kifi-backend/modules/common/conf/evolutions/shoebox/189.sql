@@ -23,12 +23,14 @@ CREATE TABLE delighted_answer (
     date datetime NOT NULL,
     score int NOT NULL,
     comment varchar(3072) NULL,
+    source varchar(32) NOT NULL,
 
     PRIMARY KEY (id),
     FOREIGN KEY (delighted_user_id)
       REFERENCES delighted_user(id)
       ON UPDATE CASCADE ON DELETE RESTRICT,
 
+    INDEX delighted_answer_i_delighted_ext_answer_id (delighted_ext_answer_id),
     INDEX delighted_answer_i_delighted_user_id (delighted_user_id)
 );
 

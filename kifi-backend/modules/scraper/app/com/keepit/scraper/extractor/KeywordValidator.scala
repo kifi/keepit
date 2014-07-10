@@ -6,10 +6,10 @@ import org.xml.sax.ContentHandler
 
 class KeywordValidator(keywordCandidates: Seq[String]) {
 
-  private[this] val matcher = new AhoCorasick[Char, (String, Int)](keywordCandidates.zipWithIndex.map{ case (k, i) => (s" ${k.toLowerCase} ".toCharArray().toSeq, (k, i)) })
+  private[this] val matcher = new AhoCorasick[Char, (String, Int)](keywordCandidates.zipWithIndex.map { case (k, i) => (s" ${k.toLowerCase} ".toCharArray().toSeq, (k, i)) })
 
   private[this] var validatedKeywords = Set.empty[(String, Int)]
-  private[this] val onMatch: (Int,(String, Int))=>Unit = { (pos: Int, k: (String, Int)) => validatedKeywords += k }
+  private[this] val onMatch: (Int, (String, Int)) => Unit = { (pos: Int, k: (String, Int)) => validatedKeywords += k }
 
   private[this] var state = matcher.initialState
   private[this] var lastChar = ' '

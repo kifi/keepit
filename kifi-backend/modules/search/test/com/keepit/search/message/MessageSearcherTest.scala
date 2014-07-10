@@ -1,13 +1,12 @@
 package com.keepit.search.message
 
-
 import com.keepit.test.TestInjector
 import com.keepit.social.BasicUser
-import com.keepit.common.db.{Id,ExternalId, SequenceNumber}
+import com.keepit.common.db.{ Id, ExternalId, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.model.User
-import com.keepit.search.index.{DefaultAnalyzer, Indexable, VolatileIndexDirectory}
+import com.keepit.search.index.{ DefaultAnalyzer, Indexable, VolatileIndexDirectory }
 import com.keepit.search.Lang
 import com.keepit.eliza.FakeElizaServiceClientImpl
 
@@ -20,8 +19,7 @@ import play.api.libs.json.Json
 import org.specs2.mutable._
 import com.keepit.common.actor.FakeScheduler
 
-
-class MessageSearcherTest extends Specification with TestInjector{
+class MessageSearcherTest extends Specification with TestInjector {
 
   def setupIndexer()(implicit injector: Injector) = {
 
@@ -30,7 +28,7 @@ class MessageSearcherTest extends Specification with TestInjector{
     val user3 = BasicUser(ExternalId(), "Jean-Luc", "Picard", "0.jpg")
 
     val thread1 = ThreadContent(
-      mode =  FULL,
+      mode = FULL,
       id = Id[ThreadContent](44),
       seq = SequenceNumber(1),
       participants = Seq(user1, user2),
@@ -48,7 +46,7 @@ class MessageSearcherTest extends Specification with TestInjector{
     )
 
     val thread2 = ThreadContent(
-      mode =  FULL,
+      mode = FULL,
       id = Id[ThreadContent](9),
       seq = SequenceNumber(2),
       participants = Seq(user1, user2),
@@ -65,7 +63,7 @@ class MessageSearcherTest extends Specification with TestInjector{
     )
 
     val thread3 = ThreadContent(
-      mode =  FULL,
+      mode = FULL,
       id = Id[ThreadContent](388),
       seq = SequenceNumber(3),
       participants = Seq(user1, user3),
@@ -100,10 +98,10 @@ class MessageSearcherTest extends Specification with TestInjector{
       airbrake = inject[AirbrakeNotifier]
     )
 
-    val threadIndexableIterable = Seq[Indexable[ThreadContent, ThreadContent]](threadIndexable1,threadIndexable2,threadIndexable3)
+    val threadIndexableIterable = Seq[Indexable[ThreadContent, ThreadContent]](threadIndexable1, threadIndexable2, threadIndexable3)
 
     val indexer = new MessageIndexer(
-      indexDirectory =  new VolatileIndexDirectory(),
+      indexDirectory = new VolatileIndexDirectory(),
       eliza = new FakeElizaServiceClientImpl(inject[AirbrakeNotifier], new FakeScheduler()),
       airbrake = inject[AirbrakeNotifier]
     )
@@ -116,7 +114,7 @@ class MessageSearcherTest extends Specification with TestInjector{
   "MessageSearcher" should {
 
     "find and rank correctly" in {
-      withInjector(){ implicit injector =>
+      withInjector() { implicit injector =>
         val indexer = setupIndexer()
 
         val searcher = new MessageSearcher(indexer.getSearcher)
@@ -126,39 +124,38 @@ class MessageSearcherTest extends Specification with TestInjector{
           DefaultAnalyzer.getAnalyzerWithStemmer(Lang("en"))
         )
 
-        parser.parse("illogical good").map{ parsedQuery =>
+        parser.parse("illogical good").map { parsedQuery =>
           searcher.search(Id[User](1), parsedQuery).length === 3
           val results = searcher.search(Id[User](2), parsedQuery)
-          results.length===2
-          val digests = results.map{ result =>
+          results.length === 2
+          val digests = results.map { result =>
             (result \ "digest").as[String]
           }
-          digests(0)==="This is thread 1."
-          digests(1)==="This is thread 2."
+          digests(0) === "This is thread 1."
+          digests(1) === "This is thread 2."
         }
 
-        parser.parse("spock").map{ parsedQuery =>
-          searcher.search(Id[User](1), parsedQuery).length===3
-          searcher.search(Id[User](2), parsedQuery).length===2
+        parser.parse("spock").map { parsedQuery =>
+          searcher.search(Id[User](1), parsedQuery).length === 3
+          searcher.search(Id[User](2), parsedQuery).length === 2
         }
 
-        parser.parse("picard").map{ parsedQuery =>
-          searcher.search(Id[User](1), parsedQuery).length===1
-          searcher.search(Id[User](2), parsedQuery).length===0
+        parser.parse("picard").map { parsedQuery =>
+          searcher.search(Id[User](1), parsedQuery).length === 1
+          searcher.search(Id[User](2), parsedQuery).length === 0
         }
 
-        parser.parse("amazon").map{ parsedQuery =>
-          searcher.search(Id[User](1), parsedQuery).length===1
+        parser.parse("amazon").map { parsedQuery =>
+          searcher.search(Id[User](1), parsedQuery).length === 1
         }
 
-        parser.parse("cheese").map{ parsedQuery =>
-          searcher.search(Id[User](1), parsedQuery).length===1
+        parser.parse("cheese").map { parsedQuery =>
+          searcher.search(Id[User](1), parsedQuery).length === 1
         }
       }
-      1===1
+      1 === 1
     }
 
   }
-
 
 }

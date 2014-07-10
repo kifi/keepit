@@ -9,11 +9,10 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class StandaloneURIGraphIndexer(
-  indexDirectory: IndexDirectory,
-  bookmarkStore: BookmarkStore,
-  airbrake: AirbrakeNotifier,
-  shoeboxClient: ShoeboxServiceClient
-) extends URIGraphIndexer(indexDirectory, bookmarkStore, airbrake) {
+    indexDirectory: IndexDirectory,
+    bookmarkStore: BookmarkStore,
+    airbrake: AirbrakeNotifier,
+    shoeboxClient: ShoeboxServiceClient) extends URIGraphIndexer(indexDirectory, bookmarkStore, airbrake) {
 
   override def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()
@@ -23,7 +22,7 @@ class StandaloneURIGraphIndexer(
     while (!done) {
       val bookmarks = Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, 1000), 180 seconds)
       done = bookmarks.isEmpty
-      total += update("", bookmarks, Shard(0,1))
+      total += update("", bookmarks, Shard(0, 1))
     }
     total
   }

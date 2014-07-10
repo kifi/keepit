@@ -2,19 +2,17 @@ package com.keepit.model
 
 import org.joda.time.DateTime
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{State, Id}
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.time._
 import com.keepit.common.mail.EmailAddress
 
 @ImplementedBy(classOf[UserEmailAddressRepoImpl])
 trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[UserEmailAddress] with SeqNumberFunction[UserEmailAddress] {
-  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))
-    (implicit session: RSession): Seq[UserEmailAddress]
-  def getByAddressOpt(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))
-      (implicit session: RSession): Option[UserEmailAddress]
+  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Seq[UserEmailAddress]
+  def getByAddressOpt(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress]
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress
   def getByUserAndCode(userId: Id[User], verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
@@ -25,12 +23,11 @@ trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[Us
 
 @Singleton
 class UserEmailAddressRepoImpl @Inject() (
-  val db: DataBaseComponent,
-  val clock: Clock,
-  userValueRepo: UserValueRepo,
-  userRepo: UserRepo,
-  verifiedEmailUserIdCache: VerifiedEmailUserIdCache
-) extends DbRepo[UserEmailAddress] with DbRepoWithDelete[UserEmailAddress] with SeqNumberDbFunction[UserEmailAddress] with UserEmailAddressRepo {
+    val db: DataBaseComponent,
+    val clock: Clock,
+    userValueRepo: UserValueRepo,
+    userRepo: UserRepo,
+    verifiedEmailUserIdCache: VerifiedEmailUserIdCache) extends DbRepo[UserEmailAddress] with DbRepoWithDelete[UserEmailAddress] with SeqNumberDbFunction[UserEmailAddress] with UserEmailAddressRepo {
 
   import db.Driver.simple._
 
@@ -52,7 +49,7 @@ class UserEmailAddressRepoImpl @Inject() (
 
   override def save(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
     val toSave = emailAddress.copy(seq = sequence.incrementAndGet())
-    userRepo.save(userRepo.get(emailAddress.userId))   // just to bump up user seqNum
+    userRepo.save(userRepo.get(emailAddress.userId)) // just to bump up user seqNum
     super.save(toSave)
   }
 
@@ -67,18 +64,16 @@ class UserEmailAddressRepoImpl @Inject() (
     }
   }
 
-  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))
-    (implicit session: RSession): Seq[UserEmailAddress] =
-    (for(f <- rows if f.address === address && f.state =!= excludeState.orNull) yield f).list
+  def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Seq[UserEmailAddress] =
+    (for (f <- rows if f.address === address && f.state =!= excludeState.orNull) yield f).list
 
-  def getByAddressOpt(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))
-      (implicit session: RSession): Option[UserEmailAddress] = {
+  def getByAddressOpt(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] = {
     val allAddresses = getByAddress(address, excludeState)
     allAddresses.find(_.state == UserEmailAddressStates.VERIFIED).orElse(allAddresses.find(_.state == UserEmailAddressStates.UNVERIFIED).headOption)
   }
 
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress] =
-    (for(f <- rows if f.userId === userId && f.state =!= UserEmailAddressStates.INACTIVE) yield f).list
+    (for (f <- rows if f.userId === userId && f.state =!= UserEmailAddressStates.INACTIVE) yield f).list
 
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress = {
     val user = userRepo.get(userId)

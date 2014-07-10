@@ -1,7 +1,7 @@
 package com.keepit.search.tracker
 
 import com.keepit.common.logging.AccessLog
-import com.keepit.search.{FullFilterChunkId}
+import com.keepit.search.{ FullFilterChunkId }
 import com.keepit.serializer.ArrayBinaryFormat
 import scala.concurrent.duration._
 import com.keepit.common.cache.BinaryCacheImpl
@@ -16,4 +16,4 @@ case class ProbablisticLRUChunkKey(id: FullFilterChunkId) extends Key[Array[Int]
 }
 
 class ProbablisticLRUChunkCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends BinaryCacheImpl[ProbablisticLRUChunkKey, Array[Int]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(ArrayBinaryFormat.intArrayFormat)
+  extends BinaryCacheImpl[ProbablisticLRUChunkKey, Array[Int]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(ArrayBinaryFormat.intArrayFormat)

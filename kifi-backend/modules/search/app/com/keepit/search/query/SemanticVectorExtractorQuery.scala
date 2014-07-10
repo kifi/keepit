@@ -17,23 +17,22 @@ import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.BytesRef
-import java.util.{Set => JSet}
+import java.util.{ Set => JSet }
 import scala.math._
-
 
 class SemanticVectorExtractorQuery(val semanticVectorQueries: Seq[SemanticVectorQuery], val personalQuery: Option[Query]) extends Query {
   override def createWeight(searcher: IndexSearcher): Weight = {
     new SemanticVectorExtractorWeight(
       this,
-      semanticVectorQueries.map{ _.createWeight(searcher) },
-      personalQuery.map{ _.createWeight(searcher) }
+      semanticVectorQueries.map { _.createWeight(searcher) },
+      personalQuery.map { _.createWeight(searcher) }
     )
   }
 
   override def rewrite(reader: IndexReader): Query = {
-    val rewrittenPersonalQuery = personalQuery.map{ _.rewrite(reader) }
+    val rewrittenPersonalQuery = personalQuery.map { _.rewrite(reader) }
     var changed: Boolean = false
-    val rewrittenSemanticVectorQueries = semanticVectorQueries.map{ semanticVectorQuery =>
+    val rewrittenSemanticVectorQueries = semanticVectorQueries.map { semanticVectorQuery =>
       val rewrittenSemanticVectorQuery = semanticVectorQuery.rewrite(reader).asInstanceOf[SemanticVectorQuery]
       changed = changed || (semanticVectorQuery ne rewrittenSemanticVectorQuery)
       rewrittenSemanticVectorQuery
@@ -46,19 +45,19 @@ class SemanticVectorExtractorQuery(val semanticVectorQueries: Seq[SemanticVector
   }
 
   override def extractTerms(out: JSet[Term]): Unit = {
-    semanticVectorQueries.foreach{ _.extractTerms(out) }
-    personalQuery.foreach{ _.extractTerms(out) }
+    semanticVectorQueries.foreach { _.extractTerms(out) }
+    personalQuery.foreach { _.extractTerms(out) }
   }
 
   override def toString(s: String) = {
-    s"SemanticVectorExtractorQuery((${semanticVectorQueries.map{ _.toString(s) }.mkString(",")}), ${personalQuery.map{ _.toString(s) }})"
+    s"SemanticVectorExtractorQuery((${semanticVectorQueries.map { _.toString(s) }.mkString(",")}), ${personalQuery.map { _.toString(s) }})"
   }
 
   override def equals(obj: Any): Boolean = obj match {
     case query: SemanticVectorExtractorQuery =>
       (personalQuery.equals(query.personalQuery) &&
-       semanticVectorQueries.size == query.semanticVectorQueries.size &&
-       (semanticVectorQueries zip query.semanticVectorQueries).forall{ case (a, b) => a.equals(b) })
+        semanticVectorQueries.size == query.semanticVectorQueries.size &&
+        (semanticVectorQueries zip query.semanticVectorQueries).forall { case (a, b) => a.equals(b) })
     case _ => false
   }
 
@@ -71,21 +70,21 @@ class SemanticVectorExtractorWeight(query: SemanticVectorExtractorQuery, semanti
   override def scoresDocsOutOfOrder() = false
 
   override def getValueForNormalization(): Float = {
-    semanticWeights.foreach{ _.getValueForNormalization() } // for side effect
-    personalWeight.foreach{ _.getValueForNormalization() } // for side effect
+    semanticWeights.foreach { _.getValueForNormalization() } // for side effect
+    personalWeight.foreach { _.getValueForNormalization() } // for side effect
     1.0f
   }
 
   override def normalize(norm: Float, topLevelBoost: Float): Unit = {
-    semanticWeights.foreach{ _.normalize(1.0f, 1.0f) } // for side effect
-    personalWeight.foreach{ _.normalize(norm, topLevelBoost) }
+    semanticWeights.foreach { _.normalize(1.0f, 1.0f) } // for side effect
+    personalWeight.foreach { _.normalize(norm, topLevelBoost) }
   }
 
   override def explain(context: AtomicReaderContext, doc: Int): Explanation = throw new UnsupportedOperationException
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    val semanticScorers = semanticWeights.map{ _.scorer(context, scoreDocsInOrder, topScorer, acceptDocs).asInstanceOf[SemanticVectorScorer] }
-    val personalScorer = personalWeight.map{ _.scorer(context, scoreDocsInOrder, topScorer, acceptDocs) }.orNull
+    val semanticScorers = semanticWeights.map { _.scorer(context, scoreDocsInOrder, topScorer, acceptDocs).asInstanceOf[SemanticVectorScorer] }
+    val personalScorer = personalWeight.map { _.scorer(context, scoreDocsInOrder, topScorer, acceptDocs) }.orNull
 
     new SemanticVectorExtractorScorer(this, semanticScorers, personalScorer)
   }
@@ -101,7 +100,7 @@ class SemanticVectorExtractorScorer(weight: SemanticVectorExtractorWeight, seman
   override def advance(target: Int): Int = {
     if (doc < NO_MORE_DOCS) {
       doc = if (doc < target) target else doc + 1
-      val docS = semanticScorers.foldLeft(NO_MORE_DOCS){ (minDoc, semanticScorer) =>
+      val docS = semanticScorers.foldLeft(NO_MORE_DOCS) { (minDoc, semanticScorer) =>
         if (semanticScorer != null) {
           val d = if (semanticScorer.docID < doc) semanticScorer.advance(doc) else semanticScorer.docID
           min(minDoc, d)
@@ -128,7 +127,7 @@ class SemanticVectorExtractorScorer(weight: SemanticVectorExtractorWeight, seman
   def processSemanticVector(process: (Term, Array[Byte], Int, Int) => Unit) = {
     val isPersonalHit: Boolean = (personalScorer != null && personalScorer.docID == doc)
 
-    semanticScorers.foreach{ semanticScorer =>
+    semanticScorers.foreach { semanticScorer =>
       if (semanticScorer != null && semanticScorer.docID == doc) {
         val bytesRef = semanticScorer.getSemanticVectorBytesRef()
         if (bytesRef == null) {

@@ -13,16 +13,16 @@ case class Feed(uri: NormalizedURI, sharingUsers: Seq[BasicUser], firstKeptAt: D
 
 object Feed {
   implicit val format = (
-    (__ \'uri).format[NormalizedURI] and
-    (__ \'sharingUsers).format[Seq[BasicUser]] and
-    (__ \'firstKeptAt).format(DateTimeJsonFormat) and
-    (__ \'totalKeepersSize).format[Int]
+    (__ \ 'uri).format[NormalizedURI] and
+    (__ \ 'sharingUsers).format[Seq[BasicUser]] and
+    (__ \ 'firstKeptAt).format(DateTimeJsonFormat) and
+    (__ \ 'totalKeepersSize).format[Int]
   )(Feed.apply, unlift(Feed.unapply))
 }
 
 object FeedResult {
   def v1(feeds: Seq[Feed]): JsValue = {
-    val jsVals = feeds.map{ feed =>
+    val jsVals = feeds.map { feed =>
       val title = feed.uri.title.getOrElse("No Title")
       Json.obj(
         "title" -> title,

@@ -13,10 +13,9 @@ trait ShardedIndexerPlugin[K, S, I <: Indexer[_, S, I]] extends IndexerPlugin[S,
 }
 
 abstract class ShardedIndexerPluginImpl[K, S, I <: Indexer[_, S, I], A <: IndexerActor[S, I]](
-  indexer: ShardedIndexer[K, S, I],
-  actor: ActorInstance[A],
-  serviceDiscovery: ServiceDiscovery
-) extends IndexerPluginImpl[S, I, A](indexer, actor, serviceDiscovery) {
+    indexer: ShardedIndexer[K, S, I],
+    actor: ActorInstance[A],
+    serviceDiscovery: ServiceDiscovery) extends IndexerPluginImpl[S, I, A](indexer, actor, serviceDiscovery) {
 
   def getIndexerFor(id: Id[K]): I = indexer.getIndexerFor(id)
 }

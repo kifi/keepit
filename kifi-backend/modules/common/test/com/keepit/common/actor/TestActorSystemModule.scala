@@ -1,8 +1,8 @@
 package com.keepit.common.actor
 
-import akka.actor.{Cancellable, Scheduler, ActorSystem}
+import akka.actor.{ Cancellable, Scheduler, ActorSystem }
 import com.google.inject.Provides
-import com.keepit.common.plugin.{SchedulingPropertiesImpl, SchedulingProperties}
+import com.keepit.common.plugin.{ SchedulingPropertiesImpl, SchedulingProperties }
 import com.keepit.inject.AppScoped
 import play.api.Play.current
 import scala.concurrent.future
@@ -64,7 +64,7 @@ class FakeScheduler extends Scheduler {
   }
 
   def schedule(initialDelay: scala.concurrent.duration.FiniteDuration, interval: scala.concurrent.duration.FiniteDuration, runnable: Runnable)(implicit executor: scala.concurrent.ExecutionContext): Cancellable = fakeCancellable
-  def schedule(initialDelay: scala.concurrent.duration.FiniteDuration,interval: scala.concurrent.duration.FiniteDuration,receiver: akka.actor.ActorRef,message: Any)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = fakeCancellable
-  def scheduleOnce(delay: scala.concurrent.duration.FiniteDuration,receiver: akka.actor.ActorRef,message: Any)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = fakeCancellable
-  def scheduleOnce(delay: scala.concurrent.duration.FiniteDuration,runnable: Runnable)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = fakeCancellable
+  def schedule(initialDelay: scala.concurrent.duration.FiniteDuration, interval: scala.concurrent.duration.FiniteDuration, receiver: akka.actor.ActorRef, message: Any)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = fakeCancellable
+  def scheduleOnce(delay: scala.concurrent.duration.FiniteDuration, receiver: akka.actor.ActorRef, message: Any)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = fakeCancellable
+  def scheduleOnce(delay: scala.concurrent.duration.FiniteDuration, runnable: Runnable)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = fakeCancellable
 }

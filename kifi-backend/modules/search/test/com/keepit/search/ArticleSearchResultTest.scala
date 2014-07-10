@@ -5,7 +5,7 @@ import com.keepit.model._
 import org.specs2.mutable._
 import com.keepit.test.TestApplication
 import play.api.test.Helpers._
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{ JsObject, Json }
 
 class ArticleSearchResultTest extends Specification {
 
@@ -23,7 +23,7 @@ class ArticleSearchResultTest extends Specification {
     pageNumber = 3,
     previousHits = 13,
     millisPassed = 23,
-    collections = Set(1L,10L,100L),
+    collections = Set(1L, 10L, 100L),
     svVariance = 1.0f,
     svExistenceVar = 1.0f,
     toShow = false,
@@ -44,7 +44,7 @@ class ArticleSearchResultTest extends Specification {
     pageNumber = 3,
     previousHits = 13,
     millisPassed = 23,
-    collections = Set(1L,10L,100L),
+    collections = Set(1L, 10L, 100L),
     svVariance = 1.0f,
     svExistenceVar = 1.0f,
     lang = "fr"

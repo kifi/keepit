@@ -14,7 +14,7 @@ abstract class JsoupBasedExtractor(url: String, maxContentChars: Int) extends Ex
 
   def parse(doc: Document): String
 
-  def process(input: HttpInputStream){
+  def process(input: HttpInputStream) {
     try {
       doc = Jsoup.parse(input, null, url) // null charset autodetects based on `http-equiv` meta tag and default to UTF-8, Parser defaults to HTML
     } catch {
@@ -34,13 +34,13 @@ abstract class JsoupBasedExtractor(url: String, maxContentChars: Int) extends Ex
     } else {
       None
     }
-    .orElse(toOption(doc.select("meta[name=" + name + "]").attr("content")))
-    .orElse(toOption(doc.select("meta[property=" + name + "]").attr("content")))
+      .orElse(toOption(doc.select("meta[name=" + name + "]").attr("content")))
+      .orElse(toOption(doc.select("meta[property=" + name + "]").attr("content")))
   }
 
   def getLinks(name: String): Set[String] = {
-    val urls = doc.select("link[ref=" + name + "]").iterator() map {e => e.attr("href")}
-    urls filterNot {str => str == null || str.isEmpty} toSet
+    val urls = doc.select("link[ref=" + name + "]").iterator() map { e => e.attr("href") }
+    urls filterNot { str => str == null || str.isEmpty } toSet
   }
 
   private def toOption(str: String): Option[String] = if (str == null || str.isEmpty) None else Some(str)

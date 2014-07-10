@@ -3,17 +3,16 @@ package com.keepit.graph.controllers.internal
 import com.google.inject.Inject
 import com.keepit.common.controller.GraphServiceController
 import com.keepit.common.logging.Logging
-import com.keepit.graph.manager.{GraphUpdaterState, GraphStatistics, GraphManager}
+import com.keepit.graph.manager.{ GraphUpdaterState, GraphStatistics, GraphManager }
 import play.api.mvc.Action
 import play.api.libs.json._
-import com.keepit.graph.wander.{Wanderlust, WanderingCommander}
+import com.keepit.graph.wander.{ Wanderlust, WanderingCommander }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.graph.model.{EdgeKind, VertexKind, GraphKinds}
+import com.keepit.graph.model.{ EdgeKind, VertexKind, GraphKinds }
 
 class GraphController @Inject() (
-  graphManager: GraphManager,
-  wanderingCommander: WanderingCommander
-) extends GraphServiceController with Logging {
+    graphManager: GraphManager,
+    wanderingCommander: WanderingCommander) extends GraphServiceController with Logging {
 
   def wander() = SafeAsyncAction(parse.json) { request =>
     val wanderlust = request.body.as[Wanderlust]

@@ -7,7 +7,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.TestSlickSessionProvider
 import com.keepit.common.mail.ElectronicMailRepo
 import com.google.inject.Injector
-import com.keepit.normalizer.{NormalizedURIInterner, NormalizationService}
+import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationService }
 
 trait ShoeboxInjectionHelpers { self: InjectorProvider =>
 

@@ -3,19 +3,17 @@ package com.keepit.social.providers
 import play.api.mvc._
 import play.api.i18n.Messages
 import securesocial.core._
-import play.api.{Play, Logger}
+import play.api.{ Play, Logger }
 import Play.current
 import providers.utils.RoutesHelper
 import securesocial.core.LoginEvent
 import securesocial.core.AccessDeniedException
 import securesocial.controllers.TemplatesPlugin
 
-
 /**
  * A controller to provide the authentication entry point
  */
-object ProviderController extends Controller
-{
+object ProviderController extends Controller {
 
   /**
    * The property that specifies the page the user is redirected to if there is no original URL saved in
@@ -74,7 +72,7 @@ object ProviderController extends Controller
     Registry.providers.get(provider) match {
       case Some(p) => {
         try {
-          p.authenticate().fold( result => result , {
+          p.authenticate().fold(result => result, {
             user => completeAuthentication(user, session)
           })
         } catch {
@@ -93,7 +91,7 @@ object ProviderController extends Controller
   }
 
   def completeAuthentication(user: Identity, session: Session)(implicit request: RequestHeader): SimpleResult = {
-    if ( Logger.isDebugEnabled ) {
+    if (Logger.isDebugEnabled) {
       Logger.debug("[securesocial] user logged in : [" + user + "]")
     }
     val withSession = Events.fire(new LoginEvent(user)).getOrElse(session)
@@ -112,20 +110,16 @@ object ProviderController extends Controller
   }
 }
 
-
-
-import play.api.mvc.{Action, Controller}
+import play.api.mvc.{ Action, Controller }
 import securesocial.core._
 import play.api.Play
 import Play.current
 import providers.utils.RoutesHelper
 
-
 /**
  * The Login page controller
  */
-object LoginPage extends Controller
-{
+object LoginPage extends Controller {
   import providers.UsernamePasswordProvider
   /**
    * The property that specifies the page the user is redirected to after logging out.
@@ -138,15 +132,15 @@ object LoginPage extends Controller
    */
   def login = Action { implicit request =>
     val to = ProviderController.landingUrl
-    if ( SecureSocial.currentUser.isDefined ) {
+    if (SecureSocial.currentUser.isDefined) {
       // if the user is already logged in just redirect to the app
-      if ( Logger.isDebugEnabled ) {
+      if (Logger.isDebugEnabled) {
         Logger.debug("User already logged in, skipping login page. Redirecting to %s".format(to))
       }
-      Redirect( to )
+      Redirect(to)
     } else {
       import com.typesafe.plugin._
-      if ( SecureSocial.enableRefererAsOriginalUrl ) {
+      if (SecureSocial.enableRefererAsOriginalUrl) {
         SecureSocial.withRefererAsOriginalUrl(Ok(use[TemplatesPlugin].getLoginPage(request, UsernamePasswordProvider.loginForm)))
       } else {
         import Play.current
@@ -165,7 +159,7 @@ object LoginPage extends Controller
   def logout = Action { implicit request =>
     val to = Play.configuration.getString(onLogoutGoTo).getOrElse(RoutesHelper.login().absoluteURL(IdentityProvider.sslEnabled))
     val user = for (
-      authenticator <- SecureSocial.authenticatorFromRequest ;
+      authenticator <- SecureSocial.authenticatorFromRequest;
       user <- UserService.find(authenticator.identityId)
     ) yield {
       Authenticator.delete(authenticator.id)
@@ -173,7 +167,7 @@ object LoginPage extends Controller
     }
     val result = Redirect(to).discardingCookies(Authenticator.discardingCookie)
     user match {
-      case Some(u) => result.withSession( Events.fire(new LogoutEvent(u)).getOrElse(session) )
+      case Some(u) => result.withSession(Events.fire(new LogoutEvent(u)).getOrElse(session))
       case None => result
     }
   }

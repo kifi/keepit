@@ -19,7 +19,7 @@ import scala.concurrent._
 
 class MainSearcherTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
-  private val singleShard = Shard[NormalizedURI](0,1)
+  private val singleShard = Shard[NormalizedURI](0, 1)
   implicit private val activeShards = ActiveShards(Set(singleShard))
 
   "MainSearcher" should {
@@ -36,8 +36,8 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         userGraphIndexer.update()
 
         val numHitsPerCategory = 1000
-        users.foreach{ user =>
-          users.sliding(3).foreach{ friends =>
+        users.foreach { user =>
+          users.sliding(3).foreach { friends =>
             val userId = user.id.get
             setConnections(Map(userId -> (friends.map(_.id.get).toSet - userId)))
             userGraphIndexer.update()
@@ -49,16 +49,16 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
             //println("----")
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet.map(_.id)
             myHits.size === min(myUriIds.size, numHitsPerCategory)
-            myHits.foreach{ h =>
+            myHits.foreach { h =>
               //println("users:" + h)
               (myUriIds contains h.hit.id) === true
             }
 
-            val friendsUriIds = friends.foldLeft(Set.empty[Long]){ (s, f) =>
+            val friendsUriIds = friends.foldLeft(Set.empty[Long]) { (s, f) =>
               s ++ graphSearcher.getUserToUriEdgeSet(f.id.get).destIdSet.map(_.id)
             } -- myUriIds
             friendsHits.size === min(friendsUriIds.size, numHitsPerCategory)
-            friendsHits.foreach{ h =>
+            friendsHits.foreach { h =>
               //println("friends:"+ h)
               (myUriIds contains h.hit.id) === false
               (friendsUriIds contains h.hit.id) === true
@@ -66,7 +66,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
 
             val othersUriIds = (uris.map(_.id.get.id).toSet) -- friendsUriIds -- myUriIds
             othersHits.size === min(othersUriIds.size, numHitsPerCategory)
-            othersHits.foreach{ h =>
+            othersHits.foreach { h =>
               //println("others:"+ h)
               (myUriIds contains h.hit.id) === false
               (friendsUriIds contains h.hit.id) === false
@@ -90,10 +90,10 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         indexer.update() === uris.size
 
         val numHitsToReturn = 7
-        users.foreach{ user =>
+        users.foreach { user =>
           val userId = user.id.get
           //println("user:" + userId)
-          users.sliding(3).foreach{ friends =>
+          users.sliding(3).foreach { friends =>
             setConnections(Map(userId -> (friends.map(_.id.get).toSet - userId)))
             userGraphIndexer.update()
             mainSearcherFactory.clear
@@ -102,7 +102,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
             val res = mainSearcher.search()
 
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
-            val friendsUriIds = friends.foldLeft(Set.empty[Id[NormalizedURI]]){ (s, f) =>
+            val friendsUriIds = friends.foldLeft(Set.empty[Id[NormalizedURI]]) { (s, f) =>
               s ++ graphSearcher.getUserToUriEdgeSet(f.id.get).destIdSet
             } -- myUriIds
             val othersUriIds = (uris.map(_.id.get).toSet) -- friendsUriIds -- myUriIds
@@ -110,9 +110,9 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
             var mCnt = 0
             var fCnt = 0
             var oCnt = 0
-            res.hits.foreach{ h =>
+            res.hits.foreach { h =>
               if (h.isMyBookmark) mCnt += 1
-              else if (! h.users.isEmpty) fCnt += 1
+              else if (!h.users.isEmpty) fCnt += 1
               else {
                 oCnt += 1
                 h.bookmarkCount === graphSearcher.getUriToUserEdgeSet(h.uriId).size
@@ -142,7 +142,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
 
         def run = {
           val numHitsToReturn = 100
-          users.foreach{ user =>
+          users.foreach { user =>
             val userId = user.id.get
             //println("user:" + userId)
             setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
@@ -157,9 +157,9 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
             var mCnt = 0
             var fCnt = 0
             var oCnt = 0
-            res.hits.foreach{ h =>
+            res.hits.foreach { h =>
               if (h.isMyBookmark) mCnt += 1
-              else if (! h.users.isEmpty) fCnt += 1
+              else if (!h.users.isEmpty) fCnt += 1
               else {
                 oCnt += 1
                 h.bookmarkCount === graphSearcher.getUriToUserEdgeSet(h.uriId).size
@@ -253,7 +253,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
           val mainSearcher = mainSearcherFactory(singleShard, userId, "alldocs", english, None, numHitsToReturn, SearchFilter.default(context), allHitsConfig)
           //println("---" + uriSeen + ":" + reachableUris)
           val res = mainSearcher.search()
-          res.hits.foreach{ h =>
+          res.hits.foreach { h =>
             //println(h)
             uriSeen.contains(h.uriId.id) === false
             uriSeen += h.uriId.id
@@ -287,7 +287,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
 
         var lastTime = Long.MaxValue
 
-        res.hits.map{ h => bookmarkMap(h.uriId) }.foreach{ b =>
+        res.hits.map { h => bookmarkMap(h.uriId) }.foreach { b =>
           (b.createdAt.getMillis <= lastTime) === true
           lastTime = b.createdAt.getMillis
         }
@@ -304,9 +304,10 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
 
         val store = {
           val sz = uris.size
-          uris.zipWithIndex.foldLeft(new FakeArticleStore){ case (store, (uri, idx)) =>
-            store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "alldocs " * idx + "dummy" * (sz - idx)))
-            store
+          uris.zipWithIndex.foldLeft(new FakeArticleStore) {
+            case (store, (uri, idx)) =>
+              store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "alldocs " * idx + "dummy" * (sz - idx)))
+              store
           }
         }
         val (uriGraph, collectionGraph, indexer, userGraphIndexer, _, mainSearcherFactory) = initIndexes(store)
@@ -323,7 +324,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val sz = res.hits.size
         val maxScore = res.hits.head.score
         val minScore = res.hits(sz - 1).score
-        val medianScore = res.hits(sz/2).score
+        val medianScore = res.hits(sz / 2).score
         (minScore < medianScore && medianScore < maxScore) === true // this is a sanity check of test data
 
         val tailCuttingConfig = noBoostConfig.overrideWith("tailCutting" -> medianScore.toString)
@@ -384,7 +385,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
 
         val publicSet = publicUris.map(u => u.id.get).toSet
         val privateSet = privateUris.map(u => u.id.get).toSet
-        res.hits.foreach{ h =>
+        res.hits.foreach { h =>
           publicSet.contains(h.uriId) === true
           privateSet.contains(h.uriId) === false
         }
@@ -433,8 +434,8 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
           Collection(userId = user1.id.get, name = "coll1"),
           Collection(userId = user2.id.get, name = "coll2")
         )
-        saveBookmarksToCollection(coll1.id.get, coll1set:_*)
-        saveBookmarksToCollection(coll2.id.get, coll2set:_*)
+        saveBookmarksToCollection(coll1.id.get, coll1set: _*)
+        saveBookmarksToCollection(coll2.id.get, coll2set: _*)
 
         val store = mkStore(uris)
         val (uriGraph, collectionGraph, indexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory) = initIndexes(store)
@@ -454,7 +455,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val res1 = mainSearcher1.search()
 
         res1.hits.size == coll1set.size
-        res1.hits.foreach{ _.uriId.id % 3 === 0 }
+        res1.hits.foreach { _.uriId.id % 3 === 0 }
 
         val coll2Future = Promise.successful(Seq(coll2.id.get)).future
         val searchFilter2 = SearchFilter.mine(collectionsFuture = Some(coll2Future), monitoredAwait = inject[MonitoredAwait])
@@ -462,7 +463,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val res2 = mainSearcher2.search()
 
         res2.hits.size == coll2set.size
-        res2.hits.foreach{ _.uriId.id % 3 === 1 }
+        res2.hits.foreach { _.uriId.id % 3 === 1 }
 
         val coll3Future = Promise.successful(Seq(coll1.id.get, coll2.id.get)).future
         val searchFilter3 = SearchFilter.mine(collectionsFuture = Some(coll3Future), monitoredAwait = inject[MonitoredAwait])
@@ -485,8 +486,8 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
           Collection(userId = user1.id.get, name = "mycoll"),
           Collection(userId = user1.id.get, name = "different mycoll")
         )
-        saveBookmarksToCollection(coll1.id.get, coll1set:_*)
-        saveBookmarksToCollection(coll2.id.get, coll2set:_*)
+        saveBookmarksToCollection(coll1.id.get, coll1set: _*)
+        saveBookmarksToCollection(coll2.id.get, coll2set: _*)
 
         val store = mkStore(uris)
         val (uriGraph, collectionGraph, indexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory) = initIndexes(store)
@@ -497,7 +498,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         mainSearcherFactory.clear()
 
         val searchFilter = SearchFilter.mine(monitoredAwait = inject[MonitoredAwait])
-        val mainSearcher1 = mainSearcherFactory(singleShard, user1.id.get,  "mycoll", english, None, uris.size, searchFilter, noBoostConfig)
+        val mainSearcher1 = mainSearcherFactory(singleShard, user1.id.get, "mycoll", english, None, uris.size, searchFilter, noBoostConfig)
         val res1 = mainSearcher1.search()
         val expected1 = (coll1set ++ coll2set).toSet
 

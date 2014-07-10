@@ -2,8 +2,8 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import play.api.libs.json.{JsArray, JsObject, JsValue}
-import com.keepit.model.{URLFactory, Normalization}
+import play.api.libs.json.{ JsArray, JsObject, JsValue }
+import com.keepit.model.{ URLFactory, Normalization }
 
 case class RawBookmarkRepresentation(title: Option[String] = None, url: String, isPrivate: Boolean, canonical: Option[String] = None, openGraph: Option[String] = None)
 
@@ -11,7 +11,7 @@ class RawBookmarkFactory @Inject() (
     airbrake: AirbrakeNotifier) {
 
   def toRawBookmark(keepInfos: Seq[KeepInfo]): Seq[RawBookmarkRepresentation] =
-    keepInfos map {k => RawBookmarkRepresentation(title = k.title, url = k.url, isPrivate = k.isPrivate) }
+    keepInfos map { k => RawBookmarkRepresentation(title = k.title, url = k.url, isPrivate = k.isPrivate) }
 
   private[commanders] def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
     case JsArray(elements) => elements.map(getBookmarkJsonObjects).flatten

@@ -31,7 +31,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
 
         val keeper = KeepSource.keeper
 
-        val (user, collections, bookmark1, bookmark2) = db.readWrite {implicit s =>
+        val (user, collections, bookmark1, bookmark2) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
@@ -60,7 +60,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
           collectionRepo.get(tagId).state.value === "active"
           val bookmarksWithTags = keepRepo.getByUserAndCollection(user.id.get, collections(0).id.get, None, None, 1000)
           bookmarksWithTags.size === 2
-          (bookmarksWithTags map {b => b.id.get}).toSet === Set(bookmark1.id.get, bookmark2.id.get)
+          (bookmarksWithTags map { b => b.id.get }).toSet === Set(bookmark1.id.get, bookmark2.id.get)
         }
 
         db.readOnlyMaster { implicit s =>
@@ -72,40 +72,40 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
 
         db.readOnlyMaster { implicit s =>
           collectionRepo.get(collections(2).id.get).state.value === "active"
-//          keepRepo.getByUser(user.id.get, None, None, Some(collections(2).id.get), 1000) === 0
+          //          keepRepo.getByUser(user.id.get, None, None, Some(collections(2).id.get), 1000) === 0
         }
 
         inject[CollectionCommander].deleteCollection(collections(0))
 
         db.readOnlyMaster { implicit s =>
           collectionRepo.get(collections(0).id.get).state.value === "inactive"
-//          keepRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000) === 0
+          //          keepRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000) === 0
         }
 
         db.readOnlyMaster { implicit s =>
           collectionRepo.get(collections(1).id.get).state.value === "active"
-//          val bookmarksWithTags = keepRepo.getByUser(user.id.get, None, None, Some(collections(1).id.get), 1000)
-//          bookmarksWithTags.size === 1
-//          bookmarksWithTags.head.id.get === bookmark1.id.get
+          //          val bookmarksWithTags = keepRepo.getByUser(user.id.get, None, None, Some(collections(1).id.get), 1000)
+          //          bookmarksWithTags.size === 1
+          //          bookmarksWithTags.head.id.get === bookmark1.id.get
         }
 
         inject[CollectionCommander].deleteCollection(collections(1))
 
         db.readOnlyMaster { implicit s =>
           collectionRepo.get(collections(1).id.get).state.value === "inactive"
-//          keepRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000) === 0
+          //          keepRepo.getByUser(user.id.get, None, None, Some(collections(0).id.get), 1000) === 0
         }
 
         db.readOnlyMaster { implicit s =>
           collectionRepo.get(collections(1).id.get).state.value === "inactive"
-//          keepRepo.getByUser(user.id.get, None, None, Some(collections(1).id.get), 1000) === 0
+          //          keepRepo.getByUser(user.id.get, None, None, Some(collections(1).id.get), 1000) === 0
         }
 
         inject[CollectionCommander].deleteCollection(collections(2))
 
         db.readOnlyMaster { implicit s =>
           collectionRepo.get(collections(2).id.get).state.value === "inactive"
-//          keepRepo.getByUser(user.id.get, None, None, Some(collections(2).id.get), 1000) === 0
+          //          keepRepo.getByUser(user.id.get, None, None, Some(collections(2).id.get), 1000) === 0
         }
       }
     }

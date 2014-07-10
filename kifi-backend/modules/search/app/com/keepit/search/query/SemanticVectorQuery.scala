@@ -24,8 +24,8 @@ import org.apache.lucene.util.Bits
 import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.ToStringUtils
-import java.util.{Set => JSet}
-import java.lang.{Float => JFloat}
+import java.util.{ Set => JSet }
+import java.lang.{ Float => JFloat }
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 import scala.math._
@@ -121,7 +121,7 @@ class SemanticVectorScorerImpl(weight: SemanticVectorWeight, tp: SemanticVectorE
   }
 
   def advance(target: Int): Int = {
-    doc = tp. advance(target)
+    doc = tp.advance(target)
     doc
   }
 

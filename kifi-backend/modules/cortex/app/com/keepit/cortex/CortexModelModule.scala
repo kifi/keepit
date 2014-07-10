@@ -8,12 +8,10 @@ import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
 import com.keepit.common.logging.Logging
 
-
-
 trait CortexModelModule extends ScalaModule
 
-case class CortexProdModelModule() extends CortexModelModule with Logging{
-  def configure(){
+case class CortexProdModelModule() extends CortexModelModule with Logging {
+  def configure() {
     bind[LDAURIFeatureUpdatePlugin].to[LDAURIFeatureUpdatePluginImpl].in[AppScoped]
     bind[RichWord2VecURIFeatureUpdatePlugin].to[RichWord2VecURIFeatureUpdatePluginImpl].in[AppScoped]
   }
@@ -38,7 +36,7 @@ case class CortexProdModelModule() extends CortexModelModule with Logging{
 }
 
 case class CortexDevModelModule() extends CortexModelModule {
-  def configure(){
+  def configure() {
     bind[LDAURIFeatureUpdatePlugin].to[LDAURIFeatureUpdatePluginImpl].in[AppScoped]
     bind[RichWord2VecURIFeatureUpdatePlugin].to[RichWord2VecURIFeatureUpdatePluginImpl].in[AppScoped]
   }

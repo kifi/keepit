@@ -13,18 +13,18 @@ import com.keepit.model.Keep
 import com.keepit.model.User
 import com.keepit.model.KeepSource
 
-class CortexKeepTest extends Specification with CortexTestInjector{
+class CortexKeepTest extends Specification with CortexTestInjector {
   "cortex keep repo" should {
     "persist and retrieve cortex keep" in {
       withDb() { implicit injector =>
         val keepRepo = inject[CortexKeepRepo]
 
-        db.readOnlyMaster{ implicit s =>
+        db.readOnlyMaster { implicit s =>
           keepRepo.getMaxSeq.value === 0L
         }
 
-        db.readWrite{ implicit s =>
-          (1 to 10).map{ i =>
+        db.readWrite { implicit s =>
+          (1 to 10).map { i =>
             val keep = CortexKeep(
               id = None,
               keptAt = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
@@ -40,8 +40,8 @@ class CortexKeepTest extends Specification with CortexTestInjector{
           }
         }
 
-        db.readOnlyMaster{ implicit s =>
-          keepRepo.getSince(SequenceNumber[CortexKeep](5), 10).map{_.keepId.id} === Range(6,11).toList
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getSince(SequenceNumber[CortexKeep](5), 10).map { _.keepId.id } === Range(6, 11).toList
           keepRepo.getMaxSeq.value === 10L
         }
       }

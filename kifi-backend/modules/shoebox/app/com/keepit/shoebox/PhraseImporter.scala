@@ -2,14 +2,14 @@ package com.keepit.shoebox
 
 import java.io._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.logging.Logging
 import com.keepit.inject._
 import com.keepit.model.PhraseRepo
-import com.keepit.model.{Phrase => PhraseModel}
+import com.keepit.model.{ Phrase => PhraseModel }
 
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import play.api.Play.current
@@ -41,10 +41,10 @@ case object StartImport extends PhraseMessage
 case object EndImport extends PhraseMessage
 
 private class PhraseImporterActor @Inject() (
-    airbrake: AirbrakeNotifier,
-    dbConnection: Database,
-    phraseRepo: PhraseRepo)
-  extends FortyTwoActor(airbrake) with Logging {
+  airbrake: AirbrakeNotifier,
+  dbConnection: Database,
+  phraseRepo: PhraseRepo)
+    extends FortyTwoActor(airbrake) with Logging {
 
   private val GROUP_SIZE = 500
 
@@ -53,8 +53,7 @@ private class PhraseImporterActor @Inject() (
       dbConnection.readWrite(implicit s => PhraseImporter.startImport)
       try {
         importFromFile(file)
-      }
-      finally {
+      } finally {
         dbConnection.readWrite(implicit s => PhraseImporter.endImport)
       }
     case m => throw new UnsupportedActorMessage(m)
@@ -69,7 +68,7 @@ private class PhraseImporterActor @Inject() (
     val (source, lang) = fileName match {
       case Array(source, lang) => (source, Lang(lang))
     }
-    for(lineGroup <- io.Source.fromFile(file).getLines.grouped(GROUP_SIZE)) {
+    for (lineGroup <- io.Source.fromFile(file).getLines.grouped(GROUP_SIZE)) {
       val phrases = lineGroup.map { line =>
         PhraseModel(phrase = line.trim, source = source, lang = lang)
       }
@@ -86,12 +85,11 @@ trait PhraseImporter {
   def importFile(file: File): Unit
 }
 
-class PhraseImporterImpl @Inject()(actor: ActorInstance[PhraseImporterActor]) extends PhraseImporter {
+class PhraseImporterImpl @Inject() (actor: ActorInstance[PhraseImporterActor]) extends PhraseImporter {
   def importFile(file: File): Unit = {
     actor.ref ! ImportFile(file)
   }
 }
-
 
 trait PhraseFormatter
 class WikipediaFormatter extends PhraseFormatter {
@@ -99,11 +97,11 @@ class WikipediaFormatter extends PhraseFormatter {
     def removeParenths(str: String, groupingSymbol: (String, String)) = {
       val begin = str.indexOf(groupingSymbol._1)
       val end = str.indexOf(groupingSymbol._2, begin)
-      if(begin>=0 && end>0) str.substring(0,begin) + str.substring(end+1)
+      if (begin >= 0 && end > 0) str.substring(0, begin) + str.substring(end + 1)
       else str
     }
-    val result = removeParenths(phrase.replaceAll("_"," "),("(",")"))
-    if(result.split(" ").size <= 1) None
+    val result = removeParenths(phrase.replaceAll("_", " "), ("(", ")"))
+    if (result.split(" ").size <= 1) None
     else Some(result.trim)
   }
 }
@@ -117,10 +115,10 @@ class WikipediaFileImport {
     val sqlline = """INSERT INTO phrase (created_at, updated_at, phrase, source, lang, state) VALUES (NOW(), NOW(), '%s', 'wikipedia', 'en', 'active');"""
     Source.fromFile(infile).getLines.foreach { line =>
       val r = formatter.format(line)
-      if(r.isDefined) {
+      if (r.isDefined) {
         try {
-          val sanitized = r.get.replaceAll("""\\""","""\\\\""").replaceAll("""'""","""\\'""").replaceAll(""""""","""\\"""").replaceAll("""%""","""\\%""").trim
-          if(sanitized.length > 5) {
+          val sanitized = r.get.replaceAll("""\\""", """\\\\""").replaceAll("""'""", """\\'""").replaceAll(""""""", """\\"""").replaceAll("""%""", """\\%""").trim
+          if (sanitized.length > 5) {
             writer.println(sqlline.format(sanitized))
           }
         } catch {

@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.keepit.common.healthcheck.{SystemAdminMailSender, AirbrakeNotifier}
+import com.keepit.common.healthcheck.{ SystemAdminMailSender, AirbrakeNotifier }
 import com.keepit.common.actor.ActorInstance
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
@@ -8,13 +8,13 @@ import com.keepit.model._
 import scala.concurrent.Future
 import akka.util.Timeout
 import scala.concurrent.duration._
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.time._
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
-import com.keepit.common.mail.{SystemEmailAddress, ElectronicMail}
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
 import com.keepit.common.db.slick.Database.Replica
@@ -23,9 +23,6 @@ import scala.util.Try
 
 case object CheckOverdues
 case object CheckOverdueCount
-
-
-
 
 private[scraper] class ScrapeScheduler @Inject() (
     scraperConfig: ScraperSchedulerConfig,
@@ -36,8 +33,7 @@ private[scraper] class ScrapeScheduler @Inject() (
     scrapeInfoRepo: ScrapeInfoRepo,
     normalizedURIRepo: NormalizedURIRepo,
     urlPatternRuleRepo: UrlPatternRuleRepo,
-    scraperServiceClient:ScraperServiceClient
-) extends FortyTwoActor(airbrake) with Logging {
+    scraperServiceClient: ScraperServiceClient) extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case CheckOverdues =>
@@ -112,16 +108,16 @@ private[scraper] class ScrapeScheduler @Inject() (
 }
 
 class ScrapeSchedulerPluginImpl @Inject() (
-    db: Database,
-    airbrake: AirbrakeNotifier,
-    systemAdminMailSender: SystemAdminMailSender,
-    scrapeInfoRepo: ScrapeInfoRepo,
-    urlPatternRuleRepo: UrlPatternRuleRepo,
-    actor: ActorInstance[ScrapeScheduler],
-    scraperConfig: ScraperSchedulerConfig,
-    scraperClient: ScraperServiceClient,
-    val scheduling: SchedulingProperties) //only on leader
-  extends ScrapeSchedulerPlugin with SchedulerPlugin with Logging {
+  db: Database,
+  airbrake: AirbrakeNotifier,
+  systemAdminMailSender: SystemAdminMailSender,
+  scrapeInfoRepo: ScrapeInfoRepo,
+  urlPatternRuleRepo: UrlPatternRuleRepo,
+  actor: ActorInstance[ScrapeScheduler],
+  scraperConfig: ScraperSchedulerConfig,
+  scraperClient: ScraperServiceClient,
+  val scheduling: SchedulingProperties) //only on leader
+    extends ScrapeSchedulerPlugin with SchedulerPlugin with Logging {
 
   implicit val actorTimeout = Timeout(scraperConfig.actorTimeout)
 
@@ -140,7 +136,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
       val info = scrapeInfoRepo.getByUriId(uriId)
       val toSave = info match {
         case Some(s) => s.state match {
-          case ScrapeInfoStates.ACTIVE   => s.withNextScrape(date)
+          case ScrapeInfoStates.ACTIVE => s.withNextScrape(date)
           case ScrapeInfoStates.ASSIGNED => s // no change
           case ScrapeInfoStates.INACTIVE => {
             log.warn(s"[scheduleScrape(${uri.toShortString})] scheduling INACTIVE $s")
@@ -154,7 +150,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
     }
   }
 
-  def scrapeBasicArticle(url: String, extractorProviderType:Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
+  def scrapeBasicArticle(url: String, extractorProviderType: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     require(url != null, "[scrapeBasicArticle] <url> cannot be null")
     val proxyOpt = db.readOnlyMaster { implicit s =>
       urlPatternRuleRepo.getProxy(url)
@@ -170,7 +166,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
       log.info(s"[getSignature] invoke (remote) Scraper service; url=$url uri=$uri proxy=$proxyOpt extractorProviderType=$extractorProviderType")
       scraperClient.getSignature(url, proxyOpt, extractorProviderType)
     } recover {
-      case t:Throwable =>
+      case t: Throwable =>
         val msg = s"Caught exception $t while parsing $url for getSignature; Cause=${t.getCause}"
         log.warn(msg, t)
         Future.successful(None)

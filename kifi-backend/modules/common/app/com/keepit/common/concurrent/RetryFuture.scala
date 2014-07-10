@@ -11,7 +11,7 @@ object RetryFuture extends Logging {
 
   private val always: PartialFunction[Throwable, Boolean] = { case t: Throwable => true }
 
-  def apply[T](attempts : Int, resolve: PartialFunction[Throwable, Boolean] = always)(f: =>Future[T]): Future[T] = {
+  def apply[T](attempts: Int, resolve: PartialFunction[Throwable, Boolean] = always)(f: => Future[T]): Future[T] = {
     val p = Promise[T]()
     var attempted = 0
 
@@ -22,17 +22,17 @@ object RetryFuture extends Logging {
           case Failure(t) =>
             attempted += 1
             if (attempted < attempts && resolve.isDefinedAt(t) && resolve(t)) {
-              f.onComplete{ handler(_) }(ExecutionContext.immediate) // run the handler immediately in the future completing thread
-          } else {
-            p.failure(t)
-          }
+              f.onComplete { handler(_) }(ExecutionContext.immediate) // run the handler immediately in the future completing thread
+            } else {
+              p.failure(t)
+            }
         }
       } catch {
         case t: Throwable => p.failure(t)
       }
     }
 
-    f.onComplete{ handler(_) }(ExecutionContext.immediate) // run the handler immediately in the future completing thread
+    f.onComplete { handler(_) }(ExecutionContext.immediate) // run the handler immediately in the future completing thread
 
     p.future
   }

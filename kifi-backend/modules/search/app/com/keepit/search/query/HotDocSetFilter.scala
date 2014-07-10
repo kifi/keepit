@@ -16,10 +16,9 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class HotDocSetFilter(
-  userId: Id[User],
-  clickBoostsFuture: Future[ResultClickBoosts],
-  monitoredAwait: MonitoredAwait
-) extends Filter {
+    userId: Id[User],
+    clickBoostsFuture: Future[ResultClickBoosts],
+    monitoredAwait: MonitoredAwait) extends Filter {
 
   private[this] lazy val boosts: ResultClickBoosts =
     monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")

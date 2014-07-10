@@ -3,15 +3,15 @@ package com.keepit.eliza.mail
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.eliza.model._
 import com.keepit.inject.AppScoped
-import com.google.inject.{Inject, ImplementedBy}
+import com.google.inject.{ Inject, ImplementedBy }
 import scala.concurrent.duration._
 import akka.util.Timeout
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 import scala.concurrent.Future
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import scala.collection.mutable
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -89,10 +89,10 @@ trait ElizaEmailNotifierPlugin extends SchedulerPlugin {
 
 @AppScoped
 class ElizaEmailNotifierPluginImpl @Inject() (
-    nonUserEmailActor: ActorInstance[ElizaNonUserEmailNotifierActor],
-    userEmailActor: ActorInstance[ElizaUserEmailNotifierActor],
-    val scheduling: SchedulingProperties)
-  extends ElizaEmailNotifierPlugin with Logging {
+  nonUserEmailActor: ActorInstance[ElizaNonUserEmailNotifierActor],
+  userEmailActor: ActorInstance[ElizaUserEmailNotifierActor],
+  val scheduling: SchedulingProperties)
+    extends ElizaEmailNotifierPlugin with Logging {
 
   import com.keepit.eliza.mail.ElizaEmailNotifierActor.SendNextEmails
 

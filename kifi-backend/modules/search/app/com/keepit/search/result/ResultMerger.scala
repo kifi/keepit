@@ -49,8 +49,8 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     val friendsHits = createQueue(maxHits * 5)
     val othersHits = createQueue(maxHits * 5)
 
-    results.foreach{ res =>
-      res.hits.foreach{ hit =>
+    results.foreach { res =>
+      res.hits.foreach { hit =>
         val scoring = hit.scoring
         (if (hit.isMyBookmark) myHits else if (hit.isFriendsBookmark) friendsHits else othersHits).insert(scoring.textScore, scoring, hit)
       }
@@ -69,35 +69,37 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
 
     val hits = createQueue(maxHits)
     if (myHits.size > 0) {
-      myHits.toRankedIterator.forall{ case (hit, rank) =>
-        val scoring = hit.scoring
-        val score = hit.score * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
-        if (score > (threshold * (1.0f - scoring.recencyScore))) {
-          scoring.normalizedTextScore = (score / highScore)
-          hits.insert(scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost, usefulPageBoost), scoring, hit.hit)
-          true
-        } else {
-          false
-        }
+      myHits.toRankedIterator.forall {
+        case (hit, rank) =>
+          val scoring = hit.scoring
+          val score = hit.score * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
+          if (score > (threshold * (1.0f - scoring.recencyScore))) {
+            scoring.normalizedTextScore = (score / highScore)
+            hits.insert(scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost, usefulPageBoost), scoring, hit.hit)
+            true
+          } else {
+            false
+          }
       }
     }
 
     if (friendsHits.size > 0) {
       val queue = createQueue(maxHits - min(minMyBookmarks, hits.size))
-      hits.discharge(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
+      hits.discharge(hits.size - minMyBookmarks).foreach { h => queue.insert(h) }
 
-      friendsHits.toRankedIterator.forall{ case (hit, rank) =>
-        val scoring = hit.scoring
-        val score = hit.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
-        if (score > threshold) {
-          scoring.normalizedTextScore = (score / highScore)
-          queue.insert(scoring.score(1.0f, sharingBoostInNetwork, newContentBoost, usefulPageBoost), scoring, hit.hit)
-          true
-        } else {
-          false
-        }
+      friendsHits.toRankedIterator.forall {
+        case (hit, rank) =>
+          val scoring = hit.scoring
+          val score = hit.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
+          if (score > threshold) {
+            scoring.normalizedTextScore = (score / highScore)
+            queue.insert(scoring.score(1.0f, sharingBoostInNetwork, newContentBoost, usefulPageBoost), scoring, hit.hit)
+            true
+          } else {
+            false
+          }
       }
-      queue.foreach{ h => hits.insert(h) }
+      queue.foreach { h => hits.insert(h) }
     }
 
     var onlyContainsOthersHits = false
@@ -107,35 +109,36 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
       val othersNorm = max(highScore, othersHighScore)
       val queue = createQueue(maxHits - hits.size)
       if (hits.size == 0) onlyContainsOthersHits = true
-      othersHits.toRankedIterator.forall{ case (hit, rank) =>
-        val scoring = hit.scoring
-        val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
-        if (score > othersThreshold) {
-          scoring.normalizedTextScore = (score / othersNorm)
-          queue.insert(scoring.score(1.0f, sharingBoostOutOfNetwork, 0.0f, usefulPageBoost), scoring, hit.hit)
-          true
-        } else {
-          false
-        }
+      othersHits.toRankedIterator.forall {
+        case (hit, rank) =>
+          val scoring = hit.scoring
+          val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
+          if (score > othersThreshold) {
+            scoring.normalizedTextScore = (score / othersNorm)
+            queue.insert(scoring.score(1.0f, sharingBoostOutOfNetwork, 0.0f, usefulPageBoost), scoring, hit.hit)
+            true
+          } else {
+            false
+          }
       }
-      queue.foreach{ h => hits.insert(h) }
+      queue.foreach { h => hits.insert(h) }
     }
 
     val hitList = hits.toSortedList
-    hitList.map{ hit =>
+    hitList.map { hit =>
       hit.hit = hit.hit.set("score", JsNumber(hit.score))
       hit.hit
     }
   }
 
   @inline private def createQueue(maxHits: Int) = new HitQueue[DetailedSearchHit](maxHits)
-  @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble/halfDecay, 3.0d))).toFloat
+  @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
 
   private def mergeTotals(results: Seq[PartialSearchResult]): (Int, Int, Int) = {
     var myTotal = 0
     var friendsTotal = 0
     var othersTotal = 0
-    results.foreach{ res =>
+    results.foreach { res =>
       myTotal += res.myTotal
       friendsTotal += res.friendsTotal
       othersTotal += res.othersTotal
@@ -147,15 +150,15 @@ class ResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
     val jsons = results.map(_.json \ "friendStats")
 
     val idBuf = new ArrayBuffer[Long]
-    jsons.foreach{ json => idBuf ++= (json \ "ids").as[Seq[Long]] }
+    jsons.foreach { json => idBuf ++= (json \ "ids").as[Seq[Long]] }
 
     val ids = idBuf.toSet[Long].toArray
     val friendStats = FriendStats(ids, new Array[Float](ids.length))
 
     var i = 0
-    jsons.foreach{ json =>
+    jsons.foreach { json =>
       val scores = (json \ "scores").as[Seq[Float]]
-      scores.foreach{ sc =>
+      scores.foreach { sc =>
         friendStats.add(idBuf(i), sc)
         i += 1
       }

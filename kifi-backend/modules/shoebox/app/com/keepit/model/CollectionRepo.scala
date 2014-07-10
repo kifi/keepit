@@ -2,10 +2,10 @@ package com.keepit.model
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{SequenceNumber, State, ExternalId, Id}
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.{ SequenceNumber, State, ExternalId, Id }
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import scala.Some
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -16,20 +16,18 @@ import com.keepit.common.logging.Logging
 import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[CollectionRepoImpl])
-trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection]{
+trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection] {
   def getUnfortunatelyIncompleteTagsByUser(userId: Id[User])(implicit session: RSession): Seq[Collection]
   def getUnfortunatelyIncompleteTagSummariesByUser(userId: Id[User])(implicit session: RSession): Seq[CollectionSummary]
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
-    excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
-    (implicit session: RSession): Option[Collection]
+    excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Option[Collection]
   def getByUserAndName(userId: Id[User], name: String,
-    excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
-    (implicit session: RSession): Option[Collection]
+    excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Option[Collection]
   def getBookmarkCount(collId: Id[Collection])(implicit session: RSession): Int
   def count(userId: Id[User])(implicit session: RSession): Int
   def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int]
   def getCollectionsChanged(num: SequenceNumber[Collection], limit: Int)(implicit session: RSession): Seq[Collection]
-  def modelChanged(c:Collection, isActive:Boolean = false)(implicit session:RWSession)
+  def modelChanged(c: Collection, isActive: Boolean = false)(implicit session: RWSession)
   def collectionChanged(modelId: Id[Collection], isActive: Boolean = false)(implicit session: RWSession)
 }
 
@@ -42,7 +40,7 @@ class CollectionRepoImpl @Inject() (
   val elizaServiceClient: ElizaServiceClient,
   val db: DataBaseComponent,
   val clock: Clock)
-  extends DbRepo[Collection] with CollectionRepo with ExternalIdColumnDbFunction[Collection] with SeqNumberDbFunction[Collection] with Logging {
+    extends DbRepo[Collection] with CollectionRepo with ExternalIdColumnDbFunction[Collection] with SeqNumberDbFunction[Collection] with Logging {
 
   import db.Driver.simple._
 
@@ -50,7 +48,7 @@ class CollectionRepoImpl @Inject() (
 
   type RepoImpl = CollectionTable
 
-  class CollectionTable(tag: Tag) extends RepoTable[Collection](db, tag, "collection") with ExternalIdColumn[Collection] with SeqNumberColumn[Collection]{
+  class CollectionTable(tag: Tag) extends RepoTable[Collection](db, tag, "collection") with ExternalIdColumn[Collection] with SeqNumberColumn[Collection] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def name = column[String]("name", O.NotNull)
     def lastKeptTo = column[Option[DateTime]]("last_kept_to", O.Nullable)
@@ -91,17 +89,17 @@ class CollectionRepoImpl @Inject() (
     }
 
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
-    excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
-    (implicit session: RSession): Option[Collection] =
+    excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Option[Collection] =
     (for {
       c <- rows if c.userId === userId && c.externalId === externalId && c.state =!= excludeState.getOrElse(null)
     } yield c).firstOption
 
   def getByUserAndName(userId: Id[User], name: String,
-      excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
-      (implicit session: RSession): Option[Collection] =
-    (for (c <- rows if c.userId === userId && c.name === name
-      && c.state =!= excludeState.getOrElse(null)) yield c).firstOption
+    excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Option[Collection] =
+    (for (
+      c <- rows if c.userId === userId && c.name === name
+        && c.state =!= excludeState.getOrElse(null)
+    ) yield c).firstOption
 
   def getBookmarkCount(collId: Id[Collection])(implicit session: RSession): Int = {
     bookmarkCountForCollectionCache.getOrElse(KeepCountForCollectionKey(collId)) { keepToCollectionRepo.count(collId) }
@@ -115,9 +113,9 @@ class CollectionRepoImpl @Inject() (
 
   def getBookmarkCounts(collIds: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Int] = {
     val keys = collIds.map(KeepCountForCollectionKey)
-    bookmarkCountForCollectionCache.bulkGetOrElse(keys){ missing =>
-      missing.map{ key => key -> keepToCollectionRepo.count(key.collectionId) }.toMap
-    }.map{ case (key, count) => key.collectionId -> count }
+    bookmarkCountForCollectionCache.bulkGetOrElse(keys) { missing =>
+      missing.map { key => key -> keepToCollectionRepo.count(key.collectionId) }.toMap
+    }.map { case (key, count) => key.collectionId -> count }
   }
 
   override def save(model: Collection)(implicit session: RWSession): Collection = {
@@ -149,7 +147,7 @@ class CollectionRepoImpl @Inject() (
   }
 
   // caller-supplied model
-  def modelChanged(col:Collection, isNewKeep: Boolean = false)(implicit session: RWSession) {
+  def modelChanged(col: Collection, isNewKeep: Boolean = false)(implicit session: RWSession) {
     if (isNewKeep) {
       save(col withLastKeptTo clock.now())
     } else {

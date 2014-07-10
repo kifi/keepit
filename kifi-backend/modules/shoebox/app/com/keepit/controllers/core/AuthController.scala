@@ -2,7 +2,7 @@ package com.keepit.controllers.core
 
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
-import com.keepit.common.controller.{ShoeboxServiceController, AuthenticatedRequest, WebsiteController, ActionAuthenticator}
+import com.keepit.common.controller.{ ShoeboxServiceController, AuthenticatedRequest, WebsiteController, ActionAuthenticator }
 import com.keepit.common.controller.ActionAuthenticator.FORTYTWO_USER_ID
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
@@ -10,22 +10,22 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.social.{SecureSocialClientIds, SocialNetworkType}
+import com.keepit.social.{ SecureSocialClientIds, SocialNetworkType }
 
 import play.api.Play._
-import play.api.libs.json.{JsNumber, Json}
+import play.api.libs.json.{ JsNumber, Json }
 import play.api.mvc._
 import securesocial.core._
 import play.api.libs.iteratee.Enumerator
 import play.api.Play
-import com.keepit.common.store.{S3UserPictureConfig, S3ImageStore}
+import com.keepit.common.store.{ S3UserPictureConfig, S3ImageStore }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.commanders.InviteCommander
 import com.keepit.common.net.UserAgent
 import com.keepit.common.performance._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.akka.SafeFuture
-import com.keepit.heimdal.{EventType, AnonymousEvent, HeimdalContextBuilder, HeimdalServiceClient}
+import com.keepit.heimdal.{ EventType, AnonymousEvent, HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.social.providers.ProviderController
 
 object AuthController {
@@ -51,8 +51,7 @@ class AuthController @Inject() (
     inviteCommander: InviteCommander,
     passwordResetRepo: PasswordResetRepo,
     heimdalServiceClient: HeimdalServiceClient,
-    implicit val secureSocialClientIds: SecureSocialClientIds
-  ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
+    implicit val secureSocialClientIds: SecureSocialClientIds) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private val PopupKey = "popup"
 
@@ -64,7 +63,7 @@ class AuthController @Inject() (
     val authRes = timing(s"[logInWithUserPass] authenticate") { ProviderController.authenticate("userpass")(request) }
     authRes.map {
       case res: SimpleResult if res.header.status == 303 =>
-        authHelper.authHandler(request, res) { (cookies:Seq[Cookie], sess:Session) =>
+        authHelper.authHandler(request, res) { (cookies: Seq[Cookie], sess: Session) =>
           val newSession = if (link != "") {
             sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
           } else sess
@@ -114,8 +113,8 @@ class AuthController @Inject() (
     val authRes = timing(s"[signup($provider)] authenticate") { ProviderController.authenticate(provider) }
 
     authRes(request).map { result =>
-      authHelper.authHandler(request, result) { (_, sess:Session) =>
-      // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
+      authHelper.authHandler(request, result) { (_, sess: Session) =>
+        // TODO: set FORTYTWO_USER_ID instead of clearing it and then setting it on the next request?
         result.withSession(sess - FORTYTWO_USER_ID + (SecureSocial.OriginalUrlKey -> routes.AuthController.signupPage().url))
       }
     }
@@ -123,15 +122,15 @@ class AuthController @Inject() (
 
   def link(provider: String) = Action.async(parse.anyContent) { implicit request =>
     ProviderController.authenticate(provider)(request) map { res: SimpleResult =>
-        val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
-        val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
-        if (resSession.get(PopupKey).isDefined) {
-          res.withSession(resSession + (SecureSocial.OriginalUrlKey -> routes.AuthController.popupAfterLinkSocial(provider).url))
-        } else if (resSession.get(SecureSocial.OriginalUrlKey).isEmpty) {
-          request.headers.get(REFERER).map { url =>
-            res.withSession(resSession + (SecureSocial.OriginalUrlKey -> url))
-          } getOrElse res
-        } else res
+      val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
+      val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
+      if (resSession.get(PopupKey).isDefined) {
+        res.withSession(resSession + (SecureSocial.OriginalUrlKey -> routes.AuthController.popupAfterLinkSocial(provider).url))
+      } else if (resSession.get(SecureSocial.OriginalUrlKey).isEmpty) {
+        request.headers.get(REFERER).map { url =>
+          res.withSession(resSession + (SecureSocial.OriginalUrlKey -> url))
+        } getOrElse res
+      } else res
     }
   }
 
@@ -206,7 +205,7 @@ class AuthController @Inject() (
           Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
         case (Some(user), Some(identity)) =>
           // User exists, is incomplete
-          val (firstName, lastName) = if (identity.firstName.contains("@")) ("","") else (User.sanitizeName(identity.firstName), User.sanitizeName(identity.lastName))
+          val (firstName, lastName) = if (identity.firstName.contains("@")) ("", "") else (User.sanitizeName(identity.firstName), User.sanitizeName(identity.lastName))
           val picture = identityPicture(identity)
 
           Ok(views.html.auth.authGrey(

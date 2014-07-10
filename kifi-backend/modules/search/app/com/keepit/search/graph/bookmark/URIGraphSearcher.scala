@@ -2,7 +2,7 @@ package com.keepit.search.graph.bookmark
 
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.model.{NormalizedURI, User}
+import com.keepit.model.{ NormalizedURI, User }
 import com.keepit.search.Lang
 import com.keepit.search.index.ArrayIdMapper
 import com.keepit.search.index.CachedIndex
@@ -74,7 +74,7 @@ class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends Base
 }
 
 class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUserId: Id[User], userGraphsSearcher: UserGraphsSearcher)
-  extends URIGraphSearcher(searcher, storeSearcher) {
+    extends URIGraphSearcher(searcher, storeSearcher) {
 
   if (userGraphsSearcher.userId != myUserId) throw new IllegalArgumentException("user id mismatch")
 
@@ -103,13 +103,13 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     val friendIds = Await.result(friendIdsFuture, 5 seconds)
     val waitTime = System.currentTimeMillis - startTime
 
-    Future{ Statsd.timing("mainSearch.friendIdsFutureWait", waitTime) }
+    Future { Statsd.timing("mainSearch.friendIdsFutureWait", waitTime) }
 
     UserToUserEdgeSet.fromLongSet(myUserId, friendIds)
   }
 
   lazy val friendsUriEdgeSets = {
-    friendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
+    friendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]) { (m, f) =>
       m + (f.id -> getUserToUriEdgeSet(f, publicOnly = true))
     }
   }
@@ -120,14 +120,14 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     val friendIds = Await.result(friendIdsFuture, 5 seconds)
     val waitTime = System.currentTimeMillis - startTime
 
-    Future{ Statsd.timing("mainSearch.searchFriendsFutureWait", waitTime) }
+    Future { Statsd.timing("mainSearch.searchFriendsFutureWait", waitTime) }
 
     if (unfriended.isEmpty) UserToUserEdgeSet.fromLongSet(myUserId, friendIds)
     else UserToUserEdgeSet.fromLongSet(myUserId, (friendIds -- unfriended))
   }
 
   lazy val searchFriendsUriEdgeSets = {
-    searchFriendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
+    searchFriendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]) { (m, f) =>
       m + (f.id -> getUserToUriEdgeSet(f, publicOnly = true))
     }
   }
@@ -145,7 +145,7 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     if (myInfo.mapper.maxDoc != myInfo.uriIdArray.length)
       log.error(s"mapper.maxDocs=${myInfo.mapper.maxDoc} ids.length=${myInfo.uriIdArray.length} publicList.size=${myInfo.publicList.size} privateList.size=${myInfo.privateList.size}")
 
-    searcher.findDocIdAndAtomicReaderContext(myUserId.id) match{
+    searcher.findDocIdAndAtomicReaderContext(myUserId.id) match {
       case Some((docId, context)) =>
         val terms = QueryUtil.getTerms(query)
         val r = LineIndexReader(context.reader, docId, terms, myInfo.uriIdArray.length, cachedIndexOpt)
@@ -167,7 +167,7 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     val prof = searcher.getDecodedDocValue[String](URIGraphFields.langProfField, myUserId.id)((arr, offset, length) => new String(arr, offset, length))
     prof match {
       case Some(prof) =>
-        prof.split(",").filter(_.indexOf(":") > 0).map{ p =>
+        prof.split(",").filter(_.indexOf(":") > 0).map { p =>
           val len = p.indexOf(":")
           (Lang(p.substring(0, len)) -> p.substring(len + 1).toInt)
         }.toMap
@@ -200,7 +200,7 @@ class UserInfo(val id: Id[User], val publicList: URIList, val privateList: URILi
 
 abstract class UserToUserEdgeSet(override val sourceId: Id[User]) extends EdgeSet[User, User]
 
-object UserToUserEdgeSet{
+object UserToUserEdgeSet {
   def fromIdSet(sourceId: Id[User], destIds: Set[Id[User]]): UserToUserEdgeSet = {
     new UserToUserEdgeSet(sourceId) with IdSetEdgeSet[User, User] {
       override def destIdSet: Set[Id[User]] = destIds
@@ -236,12 +236,12 @@ object UserToUriEdgeSet {
       override def getPrivateList = if (isPublicEdgeSet) None else Some(uriList)
 
       override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
-        override def createdAtByIndex(idx:Int): Long = {
+        override def createdAtByIndex(idx: Int): Long = {
           val datetime = uriList.createdAt(idx)
           Util.unitToMillis(datetime)
         }
         override def isPublicByIndex(idx: Int): Boolean = isPublicEdgeSet
-        override def bookmarkIdByIndex(idx: Int): Long =  throw new UnsupportedOperationException
+        override def bookmarkIdByIndex(idx: Int): Long = throw new UnsupportedOperationException
       }
     }
   }
@@ -263,12 +263,12 @@ object UserToUriEdgeSet {
 
         override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
 
-          override def createdAtByIndex(idx:Int): Long = {
+          override def createdAtByIndex(idx: Int): Long = {
             val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
             Util.unitToMillis(datetime)
           }
           override def isPublicByIndex(idx: Int): Boolean = (idx < pubListSize)
-          override def bookmarkIdByIndex(idx: Int): Long =  throw new UnsupportedOperationException
+          override def bookmarkIdByIndex(idx: Int): Long = throw new UnsupportedOperationException
         }
       }
     }
@@ -288,7 +288,7 @@ object UserToUriEdgeSet {
       override def getPrivateList = Some(privateList)
 
       override def accessor = new LuceneBackedBookmarkInfoAccessor(this, longArraySet) {
-        override protected def createdAtByIndex(idx:Int): Long = {
+        override protected def createdAtByIndex(idx: Int): Long = {
           val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
           Util.unitToMillis(datetime)
         }

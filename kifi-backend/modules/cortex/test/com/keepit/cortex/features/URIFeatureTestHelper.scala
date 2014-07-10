@@ -13,22 +13,22 @@ trait URIFeatureTestHelper {
   val english = Lang("en")
 
   def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String, contentLang: Lang = english) = {
-      Article(
-        id = normalizedUriId,
-        title = title,
-        description = None,
-        canonicalUrl = None,
-        alternateUrls = Set.empty,
-        keywords = None,
-        media = None,
-        content = content,
-        scrapedAt = currentDateTime,
-        httpContentType = Some("text/html"),
-        httpOriginalContentCharset = Option("UTF-8"),
-        state = NormalizedURIStates.SCRAPED,
-        message = None,
-        titleLang = None,
-        contentLang = Some(contentLang))
-    }
+    Article(
+      id = normalizedUriId,
+      title = title,
+      description = None,
+      canonicalUrl = None,
+      alternateUrls = Set.empty,
+      keywords = None,
+      media = None,
+      content = content,
+      scrapedAt = currentDateTime,
+      httpContentType = Some("text/html"),
+      httpOriginalContentCharset = Option("UTF-8"),
+      state = NormalizedURIStates.SCRAPED,
+      message = None,
+      titleLang = None,
+      contentLang = Some(contentLang))
+  }
 
 }

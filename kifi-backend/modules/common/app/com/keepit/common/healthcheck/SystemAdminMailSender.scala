@@ -1,8 +1,8 @@
 package com.keepit.common.healthcheck
 
-import com.google.inject.{Singleton, Inject, ImplementedBy}
+import com.google.inject.{ Singleton, Inject, ImplementedBy }
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{AmazonSimpleMailProvider, RemotePostOffice, ElectronicMail}
+import com.keepit.common.mail.{ AmazonSimpleMailProvider, RemotePostOffice, ElectronicMail }
 import play.api.Mode._
 
 @ImplementedBy(classOf[RemoteSystemAdminMailSender])

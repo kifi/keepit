@@ -3,8 +3,8 @@ package com.keepit.controllers.admin
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.common.social.{FakeSocialGraphModule, FakeShoeboxSecureSocialModule}
-import com.keepit.social.{ProdShoeboxSecureSocialModule, SocialId, SocialNetworks}
+import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxSecureSocialModule }
+import com.keepit.social.{ ProdShoeboxSecureSocialModule, SocialId, SocialNetworks }
 import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
 import com.keepit.model.ExperimentType.ADMIN
@@ -22,7 +22,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.search.TestSearchServiceClientModule
-import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
+import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 
@@ -55,13 +55,13 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
           tokenType = None, expiresIn = None, refreshToken = None)
         val su = SocialUser(IdentityId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
-        val u1 = db.readWrite {implicit s =>
+        val u1 = db.readWrite { implicit s =>
           val u1 = userRepo.save(User(createdAt = now.minusDays(3), firstName = "A", lastName = "1"))
           val u2 = userRepo.save(User(createdAt = now.minusDays(1), firstName = "B", lastName = "2"))
           val u3 = userRepo.save(User(createdAt = now.minusDays(1), firstName = "C", lastName = "3"))
           val sui = socialUserInfoRepo.save(SocialUserInfo(
-              userId = u1.id, fullName = "A 1", socialId = SocialId("111"), networkType = FACEBOOK,
-              credentials = Some(su)))
+            userId = u1.id, fullName = "A 1", socialId = SocialId("111"), networkType = FACEBOOK,
+            credentials = Some(su)))
           socialUserInfoRepo.getOpt(SocialId("111"), FACEBOOK) === Some(sui)
           userExperimentRepo.save(UserExperiment(experimentType = ADMIN, userId = u1.id.get))
           u1

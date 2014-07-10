@@ -1,6 +1,6 @@
 package com.keepit.classify
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 
 case class FakeDomainTagImporterModule() extends DomainTagImporterModule {
 

@@ -1,6 +1,6 @@
 package com.keepit.cortex.store
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.ProdStoreModule
@@ -11,13 +11,13 @@ import play.api.Play._
 import com.keepit.common.store.DevStoreModule
 import com.keepit.cortex.models.lda.S3LDAModelStore
 import net.codingwell.scalaguice.ScalaModule
-import com.keepit.common.store.{StoreModule, ProdOrElseDevStoreModule}
+import com.keepit.common.store.{ StoreModule, ProdOrElseDevStoreModule }
 import com.keepit.cortex._
 
 trait FeatureStoreModule extends StoreModule
 
 case class FeatureProdStoreModule() extends FeatureStoreModule {
-  def configure(){}
+  def configure() {}
 
   @Singleton
   @Provides
@@ -42,8 +42,8 @@ case class FeatureProdStoreModule() extends FeatureStoreModule {
 
 }
 
-case class FeatureDevStoreModule() extends ProdOrElseDevStoreModule(FeatureProdStoreModule()) with FeatureStoreModule{
-  def configure(){}
+case class FeatureDevStoreModule() extends ProdOrElseDevStoreModule(FeatureProdStoreModule()) with FeatureStoreModule {
+  def configure() {}
 
   @Singleton
   @Provides

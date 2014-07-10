@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.{ShoeboxServiceController, WebsiteController, ActionAuthenticator}
+import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
 import com.keepit.common.logging.Logging
 import play.api.Play.current
 import play.api.data.Forms._
@@ -16,8 +16,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 
 class FeedbackController @Inject() (actionAuthenticator: ActionAuthenticator)
-  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
-  
+    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+
   def feedbackForm = Action {
     Redirect("http://support.kifi.com")
   }

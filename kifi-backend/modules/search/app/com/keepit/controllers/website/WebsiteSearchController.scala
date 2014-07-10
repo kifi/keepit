@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import play.api.libs.json._
 import com.google.inject.Inject
-import com.keepit.common.controller.{WebsiteController, SearchServiceController, ActionAuthenticator}
+import com.keepit.common.controller.{ WebsiteController, SearchServiceController, ActionAuthenticator }
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
@@ -13,9 +13,8 @@ import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.SearchCommander
 
 class WebsiteSearchController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
-  searchCommander: SearchCommander
-  ) extends WebsiteController(actionAuthenticator) with SearchServiceController with Logging {
+    actionAuthenticator: ActionAuthenticator,
+    searchCommander: SearchCommander) extends WebsiteController(actionAuthenticator) with SearchServiceController with Logging {
 
   def search(
     query: String,
@@ -31,7 +30,7 @@ class WebsiteSearchController @Inject() (
     withUriSummary: Boolean = false) = JsonAction.authenticated { request =>
 
     val userId = request.userId
-    val acceptLangs : Seq[String] = request.request.acceptLanguages.map(_.code)
+    val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
 
     val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
 

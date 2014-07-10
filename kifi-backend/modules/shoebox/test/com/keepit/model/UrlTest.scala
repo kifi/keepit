@@ -14,7 +14,7 @@ class UrlTest extends Specification with ShoeboxTestInjector {
         val repo = inject[URLRepo]
         repo.eq(inject[URLRepo]) === true //verify singleton
 
-        inject[Database].readWrite{ implicit session =>
+        inject[Database].readWrite { implicit session =>
           repo.count === 0
         }
 
@@ -30,7 +30,7 @@ class UrlTest extends Specification with ShoeboxTestInjector {
           (url1, nuri1, url2, nuri2, nuri3, nuri4)
         }
 
-        inject[Database].readOnlyMaster{ implicit session =>
+        inject[Database].readOnlyMaster { implicit session =>
           println(repo.all)
           repo.get("http://cnn.com", nuri4.id.get).isDefined === false
           repo.get("http://www.google.com/#1", nuri1.id.get).isDefined === true

@@ -10,15 +10,13 @@ import com.keepit.cortex.core.StatModel
 import play.api.libs.json.Format
 import com.keepit.common.store.InMemoryObjectStore
 
-
 trait CommitInfoStore[T, M <: StatModel] extends ObjectStore[CommitInfoKey[T, M], CommitInfo[T, M]]
 
 abstract class S3CommitInfoStore[T, M <: StatModel](
-  val bucketName: S3Bucket,
-  val amazonS3Client: AmazonS3,
-  val accessLog: AccessLog,
-  val formatter: Format[CommitInfo[T, M]] = CommitInfo.format[T, M]
-) extends S3JsonStore[CommitInfoKey[T, M], CommitInfo[T, M]] with CommitInfoStore[T, M]{
+    val bucketName: S3Bucket,
+    val amazonS3Client: AmazonS3,
+    val accessLog: AccessLog,
+    val formatter: Format[CommitInfo[T, M]] = CommitInfo.format[T, M]) extends S3JsonStore[CommitInfoKey[T, M], CommitInfo[T, M]] with CommitInfoStore[T, M] {
   val prefix: String
   override def keyPrefix() = prefix
 }

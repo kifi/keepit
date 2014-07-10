@@ -9,18 +9,18 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import scala.concurrent.duration._
-import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.social.{ SocialNetworkType, SocialId }
 
 case class UserSession(
-  id: Option[Id[UserSession]] = None,
-  userId: Option[Id[User]] = None,
-  externalId: ExternalId[UserSession],
-  socialId: SocialId,
-  provider: SocialNetworkType,
-  expires: DateTime,
-  state: State[UserSession] = UserSessionStates.ACTIVE,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime) extends ModelWithExternalId[UserSession] with ModelWithState[UserSession] {
+    id: Option[Id[UserSession]] = None,
+    userId: Option[Id[User]] = None,
+    externalId: ExternalId[UserSession],
+    socialId: SocialId,
+    provider: SocialNetworkType,
+    expires: DateTime,
+    state: State[UserSession] = UserSessionStates.ACTIVE,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime) extends ModelWithExternalId[UserSession] with ModelWithState[UserSession] {
   def withId(id: Id[UserSession]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
   def isValid = state == UserSessionStates.ACTIVE && expires.isAfterNow
@@ -53,6 +53,6 @@ case class UserSessionExternalIdKey(externalId: ExternalId[UserSession]) extends
 }
 
 class UserSessionExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-    extends JsonCacheImpl[UserSessionExternalIdKey, UserSession](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[UserSessionExternalIdKey, UserSession](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 object UserSessionStates extends States[UserSession]

@@ -35,17 +35,17 @@ trait PercentMatch extends QueryParser {
     } else {
       val query = if (useSemanticMatch) new BooleanQueryWithSemanticMatch(false) else new BooleanQueryWithPercentMatch(false)
       query.setPercentMatch(percentMatch)
-      hotDocFilter.foreach{ f => query.setPercentMatchForHotDocs(percentMatchForHotDocs, f) }
+      hotDocFilter.foreach { f => query.setPercentMatchForHotDocs(percentMatchForHotDocs, f) }
 
-      val (specialClauses, otherClauses) = clauses.partition{ clause => (clause.getQuery.isInstanceOf[SiteQuery] || clause.getQuery.isInstanceOf[MediaQuery]) && !clause.isProhibited }
-      otherClauses.foreach{ clause => query.add(clause) }
+      val (specialClauses, otherClauses) = clauses.partition { clause => (clause.getQuery.isInstanceOf[SiteQuery] || clause.getQuery.isInstanceOf[MediaQuery]) && !clause.isProhibited }
+      otherClauses.foreach { clause => query.add(clause) }
 
       val finalQuery = if (specialClauses.isEmpty) {
         query
       } else {
         val specialQuery = {
           if (specialClauses.size == 1) specialClauses(0).getQuery
-          else specialClauses.foldLeft(new BooleanQuery(true)){ (bq, clause) => bq.add(clause.getQuery, Occur.MUST); bq }
+          else specialClauses.foldLeft(new BooleanQuery(true)) { (bq, clause) => bq.add(clause.getQuery, Occur.MUST); bq }
         }
 
         if (otherClauses.isEmpty) specialQuery

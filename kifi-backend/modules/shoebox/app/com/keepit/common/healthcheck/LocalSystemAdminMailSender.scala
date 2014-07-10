@@ -1,7 +1,7 @@
 package com.keepit.common.healthcheck
 
-import com.keepit.common.mail.{AmazonSimpleMailProvider, ElectronicMail, LocalPostOffice}
-import com.google.inject.{Singleton, Inject}
+import com.keepit.common.mail.{ AmazonSimpleMailProvider, ElectronicMail, LocalPostOffice }
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.Database
 
 import play.api.Mode

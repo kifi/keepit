@@ -3,7 +3,7 @@ package com.keepit.common.mail
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
 import scala.util.Try
-import play.api.data.{Forms, Mapping}
+import play.api.data.{ Forms, Mapping }
 
 case class EmailAddress(address: String) {
   override def toString = address
@@ -70,7 +70,7 @@ object SystemEmailAddress {
   val NOTIFY = EmailAddress("42.notify@gmail.com")
   val SENDGRID = EmailAddress("sendgrid@42go.com")
   val SUPPORT = EmailAddress("support@kifi.com")
-  val OLD_SUPPORT = EmailAddress("support@42go.com")//keep for serialization of mail
+  val OLD_SUPPORT = EmailAddress("support@42go.com") //keep for serialization of mail
 
   val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, ANDREW, YINGJIE, LÉO, STEPHEN, RAY, MARTIN)
   val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, NOTIFICATIONS, ENG, CONGRATS, EDUARDO, EFFI, NOTIFY, SENDGRID)

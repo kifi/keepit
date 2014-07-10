@@ -1,9 +1,9 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.classify.{DomainRepo, Domain, DomainStates}
+import com.keepit.classify.{ DomainRepo, Domain, DomainStates }
 import com.keepit.commanders.UserCommander
-import com.keepit.common.controller.{BrowserExtensionController, ShoeboxServiceController, ActionAuthenticator}
+import com.keepit.common.controller.{ BrowserExtensionController, ShoeboxServiceController, ActionAuthenticator }
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
@@ -14,10 +14,10 @@ import com.keepit.normalizer.NormalizedURIInterner
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{__, JsNumber, Json}
+import play.api.libs.json.{ __, JsNumber, Json }
 
 import scala.concurrent.Future
-import scala.math.{max, min}
+import scala.math.{ max, min }
 
 class ExtPreferenceController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -32,7 +32,7 @@ class ExtPreferenceController @Inject() (
   userToDomainRepo: UserToDomainRepo,
   normalizedURIInterner: NormalizedURIInterner,
   userCommander: UserCommander)
-  extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   private case class UserPrefs(
     lookHereMode: Boolean,
@@ -42,12 +42,12 @@ class ExtPreferenceController @Inject() (
     messagingEmails: Boolean)
 
   private implicit val userPrefsFormat = (
-      (__ \ 'lookHereMode).write[Boolean] and
-      (__ \ 'enterToSend).write[Boolean] and
-      (__ \ 'maxResults).write[Int] and
-      (__ \ 'showExtMsgIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
-      (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
-    )(unlift(UserPrefs.unapply))
+    (__ \ 'lookHereMode).write[Boolean] and
+    (__ \ 'enterToSend).write[Boolean] and
+    (__ \ 'maxResults).write[Int] and
+    (__ \ 'showExtMsgIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
+    (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
+  )(unlift(UserPrefs.unapply))
 
   private val crypt = new RatherInsecureDESCrypt
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
@@ -99,8 +99,8 @@ class ExtPreferenceController @Inject() (
     val encryptedIp: String = scala.util.Try(crypt.crypt(ipkey, ip)).getOrElse("")
     val userId = request.user.id.get
     userCommander.setLastUserActive(userId) // The extension doesn't display Delighted surveys for the moment, so we
-                                            // don't need to wait for that Future to complete before we move on
-    loadUserPrefs(userId, request.experiments) map {prefs =>
+    // don't need to wait for that Future to complete before we move on
+    loadUserPrefs(userId, request.experiments) map { prefs =>
       if (version == 1) {
         Ok(Json.arr("prefs", prefs, encryptedIp))
       } else {

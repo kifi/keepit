@@ -13,7 +13,6 @@ import com.keepit.model.NormalizedURIStates
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda._
 
-
 class URILDATopicRepoTest extends Specification with CortexTestInjector {
   "uri lda repo" should {
     "persist and retrieve feature" in {
@@ -33,12 +32,12 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
 
         val feat2 = URILDATopic(uriId = Id[NormalizedURI](2), version = ModelVersion[DenseLDA](1), uriSeq = SequenceNumber[NormalizedURI](2), state = URILDATopicStates.NOT_APPLICABLE)
 
-        db.readWrite{ implicit s =>
+        db.readWrite { implicit s =>
           uriTopicRepo.save(feat);
           uriTopicRepo.save(feat2)
         }
 
-        db.readOnlyMaster{ implicit s =>
+        db.readOnlyMaster { implicit s =>
           uriTopicRepo.getFeature(Id[NormalizedURI](1), ModelVersion[DenseLDA](1)).get.value.toList === List(0.3f, 0.5f, 0.1f, 0.1f)
           uriTopicRepo.getUpdateTimeAndState(Id[NormalizedURI](1), ModelVersion[DenseLDA](1)).get._2 === URILDATopicStates.ACTIVE
 
@@ -48,7 +47,6 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           uriTopic.thirdTopic === None
           uriTopic.sparseFeature.get.dimension === 4
           uriTopic.sparseFeature.get.topics === Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f)
-
 
           uriTopicRepo.getFeature(Id[NormalizedURI](2), ModelVersion[DenseLDA](1)) === None
           uriTopicRepo.getUpdateTimeAndState(Id[NormalizedURI](2), ModelVersion[DenseLDA](1)).get._2 === URILDATopicStates.NOT_APPLICABLE
@@ -82,7 +80,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
               state = URILDATopicStates.ACTIVE))
           }
 
-          (6 to 10).map{ i =>
+          (6 to 10).map { i =>
             uriTopicRepo.save(URILDATopic(
               uriId = Id[NormalizedURI](i),
               firstTopic = Some(LDATopic(2)),
@@ -96,7 +94,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           }
         }
 
-        db.readOnlyMaster{ implicit s =>
+        db.readOnlyMaster { implicit s =>
           uriTopicRepo.getHighestSeqNumber(ModelVersion[DenseLDA](1)).value === 5
           uriTopicRepo.getHighestSeqNumber(ModelVersion[DenseLDA](2)).value === 10
           uriTopicRepo.getHighestSeqNumber(ModelVersion[DenseLDA](3)).value === 0

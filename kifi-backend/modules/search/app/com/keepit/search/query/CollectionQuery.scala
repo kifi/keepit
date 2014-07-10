@@ -16,14 +16,14 @@ import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
 import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.util.Bits
-import java.util.{Set => JSet}
+import java.util.{ Set => JSet }
 
 class CollectionQuery(val collectionId: Long) extends Query {
   override def createWeight(searcher: IndexSearcher): Weight = new CollectionWeight(this, searcher.asInstanceOf[PersonalizedSearcher])
 
   override def rewrite(reader: IndexReader): Query = this
 
-  override def extractTerms(out: JSet[Term]): Unit = { }
+  override def extractTerms(out: JSet[Term]): Unit = {}
 
   override def toString(s: String) = s"Collection(${collectionId})"
 

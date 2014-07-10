@@ -1,24 +1,22 @@
 package com.keepit.heimdal
 
-import com.keepit.model.{MetricDescriptorRepo, UserEventLoggingRepo, MetricRepoFactory, MetricData}
+import com.keepit.model.{ MetricDescriptorRepo, UserEventLoggingRepo, MetricRepoFactory, MetricData }
 import org.joda.time.DateTime
 
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
 
-import play.api.libs.json.{JsArray, Json}
+import play.api.libs.json.{ JsArray, Json }
 import play.modules.reactivemongo.json.ImplicitBSONHandlers._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.duration._
-import scala.concurrent.{Future, Await}
-
+import scala.concurrent.{ Future, Await }
 
 import reactivemongo.bson.BSONDocument
-import reactivemongo.api.indexes.{Index, IndexType}
+import reactivemongo.api.indexes.{ Index, IndexType }
 
 import com.google.inject.Inject
-
 
 case class MetricDescriptor(name: String, start: DateTime, window: Int, step: Int, description: String, events: Seq[String], groupBy: String, breakDown: Boolean, mode: String, filters: Seq[String], lastUpdate: DateTime, uniqueField: String)
 
@@ -30,8 +28,7 @@ class MetricManager @Inject() (
     userEventLoggingRepo: UserEventLoggingRepo,
     metricDescriptorRepo: MetricDescriptorRepo,
     metricRepoFactory: MetricRepoFactory,
-    serviceDiscovery: ServiceDiscovery
-  ){
+    serviceDiscovery: ServiceDiscovery) {
 
   var updateInProgress: Boolean = false
 
@@ -52,10 +49,10 @@ class MetricManager @Inject() (
     "newinstallsonly" -> AnyContextRestriction("context.firstTime", EqualTo(ContextBoolean(true)))
   )
 
-  def computeAdHocMteric(startTime: DateTime, endTime: DateTime, definition: MetricDefinition): Future[JsArray]  = {
-    val (pipeline, postprocess) = definition.aggregationForTimeWindow(startTime, Duration(endTime.getMillis - startTime.getMillis,"ms"))
-    userEventLoggingRepo.performAggregation(pipeline).map{ bsonStream =>
-      JsArray( postprocess(bsonStream).map { bson =>
+  def computeAdHocMteric(startTime: DateTime, endTime: DateTime, definition: MetricDefinition): Future[JsArray] = {
+    val (pipeline, postprocess) = definition.aggregationForTimeWindow(startTime, Duration(endTime.getMillis - startTime.getMillis, "ms"))
+    userEventLoggingRepo.performAggregation(pipeline).map { bsonStream =>
+      JsArray(postprocess(bsonStream).map { bson =>
         JsObjectReader.read(bson)
       })
     }
@@ -69,7 +66,7 @@ class MetricManager @Inject() (
   def updateMetricOnce(desc: MetricDescriptor): MetricDescriptor = {
     val tStart = desc.lastUpdate.minusHours(desc.window).plusHours(desc.step)
     val tEnd = desc.lastUpdate.plusHours(desc.step)
-    val eventsToConsider = if (desc.events.isEmpty) AllEvents else SpecificEventSet(desc.events.toSet.map( (s: String) => EventType(s)) )
+    val eventsToConsider = if (desc.events.isEmpty) AllEvents else SpecificEventSet(desc.events.toSet.map((s: String) => EventType(s)))
     val contextRestriction = AndContextRestriction(desc.filters.map(definedRestrictions): _*)
 
     val definition = desc.mode match {
@@ -79,18 +76,17 @@ class MetricManager @Inject() (
       // case _ => new GroupedEventCountMetricDefinition(eventsToConsider, contextRestriction, EventGrouping(desc.groupBy), if (desc.groupBy.startsWith("context")) desc.breakDown else false)
     }
 
-
-    val (pipeline, postprocess) = definition.aggregationForTimeWindow(tStart, Duration(tEnd.getMillis - tStart.getMillis,"ms"))
+    val (pipeline, postprocess) = definition.aggregationForTimeWindow(tStart, Duration(tEnd.getMillis - tStart.getMillis, "ms"))
     val data: Seq[BSONDocument] = Await.result(userEventLoggingRepo.performAggregation(pipeline).map(postprocess(_)), 5 minutes)
     val metricData = MetricData(tEnd, data)
     val repo = metricRepoFactory(desc.name)
     repo.collection.indexesManager.ensure(Index(
-      key      = Seq(("time", IndexType.Ascending)),
-      unique   = true,
+      key = Seq(("time", IndexType.Ascending)),
+      unique = true,
       dropDups = true
     ))
-    repo.insert(metricData, dropDups=true)
-    val newDesc = desc.copy(lastUpdate=tEnd)
+    repo.insert(metricData, dropDups = true)
+    val newDesc = desc.copy(lastUpdate = tEnd)
     metricDescriptorRepo.upsert(desc)
     newDesc
   }
@@ -98,20 +94,20 @@ class MetricManager @Inject() (
   def updateMetricFully(descriptor: MetricDescriptor): Unit = {
     val now = currentDateTime
     var desc = descriptor
-    while(now.isAfter(desc.start.plusHours(desc.window)) && now.isAfter(desc.lastUpdate.plusHours(desc.step))){
+    while (now.isAfter(desc.start.plusHours(desc.window)) && now.isAfter(desc.lastUpdate.plusHours(desc.step))) {
       try {
         desc = updateMetricOnce(desc)
-        } catch {
-          case x: Throwable => println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"); println(x); println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"); throw x;
-        }
+      } catch {
+        case x: Throwable => println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"); println(x); println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"); throw x;
+      }
     }
   }
 
   def updateAllMetrics(): Unit = synchronized {
     if (serviceDiscovery.isLeader() && !updateInProgress) {
       updateInProgress = true
-      val descriptorsFuture : Future[Seq[MetricDescriptor]] = metricDescriptorRepo.all
-      descriptorsFuture.map{ descriptors =>
+      val descriptorsFuture: Future[Seq[MetricDescriptor]] = metricDescriptorRepo.all
+      descriptorsFuture.map { descriptors =>
         synchronized { descriptors.foreach(updateMetricFully(_)) }
         updateInProgress = false
       }
@@ -125,8 +121,8 @@ class MetricManager @Inject() (
   }
 
   def getMetric(name: String): Future[Seq[MetricData]] = {
-    metricRepoFactory(name).allLean.map{ dataPoints =>
-      dataPoints.sortBy( md => md.dt.getMillis )
+    metricRepoFactory(name).allLean.map { dataPoints =>
+      dataPoints.sortBy(md => md.dt.getMillis)
     }
   }
 

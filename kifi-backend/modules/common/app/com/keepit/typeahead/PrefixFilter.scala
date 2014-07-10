@@ -24,7 +24,7 @@ object PrefixFilter {
     while (idx < in.length) {
       var id = in(idx)
       val filter = in(idx + 1)
-      if (probes.forall{ probe => probe == (probe & filter) }) result += Id[T](id)
+      if (probes.forall { probe => probe == (probe & filter) }) result += Id[T](id)
       idx += 2
     }
     result
@@ -61,7 +61,7 @@ object PrefixFilter {
 class PrefixFilter[T](val data: Array[Long]) extends AnyVal {
   def filterBy(query: Array[String]): Seq[Id[T]] = PrefixFilter.eval[T](this, query)
   def isEmpty = (data.length == 1)
-  override def toString = s"[PrefixFilter] (len=${data.length - 1}) ${data.drop(1).take(10).grouped(2).map{t => s"${t(0)} -> ${java.lang.Long.toHexString(t(1))}"}.mkString(",")}"
+  override def toString = s"[PrefixFilter] (len=${data.length - 1}) ${data.drop(1).take(10).grouped(2).map { t => s"${t(0)} -> ${java.lang.Long.toHexString(t(1))}" }.mkString(",")}"
 }
 
 class PrefixFilterBuilder[T] {
@@ -70,7 +70,7 @@ class PrefixFilterBuilder[T] {
   out += 1L // version
 
   def add(id: Id[T], name: String) = { // expects two tokens (first/last names) usually, three tokens may be ok, four tokens will significantly compromise filtering precision
-    val filter = PrefixFilter.tokenize(name).foldLeft(0L){ (filter, token) => (filter | PrefixFilter.genFilter(token)) }
+    val filter = PrefixFilter.tokenize(name).foldLeft(0L) { (filter, token) => (filter | PrefixFilter.genFilter(token)) }
     out += id.id
     out += filter
   }

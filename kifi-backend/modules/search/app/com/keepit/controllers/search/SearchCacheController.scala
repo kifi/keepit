@@ -10,15 +10,14 @@ class SearchCacheController @Inject() (
   s3BackedResultClickTrackerBuffer: S3BackedResultClickTrackerBuffer)
     extends SearchServiceController {
 
-  def warmResultClick() = Action{ request =>
+  def warmResultClick() = Action { request =>
     try {
       s3BackedResultClickTrackerBuffer.warmCache()
       Ok("Cache Warmed up successfully.")
-    }
-    catch {
+    } catch {
       case e: Throwable => Ok(s"Failed to warm up cache. ($e.toString)")
     }
-    
+
   }
 
 }

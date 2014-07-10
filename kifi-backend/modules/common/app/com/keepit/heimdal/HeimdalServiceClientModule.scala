@@ -9,7 +9,6 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.time.Clock
 import com.keepit.inject.AppScoped
 
-
 import play.api.Play._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.plugin.SchedulingProperties
@@ -23,13 +22,13 @@ case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
 
   @Provides
   @AppScoped
-  def heimdalServiceClient (
-   client: HttpClient,
-   serviceDiscovery: ServiceDiscovery,
-   airbrakeNotifier: AirbrakeNotifier,
-   actor: ActorInstance[HeimdalClientActor],
-   clock: Clock,
-   scheduling: SchedulingProperties): HeimdalServiceClient = {
+  def heimdalServiceClient(
+    client: HttpClient,
+    serviceDiscovery: ServiceDiscovery,
+    airbrakeNotifier: AirbrakeNotifier,
+    actor: ActorInstance[HeimdalClientActor],
+    clock: Clock,
+    scheduling: SchedulingProperties): HeimdalServiceClient = {
 
     val heimdal = new HeimdalServiceClientImpl(
       airbrakeNotifier,
@@ -40,7 +39,7 @@ case class ProdHeimdalServiceClientModule() extends HeimdalServiceClientModule {
       scheduling
     )
 
-    if (!heimdal.enabled){
+    if (!heimdal.enabled) {
       heimdal.onStart()
     }
 
@@ -57,13 +56,13 @@ case class DevHeimdalServiceClientModule() extends HeimdalServiceClientModule {
 
   @Provides
   @AppScoped
-  def heimdalServiceClient (
-   client: HttpClient,
-   serviceDiscovery: ServiceDiscovery,
-   airbrakeNotifier: AirbrakeNotifier,
-   actor: ActorInstance[HeimdalClientActor],
-   clock: Clock,
-   scheduling: SchedulingProperties): HeimdalServiceClient = {
+  def heimdalServiceClient(
+    client: HttpClient,
+    serviceDiscovery: ServiceDiscovery,
+    airbrakeNotifier: AirbrakeNotifier,
+    actor: ActorInstance[HeimdalClientActor],
+    clock: Clock,
+    scheduling: SchedulingProperties): HeimdalServiceClient = {
 
     val heimdal = new HeimdalServiceClientImpl(
       airbrakeNotifier,
@@ -74,7 +73,7 @@ case class DevHeimdalServiceClientModule() extends HeimdalServiceClientModule {
       scheduling
     )
 
-    if (!heimdal.enabled){
+    if (!heimdal.enabled) {
       heimdal.onStart()
     }
 

@@ -1,9 +1,8 @@
 package com.keepit.common.concurrent
 
+import scala.concurrent.{ Future, Await, Promise }
 
-import scala.concurrent.{Future, Await, Promise}
-
-import java.util.concurrent.{TimeUnit, Executor}
+import java.util.concurrent.{ TimeUnit, Executor }
 
 import com.google.common.util.concurrent.ListenableFuture
 
@@ -17,10 +16,10 @@ object PimpMyFuture {
 
   implicit class PimpedFuture[T](fut: Future[T]) {
 
-    def asListenableFuture: ListenableFuture[T] = new ListenableFuture[T]{
+    def asListenableFuture: ListenableFuture[T] = new ListenableFuture[T] {
 
       def addListener(listener: Runnable, executor: Executor): Unit = {
-        fut.onComplete{ res =>
+        fut.onComplete { res =>
           executor.execute(listener)
         }
       }
@@ -41,28 +40,28 @@ object PimpMyFuture {
       fut.flatMap(r => ev(r))
     }
 
-    def marker: Future[Unit] = fut.map{ v => ()}
+    def marker: Future[Unit] = fut.map { v => () }
 
   }
-
 
 }
 
 object FutureHelpers {
 
-  def map[A,B](in: Map[A,Future[B]]): Future[Map[A,B]] = {
-    val seq = in.map{ case (key, fut) =>
-      val p = Promise[(A,B)]()
-      fut.onComplete{ t =>
-        val withKey : Try[(A,B)] = t.map((key, _))
-        p.complete(withKey)
-      }
-      p.future
+  def map[A, B](in: Map[A, Future[B]]): Future[Map[A, B]] = {
+    val seq = in.map {
+      case (key, fut) =>
+        val p = Promise[(A, B)]()
+        fut.onComplete { t =>
+          val withKey: Try[(A, B)] = t.map((key, _))
+          p.complete(withKey)
+        }
+        p.future
     }
     Future.sequence(seq).map(_.toMap)
   }
 
-  def sequentialExec[I,T](items: Iterable[I])(f:I => Future[T]):Future[Unit] = {
+  def sequentialExec[I, T](items: Iterable[I])(f: I => Future[T]): Future[Unit] = {
     items.headOption match {
       case None => Future.successful[Unit]()
       case Some(item) => f(item).flatMap { h =>

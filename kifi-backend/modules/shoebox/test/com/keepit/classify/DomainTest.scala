@@ -1,13 +1,11 @@
 package com.keepit.classify
 
-
 import org.specs2.mutable._
 import com.keepit.common.db.slick.Database
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model.Normalization
 
-class
-DomainTest extends Specification with ShoeboxTestInjector {
+class DomainTest extends Specification with ShoeboxTestInjector {
   "The domain repo" should {
     "save and retrieve domains by name and id" in {
       withDb() { implicit injector =>

@@ -11,8 +11,7 @@ case class Document(tokens: Seq[String])
 trait DocRepresenter[M <: StatModel, +FT <: FeatureRepresentation[Document, M]] extends FeatureRepresenter[Document, M, FT]
 
 abstract class NaiveSumDocRepresenter[M <: StatModel](
-  wordRep: WordRepresenter[M, FeatureRepresentation[String, M]]
-) extends DocRepresenter[M, FeatureRepresentation[Document, M]]{
+    wordRep: WordRepresenter[M, FeatureRepresentation[String, M]]) extends DocRepresenter[M, FeatureRepresentation[Document, M]] {
 
   override val version = wordRep.version
   override val dimension = wordRep.dimension
@@ -22,7 +21,7 @@ abstract class NaiveSumDocRepresenter[M <: StatModel](
 
   private def wordCounts(doc: Document): Map[String, Int] = {
     val m = mutable.Map[String, Int]()
-    doc.tokens.foreach{ t =>
+    doc.tokens.foreach { t =>
       m(t) = m.getOrElse(t, 0) + 1
     }
     m.toMap
@@ -32,12 +31,12 @@ abstract class NaiveSumDocRepresenter[M <: StatModel](
     val wordCount = wordCounts(doc)
     val rep = new Array[Float](dimension)
     var validCount = 0
-    for ((w, n) <- wordCount){
+    for ((w, n) <- wordCount) {
       val vecOpt = wordRep.getRawVector(w)
-      vecOpt.map{ vec =>
+      vecOpt.map { vec =>
         validCount += 1
         var i = 0
-        while (i < dimension){
+        while (i < dimension) {
           rep(i) += n * vec(i)
           i += 1
         }

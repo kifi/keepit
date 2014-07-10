@@ -1,12 +1,11 @@
 package com.keepit.normalizer
 
-import com.keepit.model.{NormalizedURI, RawKeep, Normalization}
+import com.keepit.model.{ NormalizedURI, RawKeep, Normalization }
 import com.keepit.scraper.Signature
 import com.keepit.common.db.Id
 import com.keepit.commanders.RawBookmarkRepresentation
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-
 
 sealed trait NormalizationCandidate {
   val candidateType: String
@@ -36,15 +35,15 @@ object NormalizationCandidate {
 
   // todo(ray/leo): avoid overloading apply()
 
-  def apply(t:String, url:String, n:Normalization, isTrusted:Boolean):NormalizationCandidate = {
+  def apply(t: String, url: String, n: Normalization, isTrusted: Boolean): NormalizationCandidate = {
     t match {
-      case "verified"  => VerifiedCandidate(url, n)
-      case "scraped"   => ScrapedCandidate(url, n)
+      case "verified" => VerifiedCandidate(url, n)
+      case "scraped" => ScrapedCandidate(url, n)
       case "untrusted" => UntrustedCandidate(url, n)
     }
   }
 
-  def unapply(nc:NormalizationCandidate) = Some((nc.candidateType, nc.url, nc.normalization, nc.isTrusted))
+  def unapply(nc: NormalizationCandidate) = Some((nc.candidateType, nc.url, nc.normalization, nc.isTrusted))
 
   def apply(json: JsObject): Seq[UntrustedCandidate] = {
     for {
@@ -70,7 +69,7 @@ object NormalizationCandidate {
     (__ \ 'url).format[String] and
     (__ \ 'normalization).format[Normalization] and
     (__ \ 'isTrusted).format[Boolean]
-  )(NormalizationCandidate.apply(_:String, _:String, _:Normalization, _:Boolean), unlift(NormalizationCandidate.unapply))
+  )(NormalizationCandidate.apply(_: String, _: String, _: Normalization, _: Boolean), unlift(NormalizationCandidate.unapply))
 
 }
 

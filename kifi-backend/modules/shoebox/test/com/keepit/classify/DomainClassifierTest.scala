@@ -5,7 +5,7 @@ import org.specs2.mutable.SpecificationLike
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.inject._
-import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxApplication}
+import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
@@ -36,7 +36,7 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with SpecificationLike
 
   "The domain classifier" should {
     "use imported classifications and not fetch for known domains" in {
-      running(new ShoeboxApplication(domainClassifierTestModules :+ FakeHttpClientModule():_*)) {
+      running(new ShoeboxApplication(domainClassifierTestModules :+ FakeHttpClientModule(): _*)) {
         val classifier = inject[DomainClassifierImpl]
         val tagRepo = inject[DomainTagRepo]
         val importer = inject[DomainTagImporterImpl]
@@ -65,7 +65,7 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with SpecificationLike
         case s if s.url.contains("hover.com") => "FM~Business and services,Web hosting"
         case s if s.url.contains("42go.com") || s.url.contains("addepar.com") => "FM~Technology and computers"
         case s if s.url.contains("playboy.com") || s.url.contains("porn.com") => "FM~Porn"
-      }:_*)) {
+      }: _*)) {
         val classifier = inject[DomainClassifierImpl]
         val domainRepo = inject[DomainRepo]
         val tagRepo = inject[DomainTagRepo]

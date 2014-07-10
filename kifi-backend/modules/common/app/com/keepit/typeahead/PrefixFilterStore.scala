@@ -14,15 +14,15 @@ class S3PrefixFilterStoreImpl[T](val bucketName: S3Bucket, val amazonS3Client: A
 
   protected def idToKey(id: Id[T]) = "id_" + id.toString
 
-  protected def encodeValue(value: Array[Long]) : Array[Byte] = {
-    val byteBuffer = ByteBuffer.allocate(value.length*8)
+  protected def encodeValue(value: Array[Long]): Array[Byte] = {
+    val byteBuffer = ByteBuffer.allocate(value.length * 8)
     byteBuffer.asLongBuffer.put(value)
     byteBuffer.array
   }
 
-  protected def decodeValue(data: Array[Byte]) : Array[Long] = {
+  protected def decodeValue(data: Array[Byte]): Array[Long] = {
     val intBuffer = ByteBuffer.wrap(data).asLongBuffer
-    val outArray = new Array[Long](data.length/8)
+    val outArray = new Array[Long](data.length / 8)
     intBuffer.get(outArray)
     outArray
   }

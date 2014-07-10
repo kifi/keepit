@@ -9,12 +9,11 @@ import net.codingwell.scalaguice.ScalaModule
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 
 import play.api.Play.current
 import com.keepit.shoebox.ShoeboxServiceClient
 import reactivemongo.core.nodeset.Authenticate
-
 
 trait MongoModule extends ScalaModule
 
@@ -63,7 +62,6 @@ case class ProdMongoModule() extends MongoModule {
     new ProdSystemEventLoggingRepo(collection, mixpanel, descriptorRepo, airbrake)
   }
 
-
   @Provides @Singleton
   def systemEventDescriptorRepo(cache: SystemEventDescriptorNameCache, airbrake: AirbrakeNotifier): SystemEventDescriptorRepo = {
     val (nodeA, nodeB, auth) = getHeimdalCredentials()
@@ -74,7 +72,6 @@ case class ProdMongoModule() extends MongoModule {
     new ProdSystemEventDescriptorRepo(collection, cache, airbrake)
   }
 
-
   @Provides @Singleton
   def anonymousEventLoggingRepo(descriptorRepo: AnonymousEventDescriptorRepo, mixpanel: MixpanelClient, airbrake: AirbrakeNotifier): AnonymousEventLoggingRepo = {
     val (nodeA, nodeB, auth) = getHeimdalCredentials()
@@ -84,7 +81,6 @@ case class ProdMongoModule() extends MongoModule {
     val collection = db("anonymous_events")
     new ProdAnonymousEventLoggingRepo(collection, mixpanel, descriptorRepo, airbrake)
   }
-
 
   @Provides @Singleton
   def anonymousEventDescriptorRepo(cache: AnonymousEventDescriptorNameCache, airbrake: AirbrakeNotifier): AnonymousEventDescriptorRepo = {
@@ -105,7 +101,6 @@ case class ProdMongoModule() extends MongoModule {
     val collection = db("non_user_events")
     new ProdNonUserEventLoggingRepo(collection, mixpanel, descriptorRepo, airbrake)
   }
-
 
   @Provides @Singleton
   def nonUserEventDescriptorRepo(cache: NonUserEventDescriptorNameCache, airbrake: AirbrakeNotifier): NonUserEventDescriptorRepo = {
@@ -155,7 +150,6 @@ case class DevMongoModule() extends MongoModule {
   @Singleton
   @Provides
   def systemEventLoggingRepo: SystemEventLoggingRepo = new DevSystemEventLoggingRepo
-
 
   @Provides @Singleton
   def anonymousEventLoggingRepo: AnonymousEventLoggingRepo = new DevAnonymousEventLoggingRepo

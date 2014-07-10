@@ -24,7 +24,7 @@ class NlpParserTest extends Specification {
       sent = "yellowstone national park hotels"
       tagged = NlpParser.getTaggedSegments(sent)
       t2 = System.currentTimeMillis()
-      tagged === List(("VP", "yellowstone national park hotels"))       // TODO: better segmentation (finer)
+      tagged === List(("VP", "yellowstone national park hotels")) // TODO: better segmentation (finer)
       println(s"nlp parser time elapesed: ${t2 - t1}")
 
       t1 = System.currentTimeMillis()
@@ -33,7 +33,7 @@ class NlpParserTest extends Specification {
       t2 = System.currentTimeMillis()
       tagged === List(("NP", "machine learning"), ("NP", "natrual language processing"))
       println(s"nlp parser time elapesed: ${t2 - t1}")
-      1===1
+      1 === 1
     }
   }
 

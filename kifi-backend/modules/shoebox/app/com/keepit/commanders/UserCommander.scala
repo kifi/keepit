@@ -9,17 +9,17 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.mail._
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.social.{UserIdentity, SocialNetworks}
+import com.keepit.social.{ UserIdentity, SocialNetworks }
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
-import com.keepit.social.{BasicUser, SocialGraphPlugin, SocialNetworkType}
+import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialNetworkType }
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.heimdal.{ContextStringData, HeimdalServiceClient, HeimdalContextBuilder}
+import com.keepit.heimdal._
 import com.keepit.search.SearchServiceClient
 import com.keepit.typeahead.PrefixFilter
 import com.keepit.typeahead.PrefixMatching
@@ -28,12 +28,12 @@ import akka.actor.Scheduler
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 import scala.util.Try
-import securesocial.core.{Identity, UserService, Registry}
+import securesocial.core.{ Identity, UserService, Registry }
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.typeahead.socialusers.{KifiUserTypeahead, SocialUserTypeahead}
+import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.model.SocialConnection
 import play.api.libs.json.JsString
@@ -42,7 +42,6 @@ import scala.Some
 import com.keepit.model.UserEmailAddress
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.social.UserIdentity
-import com.keepit.heimdal.ContextStringData
 import play.api.libs.json.JsSuccess
 import com.keepit.model.SocialUserConnectionsKey
 import com.keepit.common.mail.EmailAddress
@@ -82,52 +81,51 @@ object EmailInfo {
 }
 
 case class UpdatableUserInfo(
-    description: Option[String], emails: Option[Seq[EmailInfo]],
-    firstName: Option[String] = None, lastName: Option[String] = None)
+  description: Option[String], emails: Option[Seq[EmailInfo]],
+  firstName: Option[String] = None, lastName: Option[String] = None)
 object UpdatableUserInfo {
   implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
 }
 
 case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String])
 
-
 class UserCommander @Inject() (
-  db: Database,
-  userRepo: UserRepo,
-  emailRepo: UserEmailAddressRepo,
-  userValueRepo: UserValueRepo,
-  userConnectionRepo: UserConnectionRepo,
-  basicUserRepo: BasicUserRepo,
-  keepRepo: KeepRepo,
-  keepClickRepo: KeepDiscoveryRepo,
-  rekeepRepo: ReKeepRepo,
-  userExperimentCommander: LocalUserExperimentCommander,
-  socialUserInfoRepo: SocialUserInfoRepo,
-  socialConnectionRepo: SocialConnectionRepo,
-  socialUserRepo: SocialUserInfoRepo,
-  invitationRepo: InvitationRepo,
-  friendRequestRepo: FriendRequestRepo,
-  searchFriendRepo: SearchFriendRepo,
-  userCache: SocialUserInfoUserCache,
-  socialUserConnectionsCache: SocialUserConnectionsCache,
-  socialGraphPlugin: SocialGraphPlugin,
-  bookmarkCommander: KeepsCommander,
-  collectionCommander: CollectionCommander,
-  abookServiceClient: ABookServiceClient,
-  postOffice: LocalPostOffice,
-  clock: Clock,
-  scheduler: Scheduler,
-  socialUserTypeahead: SocialUserTypeahead,
-  kifiUserTypeahead: KifiUserTypeahead,
-  elizaServiceClient: ElizaServiceClient,
-  searchClient: SearchServiceClient,
-  s3ImageStore: S3ImageStore,
-  emailOptOutCommander: EmailOptOutCommander,
-  heimdalClient: HeimdalServiceClient,
-  fortytwoConfig: FortyTwoConfig,
-  bookmarkClicksRepo: UserBookmarkClicksRepo,
-  userImageUrlCache: UserImageUrlCache,
-  airbrake: AirbrakeNotifier) extends Logging {
+    db: Database,
+    userRepo: UserRepo,
+    emailRepo: UserEmailAddressRepo,
+    userValueRepo: UserValueRepo,
+    userConnectionRepo: UserConnectionRepo,
+    basicUserRepo: BasicUserRepo,
+    keepRepo: KeepRepo,
+    keepClickRepo: KeepDiscoveryRepo,
+    rekeepRepo: ReKeepRepo,
+    userExperimentCommander: LocalUserExperimentCommander,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    socialConnectionRepo: SocialConnectionRepo,
+    socialUserRepo: SocialUserInfoRepo,
+    invitationRepo: InvitationRepo,
+    friendRequestRepo: FriendRequestRepo,
+    searchFriendRepo: SearchFriendRepo,
+    userCache: SocialUserInfoUserCache,
+    socialUserConnectionsCache: SocialUserConnectionsCache,
+    socialGraphPlugin: SocialGraphPlugin,
+    bookmarkCommander: KeepsCommander,
+    collectionCommander: CollectionCommander,
+    abookServiceClient: ABookServiceClient,
+    postOffice: LocalPostOffice,
+    clock: Clock,
+    scheduler: Scheduler,
+    socialUserTypeahead: SocialUserTypeahead,
+    kifiUserTypeahead: KifiUserTypeahead,
+    elizaServiceClient: ElizaServiceClient,
+    searchClient: SearchServiceClient,
+    s3ImageStore: S3ImageStore,
+    emailOptOutCommander: EmailOptOutCommander,
+    heimdalClient: HeimdalServiceClient,
+    fortytwoConfig: FortyTwoConfig,
+    bookmarkClicksRepo: UserBookmarkClicksRepo,
+    userImageUrlCache: UserImageUrlCache,
+    airbrake: AirbrakeNotifier) extends Logging {
 
   def updateUserDescription(userId: Id[User], description: String): Unit = {
     db.readWrite { implicit session =>
@@ -141,15 +139,15 @@ class UserCommander @Inject() (
     }
   }
 
-
   def getConnectionsPage(userId: Id[User], page: Int, pageSize: Int): (Seq[ConnectionInfo], Int) = {
     val infos = db.readOnlyMaster { implicit s =>
       val searchFriends = searchFriendRepo.getSearchFriends(userId)
       val connectionIds = userConnectionRepo.getConnectedUsers(userId)
       val unfriendedIds = userConnectionRepo.getUnfriendedUsers(userId)
       val connections = connectionIds.map(_ -> false).toSeq ++ unfriendedIds.map(_ -> true).toSeq
-      connections.map { case (friendId, unfriended) =>
-        ConnectionInfo(basicUserRepo.load(friendId), friendId, unfriended, searchFriends.contains(friendId))
+      connections.map {
+        case (friendId, unfriended) =>
+          ConnectionInfo(basicUserRepo.load(friendId), friendId, unfriended, searchFriends.contains(friendId))
       }
     }
     (infos.drop(page * pageSize).take(pageSize), infos.filterNot(_.unfriended).size)
@@ -177,7 +175,6 @@ class UserCommander @Inject() (
       Seq()
     }
 
-
     // This will eventually be a lot more complex. However, for now, tricking the client is the way to go.
     // ^^^^^^^^^ Unrelated to the offensive code above ^^^^^^^^^
     val kifiSupport = Seq(
@@ -193,7 +190,7 @@ class UserCommander @Inject() (
     socialUserInfoRepo.getByUser(userId).map(BasicSocialUser.from)
   }
 
-  def abookInfo(userId:Id[User]) = abookServiceClient.getABookInfos(userId)
+  def abookInfo(userId: Id[User]) = abookServiceClient.getABookInfos(userId)
 
   def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[Try[ABookInfo]] = {
     abookServiceClient.uploadContacts(userId, origin, payload)
@@ -202,7 +199,7 @@ class UserCommander @Inject() (
   def getUserInfo(user: User): BasicUserInfo = {
     val (basicUser, description, emails, pendingPrimary, notAuthed) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
-      val description =  userValueRepo.getValueStringOpt(user.id.get, "user_description")
+      val description = userValueRepo.getValueStringOpt(user.id.get, "user_description")
       val emails = emailRepo.getAllByUser(user.id.get)
       val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, "pending_primary_email").map(EmailAddress(_))
       val notAuthed = socialUserRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name)
@@ -235,7 +232,7 @@ class UserCommander @Inject() (
   }
 
   def getUserSegment(userId: Id[User]): UserSegment = {
-    val (numBms, numFriends) = db.readOnlyMaster{ implicit s => //using cache
+    val (numBms, numFriends) = db.readOnlyMaster { implicit s => //using cache
       (keepRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
     }
 
@@ -259,7 +256,7 @@ class UserCommander @Inject() (
 
   def tellAllFriendsAboutNewUserImmediate(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = synchronized {
     val guardKey = "friendsNotifiedAboutJoining"
-    if (!db.readOnlyMaster{ implicit session => userValueRepo.getValueStringOpt(newUserId, guardKey).exists(_=="true") }) {
+    if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, guardKey).exists(_ == "true") }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, true) }
       val (newUser, toNotify, id2Email) = db.readOnlyMaster { implicit session =>
         val newUser = userRepo.get(newUserId)
@@ -272,7 +269,7 @@ class UserCommander @Inject() (
       val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), newUser.externalId, newUser.pictureName.getOrElse("0"), Some("https"))
       toNotify.foreach { userId =>
         val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(id2Email(userId)))}"
-        db.readWrite{ implicit session =>
+        db.readWrite { implicit session =>
           val user = userRepo.get(userId)
           postOffice.sendMail(ElectronicMail(
             senderUserId = None,
@@ -301,14 +298,16 @@ class UserCommander @Inject() (
   }
 
   def tellAllFriendsAboutNewUser(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = {
-    delay { synchronized {
-      tellAllFriendsAboutNewUserImmediate(newUserId, additionalRecipients)
-    }}
+    delay {
+      synchronized {
+        tellAllFriendsAboutNewUserImmediate(newUserId, additionalRecipients)
+      }
+    }
   }
 
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None): Unit = {
-    val olderUser : Boolean = newUser.createdAt.isBefore(currentDateTime.minus(24*3600*1000)) //users older than 24h get the long form welcome email
-    if (!db.readOnlyMaster{ implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
+    val olderUser: Boolean = newUser.createdAt.isBefore(currentDateTime.minus(24 * 3600 * 1000)) //users older than 24h get the long form welcome email
+    if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUser.id.get, UserValues.welcomeEmailSent.name, true) }
 
       if (withVerification) {
@@ -322,11 +321,11 @@ class UserCommander @Inject() (
 
           val (category, subj, body) = if (newUser.state != UserStates.ACTIVE) {
             (NotificationCategory.User.EMAIL_CONFIRMATION,
-             "Kifi.com | Please confirm your email address",
-             views.html.email.verifyEmail(newUser.firstName, verifyUrl).body)
+              "Kifi.com | Please confirm your email address",
+              views.html.email.verifyEmail(newUser.firstName, verifyUrl).body)
           } else {
             (NotificationCategory.User.WELCOME,
-             "Let's get started with Kifi",
+              "Let's get started with Kifi",
               if (olderUser) views.html.email.welcomeLongInlined(newUser.firstName, verifyUrl, unsubLink).body else views.html.email.welcomeInlined(newUser.firstName, verifyUrl, unsubLink).body)
           }
           val mail = ElectronicMail(
@@ -340,7 +339,7 @@ class UserCommander @Inject() (
           postOffice.sendMail(mail)
         }
       } else {
-        db.readWrite{ implicit session =>
+        db.readWrite { implicit session =>
           val emailAddr = emailRepo.getByUser(newUser.id.get)
           val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(emailAddr))}"
           val mail = ElectronicMail(
@@ -367,7 +366,7 @@ class UserCommander @Inject() (
     bookmarkCommander.setFirstKeeps(userId, DefaultKeeps.orderedKeepsWithTags.map { case (keepInfo, _) => keepsByUrl(keepInfo.url) })
   }
 
-  def doChangePassword(userId:Id[User], oldPassword:String, newPassword:String):Try[Identity] = Try {
+  def doChangePassword(userId: Id[User], oldPassword: String, newPassword: String): Try[Identity] = Try {
     val resOpt = db.readOnlyMaster { implicit session =>
       socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO)
     } map { sui =>
@@ -385,7 +384,7 @@ class UserCommander @Inject() (
     resOpt getOrElse { throw new IllegalArgumentException("no_user") }
   }
 
-  def queryContacts(userId:Id[User], search: Option[String], after:Option[String], limit: Int):Future[Seq[JsObject]] = { // TODO: optimize
+  def queryContacts(userId: Id[User], search: Option[String], after: Option[String], limit: Int): Future[Seq[JsObject]] = { // TODO: optimize
     @inline def mkId(email: EmailAddress) = s"email/${email.address}"
     @inline def getEInviteStatus(contactEmail: EmailAddress): String = { // todo: batch
       db.readOnlyMaster { implicit s =>
@@ -407,7 +406,7 @@ class UserCommander @Inject() (
   implicit val hitOrdering = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
 
   // todo(ray):removeme
-  def getAllConnections(userId:Id[User], search: Option[String], network: Option[String], after: Option[String], limit: Int):Future[Seq[JsObject]] = { // todo: convert to objects
+  def getAllConnections(userId: Id[User], search: Option[String], network: Option[String], after: Option[String], limit: Int): Future[Seq[JsObject]] = { // todo: convert to objects
     val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
       queryContacts(userId, search, after, limit)
     } else Future.successful(Seq.empty[JsObject])
@@ -433,14 +432,14 @@ class UserCommander @Inject() (
         case Some(query) =>
           var ordinal = 0
           val queryTerms = PrefixFilter.tokenize(query)
-          infos.map{ info =>
+          infos.map { info =>
             ordinal += 1
             val name = PrefixFilter.normalize(info.fullName)
             TypeaheadHit[SocialUserBasicInfo](PrefixMatching.distanceWithNormalizedName(name, queryTerms), name, ordinal, info)
-          }.collect{ case hit if hit.score < 1000000.0d => hit }
+          }.collect { case hit if hit.score < 1000000.0d => hit }
         case None =>
           var ordinal = 0
-          infos.map{ info =>
+          infos.map { info =>
             ordinal += 1
             TypeaheadHit[SocialUserBasicInfo](0, PrefixFilter.normalize(info.fullName), ordinal, info)
           }
@@ -499,8 +498,6 @@ class UserCommander @Inject() (
 
     }
 
-
-
     elizaServiceClient.sendGlobalNotification(
       userIds = Set(friend.id.get),
       title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your friend request!",
@@ -543,20 +540,18 @@ class UserCommander @Inject() (
       sticky = false,
       category = NotificationCategory.User.FRIEND_REQUEST
     ) map { id =>
-      db.readWrite { implicit session =>
-        friendRequestRepo.save(request.copy(messageHandle = Some(id)))
+        db.readWrite { implicit session =>
+          friendRequestRepo.save(request.copy(messageHandle = Some(id)))
+        }
       }
-    }
   }
 
-
-
-  def friend(myUserId:Id[User], friendUserId: ExternalId[User]):(Boolean, String) = {
+  def friend(myUserId: Id[User], friendUserId: ExternalId[User]): (Boolean, String) = {
     db.readWrite { implicit s =>
       userRepo.getOpt(friendUserId) map { recipient =>
         val openFriendRequests = friendRequestRepo.getBySender(myUserId, Set(FriendRequestStates.ACTIVE))
 
-        if (openFriendRequests.size > 40){
+        if (openFriendRequests.size > 40) {
           (false, "tooManySent")
         } else if (friendRequestRepo.getBySenderAndRecipient(myUserId, recipient.id.get).isDefined) {
           (true, "alreadySent")
@@ -599,13 +594,13 @@ class UserCommander @Inject() (
     }
   }
 
-  def unfriend(userId:Id[User], id:ExternalId[User]):Boolean = {
+  def unfriend(userId: Id[User], id: ExternalId[User]): Boolean = {
     db.readOnlyMaster(attempts = 2) { implicit ro => userRepo.getOpt(id) } exists { user =>
       val success = db.readWrite(attempts = 2) { implicit s =>
         userConnectionRepo.unfriendConnections(userId, user.id.toSet) > 0
       }
       if (success) {
-        db.readOnlyMaster{ implicit session =>
+        db.readOnlyMaster { implicit session =>
           elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
           elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
         }
@@ -619,7 +614,7 @@ class UserCommander @Inject() (
     }
   }
 
-  def ignoreFriendRequest(userId:Id[User], id: ExternalId[User]):(Boolean, String) = {
+  def ignoreFriendRequest(userId: Id[User], id: ExternalId[User]): (Boolean, String) = {
     db.readWrite { implicit s =>
       userRepo.getOpt(id) map { sender =>
         friendRequestRepo.getBySenderAndRecipient(sender.id.get, userId) map { friendRequest =>
@@ -630,19 +625,19 @@ class UserCommander @Inject() (
     }
   }
 
-  def incomingFriendRequests(userId:Id[User]):Seq[BasicUser] = {
+  def incomingFriendRequests(userId: Id[User]): Seq[BasicUser] = {
     db.readOnlyMaster(attempts = 2) { implicit ro =>
       friendRequestRepo.getByRecipient(userId) map { fr => basicUserRepo.load(fr.senderId) }
     }
   }
 
-  def outgoingFriendRequests(userId:Id[User]):Seq[BasicUser] = {
+  def outgoingFriendRequests(userId: Id[User]): Seq[BasicUser] = {
     db.readOnlyMaster(attempts = 2) { implicit ro =>
       friendRequestRepo.getBySender(userId) map { fr => basicUserRepo.load(fr.recipientId) }
     }
   }
 
-  def disconnect(userId:Id[User], networkString: String):(Option[SocialUserInfo], String) = {
+  def disconnect(userId: Id[User], networkString: String): (Option[SocialUserInfo], String) = {
     val network = SocialNetworkType(networkString)
     val (thisNetwork, otherNetworks) = db.readOnlyMaster { implicit s =>
       userCache.remove(SocialUserInfoUserKey(userId))
@@ -667,7 +662,7 @@ class UserCommander @Inject() (
     }
   }
 
-  def includeFriend(userId:Id[User], id:ExternalId[User]):Option[Boolean] = {
+  def includeFriend(userId: Id[User], id: ExternalId[User]): Option[Boolean] = {
     db.readWrite { implicit s =>
       val friendIdOpt = userRepo.getOpt(id) collect {
         case user if userConnectionRepo.getConnectionOpt(userId, user.id.get).isDefined => user.id.get
@@ -681,7 +676,7 @@ class UserCommander @Inject() (
     }
   }
 
-  def excludeFriend(userId:Id[User], id:ExternalId[User]):Option[Boolean] = {
+  def excludeFriend(userId: Id[User], id: ExternalId[User]): Option[Boolean] = {
     db.readWrite { implicit s =>
       val friendIdOpt = userRepo.getOpt(id) collect {
         case user if userConnectionRepo.getConnectionOpt(userId, user.id.get).isDefined => user.id.get
@@ -701,7 +696,6 @@ class UserCommander @Inject() (
       f
     }
   }
-
 
   def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmail: Option[EmailAddress], emails: Seq[EmailInfo]): Unit = {
     db.readWrite { implicit session =>
@@ -740,14 +734,15 @@ class UserCommander @Inject() (
       for (emailInfo <- emails) {
         if (emailInfo.isPrimary || emailInfo.isPendingPrimary) {
           val emailRecordOpt = emailRepo.getByAddressOpt(emailInfo.address)
-          emailRecordOpt.collect { case emailRecord if emailRecord.userId == userId =>
-            if (emailRecord.verified) {
-              if (primaryEmail.isEmpty || primaryEmail.get != emailRecord.address) {
-                updateUserPrimaryEmail(emailRecord)
+          emailRecordOpt.collect {
+            case emailRecord if emailRecord.userId == userId =>
+              if (emailRecord.verified) {
+                if (primaryEmail.isEmpty || primaryEmail.get != emailRecord.address) {
+                  updateUserPrimaryEmail(emailRecord)
+                }
+              } else {
+                userValueRepo.setValue(userId, "pending_primary_email", emailInfo.address)
               }
-            } else {
-              userValueRepo.setValue(userId, "pending_primary_email", emailInfo.address)
-            }
           }
         }
       }
@@ -781,6 +776,7 @@ class UserCommander @Inject() (
   }
 
   def getPrefs(prefSet: Set[String], userId: Id[User]): JsObject = {
+    // Reading from master because the value may have been updated just before
     db.readOnlyMaster { implicit s =>
       val values = userValueRepo.getValues(userId, prefSet.toSeq: _*)
       JsObject(prefSet.toSeq.map { name =>
@@ -796,12 +792,13 @@ class UserCommander @Inject() (
 
   def savePrefs(prefSet: Set[String], userId: Id[User], o: JsObject) = {
     db.readWrite(attempts = 3) { implicit s =>
-      o.fields.foreach { case (name, value) =>
-        if (value == JsNull || value.isInstanceOf[JsUndefined]) {
-          userValueRepo.clearValue(userId, name)
-        } else {
-          userValueRepo.setValue(userId, name, value.as[String])
-        }
+      o.fields.foreach {
+        case (name, value) =>
+          if (value == JsNull || value.isInstanceOf[JsUndefined]) {
+            userValueRepo.clearValue(userId, name)
+          } else {
+            userValueRepo.setValue(userId, name, value.as[String])
+          }
       }
     }
   }
@@ -827,17 +824,11 @@ class UserCommander @Inject() (
     } else Future.successful()
   }
 
-  def postDelightedAnswer(userId: Id[User], score: Int, comment: Option[String]): Future[Boolean] = {
-    val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
-    user.primaryEmail map { email =>
-      heimdalClient.postDelightedAnswer(userId, email, user.fullName, score, comment)
-    } getOrElse {
-      airbrake.notify(s"Attempted to post a Delighted answer for user $userId with no primary email")
-      Future.successful(false)
-    }
+  def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Boolean] = {
+    val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
+    heimdalClient.postDelightedAnswer(userId, user.externalId, user.primaryEmail, user.fullName, answer)
   }
 }
-
 
 object DefaultKeeps {
   val orderedTags: Seq[String] = Seq(

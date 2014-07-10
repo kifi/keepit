@@ -1,8 +1,8 @@
 package com.keepit.normalizer
 
 import com.keepit.model.UrlPatternRuleRepo
-import com.keepit.scraper.{Signature, ScrapeSchedulerPlugin}
-import com.google.inject.{Inject, Singleton}
+import com.keepit.scraper.{ Signature, ScrapeSchedulerPlugin }
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.slick.DBSession.RSession
 
 @Singleton

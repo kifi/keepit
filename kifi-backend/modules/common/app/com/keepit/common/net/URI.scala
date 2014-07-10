@@ -3,7 +3,7 @@ package com.keepit.common.net
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URIParserUtil._
 import com.keepit.common.strings.UTF8
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 import scala.util.matching.Regex
 
 object URI extends Logging {
@@ -47,7 +47,7 @@ object URI extends Logging {
    */
   def isRelative(uriString: String): Boolean = !uriString.contains("://")
 
-  def isAbsolute(uriString : String): Boolean = !isRelative(uriString)
+  def isAbsolute(uriString: String): Boolean = !isRelative(uriString)
 
   def absoluteUrl(baseUri: URI, targetUrl: String): Option[String] =
     if (isRelative(targetUrl)) {
@@ -63,7 +63,7 @@ object URI extends Logging {
         } else if (targetUrl.startsWith("./")) {
           absoluteUrl(baseUri, targetUrl.substring(2)).get
         } else if (targetUrl.startsWith("../")) {
-          val basePath = baseUri.path.map{p =>
+          val basePath = baseUri.path.map { p =>
             if (p.isEmpty) "" else {
               val base = if (p.endsWith("/")) p.substring(0, p.length - 1) else p
               val lastSlashIndex = p.lastIndexOf("/")
@@ -72,7 +72,7 @@ object URI extends Logging {
           }
           absoluteUrl(new URI(None, baseUri.scheme, baseUri.userInfo, baseUri.host, baseUri.port, basePath, None, None), targetUrl.substring(3)).get
         } else {
-          val basePath = baseUri.path.map{path =>
+          val basePath = baseUri.path.map { path =>
             val headEndIndex = path.lastIndexOf("/") + 1
             if (headEndIndex > 0) path.substring(0, headEndIndex) else path
           } getOrElse "/"
@@ -111,16 +111,16 @@ class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Opt
 
     val sb = new StringBuilder()
 
-    scheme.foreach{ scheme => sb.append(scheme).append(":") }
-    host.foreach{ host =>
+    scheme.foreach { scheme => sb.append(scheme).append(":") }
+    host.foreach { host =>
       sb.append("//")
-      userInfo.foreach{ userInfo => sb.append(userInfo).append("@") }
+      userInfo.foreach { userInfo => sb.append(userInfo).append("@") }
       sb.append(host)
       if (port >= 0) sb.append(":").append(port.toString)
     }
-    updatedPath.foreach{ path => sb.append(path) }
-    query.foreach{ query => if (query.params.size > 0) sb.append("?").append(query.toString) }
-    fragment.foreach{ fragment => if (fragment.length > 0) sb.append("#").append(fragment) }
+    updatedPath.foreach { path => sb.append(path) }
+    query.foreach { query => if (query.params.size > 0) sb.append("?").append(query.toString) }
+    fragment.foreach { fragment => if (fragment.length > 0) sb.append("#").append(fragment) }
 
     sb.toString()
   }
@@ -185,6 +185,6 @@ case class Param(name: String, value: Option[String]) {
 
   def isEmpty: Boolean = (name == "" && !value.isDefined)
 
-  def decodedValue: Option[String] = value.map{ v => java.net.URLDecoder.decode(v, UTF8) }
+  def decodedValue: Option[String] = value.map { v => java.net.URLDecoder.decode(v, UTF8) }
 }
 

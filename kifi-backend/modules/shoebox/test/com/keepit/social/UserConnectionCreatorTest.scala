@@ -9,8 +9,8 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.model._
 import com.keepit.shoebox.TestShoeboxServiceClientModule
-import com.keepit.social.{SocialNetworks, SocialId}
-import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxApplication}
+import com.keepit.social.{ SocialNetworks, SocialId }
+import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
 import com.keepit.eliza.FakeElizaServiceClientModule
 
 import play.api.libs.json.Json
@@ -23,7 +23,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
 
   "UserConnectionCreator" should {
     "create connections between friends for social users and kifi users" in {
-      running(new ShoeboxApplication(modules:_*)) {
+      running(new ShoeboxApplication(modules: _*)) {
 
         /*
          * grab json
@@ -75,7 +75,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
     }
 
     "disable non existing connections for social users but not kifi users" in {
-      running(new ShoeboxApplication(modules:_*)) {
+      running(new ShoeboxApplication(modules: _*)) {
 
         val json1 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
 
@@ -118,7 +118,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
         val extractedFriends2 = inject[FacebookSocialGraph].extractFriends(json2)
 
         val connectionsAfter = inject[UserConnectionCreator]
-            .createConnections(socialUserInfo, extractedFriends2.map(_.socialId), SocialNetworks.FACEBOOK)
+          .createConnections(socialUserInfo, extractedFriends2.map(_.socialId), SocialNetworks.FACEBOOK)
 
         inject[Database].readOnlyMaster { implicit s =>
           val fortyTwoConnections = inject[SocialConnectionRepo].getFortyTwoUserConnections(user.id.get)

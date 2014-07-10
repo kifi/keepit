@@ -1,13 +1,13 @@
 package com.keepit.common.actor
 
 import net.codingwell.scalaguice.ScalaModule
-import akka.actor.{Scheduler, ActorSystem}
+import akka.actor.{ Scheduler, ActorSystem }
 import com.keepit.inject.AppScoped
-import com.google.inject.{Singleton, Provides}
+import com.google.inject.{ Singleton, Provides }
 import play.api.Play
 import play.api.Play._
-import com.keepit.common.zookeeper.{DiscoveryModule, ServiceDiscovery}
-import com.keepit.common.plugin.{SchedulingPropertiesImpl, SchedulingProperties}
+import com.keepit.common.zookeeper.{ DiscoveryModule, ServiceDiscovery }
+import com.keepit.common.plugin.{ SchedulingPropertiesImpl, SchedulingProperties }
 
 trait ActorSystemModule extends ScalaModule
 

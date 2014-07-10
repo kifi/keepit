@@ -57,9 +57,10 @@ object CollectionIdList {
     out.writeVInt(size)
     // encode list
     var current = 0L
-    sortedCollections.foreach{ case (collectionId, name) =>
-      out.writeVLong(collectionId.id - current)
-      current = collectionId.id
+    sortedCollections.foreach {
+      case (collectionId, name) =>
+        out.writeVLong(collectionId.id - current)
+        current = collectionId.id
     }
 
     baos.flush()

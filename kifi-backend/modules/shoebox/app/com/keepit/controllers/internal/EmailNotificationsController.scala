@@ -9,15 +9,14 @@ import com.keepit.common.logging.Logging
 import play.api.mvc.Action
 import com.keepit.commanders.emails.EmailNotificationsCommander
 import com.keepit.common.db.Id
-import com.keepit.model.{DeepLocator, User}
+import com.keepit.model.{ DeepLocator, User }
 import com.keepit.eliza.model.ThreadItem
 import org.joda.time.DateTime
 
 class EmailNotificationsController @Inject() (
-   emailNotificationsCommander: EmailNotificationsCommander
-)  (implicit private val clock: Clock,
+  emailNotificationsCommander: EmailNotificationsCommander)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
-  extends ShoeboxServiceController with Logging {
+    extends ShoeboxServiceController with Logging {
 
   implicit val userIdFormat = Id.format[User]
 

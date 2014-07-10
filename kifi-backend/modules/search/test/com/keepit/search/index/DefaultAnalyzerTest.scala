@@ -30,9 +30,9 @@ class DefaultAnalyzerTest extends Specification {
     "tokenize a string nicely" in {
       toTokenList(analyzer.tokenStream("b", "DefaultAnalyzer should tokenize a string nicely")) ===
         List[Token](("<ALPHANUM>", "defaultanalyzer", 1),
-                    ("<ALPHANUM>", "tokenize", 2),
-                    ("<ALPHANUM>", "string", 2),
-                    ("<ALPHANUM>", "nicely", 1))
+          ("<ALPHANUM>", "tokenize", 2),
+          ("<ALPHANUM>", "string", 2),
+          ("<ALPHANUM>", "nicely", 1))
     }
 
     "break up a dot compound" in {
@@ -41,22 +41,22 @@ class DefaultAnalyzerTest extends Specification {
 
       toTokenList(analyzer.tokenStream("b", "a.longer.dot.compound.name")) ===
         List[Token](("<ALPHANUM>", "a", 1),
-                    ("<ALPHANUM>", "longer", 1),
-                    ("<ALPHANUM>", "dot", 1),
-                    ("<ALPHANUM>", "compound", 1),
-                    ("<ALPHANUM>", "name", 1))
+          ("<ALPHANUM>", "longer", 1),
+          ("<ALPHANUM>", "dot", 1),
+          ("<ALPHANUM>", "compound", 1),
+          ("<ALPHANUM>", "name", 1))
 
       toTokenList(analyzer.tokenStream("b", "www.yahoo.com")) ===
         List[Token](("<ALPHANUM>", "www", 1),
-                    ("<ALPHANUM>", "yahoo", 1),
-                    ("<ALPHANUM>", "com", 1))
+          ("<ALPHANUM>", "yahoo", 1),
+          ("<ALPHANUM>", "com", 1))
     }
 
     "preserve dots in acronyms" in { // lucene drops the last . in a token
       toTokenList(analyzer.tokenStream("b", "u.s. u.s.a. i.b.m.")) ===
         List[Token](("<ALPHANUM>", "u.s", 1),
-                    ("<ALPHANUM>", "u.s.a", 1),
-                    ("<ALPHANUM>", "i.b.m", 1))
+          ("<ALPHANUM>", "u.s.a", 1),
+          ("<ALPHANUM>", "i.b.m", 1))
     }
 
     "not tokenize a number" in {
@@ -67,21 +67,21 @@ class DefaultAnalyzerTest extends Specification {
     "tokenize a word with stemming" in {
       toTokenList(analyzerWithStemmer.tokenStream("b", "japanese boots O'Reilly's books")) ===
         List[Token](("<ALPHANUM>", "japan", 1),
-                    ("<ALPHANUM>", "boot", 1),
-                    ("<ALPHANUM>", "o'reilly", 1),
-                    ("<ALPHANUM>", "book", 1))
+          ("<ALPHANUM>", "boot", 1),
+          ("<ALPHANUM>", "o'reilly", 1),
+          ("<ALPHANUM>", "book", 1))
     }
 
     "tokenize a word with apostrophe as one word in query parsing" in {
       toTokenList(analyzer.tokenStream("b", "O'Reilly's books")) ===
         List[Token](("<ALPHANUM>", "o'reilly's", 1),
-                    ("<ALPHANUM>", "books", 1))
+          ("<ALPHANUM>", "books", 1))
     }
 
     "tokenize a word with apostrophe as one word in query parsing (the possesive should be removed)" in {
       toTokenList(analyzerWithStemmer.tokenStream("b", "O'Reilly's books")) ===
         List[Token](("<ALPHANUM>", "o'reilly", 1),
-                    ("<ALPHANUM>", "book", 1))
+          ("<ALPHANUM>", "book", 1))
     }
 
     "expose the stop word list" in {
@@ -127,7 +127,7 @@ class DefaultAnalyzerTest extends Specification {
           ("ジタイ", 15, 17),
           ("ハッセイ", 17, 19),
           ("ジ", 19, 20),
-          ("タイオウ", 21 , 23),
+          ("タイオウ", 21, 23),
           ("シシン", 23, 25)
         )
     }
@@ -164,7 +164,7 @@ class DefaultAnalyzerTest extends Specification {
     ret.reverse
   }
 
-  private def toHighlightTokenList(ts: TokenStream): List[HighlightToken]  = {
+  private def toHighlightTokenList(ts: TokenStream): List[HighlightToken] = {
     var ret: List[HighlightToken] = Nil
 
     if (ts.hasAttribute(classOf[OffsetAttribute]) && ts.hasAttribute(classOf[CharTermAttribute])) {

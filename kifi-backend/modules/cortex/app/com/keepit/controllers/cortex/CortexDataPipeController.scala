@@ -11,9 +11,8 @@ import com.keepit.cortex.PublishedModels
 import play.api.mvc.Action
 import com.keepit.cortex.core.ModelVersion
 
-class CortexDataPipeController @Inject()(
-  featureCommander: FeatureRetrievalCommander
-) extends CortexServiceController {
+class CortexDataPipeController @Inject() (
+    featureCommander: FeatureRetrievalCommander) extends CortexServiceController {
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
 

@@ -14,21 +14,21 @@ class NlpPhraseDetectorTest extends Specification {
     "detect phrases and correctly mapping them to Lucene tokenStream offsets" in {
       val analyzer = new StandardAnalyzer(Version.LUCENE_47)
       var queryText = "this is a critical test that should not fail"
-      NlpPhraseDetector.detectAll(queryText, analyzer, en) === Set((0, 2), (2, 2))    // (critical test, should fail), Lucene tokenstream = (critical test should fail)
+      NlpPhraseDetector.detectAll(queryText, analyzer, en) === Set((0, 2), (2, 2)) // (critical test, should fail), Lucene tokenstream = (critical test should fail)
 
       queryText = "text mining and machine learning"
       NlpPhraseDetector.detectAll(queryText, analyzer, en) === Set((0, 2), (2, 2))
 
       queryText = "install photoshop on windows 7"
-      NlpPhraseDetector.detectAll(queryText, analyzer, en) === Set((0, 3))           // tokenStream = (install photoshop windows 7)
+      NlpPhraseDetector.detectAll(queryText, analyzer, en) === Set((0, 3)) // tokenStream = (install photoshop windows 7)
     }
 
     // need to revisit this later. Need to be more tolerant.
     // Primary reason is that Stanford Parser may introduce new tokens for/at special characters
     "not try to detect if query contains non alphanumeric" in {
-       val analyzer = new StandardAnalyzer(Version.LUCENE_47)
-       val queryText = "dummy_query"
-       NlpPhraseDetector.detectAll(queryText, analyzer, en) === Set.empty[(Int, Int)]
+      val analyzer = new StandardAnalyzer(Version.LUCENE_47)
+      val queryText = "dummy_query"
+      NlpPhraseDetector.detectAll(queryText, analyzer, en) === Set.empty[(Int, Int)]
     }
 
     "not try to detect if query language is not English" in {

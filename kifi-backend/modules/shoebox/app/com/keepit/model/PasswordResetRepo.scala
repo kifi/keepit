@@ -3,12 +3,12 @@ package com.keepit.model
 import java.math.BigInteger
 import java.security.SecureRandom
 
-import org.joda.time.{Period, DateTime}
+import org.joda.time.{ Period, DateTime }
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{State, Id}
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.time._
 import com.keepit.common.strings
 import com.keepit.common.mail.EmailAddress
@@ -27,7 +27,7 @@ class PasswordResetRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
   import DBSession._
   import db.Driver.simple._
 
-  private val EXPIRATION_TIME = new Period(0, 30, 0 , 0) // 30 minutes
+  private val EXPIRATION_TIME = new Period(0, 30, 0, 0) // 30 minutes
 
   type RepoImpl = PasswordResetTable
   class PasswordResetTable(tag: Tag) extends RepoTable[PasswordReset](db, tag, "password_reset") {
@@ -47,9 +47,9 @@ class PasswordResetRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clo
 
   def getByUser(userId: Id[User], getPotentiallyExpired: Boolean = true)(implicit session: RSession): Seq[PasswordReset] =
     if (getPotentiallyExpired) {
-      (for(f <- rows if f.userId === userId && f.state =!= PasswordResetStates.INACTIVE) yield f).list
+      (for (f <- rows if f.userId === userId && f.state =!= PasswordResetStates.INACTIVE) yield f).list
     } else {
-      (for(f <- rows if f.userId === userId && f.state =!= PasswordResetStates.INACTIVE && f.createdAt > clock.now().minus(EXPIRATION_TIME)) yield f).list
+      (for (f <- rows if f.userId === userId && f.state =!= PasswordResetStates.INACTIVE && f.createdAt > clock.now().minus(EXPIRATION_TIME)) yield f).list
     }
 
   def useResetToken(token: String, ip: String)(implicit session: RWSession): Boolean = {
