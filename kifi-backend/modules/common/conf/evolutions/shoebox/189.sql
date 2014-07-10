@@ -29,6 +29,7 @@ CREATE TABLE delighted_answer (
       REFERENCES delighted_user(id)
       ON UPDATE CASCADE ON DELETE RESTRICT,
 
+    INDEX delighted_answer_i_delighted_ext_answer_id (delighted_ext_answer_id),
     INDEX delighted_answer_i_delighted_user_id (delighted_user_id)
 );
 
