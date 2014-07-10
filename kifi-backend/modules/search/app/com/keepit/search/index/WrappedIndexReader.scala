@@ -87,10 +87,7 @@ class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Arra
     }
   }
 
-  lazy val asAtomicReader: WrappedSubReader = {
-    val compositeReader = SlowCompositeReaderWrapper.wrap(this)
-    new WrappedSubReader("", compositeReader, getIdMapper)
-  }
+  lazy val asAtomicReader: WrappedSubReader = new WrappedSubReader("", SlowCompositeReaderWrapper.wrap(this), getIdMapper)
 
   def outerjoin(indexReader: CachingIndexReader, idMapper: IdMapper): WrappedIndexReader = {
     val remappers = wrappedSubReaders.foldLeft(Map.empty[String, DocIdRemapper]) { (m, r) => m + (r.name -> DocIdRemapper(idMapper, r.getIdMapper, r.inner)) }
@@ -151,7 +148,7 @@ class WrappedSubReader(val name: String, val inner: AtomicReader, idMapper: IdMa
   override def maxDoc() = inner.maxDoc()
   override def numDocs() = inner.numDocs()
   override def fields() = inner.fields()
-  override def getLiveDocs() = inner.getLiveDocs
+  override def getLiveDocs() = inner.getLiveDocs()
   override def getDocsWithField(field: String) = inner.getDocsWithField(field)
   protected def doClose() = {}
 }
