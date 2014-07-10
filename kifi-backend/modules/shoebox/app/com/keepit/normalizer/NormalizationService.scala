@@ -1,18 +1,18 @@
 package com.keepit.normalizer
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.net.URI
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.model._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.integrity.{URIMigration, UriIntegrityPlugin}
+import com.keepit.integrity.{ URIMigration, UriIntegrityPlugin }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import com.keepit.common.db.slick.Database
 import com.keepit.common._
 import com.keepit.common.db.Id
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 case class PrenormalizationException(cause: Throwable) extends Throwable(cause)
 
@@ -24,12 +24,12 @@ trait NormalizationService {
 
 @Singleton
 class NormalizationServiceImpl @Inject() (
-  db: Database,
-  failedContentCheckRepo: FailedContentCheckRepo,
-  normalizedURIRepo: NormalizedURIRepo,
-  uriIntegrityPlugin: UriIntegrityPlugin,
-  priorKnowledge: PriorKnowledge,
-  airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
+    db: Database,
+    failedContentCheckRepo: FailedContentCheckRepo,
+    normalizedURIRepo: NormalizedURIRepo,
+    uriIntegrityPlugin: UriIntegrityPlugin,
+    priorKnowledge: PriorKnowledge,
+    airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
 
   def prenormalize(uriString: String): Try[String] = {
     URI.parse(uriString).flatMap { parsedUri =>
@@ -60,7 +60,7 @@ class NormalizationServiceImpl @Inject() (
     val contentChecks = {
       Try { java.net.URI.create(currentReference.url) } match { // for debugging bad reference urls -- this is the only place that invokes getContentChecks
         case Success(uri) => log.debug(s"[processUpdate-check] currRef=$currentReference parsed-uri=$uri")
-        case Failure(t)   => throw new IllegalArgumentException(s"[processUpdate-check] -- failed to parse currRef=$currentReference; Exception=$t; Cause=${t.getCause}", t)
+        case Failure(t) => throw new IllegalArgumentException(s"[processUpdate-check] -- failed to parse currRef=$currentReference; Exception=$t; Cause=${t.getCause}", t)
       }
       priorKnowledge.getContentChecks(currentReference.url, currentReference.signature)
     }
@@ -100,8 +100,8 @@ class NormalizationServiceImpl @Inject() (
 
   private def isRelevant(currentReference: NormalizationReference, candidate: NormalizationCandidate): Boolean = {
     currentReference.normalization.isEmpty ||
-    currentReference.normalization.get < candidate.normalization ||
-    (currentReference.normalization.get == candidate.normalization && currentReference.url != candidate.url)
+      currentReference.normalization.get < candidate.normalization ||
+      (currentReference.normalization.get == candidate.normalization && currentReference.url != candidate.url)
   }
 
   private case class FindStrongerCandidate(currentReference: NormalizationReference, action: NormalizationCandidate => Action) {
@@ -141,8 +141,8 @@ class NormalizationServiceImpl @Inject() (
       val latestCurrentUri = normalizedURIRepo.get(currentReference.uriId)
       val isWriteSafe =
         latestCurrentUri.state != NormalizedURIStates.INACTIVE &&
-        latestCurrentUri.state != NormalizedURIStates.REDIRECTED &&
-        latestCurrentUri.normalization == currentReference.persistedNormalization
+          latestCurrentUri.state != NormalizedURIStates.REDIRECTED &&
+          latestCurrentUri.normalization == currentReference.persistedNormalization
       if (isWriteSafe) {
         val betterReference = internCandidate(successfulCandidate)
         val shouldMigrate = currentReference.uriId != betterReference.uriId
@@ -156,17 +156,17 @@ class NormalizationServiceImpl @Inject() (
         }
         log.info(s"Better reference ${betterReference.uriId}: ${betterReference.url} found for ${currentReference.uriId}: ${currentReference.url}")
         Some((betterReference, shouldMigrate))
-      }
-      else {
+      } else {
         log.warn(s"Aborting verified normalization because of recent overwrite of $currentReference with $latestCurrentUri")
         None
       }
-    } map { case (betterReference, shouldMigrate) =>
-      if (shouldMigrate) {
-        uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = currentReference.uriId, newUri = betterReference.uriId))
-        log.info(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
-      }
-      betterReference
+    } map {
+      case (betterReference, shouldMigrate) =>
+        if (shouldMigrate) {
+          uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = currentReference.uriId, newUri = betterReference.uriId))
+          log.info(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
+        }
+        betterReference
     }
 
   private def internCandidate(successfulCandidate: NormalizationCandidate)(implicit session: RWSession): NormalizationReference = {
@@ -217,6 +217,6 @@ class NormalizationServiceImpl @Inject() (
   }
 
   private def persistFailedAttempts(contentCheck: ContentCheck): Unit = {
-    contentCheck.getFailedAttempts().foreach { case (url1, url2) => db.readWrite { implicit session => failedContentCheckRepo.createOrIncrease(url1, url2) }}
+    contentCheck.getFailedAttempts().foreach { case (url1, url2) => db.readWrite { implicit session => failedContentCheckRepo.createOrIncrease(url1, url2) } }
   }
 }

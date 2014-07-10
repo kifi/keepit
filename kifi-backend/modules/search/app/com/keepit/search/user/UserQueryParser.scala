@@ -14,8 +14,7 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import com.keepit.typeahead.PrefixFilter
 
 class UserQueryParser(
-  analyzer: Analyzer
-) extends QueryParser(analyzer, analyzer) {
+    analyzer: Analyzer) extends QueryParser(analyzer, analyzer) {
 
   override val fields: Set[String] = Set.empty[String]
 
@@ -27,7 +26,7 @@ class UserQueryParser(
       else if (useLucenePrefixQuery) genNameQuery(queryText)
       else genPrefixNameQuery(queryText)
 
-      bq.foreach( q => addUserExperimentConstrains(q, exps))
+      bq.foreach(q => addUserExperimentConstrains(q, exps))
       bq
     }
   }
@@ -77,7 +76,7 @@ class UserQueryParser(
 
   private def genPrefixNameQuery(queryText: CharSequence): Option[BooleanQuery] = {
     val bq = new BooleanQuery
-    PrefixFilter.tokenize(queryText.toString).foreach{ q =>
+    PrefixFilter.tokenize(queryText.toString).foreach { q =>
       val tq = new TermQuery(new Term(UserIndexer.PREFIX_FIELD, q.take(UserIndexer.PREFIX_MAX_LEN)))
       bq.add(tq, Occur.MUST)
     }
@@ -85,7 +84,7 @@ class UserQueryParser(
   }
 
   private def addUserExperimentConstrains(bq: BooleanQuery, exps: Seq[String]) = {
-    exps.foreach{ exp =>
+    exps.foreach { exp =>
       val tq = new TermQuery(new Term(UserIndexer.USER_EXPERIMENTS, exp))
       bq.add(tq, Occur.MUST_NOT)
     }

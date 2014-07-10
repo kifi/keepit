@@ -8,6 +8,8 @@ import java.util.Locale
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.DateTimeFormat
 import com.typesafe.sbteclipse.core.EclipsePlugin.EclipseKeys
+import com.typesafe.sbt.SbtScalariform._
+import scalariform.formatter.preferences._
 
 object ApplicationBuild extends Build {
 
@@ -197,7 +199,7 @@ object ApplicationBuild extends Build {
     Tests.Argument("failtrace", "true")
   )
 
-  lazy val commonSettings = Seq(
+  lazy val commonSettings = scalariformSettings ++ Seq(
     scalacOptions ++= _scalacOptions,
     routesImport ++= _routesImport,
     resolvers ++= commonResolvers,
@@ -213,8 +215,10 @@ object ApplicationBuild extends Build {
     /*skip in update := true,
      *skip in update in (Compile, test) := true*/
     aggregate in update := false,
-    emojiLogs
+    emojiLogs,
     // incOptions := incOptions.value.withNameHashing(true) // see https://groups.google.com/forum/#!msg/play-framework/S_-wYW5Tcvw/OjJuB4iUwD8J
+    ScalariformKeys.preferences := ScalariformKeys.preferences.value
+      .setPreference(DoubleIndentClassDeclaration, true)
   )
 
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(

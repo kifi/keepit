@@ -13,14 +13,12 @@ import com.keepit.model.SearchFriend
 
 trait SearchFriendGraphPlugin extends IndexerPlugin[SearchFriend, SearchFriendIndexer]
 
-class SearchFriendGraphPluginImpl @Inject()(
+class SearchFriendGraphPluginImpl @Inject() (
   actor: ActorInstance[SearchFriendIndexerActor],
   indexer: SearchFriendIndexer,
   serviceDiscovery: ServiceDiscovery,
-  val scheduling: SchedulingProperties
-) extends IndexerPluginImpl[SearchFriend, SearchFriendIndexer, SearchFriendIndexerActor](indexer, actor, serviceDiscovery) with SearchFriendGraphPlugin
+  val scheduling: SchedulingProperties) extends IndexerPluginImpl[SearchFriend, SearchFriendIndexer, SearchFriendIndexerActor](indexer, actor, serviceDiscovery) with SearchFriendGraphPlugin
 
-class SearchFriendIndexerActor @Inject()(
+class SearchFriendIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,
-  indexer: SearchFriendIndexer
-) extends IndexerActor[SearchFriend, SearchFriendIndexer](airbrake, indexer)
+  indexer: SearchFriendIndexer) extends IndexerActor[SearchFriend, SearchFriendIndexer](airbrake, indexer)

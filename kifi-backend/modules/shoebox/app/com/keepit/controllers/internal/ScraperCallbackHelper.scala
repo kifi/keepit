@@ -1,33 +1,31 @@
 package com.keepit.controllers.internal
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.model._
-import com.keepit.scraper.{ScraperSchedulerConfig, ScrapeRequest}
+import com.keepit.scraper.{ ScraperSchedulerConfig, ScrapeRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.performance.{timing,timingWithResult}
+import com.keepit.common.performance.{ timing, timingWithResult }
 import java.util.concurrent.locks.ReentrantLock
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
-
 @Singleton
-class ScraperCallbackHelper @Inject()(
-  db:Database,
-  airbrake:AirbrakeNotifier,
-  urlPatternRuleRepo:UrlPatternRuleRepo,
-  normUriRepo:NormalizedURIRepo,
-  pageInfoRepo:PageInfoRepo,
-  imageInfoRepo:ImageInfoRepo,
-  scrapeInfoRepo:ScrapeInfoRepo,
-  implicit val scraperConfig: ScraperSchedulerConfig
-  ) extends Logging {
+class ScraperCallbackHelper @Inject() (
+    db: Database,
+    airbrake: AirbrakeNotifier,
+    urlPatternRuleRepo: UrlPatternRuleRepo,
+    normUriRepo: NormalizedURIRepo,
+    pageInfoRepo: PageInfoRepo,
+    imageInfoRepo: ImageInfoRepo,
+    scrapeInfoRepo: ScrapeInfoRepo,
+    implicit val scraperConfig: ScraperSchedulerConfig) extends Logging {
 
-  private val assignLock    = new ReentrantLock()
-  private val pageInfoLock  = new ReentrantLock()
+  private val assignLock = new ReentrantLock()
+  private val pageInfoLock = new ReentrantLock()
   private val imageInfoLock = new ReentrantLock()
 
-  def withLock[T](lock:ReentrantLock)(f: => T) = {
+  def withLock[T](lock: ReentrantLock)(f: => T) = {
     try {
       lock.lock
       f
@@ -36,13 +34,13 @@ class ScraperCallbackHelper @Inject()(
     }
   }
 
-  def assignTasks(zkId:Id[ScraperWorker], max:Int):Seq[ScrapeRequest] = timingWithResult(s"assignTasks($zkId,$max)", {r:Seq[ScrapeRequest] => s"${r.length} uris assigned: ${r.mkString(",")}"}) {
+  def assignTasks(zkId: Id[ScraperWorker], max: Int): Seq[ScrapeRequest] = timingWithResult(s"assignTasks($zkId,$max)", { r: Seq[ScrapeRequest] => s"${r.length} uris assigned: ${r.mkString(",")}" }) {
     val rules = urlPatternRuleRepo.rules()
     withLock(assignLock) {
       val res = db.readWrite(attempts = 1) { implicit rw =>
         val builder = Seq.newBuilder[ScrapeRequest]
         val limit = if (max < 10) max * 2 else max
-        val overdues = timingWithResult[Seq[ScrapeInfo]](s"assignTasks($zkId,$max) getOverdueList(${limit})", {r:Seq[ScrapeInfo] => s"${r.length} overdues: ${r.map(_.toShortString).mkString(",")}"}) { scrapeInfoRepo.getOverdueList(limit) }
+        val overdues = timingWithResult[Seq[ScrapeInfo]](s"assignTasks($zkId,$max) getOverdueList(${limit})", { r: Seq[ScrapeInfo] => s"${r.length} overdues: ${r.map(_.toShortString).mkString(",")}" }) { scrapeInfoRepo.getOverdueList(limit) }
         var count = 0
         for (info <- overdues if count < max) {
           val nuri = normUriRepo.get(info.uriId)
@@ -74,7 +72,7 @@ class ScraperCallbackHelper @Inject()(
     }
   }
 
-  def saveImageInfo(info:ImageInfo):ImageInfo = {
+  def saveImageInfo(info: ImageInfo): ImageInfo = {
     withLock(imageInfoLock) {
       db.readWrite(attempts = 3) { implicit s =>
         imageInfoRepo.save(info)
@@ -82,20 +80,20 @@ class ScraperCallbackHelper @Inject()(
     }
   }
 
-  def savePageInfo(info:PageInfo): PageInfo = {
+  def savePageInfo(info: PageInfo): PageInfo = {
     withLock(pageInfoLock) {
       db.readWrite(attempts = 3) { implicit s =>
         try {
           pageInfoRepo.save(info)
         } catch {
           case e: Exception => //typically MySQLIntegrityConstraintViolationException but any may do here
-          pageInfoRepo.getByUri(info.uriId) match {
-            case Some(fromDb) =>
-              //race condition. we lost, lets override...
-              pageInfoRepo.save(info.copy(id = fromDb.id))
-            case None =>
-              throw e
-          }
+            pageInfoRepo.getByUri(info.uriId) match {
+              case Some(fromDb) =>
+                //race condition. we lost, lets override...
+                pageInfoRepo.save(info.copy(id = fromDb.id))
+              case None =>
+                throw e
+            }
         }
       }
     }

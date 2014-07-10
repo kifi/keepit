@@ -5,11 +5,10 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db._
 import com.keepit.common.time._
 import scala.slick.jdbc.StaticQuery.interpolation
-import com.google.inject.{Singleton, ImplementedBy, Inject}
-
+import com.google.inject.{ Singleton, ImplementedBy, Inject }
 
 @ImplementedBy(classOf[UserBookmarkClicksRepoImpl])
-trait UserBookmarkClicksRepo extends Repo[UserBookmarkClicks]{
+trait UserBookmarkClicksRepo extends Repo[UserBookmarkClicks] {
   def getByUserUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[UserBookmarkClicks]
   def increaseCounts(userId: Id[User], uriId: Id[NormalizedURI], isSelf: Boolean)(implicit session: RWSession): UserBookmarkClicks
   def getClickCounts(userId: Id[User])(implicit session: RSession): (Int, Int)
@@ -17,11 +16,10 @@ trait UserBookmarkClicksRepo extends Repo[UserBookmarkClicks]{
 }
 
 @Singleton
-class UserBookmarkClicksRepoImpl @Inject()(
-  val db: DataBaseComponent,
-  val clock: Clock
-) extends DbRepo[UserBookmarkClicks] with UserBookmarkClicksRepo {
-    import db.Driver.simple._
+class UserBookmarkClicksRepoImpl @Inject() (
+    val db: DataBaseComponent,
+    val clock: Clock) extends DbRepo[UserBookmarkClicks] with UserBookmarkClicksRepo {
+  import db.Driver.simple._
 
   type RepoImpl = UserBookmarkClicksTable
   class UserBookmarkClicksTable(tag: Tag) extends RepoTable[UserBookmarkClicks](db, tag, "user_bookmark_clicks") {
@@ -42,12 +40,12 @@ class UserBookmarkClicksRepoImpl @Inject()(
   override def invalidateCache(model: UserBookmarkClicks)(implicit session: RSession): Unit = {}
 
   def getByUserUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[UserBookmarkClicks] = {
-    (for( r<- rows if (r.userId === userId && r.uriId === uriId) ) yield r).firstOption
+    (for (r <- rows if (r.userId === userId && r.uriId === uriId)) yield r).firstOption
   }
 
   def increaseCounts(userId: Id[User], uriId: Id[NormalizedURI], isSelf: Boolean)(implicit session: RWSession): UserBookmarkClicks = {
     val r = getByUserUri(userId, uriId).getOrElse(
-        UserBookmarkClicks(userId = userId, uriId = uriId, selfClicks = 0, otherClicks = 0))
+      UserBookmarkClicks(userId = userId, uriId = uriId, selfClicks = 0, otherClicks = 0))
 
     save(if (isSelf) r.copy(selfClicks = r.selfClicks + 1) else r.copy(otherClicks = r.otherClicks + 1))
   }
@@ -56,7 +54,7 @@ class UserBookmarkClicksRepoImpl @Inject()(
     //unique keeps, total clicks
     val uniqueKeepsClicked = (for (row <- rows if row.userId === userId && row.otherClicks > 0) yield row).length.run
     val totalClicks = (for (row <- rows if row.userId === userId) yield row.otherClicks).sum.run.getOrElse(0)
-    (uniqueKeepsClicked,totalClicks)
+    (uniqueKeepsClicked, totalClicks)
   }
 
   def getReKeepCounts(userId: Id[User])(implicit session: RSession): (Int, Int) = {

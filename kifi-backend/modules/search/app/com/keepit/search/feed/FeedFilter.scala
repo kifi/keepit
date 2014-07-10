@@ -10,15 +10,13 @@ import com.keepit.model.NormalizedURIStates
 
 case class FeedMetaInfo(
   uri: NormalizedURI,
-  isSensitive: Boolean
-)
+  isSensitive: Boolean)
 
-class FeedMetaInfoProvider @Inject()(
-  shoeboxClient: ShoeboxServiceClient
-){
+class FeedMetaInfoProvider @Inject() (
+    shoeboxClient: ShoeboxServiceClient) {
   def getFeedMetaInfo(uriId: Id[NormalizedURI]): FeedMetaInfo = {
     val uri = Await.result(shoeboxClient.getNormalizedURI(uriId), 5 seconds)
-    val sensitive =  Await.result(shoeboxClient.isSensitiveURI(uri.url), 5 seconds)
+    val sensitive = Await.result(shoeboxClient.isSensitiveURI(uri.url), 5 seconds)
     FeedMetaInfo(uri, sensitive)
   }
 }
@@ -35,6 +33,6 @@ class BasicFeedFilter extends FeedFilter {
   }
 }
 
-class CompositeFeedFilter(filters: FeedFilter *) extends FeedFilter {
+class CompositeFeedFilter(filters: FeedFilter*) extends FeedFilter {
   def accept(meta: FeedMetaInfo): Boolean = filters.forall(_.accept(meta))
 }

@@ -9,7 +9,6 @@ import com.keepit.search.Article
 import com.keepit.search.InMemoryArticleStoreImpl
 import com.keepit.search.Lang
 
-
 class URIFeatureTest extends Specification with WordFeatureTestHelper with URIFeatureTestHelper {
   "uri feature representer " should {
 
@@ -29,14 +28,14 @@ class URIFeatureTest extends Specification with WordFeatureTestHelper with URIFe
       articleStore.+=(uri2.id.get, a2)
       articleStore.+=(uri3.id.get, a3)
 
-      val uriRep = new BaseURIFeatureRepresenter[FakeWordModel](fakeDocRep, articleStore){
+      val uriRep = new BaseURIFeatureRepresenter[FakeWordModel](fakeDocRep, articleStore) {
         protected def isDefinedAt(article: Article): Boolean = article.contentLang.isDefined && article.contentLang.get == Lang("en")
         protected def toDocument(article: Article): Document = Document(article.content.split(" "))
       }
 
       uriRep(uri1).get.vectorize === Array(1f, 0f)
-      uriRep(uri2) === None   // non-english
-      uriRep(uri3) === None   // junk words
+      uriRep(uri2) === None // non-english
+      uriRep(uri3) === None // junk words
 
     }
   }

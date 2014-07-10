@@ -2,7 +2,7 @@ package com.keepit.cortex.utils
 
 object TextUtils {
 
-  object TextNormalizer{
+  object TextNormalizer {
     object LowerCaseNormalizer {
       def normalize(text: String): String = {
         text.toLowerCase()

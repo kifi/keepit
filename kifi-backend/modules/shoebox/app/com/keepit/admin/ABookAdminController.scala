@@ -12,16 +12,15 @@ import com.keepit.common.db.Id
 import org.joda.time.DateTime
 import scala.concurrent.Future
 
-
 class ABookAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   abookServiceClient: ABookServiceClient)
-extends AdminController(actionAuthenticator) {
+    extends AdminController(actionAuthenticator) {
 
   def allABooksView = abooksView(0)
 
-  def abooksView(page:Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def abooksView(page: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val PAGE_SIZE = 50
     val abookInfosFuture: Future[Seq[ABookInfo]] = abookServiceClient.getPagedABookInfos(page, PAGE_SIZE)
     val abooksCountFuture: Future[Int] = abookServiceClient.getABooksCount()

@@ -6,14 +6,14 @@ import com.google.inject.Scope
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.SchedulerPlugin
-import play.api.{Mode, Application, Plugin}
+import play.api.{ Mode, Application, Plugin }
 import play.utils.Threads
 import scala.collection.concurrent
 import scala.concurrent.Future
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.concurrent.Promise
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits._
 import java.util.concurrent.atomic.AtomicInteger
@@ -61,10 +61,9 @@ class AppScope extends Scope with Logging {
   def onStop(app: Application): Unit = {
     stopping = true
     println(s"[$identifier] scope stopping...")
-    if(!started) {
+    if (!started) {
       log.error("App not started!", new Exception(s"[$identifier] AppScore has not been started"))
-    }
-    else {
+    } else {
       require(!stopped, s"[$identifier] AppScope has already been stopped")
       // stop plugins, explicitly using the app classloader
       val stoppedPlugins = Threads.withContextClassLoader(app.classloader) {

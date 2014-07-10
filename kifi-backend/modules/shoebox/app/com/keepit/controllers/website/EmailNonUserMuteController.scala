@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.mvc.Action
@@ -11,16 +11,16 @@ import scala.concurrent._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class EmailNonUserMuteController @Inject() (
-  db: Database,
-  actionAuthenticator: ActionAuthenticator,
-  elizaServiceClient: ElizaServiceClient
-  ) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    db: Database,
+    actionAuthenticator: ActionAuthenticator,
+    elizaServiceClient: ElizaServiceClient) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def optOut(publicId: String) = Action.async { implicit request =>
     elizaServiceClient.getNonUserThreadMuteInfo(publicId).map { content =>
-      content map { case (identifier, muted) =>
-        Ok(views.html.email.muteEmails(identifier, muted, flash.get("msg")))
-      } getOrElse(BadRequest)
+      content map {
+        case (identifier, muted) =>
+          Ok(views.html.email.muteEmails(identifier, muted, flash.get("msg")))
+      } getOrElse (BadRequest)
     }
   }
 

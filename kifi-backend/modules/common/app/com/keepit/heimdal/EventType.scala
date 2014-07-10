@@ -1,6 +1,6 @@
 package com.keepit.heimdal
 
-import play.api.libs.json.{JsString, JsSuccess, JsValue, Format}
+import play.api.libs.json.{ JsString, JsSuccess, JsValue, Format }
 
 case class EventType(name: String)
 

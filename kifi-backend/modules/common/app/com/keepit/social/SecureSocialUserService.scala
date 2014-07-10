@@ -7,7 +7,7 @@ import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.ExternalId
 
 import play.api.Application
-import play.api.mvc.{Session, RequestHeader}
+import play.api.mvc.{ Session, RequestHeader }
 import securesocial.core._
 import securesocial.core.providers.Token
 import net.codingwell.scalaguice.ScalaModule
@@ -78,7 +78,7 @@ class SecureSocialUserService(implicit val application: Application) extends Use
 
   override def onStop() {
     Registry.eventListeners.unRegister(secureSocialEventListener.id)
-    cancellable.map( _.cancel() )
+    cancellable.map(_.cancel())
   }
 }
 

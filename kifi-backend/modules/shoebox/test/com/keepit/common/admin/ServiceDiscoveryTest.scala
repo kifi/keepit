@@ -1,7 +1,7 @@
 package com.keepit.common.admin
 
 import play.api.test.Helpers._
-import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxApplication}
+import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
 import play.api.test.FakeRequest
 import org.specs2.mutable.Specification
 import com.keepit.common.zookeeper.ServiceDiscovery

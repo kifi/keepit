@@ -1,14 +1,14 @@
 package com.keepit.normalizer
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import scala.util._
 import com.keepit.queue.NormalizationUpdateTask
 import java.sql.SQLException
-import com.keepit.common.logging.{Timer, Logging}
+import com.keepit.common.logging.{ Timer, Logging }
 import org.feijoas.mango.common.cache.CacheBuilder
 import java.util.concurrent.TimeUnit
 import com.kifi.franz.SQSQueue
@@ -92,7 +92,7 @@ class NormalizedURIInterner @Inject() (
                   throw new UriInternException(s"""error persisting prenormalizedUrl $prenormalizedUrl of url $url with candidates [${candidates.mkString(" ")}]""", t)
               }
               urlRepo.save(URLFactory(url = url, normalizedUriId = newUri.id.get))
-              session.onTransactionSuccess{
+              session.onTransactionSuccess {
                 updateQueue.send(NormalizationUpdateTask(newUri.id.get, true, candidates))
               }
               statsd.timing("normalizedURIRepo.internByUri.new.url_save", timer, ALWAYS)
@@ -118,7 +118,7 @@ class NormalizedURIInterner @Inject() (
                   statsd.timing("normalizedURIRepo.internByUri.fail.found.scraped", timer, ALWAYS)
                 case None =>
                   statsd.timing("normalizedURIRepo.internByUri.fail.found.not_scraped", timer, ALWAYS)
-                  //fine...
+                //fine...
               }
               throw new UriInternException(s"Uri was in the db despite a normalization failure: $fromDb", ex)
           }

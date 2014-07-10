@@ -20,10 +20,8 @@ class ArticleIndexerPluginImpl @Inject() (
   actor: ActorInstance[ArticleIndexerActor],
   indexer: ShardedArticleIndexer,
   serviceDiscovery: ServiceDiscovery,
-  val scheduling: SchedulingProperties
-) extends ShardedIndexerPluginImpl[NormalizedURI, NormalizedURI, ArticleIndexer, ArticleIndexerActor](indexer, actor, serviceDiscovery) with ArticleIndexerPlugin
+  val scheduling: SchedulingProperties) extends ShardedIndexerPluginImpl[NormalizedURI, NormalizedURI, ArticleIndexer, ArticleIndexerActor](indexer, actor, serviceDiscovery) with ArticleIndexerPlugin
 
 class ArticleIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,
-  indexer: ShardedArticleIndexer
-) extends IndexerActor[NormalizedURI, ArticleIndexer](airbrake, indexer)
+  indexer: ShardedArticleIndexer) extends IndexerActor[NormalizedURI, ArticleIndexer](airbrake, indexer)

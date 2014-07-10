@@ -17,22 +17,21 @@ import com.keepit.common.strings._
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
-case class NormalizedURI (
-  id: Option[Id[NormalizedURI]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  externalId: ExternalId[NormalizedURI] = ExternalId(),
-  title: Option[String] = None,
-  url: String,
-  urlHash: UrlHash,
-  state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
-  seq: SequenceNumber[NormalizedURI] = SequenceNumber.ZERO,
-  screenshotUpdatedAt: Option[DateTime] = None,
-  restriction: Option[Restriction] = None,
-  normalization: Option[Normalization] = None,
-  redirect: Option[Id[NormalizedURI]] = None,
-  redirectTime: Option[DateTime] = None
-) extends ModelWithExternalId[NormalizedURI] with ModelWithState[NormalizedURI] with ModelWithSeqNumber[NormalizedURI] with Logging {
+case class NormalizedURI(
+    id: Option[Id[NormalizedURI]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    externalId: ExternalId[NormalizedURI] = ExternalId(),
+    title: Option[String] = None,
+    url: String,
+    urlHash: UrlHash,
+    state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
+    seq: SequenceNumber[NormalizedURI] = SequenceNumber.ZERO,
+    screenshotUpdatedAt: Option[DateTime] = None,
+    restriction: Option[Restriction] = None,
+    normalization: Option[Normalization] = None,
+    redirect: Option[Id[NormalizedURI]] = None,
+    redirectTime: Option[DateTime] = None) extends ModelWithExternalId[NormalizedURI] with ModelWithState[NormalizedURI] with ModelWithSeqNumber[NormalizedURI] with Logging {
 
   def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
@@ -53,7 +52,7 @@ object NormalizedURI {
   implicit val stateFormat = State.format[NormalizedURI]
   implicit val urlHashFormat = Format(
     __.read[String].map(UrlHash(_)),
-    new Writes[UrlHash]{ def writes(o: UrlHash) = JsString(o.hash)}
+    new Writes[UrlHash] { def writes(o: UrlHash) = JsString(o.hash) }
   )
 
   val TitleMaxLen = 2040
@@ -77,7 +76,7 @@ object NormalizedURI {
     (__ \ 'normalization).formatNullable[Normalization] and
     (__ \ 'redirect).formatNullable(Id.format[NormalizedURI]) and
     (__ \ 'redirectTime).formatNullable[DateTime]
-    )(NormalizedURI.apply, unlift(NormalizedURI.unapply))
+  )(NormalizedURI.apply, unlift(NormalizedURI.unapply))
 
   def hashUrl(normalizedUrl: String): UrlHash = {
     val binaryHash = MessageDigest.getInstance("MD5").digest(normalizedUrl)
@@ -88,8 +87,7 @@ object NormalizedURI {
     normalizedUrl: String,
     title: Option[String] = None,
     state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
-    normalization: Option[Normalization] = None
-    ): NormalizedURI = {
+    normalization: Option[Normalization] = None): NormalizedURI = {
     if (normalizedUrl.size > URLFactory.MAX_URL_SIZE) throw new Exception(s"url size is ${normalizedUrl.size} which exceeds ${URLFactory.MAX_URL_SIZE}: $normalizedUrl")
     NormalizedURI(title = title, url = normalizedUrl, urlHash = hashUrl(normalizedUrl), state = state, screenshotUpdatedAt = None, normalization = normalization)
   }
@@ -122,19 +120,19 @@ case class URISummaryKey(val id: Id[NormalizedURI]) extends Key[URISummary] {
 }
 
 class NormalizedURICache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[NormalizedURIKey, NormalizedURI](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[NormalizedURIKey, NormalizedURI](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 class NormalizedURIUrlHashCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[NormalizedURIUrlHashKey, NormalizedURI](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[NormalizedURIUrlHashKey, NormalizedURI](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 class NormalizedURIWordCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends PrimitiveCacheImpl[NormalizedURIWordCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends PrimitiveCacheImpl[NormalizedURIWordCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 class URISummaryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[URISummaryKey, URISummary](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[URISummaryKey, URISummary](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 object NormalizedURIStates extends States[NormalizedURI] {
-  val SCRAPED	= State[NormalizedURI]("scraped")
+  val SCRAPED = State[NormalizedURI]("scraped")
   val SCRAPE_FAILED = State[NormalizedURI]("scrape_failed")
   val UNSCRAPABLE = State[NormalizedURI]("unscrapable")
   val REDIRECTED = State[NormalizedURI]("redirected")
@@ -143,12 +141,12 @@ object NormalizedURIStates extends States[NormalizedURI] {
 }
 
 case class IndexableUri(
-   id: Option[Id[NormalizedURI]] = None,
-   title: Option[String] = None,
-   url: String,
-   restriction: Option[Restriction] = None,
-   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
-   seq: SequenceNumber[NormalizedURI])
+  id: Option[Id[NormalizedURI]] = None,
+  title: Option[String] = None,
+  url: String,
+  restriction: Option[Restriction] = None,
+  state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
+  seq: SequenceNumber[NormalizedURI])
 
 object IndexableUri {
 

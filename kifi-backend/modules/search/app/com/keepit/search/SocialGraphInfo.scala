@@ -36,7 +36,7 @@ class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWi
         case Some(timeRange) =>
           filter.collections match {
             case Some(collections) =>
-              collections.foldLeft(Set.empty[Long]){ (s, collId) =>
+              collections.foldLeft(Set.empty[Long]) { (s, collId) =>
                 s ++ collectionSearcher.getCollectionToUriEdgeSet(collId).accessor.asInstanceOf[BookmarkInfoAccessor[Collection, NormalizedURI]].filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
               }
             case _ => myUriEdges.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]].filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
@@ -45,7 +45,7 @@ class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWi
         case _ =>
           filter.collections match {
             case Some(collections) =>
-              collections.foldLeft(Set.empty[Long]){ (s, collId) =>
+              collections.foldLeft(Set.empty[Long]) { (s, collId) =>
                 s ++ collectionSearcher.getCollectionToUriEdgeSet(collId).destIdLongSet
               }
             case _ => myUriEdges.destIdLongSet
@@ -73,16 +73,16 @@ class SocialGraphInfo(userId: Id[User], val uriGraphSearcher: URIGraphSearcherWi
       case _ =>
         filter.timeRange match {
           case Some(timeRange) =>
-            filteredFriendEdgeSet.destIdSet.foldLeft(Set.empty[Long]){ (s, f) =>
+            filteredFriendEdgeSet.destIdSet.foldLeft(Set.empty[Long]) { (s, f) =>
               s ++ friendsUriEdgeSets(f.id).accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]].filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
             }
           case _ =>
-            filteredFriendEdgeSet.destIdSet.foldLeft(Set.empty[Long]){ (s, f) =>
+            filteredFriendEdgeSet.destIdSet.foldLeft(Set.empty[Long]) { (s, f) =>
               s ++ friendsUriEdgeSets(f.id).destIdLongSet
             }
         }
     }
 
-    (friendsUriEdgeSets.mapValues{ _.accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]] }, LongArraySet.fromSet(friendSearchUris), relevantFriendEdgeSet, System.currentTimeMillis)
+    (friendsUriEdgeSets.mapValues { _.accessor.asInstanceOf[BookmarkInfoAccessor[User, NormalizedURI]] }, LongArraySet.fromSet(friendSearchUris), relevantFriendEdgeSet, System.currentTimeMillis)
   }
 }

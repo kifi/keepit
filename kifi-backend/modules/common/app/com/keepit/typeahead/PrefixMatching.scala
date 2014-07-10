@@ -32,7 +32,7 @@ object PrefixMatching {
     val dists = initDistance(queryTerms.length)
     var sc = 0;
     var matchFlags = 1
-    val allMatched =  ~(0xFFFFFFFF << (queryTerms.length + 1))
+    val allMatched = ~(0xFFFFFFFF << (queryTerms.length + 1))
     val maxDist = Int.MaxValue
     var i = 0
     while (i < names.length) {

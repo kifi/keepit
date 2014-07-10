@@ -2,7 +2,7 @@ package com.keepit.common.plugin
 
 import akka.util.Timeout
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
+import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.util.RecurringTaskManager
@@ -43,9 +43,8 @@ trait SequenceAssigner extends RecurringTaskManager {
 class SequenceNumberAssignmentStalling(seq: Long) extends Exception(s"sequence number assignment may be stalling: $seq")
 
 abstract class SequencingActor(
-  assigner: SequenceAssigner,
-  airbrake: AirbrakeNotifier
-) extends FortyTwoActor(airbrake) with Logging {
+    assigner: SequenceAssigner,
+    airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
 
   import SequencingPluginMessages._
 

@@ -1,8 +1,8 @@
 package com.keepit.common.healthcheck
 
-import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
+import com.keepit.common.plugin.{ SchedulingProperties, SchedulerPlugin }
 import com.google.inject.Inject
-import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
+import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.logging.Logging
 import scala.concurrent.duration._
@@ -15,7 +15,7 @@ class LoadBalancerCheckActor @Inject() (
   airbrake: AirbrakeNotifier,
   loadBalancingClient: FortyTwoElasticLoadBalancingClient,
   serviceDiscovery: ServiceDiscovery)
-  extends FortyTwoActor(airbrake) {
+    extends FortyTwoActor(airbrake) {
 
   def checkLoadBalancer(): Unit = {
     serviceDiscovery.thisInstance map { instance =>
@@ -41,7 +41,7 @@ trait LoadBalancerCheckPlugin
 class LoadBalancerCheckPluginImpl @Inject() (
   val scheduling: SchedulingProperties,
   actor: ActorInstance[LoadBalancerCheckActor])
-  extends LoadBalancerCheckPlugin with SchedulerPlugin with Logging {
+    extends LoadBalancerCheckPlugin with SchedulerPlugin with Logging {
 
   override def enabled: Boolean = true
   override def onStart() {

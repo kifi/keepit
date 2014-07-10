@@ -12,7 +12,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
   "KifiInstallationRepo" should {
     "persist" in {
       withDb() { implicit injector =>
-        val (user, installExt) = db.readWrite {implicit s =>
+        val (user, installExt) = db.readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Dafna", lastName = "Smith"))
           val installExt = installationRepo.save(KifiInstallation(
             userId = user.id.get,
@@ -23,7 +23,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
           (user, installExt)
         }
 
-        db.readOnlyMaster {implicit s =>
+        db.readOnlyMaster { implicit s =>
           installationRepo.get(installExt.id.get) === installExt
           val all = installationRepo.all(user.id.get)
           all.size === 1
@@ -35,7 +35,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
           versions.head._3 === 1
         }
 
-        db.readWrite {implicit s =>
+        db.readWrite { implicit s =>
           installationRepo.save(KifiInstallation(
             userId = user.id.get,
             version = KifiExtVersion("1.1.1"),
@@ -44,7 +44,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
             platform = KifiInstallationPlatform.Extension))
         }
 
-        db.readOnlyMaster {implicit s =>
+        db.readOnlyMaster { implicit s =>
           val all = installationRepo.all(user.id.get)
           all.size === 2
           val versions = installationRepo.getLatestActiveExtensionVersions(20)
@@ -53,7 +53,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
           versions.head._3 === 2
         }
 
-        val installIphone = db.readWrite {implicit s =>
+        val installIphone = db.readWrite { implicit s =>
           installationRepo.save(KifiInstallation(
             userId = user.id.get,
             version = KifiIPhoneVersion("1.1.1"),
@@ -62,7 +62,7 @@ class KifiInstallationRepoTest extends Specification with ShoeboxTestInjector {
             platform = KifiInstallationPlatform.IPhone))
         }
 
-        val installAndroid = db.readWrite {implicit s =>
+        val installAndroid = db.readWrite { implicit s =>
           installationRepo.save(KifiInstallation(
             userId = user.id.get,
             version = KifiAndroidVersion("1.1.1"),

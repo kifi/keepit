@@ -1,12 +1,11 @@
 package com.keepit.controllers.ext
 
-
-import com.keepit.test.{SearchApplication, SearchApplicationInjector}
+import com.keepit.test.{ SearchApplication, SearchApplicationInjector }
 import org.specs2.mutable._
 
 import com.keepit.model._
-import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.controller.{FakeActionAuthenticator, FakeActionAuthenticatorModule}
+import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 
 import play.api.test.FakeRequest
@@ -23,12 +22,11 @@ import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserSearchFilterFactory
 import com.keepit.common.mail.EmailAddress
 
-
 class ExtUserSearchControllerTest extends Specification with SearchApplicationInjector {
 
-   private def setup(client: FakeShoeboxServiceClientImpl) = {
-    val extIds = (0 until 5).map{ i => "4e5f7b8c-951b-4497-8661-12345678900" + i.toString}.map{ExternalId[User]}
-    val users = (0 until 4).map{ i =>
+  private def setup(client: FakeShoeboxServiceClientImpl) = {
+    val extIds = (0 until 5).map { i => "4e5f7b8c-951b-4497-8661-12345678900" + i.toString }.map { ExternalId[User] }
+    val users = (0 until 4).map { i =>
       User(externalId = extIds(i), firstName = s"firstName${i}", lastName = s"lastName${i}", pictureName = Some(s"picName${i}"))
     } :+ User(externalId = extIds(4), firstName = "Woody", lastName = "Allen", pictureName = Some("face"))
 
@@ -63,7 +61,7 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
 
   "ExtUserSearchController" should {
     "search user" in {
-      running(new SearchApplication(modules:_*)) {
+      running(new SearchApplication(modules: _*)) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
@@ -102,7 +100,7 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
     }
 
     "page user by name" in {
-      running(new SearchApplication(modules:_*)) {
+      running(new SearchApplication(modules: _*)) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
@@ -155,7 +153,7 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
     }
 
     "page user by email" in {
-      running(new SearchApplication(modules:_*)) {
+      running(new SearchApplication(modules: _*)) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
@@ -183,7 +181,7 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
             }
           ]
          """)
-         Json.parse(contentAsString(result)) === expected
+        Json.parse(contentAsString(result)) === expected
       }
     }
   }

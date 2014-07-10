@@ -2,14 +2,14 @@ package com.keepit.controllers.ext
 
 import com.google.inject.Inject
 import com.keepit.common.analytics._
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.db.{ExternalId, State, Id}
+import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.db.{ ExternalId, State, Id }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.common.db.slick.{Database}
+import com.keepit.common.db.slick.{ Database }
 import com.keepit.common.akka.SafeFuture
-import com.keepit.heimdal.{HeimdalServiceClient, HeimdalContextBuilder, UserEvent, EventType}
+import com.keepit.heimdal.{ HeimdalServiceClient, HeimdalContextBuilder, UserEvent, EventType }
 
 import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -30,7 +30,7 @@ class ExtEventController @Inject() (
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def logEvent = Action { request =>
-    SafeFuture{
+    SafeFuture {
       val req = request.body.asJson.get.asInstanceOf[JsObject]
       val userId = Id[User]((req \ "userId").as[Long])
       val o = (req \ "event").asInstanceOf[JsObject]
@@ -49,7 +49,7 @@ class ExtEventController @Inject() (
 
       val contextBuilder = new HeimdalContextBuilder()
       contextBuilder += ("experiments", experiments.map(_.toString).toSeq)
-      metaData.fields.foreach{
+      metaData.fields.foreach {
         case (key, jsonValue) => {
           val jsonString = jsonValue match {
             case JsString(s) => s
@@ -57,14 +57,14 @@ class ExtEventController @Inject() (
           }
           val value = try {
             val parsedValue = jsonString.toBoolean
-            contextBuilder += (key,parsedValue)
+            contextBuilder += (key, parsedValue)
           } catch {
             case _: Throwable =>
               try {
                 val parsedValue = new BigDecimal(jsonString).doubleValue
-                contextBuilder += (key,parsedValue)
+                contextBuilder += (key, parsedValue)
               } catch {
-                case _: Throwable => contextBuilder += (key,jsonString)
+                case _: Throwable => contextBuilder += (key, jsonString)
               }
           }
         }

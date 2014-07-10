@@ -5,12 +5,12 @@ import com.keepit.model._
 import com.keepit.heimdal._
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{ Singleton, Inject }
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 @Singleton
-class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
+class KeepingAnalytics @Inject() (heimdal: HeimdalServiceClient) {
   def renamedTag(oldTag: Collection, newTag: Collection, context: HeimdalContext): Unit = {
     val renamedAt = currentDateTime
     SafeFuture {
@@ -73,24 +73,25 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
   def keptPages(userId: Id[User], keeps: Seq[Keep], existingContext: HeimdalContext): Unit = SafeFuture {
     val keptAt = currentDateTime
 
-    keeps.collect { case bookmark if bookmark.source != KeepSource.default =>
-      val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++= existingContext.data
-      contextBuilder += ("action", "keptPage")
-      contextBuilder += ("source", bookmark.source.value)
-      contextBuilder += ("isPrivate", bookmark.isPrivate)
-      contextBuilder += ("hasTitle", bookmark.title.isDefined)
-      contextBuilder += ("uriId", bookmark.uriId.toString)
-      val context = contextBuilder.build
-      heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.KEPT, keptAt))
-      if (!KeepSource.imports.contains(bookmark.source)) {
-        heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, keptAt))
-      }
+    keeps.collect {
+      case bookmark if bookmark.source != KeepSource.default =>
+        val contextBuilder = new HeimdalContextBuilder
+        contextBuilder.data ++= existingContext.data
+        contextBuilder += ("action", "keptPage")
+        contextBuilder += ("source", bookmark.source.value)
+        contextBuilder += ("isPrivate", bookmark.isPrivate)
+        contextBuilder += ("hasTitle", bookmark.title.isDefined)
+        contextBuilder += ("uriId", bookmark.uriId.toString)
+        val context = contextBuilder.build
+        heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.KEPT, keptAt))
+        if (!KeepSource.imports.contains(bookmark.source)) {
+          heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, keptAt))
+        }
 
-      // Anonymized event with page information
-      anonymise(contextBuilder)
-      contextBuilder.addUrlInfo(bookmark.url)
-      heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, keptAt))
+        // Anonymized event with page information
+        anonymise(contextBuilder)
+        contextBuilder.addUrlInfo(bookmark.url)
+        heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, keptAt))
     }
     val kept = keeps.length
     val keptPrivate = keeps.count(_.isPrivate)
@@ -127,7 +128,7 @@ class KeepingAnalytics @Inject() (heimdal : HeimdalServiceClient) {
       val unkept = keeps.length
       val unkeptPrivate = keeps.count(_.isPrivate)
       val unkeptPublic = unkept - unkeptPrivate
-      heimdal.incrementUserProperties(userId, "keeps" -> - unkept, "privateKeeps" -> - unkeptPrivate, "publicKeeps" -> - unkeptPublic)
+      heimdal.incrementUserProperties(userId, "keeps" -> -unkept, "privateKeeps" -> -unkeptPrivate, "publicKeeps" -> -unkeptPublic)
     }
   }
 

@@ -10,13 +10,11 @@ case class ScraperQueueConfig(
 
 case class ScraperHttpConfig(
   httpFetcherEnforcerFreq: Int,
-  httpFetcherQSizeThreshold: Int
-)
-
+  httpFetcherQSizeThreshold: Int)
 
 case class ScraperConfig(
   changeThreshold: Double,
-  pullMultiplier:Int,
+  pullMultiplier: Int,
   pullFrequency: Int, // seconds
   queued: Boolean,
   async: Boolean,
@@ -25,8 +23,7 @@ case class ScraperConfig(
   batchSize: Int,
   batchMax: Int,
   httpConfig: ScraperHttpConfig,
-  queueConfig: ScraperQueueConfig
-)
+  queueConfig: ScraperQueueConfig)
 
 object ScraperConfig {
   val BATCH_SIZE = 100

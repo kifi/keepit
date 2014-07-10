@@ -1,6 +1,6 @@
 package com.keepit.common.healthcheck
 
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.controller.ReportedException
 import com.keepit.common.zookeeper._
 import com.keepit.test._
@@ -10,7 +10,7 @@ import org.specs2.mutable.Specification
 
 import javax.xml.transform.stream.StreamSource
 import javax.xml.validation.SchemaFactory
-import javax.xml.validation.{Validator => JValidator}
+import javax.xml.validation.{ Validator => JValidator }
 import java.io.StringReader
 
 import scala.xml._
@@ -39,7 +39,7 @@ class AirbrakeTest extends Specification with TestInjector {
     "format stack trace with x2 cause" in {
       withInjector(TestFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
-        val error = new IllegalArgumentException("hi there", new Exception("middle thing" , new IllegalStateException("its me")))
+        val error = new IllegalArgumentException("hi there", new Exception("middle thing", new IllegalStateException("its me")))
         val xml = formatter.noticeError(ErrorWithStack(error), None)
         val lines = (xml \\ "line").toVector
         lines.head === <line method="java.lang.IllegalArgumentException: hi there" file="InjectorProvider.scala" number="39"/>
@@ -81,10 +81,10 @@ class AirbrakeTest extends Specification with TestInjector {
       withInjector(TestFortyTwoModule(), FakeDiscoveryModule(), StandaloneTestActorSystemModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         val error = AirbrakeError(
-            exception = new IllegalArgumentException("hi there"),
-            message = None,
-            url = Some("http://www.kifi.com/hi"),
-            method = Some("POST")).cleanError
+          exception = new IllegalArgumentException("hi there"),
+          message = None,
+          url = Some("http://www.kifi.com/hi"),
+          method = Some("POST")).cleanError
         val xml = formatter.format(error)
         validate(xml)
         (xml \ "api-key").head === <api-key>fakeApiKey</api-key>
@@ -94,7 +94,7 @@ class AirbrakeTest extends Specification with TestInjector {
         (xml \ "server-environment" \ "environment-name").head === <environment-name>test</environment-name>
         (xml \ "request" \ "url").head === <url>http://www.kifi.com/hi</url>
         (xml \ "request" \ "action").head === <action>POST</action>
-        (xml \ "request" \ "session" \ "var").head === <var key="Z-InternalErrorId">{error.id.toString}</var>
+        (xml \ "request" \ "session" \ "var").head === <var key="Z-InternalErrorId">{ error.id.toString }</var>
         (xml \ "request" \ "session" \ "var").size === 1
       }
     }
@@ -104,15 +104,15 @@ class AirbrakeTest extends Specification with TestInjector {
       withInjector(TestFortyTwoModule(), FakeDiscoveryModule(), StandaloneTestActorSystemModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         val error = AirbrakeError(
-            exception = new IllegalArgumentException("hi there"),
-            message = None,
-            userId = Some(Id[User](42)),
-            userName = Some("Robert Heinlein"),
-            url = Some("http://www.kifi.com/hi"),
-            method = Some("POST")).cleanError
+          exception = new IllegalArgumentException("hi there"),
+          message = None,
+          userId = Some(Id[User](42)),
+          userName = Some("Robert Heinlein"),
+          url = Some("http://www.kifi.com/hi"),
+          method = Some("POST")).cleanError
         val xml = formatter.format(error)
         validate(xml)
-        (xml \ "request" \ "session" \ "var")(0) === <var key="Z-InternalErrorId">{error.id.toString}</var>
+        (xml \ "request" \ "session" \ "var")(0) === <var key="Z-InternalErrorId">{ error.id.toString }</var>
         ((xml \ "request" \ "session" \ "var")(1) \ "@key").toString === "Z-UserId"
         (xml \ "request" \ "session" \ "var")(1).text === "https://admin.kifi.com/admin/user/42"
         (xml \ "request" \ "session" \ "var")(2).toString === """<var key="Z-UserName">Robert Heinlein</var>"""
@@ -152,10 +152,10 @@ class AirbrakeTest extends Specification with TestInjector {
       withInjector(TestFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         def method1() = try {
-            Option(null).get
-          } catch {
-            case e: Throwable => throw new IllegalArgumentException("me iae", e)
-          }
+          Option(null).get
+        } catch {
+          case e: Throwable => throw new IllegalArgumentException("me iae", e)
+        }
         try {
           method1()
           1 === 2
@@ -172,12 +172,11 @@ class AirbrakeTest extends Specification with TestInjector {
 
     "create signature" in {
       def troubleMaker() =
-        for (i <- 1 to 2)
-          yield {
-            AirbrakeError(
-              new IllegalArgumentException("foo error " + i,
-                new RuntimeException("cause is bar " + i))).cleanError
-          }
+        for (i <- 1 to 2) yield {
+          AirbrakeError(
+            new IllegalArgumentException("foo error " + i,
+              new RuntimeException("cause is bar " + i))).cleanError
+        }
       def method1() = troubleMaker()
       def method2() = method1()
       def method3() = method2()
@@ -191,10 +190,10 @@ class AirbrakeTest extends Specification with TestInjector {
 
     "causeStacktraceHead stack depth" in {
       def troubleMaker(i: Int) =
-            AirbrakeError(
-              new IllegalArgumentException("foo error = " + i,
-                new RuntimeException("cause is bar " + i))).cleanError
-      def method1() = troubleMaker(0)::troubleMaker(1)::Nil
+        AirbrakeError(
+          new IllegalArgumentException("foo error = " + i,
+            new RuntimeException("cause is bar " + i))).cleanError
+      def method1() = troubleMaker(0) :: troubleMaker(1) :: Nil
       def method2() = method1()
       def method3() = method2()
       def method4() = method3()

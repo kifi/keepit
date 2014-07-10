@@ -8,15 +8,15 @@ import com.keepit.common.cache.Key
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.{Logging, AccessLog}
+import com.keepit.common.logging.{ Logging, AccessLog }
 import com.keepit.model._
 import com.keepit.serializer.ArrayBinaryFormat
 import com.keepit.typeahead._
 import scala.concurrent.duration.Duration
 import com.google.inject.Inject
 import com.amazonaws.services.s3.AmazonS3
-import com.keepit.common.store.{S3Bucket}
-import scala.concurrent.{Future}
+import com.keepit.common.store.{ S3Bucket }
+import scala.concurrent.{ Future }
 import scala.collection.mutable
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -24,14 +24,13 @@ import com.keepit.common.time._
 import org.joda.time.Minutes
 
 class SocialUserTypeahead @Inject() (
-  db: Database,
-  override val airbrake: AirbrakeNotifier,
-  userRepo: UserRepo,
-  store: SocialUserTypeaheadStore,
-  cache: SocialUserTypeaheadCache,
-  socialConnRepo:SocialConnectionRepo,
-  socialUserRepo: SocialUserInfoRepo
-) extends Typeahead[SocialUserInfo, SocialUserBasicInfo] with Logging {
+    db: Database,
+    override val airbrake: AirbrakeNotifier,
+    userRepo: UserRepo,
+    store: SocialUserTypeaheadStore,
+    cache: SocialUserTypeaheadCache,
+    socialConnRepo: SocialConnectionRepo,
+    socialUserRepo: SocialUserInfoRepo) extends Typeahead[SocialUserInfo, SocialUserBasicInfo] with Logging {
 
   implicit val fj = ExecutionContext.fj
 
@@ -45,9 +44,9 @@ class SocialUserTypeahead @Inject() (
             refresh(userId) // async
           }
           Future.successful(filter)
-        case None => refresh(userId).map{ _.data }(ExecutionContext.fj)
+        case None => refresh(userId).map { _.data }(ExecutionContext.fj)
       }
-    }.map{ new PrefixFilter[SocialUserInfo](_) }(ExecutionContext.fj)
+    }.map { new PrefixFilter[SocialUserInfo](_) }(ExecutionContext.fj)
   }
 
   protected def getInfos(ids: Seq[Id[SocialUserInfo]]): Future[Seq[SocialUserBasicInfo]] = {
@@ -79,7 +78,7 @@ class SocialUserTypeahead @Inject() (
 
   override protected def extractName(info: SocialUserBasicInfo): String = info.fullName
 
-  def refresh(userId:Id[User]):Future[PrefixFilter[SocialUserInfo]] = {
+  def refresh(userId: Id[User]): Future[PrefixFilter[SocialUserInfo]] = {
     build(userId).map { filter =>
       cache.set(SocialUserTypeaheadKey(userId), filter.data)
       store += (userId -> filter.data)
@@ -103,7 +102,7 @@ class S3SocialUserTypeaheadStore @Inject() (bucket: S3Bucket, amazonS3Client: Am
 class InMemorySocialUserTypeaheadStoreImpl extends InMemoryPrefixFilterStoreImpl[User] with SocialUserTypeaheadStore
 
 class SocialUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends BinaryCacheImpl[SocialUserTypeaheadKey, Array[Long]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(ArrayBinaryFormat.longArrayFormat)
+  extends BinaryCacheImpl[SocialUserTypeaheadKey, Array[Long]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(ArrayBinaryFormat.longArrayFormat)
 
 case class SocialUserTypeaheadKey(userId: Id[User]) extends Key[Array[Long]] {
   val namespace = "social_user_typeahead"

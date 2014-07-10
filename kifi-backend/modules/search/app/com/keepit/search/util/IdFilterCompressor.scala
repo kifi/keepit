@@ -23,7 +23,7 @@ object IdFilterCompressor {
     out.writeVInt(arr.length)
     // ids
     var current = 0L
-    arr.foreach{ id  =>
+    arr.foreach { id =>
       out.writeVLong(id - current)
       current = id
     }
@@ -38,7 +38,7 @@ object IdFilterCompressor {
     val checksum = computeChecksum(bytes)
     bytes(1) = (checksum >> 24).toByte
     bytes(2) = (checksum >> 16).toByte
-    bytes(3) = (checksum >>  8).toByte
+    bytes(3) = (checksum >> 8).toByte
     bytes(4) = (checksum).toByte
   }
 
@@ -75,7 +75,7 @@ object IdFilterCompressor {
     adler32.getValue.toInt
   }
 
-  def fromSetToBase64(ids: Set[Long]):String = printBase64Binary(toByteArray(ids))
+  def fromSetToBase64(ids: Set[Long]): String = printBase64Binary(toByteArray(ids))
 
   def fromBase64ToSet(base64: String): LongArraySet = {
     if (base64.length == 0) LongArraySet.empty

@@ -6,11 +6,11 @@ import com.keepit.common.controller.ActionAuthenticator
 import views.html
 
 class AdminEngineeringDashboardController @Inject() (
-  actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator) {
+    actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator) {
   def overview = AdminHtmlAction.authenticated { implicit request =>
-      Ok(html.admin.engineeringDashboard())
+    Ok(html.admin.engineeringDashboard())
   }
   def seyren = AdminHtmlAction.authenticated { implicit request =>
-      Ok(html.admin.seyren())
+    Ok(html.admin.seyren())
   }
 }

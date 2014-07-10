@@ -2,18 +2,17 @@ package com.keepit.common.cache
 
 import scala.concurrent.duration._
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.common.logging.AccessLog
 
-case class DbCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
+case class DbCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
 
   @Singleton
   @Provides
   def playCacheApi(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new PlayCacheApi(stats, accessLog, (innerRepo, 1 second), (outerRepo, 1 hour))
-
 
   @Singleton
   @Provides

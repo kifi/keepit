@@ -2,21 +2,21 @@ package com.keepit.search
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ Future, Promise }
 import scala.util.Try
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceInstance
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.search.sharding.{Sharding, DispatchFailedException, Shard, ActiveShards}
+import com.keepit.search.sharding.{ Sharding, DispatchFailedException, Shard, ActiveShards }
 import com.keepit.search.result._
-import org.apache.lucene.search.{Explanation, Query}
+import org.apache.lucene.search.{ Explanation, Query }
 import com.keepit.search.index.DefaultAnalyzer
 import scala.collection.mutable.ListBuffer
 
@@ -37,7 +37,7 @@ trait SearchCommander {
     tz: Option[String] = None,
     coll: Option[String] = None,
     debug: Option[String] = None,
-    withUriSummary: Boolean = false) : DecoratedResult
+    withUriSummary: Boolean = false): DecoratedResult
 
   def distSearch(
     shards: Set[Shard[NormalizedURI]],
@@ -71,14 +71,13 @@ trait SearchCommander {
 }
 
 class SearchCommanderImpl @Inject() (
-  shards: ActiveShards,
-  mainSearcherFactory: MainSearcherFactory,
-  articleSearchResultStore: ArticleSearchResultStore,
-  airbrake: AirbrakeNotifier,
-  override val searchClient: SearchServiceClient,
-  shoeboxClient: ShoeboxServiceClient,
-  monitoredAwait: MonitoredAwait
-) extends SearchCommander with Sharding with Logging {
+    shards: ActiveShards,
+    mainSearcherFactory: MainSearcherFactory,
+    articleSearchResultStore: ArticleSearchResultStore,
+    airbrake: AirbrakeNotifier,
+    override val searchClient: SearchServiceClient,
+    shoeboxClient: ShoeboxServiceClient,
+    monitoredAwait: MonitoredAwait) extends SearchCommander with Sharding with Logging {
 
   def search(
     userId: Id[User],
@@ -95,7 +94,7 @@ class SearchCommanderImpl @Inject() (
     tz: Option[String] = None,
     coll: Option[String] = None,
     debug: Option[String] = None,
-    withUriSummary: Boolean = false) : DecoratedResult = {
+    withUriSummary: Boolean = false): DecoratedResult = {
 
     if (maxHits <= 0) throw new IllegalArgumentException("maxHits is zero")
 
@@ -126,7 +125,7 @@ class SearchCommanderImpl @Inject() (
 
     if (dispatchPlan.nonEmpty) {
       // dispatch query
-      searchClient.distSearch(dispatchPlan, userId, firstLang, secondLang, query, filter, maxHits, context, start, end, tz, coll, debug).foreach{ f =>
+      searchClient.distSearch(dispatchPlan, userId, firstLang, secondLang, query, filter, maxHits, context, start, end, tz, coll, debug).foreach { f =>
         resultFutures += f.map(json => new PartialSearchResult(json))
       }
     }
@@ -141,7 +140,7 @@ class SearchCommanderImpl @Inject() (
     // do the local part
     if (localShards.nonEmpty) {
       resultFutures += Promise[PartialSearchResult].complete(
-        Try{
+        Try {
           distSearch(localShards, userId, firstLang, secondLang, experiments, query, filter, maxHits, context, predefinedConfig, start, end, tz, coll, debug)
         }
       ).future
@@ -174,7 +173,7 @@ class SearchCommanderImpl @Inject() (
         lastUUID, // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
         mergedResult,
         timing.getTotalTime.toInt,
-        numPreviousHits/maxHits,
+        numPreviousHits / maxHits,
         numPreviousHits,
         currentDateTime,
         lang
@@ -188,7 +187,7 @@ class SearchCommanderImpl @Inject() (
 
       val timeLimit = 1000
       // search is a little slow after service restart. allow some grace period
-      if (timing.getTotalTime > timeLimit && timing.timestamp - mainSearcherFactory.searchServiceStartedAt > 1000*60*8) {
+      if (timing.getTotalTime > timeLimit && timing.timestamp - mainSearcherFactory.searchServiceStartedAt > 1000 * 60 * 8) {
         val link = "https://admin.kifi.com/admin/search/results/" + res.uuid.id
         val msg = s"search time exceeds limit! searchUUID = ${res.uuid.id}, Limit time = $timeLimit, ${timing.toString}. More details at: $link"
         airbrake.notify(msg)
@@ -197,7 +196,6 @@ class SearchCommanderImpl @Inject() (
 
     res
   }
-
 
   def distSearch(
     shards: Set[Shard[NormalizedURI]],
@@ -214,7 +212,7 @@ class SearchCommanderImpl @Inject() (
     end: Option[String] = None,
     tz: Option[String] = None,
     coll: Option[String] = None,
-    debug: Option[String] = None) : PartialSearchResult = {
+    debug: Option[String] = None): PartialSearchResult = {
 
     val timing = new SearchTiming
 
@@ -231,10 +229,10 @@ class SearchCommanderImpl @Inject() (
       timing.factory
 
       val searchers = mainSearcherFactory(shards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
-      val future = Future.traverse(searchers){ searcher =>
+      val future = Future.traverse(searchers) { searcher =>
         if (debug.isDefined) searcher.debug(debug.get)
 
-        SafeFuture{ searcher.search() }
+        SafeFuture { searcher.search() }
       }
 
       timing.search
@@ -265,8 +263,7 @@ class SearchCommanderImpl @Inject() (
     dispatchPlan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
     userId: Id[User],
     query: String,
-    acceptLangCodes: Seq[String]
-  ): (Lang, Option[Lang]) = {
+    acceptLangCodes: Seq[String]): (Lang, Option[Lang]) = {
     def getLangsPriorProbabilities(majorLangs: Set[Lang], majorLangProb: Double): Map[Lang, Double] = {
       val numberOfLangs = majorLangs.size
       val eachLangProb = (majorLangProb / numberOfLangs)
@@ -285,8 +282,8 @@ class SearchCommanderImpl @Inject() (
     }
 
     val acceptLangs = {
-      val langs = acceptLangCodes.toSet.flatMap{ code: String =>
-        val langCode = code.substring(0,2)
+      val langs = acceptLangCodes.toSet.flatMap { code: String =>
+        val langCode = code.substring(0, 2)
         if (langCode == "zh") Set(Lang("zh-cn"), Lang("zh-tw"))
         else {
           val lang = Lang(langCode)
@@ -304,9 +301,10 @@ class SearchCommanderImpl @Inject() (
     val langProf = {
       val freqs = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow getting lang profile")
       val total = freqs.map(_.values.sum).sum.toFloat
-      freqs.map(_.iterator).flatten.foldLeft(Map[Lang, Float]()){ case (m, (lang, count)) =>
-        m + (lang -> (count.toFloat/total + m.getOrElse(lang, 0.0f)))
-      }.filter{ case (_, prob) => prob > 0.05f }.toSeq.sortBy(p => - p._2).take(3).toMap // top N with prob > 0.05
+      freqs.map(_.iterator).flatten.foldLeft(Map[Lang, Float]()) {
+        case (m, (lang, count)) =>
+          m + (lang -> (count.toFloat / total + m.getOrElse(lang, 0.0f)))
+      }.filter { case (_, prob) => prob > 0.05f }.toSeq.sortBy(p => -p._2).take(3).toMap // top N with prob > 0.05
     }
 
     val profLangs = langProf.keySet
@@ -344,12 +342,11 @@ class SearchCommanderImpl @Inject() (
     start: Option[String] = None,
     end: Option[String] = None,
     tz: Option[String] = None,
-    coll: Option[String] = None
-  ): SearchFilter = {
+    coll: Option[String] = None): SearchFilter = {
     filter match {
       case Some("m") =>
-        val collExtIds = coll.map{ _.split('.').flatMap(id => Try(ExternalId[Collection](id)).toOption) }
-        val collIdsFuture = collExtIds.map{ shoeboxClient.getCollectionIdsByExternalIds(_) }
+        val collExtIds = coll.map { _.split('.').flatMap(id => Try(ExternalId[Collection](id)).toOption) }
+        val collIdsFuture = collExtIds.map { shoeboxClient.getCollectionIdsByExternalIds(_) }
         SearchFilter.mine(context, collIdsFuture, start, end, tz, monitoredAwait)
       case Some("f") =>
         SearchFilter.friends(context, start, end, tz)
@@ -374,14 +371,14 @@ class SearchCommanderImpl @Inject() (
       case None => Seq(DefaultAnalyzer.defaultLang)
     }
 
-    shards.find(uriId).flatMap{ shard =>
+    shards.find(uriId).flatMap { shard =>
       val searcher = mainSearcherFactory(shard, userId, query, langs(0), if (langs.size > 1) Some(langs(1)) else None, 0, SearchFilter.default(), config)
       searcher.explain(uriId)
     }
   }
 
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = {
-    uriIds.map{ uriId =>
+    uriIds.map { uriId =>
       shards.find(uriId) match {
         case Some(shard) =>
           val searcher = mainSearcherFactory.getURIGraphSearcher(shard, userId)
@@ -398,7 +395,7 @@ class SearchCommanderImpl @Inject() (
 
   private class Prefetcher(userId: Id[User]) {
     var futures: Seq[Future[Any]] = null // pin futures in a jvm heap
-    SafeFuture{
+    SafeFuture {
       futures = mainSearcherFactory.warmUp(userId)
     }
   }

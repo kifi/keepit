@@ -6,7 +6,7 @@ import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject._
 import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.healthcheck.{AirbrakeNotifier, LocalSystemAdminMailSender, SystemAdminMailSender}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, LocalSystemAdminMailSender, SystemAdminMailSender }
 import com.amazonaws.auth.BasicAWSCredentials
 import com.keepit.common.logging.Logging
 

@@ -3,26 +3,24 @@ package com.keepit.common.cache
 import scala.concurrent._
 
 import java.util.concurrent.TimeUnit
-import java.util.{Map=>JMap}
-
+import java.util.{ Map => JMap }
 
 import net.sf.ehcache._
 import net.sf.ehcache.config.CacheConfiguration
 
-import net.spy.memcached.{CachedData, MemcachedClient}
-import net.spy.memcached.transcoders.{Transcoder, SerializingTranscoder}
+import net.spy.memcached.{ CachedData, MemcachedClient }
+import net.spy.memcached.transcoders.{ Transcoder, SerializingTranscoder }
 import net.spy.memcached.internal.BulkFuture
 import net.spy.memcached.internal.GetFuture
 
-import com.google.inject.{Inject, Singleton}
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 
 import play.api.Logger
 import play.api.Plugin
 import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.collection.JavaConverters._
-
 
 trait FortyTwoCachePlugin extends Plugin {
   private[cache] def onError(error: AirbrakeError) {}
@@ -33,7 +31,7 @@ trait FortyTwoCachePlugin extends Plugin {
   def set(key: String, value: Any, expiration: Int = 0): Unit
 
   def bulkGet(keys: Set[String]): Map[String, Any] = {
-    keys.foldLeft(Map.empty[String, Any]){ (m, k) =>
+    keys.foldLeft(Map.empty[String, Any]) { (m, k) =>
       get(k) match {
         case Some(value) => (m + (k -> value))
         case _ => m
@@ -51,29 +49,29 @@ trait InMemoryCachePlugin extends FortyTwoCachePlugin {
 
 @Singleton
 class MemcachedCache @Inject() (
-  client: MemcachedClient,
-  val airbrake: AirbrakeNotifier) extends FortyTwoCachePlugin {
+    client: MemcachedClient,
+    val airbrake: AirbrakeNotifier) extends FortyTwoCachePlugin {
 
   override private[cache] val logAccess = true
 
   override def onError(error: AirbrakeError) {
     airbrake.notify(error)
   }
-  
-  val compressThreshold:Int = 400000 // TODO: make configurable
-  val compressMethod:String = "gzip"
-  val maxThreshold:Int = 900000
+
+  val compressThreshold: Int = 400000 // TODO: make configurable
+  val compressMethod: String = "gzip"
+  val maxThreshold: Int = 900000
 
   lazy val logger = Logger("memcached.plugin")
   import java.io._
 
-  class CustomSerializing extends SerializingTranscoder{
+  class CustomSerializing extends SerializingTranscoder {
 
-    override def encode(o:Object):CachedData = { // SerializingTranscoder does not compress JSON
+    override def encode(o: Object): CachedData = { // SerializingTranscoder does not compress JSON
       o match {
-        case s:String => {
-          var b:Array[Byte] = encodeString(s)
-          var flags:Int = 0
+        case s: String => {
+          var b: Array[Byte] = encodeString(s)
+          var flags: Int = 0
           if (b.length > compressThreshold) {
             val ts = System.currentTimeMillis
             val compressed = compressMethod match {
@@ -120,7 +118,6 @@ class MemcachedCache @Inject() (
 
   lazy val tc = new CustomSerializing().asInstanceOf[Transcoder[Any]]
 
-
   def get(key: String) = {
     logger.debug("Getting the cached for key " + key)
     var future: GetFuture[Any] = null
@@ -129,7 +126,7 @@ class MemcachedCache @Inject() (
       toOption(future.get(1, TimeUnit.SECONDS))
     } catch {
       case e: Throwable =>
-        logger.error("An error has occurred while getting the value from memcached" , e)
+        logger.error("An error has occurred while getting the value from memcached", e)
         if (future != null) future.cancel(false)
         None
     }
@@ -142,13 +139,13 @@ class MemcachedCache @Inject() (
   def remove(key: String) {
     client.delete(key)
   }
-  
+
   override def bulkGet(keys: Set[String]): Map[String, Any] = {
     logger.debug("Getting the cached for keys " + keys)
     var future: BulkFuture[JMap[String, Any]] = null
     try {
       future = client.asyncGetBulk(keys.asJava, tc)
-      future.getSome(1, TimeUnit.SECONDS).asScala.foldLeft(Map.empty[String, Any]){ (m, kv) =>
+      future.getSome(1, TimeUnit.SECONDS).asScala.foldLeft(Map.empty[String, Any]) { (m, kv) =>
         toOption(kv._2) match {
           case Some(v) => m + (kv._1 -> v)
           case _ => m
@@ -156,12 +153,12 @@ class MemcachedCache @Inject() (
       }
     } catch {
       case e: Throwable =>
-        logger.error("An error has occurred while getting some values from memcached" , e)
+        logger.error("An error has occurred while getting some values from memcached", e)
         if (future != null) future.cancel(false)
         Map.empty[String, Any]
     }
   }
-  
+
   override def onStop(): Unit = {
     super.onStop()
     //shutting down the cache plugin will cause problems to mid flight requests
@@ -186,7 +183,7 @@ class MemcachedCache @Inject() (
       }
     )
   }
-  
+
   override def toString = "Memcached"
 
 }

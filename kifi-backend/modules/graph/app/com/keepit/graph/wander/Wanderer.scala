@@ -42,12 +42,10 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
     if (isStart) {
       log.info(s"[Start] $destination")
       journal.onStart(scout)
-    }
-    else if (isDeadend) {
+    } else if (isDeadend) {
       log.info(s"[Deadend] ${wanderer.id} --> ${scout.id}")
       journal.onDeadend(wanderer, scout)
-    }
-    else {
+    } else {
       log.info(s"[Teleportation] ${wanderer.id} --> ${scout.id}")
       journal.onTeleportation(wanderer, scout)
     }

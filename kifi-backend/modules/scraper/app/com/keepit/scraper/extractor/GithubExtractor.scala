@@ -7,7 +7,7 @@ import org.apache.tika.parser.html.DefaultHtmlMapper
 import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
 import org.jsoup.nodes.Document
-import com.keepit.common.net.{Host, URI}
+import com.keepit.common.net.{ Host, URI }
 
 object GithubExtractorProvider extends ExtractorProvider {
   def isDefinedAt(uri: URI) = {
@@ -42,10 +42,10 @@ class GithubExtractor(url: String, maxContentChars: Int) extends JsoupBasedExtra
       } else if (url.matches(".*/pulls")) {
         // Pull requests
         Set("h1.entry-title", ".pulls-list")
-      } else if(doc.select("body.page-profile").first() != null) {
+      } else if (doc.select("body.page-profile").first() != null) {
         // Profile
         Set(".profilecols .vcard", ".contributions-tab .popular-repos")
-      }  else if (doc.select("body.page-blob").first() != null) {
+      } else if (doc.select("body.page-blob").first() != null) {
         // Source page
         Set(".breadcrumb", ".frame-meta .commit", ".lines .highlight")
       } else if (doc.select(".gist .data").first() != null) {

@@ -5,18 +5,17 @@ import com.keepit.common.db.slick._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import play.api.libs.json.{JsNumber, JsObject}
+import play.api.libs.json.{ JsNumber, JsObject }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.google.inject.Inject
 
-class AdminArticleIndexerController @Inject()(
+class AdminArticleIndexerController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     searchClient: SearchServiceClient,
     db: Database,
-    normUriRepo: NormalizedURIRepo
-  ) extends AdminController(actionAuthenticator) {
+    normUriRepo: NormalizedURIRepo) extends AdminController(actionAuthenticator) {
 
   def index = AdminHtmlAction.authenticated { implicit request =>
     searchClient.index()
@@ -39,7 +38,7 @@ class AdminArticleIndexerController @Inject()(
     Ok("searcher refreshed")
   }
 
-  def dumpLuceneDocument(id: Id[NormalizedURI]) =  AdminHtmlAction.authenticatedAsync { implicit request =>
+  def dumpLuceneDocument(id: Id[NormalizedURI]) = AdminHtmlAction.authenticatedAsync { implicit request =>
     searchClient.dumpLuceneDocument(id).map(Ok(_))
   }
 }

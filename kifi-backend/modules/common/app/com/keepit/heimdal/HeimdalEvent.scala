@@ -32,7 +32,7 @@ object HeimdalEvent {
 }
 
 object HeimdalEventCompanion {
-  val all: Set[HeimdalEventCompanion[_ <: HeimdalEvent]] = CompanionTypeSystem[HeimdalEvent, HeimdalEventCompanion[_<: HeimdalEvent]]("E")
+  val all: Set[HeimdalEventCompanion[_ <: HeimdalEvent]] = CompanionTypeSystem[HeimdalEvent, HeimdalEventCompanion[_ <: HeimdalEvent]]("E")
   val byTypeCode: Map[String, HeimdalEventCompanion[_ <: HeimdalEvent]] = {
     require(all.size == all.map(_.typeCode).size, "Duplicate HeimdalEvent type codes.")
     all.map { vertexKind => vertexKind.typeCode -> vertexKind }.toMap
@@ -40,11 +40,10 @@ object HeimdalEventCompanion {
 }
 
 case class UserEvent(
-  userId: Id[User],
-  context: HeimdalContext,
-  eventType: EventType,
-  time: DateTime = currentDateTime
-) extends HeimdalEvent {
+    userId: Id[User],
+    context: HeimdalContext,
+    eventType: EventType,
+    time: DateTime = currentDateTime) extends HeimdalEvent {
   type E = UserEvent
   def companion = UserEvent
   override def toString(): String = s"UserEvent[user=$userId,type=${eventType.name},time=$time]"
@@ -78,12 +77,11 @@ case object AnonymousEvent extends HeimdalEventCompanion[AnonymousEvent] {
 }
 
 case class NonUserEvent(
-  identifier: String,
-  kind: NonUserKind,
-  context: HeimdalContext,
-  eventType: EventType,
-  time: DateTime = currentDateTime
-) extends HeimdalEvent {
+    identifier: String,
+    kind: NonUserKind,
+    context: HeimdalContext,
+    eventType: EventType,
+    time: DateTime = currentDateTime) extends HeimdalEvent {
   type E = NonUserEvent
   def companion = NonUserEvent
   override def toString(): String = s"NonUserEvent[nonUser=$kind::$identifier,type=${eventType.name},time=$time]"
@@ -97,13 +95,12 @@ case object NonUserEvent extends HeimdalEventCompanion[NonUserEvent] {
 case class EventDescriptor(
   name: EventType,
   description: Option[String] = None,
-  mixpanel: Boolean = false
-)
+  mixpanel: Boolean = false)
 
 object EventDescriptor {
   implicit val format: Format[EventDescriptor] = (
     (__ \ 'name).format[EventType] and
-      (__ \ 'description).formatNullable[String] and
-      (__ \ 'mixpanel).format[Boolean]
-    )(EventDescriptor.apply, unlift(EventDescriptor.unapply))
+    (__ \ 'description).formatNullable[String] and
+    (__ \ 'mixpanel).format[Boolean]
+  )(EventDescriptor.apply, unlift(EventDescriptor.unapply))
 }

@@ -19,8 +19,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
 
   "URIGraphIndexer" should {
     "maintain a sequence number on bookmarks " in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule)
-            {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
@@ -52,18 +51,19 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
 
         val searcher = indexer.getSearcher
 
-        expectedUriToUserEdges.forall{ case (uri, users) =>
-          var hits = Set.empty[Long]
-          searcher.doSearch(new TermQuery(new Term(URIGraphFields.uriField, uri.id.get.toString))){ (scorer, reader) =>
-            val mapper = reader.getIdMapper
-            var doc = scorer.nextDoc()
-            while (doc != NO_MORE_DOCS) {
-              hits += mapper.getId(doc)
-              doc = scorer.nextDoc()
+        expectedUriToUserEdges.forall {
+          case (uri, users) =>
+            var hits = Set.empty[Long]
+            searcher.doSearch(new TermQuery(new Term(URIGraphFields.uriField, uri.id.get.toString))) { (scorer, reader) =>
+              val mapper = reader.getIdMapper
+              var doc = scorer.nextDoc()
+              while (doc != NO_MORE_DOCS) {
+                hits += mapper.getId(doc)
+                doc = scorer.nextDoc()
+              }
             }
-          }
-          hits === users.map{ _.id.get.id }.toSet
-          true
+            hits === users.map { _.id.get.id }.toSet
+            true
         } === true
       }
     }
@@ -74,7 +74,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
 
         val indexer = mkURIGraphIndexer()
 
-        val expectedUriToUsers = uris.map{ uri => (uri, users.filter{ _.id.get.id <= uri.id.get.id }) }
+        val expectedUriToUsers = uris.map { uri => (uri, users.filter { _.id.get.id <= uri.id.get.id }) }
         saveBookmarksByURI(expectedUriToUsers, true)
 
         indexer.update()
@@ -82,14 +82,14 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
 
         val searcher = new BaseGraphSearcher(indexer.getSearcher)
 
-        users.forall{ user =>
+        users.forall { user =>
           val bookmarks = getBookmarksByUser(user.id.get)
 
           val publicUriList = searcher.getURIList(URIGraphFields.publicListField, searcher.getDocId(user.id.get.id))
-          publicUriList.ids.toSet === bookmarks.filterNot{ _.isPrivate }.map{ _.uriId.id }.toSet
+          publicUriList.ids.toSet === bookmarks.filterNot { _.isPrivate }.map { _.uriId.id }.toSet
 
           val privateUriList = searcher.getURIList(URIGraphFields.privateListField, searcher.getDocId(user.id.get.id))
-          privateUriList.ids.toSet === bookmarks.filter{ _.isPrivate }.map{ _.uriId.id }.toSet
+          privateUriList.ids.toSet === bookmarks.filter { _.isPrivate }.map { _.uriId.id }.toSet
 
           true
         } === true
@@ -102,18 +102,18 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
 
         val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = ""))
         val uris = saveURIs(
-          NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article1", state=SCRAPED),
-          NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article2", state=SCRAPED)
+          NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),
+          NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article2", state = SCRAPED)
         )
         saveBookmarksByUser(Seq((user, uris)), uniqueTitle = Some("line1 titles"))
 
-        uris.foreach{ uri => store += (uri.id.get -> mkArticle(uri.id.get, "title", "content")) }
+        uris.foreach { uri => store += (uri.id.get -> mkArticle(uri.id.get, "title", "content")) }
 
         val indexer = mkURIGraphIndexer()
         indexer.update()
 
         val doc = indexer.buildIndexable(user.id.get, SequenceNumber.ZERO).buildDocument
-        doc.getFields.forall{ f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
+        doc.getFields.forall { f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
       }
     }
   }

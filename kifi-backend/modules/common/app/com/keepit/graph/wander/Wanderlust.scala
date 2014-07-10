@@ -1,7 +1,7 @@
 package com.keepit.graph.wander
 
 import com.keepit.common.db.Id
-import com.keepit.model.{SocialUserInfo, NormalizedURI, User}
+import com.keepit.model.{ SocialUserInfo, NormalizedURI, User }
 import play.api.libs.json._
 import scala.concurrent.duration._
 
@@ -13,8 +13,7 @@ case class Wanderlust(
   steps: Int = 100000,
   restartProbability: Double = 0.15,
   recency: Option[Duration] = None,
-  halfLife: Option[Duration] = None
-)
+  halfLife: Option[Duration] = None)
 
 object Wanderlust {
 

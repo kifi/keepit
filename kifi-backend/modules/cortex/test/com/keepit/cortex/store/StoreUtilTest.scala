@@ -24,7 +24,7 @@ class StoreUtilTest extends Specification {
 
       dim2 === dim
 
-      for ( k <- mapper.keySet){
+      for (k <- mapper.keySet) {
         mapper(k) === mapper2(k)
       }
 

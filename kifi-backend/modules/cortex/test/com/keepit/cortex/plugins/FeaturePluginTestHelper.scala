@@ -18,7 +18,7 @@ trait FeaturePluginTestHelper {
   }
   class FakeModel extends StatModel
 
-  case class FooRepresentation(arr: Array[Float]) extends FeatureRepresentation[Foo, FakeModel]{
+  case class FooRepresentation(arr: Array[Float]) extends FeatureRepresentation[Foo, FakeModel] {
     def vectorize = arr
   }
 
@@ -31,7 +31,7 @@ trait FeaturePluginTestHelper {
     }
   }
 
-  class FooFeatureRepresenter extends FeatureRepresenter[Foo, FakeModel, FooRepresentation]{
+  class FooFeatureRepresenter extends FeatureRepresenter[Foo, FakeModel, FooRepresentation] {
     val version = ModelVersion[FakeModel](1)
     val dimension: Int = 2
     def apply(foo: Foo): Option[FooRepresentation] = {
@@ -40,9 +40,9 @@ trait FeaturePluginTestHelper {
     }
   }
 
-  class FooDataPuller extends DataPuller[Foo]{
-    val allFoo = (1 to 550).map{ i => Foo(Some(Id[Foo](i)), SequenceNumber[Foo](i))}
-    def getSince(lowSeq: SequenceNumber[Foo], limit : Int) = allFoo.filter(_.id.get.id > lowSeq.value).take(limit)
+  class FooDataPuller extends DataPuller[Foo] {
+    val allFoo = (1 to 550).map { i => Foo(Some(Id[Foo](i)), SequenceNumber[Foo](i)) }
+    def getSince(lowSeq: SequenceNumber[Foo], limit: Int) = allFoo.filter(_.id.get.id > lowSeq.value).take(limit)
   }
 
   def setup() = {

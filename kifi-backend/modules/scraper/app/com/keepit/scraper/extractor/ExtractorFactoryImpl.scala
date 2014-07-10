@@ -1,9 +1,9 @@
 package com.keepit.scraper.extractor
 
 import com.keepit.common.net.URI
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 import com.keepit.common.logging.Logging
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{ Singleton, Inject }
 
 @Singleton
 class ExtractorFactoryImpl @Inject() (
@@ -23,7 +23,7 @@ class ExtractorFactoryImpl @Inject() (
     try {
       URI.parse(url) match {
         case Success(uri) =>
-          all.find(_.isDefinedAt(uri)).map{ f =>
+          all.find(_.isDefinedAt(uri)).map { f =>
             f.apply(uri)
           }.getOrElse(throw new Exception("failed to find an extractor factory"))
         case Failure(_) =>

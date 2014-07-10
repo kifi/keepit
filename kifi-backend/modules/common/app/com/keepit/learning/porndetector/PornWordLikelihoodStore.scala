@@ -10,7 +10,6 @@ import play.api.libs.json._
 import com.keepit.common.store.ObjectStore
 import play.api.libs.functional.syntax._
 
-
 case class PornWordLikelihood(likelihood: Map[String, Float])
 
 object PornWordLikelihood {
@@ -20,7 +19,7 @@ object PornWordLikelihood {
 trait PornWordLikelihoodStore extends ObjectStore[String, PornWordLikelihood]
 
 class S3PornWordLikelihoodStore(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val formatter: Format[PornWordLikelihood] = PornWordLikelihood.format)
-extends S3JsonStore[String, PornWordLikelihood] with PornWordLikelihoodStore {
+    extends S3JsonStore[String, PornWordLikelihood] with PornWordLikelihoodStore {
   val prefix = "bayes_porn_detector/"
   override def keyPrefix() = prefix
 }

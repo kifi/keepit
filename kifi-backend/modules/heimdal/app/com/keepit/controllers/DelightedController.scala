@@ -11,7 +11,7 @@ import play.api.mvc.Action
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class DelightedController @Inject() (
-  delightedCommander: DelightedCommander) extends HeimdalServiceController {
+    delightedCommander: DelightedCommander) extends HeimdalServiceController {
 
   def getLastDelightedAnswerDate(userId: Id[User]) = Action { request =>
     Ok(Json.toJson(delightedCommander.getLastDelightedAnswerDate(userId)))

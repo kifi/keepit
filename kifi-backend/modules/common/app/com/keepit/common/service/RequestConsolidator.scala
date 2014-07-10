@@ -1,7 +1,7 @@
 package com.keepit.common.service
 
 import com.keepit.common.logging.Logging
-import scala.collection.concurrent.{TrieMap=>ConcurrentMap}
+import scala.collection.concurrent.{ TrieMap => ConcurrentMap }
 import scala.concurrent._
 import scala.concurrent.duration._
 import java.lang.ref.WeakReference
@@ -46,7 +46,7 @@ class RequestConsolidator[K, T](ttl: Duration) extends Logging {
     }
   }
 
-  def apply(key: K)(newFuture: K=>Future[T]): Future[T] = {
+  def apply(key: K)(newFuture: K => Future[T]): Future[T] = {
     clean()
 
     val now = System.currentTimeMillis

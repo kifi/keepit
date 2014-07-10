@@ -2,7 +2,7 @@ package com.keepit.eliza.model
 
 import java.util.UUID
 
-case class MalformedThreadAccessToken()  extends Exception()
+case class MalformedThreadAccessToken() extends Exception()
 
 case class ThreadAccessToken(token: String) {
   if (!ThreadAccessToken.IDPattern.pattern.matcher(token).matches()) {

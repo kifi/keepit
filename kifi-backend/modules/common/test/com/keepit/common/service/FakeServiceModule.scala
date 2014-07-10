@@ -1,12 +1,12 @@
 package com.keepit.common.service
 
-import com.google.inject.{Singleton, Inject, Provides}
+import com.google.inject.{ Singleton, Inject, Provides }
 import scala.collection.mutable.MutableList
 import play.api.Mode
 import play.api.Mode.Mode
 import com.keepit.common.time._
 import net.codingwell.scalaguice.ScalaModule
-import com.keepit.inject.{TestFortyTwoModule, FortyTwoConfig}
+import com.keepit.inject.{ TestFortyTwoModule, FortyTwoConfig }
 
 case class FakeServiceModule() extends ScalaModule {
 

@@ -34,8 +34,8 @@ class LongArraySetTest extends Specification {
       val s = LongArraySet.fromSorted(sorted)
 
       s.size === 10
-      positive.forall{ s.contains(_) } === true
-      negative.forall{ ! s.contains(_) } === true
+      positive.forall { s.contains(_) } === true
+      negative.forall { !s.contains(_) } === true
       s === positive
 
       // update
@@ -53,8 +53,8 @@ class LongArraySetTest extends Specification {
       val s = LongArraySet.from(unsorted)
 
       s.size === 10
-      positive.forall{ s.contains(_) } === true
-      negative.forall{ ! s.contains(_) } === true
+      positive.forall { s.contains(_) } === true
+      negative.forall { !s.contains(_) } === true
       s === positive
 
       // update

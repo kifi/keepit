@@ -48,7 +48,7 @@ class UserThreadRepoTest extends Specification with DbTestInjector {
           toMail.size === 1
           toMail.head.id.get === thread1.id.get
         }
-        db.readOnlyMaster {implicit s =>
+        db.readOnlyMaster { implicit s =>
           userThreadRepo.getUserStats(user1) === UserThreadStats(1, 0, 0)
           userThreadRepo.getUserStats(user2) === UserThreadStats(0, 0, 0)
           userThreadRepo.getUserThreadsForEmailing(clock.now()).size === 1

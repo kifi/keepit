@@ -1,6 +1,6 @@
 package com.keepit.search.graph.bookmark
 
-import com.keepit.search.index.{WrappedIndexReader, WrappedSubReader}
+import com.keepit.search.index.{ WrappedIndexReader, WrappedSubReader }
 import com.keepit.search.Searcher
 import com.keepit.search.query.SiteQuery
 import com.keepit.search.query.ConditionalQuery
@@ -17,12 +17,11 @@ import org.apache.lucene.search.TermQuery
 import com.keepit.search.graph.GraphTestHelper
 import com.keepit.search.Lang
 
-
 class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
   class Searchable(uriGraphSearcher: URIGraphSearcherWithUser) {
     def search(query: Query): Map[Long, Float] = {
-      var result = Map.empty[Long,Float]
+      var result = Map.empty[Long, Float]
       val (indexReader, idMapper) = uriGraphSearcher.openPersonalIndex(query)
       val ir = new WrappedSubReader("", indexReader, idMapper)
       val searcher = new Searcher(new WrappedIndexReader(null, Array(ir)))
@@ -30,10 +29,10 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
       val scorer = weight.scorer(ir.getContext, true, true, ir.getLiveDocs)
       if (scorer != null) {
         var doc = scorer.nextDoc()
-          while (doc < NO_MORE_DOCS) {
-            result += (idMapper.getId(doc) -> scorer.score())
-            doc = scorer.nextDoc()
-          }
+        while (doc < NO_MORE_DOCS) {
+          result += (idMapper.getId(doc) -> scorer.score())
+          doc = scorer.nextDoc()
+        }
       }
       result
     }
@@ -75,10 +74,11 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         val searcher = URIGraphSearcher(indexer)
 
-        expectedUriToUserEdges.map{ case (uri, users) =>
-          val expected = users.map(_.id.get).toSet
-          val answer = searcher.getUriToUserEdgeSet(uri.id.get).destIdSet
-          answer === expected
+        expectedUriToUserEdges.map {
+          case (uri, users) =>
+            val expected = users.map(_.id.get).toSet
+            val answer = searcher.getUriToUserEdgeSet(uri.id.get).destIdSet
+            answer === expected
         }
 
         indexer.numDocs === users.size
@@ -86,7 +86,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     }
 
     "generate UserToUriEdgeSet" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule){
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
@@ -96,15 +96,16 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         val searcher = URIGraphSearcher(indexer)
 
-        val expectedUserIdToUriIdEdges = bookmarks.groupBy(_.userId).map{ case (userId, bookmarks) => (userId, bookmarks.map(_.uriId)) }
-        expectedUserIdToUriIdEdges.map{ case (userId, uriIds) =>
-          val expected = uriIds.toSet
-          val answer = searcher.getUserToUriEdgeSet(userId, publicOnly = false).destIdSet
-          answer === expected
+        val expectedUserIdToUriIdEdges = bookmarks.groupBy(_.userId).map { case (userId, bookmarks) => (userId, bookmarks.map(_.uriId)) }
+        expectedUserIdToUriIdEdges.map {
+          case (userId, uriIds) =>
+            val expected = uriIds.toSet
+            val answer = searcher.getUserToUriEdgeSet(userId, publicOnly = false).destIdSet
+            answer === expected
 
-          val expectedPublicOnly = uriIds.filterNot{ uriId => (uriId.id + userId.id) % 2 == 0 }.toSet
-          val answerPublicOnly = searcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdSet
-          answerPublicOnly === expectedPublicOnly
+            val expectedPublicOnly = uriIds.filterNot { uriId => (uriId.id + userId.id) % 2 == 0 }.toSet
+            val answerPublicOnly = searcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdSet
+            answerPublicOnly === expectedPublicOnly
         }
 
         indexer.numDocs === users.size
@@ -112,9 +113,9 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     }
 
     "generate UserToUriEdgeSet in extreme case" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule){
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = superBigData
-        val expectedUriToUserEdges = uris.dropRight(1).map{ uri => (uri, Seq(users(0)))}.toList ::: List((uris.last, Seq(users(1))))
+        val expectedUriToUserEdges = uris.dropRight(1).map { uri => (uri, Seq(users(0))) }.toList ::: List((uris.last, Seq(users(1))))
         expectedUriToUserEdges.size === bigDataSize
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges, mixPrivate = false)
         val indexer = mkURIGraphIndexer()
@@ -143,19 +144,20 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         val searcher = URIGraphSearcher(indexer)
 
-        users.sliding(3).foreach{ friends =>
+        users.sliding(3).foreach { friends =>
           val friendIds = friends.map(_.id.get).toSet
           val userToUserEdgeSet = UserToUserEdgeSet.fromIdSet(Id[User](1000), friendIds)
 
-          expectedUriToUserEdges.map{ case (uri, users) =>
-            val expected = (users.map(_.id.get).toSet intersect friendIds)
-            val answer = searcher.intersect(userToUserEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet
-            //println("friends:"+ friendIds)
-            //println("users:" + users.map(_.id.get))
-            //println("expected:" + expected)
-            //println("answer:" + answer)
-            //println("---")
-            answer === expected
+          expectedUriToUserEdges.map {
+            case (uri, users) =>
+              val expected = (users.map(_.id.get).toSet intersect friendIds)
+              val answer = searcher.intersect(userToUserEdgeSet, searcher.getUriToUserEdgeSet(uri.id.get)).destIdSet
+              //println("friends:"+ friendIds)
+              //println("users:" + users.map(_.id.get))
+              //println("expected:" + expected)
+              //println("answer:" + answer)
+              //println("---")
+              answer === expected
           }
         }
 
@@ -194,9 +196,9 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         val searcher = URIGraphSearcher(indexer)
         searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(2, 4, 6)) === true
-        searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(       )) === false
-        searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(2, 4, 6)) === false
-        searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(       )) === false
+        searcher.intersectAny(new TestDocIdSetIterator(), new TestDocIdSetIterator()) === false
+        searcher.intersectAny(new TestDocIdSetIterator(), new TestDocIdSetIterator(2, 4, 6)) === false
+        searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator()) === false
         searcher.intersectAny(new TestDocIdSetIterator(1, 3, 5), new TestDocIdSetIterator(2, 4, 6)) === false
       }
     }
@@ -205,7 +207,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
         val store = setupArticleStore(uris)
-        val edges = uris.map { uri => (uri, users((uri.id.get.id % 2L).toInt), Some("personaltitle bmt" + uri.id.get.id))}
+        val edges = uris.map { uri => (uri, users((uri.id.get.id % 2L).toInt), Some("personaltitle bmt" + uri.id.get.id)) }
         saveBookmarksByEdges(edges)
 
         val indexer = mkURIGraphIndexer()
@@ -238,7 +240,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
         val store = setupArticleStore(uris)
-        val edges = uris.map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id))}
+        val edges = uris.map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id)) }
         saveBookmarksByEdges(edges)
 
         val indexer = mkURIGraphIndexer()
@@ -257,7 +259,6 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         var site = mkSiteQuery("com")
         searcher.search(site).keySet === Set(1L, 2L, 4L, 5L)
-
 
         site = mkSiteQuery("keepit.com")
         searcher.search(site).keySet === Set(1L, 2L)
@@ -280,7 +281,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
         val store = setupArticleStore(uris)
-        val edges = uris.map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id))}
+        val edges = uris.map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id)) }
         saveBookmarksByEdges(edges)
 
         val indexer = mkURIGraphIndexer()
@@ -297,7 +298,6 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
         var qry = mkQuery("com")
         searcher.search(qry).keySet === Set(1L, 2L, 4L, 5L)
-
 
         qry = mkQuery("keepit")
         searcher.search(qry).keySet === Set(1L, 2L, 3L)
@@ -317,10 +317,10 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     }
 
     "retrieve bookmark records from bookmark store" in {
-       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
         val store = setupArticleStore(uris)
-        val edges = uris.take(3).map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id))}
+        val edges = uris.take(3).map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id)) }
         saveBookmarksByEdges(edges)
 
         val indexer = mkURIGraphIndexer()
@@ -329,28 +329,28 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         addConnections(Map(users(0).id.get -> Set()))
         val (userGraph, _, userGraphsSearcherFactory) = mkUserGraphsSearcherFactory()
         userGraph.update()
-         userGraphsSearcherFactory.clear()
+        userGraphsSearcherFactory.clear()
 
         val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsSearcherFactory(users(0).id.get))
 
-        uris.take(3).foreach{ uri =>
-          val uriId =  uri.id.get
+        uris.take(3).foreach { uri =>
+          val uriId = uri.id.get
           val recOpt = searcher.getBookmarkRecord(uriId)
           recOpt must beSome[BookmarkRecord]
-          recOpt.map{ rec =>
-            rec.title === ("personaltitle bmt"+uriId)
+          recOpt.map { rec =>
+            rec.title === ("personaltitle bmt" + uriId)
             rec.url === uri.url
           }
         }
-        1===1
+        1 === 1
       }
     }
 
     "retrieve language profile" in {
-       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
         val store = setupArticleStore(uris)
-        val edges = uris.take(3).map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id))}
+        val edges = uris.take(3).map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id)) }
         saveBookmarksByEdges(edges)
 
         val indexer = mkURIGraphIndexer()
@@ -359,7 +359,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
         addConnections(Map(users(0).id.get -> Set()))
         val (userGraph, _, userGraphsSearcherFactory) = mkUserGraphsSearcherFactory()
         userGraph.update()
-         userGraphsSearcherFactory.clear()
+        userGraphsSearcherFactory.clear()
 
         val searcher = URIGraphSearcher(users(0).id.get, indexer, userGraphsSearcherFactory(users(0).id.get))
 

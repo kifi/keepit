@@ -1,11 +1,10 @@
 package com.keepit.maven
 
-
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 case class FakeMavenServiceClientModule() extends MavenServiceClientModule {
-  def configure(){}
+  def configure() {}
 
   @Singleton
   @Provides

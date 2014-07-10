@@ -4,7 +4,7 @@ import scala.concurrent.duration._
 
 import org.joda.time.DateTime
 
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, PrimitiveCacheImpl, CacheStatistics}
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, Key, PrimitiveCacheImpl, CacheStatistics }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
@@ -13,30 +13,29 @@ import com.keepit.serializer.SocialUserSerializer.userSerializer
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import securesocial.core.SocialUser
-import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
+import com.keepit.social.{ SocialNetworks, SocialNetworkType, SocialId }
 
 case class SocialUserInfo(
-  id: Option[Id[SocialUserInfo]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  userId: Option[Id[User]] = None,
-  fullName: String,
-  pictureUrl: Option[String] = None,
-  profileUrl: Option[String] = None,
-  state: State[SocialUserInfo] = SocialUserInfoStates.CREATED,
-  socialId: SocialId,
-  networkType: SocialNetworkType,
-  credentials: Option[SocialUser] = None,
-  lastGraphRefresh: Option[DateTime] = Some(currentDateTime),
-  seq: SequenceNumber[SocialUserInfo] = SequenceNumber.ZERO
-) extends ModelWithState[SocialUserInfo] with ModelWithSeqNumber[SocialUserInfo] {
+    id: Option[Id[SocialUserInfo]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    userId: Option[Id[User]] = None,
+    fullName: String,
+    pictureUrl: Option[String] = None,
+    profileUrl: Option[String] = None,
+    state: State[SocialUserInfo] = SocialUserInfoStates.CREATED,
+    socialId: SocialId,
+    networkType: SocialNetworkType,
+    credentials: Option[SocialUser] = None,
+    lastGraphRefresh: Option[DateTime] = Some(currentDateTime),
+    seq: SequenceNumber[SocialUserInfo] = SequenceNumber.ZERO) extends ModelWithState[SocialUserInfo] with ModelWithSeqNumber[SocialUserInfo] {
   def withId(id: Id[SocialUserInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def reset() = copy(state = SocialUserInfoStates.CREATED, credentials = None)
-  def withUser(user: User) = copy(userId = Some(user.id.get))//want to make sure the user has an id, fail hard if not!
-  def withCredentials(credentials: SocialUser) = copy(credentials = Some(credentials))//want to make sure the user has an id, fail hard if not!
+  def withUser(user: User) = copy(userId = Some(user.id.get)) //want to make sure the user has an id, fail hard if not!
+  def withCredentials(credentials: SocialUser) = copy(credentials = Some(credentials)) //want to make sure the user has an id, fail hard if not!
   def withState(state: State[SocialUserInfo]) = copy(state = state)
-  def withLastGraphRefresh(lastGraphRefresh : Option[DateTime] = Some(currentDateTime)) = copy(lastGraphRefresh = lastGraphRefresh)
+  def withLastGraphRefresh(lastGraphRefresh: Option[DateTime] = Some(currentDateTime)) = copy(lastGraphRefresh = lastGraphRefresh)
   def getPictureUrl(preferredWidth: Int = 50, preferredHeight: Int = 50): Option[String] = networkType match {
     case SocialNetworks.FACEBOOK =>
       Some(s"https://graph.facebook.com/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
@@ -69,12 +68,12 @@ object SocialUserInfo {
 }
 
 case class SocialUserBasicInfo(
-  id: Id[SocialUserInfo],
-  userId: Option[Id[User]],
-  fullName: String,
-  pictureUrl: Option[String],
-  socialId: SocialId,
-  networkType: SocialNetworkType) {
+    id: Id[SocialUserInfo],
+    userId: Option[Id[User]],
+    fullName: String,
+    pictureUrl: Option[String],
+    socialId: SocialId,
+    networkType: SocialNetworkType) {
 
   def getPictureUrl(preferredWidth: Int = 50, preferredHeight: Int = 50): Option[String] = networkType match {
     case SocialNetworks.FACEBOOK =>
@@ -112,7 +111,7 @@ case class SocialUserInfoCountKey() extends Key[Int] {
 }
 
 class SocialUserInfoCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends PrimitiveCacheImpl[SocialUserInfoCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends PrimitiveCacheImpl[SocialUserInfoCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class SocialUserInfoUserKey(userId: Id[User]) extends Key[Seq[SocialUserInfo]] {
   val namespace = "social_user_info_by_userid"
@@ -121,7 +120,7 @@ case class SocialUserInfoUserKey(userId: Id[User]) extends Key[Seq[SocialUserInf
 }
 
 class SocialUserInfoUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SocialUserInfoUserKey, Seq[SocialUserInfo]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[SocialUserInfoUserKey, Seq[SocialUserInfo]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class SocialUserKey(userId: Id[User]) extends Key[Seq[SocialUser]] {
   val namespace = "social_user_by_userid"
@@ -130,7 +129,7 @@ case class SocialUserKey(userId: Id[User]) extends Key[Seq[SocialUser]] {
 }
 
 class SocialUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SocialUserKey, Seq[SocialUser]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[SocialUserKey, Seq[SocialUser]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId) extends Key[SocialUserInfo] {
   override val version = 5
@@ -139,7 +138,7 @@ case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId
 }
 
 class SocialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SocialUserInfoNetworkKey, SocialUserInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[SocialUserInfoNetworkKey, SocialUserInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class SocialUserNetworkKey(networkType: SocialNetworkType, id: SocialId) extends Key[SocialUser] {
   override val version = 1
@@ -148,7 +147,7 @@ case class SocialUserNetworkKey(networkType: SocialNetworkType, id: SocialId) ex
 }
 
 class SocialUserNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SocialUserNetworkKey, SocialUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[SocialUserNetworkKey, SocialUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class SocialUserBasicInfoKey(id: Id[SocialUserInfo]) extends Key[SocialUserBasicInfo] {
   val namespace = "social_user_basic_info"
@@ -158,7 +157,6 @@ case class SocialUserBasicInfoKey(id: Id[SocialUserInfo]) extends Key[SocialUser
 
 class SocialUserBasicInfoCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[SocialUserBasicInfoKey, SocialUserBasicInfo](stats, accessLog, inner, outer: _*)
-
 
 object SocialUserInfoStates {
   val CREATED = State[SocialUserInfo]("created")

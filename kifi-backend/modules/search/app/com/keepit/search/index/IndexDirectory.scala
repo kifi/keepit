@@ -2,8 +2,8 @@ package com.keepit.search.index
 
 import java.io.File
 import com.keepit.common.store._
-import com.keepit.common.{ArchivedDirectory, BackedUpDirectory}
-import org.apache.lucene.store.{RAMDirectory, MMapDirectory, Directory}
+import com.keepit.common.{ ArchivedDirectory, BackedUpDirectory }
+import org.apache.lucene.store.{ RAMDirectory, MMapDirectory, Directory }
 import com.amazonaws.services.s3.AmazonS3
 import com.keepit.common.store.S3Bucket
 import com.keepit.common.logging.Logging

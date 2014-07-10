@@ -2,7 +2,7 @@ package com.keepit.model
 
 import scala.util.Try
 
-import play.api.libs.json.{Json, JsValue}
+import play.api.libs.json.{ Json, JsValue }
 
 import org.specs2.mutable._
 
@@ -92,6 +92,5 @@ class UserTest extends Specification with ShoeboxTestInjector {
         """)
     }
   }
-
 
 }
