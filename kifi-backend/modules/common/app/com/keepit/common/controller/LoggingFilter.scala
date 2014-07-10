@@ -12,7 +12,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import play.api.mvc._
 import play.api.Play
 import play.mvc.Http.Status
-import play.api.libs.iteratee.{Done, Iteratee, Enumerator}
+import play.api.libs.iteratee.{ Done, Iteratee, Enumerator }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.amazon.MyInstanceInfo
 
@@ -82,9 +82,9 @@ class LoggingFilter() extends EssentialFilter {
             )).duration
           }
           val headers = (CommonHeaders.ResponseTime -> duration.toString) ::
-                        (CommonHeaders.IsUP -> (if(discovery.amIUp) "Y" else "N")) ::
-                        (CommonHeaders.LocalServiceId -> discovery.thisInstance.map(_.id.id.toString).getOrElse("NA")) ::
-                        Nil
+            (CommonHeaders.IsUP -> (if (discovery.amIUp) "Y" else "N")) ::
+            (CommonHeaders.LocalServiceId -> discovery.thisInstance.map(_.id.id.toString).getOrElse("NA")) ::
+            Nil
           val headersWithCount = if (duration > 30) {
             (CommonHeaders.MidFlightRequestCount -> midFlightRequests.count.toString) :: headers
           } else {

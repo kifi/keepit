@@ -1,8 +1,8 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.time.Clock
 import com.keepit.common.db.State
 import com.keepit.common.math.ProbabilityDensity
@@ -15,11 +15,10 @@ trait ProbabilisticExperimentGeneratorRepo extends Repo[ProbabilisticExperimentG
 }
 
 @Singleton
-class ProbabilisticExperimentGeneratorRepoImpl @Inject()(
-  val db: DataBaseComponent,
-  val clock: Clock,
-  probabilisticExperimentGeneratorCache:ProbabilisticExperimentGeneratorAllCache
-) extends DbRepo[ProbabilisticExperimentGenerator] with ProbabilisticExperimentGeneratorRepo {
+class ProbabilisticExperimentGeneratorRepoImpl @Inject() (
+    val db: DataBaseComponent,
+    val clock: Clock,
+    probabilisticExperimentGeneratorCache: ProbabilisticExperimentGeneratorAllCache) extends DbRepo[ProbabilisticExperimentGenerator] with ProbabilisticExperimentGeneratorRepo {
 
   import db.Driver.simple._
 
@@ -39,16 +38,16 @@ class ProbabilisticExperimentGeneratorRepoImpl @Inject()(
     probabilisticExperimentGeneratorCache.set(ProbabilisticExperimentGeneratorAllKey, allActive())
   }
 
-  def deleteCache(model: ProbabilisticExperimentGenerator)(implicit session: RSession):Unit = {
+  def deleteCache(model: ProbabilisticExperimentGenerator)(implicit session: RSession): Unit = {
     probabilisticExperimentGeneratorCache.remove(ProbabilisticExperimentGeneratorAllKey)
   }
 
   def allActive()(implicit session: RSession): Seq[ProbabilisticExperimentGenerator] = {
-    (for(f <- rows if f.state === ProbabilisticExperimentGeneratorStates.ACTIVE) yield f).list
+    (for (f <- rows if f.state === ProbabilisticExperimentGeneratorStates.ACTIVE) yield f).list
   }
 
   def getByName(name: Name[ProbabilisticExperimentGenerator], exclude: Option[State[ProbabilisticExperimentGenerator]])(implicit session: RSession): Option[ProbabilisticExperimentGenerator] = {
-    val q = (for(f <- rows if f.name === name && f.state =!= exclude.orNull) yield f)
+    val q = (for (f <- rows if f.name === name && f.state =!= exclude.orNull) yield f)
     q.firstOption
   }
 

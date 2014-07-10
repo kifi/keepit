@@ -9,7 +9,7 @@ import com.keepit.model._
 
 import javax.mail.Message.RecipientType
 import javax.mail.Session
-import javax.mail.internet.{MimeMultipart, MimeBodyPart, InternetAddress, MimeMessage}
+import javax.mail.internet.{ MimeMultipart, MimeBodyPart, InternetAddress, MimeMessage }
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model.UserEmailAddress
 
@@ -55,7 +55,7 @@ class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector
         message.saveChanges()
 
         parser.getUris(message).map(_.toString.toLowerCase) ===
-            Seq("http://42go.com", "http://google.com/search", "http://yahoo.com")
+          Seq("http://42go.com", "http://google.com/search", "http://yahoo.com")
       }
     }
     "parse out users correctly" in {
@@ -65,7 +65,7 @@ class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector
         val userRepo = inject[UserRepo]
         val (eishay, greg) = db.readWrite { implicit s =>
           (userRepo.save(User(firstName = "Eishay", lastName = "Smith")),
-              userRepo.save(User(firstName = "Greg", lastName = "Methvin")))
+            userRepo.save(User(firstName = "Greg", lastName = "Methvin")))
         }
         db.readWrite { implicit s =>
           emailAddressRepo.save(UserEmailAddress(address = EmailAddress("eishay@42go.com"), userId = eishay.id.get, state = UserEmailAddressStates.VERIFIED))

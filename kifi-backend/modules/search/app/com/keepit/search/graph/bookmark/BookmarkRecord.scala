@@ -1,6 +1,6 @@
 package com.keepit.search.graph.bookmark
 
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model.Keep
 import com.keepit.model.NormalizedURI
 import org.apache.lucene.store.InputStreamDataInput
@@ -40,11 +40,11 @@ object BookmarkRecordSerializer {
     }
 
     BookmarkRecord(
-      in.readString(),    // title
-      in.readString(),    // url
-      in.readLong(),      // createdAt
+      in.readString(), // title
+      in.readString(), // url
+      in.readLong(), // createdAt
       in.readByte() == 1, // isPrivate
-      Id[NormalizedURI](in readLong()),
+      Id[NormalizedURI](in readLong ()),
       if (version >= 3) Some(ExternalId[Keep](in.readString())) else None)
   }
 }

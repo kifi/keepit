@@ -2,7 +2,7 @@ package com.keepit.model
 
 import org.specs2.mutable.Specification
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.ExperimentType.{AUTO_GEN, FAKE, GUIDE}
+import com.keepit.model.ExperimentType.{ AUTO_GEN, FAKE, GUIDE }
 
 class UserEmailAddressTest extends Specification {
 

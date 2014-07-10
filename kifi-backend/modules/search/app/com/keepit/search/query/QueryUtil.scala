@@ -16,7 +16,7 @@ import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.Weight
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.BytesRef
-import java.util.{HashSet => JHashSet}
+import java.util.{ HashSet => JHashSet }
 import scala.collection.JavaConversions._
 import org.apache.lucene.analysis.Analyzer
 import java.io.StringReader
@@ -26,11 +26,11 @@ import scala.collection.mutable.ListBuffer
 object QueryUtil extends Logging {
 
   def getTerms(fieldName: String, query: Query): Set[Term] = {
-    getTerms(query).filter{ _.field() == fieldName }
+    getTerms(query).filter { _.field() == fieldName }
   }
 
   def getTerms(fieldNames: Set[String], query: Query): Set[Term] = {
-    getTerms(query).filter{ term => fieldNames.contains(term.field()) }
+    getTerms(query).filter { term => fieldNames.contains(term.field()) }
   }
 
   def getTerms(query: Query): Set[Term] = {
@@ -70,7 +70,7 @@ object QueryUtil extends Logging {
       val newQuery = new PhraseQuery()
       val positions = query.getPositions()
       val terms = query.getTerms()
-      terms.zip(positions).foreach{ case (t, p) => newQuery.add(new Term(field, t.text()), p) }
+      terms.zip(positions).foreach { case (t, p) => newQuery.add(new Term(field, t.text()), p) }
       newQuery.setBoost(query.getBoost())
       newQuery
     }
@@ -81,7 +81,7 @@ object QueryUtil extends Logging {
     else {
       val newQuery = new BooleanQuery()
       val clauses = query.getClauses()
-      clauses.map{ clause =>
+      clauses.map { clause =>
         val newSubQuery = clause.getQuery() match {
           case null => null
           case subq: TermQuery => copy(subq, field)
@@ -177,7 +177,7 @@ object QueryUtil extends Logging {
     val startOffsets = ListBuffer.empty[(Int, Int)]
     try {
       ts.reset()
-      while (ts.incrementToken()){
+      while (ts.incrementToken()) {
         startOffsets.append((offset.startOffset, offset.endOffset))
       }
       ts.end()

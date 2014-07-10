@@ -7,10 +7,8 @@ import com.keepit.common.service.ServiceType
 import com.google.inject.util.Providers
 import com.keepit.common.actor.FakeScheduler
 
-
 class FakeMavenServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends MavenServiceClient {
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), ()=>{})
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
-
 
 }

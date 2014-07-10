@@ -8,19 +8,19 @@ import securesocial.core._
 import securesocial.core.AuthenticationMethod._
 import play.api.libs.json._
 import com.keepit.model.SocialUserInfo
-import com.keepit.social.{SocialUserRawInfo, SocialNetworkType, SocialId}
+import com.keepit.social.{ SocialUserRawInfo, SocialNetworkType, SocialId }
 
 class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
 
   def writes(info: SocialUserRawInfo): JsValue =
     JsObject(List(
-        "userId" -> (info.userId map { e => JsNumber(e.id) } getOrElse(JsNull)),
-        "socialUserInfoId" -> JsNumber(info.socialUserInfoId.get.id),
-        "socialId" -> JsString(info.socialId.id),
-        "networkType" -> JsString(SocialNetworkType.unapply(info.networkType).get),
-        "fullName" -> JsString(info.fullName),
-        "jsons" -> JsArray(info.jsons.toList)
-      )
+      "userId" -> (info.userId map { e => JsNumber(e.id) } getOrElse (JsNull)),
+      "socialUserInfoId" -> JsNumber(info.socialUserInfoId.get.id),
+      "socialId" -> JsString(info.socialId.id),
+      "networkType" -> JsString(SocialNetworkType.unapply(info.networkType).get),
+      "fullName" -> JsString(info.fullName),
+      "jsons" -> JsArray(info.jsons.toList)
+    )
     )
 
   def reads(json: JsValue): JsSuccess[SocialUserRawInfo] = JsSuccess({

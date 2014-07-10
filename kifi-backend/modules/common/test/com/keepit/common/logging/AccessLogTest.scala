@@ -3,7 +3,7 @@ package com.keepit.common.logging
 import com.keepit.test._
 import com.keepit.common.time._
 import org.specs2.mutable.Specification
-import org.joda.time.{ReadablePeriod, DateTime}
+import org.joda.time.{ ReadablePeriod, DateTime }
 
 class AccessLogTest extends Specification with TestInjector {
 

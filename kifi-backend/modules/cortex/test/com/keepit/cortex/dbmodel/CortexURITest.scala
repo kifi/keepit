@@ -10,32 +10,31 @@ import com.keepit.model.NormalizedURI
 import com.keepit.common.db.State
 import com.keepit.common.db.SequenceNumber
 
-
-class CortexURITest extends Specification with CortexTestInjector{
+class CortexURITest extends Specification with CortexTestInjector {
   "cortex uri repo" should {
     "persist and retrieve cortex uri" in {
       withDb() { implicit injector =>
         val uriRepo = inject[CortexURIRepo]
 
-        val uris = (1 to 10).map{ i =>
+        val uris = (1 to 10).map { i =>
           CortexURI(
-           id = None,
-           uriId = Id[NormalizedURI](i),
-           state = State[CortexURI]("active"),
-           seq = SequenceNumber[CortexURI](i)
-         )
+            id = None,
+            uriId = Id[NormalizedURI](i),
+            state = State[CortexURI]("active"),
+            seq = SequenceNumber[CortexURI](i)
+          )
         }
 
-        db.readOnlyMaster{ implicit s =>
+        db.readOnlyMaster { implicit s =>
           uriRepo.getMaxSeq.value === 0L
         }
 
-        db.readWrite{ implicit s =>
-          uris.foreach{ uriRepo.save(_)}
+        db.readWrite { implicit s =>
+          uris.foreach { uriRepo.save(_) }
         }
 
-        db.readOnlyMaster{ implicit s =>
-          uriRepo.getSince(SequenceNumber[CortexURI](5), 10).map{_.uriId.id} === Range(6, 11).toList
+        db.readOnlyMaster { implicit s =>
+          uriRepo.getSince(SequenceNumber[CortexURI](5), 10).map { _.uriId.id } === Range(6, 11).toList
           uriRepo.getMaxSeq.value === 10L
         }
       }

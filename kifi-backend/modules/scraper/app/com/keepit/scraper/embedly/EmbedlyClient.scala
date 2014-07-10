@@ -4,16 +4,16 @@ import java.net.URLEncoder
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.concurrent.RetryFuture
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.strings.UTF8
-import com.keepit.model.{ImageInfo, NormalizedURI}
+import com.keepit.model.{ ImageInfo, NormalizedURI }
 import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-import play.api.libs.ws.{Response, WS}
+import play.api.libs.ws.{ Response, WS }
 import com.keepit.common.db.Id
 
 trait EmbedlyClient {
@@ -35,8 +35,6 @@ class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
     }
   }
 
-
-
   private def parseEmbedlyInfo(resp: Response): Option[EmbedlyInfo] = {
     resp.status match {
       case Status.OK =>
@@ -57,24 +55,26 @@ class EmbedlyClientImpl @Inject() extends EmbedlyClient with Logging {
     fetchExtendedInfoConsolidater(apiUrl) { urlString =>
       fetchWithRetry(apiUrl, 120000) map { resp =>
         parseEmbedlyInfo(resp)
-      } recover { case t:Throwable =>
-        log.info(s"Caught exception while invoking ($apiUrl): Exception=$t; cause=${t.getCause}")
-        None
+      } recover {
+        case t: Throwable =>
+          log.info(s"Caught exception while invoking ($apiUrl): Exception=$t; cause=${t.getCause}")
+          None
       }
     }
   }
 
-  private val fetchExtendedInfoConsolidater = new RequestConsolidator[String,Option[EmbedlyInfo]](2 minutes)
+  private val fetchExtendedInfoConsolidater = new RequestConsolidator[String, Option[EmbedlyInfo]](2 minutes)
 
-  private def fetchWithRetry(url:String, timeout:Int):Future[Response] = {
+  private def fetchWithRetry(url: String, timeout: Int): Future[Response] = {
     val count = new AtomicInteger()
-    val resolver:PartialFunction[Throwable, Boolean] = { case t:Throwable =>
-      count.getAndIncrement
-      // random delay or backoff
-      log.info(s"[fetchWithRetry($url)] attempt#(${count.get}) failed with $t") // intermittent embedly/site failures
-      true
+    val resolver: PartialFunction[Throwable, Boolean] = {
+      case t: Throwable =>
+        count.getAndIncrement
+        // random delay or backoff
+        log.info(s"[fetchWithRetry($url)] attempt#(${count.get}) failed with $t") // intermittent embedly/site failures
+        true
     }
-    RetryFuture(attempts = 2, resolver){
+    RetryFuture(attempts = 2, resolver) {
       WS.url(url).withRequestTimeout(timeout).get()
     }
   }

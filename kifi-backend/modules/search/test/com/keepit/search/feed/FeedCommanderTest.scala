@@ -11,12 +11,11 @@ import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.sharding.ActiveShards
 import com.keepit.search.sharding.ShardSpecParser
-import com.keepit.search.{SearchServiceClient, SearchTestHelper}
+import com.keepit.search.{ SearchServiceClient, SearchTestHelper }
 import org.joda.time.DateTime
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.search.graph.bookmark._
 import scala.Some
-
 
 class FeedCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
@@ -29,12 +28,12 @@ class FeedCommanderTest extends Specification with SearchApplicationInjector wit
     )
 
     val uris = client.saveURIs(
-      NormalizedURI.withHash(title = Some("0"), normalizedUrl = "http://www.keepit.com/login", state = UNSCRAPABLE),  // kept by u1
-      NormalizedURI.withHash(title = Some("1"), normalizedUrl = "http://www.keepit.com/video", state = SCRAPED),      // u1, u2, u3
-      NormalizedURI.withHash(title = Some("2"), normalizedUrl = "http://www.keepit.com/faq", state = SCRAPED),        // u0, u2
+      NormalizedURI.withHash(title = Some("0"), normalizedUrl = "http://www.keepit.com/login", state = UNSCRAPABLE), // kept by u1
+      NormalizedURI.withHash(title = Some("1"), normalizedUrl = "http://www.keepit.com/video", state = SCRAPED), // u1, u2, u3
+      NormalizedURI.withHash(title = Some("2"), normalizedUrl = "http://www.keepit.com/faq", state = SCRAPED), // u0, u2
       NormalizedURI.withHash(title = Some("3"), normalizedUrl = "http://www.keepit.com/isSensitive", state = SCRAPED), // u1
-      NormalizedURI.withHash(title = Some("4"), normalizedUrl = "http://www.keepit.com/picture", state = SCRAPED),     // u2, u3
-      NormalizedURI.withHash(title = Some("5"), normalizedUrl = "http://www.keepit.com/private", state = SCRAPED)     // private by u2
+      NormalizedURI.withHash(title = Some("4"), normalizedUrl = "http://www.keepit.com/picture", state = SCRAPED), // u2, u3
+      NormalizedURI.withHash(title = Some("5"), normalizedUrl = "http://www.keepit.com/private", state = SCRAPED) // private by u2
     )
 
     val t0 = new DateTime(2014, 2, 17, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -61,7 +60,6 @@ class FeedCommanderTest extends Specification with SearchApplicationInjector wit
     (users, uris, bms, t0)
   }
 
-
   "FeedCommander" should {
     "work" in {
       running(application) {
@@ -84,12 +82,12 @@ class FeedCommanderTest extends Specification with SearchApplicationInjector wit
         feeds.size === 2
         val (f0, f1) = (feeds(0), feeds(1))
         f0.uri.title.get === "4"
-        f0.sharingUsers.map{_.firstName}.toSet === Set("u2")
+        f0.sharingUsers.map { _.firstName }.toSet === Set("u2")
         f0.totalKeepersSize === 2
         f0.firstKeptAt.getMillis() === t0.plusMinutes(7).getMillis()
 
         f1.uri.title.get === "1"
-        f1.sharingUsers.map{_.firstName}.toSet === Set("u1", "u2")
+        f1.sharingUsers.map { _.firstName }.toSet === Set("u1", "u2")
         f1.totalKeepersSize === 3
         f1.firstKeptAt.getMillis() === t0.plusMinutes(1).getMillis()
       }

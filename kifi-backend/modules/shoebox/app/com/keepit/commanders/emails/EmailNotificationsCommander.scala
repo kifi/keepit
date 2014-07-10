@@ -2,7 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.{LocalPostOffice, SystemEmailAddress, ElectronicMail}
+import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail }
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.eliza.model.ThreadItem
@@ -14,18 +14,18 @@ import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class EmailNotificationsCommander @Inject() (
-  localPostOffice: LocalPostOffice,
-  userRepo: UserRepo,
-  deepLinkRepo: DeepLinkRepo,
-  emailRepo: UserEmailAddressRepo,
-  db: Database,
-  clock: Clock,
-  airbrake: AirbrakeNotifier) extends Logging {
+    localPostOffice: LocalPostOffice,
+    userRepo: UserRepo,
+    deepLinkRepo: DeepLinkRepo,
+    emailRepo: UserEmailAddressRepo,
+    db: Database,
+    clock: Clock,
+    airbrake: AirbrakeNotifier) extends Logging {
 
   //Todo: needs to support non user participants
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipantIds: Seq[Id[User]],
-                         recipientUserId: Id[User], title: String, deepLocator: DeepLocator,
-                         notificationUpdatedAt: Option[DateTime]): Unit = db.readWrite { implicit session =>
+    recipientUserId: Id[User], title: String, deepLocator: DeepLocator,
+    notificationUpdatedAt: Option[DateTime]): Unit = db.readWrite { implicit session =>
     notificationUpdatedAt foreach { time =>
       val now = clock.now
       airbrake.verify(time.isAfter(now.minusMinutes(30)), s"notificationUpdatedAt $time of thread was more then 30min ago. " +
@@ -35,7 +35,7 @@ class EmailNotificationsCommander @Inject() (
     val recipient = userRepo.get(recipientUserId)
     if (recipient.state == UserStates.ACTIVE) {
       val otherParticipants = otherParticipantIds map userRepo.get
-      val allUsers: Map[Id[User], User] = (otherParticipants :+ recipient) map {u => u.id.get -> u} toMap
+      val allUsers: Map[Id[User], User] = (otherParticipants :+ recipient) map { u => u.id.get -> u } toMap
       val authorFirstLast: Seq[String] = otherParticipants.map(user => user.firstName + " " + user.lastName).sorted
       val link = deepLinkRepo.getByLocatorAndUser(deepLocator, recipientUserId)
       val url = com.keepit.controllers.ext.routes.ExtDeepLinkController.handle(link.token.value).toString()

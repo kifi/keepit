@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import org.specs2.mutable.Specification
-import play.api.libs.json.{JsError, JsSuccess, Json}
+import play.api.libs.json.{ JsError, JsSuccess, Json }
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.db.ExternalId
 

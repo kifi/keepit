@@ -9,7 +9,7 @@ import net.codingwell.scalaguice.ScalaModule
 
 import play.api.libs.json.JsValue
 
-import securesocial.core.{IdentityId, OAuth2Settings}
+import securesocial.core.{ IdentityId, OAuth2Settings }
 import com.keepit.common.mail.EmailAddress
 
 /**

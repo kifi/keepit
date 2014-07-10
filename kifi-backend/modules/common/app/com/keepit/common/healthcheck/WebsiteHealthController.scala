@@ -1,6 +1,6 @@
 package com.keepit.common.healthcheck
 
-import com.keepit.common.service.{ServiceType, FortyTwoServices}
+import com.keepit.common.service.{ ServiceType, FortyTwoServices }
 import com.keepit.common.time.RichDateTime
 import scala.util.Random
 
@@ -12,7 +12,7 @@ import securesocial.core.SecureSocial
 import views.html
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{WebsiteController,ActionAuthenticator}
+import com.keepit.common.controller.{ WebsiteController, ActionAuthenticator }
 
 class WebsiteHealthController @Inject() (
   actionAuthenticator: ActionAuthenticator,

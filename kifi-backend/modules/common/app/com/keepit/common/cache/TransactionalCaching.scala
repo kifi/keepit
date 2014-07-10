@@ -23,7 +23,7 @@ trait TransactionalCaching { self: Logging =>
 
   final def inCacheTransaction: Boolean = (inTxn && !bypassTransaction)
 
-  final def getOrCreate[K <: Key[T], T](cacheName: String)(createNewCache: => TransactionLocalCache[K, T]) : ObjectCache[K, T] = {
+  final def getOrCreate[K <: Key[T], T](cacheName: String)(createNewCache: => TransactionLocalCache[K, T]): ObjectCache[K, T] = {
     caches.get(cacheName) match {
       case Some(cache) => cache.asInstanceOf[ObjectCache[K, T]]
       case _ =>
@@ -41,12 +41,13 @@ trait TransactionalCaching { self: Logging =>
 
   def commitCacheTransaction(): Unit = {
     try {
-      caches.foreach{ case (name, cache) =>
-        try {
-          cache.flush()
-        } catch {
-          case ex: Throwable => log.error("error during flush", ex)
-        }
+      caches.foreach {
+        case (name, cache) =>
+          try {
+            cache.flush()
+          } catch {
+            case ex: Throwable => log.error("error during flush", ex)
+          }
       }
     } finally {
       caches.clear()
@@ -59,7 +60,7 @@ trait TransactionalCaching { self: Logging =>
     inTxn = false
   }
 
-  final def directCacheAccess(block: =>Unit): Unit = {
+  final def directCacheAccess(block: => Unit): Unit = {
     if (bypassTransaction) {
       block
     } else {

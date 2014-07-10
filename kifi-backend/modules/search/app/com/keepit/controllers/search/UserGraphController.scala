@@ -5,11 +5,9 @@ import com.keepit.common.controller.SearchServiceController
 import com.keepit.search.graph.user._
 import play.api.mvc.Action
 
-
-class UserGraphController @Inject()(
-  userGraph: UserGraphPlugin,
-  searchFriendGraph: SearchFriendGraphPlugin
-) extends SearchServiceController {
+class UserGraphController @Inject() (
+    userGraph: UserGraphPlugin,
+    searchFriendGraph: SearchFriendGraphPlugin) extends SearchServiceController {
 
   def reindex() = Action { implicit request =>
     userGraph.reindex()

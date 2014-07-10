@@ -1,23 +1,23 @@
 package com.keepit.eliza.controllers.ext
 
-import com.keepit.test.{ElizaApplication, ElizaApplicationInjector}
+import com.keepit.test.{ ElizaApplication, ElizaApplicationInjector }
 import org.specs2.mutable._
 import com.keepit.common.db.slick._
 import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.common.controller.{FakeActionAuthenticator, FakeActionAuthenticatorModule}
+import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
 import com.keepit.inject._
-import com.keepit.test.{DbTestInjector}
-import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl}
+import com.keepit.test.{ DbTestInjector }
+import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._
-import com.keepit.common.actor.{TestActorSystemModule, StandaloneTestActorSystemModule}
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.actor.{ TestActorSystemModule, StandaloneTestActorSystemModule }
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model.User
 import com.keepit.social.BasicUser
-import com.keepit.realtime.{UrbanAirship, FakeUrbanAirship, FakeUrbanAirshipModule}
-import com.keepit.heimdal.{HeimdalContext, TestHeimdalServiceClientModule}
+import com.keepit.realtime.{ UrbanAirship, FakeUrbanAirship, FakeUrbanAirshipModule }
+import com.keepit.heimdal.{ HeimdalContext, TestHeimdalServiceClientModule }
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
-import com.keepit.abook.{FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule}
+import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule }
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.commanders.MessagingCommander
@@ -27,7 +27,7 @@ import com.keepit.common.crypto.TestCryptoModule
 import com.google.inject.Injector
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.{ Json, JsObject }
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import akka.actor.ActorSystem
@@ -60,7 +60,7 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
   "ExtMessaging Controller" should {
 
     "send correctly" in {
-      running(new ElizaApplication(modules:_*)) {
+      running(new ElizaApplication(modules: _*)) {
         val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
         val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"))
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
@@ -161,7 +161,7 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
     }
 
     "sendMessageReplyAction" in {
-      running(new ElizaApplication(modules:_*)) {
+      running(new ElizaApplication(modules: _*)) {
         val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
         val shachaf = User(id = Some(Id[User](43)), firstName = "Shachaf", lastName = "Smith", externalId = ExternalId[User]("2be9e0e7-212e-4081-a2b0-bfcaf3e61484"))
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
@@ -202,7 +202,7 @@ class ExtMessagingControllerTest extends Specification with ElizaApplicationInje
 
         val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all }
         messages.size === 2
-        val replys = messages filter {m => m.id != message.id}
+        val replys = messages filter { m => m.id != message.id }
         replys.size === 1
         val reply = replys.head
         reply.messageText === "cool man!"

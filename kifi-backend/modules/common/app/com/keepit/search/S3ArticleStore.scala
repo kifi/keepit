@@ -7,7 +7,6 @@ import com.amazonaws.services.s3._
 import com.keepit.common.store._
 import play.api.libs.json.Format
 
-
 trait ArticleStore extends ObjectStore[Id[NormalizedURI], Article]
 
 class S3ArticleStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val formatter: Format[Article] = Article.format)

@@ -2,23 +2,22 @@ package com.keepit.common.net
 
 import com.keepit.common.logging.Logging
 import net.sf.uadetector.service.UADetectorServiceFactory
-import net.sf.uadetector.{ReadableUserAgent => SFUserAgent}
-
+import net.sf.uadetector.{ ReadableUserAgent => SFUserAgent }
 
 case class UserAgent(
-  userAgent: String,
-  name: String,
-  operatingSystemFamily: String,
-  operatingSystemName: String,
-  typeName: String,
-  version: String) {
+    userAgent: String,
+    name: String,
+    operatingSystemFamily: String,
+    operatingSystemName: String,
+    typeName: String,
+    version: String) {
   lazy val isKifiIphoneApp: Boolean = typeName == UserAgent.KifiIphoneAppTypeName
   lazy val isKifiAndroidApp: Boolean = typeName == UserAgent.KifiAndroidAppTypeName
   lazy val isIphone: Boolean = (operatingSystemFamily == "iOS" && userAgent.contains("CPU iPhone OS")) || isKifiIphoneApp
   lazy val isMobile: Boolean = UserAgent.MobileOses.contains(operatingSystemFamily) || isKifiIphoneApp
   lazy val screenCanFitWebApp: Boolean = !isMobile // || UserAgent.TabletIndicators.exists(userAgent.contains(_))  // TODO: let people use web app on tablet
   lazy val canRunExtensionIfUpToDate: Boolean = !isMobile && UserAgent.ExtensionBrowserNames.contains(name)
-  lazy val isOldIE: Boolean = name == "IE" && (try { version.toDouble.toInt } catch { case _:NumberFormatException => Double.MaxValue }) < 10
+  lazy val isOldIE: Boolean = name == "IE" && (try { version.toDouble.toInt } catch { case _: NumberFormatException => Double.MaxValue }) < 10
 }
 
 object UserAgent extends Logging {

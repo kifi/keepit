@@ -6,7 +6,7 @@ import scala.concurrent.promise
 import org.joda.time._
 import com.google.inject.Inject
 import com.keepit.classify._
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
@@ -15,13 +15,12 @@ import com.keepit.eliza.ElizaServiceClient
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import views.html
-import com.keepit.heimdal.{SystemEventTypes, HeimdalContext, SystemEvent, HeimdalServiceClient}
+import com.keepit.heimdal.{ SystemEventTypes, HeimdalContext, SystemEvent, HeimdalServiceClient }
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsBoolean
 import com.keepit.classify.DomainTag
 import play.api.libs.json.JsObject
-import com.keepit.common.store.{KifiInstallationDetails, KifInstallationStore}
-
+import com.keepit.common.store.{ KifiInstallationDetails, KifInstallationStore }
 
 class SliderAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -109,12 +108,12 @@ class SliderAdminController @Inject() (
   def getClassifications(domain: Option[String]) = AdminHtmlAction.authenticatedAsync { implicit request =>
     domain.map(domainClassifier.fetchTags)
       .getOrElse(promise[Seq[DomainTagName]].success(Seq()).future).map { tags =>
-      val tagPairs = tags.map { t =>
-        val tag = db.readOnlyMaster { implicit s => domainTagRepo.get(t) }
-        (t.name, tag.map(_.sensitive.getOrElse(false)))
+        val tagPairs = tags.map { t =>
+          val tag = db.readOnlyMaster { implicit s => domainTagRepo.get(t) }
+          (t.name, tag.map(_.sensitive.getOrElse(false)))
+        }
+        Ok(html.admin.classifications(domain, tagPairs))
       }
-      Ok(html.admin.classifications(domain, tagPairs))
-    }
   }
 
   def saveDomainTags = AdminHtmlAction.authenticated { implicit request =>
@@ -175,7 +174,7 @@ class SliderAdminController @Inject() (
     Ok(JsObject(domainSensitiveMap map { case (s, b) => s -> JsBoolean(b) } toSeq))
   }
 
-  def refetchClassifications = /* TODO: AdminJson */Action { implicit request =>
+  def refetchClassifications = /* TODO: AdminJson */ Action { implicit request =>
     domainTagImporter.refetchClassifications()
     Ok(JsObject(Seq()))
   }

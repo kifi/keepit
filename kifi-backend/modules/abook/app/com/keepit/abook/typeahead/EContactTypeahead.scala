@@ -2,30 +2,29 @@ package com.keepit.abook.typeahead
 
 import com.google.inject.Inject
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.model.{User, EContact}
+import com.keepit.model.{ User, EContact }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.abook.{ABookInfoRepo, EContactRepo}
-import scala.concurrent.{Future}
+import com.keepit.abook.{ ABookInfoRepo, EContactRepo }
+import scala.concurrent.{ Future }
 import com.keepit.common.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import com.keepit.typeahead._
 import org.joda.time.Minutes
 import com.keepit.common.time._
 import com.amazonaws.services.s3.AmazonS3
-import com.keepit.common.logging.{Logging, AccessLog}
-import com.keepit.common.cache.{Key, BinaryCacheImpl, FortyTwoCachePlugin, CacheStatistics}
+import com.keepit.common.logging.{ Logging, AccessLog }
+import com.keepit.common.cache.{ Key, BinaryCacheImpl, FortyTwoCachePlugin, CacheStatistics }
 import com.keepit.serializer.ArrayBinaryFormat
 import com.keepit.common.store.S3Bucket
 
 class EContactTypeahead @Inject() (
-  db:Database,
-  override val airbrake:AirbrakeNotifier,
-  cache: EContactTypeaheadCache,
-  store: EContactTypeaheadStore,
-  abookInfoRepo: ABookInfoRepo,
-  econtactRepo: EContactRepo
-) extends Typeahead[EContact, EContact] with Logging {
+    db: Database,
+    override val airbrake: AirbrakeNotifier,
+    cache: EContactTypeaheadCache,
+    store: EContactTypeaheadStore,
+    abookInfoRepo: ABookInfoRepo,
+    econtactRepo: EContactRepo) extends Typeahead[EContact, EContact] with Logging {
 
   import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
@@ -57,18 +56,18 @@ class EContactTypeahead @Inject() (
             refresh(userId) // async
           }
           Future.successful(filter) // return curr one
-        case None => refresh(userId).map{ _.data }(ExecutionContext.fj)
+        case None => refresh(userId).map { _.data }(ExecutionContext.fj)
       }
-    }.map{ new PrefixFilter[EContact](_) }(ExecutionContext.fj)
+    }.map { new PrefixFilter[EContact](_) }(ExecutionContext.fj)
   }
 
-  def refreshAll():Future[Unit] = {
+  def refreshAll(): Future[Unit] = {
     log.info("[refreshAll] begin re-indexing ...")
     val abookInfos = db.readOnlyMaster { implicit ro =>
       abookInfoRepo.all() // only retrieve users with existing abooks (todo: deal with deletes)
     }
     log.info(s"[refreshAll] ${abookInfos.length} to be re-indexed; abooks=${abookInfos.take(20).mkString(",")} ...")
-    val userIds = abookInfos.foldLeft(Set.empty[Id[User]]) {(a,c) => a + c.userId } // inefficient
+    val userIds = abookInfos.foldLeft(Set.empty[Id[User]]) { (a, c) => a + c.userId } // inefficient
     refreshByIds(userIds.toSeq).map { _ =>
       log.info(s"[refreshAll] re-indexing finished.")
     }(ExecutionContext.fj)
@@ -101,14 +100,14 @@ object EContactTypeahead {
 
 trait EContactTypeaheadStore extends PrefixFilterStore[User]
 
-class S3EContactTypeaheadStore @Inject()(
-  bucket:S3Bucket,
-  amazonS3Client:AmazonS3,
-  accessLog:AccessLog) extends S3PrefixFilterStoreImpl[User](bucket, amazonS3Client, accessLog) with EContactTypeaheadStore
+class S3EContactTypeaheadStore @Inject() (
+  bucket: S3Bucket,
+  amazonS3Client: AmazonS3,
+  accessLog: AccessLog) extends S3PrefixFilterStoreImpl[User](bucket, amazonS3Client, accessLog) with EContactTypeaheadStore
 
 class InMemoryEContactTypeaheadStore extends InMemoryPrefixFilterStoreImpl[User] with EContactTypeaheadStore
 
-class EContactTypeaheadCache(stats:CacheStatistics, accessLog:AccessLog, innermostPluginSettings:(FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+class EContactTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends BinaryCacheImpl[EContactTypeaheadKey, Array[Long]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(ArrayBinaryFormat.longArrayFormat)
 
 case class EContactTypeaheadKey(userId: Id[User]) extends Key[Array[Long]] {

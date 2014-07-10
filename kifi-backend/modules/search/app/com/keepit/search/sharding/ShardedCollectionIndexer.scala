@@ -13,10 +13,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class ShardedCollectionIndexer(
-  override val indexShards: Map[Shard[NormalizedURI], CollectionIndexer],
-  override val airbrake: AirbrakeNotifier,
-  shoeboxClient : ShoeboxServiceClient
-) extends ShardedIndexer[NormalizedURI, Collection, CollectionIndexer] {
+    override val indexShards: Map[Shard[NormalizedURI], CollectionIndexer],
+    override val airbrake: AirbrakeNotifier,
+    shoeboxClient: ShoeboxServiceClient) extends ShardedIndexer[NormalizedURI, Collection, CollectionIndexer] {
 
   private val fetchSize = 2000
 
@@ -29,8 +28,9 @@ class ShardedCollectionIndexer(
       val data = CollectionIndexer.fetchData(sequenceNumber, fetchSize, shoeboxClient)
       done = data.isEmpty
 
-      indexShards.foreach{ case (shard, indexer) =>
-        indexer.update(shard.indexNameSuffix, data, shard)
+      indexShards.foreach {
+        case (shard, indexer) =>
+          indexer.update(shard.indexNameSuffix, data, shard)
       }
       total += data.size
       if (!done) sequenceNumber = data.last._1.seq

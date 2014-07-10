@@ -9,7 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.collection.concurrent.TrieMap
-import scala.util.{Success, Failure}
+import scala.util.{ Success, Failure }
 
 import akka.actor.Scheduler
 
@@ -43,14 +43,14 @@ trait ServiceDiscovery {
 class UnknownServiceException(message: String) extends Exception(message)
 
 class ServiceDiscoveryImpl(
-    zkClient: ZooKeeperClient,
-    services: FortyTwoServices,
-    amazonInstanceInfo: AmazonInstanceInfo,
-    scheduler: Scheduler,
-    airbrake: Provider[AirbrakeNotifier],
-    val isCanary: Boolean = false,
-    servicesToListenOn: Seq[ServiceType])
-  extends ServiceDiscovery with Logging {
+  zkClient: ZooKeeperClient,
+  services: FortyTwoServices,
+  amazonInstanceInfo: AmazonInstanceInfo,
+  scheduler: Scheduler,
+  airbrake: Provider[AirbrakeNotifier],
+  val isCanary: Boolean = false,
+  servicesToListenOn: Seq[ServiceType])
+    extends ServiceDiscovery with Logging {
 
   @volatile private var lastStatusChangeTime = System.currentTimeMillis
 
@@ -72,11 +72,11 @@ class ServiceDiscoveryImpl(
 
   private val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()
-    val myCluster = new ServiceCluster(services.currentService, airbrake, scheduler, ()=>{forceUpdate()})
+    val myCluster = new ServiceCluster(services.currentService, airbrake, scheduler, () => { forceUpdate() })
     clustersToInit(services.currentService) = myCluster
     if (servicesToListenOn.contains(services.currentService)) throw new IllegalArgumentException(s"current service is included in servicesToListenOn: $servicesToListenOn")
-    servicesToListenOn foreach {service =>
-      val cluster = new ServiceCluster(service, airbrake, scheduler, ()=>{forceUpdate()})
+    servicesToListenOn foreach { service =>
+      val cluster = new ServiceCluster(service, airbrake, scheduler, () => { forceUpdate() })
       clustersToInit(service) = cluster
     }
     log.info(s"registered clusters: $clustersToInit")
@@ -93,14 +93,14 @@ class ServiceDiscoveryImpl(
    */
   private var lastLeaderLogTime = 0L
 
-  def isLeader(): Boolean = if (isCanary) false else zkClient.session{ zk =>
+  def isLeader(): Boolean = if (isCanary) false else zkClient.session { zk =>
     if (!stillRegistered()) {
       log.warn(s"service did not register itself yet!")
       return false
     }
     val now = System.currentTimeMillis()
     val logMe = (now - lastLeaderLogTime) > 30000 //30 sec
-    def logLeader(msg:  => String): Unit = {
+    def logLeader(msg: => String): Unit = {
       //best effort, race conditions could happen but we don't want to lock
       log.info(msg)
       lastLeaderLogTime = now
@@ -114,7 +114,7 @@ class ServiceDiscoveryImpl(
           statsd.gauge(s"service.leader.${myCluster.serviceType.shortName}", 1)
         }
         return true
-      case Some(instance)  =>
+      case Some(instance) =>
         require(myCluster.size > 1)
         if (logMe) logLeader(s"I'm not the leader since my instance is ${myInstance.get} and the leader is $instance")
         return false
@@ -131,11 +131,11 @@ class ServiceDiscoveryImpl(
 
   override def myClusterSize: Int = myCluster.size
 
-  private def stillRegistered(): Boolean = myInstance.exists{ instance =>
+  private def stillRegistered(): Boolean = myInstance.exists { instance =>
     myCluster.instanceForNode(instance.node).isDefined
   }
 
-  private def watchServices(zk: ZooKeeperSession): Unit = clusters.values.foreach{ cluster => watchService(zk, cluster) }
+  private def watchServices(zk: ZooKeeperSession): Unit = clusters.values.foreach { cluster => watchService(zk, cluster) }
 
   private def watchService(zk: ZooKeeperSession, cluster: ServiceCluster): Unit = {
     zk.create(cluster.servicePath)
@@ -146,10 +146,10 @@ class ServiceDiscoveryImpl(
   }
 
   @volatile private var forceUpdateInProgress = false
-  def forceUpdate() : Unit = if (!forceUpdateInProgress) synchronized {
+  def forceUpdate(): Unit = if (!forceUpdateInProgress) synchronized {
     if (!forceUpdateInProgress) {
       forceUpdateInProgress = true
-      zkClient.session{ zk =>
+      zkClient.session { zk =>
         for (cluster <- clusters.values) {
           val children = zk.getChildren(cluster.servicePath).map(child => (child, zk.getData[String](child).get))
           cluster.update(zk, children)
@@ -163,10 +163,9 @@ class ServiceDiscoveryImpl(
     if (unregistered) throw new IllegalStateException("unable to register once unregistered")
 
     registered = true
-    zkClient.onConnected{ zk => doRegister(zk) } // It is expected that zk is ready at this point and invokes doRegister immediately
+    zkClient.onConnected { zk => doRegister(zk) } // It is expected that zk is ready at this point and invokes doRegister immediately
     myInstance.get
   }
-
 
   private def doRegister(zk: ZooKeeperSession): Unit = {
     val thisRemoteService = getThisRemoteService
@@ -175,7 +174,7 @@ class ServiceDiscoveryImpl(
 
       //if the instance already exist, unregister it
       myInstance foreach { instance =>
-      try {
+        try {
           log.warn(s"deleting instance $instance from zookeeper before re-registering itself")
           zk.delete(instance.node)
         } catch {
@@ -197,11 +196,11 @@ class ServiceDiscoveryImpl(
   override def unRegister(): Unit = registrationLock.synchronized {
     registered = false
     unregistered = true
-    myInstance foreach {instance => zkClient.session{ zk => zk.delete(instance.node) } }
+    myInstance foreach { instance => zkClient.session { zk => zk.delete(instance.node) } }
     myInstance = None
   }
 
-  def changeStatus(newStatus: ServiceStatus): Unit = zkClient.session{ zk =>
+  def changeStatus(newStatus: ServiceStatus): Unit = zkClient.session { zk =>
     if (stillRegistered()) synchronized {
       myInstance foreach { instance =>
         log.info(s"Changing instance status to $newStatus")
@@ -213,7 +212,7 @@ class ServiceDiscoveryImpl(
     }
   }
 
-  def myStatus : Option[ServiceStatus] = myInstance.map(_.remoteService.status)
+  def myStatus: Option[ServiceStatus] = myInstance.map(_.remoteService.status)
 
   def myVersion: ServiceVersion = services.currentVersion
 
@@ -223,21 +222,21 @@ class ServiceDiscoveryImpl(
       log.info("Running self check")
       val selfCheckPromise = Promise[Boolean]
       val selfCheckFuture = services.currentService.selfCheck()
-      selfCheckFuture.onComplete{
-          case Success(passed) =>
-            if (passed) {
-              changeStatus(myHealthyStatus.get)
-              selfCheckPromise.success(true)
-            } else {
-              changeStatus(ServiceStatus.SELFCHECK_FAIL)
-              selfCheckPromise.success(false)
-            }
-            selfCheckIsRunning = false
-          case Failure(e) =>
+      selfCheckFuture.onComplete {
+        case Success(passed) =>
+          if (passed) {
+            changeStatus(myHealthyStatus.get)
+            selfCheckPromise.success(true)
+          } else {
             changeStatus(ServiceStatus.SELFCHECK_FAIL)
-            selfCheckIsRunning = false
             selfCheckPromise.success(false)
-        }
+          }
+          selfCheckIsRunning = false
+        case Failure(e) =>
+          changeStatus(ServiceStatus.SELFCHECK_FAIL)
+          selfCheckIsRunning = false
+          selfCheckPromise.success(false)
+      }
       selfCheckFutureOpt = Some(selfCheckPromise.future)
     }
     selfCheckFutureOpt.get //this option must be defined when we are in this case

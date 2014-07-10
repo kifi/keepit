@@ -1,8 +1,7 @@
 package com.keepit.model
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.heimdal._
-
 
 case class TestMongoModule() extends MongoModule {
 

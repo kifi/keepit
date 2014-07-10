@@ -1,10 +1,10 @@
 package com.keepit.search
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 
 @ImplementedBy(classOf[SearchConfigExperimentRepoImpl])
 trait SearchConfigExperimentRepo extends Repo[SearchConfigExperiment] {
@@ -13,11 +13,10 @@ trait SearchConfigExperimentRepo extends Repo[SearchConfigExperiment] {
 }
 
 @Singleton
-class SearchConfigExperimentRepoImpl @Inject()(
-  val db: DataBaseComponent,
-  val clock: Clock,
-  val cache: ActiveExperimentsCache
-) extends DbRepo[SearchConfigExperiment] with SearchConfigExperimentRepo {
+class SearchConfigExperimentRepoImpl @Inject() (
+    val db: DataBaseComponent,
+    val clock: Clock,
+    val cache: ActiveExperimentsCache) extends DbRepo[SearchConfigExperiment] with SearchConfigExperimentRepo {
 
   import db.Driver.simple._
 

@@ -6,7 +6,6 @@ import com.keepit.search.Lang
 import com.keepit.search.query.QueryUtil
 import scala.collection.mutable.ArrayBuffer
 
-
 object NlpPhraseDetector {
   val LOWER_LIMIT = 10
   val UPPER_LIMIT = 100
@@ -15,14 +14,14 @@ object NlpPhraseDetector {
   def detectAll(queryText: String, analyzer: Analyzer, lang: Lang) = {
     if (!toDetect(queryText, lang)) Set.empty[(Int, Int)]
     else {
-      val cons = NlpParser.getNonOverlappingConstituents(queryText)     // token offsets
-      val termPos = QueryUtil.getTermOffsets(analyzer, queryText)       // char offsets (start, end), end is exclusive
+      val cons = NlpParser.getNonOverlappingConstituents(queryText) // token offsets
+      val termPos = QueryUtil.getTermOffsets(analyzer, queryText) // char offsets (start, end), end is exclusive
       val offsets = toCharOffsets(cons, queryText).sortWith((a, b) => (a._1 < b._1)) // (start, end), end is exclusive
       var p = 0
       var i = 0
-      var phrases = Set.empty[(Int, Int)]      // (start, len)
+      var phrases = Set.empty[(Int, Int)] // (start, len)
       while (i < termPos.length) {
-        val q = offsets.indexWhere(contains(_, termPos(i)) , p)
+        val q = offsets.indexWhere(contains(_, termPos(i)), p)
         if (q == -1) {
           i += 1
         } else {
@@ -55,8 +54,8 @@ object NlpPhraseDetector {
     var p = 0
     val mapper = new ArrayBuffer[(Int, Int)]
     while (p < length) {
-      val start = queryText.indexWhere(! _.isSpaceChar, p)
-      if (start != -1){
+      val start = queryText.indexWhere(!_.isSpaceChar, p)
+      if (start != -1) {
         val end = queryText.indexWhere(_.isSpaceChar, start + 1)
         p = if (end == -1) length else end
         mapper += ((start, p))
@@ -65,6 +64,6 @@ object NlpPhraseDetector {
       }
     }
     val cnt = mapper.size
-    tokenOffsets.flatMap{ case (i, j) => if (i < cnt && j < cnt) Some((mapper(i)._1, mapper(j)._2)) else None }
+    tokenOffsets.flatMap { case (i, j) => if (i < cnt && j < cnt) Some((mapper(i)._1, mapper(j)._2)) else None }
   }
 }

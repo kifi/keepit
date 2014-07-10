@@ -1,7 +1,7 @@
 package com.keepit.common.cache
 
 import com.google.inject.Singleton
-import scala.collection.concurrent.{TrieMap => ConcurrentMap}
+import scala.collection.concurrent.{ TrieMap => ConcurrentMap }
 
 @Singleton
 class HashMapMemoryCache extends InMemoryCachePlugin {

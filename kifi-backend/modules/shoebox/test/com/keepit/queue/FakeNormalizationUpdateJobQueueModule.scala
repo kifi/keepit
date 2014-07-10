@@ -1,7 +1,7 @@
 package com.keepit.queue
 
-import com.google.inject.{Provides, Singleton}
-import com.kifi.franz.{FakeSQSQueue, SQSQueue}
+import com.google.inject.{ Provides, Singleton }
+import com.kifi.franz.{ FakeSQSQueue, SQSQueue }
 
 case class FakeNormalizationUpdateJobQueueModule() extends NormalizationUpdateJobQueueModule {
 
@@ -12,6 +12,6 @@ case class FakeNormalizationUpdateJobQueueModule() extends NormalizationUpdateJo
 
   @Singleton
   @Provides
-  def normalizationUpdateQueue:SQSQueue[NormalizationUpdateTask] = new FakeSQSQueue[NormalizationUpdateTask]{}
+  def normalizationUpdateQueue: SQSQueue[NormalizationUpdateTask] = new FakeSQSQueue[NormalizationUpdateTask] {}
 
 }

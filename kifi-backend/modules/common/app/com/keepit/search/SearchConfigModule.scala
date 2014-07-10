@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import net.codingwell.scalaguice.ScalaModule
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import play.api.Play._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait

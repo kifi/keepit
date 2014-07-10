@@ -1,8 +1,8 @@
 package com.keepit.common.store
 
-import com.keepit.model.{ImageProvider, NormalizedURI, ImageInfo}
+import com.keepit.model.{ ImageProvider, NormalizedURI, ImageInfo }
 import java.awt.image.BufferedImage
-import scala.util.{Success, Try}
+import scala.util.{ Success, Try }
 import com.keepit.common.db.ExternalId
 
 case class FakeS3URIImageStore() extends S3URIImageStore {

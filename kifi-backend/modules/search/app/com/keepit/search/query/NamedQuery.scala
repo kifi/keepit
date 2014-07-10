@@ -8,7 +8,7 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
 import org.apache.lucene.util.Bits
-import java.util.{Set => JSet}
+import java.util.{ Set => JSet }
 
 class NamedQuery(val name: String, val subQuery: Query, val context: NamedQueryContext) extends Query {
 

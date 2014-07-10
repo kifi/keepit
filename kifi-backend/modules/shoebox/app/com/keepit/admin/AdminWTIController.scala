@@ -1,8 +1,7 @@
 package com.keepit.controllers.admin
 
-
 import com.google.inject.Inject
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.keepit.commanders.{
   SocialConnectionModificationActor,
   UserConnectionModificationActor,
@@ -17,9 +16,7 @@ class AdminWTIController @Inject() (
     socialConnectionModificationActor: ActorInstance[SocialConnectionModificationActor],
     userConnectionModificationActor: ActorInstance[UserConnectionModificationActor],
     socialUserInfoModificationActor: ActorInstance[SocialUserInfoModificationActor],
-    invitationModificationActor: ActorInstance[InvitationModificationActor]
-  ) extends AdminController(actionAuthenticator) {
-
+    invitationModificationActor: ActorInstance[InvitationModificationActor]) extends AdminController(actionAuthenticator) {
 
   def triggerPush() = AdminHtmlAction.authenticated { implicit request =>
     socialConnectionModificationActor.ref ! FlushPlease

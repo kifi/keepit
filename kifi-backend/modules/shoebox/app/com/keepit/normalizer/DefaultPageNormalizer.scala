@@ -9,11 +9,11 @@ object DefaultPageNormalizer extends StaticNormalizer with Logging {
   private[this] val defaultPage = """(?i)/(index|default)\.(html|htm|asp|aspx|php|php3|php4|phtml|cfm|cgi|jsp|jsf|jspx|jspa)$""".r
 
   private def normalizePath(path: Option[String]): Option[String] = {
-    path.map{ defaultPage.replaceFirstIn(_, "/") }
+    path.map { defaultPage.replaceFirstIn(_, "/") }
   }
 
   def isDefinedAt(uri: URI) = {
-    uri.path.exists{ path => defaultPage.findFirstMatchIn(path).isDefined }
+    uri.path.exists { path => defaultPage.findFirstMatchIn(path).isDefined }
   }
 
   def apply(uri: URI) = {

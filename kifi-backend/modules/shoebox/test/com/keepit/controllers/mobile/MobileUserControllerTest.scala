@@ -7,17 +7,17 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db._
 import com.keepit.common.social._
 import com.keepit.model._
-import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
+import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 
 import play.api.libs.json._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import com.google.inject.Injector
-import com.keepit.social.{SocialNetworks, SocialId}
+import com.keepit.social.{ SocialNetworks, SocialId }
 import SocialNetworks._
 import securesocial.core._
 import play.api.Play
-import securesocial.core.providers.utils.{PasswordHasher, BCryptPasswordHasher}
+import securesocial.core.providers.utils.{ PasswordHasher, BCryptPasswordHasher }
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.common.controller.FakeActionAuthenticatorModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -32,7 +32,7 @@ import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
+import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
 
@@ -58,23 +58,23 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {
-    inject[Database].readWrite {implicit s =>
-      val user1965 = userRepo.save(User(firstName="Richard",lastName="Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672")))
-      val user1933 = userRepo.save(User(firstName="Paul",lastName="Dirac", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673")))
-      val user1935 = userRepo.save(User(firstName="James",lastName="Chadwick", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a674")))
-      val user1927 = userRepo.save(User(firstName="Arthur",lastName="Compton", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a675")))
-      val user1921 = userRepo.save(User(firstName="Albert",lastName="Einstein", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a676")))
-      val friends = List(user1933,user1935,user1927,user1921)
+    inject[Database].readWrite { implicit s =>
+      val user1965 = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672")))
+      val user1933 = userRepo.save(User(firstName = "Paul", lastName = "Dirac", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a673")))
+      val user1935 = userRepo.save(User(firstName = "James", lastName = "Chadwick", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a674")))
+      val user1927 = userRepo.save(User(firstName = "Arthur", lastName = "Compton", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a675")))
+      val user1921 = userRepo.save(User(firstName = "Albert", lastName = "Einstein", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a676")))
+      val friends = List(user1933, user1935, user1927, user1921)
 
-      friends.foreach {friend => userConnRepo.save(UserConnection(user1=user1965.id.get,user2=friend.id.get))}
-      (user1965,friends)
+      friends.foreach { friend => userConnRepo.save(UserConnection(user1 = user1965.id.get, user2 = friend.id.get)) }
+      (user1965, friends)
     }
   }
 
   "mobileController" should {
 
     "get currentUser" in {
-      running(new ShoeboxApplication(mobileControllerTestModules:_*)) {
+      running(new ShoeboxApplication(mobileControllerTestModules: _*)) {
         val user = inject[Database].readWrite { implicit session =>
           inject[UserRepo].save(User(firstName = "Shanee", lastName = "Smith"))
         }
@@ -110,7 +110,7 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     }
 
     "return connected users from the database" in {
-      running(new ShoeboxApplication(mobileControllerTestModules:_*)) {
+      running(new ShoeboxApplication(mobileControllerTestModules: _*)) {
         val route = com.keepit.controllers.mobile.routes.MobileUserController.friends().toString
         route === "/m/1/user/friendsDetails"
 
@@ -136,14 +136,14 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     }
 
     "get socialNetworkInfo" in {
-      running(new ShoeboxApplication(mobileControllerTestModules:_*)) {
+      running(new ShoeboxApplication(mobileControllerTestModules: _*)) {
         val route = com.keepit.controllers.mobile.routes.MobileUserController.socialNetworkInfo().toString
         route === "/m/1/user/networks"
-        inject[Database].readWrite {implicit s =>
-          val user = userRepo.save(User(firstName="Richard", lastName="Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672")))
+        inject[Database].readWrite { implicit s =>
+          val user = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672")))
           socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("FRF"), networkType = SocialNetworks.FACEBOOK))
           socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("LRF"), networkType = SocialNetworks.LINKEDIN,
-              profileUrl = Some("http://www.linkedin.com/in/rf"), pictureUrl = Some("http://my.pic.com/pic.jpg")))
+            profileUrl = Some("http://www.linkedin.com/in/rf"), pictureUrl = Some("http://my.pic.com/pic.jpg")))
           inject[FakeActionAuthenticator].setUser(user)
         }
         val mobileController = inject[MobileUserController]
@@ -159,12 +159,12 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     }
 
     "change user password" in {
-      running(new ShoeboxApplication(mobileControllerTestModules:_*)) {
+      running(new ShoeboxApplication(mobileControllerTestModules: _*)) {
         val bcrypt = Registry.hashers.get(PasswordHasher.BCryptHasher) getOrElse (new BCryptPasswordHasher(Play.current))
         val changePwdRoute = com.keepit.controllers.mobile.routes.MobileUserController.changePassword().toString
         changePwdRoute === "/m/1/password/change"
-        inject[Database].readWrite {implicit s =>
-          val user = userRepo.save(User(firstName="Richard", lastName="Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672")))
+        inject[Database].readWrite { implicit s =>
+          val user = userRepo.save(User(firstName = "Richard", lastName = "Feynman", externalId = ExternalId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672")))
           val identityId = IdentityId("me@feynman.com", "userpass")
           val pInfo = bcrypt.hash("welcome")
           val socialUser = new SocialUser(identityId, "Richard", "Feynman", "Richard Feynman", Some(identityId.userId), None, AuthenticationMethod.UserPassword, passwordInfo = Some(pInfo))

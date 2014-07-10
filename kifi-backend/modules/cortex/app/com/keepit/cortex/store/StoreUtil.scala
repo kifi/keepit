@@ -8,7 +8,7 @@ object StoreUtil {
     def toBinary(arr: Array[Float]): Array[Byte] = {
       val bs = new ByteArrayOutputStream(arr.size * 4)
       val os = new DataOutputStream(bs)
-      arr.foreach{os.writeFloat}
+      arr.foreach { os.writeFloat }
       os.close()
       val rv = bs.toByteArray()
       bs.close()
@@ -20,7 +20,7 @@ object StoreUtil {
       val N = bytes.size / 4
       val arr = new Array[Float](N)
       var n = 0
-      while ( n < N ){
+      while (n < N) {
         arr(n) = is.readFloat()
         n += 1
       }
@@ -31,7 +31,7 @@ object StoreUtil {
 
   object DenseWordVecFormatter {
 
-    private def countChars(tokens: Seq[String]) = tokens.map{_.length}.sum
+    private def countChars(tokens: Seq[String]) = tokens.map { _.length }.sum
     private val CHAR_SIZE = 2
     private val FLOAT_SIZE = 4
     private val SEP = '|'
@@ -48,20 +48,20 @@ object StoreUtil {
     def toBinary(dimension: Int, mapper: Map[String, Array[Float]]): Array[Byte] = {
       val vocSize = mapper.size
       val numLines = vocSize + 1
-      val extraCharsPerLine = 2  // SEP and '\n'
-      val totalSize = countChars(mapper.keys.map{_.trim}.toSeq) * CHAR_SIZE + numLines * extraCharsPerLine * CHAR_SIZE + FLOAT_SIZE * dimension * vocSize
+      val extraCharsPerLine = 2 // SEP and '\n'
+      val totalSize = countChars(mapper.keys.map { _.trim }.toSeq) * CHAR_SIZE + numLines * extraCharsPerLine * CHAR_SIZE + FLOAT_SIZE * dimension * vocSize
       val bs = new ByteArrayOutputStream(totalSize)
       val os = new DataOutputStream(bs)
 
       // header
       os.writeInt(vocSize); os.writeChar(SEP); os.writeInt(dimension); os.writeChar('\n')
       // lines
-      for((key, arr) <- mapper){
+      for ((key, arr) <- mapper) {
         var n = 0
         val trimed = key.trim()
-        while (n < trimed.size) { os.writeChar(trimed(n)); n += 1}
+        while (n < trimed.size) { os.writeChar(trimed(n)); n += 1 }
         os.writeChar(SEP)
-        arr.foreach{os.writeFloat(_)}
+        arr.foreach { os.writeFloat(_) }
         os.writeChar('\n')
       }
       os.close()
@@ -85,17 +85,17 @@ object StoreUtil {
       var ch = ' '
       var i = 0
 
-      while (n < vocSize){
+      while (n < vocSize) {
         n += 1
         val token = new StringBuilder
         ch = is.readChar()
-        while (ch != SEP){ token.append(ch); ch = is.readChar() }
+        while (ch != SEP) { token.append(ch); ch = is.readChar() }
 
         val arr = new Array[Float](dim)
         i = 0
-        while(i < dim){ arr(i) = is.readFloat(); i += 1 }
+        while (i < dim) { arr(i) = is.readFloat(); i += 1 }
 
-        is.readChar()     // skip '\n'
+        is.readChar() // skip '\n'
         mapper += token.toString -> arr
       }
       is.close()

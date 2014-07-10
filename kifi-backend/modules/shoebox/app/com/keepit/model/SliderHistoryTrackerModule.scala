@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.db.slick.Database
 import play.api.Play._
 import net.codingwell.scalaguice.ScalaModule

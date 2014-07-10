@@ -1,17 +1,15 @@
 package com.keepit.cortex.plugins
 
-import com.keepit.common.db.{Id, SequenceNumber, ModelWithSeqNumber}
-import com.keepit.cortex.core.{FeatureRepresentation, ModelVersion, StatModel}
-import com.keepit.cortex.store.{CommitInfoKey, CommitInfoStore, FeatureStoreSequenceNumber, VersionedStore}
+import com.keepit.common.db.{ Id, SequenceNumber, ModelWithSeqNumber }
+import com.keepit.cortex.core.{ FeatureRepresentation, ModelVersion, StatModel }
+import com.keepit.cortex.store.{ CommitInfoKey, CommitInfoStore, FeatureStoreSequenceNumber, VersionedStore }
 import com.keepit.common.logging.Logging
 import scala.collection.mutable.ArrayBuffer
 
-
 abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel, FT <: FeatureRepresentation[T, M]](
-  featureStore: VersionedStore[K, M, FT],
-  commitInfoStore: CommitInfoStore[T, M],
-  dataPuller: DataPuller[T]
-) extends Logging{
+    featureStore: VersionedStore[K, M, FT],
+    commitInfoStore: CommitInfoStore[T, M],
+    dataPuller: DataPuller[T]) extends Logging {
   protected def genFeatureKey(datum: T): K
   private def getFeatureStoreSeq(version: ModelVersion[M]): FeatureStoreSequenceNumber[T, M] = {
     val commitKey = CommitInfoKey[T, M](version)
@@ -30,12 +28,12 @@ abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel, F
   }
 
   private def getFeatureForEntities(entities: Seq[T], version: ModelVersion[M]): Seq[(T, FT)] = {
-    val keys = entities.map{genFeatureKey(_)}
+    val keys = entities.map { genFeatureKey(_) }
     val start = System.currentTimeMillis
     val values = featureStore.batchGet(keys, version)
-    val ret = (entities zip values).filter(_._2.isDefined).map{case (ent, valOpt) => (ent, valOpt.get)}
+    val ret = (entities zip values).filter(_._2.isDefined).map { case (ent, valOpt) => (ent, valOpt.get) }
 
-    log.info(s"batch retrieved ${ret.size}/${keys.size}  objects in ${(System.currentTimeMillis - start)/1000f} seconds")
+    log.info(s"batch retrieved ${ret.size}/${keys.size}  objects in ${(System.currentTimeMillis - start) / 1000f} seconds")
     ret
   }
 
@@ -54,14 +52,14 @@ abstract class FeatureRetrieval[K, T <: ModelWithSeqNumber[T], M <: StatModel, F
     var nextBatchSize = fetchSize * 2
     var startSeq = lowSeq
     var exhausted = false
-    while (buf.size < fetchSize && !exhausted){
+    while (buf.size < fetchSize && !exhausted) {
       val feats = getSince(startSeq, nextBatchSize, version)
       if (feats.isEmpty) {
         exhausted = true
       } else {
         buf.appendAll(feats)
-        startSeq = feats.map{ case (ent, feat) => ent.seq}.max
-        nextBatchSize = ((fetchSize - buf.size) * 2 min fetchSize) max 10             // overfetch
+        startSeq = feats.map { case (ent, feat) => ent.seq }.max
+        nextBatchSize = ((fetchSize - buf.size) * 2 min fetchSize) max 10 // overfetch
       }
     }
     buf.take(fetchSize)

@@ -1,21 +1,21 @@
 package com.keepit.eliza.controllers.mobile
 
-import com.keepit.test.{ElizaApplication, ElizaApplicationInjector}
+import com.keepit.test.{ ElizaApplication, ElizaApplicationInjector }
 import org.specs2.mutable._
 import com.keepit.common.db.slick._
 import com.keepit.common.controller.FakeActionAuthenticator
-import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceClientImpl}
+import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceClientImpl }
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.eliza.model._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json.Json
 import akka.actor.ActorSystem
 import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.common.actor.{TestActorSystemModule, StandaloneTestActorSystemModule}
+import com.keepit.common.actor.{ TestActorSystemModule, StandaloneTestActorSystemModule }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.controller.FakeActionAuthenticatorModule
 import play.api.libs.json.JsArray
@@ -54,7 +54,7 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
   "ExtMessaging Controller" should {
 
     "send correctly" in {
-      running(new ElizaApplication(modules:_*)) {
+      running(new ElizaApplication(modules: _*)) {
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
         val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
@@ -144,7 +144,7 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
     }
 
     "getCompactThread" in {
-      running(new ElizaApplication(modules:_*)) {
+      running(new ElizaApplication(modules: _*)) {
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
         val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
@@ -214,7 +214,7 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
 
         val res = Json.parse(contentAsString(result))
         val jsMessages = (res \ "messages").as[JsArray].value
-        (messages map {m => m.externalId} mkString ",") === (jsMessages map {m => (m \ "id").as[String]} mkString ",")
+        (messages map { m => m.externalId } mkString ",") === (jsMessages map { m => (m \ "id").as[String] } mkString ",")
         jsMessages.size === 5
         (jsMessages(0) \ "id").as[String] === messages(0).externalId.id
         (jsMessages(0) \ "time").as[Long] === messages(0).createdAt.getMillis
@@ -231,7 +231,7 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
     }
 
     "getPagedThread" in {
-      running(new ElizaApplication(modules:_*)) {
+      running(new ElizaApplication(modules: _*)) {
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
         val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
@@ -303,7 +303,7 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
 
           val res = Json.parse(contentAsString(result))
           val jsMessages = (res \ "messages").as[JsArray].value
-          (messages.reverse map {m => m.externalId} mkString ",") === (jsMessages map {m => (m \ "id").as[String]} mkString ",")
+          (messages.reverse map { m => m.externalId } mkString ",") === (jsMessages map { m => (m \ "id").as[String] } mkString ",")
           jsMessages.size === 5
           (jsMessages(0) \ "id").as[String] === messages(4).externalId.id
           (jsMessages(0) \ "time").as[Long] === messages(4).createdAt.getMillis
@@ -352,7 +352,7 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
           """)
 
           (res2 \ "messages").as[JsArray].value.size === 3
-          (messages.reverse.take(3) map {m => m.externalId} mkString ",") === ((res2 \ "messages").as[JsArray].value map {m => (m \ "id").as[String]} mkString ",")
+          (messages.reverse.take(3) map { m => m.externalId } mkString ",") === ((res2 \ "messages").as[JsArray].value map { m => (m \ "id").as[String] } mkString ",")
           res2 must equalTo(expected2)
         }
         {
@@ -389,14 +389,14 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
           """)
 
           (res3 \ "messages").as[JsArray].value.size === 2
-          (messages.reverse.drop(3) map {m => m.externalId} mkString ",") === ((res3 \ "messages").as[JsArray].value map {m => (m \ "id").as[String]} mkString ",")
+          (messages.reverse.drop(3) map { m => m.externalId } mkString ",") === ((res3 \ "messages").as[JsArray].value map { m => (m \ "id").as[String] } mkString ",")
           res3 must equalTo(expected3)
         }
       }
     }
 
     "sendMessageReplyAction" in {
-      running(new ElizaApplication(modules:_*)) {
+      running(new ElizaApplication(modules: _*)) {
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
         val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
@@ -440,7 +440,7 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
 
         val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all }
         messages.size === 2
-        val replys = messages filter {m => m.id != message.id}
+        val replys = messages filter { m => m.id != message.id }
         replys.size === 1
         val reply = replys.head
         reply.messageText === "cool man!"

@@ -9,8 +9,7 @@ case class BasicArticle(
   httpContentType: Option[String] = None, // from http header
   httpOriginalContentCharset: Option[String] = None, // from EntityUtils.getContentCharSet
   destinationUrl: String,
-  signature: Signature
-)
+  signature: Signature)
 
 object BasicArticle {
 

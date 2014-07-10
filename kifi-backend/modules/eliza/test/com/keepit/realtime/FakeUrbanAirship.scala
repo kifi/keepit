@@ -1,10 +1,10 @@
 package com.keepit.realtime
 
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.{ Future, Promise }
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import net.codingwell.scalaguice.ScalaModule
-import com.google.inject.{Singleton, Inject, Provides}
+import com.google.inject.{ Singleton, Inject, Provides }
 import scala.collection.mutable.MutableList
 import play.api.Mode
 import play.api.Mode.Mode

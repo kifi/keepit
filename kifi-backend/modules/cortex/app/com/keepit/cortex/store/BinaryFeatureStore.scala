@@ -10,7 +10,7 @@ trait BinaryFeatureStore[K, T, M <: StatModel, FT <: FeatureRepresentation[T, M]
   extends ObjectStore[VersionedStoreKey[K, M], FT] with VersionedStore[K, M, FT]
 
 trait S3BlobBinaryFeatureStore[K, T, M <: StatModel, FT <: FeatureRepresentation[T, M]] extends VersionedS3Store[K, M, FT]
-  with S3BlobStore[VersionedStoreKey[K, M], FT] with BinaryFeatureStore[K, T, M, FT] {
+    with S3BlobStore[VersionedStoreKey[K, M], FT] with BinaryFeatureStore[K, T, M, FT] {
 
   val formatter: BinaryFeatureFormatter[FT]
 

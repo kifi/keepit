@@ -4,12 +4,12 @@ import com.keepit.common.concurrent.ExecutionContext
 
 import scala.concurrent.duration.Duration
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.cache.{Key, PrimitiveCacheImpl, FortyTwoCachePlugin, CacheStatistics}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.cache.{ Key, PrimitiveCacheImpl, FortyTwoCachePlugin, CacheStatistics }
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{Id, State}
+import com.keepit.common.db.{ Id, State }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.eliza.model.MessageHandle
@@ -17,13 +17,11 @@ import com.keepit.eliza.ElizaServiceClient
 
 @ImplementedBy(classOf[FriendRequestRepoImpl])
 trait FriendRequestRepo extends Repo[FriendRequest] {
-  def getBySender(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))
-      (implicit s:RSession): Seq[FriendRequest]
-  def getByRecipient(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))
-      (implicit s: RSession): Seq[FriendRequest]
+  def getBySender(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Seq[FriendRequest]
+  def getByRecipient(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Seq[FriendRequest]
   def getCountByRecipient(userId: Id[User])(implicit s: RSession): Int
   def getBySenderAndRecipient(senderId: Id[User], recipientId: Id[User],
-      states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Option[FriendRequest]
+    states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Option[FriendRequest]
 }
 
 case class FriendRequestCountKey(userId: Id[User]) extends Key[Int] {
@@ -32,19 +30,18 @@ case class FriendRequestCountKey(userId: Id[User]) extends Key[Int] {
 }
 
 class FriendRequestCountCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
-    extends PrimitiveCacheImpl[FriendRequestCountKey, Int](stats, accessLog, inner, outer: _*)
+  extends PrimitiveCacheImpl[FriendRequestCountKey, Int](stats, accessLog, inner, outer: _*)
 
 @Singleton
 class FriendRequestRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     friendRequestCountCache: FriendRequestCountCache,
-    elizaClient: ElizaServiceClient
-  ) extends DbRepo[FriendRequest] with FriendRequestRepo with Logging {
+    elizaClient: ElizaServiceClient) extends DbRepo[FriendRequest] with FriendRequestRepo with Logging {
 
   import db.Driver.simple._
 
-//  implicit val messageHandleIdMapper = idMapper[MessageHandle]
+  //  implicit val messageHandleIdMapper = idMapper[MessageHandle]
 
   type RepoImpl = FriendRequestTable
   class FriendRequestTable(tag: Tag) extends RepoTable[FriendRequest](db, tag, "friend_request") {
@@ -82,22 +79,20 @@ class FriendRequestRepoImpl @Inject() (
     }
   }
 
-  def getBySender(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))
-      (implicit s: RSession): Seq[FriendRequest] = {
+  def getBySender(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Seq[FriendRequest] = {
     (for (fr <- rows if fr.senderId === userId && fr.state.inSet(states)) yield fr).list
   }
 
-  def getByRecipient(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))
-      (implicit s: RSession): Seq[FriendRequest] = {
+  def getByRecipient(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Seq[FriendRequest] = {
     (for (fr <- rows if fr.recipientId === userId && fr.state.inSet(states)) yield fr).list
   }
 
   def getBySenderAndRecipient(senderId: Id[User], recipientId: Id[User],
-      states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))
-      (implicit s: RSession): Option[FriendRequest] = {
-    (for (fr <- rows if fr.senderId === senderId && fr.recipientId === recipientId &&
-      fr.state.inSet(states)) yield fr).sortBy(_.createdAt desc).firstOption
+    states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Option[FriendRequest] = {
+    (for (
+      fr <- rows if fr.senderId === senderId && fr.recipientId === recipientId &&
+        fr.state.inSet(states)
+    ) yield fr).sortBy(_.createdAt desc).firstOption
   }
 }
-
 

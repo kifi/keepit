@@ -15,30 +15,30 @@ import com.google.inject.Inject
 import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{CallTimeouts, NonOKResponseException, HttpClient, DirectUrl}
+import com.keepit.common.net.{ CallTimeouts, NonOKResponseException, HttpClient, DirectUrl }
 import com.keepit.model.SocialUserInfoStates._
-import com.keepit.model.{SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo}
-import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph}
+import com.keepit.model.{ SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo }
+import com.keepit.social.{ SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph }
 
 import play.api.http.Status._
 import play.api.libs.json._
-import play.api.libs.ws.{Response, WS}
+import play.api.libs.ws.{ Response, WS }
 
-import securesocial.core.{IdentityId, OAuth2Settings}
+import securesocial.core.{ IdentityId, OAuth2Settings }
 import securesocial.core.providers.LinkedInProvider.LinkedIn
 import com.keepit.common.mail.EmailAddress
 
 object LinkedInSocialGraph {
-  val ProfileFields = Seq("id","firstName","lastName","picture-urls::(original);secure=true","publicProfileUrl")
-  val ProfileFieldSelector = ProfileFields.mkString("(",",",")")
+  val ProfileFields = Seq("id", "firstName", "lastName", "picture-urls::(original);secure=true", "publicProfileUrl")
+  val ProfileFieldSelector = ProfileFields.mkString("(", ",", ")")
   val ConnectionsPageSize = 500
 }
 
 class LinkedInSocialGraph @Inject() (
-    client: HttpClient,
-    db: Database,
-    socialUserInfoRepo: SocialUserInfoRepo)
-  extends SocialGraph with Logging {
+  client: HttpClient,
+  db: Database,
+  socialUserInfoRepo: SocialUserInfoRepo)
+    extends SocialGraph with Logging {
 
   import LinkedInSocialGraph.ProfileFieldSelector
 
@@ -120,7 +120,7 @@ class LinkedInSocialGraph @Inject() (
 
   private def connectionsUrl(id: SocialId, accessToken: String, start: Int, count: Int): String = {
     s"https://api.linkedin.com/v1/people/$id/connections:$ProfileFieldSelector?format=json" +
-        s"&start=$start&count=$count&oauth2_access_token=$accessToken"
+      s"&start=$start&count=$count&oauth2_access_token=$accessToken"
   }
 
   private def profileUrl(id: SocialId, accessToken: String): String = {
@@ -146,14 +146,14 @@ class LinkedInSocialGraph @Inject() (
    * @return the user's confirmed LinkedIn identity
    */
   def vetJsAccessToken(settings: OAuth2Settings, json: JsValue): Try[IdentityId] = Try {
-    (json \ "access_token").as[String]  // not a valid OAuth 1.0a or 2.0 token
+    (json \ "access_token").as[String] // not a valid OAuth 1.0a or 2.0 token
     val memberId = (json \ "member_id").as[String]
 
     // verify signature
     // #2 at developer.linkedin.com/documents/exchange-jsapi-tokens-rest-api-oauth-tokens
     val signature = (json \ "signature").as[String]
     val signatureOrder = (json \ "signature_order").as[Seq[String]]
-    val signatureBase = signatureOrder.fold(""){ case (b, k) => b + (json \ k).as[String] }
+    val signatureBase = signatureOrder.fold("") { case (b, k) => b + (json \ k).as[String] }
     val mac = Mac.getInstance("HmacSHA1")
     mac.init(new SecretKeySpec(settings.clientSecret.getBytes(US_ASCII), "HmacSHA1"))
     val computedSignature = mac.doFinal(signatureBase.getBytes(US_ASCII))
@@ -168,10 +168,10 @@ class LinkedInSocialGraph @Inject() (
   private def getJson(url: String): JsValue = client.withTimeout(CallTimeouts(responseTimeout = Some(TWO_MINUTES), maxJsonParseTime = Some(20000))).get(DirectUrl(url), client.ignoreFailure).json
 
   private def getJson(socialUserInfo: SocialUserInfo): Stream[JsValue] = {
-    import LinkedInSocialGraph.{ConnectionsPageSize => PageSize}
+    import LinkedInSocialGraph.{ ConnectionsPageSize => PageSize }
     val token = getAccessToken(socialUserInfo)
     val sid = socialUserInfo.socialId
-    val connectionsPages = Stream.from(0).map { n => getJson(connectionsUrl(sid, token, n*PageSize, PageSize)) }
+    val connectionsPages = Stream.from(0).map { n => getJson(connectionsUrl(sid, token, n * PageSize, PageSize)) }
     val numPages = 1 + connectionsPages.indexWhere(json => (json \ "_count").asOpt[Int].getOrElse(0) < PageSize)
     getJson(profileUrl(sid, token)) #:: connectionsPages.take(numPages)
   }

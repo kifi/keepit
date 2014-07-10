@@ -7,7 +7,7 @@ import com.keepit.search.query.parser.DefaultSyntax
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.index.Term
 import org.apache.lucene.util.Version
-import java.util.{List => JList}
+import java.util.{ List => JList }
 
 object QueryHash {
   def apply(userId: Id[User], queryText: String, analyzer: Analyzer): Long = {
@@ -16,7 +16,7 @@ object QueryHash {
     if (queryText != null && queryText.trim.length != 0) {
       // use the minimum parser to avoid expansions etc.
       val parser = new QueryParser(analyzer, analyzer) with DefaultSyntax
-      parser.parse(queryText).foreach{ query => hash.update(query.toString) }
+      parser.parse(queryText).foreach { query => hash.update(query.toString) }
     }
 
     hash.get
@@ -30,7 +30,7 @@ class StringHash64(seed: Long) {
   def get = (h1 + h2)
 
   def update(str: String) {
-    str.foreach{ c => update(c) }
+    str.foreach { c => update(c) }
   }
 
   def update(c: Char) {
@@ -44,7 +44,7 @@ class StringHash64(seed: Long) {
     x = (((x & 0xCCCCCCCCCCCCCCCCL) >>> 2) | ((x & 0x3333333333333333L) << 2))
     x = (((x & 0xF0F0F0F0F0F0F0F0L) >>> 4) | ((x & 0X0F0F0F0F0F0F0F0FL) << 4))
     x = (((x & 0xFF00FF00FF00FF00L) >>> 8) | ((x & 0x00FF00FF00FF00FFL) << 8))
-    x = (((x & 0xFFFF0000FFFF0000L) >>> 16)| ((x & 0x0000FFFF0000FFFFL) << 16))
+    x = (((x & 0xFFFF0000FFFF0000L) >>> 16) | ((x & 0x0000FFFF0000FFFFL) << 16))
     ((x >>> 32) | (x << 32))
   }
   private[this] def rotate(v: Long, n: Int): Long = (v << n) | (v >>> (64 - n))

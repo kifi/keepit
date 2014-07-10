@@ -51,7 +51,7 @@ class BasicLocalAlignment(termIds: Array[Int], gapPenalty: Float) extends LocalA
   @inline private[this] def getGapPenalty(distance: Int): Float = gapPenalty * distance.toFloat
 
   def maxScore: Float = {
-     // max possible local alignment score
+    // max possible local alignment score
     val n = termIds.length.toFloat
     ((n * (n + 1.0f) / 2.0f) - (gapPenalty * n * (n - 1.0f) / 2.0f))
   }
@@ -138,20 +138,21 @@ class PhraseAwareLocalAlignment(phraseMatcher: PhraseMatcher, phraseBoost: Float
     matching(pos % bufSize) = false
 
     state = phraseMatcher.next(id, state)
-    state.check(pos, onMatch = { case (curPos, aMatch) =>
-      var i = curPos - min(bufSize, aMatch.len)
-      while (i < curPos) {
-        i += 1
-        if (i < 0) {
-          log.error(s"i=$i curPos=$curPos aMatch.len=${aMatch.len}")
-        } else {
-          matching(i % bufSize) = true
+    state.check(pos, onMatch = {
+      case (curPos, aMatch) =>
+        var i = curPos - min(bufSize, aMatch.len)
+        while (i < curPos) {
+          i += 1
+          if (i < 0) {
+            log.error(s"i=$i curPos=$curPos aMatch.len=${aMatch.len}")
+          } else {
+            matching(i % bufSize) = true
+          }
         }
-      }
-      aMatch match {
-        case phraseMatch: PhraseMatch => matchedPhrases += phraseMatch
-        case _ => None
-      }
+        aMatch match {
+          case phraseMatch: PhraseMatch => matchedPhrases += phraseMatch
+          case _ => None
+        }
     })
   }
 

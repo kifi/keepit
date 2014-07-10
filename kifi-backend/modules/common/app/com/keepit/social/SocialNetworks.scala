@@ -1,7 +1,7 @@
 package com.keepit.social
 
 import com.keepit.social.SocialNetworks.FORTYTWO
-import play.api.libs.json.{JsString, Writes, Reads, Format}
+import play.api.libs.json.{ JsString, Writes, Reads, Format }
 
 case class SocialId(id: String) {
   override def toString = id

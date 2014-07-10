@@ -7,7 +7,7 @@ class UserAgentTest extends Specification {
     "don't parse old agent" in {
       val str = "Chrome/26.0.1410.65"
       val agent = UserAgent.fromString(str)
-      agent === UserAgent(str, "", "" ,"", "", "")
+      agent === UserAgent(str, "", "", "", "", "")
       agent.isMobile === false
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false
@@ -17,7 +17,7 @@ class UserAgentTest extends Specification {
     "parse browser versions FF Mac" in {
       val str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:20.0) Gecko/20100101 Firefox/20.0"
       val agent = UserAgent.fromString(str)
-      agent === UserAgent(str, "Firefox", "OS X" ,"OS X 10.8 Mountain Lion", "Browser", "20.0")
+      agent === UserAgent(str, "Firefox", "OS X", "OS X 10.8 Mountain Lion", "Browser", "20.0")
       agent.isMobile === false
       agent.canRunExtensionIfUpToDate === true
       agent.isKifiIphoneApp === false
@@ -37,7 +37,7 @@ class UserAgentTest extends Specification {
     "parse browser versions iphone app" in {
       val str = "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"
       val agent = UserAgent.fromString(str)
-      agent === UserAgent(str,"iKeefee","iOS","iPhone","kifi iphone app","1.0")
+      agent === UserAgent(str, "iKeefee", "iOS", "iPhone", "kifi iphone app", "1.0")
       agent.isMobile === true
       agent.isKifiIphoneApp === true
       agent.isIphone === true
@@ -103,7 +103,7 @@ class UserAgentTest extends Specification {
     "parse browser versions Chrome on iPhone" in {
       val str = "Mozilla/5.0 (iPhone; U; CPU iPhone OS 5_1_1 like Mac OS X; en) AppleWebKit/534.46.0 (KHTML, like Gecko) CriOS/19.0.1084.60 Mobile/9B206 Safari/7534.48.3"
       val agent = UserAgent.fromString(str)
-      agent === UserAgent(str,"Chrome Mobile", "iOS", "iOS 5", "Mobile Browser", "19.0.1084.60")
+      agent === UserAgent(str, "Chrome Mobile", "iOS", "iOS 5", "Mobile Browser", "19.0.1084.60")
       agent.isMobile === true
       agent.canRunExtensionIfUpToDate === false
       agent.isKifiIphoneApp === false

@@ -3,18 +3,18 @@ package com.keepit.common.pagepeeker
 import scala.concurrent._
 import play.api.libs.ws.WS
 import com.keepit.common.logging.Logging
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.net.URLEncoder
 import com.keepit.common.strings._
 import scala.Some
-import com.keepit.common.store.{ImageUtils, ImageSize}
+import com.keepit.common.store.{ ImageUtils, ImageSize }
 import java.awt.image.BufferedImage
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 import javax.imageio.ImageIO
-import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier, AirbrakeError }
 import java.io.ByteArrayInputStream
-import com.keepit.model.{NormalizedURI, ImageFormat, ImageProvider, ImageInfo}
+import com.keepit.model.{ NormalizedURI, ImageFormat, ImageProvider, ImageInfo }
 import com.keepit.common.db.Id
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.time.Clock
@@ -65,43 +65,44 @@ class PagePeekerClientImpl @Inject() (shoeboxServiceClient: ShoeboxServiceClient
             } yield (resized._2, size)
           }
 
-          val screenshots = resizedImages flatMap { case resizeAttempt =>
-            resizeAttempt match {
-              case Success((imageStream, size)) =>
-                statsd.incrementOne(s"screenshot.fetch.successes", ONE_IN_HUNDRED)
-                val rawImageOpt = try {
-                  Option(ImageIO.read(imageStream))
-                } catch {
-                  case ex: Throwable => {
-                    airbrake.notify(AirbrakeError(
-                      exception = trace.withCause(ex),
-                      message = Some(s"Problem reading resized screenshot from $url")
-                    ))
-                    None
+          val screenshots = resizedImages flatMap {
+            case resizeAttempt =>
+              resizeAttempt match {
+                case Success((imageStream, size)) =>
+                  statsd.incrementOne(s"screenshot.fetch.successes", ONE_IN_HUNDRED)
+                  val rawImageOpt = try {
+                    Option(ImageIO.read(imageStream))
+                  } catch {
+                    case ex: Throwable => {
+                      airbrake.notify(AirbrakeError(
+                        exception = trace.withCause(ex),
+                        message = Some(s"Problem reading resized screenshot from $url")
+                      ))
+                      None
+                    }
+                  } finally {
+                    imageStream.close()
                   }
-                } finally {
-                  imageStream.close()
-                }
-                rawImageOpt map { rawImage => PagePeekerImage(rawImage, size) }
-              case Failure(ex) =>
-                statsd.incrementOne(s"screenshot.fetch.fails", ALWAYS)
-                ex match {
-                  case e: java.lang.IllegalArgumentException =>
-                    // This happens when the image stream is null, coming from javax.imageio.ImageIO
-                    // todo(andrew): Excellent candidate for a persistent queue!
-                    log.warn(s"null image for $url. Will retry later.")
-                  case e: javax.imageio.IIOException =>
-                    // This happens when the provider gave a corrupted jpeg.
-                    // todo(andrew): Excellent candidate for a persistent queue!
-                    log.warn(s"Provider gave invalid screenshot for $url. Will retry later.")
-                  case _: Throwable =>
-                    airbrake.notify(AirbrakeError(
-                      exception = trace.withCause(ex),
-                      message = Some(s"Problem resizing screenshot image from $url")
-                    ))
-                }
-                None
-            }
+                  rawImageOpt map { rawImage => PagePeekerImage(rawImage, size) }
+                case Failure(ex) =>
+                  statsd.incrementOne(s"screenshot.fetch.fails", ALWAYS)
+                  ex match {
+                    case e: java.lang.IllegalArgumentException =>
+                      // This happens when the image stream is null, coming from javax.imageio.ImageIO
+                      // todo(andrew): Excellent candidate for a persistent queue!
+                      log.warn(s"null image for $url. Will retry later.")
+                    case e: javax.imageio.IIOException =>
+                      // This happens when the provider gave a corrupted jpeg.
+                      // todo(andrew): Excellent candidate for a persistent queue!
+                      log.warn(s"Provider gave invalid screenshot for $url. Will retry later.")
+                    case _: Throwable =>
+                      airbrake.notify(AirbrakeError(
+                        exception = trace.withCause(ex),
+                        message = Some(s"Problem resizing screenshot image from $url")
+                      ))
+                  }
+                  None
+              }
           }
 
           originalStream.close()

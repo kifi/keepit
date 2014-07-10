@@ -25,7 +25,7 @@ class ScraperAdminController @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   articleStore: ArticleStore,
   httpProxyRepo: HttpProxyRepo,
-  scraperServiceClient:ScraperServiceClient)
+  scraperServiceClient: ScraperServiceClient)
     extends AdminController(actionAuthenticator) {
 
   val MAX_COUNT_DISPLAY = 25
@@ -33,11 +33,12 @@ class ScraperAdminController @Inject() (
   def searchScraper = AdminHtmlAction.authenticated { implicit request => Ok(html.admin.searchScraper()) }
 
   def scraperRequests(stateFilter: Option[String] = None) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val resultsFuture = db.readOnlyReplicaAsync { implicit ro => (
-      scrapeInfoRepo.getAssignedList(MAX_COUNT_DISPLAY),
-      scrapeInfoRepo.getOverdueList(MAX_COUNT_DISPLAY),
-      scrapeInfoRepo.getAssignedCount(),
-      scrapeInfoRepo.getOverdueCount()
+    val resultsFuture = db.readOnlyReplicaAsync { implicit ro =>
+      (
+        scrapeInfoRepo.getAssignedList(MAX_COUNT_DISPLAY),
+        scrapeInfoRepo.getOverdueList(MAX_COUNT_DISPLAY),
+        scrapeInfoRepo.getAssignedCount(),
+        scrapeInfoRepo.getOverdueCount()
       )
     }
     val threadDetailsFuture = Future.sequence(scraperServiceClient.getThreadDetails(stateFilter))
@@ -47,7 +48,7 @@ class ScraperAdminController @Inject() (
     } yield Ok(html.admin.scraperRequests(assigned, overdue, assignedCount, overdueCount, threadDetails))
   }
 
-  def scrapeArticle(url:String) = AdminHtmlAction.authenticatedAsync { implicit request =>
+  def scrapeArticle(url: String) = AdminHtmlAction.authenticatedAsync { implicit request =>
     scrapeScheduler.scrapeBasicArticle(url, None) map { articleOpt =>
       articleOpt match {
         case None => Ok(s"Failed to scrape $url")
@@ -64,8 +65,8 @@ class ScraperAdminController @Inject() (
       scrapeInfoRepo.setForRescrapeByRegex(urlRegex, withinMinutes)
     }
     Redirect(com.keepit.controllers.admin.routes.ScraperAdminController.searchScraper).flashing(
-        "success" -> "%s page(s) matching %s to be rescraped within %s minutes(s). ".format(updateCount, urlRegex, withinMinutes)
-      )
+      "success" -> "%s page(s) matching %s to be rescraped within %s minutes(s). ".format(updateCount, urlRegex, withinMinutes)
+    )
   }
 
   def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction.authenticated { implicit request =>
@@ -89,7 +90,7 @@ class ScraperAdminController @Inject() (
           state = if (body.contains("active_" + key)) HttpProxyStates.ACTIVE else HttpProxyStates.INACTIVE,
           alias = body("alias_" + key),
           hostname = body("hostname_" + key),
-          port = body("port_"+ key).toInt,
+          port = body("port_" + key).toInt,
           scheme = body("scheme_" + key),
           username = Some(body("username_" + key)).filter(!_.isEmpty),
           password = Some(body("password_" + key)).filter(!_.isEmpty)
@@ -115,9 +116,9 @@ class ScraperAdminController @Inject() (
     Redirect(routes.ScraperAdminController.getProxies)
   }
 
-  def getPornDetectorModel = AdminHtmlAction.authenticatedAsync{ implicit request =>
+  def getPornDetectorModel = AdminHtmlAction.authenticatedAsync { implicit request =>
     val modelFuture = scraperServiceClient.getPornDetectorModel()
-    for(model <- modelFuture) yield Ok(Json.toJson(model))
+    for (model <- modelFuture) yield Ok(Json.toJson(model))
   }
 
 }

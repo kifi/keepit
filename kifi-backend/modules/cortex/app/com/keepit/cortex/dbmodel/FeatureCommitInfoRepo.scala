@@ -1,7 +1,7 @@
 package com.keepit.cortex.dbmodel
 
 import com.keepit.common.db.slick._
-import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
+import com.google.inject.{ ImplementedBy, Provider, Inject, Singleton }
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
@@ -20,16 +20,15 @@ import org.joda.time.DateTime
 import com.keepit.cortex.core.StatModelName
 
 @ImplementedBy(classOf[FeatureCommitInfoRepoImpl])
-trait FeatureCommitInfoRepo extends DbRepo[FeatureCommitInfo]{
+trait FeatureCommitInfoRepo extends DbRepo[FeatureCommitInfo] {
   def getByModelAndVersion(modelName: StatModelName, version: Int)(implicit session: RSession): Option[FeatureCommitInfo]
 }
 
 @Singleton
-class FeatureCommitInfoRepoImpl @Inject()(
-  val db: DataBaseComponent,
-  val clock: Clock,
-  airbrake: AirbrakeNotifier
-) extends DbRepo[FeatureCommitInfo] with FeatureCommitInfoRepo with CortexTypeMappers {
+class FeatureCommitInfoRepoImpl @Inject() (
+    val db: DataBaseComponent,
+    val clock: Clock,
+    airbrake: AirbrakeNotifier) extends DbRepo[FeatureCommitInfo] with FeatureCommitInfoRepo with CortexTypeMappers {
 
   import db.Driver.simple._
 
@@ -49,7 +48,7 @@ class FeatureCommitInfoRepoImpl @Inject()(
   def invalidateCache(model: FeatureCommitInfo)(implicit session: RSession): Unit = {}
 
   def getByModelAndVersion(modelName: StatModelName, version: Int)(implicit session: RSession): Option[FeatureCommitInfo] = {
-    val q = for{
+    val q = for {
       r <- rows if (r.modelName === modelName && r.modelVersion === version)
     } yield r
 

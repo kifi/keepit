@@ -5,21 +5,20 @@ import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ActionAuthenticator, AdminController}
+import com.keepit.common.controller.{ ActionAuthenticator, AdminController }
 import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.model.{NormalizedURI, User}
+import com.keepit.model.{ NormalizedURI, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 
 import play.api.libs.json._
 
 import views.html
 
-class AdminWord2VecController @Inject()(
-  cortex: CortexServiceClient,
-  shoebox: ShoeboxServiceClient,
-  actionAuthenticator: ActionAuthenticator
-) extends AdminController(actionAuthenticator) {
+class AdminWord2VecController @Inject() (
+    cortex: CortexServiceClient,
+    shoebox: ShoeboxServiceClient,
+    actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator) {
 
   def wordSimilarity() = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
@@ -36,8 +35,8 @@ class AdminWord2VecController @Inject()(
 
     val resp = Await.result(cortex.word2vecKeywordsAndBOW(text), 10 seconds)
 
-    val res = s"keywords(in the sense of cosine similarity): ${resp("keywords")}" + "\n\n" +  s"bow: ${resp("bow")}"
-    Ok(res.replaceAll("\n","\n<br>"))
+    val res = s"keywords(in the sense of cosine similarity): ${resp("keywords")}" + "\n\n" + s"bow: ${resp("bow")}"
+    Ok(res.replaceAll("\n", "\n<br>"))
   }
 
   def uriSimilarity() = AdminHtmlAction.authenticated { implicit request =>
@@ -95,10 +94,10 @@ class AdminWord2VecController @Inject()(
 
     val t1 = System.currentTimeMillis
     val userUris = sampleUserUris(Id[User](user), 100)
-    val sim = Await.result(cortex.word2vecUserUriSimilarity(userUris, uri), 60 seconds).filter{ case (uri, score) => score > 0.7f}.toArray.sortBy(-1f * _._2)
+    val sim = Await.result(cortex.word2vecUserUriSimilarity(userUris, uri), 60 seconds).filter { case (uri, score) => score > 0.7f }.toArray.sortBy(-1f * _._2)
     val elapse = (System.currentTimeMillis() - t1) / 1000f
 
-    val res = Json.obj("elapse" -> elapse, "uris" -> sim.map{_._1.toLong}, "scores" -> sim.map{_._2})
+    val res = Json.obj("elapse" -> elapse, "uris" -> sim.map { _._1.toLong }, "scores" -> sim.map { _._2 })
     Ok(res)
   }
 
@@ -107,7 +106,7 @@ class AdminWord2VecController @Inject()(
   }
 
   private def sampleUserUris(userId: Id[User], sampleSize: Int): Seq[Id[NormalizedURI]] = {
-    val uris = Await.result(shoebox.getBookmarks(userId), 5 seconds).map{_.uriId}
+    val uris = Await.result(shoebox.getBookmarks(userId), 5 seconds).map { _.uriId }
     if (uris.size < sampleSize) uris
     else Random.shuffle(uris.toList).take(sampleSize)
   }

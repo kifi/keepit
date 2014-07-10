@@ -35,13 +35,13 @@ class ServiceInstance(val node: Node, val thisInstance: Boolean, val remoteServi
     sentServiceUnavailable.incrementAndGet()
   }
 
-  def instanceInfo : AmazonInstanceInfo = remoteService.amazonInstanceInfo
+  def instanceInfo: AmazonInstanceInfo = remoteService.amazonInstanceInfo
 
-  def isHealthy : Boolean = remoteService.status == remoteService.healthyStatus
+  def isHealthy: Boolean = remoteService.status == remoteService.healthyStatus
 
   def isUp: Boolean = (remoteService.status == ServiceStatus.UP) && !reportedSentServiceUnavailable
 
-  def isAvailable : Boolean = isUp || isAlmostUp
+  def isAvailable: Boolean = isUp || isAlmostUp
 
   private def isAlmostUp: Boolean = remoteService.healthyStatus == ServiceStatus.UP && (remoteService.status == ServiceStatus.SICK || remoteService.status == ServiceStatus.SELFCHECK_FAIL)
 }

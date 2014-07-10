@@ -1,10 +1,10 @@
 package com.keepit.commanders
 
 import com.keepit.common.db.ExternalId
-import com.keepit.model.{Keep, SendableTag}
+import com.keepit.model.{ Keep, SendableTag }
 import com.keepit.social.BasicUser
 
-import play.api.libs.json.{__, JsObject}
+import play.api.libs.json.{ __, JsObject }
 import play.api.libs.functional.syntax._
 
 case class KeeperInfo(

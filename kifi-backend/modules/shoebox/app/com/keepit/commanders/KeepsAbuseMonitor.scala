@@ -5,7 +5,7 @@ import com.keepit.model.User
 import com.google.inject.Inject
 import com.keepit.model.KeepRepo
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
+import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
 import com.keepit.common.logging.Logging
 
 class AbuseMonitorException(message: String) extends Exception(message)

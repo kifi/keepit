@@ -1,8 +1,8 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.common.db.SequenceNumber
@@ -25,11 +25,11 @@ trait SearchFriendRepo extends Repo[SearchFriend] with SeqNumberFunction[SearchF
 
 @Singleton
 class SearchFriendRepoImpl @Inject() (
-    val db: DataBaseComponent,
-    val clock: Clock,
-    userConnectionRepo: UserConnectionRepo,
-    searchFriendsCache: SearchFriendsCache)
-    extends DbRepo[SearchFriend] with SearchFriendRepo with SeqNumberDbFunction[SearchFriend]{
+  val db: DataBaseComponent,
+  val clock: Clock,
+  userConnectionRepo: UserConnectionRepo,
+  searchFriendsCache: SearchFriendsCache)
+    extends DbRepo[SearchFriend] with SearchFriendRepo with SeqNumberDbFunction[SearchFriend] {
 
   import DBSession._
   import db.Driver.simple._
@@ -78,8 +78,8 @@ class SearchFriendRepoImpl @Inject() (
       f <- rows if f.userId === userId && f.state === SearchFriendStates.INCLUDED && f.friendId.inSet(friendIds)
     } yield f.id).list
 
-    ids.foreach{ id =>
-      (for(f <- rows if f.id === id) yield (f.state, f.updatedAt, f.seq)).update(SearchFriendStates.EXCLUDED, clock.now(), sequence.incrementAndGet())
+    ids.foreach { id =>
+      (for (f <- rows if f.id === id) yield (f.state, f.updatedAt, f.seq)).update(SearchFriendStates.EXCLUDED, clock.now(), sequence.incrementAndGet())
     }
 
     val idsToInsert = friendIds -- (for (f <- rows if f.userId === userId) yield f.friendId).list
@@ -96,8 +96,8 @@ class SearchFriendRepoImpl @Inject() (
       f <- rows if f.userId === userId && f.state === SearchFriendStates.EXCLUDED && f.friendId.inSet(friendIds)
     } yield f.id).list
 
-    ids.foreach{ id =>
-      (for(f <- rows if f.id === id) yield (f.state, f.updatedAt, f.seq)).update(SearchFriendStates.INCLUDED , clock.now(), sequence.incrementAndGet())
+    ids.foreach { id =>
+      (for (f <- rows if f.id === id) yield (f.state, f.updatedAt, f.seq)).update(SearchFriendStates.INCLUDED, clock.now(), sequence.incrementAndGet())
     }
 
     if (ids.size > 0) {

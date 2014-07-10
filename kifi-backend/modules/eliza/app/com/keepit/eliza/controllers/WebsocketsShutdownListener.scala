@@ -1,21 +1,21 @@
 package com.keepit.eliza.controllers
 
-import com.keepit.common.shutdown.{ShutdownCommander, ShutdownListener}
-import java.util.{TimerTask, Timer}
+import com.keepit.common.shutdown.{ ShutdownCommander, ShutdownListener }
+import java.util.{ TimerTask, Timer }
 import com.keepit.common.logging.Access.WS_IN
 import play.api.libs.json.Json
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.logging.Logging
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{ Singleton, Inject }
 
 /**
  * At this point, akka may start shutting down so we can't trust it or any other plugins we have :-(
  */
 @Singleton
 class WebsocketsShutdownListener @Inject() (
-  websocketRouter: WebSocketRouter,
-  accessLog: AccessLog,
-  shutdownCommander: ShutdownCommander) extends ShutdownListener with Logging {
+    websocketRouter: WebSocketRouter,
+    accessLog: AccessLog,
+    shutdownCommander: ShutdownCommander) extends ShutdownListener with Logging {
 
   val ShutdownWindowInMilli = 18000
 
@@ -28,9 +28,9 @@ class WebsocketsShutdownListener @Inject() (
     // Lets make sure that the timer runs anyway every at least ShutdownWindowInMilli/10 ms to ensure nice cleanup.
     val count = websocketRouter.connectedSockets.max(10)
     val rate = (ShutdownWindowInMilli / count).max(1)
-    println(s"closing $count sockets at rate of one every ${rate}ms")//on shutdown the logger may be terminated, double logging
+    println(s"closing $count sockets at rate of one every ${rate}ms") //on shutdown the logger may be terminated, double logging
     log.info(s"closing $count sockets at rate of one every ${rate}ms")
-    new Timer(getClass.getCanonicalName, true).scheduleAtFixedRate(task((count/ShutdownWindowInMilli).max(1)), 0, rate)
+    new Timer(getClass.getCanonicalName, true).scheduleAtFixedRate(task((count / ShutdownWindowInMilli).max(1)), 0, rate)
   }
 
   private def task(chunkSize: Int) = new TimerTask {

@@ -1,7 +1,7 @@
 package com.keepit.common.cache
 
 import com.keepit.common.logging.Logging
-import com.keepit.serializer.{NoCopyLocalSerializer, Serializer}
+import com.keepit.serializer.{ NoCopyLocalSerializer, Serializer }
 import org.specs2.mutable.Specification
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
@@ -23,7 +23,7 @@ class TransactionalCachingTest extends Specification {
     protected[cache] def setInnerCache(key: K, valueOpt: Option[T]) = { store += (key -> valueOpt) }
 
     protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, ObjectState[T]] = {
-      keys.foldLeft(Map.empty[K, ObjectState[T]]){ (result, key) =>
+      keys.foldLeft(Map.empty[K, ObjectState[T]]) { (result, key) =>
         store.get(key) match {
           case Some(valueOpt) => result + (key -> Found(valueOpt))
           case _ => result + (key -> NotFound())
@@ -35,7 +35,6 @@ class TransactionalCachingTest extends Specification {
     def exists(key: K): Boolean = store.contains(key)
     def clear(): Unit = store.clear()
   }
-
 
   case class TestKey1(id: Int) extends Key[String] {
     override val version = 1
@@ -164,7 +163,6 @@ class TransactionalCachingTest extends Specification {
       txnCache1.get(TestKey1(1)) === Some("foo")
       txnCache2.get(TestKey2(1)) === Some("bar")
 
-
       txn.beginCacheTransaction()
 
       txnCache1.remove(TestKey1(1))
@@ -229,7 +227,7 @@ class TransactionalCachingTest extends Specification {
       txn.beginCacheTransaction()
 
       txnCache1.get(TestKey1(1)) === None
-      txnCache1.getOrElse(TestKey1(1)){ "orElse invoked" } === "orElse invoked"
+      txnCache1.getOrElse(TestKey1(1)) { "orElse invoked" } === "orElse invoked"
       txnCache1.get(TestKey1(1)) === Some("orElse invoked")
 
       txn.rollbackCacheTransaction()
@@ -239,7 +237,7 @@ class TransactionalCachingTest extends Specification {
       txn.beginCacheTransaction()
 
       txnCache1.get(TestKey1(1)) === None
-      txnCache1.getOrElse(TestKey1(1)){ "orElse invoked again" } === "orElse invoked again"
+      txnCache1.getOrElse(TestKey1(1)) { "orElse invoked again" } === "orElse invoked again"
       txnCache1.get(TestKey1(1)) === Some("orElse invoked again")
 
       txn.commitCacheTransaction()
@@ -253,11 +251,11 @@ class TransactionalCachingTest extends Specification {
 
       txnCache1.direct.remove(TestKey1(1))
       txnCache1.direct.remove(TestKey1(2))
-      txnCache1.direct.getOrElse(TestKey1(1)){ "orElse invoked" } === "orElse invoked"
+      txnCache1.direct.getOrElse(TestKey1(1)) { "orElse invoked" } === "orElse invoked"
 
       txn.beginCacheTransaction()
       txnCache1.remove(TestKey1(1))
-      txnCache1.getOrElse(TestKey1(1)){ "orElse invoked" } === "orElse invoked"
+      txnCache1.getOrElse(TestKey1(1)) { "orElse invoked" } === "orElse invoked"
       txn.rollbackCacheTransaction()
       // changes should be gone after rollback
       txnCache1.direct.get(TestKey1(1)) === Some("orElse invoked")
@@ -265,9 +263,9 @@ class TransactionalCachingTest extends Specification {
 
       // bypass the transaction layer
       txn.beginCacheTransaction()
-      txn.directCacheAccess{
+      txn.directCacheAccess {
         txnCache1.remove(TestKey1(1))
-        txnCache1.getOrElse(TestKey1(2)){ "orElse invoked" } === "orElse invoked"
+        txnCache1.getOrElse(TestKey1(2)) { "orElse invoked" } === "orElse invoked"
       }
       txn.rollbackCacheTransaction()
       // changes should be still there after rollback

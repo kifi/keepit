@@ -4,8 +4,8 @@ import com.keepit.common.strings._
 import org.specs2.mutable.Specification
 import org.apache.zookeeper.CreateMode._
 import org.apache.zookeeper.KeeperException
-import play.api.libs.concurrent.Execution.Implicits.{defaultContext => execContext}
-import scala.util.{Random, Try}
+import play.api.libs.concurrent.Execution.Implicits.{ defaultContext => execContext }
+import scala.util.{ Random, Try }
 import scala.concurrent.duration._
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.CountDownLatch
@@ -17,12 +17,12 @@ class LockManagerTest extends Specification {
 
   args(skipAll = true)
 
-  lazy val zkClient = new ZooKeeperClientImpl("localhost", 20000, Some( {zk1 => println(s"in callback, got $zk1")} ))
+  lazy val zkClient = new ZooKeeperClientImpl("localhost", 20000, Some({ zk1 => println(s"in callback, got $zk1") }))
   implicit lazy val lockMgr = new LockManager(zkClient)
 
   def withZKSession[T](block: (ZooKeeperSession) => T)(implicit node: Node, cleanup: Boolean = true): T = {
     println(s"starting test with root path ${node.path}")
-    zkClient.session{ zk =>
+    zkClient.session { zk =>
       try {
         zk.create(node)
         block(zk)
@@ -68,7 +68,6 @@ class LockManagerTest extends Specification {
         lock.request(ExclusiveMode) must throwA[LockRequestAlreadyPlacedException]
       }
     }
-
 
     "creates a shared lock" in {
       implicit val node = Node("/test" + Random.nextLong.abs)
@@ -202,8 +201,8 @@ class LockManagerTest extends Specification {
         var blockingA = false
         var blockingB = false
         val lockNode = Node(node, "s_blocker")
-        val lockA: Lock = LockManager.lock(lockNode.path).onBlocking{ lck => blockingA = true }.build
-        val lockB: Lock = LockManager.lock(lockNode.path).onBlocking{ lck => blockingB = true }.build
+        val lockA: Lock = LockManager.lock(lockNode.path).onBlocking { lck => blockingA = true }.build
+        val lockB: Lock = LockManager.lock(lockNode.path).onBlocking { lck => blockingB = true }.build
 
         lockA.request(SharedMode)
         lockA.await(Duration(500, MILLISECONDS))
@@ -229,7 +228,7 @@ class LockManagerTest extends Specification {
       withZKSession { zk =>
         var blocking = false
         val lockNode = Node(node, "x_blocker")
-        val lockA: Lock = LockManager.lock(lockNode.path).onBlocking{ lck => blocking = true }.build
+        val lockA: Lock = LockManager.lock(lockNode.path).onBlocking { lck => blocking = true }.build
 
         lockA.request(ExclusiveMode)
         lockA.await(Duration(500, MILLISECONDS))

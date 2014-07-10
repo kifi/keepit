@@ -9,11 +9,10 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class StandaloneArticleIndexer(
-  indexDirectory: IndexDirectory,
-  articleStore: ArticleStore,
-  airbrake: AirbrakeNotifier,
-  shoeboxClient: ShoeboxServiceClient
-) extends ArticleIndexer(indexDirectory, articleStore, airbrake) {
+    indexDirectory: IndexDirectory,
+    articleStore: ArticleStore,
+    airbrake: AirbrakeNotifier,
+    shoeboxClient: ShoeboxServiceClient) extends ArticleIndexer(indexDirectory, articleStore, airbrake) {
 
   override def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()
@@ -23,7 +22,7 @@ class StandaloneArticleIndexer(
     while (!done) {
       val uris = Await.result(shoeboxClient.getIndexableUris(sequenceNumber, 1000), 180 seconds)
       done = uris.isEmpty
-      total += update("", uris, Shard(0,1))
+      total += update("", uris, Shard(0, 1))
     }
     total
   }

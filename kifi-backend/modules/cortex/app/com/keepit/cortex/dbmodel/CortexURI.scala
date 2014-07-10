@@ -12,15 +12,13 @@ import com.keepit.common.db.ModelWithState
 import org.joda.time.DateTime
 import com.keepit.common.time._
 
-
 case class CortexURI(
-  id: Option[Id[CortexURI]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  uriId: Id[NormalizedURI],
-  state: State[CortexURI],
-  seq: SequenceNumber[CortexURI]
-) extends ModelWithState[CortexURI] with ModelWithSeqNumber[CortexURI] {
+    id: Option[Id[CortexURI]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    uriId: Id[NormalizedURI],
+    state: State[CortexURI],
+    seq: SequenceNumber[CortexURI]) extends ModelWithState[CortexURI] with ModelWithSeqNumber[CortexURI] {
   def withId(id: Id[CortexURI]): CortexURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): CortexURI = copy(updatedAt = now)
 }

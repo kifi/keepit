@@ -12,12 +12,12 @@ class URLPatternTest extends Specification with ShoeboxTestInjector {
         val repo = inject[URLPatternRepo]
         inject[URLPatternRepo] must be(repo) // singleton
 
-        val (p1, p2) = inject[Database].readWrite{ implicit session =>
+        val (p1, p2) = inject[Database].readWrite { implicit session =>
           (repo.save(URLPattern(None, """^https?://www\.42go\.com""", None)),
-           repo.save(URLPattern(None, """://(www\.|)hulu\.com/watch/""", None)))
+            repo.save(URLPattern(None, """://(www\.|)hulu\.com/watch/""", None)))
         }
 
-        inject[Database].readOnlyMaster{ implicit session =>
+        inject[Database].readOnlyMaster { implicit session =>
           repo.get(p1.id.get) === p1
           repo.get(p2.id.get) === p2
           repo.get(p1.pattern) === Some(p1)

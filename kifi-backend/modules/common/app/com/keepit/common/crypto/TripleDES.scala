@@ -4,7 +4,7 @@ import javax.crypto._
 import javax.crypto.spec._
 import java.security.spec._
 import scala.util.Try
-import org.apache.commons.codec.binary.{Base64, Base32}
+import org.apache.commons.codec.binary.{ Base64, Base32 }
 
 /** DO NOT USE FOR REAL CRYPTO **/
 
@@ -16,11 +16,11 @@ sealed abstract class CipherConv {
 object CipherConv {
   object Base64Conv extends CipherConv {
     override def encode(data: Array[Byte]): String = Base64.encodeBase64URLSafeString(data)
-    override def decode(str: String): Array[Byte]= Base64.decodeBase64(str)
+    override def decode(str: String): Array[Byte] = Base64.decodeBase64(str)
   }
   object Base32Conv extends CipherConv {
     override def encode(data: Array[Byte]): String = new Base32().encodeAsString(data).takeWhile(_ != '=').toLowerCase
-    override def decode(str: String): Array[Byte]= new Base32().decode(str.toUpperCase)
+    override def decode(str: String): Array[Byte] = new Base32().decode(str.toUpperCase)
   }
 }
 
@@ -38,7 +38,6 @@ class TripleDES(passPhrase: String) {
 
   ecipher.init(Cipher.ENCRYPT_MODE, key, paramSpec)
   dcipher.init(Cipher.DECRYPT_MODE, key, paramSpec)
-
 
   def encryptLongToStr(id: Long, conv: CipherConv = CipherConv.Base64Conv): Try[String] = Try {
     val buffer = java.nio.ByteBuffer.allocate(longSize)

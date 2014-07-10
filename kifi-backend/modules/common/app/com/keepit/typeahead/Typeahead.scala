@@ -7,8 +7,8 @@ import com.keepit.common.performance._
 import com.keepit.model.User
 import scala.concurrent._
 import scala.concurrent.duration._
-import com.keepit.common.logging.{LogPrefix, Logging}
-import com.keepit.common.concurrent.{FutureHelpers, ExecutionContext}
+import com.keepit.common.logging.{ LogPrefix, Logging }
+import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import Logging.LoggerWithPrefix
 import play.api.libs.json._
@@ -28,7 +28,7 @@ trait Typeahead[E, I] extends Logging {
 
   protected def extractName(info: I): String
 
-  def topN(userId: Id[User], query: String, limit:Option[Int])(implicit ord: Ordering[TypeaheadHit[I]]): Future[Seq[TypeaheadHit[I]]] = {
+  def topN(userId: Id[User], query: String, limit: Option[Int])(implicit ord: Ordering[TypeaheadHit[I]]): Future[Seq[TypeaheadHit[I]]] = {
     if (query.trim.length <= 0) Future.successful(Seq.empty) else {
       implicit val fj = ExecutionContext.fj
       getPrefixFilter(userId) flatMap { prefixFilterOpt =>
@@ -59,18 +59,18 @@ trait Typeahead[E, I] extends Logging {
     }
   }
 
-  private[this] def topNWithInfos(infos:Seq[I], queryTerms:Array[String], limit:Option[Int])(implicit ord:Ordering[TypeaheadHit[I]]): Seq[TypeaheadHit[I]] = {
+  private[this] def topNWithInfos(infos: Seq[I], queryTerms: Array[String], limit: Option[Int])(implicit ord: Ordering[TypeaheadHit[I]]): Seq[TypeaheadHit[I]] = {
     if (queryTerms.length <= 0) Seq.empty else {
       var ordinal = 0
-      val hits = infos.map{ info =>
+      val hits = infos.map { info =>
         ordinal += 1
         val name = PrefixFilter.normalize(extractName(info))
         TypeaheadHit(PrefixMatching.distanceWithNormalizedName(name, queryTerms), name, ordinal, info)
-      }.collect{
+      }.collect {
         case elem @ TypeaheadHit(score, name, ordinal, info) if score < 1000000.0d => elem
       }.sorted
       val top = limit map (n => hits.take(n)) getOrElse hits
-      top.foreach { s => log.info(s"[topN(${queryTerms.mkString(",")},$limit,#infos=${infos.length})] top=${top.mkString(",")}")}
+      top.foreach { s => log.info(s"[topN(${queryTerms.mkString(",")},$limit,#infos=${infos.length})] top=${top.mkString(",")}") }
       top
     }
   }
@@ -78,7 +78,7 @@ trait Typeahead[E, I] extends Logging {
   private[this] val consolidateBuildReq = new RequestConsolidator[Id[User], PrefixFilter[E]](10 minutes)
 
   protected def build(id: Id[User]): Future[PrefixFilter[E]] = {
-    consolidateBuildReq(id){ id =>
+    consolidateBuildReq(id) { id =>
       timing(s"buildFilter($id)") {
         val builder = new PrefixFilterBuilder[E]
         getAllInfosForUser(id).map { allInfos =>
@@ -93,7 +93,7 @@ trait Typeahead[E, I] extends Logging {
 
   def refresh(id: Id[User]): Future[PrefixFilter[E]] // slow
 
-  def refreshByIds(userIds:Seq[Id[User]]):Future[Unit] = { // consider using zk and/or sqs to track progress
+  def refreshByIds(userIds: Seq[Id[User]]): Future[Unit] = { // consider using zk and/or sqs to track progress
     implicit val prefix = LogPrefix(s"refreshByIds(#ids=${userIds.length})")
     implicit val fj = ExecutionContext.fj
 
