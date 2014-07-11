@@ -89,22 +89,7 @@ class ABookImporter @Inject() (
 
           abookRawInfo.contacts.value.grouped(abookUploadConf.batchSize).foreach { batch =>
             batchNum += 1
-            val basicContacts = batch.flatMap { contact =>
-              val firstName = (contact \ "firstName").asOpt[String] trimOpt
-              val lastName = (contact \ "lastName").asOpt[String] trimOpt
-              val name = (contact \ "name").asOpt[String] trimOpt
-              val validEmails = (contact \ "emails").asOpt[Seq[JsValue]].getOrElse(Seq.empty[JsValue]).foldLeft(Seq[EmailAddress]()) {
-                case (validEmails, nextValue) =>
-                  nextValue.validate[EmailAddress] match {
-                    case JsSuccess(validEmail, _) => validEmails :+ validEmail
-                    case JsError(errors) =>
-                      log.warn(s"[upload($userId,$origin)] Json parsing errors: $errors")
-                      validEmails
-                  }
-              }
-              validEmails.map { email => BasicContact(email, name = name, firstName = firstName, lastName = lastName) }
-            }
-
+            val basicContacts = readBasicContacts(userId, origin, batch)
             processed += batch.length
             abookEntry = db.readWrite(attempts = 2) { implicit s =>
               try {
@@ -150,6 +135,22 @@ class ABookImporter @Inject() (
         airbrake.notify(s"[upload($userId, $abookInfo)] failed")
       }
     }
+  }
+
+  private def readBasicContacts(userId: Id[User], origin: ABookOriginType, batch: Seq[JsValue]): Seq[BasicContact] = batch.flatMap { contact =>
+    val firstName = (contact \ "firstName").asOpt[String] trimOpt
+    val lastName = (contact \ "lastName").asOpt[String] trimOpt
+    val name = (contact \ "name").asOpt[String] trimOpt
+    val validEmails = (contact \ "emails").asOpt[Seq[JsValue]].getOrElse(Seq.empty[JsValue]).foldLeft(Seq[EmailAddress]()) {
+      case (validEmails, nextValue) =>
+        nextValue.validate[EmailAddress] match {
+          case JsSuccess(validEmail, _) => validEmails :+ validEmail
+          case JsError(errors) =>
+            log.warn(s"[upload($userId,$origin)] Json parsing errors: $errors")
+            validEmails
+        }
+    }
+    validEmails.map { email => BasicContact(email, name = name, firstName = firstName, lastName = lastName) }
   }
 }
 
