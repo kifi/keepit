@@ -37,6 +37,7 @@ class PageCommander @Inject() (
 
   private def getKeepersFuture(userId: Id[User], uri: NormalizedURI): Future[(Seq[BasicUser], Int)] = {
     searchClient.sharingUserInfo(userId, uri.id.get).map { sharingUserInfo =>
+      // use the master. BasicUser is heavily cached.
       val keepers: Seq[BasicUser] = db.readOnlyMaster { implicit session =>
         basicUserRepo.loadAll(sharingUserInfo.sharingUserIds).values.toSeq
       }
@@ -47,6 +48,7 @@ class PageCommander @Inject() (
   def getPageDetails(url: String, userId: Id[User], experiments: Set[ExperimentType]): KeeperInfo = {
     if (url.isEmpty) throw new Exception(s"empty url for user $userId")
 
+    // use the master. Keep, KeepToCollection, and Collection are heavily cached.
     val (nUriStr, nUri, keepersFutureOpt, domain, keep, tags, position, neverOnSite, host) = db.readOnlyMaster { implicit session =>
       val (nUriStr, nUri) = normalizedURIInterner.getByUriOrPrenormalize(url) match {
         case Success(Left(nUri)) => (nUri.url, Some(nUri))
