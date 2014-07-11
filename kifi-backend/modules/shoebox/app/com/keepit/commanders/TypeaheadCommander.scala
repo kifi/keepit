@@ -4,11 +4,10 @@ import com.google.inject.Inject
 import com.keepit.common.healthcheck.{ SystemAdminMailSender, AirbrakeNotifier }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.{ LogPrefix, Logging }
-import com.keepit.common.performance.timing
 import com.keepit.model._
 import com.keepit.abook.{ RichContact, ABookServiceClient }
 import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.social.{ BasicUserWithUserId, SocialNetworkType, SocialNetworks }
 import scala.concurrent.Future
 import play.api.libs.json._
@@ -16,11 +15,10 @@ import com.keepit.typeahead.TypeaheadHit
 import play.api.libs.functional.syntax._
 import com.keepit.model.SocialUserConnectionsKey
 import com.keepit.common.concurrent.ExecutionContext
-import com.keepit.common.akka.SafeFuture
 import com.keepit.search.SearchServiceClient
 import com.keepit.common.mail.EmailAddress
 import Logging.LoggerWithPrefix
-import scala.collection.mutable.{ TreeSet, ArrayBuffer }
+import scala.collection.mutable.ArrayBuffer
 import org.joda.time.DateTime
 
 case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
@@ -233,11 +231,11 @@ class TypeaheadCommander @Inject() (
       log.infoP(s"social.len=${socialHitsTup.length} kifi.len=${kifiHitsTup.length} abook.len=${abookHitsTup.length} nf.len=${nfUserHits.length}")
       val sorted = (socialHitsTup ++ kifiHitsTup ++ abookHitsTup ++ nfUserHitsTup).sorted(hitOrd)
       log.infoP(s"all.sorted(len=${sorted.length}):${sorted.take(10).mkString(",")}")
-      Some(sorted)
+      sorted
     }
   }
 
-  private def aggregate(userId: Id[User], q: String, limit: Option[Int], dedupEmail: Boolean): Future[Option[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = {
+  private def aggregate(userId: Id[User], q: String, limit: Option[Int], dedupEmail: Boolean): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {
     implicit val prefix = LogPrefix(s"aggregate($userId,$q,$limit)")
     val socialF = socialUserTypeahead.topN(userId, q, limit map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { res =>
       res.collect {
@@ -250,64 +248,75 @@ class TypeaheadCommander @Inject() (
 
     limit match {
       case None => fetchAll(socialF, kifiF, abookF, nfUsersF)
-      case Some(n) =>
-        val zHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])] // can use minHeap
-        socialF flatMap { socialRes =>
-          val socialHits = socialRes.map(h => (h.info.networkType, h)).sorted(hitOrd)
-          zHits ++= socialHits.takeWhile(t => t._2.score == 0)
-          val topF = if (zHits.length >= n) {
-            val res = zHits.take(n)
-            log.infoP(s"short-circuit (social) res=${res.mkString(",")}")
-            Future.successful(Option(res))
+      case Some(n) => fetchTop(dedupEmail, socialF, kifiF, abookF, nfUsersF, n)
+    }
+  }
+
+  def fetchTop(
+    dedupEmail: Boolean,
+    socialF: Future[Seq[TypeaheadHit[SocialUserBasicInfo]]],
+    kifiF: Future[Seq[TypeaheadHit[User]]],
+    abookF: Future[Seq[TypeaheadHit[RichContact]]],
+    nfUsersF: Future[Seq[TypeaheadHit[BasicUserWithUserId]]],
+    limit: Int): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {
+    val zHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])] // can use minHeap
+    socialF flatMap { socialRes =>
+      val socialHits = socialRes.map(h => (h.info.networkType, h)).sorted(hitOrd)
+      zHits ++= socialHits.takeWhile(t => t._2.score == 0)
+      val topF = if (zHits.length >= limit) {
+        val res = zHits.take(limit)
+        log.infoP(s"short-circuit (social) res=${res.mkString(",")}")
+        Future.successful(res)
+      } else {
+        kifiF flatMap { kifiRes =>
+          val kifiHits = kifiRes.map(h => (SocialNetworks.FORTYTWO, h)).sorted(hitOrd)
+          zHits ++= kifiHits.takeWhile(t => t._2.score == 0)
+          if (zHits.length >= limit) {
+            val res = zHits.take(limit)
+            log.infoP(s"short-circuit (social+kifi) res=${res.mkString(",")}")
+            Future.successful(res)
           } else {
-            kifiF flatMap { kifiRes =>
-              val kifiHits = kifiRes.map(h => (SocialNetworks.FORTYTWO, h)).sorted(hitOrd)
-              zHits ++= kifiHits.takeWhile(t => t._2.score == 0)
-              if (zHits.length >= n) {
-                val res = zHits.take(n)
-                log.infoP(s"short-circuit (social+kifi) res=${res.mkString(",")}")
-                Future.successful(Option(res))
-              } else {
-                abookF flatMap { abookRes =>
-                  val filteredABookHits = if (!dedupEmail) abookRes else {
-                    val kifiUsers = kifiRes.map(h => h.info.id.get -> h).toMap
-                    abookRes.filterNot { h =>
-                      h.info.userId.exists { uId => // todo: confirm this field is updated properly
-                        kifiUsers.get(uId).exists { userHit =>
-                          if (userHit.score <= h.score) {
-                            log.infoP(s"DUP econtact (${h.info.email}) discarded; userHit=${userHit.info} econtactHit=${h.info}")
-                            true // todo: transform to User
-                          } else {
-                            log.warnP(s"DUP econtact ${h.info} has better score than user ${userHit}")
-                            false
-                          }
-                        }
-                      }
-                    }
-                  }
-                  val abookHits = filteredABookHits.map(h => (SocialNetworks.EMAIL, h)).sorted(hitOrd)
-                  zHits ++= abookHits.takeWhile(t => t._2.score == 0)
-                  if (zHits.length >= n) {
-                    val res = zHits.take(n)
-                    log.infoP(s"short-circuit (social+kifi+abook) res=${res.mkString(",")}")
-                    Future.successful(Option(res))
-                  } else {
-                    nfUsersF map { nfUserRes =>
-                      val nfUserHits = nfUserRes.map(h => (SocialNetworks.FORTYTWO_NF, h)).sorted(hitOrd)
-                      zHits ++= nfUserHits.takeWhile(t => t._2.score == 0)
-                      if (zHits.length >= n) {
-                        Option(zHits.take(n))
-                      } else { // combine all & sort
-                        Some((socialHits ++ kifiHits ++ abookHits ++ nfUserHits).sorted(hitOrd).take(n))
+            abookF flatMap { abookRes =>
+              val filteredABookHits = if (!dedupEmail) abookRes
+              else {
+                val kifiUsers = kifiRes.map(h => h.info.id.get -> h).toMap
+                abookRes.filterNot { h =>
+                  h.info.userId.exists { uId => // todo: confirm this field is updated properly
+                    kifiUsers.get(uId).exists { userHit =>
+                      if (userHit.score <= h.score) {
+                        log.infoP(s"DUP econtact (${h.info.email}) discarded; userHit=${userHit.info} econtactHit=${h.info}")
+                        true // todo: transform to User
+                      } else {
+                        log.warnP(s"DUP econtact ${h.info} has better score than user ${userHit}")
+                        false
                       }
                     }
                   }
                 }
               }
+              val abookHits = filteredABookHits.map(h => (SocialNetworks.EMAIL, h)).sorted(hitOrd)
+              zHits ++= abookHits.takeWhile(t => t._2.score == 0)
+              if (zHits.length >= limit) {
+                val res = zHits.take(limit)
+                log.infoP(s"short-circuit (social+kifi+abook) res=${res.mkString(",")}")
+                Future.successful(res)
+              } else {
+                nfUsersF map { nfUserRes =>
+                  val nfUserHits = nfUserRes.map(h => (SocialNetworks.FORTYTWO_NF, h)).sorted(hitOrd)
+                  zHits ++= nfUserHits.takeWhile(t => t._2.score == 0)
+                  if (zHits.length >= limit) {
+                    zHits.take(limit)
+                  } else {
+                    // combine all & sort
+                    (socialHits ++ kifiHits ++ abookHits ++ nfUserHits).sorted(hitOrd).take(limit)
+                  }
+                }
+              }
             }
           }
-          topF
         }
+      }
+      topF
     }
   }
 
@@ -367,25 +376,19 @@ class TypeaheadCommander @Inject() (
     val q = query.trim
     if (q.length == 0) Future.successful(Seq.empty[ConnectionWithInviteStatus])
     else {
-      val topF: Future[Option[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = aggregate(userId, q, limit, dedupEmail)
-      topF flatMap { topOpt =>
-        topOpt match {
-          case None => Future.successful(Seq.empty[ConnectionWithInviteStatus])
-          case Some(top) => {
-            for {
-              socialInvites <- socialInvitesF
-              emailInvites <- emailInvitesF
-            } yield {
-              val socialInvitesMap = socialInvites.map { inv => inv.recipientSocialUserId.get -> inv }.toMap // overhead
-              val emailInvitesMap = emailInvites.map { inv => inv.recipientEmailAddress.get -> inv }.toMap
-              val resWithStatus = joinWithInviteStatus(userId, top, emailInvitesMap, socialInvitesMap, pictureUrl)
-              val res = limit.map { n =>
-                resWithStatus.take(n)
-              }.getOrElse(resWithStatus)
-              log.infoP(s"result=${res.mkString(",")}")
-              res
-            }
-          }
+      aggregate(userId, q, limit, dedupEmail) flatMap { top =>
+        for {
+          socialInvites <- socialInvitesF
+          emailInvites <- emailInvitesF
+        } yield {
+          val socialInvitesMap = socialInvites.map { inv => inv.recipientSocialUserId.get -> inv }.toMap // overhead
+          val emailInvitesMap = emailInvites.map { inv => inv.recipientEmailAddress.get -> inv }.toMap
+          val resWithStatus = joinWithInviteStatus(userId, top, emailInvitesMap, socialInvitesMap, pictureUrl)
+          val res = limit.map { n =>
+            resWithStatus.take(n)
+          }.getOrElse(resWithStatus)
+          log.infoP(s"result=${res.mkString(",")}")
+          res
         }
       }
     }
