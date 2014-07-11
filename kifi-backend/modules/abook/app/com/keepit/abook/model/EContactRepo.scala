@@ -21,7 +21,7 @@ trait EContactRepo extends Repo[EContact] {
   def insertAll(contacts: Seq[EContact])(implicit session: RWSession): Int
   def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Boolean
   def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
-  def getByAbookIdAndEmail(abookId: Id[ABookInfo], email: EmailAddress)(implicit session: RSession): Option[EContact]
+  def getByAbookIdAndEmailId(abookId: Id[ABookInfo], emailId: Id[EmailAccount])(implicit session: RSession): Option[EContact]
   def getByAbookId(abookId: Id[ABookInfo])(implicit session: RSession): Seq[EContact]
 }
 
@@ -101,8 +101,8 @@ class EContactRepoImpl @Inject() (
     Q.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first
   }
 
-  def getByAbookIdAndEmail(abookId: Id[ABookInfo], email: EmailAddress)(implicit session: RSession): Option[EContact] = {
-    (for (row <- rows if row.abookId === abookId && row.email === email) yield row).firstOption
+  def getByAbookIdAndEmailId(abookId: Id[ABookInfo], emailId: Id[EmailAccount])(implicit session: RSession): Option[EContact] = {
+    (for (row <- rows if row.abookId === abookId && row.emailAccountId === emailId) yield row).firstOption
   }
 
   def getByAbookId(abookId: Id[ABookInfo])(implicit session: RSession): Seq[EContact] = {
