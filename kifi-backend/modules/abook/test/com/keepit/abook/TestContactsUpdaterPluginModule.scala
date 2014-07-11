@@ -7,7 +7,7 @@ import play.api.libs.json.JsValue
 import com.google.inject.{ Singleton, Provides, Inject }
 import com.keepit.shoebox.{ FakeShoeboxServiceModule }
 
-class TestContactsUpdaterPlugin @Inject() (contactsUpdater: ContactsUpdater) extends ContactsUpdaterPlugin {
+class TestABookImporterPlugin @Inject() (contactsUpdater: ABookImporter) extends ABookImporterPlugin {
   def asyncProcessContacts(userId: Id[User], origin: ABookOriginType, aBookInfo: ABookInfo, s3Key: String, rawJsonRef: WeakReference[JsValue]): Unit = {
     contactsUpdater.processABookUpload(userId, origin, aBookInfo, s3Key, rawJsonRef)
   }
@@ -16,5 +16,5 @@ class TestContactsUpdaterPlugin @Inject() (contactsUpdater: ContactsUpdater) ext
 case class TestContactsUpdaterPluginModule() extends ContactsUpdaterPluginModule {
   @Provides
   @Singleton
-  def contactsUpdaterPlugin(cUpdater: ContactsUpdater): ContactsUpdaterPlugin = new TestContactsUpdaterPlugin(cUpdater)
+  def contactsUpdaterPlugin(cUpdater: ABookImporter): ABookImporterPlugin = new TestABookImporterPlugin(cUpdater)
 }

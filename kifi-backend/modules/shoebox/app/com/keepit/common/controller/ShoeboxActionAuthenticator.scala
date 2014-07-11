@@ -55,7 +55,7 @@ class ShoeboxActionAuthenticator @Inject() (
       else Some(session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString))
     impersonatedUserIdOpt match {
       case Some(impExternalUserId) =>
-        val (impExperiments, impSocialUser, impUserId) = db.readOnlyMaster { implicit session =>
+        val (impExperiments, impSocialUser, impUserId) = db.readOnlyReplica { implicit session =>
           val impUserId = userRepo.get(impExternalUserId).id.get
           if (!isAdmin(experiments)) throw new IllegalStateException("non admin user %s tries to impersonate to %s".format(userId, impUserId))
           val impSocialUserInfo = socialUserInfoRepo.getByUser(impUserId).head
@@ -105,7 +105,7 @@ class ShoeboxActionAuthenticator @Inject() (
 
   private[controller] def isAdmin(experiments: Set[ExperimentType]) = experiments.contains(ExperimentType.ADMIN)
 
-  private[controller] def isAdmin(userId: Id[User]) = db.readOnlyMaster { implicit session =>
+  private[controller] def isAdmin(userId: Id[User]) = db.readOnlyReplica { implicit session =>
     userExperimentCommander.userHasExperiment(userId, ExperimentType.ADMIN)
   }
 

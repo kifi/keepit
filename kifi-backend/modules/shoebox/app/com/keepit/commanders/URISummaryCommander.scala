@@ -46,7 +46,7 @@ class URISummaryCommander @Inject() (
    * Gets the default URI Summary
    */
   def getDefaultURISummary(uriId: Id[NormalizedURI], waiting: Boolean): Future[URISummary] = {
-    val uri = db.readOnlyMaster { implicit session => normalizedUriRepo.get(uriId) }
+    val uri = db.readOnlyReplica { implicit session => normalizedUriRepo.get(uriId) }
     getDefaultURISummary(uri, waiting)
   }
 
@@ -99,7 +99,7 @@ class URISummaryCommander @Inject() (
 
   private def getNormalizedURIForRequest(request: URISummaryRequest): Option[NormalizedURI] = {
     if (request.silent)
-      db.readOnlyMaster { implicit session => normalizedURIInterner.getByUri(request.url) }
+      db.readOnlyReplica { implicit session => normalizedURIInterner.getByUri(request.url) }
     else
       db.readWrite { implicit session => Some(normalizedURIInterner.internByUri(request.url)) }
   }
@@ -120,7 +120,7 @@ class URISummaryCommander @Inject() (
       case ImageType.SCREENSHOT => Some(ImageProvider.PAGEPEEKER)
       case ImageType.IMAGE => Some(ImageProvider.EMBEDLY)
     }
-    db.readOnlyMaster { implicit session =>
+    db.readOnlyReplica { implicit session =>
       val storedImageInfos = nUri.id flatMap { id =>
         imageInfoRepo.getByUriWithPriority(id, minSize, targetProvider)
       }

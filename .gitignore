@@ -4,4 +4,4 @@ workspace.xml
 **/*~
 
 target/*
-
+kifi-backend/.dist/.classpath

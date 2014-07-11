@@ -78,7 +78,7 @@ class EventWriter @Inject() (
   def wrapEvent(event: Event): Option[WrappedUserEvent] = {
     event match {
       case Event(_, UserEventMetadata(eventFamily, eventName, externalUser, _, experiments, metaData, _), createdAt, _) =>
-        val user = db.readOnlyMaster { implicit session => userRepo.get(externalUser) }
+        val user = db.readOnlyReplica { implicit session => userRepo.get(externalUser) }
         val avatarUrl = imageStore.getPictureUrl(Some(150), user, "0.jpg").value.flatMap(_.toOption)
         Some(WrappedUserEvent(event, user, avatarUrl, eventName, eventFamily, createdAt))
       case _ => None
