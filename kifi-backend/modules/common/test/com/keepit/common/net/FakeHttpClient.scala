@@ -58,7 +58,7 @@ case class FakeClientResponse(expectedResponse: String, override val status: Int
   def res: Response = ???
   def bytes: Array[Byte] = ???
   def body: String = expectedResponse
-  def json: JsValue = Json.parse(expectedResponse)
+  def json: JsValue = if (expectedResponse.trim.isEmpty) JsNull else Json.parse(expectedResponse)
   def xml: NodeSeq = XML.loadString(expectedResponse)
   def request: Request = ???
   def isUp: Boolean = true
