@@ -2,8 +2,8 @@ package com.keepit.commanders
 
 import com.keepit.common.queue._
 import com.keepit.common.db.Id
-import com.keepit.model.{ User, SocialUserInfo, Invitation }
-import com.keepit.abook.model.{ EContactRepo, EContact, RichSocialConnectionRepo }
+import com.keepit.model.{ NotificationCategory, User, SocialUserInfo, Invitation }
+import com.keepit.abook.model._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
@@ -27,7 +27,13 @@ import scala.util.Failure
 import scala.util.Right
 import scala.util.Success
 import scala.math
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, EmailAddress }
+import scala.collection.mutable
+import scala.util.Left
+import scala.util.Failure
+import scala.util.Right
+import scala.util.Success
+import com.keepit.shoebox.ShoeboxServiceClient
 
 @Singleton
 class LocalRichConnectionCommander @Inject() (
@@ -37,7 +43,8 @@ class LocalRichConnectionCommander @Inject() (
     db: Database,
     repo: RichSocialConnectionRepo,
     scheduler: Scheduler,
-    eContactRepo: Provider[EContactRepo]) extends RichConnectionCommander with Logging {
+    eContactRepo: Provider[EContactRepo],
+    shoebox: ShoeboxServiceClient) extends RichConnectionCommander with Logging {
 
   def startUpdateProcessing(): Unit = {
     log.info("RConn: Triggered queued update processing")
@@ -151,4 +158,46 @@ class LocalRichConnectionCommander @Inject() (
     }
   }
 
+  def validateAllRichConnectionEmails(readOnly: Boolean): Unit = {
+    log.info("[RichConnection Email Validation] Starting validation of all Email RichConnections.")
+    val invalidConnections = mutable.Map[Id[RichSocialConnection], String]()
+    val fixableConnections = mutable.Map[Id[RichSocialConnection], String]()
+    val pageSize = 1000
+    var lastPageSize = -1
+    var nextPage = 0
+
+    do {
+      db.readWrite { implicit session =>
+        val batch = repo.page(nextPage, pageSize, Set.empty)
+        batch.foreach { connection =>
+          connection.friendEmailAddress.foreach { emailAddress =>
+            EmailAddress.validate(emailAddress.address) match {
+              case Failure(invalidEmail) => {
+                log.error(s"[RichConnection Email Validation] Found invalid email rich connection: ${connection}")
+                invalidConnections += (connection.id.get -> emailAddress.address)
+                if (!readOnly) { repo.save(connection.copy(state = RichSocialConnectionStates.INACTIVE)) }
+              }
+              case Success(validEmail) => {
+                if (validEmail != emailAddress) {
+                  log.warn(s"[RichConnection Email Validation] Found fixable email rich connection: ${connection}")
+                  fixableConnections += (connection.id.get -> emailAddress.address)
+                  if (!readOnly) { repo.save(connection.copy(friendEmailAddress = Some(validEmail))) }
+                }
+              }
+            }
+          }
+          lastPageSize = batch.length
+          nextPage += 1
+        }
+      }
+    } while (lastPageSize == pageSize)
+
+    log.info("[RichConnection Email Validation] Done with RichConnection Email validation.")
+
+    val title = s"RichConnection Email Validation Report: ReadOnly Mode = $readOnly. Invalid Contacts: ${invalidConnections.size}. Fixable Contacts: ${fixableConnections.size}"
+    val msg = s"Invalid Email RichConnections: \n\n ${invalidConnections.mkString("\n")} \n\n Fixable Contacts: \n\n ${fixableConnections.mkString("\n")}"
+    shoebox.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
+      subject = title, htmlBody = msg.replaceAll("\n", "\n<br>"), category = NotificationCategory.System.ADMIN
+    ))
+  }
 }

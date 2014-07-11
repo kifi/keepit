@@ -230,7 +230,10 @@ class ABookController @Inject() (
   }
 
   def validateAllContacts(readOnly: Boolean) = Action { request =>
-    SafeFuture { abookCommander.validateAllContacts(readOnly) }
+    SafeFuture {
+      abookCommander.validateAllContacts(readOnly)
+      richConnectionCommander.validateAllRichConnectionEmails(readOnly)
+    }
     Ok
   }
 
