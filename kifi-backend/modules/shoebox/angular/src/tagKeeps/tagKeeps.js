@@ -20,34 +20,13 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
     keepService.reset();
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
+    $scope.hasLoaded = false;
 
     var tagId = $routeParams.tagId || '';
-
-    $scope.toggleSelectAll = keepService.toggleSelectAll;
-    $scope.isSelectedAll = keepService.isSelectedAll;
-
-    $scope.isMultiChecked = function () {
-      return keepService.getSelectedLength() > 0 && !keepService.isSelectedAll();
-    };
-
-    $scope.isCheckEnabled = function () {
-      return $scope.keeps.length;
-    };
 
     $scope.hasMore = function () {
       return !keepService.isEnd();
     };
-
-    $scope.mouseoverCheckAll = false;
-
-    $scope.onMouseoverCheckAll = function () {
-      $scope.mouseoverCheckAll = true;
-    };
-
-    $scope.onMouseoutCheckAll = function () {
-      $scope.mouseoverCheckAll = false;
-    };
-
     $scope.getSubtitle = function () {
       if ($scope.loading) {
         return 'Loading...';
@@ -84,6 +63,7 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
       $scope.loading = true;
       return keepService.getKeepsByTagId(tagId).then(function (list) {
         $scope.loading = false;
+        $scope.hasLoaded = true;
 
         if (keepService.isEnd()) {
           $scope.scrollDisabled = true;
@@ -93,12 +73,23 @@ angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
       });
     };
 
-    $scope.getNextKeeps();
+    function initKeepList() {
+      $scope.scrollDisabled = false;
+      $scope.getNextKeeps();
+    }
+
+    $scope.$watch('keepService.seqReset()', function () {
+      initKeepList();
+    });
 
     tagService.promiseById(tagId).then(function (tag) {
       $window.document.title = 'Kifi • ' + tag.name;
       $scope.tag = tag || null;
     });
+
+    $scope.showEmptyState = function () {
+      return $scope.keeps.length === 0 && !$scope.hasMore();
+    };
 
   }
 ]);

@@ -48,7 +48,7 @@ class UserThreadRepoTest extends Specification with DbTestInjector {
           toMail.size === 1
           toMail.head.id.get === thread1.id.get
         }
-        db.readOnly {implicit s =>
+        db.readOnlyMaster { implicit s =>
           userThreadRepo.getUserStats(user1) === UserThreadStats(1, 0, 0)
           userThreadRepo.getUserStats(user2) === UserThreadStats(0, 0, 0)
           userThreadRepo.getUserThreadsForEmailing(clock.now()).size === 1
@@ -73,7 +73,7 @@ class UserThreadRepoTest extends Specification with DbTestInjector {
             lastActive = Some(inject[Clock].now)
           ))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           userThreadRepo.getUserStats(user1) === UserThreadStats(2, 1, 0)
           userThreadRepo.getUserStats(user2) === UserThreadStats(0, 0, 0)
           val toMail = userThreadRepo.getUserThreadsForEmailing(clock.now().plusMinutes(16))
@@ -102,7 +102,7 @@ class UserThreadRepoTest extends Specification with DbTestInjector {
             replyable = true
           ))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           userThreadRepo.getUserStats(user1) === UserThreadStats(3, 2, 1)
           userThreadRepo.getUserStats(user2) === UserThreadStats(0, 0, 0)
           val toMail = userThreadRepo.getUserThreadsForEmailing(clock.now().plusMinutes(16))

@@ -43,6 +43,7 @@
     "karma-html2js-preprocessor": "latest",
     "karma-requirejs": "latest",
     "karma-coverage": "latest",
+    "grunt-spritesmith": "latest",
     "nib": "latest",
     "jsonminify": "latest"
   }

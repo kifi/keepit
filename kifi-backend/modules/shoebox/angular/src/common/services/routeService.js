@@ -24,7 +24,13 @@ angular.module('kifi.routeService', [])
       linkNetwork: function (network) {
         return env.origin + '/link/' + network;
       },
-      uploadBookmarkFile: route('/keeps/file-import'),
+      uploadBookmarkFile: function(makePublic) {
+        var path = '/keeps/file-import';
+        if (makePublic) {
+          path += '?public=1';
+        }
+        return route(path);
+      },
       refreshNetworks: env.origin + '/friends/invite/refresh', // would love to be more ajax-y
       importStatus: route('/user/import-status'),
       prefs: route('/user/prefs'),
@@ -42,8 +48,12 @@ angular.module('kifi.routeService', [])
       removeSingleKeep: function (id) {
         return env.xhrBase + '/keeps/' + id + '/delete';
       },
+      getKeep: function (keepId) {
+        return route('/keeps/' + keepId);
+      },
       removeKeeps: route('/keeps/remove'),
       tagOrdering: route('/collections/ordering'),
+      reorderTag: route('/collections/reorderTag'),
       whoToInvite: route('/friends/wti'),
       blockWtiConnection: route('/friends/wti/block'),
       friends: function (page, pageSize) {
@@ -61,7 +71,8 @@ angular.module('kifi.routeService', [])
       socialSearch: function (name, limit) {
         limit = limit || 6;
         return route('/user/connections/all/search?query=' + name + '&limit=' + limit + '&pictureUrl=true');
-      }
+      },
+      exportKeeps: route('/keeps/export')
     };
   }
 ]);

@@ -2,7 +2,7 @@ package com.keepit.controllers.mobile
 
 import com.keepit.social.BasicUser
 import com.keepit.model._
-import com.keepit.common.controller.{ActionAuthenticator, ShoeboxServiceController, MobileController}
+import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, MobileController }
 import com.google.inject.Inject
 import com.keepit.search.SearchServiceClient
 import com.keepit.graph.GraphServiceClient
@@ -13,20 +13,19 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.social.BasicUserRepo
 import scala.Some
-import play.api.libs.json.{JsArray, Json}
+import play.api.libs.json.{ JsArray, Json }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 class MobileDiscoveryController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
-  searchClient: SearchServiceClient,
-  graphClient: GraphServiceClient,
-  db: Database,
-  uriRepo: NormalizedURIRepo,
-  basicUserRepo: BasicUserRepo,
-  uriSummaryCommander: URISummaryCommander,
-  airbrake: AirbrakeNotifier
-) extends MobileController(actionAuthenticator) with ShoeboxServiceController {
+    actionAuthenticator: ActionAuthenticator,
+    searchClient: SearchServiceClient,
+    graphClient: GraphServiceClient,
+    db: Database,
+    uriRepo: NormalizedURIRepo,
+    basicUserRepo: BasicUserRepo,
+    uriSummaryCommander: URISummaryCommander,
+    airbrake: AirbrakeNotifier) extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
   def discover(withPageInfo: Boolean, limit: Int = -1) = JsonAction.authenticatedAsync { request =>
     if (!request.experiments.contains(ExperimentType.ADMIN)) {
@@ -35,12 +34,13 @@ class MobileDiscoveryController @Inject() (
     } else {
       val userId = request.userId
       val futureUriCollisionInfos = graphClient.wander(Wanderlust.discovery(userId)).flatMap { collisions =>
-        val sortedUriCollisions = collisions.uris.toSeq.sortBy(- _._2)
+        val sortedUriCollisions = collisions.uris.toSeq.sortBy(-_._2)
         val uris = if (limit > 0) sortedUriCollisions.take(limit) else sortedUriCollisions
         val (safeUris, scores) = db.readOnly { implicit session =>
-          uris.flatMap { case (uriId, score) =>
-            val uri =  uriRepo.get(uriId)
-            if (uri.restriction.isEmpty) Some((uri, score)) else None
+          uris.flatMap {
+            case (uriId, score) =>
+              val uri = uriRepo.get(uriId)
+              if (uri.restriction.isEmpty) Some((uri, score)) else None
           }
         }.unzip
         val sharingInfosFuture = searchClient.sharingUserInfo(userId, safeUris.map(_.id.get))
@@ -68,16 +68,17 @@ class MobileDiscoveryController @Inject() (
             basicUserRepo.loadAll(sharingInfos.flatMap(_.sharingUserIds).toSet)
           }
 
-          val uriCollisionInfos = (safeUris zip sharingInfos zip pageInfos zip scores).map { case (((uri, sharingInfo), pageInfo), score) =>
-            val others = sharingInfo.keepersEdgeSetSize - sharingInfo.sharingUserIds.size
-            UriCollisionInfo(
-              uri,
-              sharingInfo.sharingUserIds map idToBasicUser,
-              others,
-              DomainToNameMapper.getNameFromUrl(uri.url),
-              pageInfo,
-              score
-            )
+          val uriCollisionInfos = (safeUris zip sharingInfos zip pageInfos zip scores).map {
+            case (((uri, sharingInfo), pageInfo), score) =>
+              val others = sharingInfo.keepersEdgeSetSize - sharingInfo.sharingUserIds.size
+              UriCollisionInfo(
+                uri,
+                sharingInfo.sharingUserIds map idToBasicUser,
+                others,
+                DomainToNameMapper.getNameFromUrl(uri.url),
+                pageInfo,
+                score
+              )
           }
           uriCollisionInfos
         }

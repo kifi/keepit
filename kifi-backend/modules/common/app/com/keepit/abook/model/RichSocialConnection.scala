@@ -13,24 +13,23 @@ import com.keepit.common.mail.EmailAddress
 object RichSocialConnectionStates extends States[RichSocialConnection]
 
 case class RichSocialConnection(
-  id: Option[Id[RichSocialConnection]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  state: State[RichSocialConnection] = RichSocialConnectionStates.ACTIVE,
+    id: Option[Id[RichSocialConnection]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    state: State[RichSocialConnection] = RichSocialConnectionStates.ACTIVE,
 
-  userId: Id[User],
-  userSocialId: Option[Id[SocialUserInfo]],
-  connectionType: SocialNetworkType,
-  friendSocialId: Option[Id[SocialUserInfo]],
-  friendEmailAddress: Option[EmailAddress],
-  friendName: Option[String],
-  friendUserId: Option[Id[User]],
-  commonKifiFriendsCount: Int,
-  kifiFriendsCount: Int,
-  invitationsSent: Int,
-  invitedBy: Int,
-  blocked: Boolean
-) extends ModelWithState[RichSocialConnection] {
+    userId: Id[User],
+    userSocialId: Option[Id[SocialUserInfo]],
+    connectionType: SocialNetworkType,
+    friendSocialId: Option[Id[SocialUserInfo]],
+    friendEmailAddress: Option[EmailAddress],
+    friendName: Option[String],
+    friendUserId: Option[Id[User]],
+    commonKifiFriendsCount: Int,
+    kifiFriendsCount: Int,
+    invitationsSent: Int,
+    invitedBy: Int,
+    blocked: Boolean) extends ModelWithState[RichSocialConnection] {
 
   def withId(id: Id[RichSocialConnection]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -56,5 +55,3 @@ object RichSocialConnection {
     (__ \ 'blocked).format[Boolean]
   )(RichSocialConnection.apply, unlift(RichSocialConnection.unapply))
 }
-
-case class Invitee()

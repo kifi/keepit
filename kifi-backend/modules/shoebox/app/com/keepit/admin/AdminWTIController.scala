@@ -1,14 +1,12 @@
 package com.keepit.controllers.admin
 
-
 import com.google.inject.Inject
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.keepit.commanders.{
   SocialConnectionModificationActor,
   UserConnectionModificationActor,
   InvitationModificationActor,
-  SocialUserInfoModificationActor,
-  EmailAddressModificationActor
+  SocialUserInfoModificationActor
 }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.actor.FlushPlease
@@ -18,17 +16,13 @@ class AdminWTIController @Inject() (
     socialConnectionModificationActor: ActorInstance[SocialConnectionModificationActor],
     userConnectionModificationActor: ActorInstance[UserConnectionModificationActor],
     socialUserInfoModificationActor: ActorInstance[SocialUserInfoModificationActor],
-    invitationModificationActor: ActorInstance[InvitationModificationActor],
-    emailAddressModificationActor: ActorInstance[EmailAddressModificationActor]
-  ) extends AdminController(actionAuthenticator) {
-
+    invitationModificationActor: ActorInstance[InvitationModificationActor]) extends AdminController(actionAuthenticator) {
 
   def triggerPush() = AdminHtmlAction.authenticated { implicit request =>
     socialConnectionModificationActor.ref ! FlushPlease
     userConnectionModificationActor.ref ! FlushPlease
     socialUserInfoModificationActor.ref ! FlushPlease
     invitationModificationActor.ref ! FlushPlease
-    emailAddressModificationActor.ref ! FlushPlease
     Ok("triggered")
   }
 

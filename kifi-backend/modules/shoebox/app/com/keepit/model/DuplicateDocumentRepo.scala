@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession

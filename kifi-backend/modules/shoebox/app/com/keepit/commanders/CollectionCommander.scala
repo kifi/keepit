@@ -6,11 +6,11 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsArray, Json }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 import com.keepit.heimdal._
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ ListBuffer, ArrayBuffer }
 import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
@@ -32,25 +32,25 @@ case class BasicCollectionByIdKey(id: Id[Collection]) extends Key[BasicCollectio
 }
 
 class BasicCollectionByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-    extends JsonCacheImpl[BasicCollectionByIdKey, BasicCollection](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[BasicCollectionByIdKey, BasicCollection](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class CollectionSaveFail(message: String) extends AnyVal
 
 class CollectionCommander @Inject() (
-  db: Database,
-  collectionRepo: CollectionRepo,
-  userValueRepo: UserValueRepo,
-  searchClient: SearchServiceClient,
-  keepToCollectionRepo: KeepToCollectionRepo,
-  keptAnalytics: KeepingAnalytics,
-  basicCollectionCache: BasicCollectionByIdCache,
-  clock: Clock) extends Logging {
+    db: Database,
+    collectionRepo: CollectionRepo,
+    userValueRepo: UserValueRepo,
+    searchClient: SearchServiceClient,
+    keepToCollectionRepo: KeepToCollectionRepo,
+    keptAnalytics: KeepingAnalytics,
+    basicCollectionCache: BasicCollectionByIdCache,
+    clock: Clock) extends Logging {
 
   val CollectionOrderingKey = "user_collection_ordering"
 
   def allCollections(sort: String, userId: Id[User]) = {
     log.info(s"Getting all collections for $userId (sort $sort)")
-    val unsortedCollections = db.readOnly { implicit s =>
+    val unsortedCollections = db.readOnlyReplica { implicit s =>
       val colls = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(userId)
       val bmCounts = collectionRepo.getBookmarkCounts(colls.map(_.id).toSet)
       colls.map { c => BasicCollection.fromCollection(c, bmCounts.get(c.id).orElse(Some(0))) }
@@ -73,15 +73,15 @@ class CollectionCommander @Inject() (
   private def userSort(uid: Id[User], unsortedCollections: Seq[BasicCollection]): Seq[BasicCollection] = db.readWrite { implicit s =>
     implicit val externalIdFormat = ExternalId.format[Collection]
     log.info(s"Getting collection ordering for user $uid")
-    userValueRepo.getValueStringOpt(uid, CollectionOrderingKey).map{ value => Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get } match {
+    userValueRepo.getValueStringOpt(uid, CollectionOrderingKey).map { value => Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get } match {
       case Some(orderedCollectionIds) =>
         val buf = new ArrayBuffer[BasicCollection](unsortedCollections.size)
         val collectionMap = unsortedCollections.map(c => c.id.get -> c).toMap
         val newCollectionIds = (collectionMap.keySet -- orderedCollectionIds)
         if (newCollectionIds.nonEmpty) {
-          unsortedCollections.foreach{ c => if (newCollectionIds.contains(c.id.get)) buf += c }
+          unsortedCollections.foreach { c => if (newCollectionIds.contains(c.id.get)) buf += c }
         }
-        orderedCollectionIds.foreach{ id => collectionMap.get(id).foreach{ c => buf += c } }
+        orderedCollectionIds.foreach { id => collectionMap.get(id).foreach { c => buf += c } }
         buf
       case None =>
         val allCollectionIds = unsortedCollections.map(_.id.get)
@@ -94,7 +94,7 @@ class CollectionCommander @Inject() (
   def getCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
     implicit val externalIdFormat = ExternalId.format[Collection]
     log.info(s"Getting collection ordering for user $uid")
-    userValueRepo.getValueStringOpt(uid, CollectionOrderingKey).map{ value =>
+    userValueRepo.getValueStringOpt(uid, CollectionOrderingKey).map { value =>
       Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get
     } getOrElse {
       val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(uid).map(_.externalId)
@@ -105,12 +105,43 @@ class CollectionCommander @Inject() (
   }
 
   def setCollectionOrdering(uid: Id[User],
-      order: Seq[ExternalId[Collection]])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
+    order: Seq[ExternalId[Collection]])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
     implicit val externalIdFormat = ExternalId.format[Collection]
     val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(uid).map(_.externalId)
     val newCollectionIds = allCollectionIds.sortBy(order.indexOf(_))
     userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(newCollectionIds)))
     newCollectionIds
+  }
+
+  def setCollectionIndexOrdering(uid: Id[User], tagId: ExternalId[Collection], newIndex: Int)(implicit s: RWSession): Seq[ExternalId[Collection]] = {
+    implicit val externalIdFormat = ExternalId.format[Collection]
+
+    val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(uid).zipWithIndex
+    val orderStr = userValueRepo.getValue(uid, UserValues.tagOrdering)
+    val orderStrArr = orderStr.as[JsArray].value.map(_.as[ExternalId[Collection]])
+
+    val tupleBuffer = allCollectionIds.sortWith {
+      case (first, second) =>
+        val firstIdx = orderStrArr.indexOf(first._1.externalId)
+        val secondIdx = orderStrArr.indexOf(second._1.externalId)
+        if (firstIdx != -1 && secondIdx == -1) {
+          true
+        } else if (firstIdx == -1 && secondIdx != -1) {
+          false
+        } else if (firstIdx == -1 && secondIdx == -1) { // both not found
+          first._2 < second._2
+        } else { // both found
+          firstIdx < secondIdx
+        }
+    }.toBuffer
+    val idsBuffer = tupleBuffer.unzip._1.map(_.externalId)
+    idsBuffer.remove(idsBuffer.indexOf(tagId))
+    idsBuffer.insert(newIndex, tagId)
+
+    val newOrdering = idsBuffer.toSeq
+    userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(newOrdering)))
+
+    newOrdering
   }
 
   def saveCollection(id: String, userId: Id[User], collectionOpt: Option[BasicCollection])(implicit context: HeimdalContext): Either[BasicCollection, CollectionSaveFail] = {
@@ -123,7 +154,7 @@ class CollectionCommander @Inject() (
           val existingCollection = collectionRepo.getByUserAndName(userId, name, None)
           val existingExternalId = existingCollection collect { case c if c.isActive => c.externalId }
           if (existingExternalId.isEmpty || existingExternalId == basicCollection.id) {
-            s.onTransactionSuccess{ searchClient.updateURIGraph() }
+            s.onTransactionSuccess { searchClient.updateURIGraph() }
             basicCollection.id map { id =>
               //
               collectionRepo.getByUserAndExternalId(userId, id) map { coll =>
@@ -172,9 +203,9 @@ class CollectionCommander @Inject() (
   }
 
   def getBasicCollections(ids: Seq[Id[Collection]]): Seq[BasicCollection] = { //ZZZ needs a cache for he basic collection by id
-    db.readOnly{ implicit session =>
-      ids.map{ id =>
-        basicCollectionCache.getOrElse(BasicCollectionByIdKey(id)){
+    db.readOnlyReplica { implicit session =>
+      ids.map { id =>
+        basicCollectionCache.getOrElse(BasicCollectionByIdKey(id)) {
           val collection = collectionRepo.get(id)
           BasicCollection.fromCollection(collection.summary)
         }

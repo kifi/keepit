@@ -10,7 +10,7 @@ import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 
 import org.joda.time.DateTime
 import org.msgpack.ScalaMessagePack
-import com.keepit.model.serialize.{MsgPackSequenceNumberTemplate, MsgPackIdTemplate, UriIdAndSeq, UriIdAndSeqBatch}
+import com.keepit.model.serialize.{ MsgPackSequenceNumberTemplate, MsgPackIdTemplate, UriIdAndSeq, UriIdAndSeqBatch }
 
 class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
 
@@ -165,11 +165,11 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
     "search gets nothing" in {
       withDb() { implicit injector =>
         db.readWrite { implicit s =>
-      	  val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
-      	  val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown"))
-      	  val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURIStates.INACTIVE)
+          val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
+          val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown"))
+          val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURIStates.INACTIVE)
           val uri2 = createUri(title = "long title", url = "http://www.keepit.com/long", state = NormalizedURIStates.SCRAPED)
-      	}
+        }
         db.readWrite { implicit s =>
           uriRepo.getByState(NormalizedURIStates.ACTIVE).isEmpty === true
         }
@@ -178,13 +178,13 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
     "search gets short" in {
       withDb() { implicit injector =>
         db.readWrite { implicit s =>
-      	  uriRepo.all.size === 0 //making sure the db is clean, trying to understand some strange failures we got
-      	  val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
-      	  val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown"))
-      	  val uri1 = createUri(title = "one title", url = "http://www.keepit.com/one", state = NormalizedURIStates.ACTIVE)
+          uriRepo.all.size === 0 //making sure the db is clean, trying to understand some strange failures we got
+          val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
+          val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown"))
+          val uri1 = createUri(title = "one title", url = "http://www.keepit.com/one", state = NormalizedURIStates.ACTIVE)
           val uri2 = createUri(title = "two title", url = "http://www.keepit.com/two", state = NormalizedURIStates.SCRAPED)
           val uri3 = createUri(title = "three title", url = "http://www.keepit.com/three", state = NormalizedURIStates.ACTIVE)
-      	}
+        }
         db.readWrite { implicit s =>
           val all = uriRepo.getByState(NormalizedURIStates.ACTIVE)
           println(all.mkString("\n"))
@@ -197,7 +197,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
   "internByUri" should {
     "Find an existing uri without creating a new one" in {
       withDb() { implicit injector =>
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           uriRepo.count === 0
         }
         val xkcd = db.readWrite { implicit s =>
@@ -210,7 +210,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           normalizedURIInterner.internByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/") === xkcd
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           uriRepo.count === 1
         }
       }
@@ -223,7 +223,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
           normalizedURIInterner.getByUri("http://www.arte.tv/fr/3482046.html").isEmpty === true
           normalizedURIInterner.internByUri("http://www.arte.tv/fr/3482046.html")
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           uriRepo.count === 1
           blowup.url === "http://www.arte.tv/fr/3482046.html"
         }
@@ -241,11 +241,11 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
           uriRepo.save(uri1.withRedirect(uri2.id.get, t))
           (uri0, uri1, uri2)
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           val updated = uriRepo.get(uri1.id.get)
           updated.redirect === uri2.id
           updated.redirectTime === Some(t)
-          uriRepo.getByRedirection(uri2.id.get).map{_.title}.toSet === Set(Some("too_old"), Some("old"))
+          uriRepo.getByRedirection(uri2.id.get).map { _.title }.toSet === Set(Some("too_old"), Some("old"))
           uriRepo.getByRedirection(uri0.id.get).size === 0
         }
       }
@@ -254,13 +254,13 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
     "correctly handle bad states transition when redirect info is present" in {
       withDb() { implicit injector =>
         val uri1Redirected = db.readWrite { implicit s =>
-         val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-         val uri1 = createUri(title = "old", url = "http://www.keepit.com/old")
-         val uri2 = createUri(title = "redirect", url = "http://www.keepit.com/redirect")
-         uriRepo.save(uri1.withRedirect(uri2.id.get, t))
+          val t = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+          val uri1 = createUri(title = "old", url = "http://www.keepit.com/old")
+          val uri2 = createUri(title = "redirect", url = "http://www.keepit.com/redirect")
+          uriRepo.save(uri1.withRedirect(uri2.id.get, t))
         }
 
-        val uri1Scraped = db.readWrite{ implicit s =>
+        val uri1Scraped = db.readWrite { implicit s =>
           uriRepo.save(uri1Redirected.withState(NormalizedURIStates.SCRAPED))
         }
 
@@ -271,7 +271,7 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
 
     "can update restriction" in {
       withDb() { implicit injector =>
-        db.readWrite{ implicit s =>
+        db.readWrite { implicit s =>
           val uri1 = createUri(title = "old", url = "http://www.keepit.com/bad")
           uriRepo.updateURIRestriction(uri1.id.get, Some(Restriction.ADULT))
           uriRepo.get(uri1.id.get).restriction === Some(Restriction.ADULT)
@@ -284,15 +284,14 @@ class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
     }
   }
 
-  def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE)(implicit
-      session: RWSession, injector: Injector) = {
+  def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE)(implicit session: RWSession, injector: Injector) = {
     val uri = NormalizedURI.withHash(title = Some(title), normalizedUrl = url, state = state)
     try {
       uriRepo.save(uri)
     } catch {
       case e: Throwable =>
         println("fail to persist uri %s. Existing URIs in the db are: %s".
-            format(uri, uriRepo.all.map(_.toString).mkString("\n")))
+          format(uri, uriRepo.all.map(_.toString).mkString("\n")))
         throw e
     }
   }

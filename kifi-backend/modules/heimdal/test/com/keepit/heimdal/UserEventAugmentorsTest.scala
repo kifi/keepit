@@ -1,11 +1,12 @@
 package com.keepit.heimdal
 
+import com.keepit.model.{ UserIdAugmentor, UserValuesAugmentor, ExtensionVersionAugmentor, EventAugmentor }
 import org.specs2.mutable.Specification
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
-import scala.concurrent.{Await, Future}
-import com.keepit.model.{KifiInstallation, Gender}
+import scala.concurrent.{ Await, Future }
+import com.keepit.model.{ KifiInstallation, Gender }
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.{ ExternalId, Id }
 import scala.concurrent.duration._
 import akka.actor.ActorSystem
 import com.keepit.akka.FutureTestScope

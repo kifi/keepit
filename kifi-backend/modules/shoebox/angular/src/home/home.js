@@ -14,38 +14,19 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
 ])
 
 .controller('HomeCtrl', [
-  '$scope', 'tagService', 'keepService', '$q', '$timeout', '$window',
-  function ($scope, tagService, keepService, $q, $timeout, $window) {
+  '$scope', 'tagService', 'keepService', '$q', '$timeout', '$window', 'installService', '$rootScope',
+  function ($scope, tagService, keepService, $q, $timeout, $window, installService, $rootScope) {
     keepService.reset();
 
     $window.document.title = 'Kifi • Your Keeps';
 
     $scope.keepService = keepService;
     $scope.keeps = keepService.list;
-
-    $scope.toggleSelectAll = keepService.toggleSelectAll;
-    $scope.isSelectedAll = keepService.isSelectedAll;
-
-    $scope.isMultiChecked = function () {
-      return keepService.getSelectedLength() > 0 && !keepService.isSelectedAll();
-    };
-
-    $scope.isCheckEnabled = function () {
-      return $scope.keeps.length;
-    };
+    $scope.enableSearch();
+    $scope.hasLoaded = false;
 
     $scope.hasMore = function () {
       return !keepService.isEnd();
-    };
-
-    $scope.mouseoverCheckAll = false;
-
-    $scope.onMouseoverCheckAll = function () {
-      $scope.mouseoverCheckAll = true;
-    };
-
-    $scope.onMouseoutCheckAll = function () {
-      $scope.mouseoverCheckAll = false;
     };
 
     $scope.getSubtitle = function () {
@@ -61,20 +42,18 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
       var numShown = $scope.keeps.length;
       switch (numShown) {
       case 0:
-        return 'You have no Keeps';
+        return 'You have no keeps';
       case 1:
-        return 'Showing your only Keep';
+        return 'Showing your only keep';
       case 2:
-        return 'Showing both of your Keeps';
+        return 'Showing both of your keeps';
       default:
         if (keepService.isEnd()) {
-          return 'Showing all ' + numShown + ' of your Keeps';
+          return 'Showing all ' + numShown + ' of your keeps';
         }
-        return 'Showing your ' + numShown + ' latest Keeps';
+        return 'Showing your ' + numShown + ' latest keeps';
       }
     };
-
-    $scope.scrollDisabled = false;
 
     $scope.getNextKeeps = function () {
       if ($scope.loading) {
@@ -85,6 +64,7 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
 
       return keepService.getList().then(function (list) {
         $scope.loading = false;
+        $scope.hasLoaded = true;
 
         if (keepService.isEnd()) {
           $scope.scrollDisabled = true;
@@ -94,6 +74,44 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
       });
     };
 
-    $scope.getNextKeeps();
+    function initKeepList() {
+      $scope.scrollDisabled = false;
+      $scope.getNextKeeps().then(function () {
+        return $scope.getNextKeeps();
+      });
+    }
+
+    $scope.$watch('keepService.seqReset()', function () {
+      initKeepList();
+    });
+
+    $scope.showEmptyState = function () {
+      return tagService.getTotalKeepCount() === 0;
+    };
+
+    $scope.triggerInstall = function () {
+      installService.triggerInstall(function () {
+        $rootScope.$emit('showGlobalModal', 'installExtensionError');
+      });
+    };
+
+    $scope.importBookmarks = function () {
+      var kifiVersion = $window.document.documentElement.dataset.kifiExt;
+
+      if (!kifiVersion) {
+        $rootScope.$emit('showGlobalModal','installExtension');
+        return;
+      }
+
+      $rootScope.$emit('showGlobalModal', 'importBookmarks');
+    };
+
+    $scope.importBookmarkFile = function () {
+      $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
+    };
+
+    $scope.addKeeps = function () {
+      $rootScope.$emit('showGlobalModal', 'addKeeps');
+    };
   }
 ]);

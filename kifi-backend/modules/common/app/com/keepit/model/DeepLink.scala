@@ -13,17 +13,16 @@ object DeepLinkToken {
 case class DeepLocator(value: String) extends AnyVal
 
 case class DeepLink(
-  id: Option[Id[DeepLink]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  initiatorUserId: Option[Id[User]],
-  recipientUserId: Option[Id[User]],
-  uriId: Option[Id[NormalizedURI]],
-  urlId: Option[Id[URL]] = None, // todo(Andrew): remove Option after grandfathering process
-  deepLocator: DeepLocator,
-  token: DeepLinkToken = DeepLinkToken(),
-  state: State[DeepLink] = DeepLinkStates.ACTIVE
-) extends ModelWithState[DeepLink] {
+    id: Option[Id[DeepLink]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    initiatorUserId: Option[Id[User]],
+    recipientUserId: Option[Id[User]],
+    uriId: Option[Id[NormalizedURI]],
+    urlId: Option[Id[URL]] = None, // todo(Andrew): remove Option after grandfathering process
+    deepLocator: DeepLocator,
+    token: DeepLinkToken = DeepLinkToken(),
+    state: State[DeepLink] = DeepLinkStates.ACTIVE) extends ModelWithState[DeepLink] {
   def withId(id: Id[DeepLink]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 

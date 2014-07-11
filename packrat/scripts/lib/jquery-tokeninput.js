@@ -156,8 +156,6 @@
     // Tokens in the list (for checking dupes)
     var tokens = [];
 
-    var timeLastKeyDown = 0;
-
     // Results cache for speed
     var cache = new Cache();
 
@@ -177,7 +175,6 @@
       })
       .on('input', handleQueryChange)
       .keydown(function (event) {
-        timeLastKeyDown = Date.now();
         var $prevToken;
         var $nextToken;
 
@@ -618,10 +615,13 @@
       var $ul = $('<ul/>')
         .append(items)
         .appendTo($dropdown)
-        .on('mouseover', 'li', function () {
-          if (Date.now() - timeLastKeyDown > 200) {
+        // requiring mousemove once b/c FF immediately triggers mouseover on element inserted under mouse cursor
+        .on('mousemove', 'li', function moved() {
+          selectDropdownItem(this);
+          $ul.off('mousemove', 'li', moved);
+          $ul.on('mouseover', 'li', function () {
             selectDropdownItem(this);
-          }
+          });
         })
         .on('mousedown', 'li', function (e) {
           if (e.which === 1) {

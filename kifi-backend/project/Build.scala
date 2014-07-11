@@ -8,6 +8,8 @@ import java.util.Locale
 import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.DateTimeFormat
 import com.typesafe.sbteclipse.core.EclipsePlugin.EclipseKeys
+import com.typesafe.sbt.SbtScalariform._
+import scalariform.formatter.preferences._
 
 object ApplicationBuild extends Build {
 
@@ -31,33 +33,32 @@ object ApplicationBuild extends Build {
   writeToFile("modules/common/conf/app_compilation_date.txt", now)
 
   lazy val emojiLogs = logManager ~= { lm =>
-      new LogManager {
-        def apply(data: sbt.Settings[Scope], state: State, task: Def.ScopedKey[_], writer: java.io.PrintWriter) = {
-          val l = lm.apply(data, state, task, writer)
-          val FailuresErrors = "(?s).*(\\d+) failures?, (\\d+) errors?.*".r
-          new Logger {
-            def filter(s: String) = {
-              val filtered = s.replace("\033[32m+\033[0m", "\u2705 ")
-                .replace("\033[33mx\033[0m", "\u274C ")
-                .replace("\033[31m!\033[0m", "\uD83D\uDCA5 ")
-              filtered match {
-                case FailuresErrors("0", "0") => filtered + " \uD83D\uDE04"
-                case FailuresErrors(_, _) => filtered + " \uD83D\uDE22"
-                case _ => filtered
-              }
+    new LogManager {
+      def apply(data: sbt.Settings[Scope], state: State, task: Def.ScopedKey[_], writer: java.io.PrintWriter) = {
+        val l = lm.apply(data, state, task, writer)
+        val FailuresErrors = "(?s).*(\\d+) failures?, (\\d+) errors?.*".r
+        new Logger {
+          def filter(s: String) = {
+            val filtered = s.replace("\033[32m+\033[0m", "\u2705 ")
+              .replace("\033[33mx\033[0m", "\u274C ")
+              .replace("\033[31m!\033[0m", "\uD83D\uDCA5 ")
+            filtered match {
+              case FailuresErrors("0", "0") => filtered + " \uD83D\uDE04"
+              case FailuresErrors(_, _) => filtered + " \uD83D\uDE22"
+              case _ => filtered
             }
-            def log(level: Level.Value, message: => String) = l.log(level, filter(message))
-            def success(message: => String) = l.success(message)
-            def trace(t: => Throwable) = l.trace(t)
-
-            override def ansiCodesSupported = l.ansiCodesSupported
           }
+          def log(level: Level.Value, message: => String) = l.log(level, filter(message))
+          def success(message: => String) = l.success(message)
+          def trace(t: => Throwable) = l.trace(t)
+
+          override def ansiCodesSupported = l.ansiCodesSupported
         }
       }
     }
+  }
 
   val angularDirectory = SettingKey[File]("angular-directory")
-  val angularBlackDirectory = SettingKey[File]("angular-black-directory")
 
   private def cmd(name: String, command: String, base: File, namedArgs: List[String] = Nil): Command = {
     Command.args(name, "<" + name + "-command>") { (state, args) =>
@@ -144,11 +145,13 @@ object ApplicationBuild extends Build {
   lazy val cortexDependencies = Seq(
     // got this from http://grepcode.com/
     "edu.stanford.nlp.models" % "stanford-corenlp-models" % "3.2.0" from
-    "http://repo1.maven.org/maven2/edu/stanford/nlp/stanford-corenlp/3.2.0/stanford-corenlp-3.2.0-models.jar",
+      "http://repo1.maven.org/maven2/edu/stanford/nlp/stanford-corenlp/3.2.0/stanford-corenlp-3.2.0-models.jar",
     "edu.stanford.nlp" % "stanford-corenlp" % "3.2.0"
   )
 
   lazy val graphDependencies = Seq()
+
+  lazy val mavenDependencies = Seq()
 
   lazy val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
     "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
@@ -160,13 +163,14 @@ object ApplicationBuild extends Build {
     "com.keepit.social._",
     "com.keepit.search._",
     "com.keepit.cortex.core._",
-    "com.keepit.cortex.models.lda._"
+    "com.keepit.cortex.models.lda._",
+    "com.keepit.common.mail.EmailAddress"
   )
 
   lazy val commonResolvers = Seq(
     Resolver.url("sbt-plugin-snapshots",
       new URL("http://repo.42go.com:4242/fortytwo/content/groups/public/"))(Resolver.ivyStylePatterns),
-      // new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
+    // new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
     "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
     // "kevoree Repository" at "http://maven2.kevoree.org/release/",
     "FortyTwo Public Repository" at "http://repo.42go.com:4242/fortytwo/content/groups/public/",
@@ -195,7 +199,7 @@ object ApplicationBuild extends Build {
     Tests.Argument("failtrace", "true")
   )
 
-  lazy val commonSettings = Seq(
+  lazy val commonSettings = scalariformSettings ++ Seq(
     scalacOptions ++= _scalacOptions,
     routesImport ++= _routesImport,
     resolvers ++= commonResolvers,
@@ -211,8 +215,10 @@ object ApplicationBuild extends Build {
     /*skip in update := true,
      *skip in update in (Compile, test) := true*/
     aggregate in update := false,
-    emojiLogs
+    emojiLogs,
     // incOptions := incOptions.value.withNameHashing(true) // see https://groups.google.com/forum/#!msg/play-framework/S_-wYW5Tcvw/OjJuB4iUwD8J
+    ScalariformKeys.preferences := ScalariformKeys.preferences.value
+      .setPreference(DoubleIndentClassDeclaration, true)
   )
 
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(
@@ -233,7 +239,6 @@ object ApplicationBuild extends Build {
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"): _*
   ).settings(
     playAssetsDirectories <+= (baseDirectory in Compile)(_ / "angular"),
-    playAssetsDirectories <+= (baseDirectory in Compile)(_ / "angular-black"),
     angularDirectory <<= (baseDirectory in Compile) { _ / "angular" },
     commands <++= angularDirectory { base =>
       Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
@@ -251,7 +256,7 @@ object ApplicationBuild extends Build {
 
   lazy val heimdal = play.Project("heimdal", appVersion, heimdalDependencies, path=file("modules/heimdal")).settings(
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-heimdal.conf"): _*
-  ).dependsOn(common % "test->test;compile->compile")
+  ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val abook = play.Project("abook", appVersion, abookDependencies, path=file("modules/abook")).settings(
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-abook.conf"): _*
@@ -269,32 +274,35 @@ object ApplicationBuild extends Build {
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-graph.conf"): _*
   ).dependsOn(common % "test->test;compile->compile")
 
+  lazy val maven = play.Project("maven", appVersion, mavenDependencies, path=file("modules/maven")).settings(
+    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-maven.conf"): _*
+  ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
+
   lazy val kifiBackend = play.Project(appName, "0.42").settings(commonSettings: _*)
     .settings(
-      aggregate in update := false,
-      angularDirectory <<= (baseDirectory in Compile) { _ / "modules/shoebox/angular" },
-      angularBlackDirectory <<= (baseDirectory in Compile) { _ / "modules/shoebox/angular-black" },
-      commands <++= angularDirectory { base =>
-        Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
-      },
-      commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) },
-      commands <+= angularBlackDirectory { base => cmd("ng-black", "grunt", base, List("dev")) }
-    )
+    aggregate in update := false,
+    angularDirectory <<= (baseDirectory in Compile) { _ / "modules/shoebox/angular" },
+    commands <++= angularDirectory { base =>
+      Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
+    },
+    commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) }
+  )
     .dependsOn(
-      common % "test->test;compile->compile",
-      shoebox % "test->test;compile->compile",
-      search % "test->test;compile->compile",
-      eliza % "test->test;compile->compile",
-      heimdal % "test->test;compile->compile",
-      abook % "test->test;compile->compile",
-      scraper % "test->test;compile->compile",
-      cortex % "test->test;compile->compile",
-      graph % "test->test;compile->compile")
-    .aggregate(common, shoebox, search, eliza, heimdal, abook, scraper, sqldb, cortex, graph)
+    common % "test->test;compile->compile",
+    shoebox % "test->test;compile->compile",
+    search % "test->test;compile->compile",
+    eliza % "test->test;compile->compile",
+    heimdal % "test->test;compile->compile",
+    abook % "test->test;compile->compile",
+    scraper % "test->test;compile->compile",
+    cortex % "test->test;compile->compile",
+    graph % "test->test;compile->compile",
+    maven % "test->test;compile->compile")
+    .aggregate(common, shoebox, search, eliza, heimdal, abook, scraper, sqldb, cortex, graph, maven)
 
   lazy val distProject = Project(id = "dist", base = file("./.dist"))
     .settings(aggregate in update := false)
-    .aggregate(search, shoebox, eliza, heimdal, abook, scraper, cortex, graph)
+    .aggregate(search, shoebox, eliza, heimdal, abook, scraper, cortex, graph, maven)
 
   override def rootProject = Some(kifiBackend)
 }

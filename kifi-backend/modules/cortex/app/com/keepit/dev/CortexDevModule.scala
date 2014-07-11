@@ -9,14 +9,13 @@ import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.cortex.models.lda.LDAInfoStoreDevModule
 import com.keepit.cortex.dbmodel.CortexDataIngestionDevModule
 
-
 case class CortexDevModule() extends CortexModule(
   cacheModule = CortexCacheModule(HashMapMemoryCacheModule()),
   commonStoreModule = CortexCommonDevStoreModule(),
-  commitInfoModule =  CommitInfoDevStoreModule(),
+  commitInfoModule = CommitInfoDevStoreModule(),
   featureStoreModule = FeatureDevStoreModule(),
   statModelStoreModule = StatModelDevStoreModule(),
-  modelModule =  CortexDevModelModule(),
+  modelModule = CortexDevModelModule(),
   ldaInfoModule = LDAInfoStoreDevModule(),
   dataIngestionModule = CortexDataIngestionDevModule()
 ) with CommonDevModule

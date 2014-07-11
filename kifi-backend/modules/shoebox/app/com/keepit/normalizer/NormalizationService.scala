@@ -1,18 +1,18 @@
 package com.keepit.normalizer
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.net.URI
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.model._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.integrity.{URIMigration, UriIntegrityPlugin}
+import com.keepit.integrity.{ URIMigration, UriIntegrityPlugin }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import com.keepit.common.db.slick.Database
 import com.keepit.common._
 import com.keepit.common.db.Id
-import scala.util.{Failure, Success, Try}
+import scala.util.{ Failure, Success, Try }
 
 case class PrenormalizationException(cause: Throwable) extends Throwable(cause)
 
@@ -24,19 +24,20 @@ trait NormalizationService {
 
 @Singleton
 class NormalizationServiceImpl @Inject() (
-  db: Database,
-  failedContentCheckRepo: FailedContentCheckRepo,
-  normalizedURIRepo: NormalizedURIRepo,
-  uriIntegrityPlugin: UriIntegrityPlugin,
-  priorKnowledge: PriorKnowledge,
-  airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
+    db: Database,
+    failedContentCheckRepo: FailedContentCheckRepo,
+    normalizedURIRepo: NormalizedURIRepo,
+    uriIntegrityPlugin: UriIntegrityPlugin,
+    priorKnowledge: PriorKnowledge,
+    airbrake: AirbrakeNotifier) extends NormalizationService with Logging {
 
   def prenormalize(uriString: String): Try[String] = {
-    URI.parse(uriString).map { uri =>
-      val uriWithStandardPrenormalization = Prenormalizer(uri)
-      val uriWithPreferredSchemeOption = priorKnowledge.getPreferredSchemeNormalizer(uriString).map(_.apply(uriWithStandardPrenormalization))
-      val prenormalizedUri = uriWithPreferredSchemeOption getOrElse uriWithStandardPrenormalization
-      prenormalizedUri.toString
+    URI.parse(uriString).flatMap { parsedUri =>
+      Try { Prenormalizer(parsedUri) }.map { prenormalizedUri =>
+        val uriWithPreferredSchemeOption = priorKnowledge.getPreferredSchemeNormalizer(uriString).map(_.apply(prenormalizedUri))
+        val result = uriWithPreferredSchemeOption getOrElse prenormalizedUri
+        result.toString
+      }
     }.recoverWith {
       case cause: Throwable => Failure(PrenormalizationException(cause))
     }
@@ -59,7 +60,7 @@ class NormalizationServiceImpl @Inject() (
     val contentChecks = {
       Try { java.net.URI.create(currentReference.url) } match { // for debugging bad reference urls -- this is the only place that invokes getContentChecks
         case Success(uri) => log.debug(s"[processUpdate-check] currRef=$currentReference parsed-uri=$uri")
-        case Failure(t)   => throw new IllegalArgumentException(s"[processUpdate-check] -- failed to parse currRef=$currentReference; Exception=$t; Cause=${t.getCause}", t)
+        case Failure(t) => throw new IllegalArgumentException(s"[processUpdate-check] -- failed to parse currRef=$currentReference; Exception=$t; Cause=${t.getCause}", t)
       }
       priorKnowledge.getContentChecks(currentReference.url, currentReference.signature)
     }
@@ -90,7 +91,7 @@ class NormalizationServiceImpl @Inject() (
     allCandidates.filter(isRelevant(currentReference, _))
   }
 
-  private def findVariations(referenceUrl: String): Seq[(Normalization, NormalizedURI)] = db.readOnly { implicit session =>
+  private def findVariations(referenceUrl: String): Seq[(Normalization, NormalizedURI)] = db.readOnlyMaster { implicit session =>
     for {
       (normalization, urlVariation) <- SchemeNormalizer.generateVariations(referenceUrl)
       uri <- normalizedURIRepo.getByNormalizedUrl(urlVariation)
@@ -99,8 +100,8 @@ class NormalizationServiceImpl @Inject() (
 
   private def isRelevant(currentReference: NormalizationReference, candidate: NormalizationCandidate): Boolean = {
     currentReference.normalization.isEmpty ||
-    currentReference.normalization.get < candidate.normalization ||
-    (currentReference.normalization.get == candidate.normalization && currentReference.url != candidate.url)
+      currentReference.normalization.get < candidate.normalization ||
+      (currentReference.normalization.get == candidate.normalization && currentReference.url != candidate.url)
   }
 
   private case class FindStrongerCandidate(currentReference: NormalizationReference, action: NormalizationCandidate => Action) {
@@ -115,7 +116,7 @@ class NormalizationServiceImpl @Inject() (
           assert(weakerCandidates.isEmpty || weakerCandidates.head.normalization <= strongerCandidate.normalization, s"Normalization candidates ${weakerCandidates.head} and $strongerCandidate have not been sorted properly for ${currentReference}")
           assert(currentReference.normalization.isEmpty || currentReference.normalization.get <= strongerCandidate.normalization, s"Normalization candidate $strongerCandidate has not been filtered properly for $currentReference")
 
-          db.readOnly { implicit session =>
+          db.readOnlyMaster { implicit session =>
             action(strongerCandidate) match {
               case Accept => Future.successful((Some(strongerCandidate), weakerCandidates))
               case Reject => findCandidate(weakerCandidates)
@@ -140,8 +141,8 @@ class NormalizationServiceImpl @Inject() (
       val latestCurrentUri = normalizedURIRepo.get(currentReference.uriId)
       val isWriteSafe =
         latestCurrentUri.state != NormalizedURIStates.INACTIVE &&
-        latestCurrentUri.state != NormalizedURIStates.REDIRECTED &&
-        latestCurrentUri.normalization == currentReference.persistedNormalization
+          latestCurrentUri.state != NormalizedURIStates.REDIRECTED &&
+          latestCurrentUri.normalization == currentReference.persistedNormalization
       if (isWriteSafe) {
         val betterReference = internCandidate(successfulCandidate)
         val shouldMigrate = currentReference.uriId != betterReference.uriId
@@ -155,17 +156,17 @@ class NormalizationServiceImpl @Inject() (
         }
         log.info(s"Better reference ${betterReference.uriId}: ${betterReference.url} found for ${currentReference.uriId}: ${currentReference.url}")
         Some((betterReference, shouldMigrate))
-      }
-      else {
+      } else {
         log.warn(s"Aborting verified normalization because of recent overwrite of $currentReference with $latestCurrentUri")
         None
       }
-    } map { case (betterReference, shouldMigrate) =>
-      if (shouldMigrate) {
-        uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = currentReference.uriId, newUri = betterReference.uriId))
-        log.info(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
-      }
-      betterReference
+    } map {
+      case (betterReference, shouldMigrate) =>
+        if (shouldMigrate) {
+          uriIntegrityPlugin.handleChangedUri(URIMigration(oldUri = currentReference.uriId, newUri = betterReference.uriId))
+          log.info(s"${currentReference.uriId}: ${currentReference.url} will be redirected to ${betterReference.uriId}: ${betterReference.url}")
+        }
+        betterReference
     }
 
   private def internCandidate(successfulCandidate: NormalizationCandidate)(implicit session: RWSession): NormalizationReference = {
@@ -197,7 +198,7 @@ class NormalizationServiceImpl @Inject() (
     }
   }
 
-  private def getURIsToBeFurtherUpdated(currentReference: NormalizationReference, newReference: NormalizationReference): Set[NormalizedURI] = db.readOnly { implicit session =>
+  private def getURIsToBeFurtherUpdated(currentReference: NormalizationReference, newReference: NormalizationReference): Set[NormalizedURI] = db.readOnlyMaster { implicit session =>
     val haveBeenUpdated = Set(currentReference.url, newReference.url)
     val toBeUpdated = for {
       url <- haveBeenUpdated
@@ -216,6 +217,6 @@ class NormalizationServiceImpl @Inject() (
   }
 
   private def persistFailedAttempts(contentCheck: ContentCheck): Unit = {
-    contentCheck.getFailedAttempts().foreach { case (url1, url2) => db.readWrite { implicit session => failedContentCheckRepo.createOrIncrease(url1, url2) }}
+    contentCheck.getFailedAttempts().foreach { case (url1, url2) => db.readWrite { implicit session => failedContentCheckRepo.createOrIncrease(url1, url2) } }
   }
 }

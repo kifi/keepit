@@ -21,12 +21,12 @@ object SocialUserSerializer {
     OFormat(
       (__ \ "fullName").read[String] orElse (__ \ "displayName").read[String],
       (__ \ "fullName").write[String]) and
-    (__ \ "email").formatNullable[String] and
-    (__ \ "avatarUrl").formatNullable[String] and
-    (__ \ "authMethod").format[String]
-        .inmap[AuthenticationMethod](AuthenticationMethod.apply, unlift(AuthenticationMethod.unapply)) and
-    (__ \ "oAuth1Info").formatNullable[OAuth1Info] and
-    (__ \ "oAuth2Info").formatNullable[OAuth2Info] and
-    (__ \ "passwordInfo").formatNullable[PasswordInfo]
+      (__ \ "email").formatNullable[String] and
+      (__ \ "avatarUrl").formatNullable[String] and
+      (__ \ "authMethod").format[String]
+      .inmap[AuthenticationMethod](AuthenticationMethod.apply, unlift(AuthenticationMethod.unapply)) and
+      (__ \ "oAuth1Info").formatNullable[OAuth1Info] and
+      (__ \ "oAuth2Info").formatNullable[OAuth2Info] and
+      (__ \ "passwordInfo").formatNullable[PasswordInfo]
   )(SocialUser.apply, unlift(SocialUser.unapply))
 }

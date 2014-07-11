@@ -9,8 +9,8 @@ import com.google.inject.Injector
 class ScrapeInfoTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
-    inject[Database].readWrite {implicit s =>
-      
+    inject[Database].readWrite { implicit s =>
+
       val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
       val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.bing.com/", Some("Bing")))
       val uri3 = uriRepo.save(NormalizedURI.withHash("http://www.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf", Some("Convex Optimization")))
@@ -33,11 +33,11 @@ class ScrapeInfoTest extends Specification with ShoeboxTestInjector {
 
   "Scrape Info" should {
     "set the next scrape by regex" in {
-    withDb() { implicit injector =>
+      withDb() { implicit injector =>
 
         val (uri1, uri2, uri3, uri4, uri5, uri6, uri7, _, _, _, _, _, _, _) = setup()
 
-        inject[Database].readWrite {implicit s =>
+        inject[Database].readWrite { implicit s =>
 
           scrapeInfoRepo.setForRescrapeByRegex("%.pdf", 4) === 2
           val deadline = currentDateTime.plusHours(4)

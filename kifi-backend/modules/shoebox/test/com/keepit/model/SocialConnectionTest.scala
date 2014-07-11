@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social._
-import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector, ShoeboxTestInjector}
+import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector, ShoeboxTestInjector }
 import java.io.File
 import org.specs2.mutable._
 import play.api.libs.json._
@@ -10,13 +10,13 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.google.inject.Injector
 import com.keepit.shoebox.TestShoeboxServiceClientModule
-import com.keepit.social.{SocialNetworks, SocialId}
+import com.keepit.social.{ SocialNetworks, SocialId }
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import play.api.test.Helpers._
 import com.keepit.common.mail.FakeMailModule
 
-class SocialConnectionTest extends Specification with ShoeboxApplicationInjector {
+class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
   val socialConnectionTestModules = Seq(FakeHttpClientModule(), ShoeboxFakeStoreModule(), TestShoeboxServiceClientModule(), FakeElizaServiceClientModule(), FakeMailModule())
 
@@ -31,7 +31,7 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
   "SocialConnection" should {
 
     "give Kifi user's connections (min set)" in {
-      running(new ShoeboxApplication(socialConnectionTestModules:_*)) {
+      withDb(socialConnectionTestModules: _*) { implicit injector =>
 
         val socialUser = inject[Database].readWrite { implicit s =>
           val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
@@ -56,19 +56,18 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
         val connections = inject[UserConnectionCreator]
         val userRepo = inject[UserRepo]
 
-        val eishaySocialUserInfo = inject[Database].readWrite{ implicit s =>
+        val eishaySocialUserInfo = inject[Database].readWrite { implicit s =>
           socialRepo.save(socialRepo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Eishay", lastName = "Smith"))))
         }
-        val andrewSocialUserInfo = inject[Database].readWrite{ implicit s =>
+        val andrewSocialUserInfo = inject[Database].readWrite { implicit s =>
           socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Andrew", lastName = "Conner"))))
         }
 
         val eishayJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_eishay_min.json"))).mkString)
         val andrewJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_andrew_min.json"))).mkString)
 
-
         // Create FortyTwo accounts on certain users
-        val users = inject[Database].readWrite{ implicit s =>
+        val users = inject[Database].readWrite { implicit s =>
           val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic")) ::
             userRepo.save(User(firstName = "Kelvin", lastName = "Jiang")) ::
             userRepo.save(User(firstName = "John", lastName = "Cochran")) :: Nil
@@ -85,17 +84,16 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
         connections.createConnections(eishaySocialUserInfo, extractFacebookFriendIds(eishayJson), SocialNetworks.FACEBOOK)
         connections.createConnections(andrewSocialUserInfo, extractFacebookFriendIds(andrewJson), SocialNetworks.FACEBOOK)
 
-        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[Database].readOnly{ implicit s =>
+        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[Database].readOnlyMaster { implicit s =>
           connectionRepo.count === 18
           (connectionRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
-           connectionRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
+            connectionRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
         }
 
         eishayFortyTwoConnection.size === 3
         eishayFortyTwoConnection.contains(users(0).id.get) === true
         eishayFortyTwoConnection.contains(users(1).id.get) === true
         eishayFortyTwoConnection.contains(users(2).id.get) === false
-
 
         andrewFortyTwoConnection.size === 2
         andrewFortyTwoConnection.contains(users(0).id.get) === false
@@ -105,7 +103,7 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
       }
     }
     "give Kifi user's connections (min set) w/o non active connections" in {
-      running(new ShoeboxApplication(socialConnectionTestModules:_*)) {
+      withDb(socialConnectionTestModules: _*) { implicit injector =>
 
         val socialUser = inject[Database].readWrite { implicit s =>
           val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
@@ -125,25 +123,24 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
         loadJsonImportFriends("facebook_graph_andrew_min.json")
         loadJsonImportFriends("facebook_graph_eishay_min.json")
 
-        inject[Database].readOnly{ implicit s =>
+        inject[Database].readOnlyMaster { implicit s =>
           println("Connections: " + inject[SocialUserInfoRepo].all.size)
         }
 
         val userRepo = inject[UserRepo]
         val socialRepo = inject[SocialUserInfoRepo]
-        val eishaySocialUserInfo = inject[Database].readWrite{ implicit s =>
+        val eishaySocialUserInfo = inject[Database].readWrite { implicit s =>
           socialRepo.save(socialRepo.get(SocialId("646386018"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Eishay", lastName = "Smith"))))
         }
-        val andrewSocialUserInfo = inject[Database].readWrite{ implicit s =>
+        val andrewSocialUserInfo = inject[Database].readWrite { implicit s =>
           socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Andrew", lastName = "Conner"))))
         }
 
         val eishayJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_eishay_min.json"))).mkString)
         val andrewJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_andrew_min.json"))).mkString)
 
-
         // Create FortyTwo accounts on certain users
-        val users = inject[Database].readWrite{ implicit s =>
+        val users = inject[Database].readWrite { implicit s =>
           val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic")) ::
             userRepo.save(User(firstName = "Kelvin", lastName = "Jiang")) ::
             userRepo.save(User(firstName = "John", lastName = "Cochran")) :: Nil
@@ -164,17 +161,16 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
 
         val connectionRepo = inject[SocialConnectionRepo]
 
-        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[Database].readOnly{ implicit s =>
+        val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[Database].readOnlyMaster { implicit s =>
           connectionRepo.all.size === 18
           (connectionRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
-           connectionRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
+            connectionRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
         }
 
         eishayFortyTwoConnection.size === 3
         eishayFortyTwoConnection.contains(users(0).id.get) === true
         eishayFortyTwoConnection.contains(users(1).id.get) === true
         eishayFortyTwoConnection.contains(users(2).id.get) === false
-
 
         andrewFortyTwoConnection.size === 2
         andrewFortyTwoConnection.contains(users(0).id.get) === false
@@ -185,7 +181,7 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
     }
 
     "give Kifi user's connections (min set) with pagination" in {
-      running(new ShoeboxApplication(socialConnectionTestModules:_*)) {
+      withDb(socialConnectionTestModules: _*) { implicit injector =>
 
         val socialUser = inject[Database].readWrite { implicit s =>
           val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
@@ -206,7 +202,7 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
 
         loadJsonImportFriends(Seq("facebook_graph_eishay_min_page1.json", "facebook_graph_eishay_min_page2.json"))
 
-        inject[Database].readOnly{ implicit s =>
+        inject[Database].readOnlyMaster { implicit s =>
           println("Connections: " + inject[SocialUserInfoRepo].all.size)
         }
 
@@ -214,7 +210,7 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
         val connectionRepo = inject[SocialConnectionRepo]
         val connections = inject[UserConnectionCreator]
         val userRepo = inject[UserRepo]
-        val eishaySocialUserInfo = inject[Database].readWrite{ implicit s =>
+        val eishaySocialUserInfo = inject[Database].readWrite { implicit s =>
           val info = socialRepo.save(SocialUserInfo(fullName = "Eishay Smith", socialId = SocialId("646386018"), networkType = SocialNetworks.FACEBOOK))
           socialRepo.save(info.withUser(userRepo.save(User(firstName = "Eishay", lastName = "Smith"))))
         }
@@ -223,7 +219,7 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
         val eishay2Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format("facebook_graph_eishay_min_page2.json"))).mkString)
 
         // Create FortyTwo accounts on certain users
-        val users = inject[Database].readWrite{ implicit s =>
+        val users = inject[Database].readWrite { implicit s =>
           val users = userRepo.save(User(firstName = "Igor", lastName = "Perisic")) ::
             userRepo.save(User(firstName = "Kelvin", lastName = "Jiang")) ::
             userRepo.save(User(firstName = "John", lastName = "Cochran")) ::
@@ -239,7 +235,7 @@ class SocialConnectionTest extends Specification with ShoeboxApplicationInjector
         inject[UserConnectionCreator].createConnections(eishaySocialUserInfo,
           Seq(eishay1Json, eishay2Json) flatMap extractFacebookFriendIds, SocialNetworks.FACEBOOK)
 
-        val eishayFortyTwoConnection = inject[Database].readOnly{ implicit s =>
+        val eishayFortyTwoConnection = inject[Database].readOnlyMaster { implicit s =>
           connectionRepo.all.size === 12
           connectionRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get)
         }

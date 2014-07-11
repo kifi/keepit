@@ -38,13 +38,11 @@ module.exports = function (grunt) {
         lib: 'lib',
         libCss: [
           'lib/normalize-css/normalize.css',
-          'managed-lib/bootstrap/bootstrap.css',
           'managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.css',
           'managed-lib/pace/pace.css'
         ],
         libMinCss: [
           'lib/normalize-css/normalize.css',
-          'managed-lib/bootstrap/bootstrap.css',
           'managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.min.css'
         ],
         libJs: [
@@ -64,12 +62,12 @@ module.exports = function (grunt) {
           'lib/angular-smart-scroll/dist/angular-smart-scroll.js',
           'lib/moment/moment.js',
           'lib/angular-moment/angular-moment.js',
-          'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.js',
           'lib/angular-facebook-api/dist/angular-facebook-api.js',
-          'lib/angular-dragdrop/draganddrop.js',
           'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.js',
           'managed-lib/ui-slider/slider.js',
-          'lib/angulartics/dist/angulartics.min.js'
+          'managed-lib/libs.js',
+          'lib/angulartics/dist/angulartics.min.js',
+          'lib/fuse.js/src/fuse.js'
         ],
         libMinJs: [
           'lib/lodash/dist/lodash.min.js',
@@ -82,19 +80,18 @@ module.exports = function (grunt) {
           'lib/angular-route/angular-route.min.js',
           //'lib/angular-ui-router/release/angular-ui-router.min.js',
           'lib/angular-animate/angular-animate.min.js',
-          //'lib/angular-bootstrap/ui-bootstrap-tpls.min.js',
           'lib/jquery.mousewheel/jquery.mousewheel.js',
           'lib/antiscroll/antiscroll.js',
           //'lib/angular-antiscroll/angular-antiscroll.js',
           'lib/angular-smart-scroll/dist/angular-smart-scroll.min.js',
           'lib/moment/min/moment.min.js',
           'lib/angular-moment/angular-moment.min.js',
-          'managed-lib/bootstrap/ui-bootstrap-custom-tpls-0.10.0.min.js',
           'lib/angular-facebook-api/dist/angular-facebook-api.min.js',
-          'lib/angular-dragdrop/draganddrop.js',
           'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.min.js',
           'managed-lib/ui-slider/slider.js',
-          'lib/angulartics/dist/angulartics.min.js'
+          'managed-lib/libs.js',
+          'lib/angulartics/dist/angulartics.min.js',
+          'lib/fuse.js/src/fuse.min.js'
         ],
         src: 'src',
         common: 'src/common/build-css',
@@ -141,7 +138,8 @@ module.exports = function (grunt) {
           'import': [
             'nib',
             'constants',
-            'common'
+            'common',
+            'sprites'
           ]
         },
         files: {
@@ -279,6 +277,52 @@ module.exports = function (grunt) {
         autoWatch: true
       }
     },
+    sprite:{
+      // https://github.com/Ensighten/grunt-spritesmith
+      base2x: {
+        src: 'img/sprites/*.png',
+        destImg: 'img/sprites.png',
+        destCSS: 'src/common/build-css/sprites.styl',
+        imgPath: '/img/sprites.png',
+        algorithm: 'binary-tree',
+        padding: 2,
+        cssFormat: 'stylus',
+        cssVarMap: function (sprite) {
+          // useful to override template variables
+        },
+        cssTemplate: 'src/common/build-css/sprites.styl.tpl'
+      },
+      baseCss2x: {
+        src: 'img/sprites/*.png',
+        destImg: 'img/sprites.png',
+        destCSS: 'src/common/spritesClasses.styl',
+        imgPath: '/img/sprites.png',
+        algorithm: 'binary-tree',
+        padding: 2,
+        cssFormat: 'stylus',
+        cssTemplate: 'src/common/build-css/spritesClasses.styl.tpl',
+        cssVarMap: function (sprite) {
+          var cssSelector = '';
+          var pseudoClasses = ['hover', 'active'];
+          var names = sprite.name.split('-');
+          var modifier = names[names.length - 1];
+          var root = names.slice(0, names.length - 1).join('-');
+
+          if (sprite.width % 2 !== 0 || sprite.height % 2 !== 0) {
+            grunt.fail.warn("sprite " + sprite.name + " is not retina: " + sprite.width + " x " + sprite.height);
+          }
+
+          if (pseudoClasses.indexOf(modifier) !== -1) {
+            cssSelector += '.sprite-' + sprite.name + ',\n.sprite-' + root + ':' + modifier + '\n  sprite2x($' + sprite.name + ')\n';
+          } else if (modifier === 'default') {
+            cssSelector += '.sprite-' + root + '\n  sprite2x($' + sprite.name + ')\n';
+          } else {
+            cssSelector += '.sprite-' + sprite.name + '\n  sprite2x($' + sprite.name + ')\n';
+          }
+          sprite.cssSelector = cssSelector;
+        }
+      }
+    },
     env: {
       // https://github.com/jsoverson/grunt-env#configuration
       dev: {
@@ -374,6 +418,7 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-contrib-stylus');
   grunt.loadNpmTasks('grunt-contrib-cssmin');
   grunt.loadNpmTasks('grunt-karma');
+  grunt.loadNpmTasks('grunt-spritesmith');
   grunt.loadNpmTasks('grunt-env');
   grunt.loadNpmTasks('grunt-html2js');
 

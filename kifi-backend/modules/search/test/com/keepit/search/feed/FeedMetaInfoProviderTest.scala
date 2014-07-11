@@ -11,7 +11,7 @@ import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
 
-class FeedMetaInfoProviderTest extends Specification with ApplicationInjector{
+class FeedMetaInfoProviderTest extends Specification with ApplicationInjector {
   "FeedMetaInfoProvider" should {
     "work" in {
       running(new TestApplication(FakeShoeboxServiceModule())) {

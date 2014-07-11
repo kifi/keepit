@@ -3,9 +3,9 @@ package com.keepit.controllers.api
 import com.google.inject.Inject
 import play.api.mvc.Action
 import com.keepit.common.logging.Logging
-import com.keepit.common.controller.{ShoeboxServiceController, WebsiteController, ActionAuthenticator}
-import play.api.libs.json.{JsError, JsSuccess, Json}
-import com.keepit.commanders.{SendgridCommander, SendgridEvent}
+import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
+import play.api.libs.json.{ JsError, JsSuccess, Json }
+import com.keepit.commanders.{ SendgridCommander, SendgridEvent }
 import scala.Exception
 
 /**
@@ -14,8 +14,8 @@ import scala.Exception
  * http://sendgrid.com/docs/API_Reference/Webhooks/event.html
  * http://sendgrid.com/docs/API_Reference/Webhooks/parse.html
  */
-class SendgridController  @Inject() (
-  actionAuthenticator:ActionAuthenticator,
+class SendgridController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   sendgridCommander: SendgridCommander)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 

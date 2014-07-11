@@ -1,16 +1,16 @@
 package com.keepit.social
 
-import com.google.inject.{Singleton, Provides}
+import com.google.inject.{ Singleton, Provides }
 import securesocial.controllers.TemplatesPlugin
-import com.keepit.common.social.{ShoeboxTemplatesPlugin}
+import com.keepit.common.social.{ ShoeboxTemplatesPlugin }
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.store.S3ImageStore
-import com.keepit.common.controller.{ShoeboxActionAuthenticator, ActionAuthenticator}
-import com.keepit.heimdal.{HeimdalServiceClient, HeimdalContextBuilderFactory}
+import com.keepit.common.controller.{ ShoeboxActionAuthenticator, ActionAuthenticator }
+import com.keepit.heimdal.{ HeimdalServiceClient, HeimdalContextBuilderFactory }
 import com.keepit.common.time.Clock
-import com.keepit.commanders.{UserCommander, LocalUserExperimentCommander}
+import com.keepit.commanders.{ UserCommander, LocalUserExperimentCommander }
 import play.api.Play.current
 import com.keepit.controllers.core.OAuth2CommonConfig
 
@@ -44,8 +44,7 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     socialGraphPlugin: SocialGraphPlugin,
     userCommander: UserCommander,
     userExperimentCommander: LocalUserExperimentCommander,
-    clock: Clock
-  ): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
+    clock: Clock): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
     db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userCommander, userExperimentCommander, clock
   )
 

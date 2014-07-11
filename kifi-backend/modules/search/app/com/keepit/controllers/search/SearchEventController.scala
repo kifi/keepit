@@ -3,7 +3,7 @@ package com.keepit.controllers.search
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.Id
-import com.keepit.model.{User, NormalizedURI}
+import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.search._
 import play.api.libs.json._
 import play.api.mvc.Action

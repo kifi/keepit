@@ -8,7 +8,7 @@ import com.keepit.normalizer.NormalizationService
 import com.google.inject.Injector
 import com.keepit.common.db.slick.DBSession.RSession
 
-class KeepToCollectionTest  extends Specification with ShoeboxTestInjector {
+class KeepToCollectionTest extends Specification with ShoeboxTestInjector {
 
   val hover = KeepSource.keeper
   val initLoad = KeepSource.bookmarkImport
@@ -18,7 +18,7 @@ class KeepToCollectionTest  extends Specification with ShoeboxTestInjector {
     "load uris from db" in {
       withDb() { implicit injector =>
 
-        val (bookmark1, bookmark2, collections) = db.readWrite {implicit s =>
+        val (bookmark1, bookmark2, collections) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C"))
           val uri1 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.google.com/"), Some("Google")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(prenormalize("http://www.amazon.com/"), Some("Amazon")))
@@ -41,9 +41,9 @@ class KeepToCollectionTest  extends Specification with ShoeboxTestInjector {
 
           val collectionRepo = inject[CollectionRepo]
           val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
-                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction2")) ::
-                            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction3")) ::
-                            Nil
+            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction2")) ::
+            collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction3")) ::
+            Nil
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = collections(0).id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = collections(0).id.get))
 
@@ -54,7 +54,7 @@ class KeepToCollectionTest  extends Specification with ShoeboxTestInjector {
           (bookmark1, bookmark2, collections)
         }
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           val uris = keepToCollectionRepo.getUriIdsInCollection(collections(0).id.get)
           uris.length === 2
           uris === Seq(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))

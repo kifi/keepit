@@ -4,17 +4,17 @@ import scala.concurrent.Future
 import scala.util.Random
 
 import com.keepit.common.concurrent.RetryFuture
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
+import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{CallTimeouts, ClientResponse, HttpClient, HttpUri}
+import com.keepit.common.net.{ CallTimeouts, ClientResponse, HttpClient, HttpUri }
 import com.keepit.common.routes._
-import com.keepit.common.zookeeper.{ServiceCluster, ServiceInstance}
+import com.keepit.common.zookeeper.{ ServiceCluster, ServiceInstance }
 import com.keepit.common._
 import com.keepit.common.strings._
 
 import java.net.ConnectException
 
-import play.api.libs.json.{JsNull, JsValue}
+import play.api.libs.json.{ JsNull, JsValue }
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.routes.ServiceRoute
 
@@ -37,7 +37,7 @@ class ServiceUri(val serviceInstance: ServiceInstance, protocol: String, port: I
 case class ServiceResponse(uri: ServiceUri, response: ClientResponse)
 
 trait RoutingStrategy {
-  def nextInstance:ServiceInstance
+  def nextInstance: ServiceInstance
 }
 
 trait ServiceClient extends CommonServiceUtilities with Logging {
@@ -60,7 +60,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
   val protocol: String = "http"
   val port: Int = 9000
 
-  protected def serviceUri(path: String, router:RoutingStrategy) = new ServiceUri(router.nextInstance, protocol, port, path)
+  protected def serviceUri(path: String, router: RoutingStrategy) = new ServiceUri(router.nextInstance, protocol, port, path)
 
   protected def url(path: String): ServiceUri = new ServiceUri(nextInstance(), protocol, port, path)
 
@@ -73,12 +73,12 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     }
   }
 
-  protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts : Int = 2, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts, routingStrategy:RoutingStrategy = roundRobin): Future[ClientResponse] = {
-    val respFuture = RetryFuture(attempts, { case t : ConnectException => serviceCluster.refresh(); true }) {
+  protected def call(call: ServiceRoute, body: JsValue = JsNull, attempts: Int = 2, callTimeouts: CallTimeouts = CallTimeouts.NoTimeouts, routingStrategy: RoutingStrategy = roundRobin): Future[ClientResponse] = {
+    val respFuture = RetryFuture(attempts, { case t: ConnectException => serviceCluster.refresh(); true }) {
       callUrl(call, serviceUri(call.url, routingStrategy), body, ignoreFailure = true, callTimeouts = callTimeouts)
     }
     respFuture.onSuccess {
-      case res: ClientResponse => if(!res.isUp) {
+      case res: ClientResponse => if (!res.isUp) {
         serviceCluster.refresh()
         res.request.httpUri.serviceInstanceOpt.map(_.reportServiceUnavailable())
       }
@@ -90,8 +90,8 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
           exception = ex,
           message = Some(
             s"can't call [${call.path}] " +
-            s"with body: ${stringBody.abbreviate(30)} (${stringBody.size} chars), " +
-            s"params: ${call.params.map(_.toString).mkString(",")}"),
+              s"with body: ${stringBody.abbreviate(30)} (${stringBody.size} chars), " +
+              s"params: ${call.params.map(_.toString).mkString(",")}"),
           method = Some(call.method.toString),
           url = Some(call.path)))
     }
@@ -111,8 +111,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
         case c @ ServiceRoute(GET, _, _*) => httpClient.withTimeout(callTimeouts).getFuture(httpUri, httpClient.ignoreFailure)
         case c @ ServiceRoute(POST, _, _*) => httpClient.withTimeout(callTimeouts).postFuture(httpUri, body, httpClient.ignoreFailure)
       }
-    }
-    else{
+    } else {
       call match {
         case c @ ServiceRoute(GET, _, _*) => httpClient.withTimeout(callTimeouts).getFuture(httpUri)
         case c @ ServiceRoute(POST, _, _*) => httpClient.withTimeout(callTimeouts).postFuture(httpUri, body)
@@ -127,7 +126,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
   protected def broadcastWithUrls(call: ServiceRoute, body: JsValue = JsNull): Seq[Future[ServiceResponse]] = {
     urls(call.url) map { url =>
       logBroadcast(url, body)
-      callUrl(call, url, body) map { ServiceResponse(url,_) }
+      callUrl(call, url, body) map { ServiceResponse(url, _) }
     }
   }
 

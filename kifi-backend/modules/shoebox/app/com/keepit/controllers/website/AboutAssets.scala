@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import controllers.AssetsBuilder
-import play.api.mvc.{AnyContent, Action, Controller}
+import play.api.mvc.{ AnyContent, Action, Controller }
 import scala.concurrent.Future
 import com.google.inject.Inject
 import com.keepit.inject.FortyTwoConfig

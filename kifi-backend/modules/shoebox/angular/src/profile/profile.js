@@ -50,6 +50,10 @@ angular.module('kifi.profile', [
 
     $scope.addEmailInput = {};
 
+    $scope.logout = function () {
+      profileService.logout();
+    };
+
     $scope.saveDescription = function (value) {
       profileService.postMe({
         description: value
@@ -105,6 +109,18 @@ angular.module('kifi.profile', [
 
     $scope.confirmSaveEmail = function () {
       profileService.setNewPrimaryEmail(emailToBeSaved);
+    };
+
+    $scope.exportKeeps = function() {
+      $scope.exported = true;
+    };
+
+    $scope.getExportUrl = function () {
+      return routeService.exportKeeps;
+    };
+
+    $scope.getExportButtonText = function() {
+      return $scope.exported ? 'Export Again' : 'Export Keeps';
     };
 
     function showVerificationAlert(email) {

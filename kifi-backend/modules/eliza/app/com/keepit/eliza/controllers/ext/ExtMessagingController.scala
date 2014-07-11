@@ -2,9 +2,9 @@ package com.keepit.eliza.controllers.ext
 
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
-import com.keepit.eliza.commanders.{MessagingCommander, ElizaEmailCommander}
+import com.keepit.eliza.commanders.{ MessagingCommander, ElizaEmailCommander }
 import com.keepit.common.db.ExternalId
-import com.keepit.common.controller.{ElizaServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.controller.{ ElizaServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
@@ -16,12 +16,13 @@ import com.keepit.common.mail.RemotePostOffice
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import play.api.libs.json.{Json, JsValue, JsObject}
+import play.api.libs.json.{ JsSuccess, Json, JsValue, JsObject }
 
 import akka.actor.ActorSystem
 
 import com.google.inject.Inject
 import com.keepit.common.logging.AccessLog
+import scala.concurrent.Future
 
 class ExtMessagingController @Inject() (
     postOffice: RemotePostOffice,
@@ -39,8 +40,7 @@ class ExtMessagingController @Inject() (
     protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,
     protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
-    val accessLog: AccessLog
-  ) extends BrowserExtensionController(actionAuthenticator) with ElizaServiceController {
+    val accessLog: AccessLog) extends BrowserExtensionController(actionAuthenticator) with ElizaServiceController {
 
   def sendMessageAction() = JsonAction.authenticatedParseJsonAsync { request =>
     val o = request.body
@@ -50,7 +50,11 @@ class ExtMessagingController @Inject() (
       (o \ "text").as[String].trim,
       (o \ "source").asOpt[MessageSource]
     )
-    val (userExtRecipients, nonUserRecipients) = messagingCommander.recipientJsonToTypedFormat((o \ "recipients").as[Seq[JsValue]])
+    val (users, emailContacts) = messagingCommander.validateRecipients((o \ "recipients").as[Seq[JsValue]])
+
+    val validUserRecipients = users.collect { case JsSuccess(validUser, _) => validUser }
+    val validEmailRecipients = emailContacts.collect { case JsSuccess(validContact, _) => validContact }
+
     val url = (o \ "url").asOpt[String]
     val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
 
@@ -60,16 +64,18 @@ class ExtMessagingController @Inject() (
     contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
 
     val messageSubmitResponse = messagingCommander.sendMessageAction(title, text, source,
-        userExtRecipients, nonUserRecipients, url, urls, request.userId, contextBuilder.build) map { case (message, threadInfoOpt, messages) =>
-      Ok(Json.obj(
-        "id" -> message.externalId.id,
-        "parentId" -> message.threadExtId.id,
-        "createdAt" -> message.createdAt,
-        "threadInfo" -> threadInfoOpt,
-        "messages" -> messages.reverse))
-    }
+      validUserRecipients, validEmailRecipients, url, urls, request.userId, contextBuilder.build) map {
+        case (message, threadInfoOpt, messages) =>
+          Ok(Json.obj(
+            "id" -> message.externalId.id,
+            "parentId" -> message.threadExtId.id,
+            "createdAt" -> message.createdAt,
+            "threadInfo" -> threadInfoOpt,
+            "messages" -> messages.reverse))
+      }
 
-    messageSubmitResponse
+    messageSubmitResponse // todo(Martin, Jared, Léo): return meaningful error about invalid participants
+
   }
 
   def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = JsonAction.authenticatedParseJson { request =>

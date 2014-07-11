@@ -6,7 +6,6 @@
 // @require scripts/lib/jquery.js
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
-// @require scripts/lib/mustache.js
 // @require scripts/render.js
 // @require scripts/title_from_url.js
 // @require scripts/html/search/google.js
@@ -164,7 +163,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       // }
 
       var inDoc = document.contains($res[0]);
-      var showAny = Boolean(resp.show && resp.hits.length && resp.prefs.maxResults && !(inDoc && tGoogleResultsShown >= tQuery) || newFilter);
+      var showAny = Boolean(resp.show && resp.hits.length && (resp.prefs.maxResults && !(inDoc && tGoogleResultsShown >= tQuery) || resp.context === 'guide') || newFilter);
       var showPreview = Boolean(showAny && !newFilter);
       log('[results] tQuery:', tQuery % 10000, 'tGoogleResultsShown:', tGoogleResultsShown % 10000, 'diff:', tGoogleResultsShown - tQuery, 'show:', resp.show, 'inDoc:', inDoc);
       resp.hits.forEach(processHit, resp);
@@ -538,7 +537,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     }).on('click', '.kifi-filter[href]', function (e, alreadySearched) {
       if (e.which > 1) return;
       var $v = $(this).removeAttr('href');
-      $v.siblings(':not([href])').attr('href', 'javascript:').filter('.kifi-filter-all').removeAttr('data-n');
+      $v.siblings(':not([href])').attr('href', 'javascript:');
       if (!alreadySearched) {
         var val = $v.data('val');
         search(false, {who: val});

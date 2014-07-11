@@ -1,7 +1,9 @@
 <div class="profile-image-wrapper">
-  <div class="profile-image" ng-click="selectFile()" ng-style="{'background-image': 'url(' + picUrl + ')'}"></div>
+  <div class="profile-image-flip">
+    <div class="profile-image" ng-style="{'background-image': 'url(' + picUrl + ')'}"></div>
+    <div class="profile-image-change" ng-click="selectFile()"><div class="profile-image-change-inner">change picture</div></div>
+  </div>
   <label class="profile-image-label">
-    <a class="profile-image-change" href="javascript:" ng-click="selectFile()">Change photo</a>
     <input class="profile-image-file" type="file" name="photo" accept="image/*" onchange="angular.element(this).scope().fileChosen(this.files)">
   </label>
   <div kf-modal show="showImageEditDialog.value">
@@ -14,12 +16,15 @@
   </div>
   <div kf-modal no-user-hide show="showImageUploadingModal.value">
     <div class="dialog-body-wrap">
-      <div class="dialog-header">Uploading image...</div>
+      <div class="kf-modal-upload-image-header">Uploading image</div>
+      <div class="kf-modal-waiting">
+        <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
+      </div>
     </div>
   </div>
   <div kf-modal show="showImageUploadFailedDialog.value">
     <div kf-basic-modal-content with-warning>
-      <div class="dialog-header dialog-warning">Sorry, we could not upload your image. Please try again later.</div>
+      <div class="kf-modal-upload-image-header warning">Sorry, we could not upload your image. Please try again later.</div>
     </div>
   </div>
 </div>

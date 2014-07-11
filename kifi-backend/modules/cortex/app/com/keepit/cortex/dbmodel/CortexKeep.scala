@@ -3,25 +3,23 @@ package com.keepit.cortex.dbmodel
 import org.joda.time.DateTime
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.model.{Keep, KeepSource, NormalizedURI, User}
+import com.keepit.model.{ Keep, KeepSource, NormalizedURI, User }
 import com.keepit.model.KeepStates
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-
 case class CortexKeep(
-  id: Option[Id[CortexKeep]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  keptAt: DateTime,
-  keepId: Id[Keep],
-  userId: Id[User],
-  uriId: Id[NormalizedURI],
-  isPrivate: Boolean,
-  state: State[CortexKeep],
-  source: KeepSource,
-  seq: SequenceNumber[CortexKeep]
-) extends ModelWithState[CortexKeep] with ModelWithSeqNumber[CortexKeep] {
+    id: Option[Id[CortexKeep]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    keptAt: DateTime,
+    keepId: Id[Keep],
+    userId: Id[User],
+    uriId: Id[NormalizedURI],
+    isPrivate: Boolean,
+    state: State[CortexKeep],
+    source: KeepSource,
+    seq: SequenceNumber[CortexKeep]) extends ModelWithState[CortexKeep] with ModelWithSeqNumber[CortexKeep] {
   def withId(id: Id[CortexKeep]): CortexKeep = copy(id = Some(id))
   def withUpdateTime(now: DateTime): CortexKeep = copy(updatedAt = now)
 }

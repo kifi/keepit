@@ -2,7 +2,7 @@ package com.keepit.common.plugin
 
 import akka.util.Timeout
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
+import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.util.RecurringTaskManager
@@ -24,14 +24,11 @@ trait SequencingPlugin extends SchedulerPlugin {
   // plugin lifecycle methods
   override def enabled: Boolean = true
 
-  override def onStart() {
-    log.info(s"starting $name")
-    scheduleTaskOnLeader(actor.system, 30 seconds, 5 seconds, actor.ref, SequencingPluginMessages.Process)
-    scheduleTaskOnAllMachines(actor.system, 100 seconds, 180 seconds, actor.ref, SequencingPluginMessages.SanityCheck)
-  }
+  val interval: FiniteDuration = 5 seconds
 
-  override def onStop() {
-    log.info(s"stopping $name")
+  override def onStart() {
+    scheduleTaskOnLeader(actor.system, 30 seconds, interval, actor.ref, SequencingPluginMessages.Process)
+    scheduleTaskOnAllMachines(actor.system, 100 seconds, 180 seconds, actor.ref, SequencingPluginMessages.SanityCheck)
   }
 }
 
@@ -46,9 +43,8 @@ trait SequenceAssigner extends RecurringTaskManager {
 class SequenceNumberAssignmentStalling(seq: Long) extends Exception(s"sequence number assignment may be stalling: $seq")
 
 abstract class SequencingActor(
-  assigner: SequenceAssigner,
-  airbrake: AirbrakeNotifier
-) extends FortyTwoActor(airbrake) with Logging {
+    assigner: SequenceAssigner,
+    airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
 
   import SequencingPluginMessages._
 

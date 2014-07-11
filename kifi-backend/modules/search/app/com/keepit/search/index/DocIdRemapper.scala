@@ -13,24 +13,25 @@ object DocIdRemapper {
 }
 
 abstract class DocIdRemapper {
-  def remap(docid: Int): Int
+  def remap(srcDocId: Int): Int
   def maxDoc(): Int
   def numDocsRemapped(): Int
 }
 
 class DocIdRemapperWithDeletionCheck(srcMapper: IdMapper, dstMapper: IdMapper, liveDocs: Bits) extends DocIdRemapper {
-  def remap(docid: Int): Int = {
-    val newDocId = dstMapper.getDocId(srcMapper.getId(docid))
-    if (newDocId >= 0 && liveDocs.get(newDocId)) newDocId else -1
+  def remap(srcDocId: Int): Int = {
+    val dstDocId = dstMapper.getDocId(srcMapper.getId(srcDocId))
+    if (dstDocId >= 0 && liveDocs.get(dstDocId)) dstDocId else -1
   }
   def maxDoc(): Int = dstMapper.maxDoc
+
   def numDocsRemapped(): Int = {
     var numRemapped = 0
     var docid = 0
     val srcMaxDoc = srcMapper.maxDoc
     while (docid < srcMaxDoc) {
-      val newDocId = dstMapper.getDocId(srcMapper.getId(docid))
-      if (newDocId >= 0 && liveDocs.get(newDocId)) numRemapped += 1
+      val dstDocId = dstMapper.getDocId(srcMapper.getId(docid))
+      if (dstDocId >= 0 && liveDocs.get(dstDocId)) numRemapped += 1
       docid += 1
     }
     numRemapped
@@ -38,10 +39,11 @@ class DocIdRemapperWithDeletionCheck(srcMapper: IdMapper, dstMapper: IdMapper, l
 }
 
 class DocIdRemapperNoDeletionCheck(srcMapper: IdMapper, dstMapper: IdMapper) extends DocIdRemapper {
-  def remap(docid: Int) = {
-    dstMapper.getDocId(srcMapper.getId(docid))
+  def remap(srcDocId: Int) = {
+    dstMapper.getDocId(srcMapper.getId(srcDocId))
   }
   def maxDoc(): Int = dstMapper.maxDoc
+
   def numDocsRemapped(): Int = {
     var numRemapped = 0
     var docid = 0

@@ -1,8 +1,7 @@
 package com.keepit.common.store
 
-import com.google.inject.{Singleton, Provides}
-import com.keepit.typeahead.socialusers.{InMemoryKifiUserTypeaheadStoreImpl, KifiUserTypeaheadStore, InMemorySocialUserTypeaheadStoreImpl, SocialUserTypeaheadStore}
-import com.keepit.typeahead.abook.{InMemoryEContactTypeaheadStore, EContactTypeaheadStore}
+import com.google.inject.{ Singleton, Provides }
+import com.keepit.typeahead.socialusers.{ InMemoryKifiUserTypeaheadStoreImpl, KifiUserTypeaheadStore, InMemorySocialUserTypeaheadStoreImpl, SocialUserTypeaheadStore }
 import com.keepit.scraper.embedly.EmbedlyStore
 import com.keepit.scraper.embedly.InMemoryEmbedlyStoreImpl
 
@@ -27,11 +26,6 @@ case class ShoeboxFakeStoreModule() extends FakeStoreModule {
   @Provides @Singleton
   def kifiUserTypeaheadStore(): KifiUserTypeaheadStore = {
     new InMemoryKifiUserTypeaheadStoreImpl()
-  }
-
-  @Provides @Singleton
-  def econtactTypeaheadStore(): EContactTypeaheadStore = {
-    new InMemoryEContactTypeaheadStore()
   }
 
   @Singleton @Provides

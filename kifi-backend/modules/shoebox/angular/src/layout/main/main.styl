@@ -1,58 +1,58 @@
 .kf-main
   min-width: 454px
-  background: #fff
+  width: calc(100% - 310px)
 
-  .kf-col-inner:before
-    content: " "
-    position: absolute
-    top: 70px
-    bottom: 0
-    border-left: 1px solid #dbdee3
+  @media screen and (max-width: 1280px)
+    width: calc(100% - 270px)
+
+@media only screen and (max-width: 1024px)
+  .kf-main
+    -webkit-transition: width sidebarTransitionDuration;
+    transition: width sidebarTransitionDuration;
+
+  .kf-sidebar-active .kf-main
+    width: calc(100% - 270px)
+
+.kf-main
+
+  &>.kf-col-inner
+    //border-left: 1px solid #dbdee3
+    //border-right: 1px solid #dbdee3
+    box-sizing: border-box
 
 .kf-main-head
   position: relative
-  height: 73px
-  padding: 13px 20px 0
+  padding: 13px 25px 0 30px
   box-sizing: border-box
 
   .kf-main-search &
     padding-top: 10px
-    height: 38px
 
 .kf-main-title
-  margin: 0 0 8px
-  font-size: 27px
-  line-height: 32px
+  margin: 0 0 2px
+  font-size: 25px
+  line-height: 30px
   font-weight: 300
-  font-smoothing: antialiased
-  color: #67829c
 
 .kf-subtitle
-  position: relative
-  padding-left: 30px
   font-size: 13px
-  font-weight: 300
   line-height: 20px
-  color: #5b6670
+  -webkit-font-smoothing: antialiased;
 
   .kf-subtitle-text
-    min-width: 80px
-    display: inline-block
+    color: #999
+    vertical-align: middle
 
-.kf-main-head
+  .kf-edit-keeps
+    padding-left: 16px
+    float: right
+    vertical-align: middle
+
+  .sprite-edit-pencil-icon
+    margin-right: 5px
+
 .kf-main-keeps
-  box-shadow: inset -1px 0 #dbdee3
-
-.kf-main-keeps
-  position: absolute
-  top: 143px
-  bottom: 0
-  left: 0
-  right: 0
-  overflow: hidden
-
-  .kf-main-search &
-    top: 108px
+  position: relative
 
   & > .antiscroll-inner
     padding: 0 19px 0 18px
@@ -87,25 +87,18 @@
 
 .kf-query-wrap
   position: relative
-  padding: 10px 120px 12px 0
-  background-color: #67829c
-  transition: padding-right .3s
+  padding: 0 25px 12px 30px
   white-space: nowrap
   z-index: 1
 
-.kf-query-wrap.focus
-.kf-query-wrap:not(.empty)
-  padding-right: 0
-
 .kf-query.kf-query
   width: 100%
-  height: 48px
-  padding: 9px 48px 9px 20px
-  border: none
-  font-size: 25px
+  padding: 9px 48px 9px 35px
+  border: defaultBorder
+  border-radius: 3px
+  font-size: 17px
   font-family: inherit
   font-weight: 300
-  line-height: 30px
   font-smoothing: antialiased
   box-sizing: border-box
 
@@ -115,40 +108,28 @@
   &::-moz-placeholder
     color: #99a3b3
 
-  &::placeholder
+  &:-moz-placeholder
     color: #99a3b3
 
-  &::-ms-clear
-    display: none
+  &::-ms-input-placeholder
+    color: #99a3b3
 
-.kf-query-icon
-  position: relative
-  display: inline-block
-  right: 48px
-  height: 48px
-  width: 48px
-  vertical-align: bottom
-  overflow: hidden
+input::-ms-clear
+  display: none
 
-.kf-query-mag
-.kf-query-x
+.kf-query + .kf-query-icon
   position: absolute
-  top: 0
-  bottom: 0
-  left: 0
-  width: 100%
-  padding-top: 13px
-  text-align: center
-  box-sizing: border-box
-  transition: left .15s .07s
+  left: 40px
+  top: 9px
+  sprite2x($search-icon-default)
 
-  &:before
-    content: " "
-    display: inline-block
-    vertical-align: bottom
-    height: 23px
-    background-image: url(../img/search.png)
-    background-size: auto 23px
+.kf-query:focus + .kf-query-icon
+  sprite2x($search-icon-active)
+
+.kf-search-clear-wrapper
+  position: relative
+  right: 50px
+  font-size: 14px
 
 .kf-query-mag
   cursor: text
@@ -159,28 +140,18 @@
     .focus &
       background-position: -26px
 
-.kf-query-x:before
-  width: 23px
-  background-position: -52px
 
-.kf-query-x:hover:before
-  background-position: -75px
-
-.kf-query-x:active:before
-  background-position: -98px
-
-.kf-query-wrap.empty .kf-query-x
 .kf-query-wrap:not(.empty) .kf-query-mag
   left: 100%
   transition-delay: 0
 
 .kf-small-tooltip
-  position: absolute
+  position: fixed
   left: 0
   right: 0
-  bottom: -12px
+  top: 52px
   text-align: center
-  z-index: 1
+  z-index: 500
 
 .kf-small-tooltip-box
   display: inline-block
@@ -202,24 +173,14 @@
     text-decoration: underline
 
 .kf-search-filters
-  display: inline
-
-  &:before
-    content: ' | '
-    color: #cccccc
-    margin-left: 11px
-    margin-right: 17px
+  padding-bottom: 10px
 
 .kf-search-filter.kf-search-filter
   display: inline
   color: #cccccc
   text-decoration: none
-
-  &:after
-    content: '|'
-    color: #cccccc
-    font-size: 0.9em
-    margin: 0 5px
+  title-text()
+  font-size: 17px
 
   &:last-child:after
     display: none
@@ -234,6 +195,10 @@
   &.selected
     color: #333333
 
+.kf-search-filter + .kf-search-filter
+  border-left: defaultBorder
+  padding-left: 10px
+  margin-left: 10px 
 
 .import-modal
 
@@ -242,15 +207,12 @@
     height: 37px
     margin: 12px 168px 16px
 
-  a.dialog-cancel
-    position: absolute
-    left: 50px
-    margin-top: 27px
-    color: #777
-    text-decoration: underline
+  .dialog-text
+    text-align: left
 
   button
-    width: 170px
+    width: 145px
+    margin: 10px
 
 .import-file-modal
 
@@ -275,6 +237,9 @@
 
   .file-import-inner
     padding: 20px 20px 0
+
+    ul
+      list-style: initial
 
   .import-how-to
     font-weight: 800
@@ -303,4 +268,27 @@
     cursor: inherit
 
   button
-    width: 240px
+    width: 145px
+    margin: 5px 10px
+
+.kf-empty-state
+
+  .sprite-add-link
+    margin-right: 17px
+    position: relative
+    left: 4px
+
+  .sprite-import-bookmarks-icon
+  .sprite-import-from-other-services-icon
+    margin-right: 12px
+
+  .sprite-install-extension-icon
+    margin-right:16px
+    position: relative
+    left: 3px
+
+  a
+    display: inline-block
+
+    &:hover
+      text-decoration: underline

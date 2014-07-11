@@ -1,6 +1,6 @@
 package com.keepit.search.graph.user
 
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model.User
@@ -30,17 +30,17 @@ class UserGraphsSearcherFactory @Inject() (userGraph: UserGraphIndexer, searchFr
 }
 
 class UserGraphsSearcher(
-  val userId: Id[User],
-  userGraph: UserGraphIndexer,
-  searchFriendGraph: SearchFriendIndexer,
-  consolidatedConnectedUsersReq: RequestConsolidator[Id[User], Set[Long]],
-  consolidatedUnfriendedReq: RequestConsolidator[Id[User], Set[Long]]) {
+    val userId: Id[User],
+    userGraph: UserGraphIndexer,
+    searchFriendGraph: SearchFriendIndexer,
+    consolidatedConnectedUsersReq: RequestConsolidator[Id[User], Set[Long]],
+    consolidatedUnfriendedReq: RequestConsolidator[Id[User], Set[Long]]) {
 
-  def getConnectedUsersFuture(): Future[Set[Long]] = consolidatedConnectedUsersReq(userId){ _ =>
-    Future{ new UserGraphSearcher(userGraph.getSearcher).getFriends(userId) }
+  def getConnectedUsersFuture(): Future[Set[Long]] = consolidatedConnectedUsersReq(userId) { _ =>
+    Future { new UserGraphSearcher(userGraph.getSearcher).getFriends(userId) }
   }
-  def getUnfriendedFuture(): Future[Set[Long]] = consolidatedUnfriendedReq(userId){ _ =>
-    Future{ new SearchFriendSearcher(searchFriendGraph.getSearcher).getUnfriended(userId) }
+  def getUnfriendedFuture(): Future[Set[Long]] = consolidatedUnfriendedReq(userId) { _ =>
+    Future { new SearchFriendSearcher(searchFriendGraph.getSearcher).getUnfriended(userId) }
   }
 
   def getConnectedUsers(): Set[Long] = {

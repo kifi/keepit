@@ -3,7 +3,7 @@ package com.keepit.model
 import org.specs2.mutable._
 
 import com.keepit.common.net.UserAgent
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.test._
 
 class KifiInstallationTest extends Specification {
@@ -18,13 +18,13 @@ class KifiInstallationTest extends Specification {
       val v5 = KifiExtVersion("2.8.9990")
       val v6 = KifiExtVersion("2.9.22")
 
-      v0 must be_<  (v1)
-      v1 must be_== (v1)
-      v1 must be_== (v2)
-      v1 must be_<  (v3)
-      v3 must be_>  (v4)
-      v4 must be_>  (v2)
-      v5 must be_<  (v6)
+      v0 must be_<(v1)
+      v1 must be_==(v1)
+      v1 must be_==(v2)
+      v1 must be_<(v3)
+      v3 must be_>(v4)
+      v4 must be_>(v2)
+      v5 must be_<(v6)
     }
     "parse version strings and order correctly for iphone" in {
       val v0 = KifiIPhoneVersion("0.0.0")
@@ -33,12 +33,12 @@ class KifiInstallationTest extends Specification {
       val v3 = KifiIPhoneVersion("3.0.1")
       val v4 = KifiIPhoneVersion("2.4.8")
 
-      v0 must be_<  (v1)
-      v1 must be_== (v1)
-      v1 must be_== (v2)
-      v1 must be_<  (v3)
-      v3 must be_>  (v4)
-      v4 must be_>  (v2)
+      v0 must be_<(v1)
+      v1 must be_==(v1)
+      v1 must be_==(v2)
+      v1 must be_<(v3)
+      v3 must be_>(v4)
+      v4 must be_>(v2)
 
       //KifiIPhoneVersion("2.4.8") > KifiExtVersion("1.4.8") YO! this does not compile
     }

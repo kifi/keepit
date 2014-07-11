@@ -1,10 +1,10 @@
 package com.keepit.common.store
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.amazonaws.services.s3.AmazonS3
 import play.api.Play._
 import com.keepit.common.logging.AccessLog
-import com.keepit.search.index.{IndexStoreInbox, InMemoryIndexStoreImpl, IndexStore, S3IndexStoreImpl}
+import com.keepit.search.index.{ IndexStoreInbox, InMemoryIndexStoreImpl, IndexStore, S3IndexStoreImpl }
 import com.keepit.search.tracker.S3ClickHistoryStoreImpl
 import com.keepit.search.tracker.InMemoryClickHistoryStoreImpl
 import com.keepit.search.tracker.ClickHistoryUserIdCache

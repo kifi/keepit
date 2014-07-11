@@ -3,18 +3,18 @@ package com.keepit.common.store
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.PutObjectResult
 
-import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 
 import com.keepit.common.controller.ActionAuthenticator
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
-import com.keepit.common.logging.{AccessLog, Logging}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
+import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.net.URI
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
-import com.keepit.social.{BasicUser, SocialNetworks}
+import com.keepit.social.{ BasicUser, SocialNetworks }
 
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.Weeks
@@ -24,11 +24,11 @@ import play.api.libs.json.Json
 import play.api.libs.ws.WS
 
 import java.awt.image.BufferedImage
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, File, InputStream}
+import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, File, InputStream }
 import javax.imageio.ImageIO
 
-import scala.concurrent.{Future, Promise}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{ Future, Promise }
+import scala.util.{ Failure, Success, Try }
 import com.keepit.model.UserPictureSource
 
 object S3UserPictureConfig {
@@ -81,8 +81,7 @@ class S3ImageStoreImpl @Inject() (
     clock: Clock,
     userPictureRepo: UserPictureRepo,
     eliza: ElizaServiceClient,
-    val config: S3ImageConfig
-  ) extends S3ImageStore with S3Helper with Logging {
+    val config: S3ImageConfig) extends S3ImageStore with S3Helper with Logging {
 
   private val ExpirationTime = Weeks.ONE
 
@@ -90,20 +89,21 @@ class S3ImageStoreImpl @Inject() (
 
   def getPictureUrl(width: Option[Int], user: User, pictureName: String): Future[String] = {
     if (config.isLocal) {
-      val sui = db.readOnly { implicit s => suiRepo.getByUser(user.id.get).head }
+      val sui = db.readOnlyReplica { implicit s => suiRepo.getByUser(user.id.get).head }
       Promise.successful(avatarUrlFromSocialNetwork(sui, width.map(_.toString).getOrElse("original"))).future
     } else {
       user.userPictureId match {
         case None =>
           // No picture uploaded, wait for it
-          val sui = db.readOnly { implicit s =>
+          val sui = db.readOnlyMaster { implicit s =>
             val suis = suiRepo.getByUser(user.id.get)
             // If user has no picture, this is the preference order for social networks:
             suis.find(_.networkType == SocialNetworks.FACEBOOK).orElse(suis.find(_.networkType == SocialNetworks.LINKEDIN)).getOrElse(suis.head)
           }
           if (sui.networkType != SocialNetworks.FORTYTWO) {
-            uploadPictureFromSocialNetwork(sui, user.externalId, setDefault = true).map { case res =>
-              avatarUrlByExternalId(width, user.externalId, res.head._1)
+            uploadPictureFromSocialNetwork(sui, user.externalId, setDefault = true).map {
+              case res =>
+                avatarUrlByExternalId(width, user.externalId, res.head._1)
             }
           } else {
             uploadPictureFromSocialNetwork(sui, user.externalId, setDefault = false)
@@ -113,7 +113,7 @@ class S3ImageStoreImpl @Inject() (
           // We have an image so serve that one, even if it might be outdated
           if (user.pictureName.isEmpty || pictureName == user.pictureName.get) {
             // Only update the primary picture
-            db.readOnly { implicit session =>
+            db.readOnlyReplica { implicit session =>
               val pic = userPictureRepo.get(userPicId)
               val upToDate = pic.origin.name == "user_upload" || pic.updatedAt.isAfter(clock.now().minus(ExpirationTime))
               if (!upToDate) {
@@ -151,7 +151,7 @@ class S3ImageStoreImpl @Inject() (
       } yield {
         val px = if (sizeName == "original") "1000" else sizeName
         val originalImageUrl = avatarUrlFromSocialNetwork(sui, px)
-        val usedImage = if(useDefaultImage) S3UserPictureConfig.defaultName else pictureName
+        val usedImage = if (useDefaultImage) S3UserPictureConfig.defaultName else pictureName
         WS.url(originalImageUrl).withRequestTimeout(120000).get().map { response =>
           val key = keyByExternalId(sizeName, externalId, usedImage)
           val putObj = uploadToS3(key, response.getAHCResponse.getResponseBodyAsStream, label = originalImageUrl)
@@ -161,7 +161,7 @@ class S3ImageStoreImpl @Inject() (
       })
       future onComplete {
         case Success(_) =>
-          val usedImage = if(useDefaultImage) S3UserPictureConfig.defaultName else pictureName
+          val usedImage = if (useDefaultImage) S3UserPictureConfig.defaultName else pictureName
           updateUserPictureRecord(sui.userId.get, usedImage, UserPictureSource(sui.networkType.name), setDefault, None)
         case Failure(e) =>
           airbrake.notify(AirbrakeError(
@@ -174,7 +174,7 @@ class S3ImageStoreImpl @Inject() (
   }
 
   def forceUpdateSocialPictures(userId: Id[User]): Unit = {
-    val (sui, user, picName) = db.readOnly { implicit s =>
+    val (sui, user, picName) = db.readOnlyReplica { implicit s =>
       val user = userRepo.get(userId)
       val suis = suiRepo.getByUser(user.id.get)
       // If user has no picture, this is the preference order for social networks:
@@ -232,17 +232,17 @@ class S3ImageStoreImpl @Inject() (
 
   def uploadTemporaryPicture(file: File): Try[(String, String)] = Try {
 
-      val bufImage = readImage(file)
+    val bufImage = readImage(file)
 
-      val os = new ByteArrayOutputStream()
-      ImageIO.write(bufImage, "jpeg", os)
-      val is = new ByteArrayInputStream(os.toByteArray())
+    val os = new ByteArrayOutputStream()
+    ImageIO.write(bufImage, "jpeg", os)
+    val is = new ByteArrayInputStream(os.toByteArray())
 
-      val token = RandomStringUtils.randomAlphanumeric(10)
-      val key = tempPath(token)
-      uploadToS3(key, is, os.size(), "temporary user upload")
+    val token = RandomStringUtils.randomAlphanumeric(10)
+    val key = tempPath(token)
+    uploadToS3(key, is, os.size(), "temporary user upload")
 
-      (token, s"${config.cdnBase}/$key")
+    (token, s"${config.cdnBase}/$key")
   }
 
   def copyTempFileToUserPic(userId: Id[User], userExtId: ExternalId[User], token: String, cropAttributes: Option[ImageCropAttributes]): Option[String] = {
@@ -294,8 +294,9 @@ class S3ImageStoreImpl @Inject() (
   private def cropResizeAndUpload(userExtId: ExternalId[User], newFilename: String, bufferedImage: BufferedImage, cropAttributes: Option[ImageCropAttributes]) = {
     val image = cropImageOrFallback(newFilename, bufferedImage, cropAttributes)
     S3UserPictureConfig.sizes.map { size =>
-      Try(ImageUtils.resizeImageMakeSquare(image, size)).map { case (contentLength, is) =>
-        uploadUserImage(userExtId, newFilename, size.width.toString, is, contentLength)
+      Try(ImageUtils.resizeImageMakeSquare(image, size)).map {
+        case (contentLength, is) =>
+          uploadUserImage(userExtId, newFilename, size.width.toString, is, contentLength)
       }.flatten match {
         case Success(res) => Some(res)
         case Failure(ex) =>

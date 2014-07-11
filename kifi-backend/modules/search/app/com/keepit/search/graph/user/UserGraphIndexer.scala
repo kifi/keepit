@@ -1,7 +1,7 @@
 package com.keepit.search.graph.user
 
 import com.keepit.common.db.Id
-import com.keepit.model.{UserConnection, User}
+import com.keepit.model.{ UserConnection, User }
 import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index.Indexable
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -9,28 +9,25 @@ import com.keepit.search.index._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.graph.Util
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.collection.mutable.{Map => MutableMap}
+import scala.collection.mutable.{ Map => MutableMap }
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import com.keepit.search.IndexInfo
-
-
 
 object UserGraphFields {
   val friendsList = "friends"
 }
 
 class UserGraphIndexer(
-  indexDirectory: IndexDirectory,
-  override val airbrake: AirbrakeNotifier,
-  shoeboxClient: ShoeboxServiceClient
-) extends Indexer[User, UserConnection, UserGraphIndexer](indexDirectory){
+    indexDirectory: IndexDirectory,
+    override val airbrake: AirbrakeNotifier,
+    shoeboxClient: ShoeboxServiceClient) extends Indexer[User, UserConnection, UserGraphIndexer](indexDirectory) {
 
   import UserGraphIndexer._
 
   override val commitBatchSize = 500
-  private val fetchSize = commitBatchSize/2              // one userConnection's seqNum corresponds to two userGraphIndexable's seqNum. Divide by 2 to make sure these two indexables are committed together.
+  private val fetchSize = commitBatchSize / 2 // one userConnection's seqNum corresponds to two userGraphIndexable's seqNum. Divide by 2 to make sure these two indexables are committed together.
 
   private def getIndexables(): Seq[UserGraphIndexable] = {
     // get userConn changed
@@ -38,7 +35,7 @@ class UserGraphIndexer(
 
     // find users affected, order by seqNum
     val m = MutableMap.empty[Id[User], SequenceNumber[UserConnection]]
-    conns.foreach{ c =>
+    conns.foreach { c =>
       val (u1, u2, seq) = (c.user1, c.user2, c.seq)
       m(u1) = m.getOrElse(u1, SequenceNumber.MinValue) max seq
       m(u2) = m.getOrElse(u2, SequenceNumber.MinValue) max seq
@@ -51,8 +48,9 @@ class UserGraphIndexer(
     val friendsLists = Await.result(friendsListsFuture, 30 seconds)
 
     // convert to indexable
-    (userAndSeq zip friendsLists) map { case ((user, seq), friends) =>
-      new UserGraphIndexable(user, seq, friends.isEmpty, friends.toSeq)
+    (userAndSeq zip friendsLists) map {
+      case ((user, seq), friends) =>
+        new UserGraphIndexable(user, seq, friends.isEmpty, friends.toSeq)
     }
   }
 
@@ -62,7 +60,7 @@ class UserGraphIndexer(
     super.onFailure(indexable, e)
   }
 
-  def update(): Int = updateLock.synchronized{
+  def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()
 
     var total = 0
@@ -87,15 +85,14 @@ object UserGraphIndexer {
   import UserGraphFields._
 
   class UserGraphIndexable(
-    override val id: Id[User],
-    override val sequenceNumber: SequenceNumber[UserConnection],
-    override val isDeleted: Boolean,
-    val friends: Seq[Id[User]]
-  ) extends Indexable[User, UserConnection] {
+      override val id: Id[User],
+      override val sequenceNumber: SequenceNumber[UserConnection],
+      override val isDeleted: Boolean,
+      val friends: Seq[Id[User]]) extends Indexable[User, UserConnection] {
 
     override def buildDocument = {
       val doc = super.buildDocument
-      val bytes = Util.packLongArray(friends.map{_.id}.toArray)
+      val bytes = Util.packLongArray(friends.map { _.id }.toArray)
       val friendsField = buildBinaryDocValuesField(friendsList, bytes)
       doc.add(friendsField)
       doc

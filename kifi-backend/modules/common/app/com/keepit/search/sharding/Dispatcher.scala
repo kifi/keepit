@@ -10,17 +10,19 @@ class ShardedServiceInstance[T](val serviceInstance: ServiceInstance) {
     case Some(spec) => Dispatcher.shardSpecParser.parse[T](spec)
     case None => Set()
   }
+
+  def size: Int = shards.size
 }
 
 object Dispatcher {
   private[sharding] val shardSpecParser = new ShardSpecParser
 
-  def apply[T](instances: Vector[ServiceInstance], forceReloadFromZK: ()=>Unit): Dispatcher[T] = {
+  def apply[T](instances: Vector[ServiceInstance], forceReloadFromZK: () => Unit): Dispatcher[T] = {
     new Dispatcher[T](instances.map(new ShardedServiceInstance[T](_)), forceReloadFromZK)
   }
 }
 
-class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFromZK: ()=>Unit) {
+class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFromZK: () => Unit) {
 
   // invert the instance list to shard->instances map filter unreachable instances out
   private def invert(): Map[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]] = {
@@ -32,8 +34,8 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
       upList
     }
     var shardToInstances = Map.empty[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]]
-    list.foreach{ instance =>
-      instance.shards.foreach{ s =>
+    list.foreach { instance =>
+      instance.shards.foreach { s =>
         shardToInstances.get(s) match {
           case Some(buf) => buf += instance
           case None => shardToInstances += (s -> ArrayBuffer(instance))
@@ -46,16 +48,17 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
   private[this] def findSafeSharding(): ArrayBuffer[Set[Shard[T]]] = {
     val results = new ArrayBuffer[Set[Shard[T]]]
 
-    instances.flatMap(_.shards.toSeq).groupBy(_.numShards).foreach{ case (numShards, shardSeq) =>
-      val shards = shardSeq.toSet
-      if (shards.size == numShards) {
-        val estimatedCapacity = shardSeq.size / numShards
-        var i = 0
-        while (i < estimatedCapacity) {
-          results += shards
-          i += 1
+    instances.flatMap(_.shards.toSeq).groupBy(_.numShards).foreach {
+      case (numShards, shardSeq) =>
+        val shards = shardSeq.toSet
+        if (shards.size == numShards) {
+          val estimatedCapacity = shardSeq.size / numShards
+          var i = 0
+          while (i < estimatedCapacity) {
+            results += shards
+            i += 1
+          }
         }
-      }
     }
 
     results
@@ -64,7 +67,7 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
   private[this] var routingTable: Map[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]] = invert()
   private[this] var safeSharding: ArrayBuffer[Set[Shard[T]]] = findSafeSharding()
 
-  private[this] def reload(): Unit = synchronized{
+  private[this] def reload(): Unit = synchronized {
     routingTable = invert()
     safeSharding = findSafeSharding()
   }
@@ -83,12 +86,13 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
       // using the reservoir algorithm
       var numEntries = 0
       var candidateShard: Shard[T] = null
-      table.foreach{ case (shard, instances) =>
-        if (shard.contains(id)) {
-          val size = instances.size
-          numEntries += size
-          if (rnd.nextInt(numEntries) < size) candidateShard = shard
-        }
+      table.foreach {
+        case (shard, instances) =>
+          if (shard.contains(id)) {
+            val size = instances.size
+            numEntries += size
+            if (rnd.nextInt(numEntries) < size) candidateShard = shard
+          }
       }
       if (candidateShard == null) {
         throw new DispatchFailedException(s"no shard found for id=$id")
@@ -138,7 +142,7 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
 
     var remaining = allShards
     while (remaining.nonEmpty) {
-      next(table, remaining, maxShardsPerInstance) match {
+      next(table, remaining, maxShardsPerInstance, 2) match {
         case (Some(instance), shards) =>
           if (!instance.serviceInstance.reportedSentServiceUnavailable) {
             results += body(instance.serviceInstance, shards)
@@ -161,9 +165,9 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
     results
   }
 
-  private def next(instMap: Map[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]], shards: Set[Shard[T]], maxShardsPerInstance: Int, numTrials: Int = 1): (Option[ShardedServiceInstance[T]], Set[Shard[T]]) = {
+  private def next(instMap: Map[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]], shards: Set[Shard[T]], maxShardsPerInstance: Int, numTrials: Int): (Option[ShardedServiceInstance[T]], Set[Shard[T]]) = {
     var numEntries = 0
-    val table = shards.toSeq.map{ shard =>
+    val table = shards.toSeq.map { shard =>
       instMap.get(shard) match {
         case Some(instances) =>
           numEntries += instances.size
@@ -173,14 +177,16 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
       }
     }
     var bestInstance: Option[ShardedServiceInstance[T]] = None
+    var bestInstSize: Int = Int.MaxValue
     var bestCoverage = Set.empty[Shard[T]]
     var trials = numTrials
     while (trials > 0 && bestCoverage.size < maxShardsPerInstance) {
       getCandidate(table, numEntries) match {
-        case candidate @ Some(inst) =>
-          val thisCoverage = (inst.shards intersect shards).take(maxShardsPerInstance)
-          if (thisCoverage.size > bestCoverage.size) {
+        case candidate @ Some(thisInst) =>
+          val thisCoverage = (thisInst.shards intersect shards).take(maxShardsPerInstance)
+          if (thisCoverage.size > bestCoverage.size || (thisCoverage.size == bestCoverage.size && thisInst.size < bestInstSize)) {
             bestInstance = candidate
+            bestInstSize = thisInst.size
             bestCoverage = thisCoverage
           }
         case None =>
@@ -193,8 +199,9 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
   private def getCandidate(table: Seq[(Int, ArrayBuffer[ShardedServiceInstance[T]])], numEntries: Int): Option[ShardedServiceInstance[T]] = {
     if (numEntries > 0) {
       val n = rnd.nextInt(numEntries)
-      table.find(_._1 > n).map{ case (num, instances) =>
-        instances(instances.size - (num - n))
+      table.find(_._1 > n).map {
+        case (num, instances) =>
+          instances(instances.size - (num - n))
       }
     } else {
       None

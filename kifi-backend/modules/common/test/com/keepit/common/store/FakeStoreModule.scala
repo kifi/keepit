@@ -4,7 +4,7 @@ import scala.collection.mutable.HashMap
 
 import com.amazonaws.services.s3.model._
 import scala.concurrent.Future
-import com.google.inject.{Singleton, Provides}
+import com.google.inject.{ Singleton, Provides }
 import com.keepit.common.db.Id
 import com.keepit.model._
 import com.keepit.common.db._
@@ -23,7 +23,7 @@ trait FakeStoreModule extends StoreModule {
 
   @Singleton
   @Provides
-  def probablisticLRUStore(): ProbablisticLRUStore = new HashMap[FullFilterChunkId, Array[Int]] with ProbablisticLRUStore{}
+  def probablisticLRUStore(): ProbablisticLRUStore = new HashMap[FullFilterChunkId, Array[Int]] with ProbablisticLRUStore {}
 
   @Singleton
   @Provides

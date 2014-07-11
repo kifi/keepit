@@ -1,19 +1,21 @@
 package com.keepit
 
 import java.io.File
+import akka.actor.ActorSystem
+import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.strings._
 import com.keepit.common.db.ExternalId
-import com.keepit.common.healthcheck.{HealthcheckPlugin, AirbrakeNotifier, AirbrakeError, BenchmarkRunner, MemoryUsageMonitor}
+import com.keepit.common.healthcheck.{ HealthcheckPlugin, AirbrakeNotifier, AirbrakeError, BenchmarkRunner, MemoryUsageMonitor }
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
-import com.keepit.common.service.{FortyTwoServices,ServiceStatus}
+import com.keepit.common.service.{ FortyTwoServices, ServiceStatus }
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.inject._
 import com.typesafe.config.ConfigFactory
-import com.keepit.common.time.{currentDateTime, DEFAULT_DATE_TIME_ZONE, RichDateTime}
-import scala.concurrent.{Future, Await}
+import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE, RichDateTime }
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration.Duration
 import scala.collection.JavaConversions._
 import play.api._
@@ -22,6 +24,7 @@ import play.api.mvc.Results._
 import play.api.mvc._
 import play.modules.statsd.api.StatsdFilter
 import play.utils.Threads
+import scala.util.Try
 import scala.util.control.NonFatal
 import com.amazonaws.services.elasticloadbalancing.model._
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingClient
@@ -34,6 +37,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   //used to identify instance of applciation. used to debug intest mode
   val globalId: ExternalId[FortyTwoGlobal] = ExternalId()
   log.debug(s"########## starting FortyTwoGlobal $globalId")
+
+  @volatile private var pluginsStarted: Boolean = false
 
   override def getControllerInstance[A](clazz: Class[A]) = try {
     injector.getInstance(clazz)
@@ -62,7 +67,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         elbClient.registerInstancesWithLoadBalancer(request)
         println(s"[${currentDateTime.toStandardTimeString}] Registered instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer")
       } catch {
-        case t:Throwable =>
+        case t: Throwable =>
           //todo(martin): find a solution
           //injector.instance[AirbrakeNotifier].panic(s"Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
           println(s"[${currentDateTime.toStandardTimeString}] Error registering instance ${amazonInstanceInfo.instanceId} with load balancer $loadBalancer: $t")
@@ -79,11 +84,11 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     }
     val services = injector.instance[FortyTwoServices]
     val startMessage = ">>>>>>>>>> FortyTwo [%s] service %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
-        this, services.currentService, services.currentVersion, services.compilationTime, services.baseUrl)
+      this.getClass.getSimpleName, services.currentService, services.currentVersion, services.compilationTime, services.baseUrl)
     log.info(s"[${currentDateTime.toStandardTimeString}] " + startMessage)
 
     val disableRegistration = sys.props.getOrElse("service.register.disable", "false").toBoolean // directly use sys.props to be consistent; uptake injected config later
-    val serviceDiscoveryOpt:Option[ServiceDiscovery] = if (disableRegistration) None else {
+    val serviceDiscoveryOpt: Option[ServiceDiscovery] = if (disableRegistration) None else {
       val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
       log.info(s"Amazon up! $amazonInstanceInfo")
       val serviceDiscovery = injector.instance[ServiceDiscovery]
@@ -92,7 +97,12 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       Some(serviceDiscovery)
     }
 
-    injector.instance[AppScope].onStart(app)
+    Try(injector.instance[ActorPlugin].onStart()) // start actor system
+    if (app.mode != Mode.Test) {
+      injector.instance[AppScope].onStart(app)
+      pluginsStarted = true
+    }
+
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
       statsd.incrementOne("deploys", ALWAYS)
       injector.instance[AirbrakeNotifier].reportDeployment()
@@ -183,8 +193,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
 
   @volatile private var announcedStopping: Boolean = false
 
-  def announceStopping(app: Application): Unit = if(!announcedStopping) synchronized {
-    if(!announcedStopping) {//double check on entering sync block
+  def announceStopping(app: Application): Unit = if (!announcedStopping) synchronized {
+    if (!announcedStopping) { //double check on entering sync block
       injector.instance[ShutdownCommander].shutdown()
       if (mode == Mode.Prod) {
         try {
@@ -199,8 +209,13 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         }
       }
       try {
-        if (mode == Mode.Prod)
-        injector.instance[AppScope].onStop(app)
+        if (pluginsStarted) {
+          injector.instance[AppScope].onStop(app)
+          if (app.mode != Mode.Test) {
+            Try(injector.instance[ActorPlugin].onStop())
+          }
+          pluginsStarted = false
+        }
       } catch {
         case e: Throwable =>
           val errorMessage = "====================== error during onStop ==============================="
@@ -221,13 +236,13 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
     val serviceDiscovery = injector.instance[ServiceDiscovery]
     announceStopping(app)
-    val stopMessage = s"[${currentDateTime.toStandardTimeString}] <<<<<<<<<< Stopping " + this
+    val stopMessage = s"[${currentDateTime.toStandardTimeString}] <<<<<<<<<< Stopping " + this.getClass.getSimpleName
     println(stopMessage)
     log.info(stopMessage)
     serviceDiscovery.unRegister()
   }
 
-  private def allowCrossOrigin(request: RequestHeader, result: SimpleResult): SimpleResult = {  // for kifi.com/site dev
+  private def allowCrossOrigin(request: RequestHeader, result: SimpleResult): SimpleResult = { // for kifi.com/site dev
     request.headers.get("Origin").filter { uri =>
       val host = URI.parse(uri).toOption.flatMap(_.host).map(_.toString).getOrElse("")
       host.endsWith("ezkeep.com") || host.endsWith("kifi.com") || host.endsWith("browserstack.com")

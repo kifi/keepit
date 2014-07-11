@@ -16,19 +16,19 @@ class IdSetFilter(val ids: Set[Long]) extends Filter {
         val idBuf = {
           val mapper = reader.getIdMapper
           val buf = new ArrayBuffer[Int]
-          ids.foreach{ id => 
+          ids.foreach { id =>
             val docid = mapper.getDocId(id)
             if (docid >= 0 && (acceptDocs == null || acceptDocs.get(docid))) buf += docid
           }
           buf.sorted
         }
-        
-        new DocIdSet { 
+
+        new DocIdSet {
           override def iterator(): DocIdSetIterator = {
             new DocIdSetIterator {
               var doc = -1
               val iter = idBuf.iterator
-              
+
               override def docID() = doc
               override def nextDoc() = {
                 doc = if (iter.hasNext) iter.next() else NO_MORE_DOCS

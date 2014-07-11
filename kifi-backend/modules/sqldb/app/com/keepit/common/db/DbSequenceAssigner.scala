@@ -1,21 +1,20 @@
 package com.keepit.common.db
 
-import com.keepit.common.db.slick.{Database, Repo, SeqNumberFunction}
+import com.keepit.common.db.slick.{ Database, Repo, SeqNumberFunction }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SequenceNumberAssignmentStalling, SequenceAssigner}
+import com.keepit.common.plugin.{ SequenceNumberAssignmentStalling, SequenceAssigner }
 
 abstract class DbSequenceAssigner[M <: ModelWithSeqNumber[M]](
-  db: Database,
-  repo: Repo[M] with SeqNumberFunction[M],
-  airbrake: AirbrakeNotifier
-) extends SequenceAssigner with Logging{
+    db: Database,
+    repo: Repo[M] with SeqNumberFunction[M],
+    airbrake: AirbrakeNotifier) extends SequenceAssigner with Logging {
 
   val batchSize: Int = 20 // override this if necessary
 
   override def assignSequenceNumbers(): Unit = {
     try {
-      while (db.readWrite{ implicit session => repo.assignSequenceNumbers(batchSize) } > 0) {}
+      while (db.readWrite { implicit session => repo.assignSequenceNumbers(batchSize) } > 0) {}
     } catch {
       case e: UnsupportedOperationException =>
         reportUnsupported(e)
@@ -27,7 +26,7 @@ abstract class DbSequenceAssigner[M <: ModelWithSeqNumber[M]](
 
   override def sanityCheck(): Unit = {
     val minDeferredSeqNumOpt = try {
-      db.readOnly{ implicit session => repo.minDeferredSequenceNumber() }
+      db.readOnlyReplica { implicit session => repo.minDeferredSequenceNumber() }
     } catch {
       case e: UnsupportedOperationException =>
         reportUnsupported(e)

@@ -1,7 +1,77 @@
-<div class="kf-col-inner" ng-controller="RightColCtrl">
-  <nav class="kf-top-right-nav">
-    <a href="javascript:" ng-click="logout()">Log out</a>
-  </nav>
-  <div ng-include="'layout/footer/footer.tpl.html'"></div>
-  <div kf-detail></div>
-</div>
+<footer class="kf-col-inner" ng-controller="RightColCtrl">
+  <div class="kf-footer" ng-show="readyToDraw()">
+
+    <div class="kf-helprank" ng-if="me.clickCount > 0 || me.rekeepTotalCount > 0">
+      <h2 class="kf-footer-header"><span class="sprite sprite-heart-icon"></span><span class="kf-footer-help-rank-header">Your most helpful keeps</span></h2>
+      <div class="kf-footer-help-rank-wrapper" ng-if="me.clickCount > 0">
+        <div class="kf-footer-help-rank-item">
+          <span class="kf-footer-help-rank-number">{{me.clickCount}}</span>
+          <span class="kf-footer-help-rank-description">
+            You've helped friends discover keeps <a class="kifi-footer-item-link" href="/helprank/click" ng-click="trackClickOnClicks()">{{me.clickCount}} times</a> this month
+          </span>
+        </div>
+        <div class="kf-footer-help-rank-item" ng-if="me.rekeepTotalCount > 0">
+          <span class="kf-footer-help-rank-number">{{me.rekeepTotalCount}}</span>
+          <span class="kf-footer-help-rank-description">
+            Your keeps have been rekept by others <a class="kifi-footer-item-link" href="/helprank/rekeep" ng-click="trackClickOnReKeeps()">{{me.rekeepTotalCount}} times</a>
+          </span>
+        </div>
+      </div>
+      <div class="kf-horizontal-separator"></div>
+    </div>
+
+    <h2 class="kf-footer-header">Friends on Kifi</h2>
+    <div kf-compact-friends-view></div>
+
+
+    <div class="kf-horizontal-separator"></div>
+
+    <h2 class="kf-footer-header">Essentials</h2>
+    <ul class="kf-footer-essentials-list about-kifi">
+      <li kf-min-version="3.1" class="start-guide">
+        <a class="kf-footer-item-link kifi-tutorial" href="javascript:" ng-click="triggerGuide(true)">
+          <span class="sprite sprite-guide-icon"></span>Kifi Step-by-step guide
+        </a>
+      </li>
+      <li class="install-kifi">
+        <a class="kf-footer-item-link" href="javascript:" ng-click="triggerInstall()">
+          <span class="sprite sprite-install-extension-icon"></span><span ng-show="!installInProgress()">Install the extension</span><span ng-show="installInProgress()">Installing...</span><span ng-show="installed()">Installed!</span>
+        </a>
+      </li>
+      <li class="import-bookmarks">
+        <a class="kf-footer-item-link" href="javascript:" ng-click="importBookmarks()">
+          <span class="sprite sprite-import-bookmarks-icon"></span>Import your bookmarks
+        </a>
+      </li>
+      <li class="import-bookmark-file">
+        <a class="kf-footer-item-link" href="javascript:" ng-click="importBookmarkFile()">
+          <span class="sprite sprite-import-from-other-services-icon"></span>Import Delicious/Kippt/Pocket/...
+        </a>
+      </li>
+    </ul>
+
+    <div class="kf-horizontal-separator"></div>
+
+    <h2 class="kf-footer-header">Info and support</h2>
+    <ul class="kf-footer-more-list about-us">
+      <li>
+        <a class="kf-footer-item-link support-center" href="http://support.kifi.com">Support center</a>
+      </li>
+      <li>
+        <a class="kf-footer-item-link contact-us" href="http://support.kifi.com/customer/portal/emails/new">Contact us</a>
+      </li>
+      <li>
+        <a class="kf-footer-item-link updates-features" href="http://blog.kifi.com">Kifi blog</a>
+      </li>
+      <li>
+        <a class="kf-footer-item-link updates-features" target="_top" href="https://www.kifi.com/privacy">Privacy</a>
+      </li>
+      <li>
+        <a class="kf-footer-item-link updates-features" target="_top" href="https://www.kifi.com/terms">Terms</a>
+      </li>
+      <li>
+        <a class="kf-footer-item-link updates-features" target="_top" href="https://www.kifi.com/about/mission.html">About us</a>
+      </li>
+    </ul>
+  </div>
+</footer>

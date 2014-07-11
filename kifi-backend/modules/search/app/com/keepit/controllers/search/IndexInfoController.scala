@@ -13,15 +13,14 @@ import com.keepit.search.message.MessageIndexerPlugin
 import com.keepit.search.phrasedetector.PhraseIndexerPlugin
 
 class IndexInfoController @Inject() (
-  articleIndexerPlugin: ArticleIndexerPlugin,
-  urlGraphPlugin: URIGraphPlugin,
-  collectionGraphPlugin: CollectionGraphPlugin,
-  userIndexerPlugin: UserIndexerPlugin,
-  userGraphPlugin: UserGraphPlugin,
-  searchFriendPlugin: SearchFriendGraphPlugin,
-  messageIndexerPlugin: MessageIndexerPlugin,
-  phraseIndexerPlugin: PhraseIndexerPlugin
-) extends SearchServiceController {
+    articleIndexerPlugin: ArticleIndexerPlugin,
+    urlGraphPlugin: URIGraphPlugin,
+    collectionGraphPlugin: CollectionGraphPlugin,
+    userIndexerPlugin: UserIndexerPlugin,
+    userGraphPlugin: UserGraphPlugin,
+    searchFriendPlugin: SearchFriendGraphPlugin,
+    messageIndexerPlugin: MessageIndexerPlugin,
+    phraseIndexerPlugin: PhraseIndexerPlugin) extends SearchServiceController {
 
   def listAll() = Action { implicit request =>
     val infos = (

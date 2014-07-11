@@ -1,18 +1,19 @@
 package com.keepit.commanders
 
+import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
 import com.google.inject.Inject
 import scala.concurrent._
-import play.api.libs.json.{Json, JsValue}
+import play.api.libs.json.{ Json, JsValue }
 import com.keepit.model._
 import scala.Some
-import com.keepit.common.store.{S3URIImageStore, ImageSize}
+import com.keepit.common.store.{ S3URIImageStore, ImageSize }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.slick.Database
 import com.keepit.common.pagepeeker.PagePeekerClient
 import java.awt.image.BufferedImage
 import com.keepit.common.images.ImageFetcher
-import scala.util.{Success, Failure}
+import scala.util.{ Success, Failure }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.collection.mutable
 import com.keepit.common.time._
@@ -24,22 +25,39 @@ import com.keepit.search.ArticleStore
 import com.keepit.scraper.embedly.EmbedlyKeyword
 import com.keepit.normalizer.NormalizedURIInterner
 
-class URISummaryCommander @Inject()(
-  normalizedUriRepo: NormalizedURIRepo,
-  normalizedURIInterner: NormalizedURIInterner,
-  imageInfoRepo: ImageInfoRepo,
-  pageInfoRepo: PageInfoRepo,
-  db: Database,
-  scraper: ScraperServiceClient,
-  cortex: CortexServiceClient,
-  pagePeekerClient: PagePeekerClient,
-  uriImageStore: S3URIImageStore,
-  embedlyStore: EmbedlyStore,
-  articleStore: ArticleStore,
-  imageFetcher: ImageFetcher,
-  airbrake: AirbrakeNotifier,
-  clock: Clock
-) extends Logging {
+class URISummaryCommander @Inject() (
+    normalizedUriRepo: NormalizedURIRepo,
+    normalizedURIInterner: NormalizedURIInterner,
+    imageInfoRepo: ImageInfoRepo,
+    pageInfoRepo: PageInfoRepo,
+    db: Database,
+    scraper: ScraperServiceClient,
+    cortex: CortexServiceClient,
+    pagePeekerClient: PagePeekerClient,
+    uriImageStore: S3URIImageStore,
+    embedlyStore: EmbedlyStore,
+    articleStore: ArticleStore,
+    imageFetcher: ImageFetcher,
+    uriSummaryCache: URISummaryCache,
+    airbrake: AirbrakeNotifier,
+    clock: Clock) extends Logging {
+
+  /**
+   * Gets the default URI Summary
+   */
+  def getDefaultURISummary(uriId: Id[NormalizedURI], waiting: Boolean): Future[URISummary] = {
+    val uri = db.readOnlyReplica { implicit session => normalizedUriRepo.get(uriId) }
+    getDefaultURISummary(uri, waiting)
+  }
+
+  def getDefaultURISummary(uri: NormalizedURI, waiting: Boolean): Future[URISummary] = {
+    import TransactionalCaching.Implicits.directCacheAccess
+
+    uriSummaryCache.getOrElseFuture(URISummaryKey(uri.id.get)) {
+      val uriSummaryRequest = URISummaryRequest(uri.url, ImageType.ANY, ImageSize(0, 0), withDescription = true, waiting = waiting, silent = false)
+      getURISummaryForRequest(uriSummaryRequest, uri)
+    }
+  }
 
   /**
    * Gets an image for the given URI. It can be an image on the page or a screenshot, and there are no size restrictions
@@ -54,7 +72,7 @@ class URISummaryCommander @Inject()(
    * If no image is available, fetching is triggered (silent=false) but the promise is immediately resolved (waiting=false)
    */
   def getImageURISummary(nUri: NormalizedURI, minSizeOpt: Option[ImageSize] = None): Future[URISummary] = {
-    val minSize = minSizeOpt getOrElse ImageSize(0,0)
+    val minSize = minSizeOpt getOrElse ImageSize(0, 0)
     val request = URISummaryRequest(nUri.url, ImageType.ANY, minSize, false, false, false)
     getURISummaryForRequest(request, nUri)
   }
@@ -81,7 +99,7 @@ class URISummaryCommander @Inject()(
 
   private def getNormalizedURIForRequest(request: URISummaryRequest): Option[NormalizedURI] = {
     if (request.silent)
-      db.readOnly { implicit session => normalizedURIInterner.getByUri(request.url) }
+      db.readOnlyReplica { implicit session => normalizedURIInterner.getByUri(request.url) }
     else
       db.readWrite { implicit session => Some(normalizedURIInterner.internByUri(request.url)) }
   }
@@ -102,27 +120,27 @@ class URISummaryCommander @Inject()(
       case ImageType.SCREENSHOT => Some(ImageProvider.PAGEPEEKER)
       case ImageType.IMAGE => Some(ImageProvider.EMBEDLY)
     }
-    val storedImagesOpt = nUri.id map { id =>
-      db.readOnly { implicit session => imageInfoRepo.getByUriWithSize(id, minSize) }
-    }
-    val storedSummaryOpt = storedImagesOpt flatMap { list =>
-      val candidates = list.filter(targetProvider.isEmpty || targetProvider == _.provider)
-      if (candidates.nonEmpty) {
-        val imageInfo = candidates.minBy(_.priority.getOrElse(Int.MaxValue))
+    db.readOnlyReplica { implicit session =>
+      val storedImageInfos = nUri.id flatMap { id =>
+        imageInfoRepo.getByUriWithPriority(id, minSize, targetProvider)
+      }
+      val storedSummaryOpt = storedImageInfos flatMap { imageInfo =>
         if (withDescription) {
+          val wordCountOpt = nUri.id flatMap { id =>
+            scraper.getURIWordCountOpt(id, Some(nUri.url))
+          }
           for {
             nUriId <- nUri.id
-            pageInfo <- db.readOnly { implicit session => pageInfoRepo.getByUri(nUriId) }
+            pageInfo <- pageInfoRepo.getByUri(nUriId)
           } yield {
-            URISummary(getS3URL(imageInfo, nUri), pageInfo.title, pageInfo.description, imageInfo.width, imageInfo.height)
+            URISummary(getS3URL(imageInfo, nUri), pageInfo.title, pageInfo.description, imageInfo.width, imageInfo.height, wordCountOpt)
           }
-        }
-        else {
+        } else {
           Some(URISummary(imageUrl = getS3URL(imageInfo, nUri), imageWidth = imageInfo.width, imageHeight = imageInfo.height))
         }
-      } else None
+      }
+      storedSummaryOpt getOrElse URISummary()
     }
-    storedSummaryOpt getOrElse URISummary()
   }
 
   /**
@@ -133,8 +151,8 @@ class URISummaryCommander @Inject()(
     else Future.successful(None)
     embedlyResultFut flatMap { embedlyResultOpt =>
       val shouldFetchFromPagePeeker =
-        (imageType == ImageType.SCREENSHOT || imageType == ImageType.ANY) &&  // Request accepts screenshots
-        (embedlyResultOpt.isEmpty || embedlyResultOpt.get.imageUrl.isEmpty)   // Couldn't find appropriate Embedly image
+        (imageType == ImageType.SCREENSHOT || imageType == ImageType.ANY) && // Request accepts screenshots
+          (embedlyResultOpt.isEmpty || embedlyResultOpt.get.imageUrl.isEmpty) // Couldn't find appropriate Embedly image
       if (shouldFetchFromPagePeeker) {
         fetchFromPagePeeker(nUri, minSize) map { imageInfoOpt =>
           val imageUrlOpt = imageInfoOpt flatMap { getS3URL(_, nUri) }
@@ -151,7 +169,7 @@ class URISummaryCommander @Inject()(
   /**
    * Triggers screenshot update and returns resulting image info
    */
-  def updateScreenshots(nUri: NormalizedURI): Future[Option[ImageInfo]] = fetchFromPagePeeker(nUri, ImageSize(0,0))
+  def updateScreenshots(nUri: NormalizedURI): Future[Option[ImageInfo]] = fetchFromPagePeeker(nUri, ImageSize(0, 0))
 
   /**
    * The default size screenshot URL is returned (when the screenshot exists).
@@ -160,10 +178,8 @@ class URISummaryCommander @Inject()(
     if (nUri.screenshotUpdatedAt.isEmpty) {
       if (!silent) updateScreenshots(nUri)
       None
-    }
-    else uriImageStore.getDefaultScreenshotURL(nUri)
+    } else uriImageStore.getDefaultScreenshotURL(nUri)
   }
-
 
   /**
    * Fetches images and/or page description from Embedly. The retrieved information is persisted to the database
@@ -241,7 +257,7 @@ class URISummaryCommander @Inject()(
       article <- articleStore.get(id)
       keywords <- article.keywords
     } yield {
-      keywords.toLowerCase.split(" ").filter{x => !x.isEmpty && x.forall(_.isLetterOrDigit)}
+      keywords.toLowerCase.split(" ").filter { x => !x.isEmpty && x.forall(_.isLetterOrDigit) }
     }
 
     rv.getOrElse(Array()).toSeq
@@ -258,21 +274,21 @@ class URISummaryCommander @Inject()(
   def getKeywordsSummary(uri: Id[NormalizedURI]): Future[KeywordsSummary] = {
     val word2vecKeywordsFut = getWord2VecKeywords(uri)
     val embedlyKeywords = getStoredEmbedlyKeywords(uri)
-    val embedlyKeywordsStr = embedlyKeywords.map{_.name}.toSet
+    val embedlyKeywordsStr = embedlyKeywords.map { _.name }.toSet
     val articleKeywords = getArticleKeywords(uri).toSet
 
     for {
       word2vecKeys <- word2vecKeywordsFut
     } yield {
 
-      val word2vecCount = word2vecKeys.map{_.wordCounts} getOrElse 0
-      val w2vCos = word2vecKeys.map{ _.cosine.toSet} getOrElse Set()
-      val w2vFreq = word2vecKeys.map{ _.freq.toSet} getOrElse Set()
+      val word2vecCount = word2vecKeys.map { _.wordCounts } getOrElse 0
+      val w2vCos = word2vecKeys.map { _.cosine.toSet } getOrElse Set()
+      val w2vFreq = word2vecKeys.map { _.freq.toSet } getOrElse Set()
 
-      val bestGuess = if (!articleKeywords.isEmpty){
-        articleKeywords intersect ( embedlyKeywordsStr union w2vCos union w2vFreq )
+      val bestGuess = if (!articleKeywords.isEmpty) {
+        articleKeywords intersect (embedlyKeywordsStr union w2vCos union w2vFreq)
       } else {
-        if (embedlyKeywords.isEmpty){
+        if (embedlyKeywords.isEmpty) {
           w2vCos intersect w2vFreq
         } else {
           embedlyKeywordsStr intersect (w2vCos union w2vFreq)
@@ -283,7 +299,6 @@ class URISummaryCommander @Inject()(
     }
 
   }
-
 
   //todo(martin) method to prune obsolete images from S3 (i.e. remove image if there is a newer image with at least the same size and priority)
 }

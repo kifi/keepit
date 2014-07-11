@@ -19,7 +19,7 @@ import com.keepit.common.healthcheck._
 
 import views.html
 
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.google.inject.Inject
 
 class AdminBenchmarkController @Inject() (
@@ -30,11 +30,11 @@ class AdminBenchmarkController @Inject() (
   import BenchmarkResultsJson._
 
   def benchmarks = AdminHtmlAction.authenticatedAsync { implicit request =>
-      val internalPing = pingSearchProcess()
-      for {
-        searchBenchmark <- searchServiceClient.benchmarks()
-        shoeboxBenchmark <- future { benchmarkRunner.runBenchmark() }
-      } yield Ok(html.admin.benchmark(shoeboxBenchmark, searchBenchmark, internalPing))
+    val internalPing = pingSearchProcess()
+    for {
+      searchBenchmark <- searchServiceClient.benchmarks()
+      shoeboxBenchmark <- future { benchmarkRunner.runBenchmark() }
+    } yield Ok(html.admin.benchmark(shoeboxBenchmark, searchBenchmark, internalPing))
   }
 
   private def pingSearchProcess(): Double = {

@@ -2,7 +2,7 @@ package com.keepit.model
 
 import scala.util.Try
 
-import play.api.libs.json.{Json, JsValue}
+import play.api.libs.json.{ Json, JsValue }
 
 import org.specs2.mutable._
 
@@ -26,15 +26,15 @@ class UserTest extends Specification with ShoeboxTestInjector {
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get === user
           userRepo.save(user.copy(lastName = "NotMyLastName"))
         }
-        db.readOnly { implicit session =>
+        db.readOnlyMaster { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get !== user
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get === updatedUser
         }
 
         sessionProvider.doWithoutCreatingSessions {
-          db.readOnly { implicit s => userRepoImpl.get(Id[User](1)) }
+          db.readOnlyMaster { implicit s => userRepoImpl.get(Id[User](1)) }
         }
-        Try(db.readOnly { implicit s => userRepoImpl.get(Id[User](2)) })
+        Try(db.readOnlyMaster { implicit s => userRepoImpl.get(Id[User](2)) })
         sessionProvider.readOnlySessionsCreated === 1
       }
     }
@@ -47,7 +47,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
           userRepo.save(User(firstName = "Martin", lastName = "Raison"))
         }
 
-        db.readOnly { implicit session =>
+        db.readOnlyMaster { implicit session =>
           userRepoImpl.pageIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE)().head === user
           userRepoImpl.pageIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE)().length === 0
           userRepoImpl.countIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE) === 1
@@ -58,7 +58,7 @@ class UserTest extends Specification with ShoeboxTestInjector {
           userExperimentRepo.save(UserExperiment(userId = user.id.get, experimentType = ExperimentType.FAKE))
         }
 
-        db.readOnly { implicit session =>
+        db.readOnlyMaster { implicit session =>
           val updatedUser = userRepo.get(user.id.get)
           userRepoImpl.pageIncludingWithoutExp(UserStates.ACTIVE)(ExperimentType.FAKE)().length === 0
           userRepoImpl.pageIncludingWithExp(UserStates.ACTIVE)(ExperimentType.FAKE)().head === updatedUser
@@ -92,6 +92,5 @@ class UserTest extends Specification with ShoeboxTestInjector {
         """)
     }
   }
-
 
 }

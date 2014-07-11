@@ -2,20 +2,20 @@ package com.keepit.social
 
 import com.keepit.common.performance._
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{State, ExternalId, Id}
+import com.keepit.common.db.{ State, ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.store.S3ImageStore
 import com.keepit.inject.AppScoped
 import com.keepit.model._
-import com.keepit.common.time.{Clock, DEFAULT_DATE_TIME_ZONE}
+import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.common.KestrelCombinator
 
 import play.api.Play.current
-import play.api.{Application, Play}
+import play.api.{ Application, Play }
 import securesocial.core._
 import securesocial.core.providers.UsernamePasswordProvider
 import securesocial.core.IdentityId
@@ -25,7 +25,7 @@ import scala.Some
 import securesocial.core.PasswordInfo
 import com.keepit.model.UserExperiment
 import com.keepit.model.UserCred
-import com.keepit.commanders.{UserCommander, LocalUserExperimentCommander}
+import com.keepit.commanders.{ UserCommander, LocalUserExperimentCommander }
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.mail.EmailAddress
@@ -43,15 +43,16 @@ class SecureSocialUserPluginImpl @Inject() (
   userCommander: UserCommander,
   userExperimentCommander: LocalUserExperimentCommander,
   clock: Clock)
-  extends UserService with SecureSocialUserPlugin with Logging {
+    extends UserService with SecureSocialUserPlugin with Logging {
 
-  private def reportExceptions[T](f: => T): T =  try f catch { case ex: Throwable =>
-    airbrake.notify(ex)
-    throw ex
+  private def reportExceptions[T](f: => T): T = try f catch {
+    case ex: Throwable =>
+      airbrake.notify(ex)
+      throw ex
   }
 
   def find(id: IdentityId): Option[SocialUser] = reportExceptions {
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       socialUserInfoRepo.getOpt(SocialId(id.userId), SocialNetworkType(id.providerId))
     } match {
       case None if id.providerId == SocialNetworks.FORTYTWO.authProvider =>
@@ -59,7 +60,7 @@ class SecureSocialUserPluginImpl @Inject() (
         // Since we support multiple email addresses, if we do not
         // find a SUI with the correct email address, we go searching.
         val email = EmailAddress(id.userId)
-        db.readOnly { implicit session =>
+        db.readOnlyMaster { implicit session =>
           emailRepo.getByAddressOpt(email).flatMap { emailAddr =>
             // todo(andrew): Don't let unverified people log in. For now, we are, but come up with something better.
             socialUserInfoRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap { sui =>
@@ -140,7 +141,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
   private def saveVerifiedEmail(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Unit = timing(s"saveVerifiedEmail $userId") {
     for (emailString <- socialUser.email if socialUser.authMethod != AuthenticationMethod.UserPassword) {
-      val email = EmailAddress(emailString)
+      val email = EmailAddress.validate(emailString).get
       val emailAddress = emailRepo.getByAddressOpt(address = email) match {
         case Some(e) if e.state == UserEmailAddressStates.VERIFIED && e.verifiedAt.isEmpty =>
           emailRepo.save(e.copy(verifiedAt = Some(clock.now))) // we didn't originally set this
@@ -160,15 +161,17 @@ class SecureSocialUserPluginImpl @Inject() (
 
     log.debug(s"[internUser] socialId=$socialId snType=$socialNetworkType socialUser=$socialUser userId=$userId isComplete=$isComplete")
 
-    val (suiOpt, existingUserOpt) = db.readOnly { implicit session => (
-      socialUserInfoRepo.getOpt(socialId, socialNetworkType),
-      userId orElse {
-      // Automatically connect accounts with existing emails
-        socialUser.email.map(EmailAddress(_)) flatMap (emailRepo.getByAddressOpt(_)) collect {
-          case e if e.state == UserEmailAddressStates.VERIFIED => e.userId
-        }
-      } flatMap userRepo.getOpt
-    )}
+    val (suiOpt, existingUserOpt) = db.readOnlyMaster { implicit session =>
+      (
+        socialUserInfoRepo.getOpt(socialId, socialNetworkType),
+        userId orElse {
+          // Automatically connect accounts with existing emails
+          socialUser.email.map(EmailAddress(_)) flatMap (emailRepo.getByAddressOpt(_)) collect {
+            case e if e.state == UserEmailAddressStates.VERIFIED => e.userId
+          }
+        } flatMap userRepo.getOpt
+      )
+    }
 
     val sui: SocialUserInfo = suiOpt.map(_.withCredentials(socialUser)) match {
 
@@ -199,11 +202,12 @@ class SecureSocialUserPluginImpl @Inject() (
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
-        for (user <- userOpt; su <- db.readOnly { implicit session => socialUserInfoRepo.getByUser(user.id.get) }
-            if su.networkType == socialUserInfo.networkType && su.id.get != socialUserInfo.id.get) {
+        for (
+          user <- userOpt; su <- db.readOnlyMaster { implicit session => socialUserInfoRepo.getByUser(user.id.get) } if su.networkType == socialUserInfo.networkType && su.id.get != socialUserInfo.id.get
+        ) {
           throw new IllegalStateException(
             s"Can't connect $socialUserInfo to user ${user.id.get}. " +
-            s"Social user for network ${su.networkType} is already connected to user ${user.id.get}: $su")
+              s"Social user for network ${su.networkType} is already connected to user ${user.id.get}: $su")
         }
 
         val sui = db.readWrite(attempts = 3) { implicit session =>
@@ -231,7 +235,7 @@ class SecureSocialUserPluginImpl @Inject() (
         val userOpt = getOrCreateUser(existingUserOpt, allowSignup, isComplete, socialUser)
         log.info("creating new SocialUserInfo for %s".format(userOpt))
 
-        val userInfo = SocialUserInfo(userId = userOpt.flatMap(_.id),//verify saved
+        val userInfo = SocialUserInfo(userId = userOpt.flatMap(_.id), //verify saved
           socialId = socialId, networkType = socialNetworkType, pictureUrl = socialUser.avatarUrl,
           fullName = socialUser.fullName, credentials = Some(socialUser))
         log.info("SocialUserInfo created is %s".format(userInfo))
@@ -250,7 +254,7 @@ class SecureSocialUserPluginImpl @Inject() (
                   UserCred(
                     userId = user.id.get,
                     loginName = email.address,
-                    provider = "bcrypt" /* hard-coded */,
+                    provider = "bcrypt" /* hard-coded */ ,
                     credentials = socialUser.passwordInfo.get.password,
                     salt = socialUser.passwordInfo.get.salt.getOrElse(""))
                 log.info(s"[save(userpass)] Saved email is $emailAddress")
@@ -270,13 +274,13 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = reportExceptions {
-    db.readOnly { implicit s =>
+    db.readOnlyMaster { implicit s =>
       providerId match {
         case UsernamePasswordProvider.UsernamePassword =>
           val cred = userCredRepo.findByEmailOpt(email)
           log.info(s"[findByEmail] $email provider=$providerId cred=$cred")
           cred match {
-            case Some(c:UserCred) => {
+            case Some(c: UserCred) => {
               val user = userRepo.get(c.userId)
               val res = Some(SocialUser(IdentityId(email, providerId), user.firstName, user.lastName, user.firstName + " " + user.lastName, Some(email), None, AuthenticationMethod.UserPassword, None, None, Some(PasswordInfo(c.provider, c.credentials, Some(c.salt)))))
               log.info(s"[findByEmail] user=$user socialUser=$res")
@@ -309,19 +313,20 @@ class SecureSocialUserPluginImpl @Inject() (
 }
 
 @AppScoped
-class SecureSocialAuthenticatorPluginImpl @Inject()(
+class SecureSocialAuthenticatorPluginImpl @Inject() (
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
   sessionRepo: UserSessionRepo,
   airbrake: AirbrakeNotifier,
   app: Application)
-  extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin with Logging  {
+    extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin with Logging {
 
   private def reportExceptionsAndTime[T](tag: String)(f: => T): Either[Error, T] = timing(tag) {
-    try Right(f) catch { case ex: Throwable =>
-      airbrake.notify(ex)
-      log.error("error while using secure social plugin", ex)
-      Left(new Error(ex))
+    try Right(f) catch {
+      case ex: Throwable =>
+        airbrake.notify(ex)
+        log.error("error while using secure social plugin", ex)
+        Left(new Error(ex))
     }
   }
 
@@ -329,7 +334,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     val snType = SocialNetworkType(authenticator.identityId.providerId) // userpass -> fortytwo
     val (socialId, provider) = (SocialId(authenticator.identityId.userId), snType)
     log.debug(s"[sessionFromAuthenticator] auth=$authenticator socialId=$socialId, provider=$provider")
-    val userId = db.readOnly {
+    val userId = db.readOnlyMaster {
       implicit s => socialUserInfoRepo.get(socialId, provider).userId // another dependency on socialUserInfo
     }
     UserSession(
@@ -358,7 +363,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
   private def internSession(newSession: UserSession): UserSession = loadSession(newSession) getOrElse persistSession(newSession)
 
   private def loadSession(newSession: UserSession): Option[UserSession] = timing(s"loadSession ${newSession.socialId}") {
-    db.readOnly { implicit s => //from cache
+    db.readOnlyMaster { implicit s => //from cache
       sessionRepo.getOpt(newSession.externalId)
     }
   }
@@ -387,7 +392,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     }
 
     val res = externalIdOpt flatMap { externalId =>
-      db.readOnly { implicit s =>
+      db.readOnlyMaster { implicit s =>
         val sess = sessionRepo.getOpt(externalId)
         log.debug(s"[find] sessionRepo.get($externalId)=$sess")
         sess

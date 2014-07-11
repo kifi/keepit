@@ -10,6 +10,7 @@ POST    /internal/scraper/pornDetector/whitelist        @com.keepit.controllers.
 POST    /internal/scraper/embedly/embedlyInfo           @com.keepit.controllers.scraper.EmbedlyController.getImbedlyInfo
 POST    /internal/scraper/embedly/imageInfos            @com.keepit.controllers.scraper.EmbedlyController.getImageInfos
 POST    /internal/scraper/uriSummary/embedly            @com.keepit.controllers.scraper.URISummaryController.getURISummaryFromEmbedly
+POST     /internal/scraper/uriWordCount                  @com.keepit.controllers.scraper.URISummaryController.getURIWordCount
 
 ->  / common.Routes
 

@@ -7,7 +7,7 @@ import scala.math._
 object AhoCorasick {
 
   trait State[D] {
-    def check(position: Int, onMatch: (Int, D)=>Unit): Unit
+    def check(position: Int, onMatch: (Int, D) => Unit): Unit
     def reset(): State[D]
   }
 
@@ -47,7 +47,7 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
       failState = state
     }
 
-    def check(position: Int, onMatch: (Int, D)=>Unit): Unit = {
+    def check(position: Int, onMatch: (Int, D) => Unit): Unit = {
       if (hasMatch) {
         data.foreach(data => onMatch(position, data))
         if (failState != null) failState.check(position, onMatch)
@@ -68,30 +68,32 @@ class AhoCorasick[I, D](dict: Seq[(Seq[I], D)]) {
 
   private def makeTrie(dict: Seq[(Seq[I], D)]): Int = {
     var maxLen: Int = 0
-    dict.foreach{ case (sequence, data)  =>
-      maxLen = max(maxLen , sequence.size)
-      sequence.foldLeft(_root){ (state, item) => state.nextOrCreate(item) }.set(data)
+    dict.foreach {
+      case (sequence, data) =>
+        maxLen = max(maxLen, sequence.size)
+        sequence.foldLeft(_root) { (state, item) => state.nextOrCreate(item) }.set(data)
     }
     maxLen
   }
 
   private def makeFailureLinks() {
     val queue: Queue[StateImpl] = Queue()
-    _root.nextStates.foreach{ case (_, s) => queue += s }
+    _root.nextStates.foreach { case (_, s) => queue += s }
 
     while (queue.nonEmpty) {
       val s = queue.dequeue()
-      s.nextStates.foreach{ case (item, next) =>
-        queue += next
-        val f = if (s.failState != null) s.failState else _root
-        f.next(item).foreach(next.setFailState(_))
+      s.nextStates.foreach {
+        case (item, next) =>
+          queue += next
+          val f = if (s.failState != null) s.failState else _root
+          f.next(item).foreach(next.setFailState(_))
       }
     }
   }
 
-  def scan(iter: Iterator[I])(onMatch: (Int, D)=>Unit): Unit = {
+  def scan(iter: Iterator[I])(onMatch: (Int, D) => Unit): Unit = {
     var position = -1
-    iter.foldLeft(_root){ (s, item) =>
+    iter.foldLeft(_root) { (s, item) =>
       position += 1
       val next = _next(item, s)
       next.check(position, onMatch)

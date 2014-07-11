@@ -10,7 +10,7 @@ import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
 import org.apache.lucene.util.Version
-import com.keepit.common.db.{SequenceNumber, Id}
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.search.IndexInfo
@@ -58,9 +58,9 @@ trait IndexingEventHandler[T, S] {
 }
 
 abstract class Indexer[T, S, I <: Indexer[T, S, I]](
-    indexDirectory: IndexDirectory,
-    fieldDecoders: Map[String, FieldDecoder])
-  extends IndexManager[S, I] with IndexingEventHandler[T, S] with Logging {
+  indexDirectory: IndexDirectory,
+  fieldDecoders: Map[String, FieldDecoder])
+    extends IndexManager[S, I] with IndexingEventHandler[T, S] with Logging {
 
   def this(indexDirectory: IndexDirectory) = this(indexDirectory, Map.empty[String, FieldDecoder])
 
@@ -72,7 +72,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
 
   private[this] val indexWriterLock = new AnyRef
 
-  private[this] def reopenWriter(): Unit = indexWriterLock.synchronized{
+  private[this] def reopenWriter(): Unit = indexWriterLock.synchronized {
     if (indexWriter != null) indexWriter.close
     indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
     if (!DirectoryReader.indexExists(indexDirectory)) {
@@ -86,7 +86,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
 
   reopenWriter() // open indexWriter
 
-  protected var searcher: Searcher = indexWriterLock.synchronized{
+  protected var searcher: Searcher = indexWriterLock.synchronized {
     Searcher(DirectoryReader.open(indexDirectory))
   }
 
@@ -94,9 +94,9 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     log.info(s"warming up an index directory [${indexDirectory.toString}]...")
     val startTime = System.currentTimeMillis
     val reader: DirectoryReader = searcher.indexReader.inner
-    val buffer = new Array[Byte](1<<16)
+    val buffer = new Array[Byte](1 << 16)
 
-    reader.getIndexCommit().getFileNames().foreach{ filename =>
+    reader.getIndexCommit().getFileNames().foreach { filename =>
       if (indexDirectory.fileExists(filename)) {
         var remaining = indexDirectory.fileLength(filename)
         val input = indexDirectory.openInput(filename, new IOContext)
@@ -124,7 +124,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
     _sequenceNumber = n
   }
 
-  def catchUpSeqNumber_=(n: SequenceNumber[S]) {_catchUpSeqNumber = n}
+  def catchUpSeqNumber_=(n: SequenceNumber[S]) { _catchUpSeqNumber = n }
 
   private[this] var _catchUpSeqNumber = {
     val v1 = commitData.getOrElse(Indexer.CommitData.sequenceNumber, "-1").toLong
@@ -152,15 +152,16 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
       val cnt = successCount
       indexDocuments(indexables, commitBatchSize)
       successCount - cnt
-    } catch { case ex: Throwable =>
-      log.error(s"error in $name update", ex)
-      throw ex
+    } catch {
+      case ex: Throwable =>
+        log.error(s"error in $name update", ex)
+        throw ex
     }
   }
 
-  def doWithIndexWriter(f: IndexWriter=>Unit) = {
+  def doWithIndexWriter(f: IndexWriter => Unit) = {
     try {
-      indexWriterLock.synchronized{ f(indexWriter) }
+      indexWriterLock.synchronized { f(indexWriter) }
     } catch {
       case ioe: IOException =>
         log.error("indexing failed", ioe)
@@ -191,29 +192,29 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
   }
 
   def indexSize = {
-    Some(searcher.indexReader.inner.getIndexCommit().getFileNames().map{ filename =>
+    Some(searcher.indexReader.inner.getIndexCommit().getFileNames().map { filename =>
       if (indexDirectory.fileExists(filename)) indexDirectory.fileLength(filename) else 0L
     }.sum)
   }
 
   def indexDocuments(indexables: Iterator[Indexable[T, S]], commitBatchSize: Int, refresh: Boolean = true): Unit = {
-    doWithIndexWriter{ indexWriter =>
+    doWithIndexWriter { indexWriter =>
       var maxSequenceNumber = sequenceNumber
-      indexables.grouped(commitBatchSize).foreach{ indexableBatch =>
+      indexables.grouped(commitBatchSize).foreach { indexableBatch =>
         var successful = new ArrayBuffer[Indexable[T, S]]
         onStart(indexableBatch)
 
         // create a map from id to its highest seqNum in the batch
-        val idToSeqNum = indexableBatch.foldLeft(Map.empty[Id[T], SequenceNumber[S]]){ (m, indexable) =>
+        val idToSeqNum = indexableBatch.foldLeft(Map.empty[Id[T], SequenceNumber[S]]) { (m, indexable) =>
           m + (indexable.id -> indexable.sequenceNumber)
         }
-        val commitBatch = indexableBatch.filter{ indexable =>
+        val commitBatch = indexableBatch.filter { indexable =>
           // ignore an indexable if its seqNum is old
           idToSeqNum.get(indexable.id) match {
             case Some(seqNum) => (seqNum == indexable.sequenceNumber)
             case None => false
           }
-        }.map{ indexable =>
+        }.map { indexable =>
           try {
             if (indexable.isDeleted) {
               indexWriter.deleteDocuments(indexable.idTerm)
@@ -225,7 +226,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
                   onFailure(indexable, e)
                   None
               }
-              document.foreach{ doc => indexWriter.updateDocument(indexable.idTerm, doc) }
+              document.foreach { doc => indexWriter.updateDocument(indexable.idTerm, doc) }
             }
             onSuccess(indexable)
             successful += indexable
@@ -246,9 +247,9 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
               throw e
             }
             case e: Throwable =>
-            val msg = s"failed to index document for id=${indexable.id}: ${e.getMessage()}"
-            log.error(msg, e)
-            onFailure(indexable, e)
+              val msg = s"failed to index document for id=${indexable.id}: ${e.getMessage()}"
+              log.error(msg, e)
+              onFailure(indexable, e)
           }
         }
         commit(maxSequenceNumber)
@@ -293,7 +294,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
         indexDirectory.asFile().foreach { dir =>
           statsd.gauge(Seq("index", dir.getName, "size").mkString("."), FileUtils.sizeOfDirectory(dir))
         }
-        log.info(s"Index directory has been backed up in ${ (end - start) / 1000} seconds")
+        log.info(s"Index directory has been backed up in ${(end - start) / 1000} seconds")
       }
     } catch {
       case e: Throwable => log.error("Index directory could not be backed up", e)
@@ -301,7 +302,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
 
   def deleteAllDocuments(refresh: Boolean = true) {
     if (DirectoryReader.indexExists(indexDirectory)) {
-      doWithIndexWriter{ indexWriter =>
+      doWithIndexWriter { indexWriter =>
         indexWriter.deleteAll()
         commit()
       }

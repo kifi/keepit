@@ -1,11 +1,10 @@
 package com.keepit.common.healthcheck
 
 import com.google.inject.Singleton
-import com.keepit.common.mail.{TestAmazonMailModule, PostOffice, ElectronicMail}
+import com.keepit.common.mail.{ TestAmazonMailModule, PostOffice, ElectronicMail }
 import com.keepit.common.mail.SystemEmailAddress.ENG
 import scala.collection.mutable.MutableList
 import com.keepit.model.NotificationCategory
-
 
 case class FakeHealthcheckModule() extends HealthCheckModule {
   def configure(): Unit = {

@@ -3,9 +3,9 @@ package com.keepit.social.providers
 import com.keepit.social.UserIdentityProvider
 
 import LinkedInProvider._
-import play.api.libs.ws.{Response, WS}
-import play.api.{Logger, Application}
-import securesocial.core.{OAuth2Info, IdentityId, AuthenticationException, SocialUser}
+import play.api.libs.ws.{ Response, WS }
+import play.api.{ Logger, Application }
+import securesocial.core.{ OAuth2Info, IdentityId, AuthenticationException, SocialUser }
 import play.api.libs.json.JsArray
 
 /**
@@ -38,7 +38,7 @@ class LinkedInProvider(application: Application)
           val timestamp = (me \ Timestamp).asOpt[String]
           Logger.error(
             "Error retrieving information from LinkedIn. Error code: %s, requestId: %s, message: %s, timestamp: %s"
-                format(error, message, requestId, timestamp)
+              format (error, message, requestId, timestamp)
           )
           throw new AuthenticationException()
         }

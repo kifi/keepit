@@ -1,6 +1,5 @@
 package com.keepit.shoebox
 
-
 import com.keepit.common.db.slick.RepoModification
 import com.keepit.model.{
   SocialConnection,
@@ -18,14 +17,12 @@ import com.keepit.commanders.{
   InvitationModification,
   InvitationModificationActor,
   SocialUserInfoModification,
-  SocialUserInfoModificationActor,
-  EmailAddressModificationActor,
-  EmailAddressModification
+  SocialUserInfoModificationActor
 }
 
 import net.codingwell.scalaguice.ScalaModule
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.actor.ActorInstance
 
 case class ShoeboxRepoChangeListenerModule() extends ScalaModule {
@@ -46,9 +43,10 @@ case class ShoeboxRepoChangeListenerModule() extends ScalaModule {
   @Provides
   @Singleton
   def invitationChangeListener(invitationModificationActor: ActorInstance[InvitationModificationActor]): Option[RepoModification.Listener[Invitation]] = Some({
-    repoModification => {
-      invitationModificationActor.ref ! InvitationModification(repoModification)
-    }
+    repoModification =>
+      {
+        invitationModificationActor.ref ! InvitationModification(repoModification)
+      }
   })
 
   @Provides
@@ -56,13 +54,6 @@ case class ShoeboxRepoChangeListenerModule() extends ScalaModule {
   def socialUserChangeListener(socialUserInfoMoficationActor: ActorInstance[SocialUserInfoModificationActor]): Option[RepoModification.Listener[SocialUserInfo]] = Some({
     repoModification => socialUserInfoMoficationActor.ref ! SocialUserInfoModification(repoModification)
   })
-
-  @Provides
-  @Singleton
-  def emailAddressChangeListener(emailAddressMoficationActor: ActorInstance[EmailAddressModificationActor]): Option[RepoModification.Listener[UserEmailAddress]] = Some({
-    repoModification => emailAddressMoficationActor.ref ! EmailAddressModification(repoModification)
-  })
-
 }
 
 case class FakeShoeboxRepoChangeListenerModule() extends ScalaModule {

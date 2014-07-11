@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import org.apache.http.conn.ssl.{SSLConnectionSocketFactory, SSLContexts, TrustStrategy}
+import org.apache.http.conn.ssl.{ SSLConnectionSocketFactory, SSLContexts, TrustStrategy }
 import java.security.cert.X509Certificate
 
 object UnsafeSSLSocketFactory {

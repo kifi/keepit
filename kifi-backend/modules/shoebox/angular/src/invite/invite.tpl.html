@@ -1,22 +1,22 @@
 <div ng-controller="InviteCtrl">
-  <div class="invite-wrapper" antiscroll="{ autoHide: false }">
+  <div class="invite-wrapper" smart-scroll scroll-distance="wtiScrollDistance" scroll-disabled="isWTIScrollDisabled()" scroll-next="wtiScrollNext()">
     <div class="invite">
-      <h2>Find people to invite to Kifi</h2>
-      <p>Search by name or email address</p>
+      <h2 class="invite-title">Find people to invite</h2>
       <div class="import-wrapper" ng-if="isRefreshingSocialGraph">
         <div class="bouncy-ball">
           <div class="pace pace-active"><div class="pace-progress"></div><div class="pace-activity"></div></div>
         </div> Importing your contacts
       </div>
+      <div kf-social-networks-status></div>
 
       <div kf-social-invite-well></div>
 
       <div kf-networks-need-attention></div>
 
-      <h3>People you may want to add to Kifi</h3>
+      <div class="invite-list-header" ng-show="whoToInvite.length > 0">Recommended people to invite</div>
 
-      <div class="kf-connection-card-container" smart-scroll scroll-distance="wtiScrollDistance" scroll-disabled="isWTIScrollDisabled()" scroll-next="wtiScrollNext()">
-        <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend" refresh-scroll="refreshScroll" show-generic-invite-error="data.showGenericInviteError" show-linkedin-token-expired-modal="data.showLinkedinTokenExpiredModal" show-linkedin-hit-rate-limit-modal="data.showLinkedinHitRateLimitModal"></div>
+      <div class="kf-connection-card-container">
+        <div kf-connection-card ng-repeat="friend in whoToInvite" friend="friend" show-generic-invite-error="data.showGenericInviteError" show-linkedin-token-expired-modal="data.showLinkedinTokenExpiredModal" show-linkedin-hit-rate-limit-modal="data.showLinkedinHitRateLimitModal"></div>
         <span ng-click="wtiScrollNext()" ng-hide="isWTIScrollDisabled()" class="kf-show-more">Show more</span>
       </div>
 

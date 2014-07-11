@@ -1,21 +1,31 @@
 package com.keepit.controllers.mobile
 
-import com.keepit.common.controller.{ShoeboxServiceController, MobileController, ActionAuthenticator, AuthenticatedRequest}
+import com.keepit.common.controller.{ ShoeboxServiceController, MobileController, ActionAuthenticator, AuthenticatedRequest }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
+import com.keepit.heimdal.{ DelightedAnswerSources, BasicDelightedAnswer }
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.commanders._
 
 import play.api.Play.current
-import play.api.libs.json.{JsObject, Json, JsValue}
+import play.api.libs.json._
 import play.api.libs.json.Json.toJson
 
 import com.google.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.util.{Success, Failure}
-import securesocial.core.{SecureSocial, Authenticator}
+import scala.concurrent.Future
+import scala.util.{ Success, Failure }
+import securesocial.core.{ SecureSocial, Authenticator }
+import play.api.libs.json.JsSuccess
+import com.keepit.common.controller.AuthenticatedRequest
+import scala.util.Failure
+import scala.Some
+import com.keepit.commanders.ConnectionInfo
+import scala.util.Success
+import play.api.libs.json.JsObject
+import com.keepit.common.http._
 
 class MobileUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -25,11 +35,12 @@ class MobileUserController @Inject() (
 
   def friends(page: Int, pageSize: Int) = JsonAction.authenticated { request =>
     val (connectionsPage, total) = userCommander.getConnectionsPage(request.userId, page, pageSize)
-    val friendsJsons = connectionsPage.map { case ConnectionInfo(friend, _, unfriended, unsearched) =>
-      Json.toJson(friend).asInstanceOf[JsObject] ++ Json.obj(
-        "searchFriend" -> unsearched,
-        "unfriended" -> unfriended
-      )
+    val friendsJsons = connectionsPage.map {
+      case ConnectionInfo(friend, _, unfriended, unsearched) =>
+        Json.toJson(friend).asInstanceOf[JsObject] ++ Json.obj(
+          "searchFriend" -> unsearched,
+          "unfriended" -> unfriended
+        )
     }
     Ok(Json.obj(
       "friends" -> friendsJsons,
@@ -48,7 +59,7 @@ class MobileUserController @Inject() (
   }
 
   def uploadContacts(origin: ABookOriginType) = JsonAction.authenticatedAsync(parse.json(maxLength = 1024 * 50000)) { request =>
-    val json : JsValue = request.body
+    val json: JsValue = request.body
     userCommander.uploadContactsProxy(request.userId, origin, json) map { abookInfoTr =>
       abookInfoTr match {
         case Success(abookInfo) => Ok(Json.toJson(abookInfo))
@@ -62,18 +73,16 @@ class MobileUserController @Inject() (
   }
 
   def updateCurrentUser = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
-    request.body.asOpt[UpdatableUserInfo] map { userData =>
-      if (userData.emails.isDefined && !userCommander.validateEmails(userData.emails.get:_*)) {
-        BadRequest(Json.obj("error" -> "bad email addresses"))
-      } else {
+    request.body.validate[UpdatableUserInfo] match {
+      case JsSuccess(userData, _) => {
         userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmail, _))
-        userData.description.foreach{ description =>
+        userData.description.foreach { description =>
           userCommander.updateUserDescription(request.userId, description)
         }
         getUserInfo(request)
       }
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "could not parse user info from body"))
+      case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } => BadRequest(Json.obj("error" -> "bad email addresses"))
+      case _ => BadRequest(Json.obj("error" -> "could not parse user info from body"))
     }
   }
 
@@ -81,14 +90,14 @@ class MobileUserController @Inject() (
     val user = userCommander.getUserInfo(request.user)
     val (clickCount, rekeepCount, rekeepTotalCount) = userCommander.getKeepAttributionCounts(request.userId)
     Ok(toJson(user.basicUser).as[JsObject] ++
-       toJson(user.info).as[JsObject] ++
-       Json.obj(
-         "notAuthed" -> user.notAuthed,
-         "experiments" -> request.experiments.map(_.value),
-         "clickCount" -> clickCount,
-         "rekeepCount" -> rekeepCount,
-         "rekeepTotalCount" -> rekeepTotalCount
-       )
+      toJson(user.info).as[JsObject] ++
+      Json.obj(
+        "notAuthed" -> user.notAuthed,
+        "experiments" -> request.experiments.map(_.value),
+        "clickCount" -> clickCount,
+        "rekeepCount" -> rekeepCount,
+        "rekeepTotalCount" -> rekeepTotalCount
+      )
     )
   }
 
@@ -99,25 +108,15 @@ class MobileUserController @Inject() (
       BadRequest(Json.obj("error" -> "bad_new_password"))
     } else {
       userCommander.doChangePassword(request.userId, oldPassword, newPassword) match {
-        case Failure(e)  => Forbidden(Json.obj("code" -> e.getMessage))
+        case Failure(e) => Forbidden(Json.obj("code" -> e.getMessage))
         case Success(_) => Ok(Json.obj("code" -> "password_changed"))
       }
     }
   }
 
   // legacy
-  def queryAll(search: Option[String], network: Option[String], limit: Int, pictureUrl:Boolean = false) = JsonAction.authenticatedAsync { request =>
+  def queryAll(search: Option[String], network: Option[String], limit: Int, pictureUrl: Boolean = false) = JsonAction.authenticatedAsync { request =>
     typeaheadCommander.queryAll(request.userId, search, network, limit, pictureUrl) map { r =>
-      Ok(Json.toJson(r))
-    }
-  }
-
-  def querySocial(search: Option[String], network: Option[String], limit: Int, pictureUrl:Boolean = false) = JsonAction.authenticated { request =>
-    Ok(Json.toJson(typeaheadCommander.querySocialInviteStatus(request.userId, search, network, limit, pictureUrl)))
-  }
-
-  def queryContacts(search: Option[String], limit: Int, pictureUrl:Boolean = false) = JsonAction.authenticatedAsync { request =>
-    typeaheadCommander.queryContactsInviteStatus(request.userId, search, limit) map { r =>
       Ok(Json.toJson(r))
     }
   }
@@ -136,7 +135,7 @@ class MobileUserController @Inject() (
     }
   }
 
-  def ignoreFriendRequest(externalId:ExternalId[User]) = JsonAction.authenticated { request =>
+  def ignoreFriendRequest(externalId: ExternalId[User]) = JsonAction.authenticated { request =>
     val (success, code) = userCommander.ignoreFriendRequest(request.userId, externalId)
     val res = Json.obj("code" -> code)
     if (success) Ok(res) else NotFound(res)
@@ -150,6 +149,21 @@ class MobileUserController @Inject() (
   def outgoingFriendRequests = JsonAction.authenticated { request =>
     val users = userCommander.outgoingFriendRequests(request.userId)
     Ok(Json.toJson(users))
+  }
+
+  def postDelightedAnswer = JsonAction.authenticatedParseJsonAsync { request =>
+    implicit val source = DelightedAnswerSources.fromUserAgent(request.userAgentOpt)
+    Json.fromJson[BasicDelightedAnswer](request.body) map { answer =>
+      userCommander.postDelightedAnswer(request.userId, answer) map { success =>
+        if (success) Ok else BadRequest
+      }
+    } getOrElse Future.successful(BadRequest)
+  }
+
+  def cancelDelightedSurvey = JsonAction.authenticatedAsync { implicit request =>
+    userCommander.cancelDelightedSurvey(request.userId) map { success =>
+      if (success) Ok else BadRequest
+    }
   }
 
   def disconnect(networkString: String) = JsonAction.authenticated(parser = parse.anyContent) { implicit request =>
@@ -187,6 +201,12 @@ class MobileUserController @Inject() (
     }
   }
 
-}
+  private val MobilePrefNames = Set("show_delighted_question")
 
+  def getPrefs() = JsonAction.authenticatedAsync { request =>
+    // Make sure the user's last active date has been updated before returning the result
+    userCommander.setLastUserActive(request.userId)
+    userCommander.getPrefs(MobilePrefNames, request.userId) map (Ok(_))
+  }
+}
 

@@ -11,7 +11,7 @@ import java.net.URLDecoder
 
 import org.joda.time.DateTime
 
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.eliza.model._
 import com.keepit.social.NonUserKinds
 import com.keepit.model._
@@ -31,9 +31,11 @@ import com.keepit.common.akka.SafeFuture
 import play.api.libs.json.JsString
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.logging.Logging
-import com.keepit.eliza.util.{MessageFormatter, TextSegment}
+import com.keepit.eliza.util.{ MessageFormatter, TextSegment }
 import com.keepit.common.strings.AbbreviateString
 import com.keepit.common.domain.DomainToNameMapper
+import com.keepit.scraper.ScraperServiceClient
+import com.keepit.commanders.TimeToReadCommander
 
 class ElizaEmailCommander @Inject() (
     shoebox: ShoeboxServiceClient,
@@ -43,9 +45,8 @@ class ElizaEmailCommander @Inject() (
     messageFetchingCommander: MessageFetchingCommander,
     messageRepo: MessageRepo,
     threadRepo: MessageThreadRepo,
-    wordCountCommander: WordCountCommander,
-    clock: Clock
-  ) extends Logging {
+    scraper: ScraperServiceClient,
+    clock: Clock) extends Logging {
 
   case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
 
@@ -86,10 +87,12 @@ class ElizaEmailCommander @Inject() (
     muteUrl: Option[String] = None,
     readTimeMinutes: Option[Int] = None): ThreadEmailInfo = {
 
-    val (nuts, starterUserId) = db.readOnly { implicit session => (
-      nonUserThreadRepo.getByMessageThreadId(thread.id.get),
-      userThreadRepo.getThreadStarter(thread.id.get)
-    )}
+    val (nuts, starterUserId) = db.readOnlyMaster { implicit session =>
+      (
+        nonUserThreadRepo.getByMessageThreadId(thread.id.get),
+        userThreadRepo.getThreadStarter(thread.id.get)
+      )
+    }
 
     val starterUser = allUsers(starterUserId)
     val participants = allUsers.values.map { _.fullName } ++ nuts.map { _.participant.fullName }
@@ -120,12 +123,12 @@ class ElizaEmailCommander @Inject() (
     toTime: Option[DateTime]): Seq[ExtendedThreadItem] = {
     val messages = messageFetchingCommander.getThreadMessages(thread)
 
-    val relevantMessages = messages.filter{ m =>
-      (fromTime.map{ dt => m.createdAt.isAfter(dt.minusMillis(100)) } getOrElse(true)) &&
-      (toTime.map{ dt => m.createdAt.isBefore(dt.plusMillis(100)) } getOrElse(true))
+    val relevantMessages = messages.filter { m =>
+      (fromTime.map { dt => m.createdAt.isAfter(dt.minusMillis(100)) } getOrElse (true)) &&
+        (toTime.map { dt => m.createdAt.isBefore(dt.plusMillis(100)) } getOrElse (true))
     }
 
-    relevantMessages.filterNot(_.from.isSystem).map{ message =>
+    relevantMessages.filterNot(_.from.isSystem).map { message =>
       val messageSegments = MessageFormatter.parseMessageSegments(message.messageText)
       message.from match {
         case MessageSender.User(id) => ExtendedThreadItem(allUsers(id).shortName, allUsers(id).fullName, Some(allUserImageUrls(id)), messageSegments)
@@ -142,7 +145,7 @@ class ElizaEmailCommander @Inject() (
       nUrlId <- thread.uriId
       url <- thread.url
     } yield {
-      wordCountCommander.getReadTimeMinutes(nUrlId, url)
+      scraper.getURIWordCount(nUrlId, Some(url)) map { cnt => TimeToReadCommander.wordCountToReadTimeMinutes(cnt) }
     }) getOrElse Future.successful(None)
   }
 
@@ -189,7 +192,7 @@ class ElizaEmailCommander @Inject() (
 
   def notifyEmailUsers(thread: MessageThread): Unit = if (thread.participants.exists(_.allNonUsers.nonEmpty)) {
     getThreadEmailData(thread) map { threadEmailData =>
-      val nuts = db.readOnly { implicit session =>
+      val nuts = db.readOnlyMaster { implicit session =>
         nonUserThreadRepo.getByMessageThreadId(thread.id.get)
       }
 
@@ -205,12 +208,12 @@ class ElizaEmailCommander @Inject() (
 
   def notifyAddedEmailUsers(thread: MessageThread, addedNonUsers: Seq[NonUserParticipant]): Unit = if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
     getThreadEmailData(thread) map { threadEmailData =>
-      val nuts = db.readOnly { implicit session => //redundant right now but I assume we will want to let everyone in the thread know that someone was added?
+      val nuts = db.readOnlyMaster { implicit session => //redundant right now but I assume we will want to let everyone in the thread know that someone was added?
         nonUserThreadRepo.getByMessageThreadId(thread.id.get).map { nut =>
           nut.participant.identifier -> nut
         }.toMap
       }
-      addedNonUsers.map{ nup =>
+      addedNonUsers.map { nup =>
         require(nup.kind == NonUserKinds.email)
         val nut = nuts(nup.identifier)
         if (!nut.muted) {
@@ -254,7 +257,7 @@ class ElizaEmailCommander @Inject() (
 
     protoEmailFut.flatMap { protoEmail =>
       val magicAddress = SystemEmailAddress.discussion(nonUserThread.accessToken.token)
-      val email = ElectronicMail (
+      val email = ElectronicMail(
         from = magicAddress,
         fromName = Some(protoEmail.starterName + " (via Kifi)"),
         to = Seq[EmailAddress](EmailAddress(nonUserThread.participant.identifier)),
@@ -271,14 +274,14 @@ class ElizaEmailCommander @Inject() (
   }
 
   def getEmailPreview(msgExtId: ExternalId[Message]): Future[Html] = {
-    val (msg, thread) = db.readOnly{ implicit session =>
+    val (msg, thread) = db.readOnlyReplica { implicit session =>
       val msg = messageRepo.get(msgExtId)
       val thread = threadRepo.get(msg.thread)
       (msg, thread)
     }
     val protoEmailFuture = getThreadEmailData(thread) map { assembleEmail(_, None, None, None, None, None) }
     if (msg.auxData.isDefined) {
-      if (msg.auxData.get.value(0)==JsString("start_with_emails")) {
+      if (msg.auxData.get.value(0) == JsString("start_with_emails")) {
         protoEmailFuture.map(_.initialHtml)
       } else {
         protoEmailFuture.map(_.addedHtml)
@@ -286,7 +289,6 @@ class ElizaEmailCommander @Inject() (
     } else {
       protoEmailFuture.map(_.digestHtml)
     }
-
 
   }
 }

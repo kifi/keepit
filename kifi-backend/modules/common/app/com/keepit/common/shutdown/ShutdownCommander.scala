@@ -1,6 +1,6 @@
 package com.keepit.common.shutdown
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 
 @Singleton
 class ShutdownCommander @Inject() () {

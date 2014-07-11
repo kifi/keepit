@@ -1,8 +1,8 @@
 package com.keepit.controllers.ext
 
-import com.keepit.classify.{Domain, DomainRepo, DomainStates}
+import com.keepit.classify.{ Domain, DomainRepo, DomainStates }
 import com.keepit.commanders.UserCommander
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URI
 import com.keepit.model._

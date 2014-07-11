@@ -1,7 +1,7 @@
 package com.keepit.eliza
 
 import com.keepit.eliza.mail.MailDiscussionServerSettings
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 
 case class TestElizaExternalEmailModule() extends ElizaExternalEmailModule {
 

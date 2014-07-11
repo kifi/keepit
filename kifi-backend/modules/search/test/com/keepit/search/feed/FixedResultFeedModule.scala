@@ -12,14 +12,13 @@ import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
 import com.keepit.search.sharding.Shard
 
-
-case class FixedResultFeedModule() extends ScalaModule{
-  override def configure(){
+case class FixedResultFeedModule() extends ScalaModule {
+  override def configure() {
     bind[FeedCommander].to[FixedResultFeedCommander].in[AppScoped]
   }
 }
 
-class FixedResultFeedCommander extends FeedCommander{
+class FixedResultFeedCommander extends FeedCommander {
   private val t0 = new DateTime(2014, 1, 30, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
   private val t1 = new DateTime(2014, 1, 30, 22, 11, 0, 0, DEFAULT_DATE_TIME_ZONE)
   private val basicUsers = Seq(

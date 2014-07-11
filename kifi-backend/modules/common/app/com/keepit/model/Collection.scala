@@ -13,21 +13,20 @@ import com.keepit.common.strings._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.serializer.BinaryFormat
-import java.io.{ByteArrayInputStream, DataInputStream, DataOutputStream, ByteArrayOutputStream}
+import java.io.{ ByteArrayInputStream, DataInputStream, DataOutputStream, ByteArrayOutputStream }
 import scala.collection.mutable.ListBuffer
 import scala.Some
 
 case class Collection(
-  id: Option[Id[Collection]] = None,
-  externalId: ExternalId[Collection] = ExternalId(),
-  userId: Id[User],
-  name: String,
-  state: State[Collection] = CollectionStates.ACTIVE,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  lastKeptTo: Option[DateTime] = None,
-  seq: SequenceNumber[Collection] = SequenceNumber.ZERO
-  ) extends ModelWithExternalId[Collection] with ModelWithState[Collection] with ModelWithSeqNumber[Collection]{
+    id: Option[Id[Collection]] = None,
+    externalId: ExternalId[Collection] = ExternalId(),
+    userId: Id[User],
+    name: String,
+    state: State[Collection] = CollectionStates.ACTIVE,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    lastKeptTo: Option[DateTime] = None,
+    seq: SequenceNumber[Collection] = SequenceNumber.ZERO) extends ModelWithExternalId[Collection] with ModelWithState[Collection] with ModelWithSeqNumber[Collection] {
   def withLastKeptTo(now: DateTime) = this.copy(lastKeptTo = Some(now))
   def withId(id: Id[Collection]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -111,7 +110,7 @@ case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {
 }
 
 class UserCollectionsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-    extends JsonCacheImpl[UserCollectionsKey, Seq[Collection]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends JsonCacheImpl[UserCollectionsKey, Seq[Collection]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class UserCollectionSummariesKey(userId: Id[User]) extends Key[Seq[CollectionSummary]] {
   override val version = 2
@@ -120,7 +119,7 @@ case class UserCollectionSummariesKey(userId: Id[User]) extends Key[Seq[Collecti
 }
 
 class UserCollectionSummariesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-    extends BinaryCacheImpl[UserCollectionSummariesKey, Seq[CollectionSummary]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends BinaryCacheImpl[UserCollectionSummariesKey, Seq[CollectionSummary]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 object CollectionStates extends States[Collection]
 

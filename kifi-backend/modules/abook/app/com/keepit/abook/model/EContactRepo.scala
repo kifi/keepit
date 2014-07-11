@@ -1,0 +1,133 @@
+package com.keepit.abook.model
+
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
+import com.keepit.common.performance._
+import com.keepit.common.time._
+import com.keepit.model._
+import scala.slick.jdbc.{ StaticQuery => Q }
+import scala.slick.util.CloseableIterator
+
+@ImplementedBy(classOf[EContactRepoImpl])
+trait EContactRepo extends Repo[EContact] {
+  def bulkGetByIds(ids: Seq[Id[EContact]])(implicit session: RSession): Map[Id[EContact], EContact]
+  def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Seq[EContact]
+  def getByUserId(userId: Id[User])(implicit session: RSession): Seq[EContact]
+  def getEContactCount(userId: Id[User])(implicit session: RSession): Int
+  def insertAll(contacts: Seq[EContact])(implicit session: RWSession): Int
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Boolean
+  def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
+  def getByAbookIdAndEmailId(abookId: Id[ABookInfo], emailId: Id[EmailAccount])(implicit session: RSession): Option[EContact]
+  def getByAbookId(abookId: Id[ABookInfo])(implicit session: RSession): Seq[EContact]
+}
+
+@Singleton
+class EContactRepoImpl @Inject() (
+    val db: DataBaseComponent,
+    val clock: Clock,
+    econtactCache: EContactCache,
+    override protected val changeListener: Option[RepoModification.Listener[EContact]]) extends DbRepo[EContact] with EContactRepo with Logging {
+
+  import DBSession._
+  import db.Driver.simple._
+
+  type RepoImpl = EContactTable
+  class EContactTable(tag: Tag) extends RepoTable[EContact](db, tag, "econtact") {
+    def userId = column[Id[User]]("user_id", O.NotNull)
+    def abookId = column[Id[ABookInfo]]("abook_id", O.Nullable)
+    def emailAccountId = column[Id[EmailAccount]]("email_account_id", O.Nullable)
+    def email = column[EmailAddress]("email", O.NotNull)
+    def contactUserId = column[Id[User]]("contact_user_id", O.Nullable)
+    def name = column[String]("name", O.Nullable)
+    def firstName = column[String]("first_name", O.Nullable)
+    def lastName = column[String]("last_name", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, userId, abookId.?, emailAccountId.?, email, contactUserId.?, name.?, firstName.?, lastName.?, state) <> ((EContact.apply _).tupled, EContact.unapply _)
+  }
+
+  def table(tag: Tag) = new EContactTable(tag)
+
+  override def deleteCache(e: EContact)(implicit session: RSession): Unit = {
+    e.id map { id =>
+      econtactCache.remove(EContactKey(id))
+    }
+  }
+
+  override def invalidateCache(e: EContact)(implicit session: RSession): Unit = { // eager
+    econtactCache.set(EContactKey(e.id.get), e)
+    log.info(s"[invalidateCache] processed $e") // todo(ray): typeahead invalidation (rare; upper layer)
+  }
+
+  private def getByIdsIter(ids: Traversable[Id[EContact]])(implicit session: RSession): CloseableIterator[EContact] = {
+    (for (f <- rows if f.id.inSet(ids)) yield f).iterator
+  }
+
+  def bulkGetByIds(ids: Seq[Id[EContact]])(implicit session: RSession): Map[Id[EContact], EContact] = {
+    if (ids.isEmpty) Map.empty[Id[EContact], EContact]
+    else {
+      val valueMap = econtactCache.bulkGetOrElse(ids.map(EContactKey(_)).toSet) { keys =>
+        val missing = keys.map(_.id)
+        val contacts = getByIdsIter(missing)
+        val res = contacts.collect {
+          case (c) if c.state == EContactStates.ACTIVE =>
+            (EContactKey(c.id.get) -> c)
+        }.toMap
+        log.info(s"[bulkGetByIds(${ids.length};${ids.take(20).mkString(",")})] MISS: ids:(len=${ids.size})${ids.mkString(",")} res=${res.values.toSeq.take(20)}")
+        res
+      }
+      val res = valueMap.map { case (k, v) => (k.id -> v) }
+      log.info(s"[bulkGetByIds(${ids.length};${ids.take(20).mkString(",")}): ALL: res(sz=${res.size})${res.values.toSeq.take(20)}")
+      res
+    }
+  }
+
+  def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Seq[EContact] = {
+    (for (f <- rows if f.userId === userId && f.email === email && f.state === EContactStates.ACTIVE) yield f).list
+  }
+
+  def getByUserIdIter(userId: Id[User], maxRows: Int)(implicit session: RSession): CloseableIterator[EContact] = {
+    val limit = math.min(MySQL.MAX_ROW_LIMIT, maxRows)
+    (for (f <- rows if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).iteratorTo(limit)
+  }
+
+  def getByUserId(userId: Id[User])(implicit session: RSession): Seq[EContact] = {
+    (for (f <- rows if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).list
+  }
+
+  def getEContactCount(userId: Id[User])(implicit session: RSession): Int = {
+    Q.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first
+  }
+
+  def getByAbookIdAndEmailId(abookId: Id[ABookInfo], emailId: Id[EmailAccount])(implicit session: RSession): Option[EContact] = {
+    (for (row <- rows if row.abookId === abookId && row.emailAccountId === emailId) yield row).firstOption
+  }
+
+  def getByAbookId(abookId: Id[ABookInfo])(implicit session: RSession): Seq[EContact] = {
+    (for (row <- rows if row.abookId === abookId) yield row).list
+  }
+
+  def insertAll(contacts: Seq[EContact])(implicit session: RWSession): Int = timing(s"econtactRepo.insertAll #contacts=${contacts.length}") {
+    rows.insertAll(contacts: _*).get
+  }
+
+  def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int = {
+    val updated = (for { row <- rows if row.email === email && row.contactUserId =!= verifiedOwner.orNull } yield row.contactUserId.?).update(verifiedOwner)
+    if (updated > 0) {
+      val updatedContacts = for { row <- rows if row.email === email } yield row
+      updatedContacts.foreach(invalidateCache)
+    }
+    updated
+  }
+
+  def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Boolean = {
+    val updated = (for { row <- rows if row.userId === userId && row.email === email } yield row.state).update(EContactStates.HIDDEN)
+    if (updated > 0) {
+      val updatedContacts = for { row <- rows if row.userId === userId && row.email === email } yield row
+      updatedContacts.foreach(invalidateCache)
+    }
+    updated > 0
+  }
+}

@@ -1,14 +1,14 @@
 package com.keepit.graph.manager
 
-import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
+import com.keepit.common.plugin.{ SchedulingProperties, SchedulerPlugin }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
+import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.google.inject.{Singleton, Inject}
-import scala.util.{Failure, Success}
+import com.google.inject.{ Singleton, Inject }
+import scala.util.{ Failure, Success }
 
 sealed trait GraphManagerActorMessage
 object GraphManagerActorMessage {
@@ -19,10 +19,9 @@ object GraphManagerActorMessage {
 }
 
 class GraphManagerActor @Inject() (
-  graph: GraphManager,
-  graphUpdateFetcher: GraphUpdateFetcher,
-  airbrake: AirbrakeNotifier
-) extends FortyTwoActor(airbrake) with Logging {
+    graph: GraphManager,
+    graphUpdateFetcher: GraphUpdateFetcher,
+    airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
   import GraphManagerActorMessage._
 
   private var updating = Set[GraphUpdateKind[_ <: GraphUpdate]]()
@@ -62,13 +61,11 @@ class GraphManagerActor @Inject() (
 
 @Singleton
 class GraphManagerPlugin @Inject() (
-  actor: ActorInstance[GraphManagerActor],
-  val scheduling: SchedulingProperties
-) extends SchedulerPlugin {
+    actor: ActorInstance[GraphManagerActor],
+    val scheduling: SchedulingProperties) extends SchedulerPlugin {
   import GraphManagerActorMessage._
 
   override def onStart() {
-    log.info(s"starting $this")
     scheduleTaskOnAllMachines(actor.system, 2 minutes, 1 minutes, actor.ref, UpdateGraph(Map(), 100))
     scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackupGraph)
   }

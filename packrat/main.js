@@ -16,7 +16,7 @@ var tabsByUrl = {}; // normUrl => [tab]
 var tabsByLocator = {}; // locator => [tab]
 var tabsTagging = []; // [tab]
 var threadReadAt = {}; // threadID => time string (only if read recently in this browser)
-var deepLinkTimers = {}; // tabId => timeout identifier
+var timeouts = {}; // tabId => timeout identifier
 
 // ===== Cached data from server
 
@@ -31,6 +31,7 @@ var ruleSet = {rules: {}};
 var urlPatterns;
 var tags;
 var tagsById;
+var guidePages;
 
 function clearDataCache() {
   log('[clearDataCache]');
@@ -38,10 +39,10 @@ function clearDataCache() {
   tabsByLocator = {};
   tabsTagging = [];
   threadReadAt = {};
-  for (var tabId in deepLinkTimers) {
-    api.timers.clearTimeout(deepLinkTimers[tabId]);
+  for (var tabId in timeouts) {
+    api.timers.clearTimeout(timeouts[tabId]);
+    delete timeouts[tabId];
   }
-  deepLinkTimers = {};
 
   pageData = {};
   threadLists = {};
@@ -54,6 +55,7 @@ function clearDataCache() {
   urlPatterns = null;
   tags = null;
   tagsById = null;
+  guidePages = null;
 }
 
 // ===== Error reporting
@@ -98,8 +100,25 @@ function clearDataCache() {
 
 var ThreadList = ThreadList || require('./threadlist').ThreadList;
 
-function PageData() {
+function PageData(o) {
+  this.update(o);
 }
+PageData.prototype = {
+  update: function (o) {
+    this.kept = o.kept;
+    this.keepId = o.keepId;
+    this.tags = o.tags || [];
+    this.position = o.position;
+    this.neverOnSite = o.neverOnSite;
+    this.sensitive = o.sensitive;
+    this.shown = o.shown;
+    this.keepers = o.keepers || [];
+    this.keeps = o.keeps || 0;
+  },
+  otherKeeps: function () {
+    return this.keeps - this.keepers.length - (this.kept === 'public');
+  }
+};
 
 function indexOfTag(tags, tagId) {
   for (var i = 0, len = tags.length; i < len; i++) {
@@ -200,15 +219,18 @@ var mixpanel = {
   sendBatch: function () {
     if (this.batch.length > 0) {
       var json = JSON.stringify(this.batch);
-      var dataString = "data=" + api.util.btoa(unescape(encodeURIComponent(json)));
+      var dataString = 'data=' + api.util.btoa(unescape(encodeURIComponent(json)));
       api.postRawAsForm("https://api.mixpanel.com/track/", dataString);
       this.batch.length = 0;
     }
   },
   augmentAndBatch: function (data) {
-    data.properties.token = 'cff752ff16ee39eda30ae01bb6fa3bd6';
+    var exp = experiments || [];
+    data.properties.token = api.isPackaged() && !api.mode.isDev() ? 'cff752ff16ee39eda30ae01bb6fa3bd6' : 'abb7e1226370392c849ec16fadff2584';
     data.properties.distinct_id = me.id;
     data.properties.source = 'extension';
+    data.properties.experiments = exp;
+    data.properties.userStatus = ~exp.indexOf('fake') ? 'fake' : ~exp.indexOf('admin') ? 'admin' : 'standard';
     data.properties.browser = api.browser.name;
     data.properties.browserDetails = api.browser.userAgent;
     this.batch.push(data);
@@ -221,7 +243,7 @@ var mixpanel = {
       if (!this.sendTimer) {
         this.sendTimer = api.timers.setInterval(this.sendBatch.bind(this), 60000);
       }
-      log("#aaa", "[mixpanel.track] %s %o", eventName, properties);
+      log('#aaa', '[mixpanel.track] %s %o', eventName, properties);
       properties.time = Date.now();
       var data = {
         'event': eventName,
@@ -243,21 +265,13 @@ var mixpanel = {
   }
 };
 
-function logEvent(eventFamily, eventName, metaData, prevEvents) {
-  if (eventFamily !== 'slider') {
-    log("#800", "[logEvent] invalid event family:", eventFamily);
-    return;
-  }
+function logEvent(eventFamily, eventName, metaData) {
   var ev = {
-    installId: stored('installation_id'), // ExternalId[KifiInstallation]
-    eventFamily: eventFamily, // Category (see eventFamilies)
-    eventName: eventName}; // Any key for this event
-  if (metaData) {
-    ev.metaData = metaData; // Any js object that you would like to attach to this event. i.e., number of total results shown, which result was clicked, etc.
-  }
-  if (prevEvents && prevEvents.length) {
-    ev.prevEvents = prevEvents; // a list of previous ExternalId[Event]s that are associated with this action. The frontend determines what is associated with what.
-  }
+    installId: stored('installation_id'),
+    eventFamily: eventFamily,
+    eventName: eventName,
+    metaData: metaData
+  };
   log("#aaa", "[logEvent] %s %o", ev.eventName, ev);
   if (socket) {
     socket.send(["log_event", ev]);
@@ -547,6 +561,7 @@ function onAddTagResponse(nUri, result) {
         api.tabs.emit(tab, 'tagged', {tagged: true});
       });
     }
+    updateKifiAppTabs('update_tags');
   }
 }
 
@@ -561,6 +576,7 @@ function onRemoveTagResponse(nUri, tagId, result) {
         api.tabs.emit(tab, 'tagged', {tagged: d.tags.length > 0});
       });
     }
+    updateKifiAppTabs('update_tags');
   }
 }
 
@@ -575,6 +591,7 @@ function onClearTagsResponse(nUri, result) {
         api.tabs.emit(tab, 'tagged', {tagged: false});
       });
     }
+    updateKifiAppTabs('update_tags');
   }
 }
 
@@ -613,11 +630,12 @@ var SUPPORT = {id: 'aa345838-70fe-45f2-914c-f27c865bdb91', firstName: 'Tamila, K
 
 api.port.on({
   deauthenticate: deauthenticate,
+  prime_search: primeSearch,
   get_keeps: searchOnServer,
   get_keepers: function(_, respond, tab) {
     log('[get_keepers]', tab.id);
-    var d = pageData[tab.nUri] || {};
-    respond({kept: d.kept, keepers: d.keepers || [], otherKeeps: d.otherKeeps || 0});
+    var d = pageData[tab.nUri];
+    respond(d ? {kept: d.kept, keepers: d.keepers, otherKeeps: d.otherKeeps()} : {keepers: []});
   },
   keep: function(data, _, tab) {
     log('[keep]', data);
@@ -633,13 +651,14 @@ api.port.on({
         og: data.og,
         isPrivate: data.how === 'private'
       }, function done(keep) {
-        log('[unkeep:done]', keep);
+        log('[keep:done]', keep);
         delete d.state;
         d.kept = data.how;
         d.keepId = keep.id;
         forEachTabAt(tab.url, tab.nUri, keep.url, function (tab) {
           setIcon(tab, data.how);
         });
+        updateKifiAppTabs('update_keeps');
       }, function fail() {
         log('[keep:fail]', data.url);
         delete d.state;
@@ -650,7 +669,6 @@ api.port.on({
       forEachTabAt(tab.url, tab.nUri, function (tab) {
         api.tabs.emit(tab, 'kept', {kept: data.how});
       });
-      updateKifiAppTabs();
     }
   },
   unkeep: function(_, __, tab) {
@@ -667,6 +685,7 @@ api.port.on({
         forEachTabAt(tab.url, tab.nUri, function (tab) {
           setIcon(tab, false);
         });
+        updateKifiAppTabs('update_keeps');
       }, function fail() {
         log('[unkeep:fail]', d.keepId);
         delete d.state;
@@ -689,8 +708,9 @@ api.port.on({
   set_title: function(data, respond) {
     ajax('POST', '/bookmarks/update', data, respond.bind(null, true), respond.bind(null, false));
   },
-  keeper_shown: function(_, __, tab) {
-    (pageData[tab.nUri] || {}).shown = true;  // server already notified via event log
+  keeper_shown: function(data, _, tab) {
+    (pageData[tab.nUri] || {}).shown = true;
+    logEvent('slider', 'sliderShown', data);
   },
   suppress_on_site: function(data, _, tab) {
     ajax("POST", "/users/slider/suppress", {url: tab.url, suppress: data});
@@ -769,9 +789,6 @@ api.port.on({
     ajax('POST', '/ext/pref/showSearchIntro?show=' + show);
     if (prefs) prefs.showSearchIntro = show;
   },
-  log_event: function(data) {
-    logEvent.apply(null, data);
-  },
   log_search_event: function(data) {
     ajax('search', 'POST', '/search/events/' + data[0], data[1]);
   },
@@ -791,20 +808,20 @@ api.port.on({
       canvas.width = bounds.width;
       canvas.height = bounds.height;
       var ctx = canvas.getContext('2d');
-      // ctx.fillStyle = 'rgb(200,0,0)';
-      // ctx.fillRect(0, 0, winWidth, winHeight);
       for (var i = 0; i < data.rects.length; i++) {
         var rect = data.rects[i];
-        ctx.drawImage(
-          drawableEl,
-          rect.left * hScale,
-          rect.top * vScale,
-          rect.width * hScale,
-          rect.height * vScale,
-          rect.left - bounds.left,
-          rect.top - bounds.top,
-          rect.width,
-          rect.height);
+        if (rect.width > 0 && rect.height > 0) {
+          ctx.drawImage(
+            drawableEl,
+            rect.left * hScale,
+            rect.top * vScale,
+            rect.width * hScale,
+            rect.height * vScale,
+            rect.left - bounds.left,
+            rect.top - bounds.top,
+            rect.width,
+            rect.height);
+        }
       }
       respond(canvas.toDataURL('image/png'));
     });
@@ -829,6 +846,7 @@ api.port.on({
     discardDraft([tab.nUri, tab.url]);
     data.extVersion = api.version;
     data.source = api.browser.name;
+    data.eip = eip;
     ajax('eliza', 'POST', '/eliza/messages', data, function(o) {
       log('[send_message] resp:', o);
       // thread (notification) JSON comes via socket
@@ -842,6 +860,7 @@ api.port.on({
     discardDraft([threadId]);
     data.extVersion = api.version;
     data.source = api.browser.name;
+    data.eip = eip;
     ajax('eliza', 'POST', '/eliza/messages/' + threadId, data, logAndRespond, logErrorAndRespond);
     function logAndRespond(o) {
       log('[send_reply] resp:', o);
@@ -1131,7 +1150,7 @@ api.port.on({
       awaitDeepLink(link, tab.id);
     } else {
       var tabs = tabsByUrl[link.nUri];
-      if ((tab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri))) {  // pageâ€™s normalized URI may have changed
+      if ((tab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri))) {  // page's normalized URI may have changed
         awaitDeepLink(link, tab.id);
         api.tabs.select(tab.id);
       } else {
@@ -1155,6 +1174,46 @@ api.port.on({
   },
   await_deep_link: function(link, _, tab) {
     awaitDeepLink(link, tab.id);
+    if (guidePages && /^#guide\/\d\/\d/.test(link.locator)) {
+      var step = +link.locator.substr(7, 1);
+      switch (step) {
+        case 1:
+          pageData[link.url] = new PageData({shown: true});
+          tabsByUrl[link.url] = tabsByUrl[link.url] || [];
+          break;
+        case 2:
+          var page = guidePages[+link.locator.substr(9, 1)];
+          var tagId = link.locator.substr(11);
+          var query = page.query.replace(/\+/g, ' ');
+          var entry = searchPrefetchCache[query] = {
+            response: pimpSearchResponse({
+              uuid: '00000000-0000-0000-0000-000000000000',
+              query: query,
+              hits: [{
+                bookmark: {
+                  title: page.title,
+                  url: page.url,
+                  tags: tagId ? [tagId] : [],
+                  matches: page.matches
+                },
+                users: [],
+                count: 1,
+                score: 0,
+                isMyBookmark: true,
+                isPrivate: false
+              }],
+              myTotal: 1,
+              friendsTotal: 0,
+              othersTotal: 816,
+              mayHaveMore: false,
+              show: true,
+              context: 'guide'
+            })
+          };
+          entry.expireTimeout = api.timers.setTimeout(cullPrefetchedResults.bind(null, query, entry), 10000);
+          break;
+      }
+    }
   },
   get_tags: function(_, respond, tab) {
     var d = pageData[tab.nUri],
@@ -1205,7 +1264,12 @@ api.port.on({
     socket.send(['unmute_thread', threadId]);
     setMuted(threadId, false);
   },
-  get_bookmark_count_if_should_import: function(_, respond) {
+  count_bookmarks: function(_, respond) {
+    api.bookmarks.getAll(function (bms) {
+      respond(bms.length);
+    });
+  },
+  get_bookmark_count_if_should_import: function(_, respond) {  // TODO: remove (obsolete)
     if (stored('prompt_to_import_bookmarks')) {
       api.bookmarks.getAll(function (bms) {
         respond(bms.length);
@@ -1226,6 +1290,32 @@ api.port.on({
   toggle_mode: function () {
     if (!api.isPackaged()) {
       api.mode.toggle();
+    }
+  },
+  start_guide: function (pages, _, tab) {
+    guidePages = pages;
+    api.tabs.emit(tab, 'guide', {step: 0, pages: guidePages, x: !experiments || experiments.indexOf('guide_forced') < 0});
+    unsilence(false);
+  },
+  track_guide: function (stepParts) {
+    mixpanel.track('user_viewed_pane', {type: 'guide' + stepParts.join('')});
+  },
+  track_guide_choice: function (pageIdx) {
+    mixpanel.track('user_clicked_pane', {type: 'guide01', action: 'chooseExamplePage', subaction: guidePages[pageIdx].track});
+  },
+  resume_guide: function (step, _, tab) {
+    if (guidePages) {
+      api.tabs.emit(tab, 'guide', {
+        step: step,
+        pages: guidePages,
+        page: 0 // TODO: guess based on tab.url
+      });
+    }
+  },
+  end_guide: function (stepParts) {
+    mixpanel.track('user_clicked_pane', {type: 'guide' + stepParts.join(''), action: 'closeGuide'});
+    if (api.isPackaged()) {
+      guidePages = null;
     }
   }
 });
@@ -1506,20 +1596,29 @@ function sendPageThreadCount(tab, tl, load) {
 function awaitDeepLink(link, tabId, retrySec) {
   var loc = link.locator;
   if (loc) {
-    api.timers.clearTimeout(deepLinkTimers[tabId]);
-    delete deepLinkTimers[tabId];
+    api.timers.clearTimeout(timeouts[tabId]);
+    delete timeouts[tabId];
     var tab = api.tabs.get(tabId);
     if (tab && (link.url || link.nUri).match(domainRe)[1] == (tab.nUri || tab.url).match(domainRe)[1]) {
       log('[awaitDeepLink]', tabId, link);
-      api.tabs.emit(tab, 'open_to', {
-        trigger: 'deepLink',
-        locator: loc.replace(/#.*/, ''),
-        compose: loc.indexOf('#compose') >= 0,
-        redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
-      }, {queue: 1});
+      if (loc.lastIndexOf('#guide/', 0) === 0) {
+        api.tabs.emit(tab, 'guide', {
+          step: +loc.substr(7, 1),
+          pages: guidePages,
+          page: +loc.substr(9, 1),
+          x: !experiments || experiments.indexOf('guide_forced') < 0
+        }, {queue: 1});
+      } else {
+        api.tabs.emit(tab, 'open_to', {
+          trigger: 'deepLink',
+          locator: loc.replace(/#.*/, ''),
+          compose: loc.indexOf('#compose') >= 0,
+          redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
+        }, {queue: 1});
+      }
     } else if ((retrySec = retrySec || .5) < 5) {
       log('[awaitDeepLink]', tabId, 'retrying in', retrySec, 'sec');
-      deepLinkTimers[tabId] = api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
+      timeouts[tabId] = api.timers.setTimeout(awaitDeepLink.bind(null, link, tabId, retrySec + .5), retrySec * 1000);
     }
     if (loc.lastIndexOf('/messages/', 0) === 0) {
       var threadId = loc.substr(10);
@@ -1532,13 +1631,12 @@ function awaitDeepLink(link, tabId, retrySec) {
   }
 }
 
-var kifiSiteRe = /^https?:\/\/(?:www\.)?kifi\.com/;
-function updateKifiAppTabs() {
+function updateKifiAppTabs(message) {
   var prefix = webBaseUri();
   for (var url in tabsByUrl) {
-    if (url.lastIndexOf(prefix, 0) === 0 || kifiSiteRe.test(url)) {
+    if (url.lastIndexOf(prefix, 0) === 0) {
       tabsByUrl[url].forEach(function (tab) {
-        api.tabs.emit(tab, 'update_keeps');
+        api.tabs.emit(tab, message);
       });
     }
   }
@@ -1643,24 +1741,28 @@ function searchOnServer(request, respond) {
 
   ajax('search', 'GET', '/search', params, function (resp) {
     log('[searchOnServer] response:', resp);
-    resp.filter = request.filter;
-    resp.me = me;
-    resp.prefs = prefs || {maxResults: 1};
-    resp.origin = webBaseUri();
-    resp.experiments = experiments;
-    resp.admBaseUri = admBaseUri();
-    resp.myTotal = resp.myTotal || 0;
-    resp.friendsTotal = resp.friendsTotal || 0;
-    resp.hits.forEach(processSearchHit);
-    if (resp.hits.length < params.maxHits && (params.context || params.f)) {
-      resp.mayHaveMore = false;
-    }
-    respond(resp);
+    respond(pimpSearchResponse(resp, request.filter, resp.hits.length < params.maxHits && (params.context || params.f)));
   });
   return true;
 }
 
-function processSearchHit(hit) {
+function pimpSearchResponse(o, filter, noMore) {
+  o.filter = filter;
+  o.me = me;
+  o.prefs = prefs || {maxResults: 1};
+  o.origin = webBaseUri();
+  o.experiments = experiments;
+  o.admBaseUri = admBaseUri();
+  o.myTotal = o.myTotal || 0;
+  o.friendsTotal = o.friendsTotal || 0;
+  o.hits.forEach(pimpSearchHit);
+  if (noMore) {
+    o.mayHaveMore = false;
+  }
+  return o;
+}
+
+function pimpSearchHit(hit) {
   var tagIds = hit.bookmark && hit.bookmark.tags;
   if (tagIds && tagIds.length && tagsById) {
     var tags = hit.tags = [];
@@ -1784,21 +1886,15 @@ function gotPageDetailsFor(url, tab, resp) {
   log('[gotPageDetailsFor]', tab.id, tabIsOld ? 'OLD' : '', url, resp);
 
   var nUri = resp.normalized;
-  var d = pageData[nUri] || new PageData;
-
-  d.kept = resp.kept;
-  d.keepId = resp.keepId;
-  d.tags = resp.tags || [];
-  d.position = resp.position;
-  d.neverOnSite = resp.neverOnSite;
-  d.sensitive = resp.sensitive;
-  d.shown = resp.shown;
-  d.keepers = resp.keepers || [];
-  d.keeps = resp.keeps || 0;
-  d.otherKeeps = d.keeps - d.keepers.length - (d.kept === 'public');
+  var d = pageData[nUri];
+  if (d) {
+    d.update(resp);
+  }
 
   if (!tabIsOld) {
-    pageData[nUri] = d;
+    if (!d) {
+      pageData[nUri] = d = new PageData(resp);
+    }
     stashTabByNormUri(tab, nUri);
     kififyWithPageData(tab, d);
   }
@@ -1992,11 +2088,12 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   }
 });
 
-api.on.beforeSearch.add(throttle(function (whence) {
+api.on.beforeSearch.add(throttle(primeSearch, 50000));
+function primeSearch(whence) {
   if (me && enabled('search')) {
     ajax('search', 'GET', '/search/warmUp', {w: whence});
   }
-}, 50000));
+}
 
 var searchPrefetchCache = {};  // for searching before the results page is ready
 api.on.search.add(function prefetchResults(query, whence) {
@@ -2419,11 +2516,15 @@ api.timers.setTimeout(api.errors.wrap(function() {
 api.errors.wrap(authenticate.bind(null, function() {
   if (api.loadReason === 'install') {
     log('[main] fresh install');
-    var tab = api.tabs.anyAt(webBaseUri() + '/install');
+    var baseUri = webBaseUri();
+    var tab = api.tabs.anyAt(baseUri + '/install') || api.tabs.anyAt(baseUri + '/');
+    var await = awaitDeepLink.bind(null, {locator: '#guide/0', url: baseUri});
     if (tab) {
-      api.tabs.navigate(tab.id, webBaseUri() + '/');
+      api.tabs.select(tab.id);
+      api.tabs.navigate(tab.id, baseUri);
+      timeouts[tab.id] = api.timers.setTimeout(await.bind(null, tab.id), 900); // be sure we're off previous page
     } else {
-      api.tabs.open(webBaseUri() + '/');
+      api.tabs.open(baseUri, await);
     }
   }
 }, 3000))();

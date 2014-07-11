@@ -1,6 +1,6 @@
 package com.keepit.common.analytics
 
-import net.codingwell.scalaguice.{ScalaMultibinder, ScalaModule}
+import net.codingwell.scalaguice.{ ScalaMultibinder, ScalaModule }
 
 trait AnalyticsModule extends ScalaModule
 

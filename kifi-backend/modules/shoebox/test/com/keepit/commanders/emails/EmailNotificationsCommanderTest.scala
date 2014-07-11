@@ -27,9 +27,9 @@ class EmailNotificationsCommanderTest extends Specification with ShoeboxTestInje
           val link = DeepLink(initiatorUserId = william.id, recipientUserId = george.id,
             uriId = None, deepLocator = DeepLocator("/foo/bar"))
           (deepLinkRepo.save(link),
-          william,
-          userRepo.save(User(firstName = "Abraham", lastName = "Lincoln")),
-          george)
+            william,
+            userRepo.save(User(firstName = "Abraham", lastName = "Lincoln")),
+            george)
         }
 
         val commander = inject[EmailNotificationsCommander]

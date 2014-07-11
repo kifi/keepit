@@ -1,27 +1,26 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.google.inject.{ Inject, ImplementedBy, Singleton }
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 
 @ImplementedBy(classOf[FailedContentCheckRepoImpl])
-trait FailedContentCheckRepo extends Repo[FailedContentCheck]{
+trait FailedContentCheckRepo extends Repo[FailedContentCheck] {
   def getByUrls(url1: String, url2: String)(implicit session: RSession): Option[FailedContentCheck]
   def createOrIncrease(url1: String, url2: String)(implicit session: RWSession): Unit
   def contains(url1: String, url2: String)(implicit session: RSession): Boolean
 }
 
 @Singleton
-class FailedContentCheckRepoImpl @Inject()(
-  val db: DataBaseComponent,
-  val clock: Clock
-) extends DbRepo[FailedContentCheck] with FailedContentCheckRepo{
-    import db.Driver.simple._
+class FailedContentCheckRepoImpl @Inject() (
+    val db: DataBaseComponent,
+    val clock: Clock) extends DbRepo[FailedContentCheck] with FailedContentCheckRepo {
+  import db.Driver.simple._
 
   type RepoImpl = FailedContentCheckTable
-  case class FailedContentCheckTable(tag: Tag) extends RepoTable[FailedContentCheck](db, tag, "failed_content_check"){
+  case class FailedContentCheckTable(tag: Tag) extends RepoTable[FailedContentCheck](db, tag, "failed_content_check") {
     def url1Hash = column[UrlHash]("url1_hash", O.NotNull)
     def url2Hash = column[UrlHash]("url2_hash", O.NotNull)
     def url1 = column[String]("url1", O.NotNull)
@@ -41,7 +40,7 @@ class FailedContentCheckRepoImpl @Inject()(
   def getByUrls(url1: String, url2: String)(implicit session: RSession): Option[FailedContentCheck] = {
     val (sorted1, sorted2) = sortUrls(url1, url2)
     val (hash1, hash2) = (NormalizedURI.hashUrl(sorted1), NormalizedURI.hashUrl(sorted2))
-    (for( r <- rows if (r.url1Hash === hash1 && r.url2Hash === hash2)) yield r).firstOption
+    (for (r <- rows if (r.url1Hash === hash1 && r.url2Hash === hash2)) yield r).firstOption
   }
 
   def createOrIncrease(url1: String, url2: String)(implicit session: RWSession): Unit = {
@@ -50,7 +49,7 @@ class FailedContentCheckRepoImpl @Inject()(
       case None => {
         val (sorted1, sorted2) = sortUrls(url1, url2)
         val (hash1, hash2) = (NormalizedURI.hashUrl(sorted1), NormalizedURI.hashUrl(sorted2))
-        save( FailedContentCheck(url1Hash = hash1, url2Hash = hash2, url1 = sorted1, url2 = sorted2, counts = 1, lastContentCheck = currentDateTime) )
+        save(FailedContentCheck(url1Hash = hash1, url2Hash = hash2, url1 = sorted1, url2 = sorted2, counts = 1, lastContentCheck = currentDateTime))
       }
     }
   }

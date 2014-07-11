@@ -1,6 +1,7 @@
 package com.keepit.common.net
 
 import com.google.inject.Provider
+import play.api.Play
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -13,11 +14,11 @@ import play.mvc._
 import com.keepit.common._
 import com.keepit.common.strings._
 import com.keepit.common.zookeeper.ServiceInstance
-import com.keepit.common.logging.{Logging, AccessLogTimer, AccessLog}
+import com.keepit.common.logging.{ Logging, AccessLogTimer, AccessLog }
 import com.keepit.common.logging.Access._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError, StackTrace}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError, StackTrace }
 import com.keepit.common.concurrent.ExecutionContext.immediate
-import com.keepit.common.controller.{MidFlightRequests, CommonHeaders}
+import com.keepit.common.controller.{ MidFlightRequests, CommonHeaders }
 import com.keepit.common.zookeeper.ServiceDiscovery
 import scala.xml._
 import play.mvc.Http.Status
@@ -26,21 +27,20 @@ import java.util.Random
 import com.keepit.common.util.TrackingId
 
 case class NonOKResponseException(url: HttpUri, response: ClientResponse, requestBody: Option[Any] = None)
-    extends Exception(s"[${url.service}] ERR on ${url.summary} stat:${response.status} - ${response.body.toString.abbreviate(100).replaceAll("\n"  ," ")}]"){
+    extends Exception(s"[${url.service}] ERR on ${url.summary} stat:${response.status} - ${response.body.toString.abbreviate(100).replaceAll("\n", " ")}]") {
   override def toString(): String = getMessage
 }
 
-
 case class ServiceUnavailableException(serviceUri: ServiceUri, response: ClientResponse, duration: Int)
-  extends Exception(s"[${serviceUri.service}] ServiceUnavailable Http Status on ${serviceUri.summary}] total-time:${duration}ms is more then 20sec?"){
+    extends Exception(s"[${serviceUri.service}] ServiceUnavailable Http Status on ${serviceUri.summary}] total-time:${duration}ms is more then 20sec?") {
   override def toString(): String = getMessage
 }
 
 case class LongWaitException(request: Request, response: ClientResponse, initTime: Int, waitTime: Int, duration: Int, remoteTime: Int, midFlightRequestCount: Int, listOfMidFlightRequests: String, remoteMidFlightRequestCount: Option[Int])
     extends Exception(
       s"[${request.httpUri.service}] Long Wait on ${request.httpUri.summary} " +
-      s"tracking-id:${request.trackingId} parse-time:${response.parsingTime.getOrElse("NA")} total-time:${duration}ms init-time:${initTime}ms remote-time:${remoteTime}ms " +
-      s"wait-time:${waitTime}ms data-size:${response.bytes.length} status:${response.res.status} remoteMidFlight[$remoteMidFlightRequestCount] localMidFlight[$midFlightRequestCount]:$listOfMidFlightRequests"){
+        s"tracking-id:${request.trackingId} parse-time:${response.parsingTime.getOrElse("NA")} total-time:${duration}ms init-time:${initTime}ms remote-time:${remoteTime}ms " +
+        s"wait-time:${waitTime}ms data-size:${response.bytes.length} status:${response.res.status} remoteMidFlight[$remoteMidFlightRequestCount] localMidFlight[$midFlightRequestCount]:$listOfMidFlightRequests") {
   override def toString(): String = getMessage
 }
 
@@ -73,9 +73,10 @@ trait HttpClient {
   val defaultFailureHandler: FailureHandler
 
   val ignoreFailure: FailureHandler = {
-    s: Request => {
-      case ex: Throwable =>
-    }
+    s: Request =>
+      {
+        case ex: Throwable =>
+      }
   }
 
   def get(url: HttpUri, onFailure: => FailureHandler = defaultFailureHandler): ClientResponse
@@ -201,7 +202,7 @@ case class HttpClientImpl(
         }
       } else {
         Some(new NonOKResponseException(request.httpUri, clientResponse, requestBody))
-      } map {exception =>
+      } map { exception =>
         if (silentFail) log.error(s"fail on $request => $clientResponse", exception)
         else throw exception
       }
@@ -213,13 +214,13 @@ case class HttpClientImpl(
     copy(callTimeouts = this.callTimeouts.overrideWith(callTimeouts))
   }
 
-  private def report(request: Request, getResponse: Request=>Future[Response], onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = {
+  private def report(request: Request, getResponse: Request => Future[Response], onFailure: => FailureHandler = defaultFailureHandler): Future[ClientResponse] = {
     getResponse(request).map(r => res(request, r))(immediate) tap { f =>
       f.onFailure(onFailure(request) orElse defaultFailureHandler(request))
       f.onSuccess {
         case response: ClientResponse => logSuccess(request, response)
         case unknown => airbrake.get.notify(s"Unknown object in http client onSuccess: $unknown on $request")
-      } (immediate)
+      }(immediate)
     }
   }
 
@@ -229,20 +230,20 @@ case class HttpClientImpl(
     val remoteMidFlightRequestCount: Option[Int] = res.res.header(CommonHeaders.MidFlightRequestCount).map(_.toInt)
     val remoteInstance = request.httpUri.serviceInstanceOpt
     val e = accessLog.add(request.timer.done(
-        remoteTime = remoteTime,
-        parsingTime = res.parsingTime.map(_.toInt),
-        remoteUp = remoteUp.toString,
-        result = "success",
-        query = request.queryString,
-        remoteServiceType = remoteInstance.map(_.remoteService.serviceType.shortName).getOrElse(null),
-        remoteServiceId = remoteInstance.map(_.id.id.toString).getOrElse(null),
-        url = request.url,
-        trackingId = request.trackingId,
-        statusCode = res.res.status,
-        dataSize = res.bytes.length))
+      remoteTime = remoteTime,
+      parsingTime = res.parsingTime.map(_.toInt),
+      remoteUp = remoteUp.toString,
+      result = "success",
+      query = request.queryString,
+      remoteServiceType = remoteInstance.map(_.remoteService.serviceType.shortName).getOrElse(null),
+      remoteServiceId = remoteInstance.map(_.id.id.toString).getOrElse(null),
+      url = request.url,
+      trackingId = request.trackingId,
+      statusCode = res.res.status,
+      dataSize = res.bytes.length))
 
     e.waitTime map { waitTime =>
-      if (waitTime > callTimeouts.maxWaitTime.get) {
+      if (waitTime > callTimeouts.maxWaitTime.get && Play.maybeApplication.map(_.mode) == Some(play.api.Mode.Prod)) {
         val initTime = request.initTime.toInt
         val exception = request.tracer.withCause(LongWaitException(request, res, initTime, waitTime - initTime, e.duration, remoteTime, midFlightRequests.count, midFlightRequests.topRequests, remoteMidFlightRequestCount))
         airbrake.get.notify(
@@ -257,7 +258,7 @@ case class HttpClientImpl(
   }
 
   private def remoteServiceString(request: Request) =
-    s"${request.httpUri.serviceInstanceOpt.map{i => i.remoteService.serviceType.shortName + i.id}.getOrElse("NA")}"
+    s"${request.httpUri.serviceInstanceOpt.map { i => i.remoteService.serviceType.shortName + i.id }.getOrElse("NA")}"
 }
 
 //This request class is not reusable for more then one call
@@ -267,11 +268,11 @@ class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(Str
   val instance = serviceDiscovery.thisInstance
   private val headersWithTracking =
     (CommonHeaders.TrackingId, trackingId) ::
-    (CommonHeaders.LocalServiceType, instance.map(_.remoteService.serviceType.shortName).getOrElse("NotAnnounced")) ::
-    (CommonHeaders.LocalServiceId, instance.map(_.id.id.toString).getOrElse("NotAnnounced")) ::
-    headers
+      (CommonHeaders.LocalServiceType, instance.map(_.remoteService.serviceType.shortName).getOrElse("NotAnnounced")) ::
+      (CommonHeaders.LocalServiceId, instance.map(_.id.id.toString).getOrElse("NotAnnounced")) ::
+      headers
   private val wsRequest = req.withHeaders(headersWithTracking: _*)
-  lazy val queryString = (wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&").trim match {
+  lazy val queryString = (wsRequest.queryString map { case (k, v) => s"$k=$v" } mkString "&").trim match {
     case "" => null
     case str => str
   }
@@ -288,11 +289,11 @@ class Request(val req: WSRequestHolder, val httpUri: HttpUri, headers: List[(Str
     initTime = timer.laps
   }
 
-  def get() =               try { startTimer(); wsRequest.get()      } finally { timeInitiation(); tracer = new StackTrace() }
-  def put(body: JsValue) =  try { startTimer(); wsRequest.put(body)  } finally { timeInitiation(); tracer = new StackTrace() }
-  def post(body: String) =  try { startTimer(); wsRequest.post(body) } finally { timeInitiation(); tracer = new StackTrace() }
+  def get() = try { startTimer(); wsRequest.get() } finally { timeInitiation(); tracer = new StackTrace() }
+  def put(body: JsValue) = try { startTimer(); wsRequest.put(body) } finally { timeInitiation(); tracer = new StackTrace() }
+  def post(body: String) = try { startTimer(); wsRequest.post(body) } finally { timeInitiation(); tracer = new StackTrace() }
   def post(body: JsValue) = try { startTimer(); wsRequest.post(body) } finally { timeInitiation(); tracer = new StackTrace() }
   def post(body: NodeSeq) = try { startTimer(); wsRequest.post(body) } finally { timeInitiation(); tracer = new StackTrace() }
-  def delete() =            try { startTimer(); wsRequest.delete()   } finally { timeInitiation(); tracer = new StackTrace() }
+  def delete() = try { startTimer(); wsRequest.delete() } finally { timeInitiation(); tracer = new StackTrace() }
 }
 

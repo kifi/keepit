@@ -5,7 +5,6 @@
 // @require scripts/lib/jquery.js
 // @require scripts/lib/jquery-ui-position.min.js
 // @require scripts/lib/jquery-hoverfu.js
-// @require scripts/lib/mustache.js
 // @require scripts/lib/underscore.js
 // @require scripts/render.js
 // @require scripts/html/keeper/keeper.js
@@ -52,7 +51,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
   document.addEventListener('click', onClick, true);
   function onClick(e) {
-    if ($slider && $slider.data('stickiness') < 2 && !$(e.target).is('.kifi-root,.kifi-root *') && e.isTrusted !== false) {
+    if ($slider && (e.closeKeeper || $slider.data('stickiness') < 2 && !$(e.target).is('.kifi-root,.kifi-root *')) && e.isTrusted !== false) {
       hideSlider('clickout');
     }
   }
@@ -297,8 +296,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     $slider.prependTo(tile);
     $(tile).on('mousedown click keydown keypress keyup', stopPropagation);
 
-    api.port.emit('log_event', ['slider', 'sliderShown', withUrls({trigger: trigger, onPageMs: String(lastCreatedAt - tile.dataset.t0)})]);
-    api.port.emit('keeper_shown');
+    api.port.emit('keeper_shown', withUrls({trigger: trigger, onPageMs: String(lastCreatedAt - tile.dataset.t0)}));
   }
 
   function growSlider(fromClass, toClass) {
@@ -333,7 +331,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
         $slider.remove(), $slider = null;
       }
-      if (justKept) {
+      if (justKept && !window.guide) {
         api.port.emit('prefs', function (prefs) {
           if (prefs.showExtMsgIntro) {
             setTimeout(api.require.bind(api, 'scripts/external_messaging_intro.js', api.noop), 1000);

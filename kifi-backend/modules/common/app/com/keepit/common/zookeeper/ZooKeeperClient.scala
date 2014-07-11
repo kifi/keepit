@@ -1,12 +1,13 @@
 package com.keepit.common.zookeeper
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.logging.Logging
+import play.api.libs.json.{ JsString, JsValue, Json }
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import org.apache.zookeeper.{CreateMode, KeeperException, Watcher, WatchedEvent, ZooKeeper}
-import org.apache.zookeeper.data.{ACL, Stat, Id}
+import org.apache.zookeeper.{ CreateMode, KeeperException, Watcher, WatchedEvent, ZooKeeper }
+import org.apache.zookeeper.data.{ ACL, Stat, Id }
 import org.apache.zookeeper.ZooDefs.Ids
 import org.apache.zookeeper.Watcher.Event.EventType
 import org.apache.zookeeper.Watcher.Event.KeeperState
@@ -14,12 +15,14 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.util.concurrent.atomic.AtomicReference
+import com.keepit.common.strings.fromByteArray
 
+case class ZooKeeperSubtree(path: String, data: Option[JsValue], children: Seq[ZooKeeperSubtree])
 
 object Node {
   def apply(path: String): Node = {
     if (!path.trim.startsWith("/")) throw new Exception(s"not an absolute path: $path")
-    val components = (path split "/").filter{ _.trim.length > 0 }
+    val components = (path split "/").filter { _.trim.length > 0 }
     if (components.length == 0) throw new Exception(s"no node name found")
     new Node(components.mkString("/", "/", ""), components(components.length - 1))
   }
@@ -29,7 +32,7 @@ object Node {
     new Node(parent.path + "/" + name, name)
   }
 
-  private def isSimpleName(name: String): Boolean =  {
+  private def isSimpleName(name: String): Boolean = {
     name.indexOf('/') < 0
   }
 }
@@ -56,9 +59,9 @@ class Node(val path: String, val name: String) {
   def ancestors(): Seq[Node] = {
     parent match {
       case Some(parentNode) =>
-        val components = (parentNode.path split "/").filter{ _.trim.length > 0 }
-        (1 to components.length).map{ i =>
-          new Node(components.slice(0, i).mkString("/", "/", "") , components(i - 1))
+        val components = (parentNode.path split "/").filter { _.trim.length > 0 }
+        (1 to components.length).map { i =>
+          new Node(components.slice(0, i).mkString("/", "/", ""), components(i - 1))
         }
       case None => Seq()
     }
@@ -74,10 +77,10 @@ trait ZooKeeperClient {
 trait ZooKeeperSession {
   def getState(): ZooKeeper.States
 
-  def watchNode[T](node: Node, onDataChanged : Option[T] => Unit)(implicit deserializer: Array[Byte] => T): Unit
+  def watchNode[T](node: Node, onDataChanged: Option[T] => Unit)(implicit deserializer: Array[Byte] => T): Unit
 
-  def watchChildren(node: Node, updateChildren : Seq[Node] => Unit): Unit
-  def watchChildrenWithData[T](node: Node, updateChildren : Seq[(Node, T)] => Unit)(implicit deserializer: Array[Byte] => T): Unit
+  def watchChildren(node: Node, updateChildren: Seq[Node] => Unit): Unit
+  def watchChildrenWithData[T](node: Node, updateChildren: Seq[(Node, T)] => Unit)(implicit deserializer: Array[Byte] => T): Unit
 
   def create(node: Node): Node
   def createChild(parent: Node, childName: String, createMode: CreateMode = CreateMode.PERSISTENT): Node
@@ -92,6 +95,8 @@ trait ZooKeeperSession {
 
   def delete(node: Node): Unit
   def deleteRecursive(node: Node): Unit
+
+  def getSubtree(path: String): ZooKeeperSubtree
 }
 
 /**
@@ -99,10 +104,10 @@ trait ZooKeeperSession {
  * It was abandoned by twitter in favor of https://github.com/twitter/util/tree/master/util-zk
  */
 class ZooKeeperClientImpl(val servers: String, val sessionTimeout: Int,
-                      watcher: Option[ZooKeeperClient => Unit]) extends ZooKeeperClient with Logging {
+    watcher: Option[ZooKeeperClient => Unit]) extends ZooKeeperClient with Logging {
 
-  private[this] val zkSession : AtomicReference[ZooKeeperSessionImpl] = new AtomicReference(null)
-  private[this] val onConnectedHandlers = new ArrayBuffer[ZooKeeperSession=>Unit]
+  private[this] val zkSession: AtomicReference[ZooKeeperSessionImpl] = new AtomicReference(null)
+  private[this] val onConnectedHandlers = new ArrayBuffer[ZooKeeperSession => Unit]
 
   private def connect(): Future[ZooKeeperSessionImpl] = {
     val promise = Promise[Unit]
@@ -110,19 +115,19 @@ class ZooKeeperClientImpl(val servers: String, val sessionTimeout: Int,
     log.info(s"Attempting to connect to zookeeper servers $servers")
     val zk = new ZooKeeperSessionImpl(this, promise)
 
-    promise.future.map{ _ =>
-      onConnectedHandlers.synchronized{ onConnectedHandlers.foreach(handler => zk.execOnConnectHandler(handler)) }
+    promise.future.map { _ =>
+      onConnectedHandlers.synchronized { onConnectedHandlers.foreach(handler => zk.execOnConnectHandler(handler)) }
       zk
     }
   }
 
-  def onConnected(handler: ZooKeeperSession=>Unit): Unit = onConnectedHandlers.synchronized {
+  def onConnected(handler: ZooKeeperSession => Unit): Unit = onConnectedHandlers.synchronized {
     onConnectedHandlers += handler
     val zk = zkSession.get
     zk.execOnConnectHandler(handler) // if already connected, this executes the handler immediately
   }
 
-  def refreshSession(): Unit = future{
+  def refreshSession(): Unit = future {
     val old = zkSession.getAndSet(Await.result(connect(), Duration.Inf))
     if (old != null) try { old.close() } catch { case _: Throwable => } // make sure the old session is closed
   }
@@ -134,7 +139,7 @@ class ZooKeeperClientImpl(val servers: String, val sessionTimeout: Int,
         try {
           watcher.map(fn => fn(this))
         } catch {
-          case e:Exception =>
+          case e: Exception =>
             log.error("Exception during zookeeper connection established callback", e)
         }
       }
@@ -157,7 +162,7 @@ class ZooKeeperClientImpl(val servers: String, val sessionTimeout: Int,
 class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]) extends ZooKeeperSession with Logging {
 
   class SessionWatcher extends Watcher {
-    def process(event : WatchedEvent) {
+    def process(event: WatchedEvent) {
       zkClient.processSessionEvent(event) // let zkClient handle the session expiration
       event.getState match {
         case KeeperState.SyncConnected => {
@@ -180,7 +185,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
 
   // watch management
   sealed trait RegisteredWatch
-  case class RegisteredNodeWatch[T](node: Node, onDataChanged : Option[T] => Unit, deserializer: Array[Byte] => T) extends RegisteredWatch
+  case class RegisteredNodeWatch[T](node: Node, onDataChanged: Option[T] => Unit, deserializer: Array[Byte] => T) extends RegisteredWatch
   case class RegisteredChildWatch(node: Node, updateChildren: Seq[Node] => Unit) extends RegisteredWatch
   case class RegisteredChildWatchWithData[T](node: Node, updateChildren: Seq[(Node, T)] => Unit, deserializer: Array[Byte] => T, watchedChildren: mutable.HashMap[Node, T]) extends RegisteredWatch
   private[this] val watchList = new ArrayBuffer[RegisteredWatch]
@@ -202,7 +207,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
     // register watches again
     log.info("recovering watches")
     watchList.synchronized {
-      watchList.foreach{ registeredWatch =>
+      watchList.foreach { registeredWatch =>
         registeredWatch match {
           case RegisteredNodeWatch(node, onDataChanged, deserializer) =>
             watchNodeInternal(node, onDataChanged, deserializer)
@@ -222,19 +227,19 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
           case e: Throwable => log.error("Exception during execution of an onConnected handler", e)
         }
       } else {
-        pendingHandlerList.synchronized{ pendingHandlerList += handler }
+        pendingHandlerList.synchronized { pendingHandlerList += handler }
       }
     }
   }
 
   def getChildren(node: Node): Seq[Node] = {
     val childNames = zk.getChildren(node, false)
-    childNames.map{ Node(node, _) }
+    childNames.map { Node(node, _) }
   }
 
   private def getChildren(node: Node, watcher: Watcher): Seq[Node] = {
     val childNames = zk.getChildren(node, watcher)
-    childNames.map{ Node(node, _) }
+    childNames.map { Node(node, _) }
   }
 
   def close(): Unit = zk.close()
@@ -299,19 +304,19 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
    * new data value as a byte array. If the node is deleted, onDataChanged will be called with
    * None and will track the node's re-creation with an existence watch.
    */
-  def watchNode[T](node: Node, onDataChanged : Option[T] => Unit)(implicit deserializer: Array[Byte] => T): Unit = {
+  def watchNode[T](node: Node, onDataChanged: Option[T] => Unit)(implicit deserializer: Array[Byte] => T): Unit = {
     registerWatch(RegisteredNodeWatch(node, onDataChanged, deserializer))
     watchNodeInternal(node, onDataChanged, deserializer)
   }
 
-  private def watchNodeInternal[T](node: Node, onDataChanged : Option[T] => Unit, deserializer: Array[Byte] => T): Unit = {
+  private def watchNodeInternal[T](node: Node, onDataChanged: Option[T] => Unit, deserializer: Array[Byte] => T): Unit = {
     log.info(s"watching node $node")
 
     def updateData {
       try {
         onDataChanged(Some(zk.getData(node, new NodeWatcher, null)).map(deserializer))
       } catch {
-        case e:KeeperException => {
+        case e: KeeperException => {
           log.warn(s"Failed to read node ${node.path}", e)
           deletedData
         }
@@ -331,7 +336,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
     }
 
     class NodeWatcher extends Watcher {
-      def process(event : WatchedEvent) {
+      def process(event: WatchedEvent) {
         event.getType match {
           case EventType.NodeDataChanged | EventType.NodeCreated => updateData
           case EventType.NodeDeleted => deletedData
@@ -386,7 +391,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
     }
 
     //check immediately
-    val children = try{
+    val children = try {
       getChildren(node, new ParentWatcher())
     } catch {
       case e: KeeperException.NoNodeException =>
@@ -406,7 +411,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
     log.info(s"watching children of $node with data")
 
     class ChildWatcher(child: Node) extends Watcher {
-      def process(event: WatchedEvent) : Unit = watchedChildren.synchronized {
+      def process(event: WatchedEvent): Unit = watchedChildren.synchronized {
         watchedChildren -= child
         event.getType match {
           case EventType.NodeDataChanged | EventType.NodeCreated =>
@@ -447,8 +452,8 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
       }
     }
 
-    def doWatchChildren(children: Seq[Node]) : Unit = watchedChildren.synchronized {
-      children.filterNot(watchedChildren.contains _).foreach{ child =>
+    def doWatchChildren(children: Seq[Node]): Unit = watchedChildren.synchronized {
+      children.filterNot(watchedChildren.contains _).foreach { child =>
         try {
           watchedChildren += (child -> deserializer(zk.getData(child.path, new ChildWatcher(child), null)))
         } catch {
@@ -463,7 +468,7 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
     }
 
     //check immediately
-    val children = try{
+    val children = try {
       getChildren(node, new ParentWatcher())
     } catch {
       case e: KeeperException.NoNodeException =>
@@ -471,5 +476,17 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
         if (zk.exists(node, new ParentWatcher()) == null) List() else getChildren(node, new ParentWatcher())
     }
     doWatchChildren(children)
+  }
+
+  def getSubtree(path: String): ZooKeeperSubtree = {
+    val data = getData[String](Node(path)).map { s =>
+      try {
+        Json.parse(s)
+      } catch {
+        case e: Exception => JsString(s)
+      }
+    }
+
+    ZooKeeperSubtree(path, data, getChildren(Node(path)).map(node => getSubtree(node.path)))
   }
 }

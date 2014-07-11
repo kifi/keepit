@@ -1,4 +1,4 @@
-// @match /^https?:\/\/(dev\.ezkeep\.com:9\d{3}|(?:www|preview)\.kifi\.com)\/.*$/
+// @match /^https?:\/\/(dev\.ezkeep\.com:\d{4}|www\.kifi\.com)\/.*$/
 // @require scripts/api.js
 // @asap
 
@@ -10,11 +10,10 @@
 
   api.port.on({
     update_keeps: function () {
-      if (document.documentElement.hasAttribute('ng-app')) {
-        window.postMessage('update_keeps', origin);
-      } else {
-        location.href = location.href;  // TODO: remove when old site dies
-      }
+      window.postMessage('update_keeps', origin);
+    },
+    update_tags: function () {
+      window.postMessage('update_tags', origin);
     }
   });
 
@@ -25,8 +24,12 @@
 
   function onMessage(event) {
     if (event.origin === origin) {
-      log('[onMessage]', event.data);
-      switch (event.data) {
+      var data = event.data;
+      log('[onMessage]', data);
+      switch (data && data.type || data) {
+      case 'start_guide':
+        api.port.emit('start_guide', data.pages);
+        break;
       case 'get_bookmark_count_if_should_import':
         api.port.emit('get_bookmark_count_if_should_import', function (count) {
           event.source.postMessage({bookmarkCount: count}, event.origin);

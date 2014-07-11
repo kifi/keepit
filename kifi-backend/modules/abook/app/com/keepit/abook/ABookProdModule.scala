@@ -1,6 +1,6 @@
 package com.keepit.abook
 
-import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, ABookCacheModule}
+import com.keepit.common.cache.{ EhCacheCacheModule, MemcachedCacheModule, ABookCacheModule }
 import com.keepit.inject.CommonProdModule
 import com.keepit.common.store.ABookProdStoreModule
 import com.keepit.common.zookeeper.ProdDiscoveryModule

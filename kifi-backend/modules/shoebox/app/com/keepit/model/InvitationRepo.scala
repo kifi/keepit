@@ -1,47 +1,45 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
 
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.{Id, State}
+import com.keepit.common.db.{ Id, State }
 import com.keepit.common.time.Clock
 
 import org.joda.time.DateTime
 
 import scala.collection.mutable
-import scala.slick.jdbc.{StaticQuery => Q}
+import scala.slick.jdbc.{ StaticQuery => Q }
 import scala.slick.util.CloseableIterator
 import com.keepit.common.mail.EmailAddress
 
 @ImplementedBy(classOf[InvitationRepoImpl])
 trait InvitationRepo extends Repo[Invitation] with RepoWithDelete[Invitation] with ExternalIdColumnFunction[Invitation] with SeqNumberFunction[Invitation] {
   def getAdminAccepted()(implicit session: RSession): Seq[Invitation]
-  def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)
-                     (implicit session: RSession): Seq[(Option[Invitation], SocialUserInfo)]
+  def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)(implicit session: RSession): Seq[(Option[Invitation], SocialUserInfo)]
   def getByUser(urlId: Id[User])(implicit session: RSession): Seq[Invitation]
   def countByUser(urlId: Id[User])(implicit session: RSession): Int
   def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Seq[Invitation]
   def getByRecipientEmailAddress(emailAddress: EmailAddress)(implicit session: RSession): Seq[Invitation]
-  def getBySenderIdAndRecipientEContactId(senderId:Id[User], econtactId: Id[EContact])(implicit session: RSession):Option[Invitation]
-  def getBySenderIdAndRecipientSocialUserId(senderId:Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession):Option[Invitation]
-  def getBySenderIdAndRecipientEmailAddress(senderId:Id[User], emailAddress: EmailAddress)(implicit session: RSession): Option[Invitation]
+  def getBySenderIdAndRecipientSocialUserId(senderId: Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Option[Invitation]
+  def getBySenderIdAndRecipientEmailAddress(senderId: Id[User], emailAddress: EmailAddress)(implicit session: RSession): Option[Invitation]
   def getLastInvitedAtBySenderIdAndRecipientSocialUserIds(senderId: Id[User], socialUserInfoIds: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], DateTime]
   def getLastInvitedAtBySenderIdAndRecipientEmailAddresses(senderId: Id[User], emailAddresses: Seq[EmailAddress])(implicit session: RSession): Map[EmailAddress, DateTime]
-  def getBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation]
-  def getBySenderIdIter(senderId:Id[User], max:Int)(implicit session: RSession):CloseableIterator[Invitation]
-  def getSocialInvitesBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation]
-  def getEmailInvitesBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation]
+  def getBySenderId(senderId: Id[User])(implicit session: RSession): Seq[Invitation]
+  def getBySenderIdIter(senderId: Id[User], max: Int)(implicit session: RSession): CloseableIterator[Invitation]
+  def getSocialInvitesBySenderId(senderId: Id[User])(implicit session: RSession): Seq[Invitation]
+  def getEmailInvitesBySenderId(senderId: Id[User])(implicit session: RSession): Seq[Invitation]
 }
 
 @Singleton
 class InvitationRepoImpl @Inject() (
-   val db: DataBaseComponent,
-   val userRepo: UserRepoImpl,
-   val socialUserInfoRepo: SocialUserInfoRepoImpl,
-   val clock: Clock,
-   override protected val changeListener: Option[RepoModification.Listener[Invitation]])
-  extends DbRepo[Invitation] with DbRepoWithDelete[Invitation] with InvitationRepo with ExternalIdColumnDbFunction[Invitation] with SeqNumberDbFunction[Invitation] {
+  val db: DataBaseComponent,
+  val userRepo: UserRepoImpl,
+  val socialUserInfoRepo: SocialUserInfoRepoImpl,
+  val clock: Clock,
+  override protected val changeListener: Option[RepoModification.Listener[Invitation]])
+    extends DbRepo[Invitation] with DbRepoWithDelete[Invitation] with InvitationRepo with ExternalIdColumnDbFunction[Invitation] with SeqNumberDbFunction[Invitation] {
 
   import DBSession._
   import db.Driver.simple._
@@ -50,11 +48,10 @@ class InvitationRepoImpl @Inject() (
   case class InvitationTable(tag: Tag) extends RepoTable[Invitation](db, tag, "invitation") with ExternalIdColumn[Invitation] with SeqNumberColumn[Invitation] {
     def senderUserId = column[Id[User]]("sender_user_id", O.Nullable)
     def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.Nullable)
-    def recipientEContactId  = column[Id[EContact]]("recipient_econtact_id", O.Nullable)
-    def recipientEmailAddress  = column[EmailAddress]("recipient_email_address", O.Nullable)
+    def recipientEmailAddress = column[EmailAddress]("recipient_email_address", O.Nullable)
     def lastSentAt = column[DateTime]("last_sent_at", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, lastSentAt.?, externalId, senderUserId.?, recipientSocialUserId.?, recipientEContactId.?, recipientEmailAddress.?, state, seq) <> ((Invitation.apply _).tupled, Invitation.unapply _)
+    def * = (id.?, createdAt, updatedAt, lastSentAt.?, externalId, senderUserId.?, recipientSocialUserId.?, recipientEmailAddress.?, state, seq) <> ((Invitation.apply _).tupled, Invitation.unapply _)
   }
 
   def table(tag: Tag) = new InvitationTable(tag)
@@ -73,8 +70,7 @@ class InvitationRepoImpl @Inject() (
   override def invalidateCache(model: Invitation)(implicit session: RSession): Unit = {}
 
   // TODO: add support for econtactId
-  def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)
-                     (implicit session: RSession): Seq[(Option[Invitation], SocialUserInfo)] = {
+  def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)(implicit session: RSession): Seq[(Option[Invitation], SocialUserInfo)] = {
     val showPending = !showState.exists(_ != InvitationStates.ACCEPTED)
     val query =
       s"""
@@ -108,30 +104,26 @@ class InvitationRepoImpl @Inject() (
     (for (i <- rows if i.state === InvitationStates.ADMIN_ACCEPTED) yield i).list
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Invitation] =
-    (for(b <- rows if b.senderUserId === userId && b.state =!= InvitationStates.INACTIVE) yield b).list
+    (for (b <- rows if b.senderUserId === userId && b.state =!= InvitationStates.INACTIVE) yield b).list
 
   def countByUser(userId: Id[User])(implicit session: RSession): Int = {
     Q.queryNA[Int](s"select count(*) from invitation where sender_user_id=$userId and state != '${InvitationStates.INACTIVE.value}'").first
   }
 
   def getByRecipientSocialUserId(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Seq[Invitation] = {
-    (for(b <- rows if b.recipientSocialUserId === socialUserInfoId) yield b).list
+    (for (b <- rows if b.recipientSocialUserId === socialUserInfoId) yield b).list
   }
 
   def getByRecipientEmailAddress(emailAddress: EmailAddress)(implicit session: RSession): Seq[Invitation] = {
     (for { row <- rows if row.recipientEmailAddress === emailAddress } yield row).list
   }
 
-  def getBySenderIdAndRecipientEContactId(senderId: Id[User], econtactId: Id[EContact])(implicit session: RSession): Option[Invitation] = {
-    (for(b <- rows if b.senderUserId === senderId && b.recipientEContactId === econtactId) yield b).firstOption
+  def getBySenderIdAndRecipientSocialUserId(senderId: Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Option[Invitation] = {
+    (for (b <- rows if b.senderUserId === senderId && b.recipientSocialUserId === socialUserInfoId) yield b).firstOption
   }
 
-  def getBySenderIdAndRecipientSocialUserId(senderId:Id[User], socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession):Option[Invitation] = {
-    (for(b <- rows if b.senderUserId === senderId && b.recipientSocialUserId === socialUserInfoId) yield b).firstOption
-  }
-
-  def getBySenderIdAndRecipientEmailAddress(senderId:Id[User], emailAddress: EmailAddress)(implicit session: RSession): Option[Invitation] = {
-    (for(b <- rows if b.senderUserId === senderId && b.recipientEmailAddress === emailAddress) yield b).firstOption
+  def getBySenderIdAndRecipientEmailAddress(senderId: Id[User], emailAddress: EmailAddress)(implicit session: RSession): Option[Invitation] = {
+    (for (b <- rows if b.senderUserId === senderId && b.recipientEmailAddress === emailAddress) yield b).firstOption
   }
 
   def getLastInvitedAtBySenderIdAndRecipientSocialUserIds(senderId: Id[User], socialUserInfoIds: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], DateTime] = {
@@ -139,7 +131,7 @@ class InvitationRepoImpl @Inject() (
       Map.empty
     } else {
       val query = for (i <- rows if i.senderUserId === senderId && i.recipientSocialUserId.inSet(socialUserInfoIds) && i.state =!= InvitationStates.INACTIVE && i.lastSentAt.isNotNull)
-        yield (i.recipientSocialUserId, i.lastSentAt)  // using createdAt for now (user cannot currently re-invite same social connection)
+        yield (i.recipientSocialUserId, i.lastSentAt) // using createdAt for now (user cannot currently re-invite same social connection)
       Map(query.list: _*)
     }
   }
@@ -149,25 +141,25 @@ class InvitationRepoImpl @Inject() (
       Map.empty
     } else {
       var query = for (i <- rows if i.senderUserId === senderId && i.recipientEmailAddress.inSet(emailAddresses) && i.state =!= InvitationStates.INACTIVE && i.lastSentAt.isNotNull)
-        yield (i.recipientEmailAddress, i.lastSentAt)  // using createdAt for now (user cannot currently re-invite same e-contact)
+        yield (i.recipientEmailAddress, i.lastSentAt) // using createdAt for now (user cannot currently re-invite same e-contact)
       Map(query.list: _*)
     }
   }
 
-  def getBySenderIdIter(senderId:Id[User], max:Int)(implicit session: RSession):CloseableIterator[Invitation] = {
-    (for(b <- rows if b.senderUserId === senderId) yield b).iteratorTo(max)
+  def getBySenderIdIter(senderId: Id[User], max: Int)(implicit session: RSession): CloseableIterator[Invitation] = {
+    (for (b <- rows if b.senderUserId === senderId) yield b).iteratorTo(max)
   }
 
-  def getBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation] = {
-    (for(b <- rows if b.senderUserId === senderId) yield b).list
+  def getBySenderId(senderId: Id[User])(implicit session: RSession): Seq[Invitation] = {
+    (for (b <- rows if b.senderUserId === senderId) yield b).list
   }
 
-  def getSocialInvitesBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation] = {
-    (for(b <- rows if b.senderUserId === senderId && b.recipientSocialUserId.isNotNull) yield b).list
+  def getSocialInvitesBySenderId(senderId: Id[User])(implicit session: RSession): Seq[Invitation] = {
+    (for (b <- rows if b.senderUserId === senderId && b.recipientSocialUserId.isNotNull) yield b).list
   }
 
-  def getEmailInvitesBySenderId(senderId:Id[User])(implicit session: RSession):Seq[Invitation] = {
-    (for(b <- rows if b.senderUserId === senderId && b.recipientEContactId.isNotNull) yield b).list
+  def getEmailInvitesBySenderId(senderId: Id[User])(implicit session: RSession): Seq[Invitation] = {
+    (for (b <- rows if b.senderUserId === senderId && b.recipientEmailAddress.isNotNull) yield b).list
   }
 }
 

@@ -1,20 +1,26 @@
 <div class="kf-tags">
-  <div class="kf-nav-group-name">Tags</div>
-  <label class="kf-nav-item kf-tag-input-box">
-    <input kf-no-drag-input name="filterName" placeholder="Find or add a tag..." ng-model="filter.name" focus-when="focusFilter" ng-change="onFilterChange()" ng-keydown="onKeydown($event)" ng-blur="dehighlight()">
+  <div class="kf-nav-group-name">TAGS</div>
+  <div class="kf-tag-input-box" ng-class="{'focused': isFilterFocused}">
     <a class="kf-tag-input-clear" href="javascript:" ng-click="clearFilter(true)" ng-show="filter.name">&times;</a>
-  </label>
+    <input class="kf-tag-filter-input" kf-no-drag-input name="filterName" placeholder="Find or add a tag..." maxlength="32" ng-model="filter.name" ng-change="onFilterChange()" ng-keydown="onKeydown($event)" ng-focus="focusFilter()" ng-blur="blurFilter()">
+  </div>
   <div class="kf-tag-list-hidden"></div>
 
-  <ul class="kf-tag-list" antiscroll="{ autoHide: false }">
-    <li kf-tag-item tag="tag" take-focus="unfocus()" release-focus="refocus()" has-new-location="newLocationTagId === tag.id" watch-tag-reorder="watchTagReorder()" reorder-tag="reorderTag(isTop,srcTag,dstTag)" received-tag-drag="receivedTagDrag()" view-tag="viewTag(tagId)" remove-tag="removeTag(tag)" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew }" ng-repeat="tag in tags"></li>
-    <li class="kf-nav-item kf-tag kf-tag-new" ng-class="{ highlight: isHighlightNew() }" ng-show="showAddTag()">
-      <a href="javascript:" ng-click="create(filter.name)">
-        <span class="kf-tag-icon kf-tag-icon-create"></span>
-        <span class="kf-tag-caption">Add a new tag:</span>
-        <span class="kf-tag-name">{{filter.name}}</span>
-      </a>
-    </li>
-  </ul>
-
+  <div class="kf-scrollable-tags" antiscroll="{ autoHide: false }" ng-class="{'kf-add-tag-shown': showAddTag()}">
+    <ul class="kf-sidebar-tag-list" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()">
+      <!-- We add a "null" tag at the end of the tag list. This is used to handle tag reordering via drag-and-drop.-->
+      <li kf-tag-item tag="tag" watch-tag-reorder="watchTagReorder()" view-tag="viewTag(tagId)" remove-tag="removeTag(tag)" ng-class="{ active: isActiveTag(tag), highlight: isHighlight(tag), new: tag.isNew }" index="{{$index}}" ng-repeat="tag in tags.concat([null]) | limitTo: tagLimit track by tag.id" tag-drag-source="data.tagDragSource" target-idx="data.targetIdx" ng-mousedown="disableClearFilter()" ng-mouseup="enableClearFilter()"></li>
+    </ul>
+    <div class="kf-tag-new" ng-show="showAddTag()" ng-mousedown="createTag()">
+      <div class="kf-tag-new-inner" ng-class="{ highlight: isHighlightNew() }">
+        <div class="kf-tag-new-icon">
+          <div class="sprite sprite-tag-add-plus"></div>
+        </div>
+        <div class="kf-tag-new-contents">
+          <div class="kf-tag-caption">Add as a new tag:</div>
+          <div class="kf-tag-name">{{filter.name}}</div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

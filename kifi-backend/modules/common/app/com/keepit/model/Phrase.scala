@@ -8,16 +8,15 @@ import com.keepit.search.Lang
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-case class Phrase (
-  id: Option[Id[Phrase]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  phrase: String,
-  lang: Lang,
-  source: String,
-  state: State[Phrase] = PhraseStates.ACTIVE,
-  seq: SequenceNumber[Phrase] = SequenceNumber.ZERO
-  ) extends ModelWithState[Phrase] with ModelWithSeqNumber[Phrase] {
+case class Phrase(
+    id: Option[Id[Phrase]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    phrase: String,
+    lang: Lang,
+    source: String,
+    state: State[Phrase] = PhraseStates.ACTIVE,
+    seq: SequenceNumber[Phrase] = SequenceNumber.ZERO) extends ModelWithState[Phrase] with ModelWithSeqNumber[Phrase] {
   def withId(id: Id[Phrase]): Phrase = copy(id = Some(id))
   def withUpdateTime(now: DateTime): Phrase = this.copy(updatedAt = now)
   def isActive: Boolean = state == PhraseStates.ACTIVE
@@ -34,7 +33,7 @@ object Phrase {
     (__ \ 'source).format[String] and
     (__ \ 'state).format(State.format[Phrase]) and
     (__ \ 'seq).format(SequenceNumber.format[Phrase])
-    )(Phrase.apply, unlift(Phrase.unapply))
+  )(Phrase.apply, unlift(Phrase.unapply))
 }
 
 object PhraseStates extends States[Phrase]

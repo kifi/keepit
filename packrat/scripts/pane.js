@@ -120,7 +120,7 @@ var pane = pane || function () {  // idempotent for Chrome
 
       var bringSlider = !keeper.showing();
       if (bringSlider) {
-        $pane.append(keeper.create(locator)).appendTo(tile.parentNode);
+        $pane.append(keeper.create(locator)).insertAfter(tile);
       } else {
         keeper.onPaneChange(locator);
         $pane.insertBefore(tile);
@@ -390,17 +390,20 @@ var pane = pane || function () {  // idempotent for Chrome
       return !!$pane;
     },
     show: function (o) {
-      log('[pane.show]', o.locator, o.trigger || '', o.redirected || '', o.compose || '');
       if (o.compose) {
+        log('[pane.show] compose', o.locator, o.trigger || '', o.to || '');
         pane.compose(o.trigger, o.locator, o.to);
       } else {
+        log('[pane.show]', o.locator, o.trigger || '', o.redirected || '');
         showPane(o.locator, false, o.redirected);
       }
     },
     hide: hidePane,
     toggle: function (trigger, locator) {
       locator = locator || '/messages:all';
-      if ($pane) {
+      if (trigger === 'button' && window.guide && $('.kifi-gs').length) {
+        log('[pane.toggle] ignoring, guide');
+      } else if ($pane) {
         if ($pane.data('state') === 'closing') {
           log('[pane.toggle] ignoring, hiding');
         } else if (window.toaster && toaster.showing()) {

@@ -22,7 +22,7 @@ class SchemeNormalizerTest extends Specification {
       normalize(normalizer, "http://m.imdb.com/title/tt0057012/") === "https://imdb.com/title/tt0057012/"
       normalize(normalizer, "https://secure.imdb.com/title/tt0062622/") === "https://secure.imdb.com/title/tt0062622/"
     }
-    
+
     "normalize to https://www" in {
       val normalizer = SchemeNormalizer(Normalization.HTTPSWWW)
       normalize(normalizer, "http://www.imdb.com/title/tt0081505/") === "https://www.imdb.com/title/tt0081505/"

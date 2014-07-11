@@ -1,6 +1,8 @@
 package com.keepit.common.healthcheck
 
-import scala.collection.mutable.{HashMap => MMap}
+import org.joda.time.{ Days, LocalDate, DateTime }
+
+import scala.collection.mutable.{ HashMap => MMap }
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -9,7 +11,7 @@ import com.google.inject.ImplementedBy
 import com.keepit.common.strings._
 
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{AlertingActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ AlertingActor, UnsupportedActorMessage }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.plugin.SchedulingProperties
@@ -25,7 +27,6 @@ import play.api.Mode._
 import play.api.templates.Html
 import com.keepit.model.NotificationCategory
 import java.io.File
-
 
 object Healthcheck {
 
@@ -45,6 +46,7 @@ case object CheckDiskSpace
 case object ErrorCount
 case object ResetErrorCount
 case object GetErrors
+case object CheckUpdateStatusOfService
 
 case class HealthcheckHost(host: String) extends AnyVal {
   override def toString = host
@@ -52,7 +54,7 @@ case class HealthcheckHost(host: String) extends AnyVal {
 
 case class HealthCheckConf(
   startupSleep: Int // seconds
-) extends AnyVal
+  ) extends AnyVal
 
 class MailSender @Inject() (
     sender: SystemAdminMailSender,
@@ -72,6 +74,13 @@ class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, 
     sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
       subject = subject, htmlBody = body, category = NotificationCategory.System.HEALTHCHECK))
   }
+
+  def sendOutOfDateMail() {
+    val subject = s"${services.currentService} out of date for 3 days"
+    val body = s"None"
+    sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
+      subject = subject, htmlBody = body, category = NotificationCategory.System.HEALTHCHECK))
+  }
 }
 
 case class AirbrakeErrorHistory(signature: AirbrakeErrorSignature, count: Int, countSinceLastAlert: Int, lastError: AirbrakeError) {
@@ -83,10 +92,10 @@ case class AirbrakeErrorHistory(signature: AirbrakeErrorSignature, count: Int, c
 }
 
 class HealthcheckActor @Inject() (
-    services: FortyTwoServices,
-    host: HealthcheckHost,
-    emailSender: MailSender)
-  extends AlertingActor {
+  services: FortyTwoServices,
+  host: HealthcheckHost,
+  emailSender: MailSender)
+    extends AlertingActor {
 
   def alert(reason: Throwable, message: Option[Any]) = self ! error(reason, message)
 
@@ -99,7 +108,7 @@ class HealthcheckActor @Inject() (
         new SendHealthcheckMail(history, host, emailSender, services).sendMail()
       }
     case GetErrors =>
-      val lastErrors: Seq[AirbrakeError] = errors.values map {history => history.lastError} toSeq;
+      val lastErrors: Seq[AirbrakeError] = errors.values map { history => history.lastError } toSeq;
       sender ! lastErrors
     case ErrorCount => sender ! errors.values.foldLeft(0)(_ + _.count)
     case ResetErrorCount => errors.clear()
@@ -122,6 +131,13 @@ class HealthcheckActor @Inject() (
       } else if (usableDiskSpace < 2 * GB) { // less then 2gb of available disk space
         self ! AirbrakeError(message = Some(s"machine has only ${(usableDiskSpace * 1d) / GB}gb free of usable disk space"))
       }
+    case CheckUpdateStatusOfService =>
+      val currentDate: DateTime = currentDateTime
+      val lastCompilationDate: DateTime = services.compilationTime
+      val betweenDays = Days.daysBetween(currentDate, lastCompilationDate).getDays
+      if (betweenDays >= 3) {
+        new SendHealthcheckMail(null, host, emailSender, services).sendOutOfDateMail()
+      }
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -135,7 +151,7 @@ trait HealthcheckPlugin {
   def reportStop(): ElectronicMail
   def reportErrors(): Unit
   var isWarm = false
-  def warmUp(benchmarkRunner: BenchmarkRunner): Unit = {isWarm = true}
+  def warmUp(benchmarkRunner: BenchmarkRunner): Unit = { isWarm = true }
 }
 
 class HealthcheckPluginImpl @Inject() (
@@ -145,8 +161,7 @@ class HealthcheckPluginImpl @Inject() (
     val scheduling: SchedulingProperties,
     isCanary: Boolean,
     amazonSimpleMailProvider: AmazonSimpleMailProvider,
-    healthCheckConf: HealthCheckConf
-) extends HealthcheckPlugin with SchedulerPlugin with Logging {
+    healthCheckConf: HealthCheckConf) extends HealthcheckPlugin with SchedulerPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
@@ -155,6 +170,7 @@ class HealthcheckPluginImpl @Inject() (
   override def onStart() {
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 30 minutes, actor.ref, ReportErrorsAction)
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 60 minutes, actor.ref, CheckDiskSpace)
+    scheduleTaskOnAllMachines(actor.system, 3 days, 1 days, actor.ref, CheckUpdateStatusOfService)
   }
 
   def errorCount(): Int = Await.result((actor.ref ? ErrorCount).mapTo[Int], 1 seconds)
@@ -175,8 +191,8 @@ class HealthcheckPluginImpl @Inject() (
     val subject = s"Service ${services.currentService} started"
     val message = Html(s"Service version ${services.currentVersion} started at $currentDateTime on $host. Service compiled at ${services.compilationTime}")
     val email = ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
-        subject = subject, htmlBody = message.body,
-        category = NotificationCategory.System.HEALTHCHECK)
+      subject = subject, htmlBody = message.body,
+      category = NotificationCategory.System.HEALTHCHECK)
 
     if (!isCanary) {
       actor.ref ! email
@@ -188,8 +204,8 @@ class HealthcheckPluginImpl @Inject() (
     val subject = s"Service ${services.currentService} stopped"
     val message = Html(s"Service version ${services.currentVersion} stopped at $currentDateTime on $host. Service compiled at ${services.compilationTime}")
     val email = ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
-        subject = subject, htmlBody = message.body,
-        category = NotificationCategory.System.HEALTHCHECK)
+      subject = subject, htmlBody = message.body,
+      category = NotificationCategory.System.HEALTHCHECK)
     if (!isCanary) {
       actor.ref ! email
     }
@@ -198,7 +214,7 @@ class HealthcheckPluginImpl @Inject() (
 
   val sleep = healthCheckConf.startupSleep
 
-  override def warmUp(benchmarkRunner: BenchmarkRunner) : Unit = {
+  override def warmUp(benchmarkRunner: BenchmarkRunner): Unit = {
     log.info(s"going to sleep for $sleep seconds to make sure all plugins are ready to go")
     log.info(s"benchmark 1: ${benchmarkRunner.runBenchmark()}")
     Thread.sleep(sleep * 1000)
@@ -207,3 +223,4 @@ class HealthcheckPluginImpl @Inject() (
     super.warmUp(benchmarkRunner)
   }
 }
+

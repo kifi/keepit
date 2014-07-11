@@ -1,12 +1,12 @@
 package com.keepit.common.crypto
 
-import java.security.{Security, SecureRandom}
-import org.apache.commons.codec.binary.{Base32, Base64}
+import java.security.{ Security, SecureRandom }
+import org.apache.commons.codec.binary.{ Base32, Base64 }
 import javax.crypto.Cipher
-import javax.crypto.spec.{IvParameterSpec, SecretKeySpec}
+import javax.crypto.spec.{ IvParameterSpec, SecretKeySpec }
 import java.nio.ByteBuffer
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import scala.util.{Success, Failure, Try}
+import scala.util.{ Success, Failure, Try }
 
 sealed abstract case class EncryptionScheme(name: String, cipherName: String, nonceLength: Int) {
   def checkValid(data: Array[Byte]): Boolean = true
@@ -53,13 +53,13 @@ object CryptoSupport {
     val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding", BouncyCastleProvider.PROVIDER_NAME)
     val secretKey = new SecretKeySpec(fromBase64(key), "AES")
     cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec)
-    toBase32(Array.concat(ivBytes,cipher.doFinal(buffer.array())))
+    toBase32(Array.concat(ivBytes, cipher.doFinal(buffer.array())))
   }
 
   def decryptLong(ciphertext: String, key: String, encryptionScheme: EncryptionScheme): Try[Long] = {
     val bytes = fromBase32(ciphertext.toUpperCase)
-    val ivBytes = bytes.slice(0,encryptionScheme.nonceLength)
-    val ciphertextBytes = bytes.slice(encryptionScheme.nonceLength,bytes.length)
+    val ivBytes = bytes.slice(0, encryptionScheme.nonceLength)
+    val ciphertextBytes = bytes.slice(encryptionScheme.nonceLength, bytes.length)
     val ivSpec = new IvParameterSpec(ivBytes)
     val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding", BouncyCastleProvider.PROVIDER_NAME)
     val secretKey = new SecretKeySpec(fromBase64(key), "AES")

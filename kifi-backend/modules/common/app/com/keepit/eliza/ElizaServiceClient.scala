@@ -1,24 +1,25 @@
 package com.keepit.eliza
 
-import com.keepit.model.{ChangedURI, NotificationCategory, User}
-import com.keepit.common.db.{SequenceNumber, Id}
-import com.keepit.common.service.{ServiceClient, ServiceType}
+import com.keepit.model.{ NormalizedURI, ChangedURI, NotificationCategory, User }
+import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Eliza
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.{CallTimeouts, HttpClient}
+import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.search.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.{Future, Promise}
+import scala.collection.mutable
+import scala.concurrent.{ Future, Promise }
 
-import play.api.libs.json.{JsArray, Json, JsObject}
+import play.api.libs.json.{ JsArray, Json, JsObject }
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
-import com.keepit.eliza.model.{MessageHandle, UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats}
+import com.keepit.eliza.model.{ MessageHandle, UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats }
 
 import akka.actor.Scheduler
 import com.keepit.common.json.JsonFormatters._
@@ -31,7 +32,7 @@ trait ElizaServiceClient extends ServiceClient {
 
   def connectedClientCount: Future[Seq[Int]]
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Future[Id[MessageHandle]]
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory): Future[Id[MessageHandle]]
 
   def unsendNotification(messageHandle: Id[MessageHandle]): Unit
 
@@ -43,20 +44,20 @@ trait ElizaServiceClient extends ServiceClient {
 
   def setNonUserThreadMuteState(publicId: String, muted: Boolean): Future[Boolean]
 
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]]
+
   //migration
   def importThread(data: JsObject): Unit
 
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]]
 }
 
-
 class ElizaServiceClientImpl @Inject() (
-    val airbrakeNotifier: AirbrakeNotifier,
-    val httpClient: HttpClient,
-    val serviceCluster: ServiceCluster,
-    userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache
-  )
-  extends ElizaServiceClient with Logging {
+  val airbrakeNotifier: AirbrakeNotifier,
+  val httpClient: HttpClient,
+  val serviceCluster: ServiceCluster,
+  userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache)
+    extends ElizaServiceClient with Logging {
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {
     implicit val userFormatter = Id.format[User]
@@ -75,22 +76,22 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def connectedClientCount: Future[Seq[Int]] = {
-    Future.sequence(broadcast(Eliza.internal.connectedClientCount)).map{ respSeq =>
-      respSeq.map{ resp => resp.body.toInt }
+    Future.sequence(broadcast(Eliza.internal.connectedClientCount)).map { respSeq =>
+      respSeq.map { resp => resp.body.toInt }
     }
   }
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Future[Id[MessageHandle]] = {
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory): Future[Id[MessageHandle]] = {
     implicit val userFormatter = Id.format[User]
     val payload = Json.obj(
-      "userIds"   -> userIds.toSeq,
-      "title"     -> title,
-      "body"      -> body,
-      "linkText"  -> linkText,
-      "linkUrl"   -> linkUrl,
-      "imageUrl"  -> imageUrl,
-      "sticky"    -> sticky,
-      "category"  -> category
+      "userIds" -> userIds.toSeq,
+      "title" -> title,
+      "body" -> body,
+      "linkText" -> linkText,
+      "linkUrl" -> linkUrl,
+      "imageUrl" -> imageUrl,
+      "sticky" -> sticky,
+      "category" -> category
     )
     call(Eliza.internal.sendGlobalNotification, payload).map { response =>
       Id[MessageHandle](response.body.toLong)
@@ -106,7 +107,7 @@ class ElizaServiceClientImpl @Inject() (
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {
     call(Eliza.internal.getThreadContentForIndexing(sequenceNumber, maxBatchSize), callTimeouts = longTimeout)
-      .map{ response =>
+      .map { response =>
         val json = Json.parse(response.body).as[JsArray]
         json.value.map(_.as[ThreadContent])
       }
@@ -114,7 +115,7 @@ class ElizaServiceClientImpl @Inject() (
 
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats] = {
     userThreadStatsForUserIdCache.get(UserThreadStatsForUserIdKey(userId)) map { s => Future.successful(s) } getOrElse {
-      call(Eliza.internal.getUserThreadStats(userId)).map{ response =>
+      call(Eliza.internal.getUserThreadStats(userId)).map { response =>
         Json.parse(response.body).as[UserThreadStats]
       }
     }
@@ -138,10 +139,16 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]] = call(Eliza.internal.getRenormalizationSequenceNumber).map(_.json.as(SequenceNumber.format[ChangedURI]))
+
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]] = {
+    call(Eliza.internal.keepAttribution(userId, uriId)).map { response =>
+      Json.parse(response.body).as[Seq[Id[User]]]
+    }
+  }
 }
 
-class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ElizaServiceClient{
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, ()=>{})
+class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler, attributionInfo: mutable.Map[Id[NormalizedURI], Seq[Id[User]]] = mutable.HashMap.empty) extends ElizaServiceClient {
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {}
@@ -155,7 +162,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     p.future
   }
 
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory) : Future[Id[MessageHandle]] = {
+  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory): Future[Id[MessageHandle]] = {
     val p = Promise.successful(Id[MessageHandle](42.toLong))
     p.future
   }
@@ -185,4 +192,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats] = Promise.successful(UserThreadStats(0, 0, 0)).future
 
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]] = Future.successful(SequenceNumber.ZERO)
+
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]] = {
+    Future.successful(attributionInfo.get(uriId).getOrElse(Seq.empty).filter(_ != userId))
+  }
 }

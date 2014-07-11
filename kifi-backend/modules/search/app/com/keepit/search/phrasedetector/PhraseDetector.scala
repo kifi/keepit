@@ -4,7 +4,7 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.index.DocsAndPositionsEnum
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.util.PriorityQueue
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
 import scala.math._
@@ -21,17 +21,17 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
     RemoveOverlapping.removeInclusions(detectAll(terms))
   }
 
-  def detectAll(terms: IndexedSeq[Term]): Set[(Int,Int)] = {
+  def detectAll(terms: IndexedSeq[Term]): Set[(Int, Int)] = {
     var result = Set.empty[(Int, Int)] // (position, length)
-    detectInternal(terms){ (position, length) => result += ((position, length)) }
+    detectInternal(terms) { (position, length) => result += ((position, length)) }
     result
   }
 
-  private def detectInternal(terms: IndexedSeq[Term])(f: (Int, Int)=>Unit): Unit = {
+  private def detectInternal(terms: IndexedSeq[Term])(f: (Int, Int) => Unit): Unit = {
     val pq = new PQ(terms.size)
 
-    val pterms = terms.map{ term => PhraseDetector.createTerm(term.text()) }
-    indexer.getSearcher.indexReader.leaves.foreach{ subReaderContext =>
+    val pterms = terms.map { term => PhraseDetector.createTerm(term.text()) }
+    indexer.getSearcher.indexReader.leaves.foreach { subReaderContext =>
       val numTerms = pterms.size
       var index = 0
       var prevWord: Word = null
@@ -54,7 +54,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
     }
   }
 
-  private def findPhrases(pq: PQ, onMatch: (Int, Int)=>Unit): Unit = {
+  private def findPhrases(pq: PQ, onMatch: (Int, Int) => Unit): Unit = {
     var effectiveCount = pq.size - 1
 
     if (effectiveCount > 0) {
@@ -108,7 +108,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
       doc
     }
 
-    def checkPosition(phraseStart: Int, wordOffset: Int, onMatch: (Int, Int)=>Unit): Boolean = {
+    def checkPosition(phraseStart: Int, wordOffset: Int, onMatch: (Int, Int) => Unit): Boolean = {
       if (index == (phraseStart + wordOffset)) {
         var freq = tp.freq()
         while (freq > 0) {
@@ -117,7 +117,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
           if (pos > wordOffset) return false
           if (pos == wordOffset) {
             if ((data & 1) == 1) {
-              onMatch(phraseStart, wordOffset+1) // one phrase matched
+              onMatch(phraseStart, wordOffset + 1) // one phrase matched
               return false // no need to continue
             }
             return (nextWord != null && nextWord.doc == doc) // position matched, continue if the next word is at the same doc
@@ -136,14 +136,15 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
 
 object RemoveOverlapping {
   def removeInclusions(phrases: Set[(Int, Int)]) = {
-    val sortedIntervals = phrases.toArray.sortWith((a,b) => (a._1 < b._1) || (a._1 == b._1 && a._2 > b._2))  // for same position, longer one comes first
+    val sortedIntervals = phrases.toArray.sortWith((a, b) => (a._1 < b._1) || (a._1 == b._1 && a._2 > b._2)) // for same position, longer one comes first
     var minStartPos = -1
     var minEndPos = -1
-    val intervals = for( i <- 0 until sortedIntervals.size
-      if( sortedIntervals(i)._1 >= minStartPos && sortedIntervals(i)._1 + sortedIntervals(i)._2 > minEndPos ) ) yield {
-        minStartPos = sortedIntervals(i)._1 + 1
-        minEndPos = sortedIntervals(i)._1 + sortedIntervals(i)._2
-        sortedIntervals(i)
+    val intervals = for (
+      i <- 0 until sortedIntervals.size if (sortedIntervals(i)._1 >= minStartPos && sortedIntervals(i)._1 + sortedIntervals(i)._2 > minEndPos)
+    ) yield {
+      minStartPos = sortedIntervals(i)._1 + 1
+      minEndPos = sortedIntervals(i)._1 + sortedIntervals(i)._2
+      sortedIntervals(i)
     }
     intervals.toSet
   }
@@ -161,7 +162,7 @@ object RemoveOverlapping {
     val intervalMaps = getIntervalMap(phrases)
     val newIntervals = removeInclusions(phrases)
     val rv = ListBuffer.empty[(Int, Int)]
-    for(interval <- newIntervals){
+    for (interval <- newIntervals) {
       val decomp = decompose(interval, intervalMaps)
       val finest = getFinestDecomposition(decomp.getOrElse(Set(ListBuffer.empty[(Int, Int)])))
       rv.appendAll(finest)
@@ -175,19 +176,19 @@ object RemoveOverlapping {
    *
    */
   def decompose(x: (Int, Int), intervals: Map[Int, Set[Int]]): Option[Set[ListBuffer[(Int, Int)]]] = {
-    if ( x._2 == 0 ) return Some(Set(ListBuffer.empty[(Int, Int)]))
-    if ( x._2 < 0 ) return None
+    if (x._2 == 0) return Some(Set(ListBuffer.empty[(Int, Int)]))
+    if (x._2 < 0) return None
 
     var solu = Set.empty[ListBuffer[(Int, Int)]]
     var found = false
     intervals.get(x._1) match {
       case None => None
       case Some(lens) => {
-        for(len <- lens){
+        for (len <- lens) {
           val subSolu = decompose((x._1 + len, x._2 - len), intervals)
           subSolu match {
             case None => None
-            case Some(subsolu) => {found = true; solu ++= subsolu.foldLeft(Set.empty[ListBuffer[(Int, Int)]]){(s, list) => list.prepend((x._1, len)); s + list}}
+            case Some(subsolu) => { found = true; solu ++= subsolu.foldLeft(Set.empty[ListBuffer[(Int, Int)]]) { (s, list) => list.prepend((x._1, len)); s + list } }
           }
         }
         if (found) Some(solu) else None

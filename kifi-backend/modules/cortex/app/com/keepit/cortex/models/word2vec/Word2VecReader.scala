@@ -7,21 +7,21 @@ import java.io._
 // word2vec I/O. C Format compatible. Single Char Byte, Little Endian For Floats.
 class Word2VecReader {
 
-  def fromBinary(bytes: Array[Byte]): (Int, Map[String,Array[Float]]) = {
-     val in = new DataInputStream(new ByteArrayInputStream(bytes))
-     fromDataStream(in)
+  def fromBinary(bytes: Array[Byte]): (Int, Map[String, Array[Float]]) = {
+    val in = new DataInputStream(new ByteArrayInputStream(bytes))
+    fromDataStream(in)
   }
 
-  def fromFile(fileName: String): (Int, Map[String,Array[Float]]) = {
+  def fromFile(fileName: String): (Int, Map[String, Array[Float]]) = {
     val dataStream = new DataInputStream(new FileInputStream(new File(fileName)))
     fromDataStream(dataStream)
   }
 
-  def fromDataStream(dataStream: DataInputStream): (Int, Map[String,Array[Float]]) = {
+  def fromDataStream(dataStream: DataInputStream): (Int, Map[String, Array[Float]]) = {
     var ch = dataStream.readByte().asInstanceOf[Char]
     var str = ""
     // read header line: vocabulary size & vector dim
-    while (ch != '\n'){
+    while (ch != '\n') {
       str += ch
       ch = dataStream.readByte().asInstanceOf[Char]
     }
@@ -36,14 +36,14 @@ class Word2VecReader {
     val bytes = new Array[Byte](chunkSize)
 
     // lines of mixed string and Float array. Formatted as:  word byte byte byte ..... byte '\n'
-    while(wordCnt < vocSize){
+    while (wordCnt < vocSize) {
       wordCnt += 1
       val vec = new Array[Float](vecDim)
 
       // read word
       word = ""
       ch = dataStream.readByte().asInstanceOf[Char]
-      while(ch != ' ') {
+      while (ch != ' ') {
         word += ch
         ch = dataStream.readByte().asInstanceOf[Char]
       }
@@ -51,7 +51,7 @@ class Word2VecReader {
       // read floats
       dataStream.read(bytes, 0, chunkSize)
       val buffed = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
-      (0 until vecDim).foreach{ i => vec(i) = buffed.getFloat(4 * i)}
+      (0 until vecDim).foreach { i => vec(i) = buffed.getFloat(4 * i) }
       wordVecMap += word -> vec
 
       // skip end of line

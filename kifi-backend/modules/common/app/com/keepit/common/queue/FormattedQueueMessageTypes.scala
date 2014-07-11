@@ -1,14 +1,12 @@
 package com.keepit.common.queue
 
-
-import com.keepit.model.{User, SocialUserInfo}
+import com.keepit.model.{ User, SocialUserInfo }
 import com.keepit.common.db.Id
 import com.keepit.social.SocialNetworkType
 
-import play.api.libs.json.{Reads, Json, Format, JsValue}
+import play.api.libs.json.{ Reads, Json, Format, JsValue }
 import com.keepit.common.reflection.CompanionTypeSystem
 import com.keepit.common.mail.EmailAddress
-
 
 sealed trait RichConnectionUpdateMessage { self =>
   type M >: self.type <: RichConnectionUpdateMessage
@@ -32,7 +30,7 @@ object RichConnectionUpdateMessageKind {
 object RichConnectionUpdateMessage {
   implicit val format = new Format[RichConnectionUpdateMessage] {
     def writes(message: RichConnectionUpdateMessage) = Json.obj("typeCode" -> message.kind.typeCode.toString, "value" -> message.kind.format.writes(message.instance))
-    def reads(json: JsValue) =(json \ "typeCode").validate[String].flatMap { typeCode => RichConnectionUpdateMessageKind.byTypeCode(typeCode).format.reads(json \ "value") }
+    def reads(json: JsValue) = (json \ "typeCode").validate[String].flatMap { typeCode => RichConnectionUpdateMessageKind.byTypeCode(typeCode).format.reads(json \ "value") }
   }
 }
 
@@ -69,7 +67,6 @@ case object RecordKifiConnection extends RichConnectionUpdateMessageKind[RecordK
   implicit val format = Json.format[RecordKifiConnection]
   implicit val typeCode = "record_kifi_connection"
 }
-
 
 case class RemoveKifiConnection(firstUserId: Id[User], secondUserId: Id[User]) extends RichConnectionUpdateMessage {
   type M = RemoveKifiConnection
@@ -117,7 +114,6 @@ case object RecordFriendUserId extends RichConnectionUpdateMessageKind[RecordFri
   implicit val typeCode = "record_friend_user_id"
 }
 
-
 //Caused by direct user action. Will usually be a direcrt call.
 case class Block(userId: Id[User], networkType: SocialNetworkType, friendSocialId: Option[Id[SocialUserInfo]], friendEmail: Option[EmailAddress]) extends RichConnectionUpdateMessage {
   type M = Block
@@ -129,17 +125,3 @@ case object Block extends RichConnectionUpdateMessageKind[Block] {
   implicit val format = Json.format[Block]
   implicit val typeCode = "block"
 }
-
-//Propages changes to EmailAddressRepo (needs sequence number).
-case class RecordVerifiedEmail(userId: Id[User], email: EmailAddress) extends RichConnectionUpdateMessage {
-  type M = RecordVerifiedEmail
-  def kind = RecordVerifiedEmail
-}
-case object RecordVerifiedEmail extends RichConnectionUpdateMessageKind[RecordVerifiedEmail] {
-  private implicit val userIdFormat = Id.format[User]
-  implicit val format = Json.format[RecordVerifiedEmail]
-  implicit val typeCode = "record_email_address"
-}
-
-
-

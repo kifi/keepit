@@ -1,7 +1,7 @@
 package com.keepit.common.cache
 
 import scala.concurrent.duration._
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
 import com.keepit.search._
 import com.keepit.social.BasicUserUserIdCache
@@ -12,7 +12,7 @@ import com.keepit.search.tracker.ClickHistoryBuilder
 import com.keepit.search.tracker.ProbablisticLRUChunkCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 
-case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
+case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
 
   @Singleton
   @Provides
@@ -22,12 +22,12 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Singleton
   @Provides
   def probablisticLRUChunkCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ProbablisticLRUChunkCache(stats, accessLog, (innerRepo, 5 seconds), (outerRepo, Duration.Inf))
+    new ProbablisticLRUChunkCache(stats, accessLog, (innerRepo, 5 seconds), (outerRepo, 30 days))
 
   @Singleton
   @Provides
   def userThreadStatsForUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserThreadStatsForUserIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, Duration.Inf))
+    new UserThreadStatsForUserIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -102,7 +102,7 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Singleton
   @Provides
   def clickHistoryUserIdCache(format: ClickHistoryBuilder, stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ClickHistoryUserIdCache(format, stats, accessLog, (innerRepo, 10 seconds), (outerRepo, Duration.Inf))
+    new ClickHistoryUserIdCache(format, stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -161,7 +161,7 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Singleton
   @Provides
   def probabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (outerRepo, Duration.Inf))
+    new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (outerRepo, 30 days))
 
   @Provides @Singleton
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

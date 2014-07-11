@@ -44,20 +44,20 @@ class SearchCommanderTest extends Specification with SearchApplicationInjector w
           inject[MonitoredAwait])
 
         val res = searchCommander.search(
-            userId = users(0).id.get,
-            acceptLangs = Seq("en"),
-            experiments = Set.empty,
-            query = "keepit",
-            filter = None,
-            maxHits = 3,
-            lastUUIDStr = None,
-            context = None,
-            predefinedConfig = Some(searchConfig),
-            start = None,
-            end = None,
-            tz = None,
-            coll = None,
-            withUriSummary = false)
+          userId = users(0).id.get,
+          acceptLangs = Seq("en"),
+          experiments = Set.empty,
+          query = "keepit",
+          filter = None,
+          maxHits = 3,
+          lastUUIDStr = None,
+          context = None,
+          predefinedConfig = Some(searchConfig),
+          start = None,
+          end = None,
+          tz = None,
+          coll = None,
+          withUriSummary = false)
 
         res.myTotal === 1
         res.friendsTotal === 1

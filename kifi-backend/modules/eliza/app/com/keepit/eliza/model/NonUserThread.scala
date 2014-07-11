@@ -3,10 +3,9 @@ package com.keepit.eliza.model
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
-import com.keepit.model.{User, EContact, NormalizedURI}
+import com.keepit.model.{ User, NormalizedURI }
 import play.api.libs.json._
-import com.keepit.common.mail.EmailAddress
-import com.keepit.social.{BasicNonUser, NonUserKinds, NonUserKind}
+import com.keepit.social.{ BasicNonUser, NonUserKinds, NonUserKind }
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
@@ -30,12 +29,11 @@ object NonUserParticipant {
       // k == "kind"
       // i == "identifier"
       // r == "referenceId"
-      ((json \ "k").asOpt[String], (json \ "i").asOpt[String]) match {
-        case (Some(NonUserKinds.email.name), Some(emailAddress)) =>
-          val addr = EmailAddress(emailAddress)
-          val id = (json \ "r").asOpt[String].map(i => Id[EContact](i.toLong))
-          JsSuccess(NonUserEmailParticipant(addr, id))
-        case _ => JsError()
+      (json \ "k").validate[String].flatMap {
+        case NonUserKinds.email.name => for {
+          email <- (json \ "i").validate[EmailAddress]
+        } yield NonUserEmailParticipant(email)
+        case unsupportedKind => JsError(s"Unsupported NonUserKind: $unsupportedKind")
       }
     }
     def writes(p: NonUserParticipant): JsValue = {
@@ -49,9 +47,9 @@ object NonUserParticipant {
   }
 }
 
-case class NonUserEmailParticipant(address: EmailAddress, econtactId: Option[Id[EContact]]) extends NonUserParticipant {
+case class NonUserEmailParticipant(address: EmailAddress) extends NonUserParticipant {
   val identifier = address.address
-  val referenceId = econtactId.map(_.id.toString)
+  val referenceId = Some(address.address)
   val kind = NonUserKinds.email
 
   def shortName = identifier
@@ -59,25 +57,22 @@ case class NonUserEmailParticipant(address: EmailAddress, econtactId: Option[Id[
 }
 
 case class NonUserThread(
-  id: Option[Id[NonUserThread]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  createdBy: Id[User],
-  participant: NonUserParticipant,
-  threadId: Id[MessageThread],
-  uriId: Option[Id[NormalizedURI]],
-  notifiedCount: Int,
-  lastNotifiedAt: Option[DateTime],
-  threadUpdatedByOtherAt: Option[DateTime],
-  muted: Boolean = false,
-  state: State[NonUserThread] = NonUserThreadStates.ACTIVE,
-  accessToken: ThreadAccessToken = ThreadAccessToken()
-) extends ModelWithState[NonUserThread] with ParticipantThread {
+    id: Option[Id[NonUserThread]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    createdBy: Id[User],
+    participant: NonUserParticipant,
+    threadId: Id[MessageThread],
+    uriId: Option[Id[NormalizedURI]],
+    notifiedCount: Int,
+    lastNotifiedAt: Option[DateTime],
+    threadUpdatedByOtherAt: Option[DateTime],
+    muted: Boolean = false,
+    state: State[NonUserThread] = NonUserThreadStates.ACTIVE,
+    accessToken: ThreadAccessToken = ThreadAccessToken()) extends ModelWithState[NonUserThread] with ParticipantThread {
   def withId(id: Id[NonUserThread]): NonUserThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withState(state: State[NonUserThread]) = copy(state = state)
 }
-
-
 
 object NonUserThreadStates extends States[NonUserThread]

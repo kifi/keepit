@@ -12,7 +12,6 @@ class UrlPatternRuleTest extends Specification with ShoeboxTestInjector {
     "persist & use patterns w/ appropriate caching" in {
       withDb() { implicit injector =>
 
-
         val db = inject[Database]
 
         db.readWrite { implicit session =>
@@ -27,7 +26,7 @@ class UrlPatternRuleTest extends Specification with ShoeboxTestInjector {
           urlPatternRuleRepo.save(UrlPatternRule(pattern = "^https*://.*.google.com.*/ServiceLogin.*$", isUnscrapable = true))
         }
 
-        db.readOnly { implicit session =>
+        db.readOnlyMaster { implicit session =>
           urlPatternRuleCache.get(UrlPatternRuleAllKey()).get.isEmpty === false
           urlPatternRuleRepo.rules().rules.length === 2
           urlPatternRuleCache.get(UrlPatternRuleAllKey()).isDefined === true
@@ -38,7 +37,7 @@ class UrlPatternRuleTest extends Specification with ShoeboxTestInjector {
           urlPatternRuleRepo.save(UrlPatternRule(pattern = "^https*://app.asana.com.*$", isUnscrapable = true))
         }
 
-        db.readOnly { implicit session =>
+        db.readOnlyMaster { implicit session =>
           urlPatternRuleCache.get(UrlPatternRuleAllKey()).get.isEmpty === false
         }
         urlPatternRuleRepo.rules.isUnscrapable("http://www.google.com/") === false
@@ -55,7 +54,7 @@ class UrlPatternRuleTest extends Specification with ShoeboxTestInjector {
           urlPatternRuleRepo.loadCache()
         }
 
-        inject[Database].readWrite{ implicit s =>
+        inject[Database].readWrite { implicit s =>
           val sd = urlPatternRuleRepo.save(d)
           val sd2 = urlPatternRuleRepo.save(d2)
           urlPatternRuleRepo.get(sd.id.get).normalization === Some(Normalization.HTTPS)

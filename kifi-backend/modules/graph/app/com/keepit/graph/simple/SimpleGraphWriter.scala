@@ -1,7 +1,7 @@
 package com.keepit.graph.simple
 
 import com.keepit.graph.model._
-import scala.collection.mutable.{Map => MutableMap, Set => MutableSet}
+import scala.collection.mutable.{ Map => MutableMap, Set => MutableSet }
 import play.api.libs.json._
 import java.util.concurrent.atomic.AtomicLong
 import com.keepit.graph.manager.GraphStatistics
@@ -15,10 +15,11 @@ object MutableVertex {
 
   def buildEdgeIndex(edgeIterator: Iterator[(VertexId, EdgeDataReader)]): MutableMap[(VertexType, EdgeType), MutableMap[VertexId, EdgeDataReader]] = {
     val edges = MutableMap[(VertexType, EdgeType), MutableMap[VertexId, EdgeDataReader]]()
-    edgeIterator.foreach { case (destinationId, edgeData) =>
-      val component = (destinationId.kind, edgeData.kind)
-      if (!edges.contains(component)) { edges += (component -> MutableMap[VertexId, EdgeDataReader]()) }
-      edges(component) += (destinationId -> edgeData)
+    edgeIterator.foreach {
+      case (destinationId, edgeData) =>
+        val component = (destinationId.kind, edgeData.kind)
+        if (!edges.contains(component)) { edges += (component -> MutableMap[VertexId, EdgeDataReader]()) }
+        edges(component) += (destinationId -> edgeData)
     }
     edges
   }
@@ -27,18 +28,22 @@ object MutableVertex {
 
     def writes(vertex: MutableVertex): JsValue = Json.obj(
       "data" -> VertexDataReader.writes.writes(vertex.data),
-      "edges" -> JsArray(vertex.edges.flatMap { case (component, edges) =>
-        edges.flatMap { case (destinationId, edgeDataReader) =>
-          Seq(VertexId.format.writes(destinationId), EdgeDataReader.writes.writes(edgeDataReader)) }
-        }.toSeq
+      "edges" -> JsArray(vertex.edges.flatMap {
+        case (component, edges) =>
+          edges.flatMap {
+            case (destinationId, edgeDataReader) =>
+              Seq(VertexId.format.writes(destinationId), EdgeDataReader.writes.writes(edgeDataReader))
+          }
+      }.toSeq
       )
     )
     def reads(json: JsValue): JsResult[MutableVertex] = {
       for {
         data <- VertexDataReader.readsAsVertexData.reads(json \ "data")
         edgeIterator <- (json \ "edges").validate[JsArray].map { jsArray =>
-          jsArray.value.sliding(2,2).map { case Seq(destinationId, edgeData) =>
-            destinationId.as[VertexId] -> edgeData.as[EdgeData[_ <: EdgeDataReader]].asReader
+          jsArray.value.sliding(2, 2).map {
+            case Seq(destinationId, edgeData) =>
+              destinationId.as[VertexId] -> edgeData.as[EdgeData[_ <: EdgeDataReader]].asReader
           }
         }
       } yield { new MutableVertex(data.asReader, buildEdgeIndex(edgeIterator)) }
@@ -47,11 +52,10 @@ object MutableVertex {
 }
 
 class SimpleGraphWriter(
-  bufferedVertices: BufferedMap[VertexId, MutableVertex],
-  bufferedIncomingEdges: BufferedMap[VertexId, MutableMap[VertexId, MutableSet[EdgeType]]],
-  vertexStatistics: Map[VertexType, AtomicLong],
-  edgeStatistics: Map[(VertexType, VertexType, EdgeType), AtomicLong]
-) extends SimpleGraphReader(bufferedVertices) with GraphWriter with Logging {
+    bufferedVertices: BufferedMap[VertexId, MutableVertex],
+    bufferedIncomingEdges: BufferedMap[VertexId, MutableMap[VertexId, MutableSet[EdgeType]]],
+    vertexStatistics: Map[VertexType, AtomicLong],
+    edgeStatistics: Map[(VertexType, VertexType, EdgeType), AtomicLong]) extends SimpleGraphReader(bufferedVertices) with GraphWriter with Logging {
 
   private val vertexDeltas = GraphStatistics.newVertexCounter()
   private val edgeDeltas: Map[(VertexType, VertexType, EdgeType), AtomicLong] = GraphStatistics.newEdgeCounter()
@@ -71,8 +75,9 @@ class SimpleGraphWriter(
     case incomingEdgesOption => {
       val buffered = MutableMap[VertexId, MutableSet[EdgeType]]()
       incomingEdgesOption.foreach { incomingEdges =>
-        incomingEdges.foreach { case (destinationId, edgeKinds) =>
-          buffered += destinationId -> (MutableSet() ++= edgeKinds)
+        incomingEdges.foreach {
+          case (destinationId, edgeKinds) =>
+            buffered += destinationId -> (MutableSet() ++= edgeKinds)
         }
       }
       bufferedIncomingEdges += (vertexId -> buffered)
@@ -159,9 +164,9 @@ class SimpleGraphWriter(
 }
 
 class BufferedMap[A, B](current: MutableMap[A, B], updated: MutableMap[A, B] = MutableMap[A, B](), removed: MutableSet[A] = MutableSet[A]()) extends MutableMap[A, B] {
-  def get(key : A) = if (removed.contains(key)) None else updated.get(key) orElse current.get(key)
+  def get(key: A) = if (removed.contains(key)) None else updated.get(key) orElse current.get(key)
   def iterator = updated.iterator ++ current.iterator.withFilter { case (key, _) => !hasBuffered(key) }
-  def +=(kv: (A,B)) = {
+  def +=(kv: (A, B)) = {
     removed -= kv._1
     updated += kv
     this

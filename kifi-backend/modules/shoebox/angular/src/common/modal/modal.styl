@@ -10,8 +10,8 @@
 .modal-content.modal-content
   width: 100%
   height: 100%
-  border: 1px solid #f2eeed
-  box-shadow: 12px 12px 0 rgba(0, 40, 90, 0.2)
+  border: 1px solid #8197AC
+  box-shadow: 10px 10px 0 rgba(0, 40, 90, 0.2)
   background: #fff
   border-radius: 5px
   overflow: hidden
@@ -46,7 +46,7 @@
     height: 20px
     line-height: 20px
     padding: 11px 15px
-    background-color: #6fa5ef
+    background-color: #4372B1
     color: #fff
     border: none
     border-radius: 6px
@@ -56,8 +56,9 @@
     cursor: pointer
     transition: background-color .1s
 
+    &:focus
     &:hover
-      background-color: #7faeef
+      background-color: #5382C1
 
     &.dialog-warn
       background-color: #ce6159
@@ -86,60 +87,40 @@
     color: #73787f
 
 .dialog-header
-  font-size: 18px
-  font-weight: 300
   padding: 9px 6px 8px
-  color: #3a495b
-  overflow: hidden
-  text-overflow: ellipsis
-  white-space: nowrap
   text-align: center
+  word-wrap: break-word
 
   &.dialog-warning
     color: #ce6159
 
 .dialog-x
   position: absolute
-  color: #bcc1c7
-  font-weight: normal
-  padding: 15px 20px
-  right: 0
-  top: 0
-  font-size: 16px
+  color: #67829C
+  right: 20px
+  top: 25px
+  font-size: 18px
   text-decoration: none
   cursor: pointer
 
 .dialog-buttons
   text-align: center
-  margin: 24px auto 10px
-
-.dialog-title
-  color: #515051
-  background: url('../img/kifi-logo-color.png') 30px 50% / 32px no-repeat
-  font-size: 0
-  background-color: #eff2f7
-  line-height: 50px
-  margin-bottom: 15px
-
-  .dialog-x
-    font-size: 13px
-    float: right
-    margin: 0 15px
-    color: #888
-    cursor: pointer
-    padding: 0px 8px
-
-    &:hover
-      color: #000
+  margin: 0px auto 20px
 
 .dialog-body-wrap
   min-width: 300px
-  margin: 20px 35px
+  max-width: 800px
+  margin: 40px 0px 5px
+  padding: 0px 35px
   color: #333
   font-size: 14px
 
   .dialog-body
     margin: 0 auto
+    padding: 0 0 20px
+
+  .dialog-buttons
+    margin-bottom: 0px
 
 .dialog-centered
   text-align: center
@@ -154,3 +135,18 @@
   background-color: #000000
   opacity: 0.3
 
+.kf-modal-upload-image-header
+  padding: 9px 6px 47px
+  text-align: center
+  word-wrap: break-word
+  margin-right: 30px
+  display: inline-block
+
+  &.warning
+    color: #ce6159
+
+.kf-modal-waiting
+  display: inline-block
+  transform: scale(.45)
+  position: relative
+  top: -30px

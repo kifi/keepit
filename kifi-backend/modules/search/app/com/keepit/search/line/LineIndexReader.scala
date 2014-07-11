@@ -11,7 +11,7 @@ import scala.collection.mutable.ArrayBuffer
 object LineIndexReader extends Logging {
 
   def apply(indexReader: AtomicReader, userDocId: Int, terms: Set[Term], numLines: Int, cachedIndexOpt: Option[CachedIndex] = None): CachingIndexReader = {
-    val index = terms.foldLeft(new CachedIndex(numLines)){ (index, term) =>
+    val index = terms.foldLeft(new CachedIndex(numLines)) { (index, term) =>
       cachedIndexOpt.flatMap(_.get(term)) match {
         case Some(invertedList) =>
           index + (term.field, term.bytes, invertedList)

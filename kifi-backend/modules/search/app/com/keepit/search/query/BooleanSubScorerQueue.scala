@@ -6,7 +6,7 @@ import org.apache.lucene.util.PriorityQueue
 object BooleanSubScorerQueue {
   def apply(scorers: Seq[BooleanScoreDoc]) = {
     val pq = new BooleanSubScorerQueue(scorers.size)
-    scorers.foreach{ pq.insertWithOverflow(_) }
+    scorers.foreach { pq.insertWithOverflow(_) }
     pq
   }
 }

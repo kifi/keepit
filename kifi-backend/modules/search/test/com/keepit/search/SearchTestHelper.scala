@@ -20,7 +20,7 @@ import com.keepit.search.phrasedetector._
 import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.query.parser.MainQueryParserFactory
-import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient}
+import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import com.keepit.test._
 import akka.actor.ActorSystem
 import scala.concurrent.duration._
@@ -34,35 +34,37 @@ import com.keepit.search.graph.user._
 
 trait SearchTestHelper { self: SearchApplicationInjector =>
 
-  val resultClickBuffer  = new InMemoryResultClickTrackerBuffer(1000)
+  val resultClickBuffer = new InMemoryResultClickTrackerBuffer(1000)
   val resultClickTracker = new ResultClickTracker(new ProbablisticLRU(resultClickBuffer, 8, Int.MaxValue))
 
   implicit val english = Lang("en")
 
   def initData(numUsers: Int, numUris: Int) = {
-    val users = (0 until numUsers).map {n => User(firstName = "foo" + n, lastName = "")}.toList
-    val uris =   (0 until numUris).map {n => NormalizedURI.withHash(title = Some("a" + n),
-        normalizedUrl = "http://www.keepit.com/article" + n, state = SCRAPED)}.toList
+    val users = (0 until numUsers).map { n => User(firstName = "foo" + n, lastName = "") }.toList
+    val uris = (0 until numUris).map { n =>
+      NormalizedURI.withHash(title = Some("a" + n),
+        normalizedUrl = "http://www.keepit.com/article" + n, state = SCRAPED)
+    }.toList
     val fakeShoeboxClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    (fakeShoeboxClient.saveUsers(users:_*), fakeShoeboxClient.saveURIs(uris:_*))
+    (fakeShoeboxClient.saveUsers(users: _*), fakeShoeboxClient.saveURIs(uris: _*))
   }
 
   def initIndexes(store: ArticleStore)(implicit activeShards: ActiveShards) = {
 
-    val articleIndexers = activeShards.local.map{ shard =>
+    val articleIndexers = activeShards.local.map { shard =>
       val articleIndexer = new ArticleIndexer(new VolatileIndexDirectory, store, inject[AirbrakeNotifier])
       (shard -> articleIndexer)
     }
     val shardedArticleIndexer = new ShardedArticleIndexer(articleIndexers.toMap, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
-    val uriGraphIndexers = activeShards.local.map{ shard =>
+    val uriGraphIndexers = activeShards.local.map { shard =>
       val bookmarkStore = new BookmarkStore(new VolatileIndexDirectory, inject[AirbrakeNotifier])
       val uriGraphIndexer = new URIGraphIndexer(new VolatileIndexDirectory, bookmarkStore, inject[AirbrakeNotifier])
       (shard -> uriGraphIndexer)
     }
     val shardedUriGraphIndexer = new ShardedURIGraphIndexer(uriGraphIndexers.toMap, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
-    val collectionIndexers = activeShards.local.map{ shard =>
+    val collectionIndexers = activeShards.local.map { shard =>
       val collectionNameIndexer = new CollectionNameIndexer(new VolatileIndexDirectory, inject[AirbrakeNotifier])
       val collectionIndexer = new CollectionIndexer(new VolatileIndexDirectory, collectionNameIndexer, inject[AirbrakeNotifier])
       (shard -> collectionIndexer)
@@ -95,9 +97,10 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
   }
 
   def mkStore(uris: Seq[NormalizedURI]) = {
-    uris.zipWithIndex.foldLeft(new FakeArticleStore){ case (store, (uri, idx)) =>
-      store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs documents".format(idx)))
-      store
+    uris.zipWithIndex.foldLeft(new FakeArticleStore) {
+      case (store, (uri, idx)) =>
+        store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs documents".format(idx)))
+        store
     }
   }
 
@@ -122,20 +125,20 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
 
   def setConnections(connections: Map[Id[User], Set[Id[User]]]) {
     val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    shoebox.clearUserConnections(connections.keys.toSeq:_*)
+    shoebox.clearUserConnections(connections.keys.toSeq: _*)
     shoebox.saveConnections(connections)
   }
 
   def saveCollections(collections: Collection*): Seq[Collection] = {
-    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveCollections(collections:_*)
+    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveCollections(collections: _*)
   }
 
   def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Keep*) {
-    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksToCollection(collectionId, bookmarks:_*)
+    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksToCollection(collectionId, bookmarks: _*)
   }
 
   def saveBookmarks(bookmarks: Keep*): Seq[Keep] = {
-    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarks(bookmarks:_*)
+    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarks(bookmarks: _*)
   }
 
   def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false): Seq[Keep] = {
@@ -148,7 +151,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
 
   def getBookmarks(userId: Id[User]): Seq[Keep] = {
     val future = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].getBookmarks(userId)
-     inject[MonitoredAwait].result(future, 3 seconds, "getBookmarks: this should not fail")
+    inject[MonitoredAwait].result(future, 3 seconds, "getBookmarks: this should not fail")
   }
 
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Option[Keep] = {

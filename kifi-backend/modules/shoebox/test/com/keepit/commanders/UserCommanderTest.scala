@@ -2,13 +2,13 @@ package com.keepit.commanders
 
 import org.specs2.mutable.Specification
 
-import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxApplication}
-import com.keepit.model.{User, UserEmailAddressRepo, UserRepo, UserEmailAddress, UserConnectionRepo}
-import com.keepit.common.mail.{EmailAddress, FakeMailModule, FakeOutbox}
+import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
+import com.keepit.model.{ User, UserEmailAddressRepo, UserRepo, UserEmailAddress, UserConnectionRepo }
+import com.keepit.common.mail.{ EmailAddress, FakeMailModule, FakeOutbox }
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
+import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
 
 import play.api.test.Helpers.running
@@ -38,10 +38,9 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
         lastName = "Kent"
       ))
 
-
-      val email1 = emailRepo.save(UserEmailAddress(userId=user1.id.get, address=EmailAddress("username@42go.com")))
-      val email2 = emailRepo.save(UserEmailAddress(userId=user2.id.get, address=EmailAddress("peteG@42go.com")))
-      val email3 = emailRepo.save(UserEmailAddress(userId=user3.id.get, address=EmailAddress("superreporter@42go.com")))
+      val email1 = emailRepo.save(UserEmailAddress(userId = user1.id.get, address = EmailAddress("username@42go.com")))
+      val email2 = emailRepo.save(UserEmailAddress(userId = user2.id.get, address = EmailAddress("peteg@42go.com")))
+      val email3 = emailRepo.save(UserEmailAddress(userId = user3.id.get, address = EmailAddress("superreporter@42go.com")))
 
       user1 = userRepo.save(user1.copy(primaryEmail = Some(email1.address), pictureName = Some("dfkjiyert")))
       user2 = userRepo.save(user2.copy(primaryEmail = Some(email2.address)))
@@ -67,17 +66,17 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
   "UserCommander" should {
 
     "notify friends of new joinee" in {
-      running(new ShoeboxApplication(modules:_*)) {
+      running(new ShoeboxApplication(modules: _*)) {
         val (user1, user2, user3) = setup()
         val userCommander = inject[UserCommander]
         val outbox = inject[FakeOutbox]
         outbox.size === 0
         userCommander.tellAllFriendsAboutNewUserImmediate(user1.id.get, Seq(user2.id.get))
         outbox.size === 2
-        val forUser2 = outbox.all.filter( email => email.to.length==1 && email.to.head.address=="peteG@42go.com")
-        val forUser3 = outbox.all.filter( email => email.to.length==1 && email.to.head.address=="superreporter@42go.com")
-        forUser2.length===1
-        forUser3.length===1
+        val forUser2 = outbox.all.filter(email => email.to.length == 1 && email.to.head.address == "peteg@42go.com")
+        val forUser3 = outbox.all.filter(email => email.to.length == 1 && email.to.head.address == "superreporter@42go.com")
+        forUser2.length === 1
+        forUser3.length === 1
         //double seding protection
         userCommander.tellAllFriendsAboutNewUser(user1.id.get, Seq(user2.id.get))
         outbox.size === 2
@@ -98,23 +97,23 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
         outbox(0).to.length === 1
         outbox(1).to.length === 1
 
-        outbox(0).to(0).address === "peteG@42go.com"
+        outbox(0).to(0).address === "peteg@42go.com"
         outbox(1).to(0).address === "superreporter@42go.com"
       }
     }
 
     "welcome a joinee" in {
-      running(new ShoeboxApplication(modules:_*)) {
+      running(new ShoeboxApplication(modules: _*)) {
         val (user1, user2, user3) = setup()
         val userCommander = inject[UserCommander]
         val outbox = inject[FakeOutbox]
-        outbox.size===0
+        outbox.size === 0
         userCommander.sendWelcomeEmail(user1)
-        outbox.size===1
-        outbox.all.filter( email => email.to.length==1 && email.to.head.address=="username@42go.com").length===1
+        outbox.size === 1
+        outbox.all.filter(email => email.to.length == 1 && email.to.head.address == "username@42go.com").length === 1
         //double seding protection
         userCommander.sendWelcomeEmail(user1)
-        outbox.size===1
+        outbox.size === 1
 
         //content check
         outbox(0).htmlBody.toString.containsSlice("Hey " + user1.firstName + ",") === true
@@ -128,7 +127,7 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
     }
 
     "page through connections" in {
-      running(new ShoeboxApplication(modules:_*)) {
+      running(new ShoeboxApplication(modules: _*)) {
         val userRepo = inject[UserRepo]
         val connectionRepo = inject[UserConnectionRepo]
 

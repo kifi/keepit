@@ -1,6 +1,6 @@
 package com.keepit.normalizer
 
-import com.keepit.common.net.{Host, URI}
+import com.keepit.common.net.{ Host, URI }
 import com.keepit.model.Normalization
 
 object WikipediaNormalizer extends StaticNormalizer {

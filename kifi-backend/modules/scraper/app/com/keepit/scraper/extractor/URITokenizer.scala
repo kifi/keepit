@@ -11,7 +11,7 @@ object URITokenizer {
     URI.parse(uriString) match {
       case Success(uri) =>
         uri.path match {
-          case Some(path) => specialCharRegex.split(path).filter{ _.length > 0 }
+          case Some(path) => specialCharRegex.split(path).filter { _.length > 0 }
           case _ => Seq()
         }
       case _ => Seq()
