@@ -41,7 +41,7 @@ class SliderAdminController @Inject() (
 
   def getRules = AdminHtmlAction.authenticated { implicit request =>
     val groupName = "default"
-    val group = db.readOnlyMaster { implicit session =>
+    val group = db.readOnlyReplica { implicit session =>
       sliderRuleRepo.getGroup(groupName)
     }
     Ok(html.admin.sliderRules(groupName, group.rules.map(r => r.name -> r).toMap))
@@ -66,7 +66,7 @@ class SliderAdminController @Inject() (
   }
 
   def getPatterns = AdminHtmlAction.authenticated { implicit request =>
-    val patterns = db.readOnlyMaster { implicit session =>
+    val patterns = db.readOnlyReplica { implicit session =>
       urlPatternRepo.all
     }
     Ok(html.admin.sliderPatterns(patterns))
@@ -99,7 +99,7 @@ class SliderAdminController @Inject() (
   }
 
   def getDomainTags = AdminHtmlAction.authenticated { implicit request =>
-    val tags = db.readOnlyMaster { implicit session =>
+    val tags = db.readOnlyReplica { implicit session =>
       domainTagRepo.all
     }
     Ok(html.admin.domainTags(tags))
@@ -109,7 +109,7 @@ class SliderAdminController @Inject() (
     domain.map(domainClassifier.fetchTags)
       .getOrElse(promise[Seq[DomainTagName]].success(Seq()).future).map { tags =>
         val tagPairs = tags.map { t =>
-          val tag = db.readOnlyMaster { implicit s => domainTagRepo.get(t) }
+          val tag = db.readOnlyReplica { implicit s => domainTagRepo.get(t) }
           (t.name, tag.map(_.sensitive.getOrElse(false)))
         }
         Ok(html.admin.classifications(domain, tagPairs))
@@ -120,7 +120,7 @@ class SliderAdminController @Inject() (
     val tagIdValue = """sensitive_([0-9]+)""".r
     val sensitiveTags = request.body.asFormUrlEncoded.get.keys
       .collect { case tagIdValue(v) => Id[DomainTag](v.toInt) }.toSet
-    val tagsToSave = db.readOnlyMaster { implicit s =>
+    val tagsToSave = db.readOnlyReplica { implicit s =>
       domainTagRepo.all.map(tag => (tag, sensitiveTags contains tag.id.get)).collect {
         case (tag, sensitive) if tag.state == DomainTagStates.ACTIVE && tag.sensitive != Some(sensitive) =>
           tag.withSensitive(Some(sensitive))
@@ -143,7 +143,7 @@ class SliderAdminController @Inject() (
   }
 
   def getDomainOverrides = AdminHtmlAction.authenticated { implicit request =>
-    val domains = db.readOnlyMaster { implicit session =>
+    val domains = db.readOnlyReplica { implicit session =>
       domainRepo.getOverrides()
     }
     Ok(html.admin.domains(domains))
@@ -153,7 +153,7 @@ class SliderAdminController @Inject() (
     val domainSensitiveMap = request.body.asFormUrlEncoded.get.map {
       case (k, vs) => k.toLowerCase -> (vs.head.toLowerCase == "true")
     }.toMap
-    val domainsToRemove = db.readOnlyMaster { implicit session =>
+    val domainsToRemove = db.readOnlyReplica { implicit session =>
       domainRepo.getOverrides()
     }.filterNot(d => domainSensitiveMap.contains(d.hostname))
 

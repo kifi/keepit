@@ -69,11 +69,12 @@ class KeepsController @Inject() (
     ))
   }
 
+  // todo(martin) - looks like this endpoint is not being used, consider removing
   def getScreenshotUrl() = JsonAction.authenticatedParseJsonAsync { request =>
     val urlOpt = (request.body \ "url").asOpt[String]
     val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
     urlOpt.map { url =>
-      db.readOnlyMasterAsync { implicit session =>
+      db.readOnlyReplicaAsync { implicit session =>
         normalizedURIInterner.getByUri(url)
       } map { uriOpt =>
         uriOpt flatMap { uriSummaryCommander.getScreenshotURL(_) } match {
@@ -83,7 +84,7 @@ class KeepsController @Inject() (
       }
     }.orElse {
       urlsOpt.map { urls =>
-        db.readOnlyMasterAsync { implicit session =>
+        db.readOnlyReplicaAsync { implicit session =>
           urls.map(url => url -> normalizedURIInterner.getByUri(url))
         } map {
           case uris =>
@@ -114,13 +115,14 @@ class KeepsController @Inject() (
     }
   }
 
+  // todo(martin) - looks like this endpoint is not being used, consider removing
   def getImageUrl() = JsonAction.authenticatedParseJsonAsync { request => // WIP; test-only
     val urlOpt = (request.body \ "url").asOpt[String]
     log.info(s"[getImageUrl] body=${request.body} url=${urlOpt}")
     urlOpt match {
       case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_argument")))
       case Some(url) => {
-        val (uriOpt, pageInfoOpt) = db.readOnlyMaster { implicit ro =>
+        val (uriOpt, pageInfoOpt) = db.readOnlyReplica { implicit ro =>
           val uriOpt = normalizedURIInterner.getByUri(url)
           val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
           (uriOpt, pageInfoOpt)
@@ -135,20 +137,21 @@ class KeepsController @Inject() (
     }
   }
 
+  // todo(martin) - looks like this endpoint is not being used, consider removing
   def getImageUrls() = JsonAction.authenticatedParseJsonAsync { request => // WIP; test-only
     val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
     log.info(s"[getImageUrls] body=${request.body} urls=${urlsOpt}")
     urlsOpt match {
       case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_arguments")))
       case Some(urls) => {
-        val tuples = db.readOnlyMaster { implicit ro =>
+        val tuples = db.readOnlyReplica { implicit ro =>
           urls.map { s =>
             s -> normalizedURIInterner.getByUri(s)
           }
         }
         val tuplesF = tuples map {
           case (url, uriOpt) =>
-            val (uriOpt, pageInfoOpt) = db.readOnlyMaster { implicit ro =>
+            val (uriOpt, pageInfoOpt) = db.readOnlyReplica { implicit ro =>
               val uriOpt = normalizedURIInterner.getByUri(url)
               val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
               (uriOpt, pageInfoOpt)
@@ -167,7 +170,7 @@ class KeepsController @Inject() (
   }
 
   def exportKeeps() = AnyAction.authenticated { request =>
-    val exports: Seq[KeepExport] = db.readOnlyMaster { implicit ro =>
+    val exports: Seq[KeepExport] = db.readOnlyReplica { implicit ro =>
       keepRepo.getKeepExports(request.userId)
     }
 
@@ -290,6 +293,7 @@ class KeepsController @Inject() (
         }
       }
     } else {
+      // user may get the info for a keep that was just created
       db.readOnlyMaster { implicit s => keepRepo.getOpt(id) } filter { _.isActive } map { b =>
         Future.successful(Ok(Json.toJson(KeepInfo.fromBookmark(b))))
       }
@@ -338,7 +342,7 @@ class KeepsController @Inject() (
   }
 
   def allCollections(sort: String) = JsonAction.authenticatedAsync { request =>
-    val numKeepsFuture = SafeFuture { db.readOnlyMaster { implicit s => keepRepo.getCountByUser(request.userId) } }
+    val numKeepsFuture = SafeFuture { db.readOnlyReplica { implicit s => keepRepo.getCountByUser(request.userId) } }
     val collectionsFuture = SafeFuture { collectionCommander.allCollections(sort, request.userId) }
     for {
       numKeeps <- numKeepsFuture
@@ -415,7 +419,7 @@ class KeepsController @Inject() (
 
   def numKeeps() = JsonAction.authenticated { request =>
     Ok(Json.obj(
-      "numKeeps" -> db.readOnlyMaster { implicit s => keepRepo.getCountByUser(request.userId) }
+      "numKeeps" -> db.readOnlyReplica { implicit s => keepRepo.getCountByUser(request.userId) }
     ))
   }
 

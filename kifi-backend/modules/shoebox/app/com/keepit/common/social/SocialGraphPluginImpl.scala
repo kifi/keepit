@@ -55,12 +55,12 @@ private[social] class SocialGraphActor @Inject() (
 
     case RefreshAll =>
       log.info("going to check which SocialUserInfo was not fetched lately")
-      val needToBeRefreshed = db.readOnlyMaster { implicit s => socialRepo.getNeedToBeRefreshed }
+      val needToBeRefreshed = db.readOnlyReplica { implicit s => socialRepo.getNeedToBeRefreshed }
       log.info(s"find ${needToBeRefreshed.size} users that need to be refreshed")
       needToBeRefreshed.foreach(self ! FetchUserInfoQuietly(_))
 
     case FetchAll =>
-      val unprocessedUsers = db.readOnlyMaster { implicit s =>
+      val unprocessedUsers = db.readOnlyReplica { implicit s =>
         socialRepo.getUnprocessed()
       }
       unprocessedUsers foreach { user =>
@@ -68,7 +68,7 @@ private[social] class SocialGraphActor @Inject() (
       }
 
     case FetchUserInfo(socialUserInfoId) =>
-      val socialUserInfo = db.readOnlyMaster { implicit session =>
+      val socialUserInfo = db.readOnlyReplica { implicit session =>
         socialRepo.get(socialUserInfoId)
       }
       fetchUserInfo(socialUserInfo)

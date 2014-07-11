@@ -13,11 +13,11 @@ class ElizaStatsCommander @Inject() (
     db: Database) extends Logging {
 
   def getUserThreadStats(userId: Id[User]): UserThreadStats = {
-    db.readOnlyMaster { implicit s =>
+    db.readOnlyReplica { implicit s =>
       userThreadRepo.getUserStats(userId)
     }
   }
 
-  def getCurrentRenormalizationSequenceNumber(): SequenceNumber[ChangedURI] = db.readOnlyMaster { implicit session => renormalizationRepo.getCurrentSequenceNumber() }
+  def getCurrentRenormalizationSequenceNumber(): SequenceNumber[ChangedURI] = db.readOnlyReplica { implicit session => renormalizationRepo.getCurrentSequenceNumber() }
 
 }

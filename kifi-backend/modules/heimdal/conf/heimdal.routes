@@ -23,20 +23,13 @@ GET  /internal/heimdal/:repo/eventDescriptors          @com.keepit.controllers.A
 
 POST /internal/heimdal/:repo/eventDescriptors          @com.keepit.controllers.AnalyticsController.updateEventDescriptors(repo: String)
 
-GET /internal/heimdal/user/delete                      @com.keepit.controllers.AnalyticsController.deleteUser(userId: Id[User])
-
+GET  /internal/heimdal/user/delete                     @com.keepit.controllers.AnalyticsController.deleteUser(userId: Id[User])
 POST /internal/heimdal/user/set                        @com.keepit.controllers.AnalyticsController.setUserProperties(userId: Id[User])
-
 POST /internal/heimdal/user/increment                  @com.keepit.controllers.AnalyticsController.incrementUserProperties(userId: Id[User])
+GET  /internal/heimdal/user/alias                      @com.keepit.controllers.AnalyticsController.setUserAlias(userId: Id[User], externalId: ExternalId[User])
 
-GET /internal/heimdal/user/alias                       @com.keepit.controllers.AnalyticsController.setUserAlias(userId: Id[User], externalId: ExternalId[User])
-
-GET /internal/heimdal/user/lastDelightedAnswerDate     @com.keepit.controllers.DelightedController.getLastDelightedAnswerDate(userId: Id[User])
-
-POST /internal/heimdal/user/postDelightedAnswer        @com.keepit.controllers.DelightedController.postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String)
+GET  /internal/heimdal/user/delighted/time             @com.keepit.controllers.DelightedController.getUserLastInteractedDate(userId: Id[User])
+POST /internal/heimdal/user/delighted/answer           @com.keepit.controllers.DelightedController.postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String)
+POST /internal/heimdal/user/delighted/cancel           @com.keepit.controllers.DelightedController.cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String)
 
 ->  / common.Routes
-
-
-
-

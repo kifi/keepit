@@ -188,9 +188,9 @@
     <h3>Contacts (total=@econtactCount; display up to 500)</h3>
     <div class="scrollArea">
         <table class="table table-condensed table-striped">
-            <tr><th>Name</th><th>Email</th><th>ContactUserId</th></tr>
+            <tr><th>Email</th><th>Name</th><th>ContactUserId</th></tr>
             @for(contact <- contacts) {
-            <tr><td>@contact.name</td><td>@contact.email</td><td>@contact.userId</td>
+            <tr><td>@contact.email</td><td>@contact.name</td><td>@contact.userId</td>
               @if(experiments.contains(ExperimentType.ADMIN)) {
                 <td>
                     <form class="form-inline" style="display:inline" action="/invite" method="POST">

@@ -9,6 +9,7 @@ CREATE TABLE delighted_user (
     delighted_ext_user_id varchar(32) NOT NULL,
     user_id bigint(20) NOT NULL,
     email varchar(256) NOT NULL,
+    user_last_interacted datetime NULL,
 
     PRIMARY KEY (id),
     UNIQUE INDEX delighted_user_i_user_id (user_id)

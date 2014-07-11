@@ -31,8 +31,8 @@ class AdminSocialUserController @Inject() (
 
   def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction.authenticatedAsync { implicit request =>
     for {
-      socialUserInfo <- db.readOnlyMasterAsync { implicit s => socialUserInfoRepo.get(socialUserId) }
-      socialConnections <- db.readOnlyMasterAsync { implicit s => socialConnectionRepo.getSocialUserConnections(socialUserId).sortWith((a, b) => a.fullName < b.fullName) }
+      socialUserInfo <- db.readOnlyReplicaAsync { implicit s => socialUserInfoRepo.get(socialUserId) }
+      socialConnections <- db.readOnlyReplicaAsync { implicit s => socialConnectionRepo.getSocialUserConnections(socialUserId).sortWith((a, b) => a.fullName < b.fullName) }
     } yield {
       val rawInfo = socialUserRawInfoStore.get(socialUserInfo.id.get)
       Ok(html.admin.socialUser(socialUserInfo, socialConnections, rawInfo))
@@ -41,7 +41,7 @@ class AdminSocialUserController @Inject() (
 
   def socialUsersView(page: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val PAGE_SIZE = 50
-    db.readOnlyMasterAsync { implicit s => socialUserInfoRepo.page(page, PAGE_SIZE) } map { socialUsers =>
+    db.readOnlyReplicaAsync { implicit s => socialUserInfoRepo.page(page, PAGE_SIZE) } map { socialUsers =>
       Ok(html.admin.socialUsers(socialUsers, page))
     }
   }
@@ -71,7 +71,7 @@ class AdminSocialUserController @Inject() (
     val user: Id[User] = if (userId == 0) request.userId else Id[User](userId)
     val howManyReally = if (howMany == 0) 20 else howMany
     abook.ripestFruit(user, howManyReally).map { socialIds =>
-      val socialUsers = db.readOnlyMaster { implicit session => socialIds.map(socialUserInfoRepo.get(_)) }
+      val socialUsers = db.readOnlyReplica { implicit session => socialIds.map(socialUserInfoRepo.get(_)) }
       Ok(html.admin.socialUsers(socialUsers, 0))
     }
   }

@@ -19,6 +19,7 @@ import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialNetworkType }
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient, HeimdalContextBuilder }
 import com.keepit.heimdal._
 import com.keepit.search.SearchServiceClient
 import com.keepit.typeahead.PrefixFilter
@@ -140,7 +141,7 @@ class UserCommander @Inject() (
   }
 
   def getConnectionsPage(userId: Id[User], page: Int, pageSize: Int): (Seq[ConnectionInfo], Int) = {
-    val infos = db.readOnlyMaster { implicit s =>
+    val infos = db.readOnlyReplica { implicit s =>
       val searchFriends = searchFriendRepo.getSearchFriends(userId)
       val connectionIds = userConnectionRepo.getConnectedUsers(userId)
       val unfriendedIds = userConnectionRepo.getUnfriendedUsers(userId)
@@ -154,7 +155,7 @@ class UserCommander @Inject() (
   }
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
-    val basicUsers = db.readOnlyMaster { implicit s =>
+    val basicUsers = db.readOnlyReplica { implicit s =>
       if (canMessageAllUsers(user.id.get)) {
         userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
           .collect { case u if u.id.get != user.id.get => BasicUser.fromUser(u) }.toSet
@@ -220,7 +221,7 @@ class UserCommander @Inject() (
 
   def getHelpCounts(user: Id[User]): (Int, Int) = {
     //unique keeps, total clicks
-    db.readOnlyMaster { implicit session => bookmarkClicksRepo.getClickCounts(user) }
+    db.readOnlyReplica { implicit session => bookmarkClicksRepo.getClickCounts(user) }
   }
 
   def getKeepAttributionCounts(userId: Id[User]): (Int, Int, Int) = { // (discoveryCount, rekeepCount, rekeepTotalCount)
@@ -232,7 +233,7 @@ class UserCommander @Inject() (
   }
 
   def getUserSegment(userId: Id[User]): UserSegment = {
-    val (numBms, numFriends) = db.readOnlyMaster { implicit s => //using cache
+    val (numBms, numFriends) = db.readOnlyReplica { implicit s => //using cache
       (keepRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
     }
 
@@ -258,7 +259,7 @@ class UserCommander @Inject() (
     val guardKey = "friendsNotifiedAboutJoining"
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, guardKey).exists(_ == "true") }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, true) }
-      val (newUser, toNotify, id2Email) = db.readOnlyMaster { implicit session =>
+      val (newUser, toNotify, id2Email) = db.readOnlyReplica { implicit session =>
         val newUser = userRepo.get(newUserId)
         val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
         val id2Email = toNotify.map { userId =>
@@ -384,95 +385,7 @@ class UserCommander @Inject() (
     resOpt getOrElse { throw new IllegalArgumentException("no_user") }
   }
 
-  def queryContacts(userId: Id[User], search: Option[String], after: Option[String], limit: Int): Future[Seq[JsObject]] = { // TODO: optimize
-    @inline def mkId(email: EmailAddress) = s"email/${email.address}"
-    @inline def getEInviteStatus(contactEmail: EmailAddress): String = { // todo: batch
-      db.readOnlyMaster { implicit s =>
-        invitationRepo.getBySenderIdAndRecipientEmailAddress(userId, contactEmail) map { inv =>
-          if (inv.state != InvitationStates.INACTIVE) "invited" else ""
-        }
-      } getOrElse ""
-    }
-
-    abookServiceClient.queryEContacts(userId, limit, search, after) map { paged =>
-      val objs = paged.take(limit).map { e =>
-        Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> getEInviteStatus(e.email))
-      }
-      log.info(s"[queryContacts(id=$userId)] res(len=${objs.length}):${objs.mkString.take(200)}")
-      objs
-    }
-  }
-
   implicit val hitOrdering = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
-
-  // todo(ray):removeme
-  def getAllConnections(userId: Id[User], search: Option[String], network: Option[String], after: Option[String], limit: Int): Future[Seq[JsObject]] = { // todo: convert to objects
-    val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
-      queryContacts(userId, search, after, limit)
-    } else Future.successful(Seq.empty[JsObject])
-    @inline def socialIdString(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
-
-    def getWithInviteStatus(sci: SocialUserBasicInfo)(implicit s: RSession): (SocialUserBasicInfo, String) = {
-      sci -> sci.userId.map(_ => "joined").getOrElse {
-        invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, sci.id) collect {
-          case inv if inv.state == InvitationStates.ACCEPTED || inv.state == InvitationStates.JOINED => {
-            // This is a hint that that cache may be stale as userId should be set
-            socialUserInfoRepo.getByUser(userId).foreach { socialUser =>
-              socialUserConnectionsCache.remove(SocialUserConnectionsKey(socialUser.id.get))
-            }
-            "joined"
-          }
-          case inv if inv.state != InvitationStates.INACTIVE => "invited"
-        } getOrElse ""
-      }
-    }
-
-    def getFilteredConnections(infos: Seq[SocialUserBasicInfo])(implicit s: RSession): Seq[TypeaheadHit[SocialUserBasicInfo]] = {
-      search match {
-        case Some(query) =>
-          var ordinal = 0
-          val queryTerms = PrefixFilter.tokenize(query)
-          infos.map { info =>
-            ordinal += 1
-            val name = PrefixFilter.normalize(info.fullName)
-            TypeaheadHit[SocialUserBasicInfo](PrefixMatching.distanceWithNormalizedName(name, queryTerms), name, ordinal, info)
-          }.collect { case hit if hit.score < 1000000.0d => hit }
-        case None =>
-          var ordinal = 0
-          infos.map { info =>
-            ordinal += 1
-            TypeaheadHit[SocialUserBasicInfo](0, PrefixFilter.normalize(info.fullName), ordinal, info)
-          }
-      }
-    }
-
-    val connections = db.readOnlyMaster { implicit s =>
-      val infos = socialConnectionRepo.getSocialConnectionInfosByUser(userId).filterKeys(networkType => network.forall(_ == networkType.name))
-      val filteredConnections = infos.values.map(getFilteredConnections).flatten.toSeq.sorted.map(_.info)
-
-      (after match {
-        case Some(id) => filteredConnections.dropWhile(socialIdString(_) != id) match {
-          case hd +: tl => tl
-          case tl => tl
-        }
-        case None => filteredConnections
-      }).take(limit).map(getWithInviteStatus)
-    }
-
-    val jsConns: Seq[JsObject] = connections.map { conn =>
-      Json.obj(
-        "label" -> conn._1.fullName,
-        "image" -> Json.toJson(conn._1.getPictureUrl(75, 75)),
-        "value" -> socialIdString(conn._1),
-        "status" -> conn._2
-      )
-    }
-    contactsF map { jsContacts =>
-      val jsCombined = jsConns ++ jsContacts
-      log.info(s"[getAllConnections($userId)] jsContacts(sz=${jsContacts.size}) jsConns(sz=${jsConns.size})")
-      jsCombined
-    }
-  }
 
   private def sendFriendRequestAcceptedEmailAndNotification(myUserId: Id[User], friend: User): Unit = SafeFuture {
     //sending 'friend request accepted' email && Notification
@@ -600,7 +513,7 @@ class UserCommander @Inject() (
         userConnectionRepo.unfriendConnections(userId, user.id.toSet) > 0
       }
       if (success) {
-        db.readOnlyMaster { implicit session =>
+        db.readOnlyReplica { implicit session =>
           elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
           elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
         }
@@ -775,29 +688,62 @@ class UserCommander @Inject() (
     }
   }
 
-  def getPrefs(prefSet: Set[String], userId: Id[User]): JsObject = {
+  private val SHOW_DELIGHTED_QUESTION_PREF = "show_delighted_question"
+
+  private def getPrefUpdates(prefSet: Set[String], userId: Id[User]): Future[JsObject] = {
+    if (prefSet.contains(SHOW_DELIGHTED_QUESTION_PREF)) {
+      // Check if user should be shown Delighted question
+      val user = db.readOnlyReplica { implicit s =>
+        userRepo.get(userId)
+      }
+      val time = clock.now()
+      val from = time.minusDays(DELIGHTED_INITIAL_DELAY)
+      val to = user.createdAt
+      val shouldShowDelightedQuestionFut = if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
+        heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
+          val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
+          time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate
+        }
+      } else Future.successful(false)
+      shouldShowDelightedQuestionFut map { shouldShowDelightedQuestion =>
+        Json.obj(SHOW_DELIGHTED_QUESTION_PREF -> shouldShowDelightedQuestion)
+      }
+    } else Future.successful(Json.obj())
+  }
+
+  private def readPrefs(prefSet: Set[String], userId: Id[User]): JsObject = {
     // Reading from master because the value may have been updated just before
-    db.readOnlyMaster { implicit s =>
-      val values = userValueRepo.getValues(userId, prefSet.toSeq: _*)
-      JsObject(prefSet.toSeq.map { name =>
-        name -> values(name).map(value => {
-          if (value == "false") JsBoolean(false)
-          else if (value == "true") JsBoolean(true)
-          else if (value == "null") JsNull
-          else JsString(value)
-        }).getOrElse(JsNull)
-      })
+    val values = db.readOnlyMaster { implicit s =>
+      userValueRepo.getValues(userId, prefSet.toSeq: _*)
+    }
+    JsObject(prefSet.toSeq.map { name =>
+      name -> values(name).map(value => {
+        if (value == "false") JsBoolean(false)
+        else if (value == "true") JsBoolean(true)
+        else if (value == "null") JsNull
+        else JsString(value)
+      }).getOrElse(JsNull)
+    })
+  }
+
+  def getPrefs(prefSet: Set[String], userId: Id[User]): Future[JsObject] = {
+    getPrefUpdates(prefSet, userId) map { updates =>
+      savePrefs(userId, updates)
+    } recover {
+      case t: Throwable => airbrake.notify(s"Error updating prefs for user $userId", t)
+    } map { _ =>
+      readPrefs(prefSet, userId)
     }
   }
 
-  def savePrefs(prefSet: Set[String], userId: Id[User], o: JsObject) = {
+  def savePrefs(userId: Id[User], o: JsObject) = {
     db.readWrite(attempts = 3) { implicit s =>
       o.fields.foreach {
         case (name, value) =>
           if (value == JsNull || value.isInstanceOf[JsUndefined]) {
             userValueRepo.clearValue(userId, name)
           } else {
-            userValueRepo.setValue(userId, name, value.as[String])
+            userValueRepo.setValue(userId, name, value.toString)
           }
       }
     }
@@ -806,27 +752,21 @@ class UserCommander @Inject() (
   val DELIGHTED_MIN_INTERVAL = 30 // days
   val DELIGHTED_INITIAL_DELAY = 7 // days
 
-  def setLastUserActive(userId: Id[User]): Future[Unit] = {
+  def setLastUserActive(userId: Id[User]): Unit = {
     val time = clock.now
-    val user = db.readWrite { implicit s =>
+    db.readWrite { implicit s =>
       userValueRepo.setValue(userId, "last_active", time)
-      userRepo.get(userId)
     }
-
-    // Check if user should be shown Delighted question
-    if (user.primaryEmail.nonEmpty && time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
-      heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
-        val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
-        if (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate) {
-          db.readWrite { implicit s => userValueRepo.setValue(userId, "show_delighted_question", true) }
-        }
-      }
-    } else Future.successful()
   }
 
   def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Boolean] = {
     val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
     heimdalClient.postDelightedAnswer(userId, user.externalId, user.primaryEmail, user.fullName, answer)
+  }
+
+  def cancelDelightedSurvey(userId: Id[User]): Future[Boolean] = {
+    val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
+    heimdalClient.cancelDelightedSurvey(userId, user.externalId, user.primaryEmail, user.fullName)
   }
 }
 
