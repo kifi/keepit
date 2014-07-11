@@ -4,13 +4,12 @@ import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.heimdal.DelightedAnswerSource
 import org.joda.time.DateTime
 
 @ImplementedBy(classOf[DelightedAnswerRepoImpl])
 trait DelightedAnswerRepo extends Repo[DelightedAnswer] {
-  def getLastAnswerDateForUser(userId: Id[User])(implicit session: RSession): Option[DateTime]
   def getByDelightedExtAnswerId(delightedExtAnswerId: String)(implicit session: RSession): Option[DelightedAnswer]
 }
 
@@ -39,14 +38,17 @@ class DelightedAnswerRepoImpl @Inject() (
   override def deleteCache(model: DelightedAnswer)(implicit session: RSession): Unit = {}
   override def invalidateCache(model: DelightedAnswer)(implicit session: RSession): Unit = {}
 
-  def getLastAnswerDateForUser(userId: Id[User])(implicit session: RSession): Option[DateTime] = {
-    Query((for {
-      u <- delightedUserRepo.rows
-      a <- rows if a.delightedUserId === u.id
-    } yield a.date).max).first
-  }
-
   def getByDelightedExtAnswerId(delightedExtAnswerId: String)(implicit session: RSession): Option[DelightedAnswer] = {
     (for { u <- rows if u.delightedExtAnswerId === delightedExtAnswerId } yield u).firstOption
+  }
+
+  override def save(answer: DelightedAnswer)(implicit session: RWSession): DelightedAnswer = {
+    val savedAnswer = super.save(answer)
+    // Update last_answer_date field in delighted_user if necessary
+    val mostRecent = delightedUserRepo.getLastInteractedDate(savedAnswer.delightedUserId) getOrElse START_OF_TIME
+    if (mostRecent < savedAnswer.date) {
+      delightedUserRepo.setLastInteractedDate(savedAnswer.delightedUserId, savedAnswer.date)
+    }
+    savedAnswer
   }
 }

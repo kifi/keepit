@@ -89,7 +89,7 @@ class S3ImageStoreImpl @Inject() (
 
   def getPictureUrl(width: Option[Int], user: User, pictureName: String): Future[String] = {
     if (config.isLocal) {
-      val sui = db.readOnlyMaster { implicit s => suiRepo.getByUser(user.id.get).head }
+      val sui = db.readOnlyReplica { implicit s => suiRepo.getByUser(user.id.get).head }
       Promise.successful(avatarUrlFromSocialNetwork(sui, width.map(_.toString).getOrElse("original"))).future
     } else {
       user.userPictureId match {
@@ -113,7 +113,7 @@ class S3ImageStoreImpl @Inject() (
           // We have an image so serve that one, even if it might be outdated
           if (user.pictureName.isEmpty || pictureName == user.pictureName.get) {
             // Only update the primary picture
-            db.readOnlyMaster { implicit session =>
+            db.readOnlyReplica { implicit session =>
               val pic = userPictureRepo.get(userPicId)
               val upToDate = pic.origin.name == "user_upload" || pic.updatedAt.isAfter(clock.now().minus(ExpirationTime))
               if (!upToDate) {
@@ -174,7 +174,7 @@ class S3ImageStoreImpl @Inject() (
   }
 
   def forceUpdateSocialPictures(userId: Id[User]): Unit = {
-    val (sui, user, picName) = db.readOnlyMaster { implicit s =>
+    val (sui, user, picName) = db.readOnlyReplica { implicit s =>
       val user = userRepo.get(userId)
       val suis = suiRepo.getByUser(user.id.get)
       // If user has no picture, this is the preference order for social networks:

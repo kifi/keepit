@@ -31,7 +31,7 @@ class KifiUserTypeahead @Inject() (
   implicit val fj = ExecutionContext.fj
 
   def refreshAll(): Future[Unit] = {
-    val userIds = db.readOnlyMaster { implicit ro =>
+    val userIds = db.readOnlyReplica { implicit ro =>
       userRepo.getAllActiveIds()
     }
     refreshByIds(userIds)

@@ -27,7 +27,7 @@ class AdminSearchConfigController @Inject() (
 
   def showUserConfig(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     val searchConfigFuture = searchClient.showUserConfig(userId)
-    val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
+    val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
     val searchConfig = Await.result(searchConfigFuture, 5 seconds)
     Ok(views.html.admin.searchConfig(user, searchConfig.iterator.toSeq.sortBy(_._1)))
   }
@@ -48,7 +48,7 @@ class AdminSearchConfigController @Inject() (
 
   def getExperiments = AdminHtmlAction.authenticatedAsync { implicit request =>
     heimdal.updateMetrics()
-    val experiments = db.readOnlyMaster { implicit s => searchConfigExperimentRepo.getNotInactive() }
+    val experiments = db.readOnlyReplica { implicit s => searchConfigExperimentRepo.getNotInactive() }
     val ids = experiments.map(_.id.get)
     val defaultConfigFuture = searchClient.getSearchDefaultConfig
     val kifiVsGoogleFuture = kifiVsGoogle(ids)
@@ -72,7 +72,7 @@ class AdminSearchConfigController @Inject() (
     val id = request.request.body.asFormUrlEncoded.get.mapValues(_.head)
       .get("id").map(_.toInt).map(Id[SearchConfigExperiment](_))
     id.map { id =>
-      val experiment = db.readOnlyMaster { implicit s => searchConfigExperimentRepo.get(id) }
+      val experiment = db.readOnlyReplica { implicit s => searchConfigExperimentRepo.get(id) }
       saveSearchConfigExperiment(experiment.withState(SearchConfigExperimentStates.INACTIVE))
     }
     Ok(JsObject(Seq()))
@@ -91,7 +91,7 @@ class AdminSearchConfigController @Inject() (
       case (k, v) if k.startsWith("param_") => k.split("_", 2)(1) -> v
     }.toMap
     id.map { id =>
-      val exp = db.readOnlyMaster { implicit s => searchConfigExperimentRepo.get(id) }
+      val exp = db.readOnlyReplica { implicit s => searchConfigExperimentRepo.get(id) }
       val toSave = exp.copy(description = desc, weight = weight, config = exp.config.overrideWith(params)).withState(state.getOrElse(exp.state))
       if (exp != toSave) saveSearchConfigExperiment(toSave, exp.weight != toSave.weight)
     }

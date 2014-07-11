@@ -89,7 +89,7 @@ class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Arra
 
   lazy val asAtomicReader: WrappedSubReader = new WrappedSubReader("", SlowCompositeReaderWrapper.wrap(this), getIdMapper)
 
-  def add(indexReader: CachingIndexReader, idMapper: IdMapper) = {
+  def outerjoin(indexReader: CachingIndexReader, idMapper: IdMapper): WrappedIndexReader = {
     val remappers = wrappedSubReaders.foldLeft(Map.empty[String, DocIdRemapper]) { (m, r) => m + (r.name -> DocIdRemapper(idMapper, r.getIdMapper, r.inner)) }
     val splitReaders = indexReader.split(remappers)
     var newSubReaders = ArrayBuffer.empty[WrappedSubReader]
@@ -102,6 +102,35 @@ class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Arra
 
     new WrappedIndexReader(inner, newSubReaders.toArray)
   }
+
+  def leftjoin(indexReader: CachingIndexReader, idMapper: IdMapper): WrappedIndexReader = {
+    val remappers = wrappedSubReaders.foldLeft(Map.empty[String, DocIdRemapper]) { (m, r) => m + (r.name -> DocIdRemapper(idMapper, r.getIdMapper, r.inner)) }
+    val splitReaders = indexReader.split(remappers)
+    var newSubReaders = ArrayBuffer.empty[WrappedSubReader]
+    wrappedSubReaders.foreach { r =>
+      newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, splitReaders(r.name)), r.getIdMapper)
+    }
+
+    new WrappedIndexReader(inner, newSubReaders.toArray)
+  }
+
+  def rightjoin(indexReader: CachingIndexReader, idMapper: IdMapper): WrappedIndexReader = {
+    val remappers = wrappedSubReaders.foldLeft(Map.empty[String, DocIdRemapper]) { (m, r) => m + (r.name -> DocIdRemapper(idMapper, r.getIdMapper, r.inner)) }
+    val splitReaders = indexReader.split(remappers)
+    var newSubReaders = ArrayBuffer.empty[WrappedSubReader]
+    wrappedSubReaders.foreach { r =>
+      val reader = splitReaders(r.name)
+      if (!reader.index.isEmpty) {
+        newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, reader, reader.getLiveDocs), r.getIdMapper)
+      }
+    }
+    splitReaders.get("").foreach { subReader =>
+      newSubReaders += new WrappedSubReader("", subReader, idMapper)
+    }
+
+    new WrappedIndexReader(inner, newSubReaders.toArray)
+  }
+
 }
 
 class WrappedSubReader(val name: String, val inner: AtomicReader, idMapper: IdMapper) extends AtomicReader {

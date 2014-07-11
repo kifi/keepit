@@ -46,7 +46,7 @@ class AdminSearchController @Inject() (
   }
 
   private def getConfigsForBlindTest: Seq[SearchConfigExperiment] = {
-    db.readOnlyMaster { implicit s =>
+    db.readOnlyReplica { implicit s =>
       searchConfigRepo.getActive()
     }.filter(_.description.contains("[blind test]"))
   }
@@ -85,7 +85,7 @@ class AdminSearchController @Inject() (
     val id2 = body.get("id2").get.toLong
     val shuffle = body.get("shuffle").get.toBoolean
 
-    val (config1, config2) = db.readOnlyMaster { implicit s =>
+    val (config1, config2) = db.readOnlyReplica { implicit s =>
       (searchConfigRepo.get(Id[SearchConfigExperiment](id1)), searchConfigRepo.get(Id[SearchConfigExperiment](id2)))
     }
 
@@ -120,7 +120,7 @@ class AdminSearchController @Inject() (
   def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminHtmlAction.authenticated { implicit request =>
 
     val result = articleSearchResultStore.get(id).get
-    val metas: Seq[ArticleSearchResultHitMeta] = db.readOnlyMaster { implicit s =>
+    val metas: Seq[ArticleSearchResultHitMeta] = db.readOnlyReplica { implicit s =>
       result.hits.zip(result.scorings) map { tuple =>
         val hit = tuple._1
         val scoring = tuple._2

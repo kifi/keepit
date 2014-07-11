@@ -49,11 +49,11 @@ class LDADbUpdaterImpl @Inject() (
   }
 
   private def fetchTasks(): Seq[CortexURI] = {
-    val commitOpt = db.readOnlyMaster { implicit s => commitRepo.getByModelAndVersion(modelName, representer.version.version) }
+    val commitOpt = db.readOnlyReplica { implicit s => commitRepo.getByModelAndVersion(modelName, representer.version.version) }
     if (commitOpt.isEmpty) db.readWrite { implicit s => commitRepo.save(FeatureCommitInfo(modelName = modelName, modelVersion = representer.version.version, seq = 0L)) }
 
     val fromSeq = SequenceNumber[CortexURI](commitOpt.map { _.seq }.getOrElse(0L))
-    db.readOnlyMaster { implicit s => uriRepo.getSince(fromSeq, fetchSize) }
+    db.readOnlyReplica { implicit s => uriRepo.getSince(fromSeq, fetchSize) }
   }
 
   private def processTasks(uris: Seq[CortexURI]): Unit = {
@@ -76,7 +76,7 @@ class LDADbUpdaterImpl @Inject() (
       }
 
       case UpdateExistingFeature => {
-        val curr = db.readOnlyMaster { implicit s => topicRepo.getByURI(uri.uriId, representer.version) }.get
+        val curr = db.readOnlyReplica { implicit s => topicRepo.getByURI(uri.uriId, representer.version) }.get
         val newFeat = computeFeature(uri)
         val updated = URILDATopic(
           id = curr.id,
@@ -96,7 +96,7 @@ class LDADbUpdaterImpl @Inject() (
       }
 
       case DeactivateExistingFeature => {
-        val curr = db.readOnlyMaster { implicit s => topicRepo.getByURI(uri.uriId, representer.version) }.get
+        val curr = db.readOnlyReplica { implicit s => topicRepo.getByURI(uri.uriId, representer.version) }.get
         val deactivated = curr.withUpdateTime(currentDateTime).withState(URILDATopicStates.INACTIVE).withSeq(uri.seq)
         db.readWrite { implicit s => topicRepo.save(deactivated) }
       }
@@ -107,7 +107,7 @@ class LDADbUpdaterImpl @Inject() (
     def isTwoWeeksOld(time: DateTime) = time.plusWeeks(2).getMillis < currentDateTime.getMillis
     def isThreeDaysOld(time: DateTime) = time.plusDays(3).getMillis < currentDateTime.getMillis
 
-    val infoOpt = db.readOnlyMaster { implicit s => topicRepo.getUpdateTimeAndState(uri.uriId, representer.version) }
+    val infoOpt = db.readOnlyReplica { implicit s => topicRepo.getUpdateTimeAndState(uri.uriId, representer.version) }
 
     (uri.state.value, infoOpt) match {
       case (SCRAPED.value, None) => CreateNewFeature
