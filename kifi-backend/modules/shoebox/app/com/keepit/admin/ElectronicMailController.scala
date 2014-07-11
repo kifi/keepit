@@ -22,12 +22,12 @@ class ElectronicMailController @Inject() (
 
   def electronicMailsView(page: Int = 0) = AdminHtmlAction.authenticated { request =>
     val PAGE_SIZE = 200
-    val (count, electronicMails) = db.readOnlyMaster { implicit s =>
+    val (count, electronicMails) = db.readOnlyReplica { implicit s =>
       val electronicMails = repo.page(page, PAGE_SIZE)
       val count = repo.count(s)
       (count, electronicMails)
     }
-    val pageCount: Int = (count / PAGE_SIZE + 1).toInt
+    val pageCount: Int = count / PAGE_SIZE + 1
     Ok(html.admin.electronicMails(electronicMails, page, count, pageCount))
   }
 }
