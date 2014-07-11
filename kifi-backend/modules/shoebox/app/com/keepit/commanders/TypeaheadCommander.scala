@@ -238,7 +238,6 @@ class TypeaheadCommander @Inject() (
   private def aggregate(userId: Id[User], q: String, limitOpt: Option[Int], dedupEmail: Boolean): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {
     implicit val prefix = LogPrefix(s"aggregate($userId,$q,$limitOpt)")
     val socialF = socialUserTypeahead.topN(userId, q, limitOpt map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { res =>
-      log.info(s"social res=${res.mkString(",")}")
       res.collect {
         case hit if includeHit(hit) => hit
       }
@@ -253,11 +252,9 @@ class TypeaheadCommander @Inject() (
         if (dedupEmail) fetchTop(dedupEmail, socialF, kifiF, abookF, nfUsersF, limit)
         else {
           val social: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = socialF.map { hits =>
-            //            val (fb, lnkd) = hits.map(hit => (hit.info.networkType, hit)).partition(_._1 == SocialNetworks.FACEBOOK)
-            //            log.info(s"aggregate($userId) fb=${fb.mkString(",")} lnkd=${lnkd.mkString(",")}")
-            //            fb ++ lnkd
-            log.info(s"aggregate($userId) hits=${hits.mkString(",")}")
-            hits.map(hit => (hit.info.networkType, hit))
+            val (fb, lnkd) = hits.map(hit => (hit.info.networkType, hit)).partition(_._1 == SocialNetworks.FACEBOOK)
+            log.infoP(s"fb=${fb.mkString(",")} lnkd=${lnkd.mkString(",")}")
+            fb ++ lnkd
           }
           val kifi = kifiF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO, hit)) }
           val abook = abookF.map { hits => hits.map(hit => (SocialNetworks.EMAIL, hit)) }
