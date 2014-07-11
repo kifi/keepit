@@ -21,13 +21,13 @@ abstract class NaiveSumDocRepresenter[M <: StatModel](
   protected def normalize(vec: Array[Float]): Array[Float]
 
   private def wordCounts(doc: Document): Map[String, Int] = {
-    val m = mutable.Map[String, Int]()
+    val cnts = mutable.Map[String, Int]().withDefaultValue(0)
     doc.tokens.foreach { t =>
       if (stopwords.isEmpty || !stopwords.get.contains(t)) {
-        m(t) = m.getOrElse(t, 0) + 1
+        cnts(t) = cnts(t) + 1
       }
     }
-    m.toMap
+    cnts.toMap
   }
 
   override def apply(doc: Document): Option[FeatureRepresentation[Document, M]] = {
