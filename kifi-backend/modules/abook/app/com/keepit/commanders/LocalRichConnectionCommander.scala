@@ -2,8 +2,8 @@ package com.keepit.commanders
 
 import com.keepit.common.queue._
 import com.keepit.common.db.Id
-import com.keepit.model.{ EContact, User, SocialUserInfo, Invitation }
-import com.keepit.abook.model.RichSocialConnectionRepo
+import com.keepit.model.{ User, SocialUserInfo, Invitation }
+import com.keepit.abook.model.{ EContactRepo, EContact, RichSocialConnectionRepo }
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
@@ -22,7 +22,6 @@ import scala.util.{ Success, Failure, Left, Right }
 
 import akka.actor.Scheduler
 import com.keepit.social.SocialNetworkType
-import com.keepit.abook.EContactRepo
 import scala.util.Left
 import scala.util.Failure
 import scala.util.Right

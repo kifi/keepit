@@ -22,7 +22,6 @@ import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 
-import scala.Some
 import scala.concurrent.{ Promise, Await, Future }
 import scala.concurrent.duration._
 import java.util.concurrent.TimeoutException

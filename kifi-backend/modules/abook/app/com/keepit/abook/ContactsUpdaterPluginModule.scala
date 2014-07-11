@@ -12,15 +12,15 @@ trait ContactsUpdaterPluginModule extends ScalaModule {
 case class ProdContactsUpdaterPluginModule() extends ContactsUpdaterPluginModule {
 
   @Provides
-  def contactsUpdaterPlugin(actorInstance: ActorInstance[ContactsUpdaterActor], sysProvider: Provider[ActorSystem], updaterActorProvider: Provider[ContactsUpdaterActor]): ContactsUpdaterPlugin = {
-    new ContactsUpdaterActorPlugin(actorInstance, sysProvider, updaterActorProvider, Runtime.getRuntime.availableProcessors)
+  def contactsUpdaterPlugin(actorInstance: ActorInstance[ABookImporterActor], sysProvider: Provider[ActorSystem], updaterActorProvider: Provider[ABookImporterActor]): ABookImporterPlugin = {
+    new ABookImporterActorPlugin(actorInstance, sysProvider, updaterActorProvider, Runtime.getRuntime.availableProcessors)
   }
 }
 
 case class DevContactsUpdaterPluginModule() extends ContactsUpdaterPluginModule {
 
   @Provides
-  def contactsUpdaterPlugin(actorInstance: ActorInstance[ContactsUpdaterActor], sysProvider: Provider[ActorSystem], updaterActorProvider: Provider[ContactsUpdaterActor]): ContactsUpdaterPlugin = {
-    new ContactsUpdaterActorPlugin(actorInstance, sysProvider, updaterActorProvider, 1)
+  def contactsUpdaterPlugin(actorInstance: ActorInstance[ABookImporterActor], sysProvider: Provider[ActorSystem], updaterActorProvider: Provider[ABookImporterActor]): ABookImporterPlugin = {
+    new ABookImporterActorPlugin(actorInstance, sysProvider, updaterActorProvider, 1)
   }
 }

@@ -1,7 +1,7 @@
 package com.keepit.abook
 
 import com.keepit.common.db.slick._
-import com.keepit.model.{ EContact, User, OAuth2TokenIssuer, OAuth2Token }
+import com.keepit.model.{ User, OAuth2TokenIssuer, OAuth2Token }
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.time.Clock
 import com.keepit.common.logging.Logging

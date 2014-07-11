@@ -1,11 +1,11 @@
-package com.keepit.abook
+package com.keepit.abook.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ BasicContact, EmailAddress }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.performance._
 import com.keepit.common.time._
 import com.keepit.model._
@@ -14,19 +14,15 @@ import scala.slick.util.CloseableIterator
 
 @ImplementedBy(classOf[EContactRepoImpl])
 trait EContactRepo extends Repo[EContact] {
-  def getById(econtactId: Id[EContact])(implicit session: RSession): Option[EContact]
   def bulkGetByIds(ids: Seq[Id[EContact]])(implicit session: RSession): Map[Id[EContact], EContact]
-  def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Option[EContact]
-  def getByUserIdIter(userId: Id[User], maxRows: Int = 100)(implicit session: RSession): CloseableIterator[EContact]
+  def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Seq[EContact]
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[EContact]
   def getEContactCount(userId: Id[User])(implicit session: RSession): Int
+  def insertAll(contacts: Seq[EContact])(implicit session: RWSession): Int
   def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Boolean
-  def insertAll(userId: Id[User], contacts: Seq[BasicContact])(implicit session: RWSession): Unit
-  def internContact(userId: Id[User], contact: BasicContact)(implicit session: RWSession): EContact
   def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
-
-  //used only for full resync
-  def getIdRangeBatch(minId: Id[EContact], maxId: Id[EContact], maxBatchSize: Int)(implicit session: RSession): Seq[EContact]
+  def getByAbookIdAndEmail(abookId: Id[ABookInfo], email: EmailAddress)(implicit session: RSession): Option[EContact]
+  def getByAbookId(abookId: Id[ABookInfo])(implicit session: RSession): Seq[EContact]
 }
 
 @Singleton
@@ -42,12 +38,14 @@ class EContactRepoImpl @Inject() (
   type RepoImpl = EContactTable
   class EContactTable(tag: Tag) extends RepoTable[EContact](db, tag, "econtact") {
     def userId = column[Id[User]]("user_id", O.NotNull)
+    def abookId = column[Id[ABookInfo]]("abook_id", O.Nullable)
+    def emailAccountId = column[Id[EmailAccount]]("email_account_id", O.Nullable)
     def email = column[EmailAddress]("email", O.NotNull)
+    def contactUserId = column[Id[User]]("contact_user_id", O.Nullable)
     def name = column[String]("name", O.Nullable)
     def firstName = column[String]("first_name", O.Nullable)
     def lastName = column[String]("last_name", O.Nullable)
-    def contactUserId = column[Id[User]]("contact_user_id", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, email, name.?, firstName.?, lastName.?, contactUserId.?, state) <> ((EContact.apply _).tupled, EContact.unapply _)
+    def * = (id.?, createdAt, updatedAt, userId, abookId.?, emailAccountId.?, email, contactUserId.?, name.?, firstName.?, lastName.?, state) <> ((EContact.apply _).tupled, EContact.unapply _)
   }
 
   def table(tag: Tag) = new EContactTable(tag)
@@ -61,10 +59,6 @@ class EContactRepoImpl @Inject() (
   override def invalidateCache(e: EContact)(implicit session: RSession): Unit = { // eager
     econtactCache.set(EContactKey(e.id.get), e)
     log.info(s"[invalidateCache] processed $e") // todo(ray): typeahead invalidation (rare; upper layer)
-  }
-
-  def getById(econtactId: Id[EContact])(implicit session: RSession): Option[EContact] = {
-    (for (f <- rows if f.id === econtactId) yield f).firstOption
   }
 
   private def getByIdsIter(ids: Traversable[Id[EContact]])(implicit session: RSession): CloseableIterator[EContact] = {
@@ -90,8 +84,8 @@ class EContactRepoImpl @Inject() (
     }
   }
 
-  def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Option[EContact] = {
-    (for (f <- rows if f.userId === userId && f.email === email && f.state === EContactStates.ACTIVE) yield f).firstOption
+  def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Seq[EContact] = {
+    (for (f <- rows if f.userId === userId && f.email === email && f.state === EContactStates.ACTIVE) yield f).list
   }
 
   def getByUserIdIter(userId: Id[User], maxRows: Int)(implicit session: RSession): CloseableIterator[EContact] = {
@@ -107,19 +101,16 @@ class EContactRepoImpl @Inject() (
     Q.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first
   }
 
-  def insertAll(userId: Id[User], contacts: Seq[BasicContact])(implicit session: RWSession): Unit = timing(s"econtactRepo.insertAll($userId) #contacts=${contacts.length}") {
-    val toBeInserted = contacts.map { contact => EContact(userId = userId, email = contact.email, name = contact.name, firstName = contact.firstName, lastName = contact.lastName) }
-    rows.insertAll(toBeInserted: _*)
+  def getByAbookIdAndEmail(abookId: Id[ABookInfo], email: EmailAddress)(implicit session: RSession): Option[EContact] = {
+    (for (row <- rows if row.abookId === abookId && row.email === email) yield row).firstOption
   }
 
-  def internContact(userId: Id[User], contact: BasicContact)(implicit session: RWSession): EContact = {
-    getByUserIdAndEmail(userId, contact.email) match {
-      case None => save(EContact(userId = userId, email = contact.email, name = contact.name, firstName = contact.firstName, lastName = contact.lastName))
-      case Some(existingContact) => existingContact.updateWith(contact) match {
-        case modifiedContact if modifiedContact != existingContact => save(modifiedContact)
-        case _ => existingContact
-      }
-    }
+  def getByAbookId(abookId: Id[ABookInfo])(implicit session: RSession): Seq[EContact] = {
+    (for (row <- rows if row.abookId === abookId) yield row).list
+  }
+
+  def insertAll(contacts: Seq[EContact])(implicit session: RWSession): Int = timing(s"econtactRepo.insertAll #contacts=${contacts.length}") {
+    rows.insertAll(contacts: _*).get
   }
 
   def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int = {
@@ -139,10 +130,4 @@ class EContactRepoImpl @Inject() (
     }
     updated > 0
   }
-
-  //used only for full resync
-  def getIdRangeBatch(minId: Id[EContact], maxId: Id[EContact], maxBatchSize: Int)(implicit session: RSession): Seq[EContact] = {
-    (for (row <- rows if row.id > minId && row.id <= maxId) yield row).sortBy(r => r.id).take(maxBatchSize).list
-  }
-
 }

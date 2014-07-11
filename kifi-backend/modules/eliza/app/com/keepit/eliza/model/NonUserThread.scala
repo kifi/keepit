@@ -3,9 +3,8 @@ package com.keepit.eliza.model
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
-import com.keepit.model.{ User, EContact, NormalizedURI }
+import com.keepit.model.{ User, NormalizedURI }
 import play.api.libs.json._
-import com.keepit.common.mail.EmailAddress
 import com.keepit.social.{ BasicNonUser, NonUserKinds, NonUserKind }
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsObject
