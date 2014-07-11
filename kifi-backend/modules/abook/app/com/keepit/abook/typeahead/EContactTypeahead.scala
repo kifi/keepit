@@ -64,7 +64,7 @@ class EContactTypeahead @Inject() (
 
   def refreshAll(): Future[Unit] = {
     log.info("[refreshAll] begin re-indexing ...")
-    val abookInfos = db.readOnlyMaster { implicit ro =>
+    val abookInfos = db.readOnlyReplica { implicit ro =>
       abookInfoRepo.all() // only retrieve users with existing abooks (todo: deal with deletes)
     }
     log.info(s"[refreshAll] ${abookInfos.length} to be re-indexed; abooks=${abookInfos.take(20).mkString(",")} ...")
