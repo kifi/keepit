@@ -54,6 +54,8 @@ trait HeimdalServiceClient extends ServiceClient {
   def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]]
 
   def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Boolean]
+
+  def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Boolean]
 }
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
@@ -157,6 +159,21 @@ class HeimdalServiceClientImpl @Inject() (
         case json =>
           (json \ "error").asOpt[String].map { msg =>
             log.warn(s"Error posting delighted answer $answer for user $userId: $msg")
+          }
+          false
+      }
+    }
+  }
+
+  def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Boolean] = {
+    call(Heimdal.internal.cancelDelightedSurvey(userId, externalId, email, name)).map { response =>
+      Json.parse(response.body) match {
+        case JsString(s) if s == "success" => true
+        case json =>
+          (json \ "error").asOpt[String].map { msg =>
+            log.warn(s"Error cancelling delighted survey for user $userId: $msg")
+          } getOrElse {
+            log.warn(s"Error cancelling delighted survey for user $userId")
           }
           false
       }

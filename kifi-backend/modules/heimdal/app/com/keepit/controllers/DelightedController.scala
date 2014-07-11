@@ -18,8 +18,8 @@ class DelightedController @Inject() (
     delightedCommander: DelightedCommander,
     airbrake: AirbrakeNotifier) extends HeimdalServiceController {
 
-  def getLastDelightedAnswerDate(userId: Id[User]) = Action { request =>
-    Ok(Json.toJson(delightedCommander.getLastDelightedAnswerDate(userId)))
+  def getUserLastInteractedDate(userId: Id[User]) = Action { request =>
+    Ok(Json.toJson(delightedCommander.getUserLastInteractedDate(userId)))
   }
 
   def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String) = Action.async(parse.tolerantJson) { request =>
@@ -28,6 +28,12 @@ class DelightedController @Inject() (
     } getOrElse {
       airbrake.notify(s"Error parsing postDelightedAnswer request: ${request.body}")
       Future.successful(BadRequest)
+    }
+  }
+
+  def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String) = Action.async { request =>
+    delightedCommander.cancelDelightedSurvey(userId, externalId, email, name) map { success =>
+      Ok(JsString(if (success) "success" else "error"))
     }
   }
 }

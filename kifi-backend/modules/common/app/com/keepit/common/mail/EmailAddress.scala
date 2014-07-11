@@ -2,7 +2,7 @@ package com.keepit.common.mail
 
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 import play.api.data.{ Forms, Mapping }
 
 case class EmailAddress(address: String) {
@@ -43,10 +43,12 @@ object EmailAddress {
     val (localAt, host) = address.splitAt(address.lastIndexOf('@') + 1)
     localAt + host.toLowerCase
   }
-  def validate(address: String): Try[EmailAddress] = Try {
-    val canonicalAddress = canonicalize(address)
-    if (!isValid(canonicalAddress)) { throw new IllegalArgumentException(s"Invalid email address: $canonicalAddress") }
-    EmailAddress(canonicalAddress)
+  def validate(address: String): Try[EmailAddress] = {
+    if (isValid(address)) {
+      Success(EmailAddress(canonicalize(address)))
+    } else {
+      Failure(new IllegalArgumentException(s"Invalid email address: $address"))
+    }
   }
 }
 
