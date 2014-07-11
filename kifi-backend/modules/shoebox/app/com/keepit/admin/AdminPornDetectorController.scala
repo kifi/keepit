@@ -44,7 +44,7 @@ class AdminPornDetectorController @Inject() (
   }
 
   def pornUrisView(page: Int, publicOnly: Boolean) = AdminHtmlAction.authenticated { implicit request =>
-    val uris = db.readOnlyMaster { implicit s => uriRepo.getRestrictedURIs(Restriction.ADULT) }.sortBy(-_.updatedAt.getMillis())
+    val uris = db.readOnlyReplica { implicit s => uriRepo.getRestrictedURIs(Restriction.ADULT) }.sortBy(-_.updatedAt.getMillis())
     val PAGE_SIZE = 100
 
     val retUris = publicOnly match {
@@ -53,7 +53,7 @@ class AdminPornDetectorController @Inject() (
         val need = (page + 1) * PAGE_SIZE
         val buf = new ArrayBuffer[NormalizedURI]()
         var (i, cnt) = (0, 0)
-        db.readOnlyMaster { implicit s =>
+        db.readOnlyReplica { implicit s =>
           while (i < uris.size && cnt < need) {
             val bms = bmRepo.getByUri(uris(i).id.get)
             if (bms.exists(_.isPrivate == false)) {

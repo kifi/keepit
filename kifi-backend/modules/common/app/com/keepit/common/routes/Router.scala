@@ -252,7 +252,6 @@ object ABook extends Service {
     def getEContactCount(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getEContactCount")
     def getABookRawInfos(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getABookRawInfos")
     def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/getOAuth2Token", Param("abookId", abookId))
-    def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/queryEContacts", Param("limit", limit), Param("search", search), Param("after", after))
     def refreshPrefixFilter(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId.id}/refreshPrefixFilter")
     def refreshPrefixFiltersByIds() = ServiceRoute(POST, s"/internal/abook/refreshPrefixFiltersByIds")
     def refreshAllPrefixFilters() = ServiceRoute(GET, s"/internal/abook/refreshAllPrefixFilters")

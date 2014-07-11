@@ -37,7 +37,7 @@ class URLRenormalizeCommander @Inject() (
   def doRenormalize(readOnly: Boolean = true, clearSeq: Boolean = false, regex: DomainOrURLRegex = DomainOrURLRegex(None, None)) = {
 
     def getUrlList() = {
-      val urls = db.readOnlyMaster { implicit s =>
+      val urls = db.readOnlyReplica { implicit s =>
         if (regex.isEmpty) urlRepo.all
         else if (regex.isDomainRegex) urlRepo.getByDomainRegex(regex.domainRegex.get)
         else if (regex.isUrlRegex) urlRepo.getByURLRegex(regex.urlRegex.get)
@@ -122,7 +122,7 @@ class URLRenormalizeCommander @Inject() (
       } else {
         // we only retrieved a subset S of urls. For any uri, it's possible some referencing url is not in set S.
         val ref = mutable.Map.empty[Id[NormalizedURI], Set[Id[URL]]]
-        db.readOnlyMaster { implicit s =>
+        db.readOnlyReplica { implicit s =>
           urls.map { _.normalizedUriId }.toSet.foreach { uriId: Id[NormalizedURI] =>
             val urls = urlRepo.getByNormUri(uriId).filter(_.state == URLStates.ACTIVE)
             ref += uriId -> urls.map { _.id.get }.toSet

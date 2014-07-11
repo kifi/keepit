@@ -224,7 +224,7 @@ class UriIntegrityActor @Inject() (
     if (toMerge.size == 0) {
       log.debug("no active changed_uris were founded. Check if we have applied changed_uris generated during urlRenormalization")
       val lowSeq = centralConfig(URIMigrationSeqNumKey) getOrElse SequenceNumber.ZERO
-      val applied = db.readOnlyMaster { implicit s => changedUriRepo.getChangesSince(lowSeq, batchSize, state = ChangedURIStates.APPLIED) }
+      val applied = db.readOnlyReplica { implicit s => changedUriRepo.getChangesSince(lowSeq, batchSize, state = ChangedURIStates.APPLIED) }
       if (applied.size == batchSize) { // make sure a full batch of applied ones
         applied.sortBy(_.seq).lastOption.map { x => centralConfig.update(URIMigrationSeqNumKey, x.seq) }
         log.info(s"${applied.size} applied changed_uris are found!")
@@ -257,7 +257,7 @@ class UriIntegrityActor @Inject() (
   private def getOverDueList(fetchSize: Int = -1) = {
     val lowSeq = centralConfig(URIMigrationSeqNumKey) getOrElse SequenceNumber.ZERO
     log.info(s"batch uri migration: fetching tasks from seqNum ${lowSeq}")
-    db.readOnlyMaster { implicit s => changedUriRepo.getChangesSince(lowSeq, fetchSize, state = ChangedURIStates.ACTIVE) }
+    db.readOnlyReplica { implicit s => changedUriRepo.getChangesSince(lowSeq, fetchSize, state = ChangedURIStates.ACTIVE) }
   }
 
   private def batchURLMigration(batchSize: Int) = {
@@ -284,7 +284,7 @@ class UriIntegrityActor @Inject() (
 
   private def getOverDueURLMigrations(fetchSize: Int = -1) = {
     val lowSeq = centralConfig(URLMigrationSeqNumKey) getOrElse SequenceNumber.ZERO
-    db.readOnlyMaster { implicit s => renormRepo.getChangesSince(lowSeq, fetchSize, state = RenormalizedURLStates.ACTIVE) }
+    db.readOnlyReplica { implicit s => renormRepo.getChangesSince(lowSeq, fetchSize, state = RenormalizedURLStates.ACTIVE) }
   }
 
   private def fixDuplicateKeeps(): Unit = {
@@ -293,7 +293,7 @@ class UriIntegrityActor @Inject() (
     log.debug(s"start deduping keeps: fetching tasks from seqNum ${seq}")
     try {
       var dedupedSuccessCount = 0
-      val keeps = db.readOnlyMaster { implicit s => keepRepo.getBookmarksChanged(seq, 1000) }
+      val keeps = db.readOnlyReplica { implicit s => keepRepo.getBookmarksChanged(seq, 1000) }
       if (keeps.nonEmpty) {
         db.readWriteBatch(keeps, 3) { (session, keep) =>
           normalizedURIInterner.getByUri(keep.url)(session) match {

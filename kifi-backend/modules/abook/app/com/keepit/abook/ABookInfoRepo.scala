@@ -1,12 +1,12 @@
 package com.keepit.abook
 
 import com.google.inject.{ ImplementedBy, Inject }
-import com.keepit.model.{ OAuth2Token, ABookOriginType, User, ABookInfo }
+import com.keepit.model._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.{ ExternalId, Model, Id }
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import org.joda.time.DateTime
 
 @ImplementedBy(classOf[ABookInfoRepoImpl])
@@ -18,6 +18,7 @@ trait ABookInfoRepo extends Repo[ABookInfo] {
   def findByUserIdAndOrigin(userId: Id[User], origin: ABookOriginType)(implicit session: RSession): Seq[ABookInfo]
   def findByUserId(userId: Id[User])(implicit session: RSession): Seq[ABookInfo]
   def isOverdue(id: Id[ABookInfo], due: DateTime = currentDateTime)(implicit session: RSession): Boolean
+  def internKifiABook(userId: Id[User])(implicit session: RWSession): ABookInfo
 }
 
 class ABookInfoRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[ABookInfo] with ABookInfoRepo with Logging {
@@ -71,5 +72,13 @@ class ABookInfoRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) 
 
   def isOverdue(id: Id[ABookInfo], due: DateTime)(implicit session: RSession): Boolean = {
     (for { c <- rows if c.id === id && c.updatedAt >= due } yield c).firstOption.isDefined
+  }
+
+  def internKifiABook(userId: Id[User])(implicit session: RWSession): ABookInfo = {
+    findByUserIdAndOrigin(userId, ABookOrigins.KIFI) match {
+      case Seq(kifiABook) => kifiABook
+      case Seq() => save(ABookInfo(userId = userId, origin = ABookOrigins.KIFI))
+      case kifiAbooks => throw new IllegalStateException(s"Several Kifi ABookInfos found for user $userId: $kifiAbooks")
+    }
   }
 }

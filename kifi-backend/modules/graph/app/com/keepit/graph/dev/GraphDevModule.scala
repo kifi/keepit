@@ -7,8 +7,8 @@ import com.keepit.graph.common.store.{ GraphDevStoreModule }
 import com.keepit.graph.common.cache.GraphCacheModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
 
-case class GraphDevModule() extends GraphModule(
-  cacheModule = GraphCacheModule(HashMapMemoryCacheModule()),
-  storeModule = GraphDevStoreModule(),
-  graphManagerModule = SimpleGraphDevModule()
-) with CommonDevModule
+case class GraphDevModule() extends GraphModule with CommonDevModule {
+  val cacheModule = GraphCacheModule(HashMapMemoryCacheModule())
+  val storeModule = GraphDevStoreModule()
+  val graphManagerModule = SimpleGraphDevModule()
+}

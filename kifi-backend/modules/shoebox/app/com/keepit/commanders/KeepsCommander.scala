@@ -175,7 +175,7 @@ class KeepsCommander @Inject() (
       if (count > 0) after.take(count) else after
     }
 
-    db.readOnlyMaster { implicit ro =>
+    db.readOnlyReplica { implicit ro =>
       val collectionOpt = (collectionId map { id => collectionRepo.getByUserAndExternalId(userId, id) }).flatten
       val keeps = collectionOpt match {
         case Some(collection) =>
@@ -246,6 +246,7 @@ class KeepsCommander @Inject() (
    * Waiting is enabled for URISummary fetching
    */
   def getFullKeepInfo(keepId: ExternalId[Keep], userId: Id[User], withPageInfo: Boolean): Option[Future[FullKeepInfo]] = {
+    // might be called right after a keep is created (e.g. via Add a Keep on website)
     db.readOnlyMaster { implicit s => keepRepo.getOpt(keepId) } filter { _.isActive } map { keep =>
       val sharingInfoFuture = searchClient.sharingUserInfo(userId, keep.uriId)
       val pageInfoFuture = if (withPageInfo) getKeepSummary(keep, true).map(Some(_)) else Future.successful(None)
@@ -267,7 +268,7 @@ class KeepsCommander @Inject() (
 
   def getKeepsInBulkSelection(selection: BulkKeepSelection, userId: Id[User]): Seq[Keep] = {
     val MAX_KEEPS_IN_COLLECTION = 1000
-    val (collectionKeeps, individualKeeps) = db.readOnlyMaster { implicit s =>
+    val (collectionKeeps, individualKeeps) = db.readOnlyReplica { implicit s =>
       val collectionKeeps = selection.tag flatMap { tagExtId =>
         val tagIdOpt = collectionRepo.getByUserAndExternalId(userId, tagExtId).flatMap(_.id)
         tagIdOpt map { tagId =>
@@ -315,7 +316,7 @@ class KeepsCommander @Inject() (
     val keeps = newKeeps ++ existingKeeps
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
     val addedToCollection = collection flatMap {
-      case Left(collectionId) => db.readOnlyMaster { implicit s => collectionRepo.getOpt(collectionId) }
+      case Left(collectionId) => db.readOnlyReplica { implicit s => collectionRepo.getOpt(collectionId) }
       case Right(name) => Some(getOrCreateTag(userId, name))
     } map { coll =>
       addToCollection(coll.id.get, keeps).size
@@ -438,16 +439,14 @@ class KeepsCommander @Inject() (
   }
 
   def editKeepTagBulk(collectionId: ExternalId[Collection], selection: BulkKeepSelection, userId: Id[User], isAdd: Boolean)(implicit context: HeimdalContext): Int = {
-    db.readOnlyMaster { implicit s =>
-      collectionRepo.getByUserAndExternalId(userId, collectionId) map { collection =>
-        val keeps = getKeepsInBulkSelection(selection, userId)
-        (keeps, collection)
-      }
-    } map {
-      case (keeps, collection) =>
-        assert(collection.id.nonEmpty, s"Collection id is undefined: $collection")
-        if (isAdd) addToCollection(collection.id.get, keeps) else removeFromCollection(collection, keeps)
-        keeps.length
+    db.readOnlyReplica { implicit s =>
+      collectionRepo.getByUserAndExternalId(userId, collectionId)
+    } map { collection =>
+      val keeps = getKeepsInBulkSelection(selection, userId)
+      (keeps, collection)
+      assert(collection.id.nonEmpty, s"Collection id is undefined: $collection")
+      if (isAdd) addToCollection(collection.id.get, keeps) else removeFromCollection(collection, keeps)
+      keeps.length
     } getOrElse 0
   }
 
@@ -503,7 +502,7 @@ class KeepsCommander @Inject() (
 
   def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection = {
     val normalizedName = name.trim.replaceAll("""\s+""", " ").take(Collection.MaxNameLength)
-    val collection = db.readOnlyMaster { implicit s =>
+    val collection = db.readOnlyReplica { implicit s =>
       collectionRepo.getByUserAndName(userId, normalizedName, excludeState = None)
     }
     collection match {

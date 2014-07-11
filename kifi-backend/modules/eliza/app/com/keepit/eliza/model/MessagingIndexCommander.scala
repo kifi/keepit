@@ -23,7 +23,7 @@ class MessagingIndexCommander @Inject() (
     airbrake: AirbrakeNotifier) extends Logging {
 
   private def getMessages(fromId: Id[Message], toId: Id[Message], maxId: Id[Message]): Seq[Message] = {
-    val messages = db.readOnlyMaster { implicit session => messageRepo.getFromIdToId(fromId, toId) }
+    val messages = db.readOnlyReplica { implicit session => messageRepo.getFromIdToId(fromId, toId) }
     val filteredMessages = messages.filter(!_.from.isSystem)
     if (filteredMessages.length > 1 || toId.id >= maxId.id) filteredMessages
     else getMessages(fromId, Id[Message](toId.id + 100), maxId)
@@ -31,12 +31,12 @@ class MessagingIndexCommander @Inject() (
 
   private def getThreadContentsForThreadWithSequenceNumber(threadId: Id[MessageThread], seq: SequenceNumber[ThreadContent]): Future[ThreadContent] = {
     log.info(s"getting content for thread $threadId seq $seq")
-    val thread = db.readOnlyMaster { implicit session => threadRepo.get(threadId) }
+    val thread = db.readOnlyReplica { implicit session => threadRepo.get(threadId) }
     val userParticipants: Seq[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set[Id[User]]()).toSeq
     val participantBasicUsersFuture = shoebox.getBasicUsers(userParticipants)
     val participantBasicNonUsers = thread.participants.map(_.allNonUsers).getOrElse(Set.empty).map(NonUserParticipant.toBasicNonUser)
 
-    val messages: Seq[Message] = db.readOnlyMaster { implicit session =>
+    val messages: Seq[Message] = db.readOnlyReplica { implicit session =>
       messageRepo.get(threadId, 0)
     } sortWith {
       case (m1, m2) =>
@@ -80,7 +80,7 @@ class MessagingIndexCommander @Inject() (
   }
 
   def getThreadContentsForMessagesFromIdToId(fromId: Id[Message], toId: Id[Message]): Future[Seq[ThreadContent]] = {
-    val maxMessageId = db.readOnlyMaster { implicit session => messageRepo.getMaxId() }
+    val maxMessageId = db.readOnlyReplica { implicit session => messageRepo.getMaxId() }
     log.info(s"trying to get messages from $fromId, to $toId max $maxMessageId")
     val allMessages = getMessages(fromId, toId, maxMessageId)
     log.info(s"got messages ${allMessages.map(_.id.get).mkString(",")}")

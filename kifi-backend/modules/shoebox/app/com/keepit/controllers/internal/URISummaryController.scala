@@ -41,7 +41,7 @@ class URISummaryController @Inject() (
     val waiting = (request.body \ "waiting").asOpt[Boolean].getOrElse(false)
     val silent = (request.body \ "silent").asOpt[Boolean].getOrElse(false)
     val uriIds = Json.fromJson[Seq[Id[NormalizedURI]]](uriIdsJson).get
-    val nUris = db.readOnlyMaster { implicit session =>
+    val nUris = db.readOnlyReplica { implicit session =>
       uriIds map (normalizedUriRepo.get(_))
     }
     val uriSummariesFut = if (withDescription && !silent) {

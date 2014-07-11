@@ -146,13 +146,8 @@ case class MavenCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   def probabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (outerRepo, 30 days))
 
-  @Singleton
   @Provides
-  def econtactCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new EContactCache(stats, accessLog, (outerRepo, 15 minutes))
-
   @Singleton
-  @Provides
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new VerifiedEmailUserIdCache(stats, accessLog, (outerRepo, 7 days))
 

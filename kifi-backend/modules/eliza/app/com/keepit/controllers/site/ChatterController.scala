@@ -28,7 +28,7 @@ class ChatterController @Inject() (
       Ok(res.headOption.map {
         case (url, msgs) =>
           if (msgs.size == 1) {
-            db.readOnlyMaster { implicit session =>
+            db.readOnlyReplica { implicit session =>
               Json.obj("threads" -> 1, "threadId" -> threadRepo.get(msgs.head).externalId.id)
             }
           } else {

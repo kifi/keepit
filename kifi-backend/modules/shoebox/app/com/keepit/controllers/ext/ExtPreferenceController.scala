@@ -59,7 +59,7 @@ class ExtPreferenceController @Inject() (
   }
 
   def getRules(version: String) = JsonAction.authenticated { request =>
-    db.readOnlyMaster { implicit s =>
+    db.readOnlyReplica { implicit s =>
       val group = sliderRuleRepo.getGroup("default")
       if (version != group.version) {
         Ok(Json.obj("slider_rules" -> group.compactJson, "url_patterns" -> urlPatternRepo.getActivePatterns()))
@@ -134,8 +134,8 @@ class ExtPreferenceController @Inject() (
   }
 
   private def loadUserPrefs(userId: Id[User], experiments: Set[ExperimentType]): Future[UserPrefs] = {
-    val userValsFuture = db.readOnlyMasterAsync { implicit s => userValueRepo.getValues(userId, UserValues.UserInitPrefs: _*) }
-    val messagingEmailsFuture = db.readOnlyMasterAsync { implicit s => notifyPreferenceRepo.canNotify(userId, NotificationCategory.User.MESSAGE) }
+    val userValsFuture = db.readOnlyReplicaAsync { implicit s => userValueRepo.getValues(userId, UserValues.UserInitPrefs: _*) }
+    val messagingEmailsFuture = db.readOnlyReplicaAsync { implicit s => notifyPreferenceRepo.canNotify(userId, NotificationCategory.User.MESSAGE) }
     for {
       userVals <- userValsFuture
       messagingEmails <- messagingEmailsFuture

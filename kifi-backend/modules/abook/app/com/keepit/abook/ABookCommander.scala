@@ -26,6 +26,8 @@ import scala.xml.Elem
 import com.keepit.abook.typeahead.EContactTypeahead
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, BasicContact, EmailAddress }
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.commanders.ContactInterner
+import com.keepit.abook.model.{ EContactRepo, EContactStates, EContact }
 
 class ABookCommander @Inject() (
     db: Database,
@@ -34,7 +36,8 @@ class ABookCommander @Inject() (
     econtactTypeahead: EContactTypeahead,
     abookInfoRepo: ABookInfoRepo,
     econtactRepo: EContactRepo,
-    contactsUpdater: ContactsUpdaterPlugin,
+    abookImporter: ABookImporterPlugin,
+    contactInterner: ContactInterner,
     shoebox: ShoeboxServiceClient) extends Logging {
 
   def toS3Key(userId: Id[User], origin: ABookOriginType, abookOwnerInfo: Option[ABookOwnerInfo]): String = {
@@ -151,6 +154,8 @@ class ABookCommander @Inject() (
             val dbEntryOpt = abookInfoRepo.findByUserIdOriginAndOwnerId(userId, origin, abookInfo.ownerId)
             (abookInfo, dbEntryOpt)
           }
+
+          case _ => throw new UnsupportedOperationException(s"Unsupported ABook origin $origin.")
         }
         val savedEntry = dbEntryOpt match {
           case Some(currEntry) => {
@@ -175,7 +180,7 @@ class ABookCommander @Inject() (
       }
 
       if (proceed) {
-        contactsUpdater.asyncProcessContacts(userId, origin, updatedEntry, s3Key, WeakReference(json))
+        abookImporter.asyncProcessContacts(userId, origin, updatedEntry, s3Key, WeakReference(json))
         log.infoP(s"scheduled for processing: $updatedEntry")
       }
       Some(updatedEntry)
@@ -211,52 +216,9 @@ class ABookCommander @Inject() (
     json
   }
 
-  def internContact(userId: Id[User], contact: BasicContact): EContact = {
-    val econtact = db.readWrite(attempts = 2) { implicit s =>
-      econtactRepo.internContact(userId, contact)
-    }
-    econtactTypeahead.refresh(userId) // async
-    log.info(s"[getOrCreateEContact($userId,${contact.email},${contact.name.getOrElse("")})] res=$econtact")
-    econtact
-  }
-
-  // todo: removeme (inefficient)
-  def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Seq[EContact] = timing(s"queryEContacts($userId,$limit,$search,$after)") {
-    @inline def normalize(str: String) = Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
-    @inline def mkId(email: String) = s"email/$email"
-    val searchTerms = search match {
-      case Some(s) if s.trim.length > 0 => s.split("[@\\s+]").filterNot(_.isEmpty).map(normalize)
-      case _ => Array.empty[String]
-    }
-    @inline def searchScore(s: String): Int = {
-      if (s.isEmpty) 0
-      else if (searchTerms.isEmpty) 1
-      else {
-        val name = normalize(s)
-        if (searchTerms.exists(!name.contains(_))) 0
-        else {
-          val names = name.split("\\s+").filterNot(_.isEmpty)
-          names.count(n => searchTerms.exists(n.startsWith)) * 2 +
-            names.count(n => searchTerms.exists(n.contains)) +
-            (if (searchTerms.exists(name.startsWith)) 1 else 0)
-        }
-      }
-    }
-
-    val contacts = db.readOnlyMaster(attempts = 2) { implicit s =>
-      econtactRepo.getByUserId(userId)
-    }
-    val filtered = contacts.filter(e => ((searchScore(e.name.getOrElse("")) > 0) || (searchScore(e.email.address) > 0)))
-    val paged = after match {
-      case Some(a) if a.trim.length > 0 => filtered.dropWhile(e => (mkId(e.email.address) != a)) match { // todo: revisit Option param handling
-        case hd +: tl => tl
-        case tl => tl
-      }
-      case _ => filtered
-    }
-    val eContacts = paged.take(limit)
-    log.info(s"[queryEContacts(id=$userId, limit=$limit, search=$search after=$after)] searchTerms=$searchTerms res(len=${eContacts.length}):${eContacts.mkString.take(200)}")
-    eContacts
+  def internKifiContact(userId: Id[User], contact: BasicContact): EContact = {
+    val kifiAbook = db.readWrite { implicit session => abookInfoRepo.internKifiABook(userId) }
+    contactInterner.internContact(userId, kifiAbook.id.get, contact)
   }
 
   def validateAllContacts(readOnly: Boolean): Unit = {
@@ -301,13 +263,17 @@ class ABookCommander @Inject() (
   }
 
   def getContactNameByEmail(userId: Id[User], email: EmailAddress): Option[String] = {
-    db.readOnlyMaster { implicit session =>
+    db.readOnlyReplica { implicit session =>
       econtactRepo.getByUserIdAndEmail(userId, email).collectFirst { case contact if contact.name.isDefined => contact.name.get }
     }
   }
 
   def getContactsByUser(userId: Id[User], page: Int = 0, pageSize: Option[Int] = None): Seq[EContact] = {
     val allContacts = db.readOnlyReplica { implicit session => econtactRepo.getByUserId(userId) }
-    pageSize.collect { case size if page >= 0 => allContacts.sortBy(_.id.get.id).drop(page * size).take(size) } getOrElse allContacts
+    val relevantContacts = pageSize.collect {
+      case size if page >= 0 =>
+        allContacts.sortBy(_.id.get.id).drop(page * size).take(size)
+    }
+    relevantContacts getOrElse allContacts
   }
 }

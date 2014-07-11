@@ -59,3 +59,9 @@ case class SimpleGraphDevModule() extends SimpleGraphModule {
     }
   }
 }
+
+case class SimpleGraphTestModule() extends SimpleGraphModule {
+
+  @Provides @Singleton
+  def simpleGraphDirectory(): SimpleGraphDirectory = new RatherUselessSimpleGraphDirectory()
+}

@@ -94,7 +94,7 @@ private class CortexDataIngestionUpdater @Inject() (
   private val DB_BATCH_SIZE = 50
 
   def updateURIRepo(fetchSize: Int): Future[Int] = {
-    val seq = db.readOnlyMaster { implicit s => uriRepo.getMaxSeq }
+    val seq = db.readOnlyReplica { implicit s => uriRepo.getMaxSeq }
 
     shoebox.getIndexable(seq, fetchSize).map { uris =>
       uris.map { CortexURI.fromURI(_) } grouped (DB_BATCH_SIZE) foreach { uris =>
@@ -113,7 +113,7 @@ private class CortexDataIngestionUpdater @Inject() (
 
   def updateKeepRepo(fetchSize: Int): Future[Int] = {
 
-    val seq = db.readOnlyMaster { implicit s => keepRepo.getMaxSeq }
+    val seq = db.readOnlyReplica { implicit s => keepRepo.getMaxSeq }
 
     shoebox.getBookmarksChanged(seq, fetchSize).map { keeps =>
       keeps.map { CortexKeep.fromKeep(_) } grouped (DB_BATCH_SIZE) foreach { keeps =>
