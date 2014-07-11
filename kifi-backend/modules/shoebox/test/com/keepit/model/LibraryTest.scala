@@ -19,7 +19,7 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
       val user1 = userRepo.save(u1)
       val user2 = userRepo.save(u2)
       val l1 = libraryRepo.save(Library(name = "lib1A", ownerId = user1.id.get, createdAt = t1.plusMinutes(1)))
-      val l2 = libraryRepo.save(Library(name = "lib1B", ownerId = user1.id.get, privacy = LibraryPrivacy.PRIVATE, createdAt = t1.plusMinutes(2)))
+      val l2 = libraryRepo.save(Library(name = "lib1B", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, createdAt = t1.plusMinutes(2)))
       val l3 = libraryRepo.save(Library(name = "lib2", ownerId = user2.id.get, createdAt = t1.plusMinutes(1)))
       (l1, l2, l3, user1, user2)
     }
@@ -32,7 +32,7 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
         setup()
         val all = db.readOnlyMaster(implicit session => libraryRepo.all)
         all.map(_.name) === Seq("lib1A", "lib1B", "lib2")
-        all.map(_.privacy) === Seq(LibraryPrivacy.PUBLIC, LibraryPrivacy.PRIVATE, LibraryPrivacy.PUBLIC)
+        all.map(_.visibility) === Seq(LibraryVisibility.PUBLICLY_VIEWED, LibraryVisibility.SECRET, LibraryVisibility.PUBLICLY_VIEWED)
       }
     }
 

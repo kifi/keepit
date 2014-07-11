@@ -6,7 +6,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
-class LibraryMemberTest extends Specification with ShoeboxTestInjector {
+class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -18,14 +18,14 @@ class LibraryMemberTest extends Specification with ShoeboxTestInjector {
       val user2 = userRepo.save(u2)
       val library1 = libraryRepo.save(Library(name = "Lib1", ownerId = user1.id.get, createdAt = t1.plusMinutes(2)))
       val library2 = libraryRepo.save(Library(name = "Lib2", ownerId = user2.id.get, createdAt = t1.plusMinutes(5)))
-      val lm1 = libraryMemberRepo.save(LibraryMember(libraryId = library1.id.get, userId = user1.id.get,
-        permission = LibraryMemberPrivacy.READ_WRITE, createdAt = t1.plusHours(1)))
-      val lm2 = libraryMemberRepo.save(LibraryMember(libraryId = library1.id.get, userId = user2.id.get,
-        permission = LibraryMemberPrivacy.READ_ONLY, createdAt = t1.plusHours(2)))
-      val lm3 = libraryMemberRepo.save(LibraryMember(libraryId = library2.id.get, userId = user2.id.get,
-        permission = LibraryMemberPrivacy.READ_WRITE, createdAt = t1.plusHours(3)))
-      val lm4 = libraryMemberRepo.save(LibraryMember(libraryId = library2.id.get, userId = user1.id.get,
-        permission = LibraryMemberPrivacy.NO_ACCESS, createdAt = t1.plusHours(4)))
+      val lm1 = libraryMemberRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get,
+        access = LibraryMembershipAccess.READ_WRITE, createdAt = t1.plusHours(1)))
+      val lm2 = libraryMemberRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user2.id.get,
+        access = LibraryMembershipAccess.READ_ONLY, createdAt = t1.plusHours(2)))
+      val lm3 = libraryMemberRepo.save(LibraryMembership(libraryId = library2.id.get, userId = user2.id.get,
+        access = LibraryMembershipAccess.READ_WRITE, createdAt = t1.plusHours(3)))
+      val lm4 = libraryMemberRepo.save(LibraryMembership(libraryId = library2.id.get, userId = user1.id.get,
+        access = LibraryMembershipAccess.READ_WRITE, createdAt = t1.plusHours(4)))
       (library1, library2, user1, user2, lm1, lm2, lm3, lm4)
     }
   }
@@ -35,7 +35,7 @@ class LibraryMemberTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         setup()
         val all = db.readOnlyMaster(implicit session => libraryMemberRepo.all)
-        all.map(_.permission) === Seq(LibraryMemberPrivacy.READ_WRITE, LibraryMemberPrivacy.READ_ONLY, LibraryMemberPrivacy.READ_WRITE, LibraryMemberPrivacy.NO_ACCESS)
+        all.map(_.access) === Seq(LibraryMembershipAccess.READ_WRITE, LibraryMembershipAccess.READ_ONLY, LibraryMembershipAccess.READ_WRITE, LibraryMembershipAccess.READ_WRITE)
       }
     }
 
@@ -53,7 +53,7 @@ class LibraryMemberTest extends Specification with ShoeboxTestInjector {
         }
         db.readWrite{ implicit s =>
           val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-          libraryMemberRepo.save(LibraryMember(libraryId = lib1.id.get, userId = user1.id.get, createdAt = t1.plusHours(1)))
+          libraryMemberRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, createdAt = t1.plusHours(1)))
         }
         db.readWrite{ implicit s =>
           libraryMemberRepo.count === 4

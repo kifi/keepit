@@ -17,27 +17,25 @@ case class Library (
                  externalId: ExternalId[Library] = ExternalId(),
                  name: String,
                  ownerId: Id[User],
-                 privacy: LibraryPrivacy = LibraryPrivacy.PUBLIC,
+                 visibility: LibraryVisibility = LibraryVisibility.PUBLICLY_VIEWED,
                  description: Option[String] = None,
-                 // Token name code: Set[String]
+                 // slug: Set[String]
                  state: State[Library] = LibraryStates.ACTIVE,
                  seq: SequenceNumber[Library] = SequenceNumber.ZERO
                  ) extends ModelWithExternalId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def withId(id: Id[Library]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def withName(myName: String) = this.copy(name = myName)
-  def withOwner(id: Id[User]) = this.copy(ownerId = id)
-  def withExternalId(id: ExternalId[Library]) = copy(externalId = id)
-  def withPrivacy(level: String) = this.copy(privacy = level match {
-    case "private" => LibraryPrivacy.PRIVATE
-    case "shared" => LibraryPrivacy.SHARED
-    case "public" => LibraryPrivacy.PUBLIC
+
+  def withPrivacy(level: String) = this.copy(visibility = level match {
+    case "private" => LibraryVisibility.SECRET
+    case "shared" => LibraryVisibility.LIMITED
+    case "public" => LibraryVisibility.PUBLICLY_VIEWED
+    case unknown => throw new Exception(s"unknown LibraryPrivacy name $LibraryVisibility")
   })
   def withState(myState: State[Library]) = this.copy(state = myState)
-  def withDescription(descript: String) = this.copy(description = Some(descript))
 
-  override def toString(): String = s"Library[id=$id,externalId=$externalId,name=$name,privacy=$privacy]"
+  override def toString(): String = s"Library[id=$id,externalId=$externalId,name=$name,privacy=$visibility]"
 
 }
 
@@ -49,14 +47,12 @@ object Library {
       (__ \ 'externalId).format(ExternalId.format[Library]) and
       (__ \ 'name).format[String] and
       (__ \ 'ownerId).format[Id[User]] and
-      (__ \ 'privacy).format[LibraryPrivacy] and
+      (__ \ 'privacy).format[LibraryVisibility] and
       (__ \ 'description).format[Option[String]] and
       (__ \ 'state).format(State.format[Library]) and
       (__ \ 'seq).format(SequenceNumber.format[Library])
     )(Library.apply, unlift(Library.unapply))
 }
-
-
 
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
@@ -68,8 +64,6 @@ class LibraryIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlug
   extends JsonCacheImpl[LibraryIdKey, Library](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 
-
-
 case class LibraryExternalIdKey(externalId: ExternalId[Library]) extends Key[Library] {
   override val version = 0
   val namespace = "library_by_external_id"
@@ -79,17 +73,13 @@ class LibraryExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, inner
   extends JsonCacheImpl[LibraryExternalIdKey, Library](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 
-object LibraryStates extends States[Library] {
-  val PENDING = State[Library]("pending")
-  val BLOCKED = State[Library]("blocked")
-  val INCOMPLETE_SIGNUP = State[Library]("incomplete_signup")
-}
+object LibraryStates extends States[Library]
 
-case class LibraryPrivacy(value: String)
-object LibraryPrivacy {
-  implicit def format[T]: Format[LibraryPrivacy] =
-    Format(__.read[String].map(LibraryPrivacy(_)), new Writes[LibraryPrivacy]{ def writes(o: LibraryPrivacy) = JsString(o.value) })
-  val PUBLIC = LibraryPrivacy("public")
-  val PRIVATE = LibraryPrivacy("private")
-  val SHARED = LibraryPrivacy("shared")
+case class LibraryVisibility(value: String)
+object LibraryVisibility {
+  implicit def format[T]: Format[LibraryVisibility] =
+    Format(__.read[String].map(LibraryVisibility(_)), new Writes[LibraryVisibility]{ def writes(o: LibraryVisibility) = JsString(o.value) })
+  val PUBLICLY_VIEWED = LibraryVisibility("public")
+  val LIMITED = LibraryVisibility("limited")
+  val SECRET = LibraryVisibility("private")
 }

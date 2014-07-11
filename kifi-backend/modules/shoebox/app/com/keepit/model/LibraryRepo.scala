@@ -30,7 +30,7 @@ class LibraryRepoImpl @Inject()(
   class LibraryTable(tag: Tag) extends RepoTable[Library](db, tag, "library") with ExternalIdColumn[Library] with SeqNumberColumn[Library] {
     def name = column[String]("name", O.NotNull)
     def ownerId = column[Id[User]]("userId", O.Nullable)
-    def privacy = column[LibraryPrivacy]("privacy", O.NotNull)
+    def privacy = column[LibraryVisibility]("privacy", O.NotNull)
     def description = column[Option[String]]("description", O.NotNull)
     def * = (id.?, createdAt, updatedAt, externalId, name, ownerId, privacy, description, state, seq) <> ((Library.apply _).tupled, Library.unapply)
   }
@@ -38,9 +38,11 @@ class LibraryRepoImpl @Inject()(
   def table(tag: Tag) = new LibraryTable(tag)
   initTable()
 
-  private def getLibrary(id: Column[Id[Library]]) =
-    for(f <- rows if f.id is id) yield f
-  private val getCompiled = Compiled(getLibrary _)
+  private val getCompiled = {
+    def getLibrary(id: Column[Id[Library]]) =
+      for(f <- rows if f.id is id) yield f
+    Compiled(getLibrary _)
+  }
 
   override def get(id: Id[Library])(implicit session: RSession): Library = {
     idCache.getOrElse(LibraryIdKey(id)) {
@@ -66,6 +68,5 @@ class LibraryRepoImpl @Inject()(
       externalIdCache.set(LibraryExternalIdKey(library.externalId), library)
     }
   }
-
 
 }
