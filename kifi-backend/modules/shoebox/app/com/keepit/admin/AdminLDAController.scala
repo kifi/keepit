@@ -107,7 +107,7 @@ class AdminLDAController @Inject() (
   }
 
   def userTopicDump(userId: Id[User], limit: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val uris = db.readOnlyMaster { implicit s => keepRepo.getLatestKeepsURIByUser(userId, limit, includePrivate = false) }
+    val uris = db.readOnlyReplica { implicit s => keepRepo.getLatestKeepsURIByUser(userId, limit, includePrivate = false) }
     cortex.getLDAFeatures(uris).map { feats =>
       Ok(Json.toJson(feats))
     }
