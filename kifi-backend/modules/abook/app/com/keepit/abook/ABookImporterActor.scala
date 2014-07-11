@@ -16,12 +16,11 @@ import com.keepit.common.actor.ActorInstance
 import akka.routing.SmallestMailboxRouter
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import java.sql.{ BatchUpdateException, SQLException }
+import java.sql.SQLException
 import com.keepit.common.performance._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.commanders.ContactInterner
-import com.keepit.common.db.slick.DBSession.RWSession
 
 trait ABookImporterPlugin extends Plugin {
   def asyncProcessContacts(userId: Id[User], origin: ABookOriginType, aBookInfo: ABookInfo, s3Key: String, rawJsonRef: WeakReference[JsValue]): Unit
@@ -107,8 +106,25 @@ class ABookImporter @Inject() (
             }
 
             processed += batch.length
-            db.readWrite { implicit session =>
-              internBatch(userId, abookInfo.id.get, basicContacts)
+            abookEntry = db.readWrite(attempts = 2) { implicit s =>
+              try {
+                contactInterner.internContacts(userId, abookInfo.id.get, basicContacts)
+              } catch {
+                case ex: MySQLIntegrityConstraintViolationException => {
+                  log.errorP(s"Caught exception while processing batch(len=${basicContacts.length}): ${basicContacts.mkString(",")}")
+                  log.errorP(s"ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
+                  // moving along
+                }
+                case ex: java.sql.BatchUpdateException => {
+                  log.errorP(s"Caught exception while processing batch(len=${basicContacts.length}): ${basicContacts.mkString(",")}")
+                  log.errorP(s"ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
+                  // moving along
+                }
+                case t: Throwable => {
+                  log.errorP(s"Unhandled ex: $t; cause: ${t.getCause}; stack trace: ${t.getStackTraceString}")
+                  throw t // this will fail
+                }
+              }
               abookInfoRepo.save(abookEntry.withNumProcessed(Some(processed))) // status update
             }
           }
@@ -133,34 +149,6 @@ class ABookImporter @Inject() (
         }
         airbrake.notify(s"[upload($userId, $abookInfo)] failed")
       }
-    }
-  }
-
-  private def internBatch(userId: Id[User], abookId: Id[ABookInfo], basicContacts: Seq[BasicContact])(implicit session: RWSession): Unit = {
-    try {
-      contactInterner.internContacts(userId, abookId, basicContacts)
-    } catch {
-      case ex: MySQLIntegrityConstraintViolationException =>
-        recoverBatch(ex, userId, abookId, basicContacts)
-      case ex: BatchUpdateException =>
-        recoverBatch(ex, userId, abookId, basicContacts)
-      case t: Throwable => {
-        log.errorP(s"Unhandled ex: $t; cause: ${t.getCause}; stack trace: ${t.getStackTraceString}")
-        throw t // this will fail
-      }
-    }
-  }
-
-  private def recoverBatch(error: Throwable, userId: Id[User], abookId: Id[ABookInfo], basicContacts: Seq[BasicContact])(implicit session: RWSession) = basicContacts.foreach { basicContact =>
-    log.errorP(s"Caught exception while processing batch(len=${basicContacts.length}): ${basicContacts.mkString(",")}")
-    log.errorP(s"ex: $error; cause: ${error.getCause}; stack trace: ${error.getStackTraceString}")
-    try {
-      contactInterner.internContact(userId, abookId, basicContact)
-    } catch {
-      case ex: MySQLIntegrityConstraintViolationException =>
-        log.errorP(s"Caught exception while processing contact($basicContact)")
-        log.errorP(s"ex: $ex; cause: ${ex.getCause}; stack trace: ${ex.getStackTraceString}")
-      // moving along
     }
   }
 }
