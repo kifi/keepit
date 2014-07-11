@@ -27,12 +27,13 @@ trait GraphServiceClient extends ServiceClient {
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, PrettyGraphState]]
   def getGraphKinds(): Future[GraphKinds]
   def wander(wanderlust: Wanderlust): Future[Collisions]
-  def getListOfUriAndScorePairs(userId: Id[User], num: Int): Future[Seq[UserConnectionFeedScore]]
+  def getListOfUriAndScorePairs(userId: Id[User]): Future[Seq[UserConnectionFeedScore]]
   def getListOfUserAndScorePairs(userId: Id[User]): Future[Seq[UserConnectionSocialScore]]
 }
 
 case class GraphCacheProvider @Inject() (
-  userScoreCache: UserConnectionSocialScoreCache)
+  userScoreCache: UserConnectionSocialScoreCache,
+  uriScoreCache: UserConnectionFeedScoreCache)
 
 class GraphServiceClientImpl @Inject() (
     override val serviceCluster: ServiceCluster,
@@ -79,9 +80,11 @@ class GraphServiceClientImpl @Inject() (
     call(Graph.internal.wander(), payload, callTimeouts = longTimeout).map { response => response.json.as[Collisions] }
   }
 
-  def getListOfUriAndScorePairs(userId: Id[User], num: Int): Future[Seq[UserConnectionFeedScore]] = {
-    call(Graph.internal.getListOfUriAndScorePairs(userId)).map { response =>
-      response.json.as[Seq[UserConnectionFeedScore]]
+  def getListOfUriAndScorePairs(userId: Id[User]): Future[Seq[UserConnectionFeedScore]] = {
+    cacheProvider.uriScoreCache.getOrElseFuture(UserConnectionFeedScoreCacheKey(userId)) {
+      call(Graph.internal.getListOfUriAndScorePairs(userId)).map { response =>
+        response.json.as[Seq[UserConnectionFeedScore]]
+      }
     }
   }
 

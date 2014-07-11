@@ -17,8 +17,8 @@ trait GraphManagerModule extends ScalaModule with Logging {
 
   def configure() = {
     bind[GraphUpdater].to[GraphUpdaterImpl]
-    bind[GraphUpdateFetcher].to[GraphUpdateFetcherImpl]
-    bind[GraphManagerPlugin].in[AppScoped]
+    // bind[GraphUpdateFetcher].to[GraphUpdateFetcherImpl]
+    // bind[GraphManagerPlugin].in[AppScoped]
   }
 }
 

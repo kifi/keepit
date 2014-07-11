@@ -52,9 +52,9 @@ case class SimpleGraphProdModule() extends SimpleGraphModule {
 case class SimpleGraphDevModule() extends SimpleGraphModule {
 
   @Provides @Singleton
-  def simpleGraphDirectory(graphStore: GraphStore): SimpleGraphDirectory = {
+  def simpleGraphDirectory( /*graphStore: GraphStore */ ): SimpleGraphDirectory = {
     current.configuration.getString("graph.simple.directory") match {
-      case Some(path) => getArchivedSimpleGraphDirectory(path, graphStore: GraphStore)
+      //case Some(path) => getArchivedSimpleGraphDirectory(path, graphStore: GraphStore)
       case None => new RatherUselessSimpleGraphDirectory()
     }
   }

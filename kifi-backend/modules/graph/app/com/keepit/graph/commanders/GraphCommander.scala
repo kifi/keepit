@@ -1,18 +1,14 @@
 package com.keepit.graph.commanders
 
-import com.google.inject.Inject
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.common.routes.Shoebox
 import com.keepit.graph.model._
 import com.keepit.graph.wander.{ Collisions, Wanderlust, WanderingCommander }
 import com.keepit.model.{ NormalizedURI, User }
-import play.api.libs.json.JsArray
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
-import scala.collection.mutable
-import scala.concurrent.duration._
-
+@Singleton
 class GraphCommander @Inject() (
     wanderingCommander: WanderingCommander,
     userScoreCache: UserConnectionSocialScoreCache,

@@ -1,6 +1,6 @@
 package com.keepit.common.cache
 
-import com.keepit.graph.model.UserConnectionSocialScoreCache
+import com.keepit.graph.model.{ UserConnectionFeedScoreCache, UserConnectionSocialScoreCache }
 
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
@@ -155,6 +155,11 @@ case class MavenCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new VerifiedEmailUserIdCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def uriScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserConnectionFeedScoreCache(stats, accessLog, (innerRepo, 1 second), (outerRepo, 5 minutes))
 
   @Singleton
   @Provides
