@@ -274,7 +274,7 @@ class ElizaEmailCommander @Inject() (
   }
 
   def getEmailPreview(msgExtId: ExternalId[Message]): Future[Html] = {
-    val (msg, thread) = db.readOnlyMaster { implicit session =>
+    val (msg, thread) = db.readOnlyReplica { implicit session =>
       val msg = messageRepo.get(msgExtId)
       val thread = threadRepo.get(msg.thread)
       (msg, thread)
