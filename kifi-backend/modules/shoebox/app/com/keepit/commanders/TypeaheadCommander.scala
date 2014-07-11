@@ -275,6 +275,7 @@ class TypeaheadCommander @Inject() (
       if (zHits.length < limit) {
         allHits ++= ordered
       }
+      // todo(ray): dedup
       (zHits.length >= limit)
     }) map { _ =>
       if (zHits.length >= limit) zHits.take(limit) else {
@@ -308,23 +309,7 @@ class TypeaheadCommander @Inject() (
             Future.successful(res)
           } else {
             abookF flatMap { abookRes =>
-              val filteredABookHits = if (!dedupEmail) abookRes
-              else {
-                val kifiUsers = kifiRes.map(h => h.info.id.get -> h).toMap
-                abookRes.filterNot { h =>
-                  h.info.userId.exists { uId => // todo: confirm this field is updated properly
-                    kifiUsers.get(uId).exists { userHit =>
-                      if (userHit.score <= h.score) {
-                        log.infoP(s"DUP econtact (${h.info.email}) discarded; userHit=${userHit.info} econtactHit=${h.info}")
-                        true // todo: transform to User
-                      } else {
-                        log.warnP(s"DUP econtact ${h.info} has better score than user ${userHit}")
-                        false
-                      }
-                    }
-                  }
-                }
-              }
+              val filteredABookHits = if (!dedupEmail) abookRes else dedup(abookRes, kifiRes.map(h => h.info.id.get -> h).toMap)
               val abookHits = filteredABookHits.map(h => (SocialNetworks.EMAIL, h)).sorted(hitOrd)
               zHits ++= abookHits.takeWhile(t => t._2.score == 0)
               if (zHits.length >= limit) {
@@ -348,6 +333,22 @@ class TypeaheadCommander @Inject() (
         }
       }
       topF
+    }
+  }
+
+  private def dedup(abookRes: Seq[TypeaheadHit[RichContact]], kifiUsers: Map[Id[User], TypeaheadHit[User]]): Seq[TypeaheadHit[RichContact]] = {
+    abookRes.filterNot { contactHit =>
+      contactHit.info.userId.exists { uId =>
+        kifiUsers.get(uId).exists { userHit =>
+          if (userHit.score <= contactHit.score) {
+            log.infoP(s"DUP econtact (${contactHit.info.email}) discarded; userHit=${userHit.info} contactHit=${contactHit.info}")
+            true // todo: transform to User
+          } else {
+            log.warnP(s"DUP contact ${contactHit.info} has better score than user ${userHit}")
+            false
+          }
+        }
+      }
     }
   }
 

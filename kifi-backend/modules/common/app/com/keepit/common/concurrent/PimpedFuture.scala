@@ -70,6 +70,7 @@ object FutureHelpers {
     }
   }
 
+  // sequentialExec with short-circuit based on predicate
   def sequentialPartialExec[T](futures: Iterable[Future[T]], predicate: T => Boolean): Future[Unit] = {
     futures.headOption match {
       case None => Future.successful[Unit]()
