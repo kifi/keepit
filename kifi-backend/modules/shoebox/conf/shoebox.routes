@@ -201,7 +201,7 @@ GET     /install                    @com.keepit.controllers.website.HomeControll
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /terms                      @com.keepit.controllers.website.HomeController.termsOfService
 GET     /privacy                    @com.keepit.controllers.website.HomeController.privacyPolicy
-GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneLandingTempForDev
+GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
 GET     /mobile                     @com.keepit.controllers.website.HomeController.mobileLanding
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
 
