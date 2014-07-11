@@ -43,6 +43,10 @@ package object cortex {
       val topicWordsJsonFile = "topic_words"
       val topicConfigsJsonFile = "topic_configs"
     }
+    object Stopwords {
+      val stopwordsFoler = "misc/stopwords/"
+      val stopwordsJsonFile = "stopwords"
+    }
   }
 
   object PublishedModels {
