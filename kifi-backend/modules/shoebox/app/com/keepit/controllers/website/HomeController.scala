@@ -117,12 +117,12 @@ class HomeController @Inject() (
     Redirect("https://itunes.apple.com/app/id740232575")
   }
 
-  def mobileLanding = HtmlAction(authenticatedAction = mobileLandingHandler(isLoggedIn = true)(_), unauthenticatedAction = mobileLandingHandler(isLoggedIn = false)(_))
-  private def mobileLandingHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
+  def mobileLanding = HtmlAction(authenticatedAction = mobileLandingHandler(_), unauthenticatedAction = mobileLandingHandler(_))
+  private def mobileLandingHandler(implicit request: Request[_]): SimpleResult = {
     if (request.headers.get("User-Agent").exists { ua => ua.contains("iPhone") && !ua.contains("iPad") }) {
       iPhoneAppStoreRedirectWithTracking
     } else {
-      Ok(views.html.marketing.mobileLanding(false, ""))
+      Ok(views.html.marketing.mobileLanding(""))
     }
   }
 
@@ -177,7 +177,7 @@ class HomeController @Inject() (
         if (isIphone) {
           iPhoneAppStoreRedirectWithTracking
         } else {
-          Ok(views.html.marketing.mobileLanding(false, ""))
+          Ok(views.html.marketing.mobileLanding(""))
         }
       } else {
         Ok(views.html.marketing.landingNew())
