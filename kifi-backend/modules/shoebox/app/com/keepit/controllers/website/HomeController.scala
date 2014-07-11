@@ -53,6 +53,7 @@ class HomeController @Inject() (
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
+    // Sign-up flow is critical, read from master
     db.readOnlyMaster { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
   }
 
