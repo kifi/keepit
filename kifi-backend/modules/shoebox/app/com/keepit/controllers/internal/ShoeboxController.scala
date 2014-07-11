@@ -13,6 +13,7 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.normalizer._
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
+import com.keepit.common.performance._
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -215,27 +216,25 @@ class ShoeboxController @Inject() (
   }
 
   def recordScrapedNormalization() = Action.async(parse.tolerantJson) { request =>
-
     val candidateUrl = (request.body \ "url").as[String]
     val candidateNormalization = (request.body \ "normalization").as[Normalization]
     val scrapedCandidate = ScrapedCandidate(candidateUrl, candidateNormalization)
 
     val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
     val signature = Signature((request.body \ "signature").as[String])
-    val scrapedUri = db.readOnlyMaster { implicit session => normUriRepo.get(uriId) }
+    val scrapedUri = db.readOnlyReplica { implicit session => normUriRepo.get(uriId) }
 
     normalizationServiceProvider.get.update(NormalizationReference(scrapedUri, signature = Some(signature)), scrapedCandidate).map { newReferenceOption =>
-
       (request.body \ "alternateUrls").asOpt[Set[String]].foreach { alternateUrls =>
         val bestReference = newReferenceOption.map { newReferenceId =>
-          db.readOnlyMaster { implicit session =>
+          db.readOnlyReplica { implicit session =>
             normUriRepo.get(newReferenceId)
           }
         } getOrElse scrapedUri
         // todo(Léo): What follows is dangerous. Someone could mess up with our data by reporting wrong alternate Urls on its website. We need to do a specific content check.
         bestReference.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { bestCandidate =>
           alternateUrls.foreach { alternateUrl =>
-            val uri = db.readOnlyMaster { implicit session =>
+            val uri = db.readOnlyReplica { implicit session =>
               normalizedURIInterner.getByUri(alternateUrl)
             }
             uri match {
