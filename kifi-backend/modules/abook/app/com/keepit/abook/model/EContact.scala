@@ -28,25 +28,7 @@ case class EContact(
   def withId(id: Id[EContact]) = this.copy(id = Some(id))
   def withName(name: Option[String]) = this.copy(name = name)
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def updateWith(contactInfo: BasicContact): EContact = {
-    require(email.equalsIgnoreCase(contactInfo.email), s"Supplied info $contactInfo does not represent the same email address as $this.")
-
-    val updatedName = contactInfo.name orElse {
-      (contactInfo.firstName, contactInfo.lastName) match {
-        case (Some(f), Some(l)) => Some(s"$f $l")
-        case (Some(f), None) => Some(f)
-        case (None, Some(l)) => Some(l)
-        case (None, None) => None
-      }
-    } orElse name
-
-    this.copy(
-      email = contactInfo.email,
-      name = updatedName,
-      firstName = contactInfo.firstName orElse firstName,
-      lastName = contactInfo.lastName orElse lastName
-    )
-  }
+  def updateWith(contacts: BasicContact*): EContact = EContact.update(this, contacts)
 }
 
 object EContactStates extends States[EContact] {
@@ -71,14 +53,35 @@ object EContact {
 
   def toRichContact(econtact: EContact): RichContact = RichContact(econtact.email, econtact.name, econtact.firstName, econtact.lastName, econtact.contactUserId)
 
-  def make(userId: Id[User], abookId: Id[ABookInfo], emailAccount: EmailAccount, contact: BasicContact): EContact = {
-    EContact(
+  def make(userId: Id[User], abookId: Id[ABookInfo], emailAccount: EmailAccount, contacts: BasicContact*): EContact = {
+    val eContact = EContact(
       userId = userId,
       abookId = Some(abookId),
       emailAccountId = Some(emailAccount.id.get),
       email = emailAccount.address,
       contactUserId = emailAccount.userId
-    ).updateWith(contact)
+    )
+    update(eContact, contacts)
+  }
+
+  def update(eContact: EContact, contacts: Seq[BasicContact]): EContact = contacts.foldLeft(eContact) {
+    case (currentEContact, moreInfo) =>
+      require(moreInfo.email.equalsIgnoreCase(currentEContact.email), s"EmailAddress from $moreInfo does not match $currentEContact.")
+      val updatedName = moreInfo.name orElse {
+        (moreInfo.firstName, moreInfo.lastName) match {
+          case (Some(f), Some(l)) => Some(s"$f $l")
+          case (Some(f), None) => Some(f)
+          case (None, Some(l)) => Some(l)
+          case (None, None) => None
+        }
+      } orElse currentEContact.name
+
+      currentEContact.copy(
+        email = moreInfo.email,
+        name = updatedName,
+        firstName = moreInfo.firstName orElse currentEContact.firstName,
+        lastName = moreInfo.lastName orElse currentEContact.lastName
+      )
   }
 }
 

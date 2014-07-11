@@ -87,9 +87,9 @@ class ABookImporter @Inject() (
           airbrake.notify(s"[$prefix failure -- cannot retrieve/process json input")
         case Some(abookRawInfo) => {
 
-          abookRawInfo.contacts.value.grouped(abookUploadConf.batchSize).foreach { g =>
+          abookRawInfo.contacts.value.grouped(abookUploadConf.batchSize).foreach { batch =>
             batchNum += 1
-            val basicContacts = g.flatMap { contact =>
+            val basicContacts = batch.flatMap { contact =>
               val firstName = (contact \ "firstName").asOpt[String] trimOpt
               val lastName = (contact \ "lastName").asOpt[String] trimOpt
               val name = (contact \ "name").asOpt[String] trimOpt
@@ -102,14 +102,10 @@ class ABookImporter @Inject() (
                       validEmails
                   }
               }
-              val uniqueEmails = validEmails.groupBy(_.address.toLowerCase).map {
-                case (lowerCasedAddress, emails) =>
-                  emails.find(_.address == lowerCasedAddress) getOrElse emails.head // arbitrary preference for lower cased addresses
-              }
-              uniqueEmails.map { email => BasicContact(email, name = name, firstName = firstName, lastName = lastName) }
+              validEmails.map { email => BasicContact(email, name = name, firstName = firstName, lastName = lastName) }
             }
 
-            processed += g.length
+            processed += batch.length
             abookEntry = db.readWrite(attempts = 2) { implicit s =>
               try {
                 contactInterner.internContacts(userId, abookInfo.id.get, basicContacts)

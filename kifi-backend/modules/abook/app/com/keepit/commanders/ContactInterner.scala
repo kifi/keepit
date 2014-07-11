@@ -34,17 +34,17 @@ class ContactInterner @Inject() (
     val (inserted, updated) = db.readWrite { implicit session =>
       val existingContacts = econtactRepo.getByAbookId(abookId)
       val existingByLowerCasedAddress = existingContacts.map { contact => contact.email.address.toLowerCase -> contact }.toMap
-      val toBeInternedByLowerCasedAddress = contacts.map { contact => contact.email.address.toLowerCase -> contact }.toMap
+      val toBeInternedByLowerCasedAddress = contacts.groupBy(_.email.address.toLowerCase)
 
       val (toBeUpdatedByLowerCasedAddress, toBeInsertedByLowerCasedAddress) = toBeInternedByLowerCasedAddress.partition {
         case (lowerCasedAddress, _) => existingByLowerCasedAddress.contains(lowerCasedAddress)
       }
 
-      val inserted = insertNewContacts(userId, abookId, toBeInsertedByLowerCasedAddress.values.toSeq)
+      val inserted = insertNewContacts(userId, abookId, toBeInsertedByLowerCasedAddress)
       val updated = toBeUpdatedByLowerCasedAddress.count {
-        case (lowerCasedAddress, contact) =>
+        case (lowerCasedAddress, contacts) =>
           val existingContact = existingByLowerCasedAddress(lowerCasedAddress)
-          updateExistingContact(userId, existingContact, contact).isDefined
+          updateExistingContact(userId, existingContact, contacts: _*).isDefined
       }
 
       (inserted, updated)
@@ -55,30 +55,34 @@ class ContactInterner @Inject() (
     (inserted, updated)
   }
 
-  private def updateExistingContact(userId: Id[User], existingContact: EContact, contact: BasicContact)(implicit session: RWSession): Option[EContact] = {
+  private def updateExistingContact(userId: Id[User], existingContact: EContact, contacts: BasicContact*)(implicit session: RWSession): Option[EContact] = {
     if (existingContact.userId != userId) { throw new IllegalArgumentException(s"Existing EContact $existingContact should belong to user $userId.") }
-    existingContact.updateWith(contact).copy(state = EContactStates.ACTIVE) match {
+    existingContact.updateWith(contacts: _*).copy(state = EContactStates.ACTIVE) match {
       case modifiedContact if modifiedContact != existingContact => Some(econtactRepo.save(modifiedContact))
       case _ => None
     }
   }
 
-  // todo(Léo): have email.id in EContact once EContact has been moved to ABook...
   private def insertNewContact(userId: Id[User], abookId: Id[ABookInfo], contact: BasicContact)(implicit session: RWSession): EContact = {
     val emailAccount = emailAccountRepo.internByAddress(contact.email)
     val newContact = EContact.make(userId, abookId, emailAccount, contact)
     econtactRepo.save(newContact)
   }
 
-  private def insertNewContacts(userId: Id[User], abookId: Id[ABookInfo], contacts: Seq[BasicContact])(implicit session: RWSession): Int = if (contacts.isEmpty) 0 else {
-    val emailAccountsByLowerCasedAddress = emailAccountRepo.internByAddresses(contacts.map(_.email): _*).map {
+  private def insertNewContacts(userId: Id[User], abookId: Id[ABookInfo], toBeInsertedByLowerCasedAddress: Map[String, Seq[BasicContact]])(implicit session: RWSession): Int = if (toBeInsertedByLowerCasedAddress.isEmpty) 0 else {
+    val uniqueEmailAddresses = toBeInsertedByLowerCasedAddress.map {
+      case (lowerCasedAddress, contacts) =>
+        val preferredContact = contacts.find(_.email.address == lowerCasedAddress) getOrElse contacts.head // arbitrary preference for lower cased addresses
+        preferredContact.email
+    }.toSeq
+    val emailAccountsByLowerCasedAddress = emailAccountRepo.internByAddresses(uniqueEmailAddresses: _*).map {
       emailAccount => emailAccount.address.address.toLowerCase() -> emailAccount
     }.toMap
-    val newContacts = contacts.map { contact =>
-      val lowerCaseAddress = contact.email.address.toLowerCase()
-      val emailAccount = emailAccountsByLowerCasedAddress(lowerCaseAddress)
-      EContact.make(userId, abookId, emailAccount, contact)
-    }
-    econtactRepo.insertAll(newContacts)
+    val newEContacts = toBeInsertedByLowerCasedAddress.map {
+      case (lowerCasedAddress, contacts) =>
+        val emailAccount = emailAccountsByLowerCasedAddress(lowerCasedAddress)
+        EContact.make(userId, abookId, emailAccount, contacts: _*)
+    }.toSeq
+    econtactRepo.insertAll(newEContacts)
   }
 }
