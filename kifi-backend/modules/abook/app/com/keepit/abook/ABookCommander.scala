@@ -217,8 +217,10 @@ class ABookCommander @Inject() (
   }
 
   def internKifiContact(userId: Id[User], contact: BasicContact): EContact = {
-    val kifiAbook = db.readWrite { implicit session => abookInfoRepo.internKifiABook(userId) }
-    contactInterner.internContact(userId, kifiAbook.id.get, contact)
+    db.readWrite { implicit session =>
+      val kifiAbook = abookInfoRepo.internKifiABook(userId)
+      contactInterner.internContact(userId, kifiAbook.id.get, contact)
+    }
   }
 
   def validateAllContacts(readOnly: Boolean): Unit = {

@@ -6,7 +6,6 @@ import com.keepit.common.db.Id
 import com.keepit.model.{ ABookInfo, User }
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.abook.typeahead.EContactTypeahead
 
@@ -14,11 +13,10 @@ import com.keepit.abook.typeahead.EContactTypeahead
 class ContactInterner @Inject() (
     emailAccountRepo: EmailAccountRepo,
     econtactRepo: EContactRepo,
-    econtactTypeahead: EContactTypeahead,
-    db: Database) extends Logging {
+    econtactTypeahead: EContactTypeahead) extends Logging {
 
-  def internContact(userId: Id[User], abookId: Id[ABookInfo], contact: BasicContact): EContact = {
-    val (econtact, inserted, updated) = db.readWrite { implicit session =>
+  def internContact(userId: Id[User], abookId: Id[ABookInfo], contact: BasicContact)(implicit session: RWSession): EContact = {
+    val (econtact, inserted, updated) = {
       econtactRepo.getByAbookIdAndEmail(abookId, contact.email) match {
         case None => (insertNewContact(userId, abookId, contact), true, false)
         case Some(existingContact) => updateExistingContact(userId, existingContact, contact).map((_, false, true)) getOrElse (existingContact, false, false)
@@ -30,8 +28,8 @@ class ContactInterner @Inject() (
     econtact
   }
 
-  def internContacts(userId: Id[User], abookId: Id[ABookInfo], contacts: Seq[BasicContact]): (Int, Int) = {
-    val (inserted, updated) = db.readWrite { implicit session =>
+  def internContacts(userId: Id[User], abookId: Id[ABookInfo], contacts: Seq[BasicContact])(implicit session: RWSession): (Int, Int) = {
+    val (inserted, updated) = {
       val existingContacts = econtactRepo.getByAbookId(abookId)
       val existingByLowerCasedAddress = existingContacts.map { contact => contact.email.address.toLowerCase -> contact }.toMap
       val toBeInternedByLowerCasedAddress = contacts.groupBy(_.email.address.toLowerCase)
