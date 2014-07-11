@@ -19,8 +19,9 @@ class ContactInterner @Inject() (
 
   def internContact(userId: Id[User], abookId: Id[ABookInfo], contact: BasicContact): EContact = {
     val (econtact, inserted, updated) = db.readWrite { implicit session =>
-      econtactRepo.getByAbookIdAndEmail(abookId, contact.email) match {
-        case None => (insertNewContact(userId, abookId, contact), true, false)
+      val emailAccount = emailAccountRepo.internByAddress(contact.email)
+      econtactRepo.getByAbookIdAndEmailId(abookId, emailAccount.id.get) match {
+        case None => (insertNewContact(userId, abookId, emailAccount, contact), true, false)
         case Some(existingContact) => updateExistingContact(userId, existingContact, contact).map((_, false, true)) getOrElse (existingContact, false, false)
       }
     }
@@ -63,8 +64,7 @@ class ContactInterner @Inject() (
     }
   }
 
-  private def insertNewContact(userId: Id[User], abookId: Id[ABookInfo], contact: BasicContact)(implicit session: RWSession): EContact = {
-    val emailAccount = emailAccountRepo.internByAddress(contact.email)
+  private def insertNewContact(userId: Id[User], abookId: Id[ABookInfo], emailAccount: EmailAccount, contact: BasicContact)(implicit session: RWSession): EContact = {
     val newContact = EContact.make(userId, abookId, emailAccount, contact)
     econtactRepo.save(newContact)
   }
