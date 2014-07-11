@@ -2,3 +2,5 @@ workspace.xml
 **/.DS_Store
 **/Thumbs.db
 **/*~
+
+kifi-backend/.dist/.classpath
