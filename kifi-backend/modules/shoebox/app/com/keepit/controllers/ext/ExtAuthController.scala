@@ -151,7 +151,7 @@ class ExtAuthController @Inject() (
   }
 
   def whois = JsonAction.authenticated { request =>
-    val user = db.readOnlyMaster(implicit s => userRepo.get(request.userId))
+    val user = db.readOnlyReplica(implicit s => userRepo.get(request.userId))
     Ok(Json.obj("externalUserId" -> user.externalId.toString))
   }
 }
