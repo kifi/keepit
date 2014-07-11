@@ -70,5 +70,15 @@ object FutureHelpers {
     }
   }
 
+  def sequentialPartialExec[T](futures: Iterable[Future[T]], predicate: T => Boolean): Future[Unit] = {
+    futures.headOption match {
+      case None => Future.successful[Unit]()
+      case Some(f) => f.flatMap { t =>
+        if (predicate(t)) Future.successful[Unit]()
+        else sequentialPartialExec(futures.tail, predicate)
+      }
+    }
+  }
+
 }
 

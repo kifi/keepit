@@ -224,19 +224,26 @@ class SearchServiceClientImpl(
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUserWithUserId]]] = {
     val payload = Json.toJson(UserSearchRequest(Some(userId), query, maxHits, context, filter))
     call(Search.internal.userTypeahead(), payload).map { r =>
-      val userSearchResult = Json.fromJson[UserSearchResult](r.json).get
-      if (userSearchResult.hits.isEmpty) Seq()
-      else {
-        val queryTerms = PrefixFilter.normalize(query).split("\\s+")
-        var ordinal = 0
-        userSearchResult.hits.map { hit =>
-          val name = hit.basicUser.firstName + " " + hit.basicUser.lastName
-          val normalizedName = PrefixFilter.normalize(name)
-          val score = PrefixMatching.distance(normalizedName, queryTerms)
-          ordinal += 1
-          val basicUserWithUserId = BasicUserWithUserId.fromBasicUserAndId(hit.basicUser, hit.id)
-          TypeaheadHit(score, name, ordinal, basicUserWithUserId)
+      try {
+        Json.fromJson[UserSearchResult](r.json).asOpt match {
+          case None => Seq.empty
+          case Some(userSearchResult) =>
+            if (userSearchResult.hits.isEmpty) Seq()
+            else {
+              val queryTerms = PrefixFilter.normalize(query).split("\\s+")
+              var ordinal = 0
+              userSearchResult.hits.map { hit =>
+                val name = hit.basicUser.firstName + " " + hit.basicUser.lastName
+                val normalizedName = PrefixFilter.normalize(name)
+                val score = PrefixMatching.distance(normalizedName, queryTerms)
+                ordinal += 1
+                val basicUserWithUserId = BasicUserWithUserId.fromBasicUserAndId(hit.basicUser, hit.id)
+                TypeaheadHit(score, name, ordinal, basicUserWithUserId)
+              }
+            }
         }
+      } catch {
+        case e: Exception => Seq.empty
       }
     }
   }

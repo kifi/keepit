@@ -14,7 +14,7 @@ import play.api.libs.json._
 import com.keepit.typeahead.TypeaheadHit
 import play.api.libs.functional.syntax._
 import com.keepit.model.SocialUserConnectionsKey
-import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
 import com.keepit.search.SearchServiceClient
 import com.keepit.common.mail.EmailAddress
 import Logging.LoggerWithPrefix
@@ -235,20 +235,54 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  private def aggregate(userId: Id[User], q: String, limit: Option[Int], dedupEmail: Boolean): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {
-    implicit val prefix = LogPrefix(s"aggregate($userId,$q,$limit)")
-    val socialF = socialUserTypeahead.topN(userId, q, limit map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { res =>
+  private def aggregate(userId: Id[User], q: String, limitOpt: Option[Int], dedupEmail: Boolean): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {
+    implicit val prefix = LogPrefix(s"aggregate($userId,$q,$limitOpt)")
+    val socialF = socialUserTypeahead.topN(userId, q, limitOpt map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { res =>
+      log.info(s"social res=${res.mkString(",")}")
       res.collect {
         case hit if includeHit(hit) => hit
       }
     }
-    val kifiF = kifiUserTypeahead.topN(userId, q, limit)(TypeaheadHit.defaultOrdering[User])
-    val abookF = if (q.length < 2) Future.successful(Seq.empty) else abookServiceClient.prefixQuery(userId, q, limit)
-    val nfUsersF = if (q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeaheadWithUserId(userId, q, limit.getOrElse(100), filter = "nf")
+    val kifiF = kifiUserTypeahead.topN(userId, q, limitOpt)(TypeaheadHit.defaultOrdering[User])
+    val abookF = if (q.length < 2) Future.successful(Seq.empty) else abookServiceClient.prefixQuery(userId, q, limitOpt)
+    val nfUsersF = if (q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeaheadWithUserId(userId, q, limitOpt.getOrElse(100), filter = "nf")
 
-    limit match {
+    limitOpt match {
       case None => fetchAll(socialF, kifiF, abookF, nfUsersF)
-      case Some(n) => fetchTop(dedupEmail, socialF, kifiF, abookF, nfUsersF, n)
+      case Some(limit) =>
+        if (dedupEmail) fetchTop(dedupEmail, socialF, kifiF, abookF, nfUsersF, limit)
+        else {
+          val social: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = socialF.map { hits =>
+            //            val (fb, lnkd) = hits.map(hit => (hit.info.networkType, hit)).partition(_._1 == SocialNetworks.FACEBOOK)
+            //            log.info(s"aggregate($userId) fb=${fb.mkString(",")} lnkd=${lnkd.mkString(",")}")
+            //            fb ++ lnkd
+            log.info(s"aggregate($userId) hits=${hits.mkString(",")}")
+            hits.map(hit => (hit.info.networkType, hit))
+          }
+          val kifi = kifiF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO, hit)) }
+          val abook = abookF.map { hits => hits.map(hit => (SocialNetworks.EMAIL, hit)) }
+          val nf = nfUsersF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO_NF, hit)) }
+          val futures = Seq(social, kifi, abook, nf)
+          fetchFirst(limit, futures)
+        }
+    }
+  }
+
+  def fetchFirst(limit: Int, futures: Iterable[Future[(Seq[(SocialNetworkType, TypeaheadHit[_])])]]): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {
+    val zHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])]
+    val allHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])]
+    FutureHelpers.sequentialPartialExec[Seq[(SocialNetworkType, TypeaheadHit[_])]](futures, { hits =>
+      val ordered = hits.sorted(hitOrd)
+      log.info(s"fetchFirst ordered=${ordered.mkString(",")}")
+      zHits ++= ordered.takeWhile { case (_, hit) => hit.score == 0 }
+      if (zHits.length < limit) {
+        allHits ++= ordered
+      }
+      (zHits.length >= limit)
+    }) map { _ =>
+      if (zHits.length >= limit) zHits.take(limit) else {
+        allHits.sorted(hitOrd)
+      }
     }
   }
 
