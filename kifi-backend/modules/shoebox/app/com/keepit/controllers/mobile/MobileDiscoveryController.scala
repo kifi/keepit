@@ -36,7 +36,7 @@ class MobileDiscoveryController @Inject() (
       val futureUriCollisionInfos = graphClient.wander(Wanderlust.discovery(userId)).flatMap { collisions =>
         val sortedUriCollisions = collisions.uris.toSeq.sortBy(-_._2)
         val uris = if (limit > 0) sortedUriCollisions.take(limit) else sortedUriCollisions
-        val (safeUris, scores) = db.readOnly { implicit session =>
+        val (safeUris, scores) = db.readOnlyReplica { implicit session =>
           uris.flatMap {
             case (uriId, score) =>
               val uri = uriRepo.get(uriId)
@@ -64,7 +64,7 @@ class MobileDiscoveryController @Inject() (
           pageInfos <- pageInfosFuture
         } yield {
 
-          val idToBasicUser = db.readOnly { implicit s =>
+          val idToBasicUser = db.readOnlyReplica { implicit s =>
             basicUserRepo.loadAll(sharingInfos.flatMap(_.sharingUserIds).toSet)
           }
 
