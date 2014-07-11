@@ -140,7 +140,7 @@ class UserCommander @Inject() (
   }
 
   def getConnectionsPage(userId: Id[User], page: Int, pageSize: Int): (Seq[ConnectionInfo], Int) = {
-    val infos = db.readOnlyMaster { implicit s =>
+    val infos = db.readOnlyReplica { implicit s =>
       val searchFriends = searchFriendRepo.getSearchFriends(userId)
       val connectionIds = userConnectionRepo.getConnectedUsers(userId)
       val unfriendedIds = userConnectionRepo.getUnfriendedUsers(userId)
@@ -154,7 +154,7 @@ class UserCommander @Inject() (
   }
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
-    val basicUsers = db.readOnlyMaster { implicit s =>
+    val basicUsers = db.readOnlyReplica { implicit s =>
       if (canMessageAllUsers(user.id.get)) {
         userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
           .collect { case u if u.id.get != user.id.get => BasicUser.fromUser(u) }.toSet
@@ -220,7 +220,7 @@ class UserCommander @Inject() (
 
   def getHelpCounts(user: Id[User]): (Int, Int) = {
     //unique keeps, total clicks
-    db.readOnlyMaster { implicit session => bookmarkClicksRepo.getClickCounts(user) }
+    db.readOnlyReplica { implicit session => bookmarkClicksRepo.getClickCounts(user) }
   }
 
   def getKeepAttributionCounts(userId: Id[User]): (Int, Int, Int) = { // (discoveryCount, rekeepCount, rekeepTotalCount)
@@ -232,7 +232,7 @@ class UserCommander @Inject() (
   }
 
   def getUserSegment(userId: Id[User]): UserSegment = {
-    val (numBms, numFriends) = db.readOnlyMaster { implicit s => //using cache
+    val (numBms, numFriends) = db.readOnlyReplica { implicit s => //using cache
       (keepRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
     }
 
@@ -258,7 +258,7 @@ class UserCommander @Inject() (
     val guardKey = "friendsNotifiedAboutJoining"
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, guardKey).exists(_ == "true") }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, true) }
-      val (newUser, toNotify, id2Email) = db.readOnlyMaster { implicit session =>
+      val (newUser, toNotify, id2Email) = db.readOnlyReplica { implicit session =>
         val newUser = userRepo.get(newUserId)
         val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
         val id2Email = toNotify.map { userId =>
@@ -600,7 +600,7 @@ class UserCommander @Inject() (
         userConnectionRepo.unfriendConnections(userId, user.id.toSet) > 0
       }
       if (success) {
-        db.readOnlyMaster { implicit session =>
+        db.readOnlyReplica { implicit session =>
           elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
           elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
         }

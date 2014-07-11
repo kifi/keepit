@@ -156,7 +156,7 @@ class MessagingAnalytics @Inject() (
       val action = if (mute) "mutedConversation" else "unmutedConversation"
       contextBuilder += ("action", action)
       contextBuilder += ("threadId", threadExternalId.id)
-      val thread = db.readOnlyMaster { implicit session => threadRepo.get(threadExternalId) }
+      val thread = db.readOnlyReplica { implicit session => threadRepo.get(threadExternalId) }
       thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.CHANGED_SETTINGS, changedAt))
     }
