@@ -35,7 +35,7 @@ class LocalUserExperimentCommander @Inject() (
     extends UserExperimentCommander with Logging {
 
   def getExperimentGenerators(): Future[Seq[ProbabilisticExperimentGenerator]] = Future {
-    db.readOnlyMaster { implicit session => generatorRepo.allActive() }
+    db.readOnlyReplica { implicit session => generatorRepo.allActive() }
   }
 
   def getExperimentsByUser(userId: Id[User]): Set[ExperimentType] = {
