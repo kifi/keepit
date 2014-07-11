@@ -2,24 +2,23 @@ package com.keepit.graph
 
 import com.google.inject.Inject
 import com.keepit.common.db.Id
-import com.keepit.common.service.{ServiceClient, ServiceType}
+import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.{ CallTimeouts, ClientResponse, HttpClient }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.graph.model._
-import com.keepit.model.{NormalizedURI, User}
-import scala.concurrent.{Future}
-import com.keepit.common.routes.{Graph}
+import com.keepit.model.{ NormalizedURI, User }
+import scala.concurrent.{ Future }
+import com.keepit.common.routes.{ Graph }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.graph.manager.{ PrettyGraphState, PrettyGraphStatistics }
 import play.api.Mode
 import play.api.Mode.Mode
-import com.keepit.graph.wander.{Wanderlust, Collisions}
-import play.api.libs.json.{JsArray, JsObject, Json}
+import com.keepit.graph.wander.{ Wanderlust, Collisions }
+import play.api.libs.json.{ JsArray, JsObject, Json }
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.graph.model.GraphKinds
-
 
 trait GraphServiceClient extends ServiceClient {
   final val serviceType = ServiceType.GRAPH
@@ -28,21 +27,19 @@ trait GraphServiceClient extends ServiceClient {
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, PrettyGraphState]]
   def getGraphKinds(): Future[GraphKinds]
   def wander(wanderlust: Wanderlust): Future[Collisions]
-  def getListOfUriAndScorePairs(userId:Id[User], num:Int): Future[Seq[UserConnectionFeedScore]]
-  def getListOfUserAndScorePairs(userId:Id[User]): Future[Seq[UserConnectionSocialScore]]
+  def getListOfUriAndScorePairs(userId: Id[User], num: Int): Future[Seq[UserConnectionFeedScore]]
+  def getListOfUserAndScorePairs(userId: Id[User]): Future[Seq[UserConnectionSocialScore]]
 }
 
 case class GraphCacheProvider @Inject() (
-  userScoreCache: UserConnectionSocialScoreCache
-)
+  userScoreCache: UserConnectionSocialScoreCache)
 
 class GraphServiceClientImpl @Inject() (
-  override val serviceCluster: ServiceCluster,
-  override val httpClient: HttpClient,
-  val airbrakeNotifier: AirbrakeNotifier,
-  cacheProvider: GraphCacheProvider,
-  mode: Mode
-) extends GraphServiceClient {
+    override val serviceCluster: ServiceCluster,
+    override val httpClient: HttpClient,
+    val airbrakeNotifier: AirbrakeNotifier,
+    cacheProvider: GraphCacheProvider,
+    mode: Mode) extends GraphServiceClient {
 
   private val longTimeout = CallTimeouts(responseTimeout = Some(300000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
 
@@ -82,13 +79,13 @@ class GraphServiceClientImpl @Inject() (
     call(Graph.internal.wander(), payload, callTimeouts = longTimeout).map { response => response.json.as[Collisions] }
   }
 
-  def getListOfUriAndScorePairs(userId:Id[User], num:Int): Future[Seq[UserConnectionFeedScore]] = {
-    call(Graph.internal.getListOfUriAndScorePairs(userId, num)).map { response =>
+  def getListOfUriAndScorePairs(userId: Id[User], num: Int): Future[Seq[UserConnectionFeedScore]] = {
+    call(Graph.internal.getListOfUriAndScorePairs(userId)).map { response =>
       response.json.as[Seq[UserConnectionFeedScore]]
     }
   }
 
-  def getListOfUserAndScorePairs(userId:Id[User]): Future[Seq[UserConnectionSocialScore]] = {
+  def getListOfUserAndScorePairs(userId: Id[User]): Future[Seq[UserConnectionSocialScore]] = {
     cacheProvider.userScoreCache.getOrElseFuture(UserConnectionSocialScoreCacheKey(userId)) {
       call(Graph.internal.getListOfUserAndScorePairs(userId)).map { response =>
         response.json.as[Seq[UserConnectionSocialScore]]

@@ -5,9 +5,9 @@ import com.keepit.common.controller.GraphServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.graph.commanders.GraphCommander
-import com.keepit.graph.manager.{NormalizedUriGraphUpdate, GraphUpdaterState, GraphStatistics, GraphManager}
-import com.keepit.model.{SocialUserInfo, NormalizedURI, User}
-import play.api.mvc.{BodyParsers, Action}
+import com.keepit.graph.manager.{ NormalizedUriGraphUpdate, GraphUpdaterState, GraphStatistics, GraphManager }
+import com.keepit.model.{ SocialUserInfo, NormalizedURI, User }
+import play.api.mvc.{ BodyParsers, Action }
 import com.keepit.graph.manager.{ GraphUpdaterState, GraphStatistics, GraphManager }
 import play.api.mvc.Action
 import play.api.libs.json._
@@ -15,13 +15,14 @@ import com.keepit.graph.wander.{ Wanderlust, WanderingCommander }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.graph.model._
 import play.api.mvc.BodyParsers.parse
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
 import com.keepit.graph.model.{ EdgeKind, VertexKind, GraphKinds }
 
 class GraphController @Inject() (
-  graphManager: GraphManager,
-  wanderingCommander: WanderingCommander,
-  graphCommander: GraphCommander
-) extends GraphServiceController with Logging {
+    graphManager: GraphManager,
+    wanderingCommander: WanderingCommander,
+    graphCommander: GraphCommander) extends GraphServiceController with Logging {
 
   def wander() = SafeAsyncAction(parse.json) { request =>
     val wanderlust = request.body.as[Wanderlust]
@@ -48,15 +49,15 @@ class GraphController @Inject() (
     Ok(json)
   }
 
-  def getListOfUriAndScorePairs(userId:Id[User], num:Int) = Action { request =>
-    val urisList = graphCommander.getListOfUriAndScorePairs(userId, num)
-    val json = Json.toJson(urisList)
+  def getListOfUriAndScorePairs(userId: Id[User]) = Action { request =>
+    val urisSeq = graphCommander.getListOfUriAndScorePairs(userId)
+    val json = Json.toJson(urisSeq)
     Ok(json)
   }
 
-  def getListOfUserAndScorePairs(userId:Id[User]) = Action { request =>
-    val usersList = graphCommander.getListOfUserAndScorePairs(userId)
-    val json = Json.toJson(usersList)
+  def getListOfUserAndScorePairs(userId: Id[User]) = Action { request =>
+    val usersSeq = graphCommander.getListOfUserAndScorePairs(userId)
+    val json = Json.toJson(usersSeq)
     Ok(json)
   }
 }

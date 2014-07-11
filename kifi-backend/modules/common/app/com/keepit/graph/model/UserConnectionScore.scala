@@ -1,7 +1,7 @@
 package com.keepit.graph.model
 
-import com.keepit.common.db.{Id}
-import com.keepit.model.{NormalizedURI, User}
+import com.keepit.common.db.{ Id }
+import com.keepit.model.{ NormalizedURI, User }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -20,7 +20,7 @@ case class UserConnectionFeedScore(uriId: Id[NormalizedURI], score: Float) exten
 
 object UserConnectionFeedScore {
   implicit val format = (
-      (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-      (__ \ 'score).format[Float]
-    )(UserConnectionFeedScore.apply, unlift(UserConnectionFeedScore.unapply))
+    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'score).format[Float]
+  )(UserConnectionFeedScore.apply, unlift(UserConnectionFeedScore.unapply))
 }

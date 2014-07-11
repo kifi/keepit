@@ -1,6 +1,6 @@
 package com.keepit.graph.model
 
-import com.keepit.common.cache.{CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key}
+import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.model.User
@@ -15,5 +15,5 @@ case class UserConnectionSocialScoreCacheKey(userId: Id[User]) extends Key[Seq[U
 }
 
 class UserConnectionSocialScoreCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[UserConnectionSocialScoreCacheKey, Seq[UserConnectionSocialScore]](stats, accessLog, inner, outer:_*)(TraversableFormat.seq(UserConnectionSocialScore.format))
+  extends JsonCacheImpl[UserConnectionSocialScoreCacheKey, Seq[UserConnectionSocialScore]](stats, accessLog, inner, outer: _*)(TraversableFormat.seq(UserConnectionSocialScore.format))
 

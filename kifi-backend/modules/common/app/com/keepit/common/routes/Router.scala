@@ -316,8 +316,8 @@ object Graph extends Service {
     def getGraphUpdaterState() = ServiceRoute(GET, "/internal/graph/state")
     def getGraphKinds() = ServiceRoute(GET, "/internal/graph/kinds")
     def wander() = ServiceRoute(POST, "/internal/graph/wander")
-    def getListOfUriAndScorePairs(userId:Id[User], num:Int) = ServiceRoute(GET, "/internal/graph/getUriAndScorePairs", Param("userId", userId), Param("num", num))
-    def getListOfUserAndScorePairs(userId:Id[User]) = ServiceRoute(GET, "/internal/graph/getUserAndScorePairs", Param("userId", userId))
+    def getListOfUriAndScorePairs(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getUriAndScorePairs", Param("userId", userId))
+    def getListOfUserAndScorePairs(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getUserAndScorePairs", Param("userId", userId))
   }
 }
 
