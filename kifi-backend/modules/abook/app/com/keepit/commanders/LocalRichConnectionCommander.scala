@@ -186,9 +186,9 @@ class LocalRichConnectionCommander @Inject() (
               }
             }
           }
-          lastPageSize = batch.length
-          nextPage += 1
         }
+        lastPageSize = batch.length
+        nextPage += 1
       }
     } while (lastPageSize == pageSize)
 
