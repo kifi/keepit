@@ -1,16 +1,20 @@
 package com.keepit.cortex.models.lda
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.db.slick.Database
-import com.keepit.cortex.dbmodel._
-import com.keepit.model.NormalizedURI
-import com.keepit.model.UrlHash
-import com.keepit.common.db.SequenceNumber
-import com.keepit.cortex.core.FeatureRepresentation
-import com.keepit.model.NormalizedURIStates
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.time._
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.cortex.core.{ FeatureRepresentation, StatModelName }
+import com.keepit.cortex.dbmodel._
+import com.keepit.cortex.plugins._
+import com.keepit.model.{ NormalizedURI, NormalizedURIStates, UrlHash }
 import org.joda.time.DateTime
-import com.keepit.cortex.core.StatModelName
+
+import scala.concurrent.duration._
 
 trait UpdateAction
 object UpdateAction {
@@ -20,9 +24,20 @@ object UpdateAction {
   object Ignore extends UpdateAction
 }
 
-trait LDADbUpdater {
-  def update(): Unit
+class LDADbUpdaterActor @Inject() (airbrake: AirbrakeNotifier, updater: LDADbUpdater) extends FeatureUpdateActor(airbrake, updater)
+
+trait LDADbUpdatePlugin extends FeatureUpdatePlugin[NormalizedURI, DenseLDA]
+
+@Singleton
+class LDADbUpdatePluginImpl @Inject() (
+    actor: ActorInstance[LDADbUpdaterActor],
+    discovery: ServiceDiscovery,
+    val scheduling: SchedulingProperties) extends BaseFeatureUpdatePlugin(actor, discovery) with LDADbUpdatePlugin {
+  override val startTime: FiniteDuration = 60 seconds
+  override val updateFrequency: FiniteDuration = 2 minutes
 }
+
+trait LDADbUpdater extends BaseFeatureUpdater[Id[NormalizedURI], NormalizedURI, DenseLDA, FeatureRepresentation[NormalizedURI, DenseLDA]]
 
 @Singleton
 class LDADbUpdaterImpl @Inject() (
@@ -31,8 +46,8 @@ class LDADbUpdaterImpl @Inject() (
     uriRepo: CortexURIRepo,
     topicRepo: URILDATopicRepo,
     commitRepo: FeatureCommitInfoRepo) extends LDADbUpdater {
-  import UpdateAction._
-  import NormalizedURIStates.SCRAPED
+  import com.keepit.cortex.models.lda.UpdateAction._
+  import com.keepit.model.NormalizedURIStates.SCRAPED
 
   private val fetchSize = 500
   private val sparsity = 10
