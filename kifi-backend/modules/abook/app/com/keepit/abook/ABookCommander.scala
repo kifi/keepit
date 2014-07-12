@@ -265,7 +265,7 @@ class ABookCommander @Inject() (
   def internAllContacts(readOnly: Boolean): Int = {
     val allABooks = db.readOnlyMaster { implicit session => abookInfoRepo.all() }
     allABooks.collect {
-      case abook if abook.origin != ABookOrigins.KIFI && { abook.state == ABookInfoStates.PENDING || abook.state == ABookInfoStates.PROCESSING } =>
+      case abook if abook.origin != ABookOrigins.KIFI && !{ abook.state == ABookInfoStates.PENDING || abook.state == ABookInfoStates.PROCESSING } =>
         if (!readOnly) {
           val udpatedABook = db.readWrite { implicit session => abookInfoRepo.save(abook.withState(ABookInfoStates.PENDING)) }
           abookImporter.asyncProcessContacts(udpatedABook.userId, udpatedABook.origin, udpatedABook, udpatedABook.rawInfoLoc.get, None)
