@@ -17,8 +17,8 @@ case class EContact(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     userId: Id[User],
-    abookId: Option[Id[ABookInfo]],
-    emailAccountId: Option[Id[EmailAccount]],
+    abookId: Id[ABookInfo],
+    emailAccountId: Id[EmailAccount],
     email: EmailAddress,
     contactUserId: Option[Id[User]] = None,
     name: Option[String] = None,
@@ -41,8 +41,8 @@ object EContact {
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'userId).format(Id.format[User]) and
-    (__ \ 'abookId).formatNullable(Id.format[ABookInfo]) and
-    (__ \ 'emailAccountId).formatNullable(Id.format[EmailAccount]) and
+    (__ \ 'abookId).format(Id.format[ABookInfo]) and
+    (__ \ 'emailAccountId).format(Id.format[EmailAccount]) and
     (__ \ 'email).format[EmailAddress] and
     (__ \ 'contactUserId).formatNullable(Id.format[User]) and
     (__ \ 'name).formatNullable[String] and
@@ -56,8 +56,8 @@ object EContact {
   def make(userId: Id[User], abookId: Id[ABookInfo], emailAccount: EmailAccount, contacts: BasicContact*): EContact = {
     val eContact = EContact(
       userId = userId,
-      abookId = Some(abookId),
-      emailAccountId = Some(emailAccount.id.get),
+      abookId = abookId,
+      emailAccountId = emailAccount.id.get,
       email = emailAccount.address,
       contactUserId = emailAccount.userId
     )
