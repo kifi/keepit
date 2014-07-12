@@ -825,5 +825,9 @@ class AdminUserController @Inject() (
   def validateAllContacts(readOnly: Boolean) = AdminJsonAction.authenticatedAsync { request =>
     abookClient.validateAllContacts(readOnly).map(count => Ok(JsNumber(count)))
   }
+
+  //todo(Léo): remove after one-time contact migration
+  def internAllElizaEmailAddresses() = AdminJsonAction.authenticatedAsync { request =>
+    eliza.internAllEmailAddresses().map(count => Ok(JsNumber(count)))
   }
 }
