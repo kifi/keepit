@@ -50,8 +50,6 @@ trait ElizaServiceClient extends ServiceClient {
   def importThread(data: JsObject): Unit
 
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]]
-
-  def internAllEmailAddresses(readOnly: Boolean): Future[Int]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -147,12 +145,6 @@ class ElizaServiceClientImpl @Inject() (
       Json.parse(response.body).as[Seq[Id[User]]]
     }
   }
-
-  def internAllEmailAddresses(readOnly: Boolean): Future[Int] = {
-    call(Eliza.internal.internAllEmailAddresses(readOnly), callTimeouts = CallTimeouts.NoTimeouts).map { response =>
-      response.json.as[Int]
-    }
-  }
 }
 
 class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler, attributionInfo: mutable.Map[Id[NormalizedURI], Seq[Id[User]]] = mutable.HashMap.empty) extends ElizaServiceClient {
@@ -204,6 +196,4 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]] = {
     Future.successful(attributionInfo.get(uriId).getOrElse(Seq.empty).filter(_ != userId))
   }
-
-  def internAllEmailAddresses(readOnly: Boolean): Future[Int] = Future.successful(0)
 }

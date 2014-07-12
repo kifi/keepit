@@ -56,7 +56,7 @@ class EmailAccountUpdaterActor @Inject() (
             val emailAccount = emailAccountRepo.getByAddress(update.emailAddress) getOrElse EmailAccount(address = update.emailAddress)
             val savedAccount = emailAccountRepo.save(emailAccount.copy(userId = Some(update.userId), verified = update.verified))
             if (savedAccount.verified && (!emailAccount.verified || savedAccount.userId != emailAccount.userId)) {
-              contactRepo.updateOwnership(savedAccount.address, savedAccount.userId)
+              contactRepo.updateOwnership(savedAccount.id.get, savedAccount.userId)
             }
           }
 
@@ -64,7 +64,7 @@ class EmailAccountUpdaterActor @Inject() (
             emailAccountRepo.getByAddress(deletion.emailAddress).foreach { emailAccount =>
               if (emailAccount.userId == Some(deletion.userId)) {
                 emailAccountRepo.save(emailAccount.copy(userId = None, verified = false))
-                if (emailAccount.verified) { contactRepo.updateOwnership(emailAccount.address, None) }
+                if (emailAccount.verified) { contactRepo.updateOwnership(emailAccount.id.get, None) }
               }
             }
           }

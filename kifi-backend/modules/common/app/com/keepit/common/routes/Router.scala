@@ -218,7 +218,6 @@ object Eliza extends Service {
     def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long) = ServiceRoute(GET, "/internal/eliza/getThreadContentForIndexing", Param("sequenceNumber", sequenceNumber), Param("maxBatchSize", maxBatchSize))
     def getRenormalizationSequenceNumber() = ServiceRoute(GET, "/internal/eliza/sequenceNumber/renormalization")
     def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/eliza/keepAttribution", Param("userId", userId), Param("uriId", uriId))
-    def internAllEmailAddresses(readOnly: Boolean) = ServiceRoute(GET, "/internal/eliza/internAllEmailAddresses", Param("readOnly", readOnly))
   }
 }
 
@@ -264,7 +263,6 @@ object ABook extends Service {
       case Right(friendEmailAddress) => Param("friendEmailAddress", friendEmailAddress)
     })
     def getRipestFruits(userId: Id[User], page: Int, pageSize: Int) = ServiceRoute(GET, s"/internal/abook/$userId/ripestFruits", Param("page", page), Param("pageSize", pageSize))
-    def validateAllContacts(readOnly: Boolean) = ServiceRoute(GET, s"/internal/abook/validateAllContacts", Param("readOnly", readOnly))
     def hideEmailFromUser(userId: Id[User], email: EmailAddress) = ServiceRoute(POST, s"/internal/abook/${userId.id}/hideEmailFromUser", Param("email", email))
     def getContactNameByEmail(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/getContactNameByEmail")
     def internKifiContact(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId.id}/internKifiContact")

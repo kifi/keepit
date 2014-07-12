@@ -9,13 +9,11 @@ import com.keepit.model._
 import play.api.libs.json.{ JsObject, JsArray, Json, JsValue }
 import scala.ref.WeakReference
 import com.keepit.common.logging.{ LogPrefix, Logging }
-import scala.collection.mutable
 import scala.concurrent._
 import scala.concurrent.duration._
 import com.keepit.common.time._
 import com.keepit.common.db.slick._
-import scala.util.{ Try, Failure, Success }
-import java.text.Normalizer
+import scala.util.Failure
 import play.api.libs.concurrent.Execution.Implicits._
 
 import Logging._
@@ -24,10 +22,9 @@ import play.api.http.Status
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.xml.Elem
 import com.keepit.abook.typeahead.EContactTypeahead
-import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, BasicContact, EmailAddress }
-import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.commanders.ContactInterner
-import com.keepit.abook.model.{ EContactRepo, EContactStates, EContact }
+import com.keepit.abook.model.{ EContactRepo, EContact }
 
 class ABookCommander @Inject() (
     db: Database,
@@ -37,8 +34,7 @@ class ABookCommander @Inject() (
     abookInfoRepo: ABookInfoRepo,
     econtactRepo: EContactRepo,
     abookImporter: ABookImporterPlugin,
-    contactInterner: ContactInterner,
-    shoebox: ShoeboxServiceClient) extends Logging {
+    contactInterner: ContactInterner) extends Logging {
 
   def toS3Key(userId: Id[User], origin: ABookOriginType, abookOwnerInfo: Option[ABookOwnerInfo]): String = {
     val k = s"${userId.id}_${origin.name}"
@@ -220,41 +216,6 @@ class ABookCommander @Inject() (
     val kifiAbook = db.readWrite { implicit session => abookInfoRepo.internKifiABook(userId) }
     contactInterner.internContact(userId, kifiAbook.id.get, contact)
   }
-
-  def inactivateOldContacts(readOnly: Boolean): Int = {
-    val pageSize = 1000
-    var lastPageSize = -1
-    var nextPage = 0
-    var oldContacts = 0
-
-    do {
-      db.readWrite { implicit session =>
-        val batch = econtactRepo.page(nextPage, pageSize, Set.empty)
-        batch.foreach { contact =>
-          if (contact.abookId.isEmpty) {
-            oldContacts += 1
-            if (!readOnly) { econtactRepo.save(contact.copy(state = EContactStates.INACTIVE)) }
-          }
-        }
-        lastPageSize = batch.length
-        nextPage += 1
-      }
-    } while (lastPageSize == pageSize)
-
-    if (oldContacts > 0 && !readOnly) { econtactTypeahead.refreshAll() }
-    oldContacts
-  }
-
-  def internAllContacts(readOnly: Boolean): Int = {
-    val allABooks = db.readOnlyMaster { implicit session => abookInfoRepo.all() }
-    allABooks.collect {
-      case abook if abook.origin != ABookOrigins.KIFI && !{ abook.state == ABookInfoStates.PENDING || abook.state == ABookInfoStates.PROCESSING } =>
-        if (!readOnly) {
-          val udpatedABook = db.readWrite { implicit session => abookInfoRepo.save(abook.withState(ABookInfoStates.PENDING)) }
-          abookImporter.asyncProcessContacts(udpatedABook.userId, udpatedABook.origin, udpatedABook, udpatedABook.rawInfoLoc.get, None)
-        }
-    }
-  }.length
 
   def getContactNameByEmail(userId: Id[User], email: EmailAddress): Option[String] = {
     db.readOnlyReplica { implicit session =>

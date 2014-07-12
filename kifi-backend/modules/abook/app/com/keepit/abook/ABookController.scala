@@ -229,13 +229,6 @@ class ABookController @Inject() (
     Ok("")
   }
 
-  def validateAllContacts(readOnly: Boolean) = Action.async { request =>
-    SafeFuture {
-      val oldContacts = abookCommander.inactivateOldContacts(readOnly: Boolean)
-      Ok(JsNumber(oldContacts))
-    }
-  }
-
   def getContactNameByEmail(userId: Id[User]) = Action(parse.json) { request =>
     val email = request.body.as[EmailAddress]
     val name = abookCommander.getContactNameByEmail(userId, email)

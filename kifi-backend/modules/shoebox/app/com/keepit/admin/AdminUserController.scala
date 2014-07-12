@@ -31,11 +31,10 @@ import play.api.libs.json._
 import play.api.mvc.{ AnyContent, SimpleResult }
 
 import views.html
-import com.keepit.typeahead.{ TypeaheadHit, PrefixFilter }
+import com.keepit.typeahead.TypeaheadHit
 import scala.collection.mutable
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
-import securesocial.core.Registry
-import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
+import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.common.concurrent.FutureHelpers
 
 case class UserStatistics(
@@ -102,8 +101,7 @@ class AdminUserController @Inject() (
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient,
-    authCommander: AuthCommander,
-    postOffice: LocalPostOffice) extends AdminController(actionAuthenticator) {
+    authCommander: AuthCommander) extends AdminController(actionAuthenticator) {
 
   def merge = AdminHtmlAction.authenticated { implicit request =>
     // This doesn't do a complete merge. It's designed for cases where someone accidentally creates a new user when
@@ -821,68 +819,5 @@ class AdminUserController @Inject() (
     }
     log.info(s"Deactivated UserEmailAddress $inactiveEmail")
     Ok(JsString(inactiveEmail.toString))
-  }
-
-  //todo(Léo): remove after one-time contact migration
-  def validateAllContacts(readOnly: Boolean) = AdminJsonAction.authenticatedAsync { request =>
-    abookClient.validateAllContacts(readOnly).map(count => Ok(JsNumber(count)))
-  }
-
-  //todo(Léo): remove after one-time contact migration
-  def internAllInvitationEmailAddresses(readOnly: Boolean) = AdminJsonAction.authenticatedAsync { request =>
-    validateAllInvitedContacts(readOnly).map(count => Ok(JsNumber(count)))
-  }
-
-  private def validateAllInvitedContacts(readOnly: Boolean): Future[Int] = {
-    log.info("[Invitation Validation] Starting validation of all InvitedContacts.")
-    val invalidInvitedContacts = mutable.Map[Id[Invitation], String]()
-    val fixableInvitedContacts = mutable.Map[Id[Invitation], String]()
-    var toBeInterned = Seq[(Id[User], BasicContact)]()
-
-    db.readWrite { implicit session =>
-      val invitations = invitationRepo.all()
-      invitations.foreach { invite =>
-        invite.recipientEmailAddress.foreach { emailAddress =>
-          BasicContact.fromString(emailAddress.address) match {
-            case Failure(invalidContact) => {
-              log.error(s"[Invitation Validation] Found invalid invited contact: ${emailAddress}")
-              invalidInvitedContacts += (invite.id.get -> emailAddress.address)
-              if (!readOnly) { invitationRepo.save(invite.copy(state = InvitationStates.INACTIVE)) }
-            }
-            case Success(validContact) => {
-              if (validContact.email != emailAddress) {
-                log.warn(s"[Invitation Validation] Found fixable invited contact: ${emailAddress}")
-                fixableInvitedContacts += (invite.id.get -> emailAddress.address)
-                if (!readOnly) { invitationRepo.save(invite.copy(recipientEmailAddress = Some(validContact.email))) }
-              }
-              invite.senderUserId.foreach { userId => toBeInterned +:= (userId -> validContact) }
-            }
-          }
-        }
-      }
-    }
-
-    val result = if (readOnly) Future.successful(0) else {
-      FutureHelpers.foldLeft(toBeInterned)(0) {
-        case (count, (userId, validContact)) =>
-          abookClient.internKifiContact(userId, validContact).map { _ => count + 1 }
-      }
-    }
-
-    log.info("[Invitation Email Validation] Done with Invitation validation.")
-
-    val title = s"Invited Contact Validation Report: ReadOnly Mode = $readOnly. Invalid InvitedContacts: ${invalidInvitedContacts.size}. Fixable InvitedContacts: ${fixableInvitedContacts.size}. Valid InvitedContacts: ${toBeInterned.size}."
-    val msg = s"Invalid InvitedContacts: \n\n ${invalidInvitedContacts.mkString("\n")} \n\n Fixable InvitedContacts: \n\n ${fixableInvitedContacts.mkString("\n")} \n\n Valid InvitedContacts: \n\n ${toBeInterned.mkString("\n")}"
-    db.readWrite { implicit session =>
-      postOffice.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
-        subject = title, htmlBody = msg.replaceAll("\n", "\n<br>"), category = NotificationCategory.System.ADMIN
-      ))
-    }
-    result
-  }
-
-  //todo(Léo): remove after one-time contact migration
-  def internAllElizaEmailAddresses(readOnly: Boolean) = AdminJsonAction.authenticatedAsync { request =>
-    eliza.internAllEmailAddresses(readOnly).map(count => Ok(JsNumber(count)))
   }
 }
