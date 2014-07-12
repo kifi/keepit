@@ -28,9 +28,8 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
     }
   }
 
-
   "LibraryRepo" should {
-    "basically work" in {       // test read/write/save
+    "basically work" in { // test read/write/save
       withDb() { implicit injector =>
         setup()
         val all = db.readOnlyMaster(implicit session => libraryRepo.all)
@@ -43,21 +42,21 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
     "invalidate cache when delete" in {
       withDb() { implicit injector =>
         val (l1, l2, l3, user1, user2) = setup()
-        db.readWrite{ implicit s =>
+        db.readWrite { implicit s =>
           libraryRepo.count === 3
           val lib = libraryRepo.get(l1.id.get)
           libraryRepo.delete(lib)
         }
-        db.readWrite{ implicit s =>
+        db.readWrite { implicit s =>
           libraryRepo.all.size === 2
           libraryRepo.count === 2
         }
-        db.readWrite{ implicit s =>
+        db.readWrite { implicit s =>
           val t1 = new DateTime(2014, 7, 4, 22, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
           libraryRepo.save(Library(name = "lib1A", ownerId = user1.id.get, createdAt = t1.plusMinutes(1),
             slug = LibrarySlug("A"), visibility = LibraryVisibility.SECRET))
         }
-        db.readWrite{ implicit s =>
+        db.readWrite { implicit s =>
           libraryRepo.count === 3
         }
       }
