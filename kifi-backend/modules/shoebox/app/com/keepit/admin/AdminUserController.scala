@@ -821,8 +821,9 @@ class AdminUserController @Inject() (
     Ok(JsString(inactiveEmail.toString))
   }
 
-  def validateAllContacts(readOnly: Boolean) = AdminJsonAction.authenticated { request =>
-    abookClient.validateAllContacts(readOnly)
-    Ok("Check your emails!")
+  //todo(Léo): remove after one-time contact migration
+  def validateAllContacts(readOnly: Boolean) = AdminJsonAction.authenticatedAsync { request =>
+    abookClient.validateAllContacts(readOnly).map(count => Ok(JsNumber(count)))
+  }
   }
 }
