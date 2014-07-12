@@ -26,7 +26,7 @@ class ABookApplication(overridingModules: Module*)(implicit path: File = new Fil
         TestSlickModule(TestDbInfo.dbInfo),
         FakeActionAuthenticatorModule(),
         FakeABookStoreModule(),
-        TestContactsUpdaterPluginModule(),
+        TestABookImporterPluginModule(),
         FakeAbookRepoChangeListenerModule()
       ), overridingModules
     )) {
