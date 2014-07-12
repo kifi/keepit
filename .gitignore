@@ -3,4 +3,5 @@ workspace.xml
 **/Thumbs.db
 **/*~
 
+target/*
 kifi-backend/.dist/.classpath
