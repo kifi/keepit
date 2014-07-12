@@ -5,11 +5,11 @@ import com.google.inject.{ Provider, Provides }
 import com.keepit.common.actor.ActorInstance
 import akka.actor.ActorSystem
 
-trait ContactsUpdaterPluginModule extends ScalaModule {
+trait ABookImporterPluginModule extends ScalaModule {
   def configure(): Unit = {}
 }
 
-case class ProdContactsUpdaterPluginModule() extends ContactsUpdaterPluginModule {
+case class ProdABookImporterPluginModule() extends ABookImporterPluginModule {
 
   @Provides
   def contactsUpdaterPlugin(actorInstance: ActorInstance[ABookImporterActor], sysProvider: Provider[ActorSystem], updaterActorProvider: Provider[ABookImporterActor]): ABookImporterPlugin = {
@@ -17,7 +17,7 @@ case class ProdContactsUpdaterPluginModule() extends ContactsUpdaterPluginModule
   }
 }
 
-case class DevContactsUpdaterPluginModule() extends ContactsUpdaterPluginModule {
+case class DevABookImporterPluginModule() extends ABookImporterPluginModule {
 
   @Provides
   def contactsUpdaterPlugin(actorInstance: ActorInstance[ABookImporterActor], sysProvider: Provider[ActorSystem], updaterActorProvider: Provider[ABookImporterActor]): ABookImporterPlugin = {
