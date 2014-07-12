@@ -1,17 +1,11 @@
 package com.keepit.heimdal
 
 import com.keepit.common.net.UserAgent
+import com.keepit.macros.json
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-case class DelightedAnswerSource(value: String)
-
-object DelightedAnswerSource {
-  implicit val format: Format[DelightedAnswerSource] = Format(
-    __.read[String].map(s => DelightedAnswerSource(s)),
-    new Writes[DelightedAnswerSource] { def writes(o: DelightedAnswerSource) = JsString(o.value) }
-  )
-}
+@json case class DelightedAnswerSource(value: String)
 
 object DelightedAnswerSources {
   val IOS = DelightedAnswerSource("ios")

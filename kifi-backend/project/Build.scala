@@ -199,7 +199,12 @@ object ApplicationBuild extends Build {
     Tests.Argument("failtrace", "true")
   )
 
-  lazy val commonSettings = scalariformSettings ++ Seq(
+  lazy val macroParadiseSettings = Seq(
+    resolvers += Resolver.sonatypeRepo("releases"),
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full)
+  )
+
+  lazy val commonSettings = scalariformSettings ++ macroParadiseSettings ++ Seq(
     scalacOptions ++= _scalacOptions,
     routesImport ++= _routesImport,
     resolvers ++= commonResolvers,
@@ -222,7 +227,12 @@ object ApplicationBuild extends Build {
   )
 
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(
-    libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.10.0"
+    macroParadiseSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "org.scala-lang" % "scala-reflect" % "2.10.0",
+        "org.scalamacros" %% "quasiquotes" % "2.0.1"
+      )
+    ): _*
   )
 
   lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
