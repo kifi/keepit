@@ -70,7 +70,8 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val uriImageSourceTypeMapper = MappedColumnType.base[ImageFormat, String](_.value, ImageFormat.apply)
   implicit val delightedAnswerSourceTypeMapper = MappedColumnType.base[DelightedAnswerSource, String](_.value, DelightedAnswerSource.apply)
   implicit val libraryPrivacyTypeMapper = MappedColumnType.base[LibraryVisibility, String](_.value, LibraryVisibility.apply)
-  implicit val libraryMemberPrivacyTypeMapper = MappedColumnType.base[LibraryMembershipAccess, String](_.value, LibraryMembershipAccess.apply)
+  implicit val librarySlugTypeMapper = MappedColumnType.base[LibrarySlug, String](_.value, LibrarySlug.apply)
+  implicit val libraryMemberPrivacyTypeMapper = MappedColumnType.base[LibraryAccess, String](_.value, LibraryAccess.apply)
 
   implicit def experimentTypeProbabilityDensityMapper[T](implicit outcomeFormat: Format[T]) = MappedColumnType.base[ProbabilityDensity[T], String](
     obj => Json.stringify(ProbabilityDensity.format[T].writes(obj)),
@@ -82,7 +83,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   }, { value =>
     SearchConfig(Json.parse(value).asInstanceOf[JsObject].fields.map { case (k, v) => k -> v.as[String] }.toMap)
   })
-
+  LibraryMembership
   implicit val seqURLHistoryMapper = MappedColumnType.base[Seq[URLHistory], String]({ value =>
     Json.stringify(Json.toJson(value))
   }, { value =>

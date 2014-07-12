@@ -18,9 +18,12 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
     db.readWrite { implicit s =>
       val user1 = userRepo.save(u1)
       val user2 = userRepo.save(u2)
-      val l1 = libraryRepo.save(Library(name = "lib1A", ownerId = user1.id.get, createdAt = t1.plusMinutes(1)))
-      val l2 = libraryRepo.save(Library(name = "lib1B", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, createdAt = t1.plusMinutes(2)))
-      val l3 = libraryRepo.save(Library(name = "lib2", ownerId = user2.id.get, createdAt = t1.plusMinutes(1)))
+      val l1 = libraryRepo.save(Library(name = "lib1A", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET,
+        createdAt = t1.plusMinutes(1), slug = LibrarySlug("A")))
+      val l2 = libraryRepo.save(Library(name = "lib1B", ownerId = user1.id.get, visibility = LibraryVisibility.LIMITED,
+        createdAt = t1.plusMinutes(2), slug = LibrarySlug("B")))
+      val l3 = libraryRepo.save(Library(name = "lib2", ownerId = user2.id.get, visibility = LibraryVisibility.ANYONE,
+        createdAt = t1.plusMinutes(1), slug = LibrarySlug("C")))
       (l1, l2, l3, user1, user2)
     }
   }
@@ -32,7 +35,8 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
         setup()
         val all = db.readOnlyMaster(implicit session => libraryRepo.all)
         all.map(_.name) === Seq("lib1A", "lib1B", "lib2")
-        all.map(_.visibility) === Seq(LibraryVisibility.PUBLICLY_VIEWED, LibraryVisibility.SECRET, LibraryVisibility.PUBLICLY_VIEWED)
+        all.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.LIMITED, LibraryVisibility.ANYONE)
+        all.map(_.slug.value) === Seq("A", "B", "C")
       }
     }
 
@@ -50,7 +54,8 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
         }
         db.readWrite{ implicit s =>
           val t1 = new DateTime(2014, 7, 4, 22, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
-          libraryRepo.save(Library(name = "lib1A", ownerId = user1.id.get, createdAt = t1))
+          libraryRepo.save(Library(name = "lib1A", ownerId = user1.id.get, createdAt = t1.plusMinutes(1),
+            slug = LibrarySlug("A"), visibility = LibraryVisibility.SECRET))
         }
         db.readWrite{ implicit s =>
           libraryRepo.count === 3

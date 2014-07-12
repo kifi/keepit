@@ -1,25 +1,25 @@
 package com.keepit.model
 
-import com.google.inject.{Provider, Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.{State, ExternalId, Id}
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
+import com.keepit.common.db.{ State, ExternalId, Id }
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import scala.slick.lifted.{TableQuery, Tag}
+import scala.slick.lifted.{ TableQuery, Tag }
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with RepoWithDelete[Library] with ExternalIdColumnFunction[Library] with SeqNumberFunction[Library] {
 
- }
+}
 
 @Singleton
-class LibraryRepoImpl @Inject()(
-                                 val db: DataBaseComponent,
-                                 val clock: Clock,
-                                 val externalIdCache: LibraryExternalIdCache,
-                                 val idCache: LibraryIdCache)
-  extends DbRepo[Library] with DbRepoWithDelete[Library] with LibraryRepo with ExternalIdColumnDbFunction[Library] with SeqNumberDbFunction[Library] with Logging {
+class LibraryRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val externalIdCache: LibraryExternalIdCache,
+  val idCache: LibraryIdCache)
+    extends DbRepo[Library] with DbRepoWithDelete[Library] with LibraryRepo with ExternalIdColumnDbFunction[Library] with SeqNumberDbFunction[Library] with Logging {
 
   import scala.slick.lifted.Query
   import DBSession._
@@ -29,10 +29,11 @@ class LibraryRepoImpl @Inject()(
   type RepoImpl = LibraryTable
   class LibraryTable(tag: Tag) extends RepoTable[Library](db, tag, "library") with ExternalIdColumn[Library] with SeqNumberColumn[Library] {
     def name = column[String]("name", O.NotNull)
-    def ownerId = column[Id[User]]("userId", O.Nullable)
-    def privacy = column[LibraryVisibility]("privacy", O.NotNull)
+    def ownerId = column[Id[User]]("owner_id", O.Nullable)
+    def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def description = column[Option[String]]("description", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, externalId, name, ownerId, privacy, description, state, seq) <> ((Library.apply _).tupled, Library.unapply)
+    def slug = column[LibrarySlug]("slug", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, externalId, name, ownerId, visibility, description, slug, state, seq) <> ((Library.apply _).tupled, Library.unapply)
   }
 
   def table(tag: Tag) = new LibraryTable(tag)
@@ -40,7 +41,7 @@ class LibraryRepoImpl @Inject()(
 
   private val getCompiled = {
     def getLibrary(id: Column[Id[Library]]) =
-      for(f <- rows if f.id is id) yield f
+      for (f <- rows if f.id is id) yield f
     Compiled(getLibrary _)
   }
 
@@ -51,7 +52,7 @@ class LibraryRepoImpl @Inject()(
   }
   override def getOpt(id: ExternalId[Library])(implicit session: RSession): Option[Library] = {
     externalIdCache.getOrElseOpt(LibraryExternalIdKey(id)) {
-      (for(f <- rows if f.externalId === id) yield f).firstOption
+      (for (f <- rows if f.externalId === id) yield f).firstOption
     }
   }
 

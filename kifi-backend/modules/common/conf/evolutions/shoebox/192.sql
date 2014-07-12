@@ -13,10 +13,11 @@ CREATE TABLE library (
     owner_id bigint(20) NOT NULL,
     description varchar(512),
     visibility varchar(20) NOT NULL,
-    tokens varchar(50) NOT NULL,
+    slug varchar(50) NOT NULL,
 
     PRIMARY KEY (id),
-    FOREIGN KEY (ownerId) REFERENCES user(id)
+    CONSTRAINT `library_f_owner` FOREIGN KEY (`owner_id`) REFERENCES `user` (`id`),
+    UNIQUE KEY `library_owner_id_slug` (owner_id, slug)
 );
 
 CREATE TABLE library_member (
@@ -29,9 +30,7 @@ CREATE TABLE library_member (
     updated_at datetime NOT NULL,
 
     PRIMARY KEY (id),
-    FOREIGN KEY (userId) REFERENCES user(id),
-    FOREIGN KEY (libraryId) REFERENCES library(id)
-    CONSTRAINT `library_member_f_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+    CONSTRAINT `library_member_f_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
     CONSTRAINT `library_member_f_library` FOREIGN KEY (`library_id`) REFERENCES `library` (`id`)
 );
 
