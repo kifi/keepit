@@ -732,15 +732,17 @@ class MessagingCommander @Inject() (
       }
     }
 
-    log.info("[NonUserThread Email Validation] Done with NonUserThread validation.")
+    result.map { interned =>
+      log.info("[NonUserThread Email Validation] Done with NonUserThread validation.")
 
-    val title = s"Messaged Contact Validation Report: ReadOnly Mode = $readOnly. Invalid Messaged Contacts: ${invalidMessagedContacts.size}. Fixable Messaged Contacts: ${fixableMessagedContacts.size}. Valid Messaged Contacts: ${toBeInterned.size}."
-    val msg = s"Invalid Messaged Contacts: \n\n ${invalidMessagedContacts.mkString("\n")} \n\n Fixable Messaged Contacts: \n\n ${fixableMessagedContacts.mkString("\n")} \n\n Valid Messaged Contacts: \n\n ${toBeInterned.mkString("\n")}"
-    shoebox.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
-      subject = title, htmlBody = msg.replaceAll("\n", "\n<br>"), category = NotificationCategory.System.ADMIN
-    ))
-    result
-  }
+      val title = s"Messaged Contact Validation Report: ReadOnly Mode = $readOnly. Invalid Messaged Contacts: ${invalidMessagedContacts.size}. Fixable Messaged Contacts: ${fixableMessagedContacts.size}. Valid Messaged Contacts: ${toBeInterned.size}. Interned Messaged Contacts: ${interned}"
+      val msg = s"Invalid Messaged Contacts: \n\n ${invalidMessagedContacts.mkString("\n")} \n\n Fixable Messaged Contacts: \n\n ${fixableMessagedContacts.mkString("\n")} \n\n Valid Messaged Contacts: \n\n ${toBeInterned.mkString("\n")}"
+      shoebox.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
+        subject = title, htmlBody = msg.replaceAll("\n", "\n<br>"), category = NotificationCategory.System.ADMIN
+      ))
+
+      interned
+    }
 }
 
 class ExternalMessagingRateLimitException(message: String) extends Throwable(message)
