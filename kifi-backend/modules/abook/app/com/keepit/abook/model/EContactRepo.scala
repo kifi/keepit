@@ -20,7 +20,7 @@ trait EContactRepo extends Repo[EContact] {
   def getEContactCount(userId: Id[User])(implicit session: RSession): Int
   def insertAll(contacts: Seq[EContact])(implicit session: RWSession): Int
   def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Boolean
-  def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
+  def updateOwnership(emailAccountId: Id[EmailAccount], verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
   def getByAbookIdAndEmailId(abookId: Id[ABookInfo], emailId: Id[EmailAccount])(implicit session: RSession): Option[EContact]
   def getByAbookId(abookId: Id[ABookInfo])(implicit session: RSession): Seq[EContact]
 }
@@ -113,10 +113,10 @@ class EContactRepoImpl @Inject() (
     rows.insertAll(contacts: _*).get
   }
 
-  def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int = {
-    val updated = (for { row <- rows if row.email === email && row.contactUserId =!= verifiedOwner.orNull } yield row.contactUserId.?).update(verifiedOwner)
+  def updateOwnership(emailAccountId: Id[EmailAccount], verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int = {
+    val updated = (for { row <- rows if row.emailAccountId === emailAccountId && row.contactUserId =!= verifiedOwner.orNull } yield row.contactUserId.?).update(verifiedOwner)
     if (updated > 0) {
-      val updatedContacts = for { row <- rows if row.email === email } yield row
+      val updatedContacts = for { row <- rows if row.email === emailAccountId } yield row
       updatedContacts.foreach(invalidateCache)
     }
     updated
