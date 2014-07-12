@@ -51,7 +51,7 @@ trait ElizaServiceClient extends ServiceClient {
 
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]]
 
-  def internAllEmailAddresses(): Future[Int]
+  def internAllEmailAddresses(readOnly: Boolean): Future[Int]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -148,8 +148,8 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def internAllEmailAddresses(): Future[Int] = {
-    call(Eliza.internal.internAllEmailAddresses()).map { response =>
+  def internAllEmailAddresses(readOnly: Boolean): Future[Int] = {
+    call(Eliza.internal.internAllEmailAddresses(readOnly)).map { response =>
       response.json.as[Int]
     }
   }
@@ -205,5 +205,5 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     Future.successful(attributionInfo.get(uriId).getOrElse(Seq.empty).filter(_ != userId))
   }
 
-  def internAllEmailAddresses(): Future[Int] = Future.successful(0)
+  def internAllEmailAddresses(readOnly: Boolean): Future[Int] = Future.successful(0)
 }

@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration.{ Duration, DurationInt }
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 import com.google.inject.Inject
 import com.keepit.abook.{ RichContact, ABookServiceClient }
@@ -35,7 +35,7 @@ import com.keepit.typeahead.{ TypeaheadHit, PrefixFilter }
 import scala.collection.mutable
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
 import securesocial.core.Registry
-import com.keepit.common.healthcheck.SystemAdminMailSender
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
 import com.keepit.common.concurrent.FutureHelpers
 
 case class UserStatistics(
@@ -102,7 +102,8 @@ class AdminUserController @Inject() (
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient,
-    authCommander: AuthCommander) extends AdminController(actionAuthenticator) {
+    authCommander: AuthCommander,
+    postOffice: LocalPostOffice) extends AdminController(actionAuthenticator) {
 
   def merge = AdminHtmlAction.authenticated { implicit request =>
     // This doesn't do a complete merge. It's designed for cases where someone accidentally creates a new user when
@@ -828,24 +829,60 @@ class AdminUserController @Inject() (
   }
 
   //todo(Léo): remove after one-time contact migration
-  def internAllInvitationEmailAddresses() = AdminJsonAction.authenticatedAsync { request =>
-    doInternAllInvitationEmailAddresses().map(count => Ok(JsNumber(count)))
+  def internAllInvitationEmailAddresses(readOnly: Boolean) = AdminJsonAction.authenticatedAsync { request =>
+    validateAllInvitedContacts(readOnly).map(count => Ok(JsNumber(count)))
   }
 
-  private def doInternAllInvitationEmailAddresses(): Future[Int] = {
-    val toBeInterned = db.readOnlyMaster { implicit session =>
-      invitationRepo.all()
-    }.map { invite => (invite.senderUserId, invite.recipientEmailAddress) }.collect {
-      case (Some(userId), Some(emailAddress)) => (userId, emailAddress)
+  private def validateAllInvitedContacts(readOnly: Boolean): Future[Int] = {
+    log.info("[Invitation Validation] Starting validation of all InvitedContacts.")
+    val invalidInvitedContacts = mutable.Map[Id[Invitation], String]()
+    val fixableInvitedContacts = mutable.Map[Id[Invitation], String]()
+    val toBeInterned = mutable.Map[Id[User], EmailAddress]()
+
+    db.readWrite { implicit session =>
+      val invitations = invitationRepo.all()
+      invitations.foreach { invite =>
+        invite.recipientEmailAddress.foreach { emailAddress =>
+          EmailAddress.validate(emailAddress.address) match {
+            case Failure(invalidEmail) => {
+              log.error(s"[Invitation Validation] Found invalid invited contact: ${emailAddress}")
+              invalidInvitedContacts += (invite.id.get -> emailAddress.address)
+              if (!readOnly) { invitationRepo.save(invite.copy(state = InvitationStates.INACTIVE)) }
+            }
+            case Success(validEmail) => {
+              if (validEmail != emailAddress) {
+                log.warn(s"[Invitation Validation] Found fixable invited contact: ${emailAddress}")
+                fixableInvitedContacts += (invite.id.get -> emailAddress.address)
+                if (!readOnly) { invitationRepo.save(invite.copy(recipientEmailAddress = Some(validEmail))) }
+              }
+              invite.senderUserId.foreach { userId => toBeInterned += (userId -> validEmail) }
+            }
+          }
+        }
+      }
     }
-    FutureHelpers.foldLeft(toBeInterned)(0) {
-      case (count, (userId, emailAddress)) =>
-        abookClient.internKifiContact(userId, BasicContact(emailAddress)).map { _ => count + 1 }
+
+    val result = if (readOnly) Future.successful(0) else {
+      FutureHelpers.foldLeft(toBeInterned)(0) {
+        case (count, (userId, emailAddress)) =>
+          abookClient.internKifiContact(userId, BasicContact(emailAddress)).map { _ => count + 1 }
+      }
     }
+
+    log.info("[Invitation Email Validation] Done with Invitation validation.")
+
+    val title = s"Invited Contact Validation Report: ReadOnly Mode = $readOnly. Invalid InvitedContacts: ${invalidInvitedContacts.size}. Fixable InvitedContacts: ${fixableInvitedContacts.size}"
+    val msg = s"Invalid InvitedContacts: \n\n ${invalidInvitedContacts.mkString("\n")} \n\n Fixable InvitedContacts: \n\n ${fixableInvitedContacts.mkString("\n")} \n\n Valid InvitedContacts: \n\n ${toBeInterned.mkString("\n")}"
+    db.readWrite { implicit session =>
+      postOffice.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
+        subject = title, htmlBody = msg.replaceAll("\n", "\n<br>"), category = NotificationCategory.System.ADMIN
+      ))
+    }
+    result
   }
 
   //todo(Léo): remove after one-time contact migration
-  def internAllElizaEmailAddresses() = AdminJsonAction.authenticatedAsync { request =>
-    eliza.internAllEmailAddresses().map(count => Ok(JsNumber(count)))
+  def internAllElizaEmailAddresses(readOnly: Boolean) = AdminJsonAction.authenticatedAsync { request =>
+    eliza.internAllEmailAddresses(readOnly).map(count => Ok(JsNumber(count)))
   }
 }

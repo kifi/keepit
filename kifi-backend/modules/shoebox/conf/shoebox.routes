@@ -568,8 +568,8 @@ POST    /admin/graph/wander                                @com.keepit.controlle
 GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
 
 GET     /admin/validateAllContacts                         @com.keepit.controllers.admin.AdminUserController.validateAllContacts(readOnly: Boolean ?= true)
-GET     /admin/internAllInvitationEmailAddresses           @com.keepit.controllers.admin.AdminUserController.internAllInvitationEmailAddresses()
-GET     /admin/internAllElizaEmailAddresses                @com.keepit.controllers.admin.AdminUserController.internAllElizaEmailAddresses()
+GET     /admin/internAllInvitationEmailAddresses           @com.keepit.controllers.admin.AdminUserController.internAllInvitationEmailAddresses(readOnly: Boolean ?= true)
+GET     /admin/internAllElizaEmailAddresses                @com.keepit.controllers.admin.AdminUserController.internAllElizaEmailAddresses(readOnly: Boolean ?= true)
 
 ##########################################
 # Common Healthcheck / service routes

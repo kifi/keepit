@@ -63,7 +63,7 @@ class ElizaController @Inject() (
     Ok(Json.toJson(seqNumber))
   }
 
-  def internAllEmailAddresses() = Action.async {
-    messagingCommander.internAllEmailAddresses().map(count => Ok(JsNumber(count)))
+  def internAllEmailAddresses(readOnly: Boolean) = Action.async {
+    messagingCommander.internAllEmailAddresses(readOnly).map(count => Ok(JsNumber(count)))
   }
 }

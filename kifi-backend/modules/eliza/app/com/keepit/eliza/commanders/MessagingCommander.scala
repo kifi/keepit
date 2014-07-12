@@ -8,7 +8,7 @@ import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ EmailAddress, BasicContact }
+import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, EmailAddress, BasicContact }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
@@ -694,18 +694,53 @@ class MessagingCommander @Inject() (
     }
   }
 
-  //todo(Léo): remove after one-time contact migration
-  def internAllEmailAddresses(): Future[Int] = {
-    val toBeInterned = db.readOnlyMaster { implicit session =>
-      nonUserThreadRepo.all()
-    }.map { nonUserThread => (nonUserThread.createdBy, nonUserThread.participant) }.collect {
-      case (userId, emailParticipant: NonUserEmailParticipant) => (userId, emailParticipant.address)
-    }
-    FutureHelpers.foldLeft(toBeInterned)(0) {
-      case (count, (userId, emailAddress)) => abookServiceClient.internKifiContact(userId, BasicContact(emailAddress)).map { _ => count + 1 }
-    }
-  }
+  def internAllEmailAddresses(readOnly: Boolean): Future[Int] = {
+    log.info("[NonUserThread Validation] Starting validation of all Messaged Contacts.")
+    val invalidMessagedContacts = mutable.Map[Id[NonUserThread], String]()
+    val fixableMessagedContacts = mutable.Map[Id[NonUserThread], String]()
+    val toBeInterned = mutable.Map[Id[User], EmailAddress]()
 
+    db.readWrite { implicit session =>
+      val nonUserThreads = nonUserThreadRepo.all()
+      nonUserThreads.foreach { nonUserThread =>
+        nonUserThread.participant match {
+          case emailParticipant: NonUserEmailParticipant =>
+            val emailAddress = emailParticipant.address
+            EmailAddress.validate(emailAddress.address) match {
+              case Failure(invalidEmail) => {
+                log.error(s"[NonUserThread Validation] Found invalid nonUserThread contact: ${emailAddress}")
+                invalidMessagedContacts += (nonUserThread.id.get -> emailAddress.address)
+                if (!readOnly) { nonUserThreadRepo.save(nonUserThread.copy(state = NonUserThreadStates.INACTIVE)) }
+              }
+              case Success(validEmail) => {
+                if (validEmail != emailAddress) {
+                  log.warn(s"[NonUserThread Validation] Found fixable nonUserThread contact: ${emailAddress}")
+                  invalidMessagedContacts += (nonUserThread.id.get -> emailAddress.address)
+                  if (!readOnly) { nonUserThreadRepo.save(nonUserThreadRepo.get(nonUserThread.id.get).copy(participant = emailParticipant.copy(address = validEmail))) }
+                }
+                toBeInterned += (nonUserThread.createdBy -> validEmail)
+              }
+            }
+        }
+      }
+    }
+
+    val result = if (readOnly) Future.successful(0) else {
+      FutureHelpers.foldLeft(toBeInterned)(0) {
+        case (count, (userId, emailAddress)) =>
+          abookServiceClient.internKifiContact(userId, BasicContact(emailAddress)).map { _ => count + 1 }
+      }
+    }
+
+    log.info("[NonUserThread Email Validation] Done with NonUserThread validation.")
+
+    val title = s"Messaged Contact Validation Report: ReadOnly Mode = $readOnly. Invalid Messaged Contacts: ${invalidMessagedContacts.size}. Fixable Messaged Contacts: ${fixableMessagedContacts.size}"
+    val msg = s"Invalid Messaged Contacts: \n\n ${invalidMessagedContacts.mkString("\n")} \n\n Fixable Messaged Contacts: \n\n ${fixableMessagedContacts.mkString("\n")} \n\n Valid Messaged Contacts: \n\n ${toBeInterned.mkString("\n")}"
+    shoebox.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
+      subject = title, htmlBody = msg.replaceAll("\n", "\n<br>"), category = NotificationCategory.System.ADMIN
+    ))
+    result
+  }
 }
 
 class ExternalMessagingRateLimitException(message: String) extends Throwable(message)
