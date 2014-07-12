@@ -1,7 +1,6 @@
 package com.keepit.eliza.controllers.internal
 
 import com.keepit.eliza.controllers.WebSocketRouter
-import com.keepit.eliza._
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
 import com.keepit.model.{ User }
@@ -11,16 +10,15 @@ import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.mvc.Action
-import play.api.libs.json.{ Json, JsNumber, JsObject, JsArray }
+import play.api.libs.json.{ Json, JsObject, JsArray }
 
 import com.google.inject.Inject
-import com.keepit.eliza.commanders.{ MessagingCommander, ElizaStatsCommander }
+import com.keepit.eliza.commanders.ElizaStatsCommander
 import com.keepit.eliza.model.UserThreadStats
 
 class ElizaController @Inject() (
     notificationRouter: WebSocketRouter,
-    elizaStatsCommander: ElizaStatsCommander,
-    messagingCommander: MessagingCommander) extends ElizaServiceController with Logging {
+    elizaStatsCommander: ElizaStatsCommander) extends ElizaServiceController with Logging {
 
   def getUserThreadStats(userId: Id[User]) = Action { request =>
     Ok(UserThreadStats.format.writes(elizaStatsCommander.getUserThreadStats(userId)))
@@ -61,9 +59,5 @@ class ElizaController @Inject() (
   def getRenormalizationSequenceNumber() = Action { _ =>
     val seqNumber = elizaStatsCommander.getCurrentRenormalizationSequenceNumber
     Ok(Json.toJson(seqNumber))
-  }
-
-  def internAllEmailAddresses(readOnly: Boolean) = Action.async {
-    messagingCommander.internAllEmailAddresses(readOnly).map(count => Ok(JsNumber(count)))
   }
 }

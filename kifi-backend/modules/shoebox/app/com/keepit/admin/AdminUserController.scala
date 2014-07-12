@@ -102,8 +102,7 @@ class AdminUserController @Inject() (
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient,
-    authCommander: AuthCommander,
-    postOffice: LocalPostOffice) extends AdminController(actionAuthenticator) {
+    authCommander: AuthCommander) extends AdminController(actionAuthenticator) {
 
   def merge = AdminHtmlAction.authenticated { implicit request =>
     // This doesn't do a complete merge. It's designed for cases where someone accidentally creates a new user when
@@ -874,10 +873,5 @@ class AdminUserController @Inject() (
       ))
     }
     result
-  }
-
-  //todo(Léo): remove after one-time contact migration
-  def internAllElizaEmailAddresses(readOnly: Boolean) = AdminJsonAction.authenticatedAsync { request =>
-    eliza.internAllEmailAddresses(readOnly).map(count => Ok(JsNumber(count)))
   }
 }

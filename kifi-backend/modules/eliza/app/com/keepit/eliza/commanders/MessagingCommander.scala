@@ -26,9 +26,6 @@ import scala.concurrent.{ Promise, Await, Future }
 import scala.concurrent.duration._
 import java.util.concurrent.TimeoutException
 import com.keepit.common.db.slick.DBSession.RSession
-import scala.collection.mutable
-import scala.util.{ Failure, Success }
-import com.keepit.common.concurrent.FutureHelpers
 
 case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 
@@ -691,57 +688,6 @@ class MessagingCommander @Inject() (
     if (totalRecentEmailRecipients > MessagingCommander.WARNING_RECENT_NON_USER_RECIPIENTS && newRecentEmailRecipients > 0) {
       val warning = s"User $user has reached to $totalRecentEmailRecipients distinct email recipients in the past ${MessagingCommander.RECENT_NON_USER_RECIPIENTS_WINDOW}"
       throw new ExternalMessagingRateLimitException(warning)
-    }
-  }
-
-  def internAllEmailAddresses(readOnly: Boolean): Future[Int] = {
-    log.info("[NonUserThread Validation] Starting validation of all Messaged Contacts.")
-    val invalidMessagedContacts = mutable.Map[Id[NonUserThread], String]()
-    val fixableMessagedContacts = mutable.Map[Id[NonUserThread], String]()
-    var toBeInterned = Seq[(Id[User], BasicContact)]()
-
-    db.readWrite { implicit session =>
-      val nonUserThreads = nonUserThreadRepo.all()
-      nonUserThreads.foreach { nonUserThread =>
-        nonUserThread.participant match {
-          case emailParticipant: NonUserEmailParticipant =>
-            val emailAddress = emailParticipant.address
-            BasicContact.fromString(emailAddress.address) match {
-              case Failure(_) => {
-                log.error(s"[NonUserThread Validation] Found invalid nonUserThread contact: ${emailAddress}")
-                invalidMessagedContacts += (nonUserThread.id.get -> emailAddress.address)
-                if (!readOnly) { nonUserThreadRepo.save(nonUserThread.copy(state = NonUserThreadStates.INACTIVE)) }
-              }
-              case Success(validContact) => {
-                if (validContact.email != emailAddress) {
-                  log.warn(s"[NonUserThread Validation] Found fixable nonUserThread contact: ${emailAddress}")
-                  invalidMessagedContacts += (nonUserThread.id.get -> emailAddress.address)
-                  if (!readOnly) { nonUserThreadRepo.save(nonUserThreadRepo.get(nonUserThread.id.get).copy(participant = emailParticipant.copy(address = validContact.email))) }
-                }
-                toBeInterned +:= (nonUserThread.createdBy -> validContact)
-              }
-            }
-        }
-      }
-    }
-
-    val result = if (readOnly) Future.successful(0) else {
-      FutureHelpers.foldLeft(toBeInterned)(0) {
-        case (count, (userId, validContact)) =>
-          abookServiceClient.internKifiContact(userId, validContact).map { _ => count + 1 }
-      }
-    }
-
-    result.map { interned =>
-      log.info("[NonUserThread Email Validation] Done with NonUserThread validation.")
-
-      val title = s"Messaged Contact Validation Report: ReadOnly Mode = $readOnly. Invalid Messaged Contacts: ${invalidMessagedContacts.size}. Fixable Messaged Contacts: ${fixableMessagedContacts.size}. Valid Messaged Contacts: ${toBeInterned.size}. Interned Messaged Contacts: ${interned}"
-      val msg = s"Invalid Messaged Contacts: \n\n ${invalidMessagedContacts.mkString("\n")} \n\n Fixable Messaged Contacts: \n\n ${fixableMessagedContacts.mkString("\n")} \n\n Valid Messaged Contacts: \n\n ${toBeInterned.mkString("\n")}"
-      shoebox.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
-        subject = title, htmlBody = msg.replaceAll("\n", "\n<br>"), category = NotificationCategory.System.ADMIN
-      ))
-
-      interned
     }
   }
 }
