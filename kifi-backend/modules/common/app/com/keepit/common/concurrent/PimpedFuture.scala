@@ -1,6 +1,6 @@
 package com.keepit.common.concurrent
 
-import scala.concurrent.{ Future, Await, Promise }
+import scala.concurrent.{ExecutionContext, Future, Await, Promise}
 
 import java.util.concurrent.{ TimeUnit, Executor }
 
@@ -10,7 +10,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.duration._
 
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 object PimpMyFuture {
 
@@ -61,14 +61,17 @@ object FutureHelpers {
     Future.sequence(seq).map(_.toMap)
   }
 
-  def sequentialExec[I, T](items: Iterable[I])(f: I => Future[T]): Future[Unit] = {
-    items.headOption match {
-      case None => Future.successful[Unit]()
-      case Some(item) => f(item).flatMap { h =>
-        sequentialExec(items.tail)(f)
-      }
-    }
+  def sequentialExec[I, T](items: Iterable[I])(f: I => Future[T])(implicit ec: ExecutionContext): Future[Unit] = {
+    foldLeft(items)(()) { case ((), nextItem) => f(nextItem).map { _ => () } }
   }
 
+  def foldLeft[I, T](items: Iterable[I], promisedResult: Promise[T] = Promise[T]())(accumulator: T)(fMap: (T, I) => Future[T])(implicit ec: ExecutionContext): Future[T] = {
+    if (items.isEmpty) { promisedResult.success(accumulator) }
+    else fMap(accumulator, items.head).onComplete {
+      case Success(updatedAccumulator) => foldLeft(items.tail, promisedResult)(updatedAccumulator)(fMap)
+      case Failure(ex) => promisedResult.failure(ex)
+    }
+    promisedResult.future
+  }
 }
 
