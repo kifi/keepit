@@ -221,31 +221,19 @@ class ABookCommander @Inject() (
     contactInterner.internContact(userId, kifiAbook.id.get, contact)
   }
 
-  def validateAllContacts(readOnly: Boolean): Unit = {
-    log.info("[EContact Validation] Starting validation of all EContacts.")
-    val invalidContacts = mutable.Map[Id[EContact], String]()
-    val fixableContacts = mutable.Map[Id[EContact], String]()
+  def inactivateOldContacts(readOnly: Boolean): Int = {
     val pageSize = 1000
     var lastPageSize = -1
     var nextPage = 0
+    var oldContacts = 0
 
     do {
       db.readWrite { implicit session =>
         val batch = econtactRepo.page(nextPage, pageSize, Set.empty)
         batch.foreach { contact =>
-          EmailAddress.validate(contact.email.address) match {
-            case Failure(invalidEmail) => {
-              log.error(s"[EContact Validation] Found invalid email contact: ${contact.email}")
-              invalidContacts += (contact.id.get -> contact.email.address)
-              if (!readOnly) { econtactRepo.save(contact.copy(state = EContactStates.INACTIVE)) }
-            }
-            case Success(validEmail) => {
-              if (validEmail != contact.email) {
-                log.warn(s"[EContact Validation] Found fixable email contact: ${contact.email}")
-                fixableContacts += (contact.id.get -> contact.email.address)
-                if (!readOnly) { econtactRepo.save(contact.copy(email = validEmail)) }
-              }
-            }
+          if (contact.abookId.isEmpty) {
+            oldContacts += 1
+            if (!readOnly) { econtactRepo.save(contact.copy(state = EContactStates.INACTIVE)) }
           }
         }
         lastPageSize = batch.length
@@ -253,13 +241,8 @@ class ABookCommander @Inject() (
       }
     } while (lastPageSize == pageSize)
 
-    log.info("[EContact Validation] Done with EContact validation.")
-
-    val title = s"Email Contact Validation Report: ReadOnly Mode = $readOnly. Invalid Contacts: ${invalidContacts.size}. Fixable Contacts: ${fixableContacts.size}"
-    val msg = s"Invalid Contacts: \n\n ${invalidContacts.mkString("\n")} \n\n Fixable Contacts: \n\n ${fixableContacts.mkString("\n")}"
-    shoebox.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
-      subject = title, htmlBody = msg.replaceAll("\n", "\n<br>"), category = NotificationCategory.System.ADMIN
-    ))
+    if (oldContacts > 0 && !readOnly) { econtactTypeahead.refreshAll() }
+    oldContacts
   }
 
   def internAllContacts(readOnly: Boolean): Int = {
