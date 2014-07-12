@@ -837,25 +837,25 @@ class AdminUserController @Inject() (
     log.info("[Invitation Validation] Starting validation of all InvitedContacts.")
     val invalidInvitedContacts = mutable.Map[Id[Invitation], String]()
     val fixableInvitedContacts = mutable.Map[Id[Invitation], String]()
-    val toBeInterned = mutable.Map[Id[User], EmailAddress]()
+    var toBeInterned = Seq[(Id[User], BasicContact)]()
 
     db.readWrite { implicit session =>
       val invitations = invitationRepo.all()
       invitations.foreach { invite =>
         invite.recipientEmailAddress.foreach { emailAddress =>
-          EmailAddress.validate(emailAddress.address) match {
-            case Failure(invalidEmail) => {
+          BasicContact.fromString(emailAddress.address) match {
+            case Failure(invalidContact) => {
               log.error(s"[Invitation Validation] Found invalid invited contact: ${emailAddress}")
               invalidInvitedContacts += (invite.id.get -> emailAddress.address)
               if (!readOnly) { invitationRepo.save(invite.copy(state = InvitationStates.INACTIVE)) }
             }
-            case Success(validEmail) => {
-              if (validEmail != emailAddress) {
+            case Success(validContact) => {
+              if (validContact.email != emailAddress) {
                 log.warn(s"[Invitation Validation] Found fixable invited contact: ${emailAddress}")
                 fixableInvitedContacts += (invite.id.get -> emailAddress.address)
-                if (!readOnly) { invitationRepo.save(invite.copy(recipientEmailAddress = Some(validEmail))) }
+                if (!readOnly) { invitationRepo.save(invite.copy(recipientEmailAddress = Some(validContact.email))) }
               }
-              invite.senderUserId.foreach { userId => toBeInterned += (userId -> validEmail) }
+              invite.senderUserId.foreach { userId => toBeInterned +:= (userId -> validContact) }
             }
           }
         }
@@ -864,14 +864,14 @@ class AdminUserController @Inject() (
 
     val result = if (readOnly) Future.successful(0) else {
       FutureHelpers.foldLeft(toBeInterned)(0) {
-        case (count, (userId, emailAddress)) =>
-          abookClient.internKifiContact(userId, BasicContact(emailAddress)).map { _ => count + 1 }
+        case (count, (userId, validContact)) =>
+          abookClient.internKifiContact(userId, validContact).map { _ => count + 1 }
       }
     }
 
     log.info("[Invitation Email Validation] Done with Invitation validation.")
 
-    val title = s"Invited Contact Validation Report: ReadOnly Mode = $readOnly. Invalid InvitedContacts: ${invalidInvitedContacts.size}. Fixable InvitedContacts: ${fixableInvitedContacts.size}"
+    val title = s"Invited Contact Validation Report: ReadOnly Mode = $readOnly. Invalid InvitedContacts: ${invalidInvitedContacts.size}. Fixable InvitedContacts: ${fixableInvitedContacts.size}. Valid InvitedContacts: ${toBeInterned.size}."
     val msg = s"Invalid InvitedContacts: \n\n ${invalidInvitedContacts.mkString("\n")} \n\n Fixable InvitedContacts: \n\n ${fixableInvitedContacts.mkString("\n")} \n\n Valid InvitedContacts: \n\n ${toBeInterned.mkString("\n")}"
     db.readWrite { implicit session =>
       postOffice.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
