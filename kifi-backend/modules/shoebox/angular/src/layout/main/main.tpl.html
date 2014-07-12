@@ -1,4 +1,5 @@
 <div class="kf-col-inner" ng-controller="MainCtrl">
+  <div kf-delighted-survey ng-show="showDelightedSurvey()"></div>
   <div ng-show="searchEnabled" ng-include="'search/mainSearchBar.tpl.html'"></div>
   <div ng-view></div>
   <div class="kf-small-tooltip" ng-if="undo.isSet() || tooltipMessage">

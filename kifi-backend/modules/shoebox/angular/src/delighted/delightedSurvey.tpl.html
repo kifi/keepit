@@ -1,0 +1,39 @@
+<div class="kf-delighted-wrap" ng-show="showSurvey">
+  <div class="kf-delighted-body">
+    <div class="kf-delighted-score-chooser" ng-show="!showCommentArea">
+      <div class="kf-delighted-title">How likely are you to recommend Kifi to a friend?</div>
+      <div class="kf-delighted-options">
+        <div class="kf-delighted-option-row">
+          <div class="kf-delighted-option-left-wrapper">
+            <div class="kf-delighted-label">Not likely</div>
+            <div class="kf-delighted-option" ng-click="clickedScore(0)">0</div>
+          </div>
+          <div class="kf-delighted-option" ng-click="clickedScore(1)">1</div>
+          <div class="kf-delighted-option" ng-click="clickedScore(2)">2</div>
+          <div class="kf-delighted-option" ng-click="clickedScore(3)">3</div>
+          <div class="kf-delighted-option" ng-click="clickedScore(4)">4</div>
+          <div class="kf-delighted-option" ng-click="clickedScore(5)">5</div>
+        </div>
+        <div class="kf-delighted-option-row">
+          <div class="kf-delighted-option" ng-click="clickedScore(6)">6</div>
+          <div class="kf-delighted-option" ng-click="clickedScore(7)">7</div>
+          <div class="kf-delighted-option" ng-click="clickedScore(8)">8</div>
+          <div class="kf-delighted-option" ng-click="clickedScore(9)">9</div>
+          <div class="kf-delighted-option-right-wrapper">
+            <div class="kf-delighted-option" ng-click="clickedScore(10)">10</div>
+            <div class="kf-delighted-label">Very likely</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="kf-delighted-comment-area" ng-show="showCommentArea">
+      <div class="kf-delighted-title">Why?</div>
+      <textarea class="kf-delighted-comment-area-input" placeholder="Enter a comment (optional)"></textarea>
+      <div class="kf-delighted-comment-actions">
+        <div class="kf-delighted-comment-back" ng-click="goBack()">Change score</div>
+        <div class="kf-delighted-comment-submit" ng-click="submit()">Submit</div>
+      </div>
+    </div>
+    <div class="sprite sprite-close-x-icon kf-delighted-cancel" ng-click="cancelSurvey()"></div>
+  </div>
+</div>

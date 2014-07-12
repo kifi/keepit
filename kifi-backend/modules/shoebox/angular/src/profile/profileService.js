@@ -211,6 +211,20 @@ angular.module('kifi.profileService', [
       $window.location = routeService.logout;
     }
 
+    function postDelightedAnswer(score, comment) {
+      var data = {
+        score: score
+      };
+      if (comment) {
+        data.comment = comment;
+      }
+      return $http.post(routeService.postDelightedAnswer, data);
+    }
+
+    function cancelDelightedSurvey() {
+      return $http.post(routeService.cancelDelightedSurvey, {});
+    }
+
     return {
       me: me, // when mutated, you MUST increment me.seqNum
       fetchMe: fetchMe,
@@ -229,7 +243,9 @@ angular.module('kifi.profileService', [
       failureInputActionResult: failureInputActionResult,
       successInputActionResult: successInputActionResult,
       getEmailValidationError: getEmailValidationError,
-      sendChangePassword: sendChangePassword
+      sendChangePassword: sendChangePassword,
+      postDelightedAnswer: postDelightedAnswer,
+      cancelDelightedSurvey: cancelDelightedSurvey
     };
   }
 ]);

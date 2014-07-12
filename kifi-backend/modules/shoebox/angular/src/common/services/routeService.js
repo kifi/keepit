@@ -72,7 +72,9 @@ angular.module('kifi.routeService', [])
         limit = limit || 6;
         return route('/user/connections/all/search?query=' + name + '&limit=' + limit + '&pictureUrl=true');
       },
-      exportKeeps: route('/keeps/export')
+      exportKeeps: route('/keeps/export'),
+      postDelightedAnswer: route('/user/delighted/answer_testonly'),
+      cancelDelightedSurvey: route('/user/delighted/cancel_testonly')
     };
   }
 ]);
