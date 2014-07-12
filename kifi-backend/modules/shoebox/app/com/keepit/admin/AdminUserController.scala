@@ -36,6 +36,7 @@ import scala.collection.mutable
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
 import securesocial.core.Registry
 import com.keepit.common.healthcheck.SystemAdminMailSender
+import com.keepit.common.concurrent.FutureHelpers
 
 case class UserStatistics(
   user: User,
@@ -825,5 +826,26 @@ class AdminUserController @Inject() (
   def validateAllContacts(readOnly: Boolean) = AdminJsonAction.authenticatedAsync { request =>
     abookClient.validateAllContacts(readOnly).map(count => Ok(JsNumber(count)))
   }
+
+  //todo(Léo): remove after one-time contact migration
+  def internAllInvitationEmailAddresses() = AdminJsonAction.authenticatedAsync { request =>
+    doInternAllInvitationEmailAddresses().map(count => Ok(JsNumber(count)))
+  }
+
+  private def doInternAllInvitationEmailAddresses(): Future[Int] = {
+    val toBeInterned = db.readOnlyMaster { implicit session =>
+      invitationRepo.all()
+    }.map { invite => (invite.senderUserId, invite.recipientEmailAddress) }.collect {
+      case (Some(userId), Some(emailAddress)) => (userId, emailAddress)
+    }
+    FutureHelpers.foldLeft(toBeInterned)(0) {
+      case (count, (userId, emailAddress)) =>
+        abookClient.internKifiContact(userId, BasicContact(emailAddress)).map { _ => count + 1 }
+    }
+  }
+
+  //todo(Léo): remove after one-time contact migration
+  def internAllElizaEmailAddresses() = AdminJsonAction.authenticatedAsync { request =>
+    eliza.internAllEmailAddresses().map(count => Ok(JsNumber(count)))
   }
 }

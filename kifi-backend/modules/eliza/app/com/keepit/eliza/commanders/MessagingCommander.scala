@@ -2,13 +2,13 @@ package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
 
-import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.{ RichContact, ABookServiceClient }
 import com.keepit.eliza.model._
 import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.BasicContact
+import com.keepit.common.mail.{ EmailAddress, BasicContact }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
@@ -26,6 +26,9 @@ import scala.concurrent.{ Promise, Await, Future }
 import scala.concurrent.duration._
 import java.util.concurrent.TimeoutException
 import com.keepit.common.db.slick.DBSession.RSession
+import scala.collection.mutable
+import scala.util.{ Failure, Success }
+import com.keepit.common.concurrent.FutureHelpers
 
 case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 
@@ -688,6 +691,18 @@ class MessagingCommander @Inject() (
     if (totalRecentEmailRecipients > MessagingCommander.WARNING_RECENT_NON_USER_RECIPIENTS && newRecentEmailRecipients > 0) {
       val warning = s"User $user has reached to $totalRecentEmailRecipients distinct email recipients in the past ${MessagingCommander.RECENT_NON_USER_RECIPIENTS_WINDOW}"
       throw new ExternalMessagingRateLimitException(warning)
+    }
+  }
+
+  //todo(Léo): remove after one-time contact migration
+  def internAllEmailAddresses(): Future[Int] = {
+    val toBeInterned = db.readOnlyMaster { implicit session =>
+      nonUserThreadRepo.all()
+    }.map { nonUserThread => (nonUserThread.createdBy, nonUserThread.participant) }.collect {
+      case (userId, emailParticipant: NonUserEmailParticipant) => (userId, emailParticipant.address)
+    }
+    FutureHelpers.foldLeft(toBeInterned)(0) {
+      case (count, (userId, emailAddress)) => abookServiceClient.internKifiContact(userId, BasicContact(emailAddress)).map { _ => count + 1 }
     }
   }
 
