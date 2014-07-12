@@ -180,7 +180,7 @@ class ABookCommander @Inject() (
       }
 
       if (proceed) {
-        abookImporter.asyncProcessContacts(userId, origin, updatedEntry, s3Key, WeakReference(json))
+        abookImporter.asyncProcessContacts(userId, origin, updatedEntry, s3Key, Some(WeakReference(json)))
         log.infoP(s"scheduled for processing: $updatedEntry")
       }
       Some(updatedEntry)
@@ -261,6 +261,17 @@ class ABookCommander @Inject() (
       subject = title, htmlBody = msg.replaceAll("\n", "\n<br>"), category = NotificationCategory.System.ADMIN
     ))
   }
+
+  def internAllContacts(readOnly: Boolean): Int = {
+    val allABooks = db.readOnlyMaster { implicit session => abookInfoRepo.all() }
+    allABooks.collect {
+      case abook if abook.origin != ABookOrigins.KIFI && { abook.state == ABookInfoStates.PENDING || abook.state == ABookInfoStates.PROCESSING } =>
+        if (!readOnly) {
+          val udpatedABook = db.readWrite { implicit session => abookInfoRepo.save(abook.withState(ABookInfoStates.PENDING)) }
+          abookImporter.asyncProcessContacts(udpatedABook.userId, udpatedABook.origin, udpatedABook, udpatedABook.rawInfoLoc.get, None)
+        }
+    }
+  }.length
 
   def getContactNameByEmail(userId: Id[User], email: EmailAddress): Option[String] = {
     db.readOnlyReplica { implicit session =>
