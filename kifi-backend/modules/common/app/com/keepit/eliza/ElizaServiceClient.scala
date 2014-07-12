@@ -149,7 +149,7 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def internAllEmailAddresses(readOnly: Boolean): Future[Int] = {
-    call(Eliza.internal.internAllEmailAddresses(readOnly)).map { response =>
+    call(Eliza.internal.internAllEmailAddresses(readOnly), callTimeouts = CallTimeouts.NoTimeouts).map { response =>
       response.json.as[Int]
     }
   }
