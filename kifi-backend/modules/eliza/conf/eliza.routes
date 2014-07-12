@@ -56,7 +56,7 @@ GET  /internal/eliza/keepAttribution            @com.keepit.eliza.controllers.in
 GET   /internal/eliza/verifyAllNotifications    @com.keepit.eliza.controllers.internal.MessagingController.verifyAllNotifications
 GET   /internal/eliza/getNonUserThreadMuteInfo  @com.keepit.eliza.controllers.internal.MessagingController.getNonUserThreadMuteInfo(publicId: String)
 POST  /internal/eliza/setNonUserThreadMuteState @com.keepit.eliza.controllers.internal.MessagingController.setNonUserThreadMuteState(publicId: String, muted: Boolean)
-GET   /internal/eliza/internAllEmailAddresses   @com.keepit.eliza.controllers.internal.ElizaController.internAllEmailAddresses()
+GET   /internal/eliza/internAllEmailAddresses   @com.keepit.eliza.controllers.internal.ElizaController.internAllEmailAddresses(readOnly: Boolean)
 
 ##########################################
 # IMPORTS
