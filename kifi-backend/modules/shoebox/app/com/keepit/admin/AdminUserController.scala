@@ -31,11 +31,11 @@ import play.api.libs.json._
 import play.api.mvc.{ AnyContent, SimpleResult }
 
 import views.html
-import com.keepit.typeahead.{ TypeaheadHit, PrefixFilter }
+import com.keepit.typeahead.TypeaheadHit
 import scala.collection.mutable
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
 import securesocial.core.Registry
-import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
+import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.common.concurrent.FutureHelpers
 
 case class UserStatistics(
@@ -821,11 +821,6 @@ class AdminUserController @Inject() (
     }
     log.info(s"Deactivated UserEmailAddress $inactiveEmail")
     Ok(JsString(inactiveEmail.toString))
-  }
-
-  //todo(Léo): remove after one-time contact migration
-  def validateAllContacts(readOnly: Boolean) = AdminJsonAction.authenticatedAsync { request =>
-    abookClient.validateAllContacts(readOnly).map(count => Ok(JsNumber(count)))
   }
 
   //todo(Léo): remove after one-time contact migration
