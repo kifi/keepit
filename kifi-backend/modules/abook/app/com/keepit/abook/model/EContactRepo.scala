@@ -116,7 +116,7 @@ class EContactRepoImpl @Inject() (
   def updateOwnership(emailAccountId: Id[EmailAccount], verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int = {
     val updated = (for { row <- rows if row.emailAccountId === emailAccountId && row.contactUserId =!= verifiedOwner.orNull } yield row.contactUserId.?).update(verifiedOwner)
     if (updated > 0) {
-      val updatedContacts = for { row <- rows if row.email === emailAccountId } yield row
+      val updatedContacts = for { row <- rows if row.emailAccountId === emailAccountId } yield row
       updatedContacts.foreach(invalidateCache)
     }
     updated
