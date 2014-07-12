@@ -83,7 +83,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   }, { value =>
     SearchConfig(Json.parse(value).asInstanceOf[JsObject].fields.map { case (k, v) => k -> v.as[String] }.toMap)
   })
-  LibraryMembership
+  
   implicit val seqURLHistoryMapper = MappedColumnType.base[Seq[URLHistory], String]({ value =>
     Json.stringify(Json.toJson(value))
   }, { value =>
