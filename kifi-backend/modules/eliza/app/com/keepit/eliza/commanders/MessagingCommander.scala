@@ -743,6 +743,7 @@ class MessagingCommander @Inject() (
 
       interned
     }
+  }
 }
 
 class ExternalMessagingRateLimitException(message: String) extends Throwable(message)
