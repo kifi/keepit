@@ -1,4 +1,4 @@
-package com.keepit.commanders
+package com.keepit.abook.commanders
 
 import com.keepit.common.queue._
 import com.keepit.common.db.Id
@@ -34,6 +34,7 @@ import scala.util.Failure
 import scala.util.Right
 import scala.util.Success
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.commanders.RichConnectionCommander
 
 @Singleton
 class LocalRichConnectionCommander @Inject() (

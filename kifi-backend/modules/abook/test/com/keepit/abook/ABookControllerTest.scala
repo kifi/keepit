@@ -21,6 +21,7 @@ import java.sql.Driver
 import scala.concurrent.Await
 import com.keepit.common.queue.FakeSimpleQueueModule
 import com.keepit.typeahead.TypeaheadHit
+import com.keepit.abook.controllers.ABookController
 
 class ABookControllerTest extends Specification with ABookApplicationInjector with ABookTestHelper {
 
@@ -35,7 +36,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
 
     "support mobile (ios) upload" in {
       running(new ABookApplication(modules: _*)) {
-        val uploadRoute = com.keepit.abook.routes.ABookController.uploadContacts(Id[User](1), ABookOrigins.IOS).url
+        val uploadRoute = com.keepit.abook.controllers.routes.ABookController.uploadContacts(Id[User](1), ABookOrigins.IOS).url
         uploadRoute === "/internal/abook/ios/uploadContacts?userId=1"
         val payload = iosUploadJson
         val uploadRequest = FakeRequest("POST", uploadRoute, FakeHeaders(Seq("Content-Type" -> Seq("application/json"))), body = payload)
@@ -71,7 +72,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
 
     "support prefixQuery" in {
       running(new ABookApplication(modules: _*)) {
-        val uploadRoute = com.keepit.abook.routes.ABookController.uploadContacts(Id[User](1), ABookOrigins.IOS).url
+        val uploadRoute = com.keepit.abook.controllers.routes.ABookController.uploadContacts(Id[User](1), ABookOrigins.IOS).url
         uploadRoute === "/internal/abook/ios/uploadContacts?userId=1"
         val payload = iosUploadJson
         val uploadRequest = FakeRequest("POST", uploadRoute, FakeHeaders(Seq("Content-Type" -> Seq("application/json"))), body = payload)
@@ -155,7 +156,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
 
     "support hide email from user" in {
       running(new ABookApplication(modules: _*)) {
-        val hideEmailRoute = com.keepit.abook.routes.ABookController.hideEmailFromUser(Id[User](1), EmailAddress("tan@kifi.com"))
+        val hideEmailRoute = com.keepit.abook.controllers.routes.ABookController.hideEmailFromUser(Id[User](1), EmailAddress("tan@kifi.com"))
         hideEmailRoute.toString === "/internal/abook/1/hideEmailFromUser?email=tan%40kifi.com"
         val controller = inject[ABookController] // setup
         val result = controller.hideEmailFromUser(Id[User](1), EmailAddress("tan@kifi.com"))(FakeRequest())

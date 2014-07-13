@@ -20,7 +20,7 @@ import java.sql.SQLException
 import com.keepit.common.performance._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
-import com.keepit.commanders.ContactInterner
+import com.keepit.abook.commanders.ContactInterner
 
 trait ABookImporterPlugin extends Plugin {
   def asyncProcessContacts(userId: Id[User], origin: ABookOriginType, aBookInfo: ABookInfo, s3Key: String, rawJsonRef: Option[WeakReference[JsValue]]): Unit
