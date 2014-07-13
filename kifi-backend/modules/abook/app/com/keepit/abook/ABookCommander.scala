@@ -9,13 +9,11 @@ import com.keepit.model._
 import play.api.libs.json.{ JsObject, JsArray, Json, JsValue }
 import scala.ref.WeakReference
 import com.keepit.common.logging.{ LogPrefix, Logging }
-import scala.collection.mutable
 import scala.concurrent._
 import scala.concurrent.duration._
 import com.keepit.common.time._
 import com.keepit.common.db.slick._
-import scala.util.{ Try, Failure, Success }
-import java.text.Normalizer
+import scala.util.Failure
 import play.api.libs.concurrent.Execution.Implicits._
 
 import Logging._
@@ -24,10 +22,9 @@ import play.api.http.Status
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.xml.Elem
 import com.keepit.abook.typeahead.EContactTypeahead
-import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, BasicContact, EmailAddress }
-import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.commanders.ContactInterner
-import com.keepit.abook.model.{ EContactRepo, EContactStates, EContact }
+import com.keepit.abook.model.{ EContactRepo, EContact }
 
 class ABookCommander @Inject() (
     db: Database,
@@ -37,8 +34,7 @@ class ABookCommander @Inject() (
     abookInfoRepo: ABookInfoRepo,
     econtactRepo: EContactRepo,
     abookImporter: ABookImporterPlugin,
-    contactInterner: ContactInterner,
-    shoebox: ShoeboxServiceClient) extends Logging {
+    contactInterner: ContactInterner) extends Logging {
 
   def toS3Key(userId: Id[User], origin: ABookOriginType, abookOwnerInfo: Option[ABookOwnerInfo]): String = {
     val k = s"${userId.id}_${origin.name}"
@@ -180,7 +176,7 @@ class ABookCommander @Inject() (
       }
 
       if (proceed) {
-        abookImporter.asyncProcessContacts(userId, origin, updatedEntry, s3Key, WeakReference(json))
+        abookImporter.asyncProcessContacts(userId, origin, updatedEntry, s3Key, Some(WeakReference(json)))
         log.infoP(s"scheduled for processing: $updatedEntry")
       }
       Some(updatedEntry)
@@ -219,47 +215,6 @@ class ABookCommander @Inject() (
   def internKifiContact(userId: Id[User], contact: BasicContact): EContact = {
     val kifiAbook = db.readWrite { implicit session => abookInfoRepo.internKifiABook(userId) }
     contactInterner.internContact(userId, kifiAbook.id.get, contact)
-  }
-
-  def validateAllContacts(readOnly: Boolean): Unit = {
-    log.info("[EContact Validation] Starting validation of all EContacts.")
-    val invalidContacts = mutable.Map[Id[EContact], String]()
-    val fixableContacts = mutable.Map[Id[EContact], String]()
-    val pageSize = 1000
-    var lastPageSize = -1
-    var nextPage = 0
-
-    do {
-      db.readWrite { implicit session =>
-        val batch = econtactRepo.page(nextPage, pageSize, Set.empty)
-        batch.foreach { contact =>
-          EmailAddress.validate(contact.email.address) match {
-            case Failure(invalidEmail) => {
-              log.error(s"[EContact Validation] Found invalid email contact: ${contact.email}")
-              invalidContacts += (contact.id.get -> contact.email.address)
-              if (!readOnly) { econtactRepo.save(contact.copy(state = EContactStates.INACTIVE)) }
-            }
-            case Success(validEmail) => {
-              if (validEmail != contact.email) {
-                log.warn(s"[EContact Validation] Found fixable email contact: ${contact.email}")
-                fixableContacts += (contact.id.get -> contact.email.address)
-                if (!readOnly) { econtactRepo.save(contact.copy(email = validEmail)) }
-              }
-            }
-          }
-        }
-        lastPageSize = batch.length
-        nextPage += 1
-      }
-    } while (lastPageSize == pageSize)
-
-    log.info("[EContact Validation] Done with EContact validation.")
-
-    val title = s"Email Contact Validation Report: ReadOnly Mode = $readOnly. Invalid Contacts: ${invalidContacts.size}. Fixable Contacts: ${fixableContacts.size}"
-    val msg = s"Invalid Contacts: \n\n ${invalidContacts.mkString("\n")} \n\n Fixable Contacts: \n\n ${fixableContacts.mkString("\n")}"
-    shoebox.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
-      subject = title, htmlBody = msg.replaceAll("\n", "\n<br>"), category = NotificationCategory.System.ADMIN
-    ))
   }
 
   def getContactNameByEmail(userId: Id[User], email: EmailAddress): Option[String] = {

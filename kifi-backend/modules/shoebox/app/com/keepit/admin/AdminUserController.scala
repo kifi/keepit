@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration.{ Duration, DurationInt }
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 import com.google.inject.Inject
 import com.keepit.abook.{ RichContact, ABookServiceClient }
@@ -31,11 +31,11 @@ import play.api.libs.json._
 import play.api.mvc.{ AnyContent, SimpleResult }
 
 import views.html
-import com.keepit.typeahead.{ TypeaheadHit, PrefixFilter }
+import com.keepit.typeahead.TypeaheadHit
 import scala.collection.mutable
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
-import securesocial.core.Registry
 import com.keepit.common.healthcheck.SystemAdminMailSender
+import com.keepit.common.concurrent.FutureHelpers
 
 case class UserStatistics(
   user: User,
@@ -819,10 +819,5 @@ class AdminUserController @Inject() (
     }
     log.info(s"Deactivated UserEmailAddress $inactiveEmail")
     Ok(JsString(inactiveEmail.toString))
-  }
-
-  def validateAllContacts(readOnly: Boolean) = AdminJsonAction.authenticated { request =>
-    abookClient.validateAllContacts(readOnly)
-    Ok("Check your emails!")
   }
 }

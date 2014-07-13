@@ -23,7 +23,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
 
   val modules = Seq(
     FakeABookStoreModule(),
-    TestContactsUpdaterPluginModule(),
+    TestABookImporterPluginModule(),
     TestABookServiceClientModule(),
     FakeShoeboxServiceModule(),
     TestSlickModule(TestDbInfo.dbInfo),

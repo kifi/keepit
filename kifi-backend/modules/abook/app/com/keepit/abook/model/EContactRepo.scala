@@ -20,7 +20,7 @@ trait EContactRepo extends Repo[EContact] {
   def getEContactCount(userId: Id[User])(implicit session: RSession): Int
   def insertAll(contacts: Seq[EContact])(implicit session: RWSession): Int
   def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Boolean
-  def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
+  def updateOwnership(emailAccountId: Id[EmailAccount], verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
   def getByAbookIdAndEmailId(abookId: Id[ABookInfo], emailId: Id[EmailAccount])(implicit session: RSession): Option[EContact]
   def getByAbookId(abookId: Id[ABookInfo])(implicit session: RSession): Seq[EContact]
 }
@@ -38,14 +38,14 @@ class EContactRepoImpl @Inject() (
   type RepoImpl = EContactTable
   class EContactTable(tag: Tag) extends RepoTable[EContact](db, tag, "econtact") {
     def userId = column[Id[User]]("user_id", O.NotNull)
-    def abookId = column[Id[ABookInfo]]("abook_id", O.Nullable)
-    def emailAccountId = column[Id[EmailAccount]]("email_account_id", O.Nullable)
+    def abookId = column[Id[ABookInfo]]("abook_id", O.NotNull)
+    def emailAccountId = column[Id[EmailAccount]]("email_account_id", O.NotNull)
     def email = column[EmailAddress]("email", O.NotNull)
     def contactUserId = column[Id[User]]("contact_user_id", O.Nullable)
     def name = column[String]("name", O.Nullable)
     def firstName = column[String]("first_name", O.Nullable)
     def lastName = column[String]("last_name", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, abookId.?, emailAccountId.?, email, contactUserId.?, name.?, firstName.?, lastName.?, state) <> ((EContact.apply _).tupled, EContact.unapply _)
+    def * = (id.?, createdAt, updatedAt, userId, abookId, emailAccountId, email, contactUserId.?, name.?, firstName.?, lastName.?, state) <> ((EContact.apply _).tupled, EContact.unapply _)
   }
 
   def table(tag: Tag) = new EContactTable(tag)
@@ -113,10 +113,10 @@ class EContactRepoImpl @Inject() (
     rows.insertAll(contacts: _*).get
   }
 
-  def updateOwnership(email: EmailAddress, verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int = {
-    val updated = (for { row <- rows if row.email === email && row.contactUserId =!= verifiedOwner.orNull } yield row.contactUserId.?).update(verifiedOwner)
+  def updateOwnership(emailAccountId: Id[EmailAccount], verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int = {
+    val updated = (for { row <- rows if row.emailAccountId === emailAccountId && row.contactUserId =!= verifiedOwner.orNull } yield row.contactUserId.?).update(verifiedOwner)
     if (updated > 0) {
-      val updatedContacts = for { row <- rows if row.email === email } yield row
+      val updatedContacts = for { row <- rows if row.emailAccountId === emailAccountId } yield row
       updatedContacts.foreach(invalidateCache)
     }
     updated

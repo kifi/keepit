@@ -42,9 +42,7 @@ class LocalRichConnectionCommander @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
     repo: RichSocialConnectionRepo,
-    scheduler: Scheduler,
-    eContactRepo: Provider[EContactRepo],
-    shoebox: ShoeboxServiceClient) extends RichConnectionCommander with Logging {
+    scheduler: Scheduler) extends RichConnectionCommander with Logging {
 
   def startUpdateProcessing(): Unit = {
     log.info("RConn: Triggered queued update processing")
@@ -156,48 +154,5 @@ class LocalRichConnectionCommander @Inject() (
         repo.recordFriendUserId(Right(eContact.email), contactUserId)
       }
     }
-  }
-
-  def validateAllRichConnectionEmails(readOnly: Boolean): Unit = {
-    log.info("[RichConnection Email Validation] Starting validation of all Email RichConnections.")
-    val invalidConnections = mutable.Map[Id[RichSocialConnection], String]()
-    val fixableConnections = mutable.Map[Id[RichSocialConnection], String]()
-    val pageSize = 1000
-    var lastPageSize = -1
-    var nextPage = 0
-
-    do {
-      db.readWrite { implicit session =>
-        val batch = repo.page(nextPage, pageSize, Set.empty)
-        batch.foreach { connection =>
-          connection.friendEmailAddress.foreach { emailAddress =>
-            EmailAddress.validate(emailAddress.address) match {
-              case Failure(invalidEmail) => {
-                log.error(s"[RichConnection Email Validation] Found invalid email rich connection: ${connection}")
-                invalidConnections += (connection.id.get -> emailAddress.address)
-                if (!readOnly) { repo.save(connection.copy(state = RichSocialConnectionStates.INACTIVE)) }
-              }
-              case Success(validEmail) => {
-                if (validEmail != emailAddress) {
-                  log.warn(s"[RichConnection Email Validation] Found fixable email rich connection: ${connection}")
-                  fixableConnections += (connection.id.get -> emailAddress.address)
-                  if (!readOnly) { repo.save(connection.copy(friendEmailAddress = Some(validEmail))) }
-                }
-              }
-            }
-          }
-        }
-        lastPageSize = batch.length
-        nextPage += 1
-      }
-    } while (lastPageSize == pageSize)
-
-    log.info("[RichConnection Email Validation] Done with RichConnection Email validation.")
-
-    val title = s"RichConnection Email Validation Report: ReadOnly Mode = $readOnly. Invalid Contacts: ${invalidConnections.size}. Fixable Contacts: ${fixableConnections.size}"
-    val msg = s"Invalid Email RichConnections: \n\n ${invalidConnections.mkString("\n")} \n\n Fixable Contacts: \n\n ${fixableConnections.mkString("\n")}"
-    shoebox.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
-      subject = title, htmlBody = msg.replaceAll("\n", "\n<br>"), category = NotificationCategory.System.ADMIN
-    ))
   }
 }
