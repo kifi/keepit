@@ -2,10 +2,10 @@ package com.keepit.controllers.admin
 
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration.{ Duration, DurationInt }
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Try }
 
 import com.google.inject.Inject
-import com.keepit.abook.{ RichContact, ABookServiceClient }
+import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.{ AuthCommander, UserCommander }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ AdminController, ActionAuthenticator, AuthenticatedRequest }
@@ -32,10 +32,9 @@ import play.api.mvc.{ AnyContent, SimpleResult }
 
 import views.html
 import com.keepit.typeahead.TypeaheadHit
-import scala.collection.mutable
 import com.keepit.typeahead.socialusers.SocialUserTypeahead
 import com.keepit.common.healthcheck.SystemAdminMailSender
-import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.abook.model.RichContact
 
 case class UserStatistics(
   user: User,

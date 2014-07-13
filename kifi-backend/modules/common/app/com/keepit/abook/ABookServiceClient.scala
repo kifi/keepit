@@ -22,14 +22,9 @@ import com.google.inject.util.Providers
 import com.keepit.common.routes.ABook
 import scala.util.{ Success, Failure, Try }
 import play.api.http.Status
-import com.keepit.abook.model.RichSocialConnection
+import com.keepit.abook.model.{ RichContact, RichSocialConnection }
 import com.keepit.common.mail.{ EmailAddress, BasicContact }
 import com.keepit.typeahead.TypeaheadHit
-
-case class RichContact(email: EmailAddress, name: Option[String] = None, firstName: Option[String] = None, lastName: Option[String] = None, userId: Option[Id[User]] = None)
-object RichContact {
-  implicit val format = Json.format[RichContact]
-}
 
 trait ABookServiceClient extends ServiceClient {
 

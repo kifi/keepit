@@ -2,26 +2,17 @@ package com.keepit.abook
 
 import com.keepit.common.mail.EmailAddress
 import org.specs2.mutable._
-import com.keepit.common.db.slick.Database
-import com.keepit.abook.store.ABookRawInfoStore
 import com.keepit.model._
-import com.keepit.common.db.{ ExternalId, TestDbInfo, Id }
+import com.keepit.common.db.Id
 import play.api.libs.json._
-import com.keepit.common.actor.{ TestActorSystemModule, StandaloneTestActorSystemModule }
-import play.api.libs.json.JsArray
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ABookCacheModule }
-import scala.Some
-import com.keepit.common.healthcheck.FakeAirbrakeModule
-import akka.actor.ActorSystem
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import play.api.test.{ FakeHeaders, FakeRequest }
 import play.api.test.Helpers._
-import play.api.db.DB
-import java.sql.Driver
-import scala.concurrent.Await
 import com.keepit.common.queue.FakeSimpleQueueModule
 import com.keepit.typeahead.TypeaheadHit
 import com.keepit.abook.controllers.ABookController
+import com.keepit.abook.model.RichContact
 
 class ABookControllerTest extends Specification with ABookApplicationInjector with ABookTestHelper {
 

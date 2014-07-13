@@ -30,7 +30,7 @@ import play.api.libs.functional.syntax._
 import scala.concurrent.Future
 import scala.util.Try
 import com.keepit.common.queue.{ RecordInvitation, CancelInvitation }
-import com.keepit.abook.{ RichContact, ABookServiceClient }
+import com.keepit.abook.ABookServiceClient
 
 import akka.actor.Scheduler
 import org.joda.time.DateTime
@@ -42,6 +42,7 @@ import com.keepit.social.SecureSocialClientIds
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
 import com.keepit.commanders.emails.EmailOptOutCommander
+import com.keepit.abook.model.RichContact
 
 case class FullSocialId(network: SocialNetworkType, identifier: Either[SocialId, EmailAddress], name: Option[String] = None) {
   override def toString(): String = s"${network.name}/${identifier.left.map(_.id).right.map(_.address).merge}"
