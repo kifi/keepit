@@ -1,10 +1,11 @@
 package com.keepit.cortex.models.lda
 
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
@@ -37,6 +38,7 @@ class LDADbUpdatePluginImpl @Inject() (
   override val updateFrequency: FiniteDuration = 2 minutes
 }
 
+@ImplementedBy(classOf[LDADbUpdaterImpl])
 trait LDADbUpdater extends BaseFeatureUpdater[Id[NormalizedURI], NormalizedURI, DenseLDA, FeatureRepresentation[NormalizedURI, DenseLDA]]
 
 @Singleton
@@ -45,11 +47,11 @@ class LDADbUpdaterImpl @Inject() (
     db: Database,
     uriRepo: CortexURIRepo,
     topicRepo: URILDATopicRepo,
-    commitRepo: FeatureCommitInfoRepo) extends LDADbUpdater {
+    commitRepo: FeatureCommitInfoRepo) extends LDADbUpdater with Logging {
   import com.keepit.cortex.models.lda.UpdateAction._
   import com.keepit.model.NormalizedURIStates.SCRAPED
 
-  private val fetchSize = 500
+  private val fetchSize = 1000
   private val sparsity = 10
 
   assume(sparsity >= 3)
@@ -60,6 +62,7 @@ class LDADbUpdaterImpl @Inject() (
 
   def update(): Unit = {
     val tasks = fetchTasks
+    log.info(s"fetched ${tasks.size} tasks")
     processTasks(tasks)
   }
 
@@ -68,15 +71,19 @@ class LDADbUpdaterImpl @Inject() (
     if (commitOpt.isEmpty) db.readWrite { implicit s => commitRepo.save(FeatureCommitInfo(modelName = modelName, modelVersion = representer.version.version, seq = 0L)) }
 
     val fromSeq = SequenceNumber[CortexURI](commitOpt.map { _.seq }.getOrElse(0L))
+    log.info(s"fetch tasks from ${fromSeq.value}")
     db.readOnlyReplica { implicit s => uriRepo.getSince(fromSeq, fetchSize) }
   }
 
   private def processTasks(uris: Seq[CortexURI]): Unit = {
     uris.foreach { uri => processURI(uri) }
 
+    log.info(s"${uris.size} uris processed")
+
     uris.lastOption.map { uri =>
       db.readWrite { implicit s =>
         val commitInfo = commitRepo.getByModelAndVersion(modelName, representer.version.version).get
+        log.info(s"committing with seq = ${uri.seq.value}")
         commitRepo.save(commitInfo.withSeq(uri.seq.value).withUpdateTime(currentDateTime))
       }
     }

@@ -9,7 +9,7 @@ package object cortex {
   val S3_CORTEX_BUCKET = "amazon.s3.cortex.bucket"
 
   object ModelVersions {
-    val denseLDAVersion = ModelVersion[DenseLDA](1)
+    val denseLDAVersion = ModelVersion[DenseLDA](2)
     val word2vecVersion = ModelVersion[Word2Vec](2)
   }
 
