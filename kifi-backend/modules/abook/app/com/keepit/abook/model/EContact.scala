@@ -1,6 +1,5 @@
 package com.keepit.abook.model
 
-import com.keepit.abook.RichContact
 import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
@@ -54,6 +53,18 @@ object EContact {
   )(EContact.apply, unlift(EContact.unapply))
 
   def toRichContact(econtact: EContact): RichContact = RichContact(econtact.email, econtact.name, econtact.firstName, econtact.lastName, econtact.contactUserId)
+
+  implicit def toIngestableContactSeq(seq: SequenceNumber[EContact]): SequenceNumber[IngestableContact] = SequenceNumber(seq.value)
+  def toIngestable(econtact: EContact): IngestableContact = {
+    IngestableContact(
+      userId = econtact.userId,
+      abookId = econtact.abookId,
+      emailAccountId = econtact.emailAccountId,
+      hidden = (econtact.state == EContactStates.HIDDEN),
+      deleted = (econtact.state == EContactStates.INACTIVE),
+      seq = econtact.seq
+    )
+  }
 
   def make(userId: Id[User], abookId: Id[ABookInfo], emailAccount: EmailAccount, contacts: BasicContact*): EContact = {
     val eContact = EContact(
