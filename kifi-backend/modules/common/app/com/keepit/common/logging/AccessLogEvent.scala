@@ -10,7 +10,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.future
 import com.keepit.common.concurrent.ExecutionContext
 
-sealed abstract class AccessLogEventType(val name: String)
+sealed abstract class AccessLogEventType(val name: String, val ignore: Boolean = false)
 
 object Access {
   object DB extends AccessLogEventType("DB")
@@ -19,7 +19,7 @@ object Access {
   object WS_IN extends AccessLogEventType("WS_IN")
   object WS_OUT extends AccessLogEventType("WS_OUT")
   object S3 extends AccessLogEventType("S3")
-  object CACHE extends AccessLogEventType("CACHE")
+  object CACHE extends AccessLogEventType("CACHE", true)
 }
 
 object AccessLogTimer {
@@ -129,7 +129,15 @@ class AccessLog @Inject() (clock: Clock) {
   def timer(eventType: AccessLogEventType): AccessLogTimer = AccessLogTimer(eventType, clock)
 
   def add(e: AccessLogEvent): AccessLogEvent = {
-    future { accessLog.info(format(e)) }(ExecutionContext.singleThread)
+    if (!e.eventType.ignore) {
+      future {
+        e.eventType match {
+          case Access.CACHE => //todo(eishay) create in memory stats and reporting since we kill the log
+          case _ => accessLog.info(format(e))
+        }
+
+      }(ExecutionContext.singleThread)
+    }
     e
   }
 
