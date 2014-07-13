@@ -130,13 +130,14 @@ class AccessLog @Inject() (clock: Clock) {
 
   def add(e: AccessLogEvent): AccessLogEvent = {
     if (!e.eventType.ignore) {
-      future {
-        e.eventType match {
-          case Access.CACHE => //todo(eishay) create in memory stats and reporting since we kill the log
-          case _ => accessLog.info(format(e))
-        }
-
-      }(ExecutionContext.singleThread)
+      e.eventType match {
+        case Access.CACHE =>
+        //todo(eishay) create in memory stats and reporting since we kill the log
+        case _ =>
+          future {
+            accessLog.info(format(e))
+          }(ExecutionContext.singleThread)
+      }
     }
     e
   }

@@ -17,7 +17,7 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
       val user1 = userRepo.save(u1)
       val user2 = userRepo.save(u2)
       val library1 = libraryRepo.save(Library(name = "Lib1", ownerId = user1.id.get, createdAt = t1.plusMinutes(2),
-         visibility = LibraryVisibility.ANYONE, slug = LibrarySlug("A")))
+        visibility = LibraryVisibility.ANYONE, slug = LibrarySlug("A")))
       val library2 = libraryRepo.save(Library(name = "Lib2", ownerId = user2.id.get, createdAt = t1.plusMinutes(5),
         visibility = LibraryVisibility.ANYONE, slug = LibrarySlug("B")))
       val lm1 = libraryMemberRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get,
@@ -44,21 +44,21 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
     "invalidate cache when delete" in {
       withDb() { implicit injector =>
         val (lib1, lib2, user1, user2, lm1, lm2, lm3, lm4) = setup()
-        db.readWrite{ implicit s =>
+        db.readWrite { implicit s =>
           libraryMemberRepo.count === 4
           val libMem = libraryMemberRepo.get(lm1.id.get)
           libraryMemberRepo.delete(libMem)
         }
-        db.readWrite{ implicit s =>
+        db.readWrite { implicit s =>
           libraryMemberRepo.all.size === 3
           libraryMemberRepo.count === 3
         }
-        db.readWrite{ implicit s =>
+        db.readWrite { implicit s =>
           val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
           libraryMemberRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get,
             access = LibraryAccess.READ_WRITE, createdAt = t1.plusHours(1)))
         }
-        db.readWrite{ implicit s =>
+        db.readWrite { implicit s =>
           libraryMemberRepo.count === 4
         }
       }
