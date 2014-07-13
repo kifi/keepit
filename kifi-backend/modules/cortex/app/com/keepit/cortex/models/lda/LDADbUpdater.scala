@@ -35,7 +35,7 @@ class LDADbUpdatePluginImpl @Inject() (
     discovery: ServiceDiscovery,
     val scheduling: SchedulingProperties) extends BaseFeatureUpdatePlugin(actor, discovery) with LDADbUpdatePlugin {
   override val startTime: FiniteDuration = 60 seconds
-  override val updateFrequency: FiniteDuration = 2 minutes
+  override val updateFrequency: FiniteDuration = 1 minutes
 }
 
 @ImplementedBy(classOf[LDADbUpdaterImpl])
@@ -51,7 +51,7 @@ class LDADbUpdaterImpl @Inject() (
   import com.keepit.cortex.models.lda.UpdateAction._
   import com.keepit.model.NormalizedURIStates.SCRAPED
 
-  private val fetchSize = 1000
+  private val fetchSize = 2000
   private val sparsity = 10
 
   assume(sparsity >= 3)
