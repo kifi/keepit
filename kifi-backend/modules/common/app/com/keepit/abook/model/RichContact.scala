@@ -11,13 +11,12 @@ object RichContact {
   implicit val format = Json.format[RichContact]
 }
 
-case class IngestableEmailAccount(emailAccountId: Id[IngestableEmailAccount], userId: Option[Id[User]], verified: Boolean, deleted: Boolean, seq: SequenceNumber[IngestableEmailAccount])
+case class IngestableEmailAccount(emailAccountId: Id[IngestableEmailAccount], userId: Option[Id[User]], verified: Boolean, seq: SequenceNumber[IngestableEmailAccount])
 object IngestableEmailAccount {
   implicit val format = (
     (__ \ 'emailAccountId).format(Id.format[IngestableEmailAccount]) and
     (__ \ 'userId).formatNullable(Id.format[User]) and
     (__ \ 'verified).format[Boolean] and
-    (__ \ 'deleted).format[Boolean] and
     (__ \ 'seq).format(SequenceNumber.format[IngestableEmailAccount])
   )(IngestableEmailAccount.apply, unlift(IngestableEmailAccount.unapply))
 }
