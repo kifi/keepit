@@ -24,8 +24,8 @@ case class EmailAccount(
 }
 
 object EmailAccount {
-  implicit def toIngestableEmailAccountId(id: Id[EmailAccount]): Id[IngestableEmailAccount] = Id(id.id)
-  implicit def toIngestableEmailAccountSeq(seq: SequenceNumber[EmailAccount]): SequenceNumber[IngestableEmailAccount] = SequenceNumber(seq.value)
+  implicit def toIngestableEmailAccountId(id: Id[EmailAccount]): Id[IngestableEmailAccount] = id.copy()
+  implicit def toIngestableEmailAccountSeq(seq: SequenceNumber[EmailAccount]): SequenceNumber[IngestableEmailAccount] = seq.copy()
   def toIngestable(emailAccount: EmailAccount): IngestableEmailAccount = {
     IngestableEmailAccount(emailAccount.id.get, userId = emailAccount.userId, verified = emailAccount.verified, seq = emailAccount.seq)
   }
