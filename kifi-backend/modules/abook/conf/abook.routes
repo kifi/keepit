@@ -33,6 +33,9 @@ GET      /internal/abook/:userId/ripestFruits                   @com.keepit.aboo
 
 POST     /internal/abook/:userId/hideEmailFromUser              @com.keepit.abook.controllers.ABookController.hideEmailFromUser(userId:Id[User], email: EmailAddress)
 
+GET      /internal/abook/database/getEmailAccountsChanged       @com.keepit.abook.controllers.ABookDataPipeController.getEmailAccountsChanged(seqNum: SequenceNumber[com.keepit.abook.model.EmailAccount], fetchSize: Int)
+GET      /internal/abook/database/getContactsChanged            @com.keepit.abook.controllers.ABookDataPipeController.getContactsChanged(seqNum: SequenceNumber[com.keepit.abook.model.EContact], fetchSize: Int)
+
 ->  / common.Routes
 
 
