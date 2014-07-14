@@ -1,0 +1,86 @@
+@(pageUrl: String = "https://www.kifi.com/", useCustomMetaData: Boolean = false, titleText: String = "", titleDesc: String = "")
+@styles = {
+}
+@content = {
+  <section class="hero">
+    <h1>Outsmarting information overload together</h1>
+    <div class="hero-box">
+      <img src="//djty7jcqog9qu.cloudfront.net/assets/site/hero_970.jpg" width="970" height="627">
+      <a href="javascript:void 'play'" class="video-still" onclick="void this.setAttribute('data-clicked','')" data-uri="//player.vimeo.com/video/99569714?title=0&amp;byline=0&amp;portrait=0&amp;color=ffffff&amp;autoplay=1" data-w="960" data-h="540" data-track-action="playVideo"></a>
+    </div>
+    <a href="javascript:void 'scroll down'" class="more-arrow">Learn more</a>
+  </section>
+
+        <section class="features">
+          <div class="wrap3">
+                <ul class="kifi_features">
+                    <li class="clearfix">
+                        <div class="left image">
+                            <img src="//djty7jcqog9qu.cloudfront.net/assets/site/home_icon1.png" width="210" height="138">
+                        </div>
+                        <div class="description">
+                            <h3>Keep it organized</h3>
+                            <p>All your timeless gems organized reliably</p>
+                        </div>
+                    </li>
+                    <li class="clearfix">
+                        <div class="left image">
+                            <img src="//djty7jcqog9qu.cloudfront.net/assets/site/home_icon2.png" width="210" height="138">
+                        </div>
+                        <div class="description">
+                            <h3>Find only the best things</h3>
+                            <p>Recall the best things that you and your friends kept</p>
+                        </div>
+                    </li>
+                    <li class="clearfix">
+                        <div class="left image">
+                            <img src="//djty7jcqog9qu.cloudfront.net/assets/site/home_icon3.png" width="210" height="138">
+                        </div>
+                        <div class="description">
+                            <h3>Recommend and talk about it</h3>
+                            <p>Share or talk about your gems with friends</p>
+                        </div>
+                    </li>
+                </ul>
+
+                <div style="text-align:center">
+                    <a href="/signup" class="signup-btn green-btn" data-track-action="clickTryKifi">Sign up free</a>
+                </div>
+            </div>
+        </section>
+}
+@earlyScripts = {
+}
+@scripts = {
+<script src="/assets/guest/js/video.js"></script>
+<script src="/assets/guest/js/landing.js"></script>
+<script type="text/javascript">
+var fb_param = {};
+fb_param.pixel_id = '6012675509696';
+fb_param.value = '0.00';
+fb_param.currency = 'USD';
+(function(){
+  var fpw = document.createElement('script');
+  fpw.async = true;
+  fpw.src = '//connect.facebook.net/en_US/fp.js';
+  var ref = document.getElementsByTagName('script')[0];
+  ref.parentNode.insertBefore(fpw, ref);
+})();
+</script>
+<noscript><img height="1" width="1" alt="" style="display:none" src="https://www.facebook.com/offsite_event.php?id=6012675509696&amp;value=0&amp;currency=USD" /></noscript>
+}
+@metaProperties = @{
+  if(useCustomMetaData) {
+    Some(Html(s"""
+    <meta name="robots" content="noindex">
+    <meta property="og:image" content="https://www.kifi.com/assets/images/facebook-90x90.png">
+    <meta property="og:title" content="$titleText">
+    <meta property="og:description" content="$titleDesc">
+    <meta property="og:site_name" content="Kifi">
+    <meta property="og:url" content="$pageUrl">"""))
+  }
+  else {
+    None
+  }
+}
+@views.html.marketing.helper3.page(title = "Kifi • Search like normal, find like never before", styles = styles, content = content, scripts = scripts, dataTrack="landing", htmlClass="landing", earlyScripts = earlyScripts, isLoggedIn = false, metaProperties = metaProperties)
