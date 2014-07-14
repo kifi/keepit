@@ -266,6 +266,7 @@ class TypeaheadCommander @Inject() (
     }
   }
 
+  import com.keepit.common._
   def fetchFirst(limit: Int, futures: Iterable[Future[(Seq[(SocialNetworkType, TypeaheadHit[_])])]]): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {
     val zHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])]
     val allHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])]
@@ -273,11 +274,8 @@ class TypeaheadCommander @Inject() (
       val ordered = hits.sorted(hitOrd)
       log.info(s"fetchFirst ordered=${ordered.mkString(",")}")
       zHits ++= ordered.takeWhile { case (_, hit) => hit.score == 0 }
-      if (zHits.length < limit) {
-        allHits ++= ordered
-      }
       // todo(ray): dedup
-      (zHits.length < limit)
+      (zHits.length < limit) tap { res => if (res) allHits ++= ordered }
     }) map { _ =>
       if (zHits.length >= limit) zHits.take(limit) else {
         allHits.sorted(hitOrd)
