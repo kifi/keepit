@@ -49,8 +49,8 @@ trait CortexServiceController extends ServiceController {
   val serviceType: ServiceType = ServiceType.CORTEX
 }
 
-trait MavenServiceController extends ServiceController {
-  val serviceType: ServiceType = ServiceType.MAVEN
+trait CuratorServiceController extends ServiceController {
+  val serviceType: ServiceType = ServiceType.CURATOR
 }
 
 trait GraphServiceController extends ServiceController {

@@ -1,4 +1,4 @@
-# MAVEN
+# CURATOR
 
 # --- !Ups
 
@@ -27,7 +27,7 @@ CREATE TABLE raw_seed_item (
 );
 
 
-CREATE TABLE maven_keep_info (
+CREATE TABLE curator_keep_info (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
@@ -38,12 +38,12 @@ CREATE TABLE maven_keep_info (
     state varchar(128) NOT NULL,
 
     PRIMARY KEY (id),
-    UNIQUE INDEX maven_keep_info_u_keep_id (keep_id),
-    INDEX maven_keep_info_i_uri_id_state (uri_id, state)
+    UNIQUE INDEX curator_keep_info_u_keep_id (keep_id),
+    INDEX curator_keep_info_i_uri_id_state (uri_id, state)
 );
 
 
-insert into evolutions (name, description) values('195.sql', 'adding new tables for keep ingestion in maven');
+insert into evolutions (name, description) values('195.sql', 'adding new tables for keep ingestion in curator');
 
 
 # --- !Downs
