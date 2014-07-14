@@ -167,7 +167,7 @@ class UserRepoImpl @Inject() (
 
   override def get(id: Id[User])(implicit session: RSession): User = {
     idCache.getOrElse(UserIdKey(id)) {
-      getCompiled(id).first
+      getCompiled(id).firstOption.getOrElse(throw NotFoundException(id))
     }
   }
 
