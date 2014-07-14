@@ -53,7 +53,7 @@ class EContactRepoImpl @Inject() (
 
   def table(tag: Tag) = new EContactTable(tag)
 
-  private val sequence = db.getSequence[EContact]("econtact_account_sequence")
+  private val sequence = db.getSequence[EContact]("econtact_sequence")
 
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
     assignSequenceNumbers(sequence, "econtact", limit)
