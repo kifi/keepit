@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
-import com.keepit.macros.json
+import com.kifi.macros.json
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.common.db._

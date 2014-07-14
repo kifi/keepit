@@ -94,7 +94,8 @@ object ApplicationBuild extends Build {
     "org.apache.lucene" % "lucene-core" % "4.7.0", // todo(andrew/yasuhiro): remove from common
     "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0", // todo(andrew/yasuhiro): remove from common
     "org.bouncycastle" % "bcprov-jdk15on" % "1.50",
-    "org.msgpack" %% "msgpack-scala" % "0.6.8"
+    "org.msgpack" %% "msgpack-scala" % "0.6.8",
+    "com.kifi" %% "json-annotation" % "0.1"
   ) map (_.excludeAll(
     ExclusionRule(organization = "com.cedarsoft"),
     ExclusionRule(organization = "javax.jms"),

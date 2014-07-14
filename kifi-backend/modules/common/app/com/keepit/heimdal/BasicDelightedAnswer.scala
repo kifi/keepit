@@ -1,7 +1,7 @@
 package com.keepit.heimdal
 
 import com.keepit.common.net.UserAgent
-import com.keepit.macros.json
+import com.kifi.macros.json
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
