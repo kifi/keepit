@@ -94,7 +94,8 @@ object ApplicationBuild extends Build {
     "org.apache.lucene" % "lucene-core" % "4.7.0", // todo(andrew/yasuhiro): remove from common
     "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0", // todo(andrew/yasuhiro): remove from common
     "org.bouncycastle" % "bcprov-jdk15on" % "1.50",
-    "org.msgpack" %% "msgpack-scala" % "0.6.8"
+    "org.msgpack" %% "msgpack-scala" % "0.6.8",
+    "com.kifi" %% "json-annotation" % "0.1"
   ) map (_.excludeAll(
     ExclusionRule(organization = "com.cedarsoft"),
     ExclusionRule(organization = "javax.jms"),
@@ -199,7 +200,12 @@ object ApplicationBuild extends Build {
     Tests.Argument("failtrace", "true")
   )
 
-  lazy val commonSettings = scalariformSettings ++ Seq(
+  lazy val macroParadiseSettings = Seq(
+    resolvers += Resolver.sonatypeRepo("releases"),
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full)
+  )
+
+  lazy val commonSettings = scalariformSettings ++ macroParadiseSettings ++ Seq(
     scalacOptions ++= _scalacOptions,
     routesImport ++= _routesImport,
     resolvers ++= commonResolvers,
@@ -222,7 +228,13 @@ object ApplicationBuild extends Build {
   )
 
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(
-    libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.10.0"
+    macroParadiseSettings ++ Seq(
+      libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.10.0",
+      libraryDependencies ++= (
+        if (scalaVersion.value.startsWith("2.10")) Seq("org.scalamacros" %% "quasiquotes" % "2.0.1")
+        else Nil
+      )
+    ): _*
   )
 
   lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
