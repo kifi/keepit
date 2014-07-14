@@ -39,12 +39,6 @@ class LibraryRepoImpl @Inject() (
   def table(tag: Tag) = new LibraryTable(tag)
   initTable()
 
-  private val getCompiled = {
-    def getLibrary(id: Column[Id[Library]]) =
-      for (f <- rows if f.id is id) yield f
-    Compiled(getLibrary _)
-  }
-
   override def get(id: Id[Library])(implicit session: RSession): Library = {
     idCache.getOrElse(LibraryIdKey(id)) {
       getCompiled(id).first

@@ -169,7 +169,9 @@ class SecureSocialUserPluginImpl @Inject() (
           socialUser.email.map(EmailAddress(_)) flatMap (emailRepo.getByAddressOpt(_)) collect {
             case e if e.state == UserEmailAddressStates.VERIFIED => e.userId
           }
-        } flatMap userRepo.getOpt
+        } flatMap { u =>
+          scala.util.Try(userRepo.get(u)).toOption
+        }
       )
     }
 
