@@ -32,21 +32,23 @@ class EmailAccountUpdaterActor @Inject() (
 
   private var updating = false
 
-  def receive = {
-
-    case FetchEmailUpdates(fetchSize: Int) => if (!updating) {
-      val seqNum = db.readOnlyMaster { implicit session => sequenceNumberRepo.get() }
-      shoebox.getEmailAccountUpdates(seqNum, fetchSize).onComplete {
-        case Success(updates) => {
-          log.info(s"${updates.length} EmailAccountUpdates were successfully fetched.")
-          self ! ProcessEmailUpdates(updates, fetchSize)
-        }
-        case Failure(_) => {
-          log.error(s"Failed to fetch EmailAccountUpdates.")
-          self ! CancelUpdate
-        }
+  private def fetchUpdates(fetchSize: Int): Unit = {
+    val seqNum = db.readOnlyMaster { implicit session => sequenceNumberRepo.get() }
+    shoebox.getEmailAccountUpdates(seqNum, fetchSize).onComplete {
+      case Success(updates) => {
+        log.info(s"${updates.length} EmailAccountUpdates were successfully fetched.")
+        self ! ProcessEmailUpdates(updates, fetchSize)
+      }
+      case Failure(_) => {
+        log.error(s"Failed to fetch EmailAccountUpdates.")
+        self ! CancelUpdate
       }
     }
+  }
+
+  def receive = {
+
+    case FetchEmailUpdates(fetchSize: Int) => if (!updating) { fetchUpdates(fetchSize) }
 
     case ProcessEmailUpdates(updates, fetchSize) => {
       if (updates.nonEmpty) db.readWrite(attempts = 2) { implicit session =>
@@ -75,7 +77,7 @@ class EmailAccountUpdaterActor @Inject() (
       log.info(s"${updates.length} EmailAccountUpdates were successfully ingested.")
 
       if (updates.length < fetchSize) { updating = false }
-      else { self ! FetchEmailUpdates(fetchSize) }
+      else { fetchUpdates(fetchSize) }
     }
 
     case CancelUpdate => { updating = false }
