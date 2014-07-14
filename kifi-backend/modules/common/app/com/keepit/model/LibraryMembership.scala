@@ -54,14 +54,19 @@ sealed abstract class LibraryAccess(val value: String)
 
 object LibraryAccess {
   case object READ_ONLY extends LibraryAccess("read_only")
+  case object READ_INSERT extends LibraryAccess("read_insert")
   case object READ_WRITE extends LibraryAccess("read_write")
+  case object OWNER extends LibraryAccess("owner")
 
   implicit def format[T]: Format[LibraryAccess] =
     Format(__.read[String].map(LibraryAccess(_)), new Writes[LibraryAccess] { def writes(o: LibraryAccess) = JsString(o.value) })
 
-  def apply(str: String) = { str match {
+  def apply(str: String) = {
+    str match {
       case READ_ONLY.value => READ_ONLY
+      case READ_INSERT.value => READ_INSERT
       case READ_WRITE.value => READ_WRITE
+      case OWNER.value => OWNER
     }
   }
 }
