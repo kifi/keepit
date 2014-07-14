@@ -8,7 +8,7 @@ CREATE TABLE user_lda_interests(
   updated_at datetime NOT NULL,
   user_id bigint(20) NOT NULL,
   version tinyint(3) unsigned NOT NULL,
-  user_topic_mean blob DEFAULT NULL
+  user_topic_mean blob DEFAULT NULL,
   state varchar(20) NOT NULL,
 
   PRIMARY KEY (id),
@@ -16,3 +16,5 @@ CREATE TABLE user_lda_interests(
 );
 
 insert into evolutions (name, description) values('197.sql', 'adding user_lda_interests');
+
+# --- !Downs
