@@ -269,7 +269,7 @@ class TypeaheadCommander @Inject() (
   def fetchFirst(limit: Int, futures: Iterable[Future[(Seq[(SocialNetworkType, TypeaheadHit[_])])]]): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {
     val zHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])]
     val allHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])]
-    FutureHelpers.sequentialPartialExec[Seq[(SocialNetworkType, TypeaheadHit[_])]](futures, { hits =>
+    FutureHelpers.sequentialExecWhile[Seq[(SocialNetworkType, TypeaheadHit[_])]](futures, { hits =>
       val ordered = hits.sorted(hitOrd)
       log.info(s"fetchFirst ordered=${ordered.mkString(",")}")
       zHits ++= ordered.takeWhile { case (_, hit) => hit.score == 0 }
@@ -277,7 +277,7 @@ class TypeaheadCommander @Inject() (
         allHits ++= ordered
       }
       // todo(ray): dedup
-      (zHits.length >= limit)
+      (zHits.length < limit)
     }) map { _ =>
       if (zHits.length >= limit) zHits.take(limit) else {
         allHits.sorted(hitOrd)

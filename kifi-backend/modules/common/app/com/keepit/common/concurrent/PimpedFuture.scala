@@ -63,13 +63,12 @@ object FutureHelpers {
     foldLeft(items)(()) { case ((), nextItem) => f(nextItem).map { _ => () } }
   }
 
-  // sequentialExec with short-circuit based on predicate
-  def sequentialPartialExec[T](futures: Iterable[Future[T]], predicate: T => Boolean)(implicit ec: ScalaExecutionContext): Future[Unit] = {
+  def sequentialExecWhile[T](futures: Iterable[Future[T]], predicate: T => Boolean)(implicit ec: ScalaExecutionContext): Future[Unit] = {
     futures.headOption match {
       case None => Future.successful[Unit]()
       case Some(f) => f.flatMap { t =>
-        if (predicate(t)) Future.successful[Unit]()
-        else sequentialPartialExec(futures.tail, predicate)
+        if (predicate(t)) sequentialExecWhile(futures.tail, predicate)
+        else Future.successful[Unit]()
       }
     }
   }
