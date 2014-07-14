@@ -1,4 +1,4 @@
-package com.keepit.maven.model
+package com.keepit.curator.model
 
 import com.keepit.common.db.{ SequenceNumber, Model, Id, ModelWithSeqNumber }
 import com.keepit.model.{ NormalizedURI, User }

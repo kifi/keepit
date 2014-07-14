@@ -1,7 +1,7 @@
-package com.keepit.maven
+package com.keepit.curator
 
 import com.google.inject.util.Modules
-import com.keepit.common.cache.{ MavenCacheModule, HashMapMemoryCacheModule }
+import com.keepit.common.cache.{ CuratorCacheModule, HashMapMemoryCacheModule }
 import com.keepit.common.db.{ TestDbInfo, TestSlickModule }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -12,14 +12,14 @@ import com.keepit.test.DbInjectionHelper
 
 import play.api.Mode
 
-trait MavenTestInjector extends EmptyInjector with DbInjectionHelper {
+trait CuratorTestInjector extends EmptyInjector with DbInjectionHelper {
   val mode = Mode.Test
   val module = Modules.combine(
     FakeAirbrakeModule(),
     FakeClockModule(),
     TestSlickModule(TestDbInfo.dbInfo),
     FakeShoeboxServiceModule(),
-    MavenCacheModule(HashMapMemoryCacheModule()),
+    CuratorCacheModule(HashMapMemoryCacheModule()),
     FakeHttpClientModule()
   )
 }

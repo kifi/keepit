@@ -1,26 +1,26 @@
-package com.keepit.maven
+package com.keepit.curator
 
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{ FortyTwoCachePlugin, InMemoryCachePlugin }
 import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.maven.model.RawSeedItemSequencingPlugin
+import com.keepit.curator.model.RawSeedItemSequencingPlugin
 
 import play.api.Application
 import play.api.Mode.Prod
 
-object MavenGlobal extends FortyTwoGlobal(Prod) with MavenServices {
-  val module = MavenProdModule()
+object CuratorGlobal extends FortyTwoGlobal(Prod) with CuratorServices {
+  val module = CuratorProdModule()
 
   override def onStart(app: Application) {
-    log.info("starting maven")
-    startMavenServices()
+    log.info("starting curator")
+    startCuratorServices()
     super.onStart(app)
-    log.info("maven started")
+    log.info("curator started")
   }
 }
 
-trait MavenServices { self: FortyTwoGlobal =>
-  def startMavenServices() {
+trait CuratorServices { self: FortyTwoGlobal =>
+  def startCuratorServices() {
     require(injector.instance[HealthcheckPlugin] != null)
     require(injector.instance[FortyTwoCachePlugin] != null)
     require(injector.instance[InMemoryCachePlugin] != null)

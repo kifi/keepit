@@ -1,9 +1,9 @@
-package com.keepit.controllers.maven
+package com.keepit.controllers.curator
 
 import com.google.inject.Inject
-import com.keepit.common.controller.MavenServiceController
+import com.keepit.common.controller.CuratorServiceController
 import play.api.libs.concurrent.Execution.Implicits._
 
-class MavenController @Inject() () extends MavenServiceController {
+class CuratorController @Inject() () extends CuratorServiceController {
 
 }

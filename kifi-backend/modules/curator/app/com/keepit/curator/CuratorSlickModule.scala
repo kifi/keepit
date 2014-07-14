@@ -1,4 +1,4 @@
-package com.keepit.maven
+package com.keepit.curator
 
 import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 
@@ -9,7 +9,7 @@ import akka.actor.ActorSystem
 import play.api.Play
 import play.api.db.DB
 
-case class MavenDbInfo() extends DbInfo {
+case class CuratorDbInfo() extends DbInfo {
   def masterDatabase = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
 
   override def slaveDatabase = None
@@ -17,7 +17,7 @@ case class MavenDbInfo() extends DbInfo {
   def driverName = Play.current.configuration.getString("db.shoebox.driver").get
 }
 
-case class MavenSlickModule() extends SlickModule(MavenDbInfo()) {
+case class CuratorSlickModule() extends SlickModule(CuratorDbInfo()) {
   @Provides @Singleton
   def dbExecutionContextProvider(system: ActorSystem): DbExecutionContext =
     DbExecutionContext(system.dispatchers.lookup("db-thread-pool-dispatcher"))

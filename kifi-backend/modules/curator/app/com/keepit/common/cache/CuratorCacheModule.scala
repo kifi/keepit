@@ -8,7 +8,7 @@ import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, Activ
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
 
-case class MavenCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
+case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
 
   @Singleton
   @Provides

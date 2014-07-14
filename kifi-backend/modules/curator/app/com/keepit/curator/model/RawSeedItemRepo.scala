@@ -1,4 +1,4 @@
-package com.keepit.maven.model
+package com.keepit.curator.model
 
 import com.keepit.common.db.slick.{ DbRepo, SeqNumberFunction, SeqNumberDbFunction, DataBaseComponent, Database }
 import com.keepit.common.db.{ Id, DbSequenceAssigner }

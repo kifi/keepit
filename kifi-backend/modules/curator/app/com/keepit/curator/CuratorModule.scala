@@ -1,13 +1,13 @@
-package com.keepit.maven
+package com.keepit.curator
 
 import com.keepit.common.cache.CacheModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.social.RemoteSecureSocialModule
 
-abstract class MavenModule(
+abstract class CuratorModule(
     val cacheModule: CacheModule) extends ConfigurationModule with CommonServiceModule {
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val secureSocialModule = RemoteSecureSocialModule()
-  val mavenSlickModule = MavenSlickModule()
+  val curatorSlickModule = CuratorSlickModule()
 }

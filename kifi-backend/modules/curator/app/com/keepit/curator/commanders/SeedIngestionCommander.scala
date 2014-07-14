@@ -1,4 +1,4 @@
-package com.keepit.maven.commanders
+package com.keepit.curator.commanders
 
 import com.google.inject.Inject
 
