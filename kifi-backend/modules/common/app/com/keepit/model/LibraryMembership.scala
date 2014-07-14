@@ -50,10 +50,18 @@ class LibraryMembershipIdCache(stats: CacheStatistics, accessLog: AccessLog, inn
 
 object LibraryMembershipStates extends States[LibraryMembership]
 
-case class LibraryAccess(value: String)
+sealed abstract class LibraryAccess(val value: String)
+
 object LibraryAccess {
+  case object READ_ONLY extends LibraryAccess("read_only")
+  case object READ_WRITE extends LibraryAccess("read_write")
+
   implicit def format[T]: Format[LibraryAccess] =
     Format(__.read[String].map(LibraryAccess(_)), new Writes[LibraryAccess] { def writes(o: LibraryAccess) = JsString(o.value) })
-  val READ_ONLY = LibraryAccess("read_only")
-  val READ_WRITE = LibraryAccess("read_write")
+
+  def apply(str: String) = { str match {
+      case READ_ONLY.value => READ_ONLY
+      case READ_WRITE.value => READ_WRITE
+    }
+  }
 }
