@@ -63,13 +63,13 @@ object ServiceType {
 
   case object CORTEX extends ServiceType("CORTEX", "CT", loadFactor = 5)
 
-  case object MAVEN extends ServiceType("MAVEN", "MV", loadFactor = 1) {
+  case object CURATOR extends ServiceType("CURATOR", "MV", loadFactor = 1) {
     override val minInstances = 0
     override val warnInstances = 0
   }
 
   // Possible initialization cycle/deadlock when one of the case objects above is first dereferenced before the ServiceType object
-  lazy val inProduction: List[ServiceType] = SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: SCRAPER :: CORTEX :: GRAPH :: MAVEN :: Nil
+  lazy val inProduction: List[ServiceType] = SEARCH :: SHOEBOX :: ELIZA :: HEIMDAL :: ABOOK :: SCRAPER :: CORTEX :: GRAPH :: CURATOR :: Nil
   lazy val notInProduction: List[ServiceType] = DEV_MODE :: TEST_MODE :: C_SHOEBOX :: Nil
   lazy val all: List[ServiceType] = inProduction ::: notInProduction
   lazy val fromString: Map[String, ServiceType] = all.map(serviceType => serviceType.name -> serviceType).toMap

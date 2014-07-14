@@ -151,7 +151,7 @@ object ApplicationBuild extends Build {
 
   lazy val graphDependencies = Seq()
 
-  lazy val mavenDependencies = Seq()
+  lazy val curatorDependencies = Seq()
 
   lazy val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
     "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
@@ -274,8 +274,8 @@ object ApplicationBuild extends Build {
     commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-graph.conf"): _*
   ).dependsOn(common % "test->test;compile->compile")
 
-  lazy val maven = play.Project("maven", appVersion, mavenDependencies, path=file("modules/maven")).settings(
-    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-maven.conf"): _*
+  lazy val curator = play.Project("curator", appVersion, curatorDependencies, path=file("modules/curator")).settings(
+    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-curator.conf"): _*
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val kifiBackend = play.Project(appName, "0.42").settings(commonSettings: _*)
@@ -297,12 +297,12 @@ object ApplicationBuild extends Build {
     scraper % "test->test;compile->compile",
     cortex % "test->test;compile->compile",
     graph % "test->test;compile->compile",
-    maven % "test->test;compile->compile")
-    .aggregate(common, shoebox, search, eliza, heimdal, abook, scraper, sqldb, cortex, graph, maven)
+    curator % "test->test;compile->compile")
+    .aggregate(common, shoebox, search, eliza, heimdal, abook, scraper, sqldb, cortex, graph, curator)
 
   lazy val distProject = Project(id = "dist", base = file("./.dist"))
     .settings(aggregate in update := false)
-    .aggregate(search, shoebox, eliza, heimdal, abook, scraper, cortex, graph, maven)
+    .aggregate(search, shoebox, eliza, heimdal, abook, scraper, cortex, graph, curator)
 
   override def rootProject = Some(kifiBackend)
 }
