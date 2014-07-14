@@ -1,0 +1,50 @@
+package com.keepit.cortex.dbmodel
+
+import com.keepit.common.db.slick._
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.time._
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.db.Id
+import com.keepit.cortex.core.ModelVersion
+import com.keepit.cortex.models.lda.DenseLDA
+import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.cortex.sql.CortexTypeMappers
+import com.keepit.model.User
+import org.joda.time.DateTime
+
+@ImplementedBy(classOf[UserLDATopicRepoImpl])
+trait UserLDATopicRepo extends DbRepo[UserLDATopic] {
+  def getByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserTopicMean]
+  def getUpdateTime(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[DateTime]
+}
+
+@Singleton
+class UserLDATopicRepoImpl @Inject() (
+    val db: DataBaseComponent,
+    val clock: Clock,
+    airbrake: AirbrakeNotifier) extends DbRepo[UserLDATopic] with UserLDATopicRepo with CortexTypeMappers {
+
+  import db.Driver.simple._
+
+  type RepoImpl = UserLDATopicTable
+
+  class UserLDATopicTable(tag: Tag) extends RepoTable[UserLDATopic](db, tag, "user_lda_topic") {
+    def userId = column[Id[User]]("user_id")
+    def version = column[ModelVersion[DenseLDA]]("version")
+    def userTopicMean = column[UserTopicMean]("user_topic_mean", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, userId, version, userTopicMean.?, state) <> ((UserLDATopic.apply _).tupled, UserLDATopic.unapply _)
+  }
+
+  def table(tag: Tag) = new UserLDATopicTable(tag)
+  initTable()
+
+  def deleteCache(model: UserLDATopic)(implicit session: RSession): Unit = {}
+  def invalidateCache(model: UserLDATopic)(implicit session: RSession): Unit = {}
+
+  def getByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserTopicMean] = {
+    (for { r <- rows if (r.userId === userId && r.version === version) } yield r.userTopicMean).firstOption
+  }
+  def getUpdateTime(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[DateTime] = {
+    (for { r <- rows if (r.userId === userId && r.version === version) } yield r.updatedAt).firstOption
+  }
+}
