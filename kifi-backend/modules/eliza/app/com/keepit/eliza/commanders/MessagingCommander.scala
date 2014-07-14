@@ -2,13 +2,13 @@ package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
 
-import com.keepit.abook.{ RichContact, ABookServiceClient }
+import com.keepit.abook.{ ABookServiceClient }
 import com.keepit.eliza.model._
 import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, EmailAddress, BasicContact }
+import com.keepit.common.mail.BasicContact
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext

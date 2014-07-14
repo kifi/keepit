@@ -1,4 +1,4 @@
-package com.keepit.commanders
+package com.keepit.abook.commanders
 
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier

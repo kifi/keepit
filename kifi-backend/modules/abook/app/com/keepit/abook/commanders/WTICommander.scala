@@ -1,4 +1,4 @@
-package com.keepit.commanders
+package com.keepit.abook.commanders
 
 import com.keepit.abook.model.{ RichSocialConnection, RichSocialConnectionRepo }
 import com.keepit.model.{ SocialUserInfo, User }

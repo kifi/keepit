@@ -3,10 +3,10 @@ package com.keepit.abook
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{ InMemoryCachePlugin, FortyTwoCachePlugin }
 import com.keepit.common.healthcheck._
-import com.keepit.commanders.{ EmailAccountUpdaterPlugin, LocalRichConnectionCommander }
 import play.api.Mode._
 import play.api._
 import com.keepit.abook.model.EmailAccountSequencingPlugin
+import com.keepit.abook.commanders.{ LocalRichConnectionCommander, EmailAccountUpdaterPlugin }
 
 object ABookGlobal extends FortyTwoGlobal(Prod) with ABookServices {
   val module = ABookProdModule()
