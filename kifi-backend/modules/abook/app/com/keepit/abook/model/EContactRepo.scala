@@ -1,19 +1,22 @@
 package com.keepit.abook.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ DbSequenceAssigner, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
-import com.keepit.common.performance._
 import com.keepit.common.time._
 import com.keepit.model._
-import scala.slick.jdbc.{ StaticQuery => Q }
+import scala.slick.jdbc.StaticQuery
 import scala.slick.util.CloseableIterator
+import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
+import com.keepit.common.actor.ActorInstance
+import scala.concurrent.duration._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 @ImplementedBy(classOf[EContactRepoImpl])
-trait EContactRepo extends Repo[EContact] {
+trait EContactRepo extends Repo[EContact] with SeqNumberFunction[EContact] {
   def bulkGetByIds(ids: Seq[Id[EContact]])(implicit session: RSession): Map[Id[EContact], EContact]
   def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Seq[EContact]
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[EContact]
@@ -30,13 +33,13 @@ class EContactRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     econtactCache: EContactCache,
-    override protected val changeListener: Option[RepoModification.Listener[EContact]]) extends DbRepo[EContact] with EContactRepo with Logging {
+    override protected val changeListener: Option[RepoModification.Listener[EContact]]) extends DbRepo[EContact] with SeqNumberDbFunction[EContact] with EContactRepo with Logging {
 
   import DBSession._
   import db.Driver.simple._
 
   type RepoImpl = EContactTable
-  class EContactTable(tag: Tag) extends RepoTable[EContact](db, tag, "econtact") {
+  class EContactTable(tag: Tag) extends RepoTable[EContact](db, tag, "econtact") with SeqNumberColumn[EContact] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def abookId = column[Id[ABookInfo]]("abook_id", O.NotNull)
     def emailAccountId = column[Id[EmailAccount]]("email_account_id", O.NotNull)
@@ -45,10 +48,26 @@ class EContactRepoImpl @Inject() (
     def name = column[String]("name", O.Nullable)
     def firstName = column[String]("first_name", O.Nullable)
     def lastName = column[String]("last_name", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, abookId, emailAccountId, email, contactUserId.?, name.?, firstName.?, lastName.?, state) <> ((EContact.apply _).tupled, EContact.unapply _)
+    def * = (id.?, createdAt, updatedAt, userId, abookId, emailAccountId, email, contactUserId.?, name.?, firstName.?, lastName.?, state, seq) <> ((EContact.apply _).tupled, EContact.unapply _)
   }
 
   def table(tag: Tag) = new EContactTable(tag)
+
+  private val sequence = db.getSequence[EContact]("econtact_sequence")
+
+  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
+    assignSequenceNumbers(sequence, "econtact", limit)
+  }
+
+  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
+    import StaticQuery.interpolation
+    sql"""select min(seq) from econtact where seq < 0""".as[Option[Long]].first
+  }
+
+  override def save(contact: EContact)(implicit session: RWSession): EContact = {
+    val toSave = contact.copy(seq = deferredSeqNum())
+    super.save(toSave)
+  }
 
   override def deleteCache(e: EContact)(implicit session: RSession): Unit = {
     e.id map { id =>
@@ -98,7 +117,7 @@ class EContactRepoImpl @Inject() (
   }
 
   def getEContactCount(userId: Id[User])(implicit session: RSession): Int = {
-    Q.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first
+    StaticQuery.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first
   }
 
   def getByAbookIdAndEmailId(abookId: Id[ABookInfo], emailId: Id[EmailAccount])(implicit session: RSession): Option[EContact] = {
@@ -109,8 +128,9 @@ class EContactRepoImpl @Inject() (
     (for (row <- rows if row.abookId === abookId) yield row).list
   }
 
-  def insertAll(contacts: Seq[EContact])(implicit session: RWSession): Int = timing(s"econtactRepo.insertAll #contacts=${contacts.length}") {
-    rows.insertAll(contacts: _*).get
+  def insertAll(contacts: Seq[EContact])(implicit session: RWSession): Int = {
+    val toBeInserted = contacts.map(_.copy(seq = deferredSeqNum()))
+    rows.insertAll(toBeInserted: _*).get
   }
 
   def updateOwnership(emailAccountId: Id[EmailAccount], verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int = {
@@ -131,3 +151,20 @@ class EContactRepoImpl @Inject() (
     updated > 0
   }
 }
+
+trait EContactSequencingPlugin extends SequencingPlugin
+
+class EContactSequencingPluginImpl @Inject() (
+    override val actor: ActorInstance[EContactSequencingActor],
+    override val scheduling: SchedulingProperties) extends EContactSequencingPlugin {
+
+  override val interval: FiniteDuration = 20 seconds
+}
+
+@Singleton
+class EContactSequenceNumberAssigner @Inject() (db: Database, repo: EContactRepo, airbrake: AirbrakeNotifier)
+  extends DbSequenceAssigner[EContact](db, repo, airbrake)
+
+class EContactSequencingActor @Inject() (
+  assigner: EContactSequenceNumberAssigner,
+  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)

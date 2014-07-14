@@ -137,7 +137,6 @@ module.exports = function (grunt) {
 					cleancss: true
 				},
 				files: {
-					'<%= p.css %>/landing.css': '<%= p.css %>/landing.less',
 					'<%= p.css %>/about.css': '<%= p.css %>/about.less',
 					'<%= p.css %>/privacy.css': '<%= p.css %>/privacy.less',
 					'<%= p.css %>/auth.css': '<%= p.css %>/auth.less',

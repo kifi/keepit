@@ -1,7 +1,6 @@
-package com.keepit.abook
+package com.keepit.abook.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.db.slick.Database
 import com.keepit.abook.store.ABookRawInfoStore
 import com.keepit.common.db.Id
 import com.keepit.common.performance._
@@ -10,7 +9,6 @@ import play.api.libs.json.{ JsObject, JsArray, Json, JsValue }
 import scala.ref.WeakReference
 import com.keepit.common.logging.{ LogPrefix, Logging }
 import scala.concurrent._
-import scala.concurrent.duration._
 import com.keepit.common.time._
 import com.keepit.common.db.slick._
 import scala.util.Failure
@@ -23,8 +21,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.xml.Elem
 import com.keepit.abook.typeahead.EContactTypeahead
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
-import com.keepit.commanders.ContactInterner
 import com.keepit.abook.model.{ EContactRepo, EContact }
+import com.keepit.abook.controllers.{ ABookOwnerInfo, GmailABookOwnerInfo }
+import com.keepit.abook.{ ABookImporterPlugin, ABookInfoRepo }
 
 class ABookCommander @Inject() (
     db: Database,

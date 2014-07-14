@@ -1,7 +1,6 @@
-package com.keepit.abook
+package com.keepit.abook.controllers
 
 import com.keepit.common.controller.ABookServiceController
-import com.keepit.commanders.WTICommander
 import com.keepit.common.db.Id
 import com.keepit.model.{ SocialUserInfo, User }
 
@@ -9,8 +8,8 @@ import play.api.libs.json.{ JsNumber, Json }
 import play.api.mvc.Action
 
 import com.google.inject.Inject
-import com.keepit.abook.model.RichSocialConnection
 import com.keepit.common.mail.EmailAddress
+import com.keepit.abook.commanders.WTICommander
 
 class ABookWTIController @Inject() (wtiCommander: WTICommander) extends ABookServiceController {
 

@@ -8,7 +8,7 @@ import com.keepit.common.controller.{ ShoeboxServiceController, MobileController
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsString }
-import com.keepit.abook.RichContact
+import com.keepit.abook.model.RichContact
 
 class MobileContactsController @Inject() (
   actionAuthenticator: ActionAuthenticator,
