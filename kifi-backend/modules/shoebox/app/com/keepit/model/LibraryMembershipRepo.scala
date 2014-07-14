@@ -34,12 +34,6 @@ class LibraryMembershipRepoImpl @Inject() (
 
   initTable()
 
-  private val getCompiled = {
-    def getLibraryMember(id: Column[Id[LibraryMembership]]) =
-      for (f <- rows if f.id is id) yield f
-    Compiled(getLibraryMember _)
-  }
-
   override def get(id: Id[LibraryMembership])(implicit session: RSession): LibraryMembership = {
     memberIdCache.getOrElse(LibraryMembershipIdKey(id)) {
       getCompiled(id).first

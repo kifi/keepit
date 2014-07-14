@@ -98,11 +98,13 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
     session.timeCheck()
   }
 
+  protected val getCompiled = Compiled { id: Column[Id[M]] =>
+    for (f <- rows if f.id is id) yield f
+  }
   def get(id: Id[M])(implicit session: RSession): M = {
     val startTime = System.currentTimeMillis()
-    val model = (for (f <- rows if f.id is id) yield f).first
+    val model = getCompiled(id).first
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\tsessionId:${session.sessionId}\ttype:GET\tduration:$time\tmodel:${model.getClass.getSimpleName}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     checkTiming(time, "GET", model)
     model
   }
@@ -110,6 +112,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   def all()(implicit session: RSession): Seq[M] = rows.list()
 
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[M]] = Set.empty[State[M]])(implicit session: RSession): Seq[M] = {
+    // todo(Andrew): When Slick 2.1 is released, convert to Compiled query (upgrade necessary for .take & .drop)
     val q = for {
       t <- rows if !t.state.inSet(excludeStates)
     } yield t
@@ -215,6 +218,7 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
   protected def rowsWithSeq = TableQuery(tableWithSeq)
 
   def getBySequenceNumber(lowerBound: SequenceNumber[M], fetchSize: Int = -1)(implicit session: RSession): Seq[M] = {
+    // todo(Andrew): When Slick 2.1 is released, convert to Compiled query (upgrade necessary for .take)
     val q = (for (t <- rowsWithSeq if t.seq > lowerBound) yield t).sortBy(_.seq)
     if (fetchSize > 0) q.take(fetchSize).list else q.list
   }
@@ -232,6 +236,7 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
   }
 
   protected def assignSequenceNumbers(sequence: DbSequence[M], tableName: String, limit: Int)(implicit session: RWSession): Int = {
+    // todo(Andrew): When Slick 2.1 is released, convert to Compiled query (upgrade necessary for .take)
     val zero = SequenceNumber.ZERO[M]
     val ids = (for (t <- rowsWithSeq if t.seq < zero) yield t).sortBy(_.seq).map(_.id).take(limit).list
     val numIds = ids.size
@@ -280,11 +285,13 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends ExternalId
 
   def get(id: ExternalId[M])(implicit session: RSession): M = getOpt(id).get
 
+  protected val getByExtIdCompiled = Compiled { id: Column[ExternalId[M]] =>
+    for (f <- rowsWithExternalIdColumn if f.externalId is id) yield f
+  }
   def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = {
     val startTime = System.currentTimeMillis()
-    val model = (for (f <- rowsWithExternalIdColumn if f.externalId === id) yield f).firstOption
+    val model = getByExtIdCompiled(id).firstOption
     val time = System.currentTimeMillis - startTime
-    dbLog.info(s"t:${clock.now}\tsessionId:${session.sessionId}\ttype:GET-EXT\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
     model
   }
 }
