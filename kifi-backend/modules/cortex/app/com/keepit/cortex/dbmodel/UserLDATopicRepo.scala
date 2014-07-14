@@ -13,7 +13,7 @@ import com.keepit.model.User
 import org.joda.time.DateTime
 
 @ImplementedBy(classOf[UserLDATopicRepoImpl])
-trait UserLDATopicRepo extends DbRepo[UserLDATopic] {
+trait UserLDATopicRepo extends DbRepo[UserLDAInterests] {
   def getByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserTopicMean]
   def getUpdateTime(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[DateTime]
 }
@@ -22,24 +22,24 @@ trait UserLDATopicRepo extends DbRepo[UserLDATopic] {
 class UserLDATopicRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    airbrake: AirbrakeNotifier) extends DbRepo[UserLDATopic] with UserLDATopicRepo with CortexTypeMappers {
+    airbrake: AirbrakeNotifier) extends DbRepo[UserLDAInterests] with UserLDATopicRepo with CortexTypeMappers {
 
   import db.Driver.simple._
 
   type RepoImpl = UserLDATopicTable
 
-  class UserLDATopicTable(tag: Tag) extends RepoTable[UserLDATopic](db, tag, "user_lda_topic") {
+  class UserLDATopicTable(tag: Tag) extends RepoTable[UserLDAInterests](db, tag, "user_lda_interests") {
     def userId = column[Id[User]]("user_id")
     def version = column[ModelVersion[DenseLDA]]("version")
     def userTopicMean = column[UserTopicMean]("user_topic_mean", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, version, userTopicMean.?, state) <> ((UserLDATopic.apply _).tupled, UserLDATopic.unapply _)
+    def * = (id.?, createdAt, updatedAt, userId, version, userTopicMean.?, state) <> ((UserLDAInterests.apply _).tupled, UserLDAInterests.unapply _)
   }
 
   def table(tag: Tag) = new UserLDATopicTable(tag)
   initTable()
 
-  def deleteCache(model: UserLDATopic)(implicit session: RSession): Unit = {}
-  def invalidateCache(model: UserLDATopic)(implicit session: RSession): Unit = {}
+  def deleteCache(model: UserLDAInterests)(implicit session: RSession): Unit = {}
+  def invalidateCache(model: UserLDAInterests)(implicit session: RSession): Unit = {}
 
   def getByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserTopicMean] = {
     (for { r <- rows if (r.userId === userId && r.version === version) } yield r.userTopicMean).firstOption
