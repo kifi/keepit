@@ -54,7 +54,7 @@ object EContact {
 
   def toRichContact(econtact: EContact): RichContact = RichContact(econtact.email, econtact.name, econtact.firstName, econtact.lastName, econtact.contactUserId)
 
-  implicit def toIngestableContactSeq(seq: SequenceNumber[EContact]): SequenceNumber[IngestableContact] = SequenceNumber(seq.value)
+  implicit def toIngestableContactSeq(seq: SequenceNumber[EContact]): SequenceNumber[IngestableContact] = seq.copy()
   def toIngestable(econtact: EContact): IngestableContact = {
     IngestableContact(
       userId = econtact.userId,

@@ -5,7 +5,7 @@ import com.keepit.common.cache.{ InMemoryCachePlugin, FortyTwoCachePlugin }
 import com.keepit.common.healthcheck._
 import play.api.Mode._
 import play.api._
-import com.keepit.abook.model.{EContactSequencingPlugin, EmailAccountSequencingPlugin}
+import com.keepit.abook.model.{ EContactSequencingPlugin, EmailAccountSequencingPlugin }
 import com.keepit.abook.commanders.{ LocalRichConnectionCommander, EmailAccountUpdaterPlugin }
 
 object ABookGlobal extends FortyTwoGlobal(Prod) with ABookServices {
