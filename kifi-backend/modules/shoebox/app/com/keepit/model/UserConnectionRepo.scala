@@ -11,6 +11,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.serializer.TraversableFormat
 import scala.slick.jdbc.StaticQuery
+import com.keepit.typeahead.socialusers.KifiUserTypeahead
 
 @ImplementedBy(classOf[UserConnectionRepoImpl])
 trait UserConnectionRepo extends Repo[UserConnection] with SeqNumberFunction[UserConnection] {
@@ -36,11 +37,12 @@ class UnfriendedConnectionsCache(stats: CacheStatistics, accessLog: AccessLog, i
 class UserConnectionRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  val friendRequestRepo: FriendRequestRepo,
-  val connCountCache: UserConnectionCountCache,
-  val userConnCache: UserConnectionIdCache,
-  val unfriendedCache: UnfriendedConnectionsCache,
-  val searchFriendsCache: SearchFriendsCache,
+  friendRequestRepo: FriendRequestRepo,
+  connCountCache: UserConnectionCountCache,
+  userConnCache: UserConnectionIdCache,
+  unfriendedCache: UnfriendedConnectionsCache,
+  searchFriendsCache: SearchFriendsCache,
+  userTypeahead: KifiUserTypeahead,
   override protected val changeListener: Option[RepoModification.Listener[UserConnection]])
     extends DbRepo[UserConnection] with UserConnectionRepo with SeqNumberDbFunction[UserConnection] {
 
@@ -59,6 +61,9 @@ class UserConnectionRepoImpl @Inject() (
     connCountCache.remove(UserConnectionCountKey(userId))
     searchFriendsCache.remove(SearchFriendsKey(userId))
     unfriendedCache.remove(UnfriendedConnectionsKey(userId))
+    session.onTransactionSuccess {
+      userTypeahead.refresh(userId)
+    }
   }
 
   override def deleteCache(conn: UserConnection)(implicit session: RSession): Unit = {
