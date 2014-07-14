@@ -9,8 +9,8 @@ JAVA_HOME=/usr/local/java/jdk1.7.0_25
 USER=fortytwo
 [[ $(whoami) == $USER ]] || { echo "You must run this script as $USER"; exit 1; }
 
-serviceNameLo="maven"                                  # service name with the first letter in lowercase
-serviceName="Maven"                                    # service name
+serviceNameLo="curator"                                  # service name with the first letter in lowercase
+serviceName="Curator"                                    # service name
 serviceUser="fortytwo"                                      # OS user name for the service
 serviceGroup="fortytwo"                                    # OS group name for the service
 applDir="/home/$serviceUser/run/$serviceNameLo"                          # home directory of the service application

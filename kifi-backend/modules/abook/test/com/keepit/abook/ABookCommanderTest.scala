@@ -16,6 +16,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.mail.{ EmailAddress, BasicContact }
 import com.keepit.abook.model.{ EContactStates, EContactRepo }
+import com.keepit.abook.commanders.ABookCommander
 
 class ABookCommanderTest extends Specification with DbTestInjector with ABookTestHelper {
 
@@ -23,7 +24,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
 
   val modules = Seq(
     FakeABookStoreModule(),
-    TestContactsUpdaterPluginModule(),
+    TestABookImporterPluginModule(),
     TestABookServiceClientModule(),
     FakeShoeboxServiceModule(),
     TestSlickModule(TestDbInfo.dbInfo),

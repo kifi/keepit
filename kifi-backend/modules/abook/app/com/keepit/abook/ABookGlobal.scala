@@ -3,10 +3,10 @@ package com.keepit.abook
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{ InMemoryCachePlugin, FortyTwoCachePlugin }
 import com.keepit.common.healthcheck._
-import com.keepit.commanders.{ EmailAccountUpdaterPlugin, LocalRichConnectionCommander }
 import play.api.Mode._
 import play.api._
-import com.keepit.abook.model.EmailAccountSequencingPlugin
+import com.keepit.abook.model.{ EContactSequencingPlugin, EmailAccountSequencingPlugin }
+import com.keepit.abook.commanders.{ LocalRichConnectionCommander, EmailAccountUpdaterPlugin }
 
 object ABookGlobal extends FortyTwoGlobal(Prod) with ABookServices {
   val module = ABookProdModule()
@@ -29,5 +29,6 @@ trait ABookServices { self: FortyTwoGlobal =>
     require(injector.instance[FortyTwoCachePlugin] != null) //make sure its not lazy loaded
     require(injector.instance[InMemoryCachePlugin] != null) //make sure its not lazy loaded
     require(injector.instance[EmailAccountSequencingPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[EContactSequencingPlugin] != null) //make sure its not lazy loaded
   }
 }

@@ -20,10 +20,10 @@ import java.sql.SQLException
 import com.keepit.common.performance._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
-import com.keepit.commanders.ContactInterner
+import com.keepit.abook.commanders.ContactInterner
 
 trait ABookImporterPlugin extends Plugin {
-  def asyncProcessContacts(userId: Id[User], origin: ABookOriginType, aBookInfo: ABookInfo, s3Key: String, rawJsonRef: WeakReference[JsValue]): Unit
+  def asyncProcessContacts(userId: Id[User], origin: ABookOriginType, aBookInfo: ABookInfo, s3Key: String, rawJsonRef: Option[WeakReference[JsValue]]): Unit
 }
 
 @Singleton
@@ -36,13 +36,13 @@ class ABookImporterActorPlugin @Inject() (
   lazy val system = sysProvider.get
   lazy val actor = system.actorOf(Props(updaterActorProvider.get).withRouter(SmallestMailboxRouter(nrOfInstances)))
 
-  def asyncProcessContacts(userId: Id[User], origin: ABookOriginType, aBookInfo: ABookInfo, s3Key: String, rawJsonRef: WeakReference[JsValue]): Unit = {
+  def asyncProcessContacts(userId: Id[User], origin: ABookOriginType, aBookInfo: ABookInfo, s3Key: String, rawJsonRef: Option[WeakReference[JsValue]]): Unit = {
     actor ! ProcessABookUpload(userId, origin, aBookInfo, s3Key, rawJsonRef)
   }
 
 }
 
-case class ProcessABookUpload(userId: Id[User], origin: ABookOriginType, abookRepoEntry: ABookInfo, s3Key: String, rawJsonRef: WeakReference[JsValue])
+case class ProcessABookUpload(userId: Id[User], origin: ABookOriginType, abookRepoEntry: ABookInfo, s3Key: String, rawJsonRef: Option[WeakReference[JsValue]])
 
 class ABookImporterActor @Inject() (
     airbrake: AirbrakeNotifier,
@@ -71,14 +71,14 @@ class ABookImporter @Inject() (
     def trimOpt = o collect { case s: String if (s != null && !s.trim.isEmpty) => s }
   }
 
-  def processABookUpload(userId: Id[User], origin: ABookOriginType, abookInfo: ABookInfo, s3Key: String, rawJsonRef: WeakReference[JsValue]) = timing(s"upload($userId,$origin,$abookInfo,$s3Key)") {
+  def processABookUpload(userId: Id[User], origin: ABookOriginType, abookInfo: ABookInfo, s3Key: String, rawJsonRef: Option[WeakReference[JsValue]]) = timing(s"upload($userId,$origin,$abookInfo,$s3Key)") {
     implicit val prefix = LogPrefix(s"processABookUpload($userId,$origin,${abookInfo.id}})")
     log.infoP(s"abookInfo=$abookInfo s3Key=$s3Key: Begin processing ...")
     var abookEntry = abookInfo
     var processed = 0
     var batchNum = 0
     try {
-      val abookRawInfoOpt = rawJsonRef.get flatMap { js => js.asOpt[ABookRawInfo] } orElse { s3.get(s3Key) }
+      val abookRawInfoOpt = rawJsonRef.flatMap(_.get) flatMap { js => js.asOpt[ABookRawInfo] } orElse { s3.get(s3Key) }
       abookRawInfoOpt match {
         case None =>
           db.readWrite(attempts = 2) { implicit s =>

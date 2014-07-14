@@ -8,12 +8,12 @@ import com.google.inject.{ Singleton, Provides, Inject }
 import com.keepit.shoebox.{ FakeShoeboxServiceModule }
 
 class TestABookImporterPlugin @Inject() (contactsUpdater: ABookImporter) extends ABookImporterPlugin {
-  def asyncProcessContacts(userId: Id[User], origin: ABookOriginType, aBookInfo: ABookInfo, s3Key: String, rawJsonRef: WeakReference[JsValue]): Unit = {
+  def asyncProcessContacts(userId: Id[User], origin: ABookOriginType, aBookInfo: ABookInfo, s3Key: String, rawJsonRef: Option[WeakReference[JsValue]]): Unit = {
     contactsUpdater.processABookUpload(userId, origin, aBookInfo, s3Key, rawJsonRef)
   }
 }
 
-case class TestContactsUpdaterPluginModule() extends ContactsUpdaterPluginModule {
+case class TestABookImporterPluginModule() extends ABookImporterPluginModule {
   @Provides
   @Singleton
   def contactsUpdaterPlugin(cUpdater: ABookImporter): ABookImporterPlugin = new TestABookImporterPlugin(cUpdater)

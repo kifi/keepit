@@ -67,9 +67,14 @@ class EmailAccountRepoImpl @Inject() (
     val toBeInserted = (allByLowerCasedAddress -- lowerCasedExistingAddresses).values.map(address => EmailAccount(address = address)).toSeq
     if (toBeInserted.isEmpty) { existingAccounts }
     else {
-      rows.insertAll(toBeInserted: _*)
+      insertAll(toBeInserted)
       (for (row <- rows if row.address inSet (addresses)) yield row).list
     }
+  }
+
+  private def insertAll(emailAccounts: Seq[EmailAccount])(implicit session: RWSession): Int = {
+    val toBeInserted = emailAccounts.map(_.copy(seq = deferredSeqNum()))
+    rows.insertAll(toBeInserted: _*).get
   }
 
   def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]] = {

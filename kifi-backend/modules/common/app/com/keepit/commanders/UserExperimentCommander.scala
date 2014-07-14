@@ -15,6 +15,8 @@ import scala.concurrent.duration._
 
 import java.util.concurrent.{ TimeUnit, TimeoutException }
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
 trait UserExperimentCommander {
 
   protected val monitoredAwait: MonitoredAwait

@@ -5,7 +5,7 @@ import com.keepit.common.healthcheck.{ SystemAdminMailSender, AirbrakeNotifier }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.{ LogPrefix, Logging }
 import com.keepit.model._
-import com.keepit.abook.{ RichContact, ABookServiceClient }
+import com.keepit.abook.ABookServiceClient
 import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
 import com.keepit.common.db.Id
 import com.keepit.social.{ BasicUserWithUserId, SocialNetworkType, SocialNetworks }
@@ -20,6 +20,7 @@ import com.keepit.common.mail.EmailAddress
 import Logging.LoggerWithPrefix
 import scala.collection.mutable.ArrayBuffer
 import org.joda.time.DateTime
+import com.keepit.abook.model.RichContact
 
 case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
 

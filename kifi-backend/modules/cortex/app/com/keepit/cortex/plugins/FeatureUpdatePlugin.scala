@@ -57,7 +57,7 @@ abstract class BaseFeatureUpdatePlugin[K, T, M <: StatModel, FT <: FeatureRepres
 
 abstract class FeatureUpdateActor[K, T, M <: StatModel, FT <: FeatureRepresentation[T, M]](
     airbrake: AirbrakeNotifier,
-    updater: FeatureUpdater[K, T, M, FT]) extends FortyTwoActor(airbrake) {
+    updater: BaseFeatureUpdater[K, T, M, FT]) extends FortyTwoActor(airbrake) {
   import FeaturePluginMessages._
 
   def receive() = {
@@ -69,12 +69,16 @@ trait DataPuller[T] {
   def getSince(lowSeq: SequenceNumber[T], limit: Int): Seq[T]
 }
 
+trait BaseFeatureUpdater[K, T, M <: StatModel, FT <: FeatureRepresentation[T, M]] {
+  def update(): Unit
+}
+
 // K: key for versionedStore
 abstract class FeatureUpdater[K, T, M <: StatModel, FT <: FeatureRepresentation[T, M]](
     representer: FeatureRepresenter[T, M, FT],
     featureStore: VersionedStore[K, M, FT],
     commitInfoStore: CommitInfoStore[T, M],
-    dataPuller: DataPuller[T]) extends Logging {
+    dataPuller: DataPuller[T]) extends BaseFeatureUpdater[K, T, M, FT] with Logging {
 
   // abstract methods
   protected def getSeqNumber(datum: T): SequenceNumber[T]

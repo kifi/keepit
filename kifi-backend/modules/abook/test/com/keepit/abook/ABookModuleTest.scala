@@ -15,6 +15,7 @@ import play.api.test.Helpers.running
 import play.api.Play.current
 import scala.reflect.ManifestFactory.classType
 import scala.collection.JavaConversions._
+import com.keepit.abook.controllers.ABookController
 
 class DeprecatedABookApplication(global: DeprecatedTestRemoteGlobal)
     extends DeprecatedTestApplication(global, useDb = false, path = new File("./modules/abook/")) {

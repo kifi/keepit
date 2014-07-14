@@ -3,10 +3,10 @@ package com.keepit.abook
 import net.codingwell.scalaguice.ScalaModule
 
 import com.keepit.common.db.slick.RepoModification
-import com.keepit.commanders.LocalRichConnectionCommander
 
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.abook.model.EContact
+import com.keepit.abook.commanders.LocalRichConnectionCommander
 
 case class AbookRepoChangeListenerModule() extends ScalaModule {
   def configure(): Unit = {}
