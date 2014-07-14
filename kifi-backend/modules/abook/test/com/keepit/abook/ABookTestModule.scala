@@ -9,7 +9,7 @@ import com.keepit.shoebox.{ TestShoeboxServiceClientModule, ProdShoeboxServiceCl
 case class ABookTestModule() extends ABookModule(
   cacheModule = ABookCacheModule(HashMapMemoryCacheModule()),
   storeModule = FakeABookStoreModule(),
-  contactsUpdaterPluginModule = TestContactsUpdaterPluginModule(),
+  contactsUpdaterPluginModule = TestABookImporterPluginModule(),
   sqsModule = FakeSimpleQueueModule()
 ) with CommonDevModule {
   override val shoeboxServiceClientModule = TestShoeboxServiceClientModule()

@@ -65,7 +65,7 @@ private class RawKeepImporterActor @Inject() (
   }
 
   def fetchOldBatch() = {
-    db.readOnlyMaster { implicit session =>
+    db.readOnlyReplica { implicit session =>
       rawKeepRepo.getOldUnprocessed(batchSize, clock.now.minusMinutes(20))
     }
   }
@@ -97,7 +97,7 @@ private class RawKeepImporterActor @Inject() (
         if (successes.nonEmpty) {
           if (source == KeepSource.bookmarkImport && installationId.isDefined) {
             // User selected to import Léo
-            val tagName = db.readOnlyMaster { implicit session =>
+            val tagName = db.readOnlyReplica { implicit session =>
               "Imported" + kifiInstallationRepo.getOpt(installationId.get).map(v => s" from ${v.userAgent.name}").getOrElse("")
             }
             val tag = bookmarksCommanderProvider.get.getOrCreateTag(userId, tagName)(context)

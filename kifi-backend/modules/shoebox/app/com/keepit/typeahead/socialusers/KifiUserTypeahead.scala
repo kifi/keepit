@@ -28,11 +28,10 @@ class KifiUserTypeahead @Inject() (
     userRepo: UserRepo,
     userConnectionRepo: UserConnectionRepo,
     UserCache: UserIdCache) extends Typeahead[User, User] with Logging { // User as info might be too heavy
-
   implicit val fj = ExecutionContext.fj
 
   def refreshAll(): Future[Unit] = {
-    val userIds = db.readOnlyMaster { implicit ro =>
+    val userIds = db.readOnlyReplica { implicit ro =>
       userRepo.getAllActiveIds()
     }
     refreshByIds(userIds)

@@ -23,12 +23,12 @@ class AdminURIGraphController @Inject() (
 
   def update(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     // bump up seqNum
-    val bookmarks = db.readOnlyMaster { implicit s => keepRepo.getByUser(userId) }
+    val bookmarks = db.readOnlyReplica { implicit s => keepRepo.getByUser(userId) }
     bookmarks.grouped(1000).foreach { group =>
       db.readWrite { implicit s => group.foreach(keepRepo.save) }
     }
 
-    val collections = db.readOnlyMaster(implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId))
+    val collections = db.readOnlyReplica(implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId))
     collections.grouped(1000).foreach { group =>
       db.readWrite(implicit s => group.foreach(collectionRepo.save))
     }
@@ -47,7 +47,7 @@ class AdminURIGraphController @Inject() (
   }
 
   def dumpCollectionLuceneDocument(id: Id[Collection]) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    val collection = db.readOnlyMaster { implicit s => collectionRepo.get(id) }
+    val collection = db.readOnlyReplica { implicit s => collectionRepo.get(id) }
     searchClient.dumpLuceneCollection(id, collection.userId).map(Ok(_))
   }
 }

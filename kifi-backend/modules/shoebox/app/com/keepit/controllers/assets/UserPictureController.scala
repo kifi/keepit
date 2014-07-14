@@ -29,7 +29,7 @@ class UserPictureController @Inject() (
 
   def getPic(size: String, id: ExternalId[User], picName: String) = Action.async { request =>
     val trimmedName = if (picName.endsWith(".jpg")) picName.dropRight(4) else picName
-    db.readOnlyMaster { implicit s => userRepo.getOpt(id) } collect {
+    db.readOnlyReplica { implicit s => userRepo.getOpt(id) } collect {
       case user if Set(UserStates.ACTIVE, UserStates.PENDING, UserStates.INCOMPLETE_SIGNUP) contains user.state =>
         val optSize = if (size == "original") None else Try(size.toInt).toOption
         imageStore.getPictureUrl(optSize, user, trimmedName) map (Redirect(_))
@@ -39,7 +39,7 @@ class UserPictureController @Inject() (
   }
 
   def get(size: Int, id: ExternalId[User]) = Action.async { request =>
-    db.readOnlyMaster { implicit s => userRepo.getOpt(id) } collect {
+    db.readOnlyReplica { implicit s => userRepo.getOpt(id) } collect {
       case user if Set(UserStates.ACTIVE, UserStates.PENDING, UserStates.INCOMPLETE_SIGNUP) contains user.state =>
         val optSize = Some(size)
         user.pictureName.map { pictureName =>
@@ -55,9 +55,9 @@ class UserPictureController @Inject() (
   def update() = HtmlAction.authenticatedAsync { request =>
     if (request.experiments.contains(ExperimentType.ADMIN)) {
       Future.sequence(for {
-        user <- db.readOnlyMaster { implicit s => userRepo.allExcluding(UserStates.INACTIVE) }
+        user <- db.readOnlyReplica { implicit s => userRepo.allExcluding(UserStates.INACTIVE) }
       } yield {
-        val socialUser = db.readOnlyMaster { implicit s => suiRepo.getByUser(user.id.get) }.head
+        val socialUser = db.readOnlyReplica { implicit s => suiRepo.getByUser(user.id.get) }.head
         imageStore.uploadPictureFromSocialNetwork(socialUser, user.externalId, setDefault = false).map(_ => socialUser.socialId)
       }).map { results =>
         Ok(results.mkString(","))

@@ -50,7 +50,7 @@ class CollectionCommander @Inject() (
 
   def allCollections(sort: String, userId: Id[User]) = {
     log.info(s"Getting all collections for $userId (sort $sort)")
-    val unsortedCollections = db.readOnlyMaster { implicit s =>
+    val unsortedCollections = db.readOnlyReplica { implicit s =>
       val colls = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(userId)
       val bmCounts = collectionRepo.getBookmarkCounts(colls.map(_.id).toSet)
       colls.map { c => BasicCollection.fromCollection(c, bmCounts.get(c.id).orElse(Some(0))) }
@@ -203,7 +203,7 @@ class CollectionCommander @Inject() (
   }
 
   def getBasicCollections(ids: Seq[Id[Collection]]): Seq[BasicCollection] = { //ZZZ needs a cache for he basic collection by id
-    db.readOnlyMaster { implicit session =>
+    db.readOnlyReplica { implicit session =>
       ids.map { id =>
         basicCollectionCache.getOrElse(BasicCollectionByIdKey(id)) {
           val collection = collectionRepo.get(id)

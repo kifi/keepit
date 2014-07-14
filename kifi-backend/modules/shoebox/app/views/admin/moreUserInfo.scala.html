@@ -3,7 +3,7 @@
   socialUserInfos: Seq[SocialUserInfo],
   socialConnections: Seq[SocialUserInfo],
   abookInfos: Seq[ABookInfo],
-  contacts: Seq[com.keepit.abook.RichContact]
+  contacts: Seq[com.keepit.abook.model.RichContact]
 )
 
 @admin("User: " + user.firstName + " " + user.lastName) {
@@ -52,9 +52,9 @@
     <h3>Active Contacts (total = @contacts.size)</h3>
     <div class="scrollArea">
         <table class="table table-condensed table-striped">
-            <tr><th>Name</th><th>Email</th><th>ContactUserId</th></tr>
+            <tr><th>Email</th><th>Name</th><th>ContactUserId</th></tr>
             @for(contact <- contacts) {
-            <tr><td><td>@contact.name</td><td>@contact.email</td><td>@contact.userId</td></tr>
+            <tr><td>@contact.email</td><td>@contact.name</td><td>@contact.userId</td></tr>
             }
         </table>
     </div>

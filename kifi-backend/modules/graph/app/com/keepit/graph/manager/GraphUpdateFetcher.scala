@@ -9,7 +9,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.abook.ABookServiceClient
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ NormalizedURI, UserConnection, User }
+import com.keepit.model.NormalizedURI
 import com.keepit.common.ImmediateMap
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.models.lda.DenseLDA
@@ -49,6 +49,10 @@ class GraphUpdateFetcherImpl @Inject() (
       }
 
       case NormalizedUriGraphUpdate => shoebox.getIndexableUris(seq.copy(), fetchSize).imap(_.map(NormalizedUriGraphUpdate.apply))
+
+      case EmailAccountGraphUpdate => abook.getEmailAccountsChanged(seq.copy(), fetchSize).imap(_.map(EmailAccountGraphUpdate.apply))
+
+      case EmailContactGraphUpdate => abook.getContactsChanged(seq.copy(), fetchSize).imap(_.map(EmailContactGraphUpdate.apply))
     }
   }
 }

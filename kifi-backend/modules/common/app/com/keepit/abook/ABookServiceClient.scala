@@ -2,7 +2,7 @@ package com.keepit.abook
 
 // import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.model._
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.{ SequenceNumber, ExternalId, Id }
 import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -22,14 +22,9 @@ import com.google.inject.util.Providers
 import com.keepit.common.routes.ABook
 import scala.util.{ Success, Failure, Try }
 import play.api.http.Status
-import com.keepit.abook.model.RichSocialConnection
+import com.keepit.abook.model.{ IngestableContact, IngestableEmailAccount, RichContact, RichSocialConnection }
 import com.keepit.common.mail.{ EmailAddress, BasicContact }
 import com.keepit.typeahead.TypeaheadHit
-
-case class RichContact(email: EmailAddress, name: Option[String] = None, firstName: Option[String] = None, lastName: Option[String] = None, userId: Option[Id[User]] = None)
-object RichContact {
-  implicit val format = Json.format[RichContact]
-}
 
 trait ABookServiceClient extends ServiceClient {
 
@@ -48,7 +43,6 @@ trait ABookServiceClient extends ServiceClient {
   def getEContactCount(userId: Id[User]): Future[Int]
   def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]]
   def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]]
-  def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]]
   def refreshPrefixFilter(userId: Id[User]): Future[Unit]
   def refreshPrefixFiltersByIds(userIds: Seq[Id[User]]): Future[Unit]
   def refreshAllFilters(): Future[Unit]
@@ -57,12 +51,13 @@ trait ABookServiceClient extends ServiceClient {
   def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]]
   def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int]
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]]
-  def validateAllContacts(readOnly: Boolean): Unit
   def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean]
   def getContactNameByEmail(userId: Id[User], email: EmailAddress): Future[Option[String]]
   def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact]
   def prefixQuery(userId: Id[User], query: String, maxHits: Option[Int] = None): Future[Seq[TypeaheadHit[RichContact]]]
   def getContactsByUser(userId: Id[User], page: Int = 0, pageSize: Option[Int] = None): Future[Seq[RichContact]]
+  def getEmailAccountsChanged(seqNum: SequenceNumber[IngestableEmailAccount], fetchSize: Int): Future[Seq[IngestableEmailAccount]]
+  def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -162,15 +157,6 @@ class ABookServiceClientImpl @Inject() (
     }
   }
 
-  def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = {
-    call(ABook.internal.queryEContacts(userId, limit, search, after)).map { r =>
-      r.status match {
-        case Status.OK => Json.fromJson[Seq[EContact]](r.json).get
-        case _ => throw new IllegalStateException(s"[queryEContacts($userId,$limit,$search,$after)] failed with ${r.status}; body=${r.body}")
-      }
-    }
-  }
-
   def prefixQuery(userId: Id[User], query: String, maxHits: Option[Int]): Future[Seq[TypeaheadHit[RichContact]]] = {
     call(ABook.internal.prefixQuery(userId, query, maxHits)).map { r =>
       r.json.as[Seq[TypeaheadHit[RichContact]]]
@@ -236,12 +222,15 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.getRipestFruits(userId, page, pageSize)).map(_.json.as[Seq[RichSocialConnection]])
   }
 
-  def validateAllContacts(readOnly: Boolean): Unit = {
-    call(ABook.internal.validateAllContacts(readOnly))
-  }
-
   def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = {
     call(ABook.internal.hideEmailFromUser(userId, email)).map(_.json.as[Boolean])
+  }
+
+  def getEmailAccountsChanged(seqNum: SequenceNumber[IngestableEmailAccount], fetchSize: Int): Future[Seq[IngestableEmailAccount]] = {
+    call(ABook.internal.getEmailAccountsChanged(seqNum, fetchSize)).map(_.json.as[Seq[IngestableEmailAccount]])
+  }
+  def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]] = {
+    call(ABook.internal.getContactsChanged(seqNum, fetchSize)).map(_.json.as[Seq[IngestableContact]])
   }
 
 }
@@ -276,8 +265,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = ???
 
-  def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]): Future[Seq[EContact]] = ???
-
   def refreshPrefixFilter(userId: Id[User]): Future[Unit] = ???
 
   def refreshPrefixFiltersByIds(userIds: Seq[Id[User]]): Future[Unit] = ???
@@ -294,8 +281,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]] = ???
 
-  def validateAllContacts(readOnly: Boolean = true): Unit = ???
-
   def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = ???
 
   def getContactNameByEmail(userId: Id[User], email: EmailAddress): Future[Option[String]] = Future.successful(None)
@@ -305,4 +290,9 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def prefixQuery(userId: Id[User], query: String, maxHits: Option[Int]): Future[Seq[TypeaheadHit[RichContact]]] = Future.successful(Seq.empty)
 
   def getContactsByUser(userId: Id[User], page: Int, pageSize: Option[Int]): Future[Seq[RichContact]] = Future.successful(Seq.empty)
+
+  def getEmailAccountsChanged(seqNum: SequenceNumber[IngestableEmailAccount], fetchSize: Int): Future[Seq[IngestableEmailAccount]] = Future.successful(Seq.empty)
+
+  def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]] = Future.successful(Seq.empty)
+
 }

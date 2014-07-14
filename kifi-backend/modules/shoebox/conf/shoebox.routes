@@ -201,7 +201,7 @@ GET     /install                    @com.keepit.controllers.website.HomeControll
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /terms                      @com.keepit.controllers.website.HomeController.termsOfService
 GET     /privacy                    @com.keepit.controllers.website.HomeController.privacyPolicy
-GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneLandingTempForDev
+GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
 GET     /mobile                     @com.keepit.controllers.website.HomeController.mobileLanding
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
 
@@ -284,7 +284,6 @@ POST    /site/user/delighted/cancel @com.keepit.controllers.website.UserControll
 
 GET     /site/user/connections/all/search    @com.keepit.controllers.website.TypeaheadController.searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
 
-GET     /site/user/socialConnections    @com.keepit.controllers.website.UserController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
 GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
@@ -568,7 +567,6 @@ GET     /admin/graph/wander                                @com.keepit.controlle
 POST    /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
 
-GET     /admin/validateAllContacts                             @com.keepit.controllers.admin.AdminUserController.validateAllContacts(readOnly: Boolean ?= true)
 ##########################################
 # Common Healthcheck / service routes
 ##########################################

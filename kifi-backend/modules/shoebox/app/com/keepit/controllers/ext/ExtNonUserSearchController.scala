@@ -7,11 +7,10 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
 
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.EContact
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ Json, JsArray, JsObject, JsString, JsValue }
-import com.keepit.abook.RichContact
+import com.keepit.abook.model.RichContact
 
 class ExtNonUserSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,

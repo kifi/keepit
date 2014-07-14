@@ -2,13 +2,13 @@ package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
 
-import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.{ ABookServiceClient }
 import com.keepit.eliza.model._
 import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ BasicContact }
+import com.keepit.common.mail.BasicContact
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
@@ -22,12 +22,10 @@ import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 
-import scala.Some
 import scala.concurrent.{ Promise, Await, Future }
 import scala.concurrent.duration._
 import java.util.concurrent.TimeoutException
 import com.keepit.common.db.slick.DBSession.RSession
-import scala.util.{ Failure, Success }
 
 case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 
@@ -108,7 +106,7 @@ class MessagingCommander @Inject() (
   def getThreadInfos(userId: Id[User], url: String): Future[(String, Seq[ElizaThreadInfo])] = {
     new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url).map {
       case Left(nUri) =>
-        val threads = db.readOnlyMaster { implicit session =>
+        val threads = db.readOnlyReplica { implicit session =>
           val threadIds = userThreadRepo.getThreadIds(userId, nUri.id)
           threadIds.map(threadRepo.get)
         }.filter(_.replyable)
@@ -122,23 +120,23 @@ class MessagingCommander @Inject() (
   }
 
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Seq[Id[User]] = {
-    val threads = db.readOnlyMaster { implicit session =>
+    val threads = db.readOnlyReplica { implicit session =>
       userThreadRepo.getUserThreads(userId, uriId)
     }
     val otherStarters = threads.filter { userThread =>
       userThread.lastSeen.exists(dt => dt.plusDays(3).isAfterNow) // tweak
     } map { userThread =>
-      db.readOnlyMaster { implicit session =>
+      db.readOnlyReplica { implicit session =>
         userThreadRepo.getThreadStarter(userThread.threadId)
       }
     } filter { _ != userId }
-    log.info(s"[keepAttribution($userId,$uriId)] threads=${threads.map(_.id.get)} otherStarters=${otherStarters}")
+    log.info(s"[keepAttribution($userId,$uriId)] threads=${threads.map(_.id.get)} otherStarters=$otherStarters")
     otherStarters
   }
 
   def hasThreads(userId: Id[User], url: String): Future[Boolean] = {
     shoebox.getNormalizedURIByURL(url).map {
-      case Some(nUri) => db.readOnlyMaster { implicit session => userThreadRepo.hasThreads(userId, nUri.id.get) }
+      case Some(nUri) => db.readOnlyReplica { implicit session => userThreadRepo.hasThreads(userId, nUri.id.get) }
       case None => false
     }
   }
@@ -264,7 +262,7 @@ class MessagingCommander @Inject() (
 
     //this is code for a special status message used in the client to do the email preview
     if (!nonUserRecipients.isEmpty) {
-      val message = db.readWrite { implicit session =>
+      db.readWrite { implicit session =>
         messageRepo.save(Message(
           from = MessageSender.System,
           thread = thread.id.get,
@@ -427,16 +425,16 @@ class MessagingCommander @Inject() (
   }
 
   def getNonUserThreadOpt(id: Id[NonUserThread]): Option[NonUserThread] =
-    db.readOnlyMaster { implicit session => getNonUserThreadOptWithSession(id) }
+    db.readOnlyReplica { implicit session => getNonUserThreadOptWithSession(id) }
 
   def getNonUserThreadOptByAccessToken(token: ThreadAccessToken): Option[NonUserThread] =
-    db.readOnlyMaster { implicit session => nonUserThreadRepo.getByAccessToken(token) }
+    db.readOnlyReplica { implicit session => nonUserThreadRepo.getByAccessToken(token) }
 
   def getUserThreadOptByAccessToken(token: ThreadAccessToken): Option[UserThread] =
-    db.readOnlyMaster { implicit session => userThreadRepo.getByAccessToken(token) }
+    db.readOnlyReplica { implicit session => userThreadRepo.getByAccessToken(token) }
 
   def getThreads(user: Id[User], url: Option[String] = None): Seq[MessageThread] = {
-    db.readOnlyMaster { implicit session =>
+    db.readOnlyReplica { implicit session =>
       val threadIds = userThreadRepo.getThreadIds(user)
       threadIds map threadRepo.get
     }
@@ -544,13 +542,13 @@ class MessagingCommander @Inject() (
   }
 
   def getUnreadUnmutedThreadCount(userId: Id[User]): Int = {
-    db.readOnlyMaster { implicit session =>
+    db.readOnlyReplica { implicit session =>
       userThreadRepo.getUnreadUnmutedThreadCount(userId)
     }
   }
 
   def getUnreadThreadCounts(userId: Id[User]): (Int, Int) = {
-    db.readOnlyMaster { implicit session =>
+    db.readOnlyReplica { implicit session =>
       userThreadRepo.getUnreadThreadCounts(userId)
     }
   }
@@ -604,7 +602,7 @@ class MessagingCommander @Inject() (
     TimeoutFuture(Future.sequence(urls.map(u => shoebox.getNormalizedURIByURL(u).map(n => u -> n)))).recover {
       case ex: TimeoutException => Seq[(String, Option[NormalizedURI])]()
     }.map { res =>
-      val urlMsgCount = db.readOnlyMaster { implicit session =>
+      val urlMsgCount = db.readOnlyReplica { implicit session =>
         res.filter(_._2.isDefined).map {
           case (url, nuri) =>
             url -> userThreadRepo.getThreadIds(userId, Some(nuri.get.id.get))
@@ -673,7 +671,7 @@ class MessagingCommander @Inject() (
     }
 
     if (totalEmailParticipants >= MessagingCommander.WARNING_NON_USER_PARTICIPANTS_PER_THREAD && newEmailParticipants > 0) {
-      val warning = s"Discussion ${thread.id.get} ${thread.uriId.map("on uri " + _).getOrElse("")} has ${totalEmailParticipants} non user participants after user $user reached to $newEmailParticipants new people."
+      val warning = s"Discussion ${thread.id.get} ${thread.uriId.map("on uri " + _).getOrElse("")} has $totalEmailParticipants non user participants after user $user reached to $newEmailParticipants new people."
       airbrake.notify(new ExternalMessagingRateLimitException(warning))
     }
 
@@ -688,11 +686,10 @@ class MessagingCommander @Inject() (
     }
 
     if (totalRecentEmailRecipients > MessagingCommander.WARNING_RECENT_NON_USER_RECIPIENTS && newRecentEmailRecipients > 0) {
-      val warning = s"User $user has reached to ${totalRecentEmailRecipients} distinct email recipients in the past ${MessagingCommander.RECENT_NON_USER_RECIPIENTS_WINDOW}"
+      val warning = s"User $user has reached to $totalRecentEmailRecipients distinct email recipients in the past ${MessagingCommander.RECENT_NON_USER_RECIPIENTS_WINDOW}"
       throw new ExternalMessagingRateLimitException(warning)
     }
   }
-
 }
 
 class ExternalMessagingRateLimitException(message: String) extends Throwable(message)

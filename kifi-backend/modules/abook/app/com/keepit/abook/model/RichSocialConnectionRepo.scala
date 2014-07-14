@@ -2,7 +2,7 @@ package com.keepit.abook.model
 
 import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.Id
-import com.keepit.model.{ EContact, User, SocialUserInfo }
+import com.keepit.model.{ User, SocialUserInfo }
 import com.keepit.common.time.Clock
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.social.{ SocialNetworks, SocialNetworkType }
