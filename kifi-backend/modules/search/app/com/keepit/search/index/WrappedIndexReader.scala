@@ -13,6 +13,7 @@ import org.apache.lucene.index.SortedSetDocValues
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import org.apache.lucene.index.SlowCompositeReaderWrapper
+import org.apache.lucene.util.Bits
 
 object WrappedIndexReader {
 
@@ -120,8 +121,11 @@ class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Arra
     var newSubReaders = ArrayBuffer.empty[WrappedSubReader]
     wrappedSubReaders.foreach { r =>
       val reader = splitReaders(r.name)
-      if (!reader.index.isEmpty) {
-        newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, reader, reader.getLiveDocs), r.getIdMapper)
+      if (reader.index.isEmpty) {
+        // include this segment reader to compute docFreq correctly even when there is no match
+        newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, reader, new Bits.MatchNoBits(r.maxDoc)), r.getIdMapper, skip = true)
+      } else {
+        newSubReaders += new WrappedSubReader(r.name, new PersonalizedIndexReader(r, reader, reader.getLiveDocs), r.getIdMapper, skip = false)
       }
     }
     splitReaders.get("").foreach { subReader =>
@@ -133,7 +137,7 @@ class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Arra
 
 }
 
-class WrappedSubReader(val name: String, val inner: AtomicReader, idMapper: IdMapper) extends AtomicReader {
+class WrappedSubReader(val name: String, val inner: AtomicReader, idMapper: IdMapper, val skip: Boolean = false) extends AtomicReader {
   def getIdMapper = idMapper
 
   override def getNumericDocValues(field: String): NumericDocValues = inner.getNumericDocValues(field)
