@@ -1,9 +1,9 @@
-package com.keepit.commanders
+package com.keepit.abook.commanders
 
 import com.keepit.common.queue._
 import com.keepit.common.db.Id
-import com.keepit.model.{ EContact, User, SocialUserInfo, Invitation }
-import com.keepit.abook.model.RichSocialConnectionRepo
+import com.keepit.model.{ NotificationCategory, User, SocialUserInfo, Invitation }
+import com.keepit.abook.model._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
@@ -22,13 +22,19 @@ import scala.util.{ Success, Failure, Left, Right }
 
 import akka.actor.Scheduler
 import com.keepit.social.SocialNetworkType
-import com.keepit.abook.EContactRepo
 import scala.util.Left
 import scala.util.Failure
 import scala.util.Right
 import scala.util.Success
 import scala.math
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, EmailAddress }
+import scala.collection.mutable
+import scala.util.Left
+import scala.util.Failure
+import scala.util.Right
+import scala.util.Success
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.commanders.RichConnectionCommander
 
 @Singleton
 class LocalRichConnectionCommander @Inject() (
@@ -37,8 +43,7 @@ class LocalRichConnectionCommander @Inject() (
     airbrake: AirbrakeNotifier,
     db: Database,
     repo: RichSocialConnectionRepo,
-    scheduler: Scheduler,
-    eContactRepo: Provider[EContactRepo]) extends RichConnectionCommander with Logging {
+    scheduler: Scheduler) extends RichConnectionCommander with Logging {
 
   def startUpdateProcessing(): Unit = {
     log.info("RConn: Triggered queued update processing")
@@ -151,5 +156,4 @@ class LocalRichConnectionCommander @Inject() (
       }
     }
   }
-
 }

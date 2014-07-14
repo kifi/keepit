@@ -10,7 +10,7 @@ import com.keepit.common.queue.ProdSimpleQueueModule
 case class ABookProdModule() extends ABookModule(
   cacheModule = ABookCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   storeModule = ABookProdStoreModule(),
-  contactsUpdaterPluginModule = ProdContactsUpdaterPluginModule(),
+  contactsUpdaterPluginModule = ProdABookImporterPluginModule(),
   sqsModule = ProdSimpleQueueModule()
 ) with CommonProdModule {
   val discoveryModule = new ProdDiscoveryModule(ServiceType.ABOOK, ServiceType.SHOEBOX :: Nil)

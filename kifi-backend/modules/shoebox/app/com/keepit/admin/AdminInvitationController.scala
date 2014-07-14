@@ -29,7 +29,7 @@ class AdminInvitationController @Inject() (
       case InvitationStates.INACTIVE.value => Some(InvitationStates.INACTIVE)
       case "all" => None
     }
-    val (invitesWithSocial, count) = db.readOnlyMaster { implicit session =>
+    val (invitesWithSocial, count) = db.readOnlyReplica { implicit session =>
       val count = invitationRepo.count
       val invitesWithSocial = invitationRepo.invitationsPage(page, pageSize, showState) map {
         case (invite, sui) => (invite.map(i => (i, i.senderUserId.map(userRepo.get))), sui)

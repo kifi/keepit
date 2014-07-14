@@ -1,31 +1,26 @@
-package com.keepit.abook
+package com.keepit.abook.controllers
 
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.controller.{ WebsiteController, ABookServiceController, ActionAuthenticator }
 import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.performance.timing
-import play.api.mvc.{ AnyContent, Action }
+import play.api.mvc.Action
 import com.keepit.abook.store.ABookRawInfoStore
 import scala.Some
 import java.io.File
-import scala.collection.mutable
 import scala.io.Source
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import scala.util.{ Success, Failure }
 import com.keepit.common.logging.{ LogPrefix, Logging }
 import com.keepit.abook.typeahead.EContactTypeahead
-import com.keepit.typeahead.{ PrefixFilter, TypeaheadHit }
-import scala.concurrent.Future
-import com.keepit.common.akka.SafeFuture
+import com.keepit.typeahead.TypeaheadHit
 import com.keepit.common.queue.RichConnectionUpdateMessage
-import java.text.Normalizer
-import scala.collection.mutable.ArrayBuffer
-import com.keepit.commanders.LocalRichConnectionCommander
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
+import com.keepit.abook.model.{ EContactRepo, EContact }
+import com.keepit.abook.{ ABookImporterPlugin, OAuth2TokenRepo, ABookInfoRepo }
+import com.keepit.abook.commanders.{ LocalRichConnectionCommander, ABookCommander }
 
 // provider-specific
 class ABookOwnerInfo(val id: Option[String], val email: Option[String] = None)
@@ -62,7 +57,7 @@ class ABookController @Inject() (
     oauth2TokenRepo: OAuth2TokenRepo,
     typeahead: EContactTypeahead,
     abookCommander: ABookCommander,
-    contactsUpdater: ContactsUpdaterPlugin,
+    contactsUpdater: ABookImporterPlugin,
     richConnectionCommander: LocalRichConnectionCommander) extends WebsiteController(actionAuthenticator) with ABookServiceController {
 
   // gmail
@@ -122,28 +117,28 @@ class ABookController @Inject() (
   }
 
   def getAllABookInfos() = Action { request =>
-    val abookInfos = db.readOnlyMaster(attempts = 2) { implicit session =>
+    val abookInfos = db.readOnlyReplica(attempts = 2) { implicit session =>
       abookInfoRepo.all()
     }
     Ok(Json.toJson(abookInfos))
   }
 
   def getPagedABookInfos(page: Int, size: Int) = Action { request =>
-    val abookInfos = db.readOnlyMaster(attempts = 2) { implicit session =>
+    val abookInfos = db.readOnlyReplica(attempts = 2) { implicit session =>
       abookInfoRepo.page(page, size)
     }
     Ok(Json.toJson(abookInfos))
   }
 
   def getABooksCount() = Action { request =>
-    val count = db.readOnlyMaster(attempts = 2) { implicit session =>
+    val count = db.readOnlyReplica(attempts = 2) { implicit session =>
       abookInfoRepo.count
     }
     Ok(JsNumber(count))
   }
 
   def getABookInfos(userId: Id[User]) = Action { request =>
-    val abookInfos = db.readOnlyMaster(attempts = 2) { implicit session =>
+    val abookInfos = db.readOnlyReplica(attempts = 2) { implicit session =>
       abookInfoRepo.findByUserId(userId)
     }
     Ok(Json.toJson(abookInfos))
@@ -182,7 +177,7 @@ class ABookController @Inject() (
   }
 
   def getEContactCount(userId: Id[User]) = Action { request =>
-    val count = db.readOnlyMaster(attempts = 2) { implicit s =>
+    val count = db.readOnlyReplica { implicit s =>
       econtactRepo.getEContactCount(userId)
     }
     Ok(JsNumber(count))
@@ -198,13 +193,6 @@ class ABookController @Inject() (
       } yield oauth2Token
     }
     Ok(Json.toJson(tokenOpt))
-  }
-
-  // todo: removeme (inefficient)
-  def queryEContacts(userId: Id[User], limit: Int, search: Option[String], after: Option[String]) = Action { request =>
-    val eContacts = abookCommander.queryEContacts(userId, limit, search, after)
-    log.info(s"[queryEContacts] userId=$userId search=$search after=$after limit=$limit res(len=${eContacts.length}):${eContacts.mkString}")
-    Ok(Json.toJson(eContacts))
   }
 
   def refreshPrefixFilter(userId: Id[User]) = Action.async { request =>
@@ -235,11 +223,6 @@ class ABookController @Inject() (
     Ok("")
   }
 
-  def validateAllContacts(readOnly: Boolean) = Action { request =>
-    SafeFuture { abookCommander.validateAllContacts(readOnly) }
-    Ok
-  }
-
   def getContactNameByEmail(userId: Id[User]) = Action(parse.json) { request =>
     val email = request.body.as[EmailAddress]
     val name = abookCommander.getContactNameByEmail(userId, email)
@@ -250,7 +233,7 @@ class ABookController @Inject() (
     val contact = request.body.as[BasicContact]
     log.info(s"[internKifiContact] userId=$userId contact=$contact")
 
-    val eContact = abookCommander.internContact(userId, contact) // todo(Léo): migrate to internKifiContact
+    val eContact = abookCommander.internKifiContact(userId, contact)
     val richContact = EContact.toRichContact(eContact)
     Ok(Json.toJson(richContact))
   }

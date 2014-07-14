@@ -3,6 +3,7 @@ package com.keepit.abook
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import play.api.libs.json.Json
+import com.keepit.abook.controllers.GmailABookOwnerInfo
 
 trait ABookTestHelper {
   val u42 = Id[User](42)

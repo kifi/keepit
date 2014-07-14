@@ -22,7 +22,7 @@ trait CortexTypeMappers { self: { val db: DataBaseComponent } =>
 
   implicit def ldaTopicFeatureMapper = MappedColumnType.base[LDATopicFeature, Blob](
     { feat => new SerialBlob(FloatArrayFormmater.toBinary(feat.value)) },
-    { blob => val len = blob.length().toInt; val arr = FloatArrayFormmater.fromBinary(blob.getBytes(0, len)); LDATopicFeature(arr) }
+    { blob => val len = blob.length().toInt; val arr = FloatArrayFormmater.fromBinary(blob.getBytes(1, len)); LDATopicFeature(arr) }
   )
 
   implicit def sparseTopicRepresentationMapper = MappedColumnType.base[SparseTopicRepresentation, String](

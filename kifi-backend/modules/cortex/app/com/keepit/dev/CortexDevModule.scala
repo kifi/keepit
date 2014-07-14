@@ -1,5 +1,6 @@
 package com.keepit.dev
 
+import com.keepit.cortex.nlp.NLPDevModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.cortex.CortexModule
 import com.keepit.cortex.store._
@@ -17,5 +18,6 @@ case class CortexDevModule() extends CortexModule(
   statModelStoreModule = StatModelDevStoreModule(),
   modelModule = CortexDevModelModule(),
   ldaInfoModule = LDAInfoStoreDevModule(),
-  dataIngestionModule = CortexDataIngestionDevModule()
+  dataIngestionModule = CortexDataIngestionDevModule(),
+  nlpModule = NLPDevModule()
 ) with CommonDevModule

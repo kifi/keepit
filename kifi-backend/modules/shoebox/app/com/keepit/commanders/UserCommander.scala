@@ -19,6 +19,7 @@ import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialNetworkType }
 import com.keepit.common.time._
 import com.keepit.common.performance.timing
 import com.keepit.eliza.ElizaServiceClient
+import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient, HeimdalContextBuilder }
 import com.keepit.heimdal._
 import com.keepit.search.SearchServiceClient
 import com.keepit.typeahead.PrefixFilter
@@ -140,7 +141,7 @@ class UserCommander @Inject() (
   }
 
   def getConnectionsPage(userId: Id[User], page: Int, pageSize: Int): (Seq[ConnectionInfo], Int) = {
-    val infos = db.readOnlyMaster { implicit s =>
+    val infos = db.readOnlyReplica { implicit s =>
       val searchFriends = searchFriendRepo.getSearchFriends(userId)
       val connectionIds = userConnectionRepo.getConnectedUsers(userId)
       val unfriendedIds = userConnectionRepo.getUnfriendedUsers(userId)
@@ -154,7 +155,7 @@ class UserCommander @Inject() (
   }
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
-    val basicUsers = db.readOnlyMaster { implicit s =>
+    val basicUsers = db.readOnlyReplica { implicit s =>
       if (canMessageAllUsers(user.id.get)) {
         userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
           .collect { case u if u.id.get != user.id.get => BasicUser.fromUser(u) }.toSet
@@ -220,7 +221,7 @@ class UserCommander @Inject() (
 
   def getHelpCounts(user: Id[User]): (Int, Int) = {
     //unique keeps, total clicks
-    db.readOnlyMaster { implicit session => bookmarkClicksRepo.getClickCounts(user) }
+    db.readOnlyReplica { implicit session => bookmarkClicksRepo.getClickCounts(user) }
   }
 
   def getKeepAttributionCounts(userId: Id[User]): (Int, Int, Int) = { // (discoveryCount, rekeepCount, rekeepTotalCount)
@@ -232,7 +233,7 @@ class UserCommander @Inject() (
   }
 
   def getUserSegment(userId: Id[User]): UserSegment = {
-    val (numBms, numFriends) = db.readOnlyMaster { implicit s => //using cache
+    val (numBms, numFriends) = db.readOnlyReplica { implicit s => //using cache
       (keepRepo.getCountByUser(userId), userConnectionRepo.getConnectionCount(userId))
     }
 
@@ -258,7 +259,7 @@ class UserCommander @Inject() (
     val guardKey = "friendsNotifiedAboutJoining"
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, guardKey).exists(_ == "true") }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, true) }
-      val (newUser, toNotify, id2Email) = db.readOnlyMaster { implicit session =>
+      val (newUser, toNotify, id2Email) = db.readOnlyReplica { implicit session =>
         val newUser = userRepo.get(newUserId)
         val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
         val id2Email = toNotify.map { userId =>
@@ -384,95 +385,7 @@ class UserCommander @Inject() (
     resOpt getOrElse { throw new IllegalArgumentException("no_user") }
   }
 
-  def queryContacts(userId: Id[User], search: Option[String], after: Option[String], limit: Int): Future[Seq[JsObject]] = { // TODO: optimize
-    @inline def mkId(email: EmailAddress) = s"email/${email.address}"
-    @inline def getEInviteStatus(contactEmail: EmailAddress): String = { // todo: batch
-      db.readOnlyMaster { implicit s =>
-        invitationRepo.getBySenderIdAndRecipientEmailAddress(userId, contactEmail) map { inv =>
-          if (inv.state != InvitationStates.INACTIVE) "invited" else ""
-        }
-      } getOrElse ""
-    }
-
-    abookServiceClient.queryEContacts(userId, limit, search, after) map { paged =>
-      val objs = paged.take(limit).map { e =>
-        Json.obj("label" -> JsString(e.name.getOrElse("")), "value" -> mkId(e.email), "status" -> getEInviteStatus(e.email))
-      }
-      log.info(s"[queryContacts(id=$userId)] res(len=${objs.length}):${objs.mkString.take(200)}")
-      objs
-    }
-  }
-
   implicit val hitOrdering = TypeaheadHit.defaultOrdering[SocialUserBasicInfo]
-
-  // todo(ray):removeme
-  def getAllConnections(userId: Id[User], search: Option[String], network: Option[String], after: Option[String], limit: Int): Future[Seq[JsObject]] = { // todo: convert to objects
-    val contactsF = if (network.isDefined && network.get == "email") { // todo: revisit
-      queryContacts(userId, search, after, limit)
-    } else Future.successful(Seq.empty[JsObject])
-    @inline def socialIdString(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
-
-    def getWithInviteStatus(sci: SocialUserBasicInfo)(implicit s: RSession): (SocialUserBasicInfo, String) = {
-      sci -> sci.userId.map(_ => "joined").getOrElse {
-        invitationRepo.getBySenderIdAndRecipientSocialUserId(userId, sci.id) collect {
-          case inv if inv.state == InvitationStates.ACCEPTED || inv.state == InvitationStates.JOINED => {
-            // This is a hint that that cache may be stale as userId should be set
-            socialUserInfoRepo.getByUser(userId).foreach { socialUser =>
-              socialUserConnectionsCache.remove(SocialUserConnectionsKey(socialUser.id.get))
-            }
-            "joined"
-          }
-          case inv if inv.state != InvitationStates.INACTIVE => "invited"
-        } getOrElse ""
-      }
-    }
-
-    def getFilteredConnections(infos: Seq[SocialUserBasicInfo])(implicit s: RSession): Seq[TypeaheadHit[SocialUserBasicInfo]] = {
-      search match {
-        case Some(query) =>
-          var ordinal = 0
-          val queryTerms = PrefixFilter.tokenize(query)
-          infos.map { info =>
-            ordinal += 1
-            val name = PrefixFilter.normalize(info.fullName)
-            TypeaheadHit[SocialUserBasicInfo](PrefixMatching.distanceWithNormalizedName(name, queryTerms), name, ordinal, info)
-          }.collect { case hit if hit.score < 1000000.0d => hit }
-        case None =>
-          var ordinal = 0
-          infos.map { info =>
-            ordinal += 1
-            TypeaheadHit[SocialUserBasicInfo](0, PrefixFilter.normalize(info.fullName), ordinal, info)
-          }
-      }
-    }
-
-    val connections = db.readOnlyMaster { implicit s =>
-      val infos = socialConnectionRepo.getSocialConnectionInfosByUser(userId).filterKeys(networkType => network.forall(_ == networkType.name))
-      val filteredConnections = infos.values.map(getFilteredConnections).flatten.toSeq.sorted.map(_.info)
-
-      (after match {
-        case Some(id) => filteredConnections.dropWhile(socialIdString(_) != id) match {
-          case hd +: tl => tl
-          case tl => tl
-        }
-        case None => filteredConnections
-      }).take(limit).map(getWithInviteStatus)
-    }
-
-    val jsConns: Seq[JsObject] = connections.map { conn =>
-      Json.obj(
-        "label" -> conn._1.fullName,
-        "image" -> Json.toJson(conn._1.getPictureUrl(75, 75)),
-        "value" -> socialIdString(conn._1),
-        "status" -> conn._2
-      )
-    }
-    contactsF map { jsContacts =>
-      val jsCombined = jsConns ++ jsContacts
-      log.info(s"[getAllConnections($userId)] jsContacts(sz=${jsContacts.size}) jsConns(sz=${jsConns.size})")
-      jsCombined
-    }
-  }
 
   private def sendFriendRequestAcceptedEmailAndNotification(myUserId: Id[User], friend: User): Unit = SafeFuture {
     //sending 'friend request accepted' email && Notification
@@ -600,7 +513,7 @@ class UserCommander @Inject() (
         userConnectionRepo.unfriendConnections(userId, user.id.toSet) > 0
       }
       if (success) {
-        db.readOnlyMaster { implicit session =>
+        db.readOnlyReplica { implicit session =>
           elizaServiceClient.sendToUser(userId, Json.arr("lost_friends", Set(basicUserRepo.load(user.id.get))))
           elizaServiceClient.sendToUser(user.id.get, Json.arr("lost_friends", Set(basicUserRepo.load(userId))))
         }
