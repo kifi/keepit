@@ -6,7 +6,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
-class LibraryInvitationTest extends Specification with ShoeboxTestInjector {
+class LibraryInviteTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -20,9 +20,9 @@ class LibraryInvitationTest extends Specification with ShoeboxTestInjector {
         visibility = LibraryVisibility.ANYONE, slug = LibrarySlug("A")))
       val library2 = libraryRepo.save(Library(name = "Lib2", ownerId = user2.id.get, createdAt = t1.plusMinutes(5),
         visibility = LibraryVisibility.ANYONE, slug = LibrarySlug("B")))
-      val inv1 = libraryInviteRepo.save(LibraryInvitation(libraryId = library1.id.get, ownerId = user1.id.get, userId = user2.id.get,
+      val inv1 = libraryInviteRepo.save(LibraryInvite(libraryId = library1.id.get, ownerId = user1.id.get, userId = user2.id.get,
         access = LibraryAccess.READ_WRITE, createdAt = t1.plusHours(1)))
-      val inv2 = libraryInviteRepo.save(LibraryInvitation(libraryId = library2.id.get, ownerId = user2.id.get, userId = user1.id.get,
+      val inv2 = libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, ownerId = user2.id.get, userId = user1.id.get,
         access = LibraryAccess.READ_ONLY, createdAt = t1.plusHours(2)))
       (library1, library2, user1, user2, inv1, inv2)
     }
@@ -52,7 +52,7 @@ class LibraryInvitationTest extends Specification with ShoeboxTestInjector {
         }
         db.readWrite { implicit s =>
           val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-          libraryInviteRepo.save(LibraryInvitation(libraryId = lib1.id.get, ownerId = user1.id.get, userId = user2.id.get,
+          libraryInviteRepo.save(LibraryInvite(libraryId = lib1.id.get, ownerId = user1.id.get, userId = user2.id.get,
             access = LibraryAccess.READ_WRITE, createdAt = t1.plusHours(1)))
         }
         db.readWrite { implicit s =>

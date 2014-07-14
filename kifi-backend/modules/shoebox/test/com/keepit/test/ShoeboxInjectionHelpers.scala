@@ -46,5 +46,5 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
   def sessionProvider(implicit injector: Injector) = inject[SlickSessionProvider].asInstanceOf[TestSlickSessionProvider]
   def libraryRepo(implicit injector: Injector) = inject[LibraryRepo]
   def libraryMemberRepo(implicit injector: Injector) = inject[LibraryMembershipRepo]
-  def libraryInviteRepo(implicit injector: Injector) = inject[LibraryInvitationRepo]
+  def libraryInviteRepo(implicit injector: Injector) = inject[LibraryInviteRepo]
 }

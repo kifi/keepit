@@ -71,7 +71,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val delightedAnswerSourceTypeMapper = MappedColumnType.base[DelightedAnswerSource, String](_.value, DelightedAnswerSource.apply)
   implicit val libraryVisibilityTypeMapper = MappedColumnType.base[LibraryVisibility, String](_.value, LibraryVisibility.apply)
   implicit val librarySlugTypeMapper = MappedColumnType.base[LibrarySlug, String](_.value, LibrarySlug.apply)
-  implicit val libraryMemberAccessTypeMapper = MappedColumnType.base[LibraryAccess, String](_.value, LibraryAccess.apply)
+  implicit val libraryAccessTypeMapper = MappedColumnType.base[LibraryAccess, String](_.value, LibraryAccess.apply)
 
   implicit def experimentTypeProbabilityDensityMapper[T](implicit outcomeFormat: Format[T]) = MappedColumnType.base[ProbabilityDensity[T], String](
     obj => Json.stringify(ProbabilityDensity.format[T].writes(obj)),
