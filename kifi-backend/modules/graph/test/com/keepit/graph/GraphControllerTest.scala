@@ -16,7 +16,6 @@ class GraphControllerTest extends Specification with GraphApplicationInjector wi
 
     "get list of uri and score pairs" in {
       running(new GraphApplication(modules: _*)) {
-        //val route = com.keepit.graph.routes.GraphController.getListOf
         val controller = inject[GraphController] //setup
         val result = controller.getListOfUriAndScorePairs(Id[User](42))(FakeRequest())
         status(result) must equalTo(OK)
@@ -27,13 +26,11 @@ class GraphControllerTest extends Specification with GraphApplicationInjector wi
 
     "get list of user and score pairs" in {
       running(new GraphApplication(modules: _*)) {
-        //val route = com.keepit.graph.routes.GraphController.getListOf
         val controller = inject[GraphController] //setup
         val result = controller.getListOfUserAndScorePairs(Id[User](42))(FakeRequest())
         status(result) must equalTo(OK)
         val content = contentAsString(result)
-        content === null
-        false === true
+        content !== null
       }
     }
   }
