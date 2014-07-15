@@ -9,11 +9,11 @@ import com.keepit.inject.FortyTwoConfig
 class AboutAssets @Inject() (applicationConfig: FortyTwoConfig) extends AssetsBuilder with Controller {
 
   val OLD_SITE_REDIRECT_MAP = Map(
-    "index.html" -> "mission.html",
-    "team.html" -> "team.html",
-    "culture.html" -> "culture.html",
-    "investors.html" -> "investors.html",
-    "join_us.html" -> "join_us.html")
+    "index.html" -> "mission",
+    "team.html" -> "team",
+    "culture.html" -> "culture",
+    "investors.html" -> "investors",
+    "join_us.html" -> "join_us")
 
   override def at(path: String, file: String): Action[AnyContent] = Action.async { request =>
     if (request.domain.contains("42go")) {
@@ -21,11 +21,8 @@ class AboutAssets @Inject() (applicationConfig: FortyTwoConfig) extends AssetsBu
         MovedPermanently(applicationConfig.applicationBaseUrl + "/about/" + redirectFile)
       } getOrElse NotFound)
     } else if (path == "/public/about_us") {
-      val extension = ".html"
-      val fileWithExtension = if (!file.endsWith(extension) && !file.contains("/") && !file.contains(".")) {
-        file + extension
-      } else file
-      super.at(path, fileWithExtension).apply(request)
+      val fileWithExt = if (file.contains("/") || file.contains(".")) file else file + ".html"
+      super.at(path, fileWithExt).apply(request)
     } else Future.successful(NotFound)
   }
 }
