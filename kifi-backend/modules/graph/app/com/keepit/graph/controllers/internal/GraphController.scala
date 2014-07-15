@@ -55,14 +55,14 @@ class GraphController @Inject() (
     Ok(json)
   }
 
-  def getListOfUriAndScorePairs(userId: Id[User]) = Action { request =>
-    val urisSeq = graphCommander.getListOfUriAndScorePairs(userId)
+  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean) = Action { request =>
+    val urisSeq = graphCommander.getListOfUriAndScorePairs(userId, avoidFirstDegreeConnection)
     val json = Json.toJson(urisSeq)
     Ok(json)
   }
 
-  def getListOfUserAndScorePairs(userId: Id[User]) = Action { request =>
-    val usersSeq = graphCommander.getListOfUserAndScorePairs(userId)
+  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean) = Action { request =>
+    val usersSeq = graphCommander.getListOfUserAndScorePairs(userId, avoidFirstDegreeConnection)
     val json = Json.toJson(usersSeq)
     Ok(json)
   }

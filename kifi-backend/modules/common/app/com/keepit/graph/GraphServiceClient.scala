@@ -27,8 +27,8 @@ trait GraphServiceClient extends ServiceClient {
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, PrettyGraphState]]
   def getGraphKinds(): Future[GraphKinds]
   def wander(wanderlust: Wanderlust): Future[Collisions]
-  def getListOfUriAndScorePairs(userId: Id[User]): Future[Seq[UserConnectionFeedScore]]
-  def getListOfUserAndScorePairs(userId: Id[User]): Future[Seq[UserConnectionSocialScore]]
+  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[UserConnectionFeedScore]]
+  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[UserConnectionSocialScore]]
 }
 
 case class GraphCacheProvider @Inject() (
@@ -80,17 +80,17 @@ class GraphServiceClientImpl @Inject() (
     call(Graph.internal.wander(), payload, callTimeouts = longTimeout).map { response => response.json.as[Collisions] }
   }
 
-  def getListOfUriAndScorePairs(userId: Id[User]): Future[Seq[UserConnectionFeedScore]] = {
+  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[UserConnectionFeedScore]] = {
     cacheProvider.uriScoreCache.getOrElseFuture(UserConnectionFeedScoreCacheKey(userId)) {
-      call(Graph.internal.getListOfUriAndScorePairs(userId)).map { response =>
+      call(Graph.internal.getListOfUriAndScorePairs(userId, avoidFirstDegreeConnection)).map { response =>
         response.json.as[Seq[UserConnectionFeedScore]]
       }
     }
   }
 
-  def getListOfUserAndScorePairs(userId: Id[User]): Future[Seq[UserConnectionSocialScore]] = {
+  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[UserConnectionSocialScore]] = {
     cacheProvider.userScoreCache.getOrElseFuture(UserConnectionSocialScoreCacheKey(userId)) {
-      call(Graph.internal.getListOfUserAndScorePairs(userId)).map { response =>
+      call(Graph.internal.getListOfUserAndScorePairs(userId, avoidFirstDegreeConnection)).map { response =>
         response.json.as[Seq[UserConnectionSocialScore]]
       }
     }

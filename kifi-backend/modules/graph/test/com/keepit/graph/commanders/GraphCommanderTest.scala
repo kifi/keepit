@@ -25,11 +25,11 @@ class GraphCommanderTest extends Specification with GraphTestInjector with Graph
 
         manager.update(createUserUpdate, createFirstDegreeUser, keepGraphUpdate1, keepGraphUpdate2, keepGraphUpdate3, keepGraphUpdate4, userConnectionGraphUpdate1, userConnectionGraphUpdate2, userConnectionGraphUpdate3)
 
-        val res1 = graphCommander.getListOfUriAndScorePairs(u42)
+        val res1 = graphCommander.getListOfUriAndScorePairs(u42, true)
 
         res1 must have size (4)
 
-        res1(1).score should be_>= (res1(2).score)
+        res1(1).score should be_>=(res1(2).score)
 
       }
     }
@@ -41,18 +41,11 @@ class GraphCommanderTest extends Specification with GraphTestInjector with Graph
 
         manager.update(createUserUpdate, createFirstDegreeUser, keepGraphUpdate1, keepGraphUpdate2, keepGraphUpdate3, keepGraphUpdate4, userConnectionGraphUpdate1, userConnectionGraphUpdate2, userConnectionGraphUpdate3)
 
-        println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-
-        println(manager.state)
-        println(GraphStatistics.prettify(manager.statistics))
-
-        println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-
-        val res2 = graphCommander.getListOfUserAndScorePairs(u42)
+        val res2 = graphCommander.getListOfUserAndScorePairs(u42, false)
 
         res2 must have size (4)
 
-        res2(1).score should be_>= (res2(2).score)
+        res2(1).score should be_>=(res2(2).score)
       }
     }
   }
