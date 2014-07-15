@@ -99,7 +99,7 @@ class URISummaryCommander @Inject() (
 
   private def getNormalizedURIForRequest(request: URISummaryRequest): Option[NormalizedURI] = {
     if (request.silent)
-      db.readOnlyReplica { implicit session => normalizedURIInterner.getByUri(request.url) }
+      db.readOnlyMaster { implicit session => normalizedURIInterner.getByUri(request.url) }
     else
       db.readWrite { implicit session => Some(normalizedURIInterner.internByUri(request.url)) }
   }

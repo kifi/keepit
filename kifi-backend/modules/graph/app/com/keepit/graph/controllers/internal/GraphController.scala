@@ -12,7 +12,7 @@ import com.keepit.graph.model._
 import com.keepit.graph.model.VertexKind._
 import scala.collection.mutable
 import com.keepit.common.db.Id
-import com.keepit.model.{NormalizedURI, SocialUserInfo, User}
+import com.keepit.model.{ NormalizedURI, SocialUserInfo, User }
 import com.keepit.common.time._
 
 class GraphController @Inject() (
