@@ -105,9 +105,7 @@ class NormalizedURIRepoImpl @Inject() (
   }
 
   override def get(id: Id[NormalizedURI])(implicit session: RSession): NormalizedURI = {
-    idCache.getOrElse(NormalizedURIKey(id)) {
-      (for (f <- rows if f.id is id) yield f).first
-    }
+    idCache.getOrElse(NormalizedURIKey(id)) { getCompiled(id).first }
   }
 
   def allActive()(implicit session: RSession): Seq[NormalizedURI] =

@@ -320,7 +320,7 @@ object Graph extends Service {
   }
 }
 
-object Maven extends Service {
+object Curator extends Service {
   object internal {
   }
 }
