@@ -24,6 +24,7 @@ angular.module('kifi.delighted', [])
         });
 
         scope.goBack = function () {
+          scope.delighted.score = null;
           scope.showCommentArea = false;
         };
 
