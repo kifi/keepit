@@ -23,4 +23,12 @@ case class EmailAccount(
   if (verified) { require(userId.isDefined, "Verified EmailAccount doesn't belong to any user.") }
 }
 
+object EmailAccount {
+  implicit def toIngestableEmailAccountId(id: Id[EmailAccount]): Id[IngestableEmailAccount] = id.copy()
+  implicit def toIngestableEmailAccountSeq(seq: SequenceNumber[EmailAccount]): SequenceNumber[IngestableEmailAccount] = seq.copy()
+  def toIngestable(emailAccount: EmailAccount): IngestableEmailAccount = {
+    IngestableEmailAccount(emailAccount.id.get, userId = emailAccount.userId, verified = emailAccount.verified, seq = emailAccount.seq)
+  }
+}
+
 object EmailAccountStates extends States[EmailAccount]

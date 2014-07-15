@@ -2,7 +2,7 @@ package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
 
-import com.keepit.abook.ABookServiceClient
+import com.keepit.abook.{ ABookServiceClient }
 import com.keepit.eliza.model._
 import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
 import com.keepit.common.db.{ Id, ExternalId }
@@ -690,7 +690,6 @@ class MessagingCommander @Inject() (
       throw new ExternalMessagingRateLimitException(warning)
     }
   }
-
 }
 
 class ExternalMessagingRateLimitException(message: String) extends Throwable(message)

@@ -63,9 +63,11 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     if (weight != null) {
       indexReader.getContext.leaves.foreach { subReaderContext =>
         val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
-        val scorer = weight.scorer(subReaderContext, true, false, subReader.getLiveDocs)
-        if (scorer != null) {
-          f(scorer, subReader)
+        if (!subReader.skip) {
+          val scorer = weight.scorer(subReaderContext, true, false, subReader.getLiveDocs)
+          if (scorer != null) {
+            f(scorer, subReader)
+          }
         }
       }
     }
@@ -78,10 +80,12 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
       if (weight != null) {
         indexReader.getContext.leaves.foreach { subReaderContext =>
           val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
-          val scorer = weight.scorer(subReaderContext, true, false, subReader.getLiveDocs)
-          val iterator = filter.getDocIdSet(subReaderContext, subReader.getLiveDocs).iterator
-          if (scorer != null || iterator != null) {
-            f(scorer, iterator, subReader)
+          if (!subReader.skip) {
+            val scorer = weight.scorer(subReaderContext, true, false, subReader.getLiveDocs)
+            val iterator = filter.getDocIdSet(subReaderContext, subReader.getLiveDocs).iterator
+            if (scorer != null || iterator != null) {
+              f(scorer, iterator, subReader)
+            }
           }
         }
       }

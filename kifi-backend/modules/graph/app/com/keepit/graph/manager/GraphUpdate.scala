@@ -7,6 +7,7 @@ import com.keepit.social.SocialNetworkType
 import com.keepit.cortex.models.lda.{ UriSparseLDAFeatures, DenseLDA, SparseTopicRepresentation }
 import com.keepit.cortex.core.ModelVersion
 import org.joda.time.DateTime
+import com.keepit.abook.model.{ IngestableContact, IngestableEmailAccount }
 
 sealed trait GraphUpdate { self =>
   type U >: self.type <: GraphUpdate
@@ -103,4 +104,30 @@ case class NormalizedUriGraphUpdate(id: Id[NormalizedURI], state: State[Normaliz
 case object NormalizedUriGraphUpdate extends GraphUpdateKind[NormalizedUriGraphUpdate] {
   val code = "normalized_uri_graph_update"
   def apply(indexableUri: IndexableUri): NormalizedUriGraphUpdate = NormalizedUriGraphUpdate(indexableUri.id.get, indexableUri.state, indexableUri.seq)
+}
+
+case class EmailAccountGraphUpdate(emailAccountId: Id[IngestableEmailAccount], userId: Option[Id[User]], verified: Boolean, emailSeq: SequenceNumber[IngestableEmailAccount]) extends GraphUpdate {
+  type U = EmailAccountGraphUpdate
+  def kind = EmailAccountGraphUpdate
+  def seq = kind.seq(emailSeq.value)
+}
+
+case object EmailAccountGraphUpdate extends GraphUpdateKind[EmailAccountGraphUpdate] {
+  val code = "email_account_graph_update"
+  def apply(emailAccount: IngestableEmailAccount): EmailAccountGraphUpdate = {
+    EmailAccountGraphUpdate(emailAccount.emailAccountId, emailAccount.userId, emailAccount.verified, emailAccount.seq)
+  }
+}
+
+case class EmailContactGraphUpdate(userId: Id[User], abookId: Id[ABookInfo], emailAccountId: Id[IngestableEmailAccount], hidden: Boolean, deleted: Boolean, emailcontactSeq: SequenceNumber[IngestableContact]) extends GraphUpdate {
+  type U = EmailContactGraphUpdate
+  def kind = EmailContactGraphUpdate
+  def seq = kind.seq(emailcontactSeq.value)
+}
+
+case object EmailContactGraphUpdate extends GraphUpdateKind[EmailContactGraphUpdate] {
+  val code = "email_contact_graph_update"
+  def apply(contact: IngestableContact): EmailContactGraphUpdate = {
+    EmailContactGraphUpdate(contact.userId, contact.abookId, contact.emailAccountId, contact.hidden, contact.deleted, contact.seq)
+  }
 }

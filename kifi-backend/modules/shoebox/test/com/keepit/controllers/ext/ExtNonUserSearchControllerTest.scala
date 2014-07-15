@@ -5,7 +5,7 @@ import com.keepit.common.mail.EmailAddress
 import org.specs2.mutable.Specification
 
 import play.api.libs.json.Json
-import com.keepit.abook.RichContact
+import com.keepit.abook.model.RichContact
 
 class ExtNonUserSearchControllerTest extends Specification {
 

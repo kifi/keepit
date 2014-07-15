@@ -1,8 +1,7 @@
 package com.keepit.abook.model
 
-import com.keepit.abook.RichContact
 import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
-import com.keepit.common.db.{ ModelWithState, Id, State, States }
+import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.model.{ ABookInfo, User }
@@ -17,14 +16,15 @@ case class EContact(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     userId: Id[User],
-    abookId: Option[Id[ABookInfo]],
-    emailAccountId: Option[Id[EmailAccount]],
+    abookId: Id[ABookInfo],
+    emailAccountId: Id[EmailAccount],
     email: EmailAddress,
     contactUserId: Option[Id[User]] = None,
     name: Option[String] = None,
     firstName: Option[String] = None,
     lastName: Option[String] = None,
-    state: State[EContact] = EContactStates.ACTIVE) extends ModelWithState[EContact] {
+    state: State[EContact] = EContactStates.ACTIVE,
+    seq: SequenceNumber[EContact] = SequenceNumber.ZERO) extends ModelWithState[EContact] with ModelWithSeqNumber[EContact] {
   def withId(id: Id[EContact]) = this.copy(id = Some(id))
   def withName(name: Option[String]) = this.copy(name = name)
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -41,23 +41,36 @@ object EContact {
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'userId).format(Id.format[User]) and
-    (__ \ 'abookId).formatNullable(Id.format[ABookInfo]) and
-    (__ \ 'emailAccountId).formatNullable(Id.format[EmailAccount]) and
+    (__ \ 'abookId).format(Id.format[ABookInfo]) and
+    (__ \ 'emailAccountId).format(Id.format[EmailAccount]) and
     (__ \ 'email).format[EmailAddress] and
     (__ \ 'contactUserId).formatNullable(Id.format[User]) and
     (__ \ 'name).formatNullable[String] and
     (__ \ 'firstName).formatNullable[String] and
     (__ \ 'lastName).formatNullable[String] and
-    (__ \ 'state).format(State.format[EContact])
+    (__ \ 'state).format(State.format[EContact]) and
+    (__ \ 'seq).format(SequenceNumber.format[EContact])
   )(EContact.apply, unlift(EContact.unapply))
 
   def toRichContact(econtact: EContact): RichContact = RichContact(econtact.email, econtact.name, econtact.firstName, econtact.lastName, econtact.contactUserId)
 
+  implicit def toIngestableContactSeq(seq: SequenceNumber[EContact]): SequenceNumber[IngestableContact] = seq.copy()
+  def toIngestable(econtact: EContact): IngestableContact = {
+    IngestableContact(
+      userId = econtact.userId,
+      abookId = econtact.abookId,
+      emailAccountId = econtact.emailAccountId,
+      hidden = (econtact.state == EContactStates.HIDDEN),
+      deleted = (econtact.state == EContactStates.INACTIVE),
+      seq = econtact.seq
+    )
+  }
+
   def make(userId: Id[User], abookId: Id[ABookInfo], emailAccount: EmailAccount, contacts: BasicContact*): EContact = {
     val eContact = EContact(
       userId = userId,
-      abookId = Some(abookId),
-      emailAccountId = Some(emailAccount.id.get),
+      abookId = abookId,
+      emailAccountId = emailAccount.id.get,
       email = emailAccount.address,
       contactUserId = emailAccount.userId
     )
@@ -90,6 +103,6 @@ class EContactCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyT
 
 case class EContactKey(id: Id[EContact]) extends Key[EContact] {
   val namespace = "econtact"
-  override val version = 1
+  override val version = 2
   def toKey(): String = id.id.toString
 }

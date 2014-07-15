@@ -181,7 +181,7 @@ class HomeController @Inject() (
           Ok(views.html.marketing.mobileLanding(""))
         }
       } else {
-        Ok(views.html.marketing.landingNew())
+        Ok(views.html.marketing.landing())
       }
     }
   }

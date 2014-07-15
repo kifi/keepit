@@ -45,7 +45,7 @@ class RichSocialConnectionTest extends Specification with ABookTestInjector {
       fullName = "Marvin"
     )
 
-    val contact42 = EContact(userId = kifiLéo, abookId = Some(Id(1)), emailAccountId = Some(Id(42)), email = EmailAddress("grassfed42@organicintegers.com"), name = Some("FortyTwo"))
+    val contact42 = EContact(userId = kifiLéo, abookId = Id(1), emailAccountId = Id(42), email = EmailAddress("grassfed42@organicintegers.com"), name = Some("FortyTwo"))
 
     "intern and retrieve rich social network connections" in {
       val léoToMarvin = db.readWrite { implicit session =>

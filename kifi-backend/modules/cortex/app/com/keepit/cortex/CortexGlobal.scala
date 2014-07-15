@@ -3,7 +3,7 @@ package com.keepit.cortex
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{ FortyTwoCachePlugin, InMemoryCachePlugin }
 import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.cortex.models.lda.{ DenseLDATopicWords, LDAURIFeatureUpdatePlugin }
+import com.keepit.cortex.models.lda.{ LDADbUpdatePlugin, DenseLDATopicWords, LDAURIFeatureUpdatePlugin }
 import com.keepit.cortex.models.word2vec.RichWord2VecURIFeatureUpdatePlugin
 import com.keepit.cortex.nlp.POSTagger
 import play.api.Application
@@ -26,7 +26,7 @@ trait CortexServices { self: FortyTwoGlobal =>
     require(injector.instance[HealthcheckPlugin] != null)
     require(injector.instance[FortyTwoCachePlugin] != null)
     require(injector.instance[InMemoryCachePlugin] != null)
-    require(injector.instance[LDAURIFeatureUpdatePlugin] != null)
+    require(injector.instance[LDADbUpdatePlugin] != null)
     require(injector.instance[RichWord2VecURIFeatureUpdatePlugin] != null)
     require(injector.instance[DenseLDATopicWords] != null)
     require(injector.instance[CortexDataIngestionPlugin] != null)

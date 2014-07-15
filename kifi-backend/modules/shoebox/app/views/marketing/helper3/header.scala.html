@@ -1,0 +1,19 @@
+@(isLoggedIn: Boolean)
+
+    <header id="header">
+      <div class="wrap">
+        <div class="header-left">
+          <a href="/" id="logo" class="scales" data-track-action="clickLogo"></a>
+          <span class="header-bar"></span>
+          <a href="about/mission" class="header-about">About us</a>
+        </div>
+        <div class="header-right">
+          @if(isLoggedIn) {
+            <a href="/" class="header-btn">Home</a>
+          } else {
+            <a href="/signup" class="header-btn green-btn" data-track-action="clickSignUp">Sign up</a>
+            <a href="/login" class="header-btn" data-track-action="clickLogIn">Log in</a>
+          }
+        </div>
+      </div>
+    </header>

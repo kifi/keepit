@@ -31,6 +31,9 @@ import java.util.{ Iterator => JIterator }
 class CachingIndexReader(val index: CachedIndex) extends AtomicReader with Logging {
 
   def split(remappers: Map[String, DocIdRemapper]): Map[String, CachingIndexReader] = {
+    val remainingDocs = new FixedBitSet(maxDoc)
+    remainingDocs.set(0, maxDoc)
+
     val (subReaders, remainder) = remappers.foldLeft((Map.empty[String, CachingIndexReader], index)) {
       case ((subReaders, index), (name, remapper)) =>
         val numDocsRemapped = remapper.numDocsRemapped
@@ -39,7 +42,7 @@ class CachingIndexReader(val index: CachedIndex) extends AtomicReader with Loggi
         var remapped = new CachedIndex(remapper.maxDoc, numDocsRemapped)
         var remainder = new CachedIndex(maxDoc, numDocsRemained)
         index.foreach { (f, t, l) =>
-          val (list1, list2) = l.split(remapper)
+          val (list1, list2) = l.split(remapper, remainingDocs)
           remapped += (f, t, list1)
           remainder += (f, t, list2)
         }
@@ -48,7 +51,11 @@ class CachingIndexReader(val index: CachedIndex) extends AtomicReader with Loggi
     if (remainder.isEmpty) {
       subReaders
     } else {
-      subReaders + ("" -> new CachingIndexReader(remainder))
+      val lastReader = new CachingIndexReader(remainder) {
+        override def hasDeletions(): Boolean = true
+        override def getLiveDocs(): Bits = remainingDocs
+      }
+      subReaders + ("" -> lastReader)
     }
   }
 
@@ -90,14 +97,16 @@ class InvertedList(val dlist: ArrayBuffer[(Int, Array[Int])]) {
 
   def iterator = dlist.iterator
 
-  def split(remapper: DocIdRemapper) = {
+  def split(remapper: DocIdRemapper, remainingDocs: FixedBitSet) = {
     val remapped = new InvertedListBuilder()
     val remainder = new InvertedListBuilder()
     var i = 0
     while (i < dlist.length) {
       val newDID = remapper.remap(dlist(i)._1)
-      if (newDID >= 0) remapped.add(newDID, dlist(i)._2)
-      else remainder.add(dlist(i))
+      if (newDID >= 0) {
+        remapped.add(newDID, dlist(i)._2)
+        remainingDocs.clear(dlist(i)._1)
+      } else remainder.add(dlist(i))
       i += 1
     }
     (remapped.sortAndBuild, remainder.build)

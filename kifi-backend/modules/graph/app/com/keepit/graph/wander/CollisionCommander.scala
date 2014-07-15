@@ -17,7 +17,7 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     val collisionMap: Map[VertexId, Int] = journal.getVisited()
     val vertexKind = VertexKind.apply(startingVertexKind)
     val vertexId = VertexId(vertexKind)(startingVertexId)
-    val firstDegreeCollisions = if (avoidFirstDegree) getFirstDegreeCollisions(vertexId, vertexKind) else Set(vertexId)
+    val firstDegreeCollisions = if (avoidFirstDegree) getFirstDegreeNeighbors(vertexId, vertexKind) else Set(vertexId)
     val users = mutable.Map[Id[User], Int]()
     collisionMap collect {
       case (vertexId, count) if count <= 1 || firstDegreeCollisions.contains(vertexId) => //igore
@@ -30,7 +30,7 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     val collisionMap: Map[VertexId, Int] = journal.getVisited()
     val vertexKind = VertexKind.apply(startingVertexKind)
     val vertexId = VertexId(vertexKind)(startingVertexId)
-    val firstDegreeCollisions = if (avoidFirstDegree) getFirstDegreeCollisions(vertexId, vertexKind) else Set(vertexId)
+    val firstDegreeCollisions = if (avoidFirstDegree) getFirstDegreeNeighbors(vertexId, vertexKind) else Set(vertexId)
     val uris = mutable.Map[Id[NormalizedURI], Int]()
     collisionMap collect {
       case (vertexId, count) if count <= 1 || firstDegreeCollisions.contains(vertexId) => //igore
@@ -43,7 +43,7 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     val collisionMap: Map[VertexId, Int] = journal.getVisited()
     val vertexKind = VertexKind.apply(startingVertexKind)
     val vertexId = VertexId(vertexKind)(startingVertexId)
-    val firstDegreeCollisions = if (avoidFirstDegree) getFirstDegreeCollisions(vertexId, vertexKind) else Set(vertexId)
+    val firstDegreeCollisions = if (avoidFirstDegree) getFirstDegreeNeighbors(vertexId, vertexKind) else Set(vertexId)
     val socialUsers = mutable.Map[Id[SocialUserInfo], Int]()
     collisionMap collect {
       case (vertexId, count) if count <= 1 || firstDegreeCollisions.contains(vertexId) => //igore
@@ -65,14 +65,14 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     neighbors.toSet
   }
 
-  private def getFirstDegreeCollisions(centralVertexId: VertexId, vertexType: VertexType): Set[VertexId] = {
-    val firstDegreeCollisions = graph.readOnly { reader =>
+  private def getFirstDegreeNeighbors(centralVertexId: VertexId, vertexType: VertexType): Set[VertexId] = {
+    val firstDegreeNeighbors = graph.readOnly { reader =>
       val vertexReader = reader.getNewVertexReader()
       val firstDegree = collectNeighbors(vertexReader)(centralVertexId, vertexType.kind)
       firstDegree + centralVertexId
     }
 
-    firstDegreeCollisions
+    firstDegreeNeighbors
   }
 
 }

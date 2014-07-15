@@ -1,5 +1,6 @@
 package com.keepit.cortex.models.lda
 
+import com.keepit.cortex.nlp.Stopwords
 import org.specs2.mutable.Specification
 import com.keepit.cortex.features.URIFeatureTestHelper
 import com.keepit.cortex.core._
@@ -147,7 +148,7 @@ trait LDADbTestHelper extends URIFeatureTestHelper {
   val lda = DenseLDA(dim, mapper)
   val version = ModelVersion[DenseLDA](1)
   val wordRep = LDAWordRepresenter(version, lda)
-  val docRep = new LDADocRepresenter(wordRep)
+  val docRep = new LDADocRepresenter(wordRep, Stopwords(Set()))
   val articleStore = new InMemoryArticleStoreImpl()
   val uriRep = LDAURIRepresenter(docRep, articleStore)
 

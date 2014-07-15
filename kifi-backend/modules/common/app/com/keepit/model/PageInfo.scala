@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
+import com.kifi.macros.json
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.common.db._
@@ -228,9 +229,4 @@ object URISummary {
 
 case class KeywordsSummary(article: Seq[String], embedly: Seq[EmbedlyKeyword], word2vecCosine: Seq[String], word2vecFreq: Seq[String], word2vecWordCount: Int, bestGuess: Seq[String])
 
-case class Word2VecKeywords(cosine: Seq[String], freq: Seq[String], wordCounts: Int)
-
-object Word2VecKeywords {
-  implicit val format = Json.format[Word2VecKeywords]
-}
-
+@json case class Word2VecKeywords(cosine: Seq[String], freq: Seq[String], wordCounts: Int)
