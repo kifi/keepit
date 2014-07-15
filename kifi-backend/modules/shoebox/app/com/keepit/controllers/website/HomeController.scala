@@ -181,13 +181,9 @@ class HomeController @Inject() (
           Ok(views.html.marketing.mobileLanding(""))
         }
       } else {
-        Ok(views.html.marketing.landingNew())
+        Ok(views.html.marketing.landing())
       }
     }
-  }
-
-  def qaLanding = Action {
-    Ok(views.html.marketing.landing())
   }
 
   private def temporaryReportLandingLoad()(implicit request: RequestHeader): Unit = SafeFuture {
