@@ -32,7 +32,7 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
     }
   }
 
-  "LibraryMemberRepo" should {
+  "LibraryMembershipRepo" should {
     "basically work" in { // test read/write/save
       withDb() { implicit injector =>
         setup()
