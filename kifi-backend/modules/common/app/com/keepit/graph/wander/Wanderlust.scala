@@ -28,7 +28,7 @@ object Wanderlust {
   def discovery(userId: Id[User]) = Wanderlust(
     startingVertexKind = "User",
     startingVertexDataId = userId.id,
-    preferredCollisions = Set("Uri"),
+    preferredCollisions = Set("Uri", "User"), // will walk all types of nodes in graph if it's empty set
     avoidTrivialCollisions = true,
     steps = 100000,
     restartProbability = 0.15,
