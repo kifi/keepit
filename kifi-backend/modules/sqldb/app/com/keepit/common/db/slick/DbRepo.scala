@@ -130,7 +130,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
 
   private def update(model: M)(implicit session: RWSession) = {
     val startTime = System.currentTimeMillis()
-    val target = for (t <- rows if t.id === model.id.get) yield t
+    val target = getCompiled(model.id.get)
     val count = target.update(model)
     val time = System.currentTimeMillis - startTime
     dbLog.info(s"t:${clock.now}\tsessionId:${session.sessionId}\ttype:UPDATE\tduration:${time}\tmodel:${model.getClass.getSimpleName()}\tmodel:${model.toString.abbreviate(200).trimAndRemoveLineBreaks}")
