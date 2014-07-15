@@ -699,10 +699,13 @@ class UserCommander @Inject() (
       val time = clock.now()
       val from = time.minusDays(DELIGHTED_INITIAL_DELAY)
       val to = user.createdAt
-      val shouldShowDelightedQuestionFut = if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
+      val shouldShowDelightedQuestionFut = if (userExperimentCommander.userHasExperiment(userId, ExperimentType.DELIGHTED_SURVEY_PERMANENT))
+        Future.successful(true)
+      else if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
         heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
           val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
-          time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate
+          (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate) &&
+            userExperimentCommander.userHasExperiment(userId, ExperimentType.DELIGHTED_SURVEY)
         }
       } else Future.successful(false)
       shouldShowDelightedQuestionFut map { shouldShowDelightedQuestion =>
