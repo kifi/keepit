@@ -50,8 +50,6 @@ class UserSessionRepoImpl @Inject() (
     }
   }
 
-  override def get(id: ExternalId[UserSession])(implicit session: RSession): UserSession = getOpt(id).get
-
   def invalidateByUser(userId: Id[User])(implicit s: RWSession): Int = {
     (for (s <- rows if s.userId === userId) yield s.externalId).list.foreach { id =>
       externalIdCache.remove(UserSessionExternalIdKey(id))

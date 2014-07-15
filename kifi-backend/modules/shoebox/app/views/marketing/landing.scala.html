@@ -1,73 +1,59 @@
 @(pageUrl: String = "https://www.kifi.com/", useCustomMetaData: Boolean = false, titleText: String = "", titleDesc: String = "")
 @styles = {
-  <link rel="stylesheet" href="/assets/css/landing.css">
 }
 @content = {
-  <div class="kifi-content">
-    <div class="kifi-video-bg">
-      <div id="video" class="kifi-video">
-        <h2>Search like normal, find like never before</h2>
-        <div class="kifi-video-play-box">
-          <a href="javascript:" class="video-still" onclick="this.setAttribute('data-clicked','');void 0" data-uri="//player.vimeo.com/video/99569714?title=0&amp;byline=0&amp;portrait=0&amp;color=ffffff&amp;autoplay=1" data-w="960" data-h="540" data-track-action="playVideo">
-            <div class="kifi-video-play"></div>
-            <div class="kifi-video-play-hover"></div>
-          </a>
-          <div class="kifi-video-caption">Watch a quick introduction to kifi</div>
-          <div class="kifi-video-play-shadow"></div>
-        </div>
-        <div class="kifi-scroll-down"></div>
-      </div>
+  <section class="hero">
+    <h1>Outsmarting information overload, together</h1>
+    <div class="hero-box">
+      <img src="//djty7jcqog9qu.cloudfront.net/assets/site/hero_970.jpg" width="970" height="627">
+      <a href="javascript:void 'play'" class="video-still" onclick="void this.setAttribute('data-clicked','')" data-uri="//player.vimeo.com/video/99569714?title=0&amp;byline=0&amp;portrait=0&amp;color=ffffff&amp;autoplay=1" data-w="960" data-h="540" data-track-action="playVideo"></a>
     </div>
-    <div id="while-browsing" class="kifi-while kifi-while-browsing">
-      <div class="kifi-while-text">
-        <h3>While browsing</h3>
-        <h2>Easily keep what you find</h2>
-      </div>
-      <img class="kifi-image-keep-it" alt="Easily keep what you find" src="/assets/images/section1.png" data-at2x="/assets/images/section1@@2x.png">
-    </div>
-    <div id="while-searching" class="kifi-while kifi-while-searching">
-      <div class="kifi-while-text">
-        <h3>While searching</h3>
-        <h2>Quickly find what you &amp;
-          your friends kept</h2>
-      </div>
-      <img class="kifi-image-search" alt="Quickly find what you &amp; your friends kept" src="/assets/images/search.png" data-at2x="/assets/images/search@@2x.png">
-    </div>
-    <div id="while-on-the-page" class="kifi-while kifi-while-on-the-page">
-      <div class="kifi-while-text">
-        <h3>While on the page</h3>
-        <h2>Message friends about your finds
-          and gain from their expertise</h2>
-      </div>
-      <img class="kifi-image-message" alt="Message friends" src="/assets/images/group3.png" data-at2x="/assets/images/group3@@2x.png">
-    </div>
-    <div id="try-kifi" class="kifi-try-kifi">
-      <h3>Any Questions? <a href="http://support.kifi.com/customer/portal/articles/1397866-welcome-to-kifi-" data-track-action="clickFindOutMore">Find out more...</a></h3>
-      <hr>
-      <h2>The best things in life are kept
-        and now easily found!</h2>
-      <a class="kifi-try-kifi-button" href="/signup" data-track-action="clickTryKifi">Try kifi</a>
-    </div>
-    <div class="kifi-two-more-things-bg">
-      <div id="two-more-things" class="kifi-two-more-things">
-        <div class="kifi-more-column kifi-kifi-com">
-          <h2>Organize your keeps and
-            friends list on <span class="kifi-fake-link">kifi.com</span></h2>
-          <img class="kifi-image-laptop" alt="kifi.com" src="/assets/images/flatmacbook.png" data-at2x="/assets/images/flatmacbook@@2x.png">
-          <h3>Search, find, tag and preview your keeps.
-            You can also invite and manage your
-            connections and friends lists.</h3>
-        </div>
-      </div>
-    </div>
-  </div>
+    <a href="javascript:void 'scroll down'" class="more-arrow">Learn more</a>
+  </section>
+
+        <section class="features">
+          <div class="wrap3">
+                <ul class="kifi_features">
+                    <li class="clearfix">
+                        <div class="left image">
+                            <img src="//djty7jcqog9qu.cloudfront.net/assets/site/home_icon1.png" width="210" height="138">
+                        </div>
+                        <div class="description">
+                            <h3>Keep it organized</h3>
+                            <p>All your timeless gems organized reliably</p>
+                        </div>
+                    </li>
+                    <li class="clearfix">
+                        <div class="left image">
+                            <img src="//djty7jcqog9qu.cloudfront.net/assets/site/home_icon2.png" width="210" height="138">
+                        </div>
+                        <div class="description">
+                            <h3>Find only the best things</h3>
+                            <p>Recall the best things that you and your friends kept</p>
+                        </div>
+                    </li>
+                    <li class="clearfix">
+                        <div class="left image">
+                            <img src="//djty7jcqog9qu.cloudfront.net/assets/site/home_icon3.png" width="210" height="138">
+                        </div>
+                        <div class="description">
+                            <h3>Recommend and talk about it</h3>
+                            <p>Share or talk about your gems with friends</p>
+                        </div>
+                    </li>
+                </ul>
+
+                <div style="text-align:center">
+                    <a href="/signup" class="signup-btn green-btn" data-track-action="clickTryKifi">Sign up free</a>
+                </div>
+            </div>
+        </section>
 }
 @earlyScripts = {
 }
 @scripts = {
-  <script src="/assets/js/retina-1.1.0.js"></script>
-  <script src="/assets/js/video.js"></script>
-  <script src="/assets/js/header.js"></script>
+<script src="/assets/guest/js/video.js"></script>
+<script src="/assets/guest/js/landing.js"></script>
 <script type="text/javascript">
 var fb_param = {};
 fb_param.pixel_id = '6012675509696';
@@ -97,4 +83,4 @@ fb_param.currency = 'USD';
     None
   }
 }
-@views.html.marketing.helper.page(title = "Kifi • Search like normal, find like never before", styles = styles, content = content, scripts = scripts, dataTrack="landing", htmlClass="landing", earlyScripts = earlyScripts, isLoggedIn = false, metaProperties = metaProperties)
+@views.html.marketing.helper3.page(title = "Kifi • Search like normal, find like never before", styles = styles, content = content, scripts = scripts, dataTrack="landing", htmlClass="landing", earlyScripts = earlyScripts, isLoggedIn = false, metaProperties = metaProperties)

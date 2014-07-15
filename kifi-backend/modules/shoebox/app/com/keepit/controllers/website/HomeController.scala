@@ -186,6 +186,10 @@ class HomeController @Inject() (
     }
   }
 
+  def qaLanding = Action {
+    Ok(views.html.marketing.landing())
+  }
+
   private def temporaryReportLandingLoad()(implicit request: RequestHeader): Unit = SafeFuture {
     val context = new HeimdalContextBuilder()
     context.addRequestInfo(request)

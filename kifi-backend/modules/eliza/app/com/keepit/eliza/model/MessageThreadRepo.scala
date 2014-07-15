@@ -80,10 +80,6 @@ class MessageThreadRepoImpl @Inject() (
     threadExternalIdCache.getOrElse(MessageThreadExternalIdKey(id))(super.get(id))
   }
 
-  override def get(id: Id[MessageThread])(implicit session: RSession): MessageThread = {
-    super.get(id)
-  }
-
   def updateNormalizedUris(updates: Seq[(Id[NormalizedURI], NormalizedURI)])(implicit session: RWSession): Unit = {
     updates.foreach {
       case (oldId, newNUri) =>

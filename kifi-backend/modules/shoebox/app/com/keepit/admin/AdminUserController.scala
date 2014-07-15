@@ -207,7 +207,7 @@ class AdminUserController @Inject() (
 
   private def doUserViewById(userId: Id[User], showPrivates: Boolean)(implicit request: AuthenticatedRequest[AnyContent]): Future[SimpleResult] = {
     db.readOnlyReplica { implicit session =>
-      userRepo.getOpt(userId)
+      Try(userRepo.get(userId))
     } map { user =>
       doUserView(user, showPrivates)
     } getOrElse Promise.successful(NotFound).future

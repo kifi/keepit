@@ -268,7 +268,7 @@ class KeepsCommander @Inject() (
 
   def getKeepsInBulkSelection(selection: BulkKeepSelection, userId: Id[User]): Seq[Keep] = {
     val MAX_KEEPS_IN_COLLECTION = 1000
-    val (collectionKeeps, individualKeeps) = db.readOnlyReplica { implicit s =>
+    val (collectionKeeps, individualKeeps) = db.readOnlyMaster { implicit s =>
       val collectionKeeps = selection.tag flatMap { tagExtId =>
         val tagIdOpt = collectionRepo.getByUserAndExternalId(userId, tagExtId).flatMap(_.id)
         tagIdOpt map { tagId =>
