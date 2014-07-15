@@ -10,10 +10,10 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 @Singleton
 class GraphCommander @Inject() (
-  wanderingCommander: WanderingCommander,
-  collisionCommander: CollisionCommander,
-  userScoreCache: UserConnectionSocialScoreCache,
-  uriScoreCache: UserConnectionFeedScoreCache) extends Logging {
+    wanderingCommander: WanderingCommander,
+    collisionCommander: CollisionCommander,
+    userScoreCache: UserConnectionSocialScoreCache,
+    uriScoreCache: UserConnectionFeedScoreCache) extends Logging {
   private val maxResults = 500
 
   private def getUriScoreList(vertexKind: String, vertexId: Long, journal: TeleportationJournal): Seq[UserConnectionFeedScore] = {

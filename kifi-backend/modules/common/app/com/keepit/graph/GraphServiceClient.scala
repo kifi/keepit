@@ -89,15 +89,6 @@ class GraphServiceClientImpl @Inject() (
   }
 
   def getListOfUserAndScorePairs(userId: Id[User]): Future[Seq[UserConnectionSocialScore]] = {
-    //    val result = cacheProvider.userScoreCache.get(UserConnectionSocialScoreCacheKey(userId))
-    //    Promise.successful(
-    //      result match {
-    //        case None => call(Graph.internal.getListOfUserAndScorePairs(userId)).map { response =>
-    //          response.json.as[Seq[UserConnectionSocialScore]]
-    //        }
-    //        case _ => result.get
-    //      }
-    //    ).future
     cacheProvider.userScoreCache.getOrElseFuture(UserConnectionSocialScoreCacheKey(userId)) {
       call(Graph.internal.getListOfUserAndScorePairs(userId)).map { response =>
         response.json.as[Seq[UserConnectionSocialScore]]
