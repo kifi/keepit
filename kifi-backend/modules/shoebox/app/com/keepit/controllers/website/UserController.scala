@@ -257,7 +257,7 @@ class UserController @Inject() (
   def getPrefs() = JsonAction.authenticatedAsync { request =>
     // The prefs endpoint is used as an indicator that the user is active
     userCommander.setLastUserActive(request.userId)
-    userCommander.getPrefs(SitePrefNames, request.userId) map (Ok(_))
+    userCommander.getPrefs(SitePrefNames, request.userId, request.experiments) map (Ok(_))
   }
 
   def savePrefs() = JsonAction.authenticatedParseJson { request =>

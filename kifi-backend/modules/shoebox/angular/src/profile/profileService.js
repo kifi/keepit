@@ -213,11 +213,9 @@ angular.module('kifi.profileService', [
 
     function postDelightedAnswer(score, comment) {
       var data = {
-        score: score
+        score: score,
+        comment: comment || undefined
       };
-      if (comment) {
-        data.comment = comment;
-      }
       return $http.post(routeService.postDelightedAnswer, data);
     }
 

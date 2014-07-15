@@ -10,26 +10,26 @@ angular.module('kifi.delighted', [])
       scope: {},
       templateUrl: 'delighted/delightedSurvey.tpl.html',
       link: function (scope, element) {
-        scope.currentScore = null;
+        scope.delighted = {};
         scope.showCommentArea = false;
         scope.showSurvey = true;
 
-        var textarea = element.find('.kf-delighted-comment-area-input');
-
-        scope.clickedScore = function (score) {
-          scope.currentScore = score;
-          scope.showCommentArea = true;
-          $timeout(function () {
-            textarea.focus();
-          });
-        };
+        scope.$watch('delighted.score', function () {
+          if (scope.delighted.score) {
+            scope.showCommentArea = true;
+            $timeout(function () {
+              element.find('.kf-delighted-comment-area-input').focus();
+            });
+          }
+        });
 
         scope.goBack = function () {
           scope.showCommentArea = false;
         };
 
         scope.submit = function () {
-          profileService.postDelightedAnswer(scope.currentScore, textarea.val() || null);
+          console.log(scope.delighted.score);
+          profileService.postDelightedAnswer(+scope.delighted.score, scope.delighted.comment || null);
           scope.showSurvey = false;
         };
 

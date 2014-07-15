@@ -5,26 +5,26 @@
       <div class="kf-delighted-options">
         <div class="kf-delighted-option-left-wrapper">
           <div class="kf-delighted-label">Not likely</div>
-          <div class="kf-delighted-option" ng-click="clickedScore(0)">0</div>
+          <label class="kf-delighted-option"><input type="radio" ng-model="delighted.score" name="delighted-score" value="0">0</label>
         </div>
-        <div class="kf-delighted-option" ng-click="clickedScore(1)">1</div>
-        <div class="kf-delighted-option" ng-click="clickedScore(2)">2</div>
-        <div class="kf-delighted-option" ng-click="clickedScore(3)">3</div>
-        <div class="kf-delighted-option" ng-click="clickedScore(4)">4</div>
-        <div class="kf-delighted-option" ng-click="clickedScore(5)">5</div>
-        <div class="kf-delighted-option" ng-click="clickedScore(6)">6</div>
-        <div class="kf-delighted-option" ng-click="clickedScore(7)">7</div>
-        <div class="kf-delighted-option" ng-click="clickedScore(8)">8</div>
-        <div class="kf-delighted-option" ng-click="clickedScore(9)">9</div>
+        <label class="kf-delighted-option"><input type="radio" ng-model="delighted.score" name="delighted-score" value="1">1</label>
+        <label class="kf-delighted-option"><input type="radio" ng-model="delighted.score" name="delighted-score" value="2">2</label>
+        <label class="kf-delighted-option"><input type="radio" ng-model="delighted.score" name="delighted-score" value="3">3</label>
+        <label class="kf-delighted-option"><input type="radio" ng-model="delighted.score" name="delighted-score" value="4">4</label>
+        <label class="kf-delighted-option"><input type="radio" ng-model="delighted.score" name="delighted-score" value="5">5</label>
+        <label class="kf-delighted-option"><input type="radio" ng-model="delighted.score" name="delighted-score" value="6">6</label>
+        <label class="kf-delighted-option"><input type="radio" ng-model="delighted.score" name="delighted-score" value="7">7</label>
+        <label class="kf-delighted-option"><input type="radio" ng-model="delighted.score" name="delighted-score" value="8">8</label>
+        <label class="kf-delighted-option"><input type="radio" ng-model="delighted.score" name="delighted-score" value="9">9</label>
         <div class="kf-delighted-option-right-wrapper">
-          <div class="kf-delighted-option" ng-click="clickedScore(10)">10</div>
+          <label class="kf-delighted-option"><input type="radio" ng-model="delighted.score" name="delighted-score" value="10">10</label>
           <div class="kf-delighted-label">Very likely</div>
         </div>
       </div>
     </div>
     <div class="kf-delighted-comment-area" ng-show="showCommentArea">
       <div class="kf-delighted-title">Why?</div>
-      <textarea class="kf-delighted-comment-area-input" placeholder="Enter a comment (optional)"></textarea>
+      <textarea class="kf-delighted-comment-area-input" ng-model="delighted.comment" name="delighted-comment" placeholder="Enter a comment (optional)"></textarea>
       <div class="kf-delighted-comment-actions">
         <div class="kf-delighted-comment-back" ng-click="goBack()">Change score</div>
         <div class="kf-delighted-comment-submit" ng-click="submit()">Submit</div>
