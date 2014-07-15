@@ -32,9 +32,7 @@ class LibraryController @Inject() (
     val libRequest = LibraryAddRequest(name = name, visibility = LibraryVisibility(visibility),
       description = description, slug = LibrarySlug(slug), collaborators = collabs, followers = follows)
 
-    val newLibrary = db.readWrite { implicit s =>
-      libraryCommander.addLibrary(libRequest, request.userId)
-    }
+    val newLibrary = libraryCommander.addLibrary(libRequest, request.userId)
     Ok(Json.toJson(newLibrary))
   }
 }
