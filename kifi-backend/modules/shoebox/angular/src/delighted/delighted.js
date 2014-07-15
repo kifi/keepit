@@ -29,7 +29,6 @@ angular.module('kifi.delighted', [])
         };
 
         scope.submit = function () {
-          console.log(scope.delighted.score);
           profileService.postDelightedAnswer(+scope.delighted.score, scope.delighted.comment || null);
           scope.showSurvey = false;
         };
