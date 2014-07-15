@@ -16,12 +16,12 @@ case class UserLDAInterests(
     userId: Id[User],
     version: ModelVersion[DenseLDA],
     userTopicMean: Option[UserTopicMean],
-    state: State[UserLDAInterests] = UserLDATopicStates.ACTIVE) extends ModelWithState[UserLDAInterests] {
+    state: State[UserLDAInterests] = UserLDAInterestsStates.ACTIVE) extends ModelWithState[UserLDAInterests] {
   def withId(id: Id[UserLDAInterests]): UserLDAInterests = copy(id = Some(id))
   def withUpdateTime(time: DateTime): UserLDAInterests = copy(updatedAt = time)
   def withState(state: State[UserLDAInterests]): UserLDAInterests = copy(state = state)
 }
 
-object UserLDATopicStates extends States[UserLDAInterests] {
-  val NOT_APPLICABLE = "not_applicable"
+object UserLDAInterestsStates extends States[UserLDAInterests] {
+  val NOT_APPLICABLE = State[UserLDAInterests]("not_applicable")
 }
