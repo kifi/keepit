@@ -4,13 +4,11 @@ import com.keepit.cortex.nlp.Stopwords
 import org.specs2.mutable.Specification
 import com.keepit.cortex.features.URIFeatureTestHelper
 import com.keepit.cortex.core._
-import com.keepit.cortex.models.lda._
 import com.keepit.search.InMemoryArticleStoreImpl
 import com.keepit.common.db.SequenceNumber
 import com.keepit.model.NormalizedURI
 import com.keepit.common.db.Id
 import com.keepit.model.UrlHash
-import com.keepit.cortex.dbmodel.CortexURI
 import com.keepit.cortex.CortexTestInjector
 import com.keepit.cortex.dbmodel._
 import com.keepit.model.NormalizedURIStates

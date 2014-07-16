@@ -12,17 +12,17 @@ import com.keepit.cortex.sql.CortexTypeMappers
 import com.keepit.model.User
 import org.joda.time.DateTime
 
-@ImplementedBy(classOf[UserLDATopicRepoImpl])
-trait UserLDATopicRepo extends DbRepo[UserLDAInterests] {
-  def getByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserTopicMean]
-  def getUpdateTime(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[DateTime]
+@ImplementedBy(classOf[UserLDAInterestsRepoImpl])
+trait UserLDAInterestsRepo extends DbRepo[UserLDAInterests] {
+  def getByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserLDAInterests]
+  def getTopicMeanByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserTopicMean]
 }
 
 @Singleton
-class UserLDATopicRepoImpl @Inject() (
+class UserLDAInterestsRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    airbrake: AirbrakeNotifier) extends DbRepo[UserLDAInterests] with UserLDATopicRepo with CortexTypeMappers {
+    airbrake: AirbrakeNotifier) extends DbRepo[UserLDAInterests] with UserLDAInterestsRepo with CortexTypeMappers {
 
   import db.Driver.simple._
 
@@ -41,10 +41,12 @@ class UserLDATopicRepoImpl @Inject() (
   def deleteCache(model: UserLDAInterests)(implicit session: RSession): Unit = {}
   def invalidateCache(model: UserLDAInterests)(implicit session: RSession): Unit = {}
 
-  def getByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserTopicMean] = {
-    (for { r <- rows if (r.userId === userId && r.version === version) } yield r.userTopicMean).firstOption
+  def getByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserLDAInterests] = {
+    (for { r <- rows if (r.userId === userId && r.version === version) } yield r).firstOption
   }
-  def getUpdateTime(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[DateTime] = {
-    (for { r <- rows if (r.userId === userId && r.version === version) } yield r.updatedAt).firstOption
+
+  def getTopicMeanByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserTopicMean] = {
+    (for { r <- rows if (r.userId === userId && r.version === version && r.state === UserLDAInterestsStates.ACTIVE) } yield r.userTopicMean).firstOption
   }
+
 }
