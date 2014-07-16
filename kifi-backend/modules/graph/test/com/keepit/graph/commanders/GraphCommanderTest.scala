@@ -4,7 +4,7 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.graph.{ manager, GraphTestHelper }
 import com.keepit.graph.common.cache.GraphCacheModule
 import com.keepit.graph.manager._
-import com.keepit.graph.model.{ UserConnectionSocialScore, UserConnectionFeedScore }
+import com.keepit.graph.model.{ ConnectedUserScore, ConnectedUriScore }
 import com.keepit.graph.simple.{ SimpleGraphTestModule }
 import com.keepit.graph.test.GraphTestInjector
 import com.keepit.model.{ KeepSource, User, Keep, UserConnection }

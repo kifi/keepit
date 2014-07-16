@@ -317,8 +317,8 @@ object Graph extends Service {
     def getGraphUpdaterState() = ServiceRoute(GET, "/internal/graph/state")
     def getGraphKinds() = ServiceRoute(GET, "/internal/graph/kinds")
     def wander() = ServiceRoute(POST, "/internal/graph/wander")
-    def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean) = ServiceRoute(GET, "/internal/graph/getUriAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnection", avoidFirstDegreeConnection))
-    def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean) = ServiceRoute(GET, "/internal/graph/getUserAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnection", avoidFirstDegreeConnection))
+    def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUriAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnection", avoidFirstDegreeConnections))
+    def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUserAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnection", avoidFirstDegreeConnections))
   }
 }
 

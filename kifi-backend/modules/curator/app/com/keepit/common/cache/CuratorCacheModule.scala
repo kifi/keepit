@@ -1,6 +1,6 @@
 package com.keepit.common.cache
 
-import com.keepit.graph.model.{ UserConnectionFeedScoreCache, UserConnectionSocialScoreCache }
+import com.keepit.graph.model.{ ConnectedUriScoreCache, ConnectedUserScoreCache }
 
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
@@ -154,10 +154,10 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def uriScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserConnectionFeedScoreCache(stats, accessLog, (innerRepo, 1 second), (outerRepo, 5 minutes))
+    new ConnectedUriScoreCache(stats, accessLog, (innerRepo, 1 second), (outerRepo, 5 minutes))
 
   @Singleton
   @Provides
   def userScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserConnectionSocialScoreCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 5 hours))
+    new ConnectedUserScoreCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 5 hours))
 }

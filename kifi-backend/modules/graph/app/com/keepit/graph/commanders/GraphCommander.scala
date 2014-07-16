@@ -12,53 +12,53 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 class GraphCommander @Inject() (
     wanderingCommander: WanderingCommander,
     collisionCommander: CollisionCommander,
-    userScoreCache: UserConnectionSocialScoreCache,
-    uriScoreCache: UserConnectionFeedScoreCache) extends Logging {
+    userScoreCache: ConnectedUserScoreCache,
+    uriScoreCache: ConnectedUriScoreCache) extends Logging {
   private val maxResults = 500
 
-  private def getUriScoreList(vertexKind: String, vertexId: Long, journal: TeleportationJournal, avoidFirstDegreeConnection: Boolean): Seq[UserConnectionFeedScore] = {
-    val ls = collisionCommander.getUris(vertexKind, vertexId, journal, avoidFirstDegreeConnection).toList.sortBy(_._2)
+  private def getUriScoreList(vertexKind: String, vertexId: Long, journal: TeleportationJournal, avoidFirstDegreeConnections: Boolean): Seq[ConnectedUriScore] = {
+    val ls = collisionCommander.getUris(vertexKind, vertexId, journal, avoidFirstDegreeConnections).toList.sortBy(_._2)
     ls.take(maxResults).map {
       case (uriId, count) =>
-        UserConnectionFeedScore(uriId, count / ls.head._2)
+        ConnectedUriScore(uriId, count / ls.head._2)
     }
   }
 
-  private def getUsersScoreList(vertexKind: String, vertexId: Long, journal: TeleportationJournal, avoidFirstDegreeConnection: Boolean): Seq[UserConnectionSocialScore] = {
-    val ls = collisionCommander.getUsers(vertexKind, vertexId, journal, avoidFirstDegreeConnection).toList.sortBy(_._2)
+  private def getUsersScoreList(vertexKind: String, vertexId: Long, journal: TeleportationJournal, avoidFirstDegreeConnections: Boolean): Seq[ConnectedUserScore] = {
+    val ls = collisionCommander.getUsers(vertexKind, vertexId, journal, avoidFirstDegreeConnections).toList.sortBy(_._2)
     ls.take(maxResults).map {
       case (userId, count) =>
-        UserConnectionSocialScore(userId, count / ls.head._2)
+        ConnectedUserScore(userId, count / ls.head._2)
     }
   }
 
-  private def updateScoreCaches(userId: Id[User], vertexKind: String, vertexId: Long, journal: TeleportationJournal, avoidFirstDegreeConnection: Boolean): (Seq[UserConnectionFeedScore], Seq[UserConnectionSocialScore]) = {
+  private def updateScoreCaches(userId: Id[User], vertexKind: String, vertexId: Long, journal: TeleportationJournal, avoidFirstDegreeConnection: Boolean): (Seq[ConnectedUriScore], Seq[ConnectedUserScore]) = {
     val urisList = getUriScoreList(vertexKind, vertexId, journal, avoidFirstDegreeConnection)
     val usersList = getUsersScoreList(vertexKind, vertexId, journal, avoidFirstDegreeConnection)
-    uriScoreCache.set(UserConnectionFeedScoreCacheKey(userId), urisList)
-    userScoreCache.set(UserConnectionSocialScoreCacheKey(userId), usersList)
+    uriScoreCache.set(ConnectedUriScoreCacheKey(userId, avoidFirstDegreeConnection), urisList)
+    userScoreCache.set(ConnectedUserScoreCacheKey(userId, avoidFirstDegreeConnection), usersList)
     (urisList, usersList)
   }
 
-  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean): Seq[UserConnectionFeedScore] = {
+  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean): Seq[ConnectedUriScore] = {
     val wanderLust = Wanderlust.discovery(userId)
     val journal = wanderingCommander.wander(wanderLust)
 
-    val result = uriScoreCache.get(UserConnectionFeedScoreCacheKey(userId))
+    val result = uriScoreCache.get(ConnectedUriScoreCacheKey(userId, avoidFirstDegreeConnections))
     result match {
-      case None => updateScoreCaches(userId, wanderLust.startingVertexKind, wanderLust.startingVertexDataId, journal, avoidFirstDegreeConnection)._1
-      case _ => result.get
+      case None => updateScoreCaches(userId, wanderLust.startingVertexKind, wanderLust.startingVertexDataId, journal, avoidFirstDegreeConnections)._1
+      case Some(data) => data
     }
   }
 
-  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean): Seq[UserConnectionSocialScore] = {
+  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean): Seq[ConnectedUserScore] = {
     val wanderLust = Wanderlust.discovery(userId)
     val journal = wanderingCommander.wander(wanderLust)
 
-    val result = userScoreCache.get(UserConnectionSocialScoreCacheKey(userId))
+    val result = userScoreCache.get(ConnectedUserScoreCacheKey(userId, avoidFirstDegreeConnections))
     result match {
-      case None => updateScoreCaches(userId, wanderLust.startingVertexKind, wanderLust.startingVertexDataId, journal, avoidFirstDegreeConnection)._2
-      case _ => result.get
+      case None => updateScoreCaches(userId, wanderLust.startingVertexKind, wanderLust.startingVertexDataId, journal, avoidFirstDegreeConnections)._2
+      case Some(data) => data
     }
   }
 

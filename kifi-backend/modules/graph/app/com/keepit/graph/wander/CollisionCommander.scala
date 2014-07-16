@@ -15,7 +15,7 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
 
   def getUsers(startingVertexKind: String, startingVertexId: Long, journal: TeleportationJournal, avoidFirstDegree: Boolean): Map[Id[User], Int] = {
     val collisionMap: Map[VertexId, Int] = journal.getVisited()
-    val vertexKind = VertexKind.apply(startingVertexKind)
+    val vertexKind = VertexKind(startingVertexKind)
     val vertexId = VertexId(vertexKind)(startingVertexId)
     val firstDegreeCollisions = if (avoidFirstDegree) getFirstDegreeNeighbors(vertexId, vertexKind) else Set(vertexId)
     val users = mutable.Map[Id[User], Int]()

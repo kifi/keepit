@@ -6,22 +6,22 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
-abstract class UserConnectionScore
+abstract class ConnectedScore
 
-case class UserConnectionSocialScore(userId: Id[User], score: Double) extends UserConnectionScore
+case class ConnectedUserScore(userId: Id[User], score: Double) extends ConnectedScore
 
-object UserConnectionSocialScore {
+object ConnectedUserScore {
   implicit val format = (
     (__ \ 'userId).format(Id.format[User]) and
     (__ \ 'score).format[Double]
-  )(UserConnectionSocialScore.apply, unlift(UserConnectionSocialScore.unapply))
+  )(ConnectedUserScore.apply, unlift(ConnectedUserScore.unapply))
 }
 
-case class UserConnectionFeedScore(uriId: Id[NormalizedURI], score: Double) extends UserConnectionScore
+case class ConnectedUriScore(uriId: Id[NormalizedURI], score: Double) extends ConnectedScore
 
-object UserConnectionFeedScore {
+object ConnectedUriScore {
   implicit val format = (
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and
     (__ \ 'score).format[Double]
-  )(UserConnectionFeedScore.apply, unlift(UserConnectionFeedScore.unapply))
+  )(ConnectedUriScore.apply, unlift(ConnectedUriScore.unapply))
 }
