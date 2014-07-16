@@ -31,11 +31,11 @@ class SimpleGlobalVertexReader(vertices: Map[VertexId, Vertex]) extends GlobalVe
   def id: VertexId = currentVertexId getOrElse { throw new UninitializedReaderException(s"$this is not initialized over a valid vertex") }
   def data: VertexDataReader = currentVertex.data
   def kind: VertexKind[_ <: VertexDataReader] = data.kind
-  val edgeReader: OutgoingEdgeReader = new SimpleOutgoingEdgeReader(this, currentVertex.edges)
+  val outgoingEdgeReader: OutgoingEdgeReader = new SimpleOutgoingEdgeReader(this, currentVertex.edges)
   def moveTo(vertex: VertexId): Unit = {
     Vertex.checkIfVertexExists(vertices)(vertex)
     currentVertexId = Some(vertex)
-    edgeReader.reset()
+    outgoingEdgeReader.reset()
   }
   def moveTo[V <: VertexDataReader: VertexKind](vertex: VertexDataId[V]): Unit = { moveTo(VertexId(vertex)) }
 }

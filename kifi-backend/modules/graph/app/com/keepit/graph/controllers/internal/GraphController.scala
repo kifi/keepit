@@ -12,7 +12,7 @@ import com.keepit.graph.model._
 import com.keepit.graph.model.VertexKind._
 import scala.collection.mutable
 import com.keepit.common.db.Id
-import com.keepit.model.{NormalizedURI, SocialUserInfo, User}
+import com.keepit.model.{ NormalizedURI, SocialUserInfo, User }
 import com.keepit.common.time._
 
 class GraphController @Inject() (
@@ -71,10 +71,10 @@ class GraphController @Inject() (
   private def collectNeighbors(vertexReader: GlobalVertexReader)(vertexId: VertexId, neighborKinds: Set[VertexType]): Set[VertexId] = {
     vertexReader.moveTo(vertexId)
     val neighbors = mutable.Set[VertexId]()
-    while (vertexReader.edgeReader.moveToNextComponent()) {
-      val (destinationKind, _) = vertexReader.edgeReader.component
+    while (vertexReader.outgoingEdgeReader.moveToNextComponent()) {
+      val (_, destinationKind, _) = vertexReader.outgoingEdgeReader.component
       if (neighborKinds.contains(destinationKind)) {
-        while (vertexReader.edgeReader.moveToNextEdge()) { neighbors += vertexReader.edgeReader.destination }
+        while (vertexReader.outgoingEdgeReader.moveToNextEdge()) { neighbors += vertexReader.outgoingEdgeReader.destination }
       }
     }
     neighbors.toSet

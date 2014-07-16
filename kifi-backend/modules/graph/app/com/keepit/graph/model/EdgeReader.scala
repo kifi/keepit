@@ -22,10 +22,13 @@ trait GlobalEdgeReader extends EdgeReader with SourceReader with DestinationRead
   def moveTo[S <: VertexDataReader, D <: VertexDataReader, E <: EdgeDataReader](source: VertexDataId[S], destination: VertexDataId[D], edgeKind: EdgeKind[E])(implicit sourceKind: VertexKind[S], destinationKind: VertexKind[D]): Unit
 }
 
-trait OutgoingEdgeReader extends EdgeReader with SourceReader {
+trait LocalEdgeReader extends EdgeReader {
   def moveToNextComponent(): Boolean
   def component: (VertexType, VertexType, EdgeType)
   def degree: Int
   def moveToNextEdge(): Boolean
   def reset(): Unit
 }
+
+trait OutgoingEdgeReader extends LocalEdgeReader with SourceReader
+trait IncomingEdgeReader extends LocalEdgeReader with DestinationReader
