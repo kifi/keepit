@@ -74,11 +74,13 @@ class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, 
     sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
       subject = subject, htmlBody = body, category = NotificationCategory.System.HEALTHCHECK))
   }
+}
 
-  def sendOutOfDateMail() {
+class SendOutOfDateMail(sender: MailSender, services: FortyTwoServices) {
+  def sendMail() {
     val subject = s"${services.currentService} out of date for 3 days---%%%test%%%"
-    val body = views.html.email.healthcheckMail(history, services.started.withZone(zones.PT).toStandardTimeString, host.host).body
-    sender.sendMail(ElectronicMail(from = EmailAddress("tan@kifi.com"), to = List(EmailAddress("tan@kifi.com")),
+    val body = s"empty"
+    sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
       subject = subject, htmlBody = body, category = NotificationCategory.System.HEALTHCHECK))
   }
 }
@@ -139,7 +141,7 @@ class HealthcheckActor @Inject() (
       log.debug("^^^^^^lastCompilationDate:^^^^^^^^ " + lastCompilationDate)
       log.debug("^^^^^^betweenDays:^^^^^^^^ " + betweenDays)
       //if (betweenDays >= 3) {
-      new SendHealthcheckMail(null, host, emailSender, services).sendOutOfDateMail()
+      new SendOutOfDateMail(emailSender, services).sendMail()
     //}
     case m => throw new UnsupportedActorMessage(m)
   }
