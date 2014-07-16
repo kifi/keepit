@@ -43,7 +43,7 @@ trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
 }
 
-class HttpFetcherImpl(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean, schedulingProperties: SchedulingProperties, scraperHttpConfig: ScraperHttpConfig) extends HttpFetcher with Logging with ScraperUtils {
+class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean, schedulingProperties: SchedulingProperties, scraperHttpConfig: ScraperHttpConfig) extends HttpFetcher with Logging with ScraperUtils {
   val cm = if (trustBlindly) {
     val registry = RegistryBuilder.create[ConnectionSocketFactory]
     registry.register("http", PlainConnectionSocketFactory.INSTANCE)
