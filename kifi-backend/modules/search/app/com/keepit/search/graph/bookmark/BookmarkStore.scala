@@ -70,7 +70,9 @@ class BookmarkStore(
             uriId = rec.uriId,
             isPrivate = rec.isPrivate,
             userId = userId,
-            source = BookmarkStore.bookmarkSource
+            source = BookmarkStore.bookmarkSource,
+            libraryId = None, // todo(andrew/léo/yasuhiro): Fix to include real library
+            libraryExternalId = None // todo(andrew/léo/yasuhiro): Fix to include real library
           )
         }
       }

@@ -4,6 +4,7 @@ import scala.concurrent.duration._
 
 import org.joda.time.DateTime
 
+import com.kifi.macros.json
 import com.keepit.common.cache._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
@@ -24,7 +25,8 @@ case class User(
     pictureName: Option[String] = None, // denormalized UserPicture.name
     userPictureId: Option[Id[UserPicture]] = None,
     seq: SequenceNumber[User] = SequenceNumber.ZERO,
-    primaryEmail: Option[EmailAddress] = None) extends ModelWithExternalId[User] with ModelWithState[User] with ModelWithSeqNumber[User] {
+    primaryEmail: Option[EmailAddress] = None,
+    username: Option[Username] = None) extends ModelWithExternalId[User] with ModelWithState[User] with ModelWithSeqNumber[User] {
   def withId(id: Id[User]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withName(firstName: String, lastName: String) = copy(firstName = firstName, lastName = lastName)
@@ -37,6 +39,8 @@ case class User(
 
 object User {
   implicit val userPicIdFormat = Id.format[UserPicture]
+  implicit val usernameFormat = Username.jsonAnnotationFormat
+
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[User]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
@@ -48,12 +52,16 @@ object User {
     (__ \ 'pictureName).formatNullable[String] and
     (__ \ 'userPictureId).formatNullable[Id[UserPicture]] and
     (__ \ 'seq).format(SequenceNumber.format[User]) and
-    (__ \ 'primaryEmail).formatNullable[EmailAddress]
+    (__ \ 'primaryEmail).formatNullable[EmailAddress] and
+    (__ \ 'username).formatNullable[Username]
   )(User.apply, unlift(User.unapply))
 
   val brackets = "[<>]".r
   def sanitizeName(str: String) = brackets.replaceAllIn(str, "")
 }
+
+@json
+case class Username(value: String)
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
   override val version = 6

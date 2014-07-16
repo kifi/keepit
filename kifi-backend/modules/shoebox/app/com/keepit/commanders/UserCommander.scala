@@ -168,9 +168,9 @@ class UserCommander @Inject() (
     // two models, service clients, and caches.
     val iNeededToDoThisIn20Minutes = if (experiments.contains(ExperimentType.ADMIN)) {
       Seq(
-        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424201"), "FortyTwo Engineering", "", "0.jpg"),
-        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424202"), "FortyTwo Family", "", "0.jpg"),
-        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424203"), "FortyTwo Product", "", "0.jpg")
+        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424201"), "FortyTwo Engineering", "", "0.jpg", None),
+        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424202"), "FortyTwo Family", "", "0.jpg", None),
+        BasicUser(ExternalId[User]("42424242-4242-4242-4242-424242424203"), "FortyTwo Product", "", "0.jpg", None)
       )
     } else {
       Seq()
@@ -179,7 +179,7 @@ class UserCommander @Inject() (
     // This will eventually be a lot more complex. However, for now, tricking the client is the way to go.
     // ^^^^^^^^^ Unrelated to the offensive code above ^^^^^^^^^
     val kifiSupport = Seq(
-      BasicUser(ExternalId[User]("aa345838-70fe-45f2-914c-f27c865bdb91"), "Tamila, Kifi Help", "", "tmilz.jpg"))
+      BasicUser(ExternalId[User]("aa345838-70fe-45f2-914c-f27c865bdb91"), "Tamila, Kifi Help", "", "tmilz.jpg", None))
     basicUsers ++ iNeededToDoThisIn20Minutes ++ kifiSupport
   }
 
@@ -243,7 +243,7 @@ class UserCommander @Inject() (
 
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
     val newUser = db.readWrite { implicit session =>
-      userRepo.save(User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state))
+      userRepo.save(User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state, username = None)) // todo(andrew): add usernames for library purposes
     }
     SafeFuture {
       db.readWrite { implicit session =>

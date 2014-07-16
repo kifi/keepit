@@ -53,17 +53,19 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+
           val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3)))
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
 
           keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(9)))
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(9), libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
 
           keepRepo.save(Keep(title = Some("k3"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
-            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6)))
+            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6), libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
 
           keepRepo.save(Keep(title = Some("k4"), userId = user2.id.get, url = url3.url, urlId = url3.id.get,
-            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6)))
+            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6), libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
 
           val col1 = collectionRepo.save(Collection(userId = user1.id.get, name = "t1"))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = col1.id.get))

@@ -27,7 +27,9 @@ case class Keep(
     state: State[Keep] = KeepStates.ACTIVE,
     source: KeepSource,
     kifiInstallation: Option[ExternalId[KifiInstallation]] = None,
-    seq: SequenceNumber[Keep] = SequenceNumber.ZERO) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
+    libraryId: Option[Id[Library]],
+    libraryExternalId: Option[ExternalId[Library]]) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,isPrimary:$isPrimary,userId:$userId,state:$state,source:$source,seq:$seq],path:$bookmarkPath"
 
@@ -59,10 +61,10 @@ case class Keep(
 object Keep {
 
   // is_primary: trueOrNull in db
-  def applyWithPrimary(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep], title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], urlId: Id[URL], url: String, bookmarkPath: Option[String], isPrivate: Boolean, userId: Id[User], state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]], seq: SequenceNumber[Keep]) =
-    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url, bookmarkPath, isPrivate, userId, state, source, kifiInstallation, seq)
+  def applyWithPrimary(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep], title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], urlId: Id[URL], url: String, bookmarkPath: Option[String], isPrivate: Boolean, userId: Id[User], state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]], seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], libraryExternalId: Option[ExternalId[Library]]) =
+    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url, bookmarkPath, isPrivate, userId, state, source, kifiInstallation, seq, libraryId, libraryExternalId)
   def unapplyWithPrimary(k: Keep) = {
-    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url, k.bookmarkPath, k.isPrivate, k.userId, k.state, k.source, k.kifiInstallation, k.seq)
+    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url, k.bookmarkPath, k.isPrivate, k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, k.libraryExternalId)
   }
 
   implicit def bookmarkFormat = (
@@ -81,7 +83,9 @@ object Keep {
     (__ \ 'state).format(State.format[Keep]) and
     (__ \ 'source).format[String].inmap(KeepSource.apply, unlift(KeepSource.unapply)) and
     (__ \ 'kifiInstallation).formatNullable(ExternalId.format[KifiInstallation]) and
-    (__ \ 'seq).format(SequenceNumber.format[Keep])
+    (__ \ 'seq).format(SequenceNumber.format[Keep]) and
+    (__ \ 'libraryId).formatNullable(Id.format[Library]) and
+    (__ \ 'libraryExternalId).formatNullable(ExternalId.format[Library])
   )(Keep.apply, unlift(Keep.unapply))
 }
 
@@ -106,7 +110,7 @@ class KeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlug
   extends PrimitiveCacheImpl[KeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 5
+  override val version = 6
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -115,7 +119,7 @@ class KeepUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPl
   extends JsonCacheImpl[KeepUriUserKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
-  override val version = 3
+  override val version = 4
   val namespace = "latest_keep_uri"
   def toKey(): String = uriId.toString
 }
@@ -124,7 +128,7 @@ class LatestKeepUriCache(stats: CacheStatistics, accessLog: AccessLog, innermost
   extends JsonCacheImpl[LatestKeepUriKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LatestKeepUrlKey(url: String) extends Key[Keep] {
-  override val version = 2
+  override val version = 3
   val namespace = "latest_keep_url"
   def toKey(): String = NormalizedURI.hashUrl(url).hash
 }
@@ -133,7 +137,7 @@ class LatestKeepUrlCache(stats: CacheStatistics, accessLog: AccessLog, innermost
   extends JsonCacheImpl[LatestKeepUrlKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KifiHitKey(userId: Id[User], uriId: Id[NormalizedURI]) extends Key[SanitizedKifiHit] {
-  override val version = 1
+  override val version = 2
   val namespace = "keep_hit"
   def toKey(): String = userId.id + "#" + uriId.id
 }
@@ -175,8 +179,8 @@ object KeepSource {
 
 object KeepFactory extends Logging {
 
-  def apply(origUrl: String, uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None): Keep = {
-    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = origUrl, source = source, isPrivate = isPrivate)
+  def apply(origUrl: String, uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None, libraryId: Option[Id[Library]], libraryExternalId: Option[ExternalId[Library]]): Keep = {
+    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = origUrl, source = source, isPrivate = isPrivate, libraryId = libraryId, libraryExternalId = libraryExternalId)
   }
 
 }

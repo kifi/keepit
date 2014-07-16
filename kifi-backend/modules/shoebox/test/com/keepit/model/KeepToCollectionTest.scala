@@ -30,14 +30,16 @@ class KeepToCollectionTest extends Specification with ShoeboxTestInjector {
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
           val url4 = urlRepo.save(URLFactory(url = uri4.url, normalizedUriId = uri4.id.get))
 
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+
           val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE))
+            uriId = uri1.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
           val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE))
+            uriId = uri2.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
           val bookmark3 = keepRepo.save(Keep(title = Some("C1"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
-            uriId = uri3.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE))
+            uriId = uri3.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
           keepRepo.save(Keep(title = Some("D1"), userId = user1.id.get, url = url4.url, urlId = url4.id.get,
-            uriId = uri4.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE))
+            uriId = uri4.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
 
           val collectionRepo = inject[CollectionRepo]
           val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::

@@ -1,13 +1,11 @@
 package com.keepit.search.feed
 
 import com.keepit.common.db.Id
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ Username, NormalizedURI, User, UrlHash }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.common.db.ExternalId
-import com.keepit.model.User
-import com.keepit.model.UrlHash
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
 import com.keepit.search.sharding.Shard
@@ -26,14 +24,16 @@ class FixedResultFeedCommander extends FeedCommander {
       externalId = ExternalId[User]("4e5f7b8c-951b-4497-8661-012345678901"),
       firstName = "u1",
       lastName = "fake",
-      pictureName = "u1.png"
+      pictureName = "u1.png",
+      username = Some(Username("u1"))
     ),
 
     BasicUser(
       externalId = ExternalId[User]("4e5f7b8c-951b-4497-8661-012345678902"),
       firstName = "u2",
       lastName = "fake",
-      pictureName = "u2.png"
+      pictureName = "u2.png",
+      username = Some(Username("u2"))
     )
   )
 

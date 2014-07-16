@@ -4,6 +4,7 @@ import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatis
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
+import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
