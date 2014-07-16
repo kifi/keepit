@@ -84,14 +84,14 @@ case class LibraryAddRequest(
   collaborators: Seq[ExternalId[User]],
   followers: Seq[ExternalId[User]])
 
-case class BasicLibrary(
+case class LibraryInfo(
   id: ExternalId[Library],
   name: String,
   visibility: LibraryVisibility,
   shortDescription: Option[String],
   slug: LibrarySlug,
   ownerId: ExternalId[User])
-object BasicLibrary {
+object LibraryInfo {
   implicit val libraryExternalIdFormat = ExternalId.format[Library]
 
   implicit val format = (
@@ -101,10 +101,10 @@ object BasicLibrary {
     (__ \ 'shortDescription).formatNullable[String] and
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'ownerId).format[ExternalId[User]]
-  )(BasicLibrary.apply, unlift(BasicLibrary.unapply))
+  )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
-  def fromLibraryAndOwner(lib: Library, owner: User): BasicLibrary = {
-    BasicLibrary(
+  def fromLibraryAndOwner(lib: Library, owner: User): LibraryInfo = {
+    LibraryInfo(
       id = lib.externalId,
       name = lib.name,
       visibility = lib.visibility,
@@ -149,12 +149,12 @@ object FullLibraryInfo {
   )(FullLibraryInfo.apply, unlift(FullLibraryInfo.unapply))
 }
 
-case class BasicLibraryIdKey(libraryId: Id[Library]) extends Key[BasicLibrary] {
+case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {
   override val version = 1
-  val namespace = "basic_library_libraryid"
+  val namespace = "library_info_libraryid"
   def toKey(): String = libraryId.id.toString
 }
 
-class BasicLibraryIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends ImmutableJsonCacheImpl[BasicLibraryIdKey, BasicLibrary](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends ImmutableJsonCacheImpl[LibraryInfoIdKey, LibraryInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
