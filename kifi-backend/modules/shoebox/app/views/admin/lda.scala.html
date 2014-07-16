@@ -47,6 +47,15 @@
 
   <p id = "doc_topic_result"></p>
 
+  <br><br>
+  <div> user interest score for a uri </div>
+  <form id = "user_uri_interest">
+     <input id = "user_id" type = "text" placeholder = "userId">
+     <input id = "uri_id" type = "text" placeholder = "uriId">
+     <button type = "submit">submit</button>
+  </form>
+  <p id = "user_uri_interest_result">
+
 
 
 
@@ -157,6 +166,18 @@
         ).done(done).fail(fail);
 
         function done(data){ $("#doc_topic_result").empty().prepend(data) }
+        function fail() { alert("bad things happened") }
+
+      })
+
+      $('#user_uri_interest').submit(function(event){
+        event.preventDefault();
+
+        $.post('@com.keepit.controllers.admin.routes.AdminLDAController.userUriInterest',
+          {userId: $('#user_id').val(), uriId: $('#uri_id').val()}
+        ).done(done).fail(fail);
+
+        function done(data) { $("#user_uri_interest_result").empty().prepend(data)}
         function fail() { alert("bad things happened") }
 
       })
