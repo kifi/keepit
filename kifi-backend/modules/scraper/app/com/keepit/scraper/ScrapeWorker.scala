@@ -365,12 +365,12 @@ class ScrapeWorker(
   private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
 
   private[this] def getSignature(x: Extractor) = {
-    Signature(Seq(
+    new SignatureBuilder().add(Seq(
       getTitle(x),
       getDescription(x).getOrElse(""),
       getKeywords(x).getOrElse(""),
       x.getContent()
-    ))
+    )).build
   }
 
   def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(

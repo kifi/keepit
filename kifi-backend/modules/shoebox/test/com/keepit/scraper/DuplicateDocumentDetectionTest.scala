@@ -16,9 +16,9 @@ class DuplicateDocumentDetectionTest extends Specification with ShoeboxTestInjec
     "find similar documents of different thresholds" in {
       withDb(TestMailModule(), FakeScrapeSchedulerModule()) { implicit injector: Injector =>
 
-        val builder1 = new SignatureBuilder(3)
-        val builder2 = new SignatureBuilder(3)
-        val builder3 = new SignatureBuilder(3)
+        val builder1 = new FakeSignatureBuilder(3)
+        val builder2 = new FakeSignatureBuilder(3)
+        val builder3 = new FakeSignatureBuilder(3)
         val sig1 = builder1.add("aaa bbb ccc ddd eee  fff ggg hhh iii jjj  kkk lll mmm nnn ooo  ppp qqq rrr sss ttt").build
         val sig2 = builder2.add("aaa bbb ccc ddd eee  fff ggg hhh iii x  kkk lll mmm nnn ooo  ppp qqq rrr sss ttt").build
         val sig3 = builder1.add("uuu").build
