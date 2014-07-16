@@ -4,7 +4,7 @@ import org.specs2.mutable.SpecificationLike
 import com.keepit.test.ShoeboxTestInjector
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.scraper.{ Signature, BasicArticle, FakeScrapeSchedulerModule }
+import com.keepit.scraper._
 import com.keepit.model._
 import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
@@ -19,21 +19,26 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.shoebox.{ ShoeboxSlickModule, FakeKeepImportsModule }
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.inject.TestFortyTwoModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
 import scala.Some
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.shoebox.FakeKeepImportsModule
 
+import scala.math._
+
 class NormalizationServiceTest extends TestKitScope with SpecificationLike with ShoeboxTestInjector {
 
   val fakeArticles: PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle] = {
-    case (url @ "http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever", signature = Signature(Seq("whatever")), destinationUrl = url)
-    case (url @ "http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "17558679", signature = Signature(Seq("17558679")), destinationUrl = url)
-    case (url @ "http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content", signature = Signature(Seq("some content")), destinationUrl = url)
-    case (url @ "http://www.linkedin.com/in/leo", None) => BasicArticle("leo", "some content", signature = Signature(Seq("some content")), destinationUrl = url)
-    case (url @ "http://www.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "136123062", signature = Signature(Seq("136123062")), destinationUrl = url)
+    case (url @ "http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever", signature = fakeSignature("whatever"), destinationUrl = url)
+    case (url @ "http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leo grimaldi", "17558679", signature = fakeSignature("17558679"), destinationUrl = url)
+    case (url @ "http://www.linkedin.com/pub/leo\u002dgrimaldi/12/42/2b3", None) => BasicArticle("leo", "some content", signature = fakeSignature("some content"), destinationUrl = url)
+    case (url @ "http://www.linkedin.com/in/leo", None) => BasicArticle("leo", "some content", signature = fakeSignature("some content"), destinationUrl = url)
+    case (url @ "http://www.linkedin.com/in/viviensaulue", Some(_)) => BasicArticle("vivien", "136123062", signature = fakeSignature("136123062"), destinationUrl = url)
+  }
+
+  private def fakeSignature(text: String): Signature = {
+    new FakeSignatureBuilder().add(text).build
   }
 
   def updateNormalizationNow(uri: NormalizedURI, candidates: NormalizationCandidate*)(implicit injector: Injector): Option[NormalizedURI] = {

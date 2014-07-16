@@ -111,6 +111,7 @@ class ABookCommander @Inject() (
           val abookUpload = Json.obj("origin" -> "gmail", "ownerId" -> userInfo.id, "numContacts" -> jsSeq.length, "contacts" -> jsSeq) // todo(ray): removeme
           processUpload(userId, ABookOrigins.GMAIL, Some(userInfo), tokenOpt, abookUpload) getOrElse (throw new IllegalStateException(s"$prefix failed to upload contacts ($abookUpload)"))
         case _ =>
+          airbrake.notify(s"Non-ok response for contacts import: $contactsResp") // todo(martin) remove after debugging
           throw new IllegalStateException(s"$prefix failed to retrieve contacts; response: $contactsResp") // todo(ray): retry
       }
     }

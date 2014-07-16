@@ -9,7 +9,7 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 import play.api.Play.current
 import com.google.inject.Inject
-import com.keepit.scraper.SignatureBuilder
+import com.keepit.scraper.Signature
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.healthcheck.SystemAdminMailSender
@@ -44,7 +44,7 @@ class DuplicateDocumentDetection @Inject() (
   }
 
   val DEFAULT_THRESHOLD = 0.90
-  val EMPTY_DOCUMENT = (new SignatureBuilder).add("").build().bytes
+  val EMPTY_DOCUMENT = Signature.empty().bytes
 
   // from `Signature`, duplicated to use Array[Byte]s for efficiency
   def similarTo(that: Array[Byte], other: Array[Byte]): Double = {

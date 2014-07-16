@@ -113,7 +113,7 @@ class AdminScreenshotController @Inject() (
     val urlOpt = (request.body \ "url").asOpt[String]
     log.info(s"[getImageInfo] body=${request.body} url=${urlOpt}")
     val resOpt = urlOpt map { url =>
-      val images = db.readOnlyReplica { implicit ro => normalizedURIInterner.getByUri(url) } match {
+      val images = db.readOnlyMaster { implicit ro => normalizedURIInterner.getByUri(url) } match {
         case Some(uri) =>
           scraper.getEmbedlyImageInfos(uri.id.get, uri.url) map { infos =>
             infos.map { Json.toJson(_) }
@@ -130,7 +130,7 @@ class AdminScreenshotController @Inject() (
     log.info(s"[getImageInfos] body=${request.body} urls=${urlsOpt}")
     urlsOpt match {
       case Some(urls) =>
-        val uris = db.readOnlyReplica { implicit ro =>
+        val uris = db.readOnlyMaster { implicit ro =>
           urls.map(url => url -> normalizedURIInterner.getByUri(url))
         }
         val imgRes = uris map {

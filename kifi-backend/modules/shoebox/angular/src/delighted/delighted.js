@@ -24,11 +24,11 @@ angular.module('kifi.delighted', [])
         });
 
         scope.goBack = function () {
+          scope.delighted.score = null;
           scope.showCommentArea = false;
         };
 
         scope.submit = function () {
-          console.log(scope.delighted.score);
           profileService.postDelightedAnswer(+scope.delighted.score, scope.delighted.comment || null);
           scope.showSurvey = false;
         };

@@ -10,9 +10,8 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.cortex.models.lda.LDATopicConfiguration
 import com.keepit.common.db.slick.Database
-import com.keepit.model.KeepRepo
+import com.keepit.model.{ NormalizedURI, KeepRepo, User }
 import com.keepit.common.db.Id
-import com.keepit.model.User
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 
@@ -111,5 +110,30 @@ class AdminLDAController @Inject() (
     cortex.getLDAFeatures(uris).map { feats =>
       Ok(Json.toJson(feats))
     }
+  }
+
+  def userUriInterest() = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val userId = body.get("userId").get.toLong
+    val uriId = body.get("uriId").get.toLong
+    val score = cortex.userUriInterest(Id[User](userId), Id[NormalizedURI](uriId))
+    score.map { s =>
+      Ok(Json.toJson(s))
+    }
+  }
+
+  def userTopicMean() = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val userId = body.get("userId").get.toLong
+    val topK = 10
+
+    cortex.userTopicMean(Id[User](userId)).map { meanOpt =>
+      val res = meanOpt.map { arr =>
+        val tops = arr.zipWithIndex.toArray.sortBy(-1f * _._1).take(topK)
+        tops.map { case (score, topic) => (topic, score) }.mkString
+      } getOrElse "not enough information"
+      Ok(Json.toJson(res))
+    }
+
   }
 }
