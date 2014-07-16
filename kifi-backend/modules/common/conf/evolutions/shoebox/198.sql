@@ -13,6 +13,6 @@ CREATE TABLE IF NOT EXISTS system_value (
     UNIQUE INDEX system_value_name (name)
 );
 
-insert into evolutions (name, description) values('197.sql', 'adding system_value table to curator');
+insert into evolutions (name, description) values('198.sql', 'adding system_value table to curator');
 
 # --- !Downs
