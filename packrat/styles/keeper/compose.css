@@ -17,7 +17,14 @@
   cursor: text; /* ff */
   word-wrap: break-word;
 }
-.kifi-compose.kifi-empty .kifi-compose-draft:focus {
+textarea.kifi-compose-draft {
+  display: block;
+  width: 100%;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+.kifi-compose.kifi-empty .kifi-compose-draft:focus,
+.kifi-compose.kifi-empty .kifi-compose-draft-textarea:focus {
   -webkit-animation: paddingLeft10 .16s ease-out;
   animation: paddingLeft10 .16s ease-out;
 }
@@ -37,11 +44,14 @@
 @keyframes paddingLeft2 {
   50% {padding-left: 2px}
 }
-.kifi-compose-draft:first-child {
+div.kifi-compose-draft:first-child {
   border-radius: 3px 3px 0 0 !important;
 }
-.kifi-compose.kifi-empty .kifi-compose-draft::after {
+.kifi-compose.kifi-empty div.kifi-compose-draft::after {
   content: attr(data-placeholder);
+  color: #a9a9a9;
+}
+textarea.kifi-compose-draft::-moz-placeholder {
   color: #a9a9a9;
 }
 .kifi-compose-draft a[href] {
@@ -101,6 +111,26 @@
   .kifi-compose-highlight.kifi-disabled {
     background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAQCAYAAAAI0W+oAAABPklEQVR4AY3UL0tDURjH8cdtQYdOkDVF04KYTEaLSRDBP0kEwbAoWDT4B9QoOhwoDNOa3VdgURE1X70Occw3MBF008dvuIPLAc99Dnzij286j/hece+8FxsIIUajKOMY0uEbzKOBTxwYAjlU0MILppJCaZSguEPBECkgwC/K6IH4Ql2oQHEZH3gMoY42liGAP7QGRYCsIZLCNRTrEEsojw8oFiAGK1DUkLaGdqD4QjfE4B6KM4g19AjFG8RgBBrZtoay+IGiiZQhNAONnFhDw9CYKg5xizoqGHDGq9BIE/u4wBMCbCHjhvqhCR7iQywZNqduSBAahtOQyDg0wTf63NCuYVh0PvezYTPohnKoJYwmIDGLUI9XpNyQYAzvULiqELiOoHC1Mes7qnmU0IAixCYykH/M4QYttHGFSUjHH0PNAa5EN2ezAAAAAElFTkSuQmCC);
   }
+}
+.kifi-compose-highlight-unavailable {
+  position: absolute;
+  bottom: 28px;
+  left: -2px;
+  background-color: #22303f;
+  border-radius: 6px;
+  padding: 8px 12px 8px 8px;
+  text-align: left;
+  color: #fff;
+  font-weight: 300;
+  cursor: default;
+  opacity: 0;
+  transition: opacity .1s linear, -webkit-transform .1s ease-out;
+  transition: opacity .1s linear, transform .1s ease-out;
+}
+.kifi-compose-highlight-unavailable.kifi-showing {
+  -webkit-transform: translate(0, -3px);
+  transform: translate(0, -3px);
+  opacity: 1;
 }
 .kifi-compose.kifi-empty .kifi-compose-tip {
   display: none;
