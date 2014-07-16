@@ -9,12 +9,11 @@ import scala.concurrent.Future
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.Id
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ User, NormalizedURI, Word2VecKeywords }
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.{ UriSparseLDAFeatures, DenseLDA }
 import com.keepit.serializer.TraversableFormat
-import com.keepit.model.Word2VecKeywords
 import com.keepit.common.net.CallTimeouts
 import com.keepit.cortex.models.lda._
 
@@ -37,6 +36,7 @@ trait CortexServiceClient extends ServiceClient {
   def ldaDocTopic(doc: String): Future[Option[Array[Float]]]
   def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit
   def getLDAFeatures(uris: Seq[Id[NormalizedURI]]): Future[Seq[Array[Float]]]
+  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[Float]
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
@@ -149,6 +149,10 @@ class CortexServiceClientImpl(
       val uriFeatures = (response.json \ "features").as[JsArray].value.map(_.as[UriSparseLDAFeatures])
       (publishedModelVersion, uriFeatures)
     }
+  }
+
+  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[Float] = {
+    call(Cortex.internal.userUriInterest(userId, uriId)).map { r => (r.json).as[Float] }
   }
 
 }
