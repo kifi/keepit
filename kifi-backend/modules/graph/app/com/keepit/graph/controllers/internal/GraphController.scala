@@ -2,13 +2,22 @@ package com.keepit.graph.controllers.internal
 
 import com.google.inject.Inject
 import com.keepit.common.controller.GraphServiceController
+import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
+import com.keepit.graph.commanders.GraphCommander
+import com.keepit.graph.manager.{ NormalizedUriGraphUpdate, GraphUpdaterState, GraphStatistics, GraphManager }
+import com.keepit.model.{ SocialUserInfo, NormalizedURI, User }
+import play.api.mvc.{ BodyParsers, Action }
 import com.keepit.graph.manager.{ GraphUpdaterState, GraphStatistics, GraphManager }
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.graph.wander._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.graph.model._
+import play.api.mvc.BodyParsers.parse
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
+import com.keepit.graph.model.{ EdgeKind, VertexKind, GraphKinds }
 import com.keepit.graph.model.VertexKind._
 import scala.collection.mutable
 import com.keepit.common.db.Id
@@ -17,7 +26,8 @@ import com.keepit.common.time._
 
 class GraphController @Inject() (
     graphManager: GraphManager,
-    wanderingCommander: WanderingCommander) extends GraphServiceController with Logging {
+    wanderingCommander: WanderingCommander,
+    graphCommander: GraphCommander) extends GraphServiceController with Logging {
 
   def wander() = SafeAsyncAction(parse.json) { request =>
     val wanderlust = request.body.as[Wanderlust]
@@ -42,6 +52,18 @@ class GraphController @Inject() (
   def getGraphKinds() = Action { request =>
     val graphKinds = GraphKinds(VertexKind.all.map(_.code), EdgeKind.all.map(_.code))
     val json = Json.toJson(graphKinds)
+    Ok(json)
+  }
+
+  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean) = Action { request =>
+    val urisSeq = graphCommander.getListOfUriAndScorePairs(userId, avoidFirstDegreeConnections)
+    val json = Json.toJson(urisSeq)
+    Ok(json)
+  }
+
+  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean) = Action { request =>
+    val usersSeq = graphCommander.getListOfUserAndScorePairs(userId, avoidFirstDegreeConnections)
+    val json = Json.toJson(usersSeq)
     Ok(json)
   }
 
@@ -96,4 +118,5 @@ class GraphController @Inject() (
     log.info(s"Resolved forbidden collisions in ${end.getMillis - start.getMillis} ms: ${forbiddenCollisions.groupBy(_.kind).mapValues(_.size).mkString(", ")}")
     forbiddenCollisions
   }
+
 }
