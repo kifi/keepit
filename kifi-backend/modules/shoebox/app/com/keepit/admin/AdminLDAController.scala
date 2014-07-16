@@ -10,9 +10,8 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.cortex.models.lda.LDATopicConfiguration
 import com.keepit.common.db.slick.Database
-import com.keepit.model.KeepRepo
+import com.keepit.model.{ NormalizedURI, KeepRepo, User }
 import com.keepit.common.db.Id
-import com.keepit.model.User
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 
@@ -110,6 +109,16 @@ class AdminLDAController @Inject() (
     val uris = db.readOnlyReplica { implicit s => keepRepo.getLatestKeepsURIByUser(userId, limit, includePrivate = false) }
     cortex.getLDAFeatures(uris).map { feats =>
       Ok(Json.toJson(feats))
+    }
+  }
+
+  def userUriInterest() = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val userId = body.get("userId").get.toLong
+    val topN = body.get("uriId").get.toLong
+    val score = Future.successful(0.5f) // fake so far
+    score.map { s =>
+      Ok(Json.toJson(s))
     }
   }
 }
