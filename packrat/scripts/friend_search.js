@@ -103,7 +103,6 @@ var initFriendSearch = (function () {
   function initDropdown($ul, $in) {
     $ul.on('mousedown', '.kifi-dropdown-item-x', function (e) {
       if (e.which === 1) {
-        console.log('ok');
         return false;
       }
     })
