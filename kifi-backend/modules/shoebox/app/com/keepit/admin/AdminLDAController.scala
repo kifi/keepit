@@ -115,7 +115,7 @@ class AdminLDAController @Inject() (
   def userUriInterest() = AdminHtmlAction.authenticatedAsync { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = body.get("userId").get.toLong
-    val topN = body.get("uriId").get.toLong
+    val uriId = body.get("uriId").get.toLong
     val score = Future.successful(0.5f) // fake so far
     score.map { s =>
       Ok(Json.toJson(s))
