@@ -871,6 +871,9 @@ api.port.on({
       respond({status: req.status});
     }
   },
+  delete_contact: function(email) {
+    ajax('POST', '/ext/hideEmailFromUser', {email: email});
+  },
   message_rendered: function(o, _, tab) {
     whenTabFocused(tab, o.threadId, function (tab) {
       markRead(o.threadId, o.messageId, o.time);

@@ -99,7 +99,7 @@ POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceCon
 GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/contacts               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToMessage(q: String, n: Int ?= 4)
 GET     /ext/nonusers               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToInvite(q: String, n: Int ?= 4)
-POST    /ext/hideEmailFromUser      @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser(q: String)
+POST    /ext/hideEmailFromUser      @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser()
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 

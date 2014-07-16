@@ -30,8 +30,9 @@
 
     // Callbacks
     onSelect: null,
+    onRemove: null, // called when removing item from dropdown
     onAdd: null,
-    onDelete: null
+    onDelete: null // called when deleting token from field
   };
 
   var CLASSES = {
@@ -428,6 +429,16 @@
       }
     }
 
+    function handleItemRemoved(el) {
+      var item = $.data(el, 'tokenInput');
+      el.remove();
+
+      // Execute the onRemove callback if defined
+      if ($.isFunction(settings.onRemove)) {
+        settings.onRemove.call($hiddenInput, item);
+      }
+    }
+
     // addToken helper
     function insertToken(item) {
       var $token = $(settings.formatToken(item))
@@ -626,6 +637,17 @@
         .on('mousedown', 'li', function (e) {
           if (e.which === 1) {
             handleItemChosen(this);
+            return false;
+          }
+        })
+        .on('mousedown', '.kifi-dropdown-item-x', function (e) {
+          if (e.which === 1) {
+            return false;
+          }
+        })
+        .on('click', '.kifi-dropdown-item-x', function (e) {
+          if (e.which === 1) {
+            handleItemRemoved(this.parentNode);
             return false;
           }
         });

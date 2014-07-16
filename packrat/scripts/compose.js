@@ -139,6 +139,12 @@ var initCompose = (function() {
           $t.tokenInput('flushCache');
         }
         throttledSaveDraft();
+      },
+      onRemove: function (item) {
+        $t.tokenInput('flushCache');
+        if (item.email) {
+          api.port.emit('delete_contact', item.email);
+        }
       }
     });
   }

@@ -71,7 +71,7 @@ var initFriendSearch = (function () {
         html.push('<div class="kifi-ti-dropdown-contact-name">');
       }
       appendParts(html, res.emailParts);
-      html.push('</div></li>');
+      html.push('</div><a class="kifi-dropdown-item-x" href="javascript:"></a></li>');
       return html.join('');
     } else if (res === 'tip') {
       return '<li class="kifi-ti-dropdown-tip">Import Gmail contacts to message them on Kifi</li>';
