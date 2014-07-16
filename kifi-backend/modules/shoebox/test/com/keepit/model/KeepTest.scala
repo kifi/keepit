@@ -34,13 +34,13 @@ class KeepTest extends Specification with ShoeboxTestInjector {
       val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
 
       keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-        uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
+        uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), libraryId = Some(lib1.id.get)))
       keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-        uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
+        uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), libraryId = Some(lib1.id.get)))
       keepRepo.save(Keep(title = Some("A2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-        uriId = uri3.id.get, source = hover, createdAt = t1.plusHours(50), isPrivate = true, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
+        uriId = uri3.id.get, source = hover, createdAt = t1.plusHours(50), isPrivate = true, libraryId = Some(lib1.id.get)))
       keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
-        uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
+        uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), libraryId = Some(lib1.id.get)))
 
       (user1, user2, uri1, uri2, uri3, url1, url2)
     }
@@ -150,7 +150,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
           keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), libraryId = Some(Id[Library](1)), libraryExternalId = Some(ExternalId[Library]())))
+            uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), libraryId = Some(Id[Library](1))))
         }
         db.readWrite { implicit s =>
           keepRepo.count === 4
@@ -190,13 +190,13 @@ class KeepTest extends Specification with ShoeboxTestInjector {
           keepRepo.latestKeep(uriId, url) === None
         }
         val firstUserBookmark = db.readWrite { implicit s =>
-          keepRepo.save(Keep(userId = firstUserId, uriId = uriId, urlId = urlId, url = url, source = hover, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
+          keepRepo.save(Keep(userId = firstUserId, uriId = uriId, urlId = urlId, url = url, source = hover, libraryId = Some(lib1.id.get)))
         }
         db.readOnlyMaster { implicit s =>
           keepRepo.latestKeep(uriId, url).flatMap(_.id) === firstUserBookmark.id
         }
         val secondUserBookmark = db.readWrite { implicit s =>
-          keepRepo.save(Keep(userId = secondUserId, uriId = uriId, urlId = urlId, url = url, source = hover, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
+          keepRepo.save(Keep(userId = secondUserId, uriId = uriId, urlId = urlId, url = url, source = hover, libraryId = Some(lib1.id.get)))
         }
         db.readOnlyMaster { implicit s =>
           keepRepo.latestKeep(uriId, url).flatMap(_.id) === secondUserBookmark.id
@@ -227,13 +227,13 @@ class KeepTest extends Specification with ShoeboxTestInjector {
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
 
           keepRepo.save(Keep(title = Some("k1"), userId = user.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
+            uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), libraryId = Some(lib1.id.get)))
 
           keepRepo.save(Keep(title = Some("k2"), userId = user.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = hover, createdAt = t1.plusMinutes(9), libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
+            uriId = uri2.id.get, source = hover, createdAt = t1.plusMinutes(9), libraryId = Some(lib1.id.get)))
 
           keepRepo.save(Keep(title = Some("k3"), userId = user.id.get, url = url3.url, urlId = url3.id.get,
-            uriId = uri3.id.get, source = hover, createdAt = t1.plusMinutes(6), isPrivate = true, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
+            uriId = uri3.id.get, source = hover, createdAt = t1.plusMinutes(6), isPrivate = true, libraryId = Some(lib1.id.get)))
 
         }
 

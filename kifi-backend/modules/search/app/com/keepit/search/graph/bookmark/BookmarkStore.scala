@@ -71,8 +71,7 @@ class BookmarkStore(
             isPrivate = rec.isPrivate,
             userId = userId,
             source = BookmarkStore.bookmarkSource,
-            libraryId = None, // todo(andrew/léo/yasuhiro): Fix to include real library
-            libraryExternalId = None // todo(andrew/léo/yasuhiro): Fix to include real library
+            libraryId = None // todo(andrew/léo/yasuhiro): Fix to include real library
           )
         }
       }

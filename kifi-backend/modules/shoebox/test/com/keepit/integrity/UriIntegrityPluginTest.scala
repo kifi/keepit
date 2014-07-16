@@ -43,9 +43,9 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
 
             val hover = KeepSource.keeper
-            val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = nuri0.id.get, source = hover, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
-            val bm2 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = nuri2.id.get, source = hover, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
-            val bm3 = bmRepo.save(Keep(title = Some("bing"), userId = user2.id.get, url = url2.url, urlId = url2.id.get, uriId = nuri2.id.get, source = hover, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
+            val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = nuri0.id.get, source = hover, libraryId = Some(lib1.id.get)))
+            val bm2 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = nuri2.id.get, source = hover, libraryId = Some(lib1.id.get)))
+            val bm3 = bmRepo.save(Keep(title = Some("bing"), userId = user2.id.get, url = url2.url, urlId = url2.id.get, uriId = nuri2.id.get, source = hover, libraryId = Some(lib1.id.get)))
 
             (Array(nuri0, nuri1, nuri2, nuri3), Array(url0, url1, url2), Array(bm1, bm2, bm3))
           }
@@ -153,14 +153,14 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
 
             val hover = KeepSource.keeper
-            val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0.id.get, source = hover, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
-            val bm0better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0better.id.get, source = hover, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
+            val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0.id.get, source = hover, libraryId = Some(lib1.id.get)))
+            val bm0better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0better.id.get, source = hover, libraryId = Some(lib1.id.get)))
 
-            val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = uri1.id.get, source = hover, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
-            val bm1better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = uri1better.id.get, source = hover, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
+            val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = uri1.id.get, source = hover, libraryId = Some(lib1.id.get)))
+            val bm1better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = uri1better.id.get, source = hover, libraryId = Some(lib1.id.get)))
 
-            val bm2 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get, uriId = uri2.id.get, source = hover, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
-            val bm2better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get, uriId = uri2better.id.get, source = hover, libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId)))
+            val bm2 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get, uriId = uri2.id.get, source = hover, libraryId = Some(lib1.id.get)))
+            val bm2better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get, uriId = uri2better.id.get, source = hover, libraryId = Some(lib1.id.get)))
 
             val c0 = collectionRepo.save(Collection(userId = user.id.get, name = "google"))
             val c1 = collectionRepo.save(Collection(userId = user.id.get, name = "googleBetter"))

@@ -4,8 +4,6 @@
 
 ALTER TABLE bookmark ADD COLUMN library_id bigint(20) NULL;
 
-ALTER TABLE bookmark ADD COLUMN library_external_id varchar(36) NULL;
-
 -- ALTER TABLE bookmark ADD CONSTRAINT bookmark_f_library_id FOREIGN KEY (library_id) REFERENCES library(id);
 
 -- ALTER TABLE bookmark ADD INDEX bookmark_i_library_id (library_id);

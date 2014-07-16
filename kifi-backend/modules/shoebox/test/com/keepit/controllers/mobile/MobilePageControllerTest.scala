@@ -58,11 +58,11 @@ class MobilePageControllerTest extends Specification with ShoeboxApplicationInje
 
           val keep1 = keepRepo.save(Keep(
             title = Some("G1"), userId = user1.id.get, url = url.url, urlId = url.id.get,
-            uriId = uri.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId),
+            uriId = uri.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(lib1.id.get),
             externalId = ExternalId("cccccccc-286e-4386-8336-da255120b273")))
           val keep2 = keepRepo.save(Keep(
             title = None, userId = user2.id.get, url = url.url, urlId = url.id.get,
-            uriId = uri.id.get, source = KeepSource.bookmarkImport, createdAt = t2.plusDays(1), libraryId = Some(lib1.id.get), libraryExternalId = Some(lib1.externalId),
+            uriId = uri.id.get, source = KeepSource.bookmarkImport, createdAt = t2.plusDays(1), libraryId = Some(lib1.id.get),
             externalId = ExternalId("dddddddd-286e-4386-8336-da255120b273")))
 
           val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = "Cooking", createdAt = t1, externalId = ExternalId("eeeeeeee-51ad-4c7d-a88e-d4e6e3c9a672")))

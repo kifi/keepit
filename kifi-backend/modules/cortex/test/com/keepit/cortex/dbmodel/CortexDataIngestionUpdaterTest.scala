@@ -49,8 +49,8 @@ class CortexDataIngestionUpdaterTest extends Specification with CortexTestInject
         changed.state.value === "inactive"
 
         shoebox.saveBookmarks(
-          Keep(uriId = Id[NormalizedURI](1), url = "url1", urlId = Id[URL](1), source = KeepSource.keeper, userId = Id[User](1), libraryId = Some(Id[Library](1)), libraryExternalId = Some(ExternalId[Library]())),
-          Keep(uriId = Id[NormalizedURI](2), url = "url1", urlId = Id[URL](2), source = KeepSource.bookmarkImport, userId = Id[User](2), libraryId = Some(Id[Library](1)), libraryExternalId = Some(ExternalId[Library]()))
+          Keep(uriId = Id[NormalizedURI](1), url = "url1", urlId = Id[URL](1), source = KeepSource.keeper, userId = Id[User](1), libraryId = Some(Id[Library](1))),
+          Keep(uriId = Id[NormalizedURI](2), url = "url1", urlId = Id[URL](2), source = KeepSource.bookmarkImport, userId = Id[User](2), libraryId = Some(Id[Library](1)))
         )
 
         Await.result(updater.updateKeepRepo(100), FiniteDuration(5, SECONDS)) === 2

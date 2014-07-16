@@ -216,7 +216,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     val bookmarks = edges.map {
       case (uri, user, optionalTitle) => {
         val url = uriToUrl(uri.id.get)
-        KeepFactory(url.url, uri = uri, userId = user.id.get, title = optionalTitle orElse uri.title, url = url, source = source, isPrivate = isPrivate, libraryId = None, libraryExternalId = None) // todo(andrew): Library ids?
+        KeepFactory(url.url, uri = uri, userId = user.id.get, title = optionalTitle orElse uri.title, url = url, source = source, isPrivate = isPrivate, libraryId = None) // todo(andrew): Library id?
       }
     }
     saveBookmarks(bookmarks: _*)

@@ -71,10 +71,9 @@ class KeepRepoImpl @Inject() (
     def source = column[KeepSource]("source", O.NotNull)
     def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
-    def libraryExternalId = column[Option[ExternalId[Library]]]("library_external_id", O.Nullable)
 
     def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, urlId, url, bookmarkPath.?, isPrivate,
-      userId, state, source, kifiInstallation.?, seq, libraryId, libraryExternalId) <> ((Keep.applyWithPrimary _).tupled, Keep.unapplyWithPrimary _)
+      userId, state, source, kifiInstallation.?, seq, libraryId) <> ((Keep.applyWithPrimary _).tupled, Keep.unapplyWithPrimary _)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -84,7 +83,7 @@ class KeepRepoImpl @Inject() (
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
 
   private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r => // bonus points for anyone who can do this generically in Slick 2.0
-    Keep(id = r.<<[Option[Id[Keep]]], createdAt = r.<<[DateTime], updatedAt = r.<<[DateTime], externalId = r.<<[ExternalId[Keep]], title = r.<<[Option[String]], uriId = r.<<[Id[NormalizedURI]], isPrimary = (r.<<[Option[Boolean]]).exists(b => b), urlId = r.<<[Id[URL]], url = r.<<[String], bookmarkPath = r.<<[Option[String]], isPrivate = r.<<[Boolean], userId = r.<<[Id[User]], state = r.<<[State[Keep]], source = r.<<[KeepSource], kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]], seq = r.<<[SequenceNumber[Keep]], libraryId = r.<<[Option[Id[Library]]], libraryExternalId = r.<<[Option[ExternalId[Library]]])
+    Keep(id = r.<<[Option[Id[Keep]]], createdAt = r.<<[DateTime], updatedAt = r.<<[DateTime], externalId = r.<<[ExternalId[Keep]], title = r.<<[Option[String]], uriId = r.<<[Id[NormalizedURI]], isPrimary = (r.<<[Option[Boolean]]).exists(b => b), urlId = r.<<[Id[URL]], url = r.<<[String], bookmarkPath = r.<<[Option[String]], isPrivate = r.<<[Boolean], userId = r.<<[Id[User]], state = r.<<[State[Keep]], source = r.<<[KeepSource], kifiInstallation = r.<<[Option[ExternalId[KifiInstallation]]], seq = r.<<[SequenceNumber[Keep]], libraryId = r.<<[Option[Id[Library]]])
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
 

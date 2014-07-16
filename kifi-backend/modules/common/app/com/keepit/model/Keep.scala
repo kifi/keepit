@@ -28,8 +28,7 @@ case class Keep(
     source: KeepSource,
     kifiInstallation: Option[ExternalId[KifiInstallation]] = None,
     seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
-    libraryId: Option[Id[Library]],
-    libraryExternalId: Option[ExternalId[Library]]) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    libraryId: Option[Id[Library]]) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   override def toString: String = s"Bookmark[id:$id,externalId:$externalId,title:$title,uriId:$uriId,urlId:$urlId,url:$url,isPrivate:$isPrivate,isPrimary:$isPrimary,userId:$userId,state:$state,source:$source,seq:$seq],path:$bookmarkPath"
 
@@ -61,10 +60,10 @@ case class Keep(
 object Keep {
 
   // is_primary: trueOrNull in db
-  def applyWithPrimary(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep], title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], urlId: Id[URL], url: String, bookmarkPath: Option[String], isPrivate: Boolean, userId: Id[User], state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]], seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], libraryExternalId: Option[ExternalId[Library]]) =
-    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url, bookmarkPath, isPrivate, userId, state, source, kifiInstallation, seq, libraryId, libraryExternalId)
+  def applyWithPrimary(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep], title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], urlId: Id[URL], url: String, bookmarkPath: Option[String], isPrivate: Boolean, userId: Id[User], state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]], seq: SequenceNumber[Keep], libraryId: Option[Id[Library]]) =
+    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url, bookmarkPath, isPrivate, userId, state, source, kifiInstallation, seq, libraryId)
   def unapplyWithPrimary(k: Keep) = {
-    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url, k.bookmarkPath, k.isPrivate, k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, k.libraryExternalId)
+    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url, k.bookmarkPath, k.isPrivate, k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId)
   }
 
   implicit def bookmarkFormat = (
@@ -84,8 +83,7 @@ object Keep {
     (__ \ 'source).format[String].inmap(KeepSource.apply, unlift(KeepSource.unapply)) and
     (__ \ 'kifiInstallation).formatNullable(ExternalId.format[KifiInstallation]) and
     (__ \ 'seq).format(SequenceNumber.format[Keep]) and
-    (__ \ 'libraryId).formatNullable(Id.format[Library]) and
-    (__ \ 'libraryExternalId).formatNullable(ExternalId.format[Library])
+    (__ \ 'libraryId).formatNullable(Id.format[Library])
   )(Keep.apply, unlift(Keep.unapply))
 }
 
@@ -179,8 +177,8 @@ object KeepSource {
 
 object KeepFactory extends Logging {
 
-  def apply(origUrl: String, uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None, libraryId: Option[Id[Library]], libraryExternalId: Option[ExternalId[Library]]): Keep = {
-    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = origUrl, source = source, isPrivate = isPrivate, libraryId = libraryId, libraryExternalId = libraryExternalId)
+  def apply(origUrl: String, uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None, libraryId: Option[Id[Library]]): Keep = {
+    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = origUrl, source = source, isPrivate = isPrivate, libraryId = libraryId)
   }
 
 }
