@@ -41,7 +41,6 @@ import com.keepit.common.net.URI
 trait HttpFetcher {
   val NO_OP = { is: HttpInputStream => }
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
-  def close()
 }
 
 class HttpFetcherImpl(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean, schedulingProperties: SchedulingProperties, scraperHttpConfig: ScraperHttpConfig) extends HttpFetcher with Logging with ScraperUtils {
@@ -327,7 +326,4 @@ class HttpFetcherImpl(val airbrake: AirbrakeNotifier, userAgent: String, connect
     }
   }
 
-  def close() {
-    httpClient.close()
-  }
 }
