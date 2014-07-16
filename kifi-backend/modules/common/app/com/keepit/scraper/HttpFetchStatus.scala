@@ -1,17 +1,11 @@
 package com.keepit.scraper
 
-import org.apache.http.protocol.{ HttpContext => ApacheHttpContext }
 import org.apache.http.{ HttpStatus => ApacheHttpStatus }
 import com.keepit.common.net.URI
 
-// wraps & hides ApacheHttpContext from clients
-class FetcherHttpContext(context: ApacheHttpContext) {
-  def destinationUrl: Option[String] = Option(context.getAttribute("scraper_destination_url").asInstanceOf[String])
-  def redirects: Seq[HttpRedirect] = Option(context.getAttribute("redirects").asInstanceOf[Seq[HttpRedirect]]).getOrElse(Seq.empty[HttpRedirect])
-}
-
-object FetcherHttpContext {
-  implicit def toFetcherContext(apacheCtx: ApacheHttpContext): FetcherHttpContext = new FetcherHttpContext(apacheCtx)
+trait FetcherHttpContext {
+  def destinationUrl: Option[String]
+  def redirects: Seq[HttpRedirect]
 }
 
 case class HttpFetchStatus(statusCode: Int, message: Option[String], context: FetcherHttpContext) {

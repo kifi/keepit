@@ -1,6 +1,7 @@
 package com.keepit.scraper
 
-import com.keepit.scraper.fetcher.{ ApacheHttpFetcher, HttpFetcher }
+import com.keepit.scraper.fetcher.HttpFetcher
+import com.keepit.scraper.fetcher.apache.ApacheHttpFetcher
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
 import com.google.inject.{ Provider, Provides, Singleton }
