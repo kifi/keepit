@@ -265,10 +265,8 @@ var initCompose = (function() {
       return $f[0];
     },
     reflectPrefs: function (prefs) {
-      if (enterToSend !== prefs.enterToSend) {
-        enterToSend = prefs.enterToSend;
-        updateKeyTip($f);
-      }
+      enterToSend = prefs.enterToSend;
+      updateKeyTip($f);
       $f.find('.kifi-compose-highlight').toggleClass('kifi-disabled', !prefs.lookHereMode);
       if (prefs.lookHereMode) {
         snap.enable($d);
