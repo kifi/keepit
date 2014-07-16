@@ -30,9 +30,9 @@
 
     // Callbacks
     onSelect: null,
-    onRemove: null, // called when removing item from dropdown
     onAdd: null,
-    onDelete: null // called when deleting token from field
+    onDelete: null,
+    initDropdown: null
   };
 
   var CLASSES = {
@@ -122,6 +122,10 @@
       this.data('tokenInput').flushCache();
       return this;
     },
+    refreshResults: function () {
+      this.data('tokenInput').refreshResults();
+      return this;
+    },
     destroy: function () {
       if (this.data('tokenInput')) {
         this.data('tokenInput').destroy();
@@ -159,6 +163,8 @@
 
     // Results cache for speed
     var cache = new Cache();
+
+    var oldResultsInvalid = false;
 
     // Create a new text input
     var $tokenInput = $('<input type="text" autocomplete="off" autocapitalize="off"/>')
@@ -380,6 +386,12 @@
       cache.flush();
     };
 
+    this.refreshResults = function () {
+      cache.flush();
+      oldResultsInvalid = true;
+      handleQueryChange();
+    }
+
     this.destroy = function () {
       this.clear();
       $tokenList.remove();
@@ -426,16 +438,6 @@
       if (!settings.onSelect || settings.onSelect.call($hiddenInput, item, el) !== false) {
         addToken(item);
         $hiddenInput.change();
-      }
-    }
-
-    function handleItemRemoved(el) {
-      var item = $.data(el, 'tokenInput');
-      el.remove();
-
-      // Execute the onRemove callback if defined
-      if ($.isFunction(settings.onRemove)) {
-        settings.onRemove.call($hiddenInput, item);
       }
     }
 
@@ -639,18 +641,10 @@
             handleItemChosen(this);
             return false;
           }
-        })
-        .on('mousedown', '.kifi-dropdown-item-x', function (e) {
-          if (e.which === 1) {
-            return false;
-          }
-        })
-        .on('click', '.kifi-dropdown-item-x', function (e) {
-          if (e.which === 1) {
-            handleItemRemoved(this.parentNode);
-            return false;
-          }
         });
+      if ($.isFunction(settings.initDropdown)) {
+        settings.initDropdown($ul);
+      }
       if (items.length && items[0].classList.contains(classes.dropdownItemToken)) {
         selectDropdownItem(items[0]);
       }
@@ -679,6 +673,10 @@
 
       var query = $tokenInput.val().trim();
       if (query.length) {
+        if (oldResultsInvalid) {
+          $dropdown.find('ul').empty();
+          oldResultsInvalid = false;
+        }
         var o = cache.get(query);
         if (o && o.complete) {
           populateDropdown(query, o.results, false);

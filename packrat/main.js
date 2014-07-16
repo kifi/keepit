@@ -872,7 +872,7 @@ api.port.on({
     }
   },
   delete_contact: function(email) {
-    ajax('POST', '/ext/hideEmailFromUser', {email: email});
+    ajax('POST', '/ext/contacts/hide', {email: email});
   },
   message_rendered: function(o, _, tab) {
     whenTabFocused(tab, o.threadId, function (tab) {

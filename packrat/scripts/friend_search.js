@@ -33,7 +33,10 @@ var initFriendSearch = (function () {
       classPrefix: 'kifi-ti-',
       classForRoots: 'kifi-root',
       formatResult: formatResult,
-      onSelect: onSelect.bind(null, $in, source)
+      onSelect: onSelect.bind(null, $in, source),
+      initDropdown: function ($ul) {
+        initDropdown($ul, $in);
+      }
     }, options));
     $('.kifi-ti-dropdown').css('background-image', 'url(' + api.url('images/wait.gif') + ')');
   };
@@ -95,5 +98,27 @@ var initFriendSearch = (function () {
       }
       return false;
     }
+  }
+
+  function initDropdown($ul, $in) {
+    $ul.on('mousedown', '.kifi-dropdown-item-x', function (e) {
+      if (e.which === 1) {
+        console.log('ok');
+        return false;
+      }
+    })
+    .on('click', '.kifi-dropdown-item-x', function (e) {
+      if (e.which === 1) {
+        var htmlItem = this.parentNode;
+        var item = $.data(htmlItem, 'tokenInput');
+        htmlItem.remove();
+
+        $in.tokenInput('refreshResults');
+        if (item.email) {
+          api.port.emit('delete_contact', item.email);
+        }
+        return false;
+      }
+    });
   }
 }());
