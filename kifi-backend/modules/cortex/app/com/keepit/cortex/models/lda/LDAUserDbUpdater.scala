@@ -75,11 +75,12 @@ class LDAUserDbUpdaterImpl @Inject() (
     val model = db.readOnlyReplica { implicit s => userTopicRepo.getByUser(user, representer.version) }
     if (shouldComputeFeature(model)) {
       val topicCounts = db.readOnlyReplica { implicit s => uriTopicRepo.getUserTopicHistograms(user, representer.version) }
+      val numOfEvidence = topicCounts.map { _._2 }.sum
       val topicMean = genFeature(topicCounts)
       val state = if (topicMean.isDefined) UserLDAInterestsStates.ACTIVE else UserLDAInterestsStates.NOT_APPLICABLE
       val tosave = model match {
         case Some(m) => m.copy(userTopicMean = topicMean).withUpdateTime(currentDateTime).withState(state)
-        case None => UserLDAInterests(userId = user, version = representer.version, userTopicMean = topicMean, state = state)
+        case None => UserLDAInterests(userId = user, version = representer.version, numOfEvidence = numOfEvidence, userTopicMean = topicMean, state = state)
       }
       db.readWrite { implicit s => userTopicRepo.save(tosave) }
     }
