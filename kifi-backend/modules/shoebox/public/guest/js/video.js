@@ -21,6 +21,7 @@ $(function () {
     $popup.addClass('showing');
     $popup.click(click);
     $(document).on('keydown.video-popup-' + $popup[0][$.expando], keydown.bind($popup[0]));
+    window.postMessage('playing-video', location.origin);
   }
 
   function click(e) {

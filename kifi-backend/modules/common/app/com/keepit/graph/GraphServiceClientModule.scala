@@ -15,11 +15,12 @@ case class ProdGraphServiceClientModule() extends GraphServiceClientModule {
   def configure() {}
 
   @Provides @Singleton
-  def graphServiceClient(httpClient: HttpClient, serviceDiscovery: ServiceDiscovery, airbrakeNotifier: AirbrakeNotifier, mode: Mode): GraphServiceClient = {
+  def graphServiceClient(httpClient: HttpClient, serviceDiscovery: ServiceDiscovery, airbrakeNotifier: AirbrakeNotifier, cacheProvider: GraphCacheProvider, mode: Mode): GraphServiceClient = {
     new GraphServiceClientImpl(
       serviceDiscovery.serviceCluster(ServiceType.GRAPH),
       httpClient,
       airbrakeNotifier,
+      cacheProvider,
       mode: Mode
     )
   }

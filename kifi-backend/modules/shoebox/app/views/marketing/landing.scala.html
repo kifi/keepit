@@ -3,10 +3,10 @@
 }
 @content = {
   <section class="hero">
-    <h1>Outsmarting information overload together</h1>
+    <h1>Outsmarting information overload, together</h1>
     <div class="hero-box">
       <img src="//djty7jcqog9qu.cloudfront.net/assets/site/hero_970.jpg" width="970" height="627">
-      <a href="javascript:void 'play'" class="video-still" onclick="void this.setAttribute('data-clicked','')" data-uri="//player.vimeo.com/video/99569714?title=0&amp;byline=0&amp;portrait=0&amp;color=ffffff&amp;autoplay=1" data-w="960" data-h="540" data-track-action="playVideo"></a>
+      <a href="javascript:void 'play'" class="video-still scales" onclick="void this.setAttribute('data-clicked','')" data-uri="//player.vimeo.com/video/99569714?title=0&amp;byline=0&amp;portrait=0&amp;color=ffffff&amp;autoplay=1" data-w="960" data-h="540" data-track-action="playVideo"></a>
     </div>
     <a href="javascript:void 'scroll down'" class="more-arrow">Learn more</a>
   </section>
@@ -44,7 +44,7 @@
                 </ul>
 
                 <div style="text-align:center">
-                    <a href="/signup" class="signup-btn green-btn" data-track-action="clickTryKifi">Sign up free</a>
+                    <a href="/signup" class="signup-btn green-btn scales" data-track-action="clickTryKifi">Sign up free</a>
                 </div>
             </div>
         </section>
@@ -54,11 +54,8 @@
 @scripts = {
 <script src="/assets/guest/js/video.js"></script>
 <script src="/assets/guest/js/landing.js"></script>
-<script type="text/javascript">
-var fb_param = {};
-fb_param.pixel_id = '6012675509696';
-fb_param.value = '0.00';
-fb_param.currency = 'USD';
+<script>
+var fb_param = {pixel_id: '6012675509696', value: '0.00', currency: 'USD'};
 (function(){
   var fpw = document.createElement('script');
   fpw.async = true;
@@ -67,7 +64,7 @@ fb_param.currency = 'USD';
   ref.parentNode.insertBefore(fpw, ref);
 })();
 </script>
-<noscript><img height="1" width="1" alt="" style="display:none" src="https://www.facebook.com/offsite_event.php?id=6012675509696&amp;value=0&amp;currency=USD" /></noscript>
+<noscript><img height="1" width="1" style="display:none" src="//www.facebook.com/offsite_event.php?id=6012675509696&amp;value=0&amp;currency=USD"></noscript>
 }
 @metaProperties = @{
   if(useCustomMetaData) {

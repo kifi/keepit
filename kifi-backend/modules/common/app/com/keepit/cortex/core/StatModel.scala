@@ -15,6 +15,7 @@ case class StatModelName(name: String)
 
 object StatModelName {
   val LDA = StatModelName("lda")
+  val LDA_USER = StatModelName("lda_user")
 }
 
 object ModelVersion {

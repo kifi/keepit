@@ -7,9 +7,9 @@ angular.module('kifi.layout.main', [
 
 .controller('MainCtrl', [
   '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',
-  'injectedState', '$rootScope', '$analytics', 'keepService', 'installService',
+  'injectedState', '$rootScope', '$analytics', 'keepService', 'installService', 'profileService',
   function ($scope, $element, $window, $location, $timeout, $rootElement, undoService, keyIndices,
-    injectedState, $rootScope, $analytics, keepService, installService) {
+    injectedState, $rootScope, $analytics, keepService, installService, profileService) {
 
     $scope.search = {};
     $scope.searchEnabled = false;
@@ -289,6 +289,10 @@ angular.module('kifi.layout.main', [
       installService.triggerInstall(function () {
         $rootScope.$emit('showGlobalModal','installExtensionError');
       });
+    };
+
+    $scope.showDelightedSurvey = function () {
+      return profileService.prefs && profileService.prefs.show_delighted_question;
     };
 
     /**

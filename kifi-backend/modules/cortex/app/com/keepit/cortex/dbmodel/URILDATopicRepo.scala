@@ -5,7 +5,7 @@ import com.google.inject.{ ImplementedBy, Provider, Inject, Singleton }
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.common.db.State
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.ModelVersion
@@ -24,15 +24,19 @@ trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getByURI(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[URILDATopic]
   def getHighestSeqNumber(version: ModelVersion[DenseLDA])(implicit session: RSession): SequenceNumber[NormalizedURI]
   def getUpdateTimeAndState(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(DateTime, State[URILDATopic])]
+  def getUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(LDATopic, Int)]
 }
 
 @Singleton
 class URILDATopicRepoImpl @Inject() (
     val db: DataBaseComponent,
+    val keepRepoProvider: Provider[CortexKeepRepo],
     val clock: Clock,
     airbrake: AirbrakeNotifier) extends DbRepo[URILDATopic] with URILDATopicRepo with CortexTypeMappers {
 
   import db.Driver.simple._
+
+  private lazy val cortexKeepRepo = keepRepoProvider.get
 
   type RepoImpl = URILDATopicTable
 
@@ -88,4 +92,19 @@ class URILDATopicRepoImpl @Inject() (
     SequenceNumber[NormalizedURI](sql.as[Long].first max 0L)
   }
 
+  def getUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(LDATopic, Int)] = {
+    import StaticQuery.interpolation
+
+    // could be expensive. may revisit this later.
+
+    val query =
+      sql"""select tp.first_topic, count(ck.uri_Id) from cortex_keep as ck inner join uri_lda_topic as tp
+           on ck.uri_id = tp.uri_id
+           where ck.user_id = ${userId.id} and tp.version = ${version.version}
+           and ck.state = 'active' and tp.state = 'active' and tp.first_topic is not null
+           group by tp.first_topic"""
+
+    query.as[(Int, Int)].list map { case (topic, count) => (LDATopic(topic), count) }
+
+  }
 }
