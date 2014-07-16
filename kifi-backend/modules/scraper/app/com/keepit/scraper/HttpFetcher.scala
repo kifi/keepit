@@ -266,6 +266,7 @@ class HttpFetcherImpl(val airbrake: AirbrakeNotifier, userAgent: String, connect
     }
   }
 
+  import FetcherHttpContext._
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch($url) ${proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
     val HttpFetchHandlerResult(responseOpt, fetchInfo, httpGet, httpContext) = fetchHandler(url, ifModifiedSince, proxy)
     responseOpt match {
