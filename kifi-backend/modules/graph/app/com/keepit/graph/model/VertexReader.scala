@@ -5,6 +5,7 @@ trait VertexReader {
   def id: VertexId
   def data: VertexDataReader
   def outgoingEdgeReader: OutgoingEdgeReader
+  def incomingEdgeReader: IncomingEdgeReader
 }
 
 trait GlobalVertexReader extends VertexReader {

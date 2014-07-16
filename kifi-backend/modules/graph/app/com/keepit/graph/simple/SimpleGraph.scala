@@ -8,32 +8,30 @@ import com.keepit.graph.manager.GraphStatistics
 import java.io.File
 import org.apache.commons.io.{ LineIterator, FileUtils }
 import scala.collection.JavaConversions._
-import com.keepit.graph.model.EdgeKind.EdgeType
-import com.keepit.graph.model.VertexKind.VertexType
 
 case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMap()) {
 
   private val vertexStatistics = GraphStatistics.newVertexCounter()
   private val edgeStatistics = GraphStatistics.newEdgeCounter()
-  private val incomingEdges = TrieMap[VertexId, MutableMap[(VertexType, VertexType, EdgeType), MutableSet[VertexId]]]()
+  private val incomingEdges = TrieMap[VertexId, MutableIncomingEdges]()
 
   vertices.foreach {
     case (sourceId, mutableVertex) =>
       val sourceKind = mutableVertex.data.kind
       vertexStatistics(sourceKind).incrementAndGet()
-      mutableVertex.edges.valuesIterator.flatten.foreach {
+      mutableVertex.outgoingEdges.edges.valuesIterator.flatten.foreach {
         case (destinationId, edgeData) =>
           val component = (sourceKind, destinationId.kind, edgeData.kind)
           edgeStatistics(component).incrementAndGet()
-          if (!incomingEdges.contains(destinationId)) { incomingEdges += (destinationId -> MutableMap()) }
-          if (!incomingEdges(destinationId).contains(component)) { incomingEdges(destinationId) += (component -> MutableSet()) }
-          incomingEdges(destinationId)(component) += sourceId
+          if (!incomingEdges.contains(destinationId)) { incomingEdges += (destinationId -> new MutableIncomingEdges(MutableMap())) }
+          if (!incomingEdges(destinationId).edges.contains(component)) { incomingEdges(destinationId).edges += (component -> MutableSet()) }
+          incomingEdges(destinationId).edges(component) += sourceId
       }
   }
 
   def statistics = GraphStatistics.filter(vertexStatistics, edgeStatistics)
 
-  def getNewReader(): GraphReader = new SimpleGraphReader(vertices)
+  def getNewReader(): GraphReader = new SimpleGraphReader(vertices, incomingEdges)
 
   def getNewWriter(): GraphWriter = {
     val bufferedVertices = new BufferedMap(vertices)
