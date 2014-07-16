@@ -65,7 +65,7 @@ class MailSender @Inject() (
   }
 }
 
-class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, sender: MailSender, services: FortyTwoServices) {
+class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, sender: MailSender, services: FortyTwoServices) extends Logging {
   def sendMail() {
     val last = history.lastError
     val subjectWithNumerics = s"[RPT-ERR][${services.currentService}] ${last.message.getOrElse("")} ${last.rootException}"
@@ -76,9 +76,9 @@ class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, 
   }
 
   def sendOutOfDateMail() {
-    val subject = s"${services.currentService} out of date for 3 days"
-    val body = s"None"
-    sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
+    val subject = s"${services.currentService} out of date for 3 days---%%%test%%%"
+    val body = views.html.email.healthcheckMail(history, services.started.withZone(zones.PT).toStandardTimeString, host.host).body
+    sender.sendMail(ElectronicMail(from = EmailAddress("tan@kifi.com"), to = List(EmailAddress("tan@kifi.com")),
       subject = subject, htmlBody = body, category = NotificationCategory.System.HEALTHCHECK))
   }
 }
@@ -95,8 +95,8 @@ class HealthcheckActor @Inject() (
   services: FortyTwoServices,
   host: HealthcheckHost,
   emailSender: MailSender)
-    extends AlertingActor {
 
+    extends AlertingActor with Logging {
   def alert(reason: Throwable, message: Option[Any]) = self ! error(reason, message)
 
   private val errors: MMap[AirbrakeErrorSignature, AirbrakeErrorHistory] = new MMap()
@@ -135,9 +135,12 @@ class HealthcheckActor @Inject() (
       val currentDate: DateTime = currentDateTime
       val lastCompilationDate: DateTime = services.compilationTime
       val betweenDays = Days.daysBetween(currentDate, lastCompilationDate).getDays
-      if (betweenDays >= 3) {
-        new SendHealthcheckMail(null, host, emailSender, services).sendOutOfDateMail()
-      }
+      log.debug("^^^^^^currentDate:^^^^^^^^ " + currentDate)
+      log.debug("^^^^^^lastCompilationDate:^^^^^^^^ " + lastCompilationDate)
+      log.debug("^^^^^^betweenDays:^^^^^^^^ " + betweenDays)
+      //if (betweenDays >= 3) {
+      new SendHealthcheckMail(null, host, emailSender, services).sendOutOfDateMail()
+    //}
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -170,7 +173,11 @@ class HealthcheckPluginImpl @Inject() (
   override def onStart() {
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 30 minutes, actor.ref, ReportErrorsAction)
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 60 minutes, actor.ref, CheckDiskSpace)
-    scheduleTaskOnAllMachines(actor.system, 3 days, 1 days, actor.ref, CheckUpdateStatusOfService)
+
+    scheduleTaskOnAllMachines(actor.system, 0 seconds, 1 minute, actor.ref, CheckUpdateStatusOfService)
+
+    //    scheduleTaskOnAllMachines(actor.system, 3 days, 1 days, actor.ref, CheckUpdateStatusOfService)
+
   }
 
   def errorCount(): Int = Await.result((actor.ref ? ErrorCount).mapTo[Int], 1 seconds)
