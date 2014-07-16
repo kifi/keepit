@@ -33,7 +33,7 @@ class FixedResultFeedCommander extends FeedCommander {
       firstName = "u2",
       lastName = "fake",
       pictureName = "u2.png",
-      username = Some(Username("u2"))
+      username = None
     )
   )
 

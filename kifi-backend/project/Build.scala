@@ -227,8 +227,8 @@ object ApplicationBuild extends Build {
       .setPreference(DoubleIndentClassDeclaration, true),
     lessEntryPoints := Nil,
     coffeescriptEntryPoints := Nil,
-    javascriptEntryPoints := Nil,
-    offline := true
+    javascriptEntryPoints := Nil
+    //,     offline := true
   )
 
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(

@@ -82,8 +82,7 @@ class MobileFeedControllerTest extends Specification with SearchApplicationInjec
               "id":"4e5f7b8c-951b-4497-8661-012345678902",
               "firstName":"u2",
               "lastName":"fake",
-              "pictureName":"u2.png",
-              "username":"u2"
+              "pictureName":"u2.png"
             }
 
           ],
