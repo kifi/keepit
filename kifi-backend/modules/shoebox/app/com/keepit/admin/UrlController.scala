@@ -193,7 +193,7 @@ class UrlController @Inject() (
     val PAGE_SIZE = 200
     val (renorms, totalCount) = db.readOnlyReplica { implicit s => (renormRepo.pageView(page, PAGE_SIZE), renormRepo.activeCount()) }
     val pageCount = (totalCount * 1.0 / PAGE_SIZE).ceil.toInt
-    val info = db.readOnlyReplica { implicit s =>
+    val info = db.readOnlyMaster { implicit s =>
       renorms.map { renorm =>
         (
           renorm.state.toString,
@@ -221,7 +221,7 @@ class UrlController @Inject() (
       case None => Future.successful(Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"A normalization candidate could not be constructed for $candidateUrl."))
       case Some(candidate) =>
         val referenceUrl = body("referenceUrl")
-        db.readOnlyReplica { implicit session => normalizedURIInterner.getByUri(referenceUrl) } match {
+        db.readOnlyMaster { implicit session => normalizedURIInterner.getByUri(referenceUrl) } match {
           case None => Future.successful(Redirect(routes.UrlController.normalizationView(0)).flashing("result" -> s"$referenceUrl could not be found."))
           case Some(oldUri) =>
             val correctedNormalization = body.get("correctNormalization").flatMap {

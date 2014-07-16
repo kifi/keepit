@@ -1,0 +1,19 @@
+package com.keepit.graph.model
+
+import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
+import com.keepit.common.db.Id
+import com.keepit.common.logging.AccessLog
+import com.keepit.model.User
+import com.keepit.serializer.TraversableFormat
+
+import scala.concurrent.duration.Duration
+
+case class ConnectedUserScoreCacheKey(userId: Id[User], avoidFirstDegreeConnections: Boolean) extends Key[Seq[ConnectedUserScore]] {
+  override val version = 0
+  val namespace = "user_connection_score"
+  def toKey(): String = userId.id.toString
+}
+
+class ConnectedUserScoreCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[ConnectedUserScoreCacheKey, Seq[ConnectedUserScore]](stats, accessLog, inner, outer: _*)(TraversableFormat.seq(ConnectedUserScore.format))
+

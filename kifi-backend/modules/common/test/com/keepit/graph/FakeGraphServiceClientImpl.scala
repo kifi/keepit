@@ -1,5 +1,8 @@
 package com.keepit.graph
 
+import com.keepit.common.db.Id
+import com.keepit.model.User
+
 import scala.concurrent.Future
 import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.graph.manager.{ PrettyGraphState, PrettyGraphStatistics }
@@ -7,7 +10,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.HttpClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.graph.wander.{ Collisions, Wanderlust }
-import com.keepit.graph.model.GraphKinds
+import com.keepit.graph.model.{ ConnectedUserScore, ConnectedUriScore, GraphKinds }
 
 class FakeGraphServiceClientImpl(
     override val serviceCluster: ServiceCluster,
@@ -17,4 +20,6 @@ class FakeGraphServiceClientImpl(
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, PrettyGraphState]] = Future.successful(Map.empty)
   def getGraphKinds(): Future[GraphKinds] = Future.successful(GraphKinds.empty)
   def wander(wanderlust: Wanderlust): Future[Collisions] = Future.successful(Collisions.empty)
+  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[ConnectedUriScore]] = Future.successful(Seq.empty)
+  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[ConnectedUserScore]] = Future.successful(Seq.empty)
 }

@@ -153,7 +153,7 @@ class InviteController @Inject() (db: Database,
           nameOpt.map {
             case Some(name) =>
               val inviter = inviterUserOpt.get.firstName
-              Ok(views.html.marketing.landingNew(
+              Ok(views.html.marketing.landing(
                 useCustomMetaData = true,
                 pageUrl = fortytwoConfig.applicationBaseUrl + request.uri,
                 titleText = s"$inviter sent you an invite to kifi",

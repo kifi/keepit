@@ -8,6 +8,7 @@ CREATE TABLE user_lda_interests(
   updated_at datetime NOT NULL,
   user_id bigint(20) NOT NULL,
   version tinyint(3) unsigned NOT NULL,
+  num_of_evidence int(5) unsigned NOT NULL,
   user_topic_mean blob DEFAULT NULL,
   state varchar(20) NOT NULL,
 
