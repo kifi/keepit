@@ -24,7 +24,7 @@ class LibraryCommander @Inject() (
     keepRepo: KeepRepo,
     clock: Clock) extends Logging {
 
-  def addLibrary(libInfo: LibraryAddRequest, ownerId: Id[User]) : Either[LibraryFail, FullLibraryInfo] = {
+  def addLibrary(libInfo: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, FullLibraryInfo] = {
 
     if (!libInfo.collaborators.intersect(libInfo.followers).isEmpty) {
       return Left(LibraryFail("collaborators & followers overlap!"))
@@ -56,9 +56,6 @@ class LibraryCommander @Inject() (
     val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = libId, ownerId = ownerId, userId = c, access = LibraryAccess.READ_ONLY)
 
     inviteBulkUsers(bulkInvites1 ++ bulkInvites2)
-
-    //BasicLibraryInfo(id = libExtId, ownerId = ownerExtId, name = libInfo.name, slug = libInfo.slug,
-    //  visibility = libInfo.visibility, shortDescription = libInfo.description)
 
     val groupCollabs = GroupHolder(count = collaboratorIds.length, users = collaboratorUsers, isMore = false)
     val groupFollowers = GroupHolder(count = followerIds.length, users = followerUsers, isMore = false)
