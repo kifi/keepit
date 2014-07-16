@@ -11,7 +11,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsBoolean, JsNumber, JsArray, JsObject }
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.cache.InMemoryCachePlugin
-import org.apache.http.HttpStatus
 
 @Singleton
 class AdminCacheController @Inject() (
@@ -38,7 +37,7 @@ class AdminCacheController @Inject() (
         serviceClient.removeAllFromLocalCaches(prefixOpt).map { responses =>
           serviceClient.serviceCluster.serviceType -> {
             val clearedRemoteInstances = responses.map { response =>
-              response.request.instance.get.instanceInfo.instanceId.id -> (response.status == HttpStatus.SC_OK)
+              response.request.instance.get.instanceInfo.instanceId.id -> (response.status == OK)
             }
             clearedRemoteInstances ++ clearedLocalInstance.toSeq
           }
