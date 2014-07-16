@@ -14,6 +14,7 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
   def configure() {
     bind[RichWord2VecURIFeatureUpdatePlugin].to[RichWord2VecURIFeatureUpdatePluginImpl].in[AppScoped]
     bind[LDADbUpdatePlugin].to[LDADbUpdatePluginImpl].in[AppScoped]
+    bind[LDAUserDbUpdatePlugin].to[LDAUserDbUpdatePluginImpl].in[AppScoped]
   }
 
   @Singleton
@@ -39,6 +40,7 @@ case class CortexDevModelModule() extends CortexModelModule {
   def configure() {
     bind[RichWord2VecURIFeatureUpdatePlugin].to[RichWord2VecURIFeatureUpdatePluginImpl].in[AppScoped]
     bind[LDADbUpdatePlugin].to[LDADbUpdatePluginImpl].in[AppScoped]
+    bind[LDAUserDbUpdatePlugin].to[LDAUserDbUpdatePluginImpl].in[AppScoped]
   }
 
   @Singleton
