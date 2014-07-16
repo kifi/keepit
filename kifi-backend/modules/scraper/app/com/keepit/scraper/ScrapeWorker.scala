@@ -5,6 +5,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
 import com.keepit.model._
 import com.keepit.scraper.extractor._
+import com.keepit.scraper.fetcher.HttpFetcher
 import com.keepit.search.{ LangDetector, Article, ArticleStore }
 import java.io.File
 import scala.concurrent.duration._
