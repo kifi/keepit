@@ -95,6 +95,8 @@ class URILDATopicRepoImpl @Inject() (
   def getUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(LDATopic, Int)] = {
     import StaticQuery.interpolation
 
+    // could be expensive. may revisit this later.
+
     val query =
       sql"""select tp.first_topic, count(ck.uri_Id) from cortex_keep as ck inner join uri_lda_topic as tp
            on ck.uri_id = tp.uri_id

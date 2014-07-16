@@ -70,7 +70,7 @@ class LDAUserDbUpdaterTest extends Specification with CortexTestInjector with LD
           userTopicUpdater.update()
 
           db.readOnlyReplica { implicit s =>
-            userTopicRepo.getFeatureByUser(Id[User](1), uriRep.version) === None
+            userTopicRepo.getTopicMeanByUser(Id[User](1), uriRep.version) === None
             userTopicRepo.getByUser(Id[User](1), uriRep.version).get.state === UserLDAInterestsStates.NOT_APPLICABLE
             commitRepo.getByModelAndVersion(StatModelName.LDA_USER, 1).get.seq === 5
           }
