@@ -29,8 +29,8 @@ class LibraryController @Inject() (
       (name, visibility, descript, slug, collabs, follows)
     }
 
-    val libRequest = LibraryAddRequest(name = name, visibility = LibraryVisibility(visibility),
-      description = description, slug = LibrarySlug(slug), collaborators = collabs, followers = follows)
+    val libRequest = LibraryAddRequest(name = name, visibility = visibility,
+      description = description, slug = slug, collaborators = collabs, followers = follows)
 
     libraryCommander.addLibrary(libRequest, request.userId) match {
       case Left(LibraryFail(message)) => BadRequest(Json.obj("error" -> message))

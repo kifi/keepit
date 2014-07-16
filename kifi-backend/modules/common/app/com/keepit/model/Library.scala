@@ -45,6 +45,11 @@ object Library {
     (__ \ 'state).format(State.format[Library]) and
     (__ \ 'seq).format(SequenceNumber.format[Library])
   )(Library.apply, unlift(Library.unapply))
+
+  val maxNameLength = 50
+  def isValidName(name: String): Boolean = {
+    !(name.length > maxNameLength) || (name.contains("\""))
+  }
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
@@ -69,6 +74,11 @@ case class LibrarySlug(value: String)
 object LibrarySlug {
   implicit def format: Format[LibrarySlug] =
     Format(__.read[String].map(LibrarySlug(_)), new Writes[LibrarySlug] { def writes(o: LibrarySlug) = JsString(o.value) })
+
+  val maxSlugLength = 50
+  def isValidSlug(slug: String): Boolean = {
+    (!slug.contains(' ') && slug.length < maxSlugLength)
+  }
 }
 
 sealed abstract class LibraryVisibility(val value: String)

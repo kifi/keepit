@@ -41,25 +41,33 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val inv2: Seq[ExternalId[User]] = userIron.externalId :: userAgent.externalId :: userHulk.externalId :: Nil
         val inv3: Seq[ExternalId[User]] = userHulk.externalId :: Nil
 
-        val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = LibrarySlug("avengers"),
-          visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
+        val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers",
+          visibility = LibraryVisibility.SECRET.value, collaborators = noInvites, followers = noInvites)
 
-        val lib2Request = LibraryAddRequest(name = "MURICA", slug = LibrarySlug("murica"),
-          visibility = LibraryVisibility.ANYONE, collaborators = noInvites, followers = inv2)
+        val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica",
+          visibility = LibraryVisibility.ANYONE.value, collaborators = noInvites, followers = inv2)
 
-        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = LibrarySlug("science"),
-          visibility = LibraryVisibility.LIMITED, collaborators = inv3, followers = noInvites)
+        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science",
+          visibility = LibraryVisibility.LIMITED.value, collaborators = inv3, followers = noInvites)
 
-        inject[LibraryCommander].addLibrary(lib1Request, userAgent.id.get)
-        inject[LibraryCommander].addLibrary(lib2Request, userCaptain.id.get)
-        inject[LibraryCommander].addLibrary(lib3Request, userIron.id.get)
+        val lib4Request = LibraryAddRequest(name = "Overlapped Invitees", slug = "overlap",
+          visibility = LibraryVisibility.LIMITED.value, collaborators = inv2, followers = inv3)
+
+        val add1 = inject[LibraryCommander].addLibrary(lib1Request, userAgent.id.get)
+        add1.isRight === true
+        val add2 = inject[LibraryCommander].addLibrary(lib2Request, userCaptain.id.get)
+        add2.isRight === true
+        val add3 = inject[LibraryCommander].addLibrary(lib3Request, userIron.id.get)
+        add3.isRight === true
+        val add4 = inject[LibraryCommander].addLibrary(lib4Request, userIron.id.get)
+        add4.isRight === false
 
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all
           allLibs.length === 3
           allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
 
-          val allMemberships = libraryMemberRepo.all
+          val allMemberships = libraryMembershipRepo.all
           allMemberships.length === 3
           allMemberships.map(_.userId) === Seq(userAgent.id.get, userCaptain.id.get, userIron.id.get)
           allMemberships.map(_.access) === Seq(LibraryAccess.OWNER, LibraryAccess.OWNER, LibraryAccess.OWNER)
