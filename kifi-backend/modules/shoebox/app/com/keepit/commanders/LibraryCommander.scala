@@ -38,8 +38,8 @@ class LibraryCommander @Inject() (
         val inviteeIdOpt = userRepo.getOpt(x) collect { case user => user.id.get }
         inviteeIdOpt.get
       }
-      val collabBasicUsers = basicUserRepo.loadAll(collabs.toSet).values.toSeq // type Seq[BasicUser]
-      val followBasicUsers = basicUserRepo.loadAll(follows.toSet).values.toSeq // type Seq[BasicUser]
+      val collabBasicUsers = basicUserRepo.loadAll(collabs.toSet).values.toSeq
+      val followBasicUsers = basicUserRepo.loadAll(follows.toSet).values.toSeq
 
       (collabs, collabBasicUsers, follows, followBasicUsers, userRepo.get(ownerId).externalId)
     }
@@ -47,7 +47,7 @@ class LibraryCommander @Inject() (
     val (libId, libExtId) = db.readWrite { implicit s =>
       val lib = libraryRepo.save(Library(ownerId = ownerId, name = libInfo.name, description = libInfo.description,
         visibility = libInfo.visibility, slug = libInfo.slug))
-      val libId = lib.id.getOrElse { return Left(LibraryFail("Library Id not found")) }
+      val libId = lib.id.get
       val libMem = libraryMembershipRepo.save(LibraryMembership(libraryId = libId, userId = ownerId, access = LibraryAccess.OWNER))
       (libId, lib.externalId)
     }
