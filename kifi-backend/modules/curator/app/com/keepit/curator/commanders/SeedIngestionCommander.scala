@@ -9,6 +9,7 @@ import com.google.inject.{ Inject, Singleton }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.util.{ Failure, Success }
+import scala.concurrent.Future
 
 @Singleton
 class SeedIngestionCommander @Inject() (
@@ -17,21 +18,29 @@ class SeedIngestionCommander @Inject() (
 
   val INGESTION_BATCH_SIZE = 50
 
-  @volatile var ingestionInProgress: Boolean = false
+  @volatile var ingestionFuture: Option[Future[Unit]] = None
 
-  def ingestAll(): Unit = if (!ingestionInProgress) synchronized {
-    if (!ingestionInProgress) {
-      ingestionInProgress = true
-      FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {
+  def ingestAll(): Future[Unit] = if (ingestionFuture.isEmpty) synchronized {
+    if (ingestionFuture.isEmpty) {
+      val fut = FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {
         log.info("Ingested one batch of keeps.")
-      }.onComplete {
-        case Success(_) => ingestionInProgress = false
+      }
+      ingestionFuture = Some(fut)
+      fut.onComplete {
+        case Success(_) => ingestionFuture = None
         case Failure(ex) => {
           log.error("Failure occured during all keeps ingestion.")
           airbrake.notify("Failure occured during all keeps ingestion.", ex)
-          ingestionInProgress = false
+          ingestionFuture = None
         }
       }
+      fut
+    } else {
+      ingestionFuture.get
     }
   }
+  else {
+    ingestionFuture.get
+  }
+
 }
