@@ -65,7 +65,7 @@ class MailSender @Inject() (
   }
 }
 
-class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, sender: MailSender, services: FortyTwoServices) extends Logging {
+class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, sender: MailSender, services: FortyTwoServices) {
   def sendMail() {
     val last = history.lastError
     val subjectWithNumerics = s"[RPT-ERR][${services.currentService}] ${last.message.getOrElse("")} ${last.rootException}"
@@ -78,7 +78,7 @@ class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, 
 
 class SendOutOfDateMail(sender: MailSender, services: FortyTwoServices) {
   def sendMail() {
-    val subject = s"${services.currentService} out of date for 3 days---%%%test%%%"
+    val subject = s"${services.currentService} out of date for 3 days"
     val body = s"empty"
     sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
       subject = subject, htmlBody = body, category = NotificationCategory.System.HEALTHCHECK))
@@ -137,12 +137,9 @@ class HealthcheckActor @Inject() (
       val currentDate: DateTime = currentDateTime
       val lastCompilationDate: DateTime = services.compilationTime
       val betweenDays = Days.daysBetween(currentDate, lastCompilationDate).getDays
-      log.debug("^^^^^^currentDate:^^^^^^^^ " + currentDate)
-      log.debug("^^^^^^lastCompilationDate:^^^^^^^^ " + lastCompilationDate)
-      log.debug("^^^^^^betweenDays:^^^^^^^^ " + betweenDays)
-      //if (betweenDays >= 3) {
-      new SendOutOfDateMail(emailSender, services).sendMail()
-    //}
+      if (betweenDays >= 3) {
+        new SendOutOfDateMail(emailSender, services).sendMail()
+      }
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -175,10 +172,7 @@ class HealthcheckPluginImpl @Inject() (
   override def onStart() {
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 30 minutes, actor.ref, ReportErrorsAction)
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 60 minutes, actor.ref, CheckDiskSpace)
-
-    scheduleTaskOnAllMachines(actor.system, 0 seconds, 1 minute, actor.ref, CheckUpdateStatusOfService)
-
-    //    scheduleTaskOnAllMachines(actor.system, 3 days, 1 days, actor.ref, CheckUpdateStatusOfService)
+    scheduleTaskOnAllMachines(actor.system, 3 days, 1 days, actor.ref, CheckUpdateStatusOfService)
 
   }
 
