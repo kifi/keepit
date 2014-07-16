@@ -38,12 +38,12 @@ class ExtNonUserSearchController @Inject() (
   }
 
   def hideEmailFromUser() = JsonAction.authenticatedParseJsonAsync { request =>
-    (request.body \ "email").asOpt[String] map { email =>
+    (request.body \ "email").asOpt[EmailAddress] map { email =>
       new SafeFuture[Boolean]({
-        typeaheadCommander.hideEmailFromUser(request.userId, EmailAddress(email))
+        typeaheadCommander.hideEmailFromUser(request.userId, email)
       }) map { result =>
         Ok(Json.toJson(result))
       }
-    } getOrElse Future.successful(BadRequest(Json.obj("email" -> "Email address missing from request")))
+    } getOrElse Future.successful(BadRequest(Json.obj("email" -> "Email address missing or invalid")))
   }
 }

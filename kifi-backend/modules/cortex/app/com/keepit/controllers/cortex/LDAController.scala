@@ -11,7 +11,7 @@ import com.keepit.cortex.models.lda.LDATopicConfiguration
 import com.keepit.cortex.models.lda.LDATopicInfo
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.common.db.Id
 
 class LDAController @Inject() (
@@ -61,5 +61,9 @@ class LDAController @Inject() (
       val vecs = feats.flatMap { featOpt => featOpt.map { _.vectorize } }
       Ok(Json.toJson(vecs))
     }
+  }
+
+  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
+    Ok(Json.toJson(0.5f)) // fake for now
   }
 }

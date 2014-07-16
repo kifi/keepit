@@ -299,7 +299,7 @@ class ShoeboxController @Inject() (
 
   def getNormalizedURIByURL() = SafeAsyncAction(parse.tolerantJson(maxLength = MaxContentLength)) { request =>
     val url: String = Json.fromJson[String](request.body).get
-    val uriOpt = db.readOnlyReplica { implicit s =>
+    val uriOpt = db.readOnlyMaster { implicit s =>
       normalizedURIInterner.getByUri(url) //using cache
     }
     uriOpt match {
