@@ -1,6 +1,6 @@
 package com.keepit.curator.model
 
-import com.keepit.common.db.{ Model, Id, ModelWithState, State }
+import com.keepit.common.db.{ Model, Id, ModelWithState, State, States }
 import com.keepit.model.{ NormalizedURI, User, Keep }
 import com.keepit.common.time._
 
@@ -19,4 +19,8 @@ case class CuratorKeepInfo(
 
   def withId(id: Id[CuratorKeepInfo]): CuratorKeepInfo = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): CuratorKeepInfo = this.copy(updateAt = updateTime)
+}
+
+object CuratorKeepInfoStates extends States[CuratorKeepInfo] {
+  val DUPLICATE = State[Keep]("duplicate")
 }

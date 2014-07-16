@@ -17,6 +17,8 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[RawSeedItemRepoImpl])
 trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeedItem] {
+  def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[RawSeedItem]
+
 }
 
 @Singleton
@@ -50,6 +52,10 @@ class RawSeedItemRepoImpl @Inject() (
   override def save(RawSeedItem: RawSeedItem)(implicit session: RWSession): RawSeedItem = {
     val toSave = RawSeedItem.copy(seq = deferredSeqNum())
     super.save(toSave)
+  }
+
+  def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[RawSeedItem] = {
+    (for (row <- rows if row.uriId === uriId) yield row).list
   }
 
 }

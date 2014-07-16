@@ -71,5 +71,23 @@ object FutureHelpers {
     }
     promisedResult.future
   }
+
+  def whilef(f: => Future[Boolean], toComplete: Option[Promise[Unit]] = None)(body: => Unit)(implicit ec: ScalaExecutionContext): Future[Unit] = {
+    val p = toComplete.getOrElse(Promise[Unit])
+    f.onComplete {
+      case Success(t) if t => {
+        try {
+          body
+          whilef(f, Some(p))(body)
+        } catch {
+          case t: Throwable => p.failure(t)
+        }
+      }
+      case Success(f) => p.success()
+      case Failure(ex) => p.failure(ex)
+    }
+    p.future
+  }
+
 }
 

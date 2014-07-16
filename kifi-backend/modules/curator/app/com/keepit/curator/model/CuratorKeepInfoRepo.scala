@@ -12,6 +12,7 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[CuratorKeepInfoRepoImpl])
 trait CuratorKeepInfoRepo extends DbRepo[CuratorKeepInfo] {
+  def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[CuratorKeepInfo]
 }
 
 @Singleton
@@ -36,5 +37,9 @@ class CuratorKeepInfoRepoImpl @Inject() (
 
   def deleteCache(model: CuratorKeepInfo)(implicit session: RSession): Unit = {}
   def invalidateCache(model: CuratorKeepInfo)(implicit session: RSession): Unit = {}
+
+  def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[CuratorKeepInfo] = {
+    (for (row <- rows if row.keepId === keepId) yield row).firstOption
+  }
 
 }

@@ -26,14 +26,14 @@ case class RawSeedItem(
   id: Option[Id[RawSeedItem]] = None,
   createdAt: DateTime = currentDateTime,
   updateAt: DateTime = currentDateTime,
-  seq: SequenceNumber[RawSeedItem],
+  seq: SequenceNumber[RawSeedItem] = SequenceNumber.ZERO,
   uriId: Id[NormalizedURI],
   userId: Option[Id[User]], //which user is this a seed item for. None means this is for every user.
   firstKept: DateTime, //the first time anyone has kept this uri
   lastKept: DateTime, //the most recent time anyone has kept this uri
   lastSeen: DateTime, //most recent time this uri was ingested for this user (could be due to a keep, a library addition, a graph output, ...); used for recency boost
   priorScore: Option[Float], //if the data source already scored the uri (e.g. when coming from the graph)
-  timesKept: Int //number of times this uri has been kept in total
+  timesKept: Int //number of times this uri has been kept in total (note that with libraries allowing multiple keep per uri this can exceed the number of users who have kept the uri)
   // attributionInfo: AttributionInfo,
   // libraryInfo: Seq[LibraryInfo]
   )
