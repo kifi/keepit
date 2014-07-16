@@ -8,7 +8,6 @@ import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.Searcher
-import com.keepit.social.BasicUser
 import com.keepit.typeahead.PrefixMatching
 import com.keepit.typeahead.PrefixFilter
 
@@ -59,7 +58,7 @@ class UserSearcher(searcher: Searcher) {
         if (id >= 0 && searchFilter.accept(id)) {
           var ref = new BytesRef()
           bv.get(doc, ref)
-          val user = BasicUser.fromByteArray(ref.bytes, ref.offset, ref.length)
+          val user = BasicUserSerializer.fromByteArray(ref.bytes, ref.offset, ref.length)
           val userId = Id[User](id)
           val isFriend = searchFilter.getKifiFriends.contains(id)
           val hit = UserHit(userId, user, isFriend)

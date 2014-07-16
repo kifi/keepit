@@ -1,16 +1,26 @@
 package com.keepit.scraper
 
-import org.apache.http.protocol.HttpContext
-import org.apache.http.HttpStatus
+import org.apache.http.protocol.{ HttpContext => ApacheHttpContext }
+import org.apache.http.{ HttpStatus => ApacheHttpStatus }
 import com.keepit.common.net.URI
 
-case class HttpFetchStatus(statusCode: Int, message: Option[String], context: HttpContext) {
-  def destinationUrl = Option(context.getAttribute("scraper_destination_url").asInstanceOf[String])
-  def redirects = Option(context.getAttribute("redirects").asInstanceOf[Seq[HttpRedirect]]).getOrElse(Seq.empty[HttpRedirect])
+// wraps & hides ApacheHttpContext from clients
+class FetcherHttpContext(context: ApacheHttpContext) {
+  def destinationUrl: Option[String] = Option(context.getAttribute("scraper_destination_url").asInstanceOf[String])
+  def redirects: Seq[HttpRedirect] = Option(context.getAttribute("redirects").asInstanceOf[Seq[HttpRedirect]]).getOrElse(Seq.empty[HttpRedirect])
+}
+
+object FetcherHttpContext {
+  implicit def toFetcherContext(apacheCtx: ApacheHttpContext): FetcherHttpContext = new FetcherHttpContext(apacheCtx)
+}
+
+case class HttpFetchStatus(statusCode: Int, message: Option[String], context: FetcherHttpContext) {
+  def destinationUrl = context.destinationUrl
+  def redirects = context.redirects
 }
 
 case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination: String) {
-  def isPermanent: Boolean = (statusCode == HttpStatus.SC_MOVED_PERMANENTLY)
+  def isPermanent: Boolean = (statusCode == ApacheHttpStatus.SC_MOVED_PERMANENTLY)
   def isAbsolute: Boolean = URI.isAbsolute(currentLocation) && URI.isAbsolute(newDestination)
   def isLocatedAt(url: String): Boolean = (currentLocation == url)
 }

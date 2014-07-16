@@ -4,18 +4,9 @@ import com.keepit.common.cache._
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.model._
-
-import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
-
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-
-import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
-
 import scala.concurrent.duration.Duration
-import com.keepit.serializer.NoCopyLocalSerializer
-import com.keepit.serializer.NoCopyLocalSerializer
-import scala.Some
 
 trait BasicUserLikeEntity {
   def asBasicUser: Option[BasicUser] = None
@@ -72,50 +63,6 @@ object BasicUser {
       pictureName = user.pictureName.map(_ + ".jpg").getOrElse("0.jpg"), // need support for default image
       username = user.username
     )
-  }
-
-  def toByteArray(basicUser: BasicUser): Array[Byte] = {
-    val bos = new ByteArrayOutputStream()
-    val oos = new OutputStreamDataOutput(bos)
-    oos.writeByte(2) // version
-    oos.writeString(basicUser.externalId.toString)
-    oos.writeString(basicUser.firstName)
-    oos.writeString(basicUser.lastName)
-    oos.writeString(basicUser.pictureName)
-    oos.writeString(basicUser.username.map(_.value).getOrElse(""))
-    oos.close()
-    bos.close()
-    bos.toByteArray()
-  }
-
-  def fromByteArray(bytes: Array[Byte], offset: Int, length: Int): BasicUser = {
-    val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
-
-    val version = in.readByte().toInt
-
-    version match {
-      case 1 => // pre-username
-        BasicUser(
-          externalId = ExternalId[User](in.readString),
-          firstName = in.readString,
-          lastName = in.readString,
-          pictureName = in.readString,
-          username = None
-        )
-      case 2 => // with username
-        BasicUser(
-          externalId = ExternalId[User](in.readString),
-          firstName = in.readString,
-          lastName = in.readString,
-          pictureName = in.readString,
-          username = {
-            val u = in.readString
-            if (u.length == 0) None else Some(Username(u))
-          }
-        )
-      case _ =>
-        throw new Exception(s"invalid data [version=${version}]")
-    }
   }
 }
 
