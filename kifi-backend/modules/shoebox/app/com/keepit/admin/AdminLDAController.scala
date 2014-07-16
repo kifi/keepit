@@ -121,4 +121,19 @@ class AdminLDAController @Inject() (
       Ok(Json.toJson(s))
     }
   }
+
+  def userTopicMean() = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val userId = body.get("userId").get.toLong
+    val topK = 10
+
+    cortex.userTopicMean(Id[User](userId)).map { meanOpt =>
+      val res = meanOpt.map { arr =>
+        val tops = arr.zipWithIndex.toArray.sortBy(-1f * _._1).take(topK)
+        tops.map { case (score, topic) => (topic, score) }.mkString
+      } getOrElse "not enough information"
+      Ok(Json.toJson(res))
+    }
+
+  }
 }

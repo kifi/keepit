@@ -66,4 +66,9 @@ class LDAController @Inject() (
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
     Ok(Json.toJson(0.5f)) // fake for now
   }
+
+  def userTopicMean(userId: Id[User]) = Action { request =>
+    val meanOpt = lda.userTopicMean(userId)
+    Ok(Json.toJson(meanOpt.map { _.mean }))
+  }
 }
