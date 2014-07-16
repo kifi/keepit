@@ -37,7 +37,9 @@ class LDAUserDbUpdaterTest extends Specification with CortexTestInjector with LD
         userTopicUpdater.update()
 
         db.readOnlyReplica { implicit s =>
-          val arr = userTopicRepo.getByUser(Id[User](1), uriRep.version).get.userTopicMean.get.mean
+          val model = userTopicRepo.getByUser(Id[User](1), uriRep.version).get
+          model.numOfEvidence === 5
+          val arr = model.userTopicMean.get.mean
           arr.take(5).toList === Array.fill(5)(1f / 5).toList
           arr.drop(5).toList === Array.fill(uriRep.dimension - 5)(0f).toList
 
@@ -73,6 +75,8 @@ class LDAUserDbUpdaterTest extends Specification with CortexTestInjector with LD
             userTopicRepo.getTopicMeanByUser(Id[User](1), uriRep.version) === None
             userTopicRepo.getByUser(Id[User](1), uriRep.version).get.state === UserLDAInterestsStates.NOT_APPLICABLE
             commitRepo.getByModelAndVersion(StatModelName.LDA_USER, 1).get.seq === 5
+            val model = userTopicRepo.getByUser(Id[User](1), uriRep.version).get
+            model.numOfEvidence === 0
           }
         }
       }
