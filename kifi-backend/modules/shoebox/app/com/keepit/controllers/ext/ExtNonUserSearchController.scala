@@ -12,6 +12,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ Json, JsArray, JsObject, JsString, JsValue }
 import com.keepit.abook.model.RichContact
 
+import scala.concurrent.Future
+
 class ExtNonUserSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   typeaheadCommander: TypeaheadCommander)
@@ -35,11 +37,13 @@ class ExtNonUserSearchController @Inject() (
       contact.name.map { name => "name" -> JsString(name) })
   }
 
-  def hideEmailFromUser(email: String) = JsonAction.authenticatedAsync { request =>
-    new SafeFuture[Boolean]({
-      typeaheadCommander.hideEmailFromUser(request.userId, EmailAddress(email))
-    }) map { result =>
-      Ok(Json.toJson(result))
-    }
+  def hideEmailFromUser() = JsonAction.authenticatedParseJsonAsync { request =>
+    (request.body \ "email").asOpt[String] map { email =>
+      new SafeFuture[Boolean]({
+        typeaheadCommander.hideEmailFromUser(request.userId, EmailAddress(email))
+      }) map { result =>
+        Ok(Json.toJson(result))
+      }
+    } getOrElse Future.successful(BadRequest(Json.obj("email" -> "Email address missing from request")))
   }
 }
