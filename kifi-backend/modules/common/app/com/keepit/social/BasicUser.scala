@@ -4,18 +4,9 @@ import com.keepit.common.cache._
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.model._
-
-import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
-
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-
-import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
-
 import scala.concurrent.duration.Duration
-import com.keepit.serializer.NoCopyLocalSerializer
-import com.keepit.serializer.NoCopyLocalSerializer
-import scala.Some
 
 trait BasicUserLikeEntity {
   def asBasicUser: Option[BasicUser] = None
@@ -70,34 +61,6 @@ object BasicUser {
     )
   }
 
-  def toByteArray(basicUser: BasicUser): Array[Byte] = {
-    val bos = new ByteArrayOutputStream()
-    val oos = new OutputStreamDataOutput(bos)
-    oos.writeByte(1) // version
-    oos.writeString(basicUser.externalId.toString)
-    oos.writeString(basicUser.firstName)
-    oos.writeString(basicUser.lastName)
-    oos.writeString(basicUser.pictureName)
-    oos.close()
-    bos.close()
-    bos.toByteArray()
-  }
-
-  def fromByteArray(bytes: Array[Byte], offset: Int, length: Int): BasicUser = {
-    val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
-
-    val version = in.readByte().toInt
-    if (version != 1) {
-      throw new Exception(s"invalid data [version=${version}]")
-    }
-
-    BasicUser(
-      externalId = ExternalId[User](in.readString),
-      firstName = in.readString,
-      lastName = in.readString,
-      pictureName = in.readString
-    )
-  }
 }
 
 case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {

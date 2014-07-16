@@ -1,14 +1,18 @@
 package com.keepit.common.commanders
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.db.slick.Database
+import com.keepit.cortex.dbmodel.{ UserTopicMean, UserLDAInterestsRepo }
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.MiscPrefix
 import com.keepit.common.db.Id
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ User, NormalizedURI }
 
 @Singleton
 class LDACommander @Inject() (
+    db: Database,
+    userTopicRepo: UserLDAInterestsRepo,
     wordRep: LDAWordRepresenter,
     docRep: LDADocRepresenter,
     ldaTopicWords: DenseLDATopicWords,
@@ -58,5 +62,11 @@ class LDACommander @Inject() (
 
   def getLDAFeatures(ids: Seq[Id[NormalizedURI]]) = {
     ldaRetriever.getByKeys(ids, wordRep.version)
+  }
+
+  def userTopicMean(userId: Id[User]): Option[UserTopicMean] = {
+    db.readOnlyReplica { implicit s =>
+      userTopicRepo.getTopicMeanByUser(userId, wordRep.version)
+    }
   }
 }

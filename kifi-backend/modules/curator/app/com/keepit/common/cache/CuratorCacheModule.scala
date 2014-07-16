@@ -154,7 +154,7 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def uriScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ConnectedUriScoreCache(stats, accessLog, (innerRepo, 1 second), (outerRepo, 5 minutes))
+    new ConnectedUriScoreCache(stats, accessLog, (innerRepo, 30 seconds), (outerRepo, 10 minutes))
 
   @Singleton
   @Provides

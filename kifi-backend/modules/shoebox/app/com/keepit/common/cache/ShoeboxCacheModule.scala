@@ -11,6 +11,7 @@ import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.typeahead.socialusers.{ KifiUserTypeaheadCache, SocialUserTypeaheadCache }
 import com.keepit.commanders.BasicCollectionByIdCache
+import com.keepit.graph.model.{ ConnectedUriScoreCache, ConnectedUserScoreCache }
 
 case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
 
@@ -285,5 +286,15 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def libraryInviteIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new LibraryInviteIdCache(stats, accessLog, (outerRepo, 10 days))
+
+  @Singleton
+  @Provides
+  def uriScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ConnectedUriScoreCache(stats, accessLog, (innerRepo, 30 seconds), (outerRepo, 10 minutes))
+
+  @Singleton
+  @Provides
+  def userScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ConnectedUserScoreCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 5 hours))
 
 }

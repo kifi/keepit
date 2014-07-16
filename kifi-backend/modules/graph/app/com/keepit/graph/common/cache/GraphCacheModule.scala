@@ -161,7 +161,7 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Singleton
   @Provides
   def uriScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ConnectedUriScoreCache(stats, accessLog, (innerRepo, 30 second), (outerRepo, 10 minutes))
+    new ConnectedUriScoreCache(stats, accessLog, (innerRepo, 30 seconds), (outerRepo, 10 minutes))
 
   @Singleton
   @Provides
