@@ -2,11 +2,11 @@ package com.keepit.scraper
 
 import com.keepit.scraper.extractor.{ ExtractorFactoryImpl, ExtractorFactory }
 import com.keepit.inject.AppScoped
-import com.google.inject.{ Provider, Provides, Singleton }
-import akka.actor.ActorSystem
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.scraper.fetcher.{ ApacheHttpFetcher, HttpFetcher }
+import com.keepit.scraper.fetcher.HttpFetcher
+import com.keepit.scraper.fetcher.apache.ApacheHttpFetcher
 
 case class TestScraperProcessorModule() extends ScrapeProcessorModule {
 
