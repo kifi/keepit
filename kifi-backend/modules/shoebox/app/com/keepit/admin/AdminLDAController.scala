@@ -116,7 +116,7 @@ class AdminLDAController @Inject() (
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = body.get("userId").get.toLong
     val uriId = body.get("uriId").get.toLong
-    val score = Future.successful(0.5f) // fake so far
+    val score = cortex.userUriInterest(Id[User](userId), Id[NormalizedURI](uriId))
     score.map { s =>
       Ok(Json.toJson(s))
     }
