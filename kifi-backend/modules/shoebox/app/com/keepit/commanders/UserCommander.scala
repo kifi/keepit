@@ -690,7 +690,7 @@ class UserCommander @Inject() (
 
   private val SHOW_DELIGHTED_QUESTION_PREF = "show_delighted_question"
 
-  private def getPrefUpdates(prefSet: Set[String], userId: Id[User]): Future[JsObject] = {
+  private def getPrefUpdates(prefSet: Set[String], userId: Id[User], experiments: Set[ExperimentType]): Future[JsObject] = {
     if (prefSet.contains(SHOW_DELIGHTED_QUESTION_PREF)) {
       // Check if user should be shown Delighted question
       val user = db.readOnlyReplica { implicit s =>
@@ -699,10 +699,13 @@ class UserCommander @Inject() (
       val time = clock.now()
       val from = time.minusDays(DELIGHTED_INITIAL_DELAY)
       val to = user.createdAt
-      val shouldShowDelightedQuestionFut = if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
+      val shouldShowDelightedQuestionFut = if (experiments.contains(ExperimentType.DELIGHTED_SURVEY_PERMANENT))
+        Future.successful(true)
+      else if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
         heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
           val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
-          time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate
+          (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate) &&
+            experiments.contains(ExperimentType.DELIGHTED_SURVEY)
         }
       } else Future.successful(false)
       shouldShowDelightedQuestionFut map { shouldShowDelightedQuestion =>
@@ -726,8 +729,8 @@ class UserCommander @Inject() (
     })
   }
 
-  def getPrefs(prefSet: Set[String], userId: Id[User]): Future[JsObject] = {
-    getPrefUpdates(prefSet, userId) map { updates =>
+  def getPrefs(prefSet: Set[String], userId: Id[User], experiments: Set[ExperimentType]): Future[JsObject] = {
+    getPrefUpdates(prefSet, userId, experiments) map { updates =>
       savePrefs(userId, updates)
     } recover {
       case t: Throwable => airbrake.notify(s"Error updating prefs for user $userId", t)

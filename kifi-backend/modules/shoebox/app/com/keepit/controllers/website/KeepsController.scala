@@ -74,7 +74,7 @@ class KeepsController @Inject() (
     val urlOpt = (request.body \ "url").asOpt[String]
     val urlsOpt = (request.body \ "urls").asOpt[Seq[String]]
     urlOpt.map { url =>
-      db.readOnlyReplicaAsync { implicit session =>
+      db.readOnlyMasterAsync { implicit session =>
         normalizedURIInterner.getByUri(url)
       } map { uriOpt =>
         uriOpt flatMap { uriSummaryCommander.getScreenshotURL(_) } match {
@@ -151,7 +151,7 @@ class KeepsController @Inject() (
         }
         val tuplesF = tuples map {
           case (url, uriOpt) =>
-            val (uriOpt, pageInfoOpt) = db.readOnlyReplica { implicit ro =>
+            val (uriOpt, pageInfoOpt) = db.readOnlyMaster { implicit ro =>
               val uriOpt = normalizedURIInterner.getByUri(url)
               val pageInfoOpt = uriOpt flatMap { uri => pageInfoRepo.getByUri(uri.id.get) }
               (uriOpt, pageInfoOpt)
