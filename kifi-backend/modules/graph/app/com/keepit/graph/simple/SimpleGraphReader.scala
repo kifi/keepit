@@ -7,7 +7,7 @@ import com.keepit.graph.model.EdgeKind.EdgeType
 
 trait Vertex {
   def data: VertexDataReader
-  def edges: Map[(VertexType, EdgeType), Map[VertexId, EdgeDataReader]]
+  def edges: Map[(VertexType, VertexType, EdgeType), Map[VertexId, EdgeDataReader]]
 }
 
 object Vertex {
@@ -18,7 +18,7 @@ object Vertex {
   def checkIfEdgeExists(vertices: Map[VertexId, Vertex])(sourceVertexId: VertexId, destinationVertexId: VertexId, edgeKind: EdgeType): Unit = {
     checkIfVertexExists(vertices)(sourceVertexId)
     checkIfVertexExists(vertices)(destinationVertexId)
-    val component = (destinationVertexId.kind, edgeKind)
+    val component = (sourceVertexId.kind, destinationVertexId.kind, edgeKind)
     if (!vertices(sourceVertexId).edges.contains(component) || !vertices(sourceVertexId).edges(component).contains(destinationVertexId)) {
       throw new EdgeNotFoundException(sourceVertexId, destinationVertexId, edgeKind)
     }
@@ -40,14 +40,14 @@ class SimpleGlobalVertexReader(vertices: Map[VertexId, Vertex]) extends GlobalVe
   def moveTo[V <: VertexDataReader: VertexKind](vertex: VertexDataId[V]): Unit = { moveTo(VertexId(vertex)) }
 }
 
-class SimpleOutgoingEdgeReader(owner: VertexReader, edges: => Map[(VertexType, EdgeType), Map[VertexId, EdgeDataReader]]) extends OutgoingEdgeReader {
-  private var components: Option[Iterator[(VertexType, EdgeType)]] = None
-  private var currentComponent: Option[(VertexType, EdgeType)] = None
+class SimpleOutgoingEdgeReader(owner: VertexReader, edges: => Map[(VertexType, VertexType, EdgeType), Map[VertexId, EdgeDataReader]]) extends OutgoingEdgeReader {
+  private var components: Option[Iterator[(VertexType, VertexType, EdgeType)]] = None
+  private var currentComponent: Option[(VertexType, VertexType, EdgeType)] = None
   private var destinations: Option[Iterator[VertexId]] = None
   private var currentDestination: Option[VertexId] = None
   def source: VertexId = owner.id
   def sourceVertex = owner
-  def component: (VertexType, EdgeType) = currentComponent getOrElse { throw new UninitializedReaderException(s"$this is not initialized over a valid component") }
+  def component: (VertexType, VertexType, EdgeType) = currentComponent getOrElse { throw new UninitializedReaderException(s"$this is not initialized over a valid component") }
   def destination: VertexId = currentDestination getOrElse { throw new UninitializedReaderException(s"$this is not initialized over a valid destination vertex") }
   def data: EdgeDataReader = edges(component)(destination)
   def kind: EdgeKind[_ <: EdgeDataReader] = data.kind
@@ -81,7 +81,8 @@ class SimpleGlobalEdgeReader(vertices: Map[VertexId, Vertex]) extends GlobalEdge
   def kind: EdgeKind[_ <: EdgeDataReader] = currentEdgeKind getOrElse { throw new UninitializedReaderException(s"$this is not initialized over a valid edge") }
   def source: VertexId = globalSourceReader.id
   def destination: VertexId = globalDestinationReader.id
-  def data: EdgeDataReader = vertices(source).edges((globalDestinationReader.kind, kind))(destination)
+  private def component = (source.kind, destination.kind, kind)
+  def data: EdgeDataReader = vertices(source).edges(component)(destination)
 
   def sourceVertex: VertexReader = globalSourceReader
   def destinationVertex: VertexReader = globalDestinationReader

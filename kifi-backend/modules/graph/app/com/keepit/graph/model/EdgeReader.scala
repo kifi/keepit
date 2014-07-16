@@ -24,7 +24,7 @@ trait GlobalEdgeReader extends EdgeReader with SourceReader with DestinationRead
 
 trait OutgoingEdgeReader extends EdgeReader with SourceReader {
   def moveToNextComponent(): Boolean
-  def component: (VertexType, EdgeType)
+  def component: (VertexType, VertexType, EdgeType)
   def degree: Int
   def moveToNextEdge(): Boolean
   def reset(): Unit
