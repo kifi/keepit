@@ -2,7 +2,7 @@ package com.keepit.cortex
 
 import scala.concurrent.Future
 import com.keepit.common.db.Id
-import com.keepit.model.{User, NormalizedURI, Word2VecKeywords}
+import com.keepit.model.{ User, NormalizedURI, Word2VecKeywords }
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.{ UriSparseLDAFeatures, DenseLDA }
@@ -35,7 +35,6 @@ class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extend
   override def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit = ???
   override def getLDAFeatures(uris: Seq[Id[NormalizedURI]]): Future[Seq[Array[Float]]] = ???
   override def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[Float] = ???
-
 
   override def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])] = ???
 }
