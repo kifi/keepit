@@ -1,8 +1,6 @@
 package com.keepit.commanders
 
-import javax.inject.Inject
-
-import akka.actor.Scheduler
+import com.google.inject.Inject
 import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
@@ -24,10 +22,9 @@ class LibraryCommander @Inject() (
     userRepo: UserRepo,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
-    scheduler: Scheduler,
     clock: Clock) extends Logging {
 
-  def addLibrary(libInfo: LibraryAddRequest, ownerId: Id[User]) : Either [LibraryFail, FullLibraryInfo] = {
+  def addLibrary(libInfo: LibraryAddRequest, ownerId: Id[User]) : Either[LibraryFail, FullLibraryInfo] = {
 
     if (!libInfo.collaborators.intersect(libInfo.followers).isEmpty) {
       return Left(LibraryFail("collaborators & followers overlap!"))
