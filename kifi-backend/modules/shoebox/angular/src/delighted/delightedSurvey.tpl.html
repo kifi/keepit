@@ -23,11 +23,11 @@
       </div>
     </div>
     <div class="kf-delighted-comment-area" ng-show="showCommentArea">
-      <div class="kf-delighted-title">Why?</div>
+      <div class="kf-delighted-title">Tell us why you chose {{delighted.score}}</div>
       <textarea class="kf-delighted-comment-area-input" ng-model="delighted.comment" name="delighted-comment" placeholder="Enter a comment (optional)"></textarea>
       <div class="kf-delighted-comment-actions">
-        <div class="kf-delighted-comment-back" ng-click="goBack()">Change score</div>
-        <div class="kf-delighted-comment-submit" ng-click="submit()">Submit</div>
+        <button class="kf-delighted-comment-back dialog-cancel" ng-click="goBack()">Change score</button>
+        <button class="kf-delighted-comment-submit" ng-click="submit()">Submit</button>
       </div>
     </div>
     <div class="sprite sprite-close-x-icon kf-delighted-cancel" ng-click="cancelSurvey()"></div>

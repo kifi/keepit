@@ -1,5 +1,5 @@
 .kf-delighted-title
-  padding: 14px 28px 8px 4px // make sure the title doesn't underlap the cancel button
+  padding: 8px 28px 8px // make sure the title doesn't underlap the cancel button
   font-family: "Georgia", Arial, sans-serif
   font-style: italic
   font-size: 18px
@@ -12,6 +12,7 @@
   border: 1px solid #dadae2
   text-align: center
   position: relative
+  padding: 6px
 
 .kf-delighted-cancel
   position: absolute
@@ -41,18 +42,11 @@
 
 .kf-delighted-comment-submit
 .kf-delighted-option
-  background-color: #6fa6ef
+  background-color: #4372b1
   &:hover
-    background-color: #5a99ed
+    background-color: #5382c1
   &:active
-    background-color: #6fa6ef
-
-.kf-delighted-comment-back
-  background-color: #ccc
-  &:hover
-    background-color: #d6d6d6
-  &:active
-    background-color: #ccc
+    background-color: #6590c8
 
 .kf-delighted-comment-back
 .kf-delighted-comment-submit
@@ -62,7 +56,7 @@
   width: 33px
 
 .kf-delighted-options
-  padding: 6px 0 26px
+  padding: 6px 0 35px
   white-space: nowrap
 
   input[type="radio"]
@@ -72,7 +66,7 @@
   position: absolute
   color: #000
   width: 70px
-  top: 37px
+  top: 46px
   color: #99a3b3
 
 .kf-delighted-option-left-wrapper
@@ -92,19 +86,48 @@
 
 .kf-delighted-comment-area
   textarea
-    margin: 10px
+    margin: 6px
     resize: none
     width: calc(100% - 100px)
     max-width: 400px
-    height: 60px
+    height: 40px
     border-radius: 3px
     border: 1px solid #ccc
     font-weight: 300
     padding: 5px
 
+.kf-delighted-comment-actions
+  margin: 10px
+
 .kf-delighted-comment-back
 .kf-delighted-comment-submit
-  padding: 0 15px
+  padding: 3px 15px
   min-width: 120px
   display: inline-block
-  margin: 10px
+
+.kf-delighted-body
+  
+  button
+    background-color: #4372b1
+    color: #fff
+    border: none
+    border-radius: 6px
+    font-size: 17px
+    font-weight: 300
+    font-smoothing: antialiased
+    cursor: pointer
+    transition: background-color .1s
+
+    &:focus
+    &:hover
+      background-color: #5382c1
+
+    &.dialog-cancel
+      background-color: #ccc
+      &:hover
+        background-color: #d6d6d6
+      &:active
+        background-color: #ccc
+
+  button + button
+    margin-left: 20px
