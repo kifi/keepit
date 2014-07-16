@@ -9,12 +9,13 @@ import java.io.File
 import org.apache.commons.io.{ LineIterator, FileUtils }
 import scala.collection.JavaConversions._
 import com.keepit.graph.model.EdgeKind.EdgeType
+import com.keepit.graph.model.VertexKind.VertexType
 
 case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMap()) {
 
   private val vertexStatistics = GraphStatistics.newVertexCounter()
   private val edgeStatistics = GraphStatistics.newEdgeCounter()
-  private val incomingEdges = TrieMap[VertexId, MutableMap[VertexId, MutableSet[EdgeType]]]()
+  private val incomingEdges = TrieMap[VertexId, MutableMap[(VertexType, VertexType, EdgeType), MutableSet[VertexId]]]()
 
   vertices.foreach {
     case (sourceId, mutableVertex) =>
@@ -22,11 +23,11 @@ case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMa
       vertexStatistics(sourceKind).incrementAndGet()
       mutableVertex.edges.valuesIterator.flatten.foreach {
         case (destinationId, edgeData) =>
-          val edgeKinds = (sourceKind, destinationId.kind, edgeData.kind)
-          edgeStatistics(edgeKinds).incrementAndGet()
+          val component = (sourceKind, destinationId.kind, edgeData.kind)
+          edgeStatistics(component).incrementAndGet()
           if (!incomingEdges.contains(destinationId)) { incomingEdges += (destinationId -> MutableMap()) }
-          if (!incomingEdges(destinationId).contains(sourceId)) { incomingEdges(destinationId) += (sourceId -> MutableSet()) }
-          incomingEdges(destinationId)(sourceId) += edgeData.kind
+          if (!incomingEdges(destinationId).contains(component)) { incomingEdges(destinationId) += (component -> MutableSet()) }
+          incomingEdges(destinationId)(component) += sourceId
       }
   }
 
