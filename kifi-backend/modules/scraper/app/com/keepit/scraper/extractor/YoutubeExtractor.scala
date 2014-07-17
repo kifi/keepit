@@ -1,7 +1,8 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.scraper.{ HttpFetcher, ScraperConfig }
+import com.keepit.scraper.ScraperConfig
 import com.keepit.common.net.{ Host, URI }
+import com.keepit.scraper.fetcher.HttpFetcher
 import com.keepit.search.Lang
 import org.jsoup.nodes.{ Element, Document }
 import java.net.URLEncoder

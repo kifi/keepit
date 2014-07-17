@@ -2,6 +2,7 @@ package com.keepit.scraper
 
 import java.util.concurrent.atomic.{ AtomicBoolean, AtomicInteger, AtomicReference, AtomicLong }
 import com.keepit.model._
+import com.keepit.scraper.fetcher.HttpFetcher
 import com.keepit.search.{ ArticleStore, Article }
 import org.joda.time.DateTime
 import scala.concurrent.duration.Duration

@@ -5,6 +5,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
 import com.keepit.model._
 import com.keepit.scraper.extractor._
+import com.keepit.scraper.fetcher.HttpFetcher
 import com.keepit.search.{ LangDetector, Article, ArticleStore }
 import java.io.File
 import scala.concurrent.duration._
@@ -364,12 +365,12 @@ class ScrapeWorker(
   private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
 
   private[this] def getSignature(x: Extractor) = {
-    Signature(Seq(
+    new SignatureBuilder().add(Seq(
       getTitle(x),
       getDescription(x).getOrElse(""),
       getKeywords(x).getOrElse(""),
       x.getContent()
-    ))
+    )).build
   }
 
   def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(

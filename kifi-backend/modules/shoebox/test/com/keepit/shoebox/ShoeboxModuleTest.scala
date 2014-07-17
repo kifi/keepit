@@ -65,7 +65,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         TestGraphServiceClientModule(),
         GeckoboardModule(),
         FakeShoeboxServiceModule(), // This one should not be required once the Scraper is off Shoebox
-        FakeScrapeSchedulerModule(), // This one should not be required once the Scraper is off Shoebox
+        FakeScrapeSchedulerModule(),
         TestScrapeSchedulerConfigModule(),
         FakeElizaServiceClientModule(),
         FakeAirbrakeModule(),

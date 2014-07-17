@@ -1,18 +1,37 @@
 package com.keepit.cortex.models.lda
 
-import com.google.inject.Inject
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.time._
+import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.cortex.core.{ StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
-import com.keepit.cortex.plugins.BaseFeatureUpdater
+import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater }
 import com.keepit.model.User
-import org.joda.time.DateTime
 
+import scala.concurrent.duration._
+
+class LDAUserDbUpdateActor @Inject() (airbrake: AirbrakeNotifier, updater: LDAUserDbUpdater) extends FeatureUpdateActor(airbrake, updater)
+
+trait LDAUserDbUpdatePlugin extends FeatureUpdatePlugin[User, DenseLDA]
+
+@Singleton
+class LDAUserDbUpdatePluginImpl @Inject() (
+    actor: ActorInstance[LDAUserDbUpdateActor],
+    discovery: ServiceDiscovery,
+    val scheduling: SchedulingProperties) extends BaseFeatureUpdatePlugin(actor, discovery) with LDAUserDbUpdatePlugin {
+  override val updateFrequency: FiniteDuration = 2 minutes
+}
+
+@ImplementedBy(classOf[LDAUserDbUpdaterImpl])
 trait LDAUserDbUpdater extends BaseFeatureUpdater[Id[User], User, DenseLDA, FeatureRepresentation[User, DenseLDA]]
 
+@Singleton
 class LDAUserDbUpdaterImpl @Inject() (
     representer: LDAURIRepresenter,
     db: Database,
@@ -56,11 +75,12 @@ class LDAUserDbUpdaterImpl @Inject() (
     val model = db.readOnlyReplica { implicit s => userTopicRepo.getByUser(user, representer.version) }
     if (shouldComputeFeature(model)) {
       val topicCounts = db.readOnlyReplica { implicit s => uriTopicRepo.getUserTopicHistograms(user, representer.version) }
+      val numOfEvidence = topicCounts.map { _._2 }.sum
       val topicMean = genFeature(topicCounts)
       val state = if (topicMean.isDefined) UserLDAInterestsStates.ACTIVE else UserLDAInterestsStates.NOT_APPLICABLE
       val tosave = model match {
         case Some(m) => m.copy(userTopicMean = topicMean).withUpdateTime(currentDateTime).withState(state)
-        case None => UserLDAInterests(userId = user, version = representer.version, userTopicMean = topicMean, state = state)
+        case None => UserLDAInterests(userId = user, version = representer.version, numOfEvidence = numOfEvidence, userTopicMean = topicMean, state = state)
       }
       db.readWrite { implicit s => userTopicRepo.save(tosave) }
     }
@@ -79,4 +99,3 @@ class LDAUserDbUpdaterImpl @Inject() (
   }
 
 }
-

@@ -91,8 +91,6 @@ object ApplicationBuild extends Build {
     "org.imgscalr" % "imgscalr-lib" % "4.2",
     "us.theatr" %% "akka-quartz" % "0.2.0_42.1",
     "org.jsoup" % "jsoup" % "1.7.1",
-    "org.apache.lucene" % "lucene-core" % "4.7.0", // todo(andrew/yasuhiro): remove from common
-    "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0", // todo(andrew/yasuhiro): remove from common
     "org.bouncycastle" % "bcprov-jdk15on" % "1.50",
     "org.msgpack" %% "msgpack-scala" % "0.6.8",
     "com.kifi" %% "json-annotation" % "0.1"
@@ -109,6 +107,8 @@ object ApplicationBuild extends Build {
     "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5"
       from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar",
     "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5",
+    "org.apache.lucene" % "lucene-core" % "4.7.0",
+    "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0",
     "org.apache.lucene" % "lucene-analyzers-kuromoji" % "4.7.0",
     "org.apache.lucene" % "lucene-suggest" % "4.7.0"
   )
@@ -139,6 +139,7 @@ object ApplicationBuild extends Build {
   lazy val abookDependencies = Seq()
 
   lazy val scraperDependencies = Seq(
+    "org.apache.lucene" % "lucene-analyzers-common" % "4.7.0",
     "org.apache.httpcomponents" % "httpclient" % "4.3.2",
     "org.apache.tika" % "tika-parsers" % "1.5"
   )
@@ -224,7 +225,11 @@ object ApplicationBuild extends Build {
     emojiLogs,
     // incOptions := incOptions.value.withNameHashing(true) // see https://groups.google.com/forum/#!msg/play-framework/S_-wYW5Tcvw/OjJuB4iUwD8J
     ScalariformKeys.preferences := ScalariformKeys.preferences.value
-      .setPreference(DoubleIndentClassDeclaration, true)
+      .setPreference(DoubleIndentClassDeclaration, true),
+    lessEntryPoints := Nil,
+    coffeescriptEntryPoints := Nil,
+    javascriptEntryPoints := Nil
+    //,     offline := true
   )
 
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(

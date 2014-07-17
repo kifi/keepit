@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.normalizer._
 import com.keepit.heimdal.{ KifiHitContext, SanitizedKifiHit, HeimdalContext, TestHeimdalServiceClientModule }
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper._
 import com.keepit.commanders.KeepInfo._
 import com.keepit.commanders.KeepInfosWithCollection._
 import com.keepit.commanders._
@@ -42,7 +42,6 @@ import org.joda.time.DateTime
 import com.google.inject.Injector
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.external.FakeExternalServiceModule
-import com.keepit.scraper.TestScraperServiceClientModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.controllers.website.KeepsController
 import scala.concurrent.Await
@@ -56,8 +55,6 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.model.KeepToCollection
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
-import com.keepit.scraper.TestScraperServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -114,6 +111,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val keepRepo = inject[KeepRepo]
+      val libraryRepo = inject[LibraryRepo]
       val keeper = KeepSource.keeper
       val keepToCollectionRepo = inject[KeepToCollectionRepo]
       val db = inject[Database]
@@ -126,10 +124,12 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
         val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
+        val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+
         val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE))
+          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
         val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE))
+          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
 
         val collectionRepo = inject[CollectionRepo]
         val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
@@ -181,6 +181,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val keepRepo = inject[KeepRepo]
+      val libraryRepo = inject[LibraryRepo]
       val keeper = KeepSource.keeper
       val db = inject[Database]
 
@@ -194,10 +195,12 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
         val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
+        val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+
         val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, isPrivate = false))
+          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, isPrivate = false, libraryId = Some(lib1.id.get)))
         val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, isPrivate = false))
+          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, isPrivate = false, libraryId = Some(lib1.id.get)))
 
         val collectionRepo = inject[CollectionRepo]
         val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
@@ -312,6 +315,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val keepRepo = inject[KeepRepo]
+      val libraryRepo = inject[LibraryRepo]
       val keeper = KeepSource.keeper
       val initLoad = KeepSource.bookmarkImport
       val db = inject[Database]
@@ -327,12 +331,14 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
         val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
+        val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+
         val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE))
+          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
         val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE))
+          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
         val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
-          uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE))
+          uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
 
         (user1, user2, bookmark1, bookmark2, bookmark3)
       }
@@ -673,6 +679,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       val uriRepo = inject[NormalizedURIRepo]
       val urlRepo = inject[URLRepo]
       val keepRepo = inject[KeepRepo]
+      val libraryRepo = inject[LibraryRepo]
       val keeper = KeepSource.keeper
       val initLoad = KeepSource.bookmarkImport
       val db = inject[Database]
@@ -688,12 +695,14 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
         val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
         val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
+        val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+
         val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE))
+          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
         val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE))
+          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
         val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
-          uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE))
+          uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
 
         (user1, bookmark1, bookmark2, bookmark3)
       }

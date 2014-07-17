@@ -1,7 +1,8 @@
 package com.keepit.scraper.extractor
 
+import com.keepit.scraper.fetcher.HttpFetcher
 import org.apache.tika.parser.html.HtmlMapper
-import com.keepit.scraper.{ ScraperConfig, HttpFetcher }
+import com.keepit.scraper.ScraperConfig
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.net.URI
 import org.apache.tika.sax.{ Link, LinkContentHandler, TeeContentHandler }

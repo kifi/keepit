@@ -29,7 +29,6 @@ import com.keepit.eliza.model.Notification
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
 import com.keepit.social.{ BasicUserLikeEntity, BasicUser, BasicNonUser }
-import com.keepit.common.crypto.PublicIdConfiguration
 
 class NotificationCommander @Inject() (
     threadRepo: MessageThreadRepo,
@@ -43,8 +42,7 @@ class NotificationCommander @Inject() (
     urbanAirship: UrbanAirship,
     notificationUpdater: NotificationUpdater,
     basicMessageCommander: MessageFetchingCommander,
-    emailCommander: ElizaEmailCommander,
-    implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
+    emailCommander: ElizaEmailCommander) extends Logging {
 
   def notifySendMessage(from: Id[User], message: Message, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
     val notifJson = buildMessageNotificationJson(

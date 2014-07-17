@@ -1,30 +1,26 @@
 package com.keepit.scraper
 
-import com.keepit.common.healthcheck.{ SystemAdminMailSender, AirbrakeNotifier }
-import com.keepit.common.actor.ActorInstance
-import com.google.inject.Inject
-import com.keepit.common.logging.Logging
-import com.keepit.model._
-import scala.concurrent.Future
 import akka.util.Timeout
-import scala.concurrent.duration._
-import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
-import com.keepit.scraper.extractor.ExtractorProviderType
+import com.google.inject.Inject
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.time._
-import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.common.healthcheck.{ SystemAdminMailSender, AirbrakeNotifier }
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
-import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.service.ServiceType
-import com.keepit.common.db.slick.Database.Replica
-import org.joda.time.DateTime
-import scala.util.Try
+import com.keepit.common.time._
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.model._
+import scala.concurrent.duration._
+
+import scala.concurrent.duration.FiniteDuration
 
 case object CheckOverdues
 case object CheckOverdueCount
 
-private[scraper] class ScrapeScheduler @Inject() (
+private[scraper] class ScraperHealthMonitor @Inject() (
     scraperConfig: ScraperSchedulerConfig,
     airbrake: AirbrakeNotifier,
     db: Database,
@@ -107,69 +103,24 @@ private[scraper] class ScrapeScheduler @Inject() (
   }
 }
 
-class ScrapeSchedulerPluginImpl @Inject() (
-  db: Database,
-  airbrake: AirbrakeNotifier,
-  systemAdminMailSender: SystemAdminMailSender,
-  scrapeInfoRepo: ScrapeInfoRepo,
-  urlPatternRuleRepo: UrlPatternRuleRepo,
-  actor: ActorInstance[ScrapeScheduler],
-  scraperConfig: ScraperSchedulerConfig,
-  scraperClient: ScraperServiceClient,
-  val scheduling: SchedulingProperties) //only on leader
-    extends ScrapeSchedulerPlugin with SchedulerPlugin with Logging {
+trait ScraperHealthMonitorPlugin extends SchedulerPlugin
 
-  implicit val actorTimeout = Timeout(scraperConfig.actorTimeout)
+class ScraperHealthMonitorPluginImpl @Inject() (
+    val actor: ActorInstance[ScraperHealthMonitor],
+    scraperConfig: ScraperSchedulerConfig,
+    val scheduling: SchedulingProperties) extends ScraperHealthMonitorPlugin {
 
-  // plugin lifecycle methods
+  val name: String = getClass.toString
+
+  implicit val actorTimeout = Timeout(5 seconds)
+
   override def enabled: Boolean = true
+
+  val interval: FiniteDuration = 5 seconds
+
   override def onStart() {
-    log.info(s"[onStart] starting ScraperPluginImpl with scraperConfig=$scraperConfig}")
+    log.info(s"[onStart] starting ScraperHealthMonitorPlugin with scraperConfig=$scraperConfig}")
     scheduleTaskOnLeader(actor.system, 30 seconds, scraperConfig.scrapePendingFrequency seconds, actor.ref, CheckOverdues)
     scheduleTaskOnLeader(actor.system, 30 seconds, scraperConfig.checkOverdueCountFrequency minutes, actor.ref, CheckOverdueCount)
-  }
-
-  def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit = {
-    require(uri != null && !uri.id.isEmpty, "[scheduleScrape] <uri> cannot be null and <uri.id> cannot be empty")
-    val uriId = uri.id.get
-    if (!NormalizedURIStates.DO_NOT_SCRAPE.contains(uri.state)) {
-      val info = scrapeInfoRepo.getByUriId(uriId)
-      val toSave = info match {
-        case Some(s) => s.state match {
-          case ScrapeInfoStates.ACTIVE => s.withNextScrape(date)
-          case ScrapeInfoStates.ASSIGNED => s // no change
-          case ScrapeInfoStates.INACTIVE => {
-            log.warn(s"[scheduleScrape(${uri.toShortString})] scheduling INACTIVE $s")
-            s.withState(ScrapeInfoStates.ACTIVE).withNextScrape(date) // dangerous; revisit
-          }
-        }
-        case None => ScrapeInfo(uriId = uriId, nextScrape = date)
-      }
-      scrapeInfoRepo.save(toSave)
-      // todo: It may be nice to force trigger a scrape directly
-    }
-  }
-
-  def scrapeBasicArticle(url: String, extractorProviderType: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
-    require(url != null, "[scrapeBasicArticle] <url> cannot be null")
-    val proxyOpt = db.readOnlyReplica { implicit s =>
-      urlPatternRuleRepo.getProxy(url)
-    }
-    log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
-    scraperClient.getBasicArticle(url, proxyOpt, extractorProviderType)
-  }
-
-  def getSignature(url: String, extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = {
-    Try {
-      val uri = java.net.URI.create(url) // given current impl of HttpFetcher, java.net.URI is needed
-      val proxyOpt = db.readOnlyReplica { implicit s => urlPatternRuleRepo.getProxy(url) }
-      log.info(s"[getSignature] invoke (remote) Scraper service; url=$url uri=$uri proxy=$proxyOpt extractorProviderType=$extractorProviderType")
-      scraperClient.getSignature(url, proxyOpt, extractorProviderType)
-    } recover {
-      case t: Throwable =>
-        val msg = s"Caught exception $t while parsing $url for getSignature; Cause=${t.getCause}"
-        log.warn(msg, t)
-        Future.successful(None)
-    } getOrElse Future.successful(None)
   }
 }

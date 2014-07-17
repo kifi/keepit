@@ -28,7 +28,8 @@ class MobileFeedControllerTest extends Specification with SearchApplicationInjec
             "id":"4e5f7b8c-951b-4497-8661-012345678901",
             "firstName":"u1",
             "lastName":"fake",
-            "pictureName":"u1.png"
+            "pictureName":"u1.png",
+            "username":"u1"
           }
         ],
 
@@ -51,7 +52,8 @@ class MobileFeedControllerTest extends Specification with SearchApplicationInjec
               "id":"4e5f7b8c-951b-4497-8661-012345678901",
               "firstName":"u1",
               "lastName":"fake",
-              "pictureName":"u1.png"
+              "pictureName":"u1.png",
+              "username":"u1"
             }
           ],
 
@@ -72,7 +74,8 @@ class MobileFeedControllerTest extends Specification with SearchApplicationInjec
               "id":"4e5f7b8c-951b-4497-8661-012345678901",
               "firstName":"u1",
               "lastName":"fake",
-              "pictureName":"u1.png"
+              "pictureName":"u1.png",
+              "username":"u1"
             },
 
             {

@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
-import com.keepit.scraper.ScrapeSchedulerPlugin
+import com.keepit.scraper.ScrapeScheduler
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 
@@ -30,7 +30,7 @@ case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boo
 class KeepInterner @Inject() (
   db: Database,
   normalizedURIInterner: NormalizedURIInterner,
-  scraper: ScrapeSchedulerPlugin,
+  scraper: ScrapeScheduler,
   keepRepo: KeepRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
@@ -208,7 +208,7 @@ class KeepInterner @Inject() (
 
     if (failed.nonEmpty) {
       airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks: look app.log for urls"), userId = Some(userId)))
-      failed.foreach { f => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${f._1.url}") }
+      failed.foreach { f => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${f._1.url}", f._2.failed.get) }
     }
     val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList
     (persisted.values.map(_.get).toSeq, failedRaws)
@@ -259,7 +259,7 @@ class KeepInterner @Inject() (
         (false, wasInactiveKeep, persistedKeep)
       case None =>
         val urlObj = urlRepo.get(url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-        (true, false, keepRepo.save(KeepFactory(url, uri, userId, title orElse uri.title, urlObj, source, isPrivate, installationId)))
+        (true, false, keepRepo.save(KeepFactory(url, uri, userId, title orElse uri.title, urlObj, source, isPrivate, installationId, None))) // todo(andrew): Fix to use libraries
     }
     if (wasInactiveKeep) {
       // A inactive keep may have had tags already. Index them if any.

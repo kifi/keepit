@@ -103,6 +103,7 @@ class MessageFetchingCommander @Inject() (
     })
   }
 
+  // todo(stephen): This should be the only way to make a MessageWithBasicUser, signature shouldn't take one in
   private def modifyMessageWithAuxData(m: MessageWithBasicUser): Future[MessageWithBasicUser] = {
     if (m.user.isEmpty) {
       val modifiedMessage = m.auxData match {
@@ -120,7 +121,7 @@ class MessageFetchingCommander @Inject() (
           }
           auxModifiedFuture.map {
             case (text, aux) =>
-              m.copy(auxData = Some(aux), text = text, user = Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg")))
+              m.copy(auxData = Some(aux), text = text, user = Some(BasicUser(ExternalId[User]("42424242-4242-4242-4242-000000000001"), "Kifi", "", "0.jpg", None)))
           }
         case None =>
           Promise.successful(m).future

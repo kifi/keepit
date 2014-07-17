@@ -9,7 +9,7 @@ import com.keepit.common.time.Clock
 import scala.slick.lifted.{ TableQuery, Tag }
 
 @ImplementedBy(classOf[LibraryRepoImpl])
-trait LibraryRepo extends Repo[Library] with RepoWithDelete[Library] with ExternalIdColumnFunction[Library] with SeqNumberFunction[Library] {
+trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
 
 }
 
@@ -17,9 +17,8 @@ trait LibraryRepo extends Repo[Library] with RepoWithDelete[Library] with Extern
 class LibraryRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  val externalIdCache: LibraryExternalIdCache,
   val idCache: LibraryIdCache)
-    extends DbRepo[Library] with DbRepoWithDelete[Library] with LibraryRepo with ExternalIdColumnDbFunction[Library] with SeqNumberDbFunction[Library] with Logging {
+    extends DbRepo[Library] with LibraryRepo with SeqNumberDbFunction[Library] with Logging {
 
   import scala.slick.lifted.Query
   import DBSession._
@@ -27,13 +26,14 @@ class LibraryRepoImpl @Inject() (
   private val sequence = db.getSequence[Library]("library_sequence")
 
   type RepoImpl = LibraryTable
-  class LibraryTable(tag: Tag) extends RepoTable[Library](db, tag, "library") with ExternalIdColumn[Library] with SeqNumberColumn[Library] {
+  class LibraryTable(tag: Tag) extends RepoTable[Library](db, tag, "library") with SeqNumberColumn[Library] {
     def name = column[String]("name", O.NotNull)
     def ownerId = column[Id[User]]("owner_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def description = column[Option[String]]("description", O.NotNull)
     def slug = column[LibrarySlug]("slug", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, externalId, name, ownerId, visibility, description, slug, state, seq) <> ((Library.apply _).tupled, Library.unapply)
+    def kind = column[LibraryKind]("kind", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind) <> ((Library.apply _).tupled, Library.unapply)
   }
 
   def table(tag: Tag) = new LibraryTable(tag)
@@ -44,15 +44,9 @@ class LibraryRepoImpl @Inject() (
       getCompiled(id).first
     }
   }
-  override def getOpt(id: ExternalId[Library])(implicit session: RSession): Option[Library] = {
-    externalIdCache.getOrElseOpt(LibraryExternalIdKey(id)) {
-      (for (f <- rows if f.externalId === id) yield f).firstOption
-    }
-  }
 
   override def deleteCache(library: Library)(implicit session: RSession): Unit = {
     idCache.remove(LibraryIdKey(library.id.get))
-    externalIdCache.remove(LibraryExternalIdKey(library.externalId))
   }
 
   override def invalidateCache(library: Library)(implicit session: RSession): Unit = {
@@ -60,7 +54,6 @@ class LibraryRepoImpl @Inject() (
       deleteCache(library)
     } else {
       idCache.set(LibraryIdKey(library.id.get), library)
-      externalIdCache.set(LibraryExternalIdKey(library.externalId), library)
     }
   }
 

@@ -1,31 +1,69 @@
 package com.keepit.common.crypto
 
 import com.keepit.common.db.Id
-import scala.util.Try
+
+import play.api.libs.json._
+import play.api.mvc.{ PathBindable, QueryStringBindable }
+
+import org.apache.commons.codec.binary.Base64
+
+import scala.util.{ Failure, Success, Try }
 
 case class PublicIdConfiguration(key: String)
 
-trait ModelWithPublicId[T] {
+case class PublicId[T <: ModelWithPublicId[T]](id: String)
 
-  val id: Option[Id[T]]
+object PublicId {
+  implicit def format[T <: ModelWithPublicId[T]]: Format[PublicId[T]] = Format(
+    __.read[String].map(PublicId(_)),
+    new Writes[PublicId[T]] { def writes(o: PublicId[T]) = JsString(o.id) }
+  )
 
-  def publicId(implicit config: PublicIdConfiguration, obj: ModelWithPublicId[T]): Try[String] = {
-    (new TripleDES(config.key).encryptLongToStr(id.get.id, CipherConv.Base32Conv)).map {
-      obj.prefix + _
+  implicit def queryStringBinder[T <: ModelWithPublicId[T]](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[PublicId[T]] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, PublicId[T]]] = {
+      stringBinder.bind(key, params) map {
+        case Right(id) => Right(PublicId(id))
+        case _ => Left("Unable to bind an PublicId")
+      }
+    }
+    override def unbind(key: String, id: PublicId[T]): String = {
+      stringBinder.unbind(key, id.id)
     }
   }
 
-  val prefix: String = ""
+  implicit def pathBinder[T <: ModelWithPublicId[T]] = new PathBindable[PublicId[T]] {
+    override def bind(key: String, value: String): Either[String, PublicId[T]] =
+      Right(PublicId(value)) // TODO: handle errors if value is malformed
+
+    override def unbind(key: String, id: PublicId[T]): String = id.toString
+  }
 }
 
-object ModelWithPublicId {
+// TODO: Cipher must be a singleton, not re-created for every encode/decode.
 
-  def decode[T](publicId: String)(implicit config: PublicIdConfiguration, obj: ModelWithPublicId[T]): Try[Id[T]] = {
-    val reg = raw"^${obj.prefix}(.*)$$".r
+trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
+
+  val prefix: String
+  val id: Option[Id[T]]
+
+  def publicId(implicit config: PublicIdConfiguration): Try[PublicId[T]] = {
+    id.map { someId =>
+      Success(PublicId[T](prefix + Base64.encodeBase64URLSafeString(Aes64BitCipher(config.key).encrypt(someId.id))))
+    }.getOrElse(Failure(new IllegalStateException("model has no id")))
+  }
+
+}
+
+trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
+
+  val prefix: String
+
+  def decode(publicId: String)(implicit config: PublicIdConfiguration): Try[Id[T]] = {
+    val reg = raw"^$prefix(.*)$$".r
     Try {
       reg.findFirstMatchIn(publicId).map(_.group(1)).map { identifier =>
-        (new TripleDES(config.key).decryptStrToLong(identifier, CipherConv.Base32Conv)) map Id[T] _ toOption
-      }.flatten.get
+        Id[T](Aes64BitCipher(config.key).decrypt(Base64.decodeBase64(identifier)))
+      }.get
     }
   }
 }

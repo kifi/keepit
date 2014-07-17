@@ -1,7 +1,7 @@
 package com.keepit.scraper
 
 import org.specs2.mutable.Specification
-import org.apache.http.HttpStatus.{ SC_MOVED_PERMANENTLY => MOVED, SC_MOVED_TEMPORARILY => TEMP_MOVED }
+import play.api.http.Status.{ MOVED_PERMANENTLY => MOVED, FOUND => TEMP_MOVED }
 import HttpRedirect._
 
 class HttpRedirectTest extends Specification {

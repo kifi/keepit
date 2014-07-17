@@ -39,27 +39,23 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "invalidate cache when delete" in {
-      withDb() { implicit injector =>
-        val (l1, l2, l3, user1, user2) = setup()
-        db.readWrite { implicit s =>
-          libraryRepo.count === 3
-          val lib = libraryRepo.get(l1.id.get)
-          libraryRepo.delete(lib)
-        }
-        db.readWrite { implicit s =>
-          libraryRepo.all.size === 2
-          libraryRepo.count === 2
-        }
-        db.readWrite { implicit s =>
-          val t1 = new DateTime(2014, 7, 4, 22, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
-          libraryRepo.save(Library(name = "lib1A", ownerId = user1.id.get, createdAt = t1.plusMinutes(1),
-            slug = LibrarySlug("A"), visibility = LibraryVisibility.SECRET))
-        }
-        db.readWrite { implicit s =>
-          libraryRepo.count === 3
-        }
-      }
+    "validate library names" in {
+      val name1 = "asdf1234"
+      val name2 = "q@#$%^&*().,/][:;\"~`--___+= "
+      Library.isValidName(name1) === true
+      Library.isValidName(name2) === true
+    }
+
+    "validate library slugs" in {
+      val str1 = "asdf1234"
+      val str2 = "asdf+qwer"
+      val str3 = "asdf 1234"
+      LibrarySlug.isValidSlug(str1) === true
+      LibrarySlug.isValidSlug(str2) === true
+      LibrarySlug.isValidSlug(str3) === false
+
+      val slug1 = LibrarySlug(str1)
+      slug1.value === str1
     }
   }
 }

@@ -3,6 +3,7 @@ package com.keepit.graph.common.cache
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.logging.AccessLog
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
+import com.keepit.graph.model.{ ConnectedUriScoreCache, ConnectedUserScoreCache }
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
@@ -127,12 +128,13 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   def searchArticleCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new ArticleSearchResultCache(stats, accessLog, (innerRepo, 10 seconds), (outerRepo, 1 hour))
 
-  @Provides
   @Singleton
+  @Provides
   def userValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new UserValueCache(stats, accessLog, (outerRepo, 7 days))
 
-  @Provides @Singleton
+  @Singleton
+  @Provides
   def systemValueCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new SystemValueCache(stats, accessLog, (outerRepo, 7 days))
 
@@ -141,8 +143,8 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   def userSegmentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserSegmentCache(stats, accessLog, (innerRepo, 12 hours), (outerRepo, 1 day))
 
-  @Provides
   @Singleton
+  @Provides
   def extensionVersionCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new ExtensionVersionInstallationIdCache(stats, accessLog, (outerRepo, 7 days))
 
@@ -151,7 +153,18 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   def probabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (outerRepo, 30 days))
 
-  @Provides @Singleton
+  @Singleton
+  @Provides
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new VerifiedEmailUserIdCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def uriScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ConnectedUriScoreCache(stats, accessLog, (innerRepo, 30 seconds), (outerRepo, 10 minutes))
+
+  @Singleton
+  @Provides
+  def userScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ConnectedUserScoreCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 5 hours))
 }

@@ -31,8 +31,9 @@ class UserLDAInterestsRepoImpl @Inject() (
   class UserLDATopicTable(tag: Tag) extends RepoTable[UserLDAInterests](db, tag, "user_lda_interests") {
     def userId = column[Id[User]]("user_id")
     def version = column[ModelVersion[DenseLDA]]("version")
+    def numOfEvidence = column[Int]("num_of_evidence")
     def userTopicMean = column[UserTopicMean]("user_topic_mean", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, version, userTopicMean.?, state) <> ((UserLDAInterests.apply _).tupled, UserLDAInterests.unapply _)
+    def * = (id.?, createdAt, updatedAt, userId, version, numOfEvidence, userTopicMean.?, state) <> ((UserLDAInterests.apply _).tupled, UserLDAInterests.unapply _)
   }
 
   def table(tag: Tag) = new UserLDATopicTable(tag)

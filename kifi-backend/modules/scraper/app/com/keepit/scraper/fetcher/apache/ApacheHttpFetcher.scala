@@ -1,50 +1,52 @@
-package com.keepit.scraper
+package com.keepit.scraper.fetcher.apache
 
-import org.joda.time.DateTime
-import com.keepit.model.HttpProxy
-import org.apache.http.protocol.{ BasicHttpContext, HttpContext }
-import org.apache.http._
+import java.io.{ EOFException, IOException }
+import java.net._
+import java.security.cert.CertPathBuilderException
+import java.util.concurrent.atomic.{ AtomicInteger, AtomicReference }
+import java.util.concurrent.{ ConcurrentLinkedQueue, Executors, ThreadFactory, TimeUnit }
+import java.util.zip.ZipException
+import javax.net.ssl.{ SSLException, SSLHandshakeException }
+
+import play.api.Play.current
+
+import com.keepit.common.time._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import org.apache.http.config.RegistryBuilder
-import org.apache.http.conn.socket.{ PlainConnectionSocketFactory, ConnectionSocketFactory }
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
-import org.apache.http.client.config.RequestConfig
-import org.apache.http.impl.client.{ BasicCredentialsProvider, HttpClientBuilder }
+import com.keepit.common.net.URI
+import com.keepit.common.performance._
+import com.keepit.common.plugin.SchedulingProperties
+import com.keepit.model.HttpProxy
+import com.keepit.scraper._
+import com.keepit.scraper.fetcher.HttpFetcher
 import org.apache.http.HttpHeaders._
+import org.apache.http.HttpStatus._
+import org.apache.http._
+import org.apache.http.auth.{ AuthScope, UsernamePasswordCredentials }
+import org.apache.http.client.ClientProtocolException
+import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.entity.{ DeflateDecompressingEntity, GzipDecompressingEntity }
 import org.apache.http.client.methods.{ CloseableHttpResponse, HttpGet }
-import org.apache.http.auth.{ UsernamePasswordCredentials, AuthScope }
 import org.apache.http.client.protocol.HttpClientContext
-import java.io.{ EOFException, IOException }
-import scala.util.Try
+import org.apache.http.config.RegistryBuilder
+import org.apache.http.conn.socket.{ ConnectionSocketFactory, PlainConnectionSocketFactory }
+import org.apache.http.conn.{ ConnectTimeoutException, HttpHostConnectException }
+import org.apache.http.impl.client.{ BasicCredentialsProvider, HttpClientBuilder }
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager
+import org.apache.http.protocol.{ HttpContext, BasicHttpContext }
 import org.apache.http.util.EntityUtils
-import com.keepit.common.time._
-import com.keepit.common.performance.{ timing, timingWithResult }
-import java.util.concurrent.{ ThreadFactory, TimeUnit, Executors, ConcurrentLinkedQueue }
-import scala.ref.WeakReference
+import org.joda.time.DateTime
 import play.api.Play
-import Play.current
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import java.util.concurrent.atomic.{ AtomicInteger, AtomicReference }
-import java.net._
-import org.apache.http.conn.{ HttpHostConnectException, ConnectTimeoutException }
-import org.apache.http.client.ClientProtocolException
-import javax.net.ssl.{ SSLException, SSLHandshakeException }
-import HttpStatus._
-import java.util.zip.ZipException
-import java.security.cert.CertPathBuilderException
 import sun.security.validator.ValidatorException
-import com.keepit.common.plugin.SchedulingProperties
 
-import com.keepit.common.net.URI
+import scala.ref.WeakReference
+import scala.util.Try
 
-trait HttpFetcher {
-  val NO_OP = { is: HttpInputStream => }
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus
-  def close()
-}
+// based on Apache HTTP Client (this one is blocking but feature-rich & flexible; see http://hc.apache.org/httpcomponents-client-ga/index.html)
+class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean, schedulingProperties: SchedulingProperties, scraperHttpConfig: ScraperHttpConfig) extends HttpFetcher with Logging with ScraperUtils {
 
-class HttpFetcherImpl(val airbrake: AirbrakeNotifier, userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean, schedulingProperties: SchedulingProperties, scraperHttpConfig: ScraperHttpConfig) extends HttpFetcher with Logging with ScraperUtils {
+  implicit def toFetcherContext(apacheCtx: HttpContext): FetcherHttpContext = new FetcherHttpContextAdaptor(apacheCtx)
+
   val cm = if (trustBlindly) {
     val registry = RegistryBuilder.create[ConnectionSocketFactory]
     registry.register("http", PlainConnectionSocketFactory.INSTANCE)
@@ -266,7 +268,6 @@ class HttpFetcherImpl(val airbrake: AirbrakeNotifier, userAgent: String, connect
       case t: Throwable => logAndSet(fetchInfo, None)(t, "fetch", url, true)
     }
   }
-
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch($url) ${proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
     val HttpFetchHandlerResult(responseOpt, fetchInfo, httpGet, httpContext) = fetchHandler(url, ifModifiedSince, proxy)
     responseOpt match {
@@ -327,7 +328,4 @@ class HttpFetcherImpl(val airbrake: AirbrakeNotifier, userAgent: String, connect
     }
   }
 
-  def close() {
-    httpClient.close()
-  }
 }

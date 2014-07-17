@@ -216,7 +216,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     val bookmarks = edges.map {
       case (uri, user, optionalTitle) => {
         val url = uriToUrl(uri.id.get)
-        KeepFactory(url.url, uri = uri, userId = user.id.get, title = optionalTitle orElse uri.title, url = url, source = source, isPrivate = isPrivate)
+        KeepFactory(url.url, uri = uri, userId = user.id.get, title = optionalTitle orElse uri.title, url = url, source = source, isPrivate = isPrivate, libraryId = None) // todo(andrew): Library id?
       }
     }
     saveBookmarks(bookmarks: _*)
@@ -337,7 +337,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
       val dummyUser = User(
         id = Some(id),
         firstName = "Douglas",
-        lastName = "Adams-clone-" + id.toString
+        lastName = "Adams-clone-" + id.toString,
+        username = None
       )
       val user = allUsers.getOrElse(id, dummyUser)
       id -> BasicUser.fromUser(user)
@@ -350,7 +351,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
       val dummyUser = User(
         id = Some(id),
         firstName = "Douglas",
-        lastName = "Adams-clone-" + id.toString
+        lastName = "Adams-clone-" + id.toString,
+        username = None
       )
       val user = allUsers.getOrElse(id, dummyUser)
       id -> BasicUser.fromUser(user)

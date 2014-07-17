@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
-import com.keepit.scraper.ScrapeSchedulerPlugin
+import com.keepit.scraper.ScrapeScheduler
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
@@ -33,7 +33,7 @@ private class RawKeepImporterActor @Inject() (
     userValueRepo: UserValueRepo,
     airbrake: AirbrakeNotifier,
     urlRepo: URLRepo,
-    scraper: ScrapeSchedulerPlugin,
+    scraper: ScrapeScheduler,
     keptAnalytics: KeepingAnalytics,
     collectionRepo: CollectionRepo,
     kifiInstallationRepo: KifiInstallationRepo,

@@ -1,8 +1,8 @@
-package com.keepit.scraper
+package com.keepit.scraper.fetcher.apache
 
-import org.apache.http.protocol.HttpRequestExecutor
-import org.apache.http.{ HttpResponse, HttpRequest }
 import com.keepit.common.logging.Logging
+import org.apache.http.protocol.HttpRequestExecutor
+import org.apache.http.{ HttpRequest, HttpResponse }
 
 /**
  * Let the executor process the content only if the response status code is good (in super class)

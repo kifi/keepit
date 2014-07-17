@@ -18,8 +18,8 @@ import com.keepit.common.cache.TestCacheModule
 
 class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
 
-  val user1965 = User(firstName = "Richard", lastName = "Feynman").withId(Id[User](1965))
-  val user1933 = User(firstName = "Paul", lastName = "Dirac").withId(Id[User](1933))
+  val user1965 = User(firstName = "Richard", lastName = "Feynman", username = Some(Username("dickyfey"))).withId(Id[User](1965))
+  val user1933 = User(firstName = "Paul", lastName = "Dirac", username = Some(Username("cyberpaul1992"))).withId(Id[User](1933))
   val users = Seq(user1965, user1933)
   val phrases = Seq(
     Phrase(phrase = "grandeur extensive", lang = Lang("fr"), source = "physique statistique"),

@@ -61,7 +61,7 @@ class FakeActionAuthenticator extends ActionAuthenticator with SecureSocial with
     onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult],
     onUnauthenticated: Request[T] => Future[SimpleResult]): Action[T] = Action.async(bodyParser) { request =>
     try {
-      val user = fixedUser.getOrElse(User(id = Some(Id[User](1)), firstName = "Arthur", lastName = "Dent"))
+      val user = fixedUser.getOrElse(User(id = Some(Id[User](1)), firstName = "Arthur", lastName = "Dent", username = None))
       log.debug("running action with fake auth of user $user, request on path ${request.path} api: $apiClient")
       val res = onAuthenticated(AuthenticatedRequest[T](FakeIdentity(user), user.id.get, user, request, fixedExperiments, None, None))
       log.debug("executed action with res: $res")

@@ -3,20 +3,33 @@
 angular.module('kifi.delighted', [])
 
 .directive('kfDelightedSurvey', [
-  '$timeout', 'profileService',
-  function ($timeout, profileService) {
+  '$timeout', '$analytics', 'profileService',
+  function ($timeout, $analytics, profileService) {
     return {
       restrict: 'A',
       scope: {},
       templateUrl: 'delighted/delightedSurvey.tpl.html',
       link: function (scope, element) {
         scope.delighted = {};
-        scope.showCommentArea = false;
         scope.showSurvey = true;
+
+        function analyticsStageName() {
+          return {score: 'npsScore', comment: 'npsComment', end: 'npsThanks'}[scope.surveyStage];
+        }
+        
+        scope.surveyStage = 'score';
+        $analytics.eventTrack('user_viewed_notification', {
+          'source': 'site',
+          'type': analyticsStageName()
+        });
 
         scope.$watch('delighted.score', function () {
           if (scope.delighted.score) {
-            scope.showCommentArea = true;
+            scope.surveyStage = 'comment';
+            $analytics.eventTrack('user_viewed_notification', {
+              'source': 'site',
+              'type': analyticsStageName()
+            });
             $timeout(function () {
               element.find('.kf-delighted-comment-area-input').focus();
             });
@@ -25,18 +38,34 @@ angular.module('kifi.delighted', [])
 
         scope.goBack = function () {
           scope.delighted.score = null;
-          scope.showCommentArea = false;
+          scope.surveyStage = 'score';
         };
 
         scope.submit = function () {
           profileService.postDelightedAnswer(+scope.delighted.score, scope.delighted.comment || null);
-          scope.showSurvey = false;
+          scope.surveyStage = 'end';
+          $analytics.eventTrack('user_viewed_notification', {
+            'source': 'site',
+            'type': analyticsStageName()
+          });
+          $timeout(function () {
+            hideSurvey();
+          }, 3000);
         };
 
         scope.cancelSurvey = function () {
+          $analytics.eventTrack('user_clicked_notification', {
+            'source': 'site',
+            'action': 'closed',
+            'type': analyticsStageName()
+          });
           profileService.cancelDelightedSurvey();
-          scope.showSurvey = false;
+          hideSurvey();
         };
+
+        function hideSurvey() {
+          element.find('.kf-delighted-wrap').addClass('hide');
+        }
       }
     };
   }

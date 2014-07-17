@@ -1,16 +1,20 @@
 package com.keepit.scraper
 
-import org.apache.http.protocol.HttpContext
-import org.apache.http.HttpStatus
 import com.keepit.common.net.URI
+import play.api.http.Status._
 
-case class HttpFetchStatus(statusCode: Int, message: Option[String], context: HttpContext) {
-  def destinationUrl = Option(context.getAttribute("scraper_destination_url").asInstanceOf[String])
-  def redirects = Option(context.getAttribute("redirects").asInstanceOf[Seq[HttpRedirect]]).getOrElse(Seq.empty[HttpRedirect])
+trait FetcherHttpContext {
+  def destinationUrl: Option[String]
+  def redirects: Seq[HttpRedirect]
+}
+
+case class HttpFetchStatus(statusCode: Int, message: Option[String], context: FetcherHttpContext) {
+  def destinationUrl = context.destinationUrl
+  def redirects = context.redirects
 }
 
 case class HttpRedirect(statusCode: Int, currentLocation: String, newDestination: String) {
-  def isPermanent: Boolean = (statusCode == HttpStatus.SC_MOVED_PERMANENTLY)
+  def isPermanent: Boolean = (statusCode == MOVED_PERMANENTLY)
   def isAbsolute: Boolean = URI.isAbsolute(currentLocation) && URI.isAbsolute(newDestination)
   def isLocatedAt(url: String): Boolean = (currentLocation == url)
 }
