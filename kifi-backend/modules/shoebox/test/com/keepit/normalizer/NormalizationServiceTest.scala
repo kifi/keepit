@@ -1,31 +1,23 @@
 package com.keepit.normalizer
 
-import org.specs2.mutable.SpecificationLike
-import com.keepit.test.ShoeboxTestInjector
-import net.codingwell.scalaguice.ScalaModule
-import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.scraper._
-import com.keepit.model._
-import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration._
+import com.google.inject.Injector
 import com.keepit.akka.TestKitScope
+import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
+import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.inject.TestFortyTwoModule
 import com.keepit.integrity.UriIntegrityPlugin
-import com.google.inject.Injector
-import com.keepit.scraper.extractor.{ ExtractorProviderType, Extractor }
-import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.shoebox.{ ShoeboxSlickModule, FakeKeepImportsModule }
-import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.inject.TestFortyTwoModule
-import scala.Some
-import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.common.zookeeper.FakeDiscoveryModule
+import com.keepit.model._
+import com.keepit.scraper.{FakeScrapeSchedulerModule, FakeSignatureBuilder, Signature, BasicArticle}
+import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.shoebox.FakeKeepImportsModule
+import com.keepit.test.ShoeboxTestInjector
+import net.codingwell.scalaguice.ScalaModule
+import org.specs2.mutable.SpecificationLike
 
-import scala.math._
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class NormalizationServiceTest extends TestKitScope with SpecificationLike with ShoeboxTestInjector {
 

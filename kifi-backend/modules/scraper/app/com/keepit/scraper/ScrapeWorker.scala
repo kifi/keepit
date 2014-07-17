@@ -1,23 +1,19 @@
 package com.keepit.scraper
 
-import com.google.inject._
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
 import com.keepit.scraper.extractor._
 import com.keepit.scraper.fetcher.HttpFetcher
 import com.keepit.search.{ LangDetector, Article, ArticleStore }
-import java.io.File
 import scala.concurrent.duration._
 import org.joda.time.Days
 import com.keepit.common.time._
-import com.keepit.common.net.{ DirectUrl, HttpClient, URI }
+import com.keepit.common.net.{ HttpClient, URI }
 import org.apache.http.HttpStatus
-import com.keepit.scraper.mediatypes.MediaTypes
 import scala.util.Success
 import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.learning.porndetector.SlidingWindowPornDetector
-import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.Lang
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -193,7 +189,7 @@ class ScrapeWorker(
     None
   }
 
-  private def handlScrapeError(latestUri: NormalizedURI, error: Error, info: ScrapeInfo): Option[Article] = {
+  private def handleScrapeError(latestUri: NormalizedURI, error: Error, info: ScrapeInfo): Option[Article] = {
 
     val Error(httpStatus, msg) = error
     // store a fallback article in a store map
@@ -238,7 +234,7 @@ class ScrapeWorker(
       case scraped: Scraped => handleSuccessfulScraped(latestUri, scraped, info, pageInfoOpt)
       case notScrapable: NotScrapable => handleNotScrapable(latestUri, notScrapable, info)
       case NotModified => handleNotModified(latestUri.url, info)
-      case error: Error => handlScrapeError(latestUri, error, info)
+      case error: Error => handleScrapeError(latestUri, error, info)
     }
   }
 
@@ -302,13 +298,13 @@ class ScrapeWorker(
             NotScrapable(fetchStatus.destinationUrl, fetchStatus.redirects)
           } else {
             val content = extractor.getContent
-            val title = getTitle(extractor)
-            val canonicalUrl = getCanonicalUrl(extractor)
-            val alternateUrls = getAlternateUrls(extractor)
-            val description = getDescription(extractor)
-            val keywords = getKeywords(extractor)
-            val media = getMediaTypeString(extractor)
-            val signature = getSignature(extractor)
+            val title = extractor.getTitle
+            val canonicalUrl = extractor.getCanonicalUrl
+            val alternateUrls = extractor.getAlternateUrls
+            val description = extractor.getDescription
+            val keywords = extractor.getKeywords
+            val media = extractor.getMediaTypeString
+            val signature = extractor.getSignature
 
             val contentLang = description match {
               case Some(desc) => LangDetector.detect(content + " " + desc)
@@ -352,37 +348,16 @@ class ScrapeWorker(
     }
   }
 
-  private[this] def getTitle(x: Extractor): String = x.getMetadata("title").getOrElse("")
-
-  private[this] def getCanonicalUrl(x: Extractor): Option[String] = x.getCanonicalUrl()
-
-  private[this] def getAlternateUrls(x: Extractor): Set[String] = x.getAlternateUrls()
-
-  private[this] def getDescription(x: Extractor): Option[String] = x.getMetadata("description")
-
-  private[this] def getKeywords(x: Extractor): Option[String] = x.getKeywords
-
-  private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
-
-  private[this] def getSignature(x: Extractor) = {
-    new SignatureBuilder().add(Seq(
-      getTitle(x),
-      getDescription(x).getOrElse(""),
-      getKeywords(x).getOrElse(""),
-      x.getContent()
-    )).build
-  }
-
   def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(
-    title = getTitle(extractor),
+    title = extractor.getTitle,
     content = extractor.getContent,
-    canonicalUrl = getCanonicalUrl(extractor),
-    description = getDescription(extractor),
-    media = getMediaTypeString(extractor),
+    canonicalUrl = extractor.getCanonicalUrl,
+    description = extractor.getDescription,
+    media = extractor.getMediaTypeString,
     httpContentType = extractor.getMetadata("Content-Type"),
     httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
     destinationUrl = destinationUrl,
-    signature = getSignature(extractor)
+    signature = extractor.getSignature
   )
 
   // Watch out: the NormalizedURI may come back as REDIRECTED
