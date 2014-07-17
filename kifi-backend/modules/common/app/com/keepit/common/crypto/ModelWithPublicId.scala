@@ -6,6 +6,8 @@ import com.google.common.io.BaseEncoding
 import play.api.libs.json._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
 
+import org.apache.commons.codec.binary.Base64
+
 import scala.util.{ Failure, Success, Try }
 
 case class PublicIdConfiguration(key: String) {
@@ -51,7 +53,7 @@ trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
 
   def publicId(implicit config: PublicIdConfiguration): Try[PublicId[T]] = {
     id.map { someId =>
-      Success(PublicId[T](prefix + PublicId.coder.encode(config.aes64bit.encrypt(someId.id))))
+      Try(PublicId[T](prefix + Base64.encodeBase64URLSafeString(config.aes64bit.encrypt(someId.id))))
     }.getOrElse(Failure(new IllegalStateException("model has no id")))
   }
 
@@ -61,12 +63,12 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
 
   val prefix: String
 
-  def decode(publicId: String)(implicit config: PublicIdConfiguration): Try[Id[T]] = {
-    if (publicId.startsWith(prefix)) {
-      Try(Id[T](config.aes64bit.decrypt(PublicId.coder.decode(publicId.substring(prefix.length)))))
-    } else {
-      Failure(new IllegalArgumentException(s"Expected $publicId to start with $prefix"))
+  def decode(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
+    val reg = raw"^$prefix(.*)$$".r
+    Try {
+      reg.findFirstMatchIn(publicId.id).map(_.group(1)).map { identifier =>
+        Id[T](config.aes64bit.decrypt(Base64.decodeBase64(identifier)))
+      }.get
     }
   }
-
 }

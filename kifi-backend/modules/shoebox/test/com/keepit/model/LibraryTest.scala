@@ -42,17 +42,21 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
     "validate library names" in {
       val name1 = "asdf1234"
       val name2 = "q@#$%^&*().,/][:;\"~`--___+= "
+      val name3 = ""
       Library.isValidName(name1) === true
-      Library.isValidName(name2) === true
+      Library.isValidName(name2) === false
+      Library.isValidName(name3) === false
     }
 
     "validate library slugs" in {
       val str1 = "asdf1234"
       val str2 = "asdf+qwer"
       val str3 = "asdf 1234"
+      val str4 = ""
       LibrarySlug.isValidSlug(str1) === true
       LibrarySlug.isValidSlug(str2) === true
       LibrarySlug.isValidSlug(str3) === false
+      LibrarySlug.isValidSlug(str4) === false
 
       val slug1 = LibrarySlug(str1)
       slug1.value === str1

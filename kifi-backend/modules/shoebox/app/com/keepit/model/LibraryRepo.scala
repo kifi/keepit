@@ -30,7 +30,7 @@ class LibraryRepoImpl @Inject() (
     def name = column[String]("name", O.NotNull)
     def ownerId = column[Id[User]]("owner_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
-    def description = column[Option[String]]("description", O.NotNull)
+    def description = column[Option[String]]("description", O.Nullable)
     def slug = column[LibrarySlug]("slug", O.NotNull)
     def kind = column[LibraryKind]("kind", O.NotNull)
     def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind) <> ((Library.apply _).tupled, Library.unapply)
