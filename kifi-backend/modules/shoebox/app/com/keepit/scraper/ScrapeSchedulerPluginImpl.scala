@@ -4,6 +4,7 @@ import com.keepit.common.healthcheck.{ SystemAdminMailSender, AirbrakeNotifier }
 import com.keepit.common.actor.ActorInstance
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.URI
 import com.keepit.model._
 import scala.concurrent.Future
 import akka.util.Timeout
@@ -150,26 +151,24 @@ class ScrapeSchedulerPluginImpl @Inject() (
     }
   }
 
+  @inline private def sanityCheck(url: String): Unit = {
+    val parseUriTr = Try(java.net.URI.create(url)) // java.net.URI needed for current impl of HttpFetcher
+    require(parseUriTr.isSuccess, s"java.net.URI parser failed to parse url=($url) error=${parseUriTr.failed.get}")
+  }
+
+  @inline private def getProxy(url: String): Option[HttpProxy] = db.readOnlyMaster { implicit s => urlPatternRuleRepo.getProxy(url) } // cached; use master
+
   def scrapeBasicArticle(url: String, extractorProviderType: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
-    require(url != null, "[scrapeBasicArticle] <url> cannot be null")
-    val proxyOpt = db.readOnlyReplica { implicit s =>
-      urlPatternRuleRepo.getProxy(url)
-    }
+    sanityCheck(url)
+    val proxyOpt = getProxy(url)
     log.info(s"[scrapeBasicArticle] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
     scraperClient.getBasicArticle(url, proxyOpt, extractorProviderType)
   }
 
   def getSignature(url: String, extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = {
-    Try {
-      val uri = java.net.URI.create(url) // given current impl of HttpFetcher, java.net.URI is needed
-      val proxyOpt = db.readOnlyReplica { implicit s => urlPatternRuleRepo.getProxy(url) }
-      log.info(s"[getSignature] invoke (remote) Scraper service; url=$url uri=$uri proxy=$proxyOpt extractorProviderType=$extractorProviderType")
-      scraperClient.getSignature(url, proxyOpt, extractorProviderType)
-    } recover {
-      case t: Throwable =>
-        val msg = s"Caught exception $t while parsing $url for getSignature; Cause=${t.getCause}"
-        log.warn(msg, t)
-        Future.successful(None)
-    } getOrElse Future.successful(None)
+    sanityCheck(url)
+    val proxyOpt = getProxy(url)
+    log.info(s"[getSignature] invoke (remote) Scraper service; url=$url proxy=$proxyOpt extractorProviderType=$extractorProviderType")
+    scraperClient.getSignature(url, proxyOpt, extractorProviderType)
   }
 }
