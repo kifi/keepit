@@ -5,7 +5,7 @@ import com.keepit.common.crypto.TestCryptoModule
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper.FakeScraperHealthMonitorModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
@@ -13,7 +13,7 @@ import org.specs2.mutable.Specification
 
 class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
-  def modules = FakeScrapeSchedulerModule() :: FakeSearchServiceClientModule() :: Nil
+  def modules = FakeScraperHealthMonitorModule() :: FakeSearchServiceClientModule() :: Nil
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 7, 4, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)

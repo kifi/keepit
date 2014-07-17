@@ -6,20 +6,22 @@ import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.{ Play, Configuration }
 
-trait ScrapeSchedulerModule extends ScalaModule
+trait ScraperHealthMonitorModule extends ScalaModule
 
-case class ProdScrapeSchedulerModule() extends ScrapeSchedulerModule {
+case class ProdScraperHealthMonitorModule() extends ScraperHealthMonitorModule {
 
   def configure {
+    bind[ScraperHealthMonitorPlugin].to[ScraperHealthMonitorPluginImpl].in[AppScoped]
     bind[ScrapeSchedulerPlugin].to[ScrapeSchedulerPluginImpl].in[AppScoped]
     install(ProdScrapeSchedulerConfigModule())
   }
 
 }
 
-case class DevScrapeSchedulerModule() extends ScrapeSchedulerModule {
+case class DevScraperHealthMonitorModule() extends ScraperHealthMonitorModule {
 
   def configure {
+    bind[ScraperHealthMonitorPlugin].to[ScraperHealthMonitorPluginImpl].in[AppScoped]
     bind[ScrapeSchedulerPlugin].to[ScrapeSchedulerPluginImpl].in[AppScoped]
     install(ProdScrapeSchedulerConfigModule())
   }

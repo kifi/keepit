@@ -8,14 +8,14 @@ import com.keepit.common.actor.{ ActorPlugin, TestActorSystemModule }
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
-import com.keepit.scraper.{ TestScraperServiceClientModule, ProdScrapeSchedulerModule, FakeScrapeSchedulerModule }
+import com.keepit.scraper.{ ProdScraperHealthMonitorModule, TestScraperServiceClientModule }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.shoebox.{ ShoeboxSlickModule, FakeShoeboxServiceModule }
 import com.google.inject.Module
 
 class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector {
 
-  val modules: Seq[Module] = Seq(TestActorSystemModule(), ProdScrapeSchedulerModule(), TestScraperServiceClientModule(), FakeShoeboxServiceModule(), FakeAirbrakeModule(), ShoeboxSlickModule())
+  val modules: Seq[Module] = Seq(TestActorSystemModule(), ProdScraperHealthMonitorModule(), TestScraperServiceClientModule(), FakeShoeboxServiceModule(), FakeAirbrakeModule(), ShoeboxSlickModule())
 
   "OphanCleaner" should {
 

@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.normalizer._
 import com.keepit.heimdal.{ KifiHitContext, SanitizedKifiHit, HeimdalContext, TestHeimdalServiceClientModule }
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper._
 import com.keepit.commanders.KeepInfo._
 import com.keepit.commanders.KeepInfosWithCollection._
 import com.keepit.commanders._
@@ -42,7 +42,6 @@ import org.joda.time.DateTime
 import com.google.inject.Injector
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.external.FakeExternalServiceModule
-import com.keepit.scraper.TestScraperServiceClientModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.controllers.website.KeepsController
 import scala.concurrent.Await
@@ -56,8 +55,6 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.model.KeepToCollection
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.scraper.FakeScrapeSchedulerModule
-import com.keepit.scraper.TestScraperServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -69,7 +66,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
+    FakeScraperHealthMonitorModule(),
     ShoeboxFakeStoreModule(),
     TestActorSystemModule(),
     FakeAirbrakeModule(),

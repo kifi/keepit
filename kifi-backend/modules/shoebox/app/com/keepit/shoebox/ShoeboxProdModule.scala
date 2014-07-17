@@ -14,7 +14,7 @@ import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.classify.ProdDomainTagImporterModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.common.integration.ProdReaperModule
-import com.keepit.scraper.{ ProdScraperServiceClientModule, ProdScrapeSchedulerModule }
+import com.keepit.scraper.{ ProdScraperServiceClientModule, ProdScraperHealthMonitorModule }
 import com.keepit.common.zookeeper.{ DiscoveryModule, ProdDiscoveryModule }
 import com.keepit.common.service.ServiceType
 import com.keepit.common.queue.ProdSimpleQueueModule
@@ -35,7 +35,7 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   analyticsModule = ProdAnalyticsModule(),
   //topicModelModule = LdaTopicModelModule(), //disable for now
   domainTagImporterModule = ProdDomainTagImporterModule(),
-  scrapeSchedulerModule = ProdScrapeSchedulerModule(),
+  scraperHealthMonitorModule = ProdScraperHealthMonitorModule(),
   fjMonitorModule = ProdForkJoinContextMonitorModule(),
   cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   externalServiceModule = ProdExternalServiceModule(),
