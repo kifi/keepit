@@ -55,7 +55,7 @@ class LibraryCommander @Inject() (
 
         val library = db.readWrite { implicit s =>
           val lib = libraryRepo.save(Library(ownerId = ownerId, name = libInfo.name, description = libInfo.description,
-            visibility = validVisibility, slug = validSlug))
+            visibility = validVisibility, slug = validSlug, kind = LibraryKind.USER_CREATED))
           val libId = lib.id.get
           libraryMembershipRepo.save(LibraryMembership(libraryId = libId, userId = ownerId, access = LibraryAccess.OWNER))
 
@@ -80,6 +80,13 @@ class LibraryCommander @Inject() (
     db.readWrite { implicit s =>
       invites.map { invite => libraryInviteRepo.save(invite) }
     }
+  }
+
+  def internSystemGeneratedLibraries(userId: Id[User]): Boolean = { // returns true if created, false if already existed
+    db.readWrite { implicit session =>
+
+    }
+    true
   }
 }
 

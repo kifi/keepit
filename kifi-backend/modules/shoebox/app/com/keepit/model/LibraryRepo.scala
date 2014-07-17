@@ -32,7 +32,8 @@ class LibraryRepoImpl @Inject() (
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def description = column[Option[String]]("description", O.NotNull)
     def slug = column[LibrarySlug]("slug", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq) <> ((Library.apply _).tupled, Library.unapply)
+    def kind = column[LibraryKind]("kind", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind) <> ((Library.apply _).tupled, Library.unapply)
   }
 
   def table(tag: Tag) = new LibraryTable(tag)
