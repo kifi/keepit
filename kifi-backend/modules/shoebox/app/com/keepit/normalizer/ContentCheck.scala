@@ -1,7 +1,7 @@
 package com.keepit.normalizer
 
 import scala.concurrent.Future
-import com.keepit.scraper.{ ScrapeSchedulerPlugin, Signature }
+import com.keepit.scraper.{ ScrapeScheduler, Signature }
 import com.keepit.model.{ URL, Normalization }
 import com.keepit.scraper.extractor.{ ExtractorProviderTypes }
 import com.keepit.common.logging.Logging
@@ -15,7 +15,7 @@ trait ContentCheck extends PartialFunction[NormalizationCandidate, Future[Boolea
   protected def check(candidate: NormalizationCandidate): Future[Boolean]
 }
 
-case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signature] = None, trustedDomain: Option[String] = None)(implicit scraperPlugin: ScrapeSchedulerPlugin) extends ContentCheck with Logging {
+case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signature] = None, trustedDomain: Option[String] = None)(implicit scraperPlugin: ScrapeScheduler) extends ContentCheck with Logging {
 
   Try { java.net.URI.create(referenceUrl) } match { // for debugging bad reference urls
     case Success(uri) => log.debug(s"[SignatureCheck] refUrl=$referenceUrl uri=$uri")
@@ -65,7 +65,7 @@ case class SignatureCheck(referenceUrl: String, referenceSignature: Option[Signa
 
 }
 
-case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: ScrapeSchedulerPlugin) extends ContentCheck with Logging {
+case class LinkedInProfileCheck(privateProfileId: Long)(implicit scraperPlugin: ScrapeScheduler) extends ContentCheck with Logging {
 
   def isDefinedAt(candidate: NormalizationCandidate) = candidate.normalization == Normalization.CANONICAL && LinkedInNormalizer.linkedInCanonicalPublicProfile.findFirstIn(candidate.url).isDefined
   protected def check(publicProfileCandidate: NormalizationCandidate) = {

@@ -13,7 +13,7 @@ import com.keepit.common.net._
 import com.keepit.common.performance._
 import com.keepit.model._
 import com.keepit.model.KeepSource._
-import com.keepit.scraper.ScrapeSchedulerPlugin
+import com.keepit.scraper.ScrapeScheduler
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import views.html
@@ -28,7 +28,7 @@ import com.keepit.model.KeepStates
 class AdminBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
-  scraper: ScrapeSchedulerPlugin,
+  scraper: ScrapeScheduler,
   searchServiceClient: SearchServiceClient,
   keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
