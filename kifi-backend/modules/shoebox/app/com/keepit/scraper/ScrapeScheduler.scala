@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import org.joda.time.DateTime
 import com.keepit.common.time._
 
-trait ScrapeSchedulerPlugin {
+trait ScrapeScheduler {
   def scheduleScrape(uri: NormalizedURI, date: DateTime = currentDateTime)(implicit session: RWSession): Unit
   def scrapeBasicArticle(url: String, extractorProviderType: Option[ExtractorProviderType]): Future[Option[BasicArticle]] // todo: move out
   def getSignature(url: String, extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]]

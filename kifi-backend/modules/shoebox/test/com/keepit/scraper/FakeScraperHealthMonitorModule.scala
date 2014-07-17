@@ -14,7 +14,7 @@ case class FakeScraperHealthMonitorModule(fakeArticles: Option[PartialFunction[(
   override def configure() {}
 
   @Provides @Singleton
-  def fakeScrapeScheduler(): ScrapeSchedulerPlugin = new FakeScraperHealthMonitorPlugin(fakeArticles)
+  def fakeScrapeScheduler(): ScrapeScheduler = new FakeScrapeScheduler(fakeArticles)
 
   def fakeScraperHealthMonitorPlugin(): ScraperHealthMonitorPlugin = new ScraperHealthMonitorPlugin {
     def scheduling = new SchedulingProperties {
@@ -24,7 +24,7 @@ case class FakeScraperHealthMonitorModule(fakeArticles: Option[PartialFunction[(
   }
 }
 
-class FakeScraperHealthMonitorPlugin(fakeArticles: Option[PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle]]) extends ScrapeSchedulerPlugin {
+class FakeScrapeScheduler(fakeArticles: Option[PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle]]) extends ScrapeScheduler {
   def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit = {}
   def scrapeBasicArticle(url: String, extractorProviderType: Option[ExtractorProviderType] = None): Future[Option[BasicArticle]] = Future.successful(fakeArticles.map(_.apply((url, extractorProviderType))))
   def getSignature(url: String, extractorProviderType: Option[ExtractorProviderType] = None): Future[Option[Signature]] = scrapeBasicArticle(url, extractorProviderType).map(_.map(_.signature))

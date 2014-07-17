@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
-import com.keepit.scraper.ScrapeSchedulerPlugin
+import com.keepit.scraper.ScrapeScheduler
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 
@@ -30,7 +30,7 @@ case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boo
 class KeepInterner @Inject() (
   db: Database,
   normalizedURIInterner: NormalizedURIInterner,
-  scraper: ScrapeSchedulerPlugin,
+  scraper: ScrapeScheduler,
   keepRepo: KeepRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,

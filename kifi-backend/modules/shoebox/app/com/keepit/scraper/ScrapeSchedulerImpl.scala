@@ -12,7 +12,7 @@ import org.joda.time.DateTime
 import scala.concurrent.Future
 import scala.util.Try
 
-class ScrapeSchedulerPluginImpl @Inject() (
+class ScrapeSchedulerImpl @Inject() (
   db: Database,
   airbrake: AirbrakeNotifier,
   systemAdminMailSender: SystemAdminMailSender,
@@ -20,7 +20,7 @@ class ScrapeSchedulerPluginImpl @Inject() (
   urlPatternRuleRepo: UrlPatternRuleRepo,
   scraperConfig: ScraperSchedulerConfig,
   scraperClient: ScraperServiceClient) //only on leader
-    extends ScrapeSchedulerPlugin with Logging {
+    extends ScrapeScheduler with Logging {
 
   def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit = {
     require(uri != null && !uri.id.isEmpty, "[scheduleScrape] <uri> cannot be null and <uri.id> cannot be empty")
