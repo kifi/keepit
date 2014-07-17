@@ -58,7 +58,7 @@ class LibraryCommander @Inject() (
 
         val library = db.readWrite { implicit s =>
           val lib = libraryRepo.save(Library(ownerId = ownerId, name = libInfo.name, description = libInfo.description,
-            visibility = validVisibility, slug = validSlug))
+            visibility = validVisibility, slug = validSlug, kind = LibraryKind.USER_CREATED))
           val libId = lib.id.get
           libraryMembershipRepo.save(LibraryMembership(libraryId = libId, userId = ownerId, access = LibraryAccess.OWNER))
           lib
