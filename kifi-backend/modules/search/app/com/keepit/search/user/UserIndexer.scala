@@ -1,7 +1,7 @@
 package com.keepit.search.user
 
 import com.keepit.common.db.{ ExternalId, Id, SequenceNumber, State }
-import com.keepit.model.User
+import com.keepit.model.{ Username, User, ExperimentType }
 import com.keepit.social.BasicUser
 import com.keepit.search.index.{ IndexDirectory, Indexable, Indexer, DefaultAnalyzer }
 import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
@@ -13,7 +13,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import com.keepit.model.UserStates._
-import com.keepit.model.ExperimentType
 import com.keepit.search.IndexInfo
 import com.keepit.typeahead.PrefixFilter
 import com.keepit.common.mail.EmailAddress
@@ -36,11 +35,12 @@ object BasicUserSerializer {
   def toByteArray(basicUser: BasicUser): Array[Byte] = {
     val bos = new ByteArrayOutputStream()
     val oos = new OutputStreamDataOutput(bos)
-    oos.writeByte(1) // version
+    oos.writeByte(2) // version
     oos.writeString(basicUser.externalId.toString)
     oos.writeString(basicUser.firstName)
     oos.writeString(basicUser.lastName)
     oos.writeString(basicUser.pictureName)
+    oos.writeString(basicUser.username.map(_.value).getOrElse(""))
     oos.close()
     bos.close()
     bos.toByteArray()
@@ -50,16 +50,30 @@ object BasicUserSerializer {
     val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
 
     val version = in.readByte().toInt
-    if (version != 1) {
-      throw new Exception(s"invalid data [version=${version}]")
-    }
 
-    BasicUser(
-      externalId = ExternalId[User](in.readString),
-      firstName = in.readString,
-      lastName = in.readString,
-      pictureName = in.readString
-    )
+    version match {
+      case 1 => // pre-username
+        BasicUser(
+          externalId = ExternalId[User](in.readString),
+          firstName = in.readString,
+          lastName = in.readString,
+          pictureName = in.readString,
+          username = None
+        )
+      case 2 => // with username
+        BasicUser(
+          externalId = ExternalId[User](in.readString),
+          firstName = in.readString,
+          lastName = in.readString,
+          pictureName = in.readString,
+          username = {
+            val u = in.readString
+            if (u.length == 0) None else Some(Username(u))
+          }
+        )
+      case _ =>
+        throw new Exception(s"invalid data [version=${version}]")
+    }
   }
 }
 

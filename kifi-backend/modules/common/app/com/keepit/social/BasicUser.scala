@@ -36,20 +36,23 @@ case class BasicUser(
     externalId: ExternalId[User],
     firstName: String,
     lastName: String,
-    pictureName: String) extends BasicUserLikeEntity {
+    pictureName: String,
+    username: Option[Username]) extends BasicUserLikeEntity {
 
   override def asBasicUser = Some(this)
 }
 
 object BasicUser {
   implicit val userExternalIdFormat = ExternalId.format[User]
+  implicit val usernameFormat = Username.jsonAnnotationFormat
 
   // Be aware that BasicUserLikeEntity uses the `kind` field to detect if its a BasicUser or BasicNonUser
   implicit val basicUserFormat = (
     (__ \ 'id).format[ExternalId[User]] and
     (__ \ 'firstName).format[String] and
     (__ \ 'lastName).format[String] and
-    (__ \ 'pictureName).format[String]
+    (__ \ 'pictureName).format[String] and
+    (__ \ 'username).formatNullable[Username]
   )(BasicUser.apply, unlift(BasicUser.unapply))
 
   def fromUser(user: User): BasicUser = {
@@ -57,14 +60,14 @@ object BasicUser {
       externalId = user.externalId,
       firstName = user.firstName,
       lastName = user.lastName,
-      pictureName = user.pictureName.map(_ + ".jpg").getOrElse("0.jpg") // need support for default image
+      pictureName = user.pictureName.map(_ + ".jpg").getOrElse("0.jpg"), // need support for default image
+      username = user.username
     )
   }
-
 }
 
 case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
-  override val version = 5
+  override val version = 6
   val namespace = "basic_user_userid"
   def toKey(): String = userId.id.toString
 }
@@ -72,14 +75,15 @@ case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
 class BasicUserUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends ImmutableJsonCacheImpl[BasicUserUserIdKey, BasicUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class BasicUserWithUserId(
+// todo: Move to shared project between shoebox and search. This is a very specialized class that doesn't need to be in common
+case class TypeaheadUserHit(
   userId: Id[User],
   externalId: ExternalId[User],
   firstName: String,
   lastName: String,
-  pictureName: String) extends BasicUserLikeEntity
+  pictureName: String)
 
-object BasicUserWithUserId {
+object TypeaheadUserHit {
   implicit val userIdFormat = Id.format[User]
   implicit val userExternalIdFormat = ExternalId.format[User]
 
@@ -89,9 +93,9 @@ object BasicUserWithUserId {
     (__ \ 'firstName).format[String] and
     (__ \ 'lastName).format[String] and
     (__ \ 'pictureName).format[String]
-  )(BasicUserWithUserId.apply, unlift(BasicUserWithUserId.unapply))
+  )(TypeaheadUserHit.apply, unlift(TypeaheadUserHit.unapply))
 
-  def fromBasicUserAndId(user: BasicUser, id: Id[User]): BasicUserWithUserId = {
-    BasicUserWithUserId(id, user.externalId, user.firstName, user.lastName, user.pictureName)
+  def fromBasicUserAndId(user: BasicUser, id: Id[User]): TypeaheadUserHit = {
+    TypeaheadUserHit(id, user.externalId, user.firstName, user.lastName, user.pictureName)
   }
 }

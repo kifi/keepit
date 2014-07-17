@@ -225,7 +225,11 @@ object ApplicationBuild extends Build {
     emojiLogs,
     // incOptions := incOptions.value.withNameHashing(true) // see https://groups.google.com/forum/#!msg/play-framework/S_-wYW5Tcvw/OjJuB4iUwD8J
     ScalariformKeys.preferences := ScalariformKeys.preferences.value
-      .setPreference(DoubleIndentClassDeclaration, true)
+      .setPreference(DoubleIndentClassDeclaration, true),
+    lessEntryPoints := Nil,
+    coffeescriptEntryPoints := Nil,
+    javascriptEntryPoints := Nil
+    //,     offline := true
   )
 
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(

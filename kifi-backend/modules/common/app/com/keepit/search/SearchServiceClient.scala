@@ -19,7 +19,7 @@ import scala.concurrent.{ Future, Promise }
 import scala.concurrent.duration._
 import com.keepit.search.feed.Feed
 import com.keepit.typeahead.TypeaheadHit
-import com.keepit.social.{ BasicUser, BasicUserWithUserId }
+import com.keepit.social.{ BasicUser, TypeaheadUserHit }
 import com.keepit.typeahead.PrefixMatching
 import com.keepit.typeahead.PrefixFilter
 import scala.collection.mutable.ListBuffer
@@ -49,7 +49,7 @@ trait SearchServiceClient extends ServiceClient {
   def refreshPhrases(): Unit
   def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult]
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]]
-  def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUserWithUserId]]]
+  def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
   def correctSpelling(text: String, enableBoost: Boolean): Future[String]
@@ -221,7 +221,7 @@ class SearchServiceClientImpl(
     }
   }
 
-  def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUserWithUserId]]] = {
+  def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]] = {
     val payload = Json.toJson(UserSearchRequest(Some(userId), query, maxHits, context, filter))
     call(Search.internal.userTypeahead(), payload).map { r =>
       val userSearchResult = Json.fromJson[UserSearchResult](r.json).get
@@ -234,7 +234,7 @@ class SearchServiceClientImpl(
           val normalizedName = PrefixFilter.normalize(name)
           val score = PrefixMatching.distance(normalizedName, queryTerms)
           ordinal += 1
-          val basicUserWithUserId = BasicUserWithUserId.fromBasicUserAndId(hit.basicUser, hit.id)
+          val basicUserWithUserId = TypeaheadUserHit.fromBasicUserAndId(hit.basicUser, hit.id)
           TypeaheadHit(score, name, ordinal, basicUserWithUserId)
         }
       }

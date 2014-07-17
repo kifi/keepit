@@ -9,7 +9,7 @@ import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
 import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.social.{ BasicUserWithUserId, SocialNetworkType, SocialNetworks }
+import com.keepit.social.{ TypeaheadUserHit, SocialNetworkType, SocialNetworks }
 import scala.concurrent.Future
 import play.api.libs.json._
 import com.keepit.typeahead.TypeaheadHit
@@ -220,7 +220,7 @@ class TypeaheadCommander @Inject() (
   private def fetchAll(socialF: Future[Seq[TypeaheadHit[SocialUserBasicInfo]]],
     kifiF: Future[Seq[TypeaheadHit[User]]],
     abookF: Future[Seq[TypeaheadHit[RichContact]]],
-    nfUsersF: Future[Seq[TypeaheadHit[BasicUserWithUserId]]]) = {
+    nfUsersF: Future[Seq[TypeaheadHit[TypeaheadUserHit]]]) = {
     for {
       socialHits <- socialF
       kifiHits <- kifiF
@@ -346,7 +346,7 @@ class TypeaheadCommander @Inject() (
           } else None
           Some(ConnectionWithInviteStatus(u.fullName, hit.score, SocialNetworks.FORTYTWO.name, picUrl, s"fortytwo/${u.externalId}", "joined"))
 
-        case bu: BasicUserWithUserId => // todo(Ray): uptake User API from search
+        case bu: TypeaheadUserHit => // todo(Ray): uptake User API from search
           val name = s"${bu.firstName} ${bu.lastName}".trim // if not good enough, lookup User
           val picUrl = if (pictureUrl) Some(bu.pictureName) else None
           val frOpt = frMap.get(bu.userId)

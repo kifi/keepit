@@ -40,7 +40,6 @@ import scala.util.{ Failure, Success, Try }
 import play.api.libs.json.JsArray
 import com.keepit.eliza.model.UserThread
 import play.api.libs.json.JsObject
-import com.keepit.common.crypto.{ PublicIdConfiguration, ModelWithPublicId }
 import com.keepit.common.json.JsonFormatters._
 
 //For migration only
@@ -65,8 +64,7 @@ class MessagingController @Inject() (
   uriNormalizationUpdater: UriNormalizationUpdater,
   messagingCommander: MessagingCommander,
   messagingIndexCommander: MessagingIndexCommander,
-  notificationCommander: NotificationCommander,
-  implicit val publicIdConfig: PublicIdConfiguration)
+  notificationCommander: NotificationCommander)
     extends ElizaServiceController with Logging {
 
   //for indexing data requests

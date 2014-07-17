@@ -52,6 +52,7 @@ class RawKeepImporterTest extends TestKit(ActorSystem()) with SpecificationLike 
           userRepo.get(user.id.get) === user
           val bookmarks = keepRepo.all
           val oneUrl = bookmarks.find(_.url == "http://www.findsounds.com/types.html")
+          println(bookmarks)
           oneUrl.size === 1
           val bm = oneUrl.head
           bm.userId === user.id.get

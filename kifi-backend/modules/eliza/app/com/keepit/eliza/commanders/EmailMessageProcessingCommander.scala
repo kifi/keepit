@@ -5,7 +5,6 @@ import com.keepit.eliza.model._
 import com.keepit.common.logging.Logging
 import com.kifi.franz.SQSQueue
 import com.keepit.eliza.mail.MailNotificationReply
-import com.keepit.common.crypto.{ PublicIdConfiguration, ModelWithPublicId }
 import com.keepit.common.db.Id
 import scala.Some
 import com.keepit.eliza.model.NonUserThread
@@ -22,8 +21,7 @@ class EmailMessageProcessingCommander @Inject() (
     messagingCommander: MessagingCommander,
     airbrake: AirbrakeNotifier,
     db: Database,
-    heimdalContextBuilder: HeimdalContextBuilderFactory,
-    implicit val config: PublicIdConfiguration) extends Logging {
+    heimdalContextBuilder: HeimdalContextBuilderFactory) extends Logging {
 
   def readIncomingMessages(): Unit = {
     mailNotificationReplyQueue.nextWithLock(1 minute).onComplete {

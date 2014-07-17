@@ -1,9 +1,11 @@
 package com.keepit.model
 
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
+import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -14,29 +16,32 @@ case class Library(
     id: Option[Id[Library]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    externalId: ExternalId[Library] = ExternalId(),
     name: String,
     ownerId: Id[User],
     visibility: LibraryVisibility,
     description: Option[String] = None,
     slug: LibrarySlug,
     state: State[Library] = LibraryStates.ACTIVE,
-    seq: SequenceNumber[Library] = SequenceNumber.ZERO) extends ModelWithExternalId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
+    seq: SequenceNumber[Library] = SequenceNumber.ZERO) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
+
+  val prefix = Library.prefix
 
   def withId(id: Id[Library]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(myState: State[Library]) = this.copy(state = myState)
 
-  override def toString(): String = s"Library[id=$id,externalId=$externalId,name=$name,privacy=$visibility]"
+  override def toString(): String = s"Library[id=$id,name=$name,privacy=$visibility]"
 
 }
 
-object Library {
+object Library extends ModelWithPublicIdCompanion[Library] {
+
+  val prefix: String = "lib"
+
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[Library]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
-    (__ \ 'externalId).format(ExternalId.format[Library]) and
     (__ \ 'name).format[String] and
     (__ \ 'ownerId).format[Id[User]] and
     (__ \ 'visibility).format[LibraryVisibility] and
@@ -59,14 +64,6 @@ case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
 }
 class LibraryIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LibraryIdKey, Library](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
-case class LibraryExternalIdKey(externalId: ExternalId[Library]) extends Key[Library] {
-  override val version = 0
-  val namespace = "library_by_external_id"
-  def toKey(): String = externalId.id
-}
-class LibraryExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[LibraryExternalIdKey, Library](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 object LibraryStates extends States[Library]
 
