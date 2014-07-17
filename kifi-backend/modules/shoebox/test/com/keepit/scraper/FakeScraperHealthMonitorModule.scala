@@ -14,7 +14,7 @@ case class FakeScraperHealthMonitorModule(fakeArticles: Option[PartialFunction[(
   override def configure() {}
 
   @Provides @Singleton
-  def fakeScraperPlugin(): ScrapeSchedulerPlugin = new FakeScraperHealthMonitorPlugin(fakeArticles)
+  def fakeScrapeScheduler(): ScrapeSchedulerPlugin = new FakeScraperHealthMonitorPlugin(fakeArticles)
 
   def fakeScraperHealthMonitorPlugin(): ScraperHealthMonitorPlugin = new ScraperHealthMonitorPlugin {
     def scheduling = new SchedulingProperties {
