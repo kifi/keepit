@@ -5,7 +5,6 @@ import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId 
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
-import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -22,7 +21,8 @@ case class Library(
     description: Option[String] = None,
     slug: LibrarySlug,
     state: State[Library] = LibraryStates.ACTIVE,
-    seq: SequenceNumber[Library] = SequenceNumber.ZERO) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
+    seq: SequenceNumber[Library] = SequenceNumber.ZERO,
+    kind: LibraryKind = LibraryKind.USER_CREATED) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   val prefix = Library.prefix
 
@@ -48,7 +48,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'description).format[Option[String]] and
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'state).format(State.format[Library]) and
-    (__ \ 'seq).format(SequenceNumber.format[Library])
+    (__ \ 'seq).format(SequenceNumber.format[Library]) and
+    (__ \ 'kind).format[LibraryKind]
   )(Library.apply, unlift(Library.unapply))
 
   val maxNameLength = 50
@@ -93,6 +94,27 @@ object LibraryVisibility {
       case ANYONE.value => ANYONE
       case LIMITED.value => LIMITED
       case SECRET.value => SECRET
+    }
+  }
+}
+
+sealed abstract class LibraryKind(val value: String)
+
+object LibraryKind {
+  trait SystemGenerated extends LibraryKind
+
+  case object SYSTEM_MAIN extends LibraryKind("system_main") with SystemGenerated
+  case object SYSTEM_SECRET extends LibraryKind("system_secret") with SystemGenerated
+  case object USER_CREATED extends LibraryKind("user_created")
+
+  implicit def format[T]: Format[LibraryKind] =
+    Format(__.read[String].map(LibraryKind(_)), new Writes[LibraryKind] { def writes(o: LibraryKind) = JsString(o.value) })
+
+  def apply(str: String) = {
+    str match {
+      case SYSTEM_MAIN.value => SYSTEM_MAIN
+      case SYSTEM_SECRET.value => SYSTEM_SECRET
+      case USER_CREATED.value => USER_CREATED
     }
   }
 }

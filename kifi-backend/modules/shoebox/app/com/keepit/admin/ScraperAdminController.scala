@@ -10,7 +10,7 @@ import com.keepit.search.ArticleStore
 import views.html
 import com.keepit.common.db.slick.Database.Replica
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.scraper.ScrapeSchedulerPlugin
+import com.keepit.scraper.ScrapeScheduler
 import play.api.mvc.Action
 import com.keepit.scraper.ScraperServiceClient
 import scala.concurrent.Future
@@ -21,7 +21,7 @@ class ScraperAdminController @Inject() (
   db: Database,
   uriRepo: NormalizedURIRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
-  scrapeScheduler: ScrapeSchedulerPlugin,
+  scrapeScheduler: ScrapeScheduler,
   normalizedURIRepo: NormalizedURIRepo,
   articleStore: ArticleStore,
   httpProxyRepo: HttpProxyRepo,

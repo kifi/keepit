@@ -14,15 +14,7 @@ angular.module('kifi.delighted', [])
         scope.showSurvey = true;
 
         function analyticsStageName() {
-          if (scope.surveyStage === 'score') {
-            return 'npsScore';
-          } else if (scope.surveyStage === 'comment') {
-            return 'npsComment';
-          } else if (scope.surveyStage === 'end') {
-            return 'npsThanks';
-          } else {
-            return null;
-          }
+          return {score: 'npsScore', comment: 'npsComment', end: 'npsThanks'}[scope.surveyStage];
         }
         
         scope.surveyStage = 'score';

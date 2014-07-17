@@ -33,7 +33,7 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
   def startShoeboxServices() {
     require(injector.instance[ForkJoinExecContextPlugin] != null)
     require(injector.instance[NormalizationUpdaterPlugin] != null)
-    require(injector.instance[ScrapeSchedulerPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[ScraperHealthMonitorPlugin] != null)
     require(injector.instance[SocialGraphPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[MailSenderPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[AutogenReaperPlugin] != null) //make sure its not lazy loaded

@@ -21,7 +21,7 @@ import com.keepit.common.mail.TestMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.{ FakeShoeboxSecureSocialModule, FakeSocialGraphModule }
 import com.keepit.search.TestSearchServiceClientModule
-import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScraperHealthMonitorModule }
+import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
 
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -31,7 +31,7 @@ class UserControllerTest extends Specification with ApplicationInjector {
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
     TestSearchServiceClientModule(),
-    FakeScraperHealthMonitorModule(),
+    FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
     TestActorSystemModule(),
     FakeAirbrakeModule(),

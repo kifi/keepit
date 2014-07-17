@@ -16,7 +16,7 @@ import com.keepit.common.analytics.DevAnalyticsModule
 import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.inject.CommonDevModule
 import com.keepit.common.integration.DevReaperModule
-import com.keepit.scraper.{ ProdScraperServiceClientModule, DevScraperHealthMonitorModule }
+import com.keepit.scraper.{ DevScrapeSchedulerModule, ProdScraperServiceClientModule, DevScraperHealthMonitorModule }
 import com.keepit.common.queue.{ ProdSimpleQueueModule, DevSimpleQueueModule }
 import com.keepit.queue.DevNormalizationUpdateJobQueueModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
@@ -35,6 +35,7 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   analyticsModule = DevAnalyticsModule(),
   //  topicModelModule = DevTopicModelModule(),
   domainTagImporterModule = DevDomainTagImporterModule(),
+  scrapeSchedulerModule = DevScrapeSchedulerModule(),
   scraperHealthMonitorModule = DevScraperHealthMonitorModule(),
   fjMonitorModule = ProdForkJoinContextMonitorModule(),
   cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule()),

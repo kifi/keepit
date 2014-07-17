@@ -8,7 +8,9 @@ import play.api.mvc.{ PathBindable, QueryStringBindable }
 
 import scala.util.{ Failure, Success, Try }
 
-case class PublicIdConfiguration(key: String)
+case class PublicIdConfiguration(key: String) {
+  lazy val aes64bit = Aes64BitCipher(key)
+}
 
 case class PublicId[T <: ModelWithPublicId[T]](id: String)
 
@@ -49,7 +51,7 @@ trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
 
   def publicId(implicit config: PublicIdConfiguration): Try[PublicId[T]] = {
     id.map { someId =>
-      Success(PublicId[T](prefix + PublicId.coder.encode(Aes64BitCipher(config.key).encrypt(someId.id))))
+      Success(PublicId[T](prefix + PublicId.coder.encode(config.aes64bit.encrypt(someId.id))))
     }.getOrElse(Failure(new IllegalStateException("model has no id")))
   }
 
@@ -61,7 +63,7 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
 
   def decode(publicId: String)(implicit config: PublicIdConfiguration): Try[Id[T]] = {
     if (publicId.startsWith(prefix)) {
-      Try(Id[T](Aes64BitCipher(config.key).decrypt(PublicId.coder.decode(publicId.substring(prefix.length)))))
+      Try(Id[T](config.aes64bit.decrypt(PublicId.coder.decode(publicId.substring(prefix.length)))))
     } else {
       Failure(new IllegalArgumentException(s"Expected $publicId to start with $prefix"))
     }

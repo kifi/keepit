@@ -24,26 +24,26 @@ case class GraphStatistics(vertexCounts: Map[VertexType, Long], edgeCounts: Map[
     incomingDegrees.toMap
   }
 
-  def outgoingDegreesByEdgeType: Map[(VertexType, VertexType, EdgeType), Double] = edgeCounts.map {
+  def outgoingDegreesByComponent: Map[(VertexType, VertexType, EdgeType), Double] = edgeCounts.map {
     case (edgeType @ (source, _, _), count) =>
       edgeType -> count.toDouble / vertexCounts(source)
   }
 
-  def incomingDegreesByEdgeType: Map[(VertexType, VertexType, EdgeType), Double] = edgeCounts.map {
+  def incomingDegreesByComponent: Map[(VertexType, VertexType, EdgeType), Double] = edgeCounts.map {
     case (edgeType @ (_, destination, _), count) =>
       edgeType -> count.toDouble / vertexCounts(destination)
   }
 }
 
 object GraphStatistics {
-  private val allEdgeKinds: Set[(VertexType, VertexType, EdgeType)] = for {
+  private val allComponents: Set[(VertexType, VertexType, EdgeType)] = for {
     sourceKind <- VertexKind.all
     destinationKind <- VertexKind.all
     edgeKind <- EdgeKind.all
   } yield (sourceKind, destinationKind, edgeKind)
 
   def newVertexCounter(): Map[VertexType, AtomicLong] = VertexKind.all.map(_ -> new AtomicLong(0)).toMap
-  def newEdgeCounter(): Map[(VertexType, VertexType, EdgeType), AtomicLong] = allEdgeKinds.map(_ -> new AtomicLong(0)).toMap
+  def newEdgeCounter(): Map[(VertexType, VertexType, EdgeType), AtomicLong] = allComponents.map(_ -> new AtomicLong(0)).toMap
 
   def filter(vertexCounter: Map[VertexType, AtomicLong], edgeCounter: Map[(VertexType, VertexType, EdgeType), AtomicLong]): GraphStatistics = {
     GraphStatistics(vertexCounter.mapValues(_.get()).filter(_._2 > 0), edgeCounter.mapValues(_.get()).filter(_._2 > 0))
@@ -52,8 +52,8 @@ object GraphStatistics {
   def prettify(statistics: GraphStatistics): PrettyGraphStatistics = {
     val outgoingDegrees = statistics.outgoingDegrees.mapValues(deg => f"$deg%.2f").withDefaultValue("")
     val incomingDegrees = statistics.incomingDegrees.mapValues(deg => f"$deg%.2f").withDefaultValue("")
-    val outgoingDegreesByEdgeType = statistics.outgoingDegreesByEdgeType.mapValues(deg => f"$deg%.2f").withDefaultValue("")
-    val incomingDegreesByEdgeType = statistics.incomingDegreesByEdgeType.mapValues(deg => f"$deg%.2f").withDefaultValue("")
+    val outgoingDegreesByComponent = statistics.outgoingDegreesByComponent.mapValues(deg => f"$deg%.2f").withDefaultValue("")
+    val incomingDegreesByComponent = statistics.incomingDegreesByComponent.mapValues(deg => f"$deg%.2f").withDefaultValue("")
 
     PrettyGraphStatistics(
       statistics.vertexCounts.map {
@@ -61,8 +61,8 @@ object GraphStatistics {
           vertexKind.code -> (count.toString, outgoingDegrees(vertexKind), incomingDegrees(vertexKind))
       }.toMap,
       statistics.edgeCounts.map {
-        case (edgeType @ (sourceKind, destinationKind, edgeKind), count) =>
-          (sourceKind.code, destinationKind.code, edgeKind.code) -> (count.toString, outgoingDegreesByEdgeType(edgeType), incomingDegreesByEdgeType(edgeType))
+        case (component @ (sourceKind, destinationKind, edgeKind), count) =>
+          (sourceKind.code, destinationKind.code, edgeKind.code) -> (count.toString, outgoingDegreesByComponent(component), incomingDegreesByComponent(component))
       }.toMap
     )
   }

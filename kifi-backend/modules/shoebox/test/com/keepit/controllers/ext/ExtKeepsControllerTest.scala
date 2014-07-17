@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 
 import com.keepit.normalizer._
 import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.scraper.{ FakeScraperHealthMonitorModule, TestScraperServiceClientModule }
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
 import com.keepit.common.controller._
 import com.keepit.search._
 import com.keepit.common.time._
@@ -31,7 +31,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
-    FakeScraperHealthMonitorModule(),
+    FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
     TestActorSystemModule(),
     FakeAirbrakeModule(),

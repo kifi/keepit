@@ -3,7 +3,7 @@ package com.keepit.controllers.website
 import org.specs2.mutable.Specification
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.heimdal.{ HeimdalContext, KifiHitContext, SanitizedKifiHit, TestHeimdalServiceClientModule }
-import com.keepit.scraper.{ FakeScraperHealthMonitorModule, TestScraperServiceClientModule }
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
 import com.keepit.commanders.KeepInfo._
 import com.keepit.commanders.KeepInfosWithCollection._
 import com.keepit.commanders._
@@ -47,7 +47,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
-    FakeScraperHealthMonitorModule(),
+    FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
     TestActorSystemModule(),
     FakeAirbrakeModule(),
