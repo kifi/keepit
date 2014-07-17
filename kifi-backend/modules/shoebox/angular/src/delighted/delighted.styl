@@ -1,3 +1,28 @@
+.kf-delighted-wrap
+  overflow: hidden
+  padding: 0 25px 0 30px
+  max-height 200px
+  
+  &.hide
+    animation: delighted-disappear 0.8s
+    max-height: 0
+    opacity: 0
+
+@keyframes delighted-disappear {
+  0% {
+    max-height: 200px
+    opacity: 1
+  }
+  50% {
+    max-height: 200px
+    opacity: 0
+  }
+  100% {
+    max-height: 0
+    opacity: 0
+  }
+}
+
 .kf-delighted-title
   padding: 8px 28px // make sure the title doesn't underlap the cancel button
   font-family: "Georgia", Arial, sans-serif
@@ -5,14 +30,37 @@
   font-size: 18px
 
 .kf-delighted-body
-  //background-color: #b4d3fa
   background-color: #fff
   border-radius: 2px
   box-shadow: 0 1px 1px 0 #dadae2
   border: 1px solid #dadae2
   text-align: center
   position: relative
-  padding: 6px
+  
+  button
+    background-color: #4372b1
+    color: #fff
+    border: none
+    border-radius: 6px
+    font-size: 17px
+    font-weight: 300
+    font-smoothing: antialiased
+    cursor: pointer
+    transition: background-color .1s
+
+    &:focus
+    &:hover
+      background-color: #5382c1
+
+    &.dialog-cancel
+      background-color: #ccc
+      &:hover
+        background-color: #d6d6d6
+      &:active
+        background-color: #ccc
+
+  button + button
+    margin-left: 20px
 
 .kf-delighted-cancel
   position: absolute
@@ -84,6 +132,14 @@
     right: 0
     text-align: right
 
+.kf-delighted-score-chooser
+.kf-delighted-comment-area
+.kf-delighted-end
+  padding: 6px
+
+.kf-delighted-end
+  background-color: #cbf3ca
+
 .kf-delighted-comment-area
   textarea
     margin: 6px
@@ -104,30 +160,3 @@
   padding: 3px 15px
   min-width: 120px
   display: inline-block
-
-.kf-delighted-body
-  
-  button
-    background-color: #4372b1
-    color: #fff
-    border: none
-    border-radius: 6px
-    font-size: 17px
-    font-weight: 300
-    font-smoothing: antialiased
-    cursor: pointer
-    transition: background-color .1s
-
-    &:focus
-    &:hover
-      background-color: #5382c1
-
-    &.dialog-cancel
-      background-color: #ccc
-      &:hover
-        background-color: #d6d6d6
-      &:active
-        background-color: #ccc
-
-  button + button
-    margin-left: 20px

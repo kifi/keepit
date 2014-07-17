@@ -11,12 +11,12 @@ angular.module('kifi.delighted', [])
       templateUrl: 'delighted/delightedSurvey.tpl.html',
       link: function (scope, element) {
         scope.delighted = {};
-        scope.showCommentArea = false;
+        scope.surveyStage = 'score';
         scope.showSurvey = true;
 
         scope.$watch('delighted.score', function () {
           if (scope.delighted.score) {
-            scope.showCommentArea = true;
+            scope.surveyStage = 'comment';
             $timeout(function () {
               element.find('.kf-delighted-comment-area-input').focus();
             });
@@ -25,18 +25,25 @@ angular.module('kifi.delighted', [])
 
         scope.goBack = function () {
           scope.delighted.score = null;
-          scope.showCommentArea = false;
+          scope.surveyStage = 'score';
         };
 
         scope.submit = function () {
           profileService.postDelightedAnswer(+scope.delighted.score, scope.delighted.comment || null);
-          scope.showSurvey = false;
+          scope.surveyStage = 'end';
+          $timeout(function () {
+            hideSurvey();
+          }, 3000);
         };
 
         scope.cancelSurvey = function () {
           profileService.cancelDelightedSurvey();
-          scope.showSurvey = false;
+          hideSurvey();
         };
+
+        function hideSurvey() {
+          element.find('.kf-delighted-wrap').addClass('hide');
+        }
       }
     };
   }
