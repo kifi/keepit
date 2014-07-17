@@ -11,6 +11,7 @@ import org.joda.time.DateTime
 /*
 case class LibraryInfo(
   libraryId: Id[Library]
+  visibility: ???
   adder: Id[User]
 )
 case class AttributionInfo(

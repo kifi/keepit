@@ -50,7 +50,6 @@ class AllKeepSeedIngestionHelper @Inject() (
       keepInfoRepo.save(keepInfo.copy(
         uriId = keep.uriId,
         userId = keep.userId,
-        isPrivate = keep.isPrivate,
         state = State[CuratorKeepInfo](keep.state.value)
       ))
     } getOrElse {
@@ -58,7 +57,6 @@ class AllKeepSeedIngestionHelper @Inject() (
         uriId = keep.uriId,
         userId = keep.userId,
         keepId = keep.id.get,
-        isPrivate = keep.isPrivate,
         state = State[CuratorKeepInfo](keep.state.value)
       ))
 
