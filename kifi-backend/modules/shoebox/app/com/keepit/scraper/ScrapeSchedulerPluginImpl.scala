@@ -152,7 +152,6 @@ class ScrapeSchedulerPluginImpl @Inject() (
   }
 
   @inline private def sanityCheck(url: String): Unit = {
-    require(url != null, "<url> cannot be null")
     val parseUriTr = Try(java.net.URI.create(url)) // java.net.URI needed for current impl of HttpFetcher
     require(parseUriTr.isSuccess, s"java.net.URI parser failed to parse url=($url) error=${parseUriTr.failed.get}")
   }
