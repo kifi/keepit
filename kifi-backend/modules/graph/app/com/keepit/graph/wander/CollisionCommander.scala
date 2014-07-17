@@ -56,10 +56,10 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
   private def collectNeighbors(vertexReader: GlobalVertexReader)(vertexId: VertexId, neighborKind: VertexType): Set[VertexId] = {
     vertexReader.moveTo(vertexId)
     val neighbors = mutable.Set[VertexId]()
-    while (vertexReader.edgeReader.moveToNextComponent()) {
-      val (destinationKind, _) = vertexReader.edgeReader.component
+    while (vertexReader.outgoingEdgeReader.moveToNextComponent()) {
+      val (destinationKind, _) = vertexReader.outgoingEdgeReader.component
       if (neighborKind == destinationKind) {
-        while (vertexReader.edgeReader.moveToNextEdge()) { neighbors += vertexReader.edgeReader.destination }
+        while (vertexReader.outgoingEdgeReader.moveToNextEdge()) { neighbors += vertexReader.outgoingEdgeReader.destination }
       }
     }
     neighbors.toSet
