@@ -226,7 +226,6 @@ object ApplicationBuild extends Build {
     // incOptions := incOptions.value.withNameHashing(true) // see https://groups.google.com/forum/#!msg/play-framework/S_-wYW5Tcvw/OjJuB4iUwD8J
     ScalariformKeys.preferences := ScalariformKeys.preferences.value
       .setPreference(DoubleIndentClassDeclaration, true),
-    lessEntryPoints := Nil,
     coffeescriptEntryPoints := Nil,
     javascriptEntryPoints := Nil
     //,     offline := true
