@@ -35,7 +35,8 @@ class SeedIngestionCommanderTest extends Specification with DbTestInjector {
         url = "https://kifi.com",
         userId = userId,
         state = KeepStates.ACTIVE,
-        source = KeepSource.keeper
+        source = KeepSource.keeper,
+        libraryId = None
       ))
     }
   }
