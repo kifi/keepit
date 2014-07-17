@@ -58,10 +58,10 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
 
   val prefix: String
 
-  def decode(publicId: String)(implicit config: PublicIdConfiguration): Try[Id[T]] = {
+  def decode(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
     val reg = raw"^$prefix(.*)$$".r
     Try {
-      reg.findFirstMatchIn(publicId).map(_.group(1)).map { identifier =>
+      reg.findFirstMatchIn(publicId.id).map(_.group(1)).map { identifier =>
         Id[T](Aes64BitCipher(config.key).decrypt(Base64.decodeBase64(identifier)))
       }.get
     }

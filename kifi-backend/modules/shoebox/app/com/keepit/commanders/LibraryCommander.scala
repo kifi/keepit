@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.commanders.LibraryInfo
 import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
@@ -9,11 +10,13 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.Clock
 import com.keepit.model._
 import com.keepit.social.BasicUser
+import com.kifi.macros.json
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.logging.{ AccessLog, Logging }
 
 import scala.concurrent.duration.Duration
+import scala.util.{ Failure, Success }
 
 class LibraryCommander @Inject() (
     db: Database,
@@ -29,8 +32,8 @@ class LibraryCommander @Inject() (
   def addLibrary(libInfo: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, FullLibraryInfo] = {
     val badMessage: Option[String] = {
       if (!libInfo.collaborators.intersect(libInfo.followers).isEmpty) { Some("collaborators & followers overlap!") }
-      else if (!Library.isValidName(libInfo.name)) { Some("invalid library name") }
-      else if (!LibrarySlug.isValidSlug(libInfo.slug)) { Some("invalid library slug") }
+      else if (!Library.isValidName(libInfo.name.getOrElse(""))) { Some("invalid library name") }
+      else if (!LibrarySlug.isValidSlug(libInfo.slug.getOrElse(""))) { Some("invalid library slug") }
       else { None }
     }
     badMessage match {
@@ -50,15 +53,14 @@ class LibraryCommander @Inject() (
 
           (collabs, collabBasicUsers, follows, followBasicUsers, userRepo.get(ownerId).externalId)
         }
-        val validVisibility = LibraryVisibility(libInfo.visibility)
-        val validSlug = LibrarySlug(libInfo.slug)
+        val validVisibility = libInfo.visibility.get
+        val validSlug = LibrarySlug(libInfo.slug.get)
 
         val library = db.readWrite { implicit s =>
-          val lib = libraryRepo.save(Library(ownerId = ownerId, name = libInfo.name, description = libInfo.description,
-            visibility = validVisibility, slug = validSlug, kind = LibraryKind.USER_CREATED))
+          val lib = libraryRepo.save(Library(ownerId = ownerId, name = libInfo.name.get, description = libInfo.description,
+            visibility = validVisibility, slug = validSlug))
           val libId = lib.id.get
           libraryMembershipRepo.save(LibraryMembership(libraryId = libId, userId = ownerId, access = LibraryAccess.OWNER))
-
           lib
         }
 
@@ -69,11 +71,59 @@ class LibraryCommander @Inject() (
 
         val groupCollabs = GroupHolder(count = collaboratorIds.length, users = collaboratorUsers, isMore = false)
         val groupFollowers = GroupHolder(count = followerIds.length, users = followerUsers, isMore = false)
-        Right(FullLibraryInfo(id = library.publicId.get, ownerId = ownerExtId, name = libInfo.name, slug = validSlug,
+        Right(FullLibraryInfo(id = library.publicId.get, ownerId = ownerExtId, name = libInfo.name.get, slug = validSlug,
           visibility = validVisibility, description = libInfo.description, keepCount = 0,
           collaborators = groupCollabs, followers = groupFollowers))
       }
     }
+  }
+
+  def modifyLibrary(libraryId: PublicId[Library], libInfo: LibraryAddRequest, userId: ExternalId[User]): Either[LibraryFail, LibraryInfo] = {
+    val idTry = Library.decode(libraryId)
+    idTry match {
+      case Failure(ex) => Left(LibraryFail("Invalid Id"))
+      case Success(id) => {
+        db.readWrite { implicit s =>
+          val targetLib = libraryRepo.get(id)
+          val targetUser = userRepo.get(userId)
+          val membership = libraryMembershipRepo.getWithLibraryIdandUserId(libraryId = targetLib.id.get, userId = targetUser.id.get)
+          membership match {
+            case None => Left(LibraryFail("Membership not found!"))
+            case Some(x) if x.access != LibraryAccess.OWNER => Left(LibraryFail("Member not owner!"))
+            case _ => {
+
+              def validName(name: String): Either[LibraryFail, String] = {
+                if (Library.isValidName(name)) Right(name)
+                else Left(LibraryFail("Invalid name"))
+              }
+              def validSlug(slug: String): Either[LibraryFail, String] = {
+                if (LibrarySlug.isValidSlug(slug)) Right(slug)
+                else Left(LibraryFail("Invalid slug"))
+              }
+
+              for {
+                newName <- validName(libInfo.name.getOrElse(targetLib.name)).right
+                newSlug <- validSlug(libInfo.slug.getOrElse(targetLib.slug.value)).right
+              } yield {
+                val newDescription: Option[String] = libInfo.description match {
+                  case Some(x) => Some(x)
+                  case _ => targetLib.description
+                }
+                val newVisibility = libInfo.visibility match {
+                  case Some(x) => x
+                  case _ => targetLib.visibility
+                }
+                val lib = libraryRepo.save(targetLib.copy(name = newName, slug = LibrarySlug(newSlug), visibility = newVisibility, description = newDescription))
+                val ownerExtId = basicUserRepo.load(lib.ownerId).externalId
+                LibraryInfo(id = lib.publicId.get, name = lib.name, slug = lib.slug, visibility = lib.visibility,
+                  shortDescription = LibraryInfo.descriptionShortener(lib.description), ownerId = ownerExtId)
+              }
+            }
+          }
+        }
+      }
+    }
+
   }
 
   private def inviteBulkUsers(invites: Seq[LibraryInvite]) {
@@ -92,11 +142,11 @@ class LibraryCommander @Inject() (
 
 case class LibraryFail(message: String) extends AnyVal
 
-case class LibraryAddRequest(
-  name: String,
-  visibility: String,
+@json case class LibraryAddRequest(
+  name: Option[String],
+  visibility: Option[LibraryVisibility],
   description: Option[String] = None,
-  slug: String,
+  slug: Option[String],
   collaborators: Seq[ExternalId[User]],
   followers: Seq[ExternalId[User]])
 
@@ -128,6 +178,12 @@ object LibraryInfo {
       slug = lib.slug,
       ownerId = owner.externalId
     )
+  }
+
+  val MaxDescriptionLength = 120
+  def descriptionShortener(str: Option[String]): Option[String] = str match {
+    case Some(s) => { Some(s.dropRight(s.length - MaxDescriptionLength)) } // will change later!
+    case _ => None
   }
 }
 
@@ -173,4 +229,3 @@ case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {
 
 class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends ImmutableJsonCacheImpl[LibraryInfoIdKey, LibraryInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
