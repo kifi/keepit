@@ -5,7 +5,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
 import com.keepit.scraper.extractor._
 import com.keepit.scraper.fetcher.HttpFetcher
-import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.search.{ LangDetector, Article, ArticleStore }
 import scala.concurrent.duration._
 import org.joda.time.Days
@@ -304,8 +303,8 @@ class ScrapeWorker(
             val alternateUrls = extractor.getAlternateUrls
             val description = extractor.getDescription
             val keywords = extractor.getKeywords
-            val media = getMediaTypeString(extractor)
-            val signature = getSignature(extractor)
+            val media = extractor.getMediaTypeString
+            val signature = extractor.getSignature
 
             val contentLang = description match {
               case Some(desc) => LangDetector.detect(content + " " + desc)
@@ -349,27 +348,16 @@ class ScrapeWorker(
     }
   }
 
-  // todo(ray): move these helper methods to Extractor (after moving it to Scraper); if not, pimp it
-  private[this] def getSignature(x: Extractor): Signature = { // todo(ray): move to extractor (after moving extractor to scraper)
-    new SignatureBuilder().add(Seq(
-      x.getTitle(),
-      x.getDescription().getOrElse(""),
-      x.getKeywords().getOrElse(""),
-      x.getContent()
-    )).build
-  }
-  private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
-
   def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(
     title = extractor.getTitle,
     content = extractor.getContent,
     canonicalUrl = extractor.getCanonicalUrl,
     description = extractor.getDescription,
-    media = getMediaTypeString(extractor),
+    media = extractor.getMediaTypeString,
     httpContentType = extractor.getMetadata("Content-Type"),
     httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
     destinationUrl = destinationUrl,
-    signature = getSignature(extractor)
+    signature = extractor.getSignature
   )
 
   // Watch out: the NormalizedURI may come back as REDIRECTED
