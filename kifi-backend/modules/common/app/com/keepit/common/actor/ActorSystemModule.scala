@@ -53,6 +53,7 @@ case class DevActorSystemModule() extends ActorSystemModule {
     }
   }
 
+  @Singleton
   @Provides
   def actorPluginProvider: ActorPlugin = {
     new ActorPlugin(ActorSystem("dev-actor-system", Play.current.configuration.underlying, Play.current.classloader))
