@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.google.inject.Inject
+import com.google.inject.{ Singleton, Provides, Inject }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
@@ -12,6 +12,7 @@ import org.joda.time.DateTime
 import scala.concurrent.Future
 import scala.util.Try
 
+@Singleton
 class ScrapeSchedulerImpl @Inject() (
   db: Database,
   airbrake: AirbrakeNotifier,
@@ -38,7 +39,8 @@ class ScrapeSchedulerImpl @Inject() (
         }
         case None => ScrapeInfo(uriId = uriId, nextScrape = date)
       }
-      scrapeInfoRepo.save(toSave)
+      val saved = scrapeInfoRepo.save(toSave)
+      log.info(s"[scheduleScrape] scheduled for ${uri.toShortString}; saved=$saved")
       // todo: It may be nice to force trigger a scrape directly
     }
   }
