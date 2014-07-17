@@ -1,5 +1,6 @@
 package com.keepit.common.actor
 
+import com.keepit.common.logging.Logging
 import net.codingwell.scalaguice.ScalaModule
 import akka.actor.{ Scheduler, ActorSystem }
 import com.keepit.inject.AppScoped
@@ -34,7 +35,7 @@ case class ProdActorSystemModule() extends ActorSystemModule {
 
 }
 
-case class DevActorSystemModule() extends ActorSystemModule {
+case class DevActorSystemModule() extends ActorSystemModule with Logging {
 
   def configure() {
     bind[ActorSystem].toProvider[ActorPlugin]
@@ -53,6 +54,7 @@ case class DevActorSystemModule() extends ActorSystemModule {
     }
   }
 
+  @Singleton
   @Provides
   def actorPluginProvider: ActorPlugin = {
     new ActorPlugin(ActorSystem("dev-actor-system", Play.current.configuration.underlying, Play.current.classloader))
