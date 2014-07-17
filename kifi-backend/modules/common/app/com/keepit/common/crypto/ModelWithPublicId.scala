@@ -1,11 +1,10 @@
 package com.keepit.common.crypto
 
 import com.keepit.common.db.Id
+import com.google.common.io.BaseEncoding
 
 import play.api.libs.json._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
-
-import org.apache.commons.codec.binary.Base64
 
 import scala.util.{ Failure, Success, Try }
 
@@ -39,6 +38,8 @@ object PublicId {
 
     override def unbind(key: String, id: PublicId[T]): String = id.toString
   }
+
+  private[crypto] val coder = BaseEncoding.base32().lowerCase().omitPadding()
 }
 
 // TODO: Cipher must be a singleton, not re-created for every encode/decode.
@@ -50,7 +51,7 @@ trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
 
   def publicId(implicit config: PublicIdConfiguration): Try[PublicId[T]] = {
     id.map { someId =>
-      Try(PublicId[T](prefix + Base64.encodeBase64URLSafeString(config.aes64bit.encrypt(someId.id))))
+      Success(PublicId[T](prefix + PublicId.coder.encode(config.aes64bit.encrypt(someId.id))))
     }.getOrElse(Failure(new IllegalStateException("model has no id")))
   }
 
@@ -61,11 +62,11 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
   val prefix: String
 
   def decode(publicId: String)(implicit config: PublicIdConfiguration): Try[Id[T]] = {
-    val reg = raw"^$prefix(.*)$$".r
-    Try {
-      reg.findFirstMatchIn(publicId).map(_.group(1)).map { identifier =>
-        Id[T](config.aes64bit.decrypt(Base64.decodeBase64(identifier)))
-      }.get
+    if (publicId.startsWith(prefix)) {
+      Try(Id[T](config.aes64bit.decrypt(PublicId.coder.decode(publicId.substring(prefix.length)))))
+    } else {
+      Failure(new IllegalArgumentException(s"Expected $publicId to start with $prefix"))
     }
   }
+
 }
