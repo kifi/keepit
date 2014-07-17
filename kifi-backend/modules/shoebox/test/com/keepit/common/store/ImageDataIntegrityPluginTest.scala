@@ -17,7 +17,7 @@ import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxSecureSocial
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeAirbrakeNotifier }
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.search.TestSearchServiceClientModule
-import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScraperHealthMonitorModule }
+import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 
@@ -36,7 +36,7 @@ class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specifica
       running(new ShoeboxApplication(
         FakeAirbrakeModule(),
         TestSearchServiceClientModule(),
-        FakeScraperHealthMonitorModule(),
+        FakeScrapeSchedulerModule(),
         imageDataIntegrityTestPluginModule,
         TestActorSystemModule(Some(system)),
         FakeShoeboxSecureSocialModule(),

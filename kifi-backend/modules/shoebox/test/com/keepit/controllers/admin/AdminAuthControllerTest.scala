@@ -15,7 +15,7 @@ import securesocial.core._
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScraperHealthMonitorModule }
+import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -27,7 +27,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjector {
 
   val modules = Seq(FakeShoeboxServiceModule(),
-    FakeScraperHealthMonitorModule(),
+    FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
     TestActorSystemModule(),
     FakeAirbrakeModule(),

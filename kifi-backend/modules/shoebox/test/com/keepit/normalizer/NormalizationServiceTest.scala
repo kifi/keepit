@@ -54,7 +54,7 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
   val modules = Seq(
     TestFortyTwoModule(),
     FakeDiscoveryModule(),
-    FakeScraperHealthMonitorModule(Some(fakeArticles)),
+    FakeScrapeSchedulerModule(Some(fakeArticles)),
     FakeAirbrakeModule(),
     StandaloneTestActorSystemModule(),
     FakeElizaServiceClientModule(),
