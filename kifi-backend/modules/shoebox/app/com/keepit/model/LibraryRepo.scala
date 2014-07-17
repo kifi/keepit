@@ -10,13 +10,14 @@ import scala.slick.lifted.{ TableQuery, Tag }
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
-
+  def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(LibraryAccess, Library)]
 }
 
 @Singleton
 class LibraryRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
+  val libraryMembershipRepo: LibraryMembershipRepoImpl,
   val idCache: LibraryIdCache)
     extends DbRepo[Library] with LibraryRepo with SeqNumberDbFunction[Library] with Logging {
 
@@ -30,7 +31,7 @@ class LibraryRepoImpl @Inject() (
     def name = column[String]("name", O.NotNull)
     def ownerId = column[Id[User]]("owner_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
-    def description = column[Option[String]]("description", O.NotNull)
+    def description = column[Option[String]]("description", O.Nullable)
     def slug = column[LibrarySlug]("slug", O.NotNull)
     def kind = column[LibraryKind]("kind", O.NotNull)
     def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind) <> ((Library.apply _).tupled, Library.unapply)
@@ -55,6 +56,14 @@ class LibraryRepoImpl @Inject() (
     } else {
       idCache.set(LibraryIdKey(library.id.get), library)
     }
+  }
+
+  def getByUser(userId: Id[User], excludeState: Option[State[Library]])(implicit session: RSession): Seq[(LibraryAccess, Library)] = {
+    val q = for {
+      lib <- rows if lib.state =!= excludeState.orNull
+      lm <- libraryMembershipRepo.rows if lm.libraryId === lib.id && lm.userId === userId && lm.state === LibraryMembershipStates.ACTIVE
+    } yield (lm.access, lib)
+    q.list
   }
 
 }
