@@ -8,7 +8,7 @@ import org.specs2.mutable.Specification
 import com.keepit.model._
 import play.api.libs.json.Json
 import com.keepit.common.healthcheck._
-import com.keepit.scraper.FakeScraperHealthMonitorModule
+import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.heimdal.{ KifiHitContext, SanitizedKifiHit, HeimdalContext }
 import com.keepit.shoebox.{ FakeKeepImportsModule, KeepImportsModule }
 import com.keepit.common.actor.{ StandaloneTestActorSystemModule, TestActorSystemModule }
@@ -29,7 +29,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
   implicit val system = ActorSystem("test")
   implicit val execCtx = fj
 
-  def modules: Seq[ScalaModule] = Seq(FakeKeepImportsModule(), FakeScraperHealthMonitorModule())
+  def modules: Seq[ScalaModule] = Seq(FakeKeepImportsModule(), FakeScrapeSchedulerModule())
 
   val keep42 = Json.obj("url" -> "http://42go.com", "isPrivate" -> false)
   val keepKifi = Json.obj("url" -> "http://kifi.com", "isPrivate" -> false)

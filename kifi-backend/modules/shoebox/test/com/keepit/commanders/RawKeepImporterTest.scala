@@ -8,7 +8,7 @@ import com.keepit.model.{ RawKeepFactory, KeepSource, User }
 import play.api.libs.json.Json
 import akka.testkit.{ TestActorRef, TestKit }
 import play.api.test.Helpers._
-import com.keepit.scraper.{ FakeScraperHealthMonitorModule, TestScraperServiceClientModule }
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
 import com.keepit.shoebox.{ TestShoeboxServiceClientModule, KeepImportsModule, FakeKeepImportsModule }
 import com.keepit.common.actor.{ ActorBuilder, TestActorSystemModule }
 import com.keepit.search.TestSearchServiceClientModule
@@ -28,7 +28,7 @@ class RawKeepImporterTest extends TestKit(ActorSystem()) with SpecificationLike 
     TestSearchServiceClientModule(),
     TestShoeboxServiceClientModule(),
     FakeHttpClientModule(),
-    FakeScraperHealthMonitorModule(),
+    FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),

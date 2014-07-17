@@ -8,7 +8,7 @@ import com.keepit.common.time._
 import com.keepit.controllers.website.KeepsController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.FakeScraperHealthMonitorModule
+import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
@@ -26,7 +26,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
     FakeExternalServiceModule() ::
     FakeSearchServiceClientModule() ::
     FakeCortexServiceClientModule() ::
-    FakeScraperHealthMonitorModule() ::
+    FakeScrapeSchedulerModule() ::
     FakeShoeboxServiceModule() ::
     FakeActionAuthenticatorModule() ::
     Nil

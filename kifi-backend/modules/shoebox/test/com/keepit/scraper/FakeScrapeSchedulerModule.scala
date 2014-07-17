@@ -10,18 +10,11 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.joda.time.DateTime
 
-case class FakeScraperHealthMonitorModule(fakeArticles: Option[PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle]] = None) extends ScraperHealthMonitorModule with ScrapeSchedulerModule {
+case class FakeScrapeSchedulerModule(fakeArticles: Option[PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle]] = None) extends ScrapeSchedulerModule {
   override def configure() {}
 
   @Provides @Singleton
   def fakeScrapeScheduler(): ScrapeScheduler = new FakeScrapeScheduler(fakeArticles)
-
-  def fakeScraperHealthMonitorPlugin(): ScraperHealthMonitorPlugin = new ScraperHealthMonitorPlugin {
-    def scheduling = new SchedulingProperties {
-      def enabledOnlyForLeader = false
-      def enabled = false
-    }
-  }
 }
 
 class FakeScrapeScheduler(fakeArticles: Option[PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle]]) extends ScrapeScheduler {
