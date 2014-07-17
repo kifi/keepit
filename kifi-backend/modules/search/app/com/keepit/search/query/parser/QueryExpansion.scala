@@ -51,6 +51,7 @@ trait QueryExpansion extends QueryParser {
           val terms = phrase.getTerms()
           val booleanQuery = new BooleanQuery(false)
           terms.foreach { term => booleanQuery.add(new TermQuery(term), SHOULD) }
+          booleanQuery.add(query, SHOULD)
           booleanQuery
         case _ =>
           query
