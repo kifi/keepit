@@ -1,9 +1,13 @@
 package com.keepit.common.crypto
 
 import com.keepit.common.db.Id
+
 import play.api.libs.json._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
-import scala.util.{ Failure, Try }
+
+import org.apache.commons.codec.binary.Base64
+
+import scala.util.{ Failure, Success, Try }
 
 case class PublicIdConfiguration(key: String)
 
@@ -35,6 +39,8 @@ object PublicId {
   }
 }
 
+// TODO: Cipher must be a singleton, not re-created for every encode/decode.
+
 trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
 
   val prefix: String
@@ -42,10 +48,8 @@ trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
 
   def publicId(implicit config: PublicIdConfiguration): Try[PublicId[T]] = {
     id.map { someId =>
-      new TripleDES(config.key).encryptLongToStr(someId.id, CipherConv.Base64Conv).map { v =>
-        PublicId[T](prefix + v)
-      }
-    }.getOrElse(Failure(new IllegalStateException("No id exists")))
+      Success(PublicId[T](prefix + Base64.encodeBase64URLSafeString(Aes64BitCipher(config.key).encrypt(someId.id))))
+    }.getOrElse(Failure(new IllegalStateException("model has no id")))
   }
 
 }
@@ -58,8 +62,8 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
     val reg = raw"^$prefix(.*)$$".r
     Try {
       reg.findFirstMatchIn(publicId).map(_.group(1)).map { identifier =>
-        new TripleDES(config.key).decryptStrToLong(identifier, CipherConv.Base64Conv).map(Id[T]).toOption
-      }.flatten.get
+        Id[T](Aes64BitCipher(config.key).decrypt(Base64.decodeBase64(identifier)))
+      }.get
     }
   }
 }
