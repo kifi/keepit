@@ -62,30 +62,37 @@ class AllKeepSeedIngestionHelper @Inject() (
         state = State[CuratorKeepInfo](keep.state.value)
       ))
 
-      rawSeedsRepo.save(RawSeedItem(
-        uriId = keep.uriId,
-        userId = None,
-        firstKept = keep.createdAt,
-        lastKept = keep.createdAt,
-        lastSeen = keep.createdAt,
-        priorScore = None,
-        timesKept = if (keep.state == KeepStates.ACTIVE) 1 else 0
-      ))
+      val seedItems = rawSeedsRepo.getByUriId(keep.uriId)
+      if (seedItems.isEmpty) {
+        rawSeedsRepo.save(RawSeedItem(
+          uriId = keep.uriId,
+          userId = None,
+          firstKept = keep.createdAt,
+          lastKept = keep.createdAt,
+          lastSeen = keep.createdAt,
+          priorScore = None,
+          timesKept = if (keep.state == KeepStates.ACTIVE) 1 else 0
+        ))
+      } else {
+        seedItems.foreach { seedItem =>
+          updateRawSeedItem(seedItem, keep.uriId, keep.createdAt, if (keep.state == KeepStates.ACTIVE) 1 else 0)
+        }
+      }
 
     }
 
   }
 
   def apply(maxItems: Int): Future[Boolean] = {
-    val lastSeqNumFut: Future[SequenceNumber[Keep]] = db.readOnlyMasterAsync {
-      implicit session => systemValueRepo.getSequenceNumber(SEQ_NUM_NAME) getOrElse { SequenceNumber[Keep](0) }
+    val lastSeqNumFut: Future[SequenceNumber[Keep]] = db.readOnlyMasterAsync { implicit session =>
+      systemValueRepo.getSequenceNumber(SEQ_NUM_NAME) getOrElse { SequenceNumber[Keep](0) }
     }
 
     lastSeqNumFut.flatMap { lastSeqNum =>
       shoebox.getBookmarksChanged(lastSeqNum, maxItems).flatMap { keeps =>
         db.readWriteAsync { implicit session =>
           keeps.foreach(processKeep)
-          systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, keeps.map(_.seq).max)
+          if (keeps.length > 0) systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, keeps.map(_.seq).max)
           keeps.length >= maxItems
         }
       }
