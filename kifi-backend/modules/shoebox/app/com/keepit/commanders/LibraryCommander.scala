@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
@@ -22,6 +23,7 @@ class LibraryCommander @Inject() (
     userRepo: UserRepo,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
+    implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
   def addLibrary(libInfo: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, FullLibraryInfo] = {
@@ -51,22 +53,23 @@ class LibraryCommander @Inject() (
         val validVisibility = LibraryVisibility(libInfo.visibility)
         val validSlug = LibrarySlug(libInfo.slug)
 
-        val (libId, libExtId) = db.readWrite { implicit s =>
+        val library = db.readWrite { implicit s =>
           val lib = libraryRepo.save(Library(ownerId = ownerId, name = libInfo.name, description = libInfo.description,
             visibility = validVisibility, slug = validSlug))
           val libId = lib.id.get
           libraryMembershipRepo.save(LibraryMembership(libraryId = libId, userId = ownerId, access = LibraryAccess.OWNER))
-          (libId, lib.externalId)
+
+          lib
         }
 
-        val bulkInvites1 = for (c <- collaboratorIds) yield LibraryInvite(libraryId = libId, ownerId = ownerId, userId = c, access = LibraryAccess.READ_WRITE)
-        val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = libId, ownerId = ownerId, userId = c, access = LibraryAccess.READ_ONLY)
+        val bulkInvites1 = for (c <- collaboratorIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = c, access = LibraryAccess.READ_WRITE)
+        val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = c, access = LibraryAccess.READ_ONLY)
 
         inviteBulkUsers(bulkInvites1 ++ bulkInvites2)
 
         val groupCollabs = GroupHolder(count = collaboratorIds.length, users = collaboratorUsers, isMore = false)
         val groupFollowers = GroupHolder(count = followerIds.length, users = followerUsers, isMore = false)
-        Right(FullLibraryInfo(id = libExtId, ownerId = ownerExtId, name = libInfo.name, slug = validSlug,
+        Right(FullLibraryInfo(id = library.publicId.get, ownerId = ownerExtId, name = libInfo.name, slug = validSlug,
           visibility = validVisibility, description = libInfo.description, keepCount = 0,
           collaborators = groupCollabs, followers = groupFollowers))
       }
@@ -91,7 +94,7 @@ case class LibraryAddRequest(
   followers: Seq[ExternalId[User]])
 
 case class LibraryInfo(
-  id: ExternalId[Library],
+  id: PublicId[Library],
   name: String,
   visibility: LibraryVisibility,
   shortDescription: Option[String],
@@ -101,7 +104,7 @@ object LibraryInfo {
   implicit val libraryExternalIdFormat = ExternalId.format[Library]
 
   implicit val format = (
-    (__ \ 'id).format[ExternalId[Library]] and
+    (__ \ 'id).format[PublicId[Library]] and
     (__ \ 'name).format[String] and
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'shortDescription).formatNullable[String] and
@@ -109,9 +112,9 @@ object LibraryInfo {
     (__ \ 'ownerId).format[ExternalId[User]]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
-  def fromLibraryAndOwner(lib: Library, owner: User): LibraryInfo = {
+  def fromLibraryAndOwner(lib: Library, owner: User)(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
-      id = lib.externalId,
+      id = lib.publicId.get,
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
@@ -131,7 +134,7 @@ object GroupHolder {
 }
 
 case class FullLibraryInfo(
-  id: ExternalId[Library],
+  id: PublicId[Library],
   name: String,
   visibility: LibraryVisibility,
   description: Option[String],
@@ -143,7 +146,7 @@ case class FullLibraryInfo(
 
 object FullLibraryInfo {
   implicit val format = (
-    (__ \ 'id).format[ExternalId[Library]] and
+    (__ \ 'id).format[PublicId[Library]] and
     (__ \ 'name).format[String] and
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'description).formatNullable[String] and

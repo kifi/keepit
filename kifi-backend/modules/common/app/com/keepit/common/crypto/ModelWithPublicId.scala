@@ -40,10 +40,10 @@ trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
   val prefix: String
   val id: Option[Id[T]]
 
-  def publicId(implicit config: PublicIdConfiguration): Try[String] = {
+  def publicId(implicit config: PublicIdConfiguration): Try[PublicId[T]] = {
     id.map { someId =>
-      new TripleDES(config.key).encryptLongToStr(someId.id, CipherConv.Base64Conv).map {
-        prefix + _
+      new TripleDES(config.key).encryptLongToStr(someId.id, CipherConv.Base64Conv).map { v =>
+        PublicId[T](prefix + v)
       }
     }.getOrElse(Failure(new IllegalStateException("No id exists")))
   }

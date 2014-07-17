@@ -1,5 +1,6 @@
 import com.google.inject.Inject
 import com.keepit.commanders.{ LibraryInfoIdKey, LibraryInfoIdCache, LibraryInfo }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.model._
@@ -7,7 +8,8 @@ import com.keepit.model._
 class LibraryInfoRepo @Inject() (libraryInfoRepo: LibraryInfoRepo,
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
-    libraryInfoCache: LibraryInfoIdCache) {
+    libraryInfoCache: LibraryInfoIdCache,
+    implicit val publicIdConfig: PublicIdConfiguration) {
 
   def load(libraryId: Id[Library])(implicit session: RSession): LibraryInfo = libraryInfoCache.getOrElse(LibraryInfoIdKey(libraryId)) {
     val targetLib = libraryRepo.get(libraryId)
@@ -15,8 +17,8 @@ class LibraryInfoRepo @Inject() (libraryInfoRepo: LibraryInfoRepo,
   }
 
   def loadAll(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], LibraryInfo] = {
-    libraryInfoCache.bulkGetOrElse(libraryIds.map { LibraryInfoIdKey(_) }) { keys =>
-      keys.map { k => (k -> load(k.libraryId)) }.toMap
+    libraryInfoCache.bulkGetOrElse(libraryIds.map(LibraryInfoIdKey)) { keys =>
+      keys.map { k => k -> load(k.libraryId) }.toMap
     }.map { case (k, v) => (k.libraryId, v) }
   }
 }

@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Injector
+import com.keepit.common.crypto.TestCryptoModule
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.time._
 import com.keepit.model._
@@ -27,7 +28,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
   "LibraryCommander" should {
     "create libraries, memberships & invites" in {
-      withDb() { implicit injector =>
+      withDb(TestCryptoModule()) { implicit injector =>
         val (userIron, userCaptain, userAgent, userHulk) = setup()
         val t1 = new DateTime(2014, 7, 11, 1, 10, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val t2 = new DateTime(2014, 7, 12, 2, 20, 0, 0, DEFAULT_DATE_TIME_ZONE)
