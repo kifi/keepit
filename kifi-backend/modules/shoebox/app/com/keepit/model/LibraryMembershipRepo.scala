@@ -19,11 +19,11 @@ class LibraryMembershipRepoImpl @Inject() (
   import scala.slick.lifted.Query
   import DBSession._
   import db.Driver.simple._
-  private val sequence = db.getSequence[LibraryMembership]("library_member_sequence")
+  private val sequence = db.getSequence[LibraryMembership]("library_membership_sequence")
 
   type RepoImpl = LibraryMemberTable
 
-  class LibraryMemberTable(tag: Tag) extends RepoTable[LibraryMembership](db, tag, "library_member") with SeqNumberColumn[LibraryMembership] {
+  class LibraryMemberTable(tag: Tag) extends RepoTable[LibraryMembership](db, tag, "library_membership") with SeqNumberColumn[LibraryMembership] {
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.Nullable)
     def access = column[LibraryAccess]("access", O.NotNull)

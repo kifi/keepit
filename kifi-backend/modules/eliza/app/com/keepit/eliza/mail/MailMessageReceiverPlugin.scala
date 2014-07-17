@@ -16,8 +16,6 @@ import com.keepit.common.mail.GenericMailParser
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import com.keepit.common.crypto.PublicIdConfiguration
-import scala.Some
 import com.kifi.franz.SQSQueue
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.matching.Regex
@@ -89,8 +87,7 @@ class MailDiscussionReceiverActor @Inject() (
 class MailDiscussionMessageParser @Inject() (
     db: Database,
     settings: MailDiscussionServerSettings,
-    airbrake: AirbrakeNotifier,
-    implicit val publicIdConfiguration: PublicIdConfiguration) extends GenericMailParser with Logging {
+    airbrake: AirbrakeNotifier) extends GenericMailParser with Logging {
 
   private val DiscussionEmail = raw"""^${settings.identifier}\+(\w+)@[\w\.]+$$""".r
 

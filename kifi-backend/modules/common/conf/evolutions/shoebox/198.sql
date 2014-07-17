@@ -1,18 +1,32 @@
-# CURATOR
+# SHOEBOX
 
 # --- !Ups
 
-CREATE TABLE IF NOT EXISTS system_value (
-    id bigint(20) NOT NULL AUTO_INCREMENT,
-    name varchar(64) NOT NULL,
-    value TEXT NOT NULL,
-    state VARCHAR(20) NOT NULL,
-    created_at datetime NOT NULL,
-    updated_at datetime NOT NULL,
-    PRIMARY KEY (id),
-    UNIQUE INDEX system_value_name (name)
-);
+ALTER TABLE bookmark ADD COLUMN library_id bigint(20) NULL;
 
-insert into evolutions (name, description) values('198.sql', 'adding system_value table to curator');
+-- ALTER TABLE bookmark ADD CONSTRAINT bookmark_f_library_id FOREIGN KEY (library_id) REFERENCES library(id);
+
+-- ALTER TABLE bookmark ADD INDEX bookmark_i_library_id (library_id);
+
+
+ALTER TABLE user ADD COLUMN username varchar(64) NULL;
+
+ALTER TABLE user ADD INDEX user_i_username (username);
+
+
+
+ALTER TABLE library ADD COLUMN seq bigint(20) NOT NULL;
+
+ALTER TABLE library ADD INDEX library_i_seq (seq);
+
+
+ALTER TABLE library_member RENAME TO library_membership;
+
+ALTER TABLE library_membership ADD COLUMN seq bigint(20) NOT NULL;
+
+ALTER TABLE library_membership ADD INDEX library_membership_i_seq (seq);
+
+
+insert into evolutions (name, description) values('198.sql', 'library_id column, username, seqs, lots of indexes');
 
 # --- !Downs

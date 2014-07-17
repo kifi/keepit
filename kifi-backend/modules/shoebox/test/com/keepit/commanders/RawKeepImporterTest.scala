@@ -8,7 +8,7 @@ import com.keepit.model.{ RawKeepFactory, KeepSource, User }
 import play.api.libs.json.Json
 import akka.testkit.{ TestActorRef, TestKit }
 import play.api.test.Helpers._
-import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
 import com.keepit.shoebox.{ TestShoeboxServiceClientModule, KeepImportsModule, FakeKeepImportsModule }
 import com.keepit.common.actor.{ ActorBuilder, TestActorSystemModule }
 import com.keepit.search.TestSearchServiceClientModule
@@ -52,6 +52,7 @@ class RawKeepImporterTest extends TestKit(ActorSystem()) with SpecificationLike 
           userRepo.get(user.id.get) === user
           val bookmarks = keepRepo.all
           val oneUrl = bookmarks.find(_.url == "http://www.findsounds.com/types.html")
+          println(bookmarks)
           oneUrl.size === 1
           val bm = oneUrl.head
           bm.userId === user.id.get

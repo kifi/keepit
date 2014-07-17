@@ -43,7 +43,8 @@ case class KeepInfo(
   uriSummary: Option[URISummary] = None,
   siteName: Option[String] = None,
   clickCount: Option[Int] = None,
-  rekeepCount: Option[Int] = None)
+  rekeepCount: Option[Int] = None,
+  libraryId: Option[ExternalId[Library]] = None)
 
 object KeepInfo {
 
@@ -60,7 +61,8 @@ object KeepInfo {
     (__ \ 'summary).formatNullable[URISummary] and
     (__ \ 'siteName).formatNullable[String] and
     (__ \ 'clickCount).formatNullable[Int] and
-    (__ \ 'rekeepCount).formatNullable[Int]
+    (__ \ 'rekeepCount).formatNullable[Int] and
+    (__ \ 'libraryId).formatNullable(ExternalId.format[Library])
   )(KeepInfo.apply _, unlift(KeepInfo.unapply))
 
   def fromFullKeepInfo(info: FullKeepInfo, sanitize: Boolean = false) = {
@@ -77,12 +79,13 @@ object KeepInfo {
       info.uriSummary,
       info.siteName,
       info.clickCount,
-      info.rekeepCount
+      info.rekeepCount,
+      None // todo(andrew): Add library external id
     )
   }
 
   def fromBookmark(bookmark: Keep): KeepInfo = {
-    KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate)
+    KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate, libraryId = None) // todo(andrew): Add library external id
   }
 }
 
@@ -95,7 +98,8 @@ case class FullKeepInfo(
   siteName: Option[String] = None,
   uriSummary: Option[URISummary] = None,
   clickCount: Option[Int] = None,
-  rekeepCount: Option[Int] = None)
+  rekeepCount: Option[Int] = None,
+  libraryId: Option[ExternalId[Library]] = None)
 
 case class KeepInfosWithCollection(
   collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[KeepInfo])

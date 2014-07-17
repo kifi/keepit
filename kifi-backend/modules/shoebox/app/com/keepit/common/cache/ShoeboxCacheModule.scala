@@ -10,7 +10,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.typeahead.socialusers.{ KifiUserTypeaheadCache, SocialUserTypeaheadCache }
-import com.keepit.commanders.BasicCollectionByIdCache
+import com.keepit.commanders.{ LibraryInfoIdCache, BasicCollectionByIdCache }
 import com.keepit.graph.model.{ ConnectedUriScoreCache, ConnectedUserScoreCache }
 
 case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
@@ -269,11 +269,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
-  def libraryExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new LibraryExternalIdCache(stats, accessLog, (outerRepo, 10 days))
-
-  @Singleton
-  @Provides
   def libraryIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new LibraryIdCache(stats, accessLog, (outerRepo, 10 days))
 
@@ -286,6 +281,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def libraryInviteIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new LibraryInviteIdCache(stats, accessLog, (outerRepo, 10 days))
+
+  @Singleton
+  @Provides
+  def libraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new LibraryInfoIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
   @Singleton
   @Provides

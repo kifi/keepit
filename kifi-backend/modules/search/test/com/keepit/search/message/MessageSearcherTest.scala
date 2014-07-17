@@ -5,7 +5,7 @@ import com.keepit.social.BasicUser
 import com.keepit.common.db.{ Id, ExternalId, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
-import com.keepit.model.User
+import com.keepit.model.{ Username, User }
 import com.keepit.search.index.{ DefaultAnalyzer, Indexable, VolatileIndexDirectory }
 import com.keepit.search.Lang
 import com.keepit.eliza.FakeElizaServiceClientImpl
@@ -23,9 +23,9 @@ class MessageSearcherTest extends Specification with TestInjector {
 
   def setupIndexer()(implicit injector: Injector) = {
 
-    val user1 = BasicUser(ExternalId(), "Mr", "Spock", "0.jpg")
-    val user2 = BasicUser(ExternalId(), "James", "Kirk", "0.jpg")
-    val user3 = BasicUser(ExternalId(), "Jean-Luc", "Picard", "0.jpg")
+    val user1 = BasicUser(ExternalId(), "Mr", "Spock", "0.jpg", Some(Username("spockizle")))
+    val user2 = BasicUser(ExternalId(), "James", "Kirk", "0.jpg", Some(Username("lilkirk")))
+    val user3 = BasicUser(ExternalId(), "Jean-Luc", "Picard", "0.jpg", Some(Username("picboyy")))
 
     val thread1 = ThreadContent(
       mode = FULL,

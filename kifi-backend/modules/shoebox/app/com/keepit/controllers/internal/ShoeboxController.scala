@@ -66,7 +66,7 @@ class ShoeboxController @Inject() (
   socialGraphPlugin: SocialGraphPlugin,
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   scraperHelper: ScraperCallbackHelper,
-  scrapeScheduler: ScrapeSchedulerPlugin,
+  scrapeScheduler: ScrapeScheduler,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache,
   latestKeepUrlCache: LatestKeepUrlCache)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)

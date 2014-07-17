@@ -93,10 +93,10 @@ class GraphController @Inject() (
   private def collectNeighbors(vertexReader: GlobalVertexReader)(vertexId: VertexId, neighborKinds: Set[VertexType]): Set[VertexId] = {
     vertexReader.moveTo(vertexId)
     val neighbors = mutable.Set[VertexId]()
-    while (vertexReader.edgeReader.moveToNextComponent()) {
-      val (destinationKind, _) = vertexReader.edgeReader.component
+    while (vertexReader.outgoingEdgeReader.moveToNextComponent()) {
+      val (_, destinationKind, _) = vertexReader.outgoingEdgeReader.component
       if (neighborKinds.contains(destinationKind)) {
-        while (vertexReader.edgeReader.moveToNextEdge()) { neighbors += vertexReader.edgeReader.destination }
+        while (vertexReader.outgoingEdgeReader.moveToNextEdge()) { neighbors += vertexReader.outgoingEdgeReader.destination }
       }
     }
     neighbors.toSet

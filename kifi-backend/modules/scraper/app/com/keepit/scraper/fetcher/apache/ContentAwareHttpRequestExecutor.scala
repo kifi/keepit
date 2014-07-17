@@ -1,4 +1,4 @@
-package com.keepit.scraper.fetcher
+package com.keepit.scraper.fetcher.apache
 
 import com.keepit.common.logging.Logging
 import org.apache.http.protocol.HttpRequestExecutor

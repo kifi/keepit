@@ -9,7 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.scraper.ScrapeSchedulerPlugin
+import com.keepit.scraper.ScrapeScheduler
 
 class OrphanCleaner @Inject() (
     db: Database,
@@ -17,7 +17,7 @@ class OrphanCleaner @Inject() (
     renormalizedURLRepo: RenormalizedURLRepo,
     nuriRepo: NormalizedURIRepo,
     scrapeInfoRepo: ScrapeInfoRepo,
-    scraper: ScrapeSchedulerPlugin,
+    scraper: ScrapeScheduler,
     keepRepo: KeepRepo,
     bookmarkInterner: KeepInterner,
     centralConfig: CentralConfig,
