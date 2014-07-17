@@ -465,9 +465,9 @@ class AdminUserController @Inject() (
 
   def changeUsersName(userId: Id[User]) = AdminHtmlAction.authenticated { request =>
     db.readWrite { implicit session =>
-      val user = userRepo.get(userId)
-      val first = request.body.asFormUrlEncoded.get.apply("first").headOption.map(_.trim).getOrElse(user.firstName)
-      val last = request.body.asFormUrlEncoded.get.apply("last").headOption.map(_.trim).getOrElse(user.lastName)
+      val user = userRepo.getNoCache(userId)
+      val first = request.body.asFormUrlEncoded.map(_.apply("first").headOption.map(_.trim)).flatten.getOrElse(user.firstName)
+      val last = request.body.asFormUrlEncoded.map(_.apply("last").headOption.map(_.trim)).flatten.getOrElse(user.lastName)
       userRepo.save(user.copy(firstName = first, lastName = last))
       Ok
     }
