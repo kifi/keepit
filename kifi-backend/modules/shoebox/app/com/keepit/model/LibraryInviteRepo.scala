@@ -1,13 +1,17 @@
 package com.keepit.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.{ State, ExternalId, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[LibraryInviteRepoImpl])
-trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryInvite] with SeqNumberFunction[LibraryInvite]
+trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryInvite] with SeqNumberFunction[LibraryInvite] {
+  def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
+
+}
 
 @Singleton
 class LibraryInviteRepoImpl @Inject() (
@@ -39,6 +43,10 @@ class LibraryInviteRepoImpl @Inject() (
     inviteIdCache.getOrElse(LibraryInviteIdKey(id)) {
       getCompiled(id).first
     }
+  }
+
+  def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
+    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).list
   }
 
   override def deleteCache(libInv: LibraryInvite)(implicit session: RSession): Unit = {

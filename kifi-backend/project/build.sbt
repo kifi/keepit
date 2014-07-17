@@ -3,5 +3,3 @@ libraryDependencies ++= Seq(
   "org.joda" % "joda-convert" % "1.3" % "compile"
 )
 
-
-

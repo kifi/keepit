@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Injector
-import com.keepit.common.crypto.TestCryptoModule
+import com.keepit.common.crypto.{ PublicIdConfiguration, TestCryptoModule }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.time._
 import com.keepit.model._
@@ -15,7 +15,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
   def modules = FakeScrapeSchedulerModule() :: FakeSearchServiceClientModule() :: Nil
 
-  def setup()(implicit injector: Injector) = {
+  def setupUsers()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 7, 4, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
     db.readWrite { implicit s =>
       val userIron = userRepo.save(User(firstName = "Tony", lastName = "Stark", createdAt = t1))
@@ -26,13 +26,28 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
   }
 
+  def setupLibraries(userIron: User, userCaptain: User, userAgent: User, userHulk: User)(implicit injector: Injector) = {
+    val t1 = new DateTime(2014, 8, 1, 1, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+    db.readWrite { implicit s =>
+      val libShield = libraryRepo.save(Library(name = "Avengers Missions", slug = LibrarySlug("avengers"),
+        visibility = LibraryVisibility.SECRET, ownerId = userAgent.id.get))
+      val libMurica = libraryRepo.save(Library(name = "MURICA", slug = LibrarySlug("murica"),
+        visibility = LibraryVisibility.ANYONE, ownerId = userAgent.id.get))
+      val libScience = libraryRepo.save(Library(name = "Science & Stuff", slug = LibrarySlug("science"),
+        visibility = LibraryVisibility.LIMITED, ownerId = userAgent.id.get))
+
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = userAgent.id.get, access = LibraryAccess.OWNER))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libScience.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER))
+
+      (libShield, libMurica, libScience)
+    }
+  }
+
   "LibraryCommander" should {
     "create libraries, memberships & invites" in {
       withDb(TestCryptoModule()) { implicit injector =>
-        val (userIron, userCaptain, userAgent, userHulk) = setup()
-        val t1 = new DateTime(2014, 7, 11, 1, 10, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val t2 = new DateTime(2014, 7, 12, 2, 20, 0, 0, DEFAULT_DATE_TIME_ZONE)
-        val t3 = new DateTime(2014, 7, 13, 3, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val (userIron, userCaptain, userAgent, userHulk) = setupUsers()
 
         db.readOnlyMaster { implicit s =>
           libraryRepo.count === 0
@@ -43,25 +58,26 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val inv3: Seq[ExternalId[User]] = userHulk.externalId :: Nil
 
         val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers",
-          visibility = LibraryVisibility.SECRET.value, collaborators = noInvites, followers = noInvites)
+          visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
 
         val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica",
-          visibility = LibraryVisibility.ANYONE.value, collaborators = noInvites, followers = inv2)
+          visibility = LibraryVisibility.ANYONE, collaborators = noInvites, followers = inv2)
 
         val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science",
-          visibility = LibraryVisibility.LIMITED.value, collaborators = inv3, followers = noInvites)
+          visibility = LibraryVisibility.LIMITED, collaborators = inv3, followers = noInvites)
 
         val lib4Request = LibraryAddRequest(name = "Overlapped Invitees", slug = "overlap",
-          visibility = LibraryVisibility.LIMITED.value, collaborators = inv2, followers = inv3)
+          visibility = LibraryVisibility.LIMITED, collaborators = inv2, followers = inv3)
 
-        val add1 = inject[LibraryCommander].addLibrary(lib1Request, userAgent.id.get)
-        add1.isRight === true
-        val add2 = inject[LibraryCommander].addLibrary(lib2Request, userCaptain.id.get)
-        add2.isRight === true
-        val add3 = inject[LibraryCommander].addLibrary(lib3Request, userIron.id.get)
-        add3.isRight === true
-        val add4 = inject[LibraryCommander].addLibrary(lib4Request, userIron.id.get)
-        add4.isRight === false
+        val lib5Request = LibraryAddRequest(name = "Invalid Param", slug = "",
+          visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
+
+        val libraryCommander = inject[LibraryCommander]
+        libraryCommander.addLibrary(lib1Request, userAgent.id.get).isRight === true
+        libraryCommander.addLibrary(lib2Request, userCaptain.id.get).isRight === true
+        libraryCommander.addLibrary(lib3Request, userIron.id.get).isRight === true
+        libraryCommander.addLibrary(lib4Request, userIron.id.get).isRight === false
+        libraryCommander.addLibrary(lib5Request, userIron.id.get).isRight === false
 
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all
@@ -85,6 +101,50 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         }
       }
 
+    }
+
+    "modify library" in {
+      withDb(TestCryptoModule()) { implicit injector =>
+        val (userIron, userCaptain, userAgent, userHulk) = setupUsers()
+        val (libShield, libMurica, libScience) = setupLibraries(userIron, userCaptain, userAgent, userHulk)
+
+        implicit val config = inject[PublicIdConfiguration]
+
+        db.readOnlyMaster { implicit s =>
+          val allLibs = libraryRepo.all
+          allLibs.length === 3
+          allLibs.map(_.name) === Seq("Avengers Missions", "MURICA", "Science & Stuff")
+          allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
+          allLibs.map(_.description) === Seq(None, None, None)
+          allLibs.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.ANYONE, LibraryVisibility.LIMITED)
+        }
+
+        val libraryCommander = inject[LibraryCommander]
+        val mod1 = libraryCommander.modifyLibrary(libraryId = libShield.publicId.get, userId = userAgent.externalId,
+          description = Some("Samuel L. Jackson was here"))
+        mod1.isRight === true
+        val mod2 = libraryCommander.modifyLibrary(libraryId = libMurica.publicId.get, userId = userCaptain.externalId,
+          name = Some("MURICA #1!!!!!"), slug = Some("murica_#1"))
+        mod2.isRight === true
+        val mod3 = libraryCommander.modifyLibrary(libraryId = libScience.publicId.get, userId = userIron.externalId,
+          visibility = Some(LibraryVisibility.ANYONE))
+        mod3.isRight === true
+        val mod4 = libraryCommander.modifyLibrary(libraryId = libScience.publicId.get, userId = userHulk.externalId,
+          name = Some("HULK SMASH"))
+        mod4.isRight === false
+        val mod5 = libraryCommander.modifyLibrary(libraryId = libScience.publicId.get, userId = userIron.externalId,
+          name = Some(""))
+        mod5.isRight === false
+
+        db.readOnlyMaster { implicit s =>
+          val allLibs = libraryRepo.all
+          allLibs.length === 3
+          allLibs.map(_.name) === Seq("Avengers Missions", "MURICA #1!!!!!", "Science & Stuff")
+          allLibs.map(_.slug.value) === Seq("avengers", "murica_#1", "science")
+          allLibs.map(_.description) === Seq(Some("Samuel L. Jackson was here"), None, None)
+          allLibs.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.ANYONE, LibraryVisibility.ANYONE)
+        }
+      }
     }
   }
 }

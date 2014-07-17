@@ -1,6 +1,7 @@
 package com.keepit.common.crypto
 
 import com.keepit.common.db.Id
+import com.google.common.io.BaseEncoding
 
 import play.api.libs.json._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
@@ -39,6 +40,8 @@ object PublicId {
 
     override def unbind(key: String, id: PublicId[T]): String = id.toString
   }
+
+  private[crypto] val coder = BaseEncoding.base32().lowerCase().omitPadding()
 }
 
 // TODO: Cipher must be a singleton, not re-created for every encode/decode.
@@ -60,10 +63,10 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
 
   val prefix: String
 
-  def decode(publicId: String)(implicit config: PublicIdConfiguration): Try[Id[T]] = {
+  def decode(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
     val reg = raw"^$prefix(.*)$$".r
     Try {
-      reg.findFirstMatchIn(publicId).map(_.group(1)).map { identifier =>
+      reg.findFirstMatchIn(publicId.id).map(_.group(1)).map { identifier =>
         Id[T](config.aes64bit.decrypt(Base64.decodeBase64(identifier)))
       }.get
     }
