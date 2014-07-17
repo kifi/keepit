@@ -288,7 +288,7 @@ class TypeaheadCommander @Inject() (
     socialF: Future[Seq[TypeaheadHit[SocialUserBasicInfo]]],
     kifiF: Future[Seq[TypeaheadHit[User]]],
     abookF: Future[Seq[TypeaheadHit[RichContact]]],
-    nfUsersF: Future[Seq[TypeaheadUserHit]],
+    nfUsersF: Future[Seq[TypeaheadHit[TypeaheadUserHit]]],
     limit: Int): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {
     val zHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])] // can use minHeap
     socialF flatMap { socialRes =>
