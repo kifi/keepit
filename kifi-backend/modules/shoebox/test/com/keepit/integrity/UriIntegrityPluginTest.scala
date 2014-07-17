@@ -10,7 +10,7 @@ import com.google.inject.Injector
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ SequenceNumber, Id }
-import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.scraper.FakeScraperHealthMonitorModule
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 
@@ -18,7 +18,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
   "uri integrity plugin" should {
     "work" in {
-      running(new ShoeboxApplication(TestActorSystemModule(), FakeScrapeSchedulerModule(), FakeAirbrakeModule())) {
+      running(new ShoeboxApplication(TestActorSystemModule(), FakeScraperHealthMonitorModule(), FakeAirbrakeModule())) {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
@@ -107,7 +107,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
     "handle collections correctly when migrating bookmarks" in {
 
-      running(new ShoeboxApplication(TestActorSystemModule(), FakeScrapeSchedulerModule(), FakeAirbrakeModule())) {
+      running(new ShoeboxApplication(TestActorSystemModule(), FakeScraperHealthMonitorModule(), FakeAirbrakeModule())) {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]

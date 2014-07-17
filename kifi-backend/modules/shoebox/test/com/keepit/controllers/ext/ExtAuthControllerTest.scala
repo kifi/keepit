@@ -25,7 +25,7 @@ import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.TestMailModule
 import com.keepit.search.TestSearchServiceClientModule
-import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScraperHealthMonitorModule }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 
@@ -33,7 +33,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
 
   def requiredModules = Seq(
     TestSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
+    FakeScraperHealthMonitorModule(),
     FakeShoeboxSecureSocialModule(),
     ShoeboxFakeStoreModule(),
     FakeHttpClientModule(),

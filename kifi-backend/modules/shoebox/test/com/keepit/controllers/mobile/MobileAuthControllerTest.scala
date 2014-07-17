@@ -14,7 +14,7 @@ import play.api.test._
 import play.api.test.Helpers._
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScraperHealthMonitorModule }
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -30,7 +30,7 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
-    FakeScrapeSchedulerModule(),
+    FakeScraperHealthMonitorModule(),
     ShoeboxFakeStoreModule(),
     TestActorSystemModule(),
     FakeAirbrakeModule(),
