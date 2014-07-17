@@ -1,7 +1,7 @@
-package com.keepit.scraper
+package com.keepit.scraper.fetcher.apache
 
-import org.apache.http.conn.ssl.{ SSLConnectionSocketFactory, SSLContexts, TrustStrategy }
 import java.security.cert.X509Certificate
+import org.apache.http.conn.ssl.{ SSLConnectionSocketFactory, SSLContexts, TrustStrategy }
 
 object UnsafeSSLSocketFactory {
   private val trustStrategy = new TrustStrategy {
