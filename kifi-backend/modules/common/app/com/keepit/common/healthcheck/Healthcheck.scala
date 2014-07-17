@@ -79,7 +79,7 @@ class SendHealthcheckMail(history: AirbrakeErrorHistory, host: HealthcheckHost, 
 class SendOutOfDateMail(sender: MailSender, services: FortyTwoServices) {
   def sendMail() {
     val subject = s"${services.currentService} out of date for 3 days"
-    val body = s"empty"
+    val body = ""
     sender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
       subject = subject, htmlBody = body, category = NotificationCategory.System.HEALTHCHECK))
   }
@@ -138,6 +138,7 @@ class HealthcheckActor @Inject() (
       val lastCompilationDate: DateTime = services.compilationTime
       val betweenDays = Days.daysBetween(currentDate, lastCompilationDate).getDays
       if (betweenDays >= 3) {
+        log.info(s"service out of the date for 3 days.")
         new SendOutOfDateMail(emailSender, services).sendMail()
       }
     case m => throw new UnsupportedActorMessage(m)
@@ -173,7 +174,6 @@ class HealthcheckPluginImpl @Inject() (
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 30 minutes, actor.ref, ReportErrorsAction)
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 60 minutes, actor.ref, CheckDiskSpace)
     scheduleTaskOnAllMachines(actor.system, 3 days, 1 days, actor.ref, CheckUpdateStatusOfService)
-
   }
 
   def errorCount(): Int = Await.result((actor.ref ? ErrorCount).mapTo[Int], 1 seconds)
