@@ -9,7 +9,9 @@ import org.apache.commons.codec.binary.Base64
 
 import scala.util.{ Failure, Success, Try }
 
-case class PublicIdConfiguration(key: String)
+case class PublicIdConfiguration(key: String) {
+  lazy val aes64bit = Aes64BitCipher(key)
+}
 
 case class PublicId[T <: ModelWithPublicId[T]](id: String)
 
@@ -48,7 +50,7 @@ trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
 
   def publicId(implicit config: PublicIdConfiguration): Try[PublicId[T]] = {
     id.map { someId =>
-      Success(PublicId[T](prefix + Base64.encodeBase64URLSafeString(Aes64BitCipher(config.key).encrypt(someId.id))))
+      Try(PublicId[T](prefix + Base64.encodeBase64URLSafeString(config.aes64bit.encrypt(someId.id))))
     }.getOrElse(Failure(new IllegalStateException("model has no id")))
   }
 

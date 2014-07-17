@@ -16,11 +16,9 @@ class LibraryController @Inject() (
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def addLibrary() = JsonAction.authenticatedParseJson { request =>
-    val addReq = request.body.as[LibraryAddRequest]
-    val libRequest = LibraryAddRequest(name = addReq.name, visibility = addReq.visibility,
-      description = addReq.description, slug = addReq.slug, collaborators = addReq.collaborators, followers = addReq.followers)
+    val addRequest = request.body.as[LibraryAddRequest]
 
-    libraryCommander.addLibrary(libRequest, request.userId) match {
+    libraryCommander.addLibrary(addRequest, request.userId) match {
       case Left(LibraryFail(message)) => BadRequest(Json.obj("error" -> message))
       case Right(newLibrary) => Ok(Json.toJson(newLibrary))
     }

@@ -57,32 +57,27 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val inv2: Seq[ExternalId[User]] = userIron.externalId :: userAgent.externalId :: userHulk.externalId :: Nil
         val inv3: Seq[ExternalId[User]] = userHulk.externalId :: Nil
 
-        val lib1Request = LibraryAddRequest(name = Some("Avengers Missions"), slug = Some("avengers"),
-          visibility = Some(LibraryVisibility.SECRET), collaborators = noInvites, followers = noInvites)
+        val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers",
+          visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
 
-        val lib2Request = LibraryAddRequest(name = Some("MURICA"), slug = Some("murica"),
-          visibility = Some(LibraryVisibility.ANYONE), collaborators = noInvites, followers = inv2)
+        val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica",
+          visibility = LibraryVisibility.ANYONE, collaborators = noInvites, followers = inv2)
 
-        val lib3Request = LibraryAddRequest(name = Some("Science and Stuff"), slug = Some("science"),
-          visibility = Some(LibraryVisibility.LIMITED), collaborators = inv3, followers = noInvites)
+        val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science",
+          visibility = LibraryVisibility.LIMITED, collaborators = inv3, followers = noInvites)
 
-        val lib4Request = LibraryAddRequest(name = Some("Overlapped Invitees"), slug = Some("overlap"),
-          visibility = Some(LibraryVisibility.LIMITED), collaborators = inv2, followers = inv3)
+        val lib4Request = LibraryAddRequest(name = "Overlapped Invitees", slug = "overlap",
+          visibility = LibraryVisibility.LIMITED, collaborators = inv2, followers = inv3)
 
-        val lib5Request = LibraryAddRequest(name = Some("Invalid Param"), slug = Some(""),
-          visibility = Some(LibraryVisibility.SECRET), collaborators = noInvites, followers = noInvites)
+        val lib5Request = LibraryAddRequest(name = "Invalid Param", slug = "",
+          visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
 
         val libraryCommander = inject[LibraryCommander]
-        val add1 = libraryCommander.addLibrary(lib1Request, userAgent.id.get)
-        add1.isRight === true
-        val add2 = libraryCommander.addLibrary(lib2Request, userCaptain.id.get)
-        add2.isRight === true
-        val add3 = libraryCommander.addLibrary(lib3Request, userIron.id.get)
-        add3.isRight === true
-        val add4 = libraryCommander.addLibrary(lib4Request, userIron.id.get)
-        add4.isRight === false
-        val add5 = libraryCommander.addLibrary(lib5Request, userIron.id.get)
-        add5.isRight === false
+        libraryCommander.addLibrary(lib1Request, userAgent.id.get).isRight === true
+        libraryCommander.addLibrary(lib2Request, userCaptain.id.get).isRight === true
+        libraryCommander.addLibrary(lib3Request, userIron.id.get).isRight === true
+        libraryCommander.addLibrary(lib4Request, userIron.id.get).isRight === false
+        libraryCommander.addLibrary(lib5Request, userIron.id.get).isRight === false
 
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all
@@ -121,25 +116,25 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           allLibs.map(_.name) === Seq("Avengers Missions", "MURICA", "Science & Stuff")
           allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
           allLibs.map(_.description) === Seq(None, None, None)
+          allLibs.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.ANYONE, LibraryVisibility.LIMITED)
         }
 
         val libraryCommander = inject[LibraryCommander]
-        val modifyReq1 = LibraryAddRequest(name = None, slug = None, description = Some("Samuel L. Jackson was here"),
-          visibility = None, collaborators = Seq.empty, followers = Seq.empty)
-        val modifyReq2 = LibraryAddRequest(name = Some("MURICA #1!!!!!"), slug = Some("murica_#1"), description = None,
-          visibility = None, collaborators = Seq.empty, followers = Seq.empty)
-        val modifyReq3 = LibraryAddRequest(name = None, slug = None, description = None,
-          visibility = Some(LibraryVisibility.ANYONE), collaborators = Seq.empty, followers = Seq.empty)
-        val badReq4 = LibraryAddRequest(name = Some("HULK SMASH"), slug = None, description = None,
-          visibility = None, collaborators = Seq.empty, followers = Seq.empty)
-        val badReq5 = LibraryAddRequest(name = Some(""), slug = None, description = None,
-          visibility = None, collaborators = Seq.empty, followers = Seq.empty)
-
-        libraryCommander.modifyLibrary(libraryId = libShield.publicId.get, libInfo = modifyReq1, userId = userAgent.externalId).isRight === true
-        libraryCommander.modifyLibrary(libraryId = libMurica.publicId.get, libInfo = modifyReq2, userId = userCaptain.externalId).isRight === true
-        libraryCommander.modifyLibrary(libraryId = libScience.publicId.get, libInfo = modifyReq3, userId = userIron.externalId).isRight === true
-        libraryCommander.modifyLibrary(libraryId = libScience.publicId.get, libInfo = badReq4, userId = userHulk.externalId).isRight === false
-        libraryCommander.modifyLibrary(libraryId = libScience.publicId.get, libInfo = badReq5, userId = userIron.externalId).isRight === false
+        val mod1 = libraryCommander.modifyLibrary(libraryId = libShield.publicId.get, userId = userAgent.externalId,
+          description = Some("Samuel L. Jackson was here"))
+        mod1.isRight === true
+        val mod2 = libraryCommander.modifyLibrary(libraryId = libMurica.publicId.get, userId = userCaptain.externalId,
+          name = Some("MURICA #1!!!!!"), slug = Some("murica_#1"))
+        mod2.isRight === true
+        val mod3 = libraryCommander.modifyLibrary(libraryId = libScience.publicId.get, userId = userIron.externalId,
+          visibility = Some(LibraryVisibility.ANYONE))
+        mod3.isRight === true
+        val mod4 = libraryCommander.modifyLibrary(libraryId = libScience.publicId.get, userId = userHulk.externalId,
+          name = Some("HULK SMASH"))
+        mod4.isRight === false
+        val mod5 = libraryCommander.modifyLibrary(libraryId = libScience.publicId.get, userId = userIron.externalId,
+          name = Some(""))
+        mod5.isRight === false
 
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all
@@ -147,6 +142,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           allLibs.map(_.name) === Seq("Avengers Missions", "MURICA #1!!!!!", "Science & Stuff")
           allLibs.map(_.slug.value) === Seq("avengers", "murica_#1", "science")
           allLibs.map(_.description) === Seq(Some("Samuel L. Jackson was here"), None, None)
+          allLibs.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.ANYONE, LibraryVisibility.ANYONE)
         }
       }
     }
