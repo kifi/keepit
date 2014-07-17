@@ -36,7 +36,7 @@ case class BasicSearchContext(
   filterByTime: Option[String],
   maxResults: Option[Int],
   kifiResults: Int,
-  kifiExpanded: Boolean,
+  kifiExpanded: Option[Boolean],
   kifiTime: Option[Int],
   kifiShownTime: Option[Int],
   thirdPartyShownTime: Option[Int],
@@ -55,7 +55,7 @@ object BasicSearchContext {
     (__ \\ 'when).readNullable[String].fmap(filterByTime) and
     (__ \ 'maxResults).readNullable[Int] and
     (__ \ 'kifiResults).read[Int] and
-    ((__ \ 'kifiExpanded).read[Boolean] orElse (__ \ 'kifiCollapsed).read[Boolean].fmap(!_)) and
+    (__ \ 'kifiExpanded).readNullable[Boolean] and
     (__ \ 'kifiTime).readNullable[Int] and
     (__ \ 'kifiShownTime).readNullable[Int] and
     (__ \ 'thirdPartyShownTime).readNullable[Int] and
@@ -247,9 +247,11 @@ class SearchAnalytics @Inject() (
 
       // Kifi Performance
 
-      contextBuilder += ("kifiExpanded", searchContext.kifiExpanded)
       contextBuilder += ("kifiRelevant", initialSearchResult.toShow)
-      contextBuilder += ("kifiLate", initialSearchResult.toShow && !searchContext.kifiExpanded)
+      searchContext.kifiExpanded.foreach { kifiExpanded =>
+        contextBuilder += ("kifiExpanded", kifiExpanded)
+        contextBuilder += ("kifiLate", initialSearchResult.toShow && !kifiExpanded)
+      }
       contextBuilder += ("kifiProcessingTime", initialSearchResult.millisPassed)
       searchContext.kifiTime.foreach { kifiLatency => contextBuilder += ("kifiLatency", kifiLatency) }
       searchContext.kifiShownTime.foreach { kifiShown => contextBuilder += ("kifiShownTime", kifiShown) }
