@@ -11,7 +11,6 @@ import scala.util.{ Success, Failure, Try }
 case class PublicIdConfiguration(key: String) {
   private val cache = TrieMap.empty[IvParameterSpec, Aes64BitCipher]
   def aes64bit(iv: IvParameterSpec) = cache.getOrElseUpdate(iv, {
-    println("Creating!")
     Aes64BitCipher(key, iv)
   })
 }
