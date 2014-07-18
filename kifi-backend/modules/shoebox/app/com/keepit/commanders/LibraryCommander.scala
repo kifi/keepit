@@ -161,18 +161,11 @@ class LibraryCommander @Inject() (
       ownerId = owner.externalId, collaborators = groupCollabs, followers = groupFollows, keepCount = numKeeps)
   }
 
-  def getLibrariesByUser(userId: Id[User]): Seq[(Library, LibraryAccess)] = {
-    val libs = db.readOnlyMaster { implicit s =>
+  def getLibrariesByUser(userId: Id[User]): Seq[(LibraryAccess, Library)] = {
+    db.readOnlyMaster { implicit s =>
       val uId = userRepo.get(userId).id.get
-      val libMems = libraryMembershipRepo.getWithUserId(uId)
-
-      for (m <- libMems) yield {
-        val lib = libraryRepo.get(m.libraryId)
-        val owner = basicUserRepo.load(lib.ownerId)
-        (lib, m.access)
-      }
+      libraryRepo.getByUser(userId)
     }
-    libs
   }
 
   private def inviteBulkUsers(invites: Seq[LibraryInvite]) {

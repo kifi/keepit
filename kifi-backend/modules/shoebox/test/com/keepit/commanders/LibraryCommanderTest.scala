@@ -262,19 +262,19 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val targetLib3 = libraryCommander.getLibrariesByUser(userAgent.id.get)
           val targetLib4 = libraryCommander.getLibrariesByUser(userHulk.id.get)
 
-          val (ironLibs, ironAccesses) = targetLib1.unzip
+          val (ironAccesses, ironLibs) = targetLib1.unzip
           ironLibs.map(_.slug.value) === Seq("science", "murica")
           ironAccesses === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)
 
-          val (captainLibs, captainAccesses) = targetLib2.unzip
+          val (captainAccesses, captainLibs) = targetLib2.unzip
           captainLibs.map(_.slug.value) === Seq("murica")
           captainAccesses === Seq(LibraryAccess.OWNER)
 
-          val (agentLibs, agentAccesses) = targetLib3.unzip
+          val (agentAccesses, agentLibs) = targetLib3.unzip
           agentLibs.map(_.slug.value) === Seq("avengers", "murica")
           agentAccesses === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)
 
-          val (hulkLibs, hulkAccesses) = targetLib4.unzip
+          val (hulkAccesses, hulkLibs) = targetLib4.unzip
           hulkLibs.map(_.slug.value) === Seq("science")
           hulkAccesses === Seq(LibraryAccess.READ_INSERT)
         }

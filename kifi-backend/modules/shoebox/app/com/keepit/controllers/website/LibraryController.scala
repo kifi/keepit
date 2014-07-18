@@ -68,7 +68,7 @@ class LibraryController @Inject() (
 
   def getLibrariesByUser = JsonAction.authenticated { request =>
     val res = for (pair <- libraryCommander.getLibrariesByUser(request.userId)) yield {
-      Json.obj("info" -> pair._1, "access" -> pair._2)
+      Json.obj("info" -> pair._2, "access" -> pair._1)
     }
     Ok(Json.obj("libraries" -> res))
   }
