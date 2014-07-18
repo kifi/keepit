@@ -5,7 +5,8 @@ import scala.concurrent.{ Future, Promise, ExecutionContext => EC }
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
-class ReactiveLock() {
+class ReactiveLock(numConcurrent: Int = 1) {
+  require(numConcurrent > 0)
 
   private case class QueuedItem[T](runner: () => Future[T], promise: Promise[T], ec: EC)
 
@@ -13,22 +14,22 @@ class ReactiveLock() {
 
   private val waitingCount = new AtomicInteger(0)
 
-  private var running: Boolean = false
+  private var runningCount: Int = 0
 
   //note that all this does inside of the synchronized block is start a future (in the worst case),
   //so actual synchonization is only held for a *very* short amount of time for each task
-  private def dispatchOne(): Unit = synchronized {
-    if (!running) {
+  private def dispatch(): Unit = synchronized {
+    if (runningCount < numConcurrent) {
       val candidate: Option[QueuedItem[_]] = Option(taskQueue.poll())
       candidate.map {
         case QueuedItem(runner, promise, ec) => {
-          running = true
+          runningCount += 1
           waitingCount.decrementAndGet()
           val fut = runner()
           fut.onComplete { _ =>
             synchronized {
-              running = false
-              dispatchOne()
+              runningCount -= 1
+              dispatch()
             }
           }(ec)
           promise.completeWith(fut)
@@ -42,7 +43,7 @@ class ReactiveLock() {
     val wrapper = () => Future { f }
     taskQueue.add(QueuedItem[T](wrapper, p, ec))
     waitingCount.incrementAndGet()
-    dispatchOne()
+    dispatch()
     p.future
   }
 
@@ -56,11 +57,13 @@ class ReactiveLock() {
     }
     taskQueue.add(QueuedItem[T](wrapper, p, ec))
     waitingCount.incrementAndGet()
-    dispatchOne()
+    dispatch()
     p.future
   }
 
   def waiting: Int = waitingCount.get()
+
+  def running: Int = runningCount
 
 }
 
