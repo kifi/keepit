@@ -389,7 +389,7 @@ class ShoeboxController @Inject() (
       scrapeInfoRepo.save(info)
     }
     log.debug(s"[saveScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} result=$saved")
-    Ok(Json.toJson(saved))
+    Ok
   }
 
   def getBookmarks(userId: Id[User]) = Action { request =>
