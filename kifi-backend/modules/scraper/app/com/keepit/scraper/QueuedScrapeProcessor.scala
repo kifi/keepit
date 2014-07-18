@@ -6,7 +6,7 @@ import com.keepit.scraper.fetcher.HttpFetcher
 import com.keepit.search.{ ArticleStore, Article }
 import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{ Provider, Inject, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.scraper.extractor._
 import com.keepit.common.logging.Logging
@@ -90,19 +90,13 @@ class QueuedScrapeProcessor @Inject() (
     val airbrake: AirbrakeNotifier,
     config: ScraperConfig,
     schedulerConfig: ScraperSchedulerConfig,
+    scrapeWorkerProvider: Provider[ScrapeWorker],
     httpFetcher: HttpFetcher,
-    httpClient: HttpClient,
     extractorFactory: ExtractorFactory,
-    articleStore: ArticleStore,
     serviceDiscovery: ServiceDiscovery,
     asyncHelper: ShoeboxDbCallbacks,
     schedulingProperties: SchedulingProperties,
-    pornDetectorFactory: PornDetectorFactory,
-    helper: SyncShoeboxDbCallbacks,
-    shoeboxClient: ShoeboxServiceClient,
-    wordCountCache: NormalizedURIWordCountCache,
-    uriSummaryCache: URISummaryCache,
-    embedlyCommander: EmbedlyCommander) extends ScrapeProcessor with Logging with ScraperUtils {
+    helper: SyncShoeboxDbCallbacks) extends ScrapeProcessor with Logging with ScraperUtils {
 
   type ScrapingForkJoinTask = ForkJoinTask[Try[Option[Article]]]
 
@@ -215,7 +209,7 @@ class QueuedScrapeProcessor @Inject() (
     scheduler.scheduleWithFixedDelay(terminator, TERMINATOR_FREQ, TERMINATOR_FREQ, TimeUnit.SECONDS)
   }
 
-  private def worker = new ScrapeWorker(airbrake, config, schedulerConfig, httpFetcher, httpClient, extractorFactory, articleStore, pornDetectorFactory, helper, shoeboxClient, wordCountCache, uriSummaryCache, embedlyCommander)
+  private def worker = scrapeWorkerProvider.get()
   def asyncScrape(nuri: NormalizedURI, scrapeInfo: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxy: Option[HttpProxy]): Unit = {
     log.info(s"[QScraper.asyncScrape($fjPool)] uri=$nuri info=$scrapeInfo proxy=$proxy")
     try {
