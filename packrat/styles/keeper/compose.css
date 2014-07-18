@@ -346,14 +346,12 @@ a.kifi-compose-submit.kifi-active {
   height: 34px;
   line-height: 28px;
   box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  border-top: 1px solid transparent;
 }
 .kifi-ti-dropdown-item-selected {
   background-color: #6fa6ef;
   color: #fff;
-}
-.kifi-ti-dropdown-token,
-.kifi-ti-dropdown-email {
-  border-top: 1px solid transparent;
 }
 .kifi-ti-dropdown-item:not(.kifi-ti-dropdown-token)+.kifi-ti-dropdown-token,
 .kifi-ti-dropdown-item:not(.kifi-ti-dropdown-email)+.kifi-ti-dropdown-email {

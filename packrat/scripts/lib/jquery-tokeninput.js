@@ -32,9 +32,7 @@
     onSelect: null,
     onAdd: null,
     onDelete: null,
-    onRemove: function (_, replaceWith) {
-      replaceWith();
-    }
+    onRemove: null
   };
 
   var CLASSES = {
@@ -384,7 +382,7 @@
       return $dropdown.find('.' + classes.dropdownItemToken).map(function (_, htmlItem) {
         return $.data(htmlItem, 'tokenInput');
       }).toArray();
-    }
+    };
 
     this.deselectDropdownItem = function () {
       selectDropdownItem(null);
@@ -663,12 +661,24 @@
                 .addClass(classes.dropdownItem + ' ' + classes.dropdownItemWaiting)
                 .css('display', 'none');
               $item.after($itemWaiting);
-              var animationPromise = $item.fadeOut(200).promise().then(function () {
+              var heightAfterAnimationPromise = $item.fadeOut(200).promise().then(function () {
                 $item.remove();
                 $itemWaiting.css('display', 'block');
                 return $itemWaiting.outerHeight();
               });
-              settings.onRemove.call($hiddenInput, item, replaceWith.bind($itemWaiting, animationPromise));
+              settings.onRemove.call($hiddenInput, item, replaceWith.bind($itemWaiting, heightAfterAnimationPromise));
+            } else {
+              $item.css({
+                'max-height': $item.outerHeight() + 'px',
+                overflow: 'hidden'
+              })
+              .animate({'max-height': 0}, {
+                duration: 200,
+                easing: 'linear',
+                complete: function () {
+                  $(this).remove();
+                }
+              });
             }
             return false;
           }
@@ -747,13 +757,12 @@
       }
     }
 
-    function replaceWith(animationPromise, item) {
+    function replaceWith(heightAfterAnimationPromise, item) {
       cache.flush();
       var $itemWaiting = this;
-      animationPromise.then(function (height) {
+      heightAfterAnimationPromise.then(function (height) {
         if (item) {
-            var $newEl = $(formatDropdownItem(item)).fadeIn().css('display', 'block');
-            $itemWaiting.after($newEl).remove();
+          var $newEl = $(formatDropdownItem(item)).fadeIn().css('display', 'block').replaceAll($itemWaiting);
         } else {
           $itemWaiting.css({
             'max-height': height + 'px',
