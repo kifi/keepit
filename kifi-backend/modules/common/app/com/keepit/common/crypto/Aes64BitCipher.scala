@@ -34,7 +34,7 @@ private object Aes64BitCipher {
   val keySalt: Array[Byte] = Array(-112, 67, 64, 26, -122, -43, 55, -61)
   val keyIterationCount = 19
 
-  def apply(ivSpec: IvParameterSpec, passPhrase: String): Aes64BitCipher = {
+  def apply(passPhrase: String, ivSpec: IvParameterSpec): Aes64BitCipher = {
     val spec = new PBEKeySpec(passPhrase.toCharArray, keySalt, keyIterationCount, 128)
     val pbeKey = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1").generateSecret(spec)
     val aesKey = new SecretKeySpec(pbeKey.getEncoded(), "AES")

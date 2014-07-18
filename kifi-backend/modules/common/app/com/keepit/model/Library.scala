@@ -25,8 +25,6 @@ case class Library(
     seq: SequenceNumber[Library] = SequenceNumber.ZERO,
     kind: LibraryKind = LibraryKind.USER_CREATED) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
-  val prefix = Library.prefix
-
   def withId(id: Id[Library]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(myState: State[Library]) = this.copy(state = myState)
@@ -35,8 +33,8 @@ case class Library(
 
 object Library extends ModelWithPublicIdCompanion[Library] {
 
-  val prefix: String = "l"
-  protected[this] val prefixIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
+  protected[this] val publicIdPrefix = "l"
+  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
 
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[Library]) and

@@ -10,23 +10,23 @@ class PublicIdTest extends Specification {
   "PublicId" should {
     implicit val config = PublicIdConfiguration("secret key")
 
-    "encode ids" in {
+    "encode and decode public ids" in {
       case class TestModel(id: Option[Id[TestModel]]) extends ModelWithPublicId[TestModel]
       object TestModel extends ModelWithPublicIdCompanion[TestModel] {
-        val prefix = "t"
-        protected[this] val prefixIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
+        protected[this] val publicIdPrefix = "t"
+        protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
       }
 
       case class TestModel2(id: Option[Id[TestModel2]]) extends ModelWithPublicId[TestModel2]
       object TestModel2 extends ModelWithPublicIdCompanion[TestModel2] {
-        val prefix = "w"
-        protected[this] val prefixIvSpec = new IvParameterSpec(Array(0, 0, 0, 0, -10, 100, 100, 10, 42, 42, 42, 42, 42, 42, 42, 42))
+        protected[this] val publicIdPrefix = "w"
+        protected[this] val publicIdIvSpec = new IvParameterSpec(Array(0, 0, 0, 0, -10, 100, 100, 10, 42, 42, 42, 42, 42, 42, 42, 42))
       }
 
-      val id1 = TestModel(id = Option(Id[TestModel](1L))).id.get
-      val id2 = TestModel(id = Option(Id[TestModel](2L))).id.get
-      val id3 = TestModel2(id = Option(Id[TestModel2](1L))).id.get
-      val id4 = TestModel2(id = Option(Id[TestModel2](2L))).id.get
+      val id1 = Id[TestModel](1L)
+      val id2 = Id[TestModel](2L)
+      val id3 = Id[TestModel2](1L)
+      val id4 = Id[TestModel2](2L)
 
       val pid1 = TestModel.publicId(id1).get
       val pid2 = TestModel.publicId(id2).get
