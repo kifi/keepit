@@ -6,7 +6,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.Clock
 import com.keepit.model._
-import play.api.libs.json.{JsString, Json}
+import play.api.libs.json.{ JsString, Json }
 
 import scala.util.{ Success, Failure }
 
@@ -59,9 +59,15 @@ class LibraryController @Inject() (
   }
 
   def getLibrary(pubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>
-    libraryCommander.getLibraryByPublicId(pubId) match {
-      case Left(LibraryFail(message)) => BadRequest(Json.obj("error" -> message))
-      case Right(newLibrary) => Ok(Json.toJson(newLibrary))
+    val idTry = Library.decode(pubId)
+    idTry match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
+      case Success(id) => {
+        libraryCommander.getLibraryById(id) match {
+          case Left(LibraryFail(message)) => BadRequest(Json.obj("error" -> message))
+          case Right(newLibrary) => Ok(Json.toJson(newLibrary))
+        }
+      }
     }
   }
 
