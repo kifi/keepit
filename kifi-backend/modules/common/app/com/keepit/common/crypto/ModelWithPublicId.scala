@@ -60,7 +60,7 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
     if (publicId.id.startsWith(prefix)) {
       Try(Id[T](config.aes64bit(prefixIvSpec).decrypt(Base62Long.decode(publicId.id.substring(prefix.length))))).flatMap { id =>
         // IDs must be less than 100 billion. This gives us "plenty" of room, while catching nearly* all invalid IDs.
-        if (id.id > 0 || id.id > 100000000000L) {
+        if (id.id > 0 && id.id < 100000000000L) {
           Success(id)
         } else {
           Failure(new IllegalArgumentException(s"Expected $publicId to be in a valid range: ${id.id}"))
