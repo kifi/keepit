@@ -92,7 +92,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLatestKeep(url: String): Future[Option[Keep]]
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]]
   def saveBookmark(bookmark: Keep): Future[Keep]
-  def saveScrapeInfo(info: ScrapeInfo): Future[ScrapeInfo]
+  def saveScrapeInfo(info: ScrapeInfo): Future[Unit]
   def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI]
   def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
   def savePageInfo(pageInfo: PageInfo): Future[Unit]
@@ -573,10 +573,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def saveScrapeInfo(info: ScrapeInfo): Future[ScrapeInfo] = {
-    call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), callTimeouts = longTimeout).map { r =>
-      r.json.as[ScrapeInfo]
-    }
+  def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = {
+    call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), callTimeouts = longTimeout).map { r => Unit }
   }
 
   def savePageInfo(pageInfo: PageInfo): Future[Unit] = {
