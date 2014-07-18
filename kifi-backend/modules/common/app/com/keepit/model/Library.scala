@@ -30,8 +30,6 @@ case class Library(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(myState: State[Library]) = this.copy(state = myState)
 
-  override def toString(): String = s"Library[id=$id,name=$name,privacy=$visibility]"
-
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {

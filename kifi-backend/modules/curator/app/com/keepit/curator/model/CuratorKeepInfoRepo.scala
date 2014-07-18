@@ -12,6 +12,7 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[CuratorKeepInfoRepoImpl])
 trait CuratorKeepInfoRepo extends DbRepo[CuratorKeepInfo] {
+  def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[CuratorKeepInfo]
 }
 
 @Singleton
@@ -27,8 +28,7 @@ class CuratorKeepInfoRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
-    def isPrivate = column[Boolean]("is_private", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, uriId, userId, keepId, isPrivate, state) <> ((CuratorKeepInfo.apply _).tupled, CuratorKeepInfo.unapply _)
+    def * = (id.?, createdAt, updatedAt, uriId, userId, keepId, state) <> ((CuratorKeepInfo.apply _).tupled, CuratorKeepInfo.unapply _)
   }
 
   def table(tag: Tag) = new CuratorKeepInfoTable(tag)
@@ -36,5 +36,9 @@ class CuratorKeepInfoRepoImpl @Inject() (
 
   def deleteCache(model: CuratorKeepInfo)(implicit session: RSession): Unit = {}
   def invalidateCache(model: CuratorKeepInfo)(implicit session: RSession): Unit = {}
+
+  def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[CuratorKeepInfo] = {
+    (for (row <- rows if row.keepId === keepId) yield row).firstOption
+  }
 
 }

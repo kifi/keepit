@@ -34,7 +34,6 @@ CREATE TABLE curator_keep_info (
     uri_id bigint(20) NOT NULL,
     user_id bigint(20) NOT NULL,
     keep_id bigint(20) NOT NULL,
-    is_private boolean NOT NULL,
     state varchar(128) NOT NULL,
 
     PRIMARY KEY (id),
