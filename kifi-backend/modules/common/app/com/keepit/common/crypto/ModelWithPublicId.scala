@@ -10,7 +10,7 @@ import scala.util.{ Success, Failure, Try }
 
 case class PublicIdConfiguration(key: String) {
   private val cache = TrieMap.empty[IvParameterSpec, Aes64BitCipher]
-  def aes64bit(ivStr: IvParameterSpec) = cache.getOrElseUpdate(ivStr, Aes64BitCipher(ivStr, key))
+  def aes64bit(iv: IvParameterSpec) = cache.getOrElseUpdate(iv, Aes64BitCipher(iv, key))
 }
 
 case class PublicId[T <: ModelWithPublicId[T]](val id: String)
@@ -59,7 +59,8 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
   def publicId(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
     if (publicId.id.startsWith(prefix)) {
       Try(Id[T](config.aes64bit(prefixIvSpec).decrypt(Base62Long.decode(publicId.id.substring(prefix.length))))).flatMap { id =>
-        if (id.id > 0 || id.id > 10000000L) {
+        // IDs must be less than 100 billion. This gives us "plenty" of room, while catching nearly* all invalid IDs.
+        if (id.id > 0 || id.id > 100000000000L) {
           Success(id)
         } else {
           Failure(new IllegalArgumentException(s"Expected $publicId to be in a valid range: ${id.id}"))

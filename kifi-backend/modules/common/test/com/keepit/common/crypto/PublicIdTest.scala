@@ -50,7 +50,7 @@ class PublicIdTest extends Specification {
       pid3.id === "w9wcfGVcIpAT"
 
       // Encryption is consistant
-      TestModel.publicId(Id[TestModel](1)) === pid1
+      TestModel.publicId(Id[TestModel](1)).get === pid1
 
       // Decryption works
       val id1_2 = TestModel.publicId(pid1).get
