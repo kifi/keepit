@@ -1,10 +1,7 @@
 package com.keepit.common.crypto
 
 import javax.crypto.spec.IvParameterSpec
-
-import com.google.common.io.BaseEncoding
 import com.keepit.common.db.Id
-import org.apache.commons.codec.binary.Base64
 import play.api.libs.json._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
 
@@ -42,8 +39,6 @@ object PublicId {
 
     override def unbind(key: String, id: PublicId[T]): String = id.toString
   }
-
-  private[crypto] val coder = BaseEncoding.base32().lowerCase().omitPadding()
 }
 
 trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
@@ -61,15 +56,17 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
   */
   protected[this] val prefixIvSpec: IvParameterSpec
 
+
   def publicId(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
-    if (publicId.id.startsWith(prefix)) {
-      Try(Id[T](config.aes64bit(prefixIvSpec).decrypt(PublicId.coder.decode(publicId.id.substring(prefix.length)))))
-    } else {
-      Failure(new IllegalArgumentException(s"Expected $publicId to start with $prefix"))
+    val reg = raw"^$prefix(.*)$$".r
+    Try {
+      reg.findFirstMatchIn(publicId.id).map(_.group(1)).map { identifier =>
+        Id[T](config.aes64bit(prefixIvSpec).decrypt(Base62Long.decode(identifier)))
+      }.get
     }
   }
 
   def publicId(id: Id[T])(implicit config: PublicIdConfiguration): Try[PublicId[T]] = {
-    Try(PublicId[T](prefix + Base64.encodeBase64URLSafeString(config.aes64bit(prefixIvSpec).encrypt(id.id))))
+    Try(PublicId[T](prefix + Base62Long.encode(config.aes64bit(prefixIvSpec).encrypt(id.id))))
   }
 }

@@ -14,21 +14,17 @@ private[crypto] class Aes64BitCipher(key: SecretKey, ivSpec: IvParameterSpec) {
   ecipher.init(Cipher.ENCRYPT_MODE, key, ivSpec)
   dcipher.init(Cipher.DECRYPT_MODE, key, ivSpec)
 
-  def encrypt(value: Long): Array[Byte] = {
+  def encrypt(value: Long): Long = crypt(value, ecipher)
+  def decrypt(value: Long): Long = crypt(value, dcipher)
+
+  private def crypt(value: Long, cipher: Cipher): Long = {
     val buffer = ByteBuffer.allocate(8)
     buffer.putLong(0, value)
-    ecipher.doFinal(buffer.array)
-  }
-
-  def decrypt(value: Array[Byte]): Long = {
-    if (value.length == 8) {
-      val bytes: Array[Byte] = dcipher.doFinal(value)
-      val buffer = ByteBuffer.allocate(8).put(bytes)
-      buffer.flip
-      buffer.getLong
-    } else {
-      throw new IllegalArgumentException(s"wrong size: ${value.length}")
-    }
+    val bytes: Array[Byte] = cipher.doFinal(buffer.array)
+    buffer.rewind
+    buffer.put(bytes)
+    buffer.flip
+    buffer.getLong
   }
 
 }
