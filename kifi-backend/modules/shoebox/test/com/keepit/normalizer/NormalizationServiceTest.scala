@@ -9,7 +9,7 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.inject.TestFortyTwoModule
 import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.model._
-import com.keepit.scraper.{FakeScrapeSchedulerModule, FakeSignatureBuilder, Signature, BasicArticle}
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeSignatureBuilder, Signature, BasicArticle }
 import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.ShoeboxTestInjector
