@@ -18,7 +18,7 @@ case class PublicId[T <: ModelWithPublicId[T]](id: String)
 
 object PublicId {
   implicit def format[T <: ModelWithPublicId[T]]: Format[PublicId[T]] = Format(
-    __.read[String].map(PublicId(_)),
+    __.read[String].map(PublicId[T]),
     new Writes[PublicId[T]] { def writes(o: PublicId[T]) = JsString(o.id) }
   )
 
@@ -26,7 +26,7 @@ object PublicId {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, PublicId[T]]] = {
       stringBinder.bind(key, params) map {
         case Right(id) => Right(PublicId(id))
-        case _ => Left("Unable to bind an PublicId")
+        case _ => Left("Not a valid Public Id")
       }
     }
     override def unbind(key: String, id: PublicId[T]): String = {
