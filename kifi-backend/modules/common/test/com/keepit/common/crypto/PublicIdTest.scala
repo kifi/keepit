@@ -58,4 +58,5 @@ class PublicIdTest extends Specification {
       id1_different !== id1
 
     }
+  }
 }
