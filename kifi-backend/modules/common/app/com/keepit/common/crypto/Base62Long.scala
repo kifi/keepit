@@ -1,5 +1,9 @@
 package com.keepit.common.crypto
 
+/**
+ * Encodes `Long` values to 11-character case-sensitive alphanumeric strings.
+ * `decode(encode(l))` will always be `l`. `encode(decode(s))` may not be `s`.
+ */
 object Base62Long {
 
   val Encode: Array[Char] = Array(
@@ -18,6 +22,7 @@ object Base62Long {
     24, 25, -1, -1, -1, -1, 63, -1, 26, 27, 28, 29, 30, 31, 32, 33, 34,
     35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51);
 
+  /** Encodes a 64-bit number to an 11-character alphanumeric string. */
   def encode(value: Long): String = {
     val neg = value < 0;
     val nn = if (neg) value ^ -1 else value;
@@ -39,6 +44,11 @@ object Base62Long {
       Encode(r4), Encode(r3), Encode(r2), Encode(r1), Encode(r0)).mkString
   }
 
+  /**
+   * Decodes an 11-character alphanumeric string to a 64-bit number.
+   * For efficiency, does not validate input strings. Behavior is unspecified
+   * for invalid inputs: a value may be returned or an exception may be thrown.
+   */
   def decode(value: String): Long = {
     val arr = value.toCharArray
     val r0 = Decode(arr(10))

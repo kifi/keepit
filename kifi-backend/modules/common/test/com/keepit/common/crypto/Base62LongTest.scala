@@ -22,5 +22,10 @@ class Base62LongTest extends Specification {
       Base62Long.decode("z9VIxAiFIwH") === Long.MinValue
       Base62Long.decode("K9VIxAiFIwH") === Long.MaxValue
     }
+    "throw when decoding certain invalid inputs" in {
+      Base62Long.decode("") must throwAn[ArrayIndexOutOfBoundsException]("10")
+      Base62Long.decode("0000000000") must throwAn[ArrayIndexOutOfBoundsException]("10")
+      Base62Long.decode("~~~~~~~~~~~") must throwAn[ArrayIndexOutOfBoundsException]("126")
+    }
   }
 }
