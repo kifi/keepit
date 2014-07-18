@@ -1,5 +1,6 @@
 package com.keepit.scraper
 
+import com.google.inject.{ Inject, ImplementedBy }
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
@@ -9,7 +10,7 @@ import com.keepit.search.{ LangDetector, Article, ArticleStore }
 import scala.concurrent.duration._
 import org.joda.time.Days
 import com.keepit.common.time._
-import com.keepit.common.net.{ HttpClient, URI }
+import com.keepit.common.net.URI
 import org.apache.http.HttpStatus
 import scala.util.Success
 import com.keepit.learning.porndetector.PornDetectorFactory
@@ -21,12 +22,18 @@ import scala.concurrent.Future
 import com.keepit.common.db.Id
 import com.keepit.scraper.embedly.EmbedlyCommander
 
-class ScrapeWorker(
+@ImplementedBy(classOf[ScrapeWorkerImpl])
+trait ScrapeWorker {
+  def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Option[Article]
+  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): ScraperResult
+  def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle
+}
+
+class ScrapeWorkerImpl @Inject() (
     airbrake: AirbrakeNotifier,
     config: ScraperConfig,
     schedulerConfig: ScraperSchedulerConfig,
     httpFetcher: HttpFetcher,
-    httpClient: HttpClient,
     extractorFactory: ExtractorFactory,
     articleStore: ArticleStore,
     pornDetectorFactory: PornDetectorFactory,
@@ -34,13 +41,13 @@ class ScrapeWorker(
     shoeboxClient: ShoeboxServiceClient,
     wordCountCache: NormalizedURIWordCountCache,
     uriSummaryCache: URISummaryCache,
-    embedlyCommander: EmbedlyCommander) extends Logging {
+    embedlyCommander: EmbedlyCommander) extends ScrapeWorker with Logging {
 
   implicit val myConfig = config
   implicit val scheduleConfig = schedulerConfig
   val awaitTTL = (myConfig.syncAwaitTimeout seconds)
 
-  private[scraper] def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Option[Article] = try {
+  def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Option[Article] = try {
     processURI(uri, info, pageInfoOpt, proxyOpt)
   } catch {
     case t: Throwable => {
