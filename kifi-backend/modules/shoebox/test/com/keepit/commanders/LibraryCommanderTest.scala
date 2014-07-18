@@ -163,22 +163,20 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       withDb(TestCryptoModule()) { implicit injector =>
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
 
-        implicit val config = inject[PublicIdConfiguration]
-
         val libraryCommander = inject[LibraryCommander]
-        val mod1 = libraryCommander.modifyLibrary(libraryId = libShield.publicId.get, userId = userAgent.externalId,
+        val mod1 = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
           description = Some("Samuel L. Jackson was here"))
         mod1.isRight === true
-        val mod2 = libraryCommander.modifyLibrary(libraryId = libMurica.publicId.get, userId = userCaptain.externalId,
+        val mod2 = libraryCommander.modifyLibrary(libraryId = libMurica.id.get, userId = userCaptain.id.get,
           name = Some("MURICA #1!!!!!"), slug = Some("murica_#1"))
         mod2.isRight === true
-        val mod3 = libraryCommander.modifyLibrary(libraryId = libScience.publicId.get, userId = userIron.externalId,
+        val mod3 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
           visibility = Some(LibraryVisibility.ANYONE))
         mod3.isRight === true
-        val mod4 = libraryCommander.modifyLibrary(libraryId = libScience.publicId.get, userId = userHulk.externalId,
+        val mod4 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userHulk.id.get,
           name = Some("HULK SMASH"))
         mod4.isRight === false
-        val mod5 = libraryCommander.modifyLibrary(libraryId = libScience.publicId.get, userId = userIron.externalId,
+        val mod5 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
           name = Some(""))
         mod5.isRight === false
 
@@ -207,7 +205,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         val libraryCommander = inject[LibraryCommander]
 
-        libraryCommander.removeLibrary(libMurica.publicId.get)
+        libraryCommander.removeLibrary(libMurica.id.get)
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
           allLibs.length === 2
@@ -216,8 +214,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryInviteRepo.all.filter(_.state == LibraryInviteStates.ACTIVE).length === 1
         }
 
-        libraryCommander.removeLibrary(libScience.publicId.get)
-        libraryCommander.removeLibrary(libShield.publicId.get)
+        libraryCommander.removeLibrary(libScience.id.get)
+        libraryCommander.removeLibrary(libShield.id.get)
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
           allLibs.length === 0
@@ -256,13 +254,13 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         db.readOnlyMaster { implicit s =>
           val libraryCommander = inject[LibraryCommander]
-          val targetLib1 = libraryCommander.getLibrariesByUser(userIron.externalId)
+          val targetLib1 = libraryCommander.getLibrariesByUser(userIron.id.get)
           targetLib1.isRight === true
-          val targetLib2 = libraryCommander.getLibrariesByUser(userCaptain.externalId)
+          val targetLib2 = libraryCommander.getLibrariesByUser(userCaptain.id.get)
           targetLib2.isRight === true
-          val targetLib3 = libraryCommander.getLibrariesByUser(userAgent.externalId)
+          val targetLib3 = libraryCommander.getLibrariesByUser(userAgent.id.get)
           targetLib3.isRight === true
-          val targetLib4 = libraryCommander.getLibrariesByUser(userHulk.externalId)
+          val targetLib4 = libraryCommander.getLibrariesByUser(userHulk.id.get)
           targetLib4.isRight === true
 
           val (ironLibs, ironAccesses) = targetLib1.right.get.unzip

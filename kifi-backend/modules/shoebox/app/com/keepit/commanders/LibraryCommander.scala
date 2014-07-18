@@ -78,86 +78,78 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def modifyLibrary(libraryId: PublicId[Library], userId: ExternalId[User],
+  def modifyLibrary(libraryId: Id[Library], userId: Id[User],
     name: Option[String] = None,
     description: Option[String] = None,
     slug: Option[String] = None,
     visibility: Option[LibraryVisibility] = None): Either[LibraryFail, LibraryInfo] = {
-    val idTry = Library.decode(libraryId)
-    idTry match {
-      case Failure(ex) => Left(LibraryFail("Invalid Id"))
-      case Success(id) => {
-        db.readWrite { implicit s =>
-          val targetLib = libraryRepo.get(id)
-          val targetUser = userRepo.get(userId)
-          val membership = libraryMembershipRepo.getWithLibraryIdandUserId(libraryId = targetLib.id.get, userId = targetUser.id.get)
-          membership match {
-            case None => Left(LibraryFail("Membership not found!"))
-            case Some(x) if x.access != LibraryAccess.OWNER => Left(LibraryFail("Member not owner!"))
-            case _ => {
 
-              def validName(name: String): Either[LibraryFail, String] = {
-                if (Library.isValidName(name)) Right(name)
-                else Left(LibraryFail("Invalid name"))
-              }
-              def validSlug(slug: String): Either[LibraryFail, String] = {
-                if (LibrarySlug.isValidSlug(slug)) Right(slug)
-                else Left(LibraryFail("Invalid slug"))
-              }
+    db.readWrite { implicit s =>
+      val targetLib = libraryRepo.get(libraryId)
+      val targetUser = userRepo.get(userId)
+      val membership = libraryMembershipRepo.getWithLibraryIdandUserId(libraryId = targetLib.id.get, userId = targetUser.id.get)
+      membership match {
+        case None => Left(LibraryFail("Membership not found!"))
+        case Some(x) if x.access != LibraryAccess.OWNER => Left(LibraryFail("Member not owner!"))
+        case _ => {
 
-              for {
-                newName <- validName(name.getOrElse(targetLib.name)).right
-                newSlug <- validSlug(slug.getOrElse(targetLib.slug.value)).right
-              } yield {
-                val newDescription: Option[String] = description.orElse(targetLib.description)
-                val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
-                val lib = libraryRepo.save(targetLib.copy(name = newName, slug = LibrarySlug(newSlug), visibility = newVisibility, description = newDescription))
-                val ownerExtId = basicUserRepo.load(lib.ownerId).externalId
-                LibraryInfo(id = lib.publicId.get, name = lib.name, slug = lib.slug, visibility = lib.visibility,
-                  shortDescription = LibraryInfo.descriptionShortener(lib.description), ownerId = ownerExtId)
-              }
-            }
+          def validName(name: String): Either[LibraryFail, String] = {
+            if (Library.isValidName(name)) Right(name)
+            else Left(LibraryFail("Invalid name"))
           }
-        }
-      }
-    }
-
-  }
-
-  def removeLibrary(libraryId: PublicId[Library]) = {
-    val idTry = Library.decode(libraryId)
-    idTry match {
-      case Failure(ex) => Left(LibraryFail("Invalid Id"))
-      case Success(id) => {
-        db.readWrite { implicit s =>
-          val oldLibrary = libraryRepo.get(id)
-          val removedLibrary = libraryRepo.save(oldLibrary.withState(LibraryStates.INACTIVE))
-
-          libraryMembershipRepo.getWithLibraryId(removedLibrary.id.get).map { m =>
-            libraryMembershipRepo.save(m.withState(LibraryMembershipStates.INACTIVE))
+          def validSlug(slug: String): Either[LibraryFail, String] = {
+            if (LibrarySlug.isValidSlug(slug)) Right(slug)
+            else Left(LibraryFail("Invalid slug"))
           }
-          libraryInviteRepo.getWithLibraryId(removedLibrary.id.get).map { inv =>
-            libraryInviteRepo.save(inv.withState(LibraryInviteStates.INACTIVE))
+
+          for {
+            newName <- validName(name.getOrElse(targetLib.name)).right
+            newSlug <- validSlug(slug.getOrElse(targetLib.slug.value)).right
+          } yield {
+            val newDescription: Option[String] = description.orElse(targetLib.description)
+            val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
+            val lib = libraryRepo.save(targetLib.copy(name = newName, slug = LibrarySlug(newSlug), visibility = newVisibility, description = newDescription))
+            val ownerExtId = basicUserRepo.load(lib.ownerId).externalId
+            LibraryInfo(id = lib.publicId.get, name = lib.name, slug = lib.slug, visibility = lib.visibility,
+              shortDescription = LibraryInfo.descriptionShortener(lib.description), ownerId = ownerExtId)
           }
         }
       }
     }
   }
 
-  def getLibraryByPublicId(libraryId: PublicId[Library]): Either[LibraryFail, FullLibraryInfo] = {
-    val idTry = Library.decode(libraryId)
+  def removeLibrary(libraryId: Id[Library]) = {
+    db.readWrite { implicit s =>
+      val oldLibrary = libraryRepo.get(libraryId)
+      val removedLibrary = libraryRepo.save(oldLibrary.withState(LibraryStates.INACTIVE))
+
+      libraryMembershipRepo.getWithLibraryId(removedLibrary.id.get).map { m =>
+        libraryMembershipRepo.save(m.withState(LibraryMembershipStates.INACTIVE))
+      }
+      libraryInviteRepo.getWithLibraryId(removedLibrary.id.get).map { inv =>
+        libraryInviteRepo.save(inv.withState(LibraryInviteStates.INACTIVE))
+      }
+    }
+  }
+
+  def getLibraryByPublicId(pubId: PublicId[Library]): Either[LibraryFail, FullLibraryInfo] = {
+    val idTry = Library.decode(pubId)
     idTry match {
-      case Failure(ex) => Left(LibraryFail("Invalid Id"))
+      case Failure(ex) => Left(LibraryFail("invalid id"))
       case Success(id) => {
         val (lib, owner, collaborators, followers, numKeeps) = db.readOnlyMaster { implicit s =>
           val lib = libraryRepo.get(id)
           val memberships = libraryMembershipRepo.getWithLibraryId(libraryId = lib.id.get)
-          val collabIds = for (m: LibraryMembership <- {
-            memberships.filter { x => x.access == LibraryAccess.READ_WRITE || x.access == LibraryAccess.READ_INSERT}
-          }) yield m.userId
-          val followIds = for (m: LibraryMembership <- {
-            memberships.filter { x => x.access == LibraryAccess.READ_ONLY}
-          }) yield m.userId
+          val collabIds = for (
+            m: LibraryMembership <- {
+              memberships.filter { x => x.access == LibraryAccess.READ_WRITE || x.access == LibraryAccess.READ_INSERT }
+            }
+          ) yield m.userId
+          val followIds = for (
+            m: LibraryMembership <- {
+              memberships.filter { x => x.access == LibraryAccess.READ_ONLY }
+            }
+          ) yield m.userId
 
           val collabUsers = basicUserRepo.loadAll(collabIds.toSet).values.toSeq
           val followUsers = basicUserRepo.loadAll(followIds.toSet).values.toSeq
@@ -169,13 +161,13 @@ class LibraryCommander @Inject() (
         val groupCollabs = GroupHolder(count = collaborators.length, users = collaborators, isMore = false)
         val groupFollows = GroupHolder(count = followers.length, users = followers, isMore = false)
 
-        Right(FullLibraryInfo(id = libraryId, name = lib.name, description = lib.description, visibility = lib.visibility, slug = lib.slug,
+        Right(FullLibraryInfo(id = pubId, name = lib.name, description = lib.description, visibility = lib.visibility, slug = lib.slug,
           ownerId = owner.externalId, collaborators = groupCollabs, followers = groupFollows, keepCount = numKeeps))
       }
     }
   }
 
-  def getLibrariesByUser(userId: ExternalId[User]): Either[LibraryFail, Seq[(LibraryInfo, LibraryAccess)]] = {
+  def getLibrariesByUser(userId: Id[User]): Either[LibraryFail, Seq[(LibraryInfo, LibraryAccess)]] = {
     val libs = db.readOnlyMaster { implicit s =>
       val uId = userRepo.get(userId).id.get
       val libMems = libraryMembershipRepo.getWithUserId(uId)
