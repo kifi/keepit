@@ -85,10 +85,13 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     db.readWrite { implicit s =>
       // Hulk accepts Ironman's invite to see 'Science & Stuff'
       val inv1 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libScience.id.get, userId = userHulk.id.get).get
+      libraryInviteRepo.save(inv1.withState(LibraryInviteStates.ACCEPTED))
 
       // Ironman & NickFury accept Captain's invite to see 'MURICA'
       val inv2 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libMurica.id.get, userId = userIron.id.get).get
+      libraryInviteRepo.save(inv2.withState(LibraryInviteStates.ACCEPTED))
       val inv3 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libMurica.id.get, userId = userAgent.id.get).get
+      libraryInviteRepo.save(inv3.withState(LibraryInviteStates.ACCEPTED))
 
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv1.libraryId, userId = inv1.userId, access = inv1.access, createdAt = t1))
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv2.libraryId, userId = inv2.userId, access = inv2.access, createdAt = t1))
@@ -210,8 +213,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
           allLibs.length === 2
           allLibs.map(_.slug.value) === Seq("avengers", "science")
-          libraryMembershipRepo.all.filter(_.state == LibraryMembershipStates.ACTIVE).length === 3
-          libraryInviteRepo.all.filter(_.state == LibraryInviteStates.ACTIVE).length === 1
+          libraryMembershipRepo.all.filter(_.state == LibraryMembershipStates.INACTIVE).length === 3
+          libraryInviteRepo.all.filter(_.state == LibraryInviteStates.INACTIVE).length === 3
         }
 
         libraryCommander.removeLibrary(libScience.id.get)
@@ -220,8 +223,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
           allLibs.length === 0
           allLibs.map(_.slug.value) === Seq.empty
-          libraryMembershipRepo.all.filter(_.state == LibraryMembershipStates.ACTIVE).length === 0
-          libraryInviteRepo.all.filter(_.state == LibraryInviteStates.ACTIVE).length === 0
+          libraryMembershipRepo.all.filter(_.state == LibraryMembershipStates.INACTIVE).length === 6
+          libraryInviteRepo.all.filter(_.state == LibraryInviteStates.INACTIVE).length === 4
         }
       }
     }
@@ -232,15 +235,15 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         val libraryCommander = inject[LibraryCommander]
 
-        val libInfo1 = libraryCommander.getLibraryById(libShield.id.get).right.get
+        val libInfo1 = libraryCommander.getLibraryById(libShield.id.get)
         libInfo1.slug.value === "avengers"
         libInfo1.collaborators.users.length === 0
         libInfo1.followers.users.length === 0
-        val libInfo2 = libraryCommander.getLibraryById(libMurica.id.get).right.get
+        val libInfo2 = libraryCommander.getLibraryById(libMurica.id.get)
         libInfo2.slug.value === "murica"
         libInfo2.collaborators.users.length === 0
         libInfo2.followers.users.length === 2
-        val libInfo3 = libraryCommander.getLibraryById(libScience.id.get).right.get
+        val libInfo3 = libraryCommander.getLibraryById(libScience.id.get)
         libInfo3.slug.value === "science"
         libInfo3.collaborators.users.length === 1
         libInfo3.followers.users.length === 0
@@ -255,27 +258,23 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         db.readOnlyMaster { implicit s =>
           val libraryCommander = inject[LibraryCommander]
           val targetLib1 = libraryCommander.getLibrariesByUser(userIron.id.get)
-          targetLib1.isRight === true
           val targetLib2 = libraryCommander.getLibrariesByUser(userCaptain.id.get)
-          targetLib2.isRight === true
           val targetLib3 = libraryCommander.getLibrariesByUser(userAgent.id.get)
-          targetLib3.isRight === true
           val targetLib4 = libraryCommander.getLibrariesByUser(userHulk.id.get)
-          targetLib4.isRight === true
 
-          val (ironLibs, ironAccesses) = targetLib1.right.get.unzip
+          val (ironLibs, ironAccesses) = targetLib1.unzip
           ironLibs.map(_.slug.value) === Seq("science", "murica")
           ironAccesses === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)
 
-          val (captainLibs, captainAccesses) = targetLib2.right.get.unzip
+          val (captainLibs, captainAccesses) = targetLib2.unzip
           captainLibs.map(_.slug.value) === Seq("murica")
           captainAccesses === Seq(LibraryAccess.OWNER)
 
-          val (agentLibs, agentAccesses) = targetLib3.right.get.unzip
+          val (agentLibs, agentAccesses) = targetLib3.unzip
           agentLibs.map(_.slug.value) === Seq("avengers", "murica")
           agentAccesses === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)
 
-          val (hulkLibs, hulkAccesses) = targetLib4.right.get.unzip
+          val (hulkLibs, hulkAccesses) = targetLib4.unzip
           hulkLibs.map(_.slug.value) === Seq("science")
           hulkAccesses === Seq(LibraryAccess.READ_INSERT)
         }

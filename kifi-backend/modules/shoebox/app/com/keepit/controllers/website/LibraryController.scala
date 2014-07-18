@@ -62,25 +62,15 @@ class LibraryController @Inject() (
     val idTry = Library.decode(pubId)
     idTry match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
-      case Success(id) => {
-        libraryCommander.getLibraryById(id) match {
-          case Left(LibraryFail(message)) => BadRequest(Json.obj("error" -> message))
-          case Right(newLibrary) => Ok(Json.toJson(newLibrary))
-        }
-      }
+      case Success(id) => Ok(Json.toJson(libraryCommander.getLibraryById(id)))
     }
   }
 
   def getLibrariesByUser = JsonAction.authenticated { request =>
-    libraryCommander.getLibrariesByUser(request.userId) match {
-      case Left(LibraryFail(message)) => BadRequest(Json.obj("error" -> message))
-      case Right(infos) => {
-        val res = for (pair <- infos) yield {
-          Json.obj("info" -> pair._1, "access" -> pair._2)
-        }
-        Ok(Json.obj("libraries" -> res))
-      }
+    val res = for (pair <- libraryCommander.getLibrariesByUser(request.userId)) yield {
+      Json.obj("info" -> pair._1, "access" -> pair._2)
     }
+    Ok(Json.obj("libraries" -> res))
   }
 
 }

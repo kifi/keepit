@@ -132,7 +132,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibraryById(id: Id[Library]): Either[LibraryFail, FullLibraryInfo] = {
+  def getLibraryById(id: Id[Library]): FullLibraryInfo = {
     val (lib, owner, collaborators, followers, numKeeps) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(id)
       val memberships = libraryMembershipRepo.getWithLibraryId(libraryId = lib.id.get)
@@ -157,11 +157,11 @@ class LibraryCommander @Inject() (
     val groupCollabs = GroupHolder(count = collaborators.length, users = collaborators, isMore = false)
     val groupFollows = GroupHolder(count = followers.length, users = followers, isMore = false)
 
-    Right(FullLibraryInfo(id = lib.publicId.get, name = lib.name, description = lib.description, visibility = lib.visibility, slug = lib.slug,
-      ownerId = owner.externalId, collaborators = groupCollabs, followers = groupFollows, keepCount = numKeeps))
+    FullLibraryInfo(id = lib.publicId.get, name = lib.name, description = lib.description, visibility = lib.visibility, slug = lib.slug,
+      ownerId = owner.externalId, collaborators = groupCollabs, followers = groupFollows, keepCount = numKeeps)
   }
 
-  def getLibrariesByUser(userId: Id[User]): Either[LibraryFail, Seq[(LibraryInfo, LibraryAccess)]] = {
+  def getLibrariesByUser(userId: Id[User]): Seq[(Library, LibraryAccess)] = {
     val libs = db.readOnlyMaster { implicit s =>
       val uId = userRepo.get(userId).id.get
       val libMems = libraryMembershipRepo.getWithUserId(uId)
@@ -169,12 +169,10 @@ class LibraryCommander @Inject() (
       for (m <- libMems) yield {
         val lib = libraryRepo.get(m.libraryId)
         val owner = basicUserRepo.load(lib.ownerId)
-        val libInfo = LibraryInfo(id = lib.publicId.get, name = lib.name, visibility = lib.visibility, slug = lib.slug,
-          shortDescription = LibraryInfo.descriptionShortener(lib.description), ownerId = owner.externalId)
-        (libInfo, m.access)
+        (lib, m.access)
       }
     }
-    Right(libs)
+    libs
   }
 
   private def inviteBulkUsers(invites: Seq[LibraryInvite]) {
