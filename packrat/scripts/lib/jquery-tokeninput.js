@@ -31,7 +31,8 @@
     // Callbacks
     onSelect: null,
     onAdd: null,
-    onDelete: null
+    onDelete: null,
+    onRemove: null
   };
 
   var CLASSES = {
@@ -46,7 +47,9 @@
     dropdownSearching: 'dropdown-searching',
     dropdownItem: 'dropdown-item',
     dropdownItemToken: 'dropdown-item-token',
-    dropdownItemSelected: 'dropdown-item-selected'
+    dropdownItemSelected: 'dropdown-item-selected',
+    dropdownItemX: 'dropdown-item-x',
+    dropdownItemWaiting: 'dropdown-item-waiting'
   };
 
   // Input box position "enum"
@@ -108,6 +111,12 @@
     },
     get: function () {
       return this.data('tokenInput').getTokens();
+    },
+    getQuery: function () {
+      return this.data('tokenInput').getCurrentQuery();
+    },
+    getItems: function () {
+      return this.data('tokenInput').getItems();
     },
     deselectDropdownItem: function () {
       this.data('tokenInput').deselectDropdownItem();
@@ -365,6 +374,14 @@
 
     this.getTokens = function () {
       return tokens.slice();
+    };
+
+    this.getCurrentQuery = getCurrentQuery;
+
+    this.getItems = function () {
+      return $dropdown.find('.' + classes.dropdownItemToken).map(function (_, htmlItem) {
+        return $.data(htmlItem, 'tokenInput');
+      }).toArray();
     };
 
     this.deselectDropdownItem = function () {
@@ -628,7 +645,47 @@
             handleItemChosen(this);
             return false;
           }
+        })
+        .on('mousedown', '.' + classes.dropdownItemX, function (e) {
+          if (e.which === 1) {
+            return false;
+          }
+        })
+        .on('click', '.' + classes.dropdownItemX, function (e) {
+          if (e.which === 1) {
+            var $item = $(this).closest('.' + classes.dropdownItemToken);
+            var item = $.data($item[0], 'tokenInput');
+
+            if ($.isFunction(settings.onRemove)) {
+              var $itemWaiting = $('<li/>')
+                .addClass(classes.dropdownItem + ' ' + classes.dropdownItemWaiting)
+                .css('display', 'none');
+              $item.after($itemWaiting);
+              var heightAfterAnimationPromise = $item.fadeOut(200).promise().then(function () {
+                $item.remove();
+                $itemWaiting.css('display', 'block');
+                return $itemWaiting.outerHeight();
+              });
+              settings.onRemove.call($hiddenInput, item, replaceWith.bind($itemWaiting, heightAfterAnimationPromise));
+            } else {
+              $item.css({
+                'max-height': $item.outerHeight() + 'px',
+                overflow: 'hidden'
+              })
+              .animate({'max-height': 0}, {
+                duration: 200,
+                easing: 'linear',
+                complete: function () {
+                  $(this).remove();
+                }
+              });
+            }
+            return false;
+          }
         });
+      if ($.isFunction(settings.initDropdown)) {
+        settings.initDropdown($ul);
+      }
       if (items.length && items[0].classList.contains(classes.dropdownItemToken)) {
         selectDropdownItem(items[0]);
       }
@@ -644,7 +701,10 @@
     // Highlight an item in the results dropdown (or pass null to deselect)
     function selectDropdownItem(item) {
       $(selectedDropdownItem).removeClass(classes.dropdownItemSelected);
-      $(selectedDropdownItem = item).addClass(classes.dropdownItemSelected);
+      selectedDropdownItem = item;
+      if (!$(selectedDropdownItem).hasClass(classes.dropdownItemWaiting)) {
+        $(selectedDropdownItem).addClass(classes.dropdownItemSelected);
+      }
     }
 
     // Do a search and show the "searching" dropdown
@@ -655,7 +715,7 @@
 
       resizeInput();
 
-      var query = $tokenInput.val().trim();
+      var query = getCurrentQuery();
       if (query.length) {
         var o = cache.get(query);
         if (o && o.complete) {
@@ -697,8 +757,34 @@
       }
     }
 
+    function replaceWith(heightAfterAnimationPromise, item) {
+      cache.flush();
+      var $itemWaiting = this;
+      heightAfterAnimationPromise.then(function (height) {
+        if (item) {
+          var $newEl = $(formatDropdownItem(item)).fadeIn().css('display', 'block').replaceAll($itemWaiting);
+        } else {
+          $itemWaiting.css({
+            'max-height': height + 'px',
+            visibility: 'hidden'
+          })
+          .animate({'max-height': 0}, {
+            duration: 200,
+            easing: 'linear',
+            complete: function () {
+              $(this).remove();
+            }
+          });
+        }
+      });
+    }
+
     function focusAsync($el) {
       setTimeout($.fn.focus.bind($el), 0);
+    }
+
+    function getCurrentQuery() {
+      return $tokenInput.val().trim();
     }
   };
 

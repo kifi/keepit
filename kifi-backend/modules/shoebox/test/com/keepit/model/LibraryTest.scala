@@ -20,10 +20,17 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
       val user2 = userRepo.save(u2)
       val l1 = libraryRepo.save(Library(name = "lib1A", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET,
         createdAt = t1.plusMinutes(1), slug = LibrarySlug("A")))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = l1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
+
       val l2 = libraryRepo.save(Library(name = "lib1B", ownerId = user1.id.get, visibility = LibraryVisibility.LIMITED,
         createdAt = t1.plusMinutes(2), slug = LibrarySlug("B")))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = l2.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = l2.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY))
+
       val l3 = libraryRepo.save(Library(name = "lib2", ownerId = user2.id.get, visibility = LibraryVisibility.ANYONE,
         createdAt = t1.plusMinutes(1), slug = LibrarySlug("C")))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = l3.id.get, userId = user2.id.get, access = LibraryAccess.OWNER))
+
       (l1, l2, l3, user1, user2)
     }
   }
@@ -39,20 +46,36 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "find a user's libraries" in {
+      withDb() { implicit injector =>
+        val (l1, l2, l3, user1, user2) = setup()
+        db.readOnlyMaster { implicit session =>
+          val user1Lib = libraryRepo.getByUser(user1.id.get)
+          user1Lib.length === 2
+          user1Lib.head === (LibraryAccess.OWNER, l1)
+          libraryRepo.getByUser(user2.id.get) === Seq((LibraryAccess.READ_ONLY, l2), (LibraryAccess.OWNER, l3))
+        }
+      }
+    }
+
     "validate library names" in {
       val name1 = "asdf1234"
       val name2 = "q@#$%^&*().,/][:;\"~`--___+= "
+      val name3 = ""
       Library.isValidName(name1) === true
-      Library.isValidName(name2) === true
+      Library.isValidName(name2) === false
+      Library.isValidName(name3) === false
     }
 
     "validate library slugs" in {
       val str1 = "asdf1234"
       val str2 = "asdf+qwer"
       val str3 = "asdf 1234"
+      val str4 = ""
       LibrarySlug.isValidSlug(str1) === true
       LibrarySlug.isValidSlug(str2) === true
       LibrarySlug.isValidSlug(str3) === false
+      LibrarySlug.isValidSlug(str4) === false
 
       val slug1 = LibrarySlug(str1)
       slug1.value === str1

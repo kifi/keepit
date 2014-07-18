@@ -30,8 +30,6 @@ case class Library(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(myState: State[Library]) = this.copy(state = myState)
 
-  override def toString(): String = s"Library[id=$id,name=$name,privacy=$visibility]"
-
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {
@@ -54,7 +52,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
 
   val maxNameLength = 50
   def isValidName(name: String): Boolean = {
-    !(name.length > maxNameLength) || (name.contains("\""))
+    (name != "") && !(name.length > maxNameLength) && !(name.contains("\"")) && !(name.contains("/"))
   }
 }
 
@@ -75,7 +73,7 @@ object LibrarySlug {
 
   val maxSlugLength = 50
   def isValidSlug(slug: String): Boolean = {
-    (!slug.contains(' ') && slug.length < maxSlugLength)
+    (slug != "" && !slug.contains(' ') && slug.length < maxSlugLength)
   }
 }
 
