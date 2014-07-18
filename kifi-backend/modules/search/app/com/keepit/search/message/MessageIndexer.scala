@@ -27,6 +27,7 @@ object ThreadIndexFields {
   val contentStemmedField = "mt_content_stemmed"
   val participantIdsField = "mt_participant_ids"
   val resultField = "mt_result"
+  val updatedAtField = "mt_updated_at"
 }
 
 class MessageContentIndexable(
@@ -101,6 +102,9 @@ class MessageContentIndexable(
 
     //participant Ids
     doc.add(buildIteratorField(ThreadIndexFields.participantIdsField, data.participantIds.iterator) { id => id.toString })
+
+    //timestamp for time decay
+    doc.add(buildLongValueField(ThreadIndexFields.updatedAtField, data.updatedAt.getMillis))
 
     //search result json, which will be served in the results verbatim
     val pageTitleOrUrl: String = data.pageTitleOpt.getOrElse(data.url)
