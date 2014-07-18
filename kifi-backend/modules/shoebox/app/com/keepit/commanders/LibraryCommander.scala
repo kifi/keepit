@@ -124,6 +124,73 @@ class LibraryCommander @Inject() (
 
   }
 
+  def removeLibrary(libraryId: PublicId[Library]) = {
+    val idTry = Library.decode(libraryId)
+    idTry match {
+      case Failure(ex) => Left(LibraryFail("Invalid Id"))
+      case Success(id) => {
+        db.readWrite { implicit s =>
+          val oldLibrary = libraryRepo.get(id)
+          val removedLibrary = libraryRepo.save(oldLibrary.withState(LibraryStates.INACTIVE))
+
+          libraryMembershipRepo.getWithLibraryId(removedLibrary.id.get).map { m =>
+            libraryMembershipRepo.save(m.withState(LibraryMembershipStates.INACTIVE))
+          }
+          libraryInviteRepo.getWithLibraryId(removedLibrary.id.get).map { inv =>
+            libraryInviteRepo.save(inv.withState(LibraryInviteStates.INACTIVE))
+          }
+        }
+      }
+    }
+  }
+
+  def getLibraryByPublicId(libraryId: PublicId[Library]): Either[LibraryFail, FullLibraryInfo] = {
+    val idTry = Library.decode(libraryId)
+    idTry match {
+      case Failure(ex) => Left(LibraryFail("Invalid Id"))
+      case Success(id) => {
+        val (lib, owner, collaborators, followers, numKeeps) = db.readOnlyMaster { implicit s =>
+          val lib = libraryRepo.get(id)
+          val memberships = libraryMembershipRepo.getWithLibraryId(libraryId = lib.id.get)
+          val collabIds = for (m: LibraryMembership <- {
+            memberships.filter { x => x.access == LibraryAccess.READ_WRITE || x.access == LibraryAccess.READ_INSERT}
+          }) yield m.userId
+          val followIds = for (m: LibraryMembership <- {
+            memberships.filter { x => x.access == LibraryAccess.READ_ONLY}
+          }) yield m.userId
+
+          val collabUsers = basicUserRepo.loadAll(collabIds.toSet).values.toSeq
+          val followUsers = basicUserRepo.loadAll(followIds.toSet).values.toSeq
+
+          val owner = basicUserRepo.load(lib.ownerId)
+          val numKeeps = 0 //keepRepo.getByLibraryId
+          (lib, owner, collabUsers, followUsers, numKeeps)
+        }
+        val groupCollabs = GroupHolder(count = collaborators.length, users = collaborators, isMore = false)
+        val groupFollows = GroupHolder(count = followers.length, users = followers, isMore = false)
+
+        Right(FullLibraryInfo(id = libraryId, name = lib.name, description = lib.description, visibility = lib.visibility, slug = lib.slug,
+          ownerId = owner.externalId, collaborators = groupCollabs, followers = groupFollows, keepCount = numKeeps))
+      }
+    }
+  }
+
+  def getLibrariesByUser(userId: ExternalId[User]): Either[LibraryFail, Seq[(LibraryInfo, LibraryAccess)]] = {
+    val libs = db.readOnlyMaster { implicit s =>
+      val uId = userRepo.get(userId).id.get
+      val libMems = libraryMembershipRepo.getWithUserId(uId)
+
+      for (m <- libMems) yield {
+        val lib = libraryRepo.get(m.libraryId)
+        val owner = basicUserRepo.load(lib.ownerId)
+        val libInfo = LibraryInfo(id = lib.publicId.get, name = lib.name, visibility = lib.visibility, slug = lib.slug,
+          shortDescription = LibraryInfo.descriptionShortener(lib.description), ownerId = owner.externalId)
+        (libInfo, m.access)
+      }
+    }
+    Right(libs)
+  }
+
   private def inviteBulkUsers(invites: Seq[LibraryInvite]) {
     db.readWrite { implicit s =>
       invites.map { invite => libraryInviteRepo.save(invite) }
