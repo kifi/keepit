@@ -59,7 +59,7 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
   */
   protected[this] val publicIdIvSpec: IvParameterSpec
 
-  def publicId(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
+  def decodePublicId(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
     if (publicId.id.startsWith(publicIdPrefix)) {
       Try(config.aes64bit(publicIdIvSpec).decrypt(Base62Long.decode(publicId.id.substring(publicIdPrefix.length)))).flatMap { id =>
         // IDs must be less than 100 billion. This gives us "plenty" of room, while catching nearly* all invalid IDs.
@@ -74,7 +74,7 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
     }
   }
 
-  def publicId(id: Id[T])(implicit config: PublicIdConfiguration): Try[PublicId[T]] = {
-    Try(PublicId[T](publicIdPrefix + Base62Long.encode(config.aes64bit(publicIdIvSpec).encrypt(id.id))))
+  def publicId(id: Id[T])(implicit config: PublicIdConfiguration): PublicId[T] = {
+    PublicId[T](publicIdPrefix + Base62Long.encode(config.aes64bit(publicIdIvSpec).encrypt(id.id)))
   }
 }

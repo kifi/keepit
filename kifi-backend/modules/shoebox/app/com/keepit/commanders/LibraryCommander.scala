@@ -70,7 +70,7 @@ class LibraryCommander @Inject() (
 
         val groupCollabs = GroupHolder(count = collaboratorIds.length, users = collaboratorUsers, isMore = false)
         val groupFollowers = GroupHolder(count = followerIds.length, users = followerUsers, isMore = false)
-        Right(FullLibraryInfo(id = Library.publicId(library.id.get).get, ownerId = ownerExtId, name = libInfo.name, slug = validSlug,
+        Right(FullLibraryInfo(id = Library.publicId(library.id.get), ownerId = ownerExtId, name = libInfo.name, slug = validSlug,
           visibility = validVisibility, description = libInfo.description, keepCount = 0,
           collaborators = groupCollabs, followers = groupFollowers))
       }
@@ -82,7 +82,7 @@ class LibraryCommander @Inject() (
     description: Option[String] = None,
     slug: Option[String] = None,
     visibility: Option[LibraryVisibility] = None): Either[LibraryFail, LibraryInfo] = {
-    val idTry = Library.publicId(libraryId)
+    val idTry = Library.decodePublicId(libraryId)
     idTry match {
       case Failure(ex) => Left(LibraryFail("Invalid Id"))
       case Success(id) => {
@@ -112,7 +112,7 @@ class LibraryCommander @Inject() (
                 val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
                 val lib = libraryRepo.save(targetLib.copy(name = newName, slug = LibrarySlug(newSlug), visibility = newVisibility, description = newDescription))
                 val ownerExtId = basicUserRepo.load(lib.ownerId).externalId
-                LibraryInfo(id = Library.publicId(lib.id.get).get, name = lib.name, slug = lib.slug, visibility = lib.visibility,
+                LibraryInfo(id = Library.publicId(lib.id.get), name = lib.name, slug = lib.slug, visibility = lib.visibility,
                   shortDescription = LibraryInfo.descriptionShortener(lib.description), ownerId = ownerExtId)
               }
             }
@@ -168,7 +168,7 @@ object LibraryInfo {
 
   def fromLibraryAndOwner(lib: Library, owner: User)(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
-      id = Library.publicId(lib.id.get).get,
+      id = Library.publicId(lib.id.get),
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,

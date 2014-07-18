@@ -120,19 +120,19 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         }
 
         val libraryCommander = inject[LibraryCommander]
-        val mod1 = libraryCommander.modifyLibrary(libraryId = Library.publicId(libShield.id.get).get, userId = userAgent.externalId,
+        val mod1 = libraryCommander.modifyLibrary(libraryId = Library.publicId(libShield.id.get), userId = userAgent.externalId,
           description = Some("Samuel L. Jackson was here"))
         mod1.isRight === true
-        val mod2 = libraryCommander.modifyLibrary(libraryId = Library.publicId(libMurica.id.get).get, userId = userCaptain.externalId,
+        val mod2 = libraryCommander.modifyLibrary(libraryId = Library.publicId(libMurica.id.get), userId = userCaptain.externalId,
           name = Some("MURICA #1!!!!!"), slug = Some("murica_#1"))
         mod2.isRight === true
-        val mod3 = libraryCommander.modifyLibrary(libraryId = Library.publicId(libScience.id.get).get, userId = userIron.externalId,
+        val mod3 = libraryCommander.modifyLibrary(libraryId = Library.publicId(libScience.id.get), userId = userIron.externalId,
           visibility = Some(LibraryVisibility.ANYONE))
         mod3.isRight === true
-        val mod4 = libraryCommander.modifyLibrary(libraryId = Library.publicId(libScience.id.get).get, userId = userHulk.externalId,
+        val mod4 = libraryCommander.modifyLibrary(libraryId = Library.publicId(libScience.id.get), userId = userHulk.externalId,
           name = Some("HULK SMASH"))
         mod4.isRight === false
-        val mod5 = libraryCommander.modifyLibrary(libraryId = Library.publicId(libScience.id.get).get, userId = userIron.externalId,
+        val mod5 = libraryCommander.modifyLibrary(libraryId = Library.publicId(libScience.id.get), userId = userIron.externalId,
           name = Some(""))
         mod5.isRight === false
 

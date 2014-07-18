@@ -28,10 +28,10 @@ class PublicIdTest extends Specification {
       val id3 = Id[TestModel2](1L)
       val id4 = Id[TestModel2](2L)
 
-      val pid1 = TestModel.publicId(id1).get
-      val pid2 = TestModel.publicId(id2).get
-      val pid3 = TestModel2.publicId(id3).get
-      val pid4 = TestModel2.publicId(id4).get
+      val pid1 = TestModel.publicId(id1)
+      val pid2 = TestModel.publicId(id2)
+      val pid3 = TestModel2.publicId(id3)
+      val pid4 = TestModel2.publicId(id4)
 
       // Inputs are different, sanity
       id1 !== id2
@@ -50,14 +50,14 @@ class PublicIdTest extends Specification {
       pid3.id === "w9wcfGVcIpAT"
 
       // Encryption is consistant
-      TestModel.publicId(Id[TestModel](1)).get === pid1
+      TestModel.publicId(Id[TestModel](1)) === pid1
 
       // Decryption works
-      val id1_2 = TestModel.publicId(pid1).get
+      val id1_2 = TestModel.decodePublicId(pid1).get
       id1_2 === id1
 
       // Description with the wrong key usually fails
-      TestModel.publicId(pid1)(PublicIdConfiguration("otherkey")).get must throwAn[IllegalArgumentException]
+      TestModel.decodePublicId(pid1)(PublicIdConfiguration("otherkey")).get must throwAn[IllegalArgumentException]
 
     }
   }
