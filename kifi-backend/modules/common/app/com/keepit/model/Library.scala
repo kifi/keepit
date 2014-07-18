@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import javax.crypto.spec.IvParameterSpec
+
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId }
 import com.keepit.common.db._
@@ -34,7 +36,8 @@ case class Library(
 
 object Library extends ModelWithPublicIdCompanion[Library] {
 
-  val prefix: String = "lib"
+  val prefix: String = "l"
+  val ivSpec: IvParameterSpec = ""
 
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[Library]) and

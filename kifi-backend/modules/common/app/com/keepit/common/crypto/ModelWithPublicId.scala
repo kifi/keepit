@@ -1,15 +1,19 @@
 package com.keepit.common.crypto
 
+import javax.crypto.spec.IvParameterSpec
+
 import com.google.common.io.BaseEncoding
 import com.keepit.common.db.Id
 import org.apache.commons.codec.binary.Base64
 import play.api.libs.json._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
 
+import scala.collection.concurrent.TrieMap
 import scala.util.{ Failure, Try }
 
 case class PublicIdConfiguration(key: String) {
-  lazy val aes64bit = Aes64BitCipher(key)
+  private val cache = TrieMap.empty[IvParameterSpec, Aes64BitCipher]
+  def aes64bit(ivStr: IvParameterSpec) = cache.getOrElseUpdate(ivStr, Aes64BitCipher(ivStr, key))
 }
 
 case class PublicId[T <: ModelWithPublicId[T]](id: String)
@@ -42,31 +46,32 @@ object PublicId {
   private[crypto] val coder = BaseEncoding.base32().lowerCase().omitPadding()
 }
 
-// TODO: Cipher must be a singleton, not re-created for every encode/decode.
 
 trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
-
-  val prefix: String
   val id: Option[Id[T]]
-
-  def publicId(implicit config: PublicIdConfiguration): Try[PublicId[T]] = {
-    id.map { someId =>
-      Try(PublicId[T](prefix + Base64.encodeBase64URLSafeString(config.aes64bit.encrypt(someId.id))))
-    }.getOrElse(Failure(new IllegalStateException("model has no id")))
-  }
-
 }
 
 trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
 
   val prefix: String
+  /* Can be generated with:
+    val sr = new java.security.SecureRandom()
+    val arr = new Array[Byte](16)
+    sr.nextBytes(arr)
+    arr
+  */
+  var ivSpec: IvParameterSpec
 
-  def decode(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
+  def publicId(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
     val reg = raw"^$prefix(.*)$$".r
     Try {
       reg.findFirstMatchIn(publicId.id).map(_.group(1)).map { identifier =>
-        Id[T](config.aes64bit.decrypt(Base64.decodeBase64(identifier)))
+        Id[T](config.aes64bit(ivSpec).decrypt(Base64.decodeBase64(identifier)))
       }.get
     }
+  }
+
+  def publicId(id: Id[T])(implicit config: PublicIdConfiguration): Try[PublicId[T]] = {
+    Try(PublicId[T](prefix + Base64.encodeBase64URLSafeString(config.aes64bit(ivSpec).encrypt(id))))
   }
 }
