@@ -46,7 +46,6 @@ object PublicId {
   private[crypto] val coder = BaseEncoding.base32().lowerCase().omitPadding()
 }
 
-
 trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
   val id: Option[Id[T]]
 }
@@ -60,18 +59,17 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
     sr.nextBytes(arr)
     arr
   */
-  var ivSpec: IvParameterSpec
+  protected[this] val prefixIvSpec: IvParameterSpec
 
   def publicId(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
-    val reg = raw"^$prefix(.*)$$".r
-    Try {
-      reg.findFirstMatchIn(publicId.id).map(_.group(1)).map { identifier =>
-        Id[T](config.aes64bit(ivSpec).decrypt(Base64.decodeBase64(identifier)))
-      }.get
+    if (publicId.id.startsWith(prefix)) {
+      Try(Id[T](config.aes64bit(prefixIvSpec).decrypt(PublicId.coder.decode(publicId.id.substring(prefix.length)))))
+    } else {
+      Failure(new IllegalArgumentException(s"Expected $publicId to start with $prefix"))
     }
   }
 
   def publicId(id: Id[T])(implicit config: PublicIdConfiguration): Try[PublicId[T]] = {
-    Try(PublicId[T](prefix + Base64.encodeBase64URLSafeString(config.aes64bit(ivSpec).encrypt(id))))
+    Try(PublicId[T](prefix + Base64.encodeBase64URLSafeString(config.aes64bit(prefixIvSpec).encrypt(id.id))))
   }
 }
