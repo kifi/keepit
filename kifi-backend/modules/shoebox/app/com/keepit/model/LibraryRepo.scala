@@ -10,13 +10,14 @@ import scala.slick.lifted.{ TableQuery, Tag }
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
-
+  def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(LibraryAccess, Library)]
 }
 
 @Singleton
 class LibraryRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
+  val libraryMembershipRepo: LibraryMembershipRepoImpl,
   val idCache: LibraryIdCache)
     extends DbRepo[Library] with LibraryRepo with SeqNumberDbFunction[Library] with Logging {
 
@@ -55,6 +56,14 @@ class LibraryRepoImpl @Inject() (
     } else {
       idCache.set(LibraryIdKey(library.id.get), library)
     }
+  }
+
+  def getByUser(userId: Id[User], excludeState: Option[State[Library]])(implicit session: RSession): Seq[(LibraryAccess, Library)] = {
+    val q = for {
+      lib <- rows if lib.state =!= excludeState.orNull
+      lm <- libraryMembershipRepo.rows if lm.libraryId === lib.id && lm.userId === userId && lm.state === LibraryMembershipStates.ACTIVE
+    } yield (lm.access, lib)
+    q.list
   }
 
 }

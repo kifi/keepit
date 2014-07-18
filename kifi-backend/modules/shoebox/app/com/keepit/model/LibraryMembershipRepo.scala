@@ -21,7 +21,6 @@ class LibraryMembershipRepoImpl @Inject() (
   val memberIdCache: LibraryMembershipIdCache)
     extends DbRepo[LibraryMembership] with DbRepoWithDelete[LibraryMembership] with LibraryMembershipRepo with SeqNumberDbFunction[LibraryMembership] with Logging {
 
-  import scala.slick.lifted.Query
   import DBSession._
   import db.Driver.simple._
   private val sequence = db.getSequence[LibraryMembership]("library_membership_sequence")

@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.model.NormalizedURI
 import com.keepit.scraper.extractor.ExtractorProviderType
