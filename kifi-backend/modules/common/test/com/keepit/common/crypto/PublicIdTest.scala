@@ -1,0 +1,64 @@
+package com.keepit.common.crypto
+
+import javax.crypto.spec.IvParameterSpec
+
+import com.keepit.common.db.Id
+import org.specs2.mutable._
+
+class PublicIdTest extends Specification {
+
+  "PublicId" should {
+    implicit val config = PublicIdConfiguration("secret key")
+
+    "encode and decode public ids" in {
+      case class TestModel(id: Option[Id[TestModel]]) extends ModelWithPublicId[TestModel]
+      object TestModel extends ModelWithPublicIdCompanion[TestModel] {
+        protected[this] val publicIdPrefix = "t"
+        protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
+      }
+
+      case class TestModel2(id: Option[Id[TestModel2]]) extends ModelWithPublicId[TestModel2]
+      object TestModel2 extends ModelWithPublicIdCompanion[TestModel2] {
+        protected[this] val publicIdPrefix = "w"
+        protected[this] val publicIdIvSpec = new IvParameterSpec(Array(0, 0, 0, 0, -10, 100, 100, 10, 42, 42, 42, 42, 42, 42, 42, 42))
+      }
+
+      val id1 = Id[TestModel](1L)
+      val id2 = Id[TestModel](2L)
+      val id3 = Id[TestModel2](1L)
+      val id4 = Id[TestModel2](2L)
+
+      val pid1 = TestModel.publicId(id1)
+      val pid2 = TestModel.publicId(id2)
+      val pid3 = TestModel2.publicId(id3)
+      val pid4 = TestModel2.publicId(id4)
+
+      // Inputs are different, sanity
+      id1 !== id2
+      id2 !== id3
+      id3 !== id4
+
+      // PublicIds should be different
+      pid1 !== pid2
+      pid1 !== pid3
+      pid1.id.substring(1) !== pid3.id.substring(1) // different IVs
+      pid2 !== pid3
+      pid3 !== pid4
+
+      // Values are correct (sensitive to changes to IV and key)
+      pid1.id === "tKhpz2uJdFZB"
+      pid3.id === "w9wcfGVcIpAT"
+
+      // Encryption is consistant
+      TestModel.publicId(Id[TestModel](1)) === pid1
+
+      // Decryption works
+      val id1_2 = TestModel.decodePublicId(pid1).get
+      id1_2 === id1
+
+      // Description with the wrong key usually fails
+      TestModel.decodePublicId(pid1)(PublicIdConfiguration("otherkey")).get must throwAn[IllegalArgumentException]
+
+    }
+  }
+}

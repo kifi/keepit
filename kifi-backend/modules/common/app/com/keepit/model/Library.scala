@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import javax.crypto.spec.IvParameterSpec
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId }
 import com.keepit.common.db._
@@ -24,8 +25,6 @@ case class Library(
     seq: SequenceNumber[Library] = SequenceNumber.ZERO,
     kind: LibraryKind = LibraryKind.USER_CREATED) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
-  val prefix = Library.prefix
-
   def withId(id: Id[Library]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(myState: State[Library]) = this.copy(state = myState)
@@ -34,7 +33,8 @@ case class Library(
 
 object Library extends ModelWithPublicIdCompanion[Library] {
 
-  val prefix: String = "lib"
+  protected[this] val publicIdPrefix = "l"
+  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
 
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[Library]) and

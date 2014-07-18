@@ -29,7 +29,7 @@ class LibraryController @Inject() (
   }
 
   def modifyLibrary(pubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>
-    val idTry = Library.decode(pubId)
+    val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) => {
@@ -48,7 +48,7 @@ class LibraryController @Inject() (
   }
 
   def removeLibrary(pubId: PublicId[Library]) = JsonAction.authenticated { request =>
-    val idTry = Library.decode(pubId)
+    val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) => {
@@ -59,7 +59,7 @@ class LibraryController @Inject() (
   }
 
   def getLibrary(pubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>
-    val idTry = Library.decode(pubId)
+    val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) => Ok(Json.toJson(libraryCommander.getLibraryById(id)))

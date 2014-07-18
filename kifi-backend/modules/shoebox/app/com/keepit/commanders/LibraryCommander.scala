@@ -1,7 +1,6 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.commanders.LibraryInfo
 import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
@@ -71,7 +70,7 @@ class LibraryCommander @Inject() (
 
         val groupCollabs = GroupHolder(count = collaboratorIds.length, users = collaboratorUsers, isMore = false)
         val groupFollowers = GroupHolder(count = followerIds.length, users = followerUsers, isMore = false)
-        Right(FullLibraryInfo(id = library.publicId.get, ownerId = ownerExtId, name = libInfo.name, slug = validSlug,
+        Right(FullLibraryInfo(id = Library.publicId(library.id.get), ownerId = ownerExtId, name = libInfo.name, slug = validSlug,
           visibility = validVisibility, description = libInfo.description, keepCount = 0,
           collaborators = groupCollabs, followers = groupFollowers))
       }
@@ -110,7 +109,7 @@ class LibraryCommander @Inject() (
             val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
             val lib = libraryRepo.save(targetLib.copy(name = newName, slug = LibrarySlug(newSlug), visibility = newVisibility, description = newDescription))
             val ownerExtId = basicUserRepo.load(lib.ownerId).externalId
-            LibraryInfo(id = lib.publicId.get, name = lib.name, slug = lib.slug, visibility = lib.visibility,
+            LibraryInfo(id = Library.publicId(lib.id.get), name = lib.name, slug = lib.slug, visibility = lib.visibility,
               shortDescription = LibraryInfo.descriptionShortener(lib.description), ownerId = ownerExtId)
           }
         }
@@ -157,7 +156,7 @@ class LibraryCommander @Inject() (
     val groupCollabs = GroupHolder(count = collaborators.length, users = collaborators, isMore = false)
     val groupFollows = GroupHolder(count = followers.length, users = followers, isMore = false)
 
-    FullLibraryInfo(id = lib.publicId.get, name = lib.name, description = lib.description, visibility = lib.visibility, slug = lib.slug,
+    FullLibraryInfo(id = Library.publicId(lib.id.get), name = lib.name, description = lib.description, visibility = lib.visibility, slug = lib.slug,
       ownerId = owner.externalId, collaborators = groupCollabs, followers = groupFollows, keepCount = numKeeps)
   }
 
@@ -213,7 +212,7 @@ object LibraryInfo {
 
   def fromLibraryAndOwner(lib: Library, owner: User)(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
-      id = lib.publicId.get,
+      id = Library.publicId(lib.id.get),
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
