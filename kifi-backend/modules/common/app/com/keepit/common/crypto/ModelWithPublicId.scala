@@ -1,8 +1,6 @@
 package com.keepit.common.crypto
 
-import com.google.common.io.BaseEncoding
 import com.keepit.common.db.Id
-import org.apache.commons.codec.binary.Base64
 import play.api.libs.json._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
 
@@ -38,8 +36,6 @@ object PublicId {
 
     override def unbind(key: String, id: PublicId[T]): String = id.toString
   }
-
-  private[crypto] val coder = BaseEncoding.base32().lowerCase().omitPadding()
 }
 
 // TODO: Cipher must be a singleton, not re-created for every encode/decode.
@@ -51,7 +47,7 @@ trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
 
   def publicId(implicit config: PublicIdConfiguration): Try[PublicId[T]] = {
     id.map { someId =>
-      Try(PublicId[T](prefix + Base64.encodeBase64URLSafeString(config.aes64bit.encrypt(someId.id))))
+      Try(PublicId[T](prefix + Base62Long.encode(config.aes64bit.encrypt(someId.id))))
     }.getOrElse(Failure(new IllegalStateException("model has no id")))
   }
 
@@ -65,7 +61,7 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
     val reg = raw"^$prefix(.*)$$".r
     Try {
       reg.findFirstMatchIn(publicId.id).map(_.group(1)).map { identifier =>
-        Id[T](config.aes64bit.decrypt(Base64.decodeBase64(identifier)))
+        Id[T](config.aes64bit.decrypt(Base62Long.decode(identifier)))
       }.get
     }
   }
