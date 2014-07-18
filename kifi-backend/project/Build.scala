@@ -225,9 +225,7 @@ object ApplicationBuild extends Build {
     emojiLogs,
     // incOptions := incOptions.value.withNameHashing(true) // see https://groups.google.com/forum/#!msg/play-framework/S_-wYW5Tcvw/OjJuB4iUwD8J
     ScalariformKeys.preferences := ScalariformKeys.preferences.value
-      .setPreference(DoubleIndentClassDeclaration, true),
-    coffeescriptEntryPoints := Nil,
-    javascriptEntryPoints := Nil
+      .setPreference(DoubleIndentClassDeclaration, true)
     //,     offline := true
   )
 
