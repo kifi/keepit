@@ -13,7 +13,7 @@ case class PublicIdConfiguration(key: String) {
   def aes64bit(ivStr: IvParameterSpec) = cache.getOrElseUpdate(ivStr, Aes64BitCipher(ivStr, key))
 }
 
-case class PublicId[T <: ModelWithPublicId[T]](id: String)
+case class PublicId[T <: ModelWithPublicId[T]](val id: String)
 
 object PublicId {
   implicit def format[T <: ModelWithPublicId[T]]: Format[PublicId[T]] = Format(
@@ -56,13 +56,11 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
   */
   protected[this] val prefixIvSpec: IvParameterSpec
 
-
   def publicId(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
-    val reg = raw"^$prefix(.*)$$".r
-    Try {
-      reg.findFirstMatchIn(publicId.id).map(_.group(1)).map { identifier =>
-        Id[T](config.aes64bit(prefixIvSpec).decrypt(Base62Long.decode(identifier)))
-      }.get
+    if (publicId.id.startsWith(prefix)) {
+      Try(Id[T](config.aes64bit(prefixIvSpec).decrypt(Base62Long.decode(publicId.id.substring(prefix.length)))))
+    } else {
+      Failure(new IllegalArgumentException(s"Expected $publicId to start with $prefix"))
     }
   }
 
