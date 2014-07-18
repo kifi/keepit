@@ -1,14 +1,12 @@
 package com.keepit.common.crypto
 
-import com.keepit.common.db.Id
 import com.google.common.io.BaseEncoding
-
+import com.keepit.common.db.Id
+import org.apache.commons.codec.binary.Base64
 import play.api.libs.json._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
 
-import org.apache.commons.codec.binary.Base64
-
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Try }
 
 case class PublicIdConfiguration(key: String) {
   lazy val aes64bit = Aes64BitCipher(key)
