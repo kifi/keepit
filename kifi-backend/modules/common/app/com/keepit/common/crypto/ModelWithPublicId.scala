@@ -6,7 +6,7 @@ import play.api.libs.json._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
 
 import scala.collection.concurrent.TrieMap
-import scala.util.{ Failure, Try }
+import scala.util.{ Success, Failure, Try }
 
 case class PublicIdConfiguration(key: String) {
   private val cache = TrieMap.empty[IvParameterSpec, Aes64BitCipher]
@@ -58,7 +58,13 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
 
   def publicId(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
     if (publicId.id.startsWith(prefix)) {
-      Try(Id[T](config.aes64bit(prefixIvSpec).decrypt(Base62Long.decode(publicId.id.substring(prefix.length)))))
+      Try(Id[T](config.aes64bit(prefixIvSpec).decrypt(Base62Long.decode(publicId.id.substring(prefix.length))))).flatMap { id =>
+        if (id.id > 0 || id.id > 10000000L) {
+          Success(id)
+        } else {
+          Failure(new IllegalArgumentException(s"Expected $publicId to be in a valid range: ${id.id}"))
+        }
+      }
     } else {
       Failure(new IllegalArgumentException(s"Expected $publicId to start with $prefix"))
     }
