@@ -6,8 +6,8 @@ var less = require('gulp-less');
 var runSequence = require('run-sequence');
 var gulpif = require('gulp-if');
 var clone = require('gulp-clone');
-var merge = require('merge-stream');
 var css = require('css');
+var es = require('event-stream');
 
 var outDir = 'out_test';
 
@@ -16,7 +16,7 @@ gulp.task('clean', function () {
     .pipe(rimraf());
 });
 
-gulp.task('move', function () {
+gulp.task('copy', function () {
   var adapters = gulp.src(['adapters/chrome/**', 'adapters/firefox/**'], {base: './adapters'})
     .pipe(gulp.dest(outDir));
 
@@ -32,7 +32,11 @@ gulp.task('move', function () {
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/data/scripts/lib'));
 
-  return merge(adapters, shared, resources, rwsocket);
+  var backgroundScripts = gulp.src(['main.js', 'threadlist.js', 'lzstring.min.js', 'scorefilter.js', 'friend_search_cache.js'])
+    .pipe(gulp.dest(outDir + '/chrome'))
+    .pipe(gulp.dest(outDir + '/firefox/lib'));
+
+  return es.merge(adapters, shared, resources, rwsocket, backgroundScripts);
 });
 
 gulp.task('html2js', function () {
@@ -50,13 +54,25 @@ gulp.task('html2js', function () {
     }
   });
 
-  return gulp.src(['html/**/*.html'], {base: './'})
+  return gulp.src('html/**/*.html', {base: './'})
     .pipe(html2js)
     .pipe(rename(function (path) {
       path.extname = '.js';
     }))
     .pipe(gulp.dest(outDir + '/chrome/scripts'))
     .pipe(gulp.dest(outDir + '/firefox/data/scripts'));
+});
+
+gulp.task('scripts', ['html2js', 'copy'], function () {
+  var chromeInjectionFooter = map(function (code, filename) {
+    var relativeFilename = filename.replace(new RegExp('^' + __dirname + '/' + outDir + '/chrome/'), '');
+    var shortName = relativeFilename.replace(/^scripts\//, '');
+    return code.toString() + 'api.injected[' + relativeFilename + ']=1;\n//@ sourceURL=http://kifi/' + shortName + '\n';
+  });
+
+  return gulp.src([outDir + '/chrome/scripts/**/*.js', '!**/iframes/**'], {base: outDir})
+    .pipe(chromeInjectionFooter)
+    .pipe(gulp.dest(outDir));
 });
 
 gulp.task('styles', function () {
@@ -87,7 +103,6 @@ gulp.task('styles', function () {
     // a bit slower than above, but much safer and more readable/maintainable
     var obj = css.parse(code.toString())
     obj.stylesheet.rules.map(insulateRule);
-    console.log(css.stringify(obj));
     return css.stringify(obj);
   });
 
@@ -99,7 +114,7 @@ gulp.task('styles', function () {
     return code.toString().replace(/\/images\//g, 'resource://kifi-at-42go-dot-com/kifi/data/images/');
   });
 
-  var preprocessed = gulp.src(['styles/**/*.*'], {base: './'})
+  var preprocessed = gulp.src('styles/**/*.*', {base: './'})
     .pipe(gulpif(/[.]less$/, less()))
     .pipe(gulpif(RegExp('^(?!' + __dirname + '/styles/(insulate\\.|iframes/))'), insulate))
   
@@ -111,9 +126,9 @@ gulp.task('styles', function () {
     .pipe(imageUrlFirefox)
     .pipe(gulp.dest(outDir + '/firefox/data'));
 
-  return merge(chrome, firefox);
+  return es.merge(chrome, firefox);
 });
 
 gulp.task('default', function () {
-  runSequence('clean', ['move', 'html2js', 'styles']);
+  runSequence('clean', ['scripts', 'styles']);
 });
