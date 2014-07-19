@@ -41,9 +41,9 @@ class PublicIdTest extends Specification {
       pid1.id.zip(pid3.id).count(c => c._1 != c._2) must be_>(5)
 
       // Values are correct (sensitive to changes to IV and key)
-      pid1.id === "tKhpz2uJdFZB"
-      pid2.id === "tKhpz2uJdFY8"  // TODO: this should be much more different from pid1.id
-      pid3.id === "w9wcfGVcIpAT"
+      pid1.id === "tEvDcZaVaEMD"
+      pid2.id === "t5rWKTLCQNJl"
+      pid3.id === "w4cIvxI460Tu"
 
       // Encryption is consistant
       TestModel.publicId(Id[TestModel](1)) === pid1

@@ -1,5 +1,6 @@
 package com.keepit.common.crypto
 
+import java.lang.Long.reverseBytes
 import java.nio.ByteBuffer
 import javax.crypto.{ Cipher, SecretKey, SecretKeyFactory }
 import javax.crypto.spec.{ IvParameterSpec, PBEKeySpec, SecretKeySpec }
@@ -8,8 +9,8 @@ import org.apache.commons.codec.binary.Base64
 
 private[crypto] class Aes64BitCipher(key: SecretKey, ivSpec: IvParameterSpec) {
 
-  private val ecipher = Cipher.getInstance("AES/CFB64/NoPadding")
-  private val dcipher = Cipher.getInstance("AES/CFB64/NoPadding")
+  private val ecipher = Cipher.getInstance("AES/CFB8/NoPadding")
+  private val dcipher = Cipher.getInstance("AES/CFB8/NoPadding")
 
   ecipher.init(Cipher.ENCRYPT_MODE, key, ivSpec)
   dcipher.init(Cipher.DECRYPT_MODE, key, ivSpec)
@@ -19,12 +20,12 @@ private[crypto] class Aes64BitCipher(key: SecretKey, ivSpec: IvParameterSpec) {
 
   private def crypt(value: Long, cipher: Cipher): Long = {
     val buffer = ByteBuffer.allocate(8)
-    buffer.putLong(0, value)
+    buffer.putLong(0, reverseBytes(value))
     val bytes: Array[Byte] = cipher.doFinal(buffer.array)
     buffer.rewind
     buffer.put(bytes)
-    buffer.flip
-    buffer.getLong
+    buffer.rewind
+    reverseBytes(buffer.getLong)
   }
 
 }

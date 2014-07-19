@@ -15,16 +15,25 @@ class Aes64BitCipherTest extends Specification {
       encrypted !== plaintext
       cipher.decrypt(encrypted) === plaintext
     }
-    "permute bits well" in {  // FAIL!!!  TODO: fix
-      cipher.encrypt(1) === 3943421451219986269L
-      cipher.encrypt(2) === 3943421451219986270L
-      cipher.encrypt(3) === 3943421451219986271L
-      cipher.encrypt(4) === 3943421451219986264L
-      cipher.encrypt(5) === 3943421451219986265L
-      cipher.encrypt(6) === 3943421451219986266L
-      cipher.encrypt(7) === 3943421451219986267L
-      cipher.encrypt(8) === 3943421451219986260L
-      cipher.encrypt(9) === 3943421451219986261L
+    "permute bits well in consecutive small positive long values" in {
+      cipher.encrypt(1) === -2644796545160457673L
+      cipher.encrypt(2) === 5711187287630018612L
+      cipher.encrypt(3) === -7392062738091901643L
+      cipher.encrypt(4) === 8792213188438217266L
+      cipher.encrypt(5) === 1380560063487963187L
+      cipher.encrypt(6) === 5823553674093653552L
+      cipher.encrypt(7) === -1056275590325946063L
+      cipher.encrypt(8) === -1380969989776329666L
+      cipher.encrypt(9) === 6145921475325096767L
+      cipher.encrypt(9991) === 1164322715469585969L
+      cipher.encrypt(9992) === 7677984277210665790L
+      cipher.encrypt(9993) === -6461694352345770945L
+      cipher.encrypt(9994) === -4690800597685002692L
+      cipher.encrypt(9995) === -6676086683958697155L
+      cipher.encrypt(9996) === 2845373186209553722L
+      cipher.encrypt(9997) === 2539424297649662523L
+      cipher.encrypt(9998) === 5757596379705742136L
+      cipher.encrypt(9999) === 1086822315686484281L
     }
   }
 }
