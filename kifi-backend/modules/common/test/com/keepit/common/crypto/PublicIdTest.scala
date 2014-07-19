@@ -26,39 +26,33 @@ class PublicIdTest extends Specification {
       val id1 = Id[TestModel](1L)
       val id2 = Id[TestModel](2L)
       val id3 = Id[TestModel2](1L)
-      val id4 = Id[TestModel2](2L)
 
       val pid1 = TestModel.publicId(id1)
       val pid2 = TestModel.publicId(id2)
       val pid3 = TestModel2.publicId(id3)
-      val pid4 = TestModel2.publicId(id4)
-
-      // Inputs are different, sanity
-      id1 !== id2
-      id2 !== id3
-      id3 !== id4
 
       // PublicIds should be different
       pid1 !== pid2
       pid1 !== pid3
-      pid1.id.substring(1) !== pid3.id.substring(1) // different IVs
       pid2 !== pid3
-      pid3 !== pid4
+
+      // PublicIds from the same Id value but for different types should be different
+      id1.id === id3.id
+      pid1.id.zip(pid3.id).count(c => c._1 != c._2) must be_>(5)
 
       // Values are correct (sensitive to changes to IV and key)
-      pid1.id === "tKhpz2uJdFZB"
-      pid3.id === "w9wcfGVcIpAT"
+      pid1.id === "tEvDcZaVaEMD"
+      pid2.id === "t5rWKTLCQNJl"
+      pid3.id === "w4cIvxI460Tu"
 
       // Encryption is consistant
       TestModel.publicId(Id[TestModel](1)) === pid1
 
       // Decryption works
-      val id1_2 = TestModel.decodePublicId(pid1).get
-      id1_2 === id1
+      TestModel.decodePublicId(pid1).get === id1
 
-      // Description with the wrong key usually fails
+      // Decryption with the wrong key should fail
       TestModel.decodePublicId(pid1)(PublicIdConfiguration("otherkey")).get must throwAn[IllegalArgumentException]
-
     }
   }
 }
