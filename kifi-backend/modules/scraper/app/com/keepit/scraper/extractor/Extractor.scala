@@ -2,7 +2,7 @@ package com.keepit.scraper.extractor
 
 import com.keepit.common.net.URI
 import com.keepit.scraper.mediatypes.MediaTypes
-import com.keepit.scraper.{ SignatureBuilder, Signature, HttpInputStream }
+import com.keepit.scraper.{ BasicArticle, SignatureBuilder, Signature, HttpInputStream }
 
 trait Extractor {
   def process(input: HttpInputStream): Unit
@@ -30,6 +30,18 @@ trait Extractor {
     )).build
   }
   def getMediaTypeString(): Option[String] = MediaTypes(this).getMediaTypeString(this)
+  def basicArticle(destinationUrl: String): BasicArticle =
+    BasicArticle(
+      title = getTitle,
+      content = getContent,
+      canonicalUrl = getCanonicalUrl,
+      description = getDescription,
+      media = getMediaTypeString,
+      httpContentType = getMetadata("Content-Type"),
+      httpOriginalContentCharset = getMetadata("Content-Encoding"),
+      destinationUrl = destinationUrl,
+      signature = getSignature
+    )
 }
 
 trait ExtractorFactory extends Function[String, Extractor]
