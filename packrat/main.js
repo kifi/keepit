@@ -644,12 +644,13 @@ api.port.on({
       api.tabs.emit(tab, 'kept', {fail: true});
     } else if (!d.state) {
       d.state = 'keeping';
-      ajax('POST', '/ext/keeps' + (data.guided ? '?guided=true' : ''), {
+      ajax('POST', '/ext/keeps', {
         title: data.title,
         url: data.url,
         canonical: data.canonical,
         og: data.og,
-        isPrivate: data.how === 'private'
+        isPrivate: data.how === 'private',
+        guided: data.guided
       }, function done(keep) {
         log('[keep:done]', keep);
         delete d.state;

@@ -124,11 +124,11 @@ class ExtBookmarksController @Inject() (
     }
   }
 
-  def keep(guided: Boolean) = JsonAction.authenticatedParseJson { request =>
+  def keep() = JsonAction.authenticatedParseJson { request =>
     val info = request.body.as[JsObject]
     val source = KeepSource.keeper
     val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
-    if (guided) {
+    if ((info \ "guided").asOpt[Boolean].getOrElse(false)) {
       hcb += ("guided", true)
     }
     implicit val context = hcb.build
