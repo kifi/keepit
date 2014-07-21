@@ -8,8 +8,9 @@ var gulpif = require('gulp-if');
 var clone = require('gulp-clone');
 var css = require('css');
 var es = require('event-stream');
+var livereload = require('gulp-livereload');
 
-var outDir = 'out_test';
+var outDir = 'out';
 var adapterFiles = ['adapters/chrome/**', 'adapters/firefox/**'];
 var sharedAdapterFiles = ['adapters/shared/*.js', 'adapters/shared/*.min.map'];
 var resourceFiles = ['icons/**', 'images/**', 'media/**', 'scripts/**', '!scripts/lib/rwsocket.js'];
@@ -19,13 +20,14 @@ var backgroundScripts = [
   'threadlist.js',
   'lzstring.min.js',
   'scorefilter.js',
-  'friend_search_cache.js'
+  'friend_search_cache.js',
+  'livereload.js'
 ];
 var htmlFiles = 'html/**/*.html';
 var styleFiles = 'styles/**/*.*';
 
-// Used to assemble lists of source descriptions
-var assemble = function () {
+// Used to take the union of glob descriptors
+var union = function () {
   return Array.prototype.reduce.call(arguments, function(a, b) {
     if (typeof b === 'string') {
       a.push(b);
@@ -98,7 +100,8 @@ gulp.task('scripts', ['html2js', 'copy'], function () {
 
   return gulp.src([outDir + '/chrome/scripts/**/*.js', '!**/iframes/**'], {base: outDir})
     .pipe(chromeInjectionFooter)
-    .pipe(gulp.dest(outDir));
+    .pipe(gulp.dest(outDir))
+    .pipe(livereload());
 });
 
 gulp.task('styles', function () {
@@ -146,7 +149,8 @@ gulp.task('styles', function () {
   
   var chrome = preprocessed.pipe(clone())
     .pipe(imageUrlChrome)
-    .pipe(gulp.dest(outDir + '/chrome'));
+    .pipe(gulp.dest(outDir + '/chrome'))
+    .pipe(livereload());
 
   var firefox = preprocessed.pipe(clone())
     .pipe(imageUrlFirefox)
@@ -156,7 +160,8 @@ gulp.task('styles', function () {
 });
 
 gulp.task('watch', function() {
-  gulp.watch(assemble(
+  livereload.listen();
+  gulp.watch(union(
     adapterFiles,
     sharedAdapterFiles,
     resourceFiles,
