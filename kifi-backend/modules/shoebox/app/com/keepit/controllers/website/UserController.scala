@@ -121,6 +121,11 @@ class UserController @Inject() (
     }
   }
 
+  def closeAccount = JsonAction.authenticated { request =>
+    userCommander.sendCloseAccountEmail(request.userId)
+    Ok(Json.obj("closed" -> true))
+  }
+
   def friend(id: ExternalId[User]) = JsonAction.authenticated { request =>
     val (success, code) = userCommander.friend(request.userId, id)
     if (success) {

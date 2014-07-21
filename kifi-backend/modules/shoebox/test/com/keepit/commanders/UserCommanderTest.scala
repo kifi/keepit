@@ -2,9 +2,9 @@ package com.keepit.commanders
 
 import org.specs2.mutable.Specification
 
-import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
-import com.keepit.model.{ User, UserEmailAddressRepo, UserRepo, UserEmailAddress, UserConnectionRepo }
-import com.keepit.common.mail.{ EmailAddress, FakeMailModule, FakeOutbox }
+import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplicationInjector, ShoeboxApplication }
+import com.keepit.model._
+import com.keepit.common.mail._
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -171,5 +171,64 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
       }
     }
   }
+}
 
+/* these are for tests that do not need to start an application */
+class DbOnlyUserCommanderTest extends Specification with ShoeboxTestInjector {
+
+  def setup()(implicit injector: Injector) = {
+    val userRepo = inject[UserRepo]
+    val emailRepo = inject[UserEmailAddressRepo]
+    val connectionRepo = inject[UserConnectionRepo]
+
+    db.readWrite { implicit session =>
+      var user1 = userRepo.save(User(
+        firstName = "Homer",
+        lastName = "Simpson"
+      ))
+      var user2 = userRepo.save(User(
+        firstName = "Peter",
+        lastName = "Griffin"
+      ))
+      var user3 = userRepo.save(User(
+        firstName = "Clark",
+        lastName = "Kent"
+      ))
+
+      val email1 = emailRepo.save(UserEmailAddress(userId = user1.id.get, address = EmailAddress("username@42go.com")))
+      val email2 = emailRepo.save(UserEmailAddress(userId = user2.id.get, address = EmailAddress("peteg@42go.com")))
+      val email3 = emailRepo.save(UserEmailAddress(userId = user3.id.get, address = EmailAddress("superreporter@42go.com")))
+
+      user1 = userRepo.save(user1.copy(primaryEmail = Some(email1.address), pictureName = Some("dfkjiyert")))
+      user2 = userRepo.save(user2.copy(primaryEmail = Some(email2.address)))
+
+      connectionRepo.addConnections(user1.id.get, Set(user2.id.get, user3.id.get))
+      (user1, user2, user3)
+    }
+
+  }
+
+  val modules = Seq(FakeMailModule())
+
+  "UserCommander" should {
+    "send a close account email" in {
+      withDb(modules: _*) { implicit injector =>
+
+        val (user1, user2, user3) = setup()
+        val userCommander = inject[UserCommander]
+        val outbox = inject[FakeOutbox]
+
+        outbox.size === 0
+        userCommander.sendCloseAccountEmail(user1.id.get)
+        outbox.size === 1
+
+        val mail: ElectronicMail = outbox(0)
+        mail.from === SystemEmailAddress.ENG
+        mail.to === Seq(SystemEmailAddress.SUPPORT)
+        mail.subject.toString === s"Close Account for ${user1.id.get}"
+        mail.htmlBody.toString === s"User ${user1.id.get} requested to close account."
+        mail.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)
+      }
+    }
+  }
 }

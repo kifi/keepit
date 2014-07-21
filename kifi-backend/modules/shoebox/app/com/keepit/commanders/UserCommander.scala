@@ -527,6 +527,18 @@ class UserCommander @Inject() (
     }
   }
 
+  def sendCloseAccountEmail(userId: Id[User]): ElectronicMail = {
+    db.readWrite { implicit s =>
+      postOffice.sendMail(ElectronicMail(
+        from = SystemEmailAddress.ENG,
+        to = Seq(SystemEmailAddress.SUPPORT),
+        subject = s"Close Account for ${userId}",
+        htmlBody = s"User ${userId} requested to close account.",
+        category = NotificationCategory.System.ADMIN
+      ))
+    }
+  }
+
   def ignoreFriendRequest(userId: Id[User], id: ExternalId[User]): (Boolean, String) = {
     db.readWrite { implicit s =>
       userRepo.getOpt(id) map { sender =>
