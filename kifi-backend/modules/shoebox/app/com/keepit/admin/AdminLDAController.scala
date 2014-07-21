@@ -118,7 +118,7 @@ class AdminLDAController @Inject() (
     val uriId = body.get("uriId").get.toLong
     val score = cortex.userUriInterest(Id[User](userId), Id[NormalizedURI](uriId))
     score.map { s =>
-      Ok(Json.toJson(s))
+      Ok(s.map { _.toString } getOrElse "n/a")
     }
   }
 

@@ -72,14 +72,13 @@ class LDACommander @Inject() (
     }
   }
 
-  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Float = {
-    val MIN_SCORE = 0.0001f
+  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Option[Float] = {
     db.readOnlyReplica { implicit s =>
       val uriTopicOpt = uriTopicRepo.getFeature(uriId, wordRep.version)
       val userTopicOpt = userTopicRepo.getTopicMeanByUser(userId, wordRep.version)
       (uriTopicOpt, userTopicOpt) match {
-        case (Some(uriFeat), Some(userFeat)) => cosineDistance(uriFeat.value, userFeat.mean) max MIN_SCORE
-        case _ => MIN_SCORE
+        case (Some(uriFeat), Some(userFeat)) => Some(cosineDistance(uriFeat.value, userFeat.mean))
+        case _ => None
       }
     }
   }
