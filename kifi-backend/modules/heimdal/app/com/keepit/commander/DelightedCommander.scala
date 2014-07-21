@@ -61,8 +61,8 @@ class DelightedCommanderImpl @Inject() (
             "score" -> answer.score.map(s => Seq(s.toString)),
             "comment" -> answer.comment.map(Seq(_))
           )
-        val url = answer.answerId map { externalId =>
-          s"/v1/survey_responses/$externalId.json"
+        val url = answer.answerId map { answerId =>
+          s"/v1/survey_responses/$answerId.json"
         } getOrElse "/v1/survey_responses.json"
 
         delightedRequest(url).post(data).map { response =>
