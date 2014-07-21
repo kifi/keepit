@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
@@ -11,6 +11,7 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[DelightedAnswerRepoImpl])
 trait DelightedAnswerRepo extends Repo[DelightedAnswer] {
   def getByDelightedExtAnswerId(delightedExtAnswerId: String)(implicit session: RSession): Option[DelightedAnswer]
+  def getByExternalId(externalId: ExternalId[DelightedAnswer])(implicit session: RSession): Option[DelightedAnswer]
 }
 
 @Singleton
@@ -40,6 +41,10 @@ class DelightedAnswerRepoImpl @Inject() (
 
   def getByDelightedExtAnswerId(delightedExtAnswerId: String)(implicit session: RSession): Option[DelightedAnswer] = {
     (for { u <- rows if u.delightedExtAnswerId === delightedExtAnswerId } yield u).firstOption
+  }
+
+  def getByExternalId(externalId: ExternalId[DelightedAnswer])(implicit session: RSession): Option[DelightedAnswer] = {
+    (for { u <- rows if u.externalId === externalId } yield u).firstOption
   }
 
   override def save(answer: DelightedAnswer)(implicit session: RWSession): DelightedAnswer = {
