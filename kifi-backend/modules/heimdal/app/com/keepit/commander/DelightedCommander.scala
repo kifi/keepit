@@ -61,13 +61,13 @@ class DelightedCommanderImpl @Inject() (
             "score" -> answer.score.map(s => Seq(s.toString)),
             "comment" -> answer.comment.map(Seq(_))
           )
-        val delightedAnswerId = answer.answerId flatMap { answerId =>
+        val answerIdOpt = answer.answerId flatMap { answerId =>
           // Could have been created a short time ago
           db.readOnlyMaster { implicit session =>
             delightedAnswerRepo.getByExternalId(answerId)
-          }
+          } map (_.delightedExtAnswerId)
         }
-        val url = delightedAnswerId map { answerId =>
+        val url = answerIdOpt map { answerId =>
           s"/v1/survey_responses/$answerId.json"
         } getOrElse "/v1/survey_responses.json"
 
