@@ -1,16 +1,21 @@
 package com.keepit.common.crypto
 
+import javax.crypto.spec.IvParameterSpec
 import com.keepit.common.db.Id
 import play.api.libs.json._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
 
-import scala.util.{ Failure, Try }
+import scala.collection.concurrent.TrieMap
+import scala.util.{ Success, Failure, Try }
 
 case class PublicIdConfiguration(key: String) {
-  lazy val aes64bit = Aes64BitCipher(key)
+  private val cache = TrieMap.empty[IvParameterSpec, Aes64BitCipher]
+  def aes64bit(iv: IvParameterSpec) = cache.getOrElseUpdate(iv, {
+    Aes64BitCipher(key, iv)
+  })
 }
 
-case class PublicId[T <: ModelWithPublicId[T]](id: String)
+case class PublicId[T <: ModelWithPublicId[T]](val id: String)
 
 object PublicId {
   implicit def format[T <: ModelWithPublicId[T]]: Format[PublicId[T]] = Format(
@@ -38,31 +43,37 @@ object PublicId {
   }
 }
 
-// TODO: Cipher must be a singleton, not re-created for every encode/decode.
-
 trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
-
-  val prefix: String
   val id: Option[Id[T]]
-
-  def publicId(implicit config: PublicIdConfiguration): Try[PublicId[T]] = {
-    id.map { someId =>
-      Try(PublicId[T](prefix + Base62Long.encode(config.aes64bit.encrypt(someId.id))))
-    }.getOrElse(Failure(new IllegalStateException("model has no id")))
-  }
-
 }
 
 trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
 
-  val prefix: String
+  protected[this] val publicIdPrefix: String
+  /* Can be generated with:
+    val sr = new java.security.SecureRandom()
+    val arr = new Array[Byte](16)
+    sr.nextBytes(arr)
+    arr
+  */
+  protected[this] val publicIdIvSpec: IvParameterSpec
 
-  def decode(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
-    val reg = raw"^$prefix(.*)$$".r
-    Try {
-      reg.findFirstMatchIn(publicId.id).map(_.group(1)).map { identifier =>
-        Id[T](config.aes64bit.decrypt(Base62Long.decode(identifier)))
-      }.get
+  def decodePublicId(publicId: PublicId[T])(implicit config: PublicIdConfiguration): Try[Id[T]] = {
+    if (publicId.id.startsWith(publicIdPrefix)) {
+      Try(config.aes64bit(publicIdIvSpec).decrypt(Base62Long.decode(publicId.id.substring(publicIdPrefix.length)))).flatMap { id =>
+        // IDs must be less than 100 billion. This gives us "plenty" of room, while catching nearly* all invalid IDs.
+        if (id > 0 && id < 100000000000L) {
+          Success(Id[T](id))
+        } else {
+          Failure(new IllegalArgumentException(s"Expected $publicId to be in a valid range: $id"))
+        }
+      }
+    } else {
+      Failure(new IllegalArgumentException(s"Expected $publicId to start with $publicIdPrefix"))
     }
+  }
+
+  def publicId(id: Id[T])(implicit config: PublicIdConfiguration): PublicId[T] = {
+    PublicId[T](publicIdPrefix + Base62Long.encode(config.aes64bit(publicIdIvSpec).encrypt(id.id)))
   }
 }
