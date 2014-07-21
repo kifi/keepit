@@ -280,5 +280,83 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+
+    "intern user system libraries" in {
+      withDb(TestCryptoModule()) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val libraryCommander = inject[LibraryCommander]
+
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
+
+        db.readOnlyMaster { implicit session =>
+          val all = libraryRepo.all()
+          all.size === 3
+
+          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 0
+          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 0
+        }
+
+        libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
+        libraryCommander.internSystemGeneratedLibraries(userCaptain.id.get)
+
+        // System libraries are created
+        db.readOnlyMaster { implicit session =>
+          libraryRepo.all().size === 7
+          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 2
+          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 2
+          libraryRepo.getByUser(userHulk.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 0
+        }
+
+        // Operation is idempotent
+        libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
+        libraryCommander.internSystemGeneratedLibraries(userHulk.id.get)
+        db.readWrite { implicit session =>
+          libraryRepo.all().size === 9
+          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 2
+          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 2
+          libraryRepo.getByUser(userHulk.id.get).map(_._2).count(_.ownerId == userHulk.id.get) === 2
+
+          val ironSysLibs = libraryRepo.getByUser(userIron.id.get).map(_._2).filter(_.ownerId == userIron.id.get)
+          val main = ironSysLibs.find(_.kind == LibraryKind.SYSTEM_MAIN).get
+          val secret = ironSysLibs.find(_.kind == LibraryKind.SYSTEM_SECRET).get
+
+          main.state === LibraryStates.ACTIVE
+          main.name === "Main Library"
+          main.slug === LibrarySlug("main")
+          main.id.get === Id[Library](4)
+          secret.state === LibraryStates.ACTIVE
+
+          libraryRepo.save(main.copy(state = LibraryStates.INACTIVE, visibility = LibraryVisibility.LIMITED, slug = LibrarySlug("main_old")))
+        }
+
+        libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
+
+        // Fixes problems in sys libraries
+        db.readOnlyMaster { implicit session =>
+          val ironMain = libraryRepo.getByUser(userIron.id.get).map(_._2).filter(_.ownerId == userIron.id.get).find(_.kind == LibraryKind.SYSTEM_MAIN).get
+
+          ironMain.state === LibraryStates.ACTIVE
+          ironMain.visibility === LibraryVisibility.SECRET
+        }
+
+        // Removes dupes
+        db.readWrite { implicit session =>
+          val lib = libraryRepo.save(Library(ownerId = userIron.id.get, name = "Main 2!", kind = LibraryKind.SYSTEM_MAIN, visibility = LibraryVisibility.LIMITED, slug = LibrarySlug("main2")))
+          libraryMembershipRepo.save(LibraryMembership(userId = userIron.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER))
+
+          println(libraryRepo.all.mkString("\n"))
+        }
+
+        libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
+
+        db.readOnlyMaster { implicit session =>
+          val ironMains = libraryRepo.getByUser(userIron.id.get, None).map(_._2).filter(_.ownerId == userIron.id.get).filter(_.kind == LibraryKind.SYSTEM_MAIN)
+          ironMains.size === 1
+          ironMains.count(l => l.state == LibraryStates.ACTIVE) === 1
+          libraryRepo.all.count(l => l.ownerId == userIron.id.get && l.state == LibraryStates.INACTIVE) === 1
+        }
+
+      }
+    }
   }
 }
