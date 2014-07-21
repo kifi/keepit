@@ -6,8 +6,11 @@ object DataBuffer {
   type Page = Array[Short]
 
   val PAGE_SIZE = 1024 // 2KBytes
-  val MAX_RECTYPEID = 100
-  val MAX_DATASIZE = 500
+
+  // We encode the record type and the record size together into one short word (16-bit)
+  // The first bit of the code is used as flag that indicates there is a record, so...
+  val MAX_RECTYPEID = 100 // this needs to fit in 7-bit
+  val MAX_DATASIZE = 500 // this (byte size) divided by two (-> the number of short words) needs to fits in 8-bit
 }
 
 class DataBuffer {
@@ -32,7 +35,7 @@ class DataBuffer {
     if (byteSize >= MAX_DATASIZE) throw new DataBufferException(s"data size too big: $byteSize")
     if (recType >= MAX_RECTYPEID) throw new DataBufferException(s"record type id too big: $recType")
 
-    val size = ((byteSize + 1) / 2).toByte
+    val size = ((byteSize + 1) / 2)
 
     // add a page if not enough room
     if (_freeSpace - size - 1 < 0) addPage()
