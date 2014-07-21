@@ -385,6 +385,7 @@ guide.step = guide.step || function () {
     var step = stepIdx != null && steps[stepIdx];
     if (step && step.allow && (proceed = allowEvent(e, step.allow)) != null) {
       // do not interfere
+      e.guided = true;
       if (proceed) {
         if (stepIdx + 1 < steps.length) {
           showStep(stepIdx + 1);

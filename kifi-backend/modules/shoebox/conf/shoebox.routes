@@ -63,7 +63,7 @@ POST    /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUser
 # Extension API
 ##########################################
 
-POST    /ext/keeps                  @com.keepit.controllers.ext.ExtBookmarksController.keep
+POST    /ext/keeps                  @com.keepit.controllers.ext.ExtBookmarksController.keep(guided: Boolean ?= false)
 # Note: /bookmarks/add is now for browser bookmark imports only
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
 # Note: /bookmarks/remove is deprecated. Use /ext/keeps/:id/unkeep instead.

@@ -644,7 +644,7 @@ api.port.on({
       api.tabs.emit(tab, 'kept', {fail: true});
     } else if (!d.state) {
       d.state = 'keeping';
-      ajax('POST', '/ext/keeps', {
+      ajax('POST', '/ext/keeps' + (data.guided ? '?guided=true' : ''), {
         title: data.title,
         url: data.url,
         canonical: data.canonical,
