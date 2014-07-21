@@ -8,18 +8,19 @@ import views.html
 import play.api.libs.json._
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import com.keepit.cortex.models.lda.LDATopicConfiguration
+import com.keepit.cortex.models.lda.{ LDATopicDetail, LDATopicConfiguration }
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ NormalizedURI, KeepRepo, User }
+import com.keepit.model.{ NormalizedURIRepo, NormalizedURI, KeepRepo, User }
 import com.keepit.common.db.Id
 import play.api.libs.concurrent.Execution.Implicits._
-import scala.concurrent.Future
+import views.html
 
 class AdminLDAController @Inject() (
     cortex: CortexServiceClient,
     shoebox: ShoeboxServiceClient,
     actionAuthenticator: ActionAuthenticator,
     db: Database,
+    uriRepo: NormalizedURIRepo,
     keepRepo: KeepRepo) extends AdminController(actionAuthenticator) {
 
   val MAX_WIDTH = 15
@@ -135,5 +136,14 @@ class AdminLDAController @Inject() (
       Ok(Json.toJson(res))
     }
 
+  }
+
+  def topicDetail(topicId: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    cortex.sampleURIsForTopic(topicId).map { uriIds =>
+      val uris = db.readOnlyReplica { implicit s =>
+        uriIds.map { id => uriRepo.get(id) }
+      }
+      Ok(html.admin.ldaDetail(LDATopicDetail(topicId, uris)))
+    }
   }
 }
