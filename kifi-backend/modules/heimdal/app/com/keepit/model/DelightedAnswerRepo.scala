@@ -17,19 +17,19 @@ trait DelightedAnswerRepo extends Repo[DelightedAnswer] {
 class DelightedAnswerRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    delightedUserRepo: DelightedUserRepoImpl) extends DbRepo[DelightedAnswer] with DelightedAnswerRepo {
+    delightedUserRepo: DelightedUserRepoImpl) extends DbRepo[DelightedAnswer] with DelightedAnswerRepo with ExternalIdColumnDbFunction[DelightedAnswer] {
 
   import db.Driver.simple._
 
   type RepoImpl = DelightedAnswerTable
-  class DelightedAnswerTable(tag: Tag) extends RepoTable[DelightedAnswer](db, tag, "delighted_answer") {
+  class DelightedAnswerTable(tag: Tag) extends RepoTable[DelightedAnswer](db, tag, "delighted_answer") with ExternalIdColumn[DelightedAnswer] {
     def delightedExtAnswerId = column[String]("delighted_ext_answer_id", O.NotNull)
     def delightedUserId = column[Id[DelightedUser]]("delighted_user_id", O.NotNull)
     def date = column[DateTime]("date", O.NotNull)
     def score = column[Int]("score", O.NotNull)
     def comment = column[String]("comment", O.Nullable)
     def source = column[DelightedAnswerSource]("source", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, delightedExtAnswerId, delightedUserId, date, score, comment.?, source) <> ((DelightedAnswer.apply _).tupled, DelightedAnswer.unapply _)
+    def * = (id.?, createdAt, updatedAt, externalId, delightedExtAnswerId, delightedUserId, date, score, comment.?, source) <> ((DelightedAnswer.apply _).tupled, DelightedAnswer.unapply _)
   }
 
   def table(tag: Tag) = new DelightedAnswerTable(tag)
