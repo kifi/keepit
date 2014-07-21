@@ -2,17 +2,19 @@ package com.keepit.common.commanders
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.slick.Database
-import com.keepit.cortex.dbmodel.{ UserTopicMean, UserLDAInterestsRepo }
+import com.keepit.cortex.dbmodel.{ URILDATopicRepo, UserTopicMean, UserLDAInterestsRepo }
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.MiscPrefix
 import com.keepit.common.db.Id
 import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.cortex.utils.MatrixUtils.cosineDistance
 
 @Singleton
 class LDACommander @Inject() (
     db: Database,
     userTopicRepo: UserLDAInterestsRepo,
+    uriTopicRepo: URILDATopicRepo,
     wordRep: LDAWordRepresenter,
     docRep: LDADocRepresenter,
     ldaTopicWords: DenseLDATopicWords,
@@ -67,6 +69,18 @@ class LDACommander @Inject() (
   def userTopicMean(userId: Id[User]): Option[UserTopicMean] = {
     db.readOnlyReplica { implicit s =>
       userTopicRepo.getTopicMeanByUser(userId, wordRep.version)
+    }
+  }
+
+  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Float = {
+    val MIN_SCORE = 0.0001f
+    db.readOnlyReplica { implicit s =>
+      val uriTopicOpt = uriTopicRepo.getFeature(uriId, wordRep.version)
+      val userTopicOpt = userTopicRepo.getTopicMeanByUser(userId, wordRep.version)
+      (uriTopicOpt, userTopicOpt) match {
+        case (Some(uriFeat), Some(userFeat)) => cosineDistance(uriFeat.value, userFeat.mean) max MIN_SCORE
+        case _ => MIN_SCORE
+      }
     }
   }
 }
