@@ -13,9 +13,9 @@ class HashJoinTest extends Specification {
 
     def join(reader: DataBufferReader): Unit = {
       reader.recordType match {
-        case 1 => v1 = Some(reader.getInt)
-        case 2 => v2 = Some(reader.getInt)
-        case 3 => v3 = Some(reader.getInt)
+        case 1 => v1 = Some(reader.nextInt)
+        case 2 => v2 = Some(reader.nextInt)
+        case 3 => v3 = Some(reader.nextInt)
         case unknown => new IllegalStateException(s"unknown record type: $unknown")
       }
     }

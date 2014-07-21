@@ -12,7 +12,7 @@ class HashJoin(dataBuffer: DataBuffer, numHashBuckets: Int, createJoiner: => Joi
 
     dataBuffer.scan(reader) { reader =>
       // assuming the first datum is ID
-      count(hash(reader.getLong())) += 1
+      count(hash(reader.nextLong())) += 1
     }
 
     var i = 0
@@ -33,7 +33,7 @@ class HashJoin(dataBuffer: DataBuffer, numHashBuckets: Int, createJoiner: => Joi
     val offset = new Array[Int](dataBuffer.size)
     dataBuffer.scan(reader) { reader =>
       // assuming the first datum is ID
-      val hashVal = hash(reader.getLong())
+      val hashVal = hash(reader.nextLong())
       count(hashVal) -= 1
       offset(count(hashVal)) = reader.recordOffset
     }
@@ -49,7 +49,7 @@ class HashJoin(dataBuffer: DataBuffer, numHashBuckets: Int, createJoiner: => Joi
       while (pos < eog) {
         val ptr = offset(pos)
         dataBuffer.set(reader, ptr)
-        val id = reader.getLong()
+        val id = reader.nextLong()
         val joiner = getJoiner(id, joinerMap, joinerPool)
         joiner.join(reader) // pushing data to the joiner
 

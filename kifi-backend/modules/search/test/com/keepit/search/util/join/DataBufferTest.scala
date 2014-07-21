@@ -42,19 +42,19 @@ class DataBufferTest extends Specification {
 
       var recType = 0
       val expected = (0 until 300).map { id =>
-        val datum = (recType, rand.nextLong, rand.nextInt, rand.nextInt.toShort, rand.nextFloat(), false)
+        val datum = (recType, true, rand.nextLong, rand.nextInt, rand.nextInt.toShort, rand.nextFloat(), false)
         buf.alloc(writer, recType, 18)
-        writer.putLong(datum._2)
-        writer.putInt(datum._3)
-        writer.putShort(datum._4)
-        writer.putFloat(datum._5)
+        writer.putLong(datum._3)
+        writer.putInt(datum._4)
+        writer.putShort(datum._5)
+        writer.putFloat(datum._6)
         recType = (recType + 1) % DataBuffer.MAX_RECTYPEID
         datum
       }
 
-      var result = new ArrayBuffer[(Int, Long, Int, Short, Float, Boolean)]()
+      var result = new ArrayBuffer[(Int, Boolean, Long, Int, Short, Float, Boolean)]()
       buf.scan(new DataBufferReader) { reader =>
-        result += ((reader.recordType, reader.getLong, reader.getInt, reader.getShort, reader.getFloat, reader.hasMore))
+        result += ((reader.recordType, reader.hasMore, reader.nextLong, reader.nextInt, reader.nextShort, reader.nextFloat, reader.hasMore))
       }
 
       (result == expected) === true
@@ -80,7 +80,7 @@ class DataBufferTest extends Specification {
 
       var result = new ArrayBuffer[(Int, Long, Float, Boolean)]()
       buf.scan(new DataBufferReader) { reader =>
-        result += ((reader.recordType, reader.getTaggedFloatTag, reader.getTaggedFloatValue, reader.hasMore))
+        result += ((reader.recordType, reader.getTaggedFloatTag, reader.nextTaggedFloatValue, reader.hasMore))
       }
 
       (result == expected.map(d => (d._1, d._2, taggedFloatValueFromFloat(d._3), d._4))) === true
@@ -111,7 +111,7 @@ class DataBufferTest extends Specification {
     // skip Long
     var result = new ArrayBuffer[(Int, Long, Int, Short, Float, Byte, Float, Boolean)]()
     buf.scan(new DataBufferReader) { reader =>
-      result += ((reader.recordType, { reader.skipLong; 0L }, reader.getInt, reader.getShort, reader.getFloat, reader.getTaggedFloatTag, reader.getTaggedFloatValue, reader.hasMore))
+      result += ((reader.recordType, { reader.skipLong; 0L }, reader.nextInt, reader.nextShort, reader.nextFloat, reader.getTaggedFloatTag, reader.nextTaggedFloatValue, reader.hasMore))
     }
     val expectedWithSkippingLong = expected.map {
       case (t, l, i, s, f, tt, tv, b) => (t, 0L, i, s, f, tt, taggedFloatValueFromFloat(tv), b)
@@ -121,7 +121,7 @@ class DataBufferTest extends Specification {
     // skip Int
     result.clear()
     buf.scan(new DataBufferReader) { reader =>
-      result += ((reader.recordType, reader.getLong, { reader.skipInt; 0 }, reader.getShort, reader.getFloat, reader.getTaggedFloatTag, reader.getTaggedFloatValue, reader.hasMore))
+      result += ((reader.recordType, reader.nextLong, { reader.skipInt; 0 }, reader.nextShort, reader.nextFloat, reader.getTaggedFloatTag, reader.nextTaggedFloatValue, reader.hasMore))
     }
     val expectedWithSkippingInt = expected.map {
       case (t, l, i, s, f, tt, tv, b) => (t, l, 0, s, f, tt, taggedFloatValueFromFloat(tv), b)
@@ -131,7 +131,7 @@ class DataBufferTest extends Specification {
     // skip Short
     result.clear()
     buf.scan(new DataBufferReader) { reader =>
-      result += ((reader.recordType, reader.getLong, reader.getInt, { reader.skipShort; 0.toShort }, reader.getFloat, reader.getTaggedFloatTag, reader.getTaggedFloatValue, reader.hasMore))
+      result += ((reader.recordType, reader.nextLong, reader.nextInt, { reader.skipShort; 0.toShort }, reader.nextFloat, reader.getTaggedFloatTag, reader.nextTaggedFloatValue, reader.hasMore))
     }
     val expectedWithSkippingShort = expected.map {
       case (t, l, i, s, f, tt, tv, b) => (t, l, i, 0.toShort, f, tt, taggedFloatValueFromFloat(tv), b)
@@ -141,7 +141,7 @@ class DataBufferTest extends Specification {
     // skip TaggedFloat
     result.clear()
     buf.scan(new DataBufferReader) { reader =>
-      result += ((reader.recordType, reader.getLong, reader.getInt, { reader.skipShort; 0.toShort }, reader.getFloat, 0.toByte, { reader.skipTaggedFloat; 0f }, reader.hasMore))
+      result += ((reader.recordType, reader.nextLong, reader.nextInt, { reader.skipShort; 0.toShort }, reader.nextFloat, 0.toByte, { reader.skipTaggedFloat; 0f }, reader.hasMore))
     }
     val expectedWithSkippingTaggedFloat = expected.map {
       case (t, l, i, s, f, tt, tv, b) => (t, l, i, 0.toShort, f, 0.toByte, 0f, b)

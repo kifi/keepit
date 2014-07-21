@@ -10,7 +10,7 @@ class DataBufferReader {
   private[this] var _offset: Int = 0 // offset within the current page in terms of short
   private[this] var _current: Int = 0 // offset within the current page in terms of short
 
-  private[util] def set(globalOffset: Int, page: Page, offset: Int): Boolean = {
+  private[join] def set(globalOffset: Int, page: Page, offset: Int): Boolean = {
     _globalOffset = globalOffset
     val tag = page(offset)
 
@@ -32,10 +32,10 @@ class DataBufferReader {
 
   def recordOffset: Int = _globalOffset // global offset in terms of short
 
-  def hasMore(): Boolean = _offset + _size < _current
+  def hasMore(): Boolean = _current < _offset + _size
 
   // Long
-  def getLong(): Long = {
+  def nextLong(): Long = {
     var ret = _page(_current) & 0xffffL
     ret = ret << 16 | (_page(_current + 1) & 0xffffL)
     ret = ret << 16 | (_page(_current + 2) & 0xffffL)
@@ -56,7 +56,7 @@ class DataBufferReader {
   }
 
   // Int
-  def getInt(): Int = {
+  def nextInt(): Int = {
     var ret = _page(_current) & 0xffff
     ret = ret << 16 | (_page(_current + 1) & 0xffff)
     _current += 2
@@ -73,7 +73,7 @@ class DataBufferReader {
   }
 
   // Short
-  def getShort(): Short = {
+  def nextShort(): Short = {
     var ret = _page(_current)
     _current += 1
     ret
@@ -88,7 +88,7 @@ class DataBufferReader {
   }
 
   // Float
-  def getFloat(): Float = {
+  def nextFloat(): Float = {
     var bits = _page(_current) & 0xffff
     bits = bits << 16 | (_page(_current + 1) & 0xffff)
     _current += 2
@@ -107,7 +107,7 @@ class DataBufferReader {
   def getTaggedFloatTag(): Byte = {
     (_page(_current) >>> 8).toByte
   }
-  def getTaggedFloatValue(): Float = {
+  def nextTaggedFloatValue(): Float = {
     val bits = ((_page(_current) & 0xff) << 24) | (_page(_current + 1) & 0xffff) << 8
     _current += 2
     java.lang.Float.intBitsToFloat(bits)

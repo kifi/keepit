@@ -9,7 +9,7 @@ class DataBufferWriter {
   private[this] var _endoff: Int = 0 // end offset of the allocation
   private[this] var _current: Int = 0 // offset within the current page in terms of short
 
-  private[util] def set(recType: Int, size: Int, page: Page, offset: Int): Boolean = {
+  private[join] def set(recType: Int, size: Int, page: Page, offset: Int): Boolean = {
     page(offset) = (0x8000 | (recType << 8) | (size & 0xff)).toShort
     _type = recType
     _page = page
