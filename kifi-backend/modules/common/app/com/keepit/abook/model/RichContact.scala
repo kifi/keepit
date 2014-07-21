@@ -9,6 +9,15 @@ import play.api.libs.functional.syntax._
 case class RichContact(email: EmailAddress, name: Option[String] = None, firstName: Option[String] = None, lastName: Option[String] = None, userId: Option[Id[User]] = None)
 object RichContact {
   implicit val format = Json.format[RichContact]
+  def deduplicateByEmailAddress(contacts: Seq[RichContact]): Seq[RichContact] = {
+    var uniqueLowerCasedAddresses = Set.empty[String]
+    contacts.filter { contact =>
+      val lowerCasedAddress = contact.email.address.toLowerCase
+      val isDuplicate = uniqueLowerCasedAddresses.contains(lowerCasedAddress)
+      uniqueLowerCasedAddresses += lowerCasedAddress
+      !isDuplicate
+    }
+  }
 }
 
 case class IngestableEmailAccount(emailAccountId: Id[IngestableEmailAccount], userId: Option[Id[User]], verified: Boolean, seq: SequenceNumber[IngestableEmailAccount])

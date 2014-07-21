@@ -3,8 +3,8 @@ package com.keepit.commanders
 import org.specs2.mutable.Specification
 
 import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
-import com.keepit.model.{ User, UserEmailAddressRepo, UserRepo, UserEmailAddress, UserConnectionRepo }
-import com.keepit.common.mail.{ EmailAddress, FakeMailModule, FakeOutbox }
+import com.keepit.model._
+import com.keepit.common.mail._
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -170,6 +170,24 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
         inject[UserCommander].getConnectionsPage(user1.id.get, 2, 2)._1.size === 0
       }
     }
-  }
 
+    "send a close account email" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        val (user1, user2, user3) = setup()
+        val userCommander = inject[UserCommander]
+        val outbox = inject[FakeOutbox]
+
+        outbox.size === 0
+        userCommander.sendCloseAccountEmail(user1.id.get)
+        outbox.size === 1
+
+        val mail: ElectronicMail = outbox(0)
+        mail.from === SystemEmailAddress.ENG
+        mail.to === Seq(SystemEmailAddress.SUPPORT)
+        mail.subject.toString === s"Close Account for ${user1.id.get}"
+        mail.htmlBody.toString === s"User ${user1.id.get} requested to close account."
+        mail.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)
+      }
+    }
+  }
 }

@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.db.{ Model, Id }
+import com.keepit.common.db.{ Id, Model }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import org.joda.time.DateTime

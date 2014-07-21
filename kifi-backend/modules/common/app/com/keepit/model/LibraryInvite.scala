@@ -49,4 +49,7 @@ case class LibraryInviteIdKey(id: Id[LibraryInvite]) extends Key[LibraryInvite] 
 class LibraryInviteIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[LibraryInviteIdKey, LibraryInvite](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-object LibraryInviteStates extends States[LibraryInvite]
+object LibraryInviteStates extends States[LibraryInvite] {
+  val ACCEPTED = State[LibraryInvite]("accepted")
+  val DECLINED = State[LibraryInvite]("declined")
+}

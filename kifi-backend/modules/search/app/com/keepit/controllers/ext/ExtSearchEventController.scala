@@ -36,6 +36,9 @@ class ExtSearchEventController @Inject() (
 
     SafeFuture {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+      if (basicSearchContext.guided) {
+        contextBuilder += ("guided", true)
+      }
       SearchEngine.get(resultSource) match {
         case SearchEngine.Kifi => {
           val kifiHitContext = (json \ "hit").as[KifiHitContext]
@@ -60,6 +63,9 @@ class ExtSearchEventController @Inject() (
     val endedWith = (json \ "endedWith").as[String]
     SafeFuture {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+      if (basicSearchContext.guided) {
+        contextBuilder += ("guided", true)
+      }
       searchEventCommander.searched(userId, time, basicSearchContext, endedWith)(contextBuilder.build)
     }
     Ok

@@ -94,6 +94,36 @@ trait SchedulerPlugin extends Plugin with Logging {
     }
   }
 
+  def scheduleTaskOnLeader(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration)(f: => Unit): Unit = {
+    val taskName = s"call function $f on leader only"
+    if (scheduling.enabled) {
+      log.info(s"Scheduling $taskName")
+      scheduleTask(system, initialDelay, frequency, taskName) {
+        if (scheduling.enabledOnlyForLeader) {
+          timing(s"executing scheduled task: $taskName") {
+            f
+          }
+        }
+      }
+    } else {
+      log.debug(s"permanently disable scheduling for task: $taskName")
+    }
+  }
+
+  def scheduleTaskOnAllMachines(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration)(f: => Unit): Unit = {
+    val taskName = s"call function $f on all machines"
+    if (scheduling.enabled) {
+      log.info(s"Scheduling $taskName")
+      scheduleTask(system, initialDelay, frequency, taskName) {
+        timing(s"executing scheduled task: $taskName") {
+          f
+        }
+      }
+    } else {
+      log.debug(s"permanently disable scheduling for task: $taskName")
+    }
+  }
+
   def cancelTasks() = _cancellables.synchronized {
     log.debug(s"Cancelling scheduled tasks: ${_cancellables map (_.name) mkString ","}")
     _cancellables foreach { task =>
