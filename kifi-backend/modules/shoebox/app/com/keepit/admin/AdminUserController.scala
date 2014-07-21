@@ -821,7 +821,7 @@ class AdminUserController @Inject() (
   }
 
   def setUsername(userId: Id[User], username: String, overrideRestrictions: Boolean = false) = AdminHtmlAction.authenticated { request =>
-    val res = userCommander.setUsername(userId, username, overrideRestrictions)
+    val res = userCommander.setUsername(userId, Username(username), overrideRestrictions)
 
     Ok(res)
   }
