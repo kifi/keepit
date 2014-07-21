@@ -103,10 +103,12 @@
           for(var i = 0; i < sz; i++){
 
             var isActive = (states[i] == true)
+            var url = '@com.keepit.controllers.admin.routes.AdminLDAController.topicDetail(0)'.replace('0', topicIds[i])
+            var idLink = $('<a>').attr('href', url).text(topicIds[i])
 
             $("#topic_words_table").append(
               "<tr>" +
-              "<td class = \"ids\" >" + topicIds[i] + "</td>" +
+              "<td class = \"ids\" >" + idLink.prop('outerHTML') + "</td>" +
               "<td><pre>" + topicWords[i] + "</pre></td>" +
               "<td class = \"tnames\">" + $("<input>",{value: topicNames[i]}).prop('outerHTML') + "</td>" +
               "<td class = \"active\">" + $("<input/>", {type: "checkbox", checked: isActive}).prop('outerHTML') + "</td>" +
