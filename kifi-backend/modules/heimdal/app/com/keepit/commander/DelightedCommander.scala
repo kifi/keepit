@@ -67,11 +67,11 @@ class DelightedCommanderImpl @Inject() (
             delightedAnswerRepo.getByExternalId(answerId)
           } map (_.delightedExtAnswerId)
         }
-        val url = answerIdOpt map { answerId =>
-          s"/v1/survey_responses/$answerId.json"
-        } getOrElse "/v1/survey_responses.json"
+        val response = answerIdOpt map { answerId =>
+          delightedRequest(s"/v1/survey_responses/$answerId.json").put(data)
+        } getOrElse delightedRequest("/v1/survey_responses.json").post(data)
 
-        delightedRequest(url).post(data).map { response =>
+        response.map { response =>
           if (response.status == Status.OK || response.status == Status.CREATED) {
             saveAnswerForResponse(response.json) match {
               case Some(answer) => Right(answer)
