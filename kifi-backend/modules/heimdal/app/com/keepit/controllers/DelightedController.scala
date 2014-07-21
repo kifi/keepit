@@ -24,7 +24,10 @@ class DelightedController @Inject() (
 
   def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String) = Action.async(parse.tolerantJson) { request =>
     request.body.asOpt[BasicDelightedAnswer] map { answer =>
-      delightedCommander.postDelightedAnswer(userId, externalId, email, name, answer) map (Ok(_))
+      delightedCommander.postDelightedAnswer(userId, externalId, email, name, answer) map {
+        case Left(error) => Ok(Json.obj("error" -> error))
+        case Right(answer) => Ok(Json.toJson(BasicDelightedAnswer(Some(answer.score), answer.comment, answer.source, Some(answer.externalId))))
+      }
     } getOrElse {
       airbrake.notify(s"Error parsing postDelightedAnswer request: ${request.body}")
       Future.successful(BadRequest)

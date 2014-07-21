@@ -649,7 +649,8 @@ api.port.on({
         url: data.url,
         canonical: data.canonical,
         og: data.og,
-        isPrivate: data.how === 'private'
+        isPrivate: data.how === 'private',
+        guided: data.guided
       }, function done(keep) {
         log('[keep:done]', keep);
         delete d.state;

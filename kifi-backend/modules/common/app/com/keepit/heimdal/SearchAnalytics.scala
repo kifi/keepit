@@ -27,6 +27,7 @@ object SearchEngine {
 
 case class BasicSearchContext(
   origin: String,
+  guided: Boolean,
   sessionId: String,
   refinement: Option[Int],
   uuid: ExternalId[ArticleSearchResult],
@@ -46,6 +47,7 @@ case class BasicSearchContext(
 object BasicSearchContext {
   implicit val reads: Reads[BasicSearchContext] = (
     (__ \ 'origin).read[String] and
+    (__ \ 'guided).readNullable[Boolean].fmap(_.getOrElse(false)) and
     (__ \ 'pageSession).readNullable[String].fmap(_.getOrElse("")) and
     (__ \ 'refinements).readNullable[Int] and
     ((__ \ 'uuid).read(ExternalId.format[ArticleSearchResult]) orElse (__ \ 'queryUUID).read(ExternalId.format[ArticleSearchResult])) and

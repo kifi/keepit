@@ -527,6 +527,18 @@ class UserCommander @Inject() (
     }
   }
 
+  def sendCloseAccountEmail(userId: Id[User]): ElectronicMail = {
+    db.readWrite { implicit s =>
+      postOffice.sendMail(ElectronicMail(
+        from = SystemEmailAddress.ENG,
+        to = Seq(SystemEmailAddress.SUPPORT),
+        subject = s"Close Account for ${userId}",
+        htmlBody = s"User ${userId} requested to close account.",
+        category = NotificationCategory.System.ADMIN
+      ))
+    }
+  }
+
   def ignoreFriendRequest(userId: Id[User], id: ExternalId[User]): (Boolean, String) = {
     db.readWrite { implicit s =>
       userRepo.getOpt(id) map { sender =>
@@ -762,9 +774,11 @@ class UserCommander @Inject() (
     }
   }
 
-  def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Boolean] = {
+  def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Option[ExternalId[DelightedAnswer]]] = {
     val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
-    heimdalClient.postDelightedAnswer(userId, user.externalId, user.primaryEmail, user.fullName, answer)
+    heimdalClient.postDelightedAnswer(userId, user.externalId, user.primaryEmail, user.fullName, answer) map { answerOpt =>
+      answerOpt flatMap (_.answerId)
+    }
   }
 
   def cancelDelightedSurvey(userId: Id[User]): Future[Boolean] = {
