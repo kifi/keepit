@@ -83,7 +83,6 @@ POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
 
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
-GET     /whois                      @com.keepit.controllers.ext.ExtAuthController.whois
 GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
 POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
 GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserController.getLoggedIn()
@@ -302,6 +301,12 @@ GET     /site/                      @com.keepit.controllers.website.HomeControll
 ##########################################
 POST    /api/sendgrid/webhook       @com.keepit.controllers.api.SendgridController.parseEvent()
 GET     /api/desk/isLoggedIn        @com.keepit.controllers.api.DeskController.isLoggedIn
+
+##########################################
+# Routes for testing purposes only
+##########################################
+
+GET     /test/me                    @com.keepit.controllers.testing.ForTestingOnlyController.me
 
 ##########################################
 # Admin

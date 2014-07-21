@@ -70,10 +70,10 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
         cookies(startResult).get(impersonateCookie.COOKIE_NAME) === None
         cookies(startResult).get(inject[KifiInstallationCookie].COOKIE_NAME) !== None
 
-        val whoisRequest1 = FakeRequest("GET", "/whois").withCookies(cookie1)
-        val whoisResult1 = route(whoisRequest1).get
+        val meRequest1 = FakeRequest("GET", "/test/me").withCookies(cookie1)
+        val meResult1 = route(meRequest1).get
 
-        (Json.parse(contentAsString(whoisResult1)) \ "externalUserId").as[String] === admin.externalId.toString
+        contentAsString(meResult1) === admin.externalId.toString
 
         val impersonateRequest = FakeRequest("POST", "/admin/user/%s/impersonate".format(impersonate.id.get.toString))
           .withCookies(cookie1)
@@ -88,10 +88,10 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
         val imprSessionCookie = session(impersonateResult)
         //        impersonateCookie.decodeFromCookie(cookies(impersonateResult).get(impersonateCookie.COOKIE_NAME)) === Some(impersonate.externalId)
 
-        //        val whoisRequest2 = FakeRequest("GET", "/whois")
+        //        val meRequest2 = FakeRequest("GET", "/test/me")
         //            .withCookies(cookie1, cookies(impersonateResult)(impersonateCookie.COOKIE_NAME))
-        //        val whoisResult2 = route(whoisRequest2).get
-        //        (Json.parse(contentAsString(whoisResult2)) \ "externalUserId").as[String] === impersonate.externalId.toString
+        //        val meResult2 = route(meRequest2).get
+        //        contentAsString(meResult2) === impersonate.externalId.toString
 
         //        inject[FakeOutbox].size === 1
 
@@ -100,10 +100,10 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
         val unimpersonateResult = route(unimpersonateRequest).get
         impersonateCookie.decodeFromCookie(cookies(unimpersonateResult).get(impersonateCookie.COOKIE_NAME)) === None
 
-        //        val whoisRequest3 = FakeRequest("GET", "/whois")
+        //        val meRequest3 = FakeRequest("GET", "/test/me")
         //            .withCookies(cookie1, cookies(unimpersonateResult)(impersonateCookie.COOKIE_NAME))
-        //        val whoisResult3 = route(whoisRequest3).get
-        //        (Json.parse(contentAsString(whoisResult3)) \ "externalUserId").as[String] === admin.externalId.toString
+        //        val meResult3 = route(meRequest3).get
+        //        contentAsString(meResult3) === admin.externalId.toString
 
       }
     }
