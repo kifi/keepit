@@ -11,7 +11,7 @@ class DataBufferWriter {
 
   private[join] def set(recType: Int, size: Int, page: Page, offset: Int): Boolean = {
     // bit 0: record flag (0: no record, 1: there is a record)
-    // bit 1-7: record id
+    // bit 1-7: record type id
     // bit 9-15: size in short words
     page(offset) = (0x8000 | (recType << 8) | (size & 0xff)).toShort
     _type = recType
