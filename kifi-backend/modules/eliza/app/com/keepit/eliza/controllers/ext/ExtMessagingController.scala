@@ -62,6 +62,9 @@ class ExtMessagingController @Inject() (
     contextBuilder += ("source", "extension")
     extVersion.foreach { version => contextBuilder += ("extensionVersion", version) }
     contextBuilder.data.remove("remoteAddress") // To be removed when the extension if fixed to send the client's ip
+    if ((o \ "guided").asOpt[Boolean].getOrElse(false)) {
+      contextBuilder += ("guided", true)
+    }
 
     val messageSubmitResponse = messagingCommander.sendMessageAction(title, text, source,
       validUserRecipients, validEmailRecipients, url, urls, request.userId, contextBuilder.build) map {
