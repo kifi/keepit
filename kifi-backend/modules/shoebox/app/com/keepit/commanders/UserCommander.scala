@@ -771,6 +771,32 @@ class UserCommander @Inject() (
     val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
     heimdalClient.cancelDelightedSurvey(userId, user.externalId, user.primaryEmail, user.fullName)
   }
+
+  // any letter or digit, followed by any letter, digit, ., _, or - (1 to 30 times)
+  lazy val usernameRegex = """[\p{L}\d][\p{L}\d\.\_\-]{2,30}""".r.pattern
+  val usernameBlacklist = Seq("support", "admin", "kifi", "friend", "invite", "about")
+  def setUsername(userId: Id[User], username: Username, overrideRestrictions: Boolean): Either[String, Username] = {
+    if (overrideRestrictions || (
+      username.value.length > 3 &&
+      usernameRegex.matcher(username.value).matches &&
+      usernameBlacklist.find(username.value.contains).nonEmpty
+    )) {
+      val existingUser = db.readOnlyMaster { implicit session =>
+        userRepo.getUsername(username)
+      }
+      if (existingUser.nonEmpty) {
+        db.readWrite { implicit session =>
+          userRepo.save(userRepo.get(userId).copy(username = Some(username)))
+        }
+        Right(username)
+      } else {
+        Left("username_exists")
+      }
+
+    } else {
+      Left("invalid_username")
+    }
+  }
 }
 
 object DefaultKeeps {

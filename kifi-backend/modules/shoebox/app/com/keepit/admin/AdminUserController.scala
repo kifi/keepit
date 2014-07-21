@@ -819,4 +819,10 @@ class AdminUserController @Inject() (
     log.info(s"Deactivated UserEmailAddress $inactiveEmail")
     Ok(JsString(inactiveEmail.toString))
   }
+
+  def setUsername(userId: Id[User], username: String, overrideRestrictions: Boolean = false) = AdminHtmlAction.authenticated { request =>
+    val res = userCommander.setUsername(userId, username, overrideRestrictions)
+
+    Ok(res)
+  }
 }
