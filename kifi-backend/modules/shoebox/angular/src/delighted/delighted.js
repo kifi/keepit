@@ -13,6 +13,8 @@ angular.module('kifi.delighted', [])
         scope.delighted = {};
         scope.showSurvey = true;
 
+        var answerId = null;
+
         function analyticsStageName() {
           return {score: 'npsScore', comment: 'npsComment', end: 'npsThanks'}[scope.surveyStage];
         }
@@ -25,6 +27,7 @@ angular.module('kifi.delighted', [])
 
         scope.$watch('delighted.score', function () {
           if (scope.delighted.score) {
+            submitAnswer();
             scope.surveyStage = 'comment';
             $analytics.eventTrack('user_viewed_notification', {
               'source': 'site',
@@ -41,8 +44,8 @@ angular.module('kifi.delighted', [])
           scope.surveyStage = 'score';
         };
 
-        scope.submit = function () {
-          profileService.postDelightedAnswer(+scope.delighted.score, scope.delighted.comment || null);
+        scope.submitComment = function () {
+          submitAnswer();
           scope.surveyStage = 'end';
           $analytics.eventTrack('user_viewed_notification', {
             'source': 'site',
@@ -65,6 +68,16 @@ angular.module('kifi.delighted', [])
 
         function hideSurvey() {
           element.find('.kf-delighted-wrap').addClass('hide');
+        }
+
+        function submitAnswer() {
+          profileService.postDelightedAnswer(
+            +scope.delighted.score || null,
+            scope.delighted.comment || null,
+            answerId
+          ).then(function (id) {
+            answerId = id;
+          });
         }
       }
     };

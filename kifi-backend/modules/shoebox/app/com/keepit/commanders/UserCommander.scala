@@ -774,9 +774,11 @@ class UserCommander @Inject() (
     }
   }
 
-  def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Boolean] = {
+  def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Option[ExternalId[DelightedAnswer]]] = {
     val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
-    heimdalClient.postDelightedAnswer(userId, user.externalId, user.primaryEmail, user.fullName, answer)
+    heimdalClient.postDelightedAnswer(userId, user.externalId, user.primaryEmail, user.fullName, answer) map { answerOpt =>
+      answerOpt flatMap (_.answerId)
+    }
   }
 
   def cancelDelightedSurvey(userId: Id[User]): Future[Boolean] = {
