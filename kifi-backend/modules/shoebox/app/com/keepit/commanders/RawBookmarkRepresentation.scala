@@ -5,7 +5,12 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.json.{ JsArray, JsObject, JsValue }
 import com.keepit.model.{ URLFactory, Normalization }
 
-case class RawBookmarkRepresentation(title: Option[String] = None, url: String, isPrivate: Boolean, canonical: Option[String] = None, openGraph: Option[String] = None)
+case class RawBookmarkRepresentation(
+  title: Option[String] = None,
+  url: String,
+  isPrivate: Boolean,
+  canonical: Option[String] = None,
+  openGraph: Option[String] = None)
 
 class RawBookmarkFactory @Inject() (
     airbrake: AirbrakeNotifier) {
