@@ -4,15 +4,14 @@ import scala.util.DynamicVariable
 
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.typesafe.plugin.MailerAPI
 import com.keepit.model.NotificationCategory
 
-class PlayMailerAPI @Inject()(
+class PlayMailerAPI @Inject() (
     db: Database,
     postOffice: LocalPostOffice,
-    airbrake: AirbrakeNotifier
-    ) extends MailerAPI {
+    airbrake: AirbrakeNotifier) extends MailerAPI {
   private val mail = new DynamicVariable(ElectronicMail(
     from = SystemEmailAddress.NOTIFICATIONS,
     subject = "",
@@ -52,12 +51,12 @@ class PlayMailerAPI @Inject()(
     this
   }
 
-  def setRecipient(tos: String *): com.typesafe.plugin.MailerAPI = {
+  def setRecipient(tos: String*): com.typesafe.plugin.MailerAPI = {
     mail.value = mail.value.copy(to = tos.map(EmailAddress(_)))
     this
   }
 
-  def setFrom(from: String ): com.typesafe.plugin.MailerAPI = {
+  def setFrom(from: String): com.typesafe.plugin.MailerAPI = {
     mail.value = mail.value.copy(from = EmailAddress(from))
     this
   }

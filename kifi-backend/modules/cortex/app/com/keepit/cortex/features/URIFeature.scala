@@ -11,9 +11,8 @@ import com.keepit.cortex.core.FloatVecFeature
 trait URIFeatureRepresenter[M <: StatModel, +FT <: FeatureRepresentation[NormalizedURI, M]] extends FeatureRepresenter[NormalizedURI, M, FT]
 
 abstract class BaseURIFeatureRepresenter[M <: StatModel](
-  docRepresenter: DocRepresenter[M, FeatureRepresentation[Document, M]],
-  articleStore: ArticleStore
-) extends URIFeatureRepresenter[M, FeatureRepresentation[NormalizedURI, M]]{
+    docRepresenter: DocRepresenter[M, FeatureRepresentation[Document, M]],
+    articleStore: ArticleStore) extends URIFeatureRepresenter[M, FeatureRepresentation[NormalizedURI, M]] {
 
   override val version = docRepresenter.version
   override val dimension = docRepresenter.dimension
@@ -27,11 +26,11 @@ abstract class BaseURIFeatureRepresenter[M <: StatModel](
     getArticle(uri) match {
       case None => None
       case Some(article) =>
-        if (isDefinedAt(article)){
+        if (isDefinedAt(article)) {
           val doc = toDocument(article)
           val rep = docRepresenter.apply(doc)
-          rep.map{ x => FloatVecFeature[NormalizedURI, M](x.vectorize)}
-      } else None
+          rep.map { x => FloatVecFeature[NormalizedURI, M](x.vectorize) }
+        } else None
     }
   }
 

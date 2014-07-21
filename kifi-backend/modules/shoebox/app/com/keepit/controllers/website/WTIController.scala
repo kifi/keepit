@@ -5,17 +5,14 @@ import com.google.inject.Inject
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, WebsiteController}
+import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
 
-import com.keepit.commanders.{InviteCommander, ShoeboxRichConnectionCommander, FullSocialId}
-
+import com.keepit.commanders.{ InviteCommander, ShoeboxRichConnectionCommander, FullSocialId }
 
 class WTIController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
-  shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander,
-  inviteCommander: InviteCommander
-) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
-
+    actionAuthenticator: ActionAuthenticator,
+    shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander,
+    inviteCommander: InviteCommander) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def block() = JsonAction.authenticated(parse.json) { request =>
     (request.body \ "fullSocialId").asOpt[FullSocialId] match {
@@ -33,5 +30,4 @@ class WTIController @Inject() (
     }
   }
 }
-
 

@@ -4,16 +4,16 @@ import com.keepit.reports._
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.common.healthcheck._
-import com.keepit.common.mail.{MailToKeepPlugin, MailSenderPlugin}
+import com.keepit.common.mail.{ MailToKeepPlugin, MailSenderPlugin }
 import com.keepit.common.store.ImageDataIntegrityPlugin
 import com.keepit.scraper._
 import play.api.Mode._
 import play.api._
 import com.keepit.social.SocialGraphPlugin
-import com.keepit.integrity.{UriIntegrityPlugin, DataIntegrityPlugin}
+import com.keepit.integrity.{ UriIntegrityPlugin, DataIntegrityPlugin }
 import com.keepit.common.integration.AutogenReaperPlugin
 import com.keepit.normalizer.NormalizationUpdaterPlugin
-import com.keepit.common.concurrent.{ForkJoinExecContextPlugin}
+import com.keepit.common.concurrent.{ ForkJoinExecContextPlugin }
 import com.keepit.signal.ReKeepStatsUpdaterPlugin
 import com.keepit.model.UrlPatternRuleRepo
 
@@ -33,7 +33,7 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
   def startShoeboxServices() {
     require(injector.instance[ForkJoinExecContextPlugin] != null)
     require(injector.instance[NormalizationUpdaterPlugin] != null)
-    require(injector.instance[ScrapeSchedulerPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[ScraperHealthMonitorPlugin] != null)
     require(injector.instance[SocialGraphPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[MailSenderPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[AutogenReaperPlugin] != null) //make sure its not lazy loaded

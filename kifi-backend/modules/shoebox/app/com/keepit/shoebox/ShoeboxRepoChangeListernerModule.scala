@@ -1,6 +1,5 @@
 package com.keepit.shoebox
 
-
 import com.keepit.common.db.slick.RepoModification
 import com.keepit.model.{
   SocialConnection,
@@ -23,7 +22,7 @@ import com.keepit.commanders.{
 
 import net.codingwell.scalaguice.ScalaModule
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.actor.ActorInstance
 
 case class ShoeboxRepoChangeListenerModule() extends ScalaModule {
@@ -44,9 +43,10 @@ case class ShoeboxRepoChangeListenerModule() extends ScalaModule {
   @Provides
   @Singleton
   def invitationChangeListener(invitationModificationActor: ActorInstance[InvitationModificationActor]): Option[RepoModification.Listener[Invitation]] = Some({
-    repoModification => {
-      invitationModificationActor.ref ! InvitationModification(repoModification)
-    }
+    repoModification =>
+      {
+        invitationModificationActor.ref ! InvitationModification(repoModification)
+      }
   })
 
   @Provides

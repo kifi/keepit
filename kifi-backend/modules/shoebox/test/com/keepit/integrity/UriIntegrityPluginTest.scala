@@ -9,12 +9,12 @@ import com.keepit.test.ShoeboxTestInjector
 import com.google.inject.Injector
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{SequenceNumber, Id}
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 
-class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInjector{
+class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInjector {
 
   "uri integrity plugin" should {
     "work" in {
@@ -33,27 +33,28 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val nuri2 = uriRepo.save(NormalizedURI.withHash("http://www.bing.com", Some("Bing")).withState(NormalizedURIStates.SCRAPED))
             val nuri3 = uriRepo.save(NormalizedURI.withHash("http://www.fakebing.com", Some("Bing")))
 
-            val url0 = urlRepo.save(URLFactory("http://www.google.com/", nuri0.id.get))             // to be redirected to nuri1
+            val url0 = urlRepo.save(URLFactory("http://www.google.com/", nuri0.id.get)) // to be redirected to nuri1
             val url1 = urlRepo.save(URLFactory("http://www.bing.com/", nuri2.id.get))
-            val url2 = urlRepo.save(URLFactory("http://www.fakebing.com/", nuri2.id.get))        // to be splitted, to be pointing to
+            val url2 = urlRepo.save(URLFactory("http://www.fakebing.com/", nuri2.id.get)) // to be splitted, to be pointing to
 
             val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
             val user2 = userRepo.save(User(firstName = "abc", lastName = "xyz"))
 
+            val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+
             val hover = KeepSource.keeper
-            val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = nuri0.id.get, source = hover))
-            val bm2 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = nuri2.id.get, source = hover))
-            val bm3 = bmRepo.save(Keep(title = Some("bing"), userId = user2.id.get, url = url2.url, urlId = url2.id.get, uriId = nuri2.id.get, source = hover))
+            val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = nuri0.id.get, source = hover, libraryId = Some(lib1.id.get)))
+            val bm2 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = nuri2.id.get, source = hover, libraryId = Some(lib1.id.get)))
+            val bm3 = bmRepo.save(Keep(title = Some("bing"), userId = user2.id.get, url = url2.url, urlId = url2.id.get, uriId = nuri2.id.get, source = hover, libraryId = Some(lib1.id.get)))
 
             (Array(nuri0, nuri1, nuri2, nuri3), Array(url0, url1, url2), Array(bm1, bm2, bm3))
           }
         }
 
-
         val (uris, urls, bms) = setup()
 
         // check init status
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           uriRepo.getByState(NormalizedURIStates.ACTIVE, -1).size === 2
           uriRepo.getByState(NormalizedURIStates.SCRAPED, -1).size === 2
 
@@ -72,7 +73,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
         plugin.batchURIMigration()
 
         // check redirection
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster { implicit s =>
           uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
 
           urlRepo.getByNormUri(uris(1).id.get).head.url === urls(0).url
@@ -91,7 +92,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
         plugin.handleChangedUri(URLMigration(urls(2), uris(3).id.get))
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster { implicit s =>
           uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
           urlRepo.getByNormUri(uris(2).id.get).head.url === urls(1).url
           urlRepo.getByNormUri(uris(3).id.get).head.url === urls(2).url
@@ -100,7 +101,6 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
           bmRepo.getByUrlId(urls(2).id.get).head.uriId === uris(3).id.get
 
         }
-
 
       }
     }
@@ -150,15 +150,17 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val url1 = urlRepo.save(URLFactory("http://www.google.com/drive", uri1.id.get))
             val url2 = urlRepo.save(URLFactory("http://www.google.com/mail", uri2.id.get))
 
+            val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+
             val hover = KeepSource.keeper
-            val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get,  uriId = uri0.id.get, source = hover))
-            val bm0better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get,  uriId = uri0better.id.get, source = hover))
+            val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0.id.get, source = hover, libraryId = Some(lib1.id.get)))
+            val bm0better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0better.id.get, source = hover, libraryId = Some(lib1.id.get)))
 
-            val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get,  uriId = uri1.id.get, source = hover))
-            val bm1better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get,  uriId = uri1better.id.get, source = hover))
+            val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = uri1.id.get, source = hover, libraryId = Some(lib1.id.get)))
+            val bm1better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = uri1better.id.get, source = hover, libraryId = Some(lib1.id.get)))
 
-            val bm2 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get,  uriId = uri2.id.get, source = hover))
-            val bm2better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get,  uriId = uri2better.id.get, source = hover))
+            val bm2 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get, uriId = uri2.id.get, source = hover, libraryId = Some(lib1.id.get)))
+            val bm2better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get, uriId = uri2better.id.get, source = hover, libraryId = Some(lib1.id.get)))
 
             val c0 = collectionRepo.save(Collection(userId = user.id.get, name = "google"))
             val c1 = collectionRepo.save(Collection(userId = user.id.get, name = "googleBetter"))
@@ -183,7 +185,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
         val (uris, betterUris, bms, betterBms) = setup()
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.getByKeep(bms(0).id.get).size === 1
           keepToCollectionRepo.getByKeep(bms(1).id.get).size === 1
           keepToCollectionRepo.getByKeep(bms(2).id.get).size === 1
@@ -199,7 +201,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
         plugin.batchURIMigration()
 
-        db.readOnly{ implicit s =>
+        db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.getByKeep(bms(0).id.get).size === 0
           keepToCollectionRepo.getByKeep(bms(1).id.get).size === 0
           keepToCollectionRepo.getByKeep(bms(2).id.get).size === 0

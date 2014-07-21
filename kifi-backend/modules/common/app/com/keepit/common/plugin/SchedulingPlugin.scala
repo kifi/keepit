@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.actor.ActorInstance
 
-import akka.actor.{ActorSystem, Cancellable, ActorRef}
+import akka.actor.{ ActorSystem, Cancellable, ActorRef }
 import play.api.Plugin
 
 import us.theatr.akka.quartz._
@@ -24,7 +24,7 @@ class SchedulingPropertiesImpl(serviceDiscovery: ServiceDiscovery, val enabled: 
   def enabledOnlyForLeader: Boolean = enabled && serviceDiscovery.isLeader()
 }
 
-case class NamedCancellable(underlying:Cancellable, taskName:String) extends Cancellable {
+case class NamedCancellable(underlying: Cancellable, taskName: String) extends Cancellable {
   def name() = taskName
   def cancel() = underlying.cancel
   def isCancelled: Boolean = underlying.isCancelled
@@ -37,7 +37,7 @@ trait SchedulerPlugin extends Plugin with Logging {
 
   val _cancellables: ListBuffer[NamedCancellable] = ListBuffer()
 
-  private def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, taskName: String)(f: => Unit): Unit =_cancellables.synchronized {
+  private def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, taskName: String)(f: => Unit): Unit = _cancellables.synchronized {
     _cancellables +=
       NamedCancellable(system.scheduler.schedule(initialDelay, frequency) { f }, taskName)
   }
@@ -66,7 +66,7 @@ trait SchedulerPlugin extends Plugin with Logging {
 
   def scheduleTaskOnLeader(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Unit = {
     val taskName = s"send message $message to actor $receiver on leader only"
-    if(scheduling.enabled) {
+    if (scheduling.enabled) {
       log.info(s"Scheduling $taskName")
       scheduleTask(system, initialDelay, frequency, taskName) {
         if (scheduling.enabledOnlyForLeader) {
@@ -76,13 +76,13 @@ trait SchedulerPlugin extends Plugin with Logging {
         }
       }
     } else {
-      log.info(s"permanently disable scheduling for task: $taskName")
+      log.debug(s"permanently disable scheduling for task: $taskName")
     }
   }
 
   def scheduleTaskOnAllMachines(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Unit = {
     val taskName = s"send message $message to actor $receiver on all machines"
-    if(scheduling.enabled) {
+    if (scheduling.enabled) {
       log.info(s"Scheduling $taskName")
       scheduleTask(system, initialDelay, frequency, taskName) {
         timing(s"executing scheduled task: $taskName") {
@@ -90,15 +90,45 @@ trait SchedulerPlugin extends Plugin with Logging {
         }
       }
     } else {
-      log.info(s"permanently disable scheduling for task: $taskName")
+      log.debug(s"permanently disable scheduling for task: $taskName")
+    }
+  }
+
+  def scheduleTaskOnLeader(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration)(f: => Unit): Unit = {
+    val taskName = s"call function $f on leader only"
+    if (scheduling.enabled) {
+      log.info(s"Scheduling $taskName")
+      scheduleTask(system, initialDelay, frequency, taskName) {
+        if (scheduling.enabledOnlyForLeader) {
+          timing(s"executing scheduled task: $taskName") {
+            f
+          }
+        }
+      }
+    } else {
+      log.debug(s"permanently disable scheduling for task: $taskName")
+    }
+  }
+
+  def scheduleTaskOnAllMachines(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration)(f: => Unit): Unit = {
+    val taskName = s"call function $f on all machines"
+    if (scheduling.enabled) {
+      log.info(s"Scheduling $taskName")
+      scheduleTask(system, initialDelay, frequency, taskName) {
+        timing(s"executing scheduled task: $taskName") {
+          f
+        }
+      }
+    } else {
+      log.debug(s"permanently disable scheduling for task: $taskName")
     }
   }
 
   def cancelTasks() = _cancellables.synchronized {
-    log.info(s"Cancelling scheduled tasks: ${_cancellables map (_.name) mkString ","}")
+    log.debug(s"Cancelling scheduled tasks: ${_cancellables map (_.name) mkString ","}")
     _cancellables foreach { task =>
       if (!task.isCancelled) {
-        log.info(s"[aboutToCancelTask] task:${task.name}) isCancelled:${task.isCancelled}")
+        log.debug(s"[aboutToCancelTask] task:${task.name}) isCancelled:${task.isCancelled}")
         task.cancel()
         log.info(s"[canceledTask] task:${task.name}) isCancelled:${task.isCancelled}")
       } else {
@@ -108,7 +138,7 @@ trait SchedulerPlugin extends Plugin with Logging {
   }
 
   override def onStop() {
-    cancelTasks()
+    //cancelTasks()
     super.onStop()
   }
 }

@@ -37,15 +37,15 @@ class SpellCheckerTest extends Specification {
       var corrector = new SpellCorrectorImpl(spellIndexer, "slow", enableAdjScore = false)
 
       val indexWriter = new IndexWriter(articleIndexDir, new IndexWriterConfig(Version.LUCENE_47, analyzer))
-      articles.foreach{ x => indexWriter.addDocument(mkDoc(x)) }
+      articles.foreach { x => indexWriter.addDocument(mkDoc(x)) }
       indexWriter.close()
 
       spellIndexer.getSpellChecker.exist("abc") === false
       spellIndexer.buildDictionary()
       spellIndexer.getSpellChecker.exist("abc") === true
       spellIndexer.getSpellChecker.exist("xyz") === true
-      corrector.getScoredSuggestions("abcd deh", 2, enableBoost = false).map{_.value}.toSet === Set("abc def", "abd def", "abc deg", "abd deg")
-      corrector.getScoredSuggestions("abcd deh", 2, enableBoost = false).head.value === "abc def"      // win by co-occurrence rate
+      corrector.getScoredSuggestions("abcd deh", 2, enableBoost = false).map { _.value }.toSet === Set("abc def", "abd def", "abc deg", "abd deg")
+      corrector.getScoredSuggestions("abcd deh", 2, enableBoost = false).head.value === "abc def" // win by co-occurrence rate
 
       corrector = new SpellCorrectorImpl(spellIndexer, "viterbi", enableAdjScore = false)
       corrector.getScoredSuggestions("abcd deh", 2, enableBoost = false).head.value === "abc def"
@@ -56,7 +56,7 @@ class SpellCheckerTest extends Specification {
     "work" in {
       val mp = new MetaphoneDistance()
       mp.getDistance("apple", "aple") === 1f
-      abs(mp.getDistance("aple", "able") - 2/3f) < (1e-5f) === true
+      abs(mp.getDistance("aple", "able") - 2 / 3f) < (1e-5f) === true
     }
   }
 

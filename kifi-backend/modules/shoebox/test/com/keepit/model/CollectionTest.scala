@@ -4,10 +4,10 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 import com.google.inject.Injector
-import com.keepit.common.db.{Id, SequenceNumber}
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.time._
 
-import com.keepit.test.{ShoeboxApplication, ShoeboxTestInjector}
+import com.keepit.test.{ ShoeboxApplication, ShoeboxTestInjector }
 
 import play.api.test.Helpers._
 import com.keepit.FortyTwoGlobal
@@ -18,7 +18,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
     val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
     val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
-    db.readWrite {implicit s =>
+    db.readWrite { implicit s =>
       val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner", createdAt = t1))
       val user2 = userRepo.save(User(firstName = "Eishay", lastName = "Smith", createdAt = t2))
 
@@ -29,12 +29,14 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
+      val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+
       val hover = KeepSource.keeper
 
       val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
-        urlId = url1.id.get, uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
+        urlId = url1.id.get, uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), libraryId = Some(lib1.id.get)))
       val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
-        urlId = url2.id.get, uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50)))
+        urlId = url2.id.get, uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), libraryId = Some(lib1.id.get)))
 
       val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = "Cooking", createdAt = t1))
       val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = "Apparel", createdAt = t1))
@@ -47,10 +49,10 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
 
   "collections" should {
     "binary serialization" in {
-      val coll1 = Collection(id = Some(Id[Collection](1)),userId = Id[User](1), name = "Cooking")
-      val coll2 = Collection(id = Some(Id[Collection](2)),userId = Id[User](1), name = "Apparel")
-      val coll3 = Collection(id = Some(Id[Collection](3)),userId = Id[User](1), name = "Scala")
-      val coll4 = Collection(id = Some(Id[Collection](4)),userId = Id[User](1), name = "Java")
+      val coll1 = Collection(id = Some(Id[Collection](1)), userId = Id[User](1), name = "Cooking")
+      val coll2 = Collection(id = Some(Id[Collection](2)), userId = Id[User](1), name = "Apparel")
+      val coll3 = Collection(id = Some(Id[Collection](3)), userId = Id[User](1), name = "Scala")
+      val coll4 = Collection(id = Some(Id[Collection](4)), userId = Id[User](1), name = "Java")
       val collectionSummaries = Seq(coll1.summary, coll2.summary, coll3.summary, coll4.summary)
       val formatter = new CollectionSummariesFormat()
       val binary = formatter.writes(Some(collectionSummaries))
@@ -71,7 +73,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll2.id.get))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Apparel", "Cooking", "Scala")
           collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Apparel", "Cooking", "Scala")
           keepRepo.getByUserAndCollection(user1.id.get, coll1.id.get, None, None, 5) must haveLength(2)
@@ -91,10 +93,10 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll3.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.getBookmarkCounts(Set(coll1.id.get, coll2.id.get, coll3.id.get)) === Map(coll1.id.get -> 2, coll2.id.get -> 0, coll3.id.get -> 1)
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.getKeepsInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
           keepToCollectionRepo.getUriIdsInCollection(coll1.id.get).toSet === Set(KeepUriAndTime(bookmark1.uriId, bookmark1.createdAt), KeepUriAndTime(bookmark2.uriId, bookmark2.createdAt))
           collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Scala", "Apparel")
@@ -104,18 +106,18 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit s =>
           keepRepo.save(bookmark1.withActive(false))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           keepToCollectionRepo.count(coll1.id.get) === 1
         }
         db.readWrite { implicit s =>
           keepToCollectionRepo.getCollectionsForKeep(bookmark1.id.get).foreach(collectionRepo.collectionChanged(_))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.getBookmarkCount(coll1.id.get) === 1
           collectionRepo.getBookmarkCounts(Set(coll1.id.get, coll2.id.get, coll3.id.get)) === Map(coll1.id.get -> 1, coll2.id.get -> 0, coll3.id.get -> 1)
         }
         sessionProvider.doWithoutCreatingSessions {
-          db.readOnly { implicit s =>
+          db.readOnlyMaster { implicit s =>
             collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
             collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
           }
@@ -168,7 +170,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
             Set(coll1.id.get, coll2.id.get, coll3.id.get)
         }
         sessionProvider.doWithoutCreatingSessions {
-          db.readOnly { implicit s =>
+          db.readOnlyMaster { implicit s =>
             keepToCollectionRepo.getCollectionsForKeep(bookmark1.id.get).toSet ===
               Set(coll1.id.get, coll2.id.get, coll3.id.get)
           }
@@ -204,13 +206,13 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
           seq
         }
 
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.getCollectionsChanged(SequenceNumber(newSeqNum), 1000).map(_.id.get) === Seq(coll1.id.get)
         }
         db.readWrite { implicit s =>
           keepRepo.save(bookmark1.withNormUriId(bookmark2.uriId))
         }
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.getCollectionsChanged(SequenceNumber(latestSeqNum), 1000).map(_.id.get) === Seq(coll1.id.get)
         }
       }
@@ -221,9 +223,9 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
         implicit val applicationInjector = current.global.asInstanceOf[FortyTwoGlobal].injector
         // TODO: figure out why this works but not withDb() - this is not even using the application injector
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           collectionRepo.getByUserAndName(user1.id.get, "scala") ===
-              collectionRepo.getByUserAndName(user1.id.get, "Scala")
+            collectionRepo.getByUserAndName(user1.id.get, "Scala")
         }
       }
     }

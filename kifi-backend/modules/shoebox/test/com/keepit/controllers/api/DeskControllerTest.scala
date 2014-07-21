@@ -8,7 +8,7 @@ import com.keepit.common.controller.FakeActionAuthenticator
 import com.keepit.model._
 import play.api.test.Helpers._
 import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
+import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.net.FakeHttpClientModule
 import play.api.libs.json.JsString
 import com.keepit.common.social.FakeShoeboxSecureSocialModule
@@ -40,7 +40,7 @@ class DeskControllerTest extends Specification with ShoeboxApplicationInjector {
   "DeskController" should {
     "is logged in" in {
       running(new ShoeboxApplication(requiredModules: _*)) {
-        val user = db.readWrite {implicit s =>
+        val user = db.readWrite { implicit s =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
         val path = com.keepit.controllers.api.routes.DeskController.isLoggedIn.toString

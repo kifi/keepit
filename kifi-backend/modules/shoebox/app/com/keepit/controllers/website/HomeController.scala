@@ -2,10 +2,10 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 
-import com.keepit.commanders.{InviteCommander, UserCommander}
+import com.keepit.commanders.{ InviteCommander, UserCommander }
 import com.keepit.common.KestrelCombinator
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController}
+import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
@@ -15,7 +15,7 @@ import com.keepit.controllers.core.AuthController
 import com.keepit.heimdal._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
+import com.keepit.social.{ SocialNetworks, SocialNetworkType, SocialGraphPlugin }
 
 import ActionAuthenticator.MaybeAuthenticatedRequest
 
@@ -27,7 +27,7 @@ import play.api.mvc._
 import play.api.mvc.DiscardingCookie
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import securesocial.core.{SecureSocial, Authenticator}
+import securesocial.core.{ SecureSocial, Authenticator }
 
 import scala.Some
 import scala.concurrent.Future
@@ -50,10 +50,11 @@ class HomeController @Inject() (
   inviteCommander: InviteCommander,
   heimdalServiceClient: HeimdalServiceClient,
   applicationConfig: FortyTwoConfig)
-  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
+    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
-    db.readOnly { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
+    // Sign-up flow is critical, read from master
+    db.readOnlyMaster { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
   }
 
   private def setHasSeenInstall()(implicit request: AuthenticatedRequest[_]): Unit = {
@@ -68,7 +69,9 @@ class HomeController @Inject() (
   private def aboutHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
-      if (!agent.isWebsiteEnabled) {
+      if (agent.isOldIE) {
+        Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
+      } else if (!agent.screenCanFitWebApp) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
       } else None
     }.flatten.getOrElse(Ok(views.html.marketing.about(isLoggedIn)))
@@ -78,7 +81,9 @@ class HomeController @Inject() (
   private def termsHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
-      if (!agent.isWebsiteEnabled) {
+      if (agent.isOldIE) {
+        None
+      } else if (!agent.screenCanFitWebApp) {
         Some(true)
       } else {
         Some(false)
@@ -92,7 +97,9 @@ class HomeController @Inject() (
   private def privacyHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
-      if (!agent.isWebsiteEnabled) {
+      if (agent.isOldIE) {
+        None
+      } else if (!agent.screenCanFitWebApp) {
         Some(true)
       } else {
         Some(false)
@@ -102,23 +109,21 @@ class HomeController @Inject() (
     }.getOrElse(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
   }
 
-  // TODO: serve this to all iPhone requests at /mobile and remove this route + action
-  def iPhoneLandingTempForDev = Action { request =>
-    Ok(views.html.marketing.iPhoneLanding())
+  def iPhoneAppStoreRedirect = HtmlAction(authenticatedAction = iPhoneAppStoreRedirectWithTracking(_), unauthenticatedAction = iPhoneAppStoreRedirectWithTracking(_))
+  private def iPhoneAppStoreRedirectWithTracking(implicit request: RequestHeader): SimpleResult = {
+    val context = new HeimdalContextBuilder()
+    context.addRequestInfo(request)
+    context += ("type", "landing")
+    heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("visitor_viewed_page")))
+    Redirect("https://itunes.apple.com/app/id740232575")
   }
 
-  def mobileLanding = HtmlAction(authenticatedAction = mobileLandingHandler(isLoggedIn = true)(_), unauthenticatedAction = mobileLandingHandler(isLoggedIn = false)(_))
-  private def mobileLandingHandler(isLoggedIn: Boolean)(implicit request: Request[_]): SimpleResult = {
-    val agentOpt = request.headers.get("User-Agent").map { agent =>
-      UserAgent.fromString(agent)
-    }
-    val ua = agentOpt.get.userAgent
-    val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
-    if (isIphone) {
-      Ok(views.html.marketing.iPhoneLanding())
+  def mobileLanding = HtmlAction(authenticatedAction = mobileLandingHandler(_), unauthenticatedAction = mobileLandingHandler(_))
+  private def mobileLandingHandler(implicit request: Request[_]): SimpleResult = {
+    if (request.headers.get("User-Agent").exists { ua => ua.contains("iPhone") && !ua.contains("iPad") }) {
+      iPhoneAppStoreRedirectWithTracking
     } else {
-      Ok(views.html.marketing.mobileLanding(false, ""))
-
+      Ok(views.html.marketing.mobileLanding(""))
     }
   }
 
@@ -147,7 +152,7 @@ class HomeController @Inject() (
       Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(routes.HomeController.install())
-    } else if (agentOpt.exists(_.isWebsiteEnabled)) {
+    } else if (agentOpt.exists(_.screenCanFitWebApp)) {
       Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular/index.html").get)) as HTML
     } else {
       Redirect(routes.HomeController.unsupported())
@@ -165,20 +170,18 @@ class HomeController @Inject() (
     } else {
       // TODO: Redirect to /login if the path is not /
       // Non-user landing page
-      val agentOpt = request.headers.get("User-Agent").map { agent =>
-        UserAgent.fromString(agent)
-      }
       temporaryReportLandingLoad()
-      if (agentOpt.exists(!_.isWebsiteEnabled)) {
+      val agentOpt = request.headers.get("User-Agent").map(UserAgent.fromString)
+      if (agentOpt.exists(!_.screenCanFitWebApp)) {
         val ua = agentOpt.get.userAgent
         val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
         if (isIphone) {
-          Ok(views.html.marketing.iPhoneLanding())
+          iPhoneAppStoreRedirectWithTracking
         } else {
-          Ok(views.html.marketing.mobileLanding(false, ""))
+          Ok(views.html.marketing.mobileLanding(""))
         }
       } else {
-        Ok(views.html.marketing.landingNew())
+        Ok(views.html.marketing.landing())
       }
     }
   }
@@ -188,7 +191,6 @@ class HomeController @Inject() (
     context.addRequestInfo(request)
     heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("loaded_landing_page")))
   }
-
 
   def agent = Action { request =>
     val res = request.headers.get("User-Agent").map { ua =>
@@ -201,16 +203,16 @@ class HomeController @Inject() (
   def homeWithParam(id: String) = home
 
   def blog = HtmlAction[AnyContent](allowPending = true)(authenticatedAction = { request =>
-      request.headers.get(USER_AGENT) match {
-        case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
-        case _ => homeAuthed(request)
-      }
-    }, unauthenticatedAction = { request =>
-      request.headers.get(USER_AGENT) match {
-        case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
-        case _ => homeNotAuthed(request)
-      }
-    })
+    request.headers.get(USER_AGENT) match {
+      case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
+      case _ => homeAuthed(request)
+    }
+  }, unauthenticatedAction = { request =>
+    request.headers.get(USER_AGENT) match {
+      case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
+      case _ => homeNotAuthed(request)
+    }
+  })
 
   def kifiSiteRedirect(path: String) = Action {
     MovedPermanently(s"/$path")
@@ -219,11 +221,11 @@ class HomeController @Inject() (
   def pendingHome()(implicit request: AuthenticatedRequest[_]) = {
     val user = request.user
 
-    val (email, friendsOnKifi) = db.readOnly { implicit session =>
+    val (email, friendsOnKifi) = db.readOnlyMaster { implicit session =>
       val email = emailRepo.getAllByUser(user.id.get).sortBy(a => a.id.get.id).lastOption.map(_.address)
       val friendsOnKifi = userConnectionRepo.getConnectedUsers(user.id.get).map { u =>
         val user = userRepo.get(u)
-        if(user.state == UserStates.ACTIVE) Some(user.externalId)
+        if (user.state == UserStates.ACTIVE) Some(user.externalId)
         else None
       }.flatten
 
@@ -258,9 +260,9 @@ class HomeController @Inject() (
     request.request.headers.get(USER_AGENT).map { agentString =>
       val agent = UserAgent.fromString(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
-      if (!agent.isWebsiteEnabled) {
+      if (!agent.screenCanFitWebApp) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.mobileLanding()))
-      } else if (!agent.isSupportedDesktop) {
+      } else if (!agent.canRunExtensionIfUpToDate) {
         Some(Redirect(com.keepit.controllers.website.routes.HomeController.unsupported()))
       } else None
     }.flatten.getOrElse(Ok(views.html.website.install(request.user)))
@@ -272,7 +274,7 @@ class HomeController @Inject() (
     suiOpt match {
       case None => code match {
         case "no_other_connected_network" => BadRequest("You must have at least one other network connected.")
-        case "not_connected_to_network"   => BadRequest(s"You are not connected to ${networkString}.")
+        case "not_connected_to_network" => BadRequest(s"You are not connected to ${networkString}.")
         case _ => Status(INTERNAL_SERVER_ERROR)("0")
       }
       case Some(newLoginUser) =>

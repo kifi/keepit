@@ -3,9 +3,8 @@ package com.keepit.common.controller
 import com.keepit.common.logging.Logging
 import play.api.mvc._
 import com.keepit.common.akka.SafeFuture
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.{ Future, ExecutionContext }
 import com.keepit.common.service.ServiceType
-
 
 trait ServiceController extends Controller with Logging {
 
@@ -21,7 +20,7 @@ trait ServiceController extends Controller with Logging {
     SafeFuture(f)
   }
 
-  def SafeAsyncAction[A](parser: BodyParser[A])(f: Request[A] => SimpleResult)(implicit ex: ExecutionContext) = Action.async[A](parser){ request =>
+  def SafeAsyncAction[A](parser: BodyParser[A])(f: Request[A] => SimpleResult)(implicit ex: ExecutionContext) = Action.async[A](parser) { request =>
     SafeFuture(f(request))
   }
 
@@ -50,8 +49,8 @@ trait CortexServiceController extends ServiceController {
   val serviceType: ServiceType = ServiceType.CORTEX
 }
 
-trait MavenServiceController extends ServiceController {
-  val serviceType: ServiceType = ServiceType.MAVEN
+trait CuratorServiceController extends ServiceController {
+  val serviceType: ServiceType = ServiceType.CURATOR
 }
 
 trait GraphServiceController extends ServiceController {

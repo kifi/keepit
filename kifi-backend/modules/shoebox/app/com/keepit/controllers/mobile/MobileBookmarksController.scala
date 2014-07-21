@@ -2,7 +2,7 @@ package com.keepit.controllers.mobile
 
 import com.keepit.commanders._
 import com.keepit.heimdal._
-import com.keepit.common.controller.{ShoeboxServiceController, MobileController, ActionAuthenticator}
+import com.keepit.common.controller.{ ShoeboxServiceController, MobileController, ActionAuthenticator }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
@@ -46,7 +46,7 @@ class MobileBookmarksController @Inject() (
 
   def allCollections(sort: String) = JsonAction.authenticatedAsync { request =>
     for {
-      numKeeps <- SafeFuture { db.readOnly { implicit s => keepRepo.getCountByUser(request.userId) } }
+      numKeeps <- SafeFuture { db.readOnlyMaster { implicit s => keepRepo.getCountByUser(request.userId) } }
       collections <- SafeFuture { collectionCommander.allCollections(sort, request.userId) }
     } yield {
       Ok(Json.obj(
@@ -122,7 +122,7 @@ class MobileBookmarksController @Inject() (
 
   def addTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    db.readOnly { implicit s => collectionRepo.getOpt(id) } map { tag =>
+    db.readOnlyMaster { implicit s => collectionRepo.getOpt(id) } map { tag =>
       bookmarksCommander.tagUrl(tag, request.body, request.userId, KeepSource.mobile, request.kifiInstallationId)
       Ok(Json.toJson(SendableTag from tag.summary))
     } getOrElse {
@@ -155,8 +155,8 @@ class MobileBookmarksController @Inject() (
       case (Some(ssUrl), Some(imgUrl)) =>
         Json.obj("url" -> url, "imgUrl" -> imgUrl, "screenshotUrl" -> ssUrl)
     }
-    val width =  (imageWidthOpt map { width => Json.obj("imgWidth" -> width) } getOrElse Json.obj())
-    val height =  (imageHeightOpt map { height => Json.obj("imgHeight" -> height) } getOrElse Json.obj())
+    val width = (imageWidthOpt map { width => Json.obj("imgWidth" -> width) } getOrElse Json.obj())
+    val height = (imageHeightOpt map { height => Json.obj("imgHeight" -> height) } getOrElse Json.obj())
     main ++ width ++ height
   }
 
@@ -171,7 +171,7 @@ class MobileBookmarksController @Inject() (
           minWidth <- (request.body \ "minWidth").asOpt[Int]
           minHeight <- (request.body \ "minHeight").asOpt[Int]
         } yield ImageSize(minWidth, minHeight))
-        val uriOpt = db.readOnly{ implicit ro => normalizedURIInterner.getByUri(url) }
+        val uriOpt = db.readOnlyMaster { implicit ro => normalizedURIInterner.getByUri(url) }
         uriOpt match {
           case None => Future.successful(NotFound(Json.obj("code" -> "uri_not_found")))
           case Some(uri) => {
@@ -192,7 +192,7 @@ class MobileBookmarksController @Inject() (
     urlsOpt match {
       case None => Future.successful(BadRequest(Json.obj("code" -> "illegal_arguments")))
       case Some(urls) => {
-        val uriOpts = db.readOnly { implicit ro =>
+        val uriOpts = db.readOnlyMaster { implicit ro =>
           urls flatMap { urlReq =>
             urlReq match {
               case JsString(url) => Some((url, normalizedURIInterner.getByUri(url), None))
@@ -209,16 +209,17 @@ class MobileBookmarksController @Inject() (
             }
           }
         }
-        val resFutSeq = uriOpts map { case (url, uriOpt, minSizeOpt) =>
-          uriOpt match {
-            case None => Future.successful(Json.obj("url" -> url, "code" -> "uri_not_found"))
-            case Some(uri) => {
-              val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
-              uriSummaryCommander.getImageURISummary(uri, minSizeOpt) map { uriSummary =>
-                toJsObject(url, uri, screenshotUrlOpt, uriSummary.imageUrl, uriSummary.imageWidth, uriSummary.imageHeight)
+        val resFutSeq = uriOpts map {
+          case (url, uriOpt, minSizeOpt) =>
+            uriOpt match {
+              case None => Future.successful(Json.obj("url" -> url, "code" -> "uri_not_found"))
+              case Some(uri) => {
+                val screenshotUrlOpt = uriSummaryCommander.getScreenshotURL(uri)
+                uriSummaryCommander.getImageURISummary(uri, minSizeOpt) map { uriSummary =>
+                  toJsObject(url, uri, screenshotUrlOpt, uriSummary.imageUrl, uriSummary.imageWidth, uriSummary.imageHeight)
+                }
               }
             }
-          }
         }
         Future.sequence(resFutSeq) map { res =>
           Ok(Json.toJson(res))

@@ -53,6 +53,7 @@ angular.module('kifi.routeService', [])
       },
       removeKeeps: route('/keeps/remove'),
       tagOrdering: route('/collections/ordering'),
+      reorderTag: route('/collections/reorderTag'),
       whoToInvite: route('/friends/wti'),
       blockWtiConnection: route('/friends/wti/block'),
       friends: function (page, pageSize) {
@@ -71,7 +72,9 @@ angular.module('kifi.routeService', [])
         limit = limit || 6;
         return route('/user/connections/all/search?query=' + name + '&limit=' + limit + '&pictureUrl=true');
       },
-      exportKeeps: route('/keeps/export')
+      exportKeeps: route('/keeps/export'),
+      postDelightedAnswer: route('/user/delighted/answer'),
+      cancelDelightedSurvey: route('/user/delighted/cancel')
     };
   }
 ]);

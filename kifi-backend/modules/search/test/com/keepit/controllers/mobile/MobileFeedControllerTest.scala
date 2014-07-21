@@ -1,6 +1,6 @@
 package com.keepit.controllers.mobile
 
-import com.keepit.test.{SearchApplication, SearchApplicationInjector}
+import com.keepit.test.{ SearchApplication, SearchApplicationInjector }
 import org.specs2.mutable.Specification
 import akka.actor.ActorSystem
 import com.keepit.common.actor.StandaloneTestActorSystemModule
@@ -14,8 +14,7 @@ import com.keepit.common.controller.FakeActionAuthenticator
 
 import play.api.test.FakeRequest
 
-
-class MobileFeedControllerTest extends Specification with SearchApplicationInjector{
+class MobileFeedControllerTest extends Specification with SearchApplicationInjector {
 
   val expected1 = Json.parse(s"""
     [
@@ -29,7 +28,8 @@ class MobileFeedControllerTest extends Specification with SearchApplicationInjec
             "id":"4e5f7b8c-951b-4497-8661-012345678901",
             "firstName":"u1",
             "lastName":"fake",
-            "pictureName":"u1.png"
+            "pictureName":"u1.png",
+            "username":"u1"
           }
         ],
 
@@ -40,8 +40,7 @@ class MobileFeedControllerTest extends Specification with SearchApplicationInjec
    ]
   """)
 
-
-   val expected2 = Json.parse(s"""
+  val expected2 = Json.parse(s"""
      [
         {
           "title":"kifi",
@@ -53,7 +52,8 @@ class MobileFeedControllerTest extends Specification with SearchApplicationInjec
               "id":"4e5f7b8c-951b-4497-8661-012345678901",
               "firstName":"u1",
               "lastName":"fake",
-              "pictureName":"u1.png"
+              "pictureName":"u1.png",
+              "username":"u1"
             }
           ],
 
@@ -74,7 +74,8 @@ class MobileFeedControllerTest extends Specification with SearchApplicationInjec
               "id":"4e5f7b8c-951b-4497-8661-012345678901",
               "firstName":"u1",
               "lastName":"fake",
-              "pictureName":"u1.png"
+              "pictureName":"u1.png",
+              "username":"u1"
             },
 
             {
@@ -105,7 +106,7 @@ class MobileFeedControllerTest extends Specification with SearchApplicationInjec
   "mobileFeedController" should {
     "provide feeds with correct paging" in {
 
-      running(new SearchApplication(modules: _*)){
+      running(new SearchApplication(modules: _*)) {
         val user = User(Some(Id[User](1)), firstName = "u1", lastName = "fake")
         inject[FakeActionAuthenticator].setUser(user)
 
@@ -118,7 +119,6 @@ class MobileFeedControllerTest extends Specification with SearchApplicationInjec
         contentType(result) must beSome("application/json")
 
         Json.parse(contentAsString(result)) === expected1
-
 
         path = com.keepit.controllers.mobile.routes.MobileFeedController.pageV1(0, 2).toString
         path === "/m/1/search/feeds/page?pageNum=0&pageSize=2"

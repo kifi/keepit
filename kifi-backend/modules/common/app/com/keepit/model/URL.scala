@@ -23,19 +23,18 @@ object URLHistory {
     (__ \ 'cause).format[String].inmap(URLHistoryCause.apply, unlift(URLHistoryCause.unapply))
   )(URLHistory.apply _, unlift(URLHistory.unapply))
 
-  val LENGTH_LIMIT = 3    // only last 3 history records to prevent DB column overflow
+  val LENGTH_LIMIT = 3 // only last 3 history records to prevent DB column overflow
 }
 
-case class URL (
-  id: Option[Id[URL]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  url: String,
-  domain: Option[String],
-  normalizedUriId: Id[NormalizedURI],
-  history: Seq[URLHistory] = Seq(),
-  state: State[URL] = URLStates.ACTIVE
-) extends ModelWithState[URL] {
+case class URL(
+    id: Option[Id[URL]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    url: String,
+    domain: Option[String],
+    normalizedUriId: Id[NormalizedURI],
+    history: Seq[URLHistory] = Seq(),
+    state: State[URL] = URLStates.ACTIVE) extends ModelWithState[URL] {
   def withId(id: Id[URL]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withNormUriId(normUriId: Id[NormalizedURI]) = copy(normalizedUriId = normUriId)

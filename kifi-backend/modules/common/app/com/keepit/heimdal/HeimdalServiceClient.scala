@@ -1,29 +1,30 @@
 package com.keepit.heimdal
 
-import com.keepit.common.service.{ServiceClient, ServiceType}
+import com.keepit.common.mail.EmailAddress
+import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Heimdal
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.{CallTimeouts, HttpClient}
+import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.common.actor.{BatchingActor, BatchingActorConfiguration, ActorInstance}
+import com.keepit.common.actor.{ FlushEventQueueAndClose, BatchingActor, BatchingActorConfiguration, ActorInstance }
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.time.Clock
 
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration._
 
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 
-import play.api.libs.json.{JsNumber, JsArray, Json, JsObject}
+import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
 import com.keepit.model.User
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.{ ExternalId, Id }
 import org.joda.time.DateTime
 import com.kifi.franz.SQSQueue
 
@@ -49,10 +50,13 @@ trait HeimdalServiceClient extends ServiceClient {
   def setUserProperties(userId: Id[User], properties: (String, ContextData)*): Unit
 
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit
-}
 
-object FlushEventQueue
-object FlushEventQueueAndClose
+  def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]]
+
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]]
+
+  def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Boolean]
+}
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
   val MaxBatchSize = 20
@@ -68,41 +72,40 @@ class HeimdalClientActor @Inject() (
     serviceDiscovery: ServiceDiscovery,
     val clock: Clock,
     val scheduler: Scheduler,
-    heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]]
-) extends BatchingActor[HeimdalEvent](airbrakeNotifier) with ServiceClient with Logging {
+    heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]]) extends BatchingActor[HeimdalEvent](airbrakeNotifier) with ServiceClient with Logging {
 
   private final val serviceType = ServiceType.HEIMDAL
   val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
 
   val batchingConf = HeimdalBatchingConfiguration
-  def processBatch(events: Seq[HeimdalEvent]): Unit = heimdalEventQueue.send(events)
+  def processBatch(events: Seq[HeimdalEvent]): Future[_] = heimdalEventQueue.send(events)
   def getEventTime(event: HeimdalEvent): DateTime = event.time
 }
 
 class HeimdalServiceClientImpl @Inject() (
-    val airbrakeNotifier: AirbrakeNotifier,
-    val httpClient: HttpClient,
-    val serviceCluster: ServiceCluster,
-    actor: ActorInstance[HeimdalClientActor],
-    clock: Clock,
-    val scheduling: SchedulingProperties)
-  extends HeimdalServiceClient with SchedulerPlugin with Logging {
+  val airbrakeNotifier: AirbrakeNotifier,
+  val httpClient: HttpClient,
+  val serviceCluster: ServiceCluster,
+  actor: ActorInstance[HeimdalClientActor],
+  clock: Clock,
+  val scheduling: SchedulingProperties)
+    extends HeimdalServiceClient with SchedulerPlugin with Logging {
 
   implicit val actorTimeout = Timeout(30 seconds)
   val longTimeout = CallTimeouts(responseTimeout = Some(30000), maxWaitTime = Some(3000), maxJsonParseTime = Some(10000))
 
   override def onStop() {
     val res = actor.ref ? FlushEventQueueAndClose
-    Await.result(res, Duration(30, SECONDS))
+    Await.result(res, Duration(5, SECONDS))
     super.onStop()
   }
 
-  def trackEvent(event: HeimdalEvent) : Unit = {
+  def trackEvent(event: HeimdalEvent): Unit = {
     actor.ref ! event
   }
 
   def getMetricData[E <: HeimdalEvent: HeimdalEventCompanion](name: String): Future[JsObject] = {
-    call(Heimdal.internal.getMetricData(implicitly[HeimdalEventCompanion[E]].typeCode, name)).map{ response =>
+    call(Heimdal.internal.getMetricData(implicitly[HeimdalEventCompanion[E]].typeCode, name)).map { response =>
       Json.parse(response.body).as[JsObject]
     }
   }
@@ -142,4 +145,37 @@ class HeimdalServiceClientImpl @Inject() (
 
   def setUserAlias(userId: Id[User], externalId: ExternalId[User]): Unit =
     call(Heimdal.internal.setUserAlias(userId: Id[User], externalId: ExternalId[User]), callTimeouts = longTimeout)
+
+  def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]] = {
+    call(Heimdal.internal.getLastDelightedAnswerDate(userId)).map { response =>
+      Json.parse(response.body).asOpt[DateTime]
+    }
+  }
+
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]] = {
+    call(Heimdal.internal.postDelightedAnswer(userId, externalId, email, name), Json.toJson(answer)).map { response =>
+      val json = Json.parse(response.body)
+      json.asOpt[BasicDelightedAnswer] orElse {
+        (json \ "error").asOpt[String].map { msg =>
+          log.warn(s"Error posting delighted answer $answer for user $userId: $msg")
+        }
+        None
+      }
+    }
+  }
+
+  def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Boolean] = {
+    call(Heimdal.internal.cancelDelightedSurvey(userId, externalId, email, name)).map { response =>
+      Json.parse(response.body) match {
+        case JsString(s) if s == "success" => true
+        case json =>
+          (json \ "error").asOpt[String].map { msg =>
+            log.warn(s"Error cancelling delighted survey for user $userId: $msg")
+          } getOrElse {
+            log.warn(s"Error cancelling delighted survey for user $userId")
+          }
+          false
+      }
+    }
+  }
 }

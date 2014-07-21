@@ -6,7 +6,7 @@ import scala.concurrent.promise
 import org.joda.time._
 import com.google.inject.Inject
 import com.keepit.classify._
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
@@ -15,13 +15,12 @@ import com.keepit.eliza.ElizaServiceClient
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import views.html
-import com.keepit.heimdal.{SystemEventTypes, HeimdalContext, SystemEvent, HeimdalServiceClient}
+import com.keepit.heimdal.{ SystemEventTypes, HeimdalContext, SystemEvent, HeimdalServiceClient }
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsBoolean
 import com.keepit.classify.DomainTag
 import play.api.libs.json.JsObject
-import com.keepit.common.store.{KifiInstallationDetails, KifInstallationStore}
-
+import com.keepit.common.store.{ KifiInstallationDetails, KifInstallationStore }
 
 class SliderAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -42,7 +41,7 @@ class SliderAdminController @Inject() (
 
   def getRules = AdminHtmlAction.authenticated { implicit request =>
     val groupName = "default"
-    val group = db.readOnly { implicit session =>
+    val group = db.readOnlyReplica { implicit session =>
       sliderRuleRepo.getGroup(groupName)
     }
     Ok(html.admin.sliderRules(groupName, group.rules.map(r => r.name -> r).toMap))
@@ -67,7 +66,7 @@ class SliderAdminController @Inject() (
   }
 
   def getPatterns = AdminHtmlAction.authenticated { implicit request =>
-    val patterns = db.readOnly { implicit session =>
+    val patterns = db.readOnlyReplica { implicit session =>
       urlPatternRepo.all
     }
     Ok(html.admin.sliderPatterns(patterns))
@@ -100,7 +99,7 @@ class SliderAdminController @Inject() (
   }
 
   def getDomainTags = AdminHtmlAction.authenticated { implicit request =>
-    val tags = db.readOnly { implicit session =>
+    val tags = db.readOnlyReplica { implicit session =>
       domainTagRepo.all
     }
     Ok(html.admin.domainTags(tags))
@@ -109,19 +108,19 @@ class SliderAdminController @Inject() (
   def getClassifications(domain: Option[String]) = AdminHtmlAction.authenticatedAsync { implicit request =>
     domain.map(domainClassifier.fetchTags)
       .getOrElse(promise[Seq[DomainTagName]].success(Seq()).future).map { tags =>
-      val tagPairs = tags.map { t =>
-        val tag = db.readOnly { implicit s => domainTagRepo.get(t) }
-        (t.name, tag.map(_.sensitive.getOrElse(false)))
+        val tagPairs = tags.map { t =>
+          val tag = db.readOnlyReplica { implicit s => domainTagRepo.get(t) }
+          (t.name, tag.map(_.sensitive.getOrElse(false)))
+        }
+        Ok(html.admin.classifications(domain, tagPairs))
       }
-      Ok(html.admin.classifications(domain, tagPairs))
-    }
   }
 
   def saveDomainTags = AdminHtmlAction.authenticated { implicit request =>
     val tagIdValue = """sensitive_([0-9]+)""".r
     val sensitiveTags = request.body.asFormUrlEncoded.get.keys
       .collect { case tagIdValue(v) => Id[DomainTag](v.toInt) }.toSet
-    val tagsToSave = db.readOnly { implicit s =>
+    val tagsToSave = db.readOnlyReplica { implicit s =>
       domainTagRepo.all.map(tag => (tag, sensitiveTags contains tag.id.get)).collect {
         case (tag, sensitive) if tag.state == DomainTagStates.ACTIVE && tag.sensitive != Some(sensitive) =>
           tag.withSensitive(Some(sensitive))
@@ -132,7 +131,7 @@ class SliderAdminController @Inject() (
         domainTagRepo.save(tag)
       }
       future {
-        val domainIds = db.readOnly { implicit s =>
+        val domainIds = db.readOnlyMaster { implicit s =>
           domainToTagRepo.getByTag(tag.id.get).map(_.domainId)
         }
         db.readWrite { implicit s =>
@@ -144,7 +143,7 @@ class SliderAdminController @Inject() (
   }
 
   def getDomainOverrides = AdminHtmlAction.authenticated { implicit request =>
-    val domains = db.readOnly { implicit session =>
+    val domains = db.readOnlyReplica { implicit session =>
       domainRepo.getOverrides()
     }
     Ok(html.admin.domains(domains))
@@ -154,7 +153,7 @@ class SliderAdminController @Inject() (
     val domainSensitiveMap = request.body.asFormUrlEncoded.get.map {
       case (k, vs) => k.toLowerCase -> (vs.head.toLowerCase == "true")
     }.toMap
-    val domainsToRemove = db.readOnly { implicit session =>
+    val domainsToRemove = db.readOnlyReplica { implicit session =>
       domainRepo.getOverrides()
     }.filterNot(d => domainSensitiveMap.contains(d.hostname))
 
@@ -175,7 +174,7 @@ class SliderAdminController @Inject() (
     Ok(JsObject(domainSensitiveMap map { case (s, b) => s -> JsBoolean(b) } toSeq))
   }
 
-  def refetchClassifications = /* TODO: AdminJson */Action { implicit request =>
+  def refetchClassifications = /* TODO: AdminJson */ Action { implicit request =>
     domainTagImporter.refetchClassifications()
     Ok(JsObject(Seq()))
   }
@@ -214,7 +213,7 @@ class SliderAdminController @Inject() (
   def getVersionForm = AdminHtmlAction.authenticated { implicit request =>
     val details = kifInstallationStore.getRaw()
 
-    val installations = db.readOnly { implicit session =>
+    val installations = db.readOnlyMaster { implicit session =>
       kifiInstallationRepo.getLatestActiveExtensionVersions(20)
     }
     Ok(html.admin.versionForm(installations, details))

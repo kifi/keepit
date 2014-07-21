@@ -1,16 +1,15 @@
-package com.keepit.maven
+package com.keepit.curator
 
-
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
-case class FakeMavenServiceClientModule() extends MavenServiceClientModule {
-  def configure(){}
+case class FakeCuratorServiceClientModule() extends CuratorServiceClientModule {
+  def configure() {}
 
   @Singleton
   @Provides
-  def MavenServiceClient(airbrake: AirbrakeNotifier): MavenServiceClient = {
-    new FakeMavenServiceClientImpl(airbrake)
+  def CuratorServiceClient(airbrake: AirbrakeNotifier): CuratorServiceClient = {
+    new FakeCuratorServiceClientImpl(airbrake)
   }
 
 }

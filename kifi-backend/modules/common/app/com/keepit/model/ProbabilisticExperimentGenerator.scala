@@ -5,7 +5,7 @@ import org.joda.time.DateTime
 import com.keepit.common.time._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key}
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
 import com.keepit.serializer.TraversableFormat
@@ -17,15 +17,14 @@ trait UserExperimentGenerator {
 }
 
 case class ProbabilisticExperimentGenerator(
-  id: Option[Id[ProbabilisticExperimentGenerator]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  state: State[ProbabilisticExperimentGenerator] = ProbabilisticExperimentGeneratorStates.ACTIVE,
-  name: Name[ProbabilisticExperimentGenerator],
-  condition: Option[ExperimentType],
-  salt: String,
-  density: ProbabilityDensity[ExperimentType]
-) extends ModelWithState[ProbabilisticExperimentGenerator] with UserExperimentGenerator {
+    id: Option[Id[ProbabilisticExperimentGenerator]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    state: State[ProbabilisticExperimentGenerator] = ProbabilisticExperimentGeneratorStates.ACTIVE,
+    name: Name[ProbabilisticExperimentGenerator],
+    condition: Option[ExperimentType],
+    salt: String,
+    density: ProbabilityDensity[ExperimentType]) extends ModelWithState[ProbabilisticExperimentGenerator] with UserExperimentGenerator {
 
   def withId(id: Id[ProbabilisticExperimentGenerator]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -67,4 +66,4 @@ trait ProbabilisticExperimentGeneratorAllKey extends Key[Seq[ProbabilisticExperi
 object ProbabilisticExperimentGeneratorAllKey extends ProbabilisticExperimentGeneratorAllKey
 
 class ProbabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[ProbabilisticExperimentGeneratorAllKey, Seq[ProbabilisticExperimentGenerator]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq[ProbabilisticExperimentGenerator])
+  extends JsonCacheImpl[ProbabilisticExperimentGeneratorAllKey, Seq[ProbabilisticExperimentGenerator]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(TraversableFormat.seq[ProbabilisticExperimentGenerator])

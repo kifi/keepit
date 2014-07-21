@@ -3,8 +3,9 @@ package com.keepit.graph.model
 import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.search.message.ThreadContent
-import play.api.libs.json.{JsNumber, Writes, Reads, Format}
+import play.api.libs.json.{ JsNumber, Writes, Reads, Format }
 import com.keepit.graph.manager.LDATopicId
+import com.keepit.abook.model.IngestableEmailAccount
 
 case class VertexDataId[V <: VertexDataReader](id: Long) // extends AnyVal
 
@@ -32,6 +33,12 @@ object VertexDataId {
   implicit def fromKeepId(keepId: Id[Keep]): VertexDataId[KeepReader] = VertexDataId(keepId.id)
   implicit def toKeepId(keepReaderId: VertexDataId[KeepReader]): Id[Keep] = Id(keepReaderId.id)
 
-  implicit def fromLDATopicId(id: LDATopicId): VertexDataId[LDATopicReader] = VertexDataId(id.toLong)
-  implicit def toLDATopicId(id: VertexDataId[LDATopicReader]): LDATopicId = LDATopicId.fromLong(id.id)
+  implicit def fromLDATopicId(ldaTopicId: LDATopicId): VertexDataId[LDATopicReader] = VertexDataId(ldaTopicId.toLong)
+  implicit def toLDATopicId(ldaTopicReaderId: VertexDataId[LDATopicReader]): LDATopicId = LDATopicId.fromLong(ldaTopicReaderId.id)
+
+  implicit def fromEmailAccountId(emailAccountId: Id[IngestableEmailAccount]): VertexDataId[EmailAccountReader] = VertexDataId(emailAccountId.id)
+  implicit def toEmailAccountId(emailAccountReaderId: VertexDataId[EmailAccountReader]): Id[IngestableEmailAccount] = Id(emailAccountReaderId.id)
+
+  implicit def fromABookId(abookId: Id[ABookInfo]): VertexDataId[AddressBookReader] = VertexDataId(abookId.id)
+  implicit def toABookId(addressBookReaderId: VertexDataId[AddressBookReader]): Id[ABookInfo] = Id(addressBookReaderId.id)
 }

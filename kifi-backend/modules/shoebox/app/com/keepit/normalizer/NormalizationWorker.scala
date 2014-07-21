@@ -2,32 +2,31 @@ package com.keepit.normalizer
 
 import com.google.inject.Inject
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.akka.{UnsupportedActorMessage, FortyTwoActor}
+import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{SchedulingProperties, SchedulerPlugin}
+import com.keepit.common.plugin.{ SchedulingProperties, SchedulerPlugin }
 import com.keepit.common.actor.ActorInstance
 import akka.util.Timeout
 import scala.concurrent.duration._
-import play.api.{Play, Plugin}
-import com.keepit.model.{NormalizedURIRepo}
+import play.api.{ Play, Plugin }
+import com.keepit.model.{ NormalizedURIRepo }
 import com.keepit.common.db.slick.Database
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.queue.{NormalizationUpdateTask}
+import com.keepit.queue.{ NormalizationUpdateTask }
 import com.keepit.common.aws.AwsConfig
 import com.kifi.franz.SQSQueue
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 case object Consume
 
-class NormalizationWorker @Inject()(
-  db:Database,
-  nuriRepo:NormalizedURIRepo,
-  airbrake:AirbrakeNotifier,
-  updateQ:SQSQueue[NormalizationUpdateTask],
-  normalizationService:NormalizationService,
-  val scheduling: SchedulingProperties,
-  awsConfig: AwsConfig
-) extends FortyTwoActor(airbrake) with Logging {
+class NormalizationWorker @Inject() (
+    db: Database,
+    nuriRepo: NormalizedURIRepo,
+    airbrake: AirbrakeNotifier,
+    updateQ: SQSQueue[NormalizationUpdateTask],
+    normalizationService: NormalizationService,
+    val scheduling: SchedulingProperties,
+    awsConfig: AwsConfig) extends FortyTwoActor(airbrake) with Logging {
 
   def receive = {
     case Consume => consume()
@@ -37,13 +36,13 @@ class NormalizationWorker @Inject()(
   def consume() = {
     updateQ.nextBatchWithLock(3, 2 minutes) onComplete {
       case Failure(t) =>
-        airbrake.notify(s"Caught exception $t while consuming messages from $updateQ",t)
+        airbrake.notify(s"Caught exception $t while consuming messages from $updateQ", t)
       case Success(messages) =>
         log.debug(s"[consume] messages:(len=${messages.length})[${messages.mkString(",")}]")
         for (m <- messages) {
           log.debug(s"[consume] received msg $m")
           m.consume { task =>
-            val nuri = db.readOnly { implicit ro =>
+            val nuri = db.readOnlyMaster { implicit ro =>
               nuriRepo.get(task.uriId)
             }
             val ref = NormalizationReference(nuri, task.isNew)
@@ -62,10 +61,9 @@ class NormalizationWorker @Inject()(
 trait NormalizationUpdaterPlugin extends Plugin {
 }
 
-class NormalizationUpdaterPluginImpl @Inject()(
-  actor:ActorInstance[NormalizationWorker],
-  val scheduling:SchedulingProperties
-) extends NormalizationUpdaterPlugin with SchedulerPlugin with Logging {
+class NormalizationUpdaterPluginImpl @Inject() (
+    actor: ActorInstance[NormalizationWorker],
+    val scheduling: SchedulingProperties) extends NormalizationUpdaterPlugin with SchedulerPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
 

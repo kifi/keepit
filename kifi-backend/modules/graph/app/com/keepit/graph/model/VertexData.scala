@@ -1,6 +1,5 @@
 package com.keepit.graph.model
 
-
 sealed trait VertexData[V <: VertexDataReader] { self: V =>
   def asReader: V = self
 }
@@ -12,3 +11,5 @@ case class FacebookAccountData(id: VertexDataId[FacebookAccountReader]) extends 
 case class LinkedInAccountData(id: VertexDataId[LinkedInAccountReader]) extends LinkedInAccountReader with VertexData[LinkedInAccountReader]
 case class LDATopicData(id: VertexDataId[LDATopicReader]) extends LDATopicReader with VertexData[LDATopicReader]
 case class KeepData(id: VertexDataId[KeepReader]) extends KeepReader with VertexData[KeepReader]
+case class EmailAccountData(id: VertexDataId[EmailAccountReader]) extends EmailAccountReader with VertexData[EmailAccountReader]
+case class AddressBookData(id: VertexDataId[AddressBookReader]) extends AddressBookReader with VertexData[AddressBookReader]

@@ -1,7 +1,7 @@
 package com.keepit.common.cache
 
 import com.keepit.common.logging.Logging
-import com.keepit.serializer.{NoCopyLocalSerializer, Serializer}
+import com.keepit.serializer.{ NoCopyLocalSerializer, Serializer }
 import org.specs2.mutable.Specification
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.duration.Duration
@@ -23,7 +23,7 @@ class TransactionalCachingTest extends Specification {
     protected[cache] def setInnerCache(key: K, valueOpt: Option[T]) = { store += (key -> valueOpt) }
 
     protected[cache] def bulkGetFromInnerCache(keys: Set[K]): Map[K, ObjectState[T]] = {
-      keys.foldLeft(Map.empty[K, ObjectState[T]]){ (result, key) =>
+      keys.foldLeft(Map.empty[K, ObjectState[T]]) { (result, key) =>
         store.get(key) match {
           case Some(valueOpt) => result + (key -> Found(valueOpt))
           case _ => result + (key -> NotFound())
@@ -35,7 +35,6 @@ class TransactionalCachingTest extends Specification {
     def exists(key: K): Boolean = store.contains(key)
     def clear(): Unit = store.clear()
   }
-
 
   case class TestKey1(id: Int) extends Key[String] {
     override val version = 1
@@ -61,10 +60,17 @@ class TransactionalCachingTest extends Specification {
   val txnCache1 = new TxnCache1(cache1)
   val txnCache2 = new TxnCache2(cache2)
 
-  implicit private val txn = new TransactionalCaching with Logging
+  private val masterTxn = new TransactionalCaching with Logging {
+    val isReadOnly = false
+  }
+
+  private val replicaTxn = new TransactionalCaching with Logging {
+    val isReadOnly = true
+  }
 
   "TransactionalCaching" should {
     "rollback cache data" in {
+      implicit val txn = masterTxn
       txn.beginCacheTransaction()
 
       txnCache1.set(TestKey1(1), "foo")
@@ -83,7 +89,21 @@ class TransactionalCachingTest extends Specification {
       cache2.get(TestKey2(1)) === None
     }
 
+    "don't write when readOnly txn" in {
+      implicit val txn = replicaTxn
+
+      txnCache1.set(TestKey1(1), "foo")
+      txnCache2.set(TestKey2(1), "bar")
+
+      txnCache1.get(TestKey1(1)) === None
+      txnCache2.get(TestKey2(1)) === None
+      cache1.get(TestKey1(1)) === None
+      cache2.get(TestKey2(1)) === None
+
+    }
+
     "commit cache data" in {
+      implicit val txn = masterTxn
       txn.beginCacheTransaction()
 
       txnCache1.set(TestKey1(1), "foo")
@@ -120,6 +140,7 @@ class TransactionalCachingTest extends Specification {
     }
 
     "remove cache data" in {
+      implicit val txn = masterTxn
       cache1.clear()
       cache2.clear()
       cache1.set(TestKey1(1), "foo")
@@ -142,7 +163,6 @@ class TransactionalCachingTest extends Specification {
       txnCache1.get(TestKey1(1)) === Some("foo")
       txnCache2.get(TestKey2(1)) === Some("bar")
 
-
       txn.beginCacheTransaction()
 
       txnCache1.remove(TestKey1(1))
@@ -162,6 +182,7 @@ class TransactionalCachingTest extends Specification {
     }
 
     "bulkGet cache data" in {
+      implicit val txn = masterTxn
       cache1.clear()
       cache2.clear()
 
@@ -201,11 +222,12 @@ class TransactionalCachingTest extends Specification {
     }
 
     "perform getOrElse" in {
+      implicit val txn = masterTxn
       cache1.clear()
       txn.beginCacheTransaction()
 
       txnCache1.get(TestKey1(1)) === None
-      txnCache1.getOrElse(TestKey1(1)){ "orElse invoked" } === "orElse invoked"
+      txnCache1.getOrElse(TestKey1(1)) { "orElse invoked" } === "orElse invoked"
       txnCache1.get(TestKey1(1)) === Some("orElse invoked")
 
       txn.rollbackCacheTransaction()
@@ -215,7 +237,7 @@ class TransactionalCachingTest extends Specification {
       txn.beginCacheTransaction()
 
       txnCache1.get(TestKey1(1)) === None
-      txnCache1.getOrElse(TestKey1(1)){ "orElse invoked again" } === "orElse invoked again"
+      txnCache1.getOrElse(TestKey1(1)) { "orElse invoked again" } === "orElse invoked again"
       txnCache1.get(TestKey1(1)) === Some("orElse invoked again")
 
       txn.commitCacheTransaction()
@@ -224,15 +246,16 @@ class TransactionalCachingTest extends Specification {
     }
 
     "skip the trasactional layer in directCacheAccess method" in {
+      implicit val txn = masterTxn
       cache1.clear()
 
       txnCache1.direct.remove(TestKey1(1))
       txnCache1.direct.remove(TestKey1(2))
-      txnCache1.direct.getOrElse(TestKey1(1)){ "orElse invoked" } === "orElse invoked"
+      txnCache1.direct.getOrElse(TestKey1(1)) { "orElse invoked" } === "orElse invoked"
 
       txn.beginCacheTransaction()
       txnCache1.remove(TestKey1(1))
-      txnCache1.getOrElse(TestKey1(1)){ "orElse invoked" } === "orElse invoked"
+      txnCache1.getOrElse(TestKey1(1)) { "orElse invoked" } === "orElse invoked"
       txn.rollbackCacheTransaction()
       // changes should be gone after rollback
       txnCache1.direct.get(TestKey1(1)) === Some("orElse invoked")
@@ -240,9 +263,9 @@ class TransactionalCachingTest extends Specification {
 
       // bypass the transaction layer
       txn.beginCacheTransaction()
-      txn.directCacheAccess{
+      txn.directCacheAccess {
         txnCache1.remove(TestKey1(1))
-        txnCache1.getOrElse(TestKey1(2)){ "orElse invoked" } === "orElse invoked"
+        txnCache1.getOrElse(TestKey1(2)) { "orElse invoked" } === "orElse invoked"
       }
       txn.rollbackCacheTransaction()
       // changes should be still there after rollback

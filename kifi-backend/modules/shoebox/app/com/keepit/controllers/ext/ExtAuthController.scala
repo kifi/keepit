@@ -6,23 +6,23 @@ import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
 import com.keepit.commanders.AuthCommander
 import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.{AirbrakeNotifier, AirbrakeError}
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.net._
-import com.keepit.common.social.{FacebookSocialGraph, LinkedInSocialGraph}
+import com.keepit.common.social.{ FacebookSocialGraph, LinkedInSocialGraph }
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.model.KifiInstallation
-import com.keepit.social.{BasicUser, SecureSocialClientIds}
+import com.keepit.social.{ BasicUser, SecureSocialClientIds }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.api.mvc.Action
 
-import securesocial.core.{OAuth2Provider, Registry}
+import securesocial.core.{ OAuth2Provider, Registry }
 
 class ExtAuthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -40,7 +40,7 @@ class ExtAuthController @Inject() (
   secureSocialClientIds: SecureSocialClientIds,
   facebook: FacebookSocialGraph,
   linkedIn: LinkedInSocialGraph)
-  extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   private val crypt = new RatherInsecureDESCrypt
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
@@ -53,20 +53,20 @@ class ExtAuthController @Inject() (
     val json = request.body
     val (userAgent, version, installationIdOpt) =
       (UserAgent.fromString(request.headers.get("user-agent").getOrElse("")),
-       KifiExtVersion((json \ "version").as[String]),
-       (json \ "installation").asOpt[String].flatMap { id =>
-         val kiId = ExternalId.asOpt[KifiInstallation](id)
-         if (kiId.isEmpty) {
-             // They sent an invalid id. Bug on client side?
-             airbrake.notify(AirbrakeError(
-               method = Some(request.method.toUpperCase),
-               userId = request.user.id,
-               userName = Some(request.user.fullName),
-               url = Some(request.path),
-               message = Some(s"""Invalid ExternalId passed in "$id" for userId $userId""")))
-         }
-         kiId
-       })
+        KifiExtVersion((json \ "version").as[String]),
+        (json \ "installation").asOpt[String].flatMap { id =>
+          val kiId = ExternalId.asOpt[KifiInstallation](id)
+          if (kiId.isEmpty) {
+            // They sent an invalid id. Bug on client side?
+            airbrake.notify(AirbrakeError(
+              method = Some(request.method.toUpperCase),
+              userId = request.user.id,
+              userName = Some(request.user.fullName),
+              url = Some(request.path),
+              message = Some(s"""Invalid ExternalId passed in "$id" for userId $userId""")))
+          }
+          kiId
+        })
     log.info(s"start details: $userAgent, $version, $installationIdOpt")
 
     val (user, installation, sliderRuleGroup, urlPatterns, isInstall, isUpdate, notAuthed) = db.readWrite { implicit s =>
@@ -97,7 +97,7 @@ class ExtAuthController @Inject() (
 
         if (isInstall) {
           contextBuilder += ("action", "installedExtension")
-          val installedExtensions = db.readOnly { implicit session => installationRepo.all(user.id.get, Some(KifiInstallationStates.INACTIVE)).length }
+          val installedExtensions = db.readOnlyMaster { implicit session => installationRepo.all(user.id.get, Some(KifiInstallationStates.INACTIVE)).length }
           contextBuilder += ("installation", installedExtensions)
           heimdal.setUserProperties(userId, "installedExtensions" -> ContextDoubleData(installedExtensions))
         } else
@@ -131,9 +131,10 @@ class ExtAuthController @Inject() (
         case _ => Failure(new IllegalArgumentException("Provider: " + providerName))
       }) map { identityId =>
         authCommander.loginWithTrustedSocialIdentity(identityId)
-      } recover { case t =>
-        airbrake.notify(AirbrakeError.incoming(request, t, "could not log in"))
-        BadRequest(Json.obj("error" -> "problem_vetting_token"))
+      } recover {
+        case t =>
+          airbrake.notify(AirbrakeError.incoming(request, t, "could not log in"))
+          BadRequest(Json.obj("error" -> "problem_vetting_token"))
       }).get
     } getOrElse BadRequest(Json.obj("error" -> "no_such_provider"))
   }
@@ -147,10 +148,5 @@ class ExtAuthController @Inject() (
   // TODO: Fix logOut. ActionAuthenticator currently sets a new session cookie after this action clears it.
   def logOut = JsonAction.authenticated { implicit request =>
     Ok(views.html.logOut(Some(request.identity), secureSocialClientIds.facebook)).withNewSession
-  }
-
-  def whois = JsonAction.authenticated { request =>
-    val user = db.readOnly(implicit s => userRepo.get(request.userId))
-    Ok(Json.obj("externalUserId" -> user.externalId.toString))
   }
 }

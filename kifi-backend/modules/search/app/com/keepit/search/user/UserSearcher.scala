@@ -8,24 +8,22 @@ import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.Searcher
-import com.keepit.social.BasicUser
 import com.keepit.typeahead.PrefixMatching
 import com.keepit.typeahead.PrefixFilter
-
 
 class UserSearcher(searcher: Searcher) {
 
   case class ScoredUserHit(hit: UserHit, score: Float) extends Ordered[ScoredUserHit] {
     // worse result < better result
     def compare(that: ScoredUserHit): Int = {
-       if (this.score < that.score) return -1
-       else if (this.score > that.score) return 1
-       else {
-         val (ua, ub, ida, idb) = (this.hit.basicUser, that.hit.basicUser, this.hit.id.id, that.hit.id.id)
-         if (ua.firstName + ua.lastName > ub.firstName + ub.lastName ||
-          (ua.firstName + ua.lastName == ub.firstName + ub.lastName && ida > idb)) -1     // prefer "smaller" name or smaller id
-         else 1
-       }
+      if (this.score < that.score) return -1
+      else if (this.score > that.score) return 1
+      else {
+        val (ua, ub, ida, idb) = (this.hit.basicUser, that.hit.basicUser, this.hit.id.id, that.hit.id.id)
+        if (ua.firstName + ua.lastName > ub.firstName + ub.lastName ||
+          (ua.firstName + ua.lastName == ub.firstName + ub.lastName && ida > idb)) -1 // prefer "smaller" name or smaller id
+        else 1
+      }
     }
   }
 
@@ -40,10 +38,10 @@ class UserSearcher(searcher: Searcher) {
   }
 
   private def genMatchingFilter(queryTerms: Array[String]): Function1[UserHit, Boolean] = {
-    if (queryTerms.forall(_.length() <= UserIndexer.PREFIX_MAX_LEN)) (u: UserHit) => true     // prefix index guarantees correctness
+    if (queryTerms.forall(_.length() <= UserIndexer.PREFIX_MAX_LEN)) (u: UserHit) => true // prefix index guarantees correctness
     else {
       val longQueries = queryTerms.filter(_.length() > UserIndexer.PREFIX_MAX_LEN)
-      (hit: UserHit) => longQueries.forall(query => query.contains("@") || hit.basicUser.firstName.toLowerCase.startsWith(query) || hit.basicUser.lastName.toLowerCase.startsWith(query))  // don't match email address with names. need test pass
+      (hit: UserHit) => longQueries.forall(query => query.contains("@") || hit.basicUser.firstName.toLowerCase.startsWith(query) || hit.basicUser.lastName.toLowerCase.startsWith(query)) // don't match email address with names. need test pass
     }
   }
 
@@ -60,11 +58,11 @@ class UserSearcher(searcher: Searcher) {
         if (id >= 0 && searchFilter.accept(id)) {
           var ref = new BytesRef()
           bv.get(doc, ref)
-          val user = BasicUser.fromByteArray(ref.bytes, ref.offset, ref.length)
+          val user = BasicUserSerializer.fromByteArray(ref.bytes, ref.offset, ref.length)
           val userId = Id[User](id)
           val isFriend = searchFilter.getKifiFriends.contains(id)
           val hit = UserHit(userId, user, isFriend)
-          if (additionalCheck(hit)){
+          if (additionalCheck(hit)) {
             val scoredHit = ScoredUserHit(hit, scoreFunc(hit))
             pq.insertWithOverflow(scoredHit)
           }
@@ -103,7 +101,7 @@ class UserSearcher(searcher: Searcher) {
   def searchPaging(query: Query, searchFilter: UserSearchFilter, pageNum: Int, pageSize: Int, queryTerms: Array[String] = Array()): UserSearchResult = {
     val scoreFunc = nameMatchScoring(queryTerms)(_)
     val check = genMatchingFilter(queryTerms)
-    val pq = genHitsPriorityQueue(query, searchFilter, (pageNum + 1)*pageSize)(scoreFunc)(check)
+    val pq = genHitsPriorityQueue(query, searchFilter, (pageNum + 1) * pageSize)(scoreFunc)(check)
     val pageHits = getKLeastSorted(pq, pageSize)
     UserSearchResult(pageHits, "")
   }

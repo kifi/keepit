@@ -29,4 +29,3 @@ class AdminController(val actionAuthenticator: ActionAuthenticator) extends Serv
   object AnyAction extends Actions.NonAuthenticatedActions
 }
 
-

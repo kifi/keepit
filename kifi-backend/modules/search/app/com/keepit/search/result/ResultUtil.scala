@@ -30,13 +30,13 @@ object ResultUtil {
   }
 
   def toKifiSearchHits(hits: Seq[DetailedSearchHit]): Seq[KifiSearchHit] = {
-    hits.map{ h =>
+    hits.map { h =>
       jsonToKifiSearchHit(h.json)
     }
   }
 
   def toSanitizedKifiSearchHits(hits: Seq[DetailedSearchHit]): Seq[KifiSearchHit] = {
-    hits.map{ h =>
+    hits.map { h =>
       jsonToKifiSearchHit(h.sanitized.json)
     }
   }
@@ -49,17 +49,16 @@ object ResultUtil {
     pageNumber: Int,
     previousHits: Int,
     time: DateTime,
-    lang: String
-  ): ArticleSearchResult = {
+    lang: String): ArticleSearchResult = {
     ArticleSearchResult(
       last,
       res.query,
-      mergedResult.hits.map{ h => h.json.as[ArticleHit] },
+      mergedResult.hits.map { h => h.json.as[ArticleHit] },
       mergedResult.myTotal,
       mergedResult.friendsTotal,
       mergedResult.othersTotal,
       res.mayHaveMoreHits,
-      mergedResult.hits.map{ h => (h.json \ "scoring").as[Scoring] },
+      mergedResult.hits.map { h => (h.json \ "scoring").as[Scoring] },
       res.idFilter,
       millisPassed,
       pageNumber,

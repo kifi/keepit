@@ -4,7 +4,7 @@ import com.keepit.model.SocialUserInfo
 import scala.concurrent._
 import com.keepit.model.SocialConnection
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.social.{SocialGraphPlugin, SocialGraphModule}
+import com.keepit.social.{ SocialGraphPlugin, SocialGraphModule }
 
 case class FakeSocialGraphModule() extends SocialGraphModule {
 

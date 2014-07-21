@@ -1,14 +1,14 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.{ShoeboxServiceController, WebsiteController, ActionAuthenticator}
+import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
 import play.api.mvc._
 import com.keepit.model._
 import com.keepit.common.db.slick._
 import com.google.inject.Inject
 import com.keepit.common.mail.EmailAddress
-import scala.util.{Success, Failure}
+import scala.util.{ Success, Failure }
 import play.api.data.Form
-import play.api.data.Forms.{tuple, text, optional}
+import play.api.data.Forms.{ tuple, text, optional }
 import com.keepit.social.SecureSocialClientIds
 import com.keepit.commanders.emails.EmailOptOutCommander
 
@@ -18,14 +18,15 @@ class EmailOptOutController @Inject() (
   emailOptOutRepo: EmailOptOutRepo,
   commander: EmailOptOutCommander,
   secureSocialClientIds: SecureSocialClientIds)
-  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def optOut(optOutToken: String) = Action { implicit request =>
     val email = commander.getEmailFromOptOutToken(optOutToken)
 
     email match {
       case Success(addr) =>
-        val opts = db.readOnly { implicit session =>
+        // Reading from master since the value was likely just written
+        val opts = db.readOnlyMaster { implicit session =>
           emailOptOutRepo.getByEmailAddress(addr).collect { case c => NotificationCategory(c.category.category) }
         }
 
@@ -48,17 +49,18 @@ class EmailOptOutController @Inject() (
     email.map { emailAddress =>
       optOutForm.bindFromRequest.fold(
         formWithErrors => BadRequest,
-        { case (all, invite, message) =>
-          // Checkbox unchecked == unsubscribe
-          db.readWrite { implicit session =>
-            all.collect { case s if s == "true" => emailOptOutRepo.optIn(emailAddress, NotificationCategory.ALL) }
-              .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.ALL) }
-            invite.map { _ => emailOptOutRepo.optIn(emailAddress, NotificationCategory.NonUser.INVITATION) }
-              .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.NonUser.INVITATION) }
-            message.map { _ => emailOptOutRepo.optIn(emailAddress, NotificationCategory.User.MESSAGE) }
-              .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.User.MESSAGE) }
-          }
-          Redirect(routes.EmailOptOutController.optOut(optOutToken)).flashing("msg" -> "Your preferences have been updated.")
+        {
+          case (all, invite, message) =>
+            // Checkbox unchecked == unsubscribe
+            db.readWrite { implicit session =>
+              all.collect { case s if s == "true" => emailOptOutRepo.optIn(emailAddress, NotificationCategory.ALL) }
+                .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.ALL) }
+              invite.map { _ => emailOptOutRepo.optIn(emailAddress, NotificationCategory.NonUser.INVITATION) }
+                .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.NonUser.INVITATION) }
+              message.map { _ => emailOptOutRepo.optIn(emailAddress, NotificationCategory.User.MESSAGE) }
+                .getOrElse { emailOptOutRepo.optOut(emailAddress, NotificationCategory.User.MESSAGE) }
+            }
+            Redirect(routes.EmailOptOutController.optOut(optOutToken)).flashing("msg" -> "Your preferences have been updated.")
         }
       )
     }.getOrElse(BadRequest)
@@ -72,6 +74,5 @@ class EmailOptOutController @Inject() (
   def getToken(email: EmailAddress) = Action {
     Ok(commander.generateOptOutToken(email))
   }
-
 
 }

@@ -7,7 +7,7 @@ import com.keepit.search.index.WrappedSubReader
 
 object ArticleVisibility {
   private[this] val fieldName = "visibility"
-  val restrictedTerm = new Term(fieldName, "redirect")      // "redirect" is misleading. It's really "restricted", because of fishy 301, or porn, etc. Should change this when we reindexing
+  val restrictedTerm = new Term(fieldName, "redirect") // "redirect" is misleading. It's really "restricted", because of fishy 301, or porn, etc. Should change this when we reindexing
 
   @inline
   def apply(reader: WrappedSubReader): ArticleVisibility = {

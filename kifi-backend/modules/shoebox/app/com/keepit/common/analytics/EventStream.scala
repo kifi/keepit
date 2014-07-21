@@ -5,9 +5,9 @@ import scala.concurrent.duration._
 
 import org.joda.time.DateTime
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -28,11 +28,11 @@ class EventStream @Inject() (
     eventWriter: EventWriter) extends Logging {
   implicit val timeout = Timeout(1 second)
 
-  def newStream(): Future[(Iteratee[JsValue,_],Enumerator[JsValue])] = {
+  def newStream(): Future[(Iteratee[JsValue, _], Enumerator[JsValue])] = {
     (actor.ref ? NewStream).map {
       case Connected(enumerator) =>
         // Since we're expecting no input from the client, just consume and discard the input
-        val iteratee = Iteratee.foreach[JsValue]{ s => actor.ref ! ReplyEcho }
+        val iteratee = Iteratee.foreach[JsValue] { s => actor.ref ! ReplyEcho }
         (iteratee, enumerator)
     }
   }
@@ -76,20 +76,20 @@ class EventWriter @Inject() (
     createdAt: DateTime)
 
   def wrapEvent(event: Event): Option[WrappedUserEvent] = {
-      event match {
-        case Event(_,UserEventMetadata(eventFamily, eventName, externalUser, _, experiments, metaData, _), createdAt, _) =>
-          val user = db.readOnly { implicit session => userRepo.get(externalUser) }
-          val avatarUrl = imageStore.getPictureUrl(Some(150), user, "0.jpg").value.flatMap(_.toOption)
-          Some(WrappedUserEvent(event, user, avatarUrl, eventName, eventFamily, createdAt))
-        case _ => None
-      }
+    event match {
+      case Event(_, UserEventMetadata(eventFamily, eventName, externalUser, _, experiments, metaData, _), createdAt, _) =>
+        val user = db.readOnlyReplica { implicit session => userRepo.get(externalUser) }
+        val avatarUrl = imageStore.getPictureUrl(Some(150), user, "0.jpg").value.flatMap(_.toOption)
+        Some(WrappedUserEvent(event, user, avatarUrl, eventName, eventFamily, createdAt))
+      case _ => None
+    }
   }
 }
 
 class EventStreamActor @Inject() (
-    airbrake: AirbrakeNotifier,
-    eventWriter: EventWriter)
-  extends FortyTwoActor(airbrake) {
+  airbrake: AirbrakeNotifier,
+  eventWriter: EventWriter)
+    extends FortyTwoActor(airbrake) {
 
   val (eventEnumerator, eventChannel) = Concurrent.broadcast[JsValue]
 

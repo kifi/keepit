@@ -1,7 +1,7 @@
 package com.keepit.graph.model
 
 import scala.util.Try
-import play.api.libs.json.{JsNumber, Writes, Reads, Format}
+import play.api.libs.json.{ JsNumber, Writes, Reads, Format }
 
 case class InvalidVertexIdException[V <: VertexDataReader](vertexId: VertexId, expectedKind: VertexKind[V])
   extends Throwable(s"VertexId $vertexId is not of extected kind $expectedKind.")
@@ -13,7 +13,7 @@ case class VertexId(id: Long) extends AnyVal {
   }
   def asIdOpt[V <: VertexDataReader](implicit kind: VertexKind[V]): Option[VertexDataId[V]] = Try(asId[V]).toOption
   def kind: VertexKind[_ <: VertexDataReader] = VertexKind(header)
-  override def toString() =  kind.code + "::" + dataId
+  override def toString() = kind.code + "::" + dataId
   private def header: Byte = (id >> VertexId.dataIdSpace).toByte
   private def dataId: Long = id & VertexId.maxVertexDataId
 }

@@ -3,8 +3,8 @@
   socialUserInfos: Seq[SocialUserInfo],
   socialConnections: Seq[SocialUserInfo],
   abookInfos: Seq[ABookInfo],
-  econtacts: Seq[EContact]
-  )
+  contacts: Seq[com.keepit.abook.model.RichContact]
+)
 
 @admin("User: " + user.firstName + " " + user.lastName) {
   <h2>User details </h2>
@@ -47,14 +47,14 @@
           }
       </table>
     }
-  @if(econtacts.size > 0) {
+  @if(contacts.size > 0) {
     <br/>
-    <h3>EContacts (total = @econtacts.size)</h3>
+    <h3>Active Contacts (total = @contacts.size)</h3>
     <div class="scrollArea">
         <table class="table table-condensed table-striped">
-            <tr><th>EContactId</th><th>Name</th><th>Email</th><th>State</th><th>ContactUserId</th></tr>
-            @for(contact <- econtacts) {
-            <tr><td>@contact.id</td><td>@contact.name</td><td>@contact.email</td><td>@contact.state</td><td>@contact.contactUserId</td></tr>
+            <tr><th>Email</th><th>Name</th><th>ContactUserId</th></tr>
+            @for(contact <- contacts) {
+            <tr><td>@contact.email</td><td>@contact.name</td><td>@contact.userId</td></tr>
             }
         </table>
     </div>

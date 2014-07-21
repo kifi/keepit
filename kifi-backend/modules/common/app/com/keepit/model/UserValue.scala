@@ -5,19 +5,19 @@ import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.common.cache.{StringCacheImpl, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{ StringCacheImpl, FortyTwoCachePlugin, Key }
+import play.api.libs.json.{ JsArray, Json, JsValue }
 import scala.concurrent.duration.Duration
 import com.keepit.model.UserValues.UserValueStringHandler
 
 case class UserValue(
-  id: Option[Id[UserValue]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  userId: Id[User],
-  name: String,
-  value: String,
-  state: State[UserValue] = UserValueStates.ACTIVE
-) extends ModelWithState[UserValue] {
+    id: Option[Id[UserValue]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    userId: Id[User],
+    name: String,
+    value: String,
+    state: State[UserValue] = UserValueStates.ACTIVE) extends ModelWithState[UserValue] {
   def withId(id: Id[UserValue]) = this.copy(id = Some(id))
   def withState(newState: State[UserValue]) = this.copy(state = newState)
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -29,7 +29,7 @@ case class UserValueKey(userId: Id[User], key: String) extends Key[String] {
   def toKey(): String = userId.id + "_" + key
 }
 class UserValueCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends StringCacheImpl[UserValueKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings:_*)
+  extends StringCacheImpl[UserValueKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 object UserValueStates extends States[UserValue]
 
@@ -65,6 +65,14 @@ object UserValues {
     def parse(valOpt: Option[String]): String = valOpt.getOrElse(default)
   }
 
+  case class UserValueDateTimeHandler(override val name: String, default: DateTime) extends UserValueHandler[DateTime] {
+    def parse(valOpt: Option[String]): DateTime = valOpt.map(parseStandardTime(_)).getOrElse(default)
+  }
+
+  case class UserValueJsValueHandler(override val name: String, default: JsValue) extends UserValueHandler[JsValue] {
+    def parse(valOpt: Option[String]): JsValue = valOpt.map(Json.parse).getOrElse(default)
+  }
+
   val lookHereMode = UserValueBooleanHandler("ext_look_here_mode", true)
   val enterToSend = UserValueBooleanHandler("enter_to_send", true)
   val maxResults = UserValueIntHandler("ext_max_results", 1)
@@ -76,4 +84,8 @@ object UserValues {
   val hasSeenInstall = UserValueBooleanHandler("has_seen_install", false)
   val welcomeEmailSent = UserValueBooleanHandler("welcomeEmailSent", false)
 
+  val showDelightedQuestion = UserValueBooleanHandler("show_delighted_question", false)
+  val lastActive = UserValueDateTimeHandler("last_active", START_OF_TIME)
+
+  val tagOrdering = UserValueJsValueHandler("user_collection_ordering", JsArray())
 }

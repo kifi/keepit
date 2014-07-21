@@ -2,14 +2,14 @@ package com.keepit.graph.manager
 
 import java.io.File
 import com.keepit.common.store._
-import com.keepit.common.{ArchivedDirectory}
+import com.keepit.common.{ ArchivedDirectory }
 import com.amazonaws.services.s3.AmazonS3
-import com.keepit.common.logging.{Logging, AccessLog}
+import com.keepit.common.logging.{ Logging, AccessLog }
 import com.keepit.common.time._
 import com.keepit.common.store.S3Bucket
 import org.apache.commons.io.FileUtils
 
-trait GraphDirectory  {
+trait GraphDirectory {
   def asFile(): Option[File]
 }
 
@@ -26,12 +26,13 @@ trait ArchivedGraphDirectory extends ArchivedDirectory with Logging { self: Grap
         restoreFromBackup()
         val t2 = currentDateTime.getMillis
         log.info(s"ArchivedGraphDirectory ${dir.getPath()} was restored from GraphStore in ${(t2 - t1) / 1000} seconds")
+      } catch {
+        case e: Exception => {
+          log.error(s"Could not restore $dir from GraphStore}", e)
+          FileUtils.deleteDirectory(dir)
+          FileUtils.forceMkdir(dir)
+        }
       }
-      catch { case e: Exception => {
-        log.error(s"Could not restore $dir from GraphStore}", e)
-        FileUtils.deleteDirectory(dir)
-        FileUtils.forceMkdir(dir)
-      }}
     }
   }
 }

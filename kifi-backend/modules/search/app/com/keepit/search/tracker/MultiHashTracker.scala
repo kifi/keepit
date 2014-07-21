@@ -1,7 +1,7 @@
 package com.keepit.search.tracker
 
 import com.keepit.common.store.ObjectStore
-import com.keepit.serializer.{SerializerException, BinaryFormat}
+import com.keepit.serializer.{ SerializerException, BinaryFormat }
 import com.keepit.search.MultiHashFilter
 
 trait MultiHashTracker[O, E] {
@@ -40,5 +40,5 @@ trait MultiHashFilterBuilder[E] extends BinaryFormat[MultiHashFilter[E]] {
     System.arraycopy(array, 0, rv, 1, array.length)
     rv
   }
-  protected def reads(array: Array[Byte], offset: Int, length: Int): MultiHashFilter[E] = build(array.slice(offset, offset+length))
+  protected def reads(array: Array[Byte], offset: Int, length: Int): MultiHashFilter[E] = build(array.slice(offset, offset + length))
 }

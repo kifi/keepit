@@ -4,11 +4,11 @@ import us.theatr.akka.quartz.QuartzActor
 import com.keepit.search._
 import com.keepit.reports._
 import com.keepit.common.zookeeper._
-import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
-import com.keepit.common.controller.{ServiceController, ShoeboxServiceController}
+import com.keepit.common.akka.{ FortyTwoActor, AlertingActor }
+import com.keepit.common.controller.{ ServiceController, ShoeboxServiceController }
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{FakeMailModule, MailToKeepServerSettings}
-import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
+import com.keepit.common.mail.{ FakeMailModule, MailToKeepServerSettings }
+import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import net.spy.memcached.MemcachedClient
 import org.specs2.mutable.Specification
 import play.api.Play.current
@@ -16,16 +16,16 @@ import play.api.mvc.Controller
 import play.api.test.Helpers.running
 import scala.collection.JavaConversions._
 import scala.reflect.ManifestFactory.classType
-import com.keepit.common.net.{FakeHttpClientModule, FakeClientResponse}
+import com.keepit.common.net.{ FakeHttpClientModule, FakeClientResponse }
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.actor.TestActorSystemModule
-import com.keepit.common.social.{FakeSocialGraphModule, FakeShoeboxSecureSocialModule}
+import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxSecureSocialModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.model.TestSliderHistoryTrackerModule
 import com.keepit.classify.FakeDomainTagImporterModule
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.scraper.{TestScrapeSchedulerConfigModule, TestScraperServiceClientModule, FakeScrapeSchedulerModule}
+import com.keepit.scraper.{ TestScrapeSchedulerConfigModule, TestScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
@@ -33,7 +33,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.graph.TestGraphServiceClientModule
 import com.keepit.signal.TestReKeepStatsUpdaterModule
-import com.keepit.normalizer.{NormalizationServiceImpl, NormalizedURIInterner}
+import com.keepit.normalizer.{ NormalizationServiceImpl, NormalizedURIInterner }
 import controllers.AssetsBuilder
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
@@ -65,7 +65,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         TestGraphServiceClientModule(),
         GeckoboardModule(),
         FakeShoeboxServiceModule(), // This one should not be required once the Scraper is off Shoebox
-        FakeScrapeSchedulerModule(), // This one should not be required once the Scraper is off Shoebox
+        FakeScrapeSchedulerModule(),
         TestScrapeSchedulerConfigModule(),
         FakeElizaServiceClientModule(),
         FakeAirbrakeModule(),

@@ -10,10 +10,9 @@ import java.util.Properties
 import javax.mail._
 import javax.mail.internet._
 import javax.mail.event._
-import javax.mail.{Authenticator, PasswordAuthentication}
+import javax.mail.{ Authenticator, PasswordAuthentication }
 
-import com.google.inject.{Inject, Singleton}
-
+import com.google.inject.{ Inject, Singleton }
 
 import play.api.Play
 import play.api.Play.current
@@ -26,16 +25,16 @@ import com.keepit.common.time._
 
 @Singleton
 class SendgridMailProvider @Inject() (
-    db: Database,
-    mailRepo: ElectronicMailRepo,
-    airbrake: AirbrakeNotifier,
-    heimdal: HeimdalServiceClient,
-    clock: Clock)
-  extends MailProvider with Logging {
+  db: Database,
+  mailRepo: ElectronicMailRepo,
+  airbrake: AirbrakeNotifier,
+  heimdal: HeimdalServiceClient,
+  clock: Clock)
+    extends MailProvider with Logging {
 
   private class SMTPAuthenticator extends Authenticator {
     override def getPasswordAuthentication: PasswordAuthentication = {
-      val username = "fortytwo"//load from conf
+      val username = "fortytwo" //load from conf
       val password = "keepemailsrunning"
       new PasswordAuthentication(username, password)
     }
@@ -78,7 +77,7 @@ class SendgridMailProvider @Inject() (
     })
 
     transport.addConnectionListener(new ConnectionListener() {
-      def opened(e: ConnectionEvent)  { log.info(e.toString) }
+      def opened(e: ConnectionEvent) { log.info(e.toString) }
       def closed(e: ConnectionEvent) {
         log.info(s"got event $e")
         nullifyTransport(transport)
@@ -113,12 +112,12 @@ class SendgridMailProvider @Inject() (
    */
   def sendMail(mail: ElectronicMail) {
     if (mail.isReadyToSend) {
-      val checkAgain = db.readOnly(mailRepo.getOpt(mail.id.get)(_)).exists(_.isReadyToSend)
-      if(checkAgain) {
+      val checkAgain = db.readOnlyMaster(mailRepo.getOpt(mail.id.get)(_)).exists(_.isReadyToSend)
+      if (checkAgain) {
         val now = clock.now
         airbrake.verify(mail.createdAt.isAfter(now.minusMinutes(10)),
           s"sending mail ${mail.id.get} / ${mail.externalId} which was created more then 10 minutes ago at " +
-          s"${mail.createdAt}, now is $now")
+            s"${mail.createdAt}, now is $now")
         val message = try {
           createMessage(mail)
         } catch {
@@ -153,9 +152,9 @@ class SendgridMailProvider @Inject() (
       message.setHeader("References", id.toEmailHeader)
     }
 
-    mail.extraHeaders.foreach{ headers =>
-      PostOffice.Headers.ALL.foreach{ header =>
-        headers.get(header).foreach{ value =>
+    mail.extraHeaders.foreach { headers =>
+      PostOffice.Headers.ALL.foreach { header =>
+        headers.get(header).foreach { value =>
           message.setHeader(header, value)
         }
       }
@@ -200,7 +199,7 @@ class SendgridMailProvider @Inject() (
     Play.configuration.getString("fortytwo.username") getOrElse System.getProperty("user.name")
 
   private def mailError(mailId: ExternalId[ElectronicMail], message: String, transport: Transport): ElectronicMail = {
-    val mail = db.readOnly {implicit s =>
+    val mail = db.readOnlyMaster { implicit s =>
       mailRepo.get(mailId)
     }
     mailError(mail, message, transport)

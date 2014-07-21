@@ -3,9 +3,8 @@ package com.keepit.graph.model
 import com.keepit.common.reflection.CompanionTypeSystem
 import play.api.libs.json._
 import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.models.lda.{LDATopic, DenseLDA}
+import com.keepit.cortex.models.lda.{ LDATopic, DenseLDA }
 import com.keepit.graph.manager.LDATopicId
-
 
 sealed trait VertexDataReader { self =>
   type V >: self.type <: VertexDataReader
@@ -138,7 +137,7 @@ trait LDATopicReader extends VertexDataReader {
   def version(): ModelVersion[DenseLDA] = LDATopicId.versionFromLong(id.id)
   def topic(): LDATopic = LDATopicId.topicFromLong(id.id)
 }
-case object LDATopicReader extends VertexKind[LDATopicReader]{
+case object LDATopicReader extends VertexKind[LDATopicReader] {
   val header = 7.toByte
   def apply(rawDataReader: RawDataReader): LDATopicReader = ???
   implicit val writes = Writes[LDATopicReader](reader => Json.obj("id" -> reader.id))
@@ -154,4 +153,26 @@ case object KeepReader extends VertexKind[KeepReader] {
   def apply(rawDataReader: RawDataReader): KeepReader = ???
   implicit val writes = Writes[KeepReader](reader => Json.obj("id" -> reader.id))
   implicit val readsAsVertexData = Reads[VertexData[KeepReader]] { json => (json \ "id").validate.map(KeepData(_)) }
+}
+
+trait EmailAccountReader extends VertexDataReader {
+  type V = EmailAccountReader
+  def kind = EmailAccountReader
+}
+case object EmailAccountReader extends VertexKind[EmailAccountReader] {
+  val header = 9.toByte
+  def apply(rawDataReader: RawDataReader): EmailAccountReader = ???
+  implicit val writes = Writes[EmailAccountReader](reader => Json.obj("id" -> reader.id))
+  implicit val readsAsVertexData = Reads[VertexData[EmailAccountReader]] { json => (json \ "id").validate.map(EmailAccountData(_)) }
+}
+
+trait AddressBookReader extends VertexDataReader {
+  type V = AddressBookReader
+  def kind = AddressBookReader
+}
+case object AddressBookReader extends VertexKind[AddressBookReader] {
+  val header = 10.toByte
+  def apply(rawDataReader: RawDataReader): AddressBookReader = ???
+  implicit val writes = Writes[AddressBookReader](reader => Json.obj("id" -> reader.id))
+  implicit val readsAsVertexData = Reads[VertexData[AddressBookReader]] { json => (json \ "id").validate.map(AddressBookData(_)) }
 }

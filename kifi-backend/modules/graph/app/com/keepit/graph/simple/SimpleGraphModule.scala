@@ -1,7 +1,7 @@
 package com.keepit.graph.simple
 
 import com.keepit.graph.manager._
-import com.google.inject.{Singleton, Provides}
+import com.google.inject.{ Singleton, Provides }
 import play.api.Play.current
 import scala.util.Try
 import scala.util.Success
@@ -58,4 +58,10 @@ case class SimpleGraphDevModule() extends SimpleGraphModule {
       case None => new RatherUselessSimpleGraphDirectory()
     }
   }
+}
+
+case class SimpleGraphTestModule() extends SimpleGraphModule {
+
+  @Provides @Singleton
+  def simpleGraphDirectory(): SimpleGraphDirectory = new RatherUselessSimpleGraphDirectory()
 }

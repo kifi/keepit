@@ -1,14 +1,14 @@
 package com.keepit.common.cache
 
 import scala.concurrent.duration._
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
-import com.keepit.search.{ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache}
+import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
 
-case class ScraperCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
+case class ScraperCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
 
   @Singleton
   @Provides
@@ -142,7 +142,7 @@ case class ScraperCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def probabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (outerRepo, Duration.Inf))
+    new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (outerRepo, 30 days))
 
   @Provides @Singleton
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

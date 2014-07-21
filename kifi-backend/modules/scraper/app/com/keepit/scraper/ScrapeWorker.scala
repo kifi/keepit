@@ -1,22 +1,20 @@
 package com.keepit.scraper
 
-import com.google.inject._
+import com.google.inject.{ Inject, ImplementedBy }
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.{AirbrakeError, AirbrakeNotifier}
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
 import com.keepit.scraper.extractor._
-import com.keepit.search.{LangDetector, Article, ArticleStore}
-import java.io.File
+import com.keepit.scraper.fetcher.HttpFetcher
+import com.keepit.search.{ LangDetector, Article, ArticleStore }
 import scala.concurrent.duration._
 import org.joda.time.Days
 import com.keepit.common.time._
-import com.keepit.common.net.{DirectUrl, HttpClient, URI}
+import com.keepit.common.net.URI
 import org.apache.http.HttpStatus
-import com.keepit.scraper.mediatypes.MediaTypes
 import scala.util.Success
 import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.learning.porndetector.SlidingWindowPornDetector
-import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.Lang
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -24,27 +22,32 @@ import scala.concurrent.Future
 import com.keepit.common.db.Id
 import com.keepit.scraper.embedly.EmbedlyCommander
 
-class ScrapeWorker(
-  airbrake: AirbrakeNotifier,
-  config: ScraperConfig,
-  schedulerConfig: ScraperSchedulerConfig,
-  httpFetcher: HttpFetcher,
-  httpClient: HttpClient,
-  extractorFactory: ExtractorFactory,
-  articleStore: ArticleStore,
-  pornDetectorFactory: PornDetectorFactory,
-  helper: SyncShoeboxDbCallbacks,
-  shoeboxClient: ShoeboxServiceClient,
-  wordCountCache: NormalizedURIWordCountCache,
-  uriSummaryCache: URISummaryCache,
-  embedlyCommander: EmbedlyCommander
-) extends Logging {
+@ImplementedBy(classOf[ScrapeWorkerImpl])
+trait ScrapeWorker {
+  def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Option[Article]
+  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): ScraperResult
+  def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle
+}
+
+class ScrapeWorkerImpl @Inject() (
+    airbrake: AirbrakeNotifier,
+    config: ScraperConfig,
+    schedulerConfig: ScraperSchedulerConfig,
+    httpFetcher: HttpFetcher,
+    extractorFactory: ExtractorFactory,
+    articleStore: ArticleStore,
+    pornDetectorFactory: PornDetectorFactory,
+    helper: SyncShoeboxDbCallbacks,
+    shoeboxClient: ShoeboxServiceClient,
+    wordCountCache: NormalizedURIWordCountCache,
+    uriSummaryCache: URISummaryCache,
+    embedlyCommander: EmbedlyCommander) extends ScrapeWorker with Logging {
 
   implicit val myConfig = config
   implicit val scheduleConfig = schedulerConfig
   val awaitTTL = (myConfig.syncAwaitTimeout seconds)
 
-  private[scraper] def safeProcessURI(uri: NormalizedURI, info:ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): Option[Article] = try {
+  def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Option[Article] = try {
     processURI(uri, info, pageInfoOpt, proxyOpt)
   } catch {
     case t: Throwable => {
@@ -52,7 +55,7 @@ class ScrapeWorker(
       airbrake.notify(t)
 
       recordScrapeFailed(uri)
-      helper.syncSaveScrapeInfo(info.withFailure())   // then update the scrape schedule
+      helper.syncSaveScrapeInfo(info.withFailure()) // then update the scrape schedule
       None
     }
   }
@@ -65,7 +68,7 @@ class ScrapeWorker(
     }
   }
 
-  private def shouldUpdateImage(uri:NormalizedURI, scrapedURI:NormalizedURI, pageInfoOpt:Option[PageInfo]):Boolean = {
+  private def shouldUpdateImage(uri: NormalizedURI, scrapedURI: NormalizedURI, pageInfoOpt: Option[PageInfo]): Boolean = {
     if (NormalizedURIStates.DO_NOT_SCRAPE.contains(scrapedURI.state)) {
       log.warn(s"[shouldUpdateImage(${uri.id},${uri.state},${uri.url})] DO_NOT_SCRAPE; skipped.")
       false
@@ -127,8 +130,7 @@ class ScrapeWorker(
     if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED)) {
       helper.syncSaveScrapeInfo(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
       None
-    }
-    else if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
+    } else if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
       helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
       log.debug(s"[processURI] (${latestUri.url}) no change detected")
       None
@@ -194,7 +196,7 @@ class ScrapeWorker(
     None
   }
 
-  private def handlScrapeError(latestUri: NormalizedURI, error: Error, info: ScrapeInfo): Option[Article] = {
+  private def handleScrapeError(latestUri: NormalizedURI, error: Error, info: ScrapeInfo): Option[Article] = {
 
     val Error(httpStatus, msg) = error
     // store a fallback article in a store map
@@ -228,7 +230,7 @@ class ScrapeWorker(
     embedlyCommander.fetchEmbedlyInfo(uri.id.get, uri.url)
   }
 
-  private def processURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt:Option[PageInfo], proxyOpt:Option[HttpProxy]): Option[Article] = {
+  private def processURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Option[Article] = {
     log.debug(s"[processURI] scraping ${uri.url} $info")
     val fetchedArticle = fetchArticle(uri, info, proxyOpt)
     val latestUri = helper.syncGetNormalizedUri(uri).get
@@ -239,11 +241,11 @@ class ScrapeWorker(
       case scraped: Scraped => handleSuccessfulScraped(latestUri, scraped, info, pageInfoOpt)
       case notScrapable: NotScrapable => handleNotScrapable(latestUri, notScrapable, info)
       case NotModified => handleNotModified(latestUri.url, info)
-      case error: Error => handlScrapeError(latestUri, error, info)
+      case error: Error => handleScrapeError(latestUri, error, info)
     }
   }
 
-  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): ScraperResult = {
+  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): ScraperResult = {
     try {
       URI.parse(normalizedUri.url) match {
         case Success(uri) =>
@@ -288,14 +290,14 @@ class ScrapeWorker(
     }
   }
 
-  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo, proxyOpt:Option[HttpProxy]): ScraperResult = {
+  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): ScraperResult = {
     val url = normalizedUri.url
     val extractor = extractorFactory(url)
     log.debug(s"[fetchArticle] url=${normalizedUri.url} ${extractor.getClass}")
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
 
     try {
-      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince, proxy = proxyOpt){ input => extractor.process(input) }
+      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince, proxy = proxyOpt) { input => extractor.process(input) }
 
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
@@ -303,13 +305,13 @@ class ScrapeWorker(
             NotScrapable(fetchStatus.destinationUrl, fetchStatus.redirects)
           } else {
             val content = extractor.getContent
-            val title = getTitle(extractor)
-            val canonicalUrl = getCanonicalUrl(extractor)
-            val alternateUrls = getAlternateUrls(extractor)
-            val description = getDescription(extractor)
-            val keywords = getKeywords(extractor)
-            val media = getMediaTypeString(extractor)
-            val signature = getSignature(extractor)
+            val title = extractor.getTitle
+            val canonicalUrl = extractor.getCanonicalUrl
+            val alternateUrls = extractor.getAlternateUrls
+            val description = extractor.getDescription
+            val keywords = extractor.getKeywords
+            val media = extractor.getMediaTypeString
+            val signature = extractor.getSignature
 
             val contentLang = description match {
               case Some(desc) => LangDetector.detect(content + " " + desc)
@@ -353,37 +355,16 @@ class ScrapeWorker(
     }
   }
 
-  private[this] def getTitle(x: Extractor): String = x.getMetadata("title").getOrElse("")
-
-  private[this] def getCanonicalUrl(x: Extractor): Option[String] = x.getCanonicalUrl()
-
-  private[this] def getAlternateUrls(x: Extractor): Set[String] = x.getAlternateUrls()
-
-  private[this] def getDescription(x: Extractor): Option[String] = x.getMetadata("description")
-
-  private[this] def getKeywords(x: Extractor): Option[String] = x.getKeywords
-
-  private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
-
-  private[this] def getSignature(x: Extractor) = {
-    Signature(Seq(
-      getTitle(x),
-      getDescription(x).getOrElse(""),
-      getKeywords(x).getOrElse(""),
-      x.getContent()
-    ))
-  }
-
   def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(
-    title = getTitle(extractor),
+    title = extractor.getTitle,
     content = extractor.getContent,
-    canonicalUrl = getCanonicalUrl(extractor),
-    description = getDescription(extractor),
-    media = getMediaTypeString(extractor),
+    canonicalUrl = extractor.getCanonicalUrl,
+    description = extractor.getDescription,
+    media = extractor.getMediaTypeString,
     httpContentType = extractor.getMetadata("Content-Type"),
     httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
     destinationUrl = destinationUrl,
-    signature = getSignature(extractor)
+    signature = extractor.getSignature
   )
 
   // Watch out: the NormalizedURI may come back as REDIRECTED
@@ -447,7 +428,7 @@ class ScrapeWorker(
   }
 
   private def isNonSensitive(url: String): Future[Boolean] = {
-    shoeboxClient.getAllURLPatterns().map{ patterns =>
+    shoeboxClient.getAllURLPatterns().map { patterns =>
       val pat = patterns.find(rule => url.matches(rule.pattern))
       pat.exists(_.nonSensitive)
     }

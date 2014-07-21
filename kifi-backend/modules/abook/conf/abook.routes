@@ -2,40 +2,39 @@
 #INTERNAL ROUTES/ABook
 ##########################################
 
-POST     /internal/abook/:userId/importContacts                 @com.keepit.abook.ABookController.importContacts(userId:Id[User])
-POST     /internal/abook/:origin/uploadContacts                 @com.keepit.abook.ABookController.uploadContacts(userId:Id[User], origin:ABookOriginType)
-POST     /internal/abook/:userId/formUpload                     @com.keepit.abook.ABookController.formUpload(userId:Id[User])
+POST     /internal/abook/:userId/importContacts                 @com.keepit.abook.controllers.ABookController.importContacts(userId:Id[User])
+POST     /internal/abook/:origin/uploadContacts                 @com.keepit.abook.controllers.ABookController.uploadContacts(userId:Id[User], origin:ABookOriginType)
+POST     /internal/abook/:userId/formUpload                     @com.keepit.abook.controllers.ABookController.formUpload(userId:Id[User])
 
-GET      /internal/abooks                                       @com.keepit.abook.ABookController.getAllABookInfos()
-GET      /internal/abooks/page/:page                            @com.keepit.abook.ABookController.getPagedABookInfos(page:Int, size:Int ?= 50)
-GET      /internal/abooksCount/                                 @com.keepit.abook.ABookController.getABooksCount()
-GET      /internal/abook/:userId/getABookInfos                  @com.keepit.abook.ABookController.getABookInfos(userId:Id[User])
-GET      /internal/abook/:userId/getABookInfo                   @com.keepit.abook.ABookController.getABookInfo(userId:Id[User], id:Id[ABookInfo])
-GET      /internal/abook/getABookInfoByExternalId               @com.keepit.abook.ABookController.getABookInfoByExternalId(externalId:ExternalId[ABookInfo])
-GET      /internal/abook/:userId/getEContacts                   @com.keepit.abook.ABookController.getEContacts(userId:Id[User], maxRows:Int)
-GET      /internal/abook/:userId/getEContactCount               @com.keepit.abook.ABookController.getEContactCount(userId:Id[User])
-GET      /internal/abook/getEContactById                        @com.keepit.abook.ABookController.getEContactById(contactId:Id[EContact])
-POST     /internal/abook/getEContactsByIds                      @com.keepit.abook.ABookController.getEContactsByIds()
-GET      /internal/abook/:userId/getEContactByEmail             @com.keepit.abook.ABookController.getEContactByEmail(userId:Id[User], email: EmailAddress)
-GET      /internal/abook/:userId/getABookRawInfos               @com.keepit.abook.ABookController.getABookRawInfos(userId:Id[User])
-POST     /internal/abook/:userId/internContact                  @com.keepit.abook.ABookController.internContact(userId:Id[User])
+GET      /internal/abooks                                       @com.keepit.abook.controllers.ABookController.getAllABookInfos()
+GET      /internal/abooks/page/:page                            @com.keepit.abook.controllers.ABookController.getPagedABookInfos(page:Int, size:Int ?= 50)
+GET      /internal/abooksCount/                                 @com.keepit.abook.controllers.ABookController.getABooksCount()
+GET      /internal/abook/:userId/getABookInfos                  @com.keepit.abook.controllers.ABookController.getABookInfos(userId:Id[User])
+GET      /internal/abook/:userId/getABookInfo                   @com.keepit.abook.controllers.ABookController.getABookInfo(userId:Id[User], id:Id[ABookInfo])
+GET      /internal/abook/getABookInfoByExternalId               @com.keepit.abook.controllers.ABookController.getABookInfoByExternalId(externalId:ExternalId[ABookInfo])
+GET      /internal/abook/:userId/getEContactCount               @com.keepit.abook.controllers.ABookController.getEContactCount(userId:Id[User])
+GET      /internal/abook/:userId/getABookRawInfos               @com.keepit.abook.controllers.ABookController.getABookRawInfos(userId:Id[User])
+POST     /internal/abook/:userId/getContactNameByEmail          @com.keepit.abook.controllers.ABookController.getContactNameByEmail(userId:Id[User])
+POST     /internal/abook/:userId/internKifiContact              @com.keepit.abook.controllers.ABookController.internKifiContact(userId:Id[User])
+GET      /internal/abook/:userId/getContacts                    @com.keepit.abook.controllers.ABookController.getContactsByUser(userId:Id[User], page: Int ?= 0, pageSize: Option[Int] ?= None)
+GET      /internal/abook/:userId/prefixQuery                    @com.keepit.abook.controllers.ABookController.prefixQuery(userId: Id[User], q: String, maxHits: Option[Int])
 
-GET      /internal/abook/:userId/getOAuth2Token                 @com.keepit.abook.ABookController.getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo])
-GET      /internal/abook/:userId/queryEContacts                 @com.keepit.abook.ABookController.queryEContacts(userId:Id[User], limit:Int, search:Option[String], after:Option[String])
+GET      /internal/abook/:userId/getOAuth2Token                 @com.keepit.abook.controllers.ABookController.getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo])
 
-GET      /internal/abook/:userId/prefixSearch                   @com.keepit.abook.ABookController.prefixSearch(userId:Id[User], query:String)
-GET      /internal/abook/:userId/prefixQuery                    @com.keepit.abook.ABookController.prefixQuery(userId:Id[User], limit:Int, search:Option[String], after:Option[String])
-GET      /internal/abook/:userId/refreshPrefixFilter            @com.keepit.abook.ABookController.refreshPrefixFilter(userId:Id[User])
-POST     /internal/abook/refreshPrefixFiltersByIds              @com.keepit.abook.ABookController.refreshPrefixFiltersByIds
-GET      /internal/abook/refreshAllPrefixFilters                @com.keepit.abook.ABookController.refreshAllPrefixFilters
+GET      /internal/abook/:userId/refreshPrefixFilter            @com.keepit.abook.controllers.ABookController.refreshPrefixFilter(userId:Id[User])
+POST     /internal/abook/refreshPrefixFiltersByIds              @com.keepit.abook.controllers.ABookController.refreshPrefixFiltersByIds
+GET      /internal/abook/refreshAllPrefixFilters                @com.keepit.abook.controllers.ABookController.refreshAllPrefixFilters
 
-POST     /internal/abook/richConnectionUpdate                   @com.keepit.abook.ABookController.richConnectionUpdate()
-POST     /internal/abook/blockRichConnection                    @com.keepit.abook.ABookWTIController.blockRichConnection()
-GET      /internal/abook/ripestFruit                            @com.keepit.abook.ABookWTIController.ripestFruit(userId: Long, howMany: Int)
-GET      /internal/abook/:userId/countInvitationsSent           @com.keepit.abook.ABookWTIController.countInvitationsSent(userId: Id[User], friendSocialId: Option[Long] ?= None, friendEmailAddress: Option[EmailAddress] ?= None)
-GET      /internal/abook/:userId/ripestFruits                   @com.keepit.abook.ABookWTIController.getRipestFruits(userId: Id[User], page: Int, pageSize: Int)
+POST     /internal/abook/richConnectionUpdate                   @com.keepit.abook.controllers.ABookController.richConnectionUpdate()
+POST     /internal/abook/blockRichConnection                    @com.keepit.abook.controllers.ABookWTIController.blockRichConnection()
+GET      /internal/abook/ripestFruit                            @com.keepit.abook.controllers.ABookWTIController.ripestFruit(userId: Long, howMany: Int)
+GET      /internal/abook/:userId/countInvitationsSent           @com.keepit.abook.controllers.ABookWTIController.countInvitationsSent(userId: Id[User], friendSocialId: Option[Long] ?= None, friendEmailAddress: Option[EmailAddress] ?= None)
+GET      /internal/abook/:userId/ripestFruits                   @com.keepit.abook.controllers.ABookWTIController.getRipestFruits(userId: Id[User], page: Int, pageSize: Int)
 
-GET      /internal/abook/validateAllContacts                    @com.keepit.abook.ABookController.validateAllContacts(readOnly: Boolean ?= true)
+POST     /internal/abook/:userId/hideEmailFromUser              @com.keepit.abook.controllers.ABookController.hideEmailFromUser(userId:Id[User], email: EmailAddress)
+
+GET      /internal/abook/database/getEmailAccountsChanged       @com.keepit.abook.controllers.ABookDataPipeController.getEmailAccountsChanged(seqNum: SequenceNumber[com.keepit.abook.model.EmailAccount], fetchSize: Int)
+GET      /internal/abook/database/getContactsChanged            @com.keepit.abook.controllers.ABookDataPipeController.getContactsChanged(seqNum: SequenceNumber[com.keepit.abook.model.EContact], fetchSize: Int)
 
 ->  / common.Routes
 

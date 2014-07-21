@@ -11,26 +11,25 @@ import com.keepit.cortex.models.lda.LDATopicConfiguration
 import com.keepit.cortex.models.lda.LDATopicInfo
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.common.db.Id
 
-
-class LDAController @Inject()(
-  lda: LDACommander
-)
-extends CortexServiceController {
+class LDAController @Inject() (
+  lda: LDACommander)
+    extends CortexServiceController {
 
   def numOfTopics() = Action { request =>
     Ok(JsNumber(lda.numOfTopics))
   }
 
   def showTopics(fromId: Int, toId: Int, topN: Int) = Action { request =>
-    val topicWords = lda.topicWords(fromId, toId, topN).map{case (id, words) => (id.toString, words.toMap)}
+    val topicWords = lda.topicWords(fromId, toId, topN).map { case (id, words) => (id.toString, words.toMap) }
     val topicConfigs = lda.topicConfigs(fromId, toId)
-    val infos = topicWords.map{ case (tid, words) =>
-      val config = topicConfigs(tid)
-      LDATopicInfo(tid.toInt, words, config)
-    }.toArray.sortBy( x => x.topicId)
+    val infos = topicWords.map {
+      case (tid, words) =>
+        val config = topicConfigs(tid)
+        LDATopicInfo(tid.toInt, words, config)
+    }.toArray.sortBy(x => x.topicId)
     Ok(Json.toJson(infos))
   }
 
@@ -59,8 +58,18 @@ extends CortexServiceController {
     val ids = (request.body).as[Seq[Id[NormalizedURI]]]
     Future {
       val feats = lda.getLDAFeatures(ids)
-      val vecs = feats.flatMap{ featOpt => featOpt.map{_.vectorize}}
+      val vecs = feats.flatMap { featOpt => featOpt.map { _.vectorize } }
       Ok(Json.toJson(vecs))
     }
+  }
+
+  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
+    val score = lda.userUriInterest(userId, uriId)
+    Ok(Json.toJson(score))
+  }
+
+  def userTopicMean(userId: Id[User]) = Action { request =>
+    val meanOpt = lda.userTopicMean(userId)
+    Ok(Json.toJson(meanOpt.map { _.mean }))
   }
 }

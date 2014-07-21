@@ -25,7 +25,7 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
       teleporter.maybe(wanderer) match {
         case Some(newStart) => teleportTo(newStart, journal)
         case None => {
-          sampleComponent(resolver).flatMap(sampleDestination(_, resolver, probabilityCache)) match {
+          sampleOutgoingComponent(resolver).flatMap(sampleDestination(_, resolver, probabilityCache)) match {
             case Some((nextDestination, edgeKind)) => traverseTo(nextDestination, edgeKind, journal)
             case None => teleportTo(teleporter.surely, journal, isDeadend = true)
           }
@@ -42,12 +42,10 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
     if (isStart) {
       log.info(s"[Start] $destination")
       journal.onStart(scout)
-    }
-    else if (isDeadend) {
+    } else if (isDeadend) {
       log.info(s"[Deadend] ${wanderer.id} --> ${scout.id}")
       journal.onDeadend(wanderer, scout)
-    }
-    else {
+    } else {
       log.info(s"[Teleportation] ${wanderer.id} --> ${scout.id}")
       journal.onTeleportation(wanderer, scout)
     }
@@ -61,33 +59,33 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
     wanderer.moveTo(destination)
   }
 
-  private def sampleComponent(resolver: EdgeResolver): Option[(VertexType, EdgeType)] = {
-    val componentWeights = mutable.MutableList[((VertexType, EdgeType), Double)]()
-    while (wanderer.edgeReader.moveToNextComponent()) {
-      val (destinationKind, edgeKind) = wanderer.edgeReader.component
+  private def sampleOutgoingComponent(resolver: EdgeResolver): Option[(VertexType, VertexType, EdgeType)] = {
+    val componentWeights = mutable.MutableList[((VertexType, VertexType, EdgeType), Double)]()
+    while (wanderer.outgoingEdgeReader.moveToNextComponent()) {
+      val component @ (_, destinationKind, edgeKind) = wanderer.outgoingEdgeReader.component
       val weight = resolver.weightComponent(wanderer, destinationKind, edgeKind)
-      componentWeights += (destinationKind, edgeKind) -> weight
+      componentWeights += component -> weight
     }
     val probability = ProbabilityDensity.normalized(componentWeights)
     probability.sample(Math.random())
   }
 
-  private def sampleDestination(component: (VertexType, EdgeType), resolver: EdgeResolver, cache: mutable.Map[(VertexId, VertexType, EdgeType), ProbabilityDensity[VertexId]]): Option[(VertexId, EdgeType)] = {
-    val (destinationKind, edgeKind) = component
+  private def sampleDestination(component: (VertexType, VertexType, EdgeType), resolver: EdgeResolver, cache: mutable.Map[(VertexId, VertexType, EdgeType), ProbabilityDensity[VertexId]]): Option[(VertexId, EdgeType)] = {
+    val (_, destinationKind, edgeKind) = component
     val key = (wanderer.id, destinationKind, edgeKind)
     val probability = cache.getOrElseUpdate(key, computeDestinationProbability(component, resolver))
     probability.sample(Math.random()).map { destination => (destination, edgeKind) }
   }
 
-  private def computeDestinationProbability(component: (VertexType, EdgeType), resolver: EdgeResolver): ProbabilityDensity[VertexId] = {
+  private def computeDestinationProbability(component: (VertexType, VertexType, EdgeType), resolver: EdgeResolver): ProbabilityDensity[VertexId] = {
     val edgeWeights = mutable.MutableList[(VertexId, Double)]()
-    wanderer.edgeReader.reset()
-    while (wanderer.edgeReader.moveToNextComponent()) {
-      if (wanderer.edgeReader.component == component) {
-        while (wanderer.edgeReader.moveToNextEdge()) {
-          val destination = wanderer.edgeReader.destination
+    wanderer.outgoingEdgeReader.reset()
+    while (wanderer.outgoingEdgeReader.moveToNextComponent()) {
+      if (wanderer.outgoingEdgeReader.component == component) {
+        while (wanderer.outgoingEdgeReader.moveToNextEdge()) {
+          val destination = wanderer.outgoingEdgeReader.destination
           scout.moveTo(destination)
-          val weight = resolver.weightEdge(wanderer, scout, wanderer.edgeReader)
+          val weight = resolver.weightEdge(wanderer, scout, wanderer.outgoingEdgeReader)
           edgeWeights += (destination -> weight)
         }
       }

@@ -147,10 +147,16 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       }
 
       $rootScope.$emit('showGlobalModal', 'importBookmarks');
+      $analytics.eventTrack('user_viewed_page', {
+        'type': 'browserImport'
+      });
     };
 
     $scope.importBookmarkFile = function () {
       $rootScope.$emit('showGlobalModal', 'importBookmarkFile');
+      $analytics.eventTrack('user_viewed_page', {
+        'type': '3rdPartyImport'
+      });
     };
 
     var refreshTimeout;

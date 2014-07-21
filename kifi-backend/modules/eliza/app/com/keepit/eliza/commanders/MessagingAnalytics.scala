@@ -1,13 +1,13 @@
 package com.keepit.eliza.commanders
 
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.heimdal._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.model.{NotificationCategory, User}
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.model.{ NotificationCategory, User }
+import com.keepit.common.db.{ ExternalId, Id }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.realtime.PushNotification
@@ -16,11 +16,11 @@ import com.keepit.eliza.model._
 
 @Singleton
 class MessagingAnalytics @Inject() (
-  heimdalContextBuilder: HeimdalContextBuilderFactory,
-  heimdal: HeimdalServiceClient,
-  shoebox: ShoeboxServiceClient,
-  threadRepo: MessageThreadRepo,
-  db: Database) extends Logging {
+    heimdalContextBuilder: HeimdalContextBuilderFactory,
+    heimdal: HeimdalServiceClient,
+    shoebox: ShoeboxServiceClient,
+    threadRepo: MessageThreadRepo,
+    db: Database) extends Logging {
 
   private val kifi = "kifi"
   private val push = "push"
@@ -156,7 +156,7 @@ class MessagingAnalytics @Inject() (
       val action = if (mute) "mutedConversation" else "unmutedConversation"
       contextBuilder += ("action", action)
       contextBuilder += ("threadId", threadExternalId.id)
-      val thread = db.readOnly { implicit session => threadRepo.get(threadExternalId) }
+      val thread = db.readOnlyReplica { implicit session => threadRepo.get(threadExternalId) }
       thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.CHANGED_SETTINGS, changedAt))
     }

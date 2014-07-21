@@ -15,18 +15,18 @@ import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.Tst
 import com.keepit.search.TstIndexer
 
-
 class TextQueryTest extends Specification {
 
   val indexer = new TstIndexer(new VolatileIndexDirectory)
-  Array("abc def", "abc def", "abc def", "abc ghi", "abc jkl").zip(Array("", "", "", "mno", "mno")).zipWithIndex.map{ case ((text, fallbackText), id) =>
-    indexer.index(Id[Tst](id), text, fallbackText)
+  Array("abc def", "abc def", "abc def", "abc ghi", "abc jkl").zip(Array("", "", "", "mno", "mno")).zipWithIndex.map {
+    case ((text, fallbackText), id) =>
+      indexer.index(Id[Tst](id), text, fallbackText)
   }
 
   "TextQuery" should {
     "not fail even when there is no subquery" in {
       val q = new TextQuery
-      indexer.getPersonalizedSearcher(Set(0L)).search(q).map(_.id).toSet  === Set.empty[Long]
+      indexer.getPersonalizedSearcher(Set(0L)).search(q).map(_.id).toSet === Set.empty[Long]
     }
 
     "search using regular query" in {

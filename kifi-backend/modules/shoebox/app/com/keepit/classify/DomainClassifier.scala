@@ -4,20 +4,20 @@ import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-import java.net.{ConnectException, URLEncoder}
+import java.net.{ ConnectException, URLEncoder }
 import java.security.MessageDigest
 import java.util.UUID
 
 import com.coremedia.iso.Hex.encodeHex
-import com.google.inject.{Inject, ImplementedBy}
+import com.google.inject.{ Inject, ImplementedBy }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.{CallTimeouts, HttpClient, NonOKResponseException, DirectUrl}
+import com.keepit.common.net.{ CallTimeouts, HttpClient, NonOKResponseException, DirectUrl }
 import com.keepit.common.strings._
 
-import akka.pattern.{ask, pipe}
+import akka.pattern.{ ask, pipe }
 import play.api.libs.concurrent.Execution.Implicits._
 
 private case class FetchDomainInfo(domain: String)
@@ -116,7 +116,7 @@ trait DomainClassifier {
   def isSensitive(domain: String): Either[Future[Boolean], Boolean]
 }
 
-class DomainClassifierImpl @Inject()(
+class DomainClassifierImpl @Inject() (
   actor: ActorInstance[DomainClassificationActor],
   db: Database,
   domainRepo: DomainRepo,
@@ -136,7 +136,7 @@ class DomainClassifierImpl @Inject()(
       Right(true)
     } else {
       val domainName = domainParts.dropWhile(_ == "www").mkString(".")
-      val domainOpt = db.readOnly { implicit s => domainRepo.get(domainName) }
+      val domainOpt = db.readOnlyReplica { implicit s => domainRepo.get(domainName) }
       domainOpt.flatMap { domain =>
         domain.sensitive.orElse(db.readWrite { implicit s => updater.calculateSensitivity(domain) })
       } match {

@@ -1,6 +1,6 @@
 package com.keepit
 
-import play.api.{Plugin, Application}
+import play.api.{ Plugin, Application }
 
 class ShutdownPlugin(app: Application) extends Plugin {
   override def onStop() {

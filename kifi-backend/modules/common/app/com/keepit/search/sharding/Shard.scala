@@ -18,7 +18,7 @@ case class ActiveShards(local: Set[Shard[NormalizedURI]]) {
 
   lazy val all = {
     val numShards = local.head.numShards
-    (0 until numShards).map{ i => Shard[NormalizedURI](i, numShards) }.toSet
+    (0 until numShards).map { i => Shard[NormalizedURI](i, numShards) }.toSet
   }
   lazy val remote = all -- local
 }
@@ -38,8 +38,8 @@ class ShardSpecParser {
 
   private class ParserImpl extends RegexParsers {
 
-    def spec[T]: Parser[Set[Shard[T]]] = rep1sep(num, ",") ~ "/" ~ num ^^{
-      case ids ~ "/" ~ numShards => ids.map{ id =>
+    def spec[T]: Parser[Set[Shard[T]]] = rep1sep(num, ",") ~ "/" ~ num ^^ {
+      case ids ~ "/" ~ numShards => ids.map { id =>
         if (numShards <= 0) throw new Exception(s"numShards=$id")
         if (id < 0 || id >= numShards) throw new Exception(s"shard id $id is out of range [0, $numShards]")
         Shard[T](id, numShards)

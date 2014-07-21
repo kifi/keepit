@@ -4,13 +4,12 @@ import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.cortex.models.word2vec.Word2Vec
 
-
 package object cortex {
 
   val S3_CORTEX_BUCKET = "amazon.s3.cortex.bucket"
 
   object ModelVersions {
-    val denseLDAVersion = ModelVersion[DenseLDA](1)
+    val denseLDAVersion = ModelVersion[DenseLDA](2)
     val word2vecVersion = ModelVersion[Word2Vec](2)
   }
 
@@ -44,10 +43,14 @@ package object cortex {
       val topicWordsJsonFile = "topic_words"
       val topicConfigsJsonFile = "topic_configs"
     }
+    object Stopwords {
+      val stopwordsFoler = "misc/stopwords/"
+      val stopwordsJsonFile = "stopwords"
+    }
   }
 
   object PublishedModels {
-    val denseLDAVersion = ModelVersion[DenseLDA](1)       // doesn't have to sync with cortex lda version
+    val denseLDAVersion = ModelVersion[DenseLDA](1) // doesn't have to sync with cortex lda version
     val defaultSparsity = 5
   }
 

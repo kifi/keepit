@@ -16,10 +16,8 @@ class MessageIndexerPluginImpl @Inject() (
   actor: ActorInstance[MessageIndexerActor],
   indexer: MessageIndexer,
   serviceDiscovery: ServiceDiscovery,
-  val scheduling: SchedulingProperties
-) extends IndexerPluginImpl[ThreadContent, MessageIndexer, MessageIndexerActor](indexer, actor, serviceDiscovery) with MessageIndexerPlugin
+  val scheduling: SchedulingProperties) extends IndexerPluginImpl[ThreadContent, MessageIndexer, MessageIndexerActor](indexer, actor, serviceDiscovery) with MessageIndexerPlugin
 
 class MessageIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,
-  indexer: MessageIndexer
-) extends IndexerActor[ThreadContent, MessageIndexer](airbrake, indexer)
+  indexer: MessageIndexer) extends IndexerActor[ThreadContent, MessageIndexer](airbrake, indexer)

@@ -11,7 +11,6 @@ import scala.math._
 import scala.util.Random
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-
 abstract class ResultClickBoosts {
   def apply(value: Long): Float
 }
@@ -27,7 +26,7 @@ class ResultClickTracker(lru: ProbablisticLRU) {
     val t = new Array[Float](n + 1)
     var i = 1
     while (i <= n) {
-      t(i) = sqrt(((i - 1).toDouble/(n - 1).toDouble)).toFloat // trying to stabilize the result when a few keeps are boosted at the same time
+      t(i) = sqrt(((i - 1).toDouble / (n - 1).toDouble)).toFloat // trying to stabilize the result when a few keeps are boosted at the same time
       i += 1
     }
     t
@@ -59,7 +58,7 @@ class ResultClickTracker(lru: ProbablisticLRU) {
 
   def getBoostsFuture(userId: Id[User], query: String, maxBoost: Float): Future[ResultClickBoosts] = {
     val hash = QueryHash(userId, query, analyzer)
-    lru.getFuture(hash).map{ probe =>
+    lru.getFuture(hash).map { probe =>
       new ResultClickBoosts {
         def apply(value: Long) = {
           val count = probe.count(value)

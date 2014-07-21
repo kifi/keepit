@@ -2,7 +2,7 @@ package com.keepit.graph.manager
 
 import org.specs2.mutable.Specification
 import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.models.lda.{DenseLDA, LDATopic}
+import com.keepit.cortex.models.lda.{ DenseLDA, LDATopic }
 
 class LDATopicIdTest extends Specification {
   "LDATopicId" should {

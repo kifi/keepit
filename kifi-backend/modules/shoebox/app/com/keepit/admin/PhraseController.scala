@@ -2,12 +2,12 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{PhraseStates, PhraseRepo, Phrase}
+import com.keepit.model.{ PhraseStates, PhraseRepo, Phrase }
 import com.keepit.shoebox.PhraseImporter
-import com.keepit.search.{SearchServiceClient, Lang}
+import com.keepit.search.{ SearchServiceClient, Lang }
 import views.html
 
 class PhraseController @Inject() (
@@ -20,9 +20,9 @@ class PhraseController @Inject() (
   val pageSize = 50
 
   def displayPhrases(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
-    val (phrasesOpt, count) = db.readOnly { implicit session =>
-      val count = 10//phraseRepo.count
-      val phrasesOpt = if(!PhraseImporter.isInProgress) {
+    val (phrasesOpt, count) = db.readOnlyReplica { implicit session =>
+      val count = 10 //phraseRepo.count
+      val phrasesOpt = if (!PhraseImporter.isInProgress) {
         Some(phraseRepo.page(page, pageSize))
       } else {
         None

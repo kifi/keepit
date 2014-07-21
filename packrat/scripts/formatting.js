@@ -207,8 +207,8 @@ function formatParticipant(participant) {
   }
 }
 
-function convertDraftToText(html) {
- 'use strict';
+function convertHtmlDraftToMarkdown(html) {
+  'use strict';
   var html2 = html
     .replace(/<div><br\s*[\/]?><\/div>/gi, '\n')
     .replace(/<br\s*[\/]?>/gi, '\n')
@@ -220,6 +220,11 @@ function convertDraftToText(html) {
     });
   html2 = emoji.encode(html2);
   return $('<div>').html(html2).text().trim();
+}
+
+function convertTextDraftToMarkdown(text) {
+  'use strict';
+  return emoji.encode(text).trim();
 }
 
 var formatAuxData = (function () {

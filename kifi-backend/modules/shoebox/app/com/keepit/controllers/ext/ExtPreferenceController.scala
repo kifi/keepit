@@ -1,8 +1,9 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.classify.{DomainRepo, Domain, DomainStates}
-import com.keepit.common.controller.{BrowserExtensionController, ShoeboxServiceController, ActionAuthenticator}
+import com.keepit.classify.{ DomainRepo, Domain, DomainStates }
+import com.keepit.commanders.UserCommander
+import com.keepit.common.controller.{ BrowserExtensionController, ShoeboxServiceController, ActionAuthenticator }
 import com.keepit.common.crypto.RatherInsecureDESCrypt
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
@@ -13,10 +14,10 @@ import com.keepit.normalizer.NormalizedURIInterner
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{__, JsNumber, Json}
+import play.api.libs.json.{ __, JsNumber, Json }
 
 import scala.concurrent.Future
-import scala.math.{max, min}
+import scala.math.{ max, min }
 
 class ExtPreferenceController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -29,8 +30,9 @@ class ExtPreferenceController @Inject() (
   notifyPreferenceRepo: UserNotifyPreferenceRepo,
   domainRepo: DomainRepo,
   userToDomainRepo: UserToDomainRepo,
-  normalizedURIInterner: NormalizedURIInterner)
-  extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+  normalizedURIInterner: NormalizedURIInterner,
+  userCommander: UserCommander)
+    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   private case class UserPrefs(
     lookHereMode: Boolean,
@@ -40,24 +42,24 @@ class ExtPreferenceController @Inject() (
     messagingEmails: Boolean)
 
   private implicit val userPrefsFormat = (
-      (__ \ 'lookHereMode).write[Boolean] and
-      (__ \ 'enterToSend).write[Boolean] and
-      (__ \ 'maxResults).write[Int] and
-      (__ \ 'showExtMsgIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
-      (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
-    )(unlift(UserPrefs.unapply))
+    (__ \ 'lookHereMode).write[Boolean] and
+    (__ \ 'enterToSend).write[Boolean] and
+    (__ \ 'maxResults).write[Int] and
+    (__ \ 'showExtMsgIntro).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
+    (__ \ 'messagingEmails).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity))
+  )(unlift(UserPrefs.unapply))
 
   private val crypt = new RatherInsecureDESCrypt
   private val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
   def normalize(url: String) = JsonAction.authenticated { request =>
-    val normalizedUrl: String = db.readOnly { implicit session => normalizedURIInterner.normalize(url) getOrElse url }
+    val normalizedUrl: String = db.readOnlyMaster { implicit session => normalizedURIInterner.normalize(url) getOrElse url }
     val json = Json.arr(normalizedUrl)
     Ok(json)
   }
 
   def getRules(version: String) = JsonAction.authenticated { request =>
-    db.readOnly { implicit s =>
+    db.readOnlyReplica { implicit s =>
       val group = sliderRuleRepo.getGroup("default")
       if (version != group.version) {
         Ok(Json.obj("slider_rules" -> group.compactJson, "url_patterns" -> urlPatternRepo.getActivePatterns()))
@@ -95,7 +97,10 @@ class ExtPreferenceController @Inject() (
   def getPrefs(version: Int) = JsonAction.authenticatedAsync { request =>
     val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val encryptedIp: String = scala.util.Try(crypt.crypt(ipkey, ip)).getOrElse("")
-    loadUserPrefs(request.user.id.get, request.experiments) map {prefs =>
+    val userId = request.user.id.get
+    userCommander.setLastUserActive(userId) // The extension doesn't display Delighted surveys for the moment, so we
+    // don't need to wait for that Future to complete before we move on
+    loadUserPrefs(userId, request.experiments) map { prefs =>
       if (version == 1) {
         Ok(Json.arr("prefs", prefs, encryptedIp))
       } else {
@@ -129,8 +134,8 @@ class ExtPreferenceController @Inject() (
   }
 
   private def loadUserPrefs(userId: Id[User], experiments: Set[ExperimentType]): Future[UserPrefs] = {
-    val userValsFuture = db.readOnlyAsync { implicit s => userValueRepo.getValues(userId, UserValues.UserInitPrefs: _*) }
-    val messagingEmailsFuture = db.readOnlyAsync { implicit s => notifyPreferenceRepo.canNotify(userId, NotificationCategory.User.MESSAGE) }
+    val userValsFuture = db.readOnlyReplicaAsync { implicit s => userValueRepo.getValues(userId, UserValues.UserInitPrefs: _*) }
+    val messagingEmailsFuture = db.readOnlyReplicaAsync { implicit s => notifyPreferenceRepo.canNotify(userId, NotificationCategory.User.MESSAGE) }
     for {
       userVals <- userValsFuture
       messagingEmails <- messagingEmailsFuture

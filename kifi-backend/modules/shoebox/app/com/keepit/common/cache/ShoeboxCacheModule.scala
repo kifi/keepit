@@ -1,20 +1,19 @@
 package com.keepit.common.cache
 
 import scala.concurrent.duration._
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
-import com.keepit.search.{ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache}
+import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.classify.DomainCache
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
-import com.keepit.typeahead.socialusers.{KifiUserTypeaheadCache, SocialUserTypeaheadCache}
-import com.keepit.typeahead.abook.EContactTypeaheadCache
-import com.keepit.commanders.BasicCollectionByIdCache
+import com.keepit.typeahead.socialusers.{ KifiUserTypeaheadCache, SocialUserTypeaheadCache }
+import com.keepit.commanders.{ LibraryInfoIdCache, BasicCollectionByIdCache }
+import com.keepit.graph.model.{ ConnectedUriScoreCache, ConnectedUserScoreCache }
 
-case class
-ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
+case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
 
   @Singleton
   @Provides
@@ -29,7 +28,7 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Singleton
   @Provides
   def userThreadStatsForUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserThreadStatsForUserIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, Duration.Inf))
+    new UserThreadStatsForUserIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -243,7 +242,7 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Singleton
   @Provides
   def probabilisticExperimentGeneratorAllCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (outerRepo, Duration.Inf))
+    new ProbabilisticExperimentGeneratorAllCache(stats, accessLog, (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -254,16 +253,6 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Provides
   def kifiUserTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new KifiUserTypeaheadCache(stats, accessLog, (outerRepo, 1 hour))
-
-  @Singleton
-  @Provides
-  def econtactTypeaheadCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new EContactTypeaheadCache(stats, accessLog, (outerRepo, 1 hour))
-
-  @Singleton
-  @Provides
-  def econtactCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new EContactCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 1 day))
 
   @Provides @Singleton
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
@@ -277,5 +266,35 @@ ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(c
   @Provides @Singleton
   def uriWordCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new NormalizedURIWordCountCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 60 days))
+
+  @Singleton
+  @Provides
+  def libraryIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new LibraryIdCache(stats, accessLog, (outerRepo, 10 days))
+
+  @Singleton
+  @Provides
+  def libraryMemberIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new LibraryMembershipIdCache(stats, accessLog, (outerRepo, 10 days))
+
+  @Singleton
+  @Provides
+  def libraryInviteIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new LibraryInviteIdCache(stats, accessLog, (outerRepo, 10 days))
+
+  @Singleton
+  @Provides
+  def libraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new LibraryInfoIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def uriScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ConnectedUriScoreCache(stats, accessLog, (innerRepo, 30 seconds), (outerRepo, 10 minutes))
+
+  @Singleton
+  @Provides
+  def userScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ConnectedUserScoreCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 5 hours))
 
 }

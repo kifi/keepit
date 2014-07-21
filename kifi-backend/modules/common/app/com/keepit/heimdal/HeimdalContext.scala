@@ -5,15 +5,15 @@ import play.api.libs.json._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import play.api.mvc.RequestHeader
 import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.model.{NotificationCategory, KeepSource, ExperimentType}
-import com.google.inject.{Inject, Singleton}
-import com.keepit.common.net.{Host, URI, UserAgent}
+import com.keepit.model.{ NotificationCategory, KeepSource, ExperimentType }
+import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.net.{ Host, URI, UserAgent }
 import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.social.SocialNetworkType
 import scala.util.Try
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.amazon.{MyInstanceInfo, AmazonInstanceInfo}
+import com.keepit.common.amazon.{ MyInstanceInfo, AmazonInstanceInfo }
 
 sealed trait ContextData
 sealed trait SimpleContextData extends ContextData
@@ -89,7 +89,7 @@ object HeimdalContext {
       data.map(HeimdalContext(_))
     }
 
-    def writes(context: HeimdalContext) : JsValue = Json.toJson(context.data)
+    def writes(context: HeimdalContext): JsValue = Json.toJson(context.data)
   }
 
   val empty = HeimdalContext(Map.empty)
@@ -98,9 +98,9 @@ object HeimdalContext {
 class HeimdalContextBuilder {
   val data = new scala.collection.mutable.HashMap[String, ContextData]()
 
-  def +=[T](key: String, value: T)(implicit toSimpleContextData: T => SimpleContextData) : Unit = data(key) = value
-  def +=[T](key: String, values: Seq[T])(implicit toSimpleContextData: T => SimpleContextData) : Unit = data(key) = ContextList(values.map(toSimpleContextData))
-  def build : HeimdalContext = HeimdalContext(data.toMap)
+  def +=[T](key: String, value: T)(implicit toSimpleContextData: T => SimpleContextData): Unit = data(key) = value
+  def +=[T](key: String, values: Seq[T])(implicit toSimpleContextData: T => SimpleContextData): Unit = data(key) = ContextList(values.map(toSimpleContextData))
+  def build: HeimdalContext = HeimdalContext(data.toMap)
 
   def addServiceInfo(thisService: FortyTwoServices, myAmazonInstanceInfo: MyInstanceInfo): Unit = {
     this += ("serviceVersion", thisService.currentVersion.value)
@@ -154,8 +154,9 @@ class HeimdalContextBuilder {
   def addUrlInfo(url: String): Unit = {
     this += ("url", url)
     URI.parse(url).foreach { uri =>
-      uri.host.collect { case host  =>
-        this += ("host", host.name)
+      uri.host.collect {
+        case host =>
+          this += ("host", host.name)
       }
       uri.scheme.foreach { scheme => this += ("scheme", scheme) }
     }
@@ -173,7 +174,7 @@ class HeimdalContextBuilder {
   }
 
   def addNotificationCategory(category: NotificationCategory): Unit = {
-    val camelledCategory = category.category.toLowerCase.split("_") match { case Array(h, q @ _*)  => h + q.map(_.capitalize).mkString }
+    val camelledCategory = category.category.toLowerCase.split("_") match { case Array(h, q @ _*) => h + q.map(_.capitalize).mkString }
     this += ("category", camelledCategory)
     NotificationCategory.ParentCategory.get(category).foreach { parentCategory => this += ("parentCategory", parentCategory) }
   }

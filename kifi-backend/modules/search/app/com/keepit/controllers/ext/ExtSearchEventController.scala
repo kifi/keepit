@@ -1,7 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.controller.{ SearchServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.heimdal._
 import com.keepit.search._
 import com.keepit.common.service.FortyTwoServices
@@ -15,11 +15,9 @@ import com.keepit.common.akka.SafeFuture
 class ExtSearchEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  searchEventCommander: SearchEventCommander)
-  (implicit private val clock: Clock,
+  searchEventCommander: SearchEventCommander)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
-  extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
-
+    extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
   def clickedSearchResult = JsonAction.authenticatedParseJson { request =>
     val clickedAt = currentDateTime
@@ -38,6 +36,9 @@ class ExtSearchEventController @Inject() (
 
     SafeFuture {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+      if (basicSearchContext.guided) {
+        contextBuilder += ("guided", true)
+      }
       SearchEngine.get(resultSource) match {
         case SearchEngine.Kifi => {
           val kifiHitContext = (json \ "hit").as[KifiHitContext]
@@ -62,6 +63,9 @@ class ExtSearchEventController @Inject() (
     val endedWith = (json \ "endedWith").as[String]
     SafeFuture {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+      if (basicSearchContext.guided) {
+        contextBuilder += ("guided", true)
+      }
       searchEventCommander.searched(userId, time, basicSearchContext, endedWith)(contextBuilder.build)
     }
     Ok

@@ -1,23 +1,22 @@
 package com.keepit.commanders
 
 import org.specs2.mutable.SpecificationLike
-import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
+import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import com.keepit.heimdal.HeimdalContext
 import akka.actor.ActorSystem
-import com.keepit.model.{RawKeepFactory, KeepSource, User}
+import com.keepit.model.{ RawKeepFactory, KeepSource, User }
 import play.api.libs.json.Json
-import akka.testkit.{TestActorRef, TestKit}
+import akka.testkit.{ TestActorRef, TestKit }
 import play.api.test.Helpers._
-import com.keepit.scraper.{TestScraperServiceClientModule, FakeScrapeSchedulerModule}
-import com.keepit.shoebox.{TestShoeboxServiceClientModule, KeepImportsModule, FakeKeepImportsModule}
-import com.keepit.common.actor.{ActorBuilder, TestActorSystemModule}
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
+import com.keepit.shoebox.{ TestShoeboxServiceClientModule, KeepImportsModule, FakeKeepImportsModule }
+import com.keepit.common.actor.{ ActorBuilder, TestActorSystemModule }
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
 import java.io.File
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
-
 
 class RawKeepImporterTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
   // This is a good example of how to test actor side effects.
@@ -53,6 +52,7 @@ class RawKeepImporterTest extends TestKit(ActorSystem()) with SpecificationLike 
           userRepo.get(user.id.get) === user
           val bookmarks = keepRepo.all
           val oneUrl = bookmarks.find(_.url == "http://www.findsounds.com/types.html")
+          println(bookmarks)
           oneUrl.size === 1
           val bm = oneUrl.head
           bm.userId === user.id.get

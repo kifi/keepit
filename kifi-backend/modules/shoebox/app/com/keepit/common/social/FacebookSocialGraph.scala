@@ -12,21 +12,21 @@ import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
-import com.keepit.common.healthcheck.{StackTrace, AirbrakeNotifier}
-import com.keepit.common.mail.{EmailAddress, LocalPostOffice}
-import com.keepit.common.net.{CallTimeouts, DirectUrl, HttpClient, NonOKResponseException, Request}
+import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
+import com.keepit.common.mail.{ EmailAddress, LocalPostOffice }
+import com.keepit.common.net.{ CallTimeouts, DirectUrl, HttpClient, NonOKResponseException, Request }
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.social.{SocialId, SocialUserRawInfo, SocialNetworks, SocialGraph}
+import com.keepit.social.{ SocialId, SocialUserRawInfo, SocialNetworks, SocialGraph }
 
 import oauth.signpost.exception.OAuthExpectationFailedException
 
 import org.apache.commons.codec.binary.Base64
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{Json, JsArray, JsValue}
+import play.api.libs.json.{ Json, JsArray, JsValue }
 
-import securesocial.core.{IdentityId, OAuth2Settings}
+import securesocial.core.{ IdentityId, OAuth2Settings }
 import securesocial.core.providers.FacebookProvider.Facebook
 
 object FacebookSocialGraph {
@@ -65,8 +65,7 @@ class FacebookSocialGraph @Inject() (
     clock: Clock,
     postOffice: LocalPostOffice,
     socialRepo: SocialUserInfoRepo,
-    airbrake: AirbrakeNotifier
-  ) extends SocialGraph with Logging {
+    airbrake: AirbrakeNotifier) extends SocialGraph with Logging {
 
   val TWO_MINUTES = 2 * 60 * 1000
   val FETCH_LIMIT = 500
@@ -144,7 +143,7 @@ class FacebookSocialGraph @Inject() (
 
   def extractFriends(parentJson: JsValue): Seq[SocialUserInfo] = {
     val friendsArr = ((parentJson \ "friends" \ "data").asOpt[JsArray]
-        orElse (parentJson \ "data").asOpt[JsArray]) getOrElse JsArray()
+      orElse (parentJson \ "data").asOpt[JsArray]) getOrElse JsArray()
     friendsArr.value map createSocialUserInfo
   }
 
@@ -213,7 +212,7 @@ class FacebookSocialGraph @Inject() (
     val tracer = new StackTrace()
     val myFailureHandler: Request => PartialFunction[Throwable, Unit] = url => {
       case nonOkRes: NonOKResponseException =>
-        // This is handled separately elsewhere
+      // This is handled separately elsewhere
       case ex: Exception =>
         val user = s"${socialUserInfo.id.getOrElse("NO_ID")}:${socialUserInfo.fullName}"
         airbrake.notify(s"fail getting json for social user $user using $url", tracer.withCause(ex))

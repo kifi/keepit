@@ -1,10 +1,10 @@
 package com.keepit.search.spellcheck
 
 import net.codingwell.scalaguice.ScalaModule
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 
 case class SpellCorrectorModule() extends ScalaModule {
-  def configure{}
+  def configure {}
 
   @Singleton
   @Provides

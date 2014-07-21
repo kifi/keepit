@@ -1,25 +1,24 @@
 package com.keepit.controllers.mobile
 
-
-import com.keepit.test.{SearchApplication, SearchApplicationInjector}
+import com.keepit.test.{ SearchApplication, SearchApplicationInjector }
 import org.specs2.mutable._
 import com.keepit.model._
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.inject._
 import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.common.controller.{FakeActionAuthenticator, FakeActionAuthenticatorModule}
+import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json._
 import akka.actor.ActorSystem
 import com.keepit.search._
-import com.keepit.search.index.{IndexStore, VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer}
+import com.keepit.search.index.{ IndexStore, VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer }
 import com.keepit.social.BasicUser
 import com.keepit.search.sharding.Shard
 import com.keepit.search.index.IndexModule
 import com.keepit.search.result._
 import com.keepit.search.result.DecoratedResult
-import org.apache.lucene.search.{Explanation, Query}
+import org.apache.lucene.search.{ Explanation, Query }
 
 class MobileSearchControllerTest extends Specification with SearchApplicationInjector {
 
@@ -34,11 +33,11 @@ class MobileSearchControllerTest extends Specification with SearchApplicationInj
 
   "MobileSearchController" should {
     "search keeps (V1)" in {
-      running(new SearchApplication(modules:_*)) {
+      running(new SearchApplication(modules: _*)) {
         val path = com.keepit.controllers.mobile.routes.MobileSearchController.searchV1("test", None, 7, None, None, None, None, None, None, None).toString
         path === "/m/1/search?q=test&maxHits=7"
 
-        val user = User(Some(Id[User](1)), firstName="prénom", lastName="nom")
+        val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom")
         inject[FakeActionAuthenticator].setUser(user)
         val request = FakeRequest("GET", path)
         val result = route(request).get
@@ -74,7 +73,8 @@ class MobileSearchControllerTest extends Specification with SearchApplicationInj
                           "id":"4e5f7b8c-951b-4497-8661-a1001885b2ec",
                           "firstName":"Vorname",
                           "lastName":"Nachname",
-                          "pictureName":"1.jpg"
+                          "pictureName":"1.jpg",
+                          "username":"vorname"
                         }
                       ],
                     "score":0.9990000128746033,
@@ -100,7 +100,7 @@ class MobileSearchControllerTest extends Specification with SearchApplicationInj
 }
 
 case class FixedResultIndexModule() extends IndexModule {
-  var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory]  // just in case we need to reference a volatileDir. e.g. in spellIndexer
+  var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory] // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
   protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory = {
     volatileDirMap.getOrElse((configName, shard), {
@@ -124,14 +124,14 @@ class FixedResultSearchCommander extends SearchCommander {
           1000, // uriId
           2, // bookmarkCount
           BasicSearchHit(
-            Some("this is a test"),  // title
-            "http://kifi.com/[テスト]",  // url, '[' and ']' should be percent-encoded and the result json
-            Some(Seq(  // collections
+            Some("this is a test"), // title
+            "http://kifi.com/[テスト]", // url, '[' and ']' should be percent-encoded and the result json
+            Some(Seq( // collections
               ExternalId[Collection]("c17da7ce-64bb-4c91-8832-1f1a6a88b7be"),
               ExternalId[Collection]("19ccb3db-4e18-4ade-91bd-1a98ef33aa63")
             )),
-            Some(ExternalId[Keep]("604754fb-182d-4c39-a314-2d1994b24159")),  // bookmarkId
-            Some(Seq((9, 13))),  // title matches
+            Some(ExternalId[Keep]("604754fb-182d-4c39-a314-2d1994b24159")), // bookmarkId
+            Some(Seq((9, 13))), // title matches
             None // url matches
           ),
           true, // isMyBookmark
@@ -140,17 +140,17 @@ class FixedResultSearchCommander extends SearchCommander {
           Seq(Id[User](999)), // users
           0.999f, // score
           new Scoring( // scoring
-            1.3f,  // textScore
-            1.0f,  // normalizedTextScore,
-            1.0f,  // bookmarkScore
-            0.5f,  // recencyScore
-            false  // usefulPage
+            1.3f, // textScore
+            1.0f, // normalizedTextScore,
+            1.0f, // bookmarkScore
+            0.5f, // recencyScore
+            false // usefulPage
           )
-        ).set("basicUsers", JsArray(Seq(Json.toJson(BasicUser(ExternalId[User]("4e5f7b8c-951b-4497-8661-a1001885b2ec"), "Vorname", "Nachname", "1.jpg")))))
+        ).set("basicUsers", JsArray(Seq(Json.toJson(BasicUser(ExternalId[User]("4e5f7b8c-951b-4497-8661-a1001885b2ec"), "Vorname", "Nachname", "1.jpg", Some(Username("vorname")))))))
       ),
-      1,  // myTotal
-      12,  // friendsTotal
-      123,  // othersTotal
+      1, // myTotal
+      12, // friendsTotal
+      123, // othersTotal
       "test", // query
       Id[User](99), // userId
       Set(100, 220), // idFilter
@@ -176,12 +176,11 @@ class FixedResultSearchCommander extends SearchCommander {
     tz: Option[String] = None,
     coll: Option[String] = None,
     debug: Option[String] = None,
-    withUriSummary: Boolean = false
-  ) : DecoratedResult = {
+    withUriSummary: Boolean = false): DecoratedResult = {
     results(query)
   }
 
-   def distSearch(
+  def distSearch(
     shards: Set[Shard[NormalizedURI]],
     userId: Id[User],
     firstLang: Lang,
@@ -196,7 +195,7 @@ class FixedResultSearchCommander extends SearchCommander {
     end: Option[String],
     tz: Option[String],
     coll: Option[String],
-    debug: Option[String]) : PartialSearchResult = ???
+    debug: Option[String]): PartialSearchResult = ???
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]) = ???
 

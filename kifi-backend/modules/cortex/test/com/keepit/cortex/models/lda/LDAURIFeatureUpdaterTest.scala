@@ -1,5 +1,6 @@
 package com.keepit.cortex.models.lda
 
+import com.keepit.cortex.nlp.Stopwords
 import org.specs2.mutable.Specification
 import com.keepit.cortex.features.WordFeatureTestHelper
 import com.keepit.cortex.core._
@@ -13,7 +14,7 @@ import com.keepit.cortex.plugins.URIPuller
 import com.keepit.cortex.plugins.DataPuller
 import com.keepit.cortex.features.URIFeatureTestHelper
 
-class LDAURIFeatureUpdaterTest extends Specification with LDATestHelper{
+class LDAURIFeatureUpdaterTest extends Specification with LDATestHelper {
   "lda uri feature updater" should {
     "work" in {
 
@@ -33,12 +34,12 @@ class LDAURIFeatureUpdaterTest extends Specification with LDATestHelper{
   }
 }
 
-trait LDATestHelper extends WordFeatureTestHelper with URIFeatureTestHelper{
+trait LDATestHelper extends WordFeatureTestHelper with URIFeatureTestHelper {
   val dim = 2
   val lda = DenseLDA(dim, mapper)
   val version = ModelVersion[DenseLDA](1)
 
-  val ldaModelStore = new InMemoryStatModelStore[DenseLDA]{
+  val ldaModelStore = new InMemoryStatModelStore[DenseLDA] {
     val formatter = DenseLDAFormatter
   }
 
@@ -50,7 +51,7 @@ trait LDATestHelper extends WordFeatureTestHelper with URIFeatureTestHelper{
   val commitStore = new InMemoryLDAURIFeatureCommitStore
 
   val wordRep = LDAWordRepresenter(version, ldaFromStore)
-  val docRep = new LDADocRepresenter(wordRep){
+  val docRep = new LDADocRepresenter(wordRep, Stopwords(Set())) {
     override val minValidTerms = 1
   }
   val uriRep = LDAURIRepresenter(docRep, articleStore)
@@ -67,7 +68,7 @@ trait LDATestHelper extends WordFeatureTestHelper with URIFeatureTestHelper{
   articleStore.+=(uri2.id.get, a2)
   articleStore.+=(uri3.id.get, a3)
 
-  class FakeURIPuller(allURI: Seq[NormalizedURI]) extends URIPuller{
+  class FakeURIPuller(allURI: Seq[NormalizedURI]) extends URIPuller {
     def getSince(lowSeq: SequenceNumber[NormalizedURI], limit: Int): Seq[NormalizedURI] = allURI.filter(_.seq > lowSeq).take(limit)
     def getBetween(lowSeq: SequenceNumber[NormalizedURI], highSeq: SequenceNumber[NormalizedURI]): Seq[NormalizedURI] = ???
   }

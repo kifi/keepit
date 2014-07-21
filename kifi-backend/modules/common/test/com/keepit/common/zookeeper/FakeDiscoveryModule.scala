@@ -1,15 +1,14 @@
 package com.keepit.common.zookeeper
 
 import com.keepit.common.service.ServiceType
-import com.google.inject.{Singleton, Provides}
-import play.api.libs.json.{JsValue, JsString, Json}
+import com.google.inject.{ Singleton, Provides }
+import play.api.libs.json.{ JsValue, JsString, Json }
 import scala.collection.mutable
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.ZooKeeper
-import com.keepit.common.actor.{FakeSchedulerModule, TestActorSystemModule}
+import com.keepit.common.actor.{ FakeSchedulerModule, TestActorSystemModule }
 import org.apache.zookeeper.KeeperException
 import com.keepit.common.strings.fromByteArray
-
 
 case class FakeDiscoveryModule() extends LocalDiscoveryModule(ServiceType.TEST_MODE) {
 
@@ -30,7 +29,7 @@ class FakeZooKeeperClient() extends ZooKeeperClient {
 
   private val zk = new FakeZooKeeperSession(db)
 
-  def onConnected(handler: ZooKeeperSession=>Unit): Unit = { handler(zk) }
+  def onConnected(handler: ZooKeeperSession => Unit): Unit = { handler(zk) }
   def session[T](f: ZooKeeperSession => T): T = f(zk)
   def close() = {}
 }
@@ -38,9 +37,9 @@ class FakeZooKeeperClient() extends ZooKeeperClient {
 class FakeZooKeeperSession(db: mutable.HashMap[Node, Option[Array[Byte]]]) extends ZooKeeperSession {
 
   def getState() = ZooKeeper.States.CONNECTED
-  def watchNode[T](node: Node, onDataChanged : Option[T] => Unit)(implicit deserializer: Array[Byte] => T) {}
-  def watchChildren(node: Node, updateChildren : Seq[Node] => Unit) {}
-  def watchChildrenWithData[T](node: Node, updateChildren : Seq[(Node, T)] => Unit)(implicit deserializer: Array[Byte] => T) {}
+  def watchNode[T](node: Node, onDataChanged: Option[T] => Unit)(implicit deserializer: Array[Byte] => T) {}
+  def watchChildren(node: Node, updateChildren: Seq[Node] => Unit) {}
+  def watchChildrenWithData[T](node: Node, updateChildren: Seq[(Node, T)] => Unit)(implicit deserializer: Array[Byte] => T) {}
 
   def create(node: Node): Node = db.synchronized {
     db(node) = None
@@ -95,8 +94,8 @@ class FakeZooKeeperSession(db: mutable.HashMap[Node, Option[Array[Byte]]]) exten
 
   def deleteRecursive(node: Node): Unit = db.synchronized {
     val prefix = node.path + "/"
-    val descendants = db.keySet.filter{ _.path startsWith prefix }
-    descendants.foreach{ db.remove(_) }
+    val descendants = db.keySet.filter { _.path startsWith prefix }
+    descendants.foreach { db.remove(_) }
     db.remove(node)
   }
 
@@ -105,7 +104,7 @@ class FakeZooKeeperSession(db: mutable.HashMap[Node, Option[Array[Byte]]]) exten
       try {
         Json.parse(s)
       } catch {
-        case e : Exception => JsString(s)
+        case e: Exception => JsString(s)
       }
     }
 

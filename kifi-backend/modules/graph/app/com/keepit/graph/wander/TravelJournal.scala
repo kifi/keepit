@@ -1,6 +1,6 @@
 package com.keepit.graph.wander
 
-import com.keepit.graph.model.{VertexId, VertexReader}
+import com.keepit.graph.model.{ VertexId, VertexReader }
 import scala.collection.mutable
 import com.keepit.graph.model.EdgeKind.EdgeType
 
@@ -16,8 +16,9 @@ class TeleportationJournal extends TravelJournal {
   private val randomTeleportations = mutable.Map[VertexId, Int]().withDefaultValue(0)
   private val visited = mutable.Map[VertexId, Int]().withDefaultValue(0)
   private var lastVisited: Option[VertexId] = None
+  private var startingVertexId: Option[VertexId] = None
 
-  def onStart(start: VertexReader): Unit = {}
+  def onStart(start: VertexReader): Unit = { startingVertexId = Some(start.id) }
 
   def onEdgeTraversal(source: VertexReader, destination: VertexReader, edgeKind: EdgeType) = {
     lastVisited = Some(source.id)
@@ -42,4 +43,5 @@ class TeleportationJournal extends TravelJournal {
   def getTeleportations(): Map[VertexId, Int] = randomTeleportations.toMap
   def getLastVisited(): Option[VertexId] = lastVisited
   def getVisited(): Map[VertexId, Int] = visited.toMap
+  def getStartingVertex(): VertexId = startingVertexId getOrElse { throw new IllegalStateException("This journal has not been completed yet.") }
 }

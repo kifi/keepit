@@ -4,35 +4,42 @@ import com.google.inject.Inject
 
 import com.keepit.commanders.TypeaheadCommander
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.model.EContact
+import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
+
+import com.keepit.common.mail.EmailAddress
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{Json, JsArray, JsObject, JsString, JsValue}
+import play.api.libs.json.{ Json, JsArray, JsObject, JsString, JsValue }
+import com.keepit.abook.model.RichContact
 
-import scala.Some
+import scala.concurrent.Future
 
 class ExtNonUserSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   typeaheadCommander: TypeaheadCommander)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  def findPeopleToInvite(q: String, n: Int) = JsonAction.authenticated { request =>
-    Ok(JsArray())
-  }
-
   def findPeopleToMessage(q: String, n: Int) = JsonAction.authenticatedAsync { request =>
     new SafeFuture({
-      typeaheadCommander.queryContacts(request.userId, Some(q), n, _.contactUserId.isEmpty)
+      typeaheadCommander.queryNonUserContacts(request.userId, q, n)
     }) map { contacts =>
       Ok(JsArray(contacts.map(serializeContact)))
     }
   }
 
-  def serializeContact(contact: EContact): JsObject = {
+  def serializeContact(contact: RichContact): JsObject = {
     JsObject(Seq[(String, JsValue)](
       "email" -> Json.toJson(contact.email)) ++
-      contact.name.map {name => "name" -> JsString(name)})
+      contact.name.map { name => "name" -> JsString(name) })
   }
 
+  def hideEmailFromUser() = JsonAction.authenticatedParseJsonAsync { request =>
+    (request.body \ "email").asOpt[EmailAddress] map { email =>
+      new SafeFuture[Boolean]({
+        typeaheadCommander.hideEmailFromUser(request.userId, email)
+      }) map { result =>
+        Ok(Json.toJson(result))
+      }
+    } getOrElse Future.successful(BadRequest(Json.obj("email" -> "Email address missing or invalid")))
+  }
 }

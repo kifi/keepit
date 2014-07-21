@@ -1,7 +1,7 @@
 package com.keepit.common.db
 
 import play.api.libs.json._
-import play.api.mvc.{PathBindable, QueryStringBindable}
+import play.api.mvc.{ PathBindable, QueryStringBindable }
 import org.msgpack.ScalaMessagePack
 import com.keepit.model.serialize.MsgPackSequenceNumberTemplate
 

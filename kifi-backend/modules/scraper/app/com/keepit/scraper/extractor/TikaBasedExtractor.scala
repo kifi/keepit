@@ -13,7 +13,7 @@ import org.apache.tika.parser.Parser
 import org.apache.tika.sax.WriteOutContentHandler
 import org.xml.sax.ContentHandler
 import play.api.http.MimeTypes
-import org.apache.tika.io.{TikaInputStream, TemporaryResources}
+import org.apache.tika.io.{ TikaInputStream, TemporaryResources }
 
 abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends Extractor with Logging {
 
@@ -24,24 +24,24 @@ abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper:
   protected def getContentHandler: ContentHandler
 
   protected def getParser(contentType: Option[String]): Parser = {
-    contentType.flatMap{ contentType =>
+    contentType.flatMap { contentType =>
       if (contentType startsWith MimeTypes.HTML) Some(new HtmlParser())
       else None
-    }.getOrElse{
+    }.getOrElse {
       new AutoDetectParser(new DefaultDetector())
     }
   }
 
   protected def getHtmlMapper: Option[HtmlMapper] = htmlMapper
 
-  def process(input: HttpInputStream){
+  def process(input: HttpInputStream) {
     val context = new ParseContext()
     var parser = getParser(input.getContentType())
     val contentHandler = getContentHandler
     context.set(classOf[Parser], parser)
     getHtmlMapper.foreach(mapper => context.set(classOf[HtmlMapper], mapper))
 
-    input.getContentType().foreach{ metadata.set(HttpHeaders.CONTENT_TYPE, _) }
+    input.getContentType().foreach { metadata.set(HttpHeaders.CONTENT_TYPE, _) }
 
     val tmp = new TemporaryResources()
     // see http://tika.apache.org/1.3/api/org/apache/tika/io/TikaInputStream.html#get(java.io.InputStream, org.apache.tika.io.TemporaryResources)
@@ -68,7 +68,7 @@ abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper:
   def getMetadata(name: String): Option[String] = {
     def initCap(str: String) = {
       if (str.length > 0) {
-        str.substring(0,1).toUpperCase + str.substring(1).toLowerCase
+        str.substring(0, 1).toUpperCase + str.substring(1).toLowerCase
       } else {
         str
       }

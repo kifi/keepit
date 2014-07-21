@@ -83,7 +83,6 @@ POST    /tags/clear                 @com.keepit.controllers.ext.ExtBookmarksCont
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
 
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
-GET     /whois                      @com.keepit.controllers.ext.ExtAuthController.whois
 GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
 POST    /ext/auth/:provider         @com.keepit.controllers.ext.ExtAuthController.jsTokenLogin(provider: String)
 GET     /ext/authed                 @com.keepit.controllers.ext.ExtUserController.getLoggedIn()
@@ -98,7 +97,7 @@ POST    /ext/pref/showExtMsgIntro   @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/contacts               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToMessage(q: String, n: Int ?= 4)
-GET     /ext/nonusers               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToInvite(q: String, n: Int ?= 4)
+POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser()
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
@@ -132,6 +131,7 @@ POST    /m/1/collections/create             @com.keepit.controllers.mobile.Mobil
 GET     /m/1/collections/all                @com.keepit.controllers.mobile.MobileBookmarksController.allCollections(sort: String ?= "last_kept")
 GET     /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.currentUser()
 POST    /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.updateCurrentUser()
+GET     /m/1/user/prefs                     @com.keepit.controllers.mobile.MobileUserController.getPrefs()
 GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileBookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileBookmarksController.addTag(id: ExternalId[Collection])
 POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileBookmarksController.removeTag(id: ExternalId[Collection])
@@ -154,10 +154,9 @@ POST    /m/1/password/forgot                    @com.keepit.controllers.mobile.M
 POST    /m/1/password/change                    @com.keepit.controllers.mobile.MobileUserController.changePassword()
 
 POST    /m/1/iphone/version/register            @com.keepit.controllers.mobile.MobileAuthController.registerIPhoneVersion()
+POST    /m/1/android/version/register           @com.keepit.controllers.mobile.MobileAuthController.registerAndroidVersion()
 
 GET     /m/1/user/connections/all               @com.keepit.controllers.mobile.MobileUserController.queryAll(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= false)
-GET     /m/1/user/connections/social            @com.keepit.controllers.mobile.MobileUserController.querySocial(search: Option[String], network: Option[String], limit: Int ?= 50000000, pictureUrl: Boolean ?= false)
-GET     /m/1/user/connections/email             @com.keepit.controllers.mobile.MobileUserController.queryContacts(search: Option[String], limit: Int ?= 50000000)
 
 GET     /m/1/contacts/search                    @com.keepit.controllers.mobile.MobileContactsController.search(q: String, n: Int ?= 4)
 
@@ -168,6 +167,8 @@ POST    /m/1/user/:id/friend                    @com.keepit.controllers.mobile.M
 POST    /m/1/user/:id/ignoreRequest             @com.keepit.controllers.mobile.MobileUserController.ignoreFriendRequest(id: ExternalId[User])
 GET     /m/1/user/outgoingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.outgoingFriendRequests
 GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.incomingFriendRequests
+POST    /m/1/user/delighted/answer              @com.keepit.controllers.mobile.MobileUserController.postDelightedAnswer()
+POST    /m/1/user/delighted/cancel              @com.keepit.controllers.mobile.MobileUserController.cancelDelightedSurvey()
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
@@ -198,7 +199,7 @@ GET     /install                    @com.keepit.controllers.website.HomeControll
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /terms                      @com.keepit.controllers.website.HomeController.termsOfService
 GET     /privacy                    @com.keepit.controllers.website.HomeController.privacyPolicy
-GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneLandingTempForDev
+GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
 GET     /mobile                     @com.keepit.controllers.website.HomeController.mobileLanding
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
 
@@ -246,6 +247,7 @@ POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsControl
 
 GET     /site/collections/all       @com.keepit.controllers.website.KeepsController.allCollections(sort: String ?= "last_kept")
 POST    /site/collections/ordering  @com.keepit.controllers.website.KeepsController.updateCollectionOrdering()
+POST    /site/collections/reorderTag  @com.keepit.controllers.website.KeepsController.updateCollectionIndexOrdering()
 POST    /site/collections/create    @com.keepit.controllers.website.KeepsController.saveCollection(id = "")
 POST    /site/collections/:id/update @com.keepit.controllers.website.KeepsController.saveCollection(id: String)
 POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsController.deleteCollection(id: ExternalId[Collection])
@@ -275,10 +277,12 @@ GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
 POST    /site/user/invite           @com.keepit.controllers.website.InviteController.inviteV2()
+POST    /site/user/delighted/answer @com.keepit.controllers.website.UserController.postDelightedAnswer()
+POST    /site/user/delighted/cancel @com.keepit.controllers.website.UserController.cancelDelightedSurvey()
+POST    /site/user/close            @com.keepit.controllers.website.UserController.closeAccount()
 
 GET     /site/user/connections/all/search    @com.keepit.controllers.website.TypeaheadController.searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
 
-GET     /site/user/socialConnections    @com.keepit.controllers.website.UserController.getAllConnections(search: Option[String], network: Option[String], after: Option[String], limit: Int ?= Integer.MAX_VALUE)
 GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
@@ -297,6 +301,12 @@ GET     /site/                      @com.keepit.controllers.website.HomeControll
 ##########################################
 POST    /api/sendgrid/webhook       @com.keepit.controllers.api.SendgridController.parseEvent()
 GET     /api/desk/isLoggedIn        @com.keepit.controllers.api.DeskController.isLoggedIn
+
+##########################################
+# Routes for testing purposes only
+##########################################
+
+GET     /test/me                    @com.keepit.controllers.testing.ForTestingOnlyController.me
 
 ##########################################
 # Admin
@@ -496,6 +506,10 @@ POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminC
 POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
 
 
+GET     /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
+GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
+
+
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")
 GET     /admin/typeahead/socialSearch       @com.keepit.controllers.admin.TypeaheadAdminController.socialSearch(userId:Id[User], query:String ?= "")
@@ -556,13 +570,14 @@ POST    /admin/cortex/lda/wordTopic                        @com.keepit.controlle
 POST    /admin/cortex/lda/docTopic                         @com.keepit.controllers.admin.AdminLDAController.docTopic
 POST    /admin/cortex/lda/saveEdits                        @com.keepit.controllers.admin.AdminLDAController.saveEdits
 GET     /admin/cortex/lda/userTopicDump                    @com.keepit.controllers.admin.AdminLDAController.userTopicDump(userId: Id[User], limit: Int)
+POST    /admin/cortex/lda/userUriInterest                  @com.keepit.controllers.admin.AdminLDAController.userUriInterest
+POST    /admin/cortex/lda/userTopicMean                    @com.keepit.controllers.admin.AdminLDAController.userTopicMean
 
 GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 POST    /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
 
-GET     /admin/validateAllContacts                             @com.keepit.controllers.admin.AdminUserController.validateAllContacts(readOnly: Boolean ?= true)
 ##########################################
 # Common Healthcheck / service routes
 ##########################################
@@ -616,7 +631,6 @@ GET     /internal/shoebox/database/getCollectionsByUser @com.keepit.controllers.
 GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableUris   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
 GET     /internal/shoebox/database/getScrapedUris     @com.keepit.controllers.internal.ShoeboxDataPipeController.getScrapedUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
-GET     /internal/shoebox/database/getScrapedUriIdAndSeq @com.keepit.controllers.internal.ShoeboxDataPipeController.getScrapedUriIdAndSeq(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
 GET     /internal/shoebox/database/getHighestUriSeq   @com.keepit.controllers.internal.ShoeboxDataPipeController.getHighestUriSeq()
 GET     /internal/shoebox/database/getUserIndexable   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int)
 GET     /internal/shoebox/database/getUserConnectionsChanged   @com.keepit.controllers.internal.ShoeboxDataPipeController.getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int)

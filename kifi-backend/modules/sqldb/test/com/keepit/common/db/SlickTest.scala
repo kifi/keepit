@@ -29,9 +29,8 @@ class SlickTest extends Specification with DbTestInjector {
       withDb() { implicit injector =>
 
         case class Bar(
-          id: Option[Id[Bar]] = None,
-          name: String
-        ) extends Model[Bar] {
+            id: Option[Id[Bar]] = None,
+            name: String) extends Model[Bar] {
           def withId(id: Id[Bar]): Bar = this.copy(id = Some(id))
           def withUpdateTime(now: DateTime) = this
         }
@@ -47,13 +46,13 @@ class SlickTest extends Specification with DbTestInjector {
 
         //we can abstract out much of the standard repo and have it injected/mocked out
         class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] {
-                    import DBSession._
+          import DBSession._
           import scala.slick.driver.H2Driver.simple._
 
           private val sequence = db.getSequence[Bar]("bar")
 
-          override def save(bar: Bar)(implicit session: RWSession): Bar = {sequence.incrementAndGet(); super.save(bar)}
-          def getCurrentSeqNum()(implicit session: RSession) = {sequence.getLastGeneratedSeq()}
+          override def save(bar: Bar)(implicit session: RWSession): Bar = { sequence.incrementAndGet(); super.save(bar) }
+          def getCurrentSeqNum()(implicit session: RSession) = { sequence.getLastGeneratedSeq() }
 
           override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}
           override def invalidateCache(model: Bar)(implicit session: RSession): Unit = {}
@@ -68,7 +67,7 @@ class SlickTest extends Specification with DbTestInjector {
           def table(tag: Tag) = new BarTable(tag)
 
           def getByName(name: String)(implicit session: ROSession): Seq[Bar] = {
-            val q = for ( f <- rows if columnExtensionMethods(f.name).is(valueToConstColumn(name))) yield (f)
+            val q = for (f <- rows if columnExtensionMethods(f.name).is(valueToConstColumn(name))) yield (f)
             q.list
           }
 
@@ -87,7 +86,7 @@ class SlickTest extends Specification with DbTestInjector {
         val repo: BarRepo = new BarRepoImpl(inject[DataBaseComponent], inject[Clock])
 
         //just for testing you know...
-        inject[Database].readWrite{ implicit session =>
+        inject[Database].readWrite { implicit session =>
           val fooA = repo.save(Bar(name = "A"))
           fooA.id.get.id === 1
           repo.getCurrentSeqNum().value === 1
@@ -96,32 +95,32 @@ class SlickTest extends Specification with DbTestInjector {
           repo.getCurrentSeqNum().value === 2
         }
 
-        inject[Database].readOnly{ implicit session =>
+        inject[Database].readOnlyMaster { implicit session =>
           repo.count(session) === 2
           val a = repo.getByName("A")
           a.size === 1
           a.head.name === "A"
         }
 
-        inject[Database].readOnly{ implicit session =>
+        inject[Database].readOnlyMaster { implicit session =>
           val a = repo.getByNameSqlInterpulation("A")
           a.size === 1
           a.head === "A"
         }
 
-        inject[Database].readOnly(Database.Master){ implicit session =>
+        inject[Database].readOnlyMaster { implicit session =>
           repo.count(session) === 2
         }
 
-        inject[Database].readOnly(Database.Slave){ implicit session =>
+        inject[Database].readOnlyReplica { implicit session =>
           repo.count(session) === 2
         }
 
-        inject[Database].readOnly{ implicit session =>
+        inject[Database].readOnlyReplica { implicit session =>
           repo.count(session) === 2
-        }(Database.Slave, Location.capture)
+        }(Location.capture)
 
-        inject[Database].readOnly{ implicit session =>
+        inject[Database].readOnlyMaster { implicit session =>
           repo.getByNameSqlInterpulationSqlInjection("A';drop table foo;select * from foo where name ='") must throwA[JdbcSQLException]
         }
 
@@ -132,9 +131,8 @@ class SlickTest extends Specification with DbTestInjector {
 
       withDb() { implicit injector =>
         val db = inject[Database]
-                import DBSession._
+        import DBSession._
         import scala.slick.driver.H2Driver.simple._
-
 
         val table = (tag: Tag) => new Table[Int](tag, "t") {
           def a = column[Int]("a")
@@ -145,38 +143,38 @@ class SlickTest extends Specification with DbTestInjector {
 
         rows.ddl
 
-        db.readWrite{ implicit session =>
+        db.readWrite { implicit session =>
           rows.ddl.create
         }
 
         val q = rows.map(s => s)
 
-        db.readWrite{ implicit session =>
+        db.readWrite { implicit session =>
           rows.insert(42)
           q.firstOption === Some(42)
           session.rollback()
         }
 
-        db.readOnly{ implicit session =>
+        db.readOnlyMaster { implicit session =>
           q.firstOption === None
         }
 
-        db.readWrite{ implicit session =>
+        db.readWrite { implicit session =>
           rows.insert(1)
         }
 
-        db.readWrite{ implicit session =>
+        db.readWrite { implicit session =>
           rows.map(s => s).delete
           q.firstOption === None
           session.rollback()
         }
 
-        db.readOnly{ implicit session =>
+        db.readOnlyMaster { implicit session =>
           q.firstOption === Some(1)
         }
 
         try {
-          db.readWrite{ implicit session =>
+          db.readWrite { implicit session =>
             rows.map(s => s).delete
             q.firstOption === None
             throw new Exception
@@ -185,15 +183,15 @@ class SlickTest extends Specification with DbTestInjector {
           case _: Throwable => //ignore
         }
 
-        db.readOnly{ implicit session =>
+        db.readOnlyMaster { implicit session =>
           q.firstOption === Some(1)
         }
 
-        db.readWrite{ implicit session =>
+        db.readWrite { implicit session =>
           rows.map(s => s).delete
         }
 
-        db.readOnly{ implicit session =>
+        db.readOnlyMaster { implicit session =>
           q.firstOption === None
         }
       }
@@ -203,10 +201,9 @@ class SlickTest extends Specification with DbTestInjector {
       withDb() { implicit injector =>
 
         case class Bar(
-          id: Option[Id[Bar]] = None,
-          externalId: ExternalId[Bar] = ExternalId(),
-          name: String
-        ) extends ModelWithExternalId[Bar] {
+            id: Option[Id[Bar]] = None,
+            externalId: ExternalId[Bar] = ExternalId(),
+            name: String) extends ModelWithExternalId[Bar] {
           def withId(id: Id[Bar]): Bar = this.copy(id = Some(id))
           def withUpdateTime(now: DateTime) = this
         }
@@ -219,13 +216,11 @@ class SlickTest extends Specification with DbTestInjector {
 
         //we can abstract out much of the standard repo and have it injected/mocked out
         class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] with ExternalIdColumnDbFunction[Bar] {
-                    import DBSession._
+          import DBSession._
           import scala.slick.driver.H2Driver.simple._
-
 
           override def deleteCache(model: Bar)(implicit session: RSession): Unit = {}
           override def invalidateCache(model: Bar)(implicit session: RSession): Unit = {}
-
 
           type RepoImpl = BarTable
           class BarTable(tag: Tag) extends RepoTable[Bar](db, tag, "foo") with ExternalIdColumn[Bar] {
@@ -237,7 +232,7 @@ class SlickTest extends Specification with DbTestInjector {
           def table(tag: Tag) = new BarTable(tag)
 
           def getByName(name: String)(implicit session: ROSession): Seq[Bar] = {
-            val q = for ( f <- rows if columnExtensionMethods(f.name).is(valueToConstColumn(name)) ) yield (f)
+            val q = for (f <- rows if columnExtensionMethods(f.name).is(valueToConstColumn(name))) yield (f)
             q.list
           }
         }
@@ -245,11 +240,11 @@ class SlickTest extends Specification with DbTestInjector {
         val repo: BarRepo = new BarRepoImpl(inject[DataBaseComponent], inject[Clock])
 
         //just for testing you know...
-        val (b1, b2) = inject[Database].readWrite{ implicit session =>
+        val (b1, b2) = inject[Database].readWrite { implicit session =>
           (repo.save(Bar(name = "A")), repo.save(Bar(name = "B")))
         }
 
-        inject[Database].readOnly{ implicit session =>
+        inject[Database].readOnlyMaster { implicit session =>
           repo.count(session) === 2
           repo.get(b1.externalId) === b1
           repo.get(b2.externalId) === b2

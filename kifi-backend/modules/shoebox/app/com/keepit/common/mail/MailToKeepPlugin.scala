@@ -2,15 +2,15 @@ package com.keepit.common.mail
 
 import scala.concurrent.duration._
 
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{FortyTwoActor, UnsupportedActorMessage}
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
-import com.keepit.common.plugin.{SchedulerPlugin, SchedulingProperties}
-import com.keepit.commanders.{RawBookmarkRepresentation, KeepInterner}
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.commanders.{ RawBookmarkRepresentation, KeepInterner }
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
@@ -28,8 +28,7 @@ case class MailToKeepServerSettings(
   password: String,
   server: String,
   protocol: String,
-  emailLabel: Option[String] = None
-)
+  emailLabel: Option[String] = None)
 
 private sealed abstract class KeepType(val name: String, val emailPrefix: String) {
   override def toString = name
@@ -49,8 +48,7 @@ class MailToKeepActor @Inject() (
     messageParser: MailToKeepMessageParser,
     db: Database,
     implicit private val clock: Clock,
-    implicit private val fortyTwoServices: FortyTwoServices
-  ) extends FortyTwoActor(airbrake) with Logging {
+    implicit private val fortyTwoServices: FortyTwoServices) extends FortyTwoActor(airbrake) with Logging {
 
   // add +$emailLabel to the end if provided
   // this is so in dev mode we can append your username so as not to conflict with prod emails
@@ -102,7 +100,7 @@ class MailToKeepActor @Inject() (
                 sendReply(
                   message = message,
                   htmlBody =
-                      s"<p>Hi ${user.firstName},</p>" +
+                    s"<p>Hi ${user.firstName},</p>" +
                       "<p>We couldn't find any URLs in your message. Try making sure your URL format is valid.</p>"
                 )
               case (Some(user), uris) =>
@@ -116,7 +114,7 @@ class MailToKeepActor @Inject() (
                   sendReply(
                     message = message,
                     htmlBody =
-                        s"<p>Hi ${user.firstName},</p>" +
+                      s"<p>Hi ${user.firstName},</p>" +
                         s"<p>Congratulations! We added a $keepType keep for $uri.</p>" +
                         "<p>Sincerely,<br>The Kifi team</p>"
                   )
@@ -151,8 +149,7 @@ class MailToKeepActor @Inject() (
 class MailToKeepMessageParser @Inject() (
     db: Database,
     emailAddressRepo: UserEmailAddressRepo,
-    userRepo: UserRepo
-  ) extends GenericMailParser with Logging {
+    userRepo: UserRepo) extends GenericMailParser with Logging {
 
   private val Url = """(?i)(?<![@.])\b(https?://)?(([a-z0-9\-]+\.)+[a-z]{2,3}(/\S*)?)\b""".r
 
@@ -165,7 +162,7 @@ class MailToKeepMessageParser @Inject() (
   }
 
   def getUser(senderAddress: EmailAddress): Option[User] = {
-    db.readOnly { implicit s =>
+    db.readOnlyReplica { implicit s =>
       emailAddressRepo.getVerifiedOwner(senderAddress).map { userId =>
         userRepo.get(userId)
       }
@@ -178,10 +175,10 @@ trait MailToKeepPlugin extends Plugin {
   def fetchNewKeeps()
 }
 
-class MailToKeepPluginImpl @Inject()(
-  actor: ActorInstance[MailToKeepActor],
-  val scheduling: SchedulingProperties //only on leader
-) extends MailToKeepPlugin with SchedulerPlugin {
+class MailToKeepPluginImpl @Inject() (
+    actor: ActorInstance[MailToKeepActor],
+    val scheduling: SchedulingProperties //only on leader
+    ) extends MailToKeepPlugin with SchedulerPlugin {
 
   override def enabled: Boolean = true
 

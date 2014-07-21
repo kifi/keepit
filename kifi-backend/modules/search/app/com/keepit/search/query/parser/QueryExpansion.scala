@@ -16,7 +16,6 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import scala.collection.mutable.ArrayBuffer
 
-
 object QueryExpansion {
   private[this] val langsToUseBoolean = Set[Lang](Lang("ja"))
 
@@ -51,7 +50,8 @@ trait QueryExpansion extends QueryParser {
         case phrase: PhraseQuery =>
           val terms = phrase.getTerms()
           val booleanQuery = new BooleanQuery(false)
-          terms.foreach{ term => booleanQuery.add(new TermQuery(term), SHOULD) }
+          terms.foreach { term => booleanQuery.add(new TermQuery(term), SHOULD) }
+          booleanQuery.add(query, SHOULD)
           booleanQuery
         case _ =>
           query
@@ -62,7 +62,7 @@ trait QueryExpansion extends QueryParser {
   }
 
   protected def getTextQuery(queryText: String, quoted: Boolean): Option[Query] = {
-    def copyFieldQuery(query:Query, field: String) = {
+    def copyFieldQuery(query: Query, field: String) = {
       query match {
         case null => null
         case query: TermQuery => copy(query, field)
@@ -97,7 +97,7 @@ trait QueryExpansion extends QueryParser {
     val textQuery = new TextQuery
     textQueries += textQuery
 
-    super.getFieldQuery("t", queryText, quoted).foreach{ q =>
+    super.getFieldQuery("t", queryText, quoted).foreach { q =>
       textQuery.terms = extractTerms(q)
       val query = if (quoted) q else mayConvertQuery(q, lang)
       textQuery.addRegularQuery(query)
@@ -107,8 +107,8 @@ trait QueryExpansion extends QueryParser {
       if (isNumericTermQuery(query) && textQuery.getBoost() >= 1.0f) textQuery.setBoost(0.5f)
     }
 
-    altAnalyzer.foreach{ alt =>
-      super.getFieldQuery("t", queryText, quoted, alt).foreach{ q =>
+    altAnalyzer.foreach { alt =>
+      super.getFieldQuery("t", queryText, quoted, alt).foreach { q =>
         if (!equivalent(textQuery.terms, extractTerms(q))) {
           val query = if (quoted) q else mayConvertQuery(q, alt.lang)
           val boost = if (textQuery.isEmpty) 0.1f else 1.0f
@@ -120,9 +120,9 @@ trait QueryExpansion extends QueryParser {
       }
     }
 
-    getStemmedFieldQuery("ts", queryText).foreach{ q =>
+    getStemmedFieldQuery("ts", queryText).foreach { q =>
       textQuery.stems = extractTerms(q)
-      if(!quoted) {
+      if (!quoted) {
         val query = mayConvertQuery(q, lang)
         textQuery.addRegularQuery(query)
         textQuery.addRegularQuery(copyFieldQuery(query, "cs"))
@@ -130,9 +130,9 @@ trait QueryExpansion extends QueryParser {
       }
     }
 
-    if(!quoted) {
-      altStemmingAnalyzer.foreach{ alt =>
-        getFieldQuery("ts", queryText, false, alt).foreach{ q =>
+    if (!quoted) {
+      altStemmingAnalyzer.foreach { alt =>
+        getFieldQuery("ts", queryText, false, alt).foreach { q =>
           if (!equivalent(textQuery.stems, extractTerms(q))) {
             val query = mayConvertQuery(q, alt.lang)
             val boost = if (textQuery.isEmpty) 0.1f else 1.0f
@@ -160,7 +160,7 @@ trait QueryExpansion extends QueryParser {
     val clauses = ArrayBuffer.empty[BooleanClause]
     val queries = ArrayBuffer.empty[(QuerySpec, TextQuery)]
 
-    querySpecList.foreach{ spec =>
+    querySpecList.foreach { spec =>
       val query = getFieldQuery(spec.field, spec.term, spec.quoted)
       query match {
         case Some(query) =>
@@ -181,7 +181,7 @@ trait QueryExpansion extends QueryParser {
   }
 }
 
-object ConcatQueryAdder{
+object ConcatQueryAdder {
 
   private def addConcatQuery(textQuery: TextQuery, concat: (String, String), concatBoost: Float): Unit = {
     val (t1, t2) = concat
@@ -198,7 +198,7 @@ object ConcatQueryAdder{
   }
 
   private def concat(q1: TextQuery, q2: TextQuery): (String, String) = {
-    val sb =  new StringBuilder
+    val sb = new StringBuilder
 
     def append(terms: Array[Term], off: Int, end: Int): Unit = {
       if (off >= 0 && off < end) {

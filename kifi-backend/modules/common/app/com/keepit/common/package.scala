@@ -1,26 +1,27 @@
 package com.keepit
 
-import org.apache.commons.compress.archivers.tar.{TarArchiveInputStream, TarArchiveEntry, TarArchiveOutputStream}
+import org.apache.commons.compress.archivers.tar.{ TarArchiveInputStream, TarArchiveEntry, TarArchiveOutputStream }
 import java.io._
-import org.apache.commons.io.{IOUtils, FileUtils}
-import scala.collection.mutable.{SynchronizedSet, HashSet, Set => MutableSet, ListBuffer}
-import java.util.zip.{GZIPInputStream, GZIPOutputStream}
+import org.apache.commons.io.{ IOUtils, FileUtils }
+import scala.collection.mutable.{ SynchronizedSet, HashSet, Set => MutableSet, ListBuffer }
+import java.util.zip.{ GZIPInputStream, GZIPOutputStream }
 import java.util.concurrent.atomic.AtomicBoolean
 
 package object common {
 
-  /** Useful when wanting to side-effect (log, stats, etc) and return the original value.
-    * Lets us rewrite things like:
-    * {{{
-    *   var someVal = func()
-    *   log.info(someVal)
-    *   someVal
-    * }}}
-    * as:
-    * {{{
-    *   func() tap log.info
-    * }}}
-    */
+  /**
+   * Useful when wanting to side-effect (log, stats, etc) and return the original value.
+   * Lets us rewrite things like:
+   * {{{
+   *   var someVal = func()
+   *   log.info(someVal)
+   *   someVal
+   * }}}
+   * as:
+   * {{{
+   *   func() tap log.info
+   * }}}
+   */
   implicit class KestrelCombinator[A](val a: A) extends AnyVal {
     def withSideEffect(fun: A => Unit): A = { fun(a); a }
     def tap(fun: A => Unit): A = withSideEffect(fun)
@@ -77,8 +78,7 @@ package object common {
             try { IOUtils.copyLarge(tarArchive, out, 0, entry.getSize) }
             catch { case e: Throwable => files.foreach(_.delete()); throw e } // directories created by FileUtils.openOutputStream may not be cleaned up
             finally { out.close() }
-          }
-          else {
+          } else {
             try { FileUtils.forceMkdir(file) }
             catch { case e: Throwable => files.foreach(_.delete()); throw e } // directories created by FileUtils.forceMkdir may not be cleaned up
           }

@@ -1,11 +1,11 @@
 package com.keepit.common.db.slick
 
-import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
-import com.keepit.common.db.{SequenceNumberRange, DbSequence, SequenceNumber, H2DatabaseDialect}
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.{ SequenceNumberRange, DbSequence, SequenceNumber, H2DatabaseDialect }
 import scala.slick.driver.H2Driver
 import scala.collection.concurrent.TrieMap
 import scala.slick.driver.JdbcDriver.DDL
-import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
+import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 import com.keepit.common.logging.Logging
 
 trait TableInitListener {
@@ -14,9 +14,9 @@ trait TableInitListener {
 }
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
-class H2(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
+class H2(val masterDb: SlickDatabase, val replicaDb: Option[SlickDatabase])
     extends DataBaseComponent with Logging {
-  println("initiating H2 driver")
+
   val Driver = H2Driver
   val tablesToInit = new TrieMap[String, { def createStatements: Iterator[String] }]
   val sequencesToInit = new TrieMap[String, String]
@@ -68,7 +68,7 @@ class H2(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
     }
   }
 
-  private def initSequenceNow(sequence: String) = initListener map {listener =>
+  private def initSequenceNow(sequence: String) = initListener map { listener =>
     listener.initSequence(sequence)
   }
 
@@ -80,7 +80,7 @@ class H2(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
     }
   }
 
-  private def initTableNow(tableName: String, ddl: { def createStatements: Iterator[String] }) = initListener map {listener =>
+  private def initTableNow(tableName: String, ddl: { def createStatements: Iterator[String] }) = initListener map { listener =>
     listener.init(tableName, ddl)
   }
 

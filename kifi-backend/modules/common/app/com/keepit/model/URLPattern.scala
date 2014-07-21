@@ -4,14 +4,13 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
 
-case class URLPattern (
-  id: Option[Id[URLPattern]] = None,
-  pattern: String,
-  example: Option[String],
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  state: State[URLPattern] = URLPatternStates.ACTIVE
-) extends ModelWithState[URLPattern] {
+case class URLPattern(
+    id: Option[Id[URLPattern]] = None,
+    pattern: String,
+    example: Option[String],
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    state: State[URLPattern] = URLPatternStates.ACTIVE) extends ModelWithState[URLPattern] {
   def withId(id: Id[URLPattern]): URLPattern = copy(id = Some(id))
   def withPattern(pattern: String): URLPattern = copy(pattern = pattern)
   def withExample(example: Option[String]): URLPattern = copy(example = example)

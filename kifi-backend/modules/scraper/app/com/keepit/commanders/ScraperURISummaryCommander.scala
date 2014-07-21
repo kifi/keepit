@@ -3,32 +3,30 @@ package com.keepit.commanders
 import java.awt.image.BufferedImage
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.images.ImageFetcher
-import com.keepit.common.store.{ImageSize, S3URIImageStore}
-import com.keepit.model.{ImageInfo, NormalizedURI, URISummary}
+import com.keepit.common.store.{ ImageSize, S3URIImageStore }
+import com.keepit.model.{ ImageInfo, NormalizedURI, URISummary }
 import com.keepit.scraper.ShoeboxDbCallbackHelper
 import com.keepit.scraper.embedly.EmbedlyClient
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.net.URI
 
-
 @ImplementedBy(classOf[ScraperURISummaryCommanderImpl])
 trait ScraperURISummaryCommander {
   def fetchFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]]
 }
 
-class ScraperURISummaryCommanderImpl @Inject()(
-  imageFetcher: ImageFetcher,
-  embedlyClient: EmbedlyClient,
-  uriImageStore: S3URIImageStore,
-  airbrake: AirbrakeNotifier,
-  callback: ShoeboxDbCallbackHelper
-) extends ScraperURISummaryCommander {
+class ScraperURISummaryCommanderImpl @Inject() (
+    imageFetcher: ImageFetcher,
+    embedlyClient: EmbedlyClient,
+    uriImageStore: S3URIImageStore,
+    airbrake: AirbrakeNotifier,
+    callback: ShoeboxDbCallbackHelper) extends ScraperURISummaryCommander {
 
   private def partitionImages(imgsInfo: Seq[ImageInfo], minSize: ImageSize): (Seq[ImageInfo], Option[ImageInfo]) = {
     val smallImages = imgsInfo.takeWhile(!meetsSizeConstraint(_, minSize))
@@ -37,7 +35,7 @@ class ScraperURISummaryCommanderImpl @Inject()(
 
   private def fetchAndInternImage(uri: NormalizedURI, imageInfo: ImageInfo): Future[Option[ImageInfo]] = {
     imageInfo.url match {
-      case Some(imageUrl) => imageFetcher.fetchRawImage(imageUrl).map{ rawImageOpt =>
+      case Some(imageUrl) => imageFetcher.fetchRawImage(imageUrl).map { rawImageOpt =>
         rawImageOpt flatMap { rawImage => internImage(imageInfo, rawImage, uri) }
       }
       case None => Future.successful(None)
@@ -79,7 +77,7 @@ class ScraperURISummaryCommanderImpl @Inject()(
   }
 
   override def fetchFromEmbedly(nUri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = {
-      embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
+    embedlyClient.getEmbedlyInfo(nUri.url) flatMap { embedlyInfoOpt =>
 
       val summary = for {
         nUriId <- nUri.id
@@ -92,7 +90,7 @@ class ScraperURISummaryCommanderImpl @Inject()(
           Future.successful(Some(URISummary(None, embedlyInfo.title, embedlyInfo.description)))
         } else {
           val images = embedlyInfo.buildImageInfo(nUriId)
-          val nonBlankImages = images.filter{ image =>
+          val nonBlankImages = images.filter { image =>
             image.url map (ScraperURISummaryCommander.filterImageByUrl(_)) getOrElse false
           }
           val (smallImages, selectedImageOpt) = partitionImages(nonBlankImages, minSize)

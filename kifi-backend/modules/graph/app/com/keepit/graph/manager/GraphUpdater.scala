@@ -19,6 +19,8 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
     case keepGraphUpdate: KeepGraphUpdate => processKeepGraphUpdate(keepGraphUpdate)
     case ldaUpdate: SparseLDAGraphUpdate => processLDAUpdate(ldaUpdate)
     case uriUpdate: NormalizedUriGraphUpdate => processNormalizedUriGraphUpdate(uriUpdate)
+    case emailAccountUpdate: EmailAccountGraphUpdate => processEmailAccountGraphUpdate(emailAccountUpdate)
+    case emailContactUpdate: EmailContactGraphUpdate => processEmailContactGraphUpdate(emailContactUpdate)
   }
 
   private def processUserGraphUpdate(update: UserGraphUpdate)(implicit writer: GraphWriter) = update.state match {
@@ -93,7 +95,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
   }
 
   private def processKeepGraphUpdate(update: KeepGraphUpdate)(implicit writer: GraphWriter) = {
-    val keepVertexId: VertexDataId[KeepReader] =  update.id
+    val keepVertexId: VertexDataId[KeepReader] = update.id
     val uriVertexId: VertexDataId[UriReader] = update.uriId
     val userVertexId: VertexDataId[UserReader] = update.userId
 
@@ -118,7 +120,7 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
   private def processLDAUpdate(update: SparseLDAGraphUpdate)(implicit writer: GraphWriter) = {
 
     def removeOldURITopicsIfExists(uriVertexId: VertexDataId[UriReader], numTopics: Int): Unit = {
-      (0 until numTopics).foreach{ i =>
+      (0 until numTopics).foreach { i =>
         val topicId = LDATopicId(update.modelVersion, LDATopic(i))
         writer.removeEdgeIfExists(uriVertexId, topicId, WeightedEdgeReader)
         writer.removeEdgeIfExists(topicId, uriVertexId, WeightedEdgeReader)
@@ -130,18 +132,46 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
 
     val uriData = UriData(uriVertexId)
 
-    update.uriFeatures.features.topics foreach { case (topic, score) =>
-      val topicId = LDATopicId(update.modelVersion, topic)
-      val topicVertexId: VertexDataId[LDATopicReader] = topicId
-      writer.saveVertex(LDATopicData(topicVertexId))
-      writer.saveVertex(uriData)
-      writer.saveEdge(uriVertexId, topicVertexId, WeightedEdgeData(score))
-      writer.saveEdge(topicVertexId, uriVertexId, WeightedEdgeData(score))
+    update.uriFeatures.features.topics foreach {
+      case (topic, score) =>
+        val topicId = LDATopicId(update.modelVersion, topic)
+        val topicVertexId: VertexDataId[LDATopicReader] = topicId
+        writer.saveVertex(LDATopicData(topicVertexId))
+        writer.saveVertex(uriData)
+        writer.saveEdge(uriVertexId, topicVertexId, WeightedEdgeData(score))
+        writer.saveEdge(topicVertexId, uriVertexId, WeightedEdgeData(score))
     }
   }
 
   private def processNormalizedUriGraphUpdate(update: NormalizedUriGraphUpdate)(implicit writer: GraphWriter) = update.state match {
     case NormalizedURIStates.INACTIVE | NormalizedURIStates.REDIRECTED => writer.removeVertexIfExists(update.id)
     case _ => writer.saveVertex(UriData(update.id))
+  }
+
+  private def processEmailAccountGraphUpdate(update: EmailAccountGraphUpdate)(implicit writer: GraphWriter) = {
+    writer.saveVertex(EmailAccountData(update.emailAccountId))
+    update.userId.foreach { userId => // todo(Léo): once we have a more aggressive email verification policy, ignore unverified accounts
+      writer.saveVertex(UserData(userId))
+      writer.saveEdge(userId, update.emailAccountId, EmptyEdgeData)
+      writer.saveEdge(update.emailAccountId, userId, EmptyEdgeData)
+    }
+  }
+
+  private def processEmailContactGraphUpdate(update: EmailContactGraphUpdate)(implicit writer: GraphWriter) = {
+    if (update.deleted || update.hidden) {
+      writer.removeEdgeIfExists(update.abookId, update.emailAccountId, EmptyEdgeReader)
+      writer.removeEdgeIfExists(update.emailAccountId, update.abookId, EmptyEdgeReader)
+    } else {
+
+      writer.saveVertex(AddressBookData(update.abookId))
+      writer.saveVertex(UserData(update.userId))
+      writer.saveVertex(EmailAccountData(update.emailAccountId))
+
+      writer.saveEdge(update.userId, update.abookId, EmptyEdgeData)
+      writer.saveEdge(update.abookId, update.userId, EmptyEdgeData)
+
+      writer.saveEdge(update.emailAccountId, update.abookId, EmptyEdgeData)
+      writer.saveEdge(update.abookId, update.emailAccountId, EmptyEdgeData)
+    }
   }
 }

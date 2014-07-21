@@ -2,15 +2,15 @@ package com.keepit.realtime
 
 import java.util.concurrent.TimeoutException
 
-import scala.concurrent.{Future, future}
+import scala.concurrent.{ Future, future }
 
-import org.joda.time.{Days, DateTime}
+import org.joda.time.{ Days, DateTime }
 
-import com.google.inject.{Inject, ImplementedBy}
+import com.google.inject.{ Inject, ImplementedBy }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.net.{NonOKResponseException, HttpClient, DirectUrl}
+import com.keepit.common.net.{ NonOKResponseException, HttpClient, DirectUrl }
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.common.logging.Logging
@@ -23,14 +23,13 @@ import play.api.libs.json.Json
 case class UrbanAirshipConfig(key: String, secret: String, baseUrl: String = "https://go.urbanairship.com")
 
 case class Device(
-   id: Option[Id[Device]] = None,
-   userId: Id[User],
-   token: String,
-   deviceType: DeviceType,
-   state: State[Device] = DeviceStates.ACTIVE,
-   createdAt: DateTime = currentDateTime,
-   updatedAt: DateTime = currentDateTime
-   ) extends ModelWithState[Device] {
+    id: Option[Id[Device]] = None,
+    userId: Id[User],
+    token: String,
+    deviceType: DeviceType,
+    state: State[Device] = DeviceStates.ACTIVE,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime) extends ModelWithState[Device] {
 
   def withId(id: Id[Device]): Device = copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): Device = copy(updatedAt = updateTime)
@@ -40,13 +39,12 @@ object DeviceStates extends States[Device]
 
 @ImplementedBy(classOf[DeviceRepoImpl])
 trait DeviceRepo extends Repo[Device] {
-  def getByUserId(userId: Id[User], excludeState: Option[State[Device]] = Some(DeviceStates.INACTIVE))
-                 (implicit s: RSession): Seq[Device]
+  def getByUserId(userId: Id[User], excludeState: Option[State[Device]] = Some(DeviceStates.INACTIVE))(implicit s: RSession): Seq[Device]
   def get(userId: Id[User], token: String, deviceType: DeviceType)(implicit s: RSession): Option[Device]
   def get(token: String, deviceType: DeviceType)(implicit s: RSession): Seq[Device]
 }
 
-class DeviceRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) extends DeviceRepo with DbRepo[Device] with MessagingTypeMappers {
+class DeviceRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DeviceRepo with DbRepo[Device] with MessagingTypeMappers {
 
   import db.Driver.simple._
   implicit val deviceTypeTypeMapper = MappedColumnType.base[DeviceType, String](_.name, DeviceType.apply)
@@ -108,13 +106,12 @@ trait UrbanAirship {
   def updateDeviceState(device: Device): Future[Device]
 }
 
-class UrbanAirshipImpl @Inject()(
-  client: HttpClient,
-  config: UrbanAirshipConfig,
-  deviceRepo: DeviceRepo,
-  db: Database,
-  clock: Clock
-  ) extends UrbanAirship with Logging {
+class UrbanAirshipImpl @Inject() (
+    client: HttpClient,
+    config: UrbanAirshipConfig,
+    deviceRepo: DeviceRepo,
+    db: Database,
+    clock: Clock) extends UrbanAirship with Logging {
 
   lazy val authenticatedClient: HttpClient = {
     val encodedUserPass = new sun.misc.BASE64Encoder().encode(s"${config.key}:${config.secret}".getBytes)
@@ -124,7 +121,7 @@ class UrbanAirshipImpl @Inject()(
   def registerDevice(userId: Id[User], token: String, deviceType: DeviceType): Device = synchronized {
     log.info(s"Registering device: $token (user $userId)")
     val device = db.readWrite { implicit s =>
-      deviceRepo.get(token, deviceType).map{ d =>
+      deviceRepo.get(token, deviceType).map { d =>
         if (d.userId != userId) deviceRepo.save(d.copy(state = DeviceStates.INACTIVE))
       }
       deviceRepo.get(userId, token, deviceType) match {
@@ -134,7 +131,7 @@ class UrbanAirshipImpl @Inject()(
       }
     }
     future {
-      val devices = db.readOnly { implicit s => deviceRepo.getByUserId(userId) }
+      val devices = db.readOnlyReplica { implicit s => deviceRepo.getByUserId(userId) }
       devices foreach updateDeviceState
     }
     device
@@ -145,7 +142,7 @@ class UrbanAirshipImpl @Inject()(
     // UserNotifyPreferenceRepo.canSend(userId, someIdentifierRepresentingMobileNotificationType)
     log.info(s"Notifying user: $userId")
     for {
-      d <- db.readOnly { implicit s => deviceRepo.getByUserId(userId) }
+      d <- db.readOnlyReplica { implicit s => deviceRepo.getByUserId(userId) }
       device <- updateDeviceState(d) if device.state == DeviceStates.ACTIVE
     } {
       sendNotification(false, device, notification)
@@ -208,8 +205,8 @@ class UrbanAirshipImpl @Inject()(
             }
             postIOS(firstMessage, device, notification, retry = true)
           case t: Throwable =>
-              authenticatedClient.defaultFailureHandler(req)
-              throw new Exception(s"error posting to urbanairship on device $device notification $notification, not attempting retries", t)
+            authenticatedClient.defaultFailureHandler(req)
+            throw new Exception(s"error posting to urbanairship on device $device notification $notification, not attempting retries", t)
         }
       }
     )
@@ -222,21 +219,21 @@ class UrbanAirshipImpl @Inject()(
         "android" -> Json.obj(
           "alert" -> message,
           "extra" -> Json.obj(
-			"unreadCount" -> notification.unvisitedCount.toString,
-			"id" -> notification.id.id
-		  )
+            "unreadCount" -> notification.unvisitedCount.toString,
+            "id" -> notification.id.id
+          )
         )
       )
     } getOrElse {
       Json.obj(
         "apids" -> Seq(device.token),
         "android" -> Json.obj(
-		  "alert" -> s"",
-		  "extra" -> Json.obj(
-		    "unreadCount" -> notification.unvisitedCount.toString,
-		    "id" -> notification.id.id
-		  )
-		)
+          "alert" -> s"",
+          "extra" -> Json.obj(
+            "unreadCount" -> notification.unvisitedCount.toString,
+            "id" -> notification.id.id
+          )
+        )
       )
     }
     authenticatedClient.postFuture(DirectUrl(s"${config.baseUrl}/api/push"), json,
@@ -250,8 +247,8 @@ class UrbanAirshipImpl @Inject()(
             }
             postAndroid(firstMessage, device, notification, retry = true)
           case t: Throwable =>
-              authenticatedClient.defaultFailureHandler(req)
-              throw new Exception(s"error posting to urbanairship on device $device notification $notification, not attempting retries", t)
+            authenticatedClient.defaultFailureHandler(req)
+            throw new Exception(s"error posting to urbanairship on device $device notification $notification, not attempting retries", t)
         }
       }
     )
@@ -259,7 +256,7 @@ class UrbanAirshipImpl @Inject()(
 
   def sendNotification(firstMessage: Boolean, device: Device, notification: PushNotification): Unit = {
     log.info(s"Sending notification to device: ${device.token}")
-	device.deviceType match {
+    device.deviceType match {
       case DeviceType.IOS =>
         postIOS(firstMessage, device, notification)
       case DeviceType.Android =>

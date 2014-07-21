@@ -1,8 +1,7 @@
 package com.keepit.eliza.model
-import com.keepit.model.{URISummary, User}
+import com.keepit.model.{ URISummary, User }
 import com.keepit.eliza.util.MessageSegment
 import com.keepit.common.db.Id
-
 
 case class ThreadEmailInfo(
   pageUrl: String,
@@ -27,5 +26,4 @@ case class ThreadEmailData(
   allUserImageUrls: Map[Id[User], String],
   uriSummaryBig: URISummary,
   uriSummarySmall: URISummary,
-  readTimeMinutesOpt: Option[Int]
-)
+  readTimeMinutesOpt: Option[Int])

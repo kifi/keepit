@@ -1,26 +1,25 @@
 package com.keepit.model
 
-import com.google.inject.{Provider, Inject, Singleton, ImplementedBy}
+import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ExternalId, Id, State, SequenceNumber, NotFoundException}
+import com.keepit.common.db.{ ExternalId, Id, State, SequenceNumber, NotFoundException }
 import com.keepit.common.logging.Logging
-import com.keepit.common.time.{zones, Clock}
+import com.keepit.common.time.{ zones, Clock }
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.heimdal.{HeimdalContextBuilder, HeimdalServiceClient}
+import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalServiceClient }
 import com.keepit.common.akka.SafeFuture
-import scala.slick.jdbc.{PositionedResult, GetResult, StaticQuery}
+import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 import org.joda.time.DateTime
-import scala.slick.lifted.{TableQuery, Tag}
-import scala.slick.jdbc.{StaticQuery => Q}
+import scala.slick.lifted.{ TableQuery, Tag }
+import scala.slick.jdbc.{ StaticQuery => Q }
 import Q.interpolation
 import scalax.io.CloseableIterator
 import com.keepit.common.mail.EmailAddress
 
-
 @ImplementedBy(classOf[UserRepoImpl])
-trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColumnFunction[User] with SeqNumberFunction[User]{
+trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColumnFunction[User] with SeqNumberFunction[User] {
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User]
   def allActiveTimes()(implicit session: RSession): Seq[DateTime]
   def pageIncluding(includeStates: State[User]*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
@@ -31,23 +30,22 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def countIncludingWithoutExp(includeStates: State[User]*)(excludeExp: ExperimentType*)(implicit session: RSession): Int
   def countNewUsers(implicit session: RSession): Int
   def getNoCache(id: Id[User])(implicit session: RSession): User
-  def getOpt(id: Id[User])(implicit session: RSession): Option[User]
   def getAllIds()(implicit session: RSession): Set[Id[User]] //Note: Need to revisit when we have >50k users.
-  def getAllActiveIds()(implicit session: RSession):Seq[Id[User]]
+  def getAllActiveIds()(implicit session: RSession): Seq[Id[User]]
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User]
-  def getUsers(ids:Seq[Id[User]])(implicit session: RSession):Map[Id[User], User]
+  def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
 }
 
 @Singleton
 class UserRepoImpl @Inject() (
-    val db: DataBaseComponent,
-    val clock: Clock,
-    val externalIdCache: UserExternalIdCache,
-    val idCache: UserIdCache,
-    basicUserCache: BasicUserUserIdCache,
-    heimdal: HeimdalServiceClient,
-    expRepoProvider: Provider[UserExperimentRepoImpl])
-  extends DbRepo[User] with DbRepoWithDelete[User] with UserRepo with ExternalIdColumnDbFunction[User] with SeqNumberDbFunction[User] with Logging {
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val externalIdCache: UserExternalIdCache,
+  val idCache: UserIdCache,
+  basicUserCache: BasicUserUserIdCache,
+  heimdal: HeimdalServiceClient,
+  expRepoProvider: Provider[UserExperimentRepoImpl])
+    extends DbRepo[User] with DbRepoWithDelete[User] with UserRepo with ExternalIdColumnDbFunction[User] with SeqNumberDbFunction[User] with Logging {
 
   import scala.slick.lifted.Query
   import DBSession._
@@ -64,7 +62,8 @@ class UserRepoImpl @Inject() (
     def pictureName = column[String]("picture_name", O.Nullable)
     def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
     def primaryEmail = column[EmailAddress]("primary_email", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmail.?) <> ((User.apply _).tupled, User.unapply)
+    def username = column[Username]("username", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmail.?, username.?) <> ((User.apply _).tupled, User.unapply)
   }
 
   def table(tag: Tag) = new UserTable(tag)
@@ -89,8 +88,7 @@ class UserRepoImpl @Inject() (
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
-  def pageIncludingWithExp(includeStates: State[User]*)(includeExp: ExperimentType*)(page: Int = 0, size: Int = 20)
-                          (implicit session: RSession): Seq[User] = {
+  def pageIncludingWithExp(includeStates: State[User]*)(includeExp: ExperimentType*)(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[User] = {
     val q = for {
       u <- rows if ((u.state inSet includeStates) &&
         (for { e <- expRepo.rows if e.userId === u.id && (e.experimentType inSet includeExp) && e.state === UserExperimentStates.ACTIVE } yield e).exists)
@@ -98,8 +96,7 @@ class UserRepoImpl @Inject() (
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
 
-  def pageIncludingWithoutExp(includeStates: State[User]*)(excludeExp: ExperimentType*)(page: Int = 0, size: Int = 20)
-                             (implicit session: RSession): Seq[User] = {
+  def pageIncludingWithoutExp(includeStates: State[User]*)(excludeExp: ExperimentType*)(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[User] = {
     val q = for {
       u <- rows if ((u.state inSet includeStates) &&
         !(for { e <- expRepo.rows if u.id === e.userId && (e.experimentType inSet excludeExp) && e.state === UserExperimentStates.ACTIVE } yield e).exists)
@@ -112,8 +109,7 @@ class UserRepoImpl @Inject() (
     Query(q.length).first
   }
 
-  def countIncludingWithExp(includeStates: State[User]*)(includeExp: ExperimentType*)
-                           (implicit session: RSession): Int = {
+  def countIncludingWithExp(includeStates: State[User]*)(includeExp: ExperimentType*)(implicit session: RSession): Int = {
     val q = for {
       u <- rows if ((u.state inSet includeStates) &&
         (for { e <- expRepo.rows if e.userId === u.id && (e.experimentType inSet includeExp) && e.state === UserExperimentStates.ACTIVE } yield e).exists)
@@ -121,8 +117,7 @@ class UserRepoImpl @Inject() (
     Query(q.length).first
   }
 
-  def countIncludingWithoutExp(includeStates: State[User]*)(excludeExp: ExperimentType*)
-                           (implicit session: RSession): Int = {
+  def countIncludingWithoutExp(includeStates: State[User]*)(excludeExp: ExperimentType*)(implicit session: RSession): Int = {
     val q = for {
       u <- rows if ((u.state inSet includeStates) &&
         !(for { e <- expRepo.rows if u.id === e.userId && (e.experimentType inSet excludeExp) && e.state === UserExperimentStates.ACTIVE } yield e).exists)
@@ -173,23 +168,17 @@ class UserRepoImpl @Inject() (
 
   override def get(id: Id[User])(implicit session: RSession): User = {
     idCache.getOrElse(UserIdKey(id)) {
-      (for(f <- rows if f.id is id) yield f).firstOption.getOrElse(throw NotFoundException(id))
+      getCompiled(id).firstOption.getOrElse(throw NotFoundException(id))
     }
   }
 
   def getNoCache(id: Id[User])(implicit session: RSession): User = {
-    (for(f <- rows if f.id is id) yield f).firstOption.getOrElse(throw NotFoundException(id))
-  }
-
-  def getOpt(id: Id[User])(implicit session: RSession): Option[User] = {
-    idCache.getOrElseOpt(UserIdKey(id)) {
-      (for(f <- rows if f.id is id) yield f).firstOption
-    }
+    getCompiled(id).firstOption.getOrElse(throw NotFoundException(id))
   }
 
   override def getOpt(id: ExternalId[User])(implicit session: RSession): Option[User] = {
     externalIdCache.getOrElseOpt(UserExternalIdKey(id)) {
-      (for(f <- rows if f.externalId === id) yield f).firstOption
+      getByExtIdCompiled(id).firstOption
     }
   }
 
@@ -209,11 +198,12 @@ class UserRepoImpl @Inject() (
       val valueMap = idCache.bulkGetOrElse(ids.map(UserIdKey(_)).toSet) { keys =>
         val missing = keys.map(_.id)
         val users = (for (f <- rows if f.id.inSet(missing)) yield f).list
-        users.collect{ case u if u.state != UserStates.INACTIVE =>
-          (UserIdKey(u.id.get) -> u)
+        users.collect {
+          case u if u.state != UserStates.INACTIVE =>
+            (UserIdKey(u.id.get) -> u)
         }.toMap
       }
-      valueMap.map{ case (k, v) => (k.id -> v) }
+      valueMap.map { case (k, v) => (k.id -> v) }
     }
   }
 }

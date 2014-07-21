@@ -3,15 +3,15 @@ package com.keepit.model
 import java.math.BigInteger
 import java.security.SecureRandom
 
-import org.joda.time.{Period, DateTime}
+import org.joda.time.{ Period, DateTime }
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{State, Id}
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.time._
 import com.keepit.common.strings
-import com.keepit.common.mail.{EmailAddress}
+import com.keepit.common.mail.{ EmailAddress }
 import com.keepit.common.mail.ElectronicMailCategory
 
 @ImplementedBy(classOf[EmailOptOutRepoImpl])
@@ -41,15 +41,15 @@ class EmailOptOutRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock
   override def invalidateCache(model: EmailOptOut)(implicit session: RSession): Unit = {}
 
   def getByEmailAddress(address: EmailAddress, excludeState: Option[State[EmailOptOut]] = Some(EmailOptOutStates.INACTIVE))(implicit session: RSession): Seq[EmailOptOut] = {
-    (for(f <- rows if f.address === address && f.state =!= excludeState.orNull) yield f).list
+    (for (f <- rows if f.address === address && f.state =!= excludeState.orNull) yield f).list
   }
 
   def hasOptedOut(address: EmailAddress, category: ElectronicMailCategory = NotificationCategory.ALL)(implicit session: RSession): Boolean = {
-    val all : ElectronicMailCategory = NotificationCategory.ALL
+    val all: ElectronicMailCategory = NotificationCategory.ALL
     val q = if (category == all) {
-      for(f <- rows if f.address === address && f.state =!= EmailOptOutStates.INACTIVE) yield f
+      for (f <- rows if f.address === address && f.state =!= EmailOptOutStates.INACTIVE) yield f
     } else {
-      for(f <- rows if f.address === address && f.state =!= EmailOptOutStates.INACTIVE && (f.category === category || f.category === all)) yield f
+      for (f <- rows if f.address === address && f.state =!= EmailOptOutStates.INACTIVE && (f.category === category || f.category === all)) yield f
     }
     q.firstOption.exists(_ => true)
   }

@@ -7,7 +7,7 @@ import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
-import java.util.{Set => JSet}
+import java.util.{ Set => JSet }
 
 trait BoostQuery extends Query {
   val textQuery: Query
@@ -40,8 +40,8 @@ trait BoostQuery extends Query {
   override def equals(obj: Any): Boolean = obj match {
     case query: BoostQuery =>
       name == query.name &&
-      textQuery == query.textQuery &&
-      boosterQuery == query.boosterQuery
+        textQuery == query.textQuery &&
+        boosterQuery == query.boosterQuery
     case _ => false
   }
 

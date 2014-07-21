@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-import com.keepit.search.{SearchFilter, ArticleSearchResult, Lang, SearchConfigExperiment}
+import com.keepit.search.{ SearchFilter, ArticleSearchResult, Lang, SearchConfigExperiment }
 import com.keepit.search.index.Analyzer
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryUtil
@@ -23,14 +23,13 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
 
 class ResultDecorator(
-  userId: Id[User],
-  query: String,
-  lang: Lang,
-  showExperts: Boolean,
-  searchExperimentId: Option[Id[SearchConfigExperiment]],
-  shoeboxClient: ShoeboxServiceClient,
-  monitoredAwait: MonitoredAwait
-) extends Logging {
+    userId: Id[User],
+    query: String,
+    lang: Lang,
+    showExperts: Boolean,
+    searchExperimentId: Option[Id[SearchConfigExperiment]],
+    shoeboxClient: ShoeboxServiceClient,
+    monitoredAwait: MonitoredAwait) extends Logging {
 
   private[this] val externalId = ExternalId[ArticleSearchResult]()
   private[this] val analyzer = DefaultAnalyzer.getAnalyzerWithStemmer(lang)
@@ -38,14 +37,14 @@ class ResultDecorator(
 
   def decorate(result: PartialSearchResult, searchFilter: SearchFilter, withUriSummary: Boolean): DecoratedResult = {
     val hits = result.hits
-    val users = hits.foldLeft(Set.empty[Id[User]]){ (s, h) => s ++ h.users }
+    val users = hits.foldLeft(Set.empty[Id[User]]) { (s, h) => s ++ h.users }
     val usersFuture = if (users.isEmpty) Future.successful(Map.empty[Id[User], JsObject]) else {
-      shoeboxClient.getBasicUsers(users.toSeq).map{ _.map{ case (id, bu) => (id -> Json.toJson(bu).asInstanceOf[JsObject]) } }
+      shoeboxClient.getBasicUsers(users.toSeq).map { _.map { case (id, bu) => (id -> Json.toJson(bu).asInstanceOf[JsObject]) } }
     }
     val uriSummariesFuture = if (hits.isEmpty || !withUriSummary) Future.successful(Map.empty[Id[NormalizedURI], URISummary]) else {
       shoeboxClient.getURISummaries(hits.map(_.uriId))
     }
-    val expertsFuture = Promise.successful(List.empty[Id[User]]).future  // TODO: revisit
+    val expertsFuture = Promise.successful(List.empty[Id[User]]).future // TODO: revisit
 
     val highlightedHits = highlight(hits)
 
@@ -54,14 +53,14 @@ class ResultDecorator(
       result.hits.size < total
     }
 
-    val idFilter = result.hits.foldLeft(searchFilter.idFilter.toSet){ (s, h) => s + h.uriId.id }
+    val idFilter = result.hits.foldLeft(searchFilter.idFilter.toSet) { (s, h) => s + h.uriId.id }
 
     val (basicUserJsonMap, uriSummaryMap) = monitoredAwait.result(usersFuture zip uriSummariesFuture, 5 seconds, s"getting basic users and uri external ids")
     var decoratedHits = addBasicUsers(highlightedHits, result.friendStats, basicUserJsonMap)
     decoratedHits = addUriSummary(decoratedHits, uriSummaryMap)
 
     val expertIds = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
-    val experts = expertIds.flatMap{ expert => basicUserJsonMap.get(expert) }
+    val experts = expertIds.flatMap { expert => basicUserJsonMap.get(expert) }
 
     new DecoratedResult(
       externalId,
@@ -79,7 +78,7 @@ class ResultDecorator(
   }
 
   private def highlight(hits: Seq[DetailedSearchHit]): Seq[DetailedSearchHit] = {
-    hits.map{ h => h.set("bookmark", highlight(h.bookmark).json) }
+    hits.map { h => h.set("bookmark", highlight(h.bookmark).json) }
   }
 
   private def highlight(h: BasicSearchHit): BasicSearchHit = {
@@ -89,14 +88,14 @@ class ResultDecorator(
   }
 
   private def addBasicUsers(hits: Seq[DetailedSearchHit], friendStats: FriendStats, basicUserMap: Map[Id[User], JsObject]): Seq[DetailedSearchHit] = {
-    hits.map{ h =>
-      val basicUsers = h.users.sortBy{ id => - friendStats.score(id) }.flatMap(basicUserMap.get(_))
+    hits.map { h =>
+      val basicUsers = h.users.sortBy { id => -friendStats.score(id) }.flatMap(basicUserMap.get(_))
       h.set("basicUsers", JsArray(basicUsers))
     }
   }
 
   private def addUriSummary(hits: Seq[DetailedSearchHit], uriSummaryMap: Map[Id[NormalizedURI], URISummary]) = {
-    hits.map{ h =>
+    hits.map { h =>
       uriSummaryMap.get(h.uriId).map(uriSummary => h.set("uriSummary", Json.toJson(uriSummary))).getOrElse(h)
     }
   }
@@ -112,7 +111,7 @@ object Highlighter extends Logging {
     if (queryText != null && queryText.trim.length != 0) {
       // use the minimum parser to avoid expansions etc.
       val parser = new QueryParser(analyzer, analyzer) with DefaultSyntax
-      parser.parse(queryText).map{ query => QueryUtil.getTerms("", query).map(_.text) }.getOrElse(Set.empty)
+      parser.parse(queryText).map { query => QueryUtil.getTerms("", query).map(_.text) }.getOrElse(Set.empty)
     } else {
       Set.empty
     }
@@ -145,19 +144,20 @@ object Highlighter extends Logging {
       }
       var curStart = -1
       var curEnd = -1
-      positions.foreach{ case (start, end) =>
-        if (start < curEnd) { // overlapping
-          if (curEnd < end) {
-            positions += (curStart -> end) // extend the highlight region
-            positions -= start
+      positions.foreach {
+        case (start, end) =>
+          if (start < curEnd) { // overlapping
+            if (curEnd < end) {
+              positions += (curStart -> end) // extend the highlight region
+              positions -= start
+              curEnd = end
+            } else { // inclusion. remove it
+              positions -= start
+            }
+          } else {
+            curStart = start
             curEnd = end
-          } else { // inclusion. remove it
-            positions -= start
           }
-        } else {
-          curStart = start
-          curEnd = end
-        }
       }
       if (positions.nonEmpty) positions.toSeq else emptyMatches
     } else {
@@ -182,5 +182,4 @@ case class DecoratedResult(
   mayHaveMoreHits: Boolean,
   show: Boolean,
   searchExperimentId: Option[Id[SearchConfigExperiment]],
-  experts: Seq[JsObject]
-)
+  experts: Seq[JsObject])

@@ -19,12 +19,12 @@ object LineField {
 }
 
 trait LineFieldBuilder {
-  def buildLineField[T](fieldName: String, lines: Seq[(Int, T, Lang)], fieldType: FieldType = TextField.TYPE_NOT_STORED)(tokenStreamFunc: (String, T, Lang)=>TokenStream): Field = {
+  def buildLineField[T](fieldName: String, lines: Seq[(Int, T, Lang)], fieldType: FieldType = TextField.TYPE_NOT_STORED)(tokenStreamFunc: (String, T, Lang) => TokenStream): Field = {
     new Field(fieldName, new LineTokenStream(fieldName, lines, tokenStreamFunc), fieldType)
   }
 }
 
-class LineTokenStream[T](fieldName: String, lines: Seq[(Int, T, Lang)], tokenStreamFunc: (String, T, Lang)=>TokenStream) extends TokenStream {
+class LineTokenStream[T](fieldName: String, lines: Seq[(Int, T, Lang)], tokenStreamFunc: (String, T, Lang) => TokenStream) extends TokenStream {
   private[this] val termAttr = addAttribute(classOf[CharTermAttribute])
   private[this] val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
   private[this] val lineIter = lines.sortBy(_._1).iterator
@@ -37,7 +37,7 @@ class LineTokenStream[T](fieldName: String, lines: Seq[(Int, T, Lang)], tokenStr
   private[this] var basePosIncrAttr: PositionIncrementAttribute = null
 
   private def lineRange(lineNo: Int) = (lineNo * LineField.MAX_POSITION_PER_LINE,
-                                        (lineNo + 1) * LineField.MAX_POSITION_PER_LINE - LineField.LINE_GAP)
+    (lineNo + 1) * LineField.MAX_POSITION_PER_LINE - LineField.LINE_GAP)
 
   override def incrementToken(): Boolean = {
     clearAttributes()

@@ -9,12 +9,12 @@ import com.keepit.model._
 import play.api.libs.json.Json
 import com.keepit.common.healthcheck._
 import com.keepit.scraper.FakeScrapeSchedulerModule
-import com.keepit.heimdal.{KifiHitContext, SanitizedKifiHit, HeimdalContext}
-import com.keepit.shoebox.{FakeKeepImportsModule, KeepImportsModule}
-import com.keepit.common.actor.{StandaloneTestActorSystemModule, TestActorSystemModule}
+import com.keepit.heimdal.{ KifiHitContext, SanitizedKifiHit, HeimdalContext }
+import com.keepit.shoebox.{ FakeKeepImportsModule, KeepImportsModule }
+import com.keepit.common.actor.{ StandaloneTestActorSystemModule, TestActorSystemModule }
 import akka.actor.ActorSystem
 import com.keepit.search.ArticleSearchResult
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.{ Id, ExternalId }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import play.api.libs.json.Json.JsValueWrapper
@@ -29,9 +29,9 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
   implicit val system = ActorSystem("test")
   implicit val execCtx = fj
 
-  def modules:Seq[ScalaModule] = Seq(FakeKeepImportsModule(), FakeScrapeSchedulerModule())
+  def modules: Seq[ScalaModule] = Seq(FakeKeepImportsModule(), FakeScrapeSchedulerModule())
 
-  val keep42   = Json.obj("url" -> "http://42go.com", "isPrivate" -> false)
+  val keep42 = Json.obj("url" -> "http://42go.com", "isPrivate" -> false)
   val keepKifi = Json.obj("url" -> "http://kifi.com", "isPrivate" -> false)
   val keepGoog = Json.obj("url" -> "http://google.com", "isPrivate" -> false)
   val keepBing = Json.obj("url" -> "http://bing.com", "isPrivate" -> false)
@@ -47,9 +47,9 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         }
         val bookmarkInterner = inject[KeepInterner]
         val (bookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmarks(Json.obj(
-            "url" -> "http://42go.com",
-            "isPrivate" -> true
-          )), user.id.get, KeepSource.email, true)
+          "url" -> "http://42go.com",
+          "isPrivate" -> true
+        )), user.id.get, KeepSource.email, true)
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 1
@@ -169,9 +169,9 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           val cu0 = keepDiscoveryRepo.getDiscoveriesByUUID(kc0.hitUUID)
           cu0.size === 1
           cu0(0).createdAt === kc0.createdAt
-          cu0(0).hitUUID  === kc0.hitUUID
+          cu0(0).hitUUID === kc0.hitUUID
           cu0(0).keeperId === u1.id.get
-          cu0(0).keepId   === keeps1(0).id.get
+          cu0(0).keepId === keeps1(0).id.get
 
           val cu1 = keepDiscoveryRepo.getDiscoveriesByUUID(kc1.hitUUID)
           cu1.size === 2
@@ -203,9 +203,10 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           val uriCounts1 = keepDiscoveryRepo.getUriDiscoveryCountsByKeeper(u1.id.get)
           uriCounts1.size === counts1.size
           uriCounts1.map(_._2).toSeq.sorted === counts1.map(_._2).toSeq.sorted
-          uriCounts1.forall { case (uriId, count) =>
-            val keep = keeps1.find(_.uriId == uriId).get
-            counts1.get(keep.id.get).get == count
+          uriCounts1.forall {
+            case (uriId, count) =>
+              val keep = keeps1.find(_.uriId == uriId).get
+              counts1.get(keep.id.get).get == count
           } === true
 
           val counts2 = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u2.id.get)
@@ -286,9 +287,10 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
 
           val uriRKC1 = rekeepRepo.getUriReKeepCountsByKeeper(u1.id.get)
           uriRKC1.size === rkc1.size
-          uriRKC1.forall { case (uri, count) =>
-            val keep = keeps1.find(_.uriId == uri).get
-            rkc1.get(keep.id.get).get == count
+          uriRKC1.forall {
+            case (uri, count) =>
+              val keep = keeps1.find(_.uriId == uri).get
+              rkc1.get(keep.id.get).get == count
           } === true
 
           val rkc2 = rekeepRepo.getReKeepCountsByKeeper(u2.id.get)
@@ -296,18 +298,20 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           rkc2.get(keeps2(1).id.get) === None
           rkc2.get(keeps2(2).id.get) === None
 
-          rekeepRepo.getReKeepCountByKeeper(u1.id.get) === rkc1.valuesIterator.foldLeft(0) {(a,c) => a + c}
-          rekeepRepo.getReKeepCountByKeeper(u2.id.get) === rkc2.valuesIterator.foldLeft(0) {(a,c) => a + c}
+          rekeepRepo.getReKeepCountByKeeper(u1.id.get) === rkc1.valuesIterator.foldLeft(0) { (a, c) => a + c }
+          rekeepRepo.getReKeepCountByKeeper(u2.id.get) === rkc2.valuesIterator.foldLeft(0) { (a, c) => a + c }
           rekeepRepo.getReKeepCountByKeeper(u3.id.get) === 1
           rekeepRepo.getReKeepCountByKeeper(u4.id.get) === 0
 
           val bkMap1 = keepRepo.bulkGetByUserAndUriIds(u1.id.get, keeps1.map(_.uriId).toSet)
-          bkMap1.forall { case (uriId, keep) =>
-            keeps1.find(_.uriId == uriId).get == keep
+          bkMap1.forall {
+            case (uriId, keep) =>
+              keeps1.find(_.uriId == uriId).get == keep
           } === true
           val bkMap2 = keepRepo.bulkGetByUserAndUriIds(u2.id.get, keeps2.map(_.uriId).toSet)
-          bkMap2.forall { case (uriId, keep) =>
-            keeps2.find(_.uriId == uriId).get == keep
+          bkMap2.forall {
+            case (uriId, keep) =>
+              keeps2.find(_.uriId == uriId).get == keep
           } === true
         }
 
@@ -322,15 +326,15 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         kbd1(1) === Set(keeps3(0).id.get)
         kbd1(2) === Set(keeps4(0).id.get)
 
-        db.readOnly { implicit ro => userBookmarkClicksRepo.getByUserUri(u1.id.get, keeps1(1).uriId) } === None
+        db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getByUserUri(u1.id.get, keeps1(1).uriId) } === None
         val bc1 = Await.result(attrCmdr.updateUserReKeepStatus(u1.id.get), Duration.Inf)
         bc1.nonEmpty === true
         bc1.length === 1
         bc1(0).rekeepCount === 1
         bc1(0).rekeepTotalCount === 2
 
-        db.readOnly { implicit ro => userBookmarkClicksRepo.getByUserUri(u2.id.get, keeps2(0).uriId) } === None
-        db.readOnly { implicit ro => userBookmarkClicksRepo.getByUserUri(u3.id.get, keeps3(0).uriId) } === None
+        db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getByUserUri(u2.id.get, keeps2(0).uriId) } === None
+        db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getByUserUri(u3.id.get, keeps3(0).uriId) } === None
 
         val bc3 = Await.result(attrCmdr.updateUserReKeepStatus(u3.id.get), Duration.Inf)
         bc3(0).rekeepCount === 1
@@ -347,13 +351,13 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         allStats(2)(0).rekeepCount === bc3(0).rekeepCount
         allStats(2)(0).rekeepTotalCount === bc3(0).rekeepTotalCount
 
-        val (rkc1, rktc1) = db.readOnly { implicit ro => userBookmarkClicksRepo.getReKeepCounts(u1.id.get) }
-        bc1.foldLeft(0) {(a,c) => a + c.rekeepCount} === rkc1
-        bc1.foldLeft(0) {(a,c) => a + c.rekeepTotalCount} === rktc1
+        val (rkc1, rktc1) = db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getReKeepCounts(u1.id.get) }
+        bc1.foldLeft(0) { (a, c) => a + c.rekeepCount } === rkc1
+        bc1.foldLeft(0) { (a, c) => a + c.rekeepTotalCount } === rktc1
 
-        val (rkc3, rktc3) = db.readOnly { implicit ro => userBookmarkClicksRepo.getReKeepCounts(u3.id.get) }
-        bc3.foldLeft(0) {(a,c) => a + c.rekeepCount} === rkc3
-        bc3.foldLeft(0) {(a,c) => a + c.rekeepTotalCount} === rktc3
+        val (rkc3, rktc3) = db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getReKeepCounts(u3.id.get) }
+        bc3.foldLeft(0) { (a, c) => a + c.rekeepCount } === rkc3
+        bc3.foldLeft(0) { (a, c) => a + c.rekeepTotalCount } === rktc3
       }
     }
 
@@ -380,14 +384,14 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         keeps1.size === 2
         keeps2.size === 3
         keeps1(1).uriId === keeps2(0).uriId
-        val clicks1 = db.readOnly { implicit rw =>
+        val clicks1 = db.readOnlyMaster { implicit rw =>
           keepDiscoveryRepo.getByKeepId(keeps1(1).id.get)
         }
         clicks1.size === 1
         clicks1.headOption.exists { click =>
           click.keeperId == u1.id.get && click.keepId == keeps1(1).id.get
         } === true
-        val rekeeps1 = db.readOnly { implicit ro =>
+        val rekeeps1 = db.readOnlyMaster { implicit ro =>
           rekeepRepo.getAllReKeepsByKeeper(u1.id.get)
         }
       }
@@ -461,9 +465,9 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           val cu0 = keepDiscoveryRepo.getDiscoveriesByUUID(kc0.hitUUID)
           cu0.size === 1
           cu0(0).createdAt === kc0.createdAt
-          cu0(0).hitUUID  === kc0.hitUUID
+          cu0(0).hitUUID === kc0.hitUUID
           cu0(0).keeperId === u1.id.get
-          cu0(0).keepId   === keeps1(0).id.get
+          cu0(0).keepId === keeps1(0).id.get
 
           val cu1 = keepDiscoveryRepo.getDiscoveriesByUUID(kc1.hitUUID)
           cu1.size === 2
@@ -495,9 +499,10 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           val uriCounts1 = keepDiscoveryRepo.getUriDiscoveryCountsByKeeper(u1.id.get)
           uriCounts1.size === counts1.size
           uriCounts1.map(_._2).toSeq.sorted === counts1.map(_._2).toSeq.sorted
-          uriCounts1.forall { case (uriId, count) =>
-            val keep = keeps1.find(_.uriId == uriId).get
-            counts1.get(keep.id.get).get == count
+          uriCounts1.forall {
+            case (uriId, count) =>
+              val keep = keeps1.find(_.uriId == uriId).get
+              counts1.get(keep.id.get).get == count
           } === true
 
           val counts2 = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u2.id.get)
@@ -528,7 +533,6 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           rks1.find(_.srcUserId == u3.id.get).exists { rk =>
             rk.keeperId == u1.id.get && rk.keepId == keeps1(1).id.get && rk.srcKeepId == keeps3(0).id.get // search
           } === true
-
 
           val rk2 = rekeeps.find(_.keeperId == u2.id.get).get
           rk2.keeperId === u2.id.get
@@ -583,9 +587,10 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
 
           val uriRKC1 = rekeepRepo.getUriReKeepCountsByKeeper(u1.id.get)
           uriRKC1.size === rkc1.size
-          uriRKC1.forall { case (uri, count) =>
-            val keep = keeps1.find(_.uriId == uri).get
-            rkc1.get(keep.id.get).get == count
+          uriRKC1.forall {
+            case (uri, count) =>
+              val keep = keeps1.find(_.uriId == uri).get
+              rkc1.get(keep.id.get).get == count
           } === true
 
           val rkc2 = rekeepRepo.getReKeepCountsByKeeper(u2.id.get)
@@ -593,18 +598,20 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           rkc2.get(keeps2(1).id.get) === None
           rkc2.get(keeps2(2).id.get) === None
 
-          rekeepRepo.getReKeepCountByKeeper(u1.id.get) === rkc1.valuesIterator.foldLeft(0) {(a,c) => a + c}
-          rekeepRepo.getReKeepCountByKeeper(u2.id.get) === rkc2.valuesIterator.foldLeft(0) {(a,c) => a + c}
+          rekeepRepo.getReKeepCountByKeeper(u1.id.get) === rkc1.valuesIterator.foldLeft(0) { (a, c) => a + c }
+          rekeepRepo.getReKeepCountByKeeper(u2.id.get) === rkc2.valuesIterator.foldLeft(0) { (a, c) => a + c }
           rekeepRepo.getReKeepCountByKeeper(u3.id.get) === 1
           rekeepRepo.getReKeepCountByKeeper(u4.id.get) === 0
 
           val bkMap1 = keepRepo.bulkGetByUserAndUriIds(u1.id.get, keeps1.map(_.uriId).toSet)
-          bkMap1.forall { case (uriId, keep) =>
-            keeps1.find(_.uriId == uriId).get == keep
+          bkMap1.forall {
+            case (uriId, keep) =>
+              keeps1.find(_.uriId == uriId).get == keep
           } === true
           val bkMap2 = keepRepo.bulkGetByUserAndUriIds(u2.id.get, keeps2.map(_.uriId).toSet)
-          bkMap2.forall { case (uriId, keep) =>
-            keeps2.find(_.uriId == uriId).get == keep
+          bkMap2.forall {
+            case (uriId, keep) =>
+              keeps2.find(_.uriId == uriId).get == keep
           } === true
         }
 
@@ -619,15 +626,15 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         kbd1(1) === Set(keeps2(0).id.get, keeps3(0).id.get) // chat & search
         kbd1(2) === Set(keeps4(0).id.get)
 
-        db.readOnly { implicit ro => userBookmarkClicksRepo.getByUserUri(u1.id.get, keeps1(1).uriId) } === None
+        db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getByUserUri(u1.id.get, keeps1(1).uriId) } === None
         val bc1 = Await.result(attrCmdr.updateUserReKeepStatus(u1.id.get), Duration.Inf)
         bc1.nonEmpty === true
         bc1.length === 1
         bc1(0).rekeepCount === 2
         bc1(0).rekeepTotalCount === 3
 
-        db.readOnly { implicit ro => userBookmarkClicksRepo.getByUserUri(u2.id.get, keeps2(0).uriId) } === None
-        db.readOnly { implicit ro => userBookmarkClicksRepo.getByUserUri(u3.id.get, keeps3(0).uriId) } === None
+        db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getByUserUri(u2.id.get, keeps2(0).uriId) } === None
+        db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getByUserUri(u3.id.get, keeps3(0).uriId) } === None
 
         val bc3 = Await.result(attrCmdr.updateUserReKeepStatus(u3.id.get), Duration.Inf)
         bc3(0).rekeepCount === 1
@@ -644,13 +651,13 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         allStats(2)(0).rekeepCount === bc3(0).rekeepCount
         allStats(2)(0).rekeepTotalCount === bc3(0).rekeepTotalCount
 
-        val (rkc1, rktc1) = db.readOnly { implicit ro => userBookmarkClicksRepo.getReKeepCounts(u1.id.get) }
-        bc1.foldLeft(0) {(a,c) => a + c.rekeepCount} === rkc1
-        bc1.foldLeft(0) {(a,c) => a + c.rekeepTotalCount} === rktc1
+        val (rkc1, rktc1) = db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getReKeepCounts(u1.id.get) }
+        bc1.foldLeft(0) { (a, c) => a + c.rekeepCount } === rkc1
+        bc1.foldLeft(0) { (a, c) => a + c.rekeepTotalCount } === rktc1
 
-        val (rkc3, rktc3) = db.readOnly { implicit ro => userBookmarkClicksRepo.getReKeepCounts(u3.id.get) }
-        bc3.foldLeft(0) {(a,c) => a + c.rekeepCount} === rkc3
-        bc3.foldLeft(0) {(a,c) => a + c.rekeepTotalCount} === rktc3
+        val (rkc3, rktc3) = db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getReKeepCounts(u3.id.get) }
+        bc3.foldLeft(0) { (a, c) => a + c.rekeepCount } === rkc3
+        bc3.foldLeft(0) { (a, c) => a + c.rekeepTotalCount } === rktc3
       }
     }
 
@@ -726,7 +733,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           "url" -> "http://42go.com/",
           "isPrivate" -> true
         ))), user.id.get, KeepSource.keeper, true)
-        db.readOnly { implicit s =>
+        db.readOnlyMaster { implicit s =>
           bookmarks.size === 1
           keepRepo.all.size === 1
         }

@@ -3,30 +3,29 @@ package com.keepit.scraper
 import scala.util.Random
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import play.api.{Play, Configuration}
+import play.api.{ Play, Configuration }
 
 case class ScraperIntervalConfig(
-  initialBackoff: Double,     //hours
-  maxBackoff: Double,         //hours
-  maxRandomDelay: Int,        // seconds
-  minInterval: Double,        //hours
-  maxInterval: Double,        //hours
-  intervalIncrement: Double,  //hours
-  intervalDecrement: Double   //hours
-)
+  initialBackoff: Double, //hours
+  maxBackoff: Double, //hours
+  maxRandomDelay: Int, // seconds
+  minInterval: Double, //hours
+  maxInterval: Double, //hours
+  intervalIncrement: Double, //hours
+  intervalDecrement: Double //hours
+  )
 
 case class ScraperSchedulerConfig(
-  actorTimeout: Int,
-  scrapePendingFrequency: Int,          // seconds
-  checkOverdueCountFrequency: Int,      // minutes
-  pendingOverdueThreshold: Int,         // minutes
-  overdueCountThreshold: Int,
-  intervalConfig: ScraperIntervalConfig
-) {
+    actorTimeout: Int,
+    scrapePendingFrequency: Int, // seconds
+    checkOverdueCountFrequency: Int, // minutes
+    pendingOverdueThreshold: Int, // minutes
+    overdueCountThreshold: Int,
+    intervalConfig: ScraperIntervalConfig) {
   private[this] val rnd = new Random
-  def randomDelay(): Int = rnd.nextInt(intervalConfig.maxRandomDelay)     // seconds
+  def randomDelay(): Int = rnd.nextInt(intervalConfig.maxRandomDelay) // seconds
 }
 
 trait ScrapeSchedulerConfigModule extends ScalaModule {

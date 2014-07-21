@@ -4,7 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.model._
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.MonitoredAwait
@@ -41,10 +41,9 @@ class MainSearcherFactory @Inject() (
     spellCorrector: SpellCorrector,
     monitoredAwait: MonitoredAwait,
     implicit private val clock: Clock,
-    implicit private val fortyTwoServices: FortyTwoServices
- ) extends Logging {
+    implicit private val fortyTwoServices: FortyTwoServices) extends Logging {
 
-  private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[(Shard[NormalizedURI],Id[User]), URIGraphSearcherWithUser](3 seconds)
+  private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[(Shard[NormalizedURI], Id[User]), URIGraphSearcherWithUser](3 seconds)
   private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[(Shard[NormalizedURI], Id[User]), CollectionSearcherWithUser](3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](10 seconds)
   private[this] val consolidateLangFreqsReq = new RequestConsolidator[Id[User], Map[Lang, Int]](180 seconds)
@@ -60,30 +59,29 @@ class MainSearcherFactory @Inject() (
     lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
-    config: SearchConfig
-  ): Seq[MainSearcher] = {
+    config: SearchConfig): Seq[MainSearcher] = {
     val clickHistoryFuture = getClickHistoryFuture(userId)
     val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
 
     val parser = parserFactory(lang1, lang2, config)
 
-    val searchers = shards.toSeq.map{ shard =>
+    val searchers = shards.toSeq.map { shard =>
       val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
       val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
 
       new MainSearcher(
-          userId,
-          lang1,
-          lang2,
-          numHitsToReturn,
-          filter,
-          config,
-          parser,
-          articleSearcher,
-          socialGraphInfo,
-          clickBoostsFuture,
-          clickHistoryFuture,
-          monitoredAwait
+        userId,
+        lang1,
+        lang2,
+        numHitsToReturn,
+        filter,
+        config,
+        parser,
+        articleSearcher,
+        socialGraphInfo,
+        clickBoostsFuture,
+        clickHistoryFuture,
+        monitoredAwait
       )
     }
 
@@ -103,8 +101,7 @@ class MainSearcherFactory @Inject() (
     lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
-    config: SearchConfig
-  ): MainSearcher = {
+    config: SearchConfig): MainSearcher = {
     val searchers = apply(Set(shard), userId, queryString, lang1, lang2, numHitsToReturn, filter, config)
     searchers(0)
   }
@@ -127,25 +124,27 @@ class MainSearcherFactory @Inject() (
     new SocialGraphInfo(userId, getURIGraphSearcher(shard, userId), getCollectionSearcher(shard, userId), filter: SearchFilter, monitoredAwait)
   }
 
-  private[this] def getURIGraphSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = consolidateURIGraphSearcherReq((shard, userId)){ case (shard, userId) =>
-    val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
-    val userGraphsSearcher = userGraphsSearcherFactory(userId)
-    Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, userGraphsSearcher)).future
+  private[this] def getURIGraphSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = consolidateURIGraphSearcherReq((shard, userId)) {
+    case (shard, userId) =>
+      val uriGraphIndexer = shardedUriGraphIndexer.getIndexer(shard)
+      val userGraphsSearcher = userGraphsSearcherFactory(userId)
+      Promise[URIGraphSearcherWithUser].success(URIGraphSearcher(userId, uriGraphIndexer, userGraphsSearcher)).future
   }
 
   def getURIGraphSearcher(shard: Shard[NormalizedURI], userId: Id[User]): URIGraphSearcherWithUser = {
     Await.result(getURIGraphSearcherFuture(shard, userId), 5 seconds)
   }
 
-  private[this] def getCollectionSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = consolidateCollectionSearcherReq((shard, userId)){ case (shard, userId) =>
-    Promise[CollectionSearcherWithUser].success(CollectionSearcher(userId, shardedCollectionIndexer.getIndexer(shard))).future
+  private[this] def getCollectionSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = consolidateCollectionSearcherReq((shard, userId)) {
+    case (shard, userId) =>
+      Promise[CollectionSearcherWithUser].success(CollectionSearcher(userId, shardedCollectionIndexer.getIndexer(shard))).future
   }
 
   def getCollectionSearcher(shard: Shard[NormalizedURI], userId: Id[User]): CollectionSearcherWithUser = {
     Await.result(getCollectionSearcherFuture(shard, userId), 5 seconds)
   }
 
-  private[this] def getClickHistoryFuture(userId: Id[User]) = consolidateClickHistoryReq(userId){ userId =>
+  private[this] def getClickHistoryFuture(userId: Id[User]) = consolidateClickHistoryReq(userId) { userId =>
     SafeFuture(clickHistoryTracker.getMultiHashFilter(userId))
   }
 
@@ -153,23 +152,25 @@ class MainSearcherFactory @Inject() (
     resultClickTracker.getBoostsFuture(userId, queryString, maxResultClickBoost)
   }
 
-  def distLangFreqsFuture(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Future[Map[Lang, Int]] = consolidateLangFreqsReq(userId){ case userId =>
-    Future.traverse(shards){ shard =>
-      SafeFuture{
-        val searcher = getURIGraphSearcher(shard, userId)
-        searcher.getLangProfile()
+  def distLangFreqsFuture(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Future[Map[Lang, Int]] = consolidateLangFreqsReq(userId) {
+    case userId =>
+      Future.traverse(shards) { shard =>
+        SafeFuture {
+          val searcher = getURIGraphSearcher(shard, userId)
+          searcher.getLangProfile()
+        }
+      }.map { results =>
+        results.map(_.iterator).flatten.foldLeft(Map[Lang, Int]()) {
+          case (m, (lang, count)) =>
+            m + (lang -> (count + m.getOrElse(lang, 0)))
+        }
       }
-    }.map{ results =>
-      results.map(_.iterator).flatten.foldLeft(Map[Lang, Int]()){ case (m, (lang, count)) =>
-        m + (lang -> (count + m.getOrElse(lang, 0)))
-      }
-    }
   }
 
   def getConfigFuture(userId: Id[User], experiments: Set[ExperimentType], predefinedConfig: Option[SearchConfig] = None): Future[(SearchConfig, Option[Id[SearchConfigExperiment]])] = {
     predefinedConfig match {
       case None =>
-        consolidateConfigReq(userId){ k => searchConfigManager.getConfigFuture(userId, experiments) }
+        consolidateConfigReq(userId) { k => searchConfigManager.getConfigFuture(userId, experiments) }
       case Some(conf) =>
         val default = searchConfigManager.defaultConfig
         // almost complete overwrite. But when search config parameter list changes, this prevents exception

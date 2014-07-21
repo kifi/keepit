@@ -9,7 +9,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.abook.ABookServiceClient
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.common.logging.Logging
-import com.keepit.model.{NormalizedURI, UserConnection, User}
+import com.keepit.model.NormalizedURI
 import com.keepit.common.ImmediateMap
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.models.lda.DenseLDA
@@ -19,11 +19,10 @@ trait GraphUpdateFetcher {
 }
 
 class GraphUpdateFetcherImpl @Inject() (
-  shoebox: ShoeboxServiceClient,
-  eliza: ElizaServiceClient,
-  abook: ABookServiceClient,
-  cortex: CortexServiceClient
-) extends GraphUpdateFetcher with Logging{
+    shoebox: ShoeboxServiceClient,
+    eliza: ElizaServiceClient,
+    abook: ABookServiceClient,
+    cortex: CortexServiceClient) extends GraphUpdateFetcher with Logging {
 
   def fetch[U <: GraphUpdate](kind: GraphUpdateKind[U], seq: SequenceNumber[U], fetchSize: Int): Future[Seq[U]] = {
 
@@ -43,12 +42,17 @@ class GraphUpdateFetcherImpl @Inject() (
 
       case SparseLDAGraphUpdate => {
         val cortexSeq = CortexSequenceNumber.fromLong[DenseLDA, NormalizedURI](seq.value)
-        cortex.getSparseLDAFeaturesChanged(cortexSeq.modelVersion, cortexSeq.seq, fetchSize).imap { case (modelVersion, uriFeaturesBatch) =>
-          uriFeaturesBatch.map { uriFeatures => SparseLDAGraphUpdate(modelVersion, uriFeatures) }
+        cortex.getSparseLDAFeaturesChanged(cortexSeq.modelVersion, cortexSeq.seq, fetchSize).imap {
+          case (modelVersion, uriFeaturesBatch) =>
+            uriFeaturesBatch.map { uriFeatures => SparseLDAGraphUpdate(modelVersion, uriFeatures) }
         }
       }
 
       case NormalizedUriGraphUpdate => shoebox.getIndexableUris(seq.copy(), fetchSize).imap(_.map(NormalizedUriGraphUpdate.apply))
+
+      case EmailAccountGraphUpdate => abook.getEmailAccountsChanged(seq.copy(), fetchSize).imap(_.map(EmailAccountGraphUpdate.apply))
+
+      case EmailContactGraphUpdate => abook.getContactsChanged(seq.copy(), fetchSize).imap(_.map(EmailContactGraphUpdate.apply))
     }
   }
 }

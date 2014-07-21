@@ -9,18 +9,16 @@ import com.keepit.search.index.IndexerActor
 import com.keepit.search.index.IndexerPlugin
 import com.keepit.search.index.IndexerPluginImpl
 import com.keepit.search.index.IndexManager
-import com.keepit.model.{UserConnection, NormalizedURI}
+import com.keepit.model.{ UserConnection, NormalizedURI }
 
 trait UserGraphPlugin extends IndexerPlugin[UserConnection, UserGraphIndexer]
 
-class UserGraphPluginImpl @Inject()(
+class UserGraphPluginImpl @Inject() (
   actor: ActorInstance[UserGraphActor],
   indexer: UserGraphIndexer,
   serviceDiscovery: ServiceDiscovery,
-  val scheduling: SchedulingProperties
-) extends IndexerPluginImpl[UserConnection, UserGraphIndexer, UserGraphActor](indexer, actor, serviceDiscovery) with UserGraphPlugin
+  val scheduling: SchedulingProperties) extends IndexerPluginImpl[UserConnection, UserGraphIndexer, UserGraphActor](indexer, actor, serviceDiscovery) with UserGraphPlugin
 
-class UserGraphActor @Inject()(
+class UserGraphActor @Inject() (
   airbrake: AirbrakeNotifier,
-  indexer: UserGraphIndexer
-) extends IndexerActor[UserConnection, UserGraphIndexer](airbrake, indexer)
+  indexer: UserGraphIndexer) extends IndexerActor[UserConnection, UserGraphIndexer](airbrake, indexer)

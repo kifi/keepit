@@ -8,10 +8,10 @@ import javax.crypto.spec.SecretKeySpec
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
-import com.keepit.common.net.{FakeHttpClient, DirectUrl}
+import com.keepit.common.net.{ FakeHttpClient, DirectUrl }
 import com.keepit.common.time._
-import com.keepit.model.{SocialUserInfo, SocialUserInfoRepo, User}
-import com.keepit.social.{SocialId, SocialNetworks}
+import com.keepit.model.{ SocialUserInfo, SocialUserInfoRepo, User }
+import com.keepit.social.{ SocialId, SocialNetworks }
 import com.keepit.test._
 
 import oauth.signpost.exception.OAuthExpectationFailedException
@@ -22,7 +22,7 @@ import play.api.libs.json.Json
 
 import scala.util.Success
 
-import securesocial.core.{AuthenticationMethod, IdentityId, OAuth2Info, OAuth2Settings, SocialUser}
+import securesocial.core.{ AuthenticationMethod, IdentityId, OAuth2Info, OAuth2Settings, SocialUser }
 
 class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
 
@@ -80,7 +80,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
     "fetch from facebook using jennifer_hirsch" in {
       withDb() { implicit injector =>
         val data = io.Source.fromFile(new File("test/com/keepit/common/social/data/jennifer_hirsch.min.json")).mkString
-        val httpClient = new FakeHttpClient(Some({ case _ => data}))
+        val httpClient = new FakeHttpClient(Some({ case _ => data }))
         val info = SocialUserInfo(userId = None, fullName = "", socialId = SocialId(""), networkType = SocialNetworks.FACEBOOK, credentials = None)
 
         val graph = new FacebookSocialGraph(httpClient, db, null, null, socialUserInfoRepo, null) {
@@ -96,7 +96,7 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
       skipped("json is very large, stress test only")
       withDb() { implicit injector =>
         val data = io.Source.fromFile(new File("test/com/keepit/common/social/data/large.json")).mkString
-        val httpClient = new FakeHttpClient(Some({ case _ => data}))
+        val httpClient = new FakeHttpClient(Some({ case _ => data }))
         val info = SocialUserInfo(userId = None, fullName = "", socialId = SocialId(""), networkType = SocialNetworks.FACEBOOK, credentials = None)
 
         val graph = new FacebookSocialGraph(httpClient, db, null, null, socialUserInfoRepo, null) {
@@ -106,7 +106,6 @@ class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
         rawInfo.socialId.id === "grimland"
       }
     }
-
 
     "vet a valid JS API auth response" in {
       val userId = "10005000345440"

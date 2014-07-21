@@ -6,14 +6,14 @@ import com.keepit.model.User
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.search.index.{VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer}
+import com.keepit.search.index.{ VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer }
 import play.api.test.Helpers._
 import com.keepit.inject._
 import com.keepit.test._
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 
-class UserGraphIndexTest extends Specification with ApplicationInjector{
+class UserGraphIndexTest extends Specification with ApplicationInjector {
 
   def mkUserGraphIndexer(dir: IndexDirectory = new VolatileIndexDirectory): UserGraphIndexer = {
     new UserGraphIndexer(dir, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
@@ -24,9 +24,9 @@ class UserGraphIndexTest extends Specification with ApplicationInjector{
     "work" in {
       running(new TestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-        val uids = (1 to 8).map{Id[User](_)}
-        val (oddIds, evenIds) = uids.partition( id => id.id % 2 == 1)
-        val initConn = uids.map{ id =>
+        val uids = (1 to 8).map { Id[User](_) }
+        val (oddIds, evenIds) = uids.partition(id => id.id % 2 == 1)
+        val initConn = uids.map { id =>
           val conn = if (id.id % 2 == 0) evenIds.filter(_.id > id.id) else oddIds.filter(_.id > id.id)
           (id, conn.toSet)
         }.toMap
@@ -35,11 +35,11 @@ class UserGraphIndexTest extends Specification with ApplicationInjector{
         val indexer = mkUserGraphIndexer()
         indexer.update()
         indexer.numDocs === 8
-        indexer.sequenceNumber.value === 4*3
+        indexer.sequenceNumber.value === 4 * 3
 
         var searcher = new UserGraphSearcher(indexer.getSearcher)
-        searcher.getFriends(uids(0)).toSet === oddIds.filter(_.id != 1).map{_.id}.toSet
-        searcher.getFriends(uids(1)).toSet === evenIds.filter(_.id != 2).map{_.id}.toSet
+        searcher.getFriends(uids(0)).toSet === oddIds.filter(_.id != 1).map { _.id }.toSet
+        searcher.getFriends(uids(1)).toSet === evenIds.filter(_.id != 2).map { _.id }.toSet
 
         val del1 = Map(uids(0) -> Set(uids(2)))
         val del2 = Map(uids(1) -> Set(uids(3), uids(5), uids(7)))

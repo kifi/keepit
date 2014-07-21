@@ -1,6 +1,6 @@
 package com.keepit.inject
 
-import com.google.inject.{Singleton, Provides}
+import com.google.inject.{ Singleton, Provides }
 import com.keepit.common.time._
 import com.keepit.common.service.FakeServiceModule
 import play.api.Mode._

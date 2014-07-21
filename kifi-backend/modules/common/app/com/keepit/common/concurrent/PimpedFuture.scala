@@ -1,26 +1,23 @@
 package com.keepit.common.concurrent
 
+import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Future, Await, Promise }
 
-import scala.concurrent.{Future, Await, Promise}
-
-import java.util.concurrent.{TimeUnit, Executor}
+import java.util.concurrent.{ Executor }
 
 import com.google.common.util.concurrent.ListenableFuture
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
 import scala.concurrent.duration._
 
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 object PimpMyFuture {
 
   implicit class PimpedFuture[T](fut: Future[T]) {
 
-    def asListenableFuture: ListenableFuture[T] = new ListenableFuture[T]{
+    def asListenableFuture(implicit ec: ScalaExecutionContext): ListenableFuture[T] = new ListenableFuture[T] {
 
       def addListener(listener: Runnable, executor: Executor): Unit = {
-        fut.onComplete{ res =>
+        fut.onComplete { res =>
           executor.execute(listener)
         }
       }
@@ -37,38 +34,58 @@ object PimpMyFuture {
 
     }
 
-    def flatten[E](implicit ev: <:<[T, Future[E]]): Future[E] = {
+    def flatten[E](implicit ev: <:<[T, Future[E]], ec: ScalaExecutionContext): Future[E] = {
       fut.flatMap(r => ev(r))
     }
 
-    def marker: Future[Unit] = fut.map{ v => ()}
+    def marker(implicit ec: ScalaExecutionContext): Future[Unit] = fut.map { v => () }
 
   }
-
 
 }
 
 object FutureHelpers {
 
-  def map[A,B](in: Map[A,Future[B]]): Future[Map[A,B]] = {
-    val seq = in.map{ case (key, fut) =>
-      val p = Promise[(A,B)]()
-      fut.onComplete{ t =>
-        val withKey : Try[(A,B)] = t.map((key, _))
-        p.complete(withKey)
-      }
-      p.future
+  def map[A, B](in: Map[A, Future[B]])(implicit ec: ScalaExecutionContext): Future[Map[A, B]] = {
+    val seq = in.map {
+      case (key, fut) =>
+        val p = Promise[(A, B)]()
+        fut.onComplete { t =>
+          val withKey: Try[(A, B)] = t.map((key, _))
+          p.complete(withKey)
+        }
+        p.future
     }
     Future.sequence(seq).map(_.toMap)
   }
 
-  def sequentialExec[I,T](items: Iterable[I])(f:I => Future[T]):Future[Unit] = {
-    items.headOption match {
-      case None => Future.successful[Unit]()
-      case Some(item) => f(item).flatMap { h =>
-        sequentialExec(items.tail)(f)
-      }
+  def sequentialExec[I, T](items: Iterable[I])(f: I => Future[T])(implicit ec: ScalaExecutionContext): Future[Unit] = {
+    foldLeft(items)(()) { case ((), nextItem) => f(nextItem).map { _ => () } }
+  }
+
+  def foldLeft[I, T](items: Iterable[I], promisedResult: Promise[T] = Promise[T]())(accumulator: T)(fMap: (T, I) => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {
+    if (items.isEmpty) { promisedResult.success(accumulator) }
+    else fMap(accumulator, items.head).onComplete {
+      case Success(updatedAccumulator) => foldLeft(items.tail, promisedResult)(updatedAccumulator)(fMap)
+      case Failure(ex) => promisedResult.failure(ex)
     }
+    promisedResult.future
+  }
+
+  def whilef(f: => Future[Boolean], p: Promise[Unit] = Promise[Unit]())(body: => Unit)(implicit ec: ScalaExecutionContext): Future[Unit] = {
+    f.onComplete {
+      case Success(true) => {
+        try {
+          body
+          whilef(f, p)(body)
+        } catch {
+          case t: Throwable => p.failure(t)
+        }
+      }
+      case Success(false) => p.success()
+      case Failure(ex) => p.failure(ex)
+    }
+    p.future
   }
 
 }

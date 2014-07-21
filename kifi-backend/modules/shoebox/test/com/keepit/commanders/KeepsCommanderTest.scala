@@ -1,8 +1,11 @@
 package com.keepit.commanders
 
+import com.keepit.common.controller.{ FakeActionAuthenticatorModule, FakeActionAuthenticator, ActionAuthenticator }
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.time._
+import com.keepit.controllers.website.KeepsController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
@@ -10,17 +13,23 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import com.keepit.shoebox.FakeKeepImportsModule
+import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
+import play.api.libs.json.{ JsArray, JsString, Json }
+import play.api.test.FakeRequest
+import play.api.test.Helpers._
 
 class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
   def modules = FakeKeepImportsModule() ::
-                ShoeboxFakeStoreModule() ::
-                FakeExternalServiceModule() ::
-                FakeSearchServiceClientModule() ::
-                FakeCortexServiceClientModule() ::
-                FakeScrapeSchedulerModule() :: Nil
+    ShoeboxFakeStoreModule() ::
+    FakeExternalServiceModule() ::
+    FakeSearchServiceClientModule() ::
+    FakeCortexServiceClientModule() ::
+    FakeScrapeSchedulerModule() ::
+    FakeShoeboxServiceModule() ::
+    FakeActionAuthenticatorModule() ::
+    Nil
 
   "KeepsCommander" should {
     "export keeps" in {
@@ -44,23 +53,25 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+
           val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3)))
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(lib1.id.get)))
 
           keepRepo.save(Keep(title = Some("k2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(9)))
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(9), libraryId = Some(lib1.id.get)))
 
           keepRepo.save(Keep(title = Some("k3"), userId = user1.id.get, url = url3.url, urlId = url3.id.get,
-            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6)))
+            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6), libraryId = Some(lib1.id.get)))
 
           keepRepo.save(Keep(title = Some("k4"), userId = user2.id.get, url = url3.url, urlId = url3.id.get,
-            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6)))
+            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(6), libraryId = Some(lib1.id.get)))
 
           val col1 = collectionRepo.save(Collection(userId = user1.id.get, name = "t1"))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = col1.id.get))
         }
 
-        val keepExports = db.readOnly { implicit s => keepRepo.getKeepExports(Id[User](1)) }
+        val keepExports = db.readOnlyMaster { implicit s => keepRepo.getKeepExports(Id[User](1)) }
         keepExports.length === 3
         keepExports(0) === KeepExport(title = Some("k3"), createdAt = t1.plusMinutes(6), url = site3)
         keepExports(1) === KeepExport(title = Some("k2"), createdAt = t1.plusMinutes(9), url = site2)
