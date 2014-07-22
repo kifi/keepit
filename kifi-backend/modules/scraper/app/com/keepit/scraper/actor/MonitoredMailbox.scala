@@ -1,8 +1,8 @@
 package com.keepit.scraper.actor
 
-import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue}
+import java.util.concurrent.{ ConcurrentHashMap, ConcurrentLinkedQueue }
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{ ActorRef, ActorSystem }
 import akka.dispatch._
 import com.keepit.common.logging.Logging
 import com.typesafe.config.Config
