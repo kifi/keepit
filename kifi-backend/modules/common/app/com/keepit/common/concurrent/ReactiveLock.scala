@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 class ReactiveLock(numConcurrent: Int = 1) {
-  require(numConcurrent > 0)
+  require(numConcurrent > 0, "Concurrency degree must be strictly positive!")
 
   private case class QueuedItem[T](runner: () => Future[T], promise: Promise[T], ec: EC)
 
@@ -14,20 +14,20 @@ class ReactiveLock(numConcurrent: Int = 1) {
 
   private val waitingCount = new AtomicInteger(0)
 
-  private var runningCount: Int = 0
+  private var runningCount: Integer = 0
 
   //note that all this does inside of the synchronized block is start a future (in the worst case),
   //so actual synchonization is only held for a *very* short amount of time for each task
-  private def dispatch(): Unit = synchronized {
+  private def dispatch(): Unit = runningCount.synchronized {
     if (runningCount < numConcurrent) {
       val candidate: Option[QueuedItem[_]] = Option(taskQueue.poll())
-      candidate.map {
+      candidate.foreach {
         case QueuedItem(runner, promise, ec) => {
           runningCount += 1
           waitingCount.decrementAndGet()
           val fut = runner()
           fut.onComplete { _ =>
-            synchronized {
+            runningCount.synchronized {
               runningCount -= 1
               dispatch()
             }
