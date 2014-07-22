@@ -258,8 +258,8 @@ POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.KeepsCont
 POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()
 POST    /site/libraries/:id/modify  @com.keepit.controllers.website.LibraryController.modifyLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/delete  @com.keepit.controllers.website.LibraryController.removeLibrary(id: PublicId[Library])
-POST    /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibrary(id: PublicId[Library])
-POST    /site/libraries/            @com.keepit.controllers.website.LibraryController.getLibrariesByUser()
+GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibrary(id: PublicId[Library])
+GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrariesByUser()
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()

@@ -108,9 +108,7 @@ class LibraryCommander @Inject() (
             val newDescription: Option[String] = description.orElse(targetLib.description)
             val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
             val lib = libraryRepo.save(targetLib.copy(name = newName, slug = LibrarySlug(newSlug), visibility = newVisibility, description = newDescription))
-            val ownerExtId = basicUserRepo.load(lib.ownerId).externalId
-            LibraryInfo(id = Library.publicId(lib.id.get), name = lib.name, slug = lib.slug, visibility = lib.visibility,
-              shortDescription = LibraryInfo.descriptionShortener(lib.description), ownerId = ownerExtId)
+            LibraryInfo.fromLibraryAndOwner(lib, userRepo.get(userId))
           }
         }
       }
@@ -165,17 +163,9 @@ class LibraryCommander @Inject() (
       ownerId = owner.externalId, collaborators = groupCollabs, followers = groupFollows, keepCount = numKeeps)
   }
 
-  def getLibrariesByUser(userId: Id[User]): Seq[(LibraryAccess, LibraryInfo)] = {
+  def getLibrariesByUser(userId: Id[User]): Seq[(LibraryAccess, Library)] = {
     db.readOnlyMaster { implicit s =>
-      val uId = userRepo.get(userId).id.get
-      val pairs = libraryRepo.getByUser(userId)
-      val (accesses, libraries) = pairs.unzip
-      for (pair <- pairs) yield {
-        val (access, lib) = pair
-        val info = LibraryInfo(Library.publicId(lib.id.get), lib.name, lib.visibility,
-          LibraryInfo.descriptionShortener(lib.description), lib.slug, basicUserRepo.load(lib.ownerId).externalId)
-        (access, info)
-      }
+      libraryRepo.getByUser(userId)
     }
   }
 

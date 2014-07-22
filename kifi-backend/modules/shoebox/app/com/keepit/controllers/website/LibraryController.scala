@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryCommander, LibraryAddRequest, LibraryFail }
+import com.keepit.commanders.{ LibraryInfo, LibraryCommander, LibraryAddRequest, LibraryFail }
 import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
@@ -15,6 +15,7 @@ import scala.util.{ Success, Failure }
 class LibraryController @Inject() (
   db: Database,
   libraryRepo: LibraryRepo,
+  userRepo: UserRepo,
   libraryCommander: LibraryCommander,
   actionAuthenticator: ActionAuthenticator,
   clock: Clock,
@@ -71,8 +72,11 @@ class LibraryController @Inject() (
   }
 
   def getLibrariesByUser = JsonAction.authenticated { request =>
-    val res = for (pair <- libraryCommander.getLibrariesByUser(request.userId)) yield {
-      Json.obj("info" -> pair._2, "access" -> pair._1)
+    val res = for (tuple <- libraryCommander.getLibrariesByUser(request.userId)) yield {
+      val lib = tuple._2
+      val owner = db.readOnlyReplica { implicit s => userRepo.get(lib.ownerId) }
+      val info = LibraryInfo.fromLibraryAndOwner(lib, owner)
+      Json.obj("info" -> info, "access" -> tuple._1)
     }
     Ok(Json.obj("libraries" -> res))
   }

@@ -15,9 +15,7 @@ case class PublicIdConfiguration(key: String) {
   })
 }
 
-case class PublicId[T <: ModelWithPublicId[T]](id: String) {
-  override def toString = id
-}
+case class PublicId[T <: ModelWithPublicId[T]](id: String)
 
 object PublicId {
   implicit def format[T <: ModelWithPublicId[T]]: Format[PublicId[T]] = Format(
@@ -41,7 +39,7 @@ object PublicId {
     override def bind(key: String, value: String): Either[String, PublicId[T]] =
       Right(PublicId(value)) // TODO: handle errors if value is malformed
 
-    override def unbind(key: String, id: PublicId[T]): String = id.toString
+    override def unbind(key: String, id: PublicId[T]): String = id.id
   }
 }
 

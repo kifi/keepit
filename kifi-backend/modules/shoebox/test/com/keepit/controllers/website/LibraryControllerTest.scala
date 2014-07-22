@@ -113,7 +113,7 @@ class LibraryControllerTest extends Specification with ShoeboxApplicationInjecto
         val expected = Json.parse(
           s"""
              |{
-             |"id":"${pubId}",
+             |"id":"${pubId.id}",
              |"name":"Library2",
              |"visibility":"anyone",
              |"shortDescription":"asdf",
@@ -167,7 +167,7 @@ class LibraryControllerTest extends Specification with ShoeboxApplicationInjecto
 
         val pubId = Library.publicId(lib1.id.get)
         val testPath = com.keepit.controllers.website.routes.LibraryController.getLibrary(pubId).url
-        val request1 = FakeRequest("POST", testPath).withBody(Json.obj())
+        val request1 = FakeRequest("GET", testPath).withBody(Json.obj())
         val result1 = route(request1).get
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
@@ -175,7 +175,7 @@ class LibraryControllerTest extends Specification with ShoeboxApplicationInjecto
         val expected = Json.parse(
           s"""
              |{
-             |"id":"$pubId",
+             |"id":"${pubId.id}",
              |"name":"Library1",
              |"visibility":"secret",
              |"slug":"lib1",
@@ -205,7 +205,7 @@ class LibraryControllerTest extends Specification with ShoeboxApplicationInjecto
 
         val pubId = Library.publicId(lib1.id.get)
         val testPath = com.keepit.controllers.website.routes.LibraryController.getLibrariesByUser.url
-        val request1 = FakeRequest("POST", testPath)
+        val request1 = FakeRequest("GET", testPath)
         val result1 = route(request1).get
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
@@ -215,7 +215,7 @@ class LibraryControllerTest extends Specification with ShoeboxApplicationInjecto
             |{"libraries":
               |[
                 |{"info":{
-                |"id":"$pubId",
+                |"id":"${pubId.id}",
                 |"name":"Library1",
                 |"visibility":"secret",
                 |"slug":"lib1",
