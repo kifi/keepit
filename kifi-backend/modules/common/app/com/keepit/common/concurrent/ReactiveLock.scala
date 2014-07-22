@@ -1,6 +1,6 @@
 package com.keepit.common.concurrent
 
-import scala.concurrent.{ Future, Promise, ExecutionContext => EC }
+import scala.concurrent.{ Future, Promise, ExecutionContext => EC, Lock }
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
@@ -14,11 +14,13 @@ class ReactiveLock(numConcurrent: Int = 1) {
 
   private val waitingCount = new AtomicInteger(0)
 
-  private var runningCount: Integer = 0
+  private var runningCount: Int = 0
+
+  private val lock = new Lock()
 
   //note that all this does inside of the synchronized block is start a future (in the worst case),
   //so actual synchonization is only held for a *very* short amount of time for each task
-  private def dispatch(): Unit = runningCount.synchronized {
+  private def dispatch(): Unit = lock.synchronized {
     if (runningCount < numConcurrent) {
       val candidate: Option[QueuedItem[_]] = Option(taskQueue.poll())
       candidate.foreach {
@@ -27,7 +29,7 @@ class ReactiveLock(numConcurrent: Int = 1) {
           waitingCount.decrementAndGet()
           val fut = runner()
           fut.onComplete { _ =>
-            runningCount.synchronized {
+            lock.synchronized {
               runningCount -= 1
               dispatch()
             }
