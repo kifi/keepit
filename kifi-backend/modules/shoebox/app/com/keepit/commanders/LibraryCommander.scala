@@ -119,8 +119,7 @@ class LibraryCommander @Inject() (
     db.readWrite { implicit s =>
       libraryRepo.getByIdAndOwner(libraryId, userId) match {
         case None => Left(LibraryFail("Library Not Found"))
-        case Some(targetLib) =>
-          val oldLibrary = libraryRepo.get(libraryId)
+        case Some(oldLibrary) =>
           val removedLibrary = libraryRepo.save(oldLibrary.withState(LibraryStates.INACTIVE))
 
           libraryMembershipRepo.getWithLibraryId(removedLibrary.id.get).map { m =>
