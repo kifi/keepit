@@ -4,14 +4,15 @@ class DataBufferReader {
   import DataBuffer.Page
 
   private[this] var _type: Int = 0
-  private[this] var _size: Int = 0
+  private[this] var _size: Int = 0 // record size in terms of short words
   private[this] var _page: Page = null
-  private[this] var _globalOffset: Int = 0 // global offset in terms of short
-  private[this] var _offset: Int = 0 // offset within the current page in terms of short
-  private[this] var _current: Int = 0 // offset within the current page in terms of short
+  private[this] var _globalOffset: Int = 0 // global byte offset
+  private[this] var _offset: Int = 0 // offset within the current page in terms of short words
+  private[this] var _current: Int = 0 // offset within the current page in terms of short words
 
-  private[join] def set(globalOffset: Int, page: Page, offset: Int): Boolean = {
+  private[join] def set(globalOffset: Int, page: Page, byteOffset: Int): Boolean = {
     _globalOffset = globalOffset
+    val offset = byteOffset >> 1
     val tag = page(offset)
 
     if ((tag & 0x8000) != 0) { // validity check
@@ -26,11 +27,11 @@ class DataBufferReader {
     }
   }
 
-  private[util] def next: Int = _offset + _size // offset (in terms of short) of next record
+  private[util] def next: Int = (_offset + _size) << 1 // byte offset of next record
 
   def recordType: Int = _type // record type
 
-  def recordOffset: Int = _globalOffset // global offset in terms of short
+  def recordOffset: Int = _globalOffset // global byte offset
 
   def hasMore(): Boolean = _current < _offset + _size
 
