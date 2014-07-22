@@ -2,6 +2,7 @@ package com.keepit.scraper
 
 import com.keepit.inject.AppScoped
 import com.google.inject.{ Provider, Provides, Singleton }
+import com.keepit.scraper.actor.ScrapeProcessorActorImpl
 import com.keepit.scraper.extractor.{ ExtractorFactoryImpl, ExtractorFactory }
 import akka.actor.ActorSystem
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -16,6 +17,7 @@ case class DevScraperProcessorModule() extends ScrapeProcessorModule {
     bind[ShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[SyncShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[PullerPlugin].to[PullerPluginImpl].in[AppScoped]
+    bind[ScrapeProcessor].to[ScrapeProcessorActorImpl]
     install(ProdScraperConfigModule())
   }
 

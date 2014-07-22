@@ -1,5 +1,6 @@
 package com.keepit.common.actor
 
+import com.typesafe.config.ConfigFactory
 import net.codingwell.scalaguice.ScalaModule
 import akka.actor.{ Scheduler, ActorSystem }
 import com.keepit.inject.AppScoped
@@ -56,6 +57,7 @@ case class DevActorSystemModule() extends ActorSystemModule {
   @Singleton
   @Provides
   def actorPluginProvider: ActorPlugin = {
-    new ActorPlugin(ActorSystem("dev-actor-system", Play.current.configuration.underlying, Play.current.classloader))
+    val monitoredConfig = ConfigFactory.load("akka-monitored.conf")
+    new ActorPlugin(ActorSystem("dev-actor-system", monitoredConfig.withFallback(Play.current.configuration.underlying), Play.current.classloader))
   }
 }
