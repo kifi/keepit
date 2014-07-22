@@ -268,8 +268,8 @@ angular.module('kifi.profile', [
 ])
 
 .directive('kfProfileManageAccount', [
-  '$http', 'profileService',
-  function ($http, profileService) {
+  '$http', 'profileService', '$analytics', '$location',
+  function ($http, profileService, $analytics, $location) {
     return {
       restrict: 'A',
       scope: {},
@@ -295,6 +295,11 @@ angular.module('kifi.profile', [
           var data = { comment: scope.comment };
           profileService.closeAccountRequest(data).then(function () {
             scope.closeAccountStatus = 'sent';
+
+            $analytics.eventTrack('user_clicked_page', {
+              'action': 'clickCloseAccount',
+              'path': $location.path()
+            });
           }, function () {
             scope.closeAccountStatus = 'error';
           });
