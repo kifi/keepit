@@ -1,17 +1,12 @@
 package com.keepit.scraper.actor
 
-import java.util.concurrent.{ ConcurrentHashMap, ConcurrentLinkedQueue }
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentLinkedQueue}
 
-import akka.actor.{ SupervisorStrategy, ActorRef, ActorSystem }
+import akka.actor.{ActorRef, ActorSystem}
 import akka.dispatch._
-import akka.japi.Util._
-import akka.routing._
-import com.google.inject.Inject
-import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.typesafe.config.Config
 
-import scala.collection.immutable
 import scala.ref.WeakReference
 
 // see http://doc.akka.io/docs/akka/snapshot/scala/mailboxes.html
@@ -68,7 +63,7 @@ class MonitoredMailbox(settings: ActorSystem.Settings, config: Config) extends M
 
 object MonitoredMailbox {
   private[actor] var mailboxes = new ConcurrentHashMap[ActorRef, WeakReference[MonitoredMessageQueue]]()
-  import collection.JavaConversions._
+  import scala.collection.JavaConversions._
   def aggregateSize: Int = {
     mailboxes.valuesIterator.foldLeft(0) { (a, c) => a + c.get.map(_.numberOfMessages).getOrElse(0) }
   }
@@ -77,17 +72,5 @@ object MonitoredMailbox {
   }
   def numEmptyMailboxes: Int = {
     mailboxes.values.filterNot(_.get.exists(_.hasMessages)).toSeq.length
-  }
-}
-
-case class MonitoredSmallestMailboxRouter(
-    nrOfInstances: Int = 0,
-    routees: immutable.Iterable[String] = Nil,
-    override val resizer: Option[Resizer] = None,
-    val routerDispatcher: String = Dispatchers.DefaultDispatcherId,
-    val supervisorStrategy: SupervisorStrategy = SupervisorStrategy.defaultStrategy) extends RouterConfig with SmallestMailboxLike {
-
-  override def createRoute(routeeProvider: RouteeProvider): Route = {
-    super.createRoute(routeeProvider)
   }
 }
