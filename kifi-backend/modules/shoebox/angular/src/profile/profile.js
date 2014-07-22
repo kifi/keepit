@@ -1,6 +1,8 @@
 'use strict';
 
 angular.module('kifi.profile', [
+  'kifi',
+  'ngRoute',
   'util',
   'kifi.profileService',
   'kifi.profileInput',
@@ -109,18 +111,6 @@ angular.module('kifi.profile', [
 
     $scope.confirmSaveEmail = function () {
       profileService.setNewPrimaryEmail(emailToBeSaved);
-    };
-
-    $scope.exportKeeps = function() {
-      $scope.exported = true;
-    };
-
-    $scope.getExportUrl = function () {
-      return routeService.exportKeeps;
-    };
-
-    $scope.getExportButtonText = function() {
-      return $scope.exported ? 'Export Again' : 'Export Keeps';
     };
 
     function showVerificationAlert(email) {
@@ -250,4 +240,69 @@ angular.module('kifi.profile', [
       }
     };
   }
-]);
+])
+
+.directive('kfProfileExportKeeps', [
+  'routeService',
+  function (routeService) {
+    return {
+      restrict: 'A',
+      replace: true,
+      scope: {},
+      templateUrl: 'profile/profileExportKeeps.tpl.html',
+      link: function (scope) {
+        scope.getExportUrl = function () {
+          return routeService.exportKeeps;
+        };
+
+        scope.exportKeeps = function () {
+          scope.exported = true;
+        };
+
+        scope.getExportButtonText = function () {
+          return scope.exported ? 'Export Again' : 'Export Keeps';
+        };
+      }
+    };
+  }
+])
+
+.directive('kfProfileManageAccount', [
+  '$http', 'profileService',
+  function ($http, profileService) {
+    return {
+      restrict: 'A',
+      scope: {},
+      templateUrl: 'profile/profileManageAccount.tpl.html',
+      link: function (scope) {
+        scope.isOpen = { 'uninstall': false, 'close': false, 'export': false };
+        scope.toggle = function (target) {
+          scope.isOpen[target] = !scope.isOpen[target];
+        };
+
+        scope.getCloseAccountButtonText = function () {
+          return (scope.closeAccountStatus === 'error') && 'Retry' ||
+            (scope.closeAccountStatus === 'pending') && 'Sending...' ||
+            (scope.closeAccountStatus === 'sent') && 'Message Sent' ||
+            'Close Account';
+        };
+
+        scope.closeAccount = function () {
+          scope.closeAccountStatus = 'pending';
+          var data = { comment: scope.comment };
+          profileService.closeAccountRequest(data).then(function () {
+            scope.closeAccountStatus = 'sent';
+          }, function () {
+            scope.closeAccountStatus = 'error';
+          });
+          return false;
+        };
+
+        scope.isCloseAccountStatus = function (status) {
+          return scope.closeAccountStatus === status;
+        };
+      }
+    };
+  }
+])
+;

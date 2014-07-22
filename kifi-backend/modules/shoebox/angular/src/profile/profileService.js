@@ -223,6 +223,10 @@ angular.module('kifi.profileService', [
       return $http.post(routeService.cancelDelightedSurvey, {});
     }
 
+    function closeAccountRequest(data) {
+      return $http.post('/site/user/close', data);
+    }
+
     return {
       me: me, // when mutated, you MUST increment me.seqNum
       fetchMe: fetchMe,
@@ -243,7 +247,8 @@ angular.module('kifi.profileService', [
       getEmailValidationError: getEmailValidationError,
       sendChangePassword: sendChangePassword,
       postDelightedAnswer: postDelightedAnswer,
-      cancelDelightedSurvey: cancelDelightedSurvey
+      cancelDelightedSurvey: cancelDelightedSurvey,
+      closeAccountRequest: closeAccountRequest
     };
   }
 ]);
