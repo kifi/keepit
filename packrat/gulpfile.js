@@ -8,8 +8,8 @@ var gulpif = require('gulp-if');
 var clone = require('gulp-clone');
 var css = require('css');
 var es = require('event-stream');
-var livereload = require('gulp-livereload');
 var fs = require('fs');
+var reload = require('./gulp/livereload.js');
 
 var outDir = 'out';
 var adapterFiles = ['adapters/chrome/**', 'adapters/firefox/**', '!adapters/chrome/manifest.json', '!adapters/firefox/package.json'];
@@ -252,12 +252,11 @@ gulp.task('config', ['copy'], function () {
 function watchAndReload(targets, tasks) {
   gulp.watch(targets, function () {
     // the tasks array is modified by runSequence, need to pass a copy
-    runSequence(tasks.slice(0), livereload.changed);
+    runSequence(tasks.slice(0), reload);
   });
 }
 
 gulp.task('watch', function() {
-  livereload.listen();
   watchAndReload(union(
     adapterFiles,
     sharedAdapterFiles,
