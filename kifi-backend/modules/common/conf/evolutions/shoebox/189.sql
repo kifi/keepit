@@ -8,7 +8,7 @@ CREATE TABLE delighted_user (
     updated_at datetime NOT NULL, 
     delighted_ext_user_id varchar(32) NOT NULL,
     user_id bigint(20) NOT NULL,
-    email varchar(256) NOT NULL,
+    email varchar(256) NULL,
     user_last_interacted datetime NULL,
 
     PRIMARY KEY (id),
