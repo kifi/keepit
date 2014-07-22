@@ -1,5 +1,9 @@
 <kifi class="kifi-root kifi-keeper">
-  <span class="kifi-keeper-x" style="background-image:url({{bgDir}}/x.png)" data-tip-html="Hide kifi (Esc)" data-tip-class="kifi-root kifi-tip kifi-keeper-x-tip"></span>
+  <span class="kifi-dock-btn kifi-dock-site" data-tip="s"></span>
+  <span class="kifi-dock-btn kifi-dock-messages{{#boxOpen}} kifi-at{{/boxOpen}}" data-loc="/messages:all" data-tip="i">
+    <span class="kifi-count"{{^boxCount}} style="display:none"{{/boxCount}}>{{boxCount}}</span>
+  </span>
+  <span class="kifi-dock-btn kifi-dock-compose" data-tip="c"></span>
   <span class="kifi-keep-card {{#isKept}}{{#isPrivate}}kifi-private{{/isPrivate}}{{^isPrivate}}kifi-public{{/isPrivate}}{{/isKept}}{{^isKept}}kifi-unkept{{/isKept}}{{#isTagged}} kifi-tagged{{/isTagged}}">
     <span class="kifi-keep-side">
       <span class="kifi-keep-btn kifi-hoverless"></span>
@@ -12,11 +16,5 @@
       <span class="kifi-kept-tag"></span>
     </span>
   </span>
-  <span class="kifi-dock">
-    <span class="kifi-dock-btn kifi-dock-messages{{#boxOpen}} kifi-at{{/boxOpen}}" data-loc="/messages:all" data-tip="i">
-      <span class="kifi-count"{{^boxCount}} style="display:none"{{/boxCount}}>{{boxCount}}</span>
-    </span>
-    <span class="kifi-dock-sep"></span>
-    <span class="kifi-dock-btn kifi-dock-compose" data-tip="c"></span>
-  </span>
+  <span class="kifi-keeper-x" style="background-image:url({{bgDir}}/x.png)" data-tip-html="Hide kifi (Esc)" data-tip-class="kifi-root kifi-tip kifi-keeper-x-tip"></span>
 </kifi>
