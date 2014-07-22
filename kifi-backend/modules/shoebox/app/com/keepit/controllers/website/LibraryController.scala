@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders._
+import com.keepit.commanders.{LibraryInfo, LibraryCommander, LibraryAddRequest, LibraryFail}
 import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
@@ -10,7 +10,7 @@ import com.keepit.common.time.Clock
 import com.keepit.model._
 import com.keepit.common.json.JsonFormatters._
 import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import play.api.libs.json.{ JsString, Json }
 
 import scala.util.{ Success, Failure }
 
