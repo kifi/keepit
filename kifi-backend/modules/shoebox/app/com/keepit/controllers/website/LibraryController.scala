@@ -1,14 +1,16 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryInfo, LibraryCommander, LibraryAddRequest, LibraryFail }
+import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.Clock
 import com.keepit.model._
-import play.api.libs.json.{ JsString, Json }
+import com.keepit.common.json.JsonFormatters._
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 import scala.util.{ Success, Failure }
 
@@ -81,4 +83,22 @@ class LibraryController @Inject() (
     Ok(Json.obj("libraries" -> res))
   }
 
+  def inviteUsersToLibrary(pubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>
+    val idTry = Library.decodePublicId(pubId)
+    idTry match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
+      case Success(id) => {
+        val inviteList = (request.body \ "pairs").asOpt[Seq[(ExternalId[User], LibraryAccess)]]
+        val res = libraryCommander.inviteUsersToLibrary(id, request.userId, inviteList.getOrElse(Seq.empty))
+        res match {
+          case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+          case Right(info) => {
+            val res = info.map { i => Json.obj("user" -> i._1, "access" -> i._2) }
+            Ok(Json.toJson(res))
+          }
+        }
+      }
+    }
+  }
 }
+

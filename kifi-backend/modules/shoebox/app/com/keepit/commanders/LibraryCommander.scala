@@ -228,6 +228,23 @@ class LibraryCommander @Inject() (
       newLibCreated
     }
   }
+
+  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(ExternalId[User], LibraryAccess)]): Either[LibraryFail, Seq[(ExternalId[User], LibraryAccess)]] = {
+    db.readWrite { implicit s =>
+      libraryRepo.getByIdAndOwner(libraryId, inviterId) match {
+        case None => Left(LibraryFail("Library Not Found"))
+        case Some(targetLib) => {
+          val successInvites = for (i <- inviteList; user = userRepo.getOpt(i._1) if !user.isEmpty) yield {
+            val inv = LibraryInvite(libraryId = libraryId, ownerId = inviterId, userId = user.get.id.get, access = i._2)
+            (inv, i)
+          }
+          val (inv1, res) = successInvites.unzip
+          inviteBulkUsers(inv1)
+          Right(res)
+        }
+      }
+    }
+  }
 }
 
 case class LibraryFail(message: String) extends AnyVal
