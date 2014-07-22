@@ -1,0 +1,126 @@
+.kifi-tile
+  position: fixed
+  z-index: 999999999991 !important
+  bottom: 0
+  right: 0
+  left: auto
+  top: auto
+  width: 42px
+  height: 42px
+  border: 6px solid transparent
+  -moz-box-sizing: content-box
+  box-sizing: content-box
+  text-align: center
+  transition: -webkit-transform .12s ease-in-out
+  transition: transform .12s ease-in-out
+  -webkit-perspective: 200px
+  perspective: 200px
+
+.kifi-tile[kifi-fullscreen]
+  display: none
+
+.kifi-tile-card
+  position: absolute
+  top: 0
+  bottom: 0
+  left: 0
+  right: 0
+  transition: -webkit-transform .25s ease-in-out
+  transition: transform .25s ease-in-out
+  -webkit-transform-style: preserve-3d
+  transform-style: preserve-3d
+
+.kifi-tile[data-kept] .kifi-tile-card
+  -webkit-transform: rotateX(-180deg)
+  transform: rotateX(-180deg)
+
+.kifi-tile-card.kifi-0s,
+.kifi-tile-card.kifi-0s>.kifi-tile-keep,
+.kifi-tile-card.kifi-0s>.kifi-tile-kept
+  transition: none
+
+.kifi-tile-keep,
+.kifi-tile-kept
+  position: absolute
+  top: 0
+  bottom: 0
+  left: 0
+  right: 0
+  border-radius: 5px !important
+  opacity: .4
+  -webkit-backface-visibility: hidden
+  backface-visibility: hidden
+  transition: visibility 0s .125s
+  /* broken backface-visibility workaround */
+
+.kifi-tile-keep
+  /* tile_logo.png */
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADQAAAAeCAQAAADJRvUwAAAB0klEQVR4Ab3WP0iVXwDH4VNe+yOhllQmokINRktTRQhiRkMFOdZQQ1tLOOQgFKWTYwTSj/gR6uzWYEgJgkMYQVMlGIKDEJEJmWVye4K4cDhwRd/03s93Oxx47ru87w2WxVZVCVtag0tuuatNSBek1f4zcUSfDwCGSgNVeuAHbB9007RZI5rFsxoTSBsWBB3GzRlzNivUA2BBXeEsV4ThyV8mD/jldBaowpJYT+H0nhh5wzoLP2JcbDQLVC3GQ0Fw2IrYT+fife/FprNAwYzYdUHQK8bt5PaI2GA26LwVwHM5QTAltmRXcrvZPGBWfTYoOKbPoGsFJmdN7IWQzn53DOpWI6wHNetKdsUeB1Um74CgSYw5Q4X9p1qlunh7vSc66qu0V3K6zOh2SqvLnnotaLFeJ9X6ol+b49oNWCwG7fZG2qImQZcYbzeEkopBj6VxUdh+6Ko0BoTth874Jm1SRXZI60bQR2mfNAibhEa1FNYobASl5XUKm4PST0NW6L5QDmjCzvJA8w6UB2LMjvJA9JYKeiYtr700UKN30hbUlwKqdcJ3aS9VlAIKbkijvzRQ8L+03y5sFSr+33uvKWmf7dMhxqTgkDWxRwlUZVVsOSjT/gAqEZpmhTmyWwAAAABJRU5ErkJggg==")
+  background-color: #263f5c
+  background-size: 26px auto
+  background-position: center
+  background-repeat: no-repeat
+
+.kifi-tile-kept
+  background-color: #0a5aab
+  -webkit-transform: rotateX(180deg)
+  transform: rotateX(180deg)
+
+.kifi-tile[data-kept=private] .kifi-tile-kept
+  background-color: #c85047
+
+.kifi-tile[data-kept] .kifi-tile-keep,
+.kifi-tile:not([data-kept]) .kifi-tile-kept
+  visibility: hidden
+
+.kifi-tile .kifi-tile-kept::before
+  content: "kept"
+  position: absolute
+  top: 0
+  left: 0
+  width: 100%
+  text-align: center
+  color: #fff
+  font-size: 14px
+  line-height: 42px
+
+.kifi-count,
+.kifi-keeper .kifi-count
+  display: inline-block
+  position: relative
+  top: -12px
+  -moz-box-sizing: content-box
+  box-sizing: content-box
+  min-width: 20px
+  border-radius: 15px !important
+  background: #e74c3c padding-box
+  color: #fff
+  font-size: 10px
+  line-height: 20px
+
+.kifi-shake
+  -webkit-animation: kifi-shake .15s 2 linear
+  -moz-animation: kifi-shake .15s 2 linear
+  animation: kifi-shake .15s 2 linear
+
+@keyframes kifi-shake
+  0%
+    transform: translate(3px, 0)
+  50%
+    transform: translate(-3px, 0)
+  100%
+    transform: none
+@keyframes kifi-shake
+  0%
+    -moz-transform: translate(3px, 0)
+  50%
+    -moz-transform: translate(-3px, 0)
+  100%
+    -moz-transform: none
+@keyframes kifi-shake
+  0%
+    -webkit-transform: translate(3px, 0)
+  50%
+    -webkit-transform: translate(-3px, 0)
+  100%
+    -webkit-transform: none

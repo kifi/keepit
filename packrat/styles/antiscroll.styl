@@ -1,0 +1,40 @@
+.kifi-scrollbar
+  position: absolute
+  background: rgba(0,0,0,0) content-box
+
+.kifi-scrollbar-shown
+  background-color: rgba(0,0,0,.5)
+
+.kifi-scrollbar-vertical
+  margin-top: 2px
+  top: 0
+  right: 1px
+  width: 1px
+  border-radius: .5px !important
+  transition: background-color .3s linear, width .12s ease-in-out .02s, border-radius .12s ease-in-out .02s
+
+.kifi-scrollbar-vertical:hover,
+.kifi-scrollbar-vertical.kifi-scroll-dragging
+  width: 12px
+  border-radius: 6px !important
+  box-shadow: 0 0 1px #fff
+
+.kifi-scrollbar-vertical::before
+  content: ' '
+  position: absolute
+  top: 0
+  bottom: 0
+  left: -8px
+  width: 8px
+
+.kifi-scroll-inner
+  overflow: scroll
+
+.kifi-scroll-inner::-webkit-scrollbar
+  width: 0
+  height: 0
+
+.kifi-scroll-inner::scrollbar
+  width: 0
+  height: 0
+

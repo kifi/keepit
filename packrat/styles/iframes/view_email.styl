@@ -1,0 +1,31 @@
+html
+  font: 16px/140% Arial, sans-serif
+
+html.mac
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif
+
+body
+  margin: 0
+
+.kifi-waiting
+  position: absolute
+  height: 16px
+  width: 16px
+  top: calc(50% - 8px)
+  left: calc(50% - 8px)
+  background-image: url('../../images/spinner_32.gif')
+  background-size: 16px
+
+@media (min-resolution: 1.3dppx)
+  .kifi-waiting
+    background-image: url('../../images/spinner_32.gif')
+    /*todo: higher resolution asset*/
+
+.kifi-error
+  display: none
+  position: absolute
+  width: 100%
+  text-align: center
+  top: calc(50% - 16px)
+  color: rgb(52, 73, 94)
+

@@ -1,0 +1,222 @@
+.kifi-pane-settings
+  background: #fafafa
+
+.kifi-settings-scroll
+  position: absolute
+  top: 37px
+  left: 0
+  right: 0
+  bottom: 0
+  overflow: hidden
+  border-top: 1px solid rgba(221,221,221,0)
+  transition: border-top-color .2s
+
+.kifi-settings-scroll.kifi-scrolled
+  border-top-color: #ddd
+
+.kifi-settings-scroll>.kifi-scroll-inner
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+  height: 100%
+  overflow: auto
+  overflow-x: hidden
+  padding: 2px 24px 30px
+
+.kifi-settings-h
+  font-size: 16px
+  line-height: 29px
+  margin: 0 -11px 24px
+  background-color: #eaecef
+  border-radius: 3px
+  padding-left: 10px
+  -webkit-font-smoothing: antialiased
+
+.kifi-settings-h:not(:first-child)
+  margin-top: 24px
+
+.kifi-setting-label
+  display: inline-block
+  line-height: 16px
+  cursor: pointer
+
+.kifi-setting-desc+.kifi-setting-label
+  margin-top: 16px
+
+.kifi-setting-checkbox
+  display: inline-block
+  vertical-align: middle
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+  height: 13px
+  width: 13px
+  opacity: 0
+  margin-right: 10px
+
+.kifi-setting-checkbox+.kifi-setting-name::before
+  content: ' '
+  position: absolute
+  top: 1px
+  left: -23px
+  height: 13px
+  width: 13px
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+  border: 1px solid #b5bfcb
+  border-radius: 2px
+  background-color: #fafafa
+
+.kifi-setting-checkbox:checked+.kifi-setting-name::after
+  content: ' '
+  position: absolute
+  top: 3px
+  left: -21px
+  height: 8px
+  width: 11px
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAICAYAAAAvOAWIAAAAdUlEQVQY02NgIACUrYKkgPgaEFcRUigHxLeB+D8Q74cJMmNRqADE96AKDwIxD0hwGlRQAUmhEhA/hCrcA8RcMIntUEGQpDIQqwPxE6gYSI4T2TpOJA0gRc+g7M1AzIbNI2xQyf9QvBarQjQNy4F4CRCzYFMDAF8UO59uME55AAAAAElFTkSuQmCC")
+  background-size: cover
+
+@media (min-resolution: 1.3dppx)
+  .kifi-setting-checkbox:checked+.kifi-setting-name::after
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAQCAYAAAAS7Y8mAAAA5klEQVQ4y2NgoBJQtgpKA+KPQFzKQEVDc4D4HxD/h+JKahhahGYoCN+m1NByNANB+B0Qm1BiaDUWQ18DsSGyIkYgliTB0CYshr4EYl1kRWxAvAIaTrVEGNqBxdBnQKyJrnAVmqIWHAaCfNWDxdAnQKyGTcN9LIo7sBg6CYu6B0CshMtr6lBb0TX1Qg0E4elY5O8BsTyhcFOC2o6ueTIQz8EifhOIZYmNaXkgvovFEHR8jZQUBDNcFuoaXIZeBmJxchO+JNRV6IaeA2IRSrOqGNR1MEPPALEQtUosESA+AMQ7gZifVP0AbX/OiQ8N2MsAAAAASUVORK5CYII=")
+
+.kifi-setting-label:hover>.kifi-setting-checkbox+.kifi-setting-name::before,
+.kifi-setting-checkbox:focus+.kifi-setting-name::before,
+.kifi-setting-select:focus
+  border-color: #294057
+
+.kifi-setting-checkbox:focus+.kifi-setting-name::before,
+.kifi-setting-select:focus
+  outline: #5b9dd9 auto 4px !important
+  outline-offset: 0
+
+.kifi-setting-select:focus
+
+.kifi-setting-select
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+  height: 17px
+  min-width: 36px
+  border: 1px solid #bbb
+  border-radius: 3px
+  vertical-align: bottom
+  text-indent: 10px
+  text-align: center
+  background: right 5px bottom 5px/5px 4px no-repeat
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAECAQAAADsOj3LAAAAJUlEQVR4AWNguMPwHwzvMjB4QphAGggWARnzGcBAiOEEgyADAwA77wtxCYMU+wAAAABJRU5ErkJggg==")
+  padding-right: 6px
+  margin-right: 8px
+
+@-moz-document url-prefix()
+  .kifi-setting-select
+    min-width: 0
+    text-align: left
+    text-indent: 2.5px
+    text-overflow: ''
+    overflow: hidden
+
+@media (min-resolution: 1.3dppx)
+  .kifi-setting-select
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAICAQAAABq86Y9AAAARUlEQVQI12NgeMLwHw0+ZWDowxCcwsDAzXAHRegeAw8DEDgw/IML/WOwZ4CCGchaYYCX4RFY6A7QMCTgiaoVBmYydMOYAEveLcPljI4rAAAAAElFTkSuQmCC")
+
+.kifi-setting-name
+  vertical-align: middle
+  font-size: 13px
+  -webkit-user-select: none
+  -moz-user-select: none
+  position: relative
+
+.kifi-setting-desc
+  margin: 7px 10px 0 24px
+  font-size: 13px
+  line-height: 16px
+  color: #999
+
+.kifi-setting-status
+  display: inline-block
+  height: 16px
+  width: 16px
+  vertical-align: middle
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAwUlEQVR42q3TQQqCUBSFYUdCW1EnQVEgUYNW0MJSQqG91KQ9SLWIIqMGGYr9goIcFCwbfAOv956H7z2NzWGlLKxxxKt0LGuW9tcfTATIkLfIsMVAA0zskHe0h1kPCJF/KagCbKQ/BKSwiwCvQ3OMGaZS94qAU4fhMQy48u5UFBMpzrHEXYZHuElv0hQwqVaT4Ri5eDR9wgVDGNBhFbVt4hUuFjKs/CLA6XGMTp+LFPa+yn/7mZQNH2e88UQEH472fwBIyllyTdS04wAAAABJRU5ErkJggg==")
+  background-size: cover
+  position: relative
+  left: 7px
+  bottom: 1px
+
+@media (min-resolution: 1.3dppx)
+  .kifi-setting-status
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAABhUlEQVR42sXXv07CUBTH8U4EG4mJgyYuGlsdXIzEJ3Epj0QdnRR4AneNg4MQhxITkbeAsoKxLNdvk0Niasi9bS9l+Ew9955fWrh/nLv+jaldBLhHhCl+xBSRPAuk1jFhUnSKLuZQhuYyxisToI42EqiCEpmjnjeAhxGUJSP4pgGamEBZNsGVLoCPGGpDYvjrAuxoXrstX9LrX4A2VEXCbAAPywoDLOH9DdCFqlhvFaCBucWJBzjGPh41i1UjDRBYbN6HC0ccaOqDtKiziebiRDOmkxZFG2ruYqAZF6WFM03RC85xjc8czd8Mgs8cg83mEI7Yw4eN5iIxCXAEJxuibHORmHyCJ9SyIco2F7PMj9A8RNnmItL/DfUhXPShCujkXYieUbPRXARFluJXXOAS7yWaL1ZLcaq3jc1o29uxnz2QhBUGuF13JBtX0HwMd6uH0m0ey5umFxMfY8uv3S9yNQstXM1C3dVMx0cXixyNv2XMmW7+vNfzFh4wRIyliDGUZ6081/Nftsxof2A9FN0AAAAASUVORK5CYII=")
+
+.kifi-setting-sensitive,
+.kifi-setting-max-results
+  padding-top: 16px
+
+.kifi-settings-scroll a[href]
+  color: #6fa6ef !important
+
+.kifi-settings-scroll a[href]:hover,
+.kifi-settings-scroll a[href]:focus
+  text-decoration: underline
+
+.kifi-settings-play-alert
+  margin-left: 4px
+
+.kifi-settings-k-icon
+  display: inline-block
+  height: 16px
+  width: 16px
+  vertical-align: top
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABQElEQVR4AY3TP0vDQBjH8eogTjqJk+/CN+ALcLJDX4GToIN/QBBBcXfRQdDBQbSCSIbWoUMVMhQdRBGkwUGn0sUcpCZp8B5/D+SO8JBTDz5wuRxfyLVXKY7ls89RP0gPKR/1+y/CGsugBVUYgYphJzADnVN/QDIgtGFaBqYgAHIFhGeYLAYaQI6Ay7kJzAG5AqsXITWfYmq9JIx2PWX2apjlwMlvgfZrYp+7vYxWCnthnwNdV+DxY0g6nw9STdvXSn7GAwdiGSgbWOf3Uo8D/b8C8VDT+mVYFgg44LsCaabtvPOWlgWaHNh0BRo4fRV/2+fju0gGlsyfSLl+haPbyB5klGjaurIH2YcJDrBFE1irh7TjKcZzXuPTl2saavIu7AH9g4YNeReMKrwDOfC7eXkbpXGowQF4cJPPF2BM7v8BvlH7+OUoAFIAAAAASUVORK5CYII=")
+  background-size: cover
+
+@media (min-resolution: 1.3dppx)
+  .kifi-settings-k-icon
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAACG0lEQVR4Ab2XS6vTUBDHUz/MfXgVv4DfQb0qBvfiSu5CbkW6UVeCK3UhuBbdqNAWqqCoLbQl4AMVBW+lVHwguLBNmtq0zRn/WcwmndSTk8SB3+7A/DKTM+ccSyeI6CDJcRhYWdBcKAtcf+LNdu7+JhCAAXgMLoFDwNJBZ1HpnuOfTxCIkifxBthgXxaBTdC+2nDJQIDpgC0TARv4gDIIMD44nUbgHFCAchBgFNjREbA5eY4CjIpXQur5GFBBAtyO/ZJACbQAFSjAtEEpLrAN6D8IMCfiAk4Wge7ngPxALfHu6yxJ4CULcO/JVOBOxycppnNFV2qjVVU4wAJlU4HL1RFN8KVSYIL+qw0VFqibCNx46tHezzlJ8f6bXPoYDRbomQi8RX+lcP8oqjwc6gj0WWCkIaAdt5tj3Z0wZgHKSwC7QSs5k2sFFiFR5QGXPl0F9vKqQPPTNI1AnwWqeQkocOuZ9oSss8CuicDHH/IuGE5CunhfqxUXWGDdROAm5kD/lzwHXn/RmgNbLBDRMZmE0aiNRq4UGNGrkjvxw+iI6VkQjVwpohGNUZ0kcEy6DzyXFkdfGarln+3aI5d4zatBIEp8+C62ohW/DzBrwAVUIB5YX3UnPA4WBSVXwNa5FZ8BYQHJz6Z5F5wEXo5lP2XyMloDLzImb4GNTG9DcBR0UyZ2wDb/7UYCAhtgF9RAj09R4IIeqIEy2ASWDn8B+0PuRhdFvnIAAAAASUVORK5CYII=")
+
+.kifi-settings-links
+  margin-top: 30px
+  font-size: 13px
+
+.kifi-settings-help-link
+  display: inline-block
+  margin-top: 12px
+
+.kifi-settings-x
+  position: absolute
+  top: 6px
+  right: 10px
+  height: 26px
+  width: 26px
+  border-radius: 50% !important
+
+.kifi-settings-x:before,
+.kifi-settings-x:after
+  content: ' '
+  position: absolute
+  top: 4px
+  bottom: 4px
+  left: 50%
+  width: 3px
+  background: #d1d6dc
+  font-size: 0
+
+.kifi-settings-x:before
+  -webkit-transform: translate(-1.5px) rotate(45deg)
+  transform: translate(-1.5px) rotate(45deg)
+
+.kifi-settings-x:after
+  -webkit-transform: translate(-1.5px) rotate(-45deg)
+  transform: translate(-1.5px) rotate(-45deg)
+
+.kifi-settings-x:hover:before,
+.kifi-settings-x:hover:after,
+.kifi-settings-x:focus:before,
+.kifi-settings-x:focus:after
+  background: #8e939a
+
+.kifi-settings-x:active:before,
+.kifi-settings-x:active:after
+  background: #fafafa
+
+.kifi-settings-x:active
+  background: #d0d4da
+

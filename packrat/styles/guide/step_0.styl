@@ -1,0 +1,132 @@
+.kifi-guide-0-stage
+  position: fixed
+  top: 0
+  left: 0
+  height: 100%
+  width: 100%
+  z-index: 999999999993
+  background-color: rgba(0,0,0,.85)
+  opacity: 0
+  transition: opacity .34s linear
+
+.kifi-guide-0-stage.kifi-open
+  opacity: 1
+
+.kifi-guide-pages
+  position: absolute
+  top: 0
+  left: 0
+  height: 100%
+  width: 100%
+
+.kifi-guide-page
+  position: absolute
+  top: 50%
+  left: 0
+  width: 100%
+  text-align: center
+  transition: -webkit-transform .5s ease-out
+  transition: transform .5s ease-out
+
+[kifi-p='1']>.kifi-guide-page
+  -webkit-transform: translate3d(-100%,0,0)
+  transform: translate3d(-100%,0,0)
+
+.kifi-guide-page-0
+  margin-top: -170px
+
+.kifi-guide-page-1
+  margin-top: -200px
+  left: 100%
+
+.kifi-guide-pic
+  height: 100px
+  width: 100px
+  border: 5px solid #dcdcdc
+  border-radius: 50%
+  margin-bottom: 10px
+
+.kifi-guide-0-h1
+  margin: 12px 0
+  font: bold italic 26px/36px Georgia,Times,serif !important
+  -webkit-font-smoothing: antialiased
+  color: #fff
+
+.kifi-guide-0-p
+  line-height: 24px
+  font-size: 16px
+  -webkit-font-smoothing: antialiased
+  color: #fff
+
+.kifi-guide-em
+  color: #f38283
+
+.kifi-guide-0-next
+  margin-top: 32px
+  display: inline-block
+  border: 3px solid #fff
+  border-radius: 7px
+  padding: 0 32px
+  line-height: 50px
+  font-size: 16px
+  -webkit-font-smoothing: antialiased
+  color: #fff
+
+.kifi-guide-0-next:hover,
+.kifi-guide-0-next:focus
+  color: #fff
+  background-color: rgba(255,255,255,.05)
+
+.kifi-guide-0-next:active
+  color: #fff
+  background-color: rgba(255,255,255,.15)
+
+.kifi-guide-page-1>.kifi-guide-0-h1
+  margin: 0 0 30px
+  line-height: 36px
+  font-size: 24px
+
+.kifi-guide-site-a
+  display: inline-table
+  table-layout: fixed
+  position: relative
+  width: 158px
+  height: 280px
+  vertical-align: top
+  background: #fff center top/auto 155px no-repeat
+  border-radius: 4px
+  margin: 0 10px
+
+.kifi-guide-site-a:hover,
+.kifi-guide-site-a:focus
+  color: #868b91
+
+.kifi-guide-site-title
+  display: table-cell
+  width: 100%
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+  padding: 155px 8px 20px
+  vertical-align: middle
+  color: #444
+  font: italic 16px Georgia, Times, sans-serif !important
+  -webkit-font-smoothing: antialiased
+
+.kifi-guide-site
+  position: absolute
+  left: 0
+  right: 0
+  bottom: 10px
+  color: #bcbfc2
+  font-size: 11px
+  -webkit-font-smoothing: antialiased
+
+.kifi-guide-site-a:not(:hover):not(:focus)::before
+  content: ' '
+  position: absolute
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  background-color: rgba(0,0,0,.05)
+

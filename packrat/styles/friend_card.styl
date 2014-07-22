@@ -1,0 +1,78 @@
+.kifi-kcard
+  position: absolute
+  background-color: #fff
+  color: #faf9f9
+  box-shadow: rgba(103,130,156,.35) 2px 3px
+  border: 1px solid #b8c5d2
+  border-radius: 3px !important
+  padding: 1px
+  text-align: left
+  cursor: default
+  opacity: 0
+  -webkit-transform: translate(0, 3px)
+  transform: translate(0, 3px)
+  transition: opacity linear, -webkit-transform ease-in-out
+  transition: opacity linear, transform ease-in-out
+  transition-duration: 100ms
+
+.kifi-kcard.kifi-showing
+  opacity: 1
+  -webkit-transform: none
+  transform: none
+  transition-duration: 60ms
+
+.kifi-kcard-top
+  display: table
+  table-layout: fixed
+  border-collapse: collapse
+  max-width: 320px
+
+.kifi-kcard-pic
+  display: table-cell
+  height: 72px
+  width: 72px
+  border-radius: 2px 0 0 2px !important
+
+.kifi-kcard-info
+  display: table-cell
+  vertical-align: middle
+  padding: 0 14px
+  font-size: 12px
+  line-height: 13px
+  color: #808080
+
+.kifi-kcard-name
+  font-size: 16px
+  line-height: 18px
+  color: #444
+  margin-bottom: 4px
+
+.kifi-kcard-desc
+  color: #929496
+
+.kifi-kcard-tri
+  position: absolute
+  height: 14px
+  width: 28px
+  bottom: -14px
+  left: 50%
+  margin-left: -14px
+  overflow: hidden
+  border-color: inherit
+
+.kifi-kcard-tri::after
+  content: ' '
+  position: absolute
+  height: 14px
+  width: 14px
+  left: 7px
+  top: -7px
+  -webkit-transform: rotate(45deg)
+  transform: rotate(45deg)
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+  box-shadow: rgba(103, 130, 156, .35) 2px 1px
+  border: 1px solid
+  border-color: inherit
+  background-color: #fff
+
