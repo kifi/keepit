@@ -227,7 +227,7 @@ angular.module('kifi.profileService', [
     }
 
     function closeAccountRequest(data) {
-      return $http.post('/site/user/close', data);
+      return $http.post(routeService.userCloseAccount, data);
     }
 
     return {

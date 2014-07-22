@@ -288,6 +288,9 @@ angular.module('kifi.profile', [
         };
 
         scope.closeAccount = function () {
+          // prevent multiple attempts
+          if (scope.closeAccountStatus) { return false; }
+
           scope.closeAccountStatus = 'pending';
           var data = { comment: scope.comment };
           profileService.closeAccountRequest(data).then(function () {

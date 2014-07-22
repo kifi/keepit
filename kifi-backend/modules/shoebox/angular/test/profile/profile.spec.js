@@ -10,12 +10,13 @@ describe('kifi.profile', function () {
 
   describe('close account link', function () {
     var $rootScope, $compile, $httpBackend, scope, elem, isolateScope, link,
-      errorMsgElem, successMsgElem;
+      errorMsgElem, successMsgElem, routeService;
 
     beforeEach(inject(function () {
       $rootScope = $injector.get('$rootScope');
       $compile = $injector.get('$compile');
       $httpBackend = $injector.get('$httpBackend');
+      routeService = $injector.get('routeService');
 
       scope = $rootScope.$new();
       elem = angular.element("<div kf-profile-manage-account></div>");
@@ -32,7 +33,7 @@ describe('kifi.profile', function () {
 
     describe('valid request', function () {
       beforeEach(function () {
-        $httpBackend.expectPOST('/site/user/close', { 'comment': 'n/a' }).respond(200, '{"closed":true}');
+        $httpBackend.expectPOST(routeService.userCloseAccount, { 'comment': 'n/a' }).respond(200, '{"closed":true}');
         expect(link.text()).toEqual('Close Account');
         link.click();
       });
@@ -48,11 +49,18 @@ describe('kifi.profile', function () {
         $httpBackend.flush();
         expect(successMsgElem.hasClass('ng-hide')).toBe(false);
       });
+
+      it('does not allow the request to be sent more than once', function () {
+        $httpBackend.flush();
+        link.click();
+        $httpBackend.verifyNoOutstandingExpectation();
+        $httpBackend.verifyNoOutstandingRequest();
+      });
     });
 
     describe('invalid request', function () {
       beforeEach(function () {
-        $httpBackend.expectPOST('/site/user/close', { 'comment': 'n/a' }).respond(422);
+        $httpBackend.expectPOST(routeService.userCloseAccount, { 'comment': 'n/a' }).respond(422);
         link.click();
       });
 
