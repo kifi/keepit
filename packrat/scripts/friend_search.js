@@ -33,7 +33,35 @@ var initFriendSearch = (function () {
       classPrefix: 'kifi-ti-',
       classForRoots: 'kifi-root',
       formatResult: formatResult,
-      onSelect: onSelect.bind(null, $in, source)
+      onSelect: onSelect.bind(null, $in, source),
+      onRemove: function (item, replaceWith) {
+        $('.kifi-ti-dropdown-item-waiting')
+          .addClass('kifi-ti-dropdown-email')
+          .css('background-image', 'url(' + api.url('images/wait.gif') + ')');
+        // Search for another contact to be used as a replacement
+        var query = $in.tokenInput('getQuery');
+        var items = $in.tokenInput('getItems');
+        var emailSuggestions = (items || []).reduce(function (prev, curr) {
+          if (curr.email) {
+            prev.push(curr.email);
+          }
+          return prev;
+        }, []);
+        api.port.emit('delete_contact', item.email, function (status) {
+          if (!status) {
+            return replaceWith(item); // put old item back into place
+          }
+          api.port.emit('search_contacts', {q: query, n: emailSuggestions.length + 1}, function (contacts) {
+            for (var i = 0; i < contacts.length; i++) {
+              var candidate = contacts[i];
+              if (emailSuggestions.indexOf(candidate.email) === -1) {
+                return replaceWith(candidate);
+              }
+            }
+            return replaceWith();
+          });
+        });
+      }
     }, options));
     $('.kifi-ti-dropdown').css('background-image', 'url(' + api.url('images/wait.gif') + ')');
   };
@@ -71,7 +99,11 @@ var initFriendSearch = (function () {
         html.push('<div class="kifi-ti-dropdown-contact-name">');
       }
       appendParts(html, res.emailParts);
-      html.push('</div></li>');
+      html.push('</div>');
+      if (!res.isNew) {
+        html.push('<a class="kifi-ti-dropdown-item-x" href="javascript:"></a>');
+      }
+      html.push('</li>');
       return html.join('');
     } else if (res === 'tip') {
       return '<li class="kifi-ti-dropdown-tip">Import Gmail contacts to message them on Kifi</li>';

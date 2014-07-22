@@ -1,6 +1,7 @@
 package com.keepit.test
 
 import com.keepit.common.controller._
+import com.keepit.common.crypto.TestCryptoModule
 import play.api.Mode
 import com.keepit.inject.{ TestFortyTwoModule, ApplicationInjector, EmptyInjector }
 import com.keepit.common.db.TestDbInfo
@@ -45,7 +46,8 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
       FakeSimpleQueueModule(),
       FakeNormalizationUpdateJobQueueModule(),
       AwsModule(),
-      FakeShoeboxRepoChangeListenerModule()
+      FakeShoeboxRepoChangeListenerModule(),
+      TestCryptoModule()
     ), overridingModules
   ))
 

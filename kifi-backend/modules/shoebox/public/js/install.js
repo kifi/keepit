@@ -1,5 +1,6 @@
 $(function () {
   var errorCount = 0;
+
   $(document).on('click', '.install-button[href]', function () {
     var $a = $(this);
     var $doc = $('html');
@@ -16,15 +17,24 @@ $(function () {
         console.log('[chrome.webstore.install] error:', e);
         if (++errorCount < 4) {
           $a.text('Had an error. Try again?');
-          setTimeout(function() {
-            $a.html($a.data('html')).attr('href', 'javascript:');
-          }, 1500);
+          setTimeout(restoreInstallLink.bind(null, $a), 1500);
         } else {
-          $a.replaceWith('<p class=install-error>There seems to be a problem.<br>We’ll look into it.<br>Feel free to try again later.</p>');
+          $a.hide();
+          $('.install-error').show();
         }
       })
     } else if ($doc.hasClass('firefox')) {
       window.location = 'https://www.kifi.com/assets/plugins/kifi.xpi';
+      setTimeout(troubleshootFirefox.bind(null, $a), 8000);
     }
   });
+
+  function restoreInstallLink($a) {
+    $a.html($a.data('html')).attr('href', 'javascript:');
+  }
+
+  function troubleshootFirefox($a) {
+    restoreInstallLink($a);
+    $('.install-ff-help:hidden').slideDown();
+  }
 });

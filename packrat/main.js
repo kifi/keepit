@@ -649,7 +649,8 @@ api.port.on({
         url: data.url,
         canonical: data.canonical,
         og: data.og,
-        isPrivate: data.how === 'private'
+        isPrivate: data.how === 'private',
+        guided: data.guided
       }, function done(keep) {
         log('[keep:done]', keep);
         delete d.state;
@@ -1138,6 +1139,22 @@ api.port.on({
         api.tabs.emit(tab, 'contacts', {searchId: searchId, contacts: [], error: true});
       });
     }
+  },
+  search_contacts: function(data, respond, tab) {
+    var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
+    var searchContext = {sf: sf, q: data.q}
+    ajax('GET', '/ext/contacts', {q: data.q, n: data.n}, function (contacts) {
+      respond(contacts.map(toContactResult, searchContext));
+    }, respond);
+  },
+  delete_contact: function(email, respond) {
+    ajax('POST', '/ext/contacts/hide', {email: email}, function (status) {
+      log('[delete_contact] resp:', status);
+      respond(status);
+    }, function () {
+      log('#c00', '[delete_contact] resp:', status);
+      respond(false);
+    });
   },
   open_tab: function (path) {
     api.tabs.open(webBaseUri() + path);

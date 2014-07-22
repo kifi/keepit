@@ -121,6 +121,11 @@ class UserController @Inject() (
     }
   }
 
+  def closeAccount = JsonAction.authenticated { request =>
+    userCommander.sendCloseAccountEmail(request.userId)
+    Ok(Json.obj("closed" -> true))
+  }
+
   def friend(id: ExternalId[User]) = JsonAction.authenticated { request =>
     val (success, code) = userCommander.friend(request.userId, id)
     if (success) {
@@ -413,8 +418,10 @@ class UserController @Inject() (
   def postDelightedAnswer = JsonAction.authenticatedParseJsonAsync { request =>
     implicit val source = DelightedAnswerSources.fromUserAgent(request.userAgentOpt)
     Json.fromJson[BasicDelightedAnswer](request.body) map { answer =>
-      userCommander.postDelightedAnswer(request.userId, answer) map { success =>
-        if (success) Ok else BadRequest
+      userCommander.postDelightedAnswer(request.userId, answer) map { externalIdOpt =>
+        externalIdOpt map { externalId =>
+          Ok(Json.obj("answerId" -> externalId))
+        } getOrElse NotFound
       }
     } getOrElse Future.successful(BadRequest)
   }

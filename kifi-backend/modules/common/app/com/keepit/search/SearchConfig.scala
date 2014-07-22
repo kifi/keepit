@@ -45,7 +45,8 @@ object SearchConfig {
       "useSemanticMatch" -> "false",
       "proximityGapPenalty" -> "0.05",
       "proximityThreshold" -> "0.0",
-      "proximityPowerFactor" -> "1.0"
+      "proximityPowerFactor" -> "1.0",
+      "messageHalfLifeHours" -> "24"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -77,7 +78,8 @@ object SearchConfig {
       "useSemanticMatch" -> "use semantic boolean query",
       "proximityGapPenalty" -> "unit gap penalty, used in proximity query",
       "proximityThreshold" -> "if a doc's proximity score is lower than this value, this doc will not be considered as a hit",
-      "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches"
+      "proximityPowerFactor" -> "raise proximity score to a power. Usually used in content field to penalize more on loose matches",
+      "messageHalfLifeHours" -> "exponential time decay constant used in message search"
     )
 
   val empty = new SearchConfig(Map.empty)

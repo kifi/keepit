@@ -53,7 +53,7 @@ trait HeimdalServiceClient extends ServiceClient {
 
   def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]]
 
-  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Boolean]
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]]
 
   def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Boolean]
 }
@@ -152,15 +152,14 @@ class HeimdalServiceClientImpl @Inject() (
     }
   }
 
-  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Boolean] = {
+  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]] = {
     call(Heimdal.internal.postDelightedAnswer(userId, externalId, email, name), Json.toJson(answer)).map { response =>
-      Json.parse(response.body) match {
-        case JsString(s) if s == "success" => true
-        case json =>
-          (json \ "error").asOpt[String].map { msg =>
-            log.warn(s"Error posting delighted answer $answer for user $userId: $msg")
-          }
-          false
+      val json = Json.parse(response.body)
+      json.asOpt[BasicDelightedAnswer] orElse {
+        (json \ "error").asOpt[String].map { msg =>
+          log.warn(s"Error posting delighted answer $answer for user $userId: $msg")
+        }
+        None
       }
     }
   }

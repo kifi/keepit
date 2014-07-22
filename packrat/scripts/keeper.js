@@ -129,7 +129,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     })
     .on('click', '.kifi-keep-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
-        keepPage('public');
+        keepPage('public', e);
         this.classList.add('kifi-hoverless');
       }
     }, 400, true))
@@ -203,7 +203,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     })
     .on('click', '.kifi-keep-lock', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
-        keepPage('private');
+        keepPage('private', e);
       }
     }, 400, true))
     .on('click', '.kifi-kept-lock', _.debounce(function (e) {
@@ -233,7 +233,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         return;
       }
       if (this.classList.contains('kifi-keep-tag')) {
-        keepPage('public', true);
+        keepPage('public', e, true);
       }
       api.require('scripts/tagbox.js', function () {
         tagbox.onShow.add(beginStickyTime);
@@ -384,11 +384,11 @@ var keeper = keeper || function () {  // idempotent for Chrome
       }
     }};
 
-  function keepPage(how, suppressNamePrompt) {
-    log('[keepPage]', how);
+  function keepPage(how, e, suppressNamePrompt) {
+    log('[keepPage]', e, how);
     justKept = true;
     var title = authoredTitle();
-    api.port.emit('keep', withUrls({title: title, how: how}));
+    api.port.emit('keep', withUrls({title: title, how: how, guided: e.originalEvent.guided}));
     if (!title && !suppressNamePrompt) {
       beginStickyTime();
       api.require('scripts/keep_name_prompt.js', function () {
