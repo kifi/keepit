@@ -13,9 +13,9 @@ class HashJoinTest extends Specification {
 
     def join(reader: DataBufferReader): Unit = {
       reader.recordType match {
-        case 1 => v1 = Some(reader.nextInt)
-        case 2 => v2 = Some(reader.nextInt)
-        case 3 => v3 = Some(reader.nextInt)
+        case 1 => v1 = Some(v1.getOrElse(0) + reader.nextInt)
+        case 2 => v2 = Some(v2.getOrElse(0) + reader.nextInt)
+        case 3 => v3 = Some(v3.getOrElse(0) + reader.nextInt)
         case unknown => new IllegalStateException(s"unknown record type: $unknown")
       }
     }
@@ -70,7 +70,32 @@ class HashJoinTest extends Specification {
 
       join.execute()
 
-      result === expected
+      (result == expected) === true
     }
+
+    "successfully aggregate data for duplicate ids" in {
+      val buf = new DataBuffer
+      val writer = new DataBufferWriter
+
+      val table = (0 until 60).map(i => (i * 2).toLong -> 1) ++
+        (0 until 40).map(i => (i * 3).toLong -> 2) ++
+        (0 until 24).map(i => (i * 5).toLong -> 4)
+
+      table.foreach {
+        case (id, value) =>
+          buf.alloc(writer, 1, 12)
+          writer.putLong(id)
+          writer.putInt(value)
+      }
+
+      val expected: Map[Long, (Option[Int], Option[Int], Option[Int])] = table.groupBy(_._1).mapValues(s => (Some(s.map(_._2).sum), None, None))
+      val result = mutable.HashMap.empty[Long, (Option[Int], Option[Int], Option[Int])]
+      val join = new HashJoin(buf, 20, new TstJoiner(result))
+
+      join.execute()
+
+      (result == expected) === true
+    }
+
   }
 }
