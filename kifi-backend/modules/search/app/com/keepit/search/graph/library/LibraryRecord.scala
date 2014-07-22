@@ -2,8 +2,8 @@ package com.keepit.search.graph.library
 
 import com.keepit.common.db.Id
 import com.keepit.model.Library
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-import org.apache.lucene.store.{InputStreamDataInput, OutputStreamDataOutput}
+import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
+import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
 
 case class LibraryRecord(name: String, description: Option[String], id: Id[Library])
 
