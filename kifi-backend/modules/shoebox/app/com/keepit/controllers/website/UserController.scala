@@ -121,8 +121,9 @@ class UserController @Inject() (
     }
   }
 
-  def closeAccount = JsonAction.authenticated { request =>
-    userCommander.sendCloseAccountEmail(request.userId)
+  def closeAccount = JsonAction.authenticatedParseJson { request =>
+    val comment = (request.body \ "comment").asOpt[String].getOrElse("")
+    userCommander.sendCloseAccountEmail(request.userId, comment)
     Ok(Json.obj("closed" -> true))
   }
 
