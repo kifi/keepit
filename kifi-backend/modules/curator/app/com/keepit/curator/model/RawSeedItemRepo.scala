@@ -10,6 +10,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import scala.concurrent.duration._
+import scala.slick.jdbc.StaticQuery
 
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 
@@ -65,6 +66,15 @@ class RawSeedItemRepoImpl @Inject() (
 
   def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
     (for (row <- rows if row.userId === userId || row.userId.isNull) yield row).sortBy(_.seq.desc).take(maxBatchSize).list
+  }
+
+  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
+    assignSequenceNumbers(sequence, "raw_seed_item", limit)
+  }
+
+  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
+    import StaticQuery.interpolation
+    sql"""select min(seq) from raw_seed_item where seq < 0""".as[Option[Long]].first
   }
 
 }

@@ -166,6 +166,57 @@ class SeedIngestionCommanderTest extends Specification with DbTestInjector {
       }
     }
 
+    "retrieve seed items by sequence number correctly" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, shoebox) = setup()
+        val user1Keeps = makeKeeps(user1, 5, shoebox)
+        val user2Keeps = makeKeeps(user2, 6, shoebox)
+        val commander = inject[SeedIngestionCommander]
+        val seedItemRepo = inject[RawSeedItemRepo]
+
+        Await.result(commander.ingestAll(), Duration(10, "seconds"))
+        db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
+
+        val user1SeedItems = Await.result(commander.getBySeqNumAndUser(SequenceNumber.ZERO, user1, 20), Duration(10, "seconds"))
+        val user2SeedItems = Await.result(commander.getBySeqNumAndUser(SequenceNumber.ZERO, user2, 20), Duration(10, "seconds"))
+
+        user1SeedItems.length === 6
+        user2SeedItems.length === 6
+
+        user1SeedItems.foreach { seedItem =>
+          seedItem.timesKept === (if (seedItem.uriId == Id[NormalizedURI](6)) 1 else 2)
+          seedItem.userId === user1
+        }
+
+        user2SeedItems.foreach { seedItem =>
+          seedItem.userId === user2
+        }
+
+        1 === 1
+      }
+    }
+
+    "retrieve recent items correctly" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, shoebox) = setup()
+        val user1Keeps = makeKeeps(user1, 5, shoebox)
+        val commander = inject[SeedIngestionCommander]
+        val seedItemRepo = inject[RawSeedItemRepo]
+
+        Await.result(commander.ingestAll(), Duration(10, "seconds"))
+        db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
+
+        val items = Await.result(commander.getRecentItems(user1, 2), Duration(10, "seconds"))
+        items.length === 2
+        items.foreach { item =>
+          item.userId === user1
+          item.uriId.id > 3
+        }
+
+        1 === 1
+      }
+    }
+
   }
 
 }
