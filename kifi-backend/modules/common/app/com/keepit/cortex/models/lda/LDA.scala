@@ -69,3 +69,7 @@ object LDATopicInfo {
     (__ \ 'config).format[LDATopicConfiguration]
   )(LDATopicInfo.apply, unlift(LDATopicInfo.unapply))
 }
+
+case class LDATopicDetail(
+  topicId: Int,
+  sampleURIs: Seq[NormalizedURI])

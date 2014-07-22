@@ -34,8 +34,9 @@ class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extend
   override def ldaDocTopic(doc: String): Future[Option[Array[Float]]] = ???
   override def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit = ???
   override def getLDAFeatures(uris: Seq[Id[NormalizedURI]]): Future[Seq[Array[Float]]] = ???
-  override def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[Float] = ???
+  override def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[Option[Float]] = ???
   override def userTopicMean(userId: Id[User]): Future[Option[Array[Float]]] = ???
+  override def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]] = ???
 
   override def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])] = ???
 }

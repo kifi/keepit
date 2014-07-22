@@ -149,9 +149,4 @@ class ExtAuthController @Inject() (
   def logOut = JsonAction.authenticated { implicit request =>
     Ok(views.html.logOut(Some(request.identity), secureSocialClientIds.facebook)).withNewSession
   }
-
-  def whois = JsonAction.authenticated { request =>
-    val user = db.readOnlyReplica(implicit s => userRepo.get(request.userId))
-    Ok(Json.obj("externalUserId" -> user.externalId.toString))
-  }
 }

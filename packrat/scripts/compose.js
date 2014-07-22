@@ -256,11 +256,11 @@ var initCompose = (function() {
     $form.keydown(function (e) {
       if (e.which === 13 && !e.shiftKey && !e.altKey && !enterToSend === (e.metaKey || e.ctrlKey) && e.originalEvent.isTrusted !== false) {
         e.preventDefault();
-        submit();
+        submit(e);
       }
     });
 
-    function submit() {
+    function submit(e) {
       if ($form.data('submitted')) {
         return;
       }
@@ -278,7 +278,7 @@ var initCompose = (function() {
       }
       var $submit = $form.find('.kifi-compose-submit').addClass('kifi-active');
       setTimeout($.fn.removeClass.bind($submit, 'kifi-active'), 10);
-      opts.onSubmit(text, recipients);
+      opts.onSubmit(text, recipients, e.originalEvent.guided);
       if (opts.resetOnSubmit) {
         editor.clear();
         editor.$el.focus();
@@ -362,13 +362,13 @@ var initCompose = (function() {
     $form.find('.kifi-compose-submit')
     .click(function (e) {
       if (e.originalEvent.isTrusted !== false) {
-        submit();
+        submit(e);
       }
     })
     .keypress(function (e) {
       if (e.which === 32 && e.originalEvent.isTrusted !== false) {
         e.preventDefault();
-        submit();
+        submit(e);
       }
     });
 
