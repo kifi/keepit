@@ -25,6 +25,7 @@ class DataBufferTest extends Specification {
         recType = (recType + 1) % DataBuffer.MAX_RECTYPEID
         datum
       }
+      buf.numPages === 3
 
       var result = new ArrayBuffer[(Int, Boolean)]()
       buf.scan(new DataBufferReader) { reader =>
@@ -41,7 +42,7 @@ class DataBufferTest extends Specification {
       val writer = new DataBufferWriter
 
       var recType = 0
-      val expected = (0 until 300).map { id =>
+      val expected = (0 until 200).map { id =>
         val datum = (recType, true, rand.nextLong, rand.nextInt, rand.nextInt.toShort, rand.nextFloat(), false)
         buf.alloc(writer, recType, 18)
         writer.putLong(datum._3)
@@ -51,6 +52,7 @@ class DataBufferTest extends Specification {
         recType = (recType + 1) % DataBuffer.MAX_RECTYPEID
         datum
       }
+      buf.numPages === 2
 
       var result = new ArrayBuffer[(Int, Boolean, Long, Int, Short, Float, Boolean)]()
       buf.scan(new DataBufferReader) { reader =>
@@ -77,6 +79,7 @@ class DataBufferTest extends Specification {
         recType = (recType + 1) % DataBuffer.MAX_RECTYPEID
         datum
       }
+      buf.numPages === 1
 
       var result = new ArrayBuffer[(Int, Long, Float, Boolean)]()
       buf.scan(new DataBufferReader) { reader =>
@@ -86,7 +89,7 @@ class DataBufferTest extends Specification {
       (result == expected.map(d => (d._1, d._2, taggedFloatValueFromFloat(d._3), d._4))) === true
 
       (result.map(_._3) zip expected.map(_._3)).forall {
-        case (f1, f2) => abs((f1 - f2) / f2) < (1.0f / (0x7fff.toFloat))
+        case (f1, f2) => abs((f1 - f2) / f2) <= (1.0f / (0x7fff.toFloat))
       } === true
     }
   }

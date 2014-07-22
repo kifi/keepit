@@ -5,21 +5,24 @@ class DataBufferWriter {
 
   private[this] var _type: Int = 0
   private[this] var _page: Page = null
-  private[this] var _offset: Int = 0 // offset within the current page in terms of short
-  private[this] var _endoff: Int = 0 // end offset of the allocation
-  private[this] var _current: Int = 0 // offset within the current page in terms of short
+  private[this] var _offset: Int = 0 // offset within the current page in terms of short words
+  private[this] var _endoff: Int = 0 // end offset of the allocation in terms of short words
+  private[this] var _current: Int = 0 // offset within the current page in terms of short words
 
-  private[join] def set(recType: Int, size: Int, page: Page, offset: Int): Boolean = {
+  private[join] def set(recType: Int, byteSize: Int, page: Page, byteOffset: Int): Int = {
     // bit 0: record flag (0: no record, 1: there is a record)
     // bit 1-7: record type id
     // bit 9-15: size in short words
+    val size = byteSize >> 1
+    val offset = byteOffset >> 1
     page(offset) = (0x8000 | (recType << 8) | (size & 0xff)).toShort
     _type = recType
     _page = page
     _offset = offset + 1 // beginning of the data
     _endoff = offset + 1 + size // end of the allocation
     _current = offset + 1
-    true
+
+    byteSize + DataBuffer.DESCRIPTOR_SIZE // total allocated
   }
 
   // Long
