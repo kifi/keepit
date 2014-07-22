@@ -15,7 +15,9 @@ case class PublicIdConfiguration(key: String) {
   })
 }
 
-case class PublicId[T <: ModelWithPublicId[T]](val id: String)
+case class PublicId[T <: ModelWithPublicId[T]](id: String) {
+  override def toString = id
+}
 
 object PublicId {
   implicit def format[T <: ModelWithPublicId[T]]: Format[PublicId[T]] = Format(

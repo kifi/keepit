@@ -38,9 +38,9 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       val libShield = libraryRepo.save(Library(name = "Avengers Missions", slug = LibrarySlug("avengers"),
         visibility = LibraryVisibility.SECRET, ownerId = userAgent.id.get, createdAt = t1))
       val libMurica = libraryRepo.save(Library(name = "MURICA", slug = LibrarySlug("murica"),
-        visibility = LibraryVisibility.ANYONE, ownerId = userAgent.id.get, createdAt = t1))
+        visibility = LibraryVisibility.ANYONE, ownerId = userCaptain.id.get, createdAt = t1))
       val libScience = libraryRepo.save(Library(name = "Science & Stuff", slug = LibrarySlug("science"),
-        visibility = LibraryVisibility.LIMITED, ownerId = userAgent.id.get, createdAt = t1))
+        visibility = LibraryVisibility.LIMITED, ownerId = userIron.id.get, createdAt = t1))
 
       libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = userAgent.id.get, access = LibraryAccess.OWNER, createdAt = t2))
       libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, createdAt = t2))
@@ -208,7 +208,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         val libraryCommander = inject[LibraryCommander]
 
-        libraryCommander.removeLibrary(libMurica.id.get)
+        libraryCommander.removeLibrary(libMurica.id.get, userCaptain.id.get)
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
           allLibs.length === 2
@@ -217,8 +217,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryInviteRepo.all.filter(_.state == LibraryInviteStates.INACTIVE).length === 3
         }
 
-        libraryCommander.removeLibrary(libScience.id.get)
-        libraryCommander.removeLibrary(libShield.id.get)
+        libraryCommander.removeLibrary(libScience.id.get, userIron.id.get)
+        libraryCommander.removeLibrary(libShield.id.get, userAgent.id.get)
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
           allLibs.length === 0
@@ -292,8 +292,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val all = libraryRepo.all()
           all.size === 3
 
-          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 0
-          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 0
+          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 1
+          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 1
         }
 
         libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
@@ -302,8 +302,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         // System libraries are created
         db.readOnlyMaster { implicit session =>
           libraryRepo.all().size === 7
-          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 2
-          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 2
+          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 3
+          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 3
           libraryRepo.getByUser(userHulk.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 0
         }
 
@@ -312,8 +312,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         libraryCommander.internSystemGeneratedLibraries(userHulk.id.get)
         db.readWrite { implicit session =>
           libraryRepo.all().size === 9
-          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 2
-          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 2
+          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 3
+          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 3
           libraryRepo.getByUser(userHulk.id.get).map(_._2).count(_.ownerId == userHulk.id.get) === 2
 
           val ironSysLibs = libraryRepo.getByUser(userIron.id.get).map(_._2).filter(_.ownerId == userIron.id.get)

@@ -1,5 +1,7 @@
+package com.keepit.controllers.website
+
 import com.google.inject.Inject
-import com.keepit.commanders._
+import com.keepit.commanders.{ LibraryCommander, LibraryAddRequest, LibraryFail }
 import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
@@ -52,8 +54,10 @@ class LibraryController @Inject() (
     idTry match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) => {
-        libraryCommander.removeLibrary(id)
-        Ok(JsString("success"))
+        libraryCommander.removeLibrary(id, request.userId) match {
+          case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+          case Right(success) => Ok(JsString(success))
+        }
       }
     }
   }
