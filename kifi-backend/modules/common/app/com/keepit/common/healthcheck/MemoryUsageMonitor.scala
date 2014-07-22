@@ -15,7 +15,10 @@ import scala.collection.JavaConversions._
 object MemoryUsageMonitor {
 
   val poolsToBeMonitored = Set("CMS Old Gen")
-  val percentThreshold = 0.9d // probably it is a good idea to tune -XX:CMSInitiatingOccupancyFraction to the same value
+
+  // The following default is used when -XX:CMSInitiatingOccupancyFraction is not set.
+  // It is encouraged to set -XX:CMSInitiatingOccupancyFraction explicitly.
+  val percentThresholdDefault = 0.92d
 
   case class MemoryPool(bean: MemoryPoolMXBean, threshold: Long, maxHeapSize: Long)
 
@@ -39,6 +42,18 @@ trait MemoryUsageMonitor {
 
 class MemoryUsageMonitorImpl(warn: (MemoryPoolMXBean, Long, Long, Int) => Unit) extends MemoryUsageMonitor with Logging {
   import MemoryUsageMonitor._
+
+  private val percentThreshold: Double = {
+    val runtimeMxBean = ManagementFactory.getRuntimeMXBean()
+    val jvmArgs = runtimeMxBean.getInputArguments()
+    val threshold = jvmArgs.find(_.startsWith("-XX:CMSInitiatingOccupancyFraction=")) match {
+      case Some(arg) => arg.split("=")(1).toDouble / 100.0d
+      case None => percentThresholdDefault
+    }
+
+    log.info(s"percentThreshold=$threshold")
+    threshold
+  }
 
   override val monitoredPools = ManagementFactory.getMemoryPoolMXBeans.flatMap { pool =>
     if (pool.getType == MemoryType.HEAP && poolsToBeMonitored.contains(pool.getName)) {

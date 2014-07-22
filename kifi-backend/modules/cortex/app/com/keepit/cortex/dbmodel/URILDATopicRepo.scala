@@ -25,6 +25,7 @@ trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getHighestSeqNumber(version: ModelVersion[DenseLDA])(implicit session: RSession): SequenceNumber[NormalizedURI]
   def getUpdateTimeAndState(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(DateTime, State[URILDATopic])]
   def getUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(LDATopic, Int)]
+  def getLatestURIsInTopic(topicId: LDATopic, version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[Id[NormalizedURI]]
 }
 
 @Singleton
@@ -106,5 +107,12 @@ class URILDATopicRepoImpl @Inject() (
 
     query.as[(Int, Int)].list map { case (topic, count) => (LDATopic(topic), count) }
 
+  }
+
+  def getLatestURIsInTopic(topicId: LDATopic, version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[Id[NormalizedURI]] = {
+    import StaticQuery.interpolation
+
+    val q = sql"select uri_id from uri_lda_topic where first_topic = ${topicId.index} and version = ${version.version} order by updated_at desc limit ${limit}"
+    q.as[Long].list.map { Id[NormalizedURI](_) }
   }
 }
