@@ -355,7 +355,6 @@ Options.extract = function(document) {
     element = _ref[_i];
     if ((src = element.src) && (m = src.match(/^[^:]+:\/\/(.*)\/z?livereload\.js(?:\?(.*))?$/))) {
       options = new Options();
-      debugger;
       if (mm = m[1].match(/^([^\/:]+)(?::(\d+))?$/)) {
         options.host = mm[1];
         if (mm[2]) {

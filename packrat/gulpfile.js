@@ -9,9 +9,10 @@ var clone = require('gulp-clone');
 var css = require('css');
 var es = require('event-stream');
 var livereload = require('gulp-livereload');
+var fs = require('fs');
 
 var outDir = 'out';
-var adapterFiles = ['adapters/chrome/**', 'adapters/firefox/**'];
+var adapterFiles = ['adapters/chrome/**', 'adapters/firefox/**', '!adapters/chrome/manifest.json', '!adapters/firefox/package.json'];
 var sharedAdapterFiles = ['adapters/shared/*.js', 'adapters/shared/*.min.map'];
 var resourceFiles = ['icons/**', 'images/**', 'media/**', 'scripts/**', '!scripts/lib/rwsocket.js'];
 var rwsocketScript = 'scripts/lib/rwsocket.js';
@@ -23,8 +24,14 @@ var backgroundScripts = [
   'friend_search_cache.js',
   'livereload.js'
 ];
+var tabScripts = ['scripts/**'];
 var htmlFiles = 'html/**/*.html';
 var styleFiles = 'styles/**/*.*';
+
+var contentScripts = {};
+var styleDeps = {};
+var scriptDeps = {};
+var asap = {};
 
 // Used to take the union of glob descriptors
 var union = function () {
@@ -37,7 +44,6 @@ var union = function () {
     }
   }, []);
 }
-
 
 gulp.task('clean', function () {
   return gulp.src(outDir, {read: false})
@@ -95,13 +101,12 @@ gulp.task('scripts', ['html2js', 'copy'], function () {
   var chromeInjectionFooter = map(function (code, filename) {
     var relativeFilename = filename.replace(new RegExp('^' + __dirname + '/' + outDir + '/chrome/'), '');
     var shortName = relativeFilename.replace(/^scripts\//, '');
-    return code.toString() + 'api.injected[' + relativeFilename + ']=1;\n//@ sourceURL=http://kifi/' + shortName + '\n';
+    return code.toString() + 'api.injected["' + relativeFilename + '"]=1;\n//@ sourceURL=http://kifi/' + shortName + '\n';
   });
 
   return gulp.src([outDir + '/chrome/scripts/**/*.js', '!**/iframes/**'], {base: outDir})
     .pipe(chromeInjectionFooter)
-    .pipe(gulp.dest(outDir))
-    .pipe(livereload());
+    .pipe(gulp.dest(outDir));
 });
 
 gulp.task('styles', function () {
@@ -149,8 +154,7 @@ gulp.task('styles', function () {
   
   var chrome = preprocessed.pipe(clone())
     .pipe(imageUrlChrome)
-    .pipe(gulp.dest(outDir + '/chrome'))
-    .pipe(livereload());
+    .pipe(gulp.dest(outDir + '/chrome'));
 
   var firefox = preprocessed.pipe(clone())
     .pipe(imageUrlFirefox)
@@ -159,19 +163,112 @@ gulp.task('styles', function () {
   return es.merge(chrome, firefox);
 });
 
+gulp.task('extractMeta', function () {
+  var extractMeta = map(function (code, filename) {
+    var relativeFilename = filename.replace(new RegExp('^' + __dirname + '/'), '');
+    var re = /^\/\/ @(match|require|asap)([^\S\n](.+))?$/gm;
+    var content = code.toString();
+    while ((match = re.exec(content)) !== null) {
+      if (match[1] === 'match') {
+        contentScripts[relativeFilename] = match[3];
+      } else if (match[1] === 'require') {
+        var dep = match[3].trim();
+        var depMatch = dep.match(/^(.*)\.([^.]+)$/)
+        if (depMatch) {
+          var base = depMatch[1];
+          var ext = depMatch[2];
+          if (ext === 'css' || ext === 'less' || ext === 'styl') {
+            styleDeps[relativeFilename] = styleDeps[relativeFilename] || [];
+            styleDeps[relativeFilename].push(base + '.css');
+          } else if (ext === 'js') {
+            scriptDeps[relativeFilename] = scriptDeps[relativeFilename] || [];
+            scriptDeps[relativeFilename].push(dep);
+          }
+        }
+      } else if (match[1] === 'asap') {
+        asap[relativeFilename] = true;
+      }
+    }
+  });
+
+  return gulp.src(tabScripts)
+    .pipe(extractMeta)
+});
+
+gulp.task('meta', ['extractMeta'], function () {
+  var contentScriptItems = [];
+  for (var f in contentScripts) {
+    contentScriptItems.push('["' + f + '", ' + contentScripts[f] + ', ' + (asap[f] ? 1 : 0) + ']');
+  }
+  var contentScriptsString = ' [\n  ' + contentScriptItems.join(',\n  ') + ']';
+  var styleDepsString = JSON.stringify(styleDeps, undefined, 2);
+  var scriptDepsString = JSON.stringify(scriptDeps, undefined, 2);
+
+  var chromeMeta = 'meta = {\n  contentScripts:' +
+    contentScriptsString +
+    ',\n  styleDeps: ' +
+    styleDepsString +
+    ',\n  scriptDeps: ' +
+    scriptDepsString +
+    '};';
+
+  var firefoxMeta = 'exports.contentScripts =' +
+    contentScriptsString +
+    ';\nexports.styleDeps = ' +
+    styleDepsString +
+    ';\nexports.scriptDeps = ' +
+    scriptDepsString +
+    ';';
+
+  fs.writeFile(outDir + '/chrome/meta.js', chromeMeta);
+  fs.writeFile(outDir + '/firefox/lib/meta.js', firefoxMeta);
+});
+
+gulp.task('config', ['copy'], function () {
+  var version = fs.readFileSync('build.properties', {encoding: 'utf8'})
+    .match('version=(.*)')[1].trim();
+
+  function setVersion(contents) {
+    return contents.replace(/"version":.*$/gm, '"version": "' + version + '",');
+  }
+
+  var chromeConfig = gulp.src('adapters/chrome/manifest.json')
+    .pipe(rename('chrome/manifest.json'))
+    .pipe(map(function (code) {
+      return setVersion(code.toString());
+    }))
+    .pipe(gulp.dest(outDir))
+
+  var firefoxConfig = gulp.src('adapters/firefox/package.json')
+    .pipe(rename('firefox/package.json'))
+    .pipe(map(function (code) {
+      return setVersion(code.toString());
+    }))
+    .pipe(gulp.dest(outDir))
+
+  return es.merge(chromeConfig, firefoxConfig);
+});
+
+function watchAndReload(targets, tasks) {
+  gulp.watch(targets, function () {
+    // the tasks array is modified by runSequence, need to pass a copy
+    runSequence(tasks.slice(0), livereload.changed);
+  });
+}
+
 gulp.task('watch', function() {
   livereload.listen();
-  gulp.watch(union(
+  watchAndReload(union(
     adapterFiles,
     sharedAdapterFiles,
     resourceFiles,
     rwsocketScript,
     backgroundScripts,
     htmlFiles
-  ), ['scripts']);
-  gulp.watch(styleFiles, ['styles']);
+  ), ['scripts', 'meta']);
+  watchAndReload(styleFiles, ['styles', 'meta']);
 });
 
 gulp.task('default', function () {
-  runSequence('clean', ['watch', 'scripts', 'styles']);
+  runSequence('clean', ['watch', 'scripts', 'styles', 'meta', 'config']);
 });
