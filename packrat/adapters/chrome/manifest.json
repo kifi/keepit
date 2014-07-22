@@ -30,8 +30,7 @@
       "main.js",
       "lzstring.min.js",
       "scorefilter.js",
-      "friend_search_cache.js",
-      "livereload.js"
+      "friend_search_cache.js"
     ]
   },
   "content_scripts": [

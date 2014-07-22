@@ -9,6 +9,7 @@ var clone = require('gulp-clone');
 var css = require('css');
 var es = require('event-stream');
 var fs = require('fs');
+var jeditor = require("gulp-json-editor");
 var reload = require('./gulp/livereload.js');
 
 var outDir = 'out';
@@ -228,21 +229,22 @@ gulp.task('config', ['copy'], function () {
   var version = fs.readFileSync('build.properties', {encoding: 'utf8'})
     .match('version=(.*)')[1].trim();
 
-  function setVersion(contents) {
-    return contents.replace(/"version":.*$/gm, '"version": "' + version + '",');
-  }
-
   var chromeConfig = gulp.src('adapters/chrome/manifest.json')
     .pipe(rename('chrome/manifest.json'))
+    .pipe(jeditor(function(json) {
+      json.version = version;
+      json.background.scripts.push('livereload.js');
+      return json;
+    }))
     .pipe(map(function (code) {
-      return setVersion(code.toString());
+      return JSON.stringify(JSON.parse(code.toString()), undefined, 2);
     }))
     .pipe(gulp.dest(outDir))
 
   var firefoxConfig = gulp.src('adapters/firefox/package.json')
     .pipe(rename('firefox/package.json'))
     .pipe(map(function (code) {
-      return setVersion(code.toString());
+      return code.toString().replace(/"version":.*$/gm, '"version": "' + version + '",');
     }))
     .pipe(gulp.dest(outDir))
 
