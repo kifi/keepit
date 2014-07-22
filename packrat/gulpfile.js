@@ -2,7 +2,7 @@ var gulp = require('gulp');
 var rimraf = require('gulp-rimraf');
 var rename = require('gulp-rename');
 var map = require('vinyl-map');
-var less = require('gulp-less');
+var stylus = require('gulp-stylus');
 var runSequence = require('run-sequence');
 var gulpif = require('gulp-if');
 var clone = require('gulp-clone');
@@ -12,6 +12,9 @@ var fs = require('fs');
 var jeditor = require("gulp-json-editor");
 var lazypipe = require('lazypipe');
 var reload = require('./gulp/livereload.js');
+var watch = require('gulp-watch');
+var plumber = require('gulp-plumber');
+var print = require('gulp-print');
 
 var outDir = 'out';
 var adapterFiles = ['adapters/chrome/**', 'adapters/firefox/**', '!adapters/chrome/manifest.json', '!adapters/firefox/package.json'];
@@ -28,7 +31,7 @@ var backgroundScripts = [
 ];
 var tabScripts = ['scripts/**'];
 var htmlFiles = 'html/**/*.html';
-var styleFiles = 'styles/**/*.*';
+var styleFiles = 'styles/**/*.styl';
 
 var contentScripts = {};
 var styleDeps = {};
@@ -124,7 +127,8 @@ gulp.task('scripts', ['html2js', 'copy'], function () {
     .pipe(gulp.dest(outDir));
 });
 
-gulp.task('styles', function () {
+var rewriteStyles = (function () {
+
   function insulateSelectors(rule) {
     if (rule.selectors) {
       rule.selectors = rule.selectors.map(function (selector) {
@@ -140,40 +144,58 @@ gulp.task('styles', function () {
     }
   }
 
-  var insulate = map(function (code) {
-    // too slow (and probably wrong):
-    //return line.replace(/^(([^().]*|\([^)]*\))*)(\.[a-zA-Z0-9_-]*).*$/gm, '$1$3$3$3');
+  var insulate = function () {
+    return map(function (code) {
+      // too slow (and probably wrong):
+      //return line.replace(/^(([^().]*|\([^)]*\))*)(\.[a-zA-Z0-9_-]*).*$/gm, '$1$3$3$3');
 
-    // reasonably fast (but slower than sed):
-    /*return code.toString().split('\n').map(function (line) {
-      return line.replace(/(\.[a-zA-Z0-9_-]*)(?![^(]*\))/m, '$1$1$1');
-    }).join('\n');*/
+      // reasonably fast (but slower than sed):
+      /*return code.toString().split('\n').map(function (line) {
+        return line.replace(/(\.[a-zA-Z0-9_-]*)(?![^(]*\))/m, '$1$1$1');
+      }).join('\n');*/
 
-    // a bit slower than above, but much safer and more readable/maintainable
-    var obj = css.parse(code.toString())
-    obj.stylesheet.rules.map(insulateRule);
-    return css.stringify(obj);
-  });
+      // a bit slower than above, but much safer and more readable/maintainable
+      var obj = css.parse(code.toString())
+      obj.stylesheet.rules.map(insulateRule);
+      return css.stringify(obj);
+    });
+  };
 
-  var imageUrlChrome = map(function (code) {
+  return lazypipe()
+    .pipe(print, function (filepath) {
+      return 'Processing ' + filepath;
+    })
+    .pipe(function () {
+      return gulpif(/[.]styl$/, stylus());
+    })
+    .pipe(function () {
+      return gulpif(RegExp('^(?!' + __dirname + '/styles/(insulate\\.|iframes/))'), insulate())
+    });
+})();
+
+var chromifyStyles = lazypipe()
+  .pipe(map, function (code) {
     return code.toString().replace(/\/images\//g, 'chrome-extension://__MSG_@@extension_id__/images/');
-  });
+  })
+  .pipe(gulp.dest, outDir + '/chrome');
 
-  var imageUrlFirefox = map(function (code) {
+var firefoxifyStyles = lazypipe()
+  .pipe(map, function (code) {
     return code.toString().replace(/\/images\//g, 'resource://kifi-at-42go-dot-com/kifi/data/images/');
-  });
+  })
+  .pipe(gulp.dest, outDir + '/firefox/data');
 
+gulp.task('styles', function () {
   var preprocessed = gulp.src(styleFiles, {base: './'})
-    .pipe(gulpif(/[.]less$/, less()))
-    .pipe(gulpif(RegExp('^(?!' + __dirname + '/styles/(insulate\\.|iframes/))'), insulate))
-  
-  var chrome = preprocessed.pipe(clone())
-    .pipe(imageUrlChrome)
-    .pipe(gulp.dest(outDir + '/chrome'));
+    .pipe(rewriteStyles());
 
-  var firefox = preprocessed.pipe(clone())
-    .pipe(imageUrlFirefox)
-    .pipe(gulp.dest(outDir + '/firefox/data'));
+  var chrome = preprocessed
+    .pipe(clone())
+    .pipe(chromifyStyles());
+
+  var firefox = preprocessed
+    .pipe(clone())
+    .pipe(firefoxifyStyles());
 
   return es.merge(chrome, firefox);
 });
@@ -192,7 +214,7 @@ gulp.task('extractMeta', function () {
         if (depMatch) {
           var base = depMatch[1];
           var ext = depMatch[2];
-          if (ext === 'css' || ext === 'less' || ext === 'styl') {
+          if (ext === 'css' || ext === 'styl') {
             styleDeps[relativeFilename] = styleDeps[relativeFilename] || [];
             styleDeps[relativeFilename].push(base + '.css');
           } else if (ext === 'js') {
@@ -263,11 +285,41 @@ gulp.task('config', ['copy'], function () {
   return es.merge(chromeConfig, firefoxConfig);
 });
 
-function watchAndReload(targets, tasks) {
-  gulp.watch(targets, function () {
-    // the tasks array is modified by runSequence, need to pass a copy
-    runSequence(tasks.slice(0), reload);
+/**
+ * Takes a set of "actions" (lazypipes or task names), and creates corresponding
+ * watchers. "actions" can be either lazypipes (good!), or task names (not as good,
+ * because the task is run on all files, not just the modified ones)
+ */
+function watchAndReload(target) {
+  var actions = Array.prototype.slice.call(arguments, 1);
+  var tasks = [];
+  var pipes = [];
+
+  actions.forEach(function (a) {
+    if (typeof a === 'string') {
+      tasks.push(a);
+    } else {
+      pipes.push(a);
+    }
   });
+
+  if (tasks) {
+    gulp.watch(target, function () {
+      // the tasks array is modified by runSequence, need to pass a copy
+      runSequence(tasks.slice(0), reload);
+    });
+  }
+
+  if (pipes) {
+    gulp.src(target, {base: './'})
+      .pipe(watch(function(files) {
+        var withLazypipe = pipes.map(function (pipe) {
+          return files.pipe(pipe());
+        });
+        return es.merge.apply(null, withLazypipe)
+          .pipe(es.wait(reload));
+      }));
+  }
 }
 
 gulp.task('watch', function() {
@@ -278,8 +330,9 @@ gulp.task('watch', function() {
     rwsocketScript,
     backgroundScripts,
     htmlFiles
-  ), ['scripts', 'meta']);
-  watchAndReload(styleFiles, ['styles', 'meta']);
+  ), 'scripts', 'meta');
+
+  watchAndReload(styleFiles, 'meta', rewriteStyles.pipe(chromifyStyles));
 });
 
 gulp.task('default', function () {
