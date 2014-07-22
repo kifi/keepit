@@ -5,7 +5,7 @@
  */
 
 (function() {
-  var socket = new WebSocket("ws://localhost:35729");
+  var socket = new WebSocket("ws://dev.ezkeep.com:35729");
   socket.onmessage = function (event) {
     if (event.data === 'reload') {
       window.chrome.runtime.reload();
