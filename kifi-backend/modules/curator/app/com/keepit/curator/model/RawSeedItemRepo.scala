@@ -1,7 +1,7 @@
 package com.keepit.curator.model
 
 import com.keepit.common.db.slick.{ DbRepo, SeqNumberFunction, SeqNumberDbFunction, DataBaseComponent, Database }
-import com.keepit.common.db.{ Id, DbSequenceAssigner }
+import com.keepit.common.db.{ Id, DbSequenceAssigner, SequenceNumber }
 import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.common.time.Clock
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
@@ -18,7 +18,8 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[RawSeedItemRepoImpl])
 trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeedItem] {
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[RawSeedItem]
-
+  def getBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
+  def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
 }
 
 @Singleton
@@ -56,6 +57,14 @@ class RawSeedItemRepoImpl @Inject() (
 
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[RawSeedItem] = {
     (for (row <- rows if row.uriId === uriId) yield row).list
+  }
+
+  def getBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
+    (for (row <- rows if row.seq > start && (row.userId === userId || row.userId.isNull)) yield row).take(maxBatchSize).list
+  }
+
+  def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
+    (for (row <- rows if row.userId === userId || row.userId.isNull) yield row).sortBy(_.seq.desc).take(maxBatchSize).list
   }
 
 }

@@ -74,7 +74,7 @@ class SeedIngestionCommanderTest extends Specification with DbTestInjector {
         val seedItemRepo = inject[RawSeedItemRepo]
         val commander = inject[SeedIngestionCommander]
         db.readOnlyMaster { implicit session => keepInfoRepo.all() }.length === 0
-        Await.result(commander.ingestAll(), Duration(5, "seconds"))
+        Await.result(commander.ingestAll(), Duration(10, "seconds"))
         db.readOnlyMaster { implicit session => keepInfoRepo.all() }.length === 60
         db.readOnlyMaster { implicit session => systemValueRepo.getSequenceNumber(Name[SequenceNumber[Keep]]("all_keeps_seq_num")).get } === SequenceNumber[Keep](60)
 
@@ -107,7 +107,7 @@ class SeedIngestionCommanderTest extends Specification with DbTestInjector {
           createdAt = new DateTime(2022, 10, 1, 9, 18, 44)
         ))
 
-        Await.result(commander.ingestAll(), Duration(5, "seconds"))
+        Await.result(commander.ingestAll(), Duration(10, "seconds"))
         db.readOnlyMaster { implicit session =>
           keepInfoRepo.all().length === 60
           keepInfoRepo.getByKeepId(user1Keeps(0).id.get).get.state.value == KeepStates.INACTIVE.value
@@ -146,7 +146,7 @@ class SeedIngestionCommanderTest extends Specification with DbTestInjector {
           state = KeepStates.ACTIVE
         ))
 
-        Await.result(commander.ingestAll(), Duration(5, "seconds"))
+        Await.result(commander.ingestAll(), Duration(10, "seconds"))
         db.readOnlyMaster { implicit session => keepInfoRepo.all() }.length === 60
 
         var seedItemsAfter2 = db.readOnlyMaster { implicit session => seedItemRepo.all() }
