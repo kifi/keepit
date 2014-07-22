@@ -10,15 +10,16 @@ object LibraryFields {
   val nameStemmedField = "ns"
   val descriptionField = "d"
   val descriptionStemmedField = "ds"
+  val visibilityField = "v"
   val usersField = "u"
   val recordField = "rec"
 }
 
-class LibraryIndexable(library: Library, members: Seq[Id[User]]) extends Indexable[Library, Library] {
+class LibraryIndexable(library: Library, users: Seq[Id[User]]) extends Indexable[Library, Library] {
 
   val id = library.id.get
   val sequenceNumber = library.seq
-  val isDeleted: Boolean = members.isEmpty
+  val isDeleted: Boolean = users.isEmpty
 
   override def buildDocument = {
     import LibraryFields._
@@ -34,7 +35,8 @@ class LibraryIndexable(library: Library, members: Seq[Id[User]]) extends Indexab
       doc.add(buildTextField(descriptionStemmedField, description, DefaultAnalyzer.getAnalyzerWithStemmer(descriptionLang)))
     }
 
-    doc.add(buildIteratorField(usersField, members.iterator) { id => id.id.toString })
+    doc.add(buildKeywordField(visibilityField, library.visibility.value))
+    doc.add(buildIteratorField(usersField, users.iterator) { id => id.id.toString })
 
     val record = LibraryRecord(library.name, library.description, library.id.get)
     doc.add(buildBinaryDocValuesField(recordField, record))
