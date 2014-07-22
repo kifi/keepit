@@ -115,11 +115,11 @@ var toaster = (function () {
     }
   }
 
-  function send(text, recipients) {
+  function send(text, recipients, guided) {
     hide();
     api.port.emit(
       'send_message',
-      withUrls({title: authoredTitle(), text: text, recipients: recipients.map(idOf)}),
+      withUrls({title: authoredTitle(), text: text, recipients: recipients.map(idOf), guided: guided}),
       function (resp) {
         log('[sendMessage] resp:', resp);
         pane.show({locator: '/messages/' + resp.threadId});

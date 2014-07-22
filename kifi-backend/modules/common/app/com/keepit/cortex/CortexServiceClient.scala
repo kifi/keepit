@@ -36,8 +36,9 @@ trait CortexServiceClient extends ServiceClient {
   def ldaDocTopic(doc: String): Future[Option[Array[Float]]]
   def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit
   def getLDAFeatures(uris: Seq[Id[NormalizedURI]]): Future[Seq[Array[Float]]]
-  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[Float]
+  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[Option[Float]]
   def userTopicMean(userId: Id[User]): Future[Option[Array[Float]]]
+  def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]]
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
@@ -152,8 +153,8 @@ class CortexServiceClientImpl(
     }
   }
 
-  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[Float] = {
-    call(Cortex.internal.userUriInterest(userId, uriId)).map { r => (r.json).as[Float] }
+  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[Option[Float]] = {
+    call(Cortex.internal.userUriInterest(userId, uriId)).map { r => (r.json).asOpt[Float] }
   }
 
   def userTopicMean(userId: Id[User]): Future[Option[Array[Float]]] = {
@@ -161,6 +162,10 @@ class CortexServiceClientImpl(
       val jsArrOpt = (r.json).asOpt[JsArray]
       jsArrOpt.map { arr => arr.value.map { x => x.as[Float] }.toArray }
     }
+  }
+
+  def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]] = {
+    call(Cortex.internal.sampleURIsForTopic(topic)).map { r => (r.json).as[Seq[Id[NormalizedURI]]] }
   }
 
 }

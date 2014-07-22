@@ -175,9 +175,57 @@ class LibraryCommander @Inject() (
 
   def internSystemGeneratedLibraries(userId: Id[User]): Boolean = { // returns true if created, false if already existed
     db.readWrite { implicit session =>
+      val libMem = libraryMembershipRepo.getWithUserId(userId, None)
+      val allLibs = libraryRepo.getByUser(userId, None)
 
+      // Get all current system libraries, for main/secret, make sure only one is active.
+      // This corrects any issues with previously created libraries / memberships
+      val sysLibs = allLibs.filter(_._2.ownerId == userId)
+        .filter(l => l._2.kind == LibraryKind.SYSTEM_MAIN || l._2.kind == LibraryKind.SYSTEM_SECRET)
+        .sortBy(_._2.id.get.id)
+        .groupBy(_._2.kind)
+        .map {
+          case (kind, libs) =>
+            val (slug, name) = if (kind == LibraryKind.SYSTEM_MAIN) ("main", "Main Library") else ("secret", "Secret Library")
+
+            val activeLib = libs.head._2.copy(state = LibraryStates.ACTIVE, slug = LibrarySlug(slug), name = name, visibility = LibraryVisibility.SECRET)
+            val activeMembership = libMem.find(_.libraryId == activeLib.id.get)
+              .getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER))
+              .copy(state = LibraryMembershipStates.ACTIVE)
+            val active = (activeMembership, activeLib)
+            val otherLibs = libs.tail.map {
+              case (a, l) =>
+                val inactMem = libMem.find(_.libraryId == l.id.get)
+                  .getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER))
+                  .copy(state = LibraryMembershipStates.INACTIVE)
+                (inactMem, l.copy(state = LibraryStates.INACTIVE))
+            }
+            active +: otherLibs
+        }.flatten.toList // force eval
+
+      // Save changes
+      sysLibs.map {
+        case (mem, lib) =>
+          libraryRepo.save(lib)
+          libraryMembershipRepo.save(mem)
+      }
+
+      // If user is missing a system lib, create it
+      var newLibCreated = false
+      if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_MAIN).isEmpty) {
+        val mainLib = libraryRepo.save(Library(name = "Main Library", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("main"), kind = LibraryKind.SYSTEM_MAIN))
+        val mainMem = libraryMembershipRepo.save(LibraryMembership(libraryId = mainLib.id.get, userId = userId, access = LibraryAccess.OWNER))
+        newLibCreated = true
+      }
+
+      if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_SECRET).isEmpty) {
+        val mainLib = libraryRepo.save(Library(name = "Secret Library", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), kind = LibraryKind.SYSTEM_SECRET))
+        val mainMem = libraryMembershipRepo.save(LibraryMembership(libraryId = mainLib.id.get, userId = userId, access = LibraryAccess.OWNER))
+        newLibCreated = true
+      }
+
+      newLibCreated
     }
-    true
   }
 }
 

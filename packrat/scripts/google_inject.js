@@ -78,6 +78,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       "searched",
       {
         "origin": origin,
+        "guided": "guide" in window,
         "uuid": response.uuid,
         "experimentId": response.experimentId,
         "query": response.query,
@@ -306,7 +307,7 @@ if (searchUrlRe.test(document.URL)) !function () {
   }
 
   // TODO: also detect result selection via keyboard
-  $(document).on("mousedown", "#search h3.r a", function logSearchEvent() {
+  $(document).on("mousedown", "#search h3.r a", function logSearchEvent(e) {
     var href = this.href, $li = $(this).closest("li.g");
     var resIdx = $li.prevAll('li.g').length;
     var isKifi = $li[0].parentNode.id === 'kifi-res-list';
@@ -319,10 +320,12 @@ if (searchUrlRe.test(document.URL)) !function () {
         "resultClicked",
         {
           "origin": origin,
+          "guided": e.originalEvent.guided || false,
           "uuid": isKifi ? hit.uuid : response.uuid,
+          "experimentId": response.experimentId,
+          "query": response.query,
           "filter": filter,
           "maxResults": response.prefs.maxResults,
-          "experimentId": response.experimentId,
           "kifiResults": response.hits.length,
           "kifiExpanded": response.expanded || false,
           "kifiTime": tKifiResultsReceived - tQuery,
@@ -333,7 +336,6 @@ if (searchUrlRe.test(document.URL)) !function () {
           "resultPosition": resIdx,
           "resultSource": isKifi ? "Kifi" : "Google",
           "resultUrl": href,
-          "query": response.query,
           "hit": isKifi ? {
             "isMyBookmark": hit.isMyBookmark,
             "isPrivate": hit.isPrivate,
