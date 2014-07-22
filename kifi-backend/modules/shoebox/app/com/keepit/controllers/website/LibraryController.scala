@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{LibraryInfo, LibraryCommander, LibraryAddRequest, LibraryFail}
+import com.keepit.commanders.{ LibraryInfo, LibraryCommander, LibraryAddRequest, LibraryFail }
 import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
