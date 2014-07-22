@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
+import com.keepit.commanders.UsernameOps
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ ExternalId, Id, State, SequenceNumber, NotFoundException }
@@ -64,7 +65,8 @@ class UserRepoImpl @Inject() (
     def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
     def primaryEmail = column[EmailAddress]("primary_email", O.Nullable)
     def username = column[Username]("username", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmail.?, username.?) <> ((User.apply _).tupled, User.unapply)
+    def normalizedUsername = column[String]("normalized_username", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmail.?, username.?, normalizedUsername.?) <> ((User.apply _).tupled, User.unapply)
   }
 
   def table(tag: Tag) = new UserTable(tag)

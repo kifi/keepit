@@ -36,7 +36,9 @@ class LibraryRepoImpl @Inject() (
     def description = column[Option[String]]("description", O.Nullable)
     def slug = column[LibrarySlug]("slug", O.NotNull)
     def kind = column[LibraryKind]("kind", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind) <> ((Library.apply _).tupled, Library.unapply)
+    def isSearchableByOthers = column[Boolean]("is_searchable_by_others", O.NotNull)
+
+    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind, isSearchableByOthers) <> ((Library.apply _).tupled, Library.unapply)
   }
 
   def table(tag: Tag) = new LibraryTable(tag)
