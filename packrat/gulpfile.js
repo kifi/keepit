@@ -10,6 +10,7 @@ var css = require('css');
 var es = require('event-stream');
 var fs = require('fs');
 var jeditor = require("gulp-json-editor");
+var lazypipe = require('lazypipe');
 var reload = require('./gulp/livereload.js');
 
 var outDir = 'out';
@@ -45,6 +46,19 @@ var union = function () {
     }
   }, []);
 }
+
+// gulp-json-editor but with prettier printing
+var jeditor = (function () {
+  var editor = require("gulp-json-editor");
+
+  return function (transform) {
+    return (lazypipe()
+      .pipe(editor, transform)
+      .pipe(map, function (code) {
+        return JSON.stringify(JSON.parse(code.toString()), undefined, 2);
+      }))();
+  }
+})();
 
 gulp.task('clean', function () {
   return gulp.src(outDir, {read: false})
@@ -236,15 +250,13 @@ gulp.task('config', ['copy'], function () {
       json.background.scripts.push('livereload.js');
       return json;
     }))
-    .pipe(map(function (code) {
-      return JSON.stringify(JSON.parse(code.toString()), undefined, 2);
-    }))
     .pipe(gulp.dest(outDir))
 
   var firefoxConfig = gulp.src('adapters/firefox/package.json')
     .pipe(rename('firefox/package.json'))
-    .pipe(map(function (code) {
-      return code.toString().replace(/"version":.*$/gm, '"version": "' + version + '",');
+    .pipe(jeditor(function(json) {
+      json.version = version;
+      return json;
     }))
     .pipe(gulp.dest(outDir))
 
