@@ -115,7 +115,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
         id = None,
         createdAt = currentDateTime,
         updatedAt = currentDateTime,
-        keptAt = currentDateTime,
+        keptAt = new DateTime(2014, 7, 1, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
         keepId = Id[Keep](1),
         userId = Id[User](1),
         uriId = Id[NormalizedURI](1),
@@ -128,7 +128,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           id = None,
           createdAt = currentDateTime,
           updatedAt = currentDateTime,
-          keptAt = currentDateTime,
+          keptAt = new DateTime(2014, 7, 20, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
           keepId = Id[Keep](2),
           userId = Id[User](1),
           uriId = Id[NormalizedURI](2),
@@ -142,7 +142,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           id = None,
           createdAt = currentDateTime,
           updatedAt = currentDateTime,
-          keptAt = currentDateTime,
+          keptAt = new DateTime(2014, 7, 20, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
           keepId = Id[Keep](3),
           userId = Id[User](1),
           uriId = Id[NormalizedURI](3),
@@ -178,6 +178,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
 
         topicRepo.getUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1)).toList === List((LDATopic(1), 1), (LDATopic(2), 1))
         topicRepo.getUserTopicHistograms(Id[User](2), ModelVersion[DenseLDA](1)).toList === List()
+        topicRepo.getUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1), after = Some(new DateTime(2014, 7, 10, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE))).toList === List((LDATopic(2), 1))
 
       }
     }
