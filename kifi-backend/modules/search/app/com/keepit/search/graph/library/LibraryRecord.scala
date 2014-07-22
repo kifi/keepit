@@ -1,11 +1,11 @@
 package com.keepit.search.graph.library
 
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.Id
 import com.keepit.model.Library
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import org.apache.lucene.store.{InputStreamDataInput, OutputStreamDataOutput}
 
-case class LibraryRecord(title: String, description: String, id: ExternalId[Library])
+case class LibraryRecord(name: String, description: Option[String], id: Id[Library])
 
 object LibraryRecord {
   implicit def toByteArray(record: LibraryRecord): Array[Byte] = {
@@ -13,9 +13,9 @@ object LibraryRecord {
     val out = new OutputStreamDataOutput(baos)
 
     out.writeByte(1) // version
-    out.writeString(record.title)
-    out.writeString(record.description)
-    out.writeString(record.id.id)
+    out.writeString(record.name)
+    out.writeString(record.description.getOrElse(""))
+    out.writeLong(record.id.id)
 
     out.close()
     baos.close()
@@ -32,8 +32,8 @@ object LibraryRecord {
       throw new Exception(s"invalid data [version=${version}]")
     }
     val title = in.readString()
-    val description = in.readString()
-    val id = ExternalId[Library](in.readString())
+    val description = Some(in.readString()).filter(_.nonEmpty)
+    val id = Id[Library](in.readLong())
     LibraryRecord(title, description, id)
   }
 }
