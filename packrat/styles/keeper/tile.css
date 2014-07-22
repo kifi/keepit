@@ -5,8 +5,8 @@
   right: 0;
   left: auto;
   top: auto;
-  width: 48px;
-  height: 48px;
+  width: 49px;
+  height: 49px;
   border: 3px solid transparent;
   -moz-box-sizing: content-box;
   box-sizing: content-box;
@@ -48,41 +48,38 @@
   right: 0;
   border: 3px solid rgba(255,255,255,.7);
   border-radius: 50% !important;
-  opacity: .5;
+  box-shadow: inset 0 0 1px 1px rgba(0,0,0,.15);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   transition: visibility 0s .125s; /* broken backface-visibility workaround */
 }
-.kifi-tile-keep { /* tile_logo.png */
-  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADQAAAAeCAQAAADJRvUwAAAB0klEQVR4Ab3WP0iVXwDH4VNe+yOhllQmokINRktTRQhiRkMFOdZQQ1tLOOQgFKWTYwTSj/gR6uzWYEgJgkMYQVMlGIKDEJEJmWVye4K4cDhwRd/03s93Oxx47ru87w2WxVZVCVtag0tuuatNSBek1f4zcUSfDwCGSgNVeuAHbB9007RZI5rFsxoTSBsWBB3GzRlzNivUA2BBXeEsV4ThyV8mD/jldBaowpJYT+H0nhh5wzoLP2JcbDQLVC3GQ0Fw2IrYT+fife/FprNAwYzYdUHQK8bt5PaI2GA26LwVwHM5QTAltmRXcrvZPGBWfTYoOKbPoGsFJmdN7IWQzn53DOpWI6wHNetKdsUeB1Um74CgSYw5Q4X9p1qlunh7vSc66qu0V3K6zOh2SqvLnnotaLFeJ9X6ol+b49oNWCwG7fZG2qImQZcYbzeEkopBj6VxUdh+6Ko0BoTth874Jm1SRXZI60bQR2mfNAibhEa1FNYobASl5XUKm4PST0NW6L5QDmjCzvJA8w6UB2LMjvJA9JYKeiYtr700UKN30hbUlwKqdcJ3aS9VlAIKbkijvzRQ8L+03y5sFSr+33uvKWmf7dMhxqTgkDWxRwlUZVVsOSjT/gAqEZpmhTmyWwAAAABJRU5ErkJggg==);
-  background-color: #333;
-  background-size: 26px auto;
-  background-position: center;
-  background-repeat: no-repeat;
-  box-shadow: inset 0 0 1px 1px rgba(0,0,0,.5);
+.kifi-tile-keep {
+  background: rgba(51,51,51,.4) url(/images/keeper/tile_logo.svg) center no-repeat padding-box;
+  background-size: 30px auto;
 }
 .kifi-tile-kept {
-  background-color: #0a5aab;
+  background: #4daf7c padding-box;
   -webkit-transform: rotateX(180deg);
   transform: rotateX(180deg);
 }
 .kifi-tile[data-kept=private] .kifi-tile-kept {
-  background-color: #c85047;
+  background-color: #e65b45;
 }
 .kifi-tile[data-kept] .kifi-tile-keep,
 .kifi-tile:not([data-kept]) .kifi-tile-kept {
   visibility: hidden;
 }
 .kifi-tile .kifi-tile-kept::before {
-  content: "kept";
+  content: "Kept";
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   text-align: center;
   color: #fff;
-  font-size: 14px;
-  line-height: 42px;
+  font-size: 12px;
+  line-height: 44px;
+  text-shadow: 0 0 2px rgba(0,0,0,.3);
 }
 .kifi-count,
 .kifi-keeper .kifi-count {
