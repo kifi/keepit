@@ -38,6 +38,9 @@ object UserValueStates extends States[UserValue]
 @json case class UserValueName(name: String)
 
 object UserValueName {
+  /*
+   * Please use lower_underscore_case for new value names (and not lowerCamelCase)
+   */
   val LOOK_HERE_MODE = UserValueName("ext_look_here_mode")
   val ENTER_TO_SEND = UserValueName("enter_to_send")
   val MAX_RESULTS = UserValueName("ext_max_results")
