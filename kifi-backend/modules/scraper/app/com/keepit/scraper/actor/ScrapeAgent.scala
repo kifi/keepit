@@ -24,38 +24,36 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{ Success, Failure }
 
-import ScraperMessages._
-import InternalMessages._
 import akka.pattern.ask
 import akka.pattern.pipe
 
-// pull-based; see http://letitcrash.com/post/29044669086/balancing-workload-across-nodes-with-akka-2
-
-object InternalMessages {
-  // master => worker
-  case object JobAvail
-
-  // worker => master
-  case class WorkerCreated(worker: ActorRef)
-  case class WorkerAvail(worker: ActorRef)
-  case class WorkerBusy(worker: ActorRef, s: Scrape)
-
-  // worker => worker (self)
-  case class JobDone(s: Scrape, res: Option[Article]) {
-    override def toString = s"JobDone(request=$s,result=${res.map(_.title)})"
-  }
-
-  // processor => master (informational; pulling)
-  case object QueueSize
-}
-
-// Scrape: pure side-effects; Fetch: returns content (see fetchBasicArticle)
 object ScraperMessages {
+  // Scrape: pure side-effects; Fetch: returns content (see fetchBasicArticle)
   case class Fetch(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType])
   case class Scrape(uri: NormalizedURI, info: ScrapeInfo, pageInfo: Option[PageInfo], proxyOpt: Option[HttpProxy]) {
     override def toString = s"Scrape(uri=${uri.toShortString},info=${info.toShortString})"
   }
-  case class ScrapeJob(submitTS: DateTime, scrapeRequest: Scrape)
+  case object QueueSize // informational; pulling
+}
+
+// pull-based; see http://letitcrash.com/post/29044669086/balancing-workload-across-nodes-with-akka-2
+object InternalMessages {
+  import ScraperMessages.{ Fetch, Scrape }
+
+  // master => worker
+  case object JobAvail
+  case class ScrapeJob(submitTS: DateTime, s: Scrape)
+  case class FetchJob(submitTS: DateTime, f: Fetch)
+
+  // worker => master
+  case class WorkerCreated(worker: ActorRef)
+  case class WorkerAvail(worker: ActorRef)
+  case class WorkerBusy(worker: ActorRef, job: ScrapeJob)
+
+  // worker => worker (self)
+  case class JobDone(job: ScrapeJob, res: Option[Article]) {
+    override def toString = s"JobDone(request=$job,result=${res.map(_.title)})"
+  }
 }
 
 @Singleton
@@ -66,6 +64,8 @@ class ScrapeProcessorActorImpl @Inject() (
     scrapeProcActorProvider: Provider[ScrapeAgent],
     serviceDiscovery: ServiceDiscovery,
     asyncHelper: ShoeboxDbCallbacks) extends ScrapeProcessor with Logging {
+
+  import ScraperMessages._
 
   val PULL_THRESHOLD = Runtime.getRuntime.availableProcessors() / 2
   val WARNING_THRESHOLD = 100
@@ -123,6 +123,9 @@ class ScrapeAgentSupervisor @Inject() (
     fetcherAgentProvider: Provider[FetchAgent],
     scrapeAgentProvider: Provider[ScrapeAgent]) extends FortyTwoActor(airbrake) with Logging {
 
+  import ScraperMessages._
+  import InternalMessages._
+
   log.info(s"Supervisor.<ctr> created! context=$context")
 
   implicit val fj = ExecutionContext.fj
@@ -149,28 +152,31 @@ class ScrapeAgentSupervisor @Inject() (
   val scrapeQ = new collection.mutable.Queue[ScrapeJob]()
 
   def receive = {
-    case QueueSize =>
-      sender ! scrapeQ.size
+    // internal
     case WorkerCreated(worker) =>
       log.info(s"[Supervisor] <WorkerCreated> $worker")
     case WorkerAvail(worker) =>
       log.info(s"[Supervisor] <WorkerAvail> $worker; scrapeQ(sz=${scrapeQ.size}):${scrapeQ.mkString(",")}")
       if (!scrapeQ.isEmpty) {
         val job = scrapeQ.dequeue
-        log.info(s"[Supervisor] <WorkerAvail> assign job ${job.scrapeRequest} (submit: ${job.submitTS.toLocalTime}, waited: ${clock.now().getMillis - job.submitTS.getMillis}) to worker $worker")
-        worker ! job.scrapeRequest
+        log.info(s"[Supervisor] <WorkerAvail> assign job ${job.s} (submit: ${job.submitTS.toLocalTime}, waited: ${clock.now().getMillis - job.submitTS.getMillis}) to worker $worker")
+        worker ! job
       }
-    case WorkerBusy(worker, s) =>
-      log.info(s"[Supervisor] <WorkerBusy> worker=$sender is busy; job($s) rejected")
-      self ! s
-    case f: Fetch =>
-      fetcherRouter.forward(f)
-    case s: Scrape =>
-      scrapeQ.enqueue(ScrapeJob(clock.now(), s))
-      scraperRouter ! Broadcast(JobAvail)
+    case WorkerBusy(worker, job) =>
+      log.info(s"[Supervisor] <WorkerBusy> worker=$sender is busy; $job rejected")
+      self ! job
     case job: ScrapeJob =>
       scrapeQ.enqueue(job)
       scraperRouter ! Broadcast(JobAvail)
+
+    // external
+    case f: Fetch =>
+      fetcherRouter.forward(FetchJob(clock.now(), f))
+    case s: Scrape =>
+      scrapeQ.enqueue(ScrapeJob(clock.now(), s))
+      scraperRouter ! Broadcast(JobAvail)
+    case QueueSize =>
+      sender ! scrapeQ.size
     case m => throw new UnsupportedActorMessage(m)
   }
 
@@ -189,7 +195,9 @@ class ScrapeAgent @Inject() (
   log.info(s"[ScrapeAgent($name)] created! parent=${context.parent} props=${context.props} context=${context}")
 
   implicit val timeout = Timeout(10 seconds)
-  import context._
+
+  import InternalMessages._
+  implicit val fj = ExecutionContext.fj
 
   val parent = context.parent
   parent ! WorkerCreated(self)
@@ -199,26 +207,26 @@ class ScrapeAgent @Inject() (
     case JobAvail =>
       log.info(s"[ScrapeAgent($name).idle] job is available and I'm idle! Go get some work!")
       parent ! WorkerAvail(self)
-    case s: Scrape =>
-      log.info(s"[ScrapeAgent($name).idle] got work to do: $s")
-      context.become(busy(s))
+    case job: ScrapeJob =>
+      log.info(s"[ScrapeAgent($name).idle] got work to do: $job")
+      context.become(busy(job))
       SafeFuture {
-        JobDone(s, worker.safeProcessURI(s.uri, s.info, s.pageInfo, s.proxyOpt)) // blocking call (for now)
+        JobDone(job, worker.safeProcessURI(job.s.uri, job.s.info, job.s.pageInfo, job.s.proxyOpt)) // blocking call (for now)
       }.pipeTo(self)
     case m =>
       log.info(s"[ScrapeAgent($name).idle] ignore event $m")
   }
 
-  def busy(s: Scrape): Receive = {
+  def busy(s: ScrapeJob): Receive = {
     case JobAvail =>
       log.info(s"[ScrapeAgent($name).busy] ignore <JobAvail> event")
     case d: JobDone =>
       log.info(s"[ScrapeAgent($name).busy] <JobDone> $d")
       context.become(idle) // unbecome shouldn't be necessary
       parent ! WorkerAvail(self)
-    case s: Scrape =>
-      log.warn(s"[ScrapeAgent($name).busy] ignore <Scrape> job: $s")
-      parent ! WorkerBusy(self, s)
+    case job: ScrapeJob =>
+      log.warn(s"[ScrapeAgent($name).busy] ignore <Scrape> $job")
+      parent ! WorkerBusy(self, job)
     case m =>
       log.info(s"[ScrapeAgent($name).busy] ignore event $m")
   }
@@ -234,11 +242,14 @@ class FetchAgent @Inject() (
     httpFetcher: HttpFetcher,
     worker: ScrapeWorker) extends FortyTwoActor(airbrake) with Logging {
 
+  import ScraperMessages.Fetch
+  import InternalMessages._
+
   val name = self.path.name
   log.info(s"[FetchAgent($name)] created! parent=${context.parent} props=${context.props} context=${context}")
 
   def receive: Receive = {
-    case Fetch(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]) =>
+    case FetchJob(submitTS, Fetch(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType])) =>
       val articleOpt = fetchBasicArticle(url, proxyOpt, extractorProviderTypeOpt)
       log.info(s"[FetchAgent($name)] <Fetch> url=$url article=$articleOpt")
       sender ! articleOpt
