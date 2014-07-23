@@ -788,20 +788,14 @@ class UserCommander @Inject() (
   }
 
   // any letter or digit, followed by any letter, digit, ., _, or - (1 to 30 times)
-  lazy val usernameRegex = """[\p{L}\d][\p{L}\d\.\_\-]{2,30}""".r.pattern
-  val usernameBlacklist = Seq("support", "admin", "kifi", "friend", "invite", "about")
   def setUsername(userId: Id[User], username: Username, overrideRestrictions: Boolean): Either[String, Username] = {
-    if (overrideRestrictions || (
-      username.value.length > 3 &&
-      usernameRegex.matcher(username.value).matches &&
-      usernameBlacklist.find(username.value.contains).nonEmpty
-    )) {
+    if (overrideRestrictions || UsernameOps.isValid(username.value)) {
       val existingUser = db.readOnlyMaster { implicit session =>
-        userRepo.getUsername(username)
+        userRepo.getNormalizedUsername(UsernameOps.normalize(username.value))
       }
-      if (existingUser.nonEmpty) {
+      if (existingUser.isEmpty || existingUser.get.id.get == userId) {
         db.readWrite { implicit session =>
-          userRepo.save(userRepo.get(userId).copy(username = Some(username)))
+          userRepo.save(userRepo.get(userId).copy(username = Some(username), normalizedUsername = Some(UsernameOps.normalize(username.value))))
         }
         Right(username)
       } else {
@@ -859,7 +853,7 @@ object UsernameOps {
     val normalized = Normalizer.normalize(username, Normalizer.Form.NFKD)
     normalized.replaceAll("[\\p{InCombiningDiacriticalMarks}]", "")
   }
-  private val letterRegex = """\b\p{L}+\b""".r
+  private val letterRegex = """\p{L}?\d?""".r
   private def removePunctuation(username: String): String = {
     (letterRegex findAllIn username).mkString("")
   }

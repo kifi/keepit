@@ -10,6 +10,6 @@ ALTER TABLE library_membership ADD COLUMN show_in_search boolean NOT NULL DEFAUL
 
 ALTER TABLE library ADD COLUMN is_searchable_by_others boolean NOT NULL DEFAULT true;
 
-insert into evolutions (name, description) values('203.sql', 'add normalized username column, show_in_search for library_membership');
+insert into evolutions (name, description) values('204.sql', 'add normalized username column, show_in_search for library_membership');
 
 # --- !Downs

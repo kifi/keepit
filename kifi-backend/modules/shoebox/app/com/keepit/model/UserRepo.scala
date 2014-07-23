@@ -36,6 +36,7 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User]
   def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
   def getUsername(username: Username)(implicit session: RSession): Option[User]
+  def getNormalizedUsername(username: String)(implicit session: RSession): Option[User]
 }
 
 @Singleton
@@ -215,5 +216,12 @@ class UserRepoImpl @Inject() (
   }
   def getUsername(username: Username)(implicit session: RSession): Option[User] = {
     getUsernameCompiled(username).firstOption
+  }
+
+  private val getNormalizedUsernameCompiled = Compiled { username: Column[String] =>
+    for (f <- rows if f.normalizedUsername is username) yield f
+  }
+  def getNormalizedUsername(username: String)(implicit session: RSession): Option[User] = {
+    getNormalizedUsernameCompiled(username).firstOption
   }
 }
