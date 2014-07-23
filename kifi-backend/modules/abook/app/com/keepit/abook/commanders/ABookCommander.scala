@@ -231,4 +231,7 @@ class ABookCommander @Inject() (
     }
     relevantContacts getOrElse allContacts
   }
+
+  def getContactsConnectedToEmailAddress(email: EmailAddress): Seq[EContact] =
+    db.readOnlyReplica { implicit session => econtactRepo.getByEmail(email) }
 }

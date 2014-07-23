@@ -10,12 +10,11 @@ import com.keepit.common.time.FakeClockModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.common.cache.ABookCacheModule
 import play.api.libs.json.JsString
-import scala.Some
 import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.mail.{ EmailAddress, BasicContact }
-import com.keepit.abook.model.{ EContactStates, EContactRepo }
+import com.keepit.abook.model.{ EmailAccount, EContactStates, EContactRepo, EContact }
 import com.keepit.abook.commanders.ABookCommander
 
 class ABookCommanderTest extends Specification with DbTestInjector with ABookTestHelper {
@@ -167,6 +166,19 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
       }
     }
 
+    "getContactsConnectedToEmailAddress" should {
+      "return contacts for the given email" in {
+        withDb(modules: _*) { implicit injector =>
+          val commander = inject[ABookCommander]
+          val factory = inject[ABookTestContactFactory]
+          val (c1, c2, c3) = factory.createMany
+
+          commander.getContactsConnectedToEmailAddress(AbookTestEmails.BAR_EMAIL) === Seq(c1, c3)
+          commander.getContactsConnectedToEmailAddress(AbookTestEmails.BAZ_EMAIL) === Seq(c2)
+          commander.getContactsConnectedToEmailAddress(AbookTestEmails.FOO_EMAIL) === Seq()
+        }
+      }
+    }
   }
 }
 
