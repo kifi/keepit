@@ -2,12 +2,14 @@ package com.keepit.controllers.website
 
 import com.keepit.commanders.{ FullLibraryInfo, LibraryInfo }
 import com.keepit.common.crypto.{ PublicIdConfiguration, ShoeboxCryptoModule }
+import com.keepit.common.db.ExternalId
 import com.keepit.common.social.FakeShoeboxSecureSocialModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.time._
 import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
 import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.common.json.JsonFormatters._
 import com.keepit.test.{ ShoeboxApplication, TestApplication, ShoeboxApplicationInjector, ShoeboxTestInjector }
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -225,6 +227,44 @@ class LibraryControllerTest extends Specification with ShoeboxApplicationInjecto
             |}
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
+      }
+    }
+
+    "invite users to library" in {
+      running(new ShoeboxApplication(controllerTestModules: _*)) {
+        implicit val config = inject[PublicIdConfiguration]
+        val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val (user1, user2, user3, lib1) = db.readWrite { implicit s =>
+          val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
+          val user2 = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1))
+          val user3 = userRepo.save(User(firstName = "Char", lastName = "Mander", createdAt = t1))
+          val library = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.SECRET))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
+          (user1, user2, user3, library)
+        }
+
+        val pubId = Library.publicId(lib1.id.get)
+        val testPath = com.keepit.controllers.website.routes.LibraryController.inviteUsersToLibrary(pubId).url
+
+        val inputJson1 =
+          Json.obj("pairs" -> Some(Json.toJson(Seq(
+            (user2.externalId, LibraryAccess.READ_ONLY),
+            (user3.externalId, LibraryAccess.READ_ONLY)))
+          ))
+
+        val request1 = FakeRequest("POST", testPath).withJsonBody(inputJson1)
+        val result1 = route(request1).get
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+
+        val expected1 = Json.parse(
+          s"""
+            |[
+            | {"user":"${user2.externalId}","access":"${LibraryAccess.READ_ONLY.value}"},
+            | {"user":"${user3.externalId}","access":"${LibraryAccess.READ_ONLY.value}"}
+            |]
+           """.stripMargin)
+        Json.parse(contentAsString(result1)) must equalTo(expected1)
       }
     }
   }
