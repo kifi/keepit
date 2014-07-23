@@ -117,7 +117,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
       private[this] val threshold = totalValue * percentMatch / 100.0f - totalValueOnRequired
       private[this] val thresholdForHotDocs = totalValue * percentMatchForHotDocs / 100.0f - totalValueOnRequired
 
-      private[this] val coordFactorForRequired = if (disableCoord) 1.0f else similarity.coord(requiredWeights.length, requiredWeights.length)
+      private[this] val coordFactorForRequired = if (disableCoord) 1.0f else similarity.coord(requiredWeights.length, requiredWeights.length + optionalWeights.length)
       private[this] val coordFactorForOptional = {
         val maxCoord = requiredWeights.length + optionalWeights.length
         (0 to optionalWeights.length).map { i => if (disableCoord) 1.0f else similarity.coord(i + requiredWeights.length, maxCoord) }.toArray
