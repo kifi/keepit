@@ -57,7 +57,6 @@ case class DevActorSystemModule() extends ActorSystemModule {
   @Singleton
   @Provides
   def actorPluginProvider: ActorPlugin = {
-    val monitoredConfig = ConfigFactory.load("akka-monitored.conf")
-    new ActorPlugin(ActorSystem("dev-actor-system", monitoredConfig.withFallback(Play.current.configuration.underlying), Play.current.classloader))
+    new ActorPlugin(ActorSystem("dev-actor-system", Play.current.configuration.underlying, Play.current.classloader))
   }
 }
