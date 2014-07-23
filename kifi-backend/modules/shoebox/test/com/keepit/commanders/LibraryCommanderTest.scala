@@ -229,24 +229,18 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get full library info by publicId" in {
+    "get library by publicId" in {
       withDb(TestCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         val libraryCommander = inject[LibraryCommander]
 
-        val libInfo1 = libraryCommander.getLibraryById(libShield.id.get)
-        libInfo1.slug.value === "avengers"
-        libInfo1.collaborators.users.length === 0
-        libInfo1.followers.users.length === 0
-        val libInfo2 = libraryCommander.getLibraryById(libMurica.id.get)
-        libInfo2.slug.value === "murica"
-        libInfo2.collaborators.users.length === 0
-        libInfo2.followers.users.length === 2
-        val libInfo3 = libraryCommander.getLibraryById(libScience.id.get)
-        libInfo3.slug.value === "science"
-        libInfo3.collaborators.users.length === 1
-        libInfo3.followers.users.length === 0
+        val lib1 = libraryCommander.getLibraryById(libShield.id.get)
+        lib1 === libShield
+        val lib2 = libraryCommander.getLibraryById(libMurica.id.get)
+        lib2 === libMurica
+        val lib3 = libraryCommander.getLibraryById(libScience.id.get)
+        lib3 === libScience
       }
     }
 

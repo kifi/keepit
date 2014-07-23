@@ -29,7 +29,9 @@ class LibraryController @Inject() (
 
     libraryCommander.addLibrary(addRequest, request.userId) match {
       case Left(LibraryFail(message)) => BadRequest(Json.obj("error" -> message))
-      case Right(newLibrary) => Ok(Json.toJson(newLibrary))
+      case Right(newLibrary) => {
+        Ok(Json.toJson(libraryCommander.createFullLibraryInfo(newLibrary)))
+      }
     }
   }
 
@@ -72,7 +74,10 @@ class LibraryController @Inject() (
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
-      case Success(id) => Ok(Json.toJson(libraryCommander.getLibraryById(id)))
+      case Success(id) => {
+        val lib = libraryCommander.getLibraryById(id)
+        Ok(Json.toJson(libraryCommander.createFullLibraryInfo(lib)))
+      }
     }
   }
 
