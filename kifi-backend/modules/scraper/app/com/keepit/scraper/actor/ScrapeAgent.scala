@@ -34,21 +34,21 @@ import akka.pattern.ask
 
 object InternalMessages {
   // master => worker
-  case class JobAvail()
-  case class Assign()
+  case object JobAvail
 
   // worker => master
   case class WorkerCreated(worker: ActorRef)
   case class WorkerAvail(worker: ActorRef)
   case class WorkerBusy(worker: ActorRef, s: Scrape)
   case class JobDone(worker: ActorRef, s: Scrape, res: Option[Article]) {
-    override def toString = s"JobDone(job=$s,result=${res.map(_.title)})"
+    override def toString = s"JobDone(request=$s,result=${res.map(_.title)})"
   }
 
   // processor => master (informational; pulling)
-  case class QueueSize()
+  case object QueueSize
 }
 
+// Scrape: pure side-effects; Fetch: returns content (see fetchBasicArticle)
 object ScraperMessages {
   case class Fetch(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType])
   case class Scrape(uri: NormalizedURI, info: ScrapeInfo, pageInfo: Option[PageInfo], proxyOpt: Option[HttpProxy]) {
@@ -74,7 +74,6 @@ class ScrapeProcessorActorImpl @Inject() (
 
   lazy val system = sysProvider.get
   lazy val actor = system.actorOf(Props(scrapeSupervisorProvider.get), "scraper_supervisor")
-  log.info(s"[ScrapeProcessorActorImpl] created! sys=$system actor=$actor")
 
   def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = {
     actor.ask(Fetch(url, proxyOpt, extractorProviderTypeOpt))(Timeout(15 minutes)).mapTo[Option[BasicArticle]]
@@ -84,7 +83,7 @@ class ScrapeProcessorActorImpl @Inject() (
     actor ! Scrape(uri, info, pageInfo, proxyOpt)
   }
 
-  private def getQueueSize(): Future[Int] = actor.ask(QueueSize()).mapTo[Int]
+  private def getQueueSize(): Future[Int] = actor.ask(QueueSize).mapTo[Int]
 
   override def pull(): Unit = {
     getQueueSize() onComplete {
@@ -110,7 +109,7 @@ class ScrapeProcessorActorImpl @Inject() (
           log.info(s"[ScrapeProcessorActorImpl.pull] qSize=${qSize}; Skip a round")
         }
       case Failure(e) =>
-        airbrake.notify(s"Failed to obtain queue size from supervisor; exception=$e; cause=${e.getCause}", e)
+        airbrake.notify(s"Failed to obtain qSize from supervisor; exception=$e; cause=${e.getCause}", e)
     }
   }
 
@@ -124,8 +123,6 @@ class ScrapeAgentSupervisor @Inject() (
     scrapeAgentProvider: Provider[ScrapeAgent]) extends FortyTwoActor(airbrake) with Logging {
 
   log.info(s"Supervisor.<ctr> created! context=$context")
-
-  import ScraperMessages._
 
   implicit val fj = ExecutionContext.fj
   implicit val timeout = Timeout(15 minutes)
@@ -151,7 +148,7 @@ class ScrapeAgentSupervisor @Inject() (
   val scrapeQ = new collection.mutable.Queue[ScrapeJob]()
 
   def receive = {
-    case qs: QueueSize =>
+    case QueueSize =>
       sender ! scrapeQ.size
     case WorkerCreated(worker) =>
       log.info(s"[Supervisor] <WorkerCreated> $worker")
@@ -169,10 +166,10 @@ class ScrapeAgentSupervisor @Inject() (
       fetcherRouter.forward(f)
     case s: Scrape =>
       scrapeQ.enqueue(ScrapeJob(clock.now(), s))
-      scraperRouter ! Broadcast(JobAvail())
+      scraperRouter ! Broadcast(JobAvail)
     case job: ScrapeJob =>
       scrapeQ.enqueue(job)
-      scraperRouter ! Broadcast(JobAvail())
+      scraperRouter ! Broadcast(JobAvail)
     case m => throw new UnsupportedActorMessage(m)
   }
 
@@ -198,14 +195,14 @@ class ScrapeAgent @Inject() (
   parent ! WorkerAvail(self)
 
   def idle: Receive = {
-    case p: JobAvail =>
+    case JobAvail =>
       log.info(s"[ScrapeAgent($name).idle] job is available and I'm idle! Go get some work!")
-      sender ! WorkerAvail(self)
+      parent ! WorkerAvail(self)
     case s: Scrape =>
       log.info(s"[ScrapeAgent($name).idle] got work to do: $s")
       context.become(busy(s))
       SafeFuture {
-        worker.safeProcessURI(s.uri, s.info, s.pageInfo, s.proxyOpt)
+        worker.safeProcessURI(s.uri, s.info, s.pageInfo, s.proxyOpt) // blocking call (for now)
       } map { res =>
         self ! JobDone(self, s, res)
       }
@@ -214,7 +211,7 @@ class ScrapeAgent @Inject() (
   }
 
   def busy(s: Scrape): Receive = {
-    case p: JobAvail =>
+    case JobAvail =>
       log.info(s"[ScrapeAgent($name).busy] ignore <JobAvail> event")
     case d: JobDone =>
       log.info(s"[ScrapeAgent($name).busy] <JobDone> $d")
