@@ -26,7 +26,8 @@ case class User(
     userPictureId: Option[Id[UserPicture]] = None,
     seq: SequenceNumber[User] = SequenceNumber.ZERO,
     primaryEmail: Option[EmailAddress] = None,
-    username: Option[Username] = None) extends ModelWithExternalId[User] with ModelWithState[User] with ModelWithSeqNumber[User] {
+    username: Option[Username] = None,
+    normalizedUsername: Option[String] = None) extends ModelWithExternalId[User] with ModelWithState[User] with ModelWithSeqNumber[User] {
   def withId(id: Id[User]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withName(firstName: String, lastName: String) = copy(firstName = firstName, lastName = lastName)
@@ -53,7 +54,8 @@ object User {
     (__ \ 'userPictureId).formatNullable[Id[UserPicture]] and
     (__ \ 'seq).format(SequenceNumber.format[User]) and
     (__ \ 'primaryEmail).formatNullable[EmailAddress] and
-    (__ \ 'username).formatNullable[Username]
+    (__ \ 'username).formatNullable[Username] and
+    (__ \ 'normalizedUsername).formatNullable[String]
   )(User.apply, unlift(User.unapply))
 
   val brackets = "[<>]".r
