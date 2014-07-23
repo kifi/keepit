@@ -117,7 +117,6 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
 
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val userValueRepo = inject[UserValueRepo]
-        val CollectionOrderingKey = "user_collection_ordering"
 
         val (user, oldOrdering, tagA, tagB, tagC, tagD) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Mario", lastName = "Luigi", createdAt = t1))
@@ -134,7 +133,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
             Nil
           val collectionIds = collections.map(_.externalId).toSeq
 
-          userValueRepo.save(UserValue(userId = user1.id.get, name = CollectionOrderingKey, value = Json.stringify(Json.toJson(collectionIds))))
+          userValueRepo.save(UserValue(userId = user1.id.get, name = UserValueName.USER_COLLECTION_ORDERING, value = Json.stringify(Json.toJson(collectionIds))))
           (user1, collectionIds, tagA, tagB, tagC, tagD)
         }
 
@@ -149,7 +148,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
           inject[CollectionCommander].setCollectionIndexOrdering(user.id.get, tagA.externalId, 2)
         }
         db.readOnlyMaster { implicit s =>
-          val ordering = userValueRepo.getUserValue(user.id.get, CollectionOrderingKey).get
+          val ordering = userValueRepo.getUserValue(user.id.get, UserValueName.USER_COLLECTION_ORDERING).get
           val newOrdering = tagB.externalId :: tagC.externalId :: tagA.externalId :: tagD.externalId :: Nil
           ordering.value === Json.stringify(Json.toJson(newOrdering))
         }
@@ -159,7 +158,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
           inject[CollectionCommander].setCollectionIndexOrdering(user.id.get, tagA.externalId, 0)
         }
         db.readOnlyMaster { implicit s =>
-          val ordering = userValueRepo.getUserValue(user.id.get, CollectionOrderingKey).get
+          val ordering = userValueRepo.getUserValue(user.id.get, UserValueName.USER_COLLECTION_ORDERING).get
           val newOrdering = tagA.externalId :: tagB.externalId :: tagC.externalId :: tagD.externalId :: Nil
           ordering.value === Json.stringify(Json.toJson(newOrdering))
         }
@@ -169,7 +168,7 @@ class CollectionCommanderTest extends Specification with ShoeboxTestInjector {
           inject[CollectionCommander].setCollectionIndexOrdering(user.id.get, tagA.externalId, 3)
         }
         db.readOnlyMaster { implicit s =>
-          val ordering = userValueRepo.getUserValue(user.id.get, CollectionOrderingKey).get
+          val ordering = userValueRepo.getUserValue(user.id.get, UserValueName.USER_COLLECTION_ORDERING).get
           val newOrdering = tagB.externalId :: tagC.externalId :: tagD.externalId :: tagA.externalId :: Nil
           ordering.value === Json.stringify(Json.toJson(newOrdering))
         }

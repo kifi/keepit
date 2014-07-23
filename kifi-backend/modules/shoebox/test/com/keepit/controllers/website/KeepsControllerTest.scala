@@ -785,7 +785,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
             Nil
 
           val collectionIds = collections.map(_.externalId).toSeq
-          inject[UserValueRepo].save(UserValue(userId = user1.id.get, name = "user_collection_ordering", value = Json.stringify(Json.toJson(collectionIds))))
+          inject[UserValueRepo].save(UserValue(userId = user1.id.get, name = UserValueName.USER_COLLECTION_ORDERING, value = Json.stringify(Json.toJson(collectionIds))))
           (user1, collectionIds, tagA, tagB, tagC, tagD)
         }
 
