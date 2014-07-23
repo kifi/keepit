@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.time._
 import com.keepit.common.db.Id
+import com.keepit.common.logging.Logging
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -23,7 +24,7 @@ class AllKeepSeedIngestionHelper @Inject() (
     keepInfoRepo: CuratorKeepInfoRepo,
     rawSeedsRepo: RawSeedItemRepo,
     db: Database,
-    shoebox: ShoeboxServiceClient) extends GlobalSeedIngestionHelper {
+    shoebox: ShoeboxServiceClient) extends GlobalSeedIngestionHelper with Logging {
 
   private val SEQ_NUM_NAME: Name[SequenceNumber[Keep]] = Name("all_keeps_seq_num")
 
@@ -40,6 +41,7 @@ class AllKeepSeedIngestionHelper @Inject() (
   private def processKeep(keep: Keep)(implicit session: RWSession): Unit = {
     keepInfoRepo.getByKeepId(keep.id.get).map { keepInfo =>
       val seedItems = rawSeedsRepo.getByUriId(keepInfo.uriId)
+      log.info(s"Got seed items: ${seedItems}")
       require(seedItems.length > 0, s"Missing RSI: keepId ${keepInfo.keepId}, uriId ${keepInfo.uriId}") //note that here we look up with the possible old uri id from the local keep info repo and deal with renormalization later, hence the require
       val countChange = if (keep.state.value != keepInfo.state.value) {
         if (keepInfo.state == CuratorKeepInfoStates.ACTIVE) -1 else if (keep.state == KeepStates.ACTIVE) 1 else 0
