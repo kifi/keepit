@@ -27,6 +27,7 @@ import scala.util.{ Success, Failure }
 import ScraperMessages._
 import InternalMessages._
 import akka.pattern.ask
+import akka.pattern.pipe
 
 // pull-based; see http://letitcrash.com/post/29044669086/balancing-workload-across-nodes-with-akka-2
 
@@ -38,7 +39,9 @@ object InternalMessages {
   case class WorkerCreated(worker: ActorRef)
   case class WorkerAvail(worker: ActorRef)
   case class WorkerBusy(worker: ActorRef, s: Scrape)
-  case class JobDone(worker: ActorRef, s: Scrape, res: Option[Article]) {
+
+  // worker => worker (self)
+  case class JobDone(s: Scrape, res: Option[Article]) {
     override def toString = s"JobDone(request=$s,result=${res.map(_.title)})"
   }
 
@@ -200,10 +203,8 @@ class ScrapeAgent @Inject() (
       log.info(s"[ScrapeAgent($name).idle] got work to do: $s")
       context.become(busy(s))
       SafeFuture {
-        worker.safeProcessURI(s.uri, s.info, s.pageInfo, s.proxyOpt) // blocking call (for now)
-      } map { res =>
-        self ! JobDone(self, s, res)
-      }
+        JobDone(s, worker.safeProcessURI(s.uri, s.info, s.pageInfo, s.proxyOpt)) // blocking call (for now)
+      }.pipeTo(self)
     case m =>
       log.info(s"[ScrapeAgent($name).idle] ignore event $m")
   }
