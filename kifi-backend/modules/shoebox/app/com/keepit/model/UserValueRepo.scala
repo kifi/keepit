@@ -16,7 +16,6 @@ trait UserValueRepo extends Repo[UserValue] {
   def getUserValue(userId: Id[User], key: UserValueName)(implicit session: RSession): Option[UserValue]
   def setValue[T](userId: Id[User], name: UserValueName, value: T)(implicit session: RWSession): T
   def clearValue(userId: Id[User], name: UserValueName)(implicit session: RWSession): Boolean
-  def getLapsedUsers(before: DateTime, after: DateTime, maxCount: Int = 1000)(implicit session: RSession): Seq[Id[User]]
 }
 
 @Singleton
