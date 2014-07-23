@@ -7,7 +7,7 @@ var tile = tile || function() {  // idempotent for Chrome
   'use strict';
   log('[keeper_scout]', location.hostname);
 
-  var whenMeKnown = [], tileParent, tileObserver, tileCard, tileCount, onScroll;
+  var whenMeKnown = [], tileParent, tileObserver, tileCard, tileCount;
   while ((tile = document.getElementById('kifi-tile'))) {
     tile.remove();
   }
@@ -91,26 +91,6 @@ var tile = tile || function() {  // idempotent for Chrome
     },
     count: function(n) {
       tile && updateCount(n);
-    },
-    scroll_rule: function(r) {
-      if (!onScroll && !window.keeper) {
-        var lastScrollTime = 0;
-        document.addEventListener('scroll', onScroll = function (e) {
-          var t = e.timeStamp || Date.now();
-          if (t - lastScrollTime > 100) {  // throttling to avoid measuring DOM too freq
-            lastScrollTime = t;
-            var srEl = scrollRoot();
-            var hPage = srEl.scrollHeight;
-            var hViewport = srEl.clientHeight;
-            var hSeen = window.pageYOffset + hViewport;
-            log('[onScroll]', Math.round(hSeen / hPage * 10000) / 100, '>', r[1], '% and', hPage, '>', r[0] * hViewport, '?');
-            if (hPage > r[0] * hViewport && hSeen > (r[1] / 100) * hPage && e.isTrusted !== false) {
-              log('[onScroll] showing');
-              loadAndDo('keeper', 'engage', 'scroll', 'button');
-            }
-          }
-        });
-      }
     },
     reset: cleanUpDom.bind(null, true),
     silence: cleanUpDom.bind(null, true),
@@ -199,10 +179,6 @@ var tile = tile || function() {  // idempotent for Chrome
     } else {
       var args = Array.prototype.slice.call(arguments, 2);
       api.require('scripts/' + name + '.js', function() {
-        if (onScroll && methodName !== 'showKeepers') {
-          document.removeEventListener('scroll', onScroll);
-          onScroll = null;
-        }
         if (window.hideKeeperCallout) {
           hideKeeperCallout();
         }
@@ -273,10 +249,6 @@ var tile = tile || function() {  // idempotent for Chrome
 
   function cleanUpDom(leaveTileInDoc) {
     window.removeEventListener("resize", onResize);
-    if (onScroll) {
-      document.removeEventListener("scroll", onScroll);
-      onScroll = null;
-    }
     if (tile) {
       if (leaveTileInDoc) {
         tile.style.display = 'none';
@@ -292,10 +264,6 @@ var tile = tile || function() {  // idempotent for Chrome
   function paneCall(methodName) {
     var pane = window.pane;
     return pane && pane[methodName]();
-  }
-
-  function scrollRoot() {
-    return document[document.compatMode === 'CSS1Compat' ? 'documentElement' : 'body'];
   }
 
   api.onEnd.push(function() {
