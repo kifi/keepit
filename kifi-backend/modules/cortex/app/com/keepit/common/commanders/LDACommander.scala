@@ -28,6 +28,13 @@ class LDACommander @Inject() (
 
   def numOfTopics: Int = ldaTopicWords.topicWords.length
 
+  val activeTopics = currentConfig.configs.filter { case (id, conf) => conf.isActive }.map { case (id, _) => id.toInt }.toArray.sorted
+
+  private def projectToActive(arr: Array[Float]): Array[Float] = {
+    assume(arr.size == numOfTopics)
+    activeTopics.map { i => arr(i) }.toArray
+  }
+
   def topicWords(topicId: Int, topN: Int): Seq[(String, Float)] = {
     assume(topicId >= 0 && topicId < numOfTopics && topN >= 0)
 
@@ -91,7 +98,9 @@ class LDACommander @Inject() (
 
   private def computeInterestScore(numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeatOpt: Option[LDATopicFeature]): Option[LDAUserURIInterestScore] = {
     (userFeatOpt, uriFeatOpt) match {
-      case (Some(userFeat), Some(uriFeat)) => Some(LDAUserURIInterestScore(cosineDistance(userFeat.mean, uriFeat.value), computeConfidence(numOfEvidenceForUser)))
+      case (Some(userFeat), Some(uriFeat)) =>
+        val (u, v) = (projectToActive(userFeat.mean), projectToActive(uriFeat.value))
+        Some(LDAUserURIInterestScore(cosineDistance(u, v), computeConfidence(numOfEvidenceForUser)))
       case _ => None
     }
   }
