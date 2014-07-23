@@ -247,6 +247,33 @@ class LibraryCommander @Inject() (
       }
     }
   }
+
+  def joinLibrary(libraryId: Id[Library], inviteeId: Id[User]): Either[LibraryFail, LibraryInfo] = {
+    db.readWrite { implicit s =>
+      libraryInviteRepo.getWithLibraryIdandUserId(libraryId, inviteeId) match {
+        case None => Left(LibraryFail("invite not found"))
+        case Some(inv) => {
+          libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = inviteeId, access = inv.access))
+          val lib = libraryRepo.get(libraryId)
+          Right(LibraryInfo.fromLibraryAndOwner(lib, userRepo.get(lib.ownerId)))
+        }
+      }
+    }
+  }
+
+  def declineLibrary(libraryId: Id[Library], inviteeId: Id[User]): Either[LibraryFail, Unit] = {
+    db.readWrite { implicit s =>
+      libraryInviteRepo.getWithLibraryIdandUserId(libraryId, inviteeId) match {
+        case None => Left(LibraryFail("invite not found"))
+        case Some(inv) => {
+          libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.DECLINED))
+          Right()
+        }
+      }
+    }
+  }
+
 }
 
 case class LibraryFail(message: String) extends AnyVal

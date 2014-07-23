@@ -65,7 +65,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def getLibrary(pubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>
+  def getLibrary(pubId: PublicId[Library]) = JsonAction.authenticated { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
@@ -106,5 +106,31 @@ class LibraryController @Inject() (
       }
     }
   }
+
+  def joinLibrary(pubId: PublicId[Library]) = JsonAction.authenticated { request =>
+    val idTry = Library.decodePublicId(pubId)
+    idTry match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
+      case Success(id) => {
+        libraryCommander.joinLibrary(id, request.userId) match {
+          case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+          case Right(info) => Ok(Json.toJson(info))
+        }
+      }
+    }
+  }
+  def declineLibrary(pubId: PublicId[Library]) = JsonAction.authenticated { request =>
+    val idTry = Library.decodePublicId(pubId)
+    idTry match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
+      case Success(id) => {
+        libraryCommander.declineLibrary(id, request.userId) match {
+          case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+          case Right(_) => Ok(JsString("success"))
+        }
+      }
+    }
+  }
+
 }
 
