@@ -72,4 +72,10 @@ class LDAController @Inject() (
     val meanOpt = lda.userTopicMean(userId)
     Ok(Json.toJson(meanOpt.map { _.mean }))
   }
+
+  def sampleURIs(topicId: Int) = Action { request =>
+    val uris = lda.sampleURIs(topicId)
+    Ok(Json.toJson(uris))
+  }
+
 }

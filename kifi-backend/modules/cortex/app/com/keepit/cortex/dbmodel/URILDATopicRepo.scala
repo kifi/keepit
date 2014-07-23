@@ -24,7 +24,8 @@ trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getByURI(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[URILDATopic]
   def getHighestSeqNumber(version: ModelVersion[DenseLDA])(implicit session: RSession): SequenceNumber[NormalizedURI]
   def getUpdateTimeAndState(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(DateTime, State[URILDATopic])]
-  def getUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(LDATopic, Int)]
+  def getUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA], after: Option[DateTime] = None)(implicit session: RSession): Seq[(LDATopic, Int)]
+  def getLatestURIsInTopic(topicId: LDATopic, version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[Id[NormalizedURI]]
 }
 
 @Singleton
@@ -92,19 +93,35 @@ class URILDATopicRepoImpl @Inject() (
     SequenceNumber[NormalizedURI](sql.as[Long].first max 0L)
   }
 
-  def getUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(LDATopic, Int)] = {
+  def getUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA], after: Option[DateTime])(implicit session: RSession): Seq[(LDATopic, Int)] = {
     import StaticQuery.interpolation
 
     // could be expensive. may revisit this later.
 
-    val query =
-      sql"""select tp.first_topic, count(ck.uri_Id) from cortex_keep as ck inner join uri_lda_topic as tp
+    if (after.isDefined) {
+      val q =
+        sql"""select tp.first_topic, count(ck.uri_Id) from cortex_keep as ck inner join uri_lda_topic as tp
+           on ck.uri_id = tp.uri_id
+           where ck.user_id = ${userId.id} and tp.version = ${version.version}
+           and ck.state = 'active' and tp.state = 'active' and tp.first_topic is not null and ck.kept_at > ${after.get.toLocalDate.toString}
+           group by tp.first_topic"""
+      q.as[(Int, Int)].list map { case (topic, count) => (LDATopic(topic), count) }
+    } else {
+      val q =
+        sql"""select tp.first_topic, count(ck.uri_Id) from cortex_keep as ck inner join uri_lda_topic as tp
            on ck.uri_id = tp.uri_id
            where ck.user_id = ${userId.id} and tp.version = ${version.version}
            and ck.state = 'active' and tp.state = 'active' and tp.first_topic is not null
            group by tp.first_topic"""
+      q.as[(Int, Int)].list map { case (topic, count) => (LDATopic(topic), count) }
+    }
 
-    query.as[(Int, Int)].list map { case (topic, count) => (LDATopic(topic), count) }
+  }
 
+  def getLatestURIsInTopic(topicId: LDATopic, version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[Id[NormalizedURI]] = {
+    import StaticQuery.interpolation
+
+    val q = sql"select uri_id from uri_lda_topic where first_topic = ${topicId.index} and version = ${version.version} order by updated_at desc limit ${limit}"
+    q.as[Long].list.map { Id[NormalizedURI](_) }
   }
 }

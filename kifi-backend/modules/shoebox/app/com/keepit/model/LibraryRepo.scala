@@ -10,6 +10,8 @@ import scala.slick.lifted.{ TableQuery, Tag }
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
+  def getByIdAndOwner(libraryId: Id[Library], ownerId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
+  def getByNameAndUser(userId: Id[User], name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(LibraryAccess, Library)]
 }
 
@@ -34,7 +36,9 @@ class LibraryRepoImpl @Inject() (
     def description = column[Option[String]]("description", O.Nullable)
     def slug = column[LibrarySlug]("slug", O.NotNull)
     def kind = column[LibraryKind]("kind", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind) <> ((Library.apply _).tupled, Library.unapply)
+    def isSearchableByOthers = column[Boolean]("is_searchable_by_others", O.NotNull)
+
+    def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind, isSearchableByOthers) <> ((Library.apply _).tupled, Library.unapply)
   }
 
   def table(tag: Tag) = new LibraryTable(tag)
@@ -56,6 +60,18 @@ class LibraryRepoImpl @Inject() (
     } else {
       idCache.set(LibraryIdKey(library.id.get), library)
     }
+  }
+
+  private def getIdAndUserCompiled(libraryId: Column[Id[Library]], ownerId: Column[Id[User]], excludeState: Option[State[Library]]) =
+    Compiled { (for (b <- rows if b.id === libraryId && b.ownerId === ownerId && b.state =!= excludeState.orNull) yield b) }
+  def getByIdAndOwner(libraryId: Id[Library], ownerId: Id[User], excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
+    getIdAndUserCompiled(libraryId, ownerId, excludeState).firstOption
+  }
+
+  private def getByNameAndUserCompiled(userId: Column[Id[User]], name: Column[String], excludeState: Option[State[Library]]) =
+    Compiled { (for (b <- rows if b.name === name && b.ownerId === userId && b.state =!= excludeState.orNull) yield b) }
+  def getByNameAndUser(userId: Id[User], name: String, excludeState: Option[State[Library]])(implicit session: RSession): Option[Library] = {
+    getByNameAndUserCompiled(userId, name, excludeState).firstOption
   }
 
   def getByUser(userId: Id[User], excludeState: Option[State[Library]])(implicit session: RSession): Seq[(LibraryAccess, Library)] = {

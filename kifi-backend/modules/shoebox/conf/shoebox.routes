@@ -255,6 +255,13 @@ POST    /site/collections/:id/undelete @com.keepit.controllers.website.KeepsCont
 POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.KeepsController.removeKeepsFromCollection(id: ExternalId[Collection])
 POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.KeepsController.keepToCollection(id: ExternalId[Collection])
 
+POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()
+POST    /site/libraries/:id/modify  @com.keepit.controllers.website.LibraryController.modifyLibrary(id: PublicId[Library])
+POST    /site/libraries/:id/delete  @com.keepit.controllers.website.LibraryController.removeLibrary(id: PublicId[Library])
+GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibrary(id: PublicId[Library])
+GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrariesByUser()
+POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.inviteUsersToLibrary(id: PublicId[Library])
+
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
 GET     /site/user/email            @com.keepit.controllers.website.UserController.getEmailInfo(email: EmailAddress)
@@ -439,6 +446,7 @@ POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthContr
 POST    /admin/user/:id/deactivate  @com.keepit.controllers.admin.AdminUserController.deactivate(id: Id[User])
 GET     /admin/user/:id/mixpanel/reset    @com.keepit.controllers.admin.AdminUserController.resetMixpanelProfile(id: Id[User])
 POST    /admin/user/:id/uservalue   @com.keepit.controllers.admin.AdminUserController.userValue(id: Id[User])
+POST    /admin/user/:id/username   @com.keepit.controllers.admin.AdminUserController.setUsername(id: Id[User], username: String, overrideRestrictions: Boolean ?= false)
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
 POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
@@ -572,6 +580,7 @@ POST    /admin/cortex/lda/saveEdits                        @com.keepit.controlle
 GET     /admin/cortex/lda/userTopicDump                    @com.keepit.controllers.admin.AdminLDAController.userTopicDump(userId: Id[User], limit: Int)
 POST    /admin/cortex/lda/userUriInterest                  @com.keepit.controllers.admin.AdminLDAController.userUriInterest
 POST    /admin/cortex/lda/userTopicMean                    @com.keepit.controllers.admin.AdminLDAController.userTopicMean
+GET     /admin/cortex/lda/topicDetail                      @com.keepit.controllers.admin.AdminLDAController.topicDetail(topicId: Int)
 
 GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
@@ -675,8 +684,8 @@ POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.in
 GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.internal.ShoeboxController.isUnscrapable(url: String, destinationUrl: Option[String])
 POST     /internal/shoebox/database/isUnscrapableP    @com.keepit.controllers.internal.ShoeboxController.isUnscrapableP
 GET      /internal/shoebox/database/getFriendRequestBySender @com.keepit.controllers.internal.ShoeboxController.getFriendRequestsBySender(senderId: Id[User])
-GET      /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.getUserValue(userId: Id[User], key: String)
-POST     /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.setUserValue(userId: Id[User], key: String)
+GET      /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.getUserValue(userId: Id[User], key: UserValueName)
+POST     /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.setUserValue(userId: Id[User], key: UserValueName)
 GET      /internal/shoebox/database/userSegment       @com.keepit.controllers.internal.ShoeboxController.getUserSegment(userId: Id[User])
 GET      /internal/shoebox/database/extensionVersion  @com.keepit.controllers.internal.ShoeboxController.getExtensionVersion(installationId: ExternalId[KifiInstallation])
 POST     /internal/shoebox/database/triggerRawKeepImport @com.keepit.controllers.internal.ShoeboxController.triggerRawKeepImport()

@@ -20,7 +20,7 @@ import com.keepit.model.User
 import securesocial.core.OAuth2Info
 import com.keepit.model.SocialUserInfo
 import play.api.libs.json.JsObject
-import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxSecureSocialModule }
+import com.keepit.common.social.{ FakeSocialGraphModule, TestShoeboxAppSecureSocialModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.TestMailModule
@@ -34,7 +34,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
   def requiredModules = Seq(
     TestSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
-    FakeShoeboxSecureSocialModule(),
+    TestShoeboxAppSecureSocialModule(),
     ShoeboxFakeStoreModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),

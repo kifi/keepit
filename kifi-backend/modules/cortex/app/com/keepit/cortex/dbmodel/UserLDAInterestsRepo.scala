@@ -33,7 +33,9 @@ class UserLDAInterestsRepoImpl @Inject() (
     def version = column[ModelVersion[DenseLDA]]("version")
     def numOfEvidence = column[Int]("num_of_evidence")
     def userTopicMean = column[UserTopicMean]("user_topic_mean", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, version, numOfEvidence, userTopicMean.?, state) <> ((UserLDAInterests.apply _).tupled, UserLDAInterests.unapply _)
+    def numOfRecentEvidence = column[Int]("num_of_recent_evidence")
+    def userRecentTopicMean = column[UserTopicMean]("user_recent_topic_mean", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, userId, version, numOfEvidence, userTopicMean.?, numOfRecentEvidence, userRecentTopicMean.?, state) <> ((UserLDAInterests.apply _).tupled, UserLDAInterests.unapply _)
   }
 
   def table(tag: Tag) = new UserLDATopicTable(tag)

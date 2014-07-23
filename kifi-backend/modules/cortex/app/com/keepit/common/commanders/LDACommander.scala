@@ -82,4 +82,12 @@ class LDACommander @Inject() (
       }
     }
   }
+
+  def sampleURIs(topicId: Int): Seq[Id[NormalizedURI]] = {
+    val SAMPLE_SIZE = 20
+    val uris = db.readOnlyReplica { implicit s =>
+      uriTopicRepo.getLatestURIsInTopic(LDATopic(topicId), wordRep.version, limit = 100)
+    }
+    scala.util.Random.shuffle(uris).take(SAMPLE_SIZE)
+  }
 }

@@ -3,7 +3,7 @@ package com.keepit.social
 import scala.concurrent.Future
 import scala.util.Try
 
-import com.keepit.model.SocialUserInfo
+import com.keepit.model.{ UserValueName, SocialUserInfo }
 
 import net.codingwell.scalaguice.ScalaModule
 
@@ -22,7 +22,7 @@ trait SocialGraph {
   def extractFriends(parentJson: JsValue): Seq[SocialUserInfo]
   def updateSocialUserInfo(sui: SocialUserInfo, json: JsValue): SocialUserInfo
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit]
-  def extractUserValues(json: JsValue): Map[String, String]
+  def extractUserValues(json: JsValue): Map[UserValueName, String]
   def vetJsAccessToken(settings: OAuth2Settings, json: JsValue): Try[IdentityId]
 }
 

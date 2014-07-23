@@ -12,29 +12,32 @@ class UserValueTest extends Specification with ShoeboxTestInjector {
     "create, update, delete using the cache (and invalidate properly)" in {
       withDb() { implicit injector =>
         val userValueRepo = inject[UserValueRepoImpl]
-        val test = UserValueStringHandler("test", "some default value")
-        val test1 = UserValueIntHandler("test1", -1000)
+        val userValueNameTest = UserValueName("test")
+        val userValueNameTest1 = UserValueName("test1")
+        val userValueNameTest2 = UserValueName("test2")
+        val test = UserValueStringHandler(userValueNameTest, "some default value")
+        val test1 = UserValueIntHandler(userValueNameTest1, -1000)
 
         val (user1, uv) = db.readWrite { implicit session =>
-          userValueRepo.valueCache.get(UserValueKey(Id[User](1), "test")).isDefined === false
+          userValueRepo.valueCache.get(UserValueKey(Id[User](1), userValueNameTest)).isDefined === false
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
           userValueRepo.getValue(user1.id.get, test) === test.default
 
-          val uv = userValueRepo.save(UserValue(userId = user1.id.get, name = "test", value = "this right here!"))
+          val uv = userValueRepo.save(UserValue(userId = user1.id.get, name = userValueNameTest, value = "this right here!"))
 
           (user1, uv)
         }
 
         db.readOnlyMaster { implicit s =>
-          userValueRepo.valueCache.get(UserValueKey(user1.id.get, "test")).isDefined === false
+          userValueRepo.valueCache.get(UserValueKey(user1.id.get, userValueNameTest)).isDefined === false
           userValueRepo.getValue(user1.id.get, test) === "this right here!"
-          userValueRepo.valueCache.get(UserValueKey(user1.id.get, "test")).get === "this right here!"
+          userValueRepo.valueCache.get(UserValueKey(user1.id.get, userValueNameTest)).get === "this right here!"
         }
         db.readWrite { implicit s =>
           userValueRepo.save(userValueRepo.get(uv.id.get).withState(UserValueStates.INACTIVE))
         }
         db.readOnlyMaster { implicit s =>
-          userValueRepo.valueCache.get(UserValueKey(user1.id.get, "test")).isDefined === false
+          userValueRepo.valueCache.get(UserValueKey(user1.id.get, userValueNameTest)).isDefined === false
         }
 
         db.readWrite { implicit s =>
@@ -51,18 +54,18 @@ class UserValueTest extends Specification with ShoeboxTestInjector {
         }
 
         db.readOnlyMaster { implicit s =>
-          userValueRepo.getValues(user1.id.get, "test", "test1")
-        } === Map("test" -> Some("this right here!"), "test1" -> None)
+          userValueRepo.getValues(user1.id.get, userValueNameTest, userValueNameTest1)
+        } === Map(userValueNameTest -> Some("this right here!"), userValueNameTest1 -> None)
 
         db.readWrite { implicit s =>
-          userValueRepo.save(UserValue(userId = user1.id.get, name = "test2", value = "this right there!"))
+          userValueRepo.save(UserValue(userId = user1.id.get, name = userValueNameTest2, value = "this right there!"))
         }
         db.readOnlyMaster { implicit s =>
-          userValueRepo.getValues(user1.id.get, "test", "test1", "test2")
+          userValueRepo.getValues(user1.id.get, userValueNameTest, userValueNameTest1, userValueNameTest2)
         } === Map(
-          "test" -> Some("this right here!"),
-          "test1" -> None,
-          "test2" -> Some("this right there!")
+          userValueNameTest -> Some("this right here!"),
+          userValueNameTest1 -> None,
+          userValueNameTest2 -> Some("this right there!")
         )
       }
     }

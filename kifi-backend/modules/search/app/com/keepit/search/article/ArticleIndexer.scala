@@ -21,6 +21,20 @@ import com.keepit.search.IndexInfo
 import com.keepit.search.sharding.Shard
 import com.keepit.search.util.MultiStringReader
 
+object ArticleFields {
+  val titleField = "t"
+  val titleStemmedField = "ts"
+  val titleLangField = "tl"
+  val contentField = "c"
+  val contentStemmedField = "cs"
+  val contentLangField = "cl"
+  val semanticVectorField = "sv"
+  val siteField = "site"
+  val homePageField = "home_page"
+  val mediaField = "media"
+  val recordField = "rec"
+}
+
 class ArticleIndexer(
   indexDirectory: IndexDirectory,
   articleStore: ArticleStore,
@@ -73,6 +87,9 @@ object ArticleIndexer extends Logging {
       val uri: IndexableUri,
       articleStore: ArticleStore,
       airbrake: AirbrakeNotifier) extends Indexable[NormalizedURI, NormalizedURI] {
+
+    import ArticleFields._
+
     implicit def toReader(text: String) = new StringReader(text)
 
     private def getArticle(id: Id[NormalizedURI], maxRetry: Int, minSleepTime: Long): Option[Article] = {
@@ -108,8 +125,8 @@ object ArticleIndexer extends Logging {
           }
           val titleLang = article.titleLang.getOrElse(DefaultAnalyzer.defaultLang)
           val contentLang = article.contentLang.getOrElse(DefaultAnalyzer.defaultLang)
-          doc.add(buildKeywordField("cl", contentLang.lang))
-          doc.add(buildKeywordField("tl", titleLang.lang))
+          doc.add(buildKeywordField(contentLangField, contentLang.lang))
+          doc.add(buildKeywordField(titleLangField, titleLang.lang))
 
           val titleAnalyzer = DefaultAnalyzer.getAnalyzer(titleLang)
           val titleAnalyzerWithStemmer = DefaultAnalyzer.getAnalyzerWithStemmer(titleLang)
@@ -123,16 +140,16 @@ object ArticleIndexer extends Logging {
             article.media.getOrElse(""))
           val titleAndUrl = Array(article.title, "\n\n", urlToIndexableString(uri.url).getOrElse(""))
 
-          doc.add(buildTextField("t", new MultiStringReader(titleAndUrl), titleAnalyzer))
-          doc.add(buildTextField("ts", new MultiStringReader(titleAndUrl), titleAnalyzerWithStemmer))
+          doc.add(buildTextField(titleField, new MultiStringReader(titleAndUrl), titleAnalyzer))
+          doc.add(buildTextField(titleStemmedField, new MultiStringReader(titleAndUrl), titleAnalyzerWithStemmer))
 
-          doc.add(buildTextField("c", new MultiStringReader(content), contentAnalyzer))
-          doc.add(buildTextField("cs", new MultiStringReader(content), contentAnalyzerWithStemmer))
+          doc.add(buildTextField(contentField, new MultiStringReader(content), contentAnalyzer))
+          doc.add(buildTextField(contentStemmedField, new MultiStringReader(content), contentAnalyzerWithStemmer))
 
           val builder = new SemanticVectorBuilder(60)
-          builder.load(titleAnalyzerWithStemmer.tokenStream("t", article.title))
-          builder.load(contentAnalyzerWithStemmer.tokenStream("c", new MultiStringReader(content)))
-          doc.add(buildSemanticVectorField("sv", builder))
+          builder.load(titleAnalyzerWithStemmer.tokenStream(titleField, article.title))
+          builder.load(contentAnalyzerWithStemmer.tokenStream(contentField, new MultiStringReader(content)))
+          doc.add(buildSemanticVectorField(semanticVectorField, builder))
 
           val parsedURI = URI.parse(uri.url)
           parsedURI.foreach { uri =>
@@ -140,7 +157,7 @@ object ArticleIndexer extends Logging {
               case Host(domain @ _*) =>
                 if (domain.nonEmpty) {
                   // index domain name
-                  doc.add(buildIteratorField("site", (1 to domain.size).iterator) { n => domain.take(n).reverse.mkString(".") })
+                  doc.add(buildIteratorField(siteField, (1 to domain.size).iterator) { n => domain.take(n).reverse.mkString(".") })
                 }
             }
           }
@@ -148,18 +165,18 @@ object ArticleIndexer extends Logging {
           // home page
           parsedURI match {
             case Success(URI(_, _, Some(Host(domain @ _*)), _, path, None, None)) if (!path.isDefined || path == Some("/")) =>
-              doc.add(buildTextField("home_page", domain.reverse.mkString(" "), DefaultAnalyzer.defaultAnalyzer))
+              doc.add(buildTextField(homePageField, domain.reverse.mkString(" "), DefaultAnalyzer.defaultAnalyzer))
             case _ =>
           }
 
           // media keyword field
           article.media.foreach { media =>
-            doc.add(buildTextField("media", media, DefaultAnalyzer.defaultAnalyzer))
+            doc.add(buildTextField(mediaField, media, DefaultAnalyzer.defaultAnalyzer))
           }
 
           // store title and url in the index
           val r = ArticleRecord(article.title, uri.url, article.id)
-          doc.add(buildBinaryDocValuesField("rec", r))
+          doc.add(buildBinaryDocValuesField(recordField, r))
 
           doc
         case None => doc
