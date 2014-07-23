@@ -54,7 +54,7 @@ class MobilePageControllerTest extends Specification with ShoeboxApplicationInje
 
           val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
 
-          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), isSearchableByOthers = false))
 
           val keep1 = keepRepo.save(Keep(
             title = Some("G1"), userId = user1.id.get, url = url.url, urlId = url.id.get,

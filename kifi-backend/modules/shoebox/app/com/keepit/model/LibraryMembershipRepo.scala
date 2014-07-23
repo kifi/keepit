@@ -31,7 +31,8 @@ class LibraryMembershipRepoImpl @Inject() (
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.Nullable)
     def access = column[LibraryAccess]("access", O.NotNull)
-    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
+    def showInSearch = column[Boolean]("show_in_search", O.NotNull)
+    def * = (id.?, libraryId, userId, access, createdAt, updatedAt, state, seq, showInSearch) <> ((LibraryMembership.apply _).tupled, LibraryMembership.unapply)
   }
 
   def table(tag: Tag) = new LibraryMemberTable(tag)

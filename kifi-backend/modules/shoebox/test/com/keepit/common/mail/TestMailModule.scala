@@ -67,6 +67,10 @@ case class FakeMailModule() extends MailModule {
     }
   }
 
+  @Singleton
+  @Provides
+  override def optoutSecret: OptoutSecret = OptoutSecret("""&some1sec\re#t2str;in''g3that4we5use6for7te%sting""")
+
   @Provides
   def fakeMailProvider(emails: FakeOutbox): MailProvider = new FakeMailProvider(emails)
 }
