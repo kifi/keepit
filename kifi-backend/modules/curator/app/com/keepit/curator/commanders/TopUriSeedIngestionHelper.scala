@@ -58,7 +58,7 @@ class TopUriSeedIngestionHelper @Inject() (
   }
 
   //triggers ingestions of up to maxItem RawSeedItems for the given user. Returns true if there might be more items to be ingested, false otherwise
-  //maxItems not used for getListOfUriAndScorePair API, always return true
+  //maxItems not used for getListOfUriAndScorePair API, always return false
   def apply(userId: Id[User], maxItems: Int): Future[Boolean] = {
 
     val userTrack = db.readWrite { implicit session =>
@@ -67,8 +67,10 @@ class TopUriSeedIngestionHelper @Inject() (
         case None => userTrackRepo.save(CuratorUserTrackItem(userId = userId, lastSeen = currentDateTime))
       }
     }
+
     val betweenHours = Hours.hoursBetween(currentDateTime, userTrack.lastSeen).getHours
     val betweenSecs = Seconds.secondsBetween(currentDateTime, userTrack.lastSeen).getSeconds
+
     if (betweenHours > uriIngestionFreq || betweenSecs <= 1) {
 
       db.readWrite { implicit session =>
