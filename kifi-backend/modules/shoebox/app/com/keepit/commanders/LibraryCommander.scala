@@ -86,7 +86,7 @@ class LibraryCommander @Inject() (
     name: Option[String] = None,
     description: Option[String] = None,
     slug: Option[String] = None,
-    visibility: Option[LibraryVisibility] = None): Either[LibraryFail, LibraryInfo] = {
+    visibility: Option[LibraryVisibility] = None): Either[LibraryFail, Library] = {
 
     db.readWrite { implicit s =>
       val targetLib = libraryRepo.get(libraryId)
@@ -108,8 +108,7 @@ class LibraryCommander @Inject() (
         } yield {
           val newDescription: Option[String] = description.orElse(targetLib.description)
           val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
-          val lib = libraryRepo.save(targetLib.copy(name = newName, slug = LibrarySlug(newSlug), visibility = newVisibility, description = newDescription))
-          LibraryInfo.fromLibraryAndOwner(lib, userRepo.get(userId))
+          libraryRepo.save(targetLib.copy(name = newName, slug = LibrarySlug(newSlug), visibility = newVisibility, description = newDescription))
         }
       }
     }
@@ -247,15 +246,14 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def joinLibrary(libraryId: Id[Library], inviteeId: Id[User]): Either[LibraryFail, LibraryInfo] = {
+  def joinLibrary(libraryId: Id[Library], inviteeId: Id[User]): Either[LibraryFail, Library] = {
     db.readWrite { implicit s =>
       libraryInviteRepo.getWithLibraryIdandUserId(libraryId, inviteeId) match {
         case None => Left(LibraryFail("invite not found"))
         case Some(inv) => {
           libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = inviteeId, access = inv.access, showInSearch = true))
-          val lib = libraryRepo.get(libraryId)
-          Right(LibraryInfo.fromLibraryAndOwner(lib, userRepo.get(lib.ownerId)))
+          Right(libraryRepo.get(libraryId))
         }
       }
     }

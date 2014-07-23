@@ -46,7 +46,10 @@ class LibraryController @Inject() (
         val res = libraryCommander.modifyLibrary(id, request.userId, newName, newDescription, newSlug, newVisibility)
         res match {
           case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
-          case Right(info) => Ok(Json.toJson(info))
+          case Right(lib) => {
+            val owner = db.readOnlyReplica { implicit s => userRepo.get(lib.ownerId) }
+            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner)))
+          }
         }
       }
     }
@@ -114,7 +117,10 @@ class LibraryController @Inject() (
       case Success(id) => {
         libraryCommander.joinLibrary(id, request.userId) match {
           case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
-          case Right(info) => Ok(Json.toJson(info))
+          case Right(lib) => {
+            val owner = db.readOnlyReplica { implicit s => userRepo.get(lib.ownerId) }
+            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner)))
+          }
         }
       }
     }
