@@ -20,6 +20,7 @@ GET     /internal/cortex/lda/numOfTopics                                        
 GET     /internal/cortex/lda/showTopics                                             @com.keepit.controllers.cortex.LDAController.showTopics(fromId: Int, toId: Int, topN: Int)
 GET     /internal/cortex/lda/wordTopic                                              @com.keepit.controllers.cortex.LDAController.wordTopic(word)
 POST    /internal/cortex/lda/docTopic                                               @com.keepit.controllers.cortex.LDAController.docTopic
+GET     /internal/cortex/lda/confs                                                  @com.keepit.controllers.cortex.LDAController.ldaConfigurations
 POST    /internal/cortex/lda/saveEdits                                              @com.keepit.controllers.cortex.LDAController.saveEdits
 POST    /internal/cortex/lda/ldaFeatures                                            @com.keepit.controllers.cortex.LDAController.getLDAFeatures
 GET     /internal/cortex/lda/userUriInterest                                        @com.keepit.controllers.cortex.LDAController.userUriInterest(userId: Id[User], uriId: Id[NormalizedURI])
