@@ -21,7 +21,7 @@ class SeedIngestionPlugin @Inject() (
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
 
   override def onStart() {
-    scheduleTaskOnLeader(system, 1 minutes, 5 minutes) {
+    scheduleTaskOnLeader(system, 1 minutes, 1 minutes) {
       commander.ingestAll()
     }
   }
