@@ -261,6 +261,9 @@ POST    /site/libraries/:id/delete  @com.keepit.controllers.website.LibraryContr
 GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibrary(id: PublicId[Library])
 GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrariesByUser()
 POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.inviteUsersToLibrary(id: PublicId[Library])
+POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryController.joinLibrary(id: PublicId[LibraryInvite])
+POST    /site/libraries/:id/decline @com.keepit.controllers.website.LibraryController.declineLibrary(id: PublicId[LibraryInvite])
+POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryController.leaveLibrary(id: PublicId[Library])
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
