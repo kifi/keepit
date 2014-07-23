@@ -241,8 +241,8 @@ class LibraryControllerTest extends Specification with ShoeboxApplicationInjecto
           val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
           val user2 = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1))
           val user3 = userRepo.save(User(firstName = "Char", lastName = "Mander", createdAt = t1))
-          val library = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.SECRET))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = library.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
+          val library = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.SECRET, isSearchableByOthers = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           (user1, user2, user3, library)
         }
 
