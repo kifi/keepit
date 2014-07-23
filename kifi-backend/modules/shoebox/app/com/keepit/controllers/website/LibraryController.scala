@@ -119,6 +119,7 @@ class LibraryController @Inject() (
       }
     }
   }
+
   def declineLibrary(pubId: PublicId[Library]) = JsonAction.authenticated { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
@@ -132,5 +133,17 @@ class LibraryController @Inject() (
     }
   }
 
+  def leaveLibrary(pubId: PublicId[Library]) = JsonAction.authenticated { request =>
+    val idTry = Library.decodePublicId(pubId)
+    idTry match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
+      case Success(id) => {
+        libraryCommander.leaveLibrary(id, request.userId) match {
+          case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
+          case Right(_) => Ok(JsString("success"))
+        }
+      }
+    }
+  }
 }
 

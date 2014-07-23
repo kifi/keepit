@@ -425,5 +425,25 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+
+    "let users leave library" in {
+      withDb(TestCryptoModule()) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
+        val libraryCommander = inject[LibraryCommander]
+
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.all.length === 6
+          libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 0
+        }
+
+        libraryCommander.leaveLibrary(libMurica.id.get, userAgent.id.get)
+
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.all.length === 6
+          libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 1
+        }
+      }
+    }
   }
 }

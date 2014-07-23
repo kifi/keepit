@@ -273,6 +273,18 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def leaveLibrary(libraryId: Id[Library], userId: Id[User]): Either[LibraryFail, Unit] = {
+    db.readWrite { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdandUserId(libraryId, userId) match {
+        case None => Left(LibraryFail("membership not found"))
+        case Some(mem) => {
+          libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
+          Right()
+        }
+      }
+    }
+  }
+
 }
 
 case class LibraryFail(message: String) extends AnyVal
