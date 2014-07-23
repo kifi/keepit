@@ -19,7 +19,7 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.common.mail.TestMailModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{ FakeShoeboxSecureSocialModule, FakeSocialGraphModule }
+import com.keepit.common.social.{ TestShoeboxAppSecureSocialModule, FakeSocialGraphModule }
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
 
@@ -40,7 +40,7 @@ class UserControllerTest extends Specification with ApplicationInjector {
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     TestHeimdalServiceClientModule(),
-    FakeShoeboxSecureSocialModule(),
+    TestShoeboxAppSecureSocialModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     TestScraperServiceClientModule()

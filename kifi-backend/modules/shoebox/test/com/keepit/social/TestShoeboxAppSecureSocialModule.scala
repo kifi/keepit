@@ -21,11 +21,20 @@ import scala.concurrent.duration._
 
 case class TestShoeboxAppSecureSocialModule() extends ScalaModule {
   override def configure(): Unit = {
-    //    import play.api.Play.current
-    //    new SecureSocialUserService().onStart()
-    //    require(UserService.delegate.isDefined)
-    bind[ActionAuthenticator].to[TestActionAuthenticator]
+    import play.api.Play.current
+    new SecureSocialUserService().onStart()
+    require(UserService.delegate.isDefined)
     install(FakeSocialGraphModule())
+  }
+
+  @Singleton
+  @Provides
+  def secureSocialClientIds: SecureSocialClientIds = SecureSocialClientIds("ovlhms1y0fjr", "530357056981814")
+}
+
+case class FakeShoeboxSecureSocialModule() extends ScalaModule {
+  override def configure(): Unit = {
+    bind[ActionAuthenticator].to[TestActionAuthenticator]
   }
 
   @Singleton
@@ -70,8 +79,6 @@ class TestActionAuthenticator @Inject() (
     val socialUserOpt = request.headers.get("socialUser").map { _ =>
       SocialUser(IdentityId("username", "fortytwo"), "First", "Last", "First Last", None, None, AuthenticationMethod("userpass"), None, None, None)
     }
-
-    println("$$$$$$$$ Trying to request from:" + userIdOpt)
 
     userIdOpt match {
       case Some(uid) =>
