@@ -30,7 +30,7 @@ import ScraperMessages._
 import InternalMessages._
 import akka.pattern.ask
 
-// see http://letitcrash.com/post/29044669086/balancing-workload-across-nodes-with-akka-2
+// pull-based; see http://letitcrash.com/post/29044669086/balancing-workload-across-nodes-with-akka-2
 
 object InternalMessages {
   // master => worker
@@ -54,6 +54,7 @@ object ScraperMessages {
   case class Scrape(uri: NormalizedURI, info: ScrapeInfo, pageInfo: Option[PageInfo], proxyOpt: Option[HttpProxy]) {
     override def toString = s"Scrape(uri=${uri.toShortString},info=${info.toShortString})"
   }
+  case class ScrapeJob(submitTS: DateTime, scrapeRequest: Scrape)
 }
 
 @Singleton
@@ -124,7 +125,6 @@ class ScrapeAgentSupervisor @Inject() (
 
   log.info(s"Supervisor.<ctr> created! context=$context")
 
-  import akka.pattern.ask
   import ScraperMessages._
 
   implicit val fj = ExecutionContext.fj
@@ -148,19 +148,19 @@ class ScrapeAgentSupervisor @Inject() (
   log.info(s"[Supervisor.<ctr>] children(sz=${context.children.size}):${context.children.map(_.path.name).mkString(",")}")
 
   val scrapeJobs = Map[ActorRef, Scrape]()
-  val scrapeQ = new ConcurrentLinkedQueue[(DateTime, Scrape)]()
+  val scrapeQ = new collection.mutable.Queue[ScrapeJob]()
 
   def receive = {
     case qs: QueueSize =>
-      sender ! scrapeQ.size()
+      sender ! scrapeQ.size
     case WorkerCreated(worker) =>
       log.info(s"[Supervisor] <WorkerCreated> $worker")
     case WorkerAvail(worker) =>
-      log.info(s"[Supervisor] <WorkerAvail> $worker")
+      log.info(s"[Supervisor] <WorkerAvail> $worker; scrapeQ(sz=${scrapeQ.size}):${scrapeQ.mkString(",")}")
       if (!scrapeQ.isEmpty) {
-        val (dt, s) = scrapeQ.poll
-        log.info(s"[Supervisor] assign job $s (submitted: ${dt.toLocalTime}, waited: ${clock.now().getMillis - dt.getMillis}) to worker $worker")
-        worker ! s
+        val job = scrapeQ.dequeue
+        log.info(s"[Supervisor] <WorkerAvail> assign job ${job.scrapeRequest} (submit: ${job.submitTS.toLocalTime}, waited: ${clock.now().getMillis - job.submitTS.getMillis}) to worker $worker")
+        worker ! job.scrapeRequest
       }
     case WorkerBusy(worker, s) =>
       log.info(s"[Supervisor] <WorkerBusy> worker=$sender is busy; job($s) rejected")
@@ -168,7 +168,10 @@ class ScrapeAgentSupervisor @Inject() (
     case f: Fetch =>
       fetcherRouter.forward(f)
     case s: Scrape =>
-      scrapeQ.offer(clock.now() -> s)
+      scrapeQ.enqueue(ScrapeJob(clock.now(), s))
+      scraperRouter ! Broadcast(JobAvail())
+    case job: ScrapeJob =>
+      scrapeQ.enqueue(job)
       scraperRouter ! Broadcast(JobAvail())
     case m => throw new UnsupportedActorMessage(m)
   }
