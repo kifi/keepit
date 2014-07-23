@@ -19,6 +19,8 @@ import com.keepit.scraper.extractor._
 import com.keepit.scraper.fetcher.HttpFetcher
 import com.keepit.search.Article
 import org.apache.http.HttpStatus
+import com.keepit.common.time._
+import org.joda.time.DateTime
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -115,6 +117,7 @@ class ScrapeProcessorActorImpl @Inject() (
 
 class ScrapeAgentSupervisor @Inject() (
     airbrake: AirbrakeNotifier,
+    clock: Clock,
     sysProvider: Provider[ActorSystem],
     fetcherAgentProvider: Provider[FetchAgent],
     scrapeAgentProvider: Provider[ScrapeAgent]) extends FortyTwoActor(airbrake) with Logging {
@@ -128,24 +131,24 @@ class ScrapeAgentSupervisor @Inject() (
   implicit val timeout = Timeout(15 minutes)
 
   lazy val system = sysProvider.get
-  log.info(s"[Supervisor.ctr] config=${system.settings.config}")
+  log.info(s"[Supervisor.<ctr>] config=${system.settings.config}")
 
-  val scrapers = (0 until Runtime.getRuntime.availableProcessors() / 2).map { i =>
+  val scrapers = (0 until Runtime.getRuntime.availableProcessors()).map { i =>
     context.actorOf(Props(scrapeAgentProvider.get), s"scrape-agent$i")
   }
   val scraperRouter = context.actorOf(Props.empty.withRouter(SmallestMailboxRouter(routees = scrapers)), "scraper-router")
-  log.info(s"[Supervisor.ctr] scraperRouter=$scraperRouter scrapers=${scrapers.mkString(",")}")
+  log.info(s"[Supervisor.<ctr>] scraperRouter=$scraperRouter scrapers(sz=${scrapers.size}):${scrapers.mkString(",")}")
 
-  val fetchers = (0 until Runtime.getRuntime.availableProcessors() / 4).map { i =>
+  val fetchers = (0 until Runtime.getRuntime.availableProcessors() / 2).map { i =>
     context.actorOf(Props(fetcherAgentProvider.get), s"fetch-agent$i")
   }
   val fetcherRouter = context.actorOf(Props.empty.withRouter(SmallestMailboxRouter(routees = fetchers)), "fetcher-router")
-  log.info(s"[Supervisor.ctr] fetcherRouter=$fetcherRouter fetchers=${fetchers.mkString(",")}")
+  log.info(s"[Supervisor.<ctr>] fetcherRouter=$fetcherRouter fetchers(sz=${fetchers.size}):${fetchers.mkString(",")}")
 
-  log.info(s"[Supervisor.ctr] context.children(len=${context.children.size}):${context.children.mkString(",")}")
+  log.info(s"[Supervisor.<ctr>] children(sz=${context.children.size}):${context.children.map(_.path.name).mkString(",")}")
 
   val scrapeJobs = Map[ActorRef, Scrape]()
-  val scrapeQ = new ConcurrentLinkedQueue[Scrape]()
+  val scrapeQ = new ConcurrentLinkedQueue[(DateTime, Scrape)]()
 
   def receive = {
     case qs: QueueSize =>
@@ -155,8 +158,8 @@ class ScrapeAgentSupervisor @Inject() (
     case WorkerAvail(worker) =>
       log.info(s"[Supervisor] <WorkerAvail> $worker")
       if (!scrapeQ.isEmpty) {
-        val s = scrapeQ.poll
-        log.info(s"[Supervisor] assign job $s to worker $worker")
+        val (dt, s) = scrapeQ.poll
+        log.info(s"[Supervisor] assign job $s (submitted: ${dt.toLocalTime}, waited: ${clock.now().getMillis - dt.getMillis}) to worker $worker")
         worker ! s
       }
     case WorkerBusy(worker, s) =>
@@ -165,7 +168,7 @@ class ScrapeAgentSupervisor @Inject() (
     case f: Fetch =>
       fetcherRouter.forward(f)
     case s: Scrape =>
-      scrapeQ.offer(s)
+      scrapeQ.offer(clock.now() -> s)
       scraperRouter ! Broadcast(JobAvail())
     case m => throw new UnsupportedActorMessage(m)
   }
