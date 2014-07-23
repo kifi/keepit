@@ -10,6 +10,8 @@ import scala.slick.lifted.{ TableQuery, Tag }
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
+  def getByIdAndOwner(libraryId: Id[Library], ownerId: Id[User])(implicit session: RSession): Option[Library]
+  def getByNameAndUser(userId: Id[User], name: String)(implicit session: RSession): Option[Library]
   def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(LibraryAccess, Library)]
 }
 
@@ -56,6 +58,18 @@ class LibraryRepoImpl @Inject() (
     } else {
       idCache.set(LibraryIdKey(library.id.get), library)
     }
+  }
+
+  private def getIdAndUserCompiled(libraryId: Column[Id[Library]], ownerId: Column[Id[User]]) =
+    Compiled { (for (b <- rows if b.id === libraryId && b.ownerId === ownerId) yield b).sortBy(_.createdAt) }
+  def getByIdAndOwner(libraryId: Id[Library], ownerId: Id[User])(implicit session: RSession): Option[Library] = {
+    getIdAndUserCompiled(libraryId, ownerId).firstOption
+  }
+
+  private def getByNameAndUserCompiled(userId: Column[Id[User]], name: Column[String]) =
+    Compiled { (for (b <- rows if b.name === name && b.ownerId === userId) yield b).sortBy(_.createdAt) }
+  def getByNameAndUser(userId: Id[User], name: String)(implicit session: RSession): Option[Library] = {
+    getByNameAndUserCompiled(userId, name).firstOption
   }
 
   def getByUser(userId: Id[User], excludeState: Option[State[Library]])(implicit session: RSession): Seq[(LibraryAccess, Library)] = {
