@@ -215,7 +215,7 @@ class ScrapeAgent @Inject() (
       log.info(s"[ScrapeAgent($name).busy] ignore <JobAvail> event")
     case d: JobDone =>
       log.info(s"[ScrapeAgent($name).busy] <JobDone> $d")
-      context.become(idle) // check whether unbecome is needed
+      context.become(idle) // unbecome shouldn't be necessary
       parent ! WorkerAvail(self)
     case s: Scrape =>
       log.warn(s"[ScrapeAgent($name).busy] ignore <Scrape> job: $s")
