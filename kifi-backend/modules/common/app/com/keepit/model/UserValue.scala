@@ -38,9 +38,6 @@ object UserValueStates extends States[UserValue]
 @json case class UserValueName(name: String)
 
 object UserValueName {
-  /*
-   * Please use lower_underscore_case for new value names (and not lowerCamelCase)
-   */
   val LOOK_HERE_MODE = UserValueName("ext_look_here_mode")
   val ENTER_TO_SEND = UserValueName("enter_to_send")
   val MAX_RESULTS = UserValueName("ext_max_results")
@@ -67,6 +64,7 @@ object UserValueName {
   val ONBOARDING_SEEN = UserValueName("onboarding_seen")
   val NON_USER_IDENTIFIER = UserValueName("nonUserIdentifier")
   val NON_USER_KIND = UserValueName("nonUserKind")
+  // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
   def bookmarkImportContextName(newImportId: String) = UserValueName(s"bookmark_import_${newImportId}_context")
   def importInProgress(networkType: String) = UserValueName(s"import_in_progress_$networkType")
