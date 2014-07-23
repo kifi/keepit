@@ -19,7 +19,7 @@ import securesocial.core._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-case class FakeShoeboxSecureSocialModule() extends ScalaModule {
+case class TestShoeboxAppSecureSocialModule() extends ScalaModule {
   override def configure(): Unit = {
     //    import play.api.Play.current
     //    new SecureSocialUserService().onStart()
