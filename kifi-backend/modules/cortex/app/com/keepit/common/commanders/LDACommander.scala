@@ -27,6 +27,13 @@ class LDACommander @Inject() (
 
   def numOfTopics: Int = ldaTopicWords.topicWords.length
 
+  val activeTopics = currentConfig.configs.filter{ case (id, conf) => conf.isActive }.map{ case (id, _) => id.toInt}.toArray.sorted
+
+  private def projectToActive(arr: Array[Float]): Array[Float] = {
+    assume(arr.size == numOfTopics)
+    activeTopics.map{ i => arr(i)}.toArray
+  }
+
   def topicWords(topicId: Int, topN: Int): Seq[(String, Float)] = {
     assume(topicId >= 0 && topicId < numOfTopics && topN >= 0)
 
