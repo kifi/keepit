@@ -36,15 +36,15 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     val t2 = new DateTime(2014, 8, 1, 1, 0, 0, 1, DEFAULT_DATE_TIME_ZONE)
     val (libShield, libMurica, libScience) = db.readWrite { implicit s =>
       val libShield = libraryRepo.save(Library(name = "Avengers Missions", slug = LibrarySlug("avengers"),
-        visibility = LibraryVisibility.SECRET, ownerId = userAgent.id.get, createdAt = t1))
+        visibility = LibraryVisibility.SECRET, ownerId = userAgent.id.get, createdAt = t1, isSearchableByOthers = false))
       val libMurica = libraryRepo.save(Library(name = "MURICA", slug = LibrarySlug("murica"),
-        visibility = LibraryVisibility.ANYONE, ownerId = userAgent.id.get, createdAt = t1))
+        visibility = LibraryVisibility.ANYONE, ownerId = userCaptain.id.get, createdAt = t1, isSearchableByOthers = true))
       val libScience = libraryRepo.save(Library(name = "Science & Stuff", slug = LibrarySlug("science"),
-        visibility = LibraryVisibility.LIMITED, ownerId = userAgent.id.get, createdAt = t1))
+        visibility = LibraryVisibility.LIMITED, ownerId = userIron.id.get, createdAt = t1, isSearchableByOthers = true))
 
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = userAgent.id.get, access = LibraryAccess.OWNER, createdAt = t2))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, createdAt = t2))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = libScience.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, createdAt = t2))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = userAgent.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = libScience.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true))
       (libShield, libMurica, libScience)
     }
     db.readOnlyMaster { implicit s =>
@@ -93,9 +93,9 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       val inv3 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libMurica.id.get, userId = userAgent.id.get).get
       libraryInviteRepo.save(inv3.withState(LibraryInviteStates.ACCEPTED))
 
-      libraryMembershipRepo.save(LibraryMembership(libraryId = inv1.libraryId, userId = inv1.userId, access = inv1.access, createdAt = t1))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = inv2.libraryId, userId = inv2.userId, access = inv2.access, createdAt = t1))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = inv3.libraryId, userId = inv3.userId, access = inv3.access, createdAt = t1))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = inv1.libraryId, userId = inv1.userId, access = inv1.access, showInSearch = true, createdAt = t1))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = inv2.libraryId, userId = inv2.userId, access = inv2.access, showInSearch = true, createdAt = t1))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = inv3.libraryId, userId = inv3.userId, access = inv3.access, showInSearch = true, createdAt = t1))
     }
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.all.length === 6
@@ -117,19 +117,19 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val inv3: Seq[ExternalId[User]] = userHulk.externalId :: Nil
 
         val lib1Request = LibraryAddRequest(name = "Avengers Missions", slug = "avengers",
-          visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
+          visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites, isSearchableByOthers = true)
 
         val lib2Request = LibraryAddRequest(name = "MURICA", slug = "murica",
-          visibility = LibraryVisibility.ANYONE, collaborators = noInvites, followers = inv2)
+          visibility = LibraryVisibility.ANYONE, collaborators = noInvites, followers = inv2, isSearchableByOthers = true)
 
         val lib3Request = LibraryAddRequest(name = "Science and Stuff", slug = "science",
-          visibility = LibraryVisibility.LIMITED, collaborators = inv3, followers = noInvites)
+          visibility = LibraryVisibility.LIMITED, collaborators = inv3, followers = noInvites, isSearchableByOthers = true)
 
         val lib4Request = LibraryAddRequest(name = "Overlapped Invitees", slug = "overlap",
-          visibility = LibraryVisibility.LIMITED, collaborators = inv2, followers = inv3)
+          visibility = LibraryVisibility.LIMITED, collaborators = inv2, followers = inv3, isSearchableByOthers = true)
 
         val lib5Request = LibraryAddRequest(name = "Invalid Param", slug = "",
-          visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites)
+          visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites, isSearchableByOthers = true)
 
         val libraryCommander = inject[LibraryCommander]
         libraryCommander.addLibrary(lib1Request, userAgent.id.get).isRight === true
@@ -208,7 +208,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         val libraryCommander = inject[LibraryCommander]
 
-        libraryCommander.removeLibrary(libMurica.id.get)
+        libraryCommander.removeLibrary(libMurica.id.get, userCaptain.id.get)
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
           allLibs.length === 2
@@ -217,8 +217,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryInviteRepo.all.filter(_.state == LibraryInviteStates.INACTIVE).length === 3
         }
 
-        libraryCommander.removeLibrary(libScience.id.get)
-        libraryCommander.removeLibrary(libShield.id.get)
+        libraryCommander.removeLibrary(libScience.id.get, userIron.id.get)
+        libraryCommander.removeLibrary(libShield.id.get, userAgent.id.get)
         db.readOnlyMaster { implicit s =>
           val allLibs = libraryRepo.all.filter(_.state == LibraryStates.ACTIVE)
           allLibs.length === 0
@@ -292,8 +292,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val all = libraryRepo.all()
           all.size === 3
 
-          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 0
-          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 0
+          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 1
+          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 1
         }
 
         libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
@@ -302,8 +302,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         // System libraries are created
         db.readOnlyMaster { implicit session =>
           libraryRepo.all().size === 7
-          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 2
-          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 2
+          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 3
+          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 3
           libraryRepo.getByUser(userHulk.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 0
         }
 
@@ -312,8 +312,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         libraryCommander.internSystemGeneratedLibraries(userHulk.id.get)
         db.readWrite { implicit session =>
           libraryRepo.all().size === 9
-          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 2
-          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 2
+          libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 3
+          libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 3
           libraryRepo.getByUser(userHulk.id.get).map(_._2).count(_.ownerId == userHulk.id.get) === 2
 
           val ironSysLibs = libraryRepo.getByUser(userIron.id.get).map(_._2).filter(_.ownerId == userIron.id.get)
@@ -341,8 +341,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         // Removes dupes
         db.readWrite { implicit session =>
-          val lib = libraryRepo.save(Library(ownerId = userIron.id.get, name = "Main 2!", kind = LibraryKind.SYSTEM_MAIN, visibility = LibraryVisibility.LIMITED, slug = LibrarySlug("main2")))
-          libraryMembershipRepo.save(LibraryMembership(userId = userIron.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER))
+          val lib = libraryRepo.save(Library(ownerId = userIron.id.get, name = "Main 2!", kind = LibraryKind.SYSTEM_MAIN, visibility = LibraryVisibility.LIMITED, slug = LibrarySlug("main2"), isSearchableByOthers = true))
+          libraryMembershipRepo.save(LibraryMembership(userId = userIron.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           println(libraryRepo.all.mkString("\n"))
         }
@@ -358,5 +358,42 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
       }
     }
+
+    "invite users" in {
+      withDb(TestCryptoModule()) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
+        val libraryCommander = inject[LibraryCommander]
+
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.all.length === 0
+        }
+
+        val inviteList1 = Seq(
+          (userIron.id.get, LibraryAccess.READ_ONLY),
+          (userAgent.id.get, LibraryAccess.READ_ONLY),
+          (userHulk.id.get, LibraryAccess.READ_ONLY))
+        val res1 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1)
+        res1.isRight === true
+
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.all.length === 3
+          libraryInviteRepo.all.map(x => (x.userId, x.access)) ===
+            Seq((userIron.id.get, LibraryAccess.READ_ONLY),
+              (userAgent.id.get, LibraryAccess.READ_ONLY),
+              (userHulk.id.get, LibraryAccess.READ_ONLY))
+        }
+
+        // Scumbag Ironman tries to invite himself for READ_WRITE access
+        val inviteList2 = Seq((userIron.id.get, LibraryAccess.READ_WRITE))
+        val res2 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2)
+        res2.isRight === false
+
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.all.length === 3
+        }
+      }
+    }
+
   }
 }

@@ -18,8 +18,7 @@ case class LibraryInvite(
     access: LibraryAccess,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    state: State[LibraryInvite] = LibraryInviteStates.ACTIVE,
-    seq: SequenceNumber[LibraryInvite] = SequenceNumber.ZERO) extends ModelWithState[LibraryInvite] with ModelWithSeqNumber[LibraryInvite] {
+    state: State[LibraryInvite] = LibraryInviteStates.ACTIVE) extends ModelWithState[LibraryInvite] {
 
   def withId(id: Id[LibraryInvite]): LibraryInvite = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryInvite = this.copy(updatedAt = now)
@@ -37,8 +36,7 @@ object LibraryInvite {
     (__ \ 'access).format[LibraryAccess] and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
-    (__ \ 'state).format(State.format[LibraryInvite]) and
-    (__ \ 'seq).format(SequenceNumber.format[LibraryInvite])
+    (__ \ 'state).format(State.format[LibraryInvite])
   )(LibraryInvite.apply, unlift(LibraryInvite.unapply))
 }
 

@@ -255,6 +255,13 @@ POST    /site/collections/:id/undelete @com.keepit.controllers.website.KeepsCont
 POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.KeepsController.removeKeepsFromCollection(id: ExternalId[Collection])
 POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.KeepsController.keepToCollection(id: ExternalId[Collection])
 
+POST    /site/libraries/add         @com.keepit.controllers.website.LibraryController.addLibrary()
+POST    /site/libraries/:id/modify  @com.keepit.controllers.website.LibraryController.modifyLibrary(id: PublicId[Library])
+POST    /site/libraries/:id/delete  @com.keepit.controllers.website.LibraryController.removeLibrary(id: PublicId[Library])
+GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibrary(id: PublicId[Library])
+GET     /site/libraries             @com.keepit.controllers.website.LibraryController.getLibrariesByUser()
+POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.inviteUsersToLibrary(id: PublicId[Library])
+
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
 GET     /site/user/email            @com.keepit.controllers.website.UserController.getEmailInfo(email: EmailAddress)

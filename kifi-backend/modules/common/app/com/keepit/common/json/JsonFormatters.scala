@@ -17,4 +17,8 @@ object JsonFormatters {
   implicit def tuple2Writes[A, B](implicit aWrites: Writes[A], bWrites: Writes[B]): Writes[Tuple2[A, B]] = new Writes[Tuple2[A, B]] {
     def writes(tuple: Tuple2[A, B]) = JsArray(Seq(aWrites.writes(tuple._1), bWrites.writes(tuple._2)))
   }
+
+  implicit def tuple2Format[A, B](implicit reads: Reads[(A, B)], writes: Writes[(A, B)]) = {
+    Format(reads, writes)
+  }
 }

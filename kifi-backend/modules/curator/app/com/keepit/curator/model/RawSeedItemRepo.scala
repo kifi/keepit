@@ -1,7 +1,7 @@
 package com.keepit.curator.model
 
 import com.keepit.common.db.slick.{ DbRepo, SeqNumberFunction, SeqNumberDbFunction, DataBaseComponent, Database }
-import com.keepit.common.db.{ Id, DbSequenceAssigner }
+import com.keepit.common.db.{ Id, DbSequenceAssigner, SequenceNumber }
 import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.common.time.Clock
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
@@ -10,6 +10,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import scala.concurrent.duration._
+import scala.slick.jdbc.StaticQuery
 
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 
@@ -19,6 +20,8 @@ import org.joda.time.DateTime
 trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeedItem] {
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[RawSeedItem]
   def getByUriIdAndUserId(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[RawSeedItem]
+  def getBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
+  def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
 }
 
 @Singleton
@@ -61,6 +64,24 @@ class RawSeedItemRepoImpl @Inject() (
   def getByUriIdAndUserId(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[RawSeedItem] = {
     (for (row <- rows if row.uriId === uriId && row.userId === userId) yield row).firstOption
   }
+
+  def getBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
+    (for (row <- rows if row.seq > start && (row.userId === userId || row.userId.isNull)) yield row).take(maxBatchSize).list
+  }
+
+  def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
+    (for (row <- rows if row.userId === userId || row.userId.isNull) yield row).sortBy(_.seq.desc).take(maxBatchSize).list
+  }
+
+  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
+    assignSequenceNumbers(sequence, "raw_seed_item", limit)
+  }
+
+  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
+    import StaticQuery.interpolation
+    sql"""select min(seq) from raw_seed_item where seq < 0""".as[Option[Long]].first
+  }
+
 }
 
 trait RawSeedItemSequencingPlugin extends SequencingPlugin

@@ -125,6 +125,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
+  def getLibrariesWithMembersChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[(Library, Seq[LibraryMembership])]] = Future.successful(Seq.empty) // todo(Léo): implement
 }
 
 case class ShoeboxCacheProvider @Inject() (
