@@ -28,7 +28,7 @@ class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extend
 
   override def ldaNumOfTopics(): Future[Int] = ???
   override def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Seq[LDATopicInfo]] = ???
-  override def ldaConfigurations: Future[LDATopicConfigurations] = ???
+  override def ldaConfigurations: Future[LDATopicConfigurations] = Future.successful(LDATopicConfigurations(Map()))
   override def ldaWordTopic(word: String): Future[Option[Array[Float]]] = ???
   override def ldaDocTopic(doc: String): Future[Option[Array[Float]]] = ???
   override def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit = ???
