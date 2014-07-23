@@ -527,13 +527,14 @@ class UserCommander @Inject() (
     }
   }
 
-  def sendCloseAccountEmail(userId: Id[User]): ElectronicMail = {
+  def sendCloseAccountEmail(userId: Id[User], comment: String): ElectronicMail = {
+    val safeComment = comment.replaceAll("[<>]+", "")
     db.readWrite { implicit s =>
       postOffice.sendMail(ElectronicMail(
         from = SystemEmailAddress.ENG,
         to = Seq(SystemEmailAddress.SUPPORT),
         subject = s"Close Account for ${userId}",
-        htmlBody = s"User ${userId} requested to close account.",
+        htmlBody = s"User ${userId} requested to close account.<br/>---<br/>${safeComment}",
         category = NotificationCategory.System.ADMIN
       ))
     }

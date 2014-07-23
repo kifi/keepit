@@ -13,6 +13,7 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[CuratorKeepInfoRepoImpl])
 trait CuratorKeepInfoRepo extends DbRepo[CuratorKeepInfo] {
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[CuratorKeepInfo]
+  def getKeepersByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[User]]
 }
 
 @Singleton
@@ -39,6 +40,10 @@ class CuratorKeepInfoRepoImpl @Inject() (
 
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[CuratorKeepInfo] = {
     (for (row <- rows if row.keepId === keepId) yield row).firstOption
+  }
+
+  def getKeepersByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[User]] = {
+    (for (row <- rows if row.uriId === uriId && row.state === CuratorKeepInfoStates.ACTIVE) yield row.userId).list
   }
 
 }

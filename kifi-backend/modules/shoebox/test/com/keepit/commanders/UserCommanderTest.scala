@@ -178,14 +178,15 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
         val outbox = inject[FakeOutbox]
 
         outbox.size === 0
-        userCommander.sendCloseAccountEmail(user1.id.get)
+        // test that the angle brackets are removed
+        userCommander.sendCloseAccountEmail(user1.id.get, "<a>l</a>going amish")
         outbox.size === 1
 
         val mail: ElectronicMail = outbox(0)
         mail.from === SystemEmailAddress.ENG
         mail.to === Seq(SystemEmailAddress.SUPPORT)
         mail.subject.toString === s"Close Account for ${user1.id.get}"
-        mail.htmlBody.toString === s"User ${user1.id.get} requested to close account."
+        mail.htmlBody.toString === s"User ${user1.id.get} requested to close account.<br/>---<br/>al/agoing amish"
         mail.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)
       }
     }
