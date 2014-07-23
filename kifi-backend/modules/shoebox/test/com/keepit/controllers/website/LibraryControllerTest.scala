@@ -265,18 +265,6 @@ class LibraryControllerTest extends Specification with ShoeboxApplicationInjecto
             |]
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
-
-        val inputJson2 =
-          Json.obj("pairs" -> Some(Json.toJson(Seq(
-            (ExternalId[User](), LibraryAccess.READ_WRITE))) // try to invite bad user id
-          ))
-        val request2 = FakeRequest("POST", testPath).withJsonBody(inputJson2)
-        val result2 = route(request2).get
-        status(result2) must equalTo(OK)
-        contentType(result2) must beSome("application/json")
-
-        val expected2 = Json.parse("[]")
-        Json.parse(contentAsString(result2)) must equalTo(expected2)
       }
     }
   }

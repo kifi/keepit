@@ -88,8 +88,14 @@ class LibraryController @Inject() (
     idTry match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) => {
-        val inviteList = (request.body \ "pairs").asOpt[Seq[(ExternalId[User], LibraryAccess)]]
-        val res = libraryCommander.inviteUsersToLibrary(id, request.userId, inviteList.getOrElse(Seq.empty))
+        val inviteList = (request.body \ "pairs").asOpt[Seq[(ExternalId[User], LibraryAccess)]].getOrElse(Seq.empty)
+
+        val validInviteList = db.readOnlyReplica { implicit s =>
+          for (i <- inviteList; user = userRepo.getOpt(i._1) if !user.isEmpty) yield {
+            (user.get.id.get, i._2)
+          }
+        }
+        val res = libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList)
         res match {
           case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
           case Right(info) => {

@@ -230,15 +230,16 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(ExternalId[User], LibraryAccess)]): Either[LibraryFail, Seq[(ExternalId[User], LibraryAccess)]] = {
+  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Id[User], LibraryAccess)]): Either[LibraryFail, Seq[(ExternalId[User], LibraryAccess)]] = {
     db.readWrite { implicit s =>
       val targetLib = libraryRepo.get(libraryId)
       if (targetLib.ownerId != inviterId) {
         Left(LibraryFail("Not Owner"))
       } else {
-        val successInvites = for (i <- inviteList; user = userRepo.getOpt(i._1) if !user.isEmpty) yield {
-          val inv = LibraryInvite(libraryId = libraryId, ownerId = inviterId, userId = user.get.id.get, access = i._2)
-          (inv, i)
+        val successInvites = for (i <- inviteList) yield {
+          val inv = LibraryInvite(libraryId = libraryId, ownerId = inviterId, userId = i._1, access = i._2)
+          val extId = userRepo.get(i._1).externalId
+          (inv, (extId, i._2))
         }
         val (inv1, res) = successInvites.unzip
         inviteBulkUsers(inv1)
