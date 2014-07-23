@@ -25,8 +25,6 @@ import com.keepit.scraper.embedly.EmbedlyCommander
 @ImplementedBy(classOf[ScrapeWorkerImpl])
 trait ScrapeWorker {
   def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Option[Article]
-  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): ScraperResult
-  def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle
 }
 
 class ScrapeWorkerImpl @Inject() (
@@ -245,7 +243,7 @@ class ScrapeWorkerImpl @Inject() (
     }
   }
 
-  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): ScraperResult = {
+  private def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): ScraperResult = {
     try {
       URI.parse(normalizedUri.url) match {
         case Success(uri) =>
@@ -354,18 +352,6 @@ class ScrapeWorkerImpl @Inject() (
       }
     }
   }
-
-  def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(
-    title = extractor.getTitle,
-    content = extractor.getContent,
-    canonicalUrl = extractor.getCanonicalUrl,
-    description = extractor.getDescription,
-    media = extractor.getMediaTypeString,
-    httpContentType = extractor.getMetadata("Content-Type"),
-    httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
-    destinationUrl = destinationUrl,
-    signature = extractor.getSignature
-  )
 
   // Watch out: the NormalizedURI may come back as REDIRECTED
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): NormalizedURI = {

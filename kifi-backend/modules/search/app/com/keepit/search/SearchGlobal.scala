@@ -14,6 +14,7 @@ import com.keepit.search.phrasedetector.PhraseIndexerPlugin
 import com.keepit.search.spellcheck.SpellIndexerPlugin
 import com.keepit.search.graph.collection.CollectionGraphPlugin
 import com.keepit.search.graph.user._
+import com.keepit.search.graph.library.LibraryIndexerPlugin
 
 object SearchGlobal extends FortyTwoGlobal(Prod) with SearchServices {
   val module = SearchProdModule()
@@ -42,6 +43,7 @@ trait SearchServices { self: FortyTwoGlobal =>
     require(injector.instance[UserGraphPlugin] != null)
     require(injector.instance[SearchFriendGraphPlugin] != null)
     require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
+    // require(injector.instance[LibraryIndexerPlugin] != null) //make sure its not lazy loaded todo(Léo): activate once Shoebox is ready
     require(NlpParser.enabled)
   }
 }

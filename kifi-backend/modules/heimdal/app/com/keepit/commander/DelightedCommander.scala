@@ -61,11 +61,17 @@ class DelightedCommanderImpl @Inject() (
             "score" -> answer.score.map(s => Seq(s.toString)),
             "comment" -> answer.comment.map(Seq(_))
           )
-        val url = answer.answerId map { answerId =>
-          s"/v1/survey_responses/$answerId.json"
-        } getOrElse "/v1/survey_responses.json"
+        val answerIdOpt = answer.answerId flatMap { answerId =>
+          // Could have been created a short time ago
+          db.readOnlyMaster { implicit session =>
+            delightedAnswerRepo.getByExternalId(answerId)
+          } map (_.delightedExtAnswerId)
+        }
+        val response = answerIdOpt map { answerId =>
+          delightedRequest(s"/v1/survey_responses/$answerId.json").put(data)
+        } getOrElse delightedRequest("/v1/survey_responses.json").post(data)
 
-        delightedRequest(url).post(data).map { response =>
+        response.map { response =>
           if (response.status == Status.OK || response.status == Status.CREATED) {
             saveAnswerForResponse(response.json) match {
               case Some(answer) => Right(answer)
@@ -126,7 +132,13 @@ class DelightedCommanderImpl @Inject() (
           source = source
         )
       }
-      answerOpt map (delightedAnswerRepo.save(_)) orElse {
+      answerOpt map { answer =>
+        val answerToSave = delightedAnswerRepo.getByDelightedExtAnswerId(answer.delightedExtAnswerId) match {
+          case Some(existing) => answer.copy(id = existing.id, externalId = existing.externalId)
+          case None => answer
+        }
+        delightedAnswerRepo.save(answerToSave)
+      } orElse {
         airbrake.notify(s"Could not parse Delighted answer: ${json}")
         None
       }
