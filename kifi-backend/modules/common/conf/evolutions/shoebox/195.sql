@@ -41,6 +41,16 @@ CREATE TABLE curator_keep_info (
     INDEX curator_keep_info_i_uri_id_state (uri_id, state)
 );
 
+CREATE TABLE IF NOT EXISTS evolutions (
+    id bigint(20) NOT NULL AUTO_INCREMENT,
+    created_at timestamp NOT NULL,
+    name varchar(64) NOT NULL,
+    description varchar(512) DEFAULT '',
+
+    PRIMARY KEY (id),
+    CONSTRAINT evolutions_u_name UNIQUE (name)
+);
+
 
 insert into evolutions (name, description) values('195.sql', 'adding new tables for keep ingestion in curator');
 

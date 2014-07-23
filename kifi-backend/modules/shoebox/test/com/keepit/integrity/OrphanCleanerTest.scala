@@ -29,7 +29,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector {
 
         val (user, lib1) = db.readWrite { implicit session =>
           val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
-          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), isSearchableByOthers = false))
 
           (user, lib1)
         }
@@ -134,7 +134,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector {
         val (user, other, lib1) = db.readWrite { implicit session =>
           val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
           val other = userRepo.save(User(firstName = "foo", lastName = "bar"))
-          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), isSearchableByOthers = false))
 
           (user, other, lib1)
         }
@@ -344,7 +344,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector {
 
         val (user, lib1) = db.readWrite { implicit session =>
           val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
-          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), isSearchableByOthers = false))
 
           (user, lib1)
         }
