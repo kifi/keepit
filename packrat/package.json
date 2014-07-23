@@ -20,6 +20,8 @@
     "lazypipe": "~0.2.2",
     "gulp-stylus": "~1.1.0",
     "gulp-watch": "~0.6.8",
-    "gulp-print": "~1.1.0"
+    "gulp-print": "~1.1.0",
+    "nib": "~1.0.3",
+    "gulp-header": "~1.0.5"
   }
 }

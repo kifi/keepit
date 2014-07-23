@@ -15,6 +15,8 @@ var reload = require('./gulp/livereload.js');
 var watch = require('gulp-watch');
 var plumber = require('gulp-plumber');
 var print = require('gulp-print');
+var nib = require('nib');
+var header = require('gulp-header');
 
 var outDir = 'out';
 var adapterFiles = ['adapters/chrome/**', 'adapters/firefox/**', '!adapters/chrome/manifest.json', '!adapters/firefox/package.json'];
@@ -179,12 +181,16 @@ var stylesPipe = (function () {
     }
   }
 
+  var stylusWithConfig = lazypipe()
+    .pipe(header, 'support-for-ie ?= false\nvendor-prefixes ?= webkit moz official\n@import \'nib\'\n')
+    .pipe(stylus, {use: [nib()]});
+
   return lazypipe()
     .pipe(print, function (filepath) {
       return 'Processing ' + filepath;
     })
     .pipe(function () {
-      return gulpif(/[.]styl$/, stylus());
+      return gulpif(/[.]styl$/, stylusWithConfig());
     })
     .pipe(mainStylesOnly(insulate))
     .pipe(mainStylesOnly(chromify))
