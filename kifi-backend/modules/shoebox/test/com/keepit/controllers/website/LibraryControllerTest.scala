@@ -5,7 +5,7 @@ import com.keepit.commanders.{ FullLibraryInfo, LibraryInfo }
 import com.keepit.common.crypto.{ TestCryptoModule, PublicIdConfiguration, ShoeboxCryptoModule }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.TestMailModule
-import com.keepit.common.social.{ FakeShoeboxSecureSocialModule, TestShoeboxAppSecureSocialModule, FakeSocialGraphModule }
+import com.keepit.common.social.{ FakeAuthenticator, TestShoeboxAppSecureSocialModule, FakeSocialGraphModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -27,7 +27,7 @@ import scala.concurrent.Future
 class LibraryControllerTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     TestCryptoModule(),
-    FakeShoeboxSecureSocialModule(),
+    FakeAuthenticator(),
     ShoeboxFakeStoreModule(),
     TestABookServiceClientModule(),
     FakeKeepImportsModule(),
