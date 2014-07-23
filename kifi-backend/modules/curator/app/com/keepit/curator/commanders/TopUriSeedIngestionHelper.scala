@@ -10,7 +10,7 @@ import com.keepit.curator.model._
 import com.keepit.graph.GraphServiceClient
 import com.keepit.graph.model.ConnectedUriScore
 import com.keepit.model._
-import org.joda.time.{ Hours, DateTime }
+import org.joda.time.{ Seconds, Hours, DateTime }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
@@ -22,7 +22,7 @@ class TopUriSeedIngestionHelper @Inject() (
     db: Database,
     graph: GraphServiceClient) extends PersonalSeedIngestionHelper {
 
-  val uriIngestFreq = 12
+  val uriIngestionFreq = 12
 
   private def updateRawSeedItem(seedItem: RawSeedItem, uriId: Id[NormalizedURI], priorScore: Option[Float], newDateCandidate: DateTime)(implicit session: RWSession): Unit = {
     rawSeedsRepo.save(seedItem.copy(
@@ -30,26 +30,24 @@ class TopUriSeedIngestionHelper @Inject() (
       priorScore = priorScore,
       firstKept = if (newDateCandidate.isBefore(seedItem.firstKept)) newDateCandidate else seedItem.firstKept,
       lastKept = if (newDateCandidate.isAfter(seedItem.lastKept)) newDateCandidate else seedItem.lastKept,
-      lastSeen = if (newDateCandidate.isAfter(seedItem.lastSeen)) newDateCandidate else seedItem.lastSeen
-    ))
+      lastSeen = if (newDateCandidate.isAfter(seedItem.lastSeen)) newDateCandidate else seedItem.lastSeen))
   }
 
-  //need to check if same userID?
   private def updateUserTrackItem(userTrackItem: CuratorUserTrackItem, lastSeen: DateTime)(implicit session: RWSession): Unit = {
     userTrackRepo.save(userTrackItem.copy(
-      lastSeen = lastSeen
-    ))
+      lastSeen = lastSeen))
   }
 
   def processUriScores(uriScore: ConnectedUriScore, userId: Id[User])(implicit session: RWSession): Unit = {
-    //how does here use getOrElse
     rawSeedsRepo.getByUriIdAndUserId(uriScore.uriId, userId) match {
-      case Some(seedItem) => updateRawSeedItem(seedItem, uriScore.uriId, Some(uriScore.score.toFloat), currentDateTime)
+      case Some(seedItem) => {
+        updateRawSeedItem(seedItem, uriScore.uriId, Some(uriScore.score.toFloat), currentDateTime)
+      }
       case None => {
         val anotherRawSeedItem = rawSeedsRepo.getByUriId(uriScore.uriId).head
         rawSeedsRepo.save(RawSeedItem(
           uriId = uriScore.uriId,
-          userId = None,
+          userId = Some(userId),
           firstKept = anotherRawSeedItem.firstKept,
           lastKept = anotherRawSeedItem.lastKept,
           lastSeen = currentDateTime,
@@ -63,26 +61,31 @@ class TopUriSeedIngestionHelper @Inject() (
   //maxItems not used for getListOfUriAndScorePair API, always return true
   def apply(userId: Id[User], maxItems: Int): Future[Boolean] = {
 
-    db.readWriteAsync { implicit session =>
-      val userTrack = userTrackRepo.getByUserId(userId) match {
+    val userTrack = db.readWrite { implicit session =>
+      userTrackRepo.getByUserId(userId) match {
         case Some(userTrack) => userTrack
         case None => userTrackRepo.save(CuratorUserTrackItem(userId = userId, lastSeen = currentDateTime))
       }
+    }
+    val betweenHours = Hours.hoursBetween(currentDateTime, userTrack.lastSeen).getHours
+    val betweenSecs = Seconds.secondsBetween(currentDateTime, userTrack.lastSeen).getSeconds
+    if (betweenHours > uriIngestionFreq || betweenSecs <= 1) {
 
-      val betweenHours = Hours.hoursBetween(currentDateTime, userTrack.lastSeen).getHours
-
-      if (betweenHours > uriIngestFreq) {
+      db.readWrite { implicit session =>
         updateUserTrackItem(userTrack, currentDateTime)
-        graph.getListOfUriAndScorePairs(userId, true).map { uriScores =>
-          db.readWriteAsync { implicit session =>
-            uriScores.foreach(uriScore =>
-              processUriScores(uriScore, userId))
-          }
+      }
+
+      graph.getListOfUriAndScorePairs(userId, true).flatMap { uriScores =>
+        db.readWriteAsync { implicit session =>
+          uriScores.foreach(uriScore => processUriScores(uriScore, userId))
+          false
         }
       }
+
+    } else {
+      Future.successful(false)
     }
 
-    Future(true)
   }
 
 }

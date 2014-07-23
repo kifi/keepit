@@ -8,7 +8,7 @@ import com.keepit.common.time.Clock
 import com.keepit.model.User
 import org.joda.time.DateTime
 
-@ImplementedBy(classOf[CuratorUserTrackItem])
+@ImplementedBy(classOf[UserTrackItemRepoImpl])
 trait UserTrackItemRepo extends DbRepo[CuratorUserTrackItem] {
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[CuratorUserTrackItem]
 }
