@@ -2,7 +2,7 @@
 
 # --- !Ups
 
-ALTER TABLE user ADD COLUMN normalized_username varchar(64) NOT NULL;
+ALTER TABLE user ADD COLUMN normalized_username varchar(64) NULL;
 
 ALTER TABLE user ADD INDEX user_i_normalized_username (normalized_username);
 

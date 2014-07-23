@@ -166,7 +166,7 @@ class FacebookSocialGraph @Inject() (
     oAuth2Info.accessToken
   }
 
-  def extractUserValues(json: JsValue): Map[String, String] = Seq(
+  def extractUserValues(json: JsValue): Map[UserValueName, String] = Seq(
     (json \ "gender").asOpt[String].map(Gender.key -> Gender(_).toString)
   ).flatten.toMap
 

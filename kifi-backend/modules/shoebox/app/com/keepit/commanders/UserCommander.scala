@@ -132,9 +132,9 @@ class UserCommander @Inject() (
     db.readWrite { implicit session =>
       val trimmed = description.trim
       if (trimmed != "") {
-        userValueRepo.setValue(userId, "user_description", trimmed)
+        userValueRepo.setValue(userId, UserValueName.USER_DESCRIPTION, trimmed)
       } else {
-        userValueRepo.clearValue(userId, "user_description")
+        userValueRepo.clearValue(userId, UserValueName.USER_DESCRIPTION)
       }
       userRepo.save(userRepo.getNoCache(userId)) // update user index sequence number
     }
@@ -200,9 +200,9 @@ class UserCommander @Inject() (
   def getUserInfo(user: User): BasicUserInfo = {
     val (basicUser, description, emails, pendingPrimary, notAuthed) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
-      val description = userValueRepo.getValueStringOpt(user.id.get, "user_description")
+      val description = userValueRepo.getValueStringOpt(user.id.get, UserValueName.USER_DESCRIPTION)
       val emails = emailRepo.getAllByUser(user.id.get)
-      val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, "pending_primary_email").map(EmailAddress(_))
+      val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
       val notAuthed = socialUserRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name)
       (basicUser, description, emails, pendingPrimary, notAuthed)
     }
@@ -247,7 +247,7 @@ class UserCommander @Inject() (
     }
     SafeFuture {
       db.readWrite { implicit session =>
-        userValueRepo.setValue(newUser.id.get, "ext_show_ext_msg_intro", true)
+        userValueRepo.setValue(newUser.id.get, UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
       }
       searchClient.warmUpUser(newUser.id.get)
       searchClient.updateUserIndex()
@@ -256,9 +256,8 @@ class UserCommander @Inject() (
   }
 
   def tellAllFriendsAboutNewUserImmediate(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = synchronized {
-    val guardKey = "friendsNotifiedAboutJoining"
-    if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, guardKey).exists(_ == "true") }) {
-      db.readWrite { implicit session => userValueRepo.setValue(newUserId, guardKey, true) }
+    if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, UserValueName.FRIENDS_NOTIFIED_ABOUT_JOINING).exists(_ == "true") }) {
+      db.readWrite { implicit session => userValueRepo.setValue(newUserId, UserValueName.FRIENDS_NOTIFIED_ABOUT_JOINING, true) }
       val (newUser, toNotify, id2Email) = db.readOnlyReplica { implicit session =>
         val newUser = userRepo.get(newUserId)
         val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
@@ -316,7 +315,7 @@ class UserCommander @Inject() (
         db.readWrite { implicit session =>
           val emailAddr = emailRepo.save(emailRepo.getByAddressOpt(targetEmailOpt.get).get.withVerificationCode(clock.now))
           val verifyUrl = s"$url${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
-          userValueRepo.setValue(newUser.id.get, "pending_primary_email", emailAddr.address)
+          userValueRepo.setValue(newUser.id.get, UserValueName.PENDING_PRIMARY_EMAIL, emailAddr.address)
 
           val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(emailAddr.address))}"
 
@@ -625,7 +624,7 @@ class UserCommander @Inject() (
 
   def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmail: Option[EmailAddress], emails: Seq[EmailInfo]): Unit = {
     db.readWrite { implicit session =>
-      val pendingPrimary = userValueRepo.getValueStringOpt(userId, "pending_primary_email").map(EmailAddress(_))
+      val pendingPrimary = userValueRepo.getValueStringOpt(userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
       val uniqueEmails = emails.map(_.address).toSet
       val (existing, toRemove) = emailRepo.getAllByUser(userId).partition(em => uniqueEmails contains em.address)
       // Remove missing emails
@@ -635,7 +634,7 @@ class UserCommander @Inject() (
         val isLastVerified = !existing.exists(em => em != email && em.verified)
         if (!isPrimary && !isLast && !isLastVerified) {
           if (pendingPrimary.isDefined && email.address == pendingPrimary.get) {
-            userValueRepo.clearValue(userId, "pending_primary_email")
+            userValueRepo.clearValue(userId, UserValueName.PENDING_PRIMARY_EMAIL)
           }
           emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE))
         }
@@ -667,19 +666,19 @@ class UserCommander @Inject() (
                   updateUserPrimaryEmail(emailRecord)
                 }
               } else {
-                userValueRepo.setValue(userId, "pending_primary_email", emailInfo.address)
+                userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, emailInfo.address)
               }
           }
         }
       }
 
-      userValueRepo.getValueStringOpt(userId, "pending_primary_email").map { pp =>
+      userValueRepo.getValueStringOpt(userId, UserValueName.PENDING_PRIMARY_EMAIL).map { pp =>
         emailRepo.getByAddressOpt(EmailAddress(pp)) match {
           case Some(em) =>
             if (em.verified && em.address == pp) {
               updateUserPrimaryEmail(em)
             }
-          case None => userValueRepo.clearValue(userId, "pending_primary_email")
+          case None => userValueRepo.clearValue(userId, UserValueName.PENDING_PRIMARY_EMAIL)
         }
       }
     }
@@ -687,7 +686,7 @@ class UserCommander @Inject() (
 
   def updateUserPrimaryEmail(primaryEmail: UserEmailAddress)(implicit session: RWSession) = {
     require(primaryEmail.verified, s"Suggested primary email $primaryEmail is not verified")
-    userValueRepo.clearValue(primaryEmail.userId, "pending_primary_email")
+    userValueRepo.clearValue(primaryEmail.userId, UserValueName.PENDING_PRIMARY_EMAIL)
     val currentUser = userRepo.get(primaryEmail.userId)
     userRepo.save(currentUser.copy(primaryEmail = Some(primaryEmail.address)))
     heimdalClient.setUserProperties(primaryEmail.userId, "$email" -> ContextStringData(primaryEmail.address.address))
@@ -701,10 +700,8 @@ class UserCommander @Inject() (
     }
   }
 
-  private val SHOW_DELIGHTED_QUESTION_PREF = "show_delighted_question"
-
-  private def getPrefUpdates(prefSet: Set[String], userId: Id[User], experiments: Set[ExperimentType]): Future[JsObject] = {
-    if (prefSet.contains(SHOW_DELIGHTED_QUESTION_PREF)) {
+  private def getPrefUpdates(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[ExperimentType]): Future[Map[UserValueName, JsValue]] = {
+    if (prefSet.contains(UserValueName.SHOW_DELIGHTED_QUESTION)) {
       // Check if user should be shown Delighted question
       val user = db.readOnlyReplica { implicit s =>
         userRepo.get(userId)
@@ -722,18 +719,18 @@ class UserCommander @Inject() (
         }
       } else Future.successful(false)
       shouldShowDelightedQuestionFut map { shouldShowDelightedQuestion =>
-        Json.obj(SHOW_DELIGHTED_QUESTION_PREF -> shouldShowDelightedQuestion)
+        Map(UserValueName.SHOW_DELIGHTED_QUESTION -> JsBoolean(shouldShowDelightedQuestion))
       }
-    } else Future.successful(Json.obj())
+    } else Future.successful(Map())
   }
 
-  private def readPrefs(prefSet: Set[String], userId: Id[User]): JsObject = {
+  private def readPrefs(prefSet: Set[UserValueName], userId: Id[User]): JsObject = {
     // Reading from master because the value may have been updated just before
     val values = db.readOnlyMaster { implicit s =>
       userValueRepo.getValues(userId, prefSet.toSeq: _*)
     }
     JsObject(prefSet.toSeq.map { name =>
-      name -> values(name).map(value => {
+      name.name -> values(name).map(value => {
         if (value == "false") JsBoolean(false)
         else if (value == "true") JsBoolean(true)
         else if (value == "null") JsNull
@@ -742,7 +739,7 @@ class UserCommander @Inject() (
     })
   }
 
-  def getPrefs(prefSet: Set[String], userId: Id[User], experiments: Set[ExperimentType]): Future[JsObject] = {
+  def getPrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[ExperimentType]): Future[JsObject] = {
     getPrefUpdates(prefSet, userId, experiments) map { updates =>
       savePrefs(userId, updates)
     } recover {
@@ -752,9 +749,9 @@ class UserCommander @Inject() (
     }
   }
 
-  def savePrefs(userId: Id[User], o: JsObject) = {
+  def savePrefs(userId: Id[User], o: Map[UserValueName, JsValue]) = {
     db.readWrite(attempts = 3) { implicit s =>
-      o.fields.foreach {
+      o.map {
         case (name, value) =>
           if (value == JsNull || value.isInstanceOf[JsUndefined]) {
             userValueRepo.clearValue(userId, name)
@@ -771,7 +768,7 @@ class UserCommander @Inject() (
   def setLastUserActive(userId: Id[User]): Unit = {
     val time = clock.now
     db.readWrite { implicit s =>
-      userValueRepo.setValue(userId, "last_active", time)
+      userValueRepo.setValue(userId, UserValueName.LAST_ACTIVE, time)
     }
   }
 
