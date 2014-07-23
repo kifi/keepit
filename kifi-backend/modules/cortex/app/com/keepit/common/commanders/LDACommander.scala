@@ -57,6 +57,8 @@ class LDACommander @Inject() (
     docRep(doc).map { _.vectorize }
   }
 
+  def ldaConfigurations: LDATopicConfigurations = currentConfig
+
   def saveConfigEdits(config: Map[String, LDATopicConfiguration]) = {
     val newConfig = LDATopicConfigurations(currentConfig.configs ++ config)
     currentConfig = newConfig

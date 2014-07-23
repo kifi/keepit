@@ -32,6 +32,7 @@ trait CortexServiceClient extends ServiceClient {
 
   def ldaNumOfTopics(): Future[Int]
   def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Seq[LDATopicInfo]]
+  def ldaConfigurations: Future[LDATopicConfigurations]
   def ldaWordTopic(word: String): Future[Option[Array[Float]]]
   def ldaDocTopic(doc: String): Future[Option[Array[Float]]]
   def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit
@@ -118,6 +119,10 @@ class CortexServiceClientImpl(
     call(Cortex.internal.ldaShowTopics(fromId, toId, topN)).map { r =>
       (r.json).as[Seq[LDATopicInfo]]
     }
+  }
+
+  def ldaConfigurations: Future[LDATopicConfigurations] = {
+    call(Cortex.internal.ldaConfigurations()).map { r => (r.json).as[LDATopicConfigurations] }
   }
 
   def ldaWordTopic(word: String): Future[Option[Array[Float]]] = {
