@@ -19,17 +19,17 @@ class FakeGraphServiceClientImpl(
     override val serviceCluster: ServiceCluster,
     override val httpClient: HttpClient,
     val airbrakeNotifier: AirbrakeNotifier) extends GraphServiceClient {
-  var listOfUriAndScorePairs: Seq[ConnectedUriScore] = Seq.empty
+  var uriAndScorePairs: Seq[ConnectedUriScore] = Seq.empty
   def getGraphStatistics(): Future[Map[AmazonInstanceId, PrettyGraphStatistics]] = Future.successful(Map.empty)
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, PrettyGraphState]] = Future.successful(Map.empty)
   def getGraphKinds(): Future[GraphKinds] = Future.successful(GraphKinds.empty)
   def wander(wanderlust: Wanderlust): Future[Collisions] = Future.successful(Collisions.empty)
-  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[ConnectedUriScore]] = Future.successful(listOfUriAndScorePairs)
+  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[ConnectedUriScore]] = Future.successful(uriAndScorePairs)
   def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[ConnectedUserScore]] = Future.successful(Seq.empty)
 
-  def fakeReturnOfGetListOfUriAndScorePairs(keeps: Seq[Keep], userId: Id[User]) {
-    keeps.foreach(keep =>
-      listOfUriAndScorePairs = ConnectedUriScore(keep.uriId, 0.795) +: listOfUriAndScorePairs
+  def getUriAndScorePairs(uris: Seq[Id[NormalizedURI]], userId: Id[User]) {
+    uris.foreach(uri =>
+      uriAndScorePairs = ConnectedUriScore(uri, 0.795) +: uriAndScorePairs
     )
   }
 }
