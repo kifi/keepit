@@ -10,6 +10,7 @@ import com.keepit.common.time._
 import com.keepit.heimdal.{ DelightedAnswerSources, DelightedAnswerSource, BasicDelightedAnswer }
 import com.keepit.model._
 import com.keepit.common.collection._
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.ning.http.client.Realm.AuthScheme
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsString, JsValue, Json }
@@ -26,6 +27,7 @@ trait DelightedCommander {
   def getUserLastInteractedDate(userId: Id[User]): Option[DateTime]
   def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Either[String, DelightedAnswer]]
   def fetchNewDelightedAnswers()
+  def scheduleSurveyForLapsedUsers()
   def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Boolean]
 }
 
@@ -36,7 +38,8 @@ class DelightedCommanderImpl @Inject() (
     systemValueRepo: SystemValueRepo,
     delightedConfig: DelightedConfig,
     airbrake: AirbrakeNotifier,
-    clock: Clock) extends DelightedCommander with Logging {
+    clock: Clock,
+    shoebox: ShoeboxServiceClient) extends DelightedCommander with Logging {
 
   private val LAST_DELIGHTED_FETCH_TIME = Name[SystemValue]("last_delighted_fetch_time")
 
@@ -113,6 +116,10 @@ class DelightedCommanderImpl @Inject() (
     }
   }
 
+  def scheduleSurveyForLapsedUsers() = {
+    // todo(martin)
+  }
+
   private def saveAnswerForResponse(json: JsValue): Option[DelightedAnswer] = {
     db.readWrite { implicit s =>
       val answerOpt = for {
@@ -180,6 +187,8 @@ class DevDelightedCommander extends DelightedCommander with Logging {
     Future.successful(Left("Cannot create Delighted answers in dev mode"))
 
   def fetchNewDelightedAnswers() = log.info("Fake fetching new Delighted answers")
+
+  def scheduleSurveyForLapsedUsers() = log.info("Fake scheduling survey for lapsed users")
 
   def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Boolean] = Future.successful(true)
 }

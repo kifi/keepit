@@ -153,6 +153,7 @@ object Shoebox extends Service {
     def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableSocialUserInfos", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getEmailAccountUpdates", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesAndMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getLapsedUsers() = ServiceRoute(GET, "/internal/shoebox/database/getLapsedUsers")
   }
 }
 

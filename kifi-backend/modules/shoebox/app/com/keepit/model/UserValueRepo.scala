@@ -105,4 +105,10 @@ class UserValueRepoImpl @Inject() (
     changed
   }
 
+  def getLapsedUsers(before: DateTime, after: DateTime, maxCount: Int = 1000)(implicit session: RSession): Seq[Id[User]] = {
+    (for (
+      f <- rows if f.state === UserValueStates.ACTIVE && f.name === UserValueName.LAST_ACTIVE &&
+        f.value < LargeString(before.toStandardTimeString) && f.value > LargeString(after.toStandardTimeString)
+    ) yield f.userId).take(maxCount).list
+  }
 }

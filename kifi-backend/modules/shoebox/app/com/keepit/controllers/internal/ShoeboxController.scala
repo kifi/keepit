@@ -641,4 +641,10 @@ class ShoeboxController @Inject() (
       Ok(Json.toJson(url))
     }
   }
+
+  def getLapsedUsers() = Action { request =>
+    db.readOnlyReplica { implicit session =>
+      Ok(Json.toJson(userValueRepo.getLapsedUsers(clock.now().minusDays(7), clock.now().minusDays(9))))
+    }
+  }
 }

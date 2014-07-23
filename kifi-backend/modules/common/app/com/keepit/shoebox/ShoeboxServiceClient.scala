@@ -126,6 +126,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]]
+  def getLapsedUsers(): Future[Seq[Id[User]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -855,4 +856,9 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getLapsedUsers(): Future[Seq[Id[User]]] = {
+    call(Shoebox.internal.getLapsedUsers(), callTimeouts = longTimeout).map { r =>
+      r.json.as[Seq[Id[User]]]
+    }
+  }
 }

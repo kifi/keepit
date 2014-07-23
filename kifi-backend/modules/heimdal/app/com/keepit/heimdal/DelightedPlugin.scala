@@ -13,6 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 
 private case object FetchNewDelightedAnswers
+private case object ScheduleSurveyForLapsedUsers
 
 class DelightedAnswerReceiverActor @Inject() (
     airbrake: AirbrakeNotifier,
@@ -22,6 +23,9 @@ class DelightedAnswerReceiverActor @Inject() (
     case FetchNewDelightedAnswers =>
       log.info("Checking for new answers")
       commander.fetchNewDelightedAnswers()
+    case ScheduleSurveyForLapsedUsers =>
+      log.info("Scheduling survey for lapsed users")
+      commander.scheduleSurveyForLapsedUsers()
     case m => throw new UnsupportedActorMessage(m)
   }
 }
@@ -41,6 +45,7 @@ class DelightedPluginImpl @Inject() (
   override def onStart() {
     log.info("Starting DelightedPluginImpl")
     scheduleTaskOnLeader(actor.system, 10 seconds, 15 seconds, actor.ref, FetchNewDelightedAnswers)
+    scheduleTaskOnLeader(actor.system, 10 seconds, 1 day, actor.ref, ScheduleSurveyForLapsedUsers)
   }
 
   def fetchNewDelightedAnswers() {
