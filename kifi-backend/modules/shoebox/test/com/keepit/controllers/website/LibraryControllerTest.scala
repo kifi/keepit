@@ -307,7 +307,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val libraryController = inject[LibraryController]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
-        val (user1, user2, lib1, lib2) = db.readWrite { implicit s =>
+        val (user1, user2, lib1, lib2, inv1, inv2) = db.readWrite { implicit s =>
           val userA = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
           val userB = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1))
 
@@ -318,13 +318,14 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.save(LibraryMembership(libraryId = libraryB2.id.get, userId = userB.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           // user B invites A to both libraries
-          libraryInviteRepo.save(LibraryInvite(libraryId = libraryB1.id.get, ownerId = userB.id.get, userId = userA.id.get, access = LibraryAccess.READ_INSERT))
-          libraryInviteRepo.save(LibraryInvite(libraryId = libraryB2.id.get, ownerId = userB.id.get, userId = userA.id.get, access = LibraryAccess.READ_INSERT))
-          (userA, userB, libraryB1, libraryB2)
+          val inv1 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB1.id.get, ownerId = userB.id.get, userId = userA.id.get, access = LibraryAccess.READ_INSERT))
+          val inv2 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB2.id.get, ownerId = userB.id.get, userId = userA.id.get, access = LibraryAccess.READ_INSERT))
+          (userA, userB, libraryB1, libraryB2, inv1, inv2)
         }
 
-        val pubId1 = Library.publicId(lib1.id.get)
-        val pubId2 = Library.publicId(lib2.id.get)
+        val pubId1 = LibraryInvite.publicId(inv1.id.get)
+        val pubId2 = LibraryInvite.publicId(inv2.id.get)
+
         val testPathJoin = com.keepit.controllers.website.routes.LibraryController.joinLibrary(pubId1).url
         val testPathDecline = com.keepit.controllers.website.routes.LibraryController.declineLibrary(pubId2).url
 

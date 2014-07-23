@@ -84,13 +84,13 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     val t1 = new DateTime(2014, 8, 1, 3, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
     db.readWrite { implicit s =>
       // Hulk accepts Ironman's invite to see 'Science & Stuff'
-      val inv1 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libScience.id.get, userId = userHulk.id.get).get
+      val inv1 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libScience.id.get, userId = userHulk.id.get).head
       libraryInviteRepo.save(inv1.withState(LibraryInviteStates.ACCEPTED))
 
       // Ironman & NickFury accept Captain's invite to see 'MURICA'
-      val inv2 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libMurica.id.get, userId = userIron.id.get).get
+      val inv2 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libMurica.id.get, userId = userIron.id.get).head
       libraryInviteRepo.save(inv2.withState(LibraryInviteStates.ACCEPTED))
-      val inv3 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libMurica.id.get, userId = userAgent.id.get).get
+      val inv3 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libMurica.id.get, userId = userAgent.id.get).head
       libraryInviteRepo.save(inv3.withState(LibraryInviteStates.ACCEPTED))
 
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv1.libraryId, userId = inv1.userId, access = inv1.access, showInSearch = true, createdAt = t1))
@@ -395,15 +395,14 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
         val libraryCommander = inject[LibraryCommander]
 
-        db.readOnlyMaster { implicit s =>
+        val inviteIds = db.readOnlyMaster { implicit s =>
           libraryInviteRepo.all.length === 4
+          libraryInviteRepo.all.map(_.id.get)
         }
-        libraryCommander.joinLibrary(libMurica.id.get, userAgent.id.get).isRight === true
-        libraryCommander.joinLibrary(libMurica.id.get, userIron.id.get).isRight === true
-        libraryCommander.declineLibrary(libMurica.id.get, userHulk.id.get).isRight === true
-        libraryCommander.joinLibrary(libScience.id.get, userHulk.id.get).isRight === true
-
-        libraryCommander.joinLibrary(libShield.id.get, userIron.id.get).isRight === false
+        libraryCommander.joinLibrary(inviteIds(0))
+        libraryCommander.joinLibrary(inviteIds(1))
+        libraryCommander.declineLibrary(inviteIds(2))
+        libraryCommander.joinLibrary(inviteIds(3))
 
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.all.length === 4

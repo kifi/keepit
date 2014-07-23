@@ -244,28 +244,31 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def joinLibrary(libraryId: Id[Library], inviteeId: Id[User]): Either[LibraryFail, Library] = {
+  def joinLibrary(inviteId: Id[LibraryInvite]): Library = {
     db.readWrite { implicit s =>
-      libraryInviteRepo.getWithLibraryIdandUserId(libraryId, inviteeId) match {
-        case None => Left(LibraryFail("invite not found"))
-        case Some(inv) => {
-          libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = inviteeId, access = inv.access, showInSearch = true))
-          Right(libraryRepo.get(libraryId))
-        }
+      val inv = libraryInviteRepo.get(inviteId)
+      val listInvites = libraryInviteRepo.getWithLibraryIdandUserId(inv.libraryId, inv.userId)
+
+      listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
+
+      val listAccesses = listInvites.map(_.access)
+      val maxAccess = if (listAccesses.contains(LibraryAccess.READ_WRITE)) {
+        LibraryAccess.READ_WRITE
+      } else if (listAccesses.contains(LibraryAccess.READ_INSERT)) {
+        LibraryAccess.READ_INSERT
+      } else {
+        LibraryAccess.READ_ONLY
       }
+
+      libraryMembershipRepo.save(LibraryMembership(libraryId = inv.libraryId, userId = inv.userId, access = maxAccess, showInSearch = true))
+      libraryRepo.get(inv.libraryId)
     }
   }
 
-  def declineLibrary(libraryId: Id[Library], inviteeId: Id[User]): Either[LibraryFail, Unit] = {
+  def declineLibrary(inviteId: Id[LibraryInvite]) = {
     db.readWrite { implicit s =>
-      libraryInviteRepo.getWithLibraryIdandUserId(libraryId, inviteeId) match {
-        case None => Left(LibraryFail("invite not found"))
-        case Some(inv) => {
-          libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.DECLINED))
-          Right()
-        }
-      }
+      val inv = libraryInviteRepo.get(inviteId)
+      libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.DECLINED))
     }
   }
 
