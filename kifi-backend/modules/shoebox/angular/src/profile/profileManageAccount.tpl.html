@@ -1,0 +1,45 @@
+<a class="profile-manage-account-title-wrapper" href="javascript:" ng-click="toggle('uninstall');">
+  <div class="profile-setting-arrow" ng-class="{'active':isOpen.uninstall}"></div>
+  <div class="profile-manage-account-title" ng-class="{'active':isOpen.uninstall}">Uninstall the browser extension</div>
+</a>
+<div class="profile-uninstall-change" ng-show="isOpen['uninstall']">
+  <ul>
+    <li>
+      <a href="http://support.kifi.com/customer/portal/articles/1633572-removing-the-browser-extension-from-firefox" target="_blank">Instructions to uninstall the Firefox extension</a>
+    </li>
+    <li>
+      <a href="http://support.kifi.com/customer/portal/articles/1633565-removing-the-browser-extension-from-chrome" target="_blank">Instructions to uninstall the Chrome extension</a>
+    </li>
+  </ul>
+</div>
+
+<a class="profile-manage-account-title-wrapper" href="javascript:" ng-click="toggle('export');">
+  <div class="profile-setting-arrow" ng-class="{'active':isOpen.export}"></div>
+  <div class="profile-manage-account-title" ng-class="{'active':isOpen.export}">Export your keeps</div>
+</a>
+<div class="profile-manage-account-export-keeps-change" ng-show="isOpen.export">
+  <div kf-profile-export-keeps></div>
+</div>
+
+<a class="profile-manage-account-title-wrapper" href="javascript:" ng-click="toggle('close');">
+  <div class="profile-setting-arrow" ng-class="{'active':isOpen.close}"></div>
+  <div class="profile-manage-account-title" ng-class="{'active':isOpen.close}">Close your account</div>
+</a>
+<div class="profile-manage-account-close-account-change" ng-show="isOpen.close">
+  <textarea placeholder="Please tell us why you would like to close your account..."
+      ng-disabled="isCloseAccountStatus('sent')" ng-model="comment"></textarea>
+  <div>
+    <a class="profile-export close-account-button export-first" href="javascript:" ng-click="closeAccount()"
+        ng-disabled="isCloseAccountStatus('sent')">
+      {{getCloseAccountButtonText()}}
+    </a>
+  </div>
+  <p class="profile-close-account-status success" ng-show="isCloseAccountStatus('sent')">
+    <span class="profile-placeholder">&nbsp;</span>
+    <span>Message sent. We'll send you a confirmation email shortly.</span>
+  </p>
+  <p class="profile-close-account-status error" ng-show="isCloseAccountStatus('error')">
+    <span class="profile-placeholder">&nbsp;</span>
+    <span>There was an error sending the request. Please try again later.</span>
+  </p>
+</div>
