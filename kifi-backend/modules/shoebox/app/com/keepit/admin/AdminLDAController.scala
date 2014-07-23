@@ -118,8 +118,11 @@ class AdminLDAController @Inject() (
     val userId = body.get("userId").get.toLong
     val uriId = body.get("uriId").get.toLong
     val score = cortex.userUriInterest(Id[User](userId), Id[NormalizedURI](uriId))
-    score.map { s =>
-      Ok(s.map { _.toString } getOrElse "n/a")
+    score.map {
+      case (globalScore, recencyScore) =>
+        val globalMsg = "globalScore: " + globalScore.map { _.toString }.getOrElse("n/a")
+        val recencyMsg = "recencyScore: " + recencyScore.map { _.toString }.getOrElse("n/a")
+        Ok(globalMsg + "; " + recencyMsg)
     }
   }
 
