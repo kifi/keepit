@@ -33,7 +33,7 @@ case class LibraryInvite(
 object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
 
   protected[this] val publicIdPrefix = "l"
-  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
+  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-20, -76, -59, 85, 85, -2, 72, 61, 58, 38, 60, -2, -128, 79, 9, -87))
 
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[LibraryInvite]) and

@@ -337,7 +337,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val expected = Json.parse(
           s"""
              |{
-             |"id":"${pubId1.id}",
+             |"id":"${Library.publicId(lib1.id.get).id}",
              |"name":"Library1",
              |"visibility":"limited",
              |"slug":"lib1",
