@@ -353,7 +353,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         delete data.dragStarting;
         log('[startDrag] installing draggable');
         data.$dragGlass = $('<div class="kifi-drag-glass kifi-root">').mouseup(stopDrag).appendTo(tile.parentNode);
-        $(tile).draggable({axis: 'y', containment: [0, 0, window.innerWidth, window.innerHeight - tile.offsetHeight], scroll: false, stop: stopDrag})[0]
+        $(tile).draggable({axis: 'y', containment: 'window', scroll: false, stop: stopDrag})[0]
           .dispatchEvent(new MouseEvent('mousedown', data.mousedownEvent)); // starts drag
       }
       function stopDrag() {
