@@ -1,7 +1,5 @@
 package com.keepit.scraper.actor
 
-import java.util.concurrent.ConcurrentLinkedQueue
-
 import akka.actor.SupervisorStrategy.Restart
 import akka.actor._
 import akka.routing.{ Broadcast, SmallestMailboxRouter }
