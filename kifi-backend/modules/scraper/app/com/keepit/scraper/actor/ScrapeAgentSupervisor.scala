@@ -86,6 +86,7 @@ class ScrapeAgentSupervisor @Inject() (
       log.info(s"[Supervisor] <WorkerBusy> worker=$sender is busy; $job rejected")
       self ! job
     case job: ScrapeJob =>
+      log.info(s"[Supervisor] <ScrapeJob> enqueue $job")
       scrapeQ.enqueue(job)
       scraperRouter ! Broadcast(JobAvail)
 

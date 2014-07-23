@@ -30,10 +30,10 @@ class ScrapeAgent @Inject() (
 
   def idle: Receive = {
     case JobAvail =>
-      log.info(s"[ScrapeAgent($name).idle] job is available and I'm idle! Go get some work!")
+      log.info(s"[ScrapeAgent($name).idle] <JobAvail> responds with <WorkerAvail>")
       parent ! WorkerAvail(self)
     case job: ScrapeJob =>
-      log.info(s"[ScrapeAgent($name).idle] got work to do: $job")
+      log.info(s"[ScrapeAgent($name).idle] <ScrapeJob> got assigned $job")
       context.become(busy(job))
       SafeFuture {
         JobDone(job, worker.safeProcessURI(job.s.uri, job.s.info, job.s.pageInfo, job.s.proxyOpt)) // blocking call (for now)
@@ -44,13 +44,13 @@ class ScrapeAgent @Inject() (
 
   def busy(s: ScrapeJob): Receive = {
     case JobAvail =>
-      log.info(s"[ScrapeAgent($name).busy] ignore <JobAvail> event")
+      log.info(s"[ScrapeAgent($name).busy] ignore event <JobAvail>")
     case d: JobDone =>
       log.info(s"[ScrapeAgent($name).busy] <JobDone> $d")
       context.become(idle) // unbecome shouldn't be necessary
       parent ! WorkerAvail(self)
     case job: ScrapeJob =>
-      log.warn(s"[ScrapeAgent($name).busy] ignore <Scrape> $job")
+      log.warn(s"[ScrapeAgent($name).busy] reject <ScrapeJob> assignment: $job")
       parent ! WorkerBusy(self, job)
     case m =>
       log.info(s"[ScrapeAgent($name).busy] ignore event $m")
