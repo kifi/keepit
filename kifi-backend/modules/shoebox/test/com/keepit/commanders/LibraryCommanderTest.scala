@@ -358,5 +358,42 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
       }
     }
+
+    "invite users" in {
+      withDb(TestCryptoModule()) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
+        val libraryCommander = inject[LibraryCommander]
+
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.all.length === 0
+        }
+
+        val inviteList1 = Seq(
+          (userIron.id.get, LibraryAccess.READ_ONLY),
+          (userAgent.id.get, LibraryAccess.READ_ONLY),
+          (userHulk.id.get, LibraryAccess.READ_ONLY))
+        val res1 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1)
+        res1.isRight === true
+
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.all.length === 3
+          libraryInviteRepo.all.map(x => (x.userId, x.access)) ===
+            Seq((userIron.id.get, LibraryAccess.READ_ONLY),
+              (userAgent.id.get, LibraryAccess.READ_ONLY),
+              (userHulk.id.get, LibraryAccess.READ_ONLY))
+        }
+
+        // Scumbag Ironman tries to invite himself for READ_WRITE access
+        val inviteList2 = Seq((userIron.id.get, LibraryAccess.READ_WRITE))
+        val res2 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2)
+        res2.isRight === false
+
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.all.length === 3
+        }
+      }
+    }
+
   }
 }

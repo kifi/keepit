@@ -89,27 +89,27 @@ class LibraryCommander @Inject() (
     visibility: Option[LibraryVisibility] = None): Either[LibraryFail, LibraryInfo] = {
 
     db.readWrite { implicit s =>
-      libraryRepo.getByIdAndOwner(libraryId, userId) match {
-        case None => Left(LibraryFail("Library Not Found"))
-        case Some(targetLib) => {
-          def validName(name: String): Either[LibraryFail, String] = {
-            if (Library.isValidName(name)) Right(name)
-            else Left(LibraryFail("Invalid name"))
-          }
-          def validSlug(slug: String): Either[LibraryFail, String] = {
-            if (LibrarySlug.isValidSlug(slug)) Right(slug)
-            else Left(LibraryFail("Invalid slug"))
-          }
+      val targetLib = libraryRepo.get(libraryId)
+      if (targetLib.ownerId != userId) {
+        Left(LibraryFail("Not Owner"))
+      } else {
+        def validName(name: String): Either[LibraryFail, String] = {
+          if (Library.isValidName(name)) Right(name)
+          else Left(LibraryFail("Invalid name"))
+        }
+        def validSlug(slug: String): Either[LibraryFail, String] = {
+          if (LibrarySlug.isValidSlug(slug)) Right(slug)
+          else Left(LibraryFail("Invalid slug"))
+        }
 
-          for {
-            newName <- validName(name.getOrElse(targetLib.name)).right
-            newSlug <- validSlug(slug.getOrElse(targetLib.slug.value)).right
-          } yield {
-            val newDescription: Option[String] = description.orElse(targetLib.description)
-            val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
-            val lib = libraryRepo.save(targetLib.copy(name = newName, slug = LibrarySlug(newSlug), visibility = newVisibility, description = newDescription))
-            LibraryInfo.fromLibraryAndOwner(lib, userRepo.get(userId))
-          }
+        for {
+          newName <- validName(name.getOrElse(targetLib.name)).right
+          newSlug <- validSlug(slug.getOrElse(targetLib.slug.value)).right
+        } yield {
+          val newDescription: Option[String] = description.orElse(targetLib.description)
+          val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
+          val lib = libraryRepo.save(targetLib.copy(name = newName, slug = LibrarySlug(newSlug), visibility = newVisibility, description = newDescription))
+          LibraryInfo.fromLibraryAndOwner(lib, userRepo.get(userId))
         }
       }
     }
@@ -117,19 +117,19 @@ class LibraryCommander @Inject() (
 
   def removeLibrary(libraryId: Id[Library], userId: Id[User]): Either[LibraryFail, String] = {
     db.readWrite { implicit s =>
-      libraryRepo.getByIdAndOwner(libraryId, userId) match {
-        case None => Left(LibraryFail("Library Not Found"))
-        case Some(targetLib) =>
-          val oldLibrary = libraryRepo.get(libraryId)
-          val removedLibrary = libraryRepo.save(oldLibrary.withState(LibraryStates.INACTIVE))
+      val oldLibrary = libraryRepo.get(libraryId)
+      if (oldLibrary.ownerId != userId) {
+        Left(LibraryFail("Not Owner"))
+      } else {
+        val removedLibrary = libraryRepo.save(oldLibrary.withState(LibraryStates.INACTIVE))
 
-          libraryMembershipRepo.getWithLibraryId(removedLibrary.id.get).map { m =>
-            libraryMembershipRepo.save(m.withState(LibraryMembershipStates.INACTIVE))
-          }
-          libraryInviteRepo.getWithLibraryId(removedLibrary.id.get).map { inv =>
-            libraryInviteRepo.save(inv.withState(LibraryInviteStates.INACTIVE))
-          }
-          Right("success")
+        libraryMembershipRepo.getWithLibraryId(removedLibrary.id.get).map { m =>
+          libraryMembershipRepo.save(m.withState(LibraryMembershipStates.INACTIVE))
+        }
+        libraryInviteRepo.getWithLibraryId(removedLibrary.id.get).map { inv =>
+          libraryInviteRepo.save(inv.withState(LibraryInviteStates.INACTIVE))
+        }
+        Right("success")
       }
     }
   }
@@ -226,6 +226,24 @@ class LibraryCommander @Inject() (
       } else None
 
       (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_MAIN).map(_._2).orElse(mainOpt).get, sysLibs.find(_._2.kind == LibraryKind.SYSTEM_SECRET).map(_._2).orElse(secretOpt).get)
+    }
+  }
+
+  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Id[User], LibraryAccess)]): Either[LibraryFail, Seq[(ExternalId[User], LibraryAccess)]] = {
+    db.readWrite { implicit s =>
+      val targetLib = libraryRepo.get(libraryId)
+      if (targetLib.ownerId != inviterId) {
+        Left(LibraryFail("Not Owner"))
+      } else {
+        val successInvites = for (i <- inviteList) yield {
+          val inv = LibraryInvite(libraryId = libraryId, ownerId = inviterId, userId = i._1, access = i._2)
+          val extId = userRepo.get(i._1).externalId
+          (inv, (extId, i._2))
+        }
+        val (inv1, res) = successInvites.unzip
+        inviteBulkUsers(inv1)
+        Right(res)
+      }
     }
   }
 }
