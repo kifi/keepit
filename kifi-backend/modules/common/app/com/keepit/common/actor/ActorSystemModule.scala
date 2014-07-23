@@ -1,6 +1,5 @@
 package com.keepit.common.actor
 
-import com.typesafe.config.ConfigFactory
 import net.codingwell.scalaguice.ScalaModule
 import akka.actor.{ Scheduler, ActorSystem }
 import com.keepit.inject.AppScoped
