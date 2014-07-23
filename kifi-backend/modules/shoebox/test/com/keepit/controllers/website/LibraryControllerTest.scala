@@ -36,7 +36,8 @@ class LibraryControllerTest extends Specification with ShoeboxApplicationInjecto
           "slug" -> "lib1",
           "visibility" -> "secret",
           "collaborators" -> Json.arr(),
-          "followers" -> Json.arr()
+          "followers" -> Json.arr(),
+          "isSearchableByOthers" -> false
         )
         val request1 = FakeRequest("POST", testPath).withJsonBody(inputJson1)
         val result1 = route(request1).get
@@ -55,7 +56,8 @@ class LibraryControllerTest extends Specification with ShoeboxApplicationInjecto
           "slug" -> "lib2 abcd",
           "visibility" -> "secret",
           "collaborators" -> Json.arr(),
-          "followers" -> Json.arr()
+          "followers" -> Json.arr(),
+          "isSearchableByOthers" -> false
         )
         val request2 = FakeRequest("POST", testPath).withJsonBody(inputJson2)
         val result2 = route(request2).get
@@ -73,7 +75,8 @@ class LibraryControllerTest extends Specification with ShoeboxApplicationInjecto
           "slug" -> "lib5",
           "visibility" -> "secret",
           "collaborators" -> Json.arr(),
-          "followers" -> Json.arr()
+          "followers" -> Json.arr(),
+          "isSearchableByOthers" -> false
         )
         val request4 = FakeRequest("POST", com.keepit.controllers.website.routes.LibraryController.addLibrary().url).withJsonBody(inputJson4)
         val result4 = route(request4).get
