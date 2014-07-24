@@ -19,7 +19,7 @@ case class ProdScraperProcessorModule() extends ScrapeProcessorModule {
     bind[ShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[SyncShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[PullerPlugin].to[PullerPluginImpl].in[AppScoped]
-    bind[ScrapeProcessor].to[QueuedScrapeProcessor]
+    bind[ScrapeProcessor].to[ScrapeProcessorActorImpl]
     install(ProdScraperConfigModule())
     install(ProdScrapeSchedulerConfigModule())
   }
