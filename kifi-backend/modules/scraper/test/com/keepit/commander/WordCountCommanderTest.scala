@@ -52,6 +52,7 @@ class WordCountCommanderTest extends Specification with ApplicationInjector {
       Future.successful(Some(BasicArticle(title = "not important", content = content, signature = Signature("fixedSignature"), destinationUrl = url)))
     }
     def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, pageInfo: Option[PageInfo], proxyOpt: Option[HttpProxy]): Unit = {}
+    def status: Future[Seq[ScrapeJobStatus]] = Future.successful(Seq.empty)
   }
 
   "WordCountCommander" should {

@@ -11,6 +11,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.model.{ HttpProxy, NormalizedURI, PageInfo, ScrapeInfo }
 import com.keepit.scraper._
 import com.keepit.scraper.extractor._
+import org.joda.time.DateTime
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -23,6 +24,7 @@ object ScraperMessages {
     override def toString = s"Scrape(uri=${uri.toShortString},info=${info.toShortString})"
   }
   case object QueueSize // informational; pulling
+  case object JobAssignments
 }
 
 @Singleton
@@ -53,7 +55,11 @@ class ScrapeProcessorActorImpl @Inject() (
     actor ! Scrape(uri, info, pageInfo, proxyOpt)
   }
 
-  private def getQueueSize(): Future[Int] = actor.ask(QueueSize).mapTo[Int]
+  override def status(): Future[Seq[ScrapeJobStatus]] = {
+    actor.ask(JobAssignments).mapTo[Seq[ScrapeJobStatus]]
+  }
+
+  private[this] def getQueueSize(): Future[Int] = actor.ask(QueueSize).mapTo[Int]
 
   override def pull(): Unit = {
     getQueueSize() onComplete {

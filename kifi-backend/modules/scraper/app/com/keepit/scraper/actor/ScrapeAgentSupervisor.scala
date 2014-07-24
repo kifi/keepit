@@ -10,7 +10,7 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.scraper.ScraperConfig
+import com.keepit.scraper.{ ScrapeJobStatus, ScraperConfig }
 import com.keepit.search.Article
 import org.joda.time.DateTime
 
@@ -104,7 +104,7 @@ class ScrapeAgentSupervisor @Inject() (
       workerJobs.remove(worker)
       self ! job
     case JobDone(worker, job, res) =>
-      log.info(s"[Supervisor] <JobDone> worker=$worker job=$job res=$res")
+      log.info(s"[Supervisor] <JobDone> worker=$worker job=$job res=${res.map(_.title)}")
       workerJobs.remove(worker)
     case JobAborted(worker, job) =>
       log.warn(s"[Supervisor] <JobAborted> worker=$worker job=$job")
@@ -125,6 +125,10 @@ class ScrapeAgentSupervisor @Inject() (
         diagnostic()
       }
       sender ! scrapeQ.size
+    case JobAssignments =>
+      val snapshot = workerJobs.toSeq.map { case (worker, job) => ScrapeJobStatus(worker.path.name, job.submitTS, job.s.uri, job.s.info) }
+      log.info(s"[Supervisor] <JobAssignments> snapshot(len=${snapshot.length}): ${snapshot.mkString(",")}")
+      sender ! snapshot
     case m => throw new UnsupportedActorMessage(m)
   }
 

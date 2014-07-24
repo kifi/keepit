@@ -120,6 +120,7 @@ trait ScraperServiceClient extends ServiceClient {
   implicit val fj = com.keepit.common.concurrent.ExecutionContext.fj
   final val serviceType = ServiceType.SCRAPER
 
+  def status(): Seq[Future[(AmazonInstanceInfo, Seq[ScrapeJobStatus])]]
   def getBasicArticle(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]]
   def getSignature(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[Signature]]
   def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadInstanceInfo]]
@@ -156,6 +157,14 @@ class ScraperServiceClientImpl @Inject() (
   def getSignature(url: String, proxy: Option[HttpProxy], extractorProviderType: Option[ExtractorProviderType]): Future[Option[Signature]] = consolidateGetSignatureReq(url) { url =>
     call(Scraper.internal.getSignature, Json.obj("url" -> url, "proxy" -> Json.toJson(proxy), "extractorProviderType" -> extractorProviderType.map(_.name))).map { r =>
       r.json.asOpt[String].map(Signature(_))
+    }
+  }
+
+  def status(): Seq[Future[(AmazonInstanceInfo, Seq[ScrapeJobStatus])]] = {
+    broadcastWithUrls(Scraper.internal.status()).map { f =>
+      f map { serviceResponse =>
+        (serviceResponse.uri.serviceInstance.instanceInfo, Json.fromJson[Seq[ScrapeJobStatus]](serviceResponse.response.json).get)
+      }
     }
   }
 
@@ -240,6 +249,8 @@ class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, sched
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, () => {})
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
+
+  override def status(): Seq[Future[(AmazonInstanceInfo, Seq[ScrapeJobStatus])]] = Seq.empty
 
   def getBasicArticle(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = ???
 
