@@ -293,6 +293,27 @@ class LibraryCommander @Inject() (
 
   def copyKeeps(userId: Id[User], fromLibraryId: Id[Library], toLibraryId: Id[Library], keeps: Set[Id[Keep]]): Either[LibraryFail, Library] = {
     db.readWrite { implicit s =>
+      val memberFrom = libraryMembershipRepo.getWithLibraryIdandUserId(fromLibraryId, userId)
+      val memberTo = libraryMembershipRepo.getWithLibraryIdandUserId(toLibraryId, userId)
+
+      (memberFrom, memberTo) match {
+        case (None, _) => Left(LibraryFail("no membership from library"))
+        case (_, None) => Left(LibraryFail("no membership to library"))
+        case (Some(_), Some(memTo)) if memTo.access == LibraryAccess.READ_ONLY => Left(LibraryFail("invalid access to library"))
+        case (_, _) => {
+          val existingURIs = keepRepo.getByLibrary(toLibraryId).map(_.uriId)
+          keeps.map { keepId =>
+            val oldKeep = keepRepo.get(keepId)
+            if (!existingURIs.contains(oldKeep.uriId)) {
+              keepRepo.save(Keep(title = oldKeep.title, uriId = oldKeep.uriId, url = oldKeep.url, urlId = oldKeep.urlId,
+                userId = oldKeep.userId, source = oldKeep.source, libraryId = Some(toLibraryId)))
+            }
+          }
+          Right(libraryRepo.get(toLibraryId))
+        }
+      }
+
+      /*
       libraryMembershipRepo.getWithLibraryIdandUserId(fromLibraryId, userId) match {
         case None => Left(LibraryFail("no membership from library"))
         case Some(memFrom) => {
@@ -313,11 +334,35 @@ class LibraryCommander @Inject() (
           }
         }
       }
+      */
+
     }
   }
 
   def moveKeeps(userId: Id[User], fromLibraryId: Id[Library], toLibraryId: Id[Library], keeps: Set[Id[Keep]]): Either[LibraryFail, Library] = {
     db.readWrite { implicit s =>
+      val memberFrom = libraryMembershipRepo.getWithLibraryIdandUserId(fromLibraryId, userId)
+      val memberTo = libraryMembershipRepo.getWithLibraryIdandUserId(toLibraryId, userId)
+
+      (memberFrom, memberTo) match {
+        case (None, _) => Left(LibraryFail("no membership from library"))
+        case (_, None) => Left(LibraryFail("no membership to library"))
+        case (Some(memFrom), Some(memTo)) if (memFrom.access == LibraryAccess.READ_ONLY ||
+          memFrom.access == LibraryAccess.READ_INSERT ||
+          memTo.access == LibraryAccess.READ_ONLY) => Left(LibraryFail("invalid access to library"))
+        case (_, _) => {
+          val existingURIs = keepRepo.getByLibrary(toLibraryId).map(_.uriId)
+          keeps.map { keepId =>
+            val oldKeep = keepRepo.get(keepId)
+            if (!existingURIs.contains(oldKeep.uriId)) {
+              keepRepo.save(oldKeep.copy(libraryId = Some(toLibraryId)))
+            }
+          }
+          Right(libraryRepo.get(toLibraryId))
+        }
+      }
+    }
+    /*
       libraryMembershipRepo.getWithLibraryIdandUserId(fromLibraryId, userId) match {
         case None => Left(LibraryFail("no membership from library"))
         case Some(memFrom) if memFrom.access == LibraryAccess.READ_ONLY || memFrom.access == LibraryAccess.READ_INSERT => Left(LibraryFail("invalid access from library"))
@@ -339,6 +384,7 @@ class LibraryCommander @Inject() (
         }
       }
     }
+    */
   }
 
 }
