@@ -55,13 +55,13 @@ class ScrapeAgentSupervisor @Inject() (
   lazy val system = sysProvider.get
   log.info(s"[Supervisor.<ctr>] config=${system.settings.config}")
 
-  val scrapers = (0 until Runtime.getRuntime.availableProcessors()).map { i =>
+  val scrapers = (0 until Runtime.getRuntime.availableProcessors() * 2).map { i =>
     context.actorOf(Props(scrapeAgentProvider.get), s"scrape-agent$i")
   }
   val scraperRouter = context.actorOf(Props.empty.withRouter(SmallestMailboxRouter(routees = scrapers)), "scraper-router")
   log.info(s"[Supervisor.<ctr>] scraperRouter=$scraperRouter scrapers(sz=${scrapers.size}):${scrapers.mkString(",")}")
 
-  val fetchers = (0 until Runtime.getRuntime.availableProcessors() / 2).map { i =>
+  val fetchers = (0 until Runtime.getRuntime.availableProcessors()).map { i =>
     context.actorOf(Props(fetcherAgentProvider.get), s"fetch-agent$i")
   }
   val fetcherRouter = context.actorOf(Props.empty.withRouter(SmallestMailboxRouter(routees = fetchers)), "fetcher-router")
