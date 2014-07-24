@@ -82,8 +82,7 @@
   line-height: 44px;
   text-shadow: 0 0 2px rgba(0,0,0,.3);
 }
-.kifi-count,
-.kifi-keeper .kifi-count {
+.kifi-count {
   position: absolute;
   top: -6px;
   left: 2px;
