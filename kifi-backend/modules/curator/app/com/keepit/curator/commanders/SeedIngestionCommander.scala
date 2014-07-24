@@ -55,6 +55,7 @@ class SeedIngestionCommander @Inject() (
     userId = userId,
     uriId = rawItem.uriId,
     seq = SequenceNumber[SeedItem](rawItem.seq.value),
+    priorScore = rawItem.priorScore,
     timesKept = rawItem.timesKept,
     lastSeen = rawItem.lastSeen,
     keepers = keepers
