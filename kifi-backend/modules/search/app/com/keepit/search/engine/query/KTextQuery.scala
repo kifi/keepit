@@ -116,7 +116,7 @@ class KTextQuery extends Query with Logging {
 
 class KTextWeight(query: KTextQuery,
     mainWeight: Weight,
-    semanticWeight: Weight) extends Weight with Logging {
+    semanticWeight: Weight) extends Weight with KWeight with Logging {
 
   override def getQuery() = query
   override def scoresDocsOutOfOrder() = false
@@ -144,23 +144,27 @@ class KTextWeight(query: KTextQuery,
 
     val result = new ComplexExplanation()
     if (exists) {
-      result.setDescription("TextQuery")
+      result.setDescription("KTextQuery")
       result.setValue(sc.score)
       result.setMatch(true)
       if (mainWeight != null) {
         val exp = mainWeight.explain(context, doc)
-        if (exp.getValue() > 0.0f) result.addDetail(mainWeight.explain(context, doc))
+        if (exp.getValue() > 0.0f) result.addDetail(exp)
       }
       if (semanticWeight != null) {
         val exp = semanticWeight.explain(context, doc)
-        if (exp.getValue() > 0.0f) result.addDetail(semanticWeight.explain(context, doc))
+        if (exp.getValue() > 0.0f) result.addDetail(exp)
       }
     } else {
-      result.setDescription("TextQuery, doesn't match id %d".format(doc))
+      result.setDescription("KTextQuery, doesn't match id %d".format(doc))
       result.setValue(0.0f)
       result.setMatch(false)
     }
     result
+  }
+
+  def getWeights(out: ArrayBuffer[(Weight, Float)]): Unit = {
+    out += ((this, 1.0f))
   }
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {

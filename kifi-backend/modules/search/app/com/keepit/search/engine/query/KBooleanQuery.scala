@@ -1,7 +1,6 @@
 package com.keepit.search.engine.query
 
 import org.apache.lucene.index.{ AtomicReaderContext, IndexReader }
-import org.apache.lucene.search.BooleanClause.Occur
 import org.apache.lucene.search.{ BooleanClause, BooleanQuery, ComplexExplanation, Explanation, IndexSearcher, Query, Scorer, Weight }
 import org.apache.lucene.util.Bits
 
@@ -63,17 +62,17 @@ class KBooleanQuery() extends BooleanQuery(false) {
 
   override def createWeight(searcher: IndexSearcher) = {
     new BooleanWeight(searcher, false) {
-      private[this] val weightList = new ArrayBuffer[(Weight, Occur, Float)]
+      private[this] val weightList = new ArrayBuffer[(Weight, Float)]
       private[this] val normalizationValue: Float = {
         var sum = 0.0d
         clauses.zip(weights).foreach {
           case (c, w) =>
             if (c.isProhibited()) {
-              weightList += ((w, c.getOccur, 0.0f))
+              weightList += ((w, 0.0f)) // weight = 0 since a prohibited should not be counted in percent match
             } else {
               val value = w.getValueForNormalization().toDouble
               val sqrtValue = sqrt(value).toFloat
-              weightList += ((w, c.getOccur, sqrtValue))
+              weightList += ((w, sqrtValue))
               sum += value
             }
         }
@@ -86,25 +85,27 @@ class KBooleanQuery() extends BooleanQuery(false) {
         throw new UnsupportedOperationException()
       }
 
-      def getWeightList(): ArrayBuffer[(Weight, Occur, Float)] = weightList
+      def getWeights(out: ArrayBuffer[(Weight, Float)]): Unit = {
+        out ++= weightList
+      }
 
       override def explain(context: AtomicReaderContext, doc: Int): Explanation = {
 
         val sumExpl = new ComplexExplanation()
         var sum = 0.0f
 
-        weightList.foreach {
-          case (w, occur, value) =>
+        clauses.zip(weightList).foreach {
+          case (clause, (w, value)) =>
             val e = w.explain(context, doc)
             if (e.isMatch()) {
               sumExpl.addDetail(e)
-              if (occur != BooleanClause.Occur.MUST_NOT) sum += e.getValue()
+              if (!clause.isProhibited) sum += e.getValue()
             }
         }
-        sumExpl.setMatch(true)
+        sumExpl.setMatch(sum > 0.0f)
         sumExpl.setValue(sum)
 
-        sumExpl.setDescription(s"TopBooleanQuery, sum of:")
+        sumExpl.setDescription(s"KBooleanQuery, sum of:")
         sumExpl
       }
     }

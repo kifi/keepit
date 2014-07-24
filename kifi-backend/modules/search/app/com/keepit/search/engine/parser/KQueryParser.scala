@@ -5,7 +5,7 @@ import org.apache.lucene.search._
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.search.engine.ScoreExpressionBuilder
+import com.keepit.search.engine.EngineBuilder
 import com.keepit.search.Lang
 import com.keepit.search.index.Analyzer
 import com.keepit.search.phrasedetector.PhraseDetector
@@ -19,39 +19,40 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 class KQueryParser(
     analyzer: Analyzer,
     stemmingAnalyzer: Analyzer,
-    alternativeAnalyzer: Option[Analyzer],
-    alternativeStemmingAnalyzer: Option[Analyzer],
+    altAnalyzer: Option[Analyzer],
+    altStemmingAnalyzer: Option[Analyzer],
     proximityBoost: Float,
     semanticBoost: Float,
     phraseBoost: Float,
-    siteBoostVal: Float,
-    concatBoostVal: Float,
+    siteBoost: Float,
+    concatBoost: Float,
     homePageBoost: Float,
     proximityGapPanelty: Float,
     proximityThreshold: Float,
     proximityPowerFactor: Float,
     phraseDetector: PhraseDetector,
     phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]],
-    monitoredAwait: MonitoredAwait) {
+    monitoredAwait: MonitoredAwait) { qp =>
 
   private[this] val parser = new QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with KQueryExpansion {
-    override val altAnalyzer = alternativeAnalyzer
-    override val altStemmingAnalyzer = alternativeStemmingAnalyzer
-    override val siteBoost = siteBoostVal
-    override val concatBoost = concatBoostVal
-    override val lang: Lang = analyzer.lang
+    override val altAnalyzer = qp.altAnalyzer
+    override val altStemmingAnalyzer = qp.altStemmingAnalyzer
+    override val siteBoost = qp.siteBoost
+    override val concatBoost = qp.concatBoost
+    override val lang: Lang = qp.analyzer.lang
   }
 
   var totalParseTime: Long = 0L
 
-  def parse(queryText: CharSequence): Unit = {
+  def parse(queryText: CharSequence): Option[EngineBuilder] = {
     val tParse = System.currentTimeMillis
 
-    parser.parse(queryText).map { query =>
+    val builderOpt = parser.parse(queryText).map { query =>
       val numTextQueries = parser.textQueries.size
-      if (numTextQueries <= 0) query
-      else if (numTextQueries > ProximityQuery.maxLength) query // too many terms, skip proximity and semantic vector
-      else {
+
+      if (numTextQueries <= 0 || numTextQueries > ProximityQuery.maxLength) { // no terms or too many terms, skip proximity and semantic vector
+        new EngineBuilder(query)
+      } else {
         val phrasesFuture = if (numTextQueries > 1 && phraseBoost > 0.0f) detectPhrases(queryText, parser.lang) else null
 
         if (semanticBoost > 0.0f) {
@@ -61,7 +62,7 @@ class KQueryParser(
           }
         }
 
-        val exprBuilder = new ScoreExpressionBuilder(query)
+        val exprBuilder = new EngineBuilder(query)
 
         if (proximityBoost > 0.0f && numTextQueries > 1) {
           val phrases = if (phrasesFuture != null) monitoredAwait.result(phrasesFuture, 3 seconds, "phrase detection") else Set.empty[(Int, Int)]
@@ -81,10 +82,12 @@ class KQueryParser(
           exprBuilder.addBooster(homePageQuery, homePageBoost)
         }
 
-        exprBuilder.getScoreExpression()
+        exprBuilder
       }
     }
     totalParseTime = System.currentTimeMillis - tParse
+
+    builderOpt
   }
 
   private[this] lazy val phTerms: IndexedSeq[Term] = {
