@@ -24,6 +24,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
 class LibraryMembershipRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
+  val libraryRepo: LibraryRepo,
   val memberIdCache: LibraryMembershipIdCache)
     extends DbRepo[LibraryMembership] with DbRepoWithDelete[LibraryMembership] with LibraryMembershipRepo with SeqNumberDbFunction[LibraryMembership] with Logging {
 
@@ -47,7 +48,9 @@ class LibraryMembershipRepoImpl @Inject() (
 
   override def save(libraryMembership: LibraryMembership)(implicit session: RWSession): LibraryMembership = {
     val toSave = libraryMembership.copy(seq = deferredSeqNum())
-    super.save(toSave)
+    val res = super.save(toSave)
+    libraryRepo.save(libraryRepo.get(libraryMembership.libraryId)) // update Library sequence number
+    res
   }
 
   override def get(id: Id[LibraryMembership])(implicit session: RSession): LibraryMembership = {
