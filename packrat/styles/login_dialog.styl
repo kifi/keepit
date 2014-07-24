@@ -1,0 +1,108 @@
+.kifi-login-dialog
+  position: fixed
+  top: 0
+  left: 0
+  width: 100%
+  height: 100%
+  z-index: 99999999999998
+  background: rgba(235,235,235,.6)
+  -webkit-perspective: 1300px
+  perspective: 1300px
+  visibility: hidden
+  opacity: 0
+  transition: visibility 0s .3s, opacity .3s
+
+.kifi-login-dialog.kifi-show
+  visibility: visible
+  opacity: 1
+  transition-delay: 0s
+
+.kifi-login-dialog-box
+  position: fixed
+  top: 20%
+  left: 50%
+  -webkit-transform-style: preserve-3d
+  transform-style: preserve-3d
+  -webkit-transform: rotateX(-70deg)
+  transform: rotateX(-70deg)
+  transition: -webkit-transform .3s
+  transition: transform .3s
+  border: 1px solid #e3e5e8
+  border-radius: 5px !important
+  background: #fff
+  color: #000
+  line-height: 0
+  text-align: center
+
+.kifi-show>.kifi-login-dialog-box
+  -webkit-transform: none
+  transform: none
+
+.kifi-login-dialog-logo
+  margin: 5px auto 6px
+  width: 52px
+  height: 30px
+  position: relative
+
+.kifi-login-dialog-x
+  position: absolute
+  top: 8px
+  right: 10px
+  height: 24px
+  width: 24px
+  border-radius: 50% !important
+
+.kifi-login-dialog-x:before,
+.kifi-login-dialog-x:after
+  content: ' '
+  position: absolute
+  top: 4px
+  bottom: 4px
+  left: 50%
+  width: 2px
+  background: #b1b8c1
+  font-size: 0
+
+.kifi-login-dialog-x:before
+  -webkit-transform: translate(-1px) rotate(45deg)
+  transform: translate(-1px) rotate(45deg)
+
+.kifi-login-dialog-x:after
+  -webkit-transform: translate(-1px) rotate(-45deg)
+  transform: translate(-1px) rotate(-45deg)
+
+.kifi-login-dialog-x:hover:before,
+.kifi-login-dialog-x:hover:after,
+.kifi-login-dialog-x:focus:before,
+.kifi-login-dialog-x:focus:after
+  background: #c1c6cd
+
+.kifi-login-dialog-x:active:before,
+.kifi-login-dialog-x:active:after
+  background: #fff
+
+.kifi-login-dialog-x:active
+  background: #485b6e
+
+.kifi-login-dialog-header,
+.kifi-login-dialog-iframe
+  position: absolute
+  top: 0
+  left: 0
+  width: 100%
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+
+.kifi-login-dialog-header
+  height: 41px
+  background: #34495e
+  border-top-left-radius: inherit !important
+  border-top-right-radius: inherit !important
+
+.kifi-login-dialog-iframe
+  height: 100%
+  border-top: 41px solid transparent
+  background: #f6f6f6 content-box
+  border-bottom-left-radius: inherit !important
+  border-bottom-right-radius: inherit !important
+

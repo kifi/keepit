@@ -1,0 +1,160 @@
+.kifi-gs
+  position: fixed
+  bottom: 10px
+  left: 10px
+  min-width: 192px
+  z-index: 999999999993
+  border: 1px solid gray
+  border-radius: 10px
+  background-color: rgba(0,0,0,.8)
+  color: #fff
+  overflow: hidden
+  transition: -webkit-transform .5s ease-out
+  transition: transform .5s ease-out
+
+.kifi-gs:not(.kifi-showing)
+  -webkit-transform: translate3d(0,200px,0)
+  transform: translate3d(0,200px,0)
+  transition-timing-function: ease-in
+  transition-duration: .2s
+
+.kifi-gs-h
+  background-color: #000
+  line-height: 36px
+  font-size: 14px
+  font-family: Georgia, Times, sans-serif !important
+  font-style: italic
+  font-weight: bold
+  -webkit-font-smoothing: antialiased
+  color: #bebebe
+  text-align: center
+
+.kifi-gs-ol
+  padding: 10px 10px 16px
+  counter-reset: guide-step
+
+.kifi-gs-li
+  line-height: 30px
+  font-size: 13px
+  color: #686767
+
+.kifi-gs-li.kifi-current
+  position: relative
+  color: #bebebe
+
+.kifi-gs-li::before
+  counter-increment: guide-step
+  content: counter(guide-step) '.'
+  display: inline-block
+  width: 30px
+  text-align: right
+  margin-right: 8px
+
+.kifi-gs-name
+  white-space: nowrap
+  color: #6cf
+  -webkit-font-smoothing: antialiased
+
+.kifi-current:not(.kifi-complete)>.kifi-gs-name,
+.kifi-current~*>.kifi-gs-name
+  color: inherit
+
+.kifi-gs-name::after
+  content: ' '
+  height: 8px
+  width: 12px
+  display: inline-block
+  background: url(/images/guide/checkmark.png) no-repeat
+  background-size: contain
+  margin-left: 6px
+
+.kifi-current:not(.kifi-complete)>.kifi-gs-name::after,
+.kifi-current~*>.kifi-gs-name::after
+  visibility: hidden
+
+.kifi-gs-bar
+  position: absolute
+  left: 38px
+  bottom: 2px
+  box-sizing: border-box
+  width: 110px
+  height: 1px
+  border-left: 0px solid #6cf
+  background: #565859
+  transition: border-left-width 0.3s ease-in-out
+
+.kifi-complete>.kifi-gs-bar
+  display: none
+
+.kifi-guide-x
+  position: absolute
+  top: 9px
+  right: 8px
+  height: 18px
+  width: 18px
+  border-radius: 50%
+
+.kifi-guide-x:hover,
+.kifi-guide-x:focus
+  background-color: #333
+
+.kifi-guide-x:active
+  background-color: #282828
+
+.kifi-guide-x::before,
+.kifi-guide-x::after
+  content: ' '
+  position: absolute
+  top: 4px
+  bottom: 4px
+  left: 50%
+  width: 2px
+  background: #565859
+  font-size: 0
+
+.kifi-guide-x::before
+  -webkit-transform: translate(-1px) rotate(45deg)
+  transform: translate(-1px) rotate(45deg)
+
+.kifi-guide-x::after
+  -webkit-transform: translate(-1px) rotate(-45deg)
+  transform: translate(-1px) rotate(-45deg)
+
+.kifi-guide-x:hover::before,
+.kifi-guide-x:hover::after,
+.kifi-guide-x:focus::before,
+.kifi-guide-x:focus::after
+  background: #75797a
+
+.kifi-guide-x:active::before,
+.kifi-guide-x:active::after
+  background: #616465
+
+.kifi-curved-arrow
+  position: fixed
+  z-index: 999999999993
+  width: 0
+  height: 0
+
+.kifi-curved-arrow-head
+  position: absolute
+  top: -10px
+  left: 0
+  width: 0
+  height: 0
+  border-style: solid
+  border-color: transparent transparent transparent #f99
+  border-width: 10px 0 10px 17.32px
+  -webkit-transform-origin: 0 center
+  transform-origin: 0 center
+
+.kifi-curved-arrow-tail
+  position: absolute
+  top: -2px
+  left: -2px
+  width: 4px
+  height: 4px
+  background: #f99
+  border-radius: 50%
+  box-shadow: -.5px .5px 0 rgba(0,0,0,.5)
+

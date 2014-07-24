@@ -1,0 +1,204 @@
+.kifi-messages-sent
+  max-height: 0
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+
+.kifi-messages-sent-inner
+  max-height: inherit
+
+.kifi-message-sent
+  margin: 0 9px
+  padding: 11px 10px 11px 0
+  position: relative
+
+.kifi-message-sent:first-child
+  margin-top: 10px
+
+.kifi-message-sent:last-child
+  padding-bottom: 0
+  margin-bottom: 4px
+
+.kifi-message-status
+  position: absolute
+  right: 10px
+  top: -6px
+  line-height: 12px
+  font-size: 12px
+  padding: 0 3px
+  background-color: #fafafa
+  display: none
+
+.kifi-message-sent .kifi-message-tip
+  line-height: 11px
+  font-size: 11px
+  float: right
+  background-color: #fafafa
+  color: #a9a9a9
+  display: none
+
+.kifi-message-sent:hover .kifi-message-tip,
+.kifi-message-sent:last-child .kifi-message-tip
+  display: block
+
+.kifi-message-sent:hover~.kifi-message-sent:last-child .kifi-message-tip
+  display: none
+
+.kifi-message-source
+  font-size: 10px
+
+img.kifi-message-pic,
+span.kifi-message-pic-email
+  float: left
+  width: 30px
+  height: 30px
+  border-radius: 2px !important
+
+img.kifi-message-pic
+  background-color: rgba(0,0,0,.1)
+
+span.kifi-message-pic-email
+  line-height: 30px
+  text-align: center
+  font-size: 25px
+  color: white
+  cursor: default
+  -webkit-user-select: none
+  -moz-user-select: none
+  user-select: none
+
+img.kifi-message-pic.kifi-self
+  border-radius: 20px !important
+
+.kifi-message-body
+  margin-left: 40px
+  word-wrap: break-word
+
+.kifi-message-top
+  position: relative
+  top: -2px
+  margin-bottom: 2px
+  width: 100%
+  overflow: hidden
+
+.kifi-message-name
+  font-weight: bold
+  overflow: hidden
+  white-space: nowrap
+  text-overflow: ellipsis
+
+.kifi-message-p
+  line-height: 16px
+  color: #444
+
+.kifi-message-pp
+  margin-top: 6px
+
+.kifi-message-p>a[href]
+  text-decoration: underline
+
+.kifi-image-in-message
+  max-width: 100%
+
+.kifi-message-sent::after
+  content: " "
+  display: block
+  font-size: 0
+  line-height: 0
+  visibility: hidden
+  clear: both
+
+.kifi-message-aux .kifi-message-body,
+.kifi-message-aux .kifi-message-pic
+  display: none
+
+.kifi-message-sent.kifi-message-aux
+  padding: 0
+
+.kifi-message-aux
+  text-align: center
+  color: #b8c5d0
+  border-top: 1px solid #b8c5d0
+  border-bottom: 1px solid #b8c5d0
+  margin-top: 0
+  margin-bottom: 0
+
+.kifi-message-aux .kifi-message-tip
+  position: absolute
+  right: 10px
+  top: -6px
+  padding: 0 3px
+
+.kifi-message-aux + .kifi-message-sent
+  border-top: 0
+
+.kifi-aux-message
+  padding: 13px
+
+.kifi-thread-background
+  position: absolute
+  top: 40px
+  bottom: 0
+  width: 100%
+  background-color: #fafafa
+
+.kifi-message-email-view,
+.kifi-message-email-learn
+  color: inherit
+  text-decoration: underline
+
+.kifi-message-email-view:hover,
+.kifi-message-email-learn:hover
+  color: #a6b1bb
+
+.kifi-message-email-tooltip
+  width: 300px
+  padding: 15px
+  background-color: #fff
+  color: black
+  box-shadow: rgba(103,130,156,.35) 2px 3px
+  border: 1px solid #b8c5d2
+  border-radius: 3px
+  text-align: left
+  font-size: 13px
+  opacity: 0
+  visibility: hidden
+  z-index: 999999999992
+  -webkit-transform: translate(0, 3px)
+  transform: translate(0, 3px)
+  transition: opacity linear, -webkit-transform ease-in-out
+  transition: opacity linear, transform ease-in-out
+  transition-duration: 100ms
+
+.kifi-message-email-tooltip.kifi-showing
+  -webkit-transform: none
+  transform: none
+  transition-duration: 60ms
+  opacity: 1
+  visibility: visible
+
+.kifi-message-email-tooltip-tri
+  position: absolute
+  height: 14px
+  width: 28px
+  bottom: -14px
+  right: 40px
+  margin-left: -14px
+  overflow: hidden
+  border-color: inherit
+
+.kifi-message-email-tooltip-tri::after
+  content: ' '
+  position: absolute
+  height: 14px
+  width: 14px
+  left: 7px
+  top: -7px
+  -webkit-transform: rotate(45deg)
+  transform: rotate(45deg)
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+  box-shadow: rgba(103, 130, 156, .35) 2px 1px
+  border: 1px solid
+  border-color: inherit
+  background-color: #fff
+

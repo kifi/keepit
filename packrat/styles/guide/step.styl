@@ -1,0 +1,157 @@
+.kifi-guide-loading.kifi-guide-loading
+  position: fixed
+  left: 50%
+  top: 50%
+  height: 260px
+  width: 260px
+  margin: -130px 0 0 -130px
+  background-color: rgba(0,0,0,.8)
+  background-clip: content-box
+  border: 15px solid rgba(240,240,240,.2)
+  border-radius: 50%
+  text-align: center
+
+.kifi-guide-loading::before
+  content: 'Loading Kifi guide'
+  display: block
+  padding: 92px 0 0
+  font: bold italic 21px/36px Georgia,Times,serif !important
+  -webkit-font-smoothing: antialiased
+  color: #fff
+
+.kifi-guide-spinner
+  display: inline-block
+  width: 16px
+  height: 16px
+  margin: 12px 6px
+  background: rgba(255,255,255,.5)
+  border-radius: 50%
+  opacity: 0
+  -webkit-transform: scale(.5)
+  transform: scale(.5)
+  -webkit-animation: kifi-guide-spinner .4s ease-in-out infinite alternate
+  animation: kifi-guide-spinner .4s ease-in-out infinite alternate
+
+.kifi-guide-spinner:nth-child(2)
+  -webkit-animation-delay: .1s
+  animation-delay: .1s
+
+.kifi-guide-spinner:nth-child(3)
+  -webkit-animation-delay: .2s
+  animation-delay: .2s
+
+.kifi-guide-spinner:nth-child(4)
+  -webkit-animation-delay: .3s
+  animation-delay: .3s
+
+.kifi-guide-spinner:last-child
+  -webkit-animation-delay: .4s
+  animation-delay: .4s
+
+@keyframes kifi-guide-spinner
+  100%
+    opacity: 1
+    -webkit-transform: none
+@keyframes kifi-guide-spinner
+  100%
+    opacity: 1
+    transform: none
+.kifi-spotlight
+  position: fixed
+  z-index: 999999999993
+
+.kifi-guide-stage
+  position: fixed
+  z-index: 999999999993
+  text-align: center
+  opacity: 0
+  -webkit-transform: translate3d(-50px,0,0)
+  transform: translate3d(-50px,0,0)
+  transition: opacity linear, -webkit-transform ease-out
+  transition: opacity linear, transform ease-out
+  transition-duration: .3s
+
+.kifi-guide-stage.kifi-from-right
+  -webkit-transform: translate3d(50px,0,0)
+  transform: translate3d(50px,0,0)
+
+.kifi-guide-stage.kifi-open
+  opacity: 1
+  -webkit-transform: none
+  transform: none
+
+.kifi-guide-stage.kifi-done
+  opacity: 0
+  transition: opacity .12s linear
+
+.kifi-guide-h1
+  margin: 0 0 12px
+  font: bold italic 26px/36px Georgia,Times,serif !important
+  -webkit-font-smoothing: antialiased
+  color: #fff
+
+.kifi-guide-p
+  line-height: 24px
+  font-size: 16px
+  font-weight: 300
+  -webkit-font-smoothing: antialiased
+  letter-spacing: .7px
+  color: #fff
+  transition: opacity linear, -webkit-transform ease-out
+  transition: opacity linear, transform ease-out
+  transition-duration: .2s
+
+.kifi-guide-p.kifi-off-left
+  opacity: 0
+  -webkit-transform: translate3d(-40px,0,0)
+  transform: translate3d(-40px,0,0)
+
+.kifi-guide-em
+  color: #f38283
+
+.kifi-guide-next
+  margin-top: 20px
+  display: inline-block
+  border: 3px solid #fff
+  border-radius: 7px
+  padding: 0 60px
+  line-height: 50px
+  font-size: 16px
+  -webkit-font-smoothing: antialiased
+  color: #fff
+
+.kifi-guide-next:hover,
+.kifi-guide-next:focus
+  color: #fff
+  background-color: rgba(255,255,255,.05)
+
+.kifi-guide-next:active
+  color: #fff
+  background-color: rgba(255,255,255,.15)
+
+.kifi-step0,
+.kifi-step1,
+.kifi-step2,
+.kifi-step3,
+.kifi-step4,
+.kifi-step5
+  display: none
+
+.kifi-guide-stage[kifi-step='0'] .kifi-step0,
+.kifi-guide-stage[kifi-step='1'] .kifi-step1,
+.kifi-guide-stage[kifi-step='2'] .kifi-step2,
+.kifi-guide-stage[kifi-step='3'] .kifi-step3,
+.kifi-guide-stage[kifi-step='4'] .kifi-step4,
+.kifi-guide-stage[kifi-step='5'] .kifi-step5
+  display: block
+
+.kifi-guide-stage[kifi-step='4'] .kifi-step4.kifi-guide-next,
+.kifi-guide-stage[kifi-step='5'] .kifi-step5.kifi-guide-next
+  display: inline-block
+
+.kifi-guide-stage[kifi-step='0'] .kifi-step0.kifi-guide-p,
+.kifi-guide-stage[kifi-step='1'] .kifi-step1.kifi-guide-p,
+.kifi-guide-stage[kifi-step='2'] .kifi-step2.kifi-guide-p,
+.kifi-guide-stage[kifi-step='3'] .kifi-step3.kifi-guide-p
+  display: inline-block
+

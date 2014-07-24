@@ -1,0 +1,572 @@
+#kifi-res
+  margin-bottom: 18px
+  position: relative
+
+.kifi-res-bar
+  position: relative
+  cursor: pointer
+  border: 1px solid #e5e7e8
+  border-radius: 6px 0 0 6px
+  background: #fafafa
+  color: #929496
+  font-size: 11px !important
+  /* FF */
+  line-height: 27px !important
+  /* FF */
+  height: 27px
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+  -webkit-user-select: none
+  -moz-user-select: none
+  margin-right: 57px
+
+.kifi-res-bar a:active,
+.kifi-res-buttons a:active,
+.kifi-filter:active
+  color: inherit !important
+
+.kifi-res-bar-kifi
+  color: #777
+  font-size: 13px
+  font-weight: bold
+  line-height: inherit
+  margin: 0 12px
+  position: relative
+  bottom: 1px
+
+.kifi-res-bar-status
+  vertical-align: 1px
+
+#kifi-res .kifi-res-bar-status,
+#kifi-res .kifi-filter
+  text-decoration: none !important
+
+.kifi-res-bar-status[href],
+.kifi-filter[href]
+  color: #6fa6ef
+
+.kifi-res-bar-status[href]:active,
+.kifi-filter[href]:active
+  color: #76aaf0 !important
+
+:not(.kifi-loading):not(.kifi-preview):not(.kifi-collapsed):not([data-n])>.kifi-res-bar-status
+  display: none
+
+.kifi-res-bar-status[data-n]:not([data-n='0'])::before
+  content: attr(data-n)
+  display: inline-block
+  width: 14px
+  height: 14px
+  line-height: 14px
+  border: 1px solid currentColor
+  border-radius: 50%
+  text-align: center
+
+.kifi-res-bar-status[data-n='0'][data-of]::before
+  content: 'No good matches'
+  color: #929496
+
+.kifi-collapsed>.kifi-res-bar-status::after
+  content: 'Expand'
+
+.kifi-loading>.kifi-res-bar-status::after
+  content: 'Loading relevant keeps...'
+
+.kifi-res-bar-status[href][data-n]::after
+  content: 'Top keeps for you'
+  margin-left: 3px
+
+.kifi-res-bar-status[href][data-n='1']::after
+  content: 'Top keep for you'
+
+.kifi-res-bar-status[href][data-n='0'][data-of]::after
+  content: 'Show anyway'
+  margin-left: 8px
+  transition: opacity .2s .1s
+
+.kifi-res-bar:not(:hover)>.kifi-res-bar-status[href][data-n='0'][data-of]::after
+  opacity: 0
+  transition-delay: 0
+
+.kifi-res-bar:hover>.kifi-res-bar-status[href]::after
+  color: inherit
+
+.kifi-res-bar:hover>.kifi-res-bar-status[href]::after,
+.kifi-filter[href]:hover
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAEElEQVQIW2NgAIL8Ze//AwAGlAMEWWp0lgAAAABJRU5ErkJggg==")
+  background-size: auto 1px
+  background-position: right bottom
+  background-repeat: repeat-x
+
+.kifi-res-buttons
+  float: right
+  height: 0
+  position: relative
+
+.kifi-res-arrow
+  position: absolute
+  bottom: 0
+  right: 29px
+  width: 29px
+  height: 27px
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+  background: #fafafa
+  border: 1px solid #e5e7e8
+  text-align: center
+
+.kifi-res-bar:hover,
+.kifi-res-arrow[href]:hover,
+.kifi-res-arrow[href]:focus,
+.kifi-res-menu-a:hover,
+.kifi-res-menu-a:focus,
+.kifi-res-menu-item[href]:hover,
+.kifi-res-menu-item[href]:focus,
+.kifi-res-menu-item[href].kifi-hover
+  background-color: #fdfdfd
+
+.kifi-res-arrow[href]:active,
+.kifi-res-menu-a:active,
+.kifi-res-menu-a.kifi-active,
+.kifi-res-menu-item[href]:active
+  background-color: #f2f2f2
+
+.kifi-res-arrow::before
+  content: ' '
+  position: absolute
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  background: center/10px 6px no-repeat
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAGCAYAAAD68A/GAAAAiklEQVQI12M4c/PZ5B1HL/8/cfVRFQMS2HH0EvfpG0/DQXKnrj9ZAxYEMmpAAiAM1JgJxKEw/vErD6cDNbEhm8AMVDAVpgBo2qJ9p29wwBUAJadDTSqGatAGYiWoXBxU0zKw4mOXHzTBTDp57XEzUEECjA+UmwbUyIhstSDQrZOQrJ636/gVZZg8AHwnhzVkwKscAAAAAElFTkSuQmCC")
+  -webkit-transform: scale(1,-1)
+  transform: scale(1,-1)
+  transition: -webkit-transform .2s
+  transition: transform .2s
+
+.kifi-collapsed+*>.kifi-res-arrow::before
+  -webkit-transform: none
+  transform: none
+
+@media (min-resolution: 1.3dppx)
+  .kifi-res-arrow::before
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAMCAYAAABiDJ37AAABVElEQVQoz5WTu0oDURCGExIwsJaKjViHlIb0xsaHCFjY2tnZi53voJVNRGy8pRJdjVECbtQY8LJeNgErtVJyWb/RSRBZ15OFD87ln3/mzDkbOa3V45CH0smVl470+RE3ChuwCQlZGJQF23E7tnPX1o1xQ6Nl4t6J8xnvwUhPcHz5mKXCIgIf2qXq026QsRqtfBu5Prpq8eIh92fmw4o7g3lNskrVjMU4DWM/jVivYzRHEVGTvkRhFjytWNrxIUkweKWqxaPze6vffotxQo0b8IbZAgz/FzQAW1BBnA3RxYPWiUmyV9BLsURowSrHasrREOwznzCoPok2341jvgNDPQENziAoaL869MlGMBlQUQrW1EhuuUzsVFhmeT5lER+c3UrmL2NIwXrXCM0NZtPbthMzuhACchhc6y0LLa3omSczz76Z0S/TGAby1jx4Ybwkf1ZYzCeIQXr24u+8gQAAAABJRU5ErkJggg==")
+
+.kifi-res-arrow:not([href])::before
+  opacity: .4
+
+.kifi-res-menu-a
+  position: absolute
+  bottom: 0
+  right: 0
+  width: 30px
+  height: 27px
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+  border: 1px solid #e5e7e8
+  border-radius: 0 6px 6px 0
+  background: #fafafa center/auto 7px no-repeat
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAHCAYAAADam2dgAAAAFElEQVQYV2PccfTSfwa6AcZBaB0ApDYJ7ikaooQAAAAASUVORK5CYII=")
+
+@media (min-resolution: 1.3dppx)
+  .kifi-res-menu-a
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAAOCAYAAAAi2ky3AAAAHUlEQVQoz2PYcfTSf2pgBqoZNAoIg9FYG401KmAAaSJk+Aie37YAAAAASUVORK5CYII=")
+
+.kifi-res-menu
+  z-index: 999
+  right: 4px
+  top: -1px
+  white-space: nowrap
+  font-size: 13px
+  line-height: 40px
+  -webkit-user-select: none
+  -moz-user-select: none
+
+.kifi-res-menu,
+.kifi-res-submenu
+  display: none
+  position: absolute
+  border-style: solid
+  border-color: #e5e7e8
+  border-width: 1px 1px 0
+  background-color: #fafafa
+  color: #929496
+
+.kifi-res-submenu
+  left: 100%
+  top: -1px
+
+.kifi-res-menu-item:hover>.kifi-res-submenu,
+.kifi-res-menu-item.kifi-hover>.kifi-res-submenu
+  display: block
+
+.kifi-res-menu-item
+  display: block
+  padding: 0 20px
+  color: inherit !important
+  text-decoration: none !important
+  border-bottom: 1px solid
+  border-color: inherit
+
+div.kifi-res-menu-item
+  padding-right: 42px
+  background: right 11px center/5px 10px no-repeat
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAKCAYAAAB8OZQwAAAATUlEQVQI12PYcfTSbiD+D8QTGGAAyDEC4n9A/AOIFZEllkJVL0UWVALin1AdhsgSE6CqdyEL9kMFd8MEFKEWgbQbYbcIyUk/4U7C5ngAl11lXc1/qG0AAAAASUVORK5CYII=")
+  background-color: inherit
+
+@media (min-resolution: 1.3dppx)
+  div.kifi-res-menu-item
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAUCAYAAAC07qxWAAAAkUlEQVR42p3ToQ2AMBCFYQSqWLoAI8BMwBIdoizRGUjAsgCmG+CRGOAhmjQvJy6IH/UlDddrMW/7gp6siEpU5H2fDt2Eewl+BYIHMhJs0EXYMUxNBE9US9Cik7BnmHIEL9RIsEIH4ZAgNxK8USvBEkXCixau2qM7RkbxM+rx6AfuhSu0qqX4vWatsLgDj039FF6MNylcmSFAsgAAAABJRU5ErkJggg==")
+
+.kifi-res-menu-item.kifi-checkable
+  padding-left: 26px
+
+.kifi-res-menu-item.kifi-checked
+  background: 10px center/11px 8px no-repeat
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAICAQAAACFMc0DAAAAaElEQVQIHV3BQQpBARgGwK/oFTmBhV4sHHHKQZxAWVlZvI2SS9gopeQaPwphJvlj7GiRXyZOyj6JXl60zsrBKJbO2jyYuig7wyQ65WJm7qp0Bnky0ClXN2WryZvGVikbTb5prK3083EHo58xH+dpWr8AAAAASUVORK5CYII=")
+
+@media (min-resolution: 1.3dppx)
+  .kifi-res-menu-item.kifi-checked
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAQCAQAAAC45EetAAAAz0lEQVQoz2NgIAKUp5V/LC9lIEppTvm/8v9AWElYaRFU6f/y24SUlkMV/i9/V26CX2k1XOnrckOIEGO5JFalTXClL8t1IUJs5SuArqrFUNoBV/qsXBMmuAoq1IKkkLG8B670SbkaQuI+XLgDrnQSXOxBuRKydepAvTCpXqBCxvLpcP69cnl01ykB9cOkJ5fPgbNvlsti87d8+V24Ehi8hj2MQMplgeYgK71cLo4vAiSBZsGUnisXIRS1YkDzQErPlAsRk75Eyg+U7yznxyUPALfSrtHLaVWkAAAAAElFTkSuQmCC")
+
+.kifi-res-max-results
+  position: relative
+
+.kifi-res-max-results::after
+  content: ' '
+  position: absolute
+  top: 41px
+  left: 0
+  right: 0
+  height: 82px
+  z-index: -1
+  transform: skewX(58deg)
+  -webkit-transform: skewX(58deg)
+  transform-origin: left top
+  -webkit-transform-origin: left top
+
+.kifi-collapsed~.kifi-res-box,
+.kifi-preview~.kifi-res-box>.kifi-filters
+  display: none
+
+.kifi-filters
+  padding: 0 12px
+  color: #929496
+  font-size: 11px
+  line-height: 28px
+  text-align: right
+  border-bottom: 1px solid #f2f3f3
+
+.kifi-filter
+  display: inline-block
+  position: relative
+  -webkit-user-select: none
+  -moz-user-select: none
+  user-select: none
+  cursor: default
+
+.kifi-filter[href]:hover
+  background-position: right bottom 8px
+  cursor: pointer
+
+.kifi-filter-all
+  float: left
+
+.kifi-filter-all[data-top][href]::before
+  content: attr(data-top) ' top keeps'
+
+.kifi-filter-all[data-top='1'][href]::before
+  content: attr(data-top) ' top keep'
+
+.kifi-filter-all[data-top]:not([href])::before
+  content: attr(data-top) ' top keeps'
+
+.kifi-filter-all[data-top='1']:not([href])::before
+  content: attr(data-top) ' top keep'
+
+.kifi-filter-all[data-n]::before
+  content: attr(data-n) ' keeps'
+
+.kifi-filter-all[data-n='1']::before
+  content: attr(data-n) ' keep'
+
+.kifi-filter-yours::after,
+.kifi-filter-friends::after
+  content: attr(data-n)
+  margin-left: 4px
+
+.kifi-filter-sep
+  margin: 0 3px
+
+#kifi-res-list
+  margin-top: 18px !important
+  /* FF */
+
+#kifi-res-list.kifi-res-none
+  margin: 0 !important
+  text-align: center
+  font-size: 12px
+  color: #666
+
+#kifi-res-list.kifi-res-none::before
+  content: ' '
+  display: block
+  height: 20px
+
+#kifi-res-list.kifi-res-none::after
+  content: ' '
+  display: block
+  height: 12px
+
+.kifi-res-more-heading
+  margin: -10px 0 20px
+  padding: 0 12px
+  color: #929496
+  font-size: 11px
+  line-height: 28px
+  border-bottom: 1px solid #f2f3f3
+
+.kifi-res-title:visited
+  color: #2518b5
+
+.kifi-res-score
+  position: absolute
+  top: 6px
+  left: -60px
+  width: 40px
+  text-align: right
+  font-size: 10px
+  line-height: 12px
+  color: #bda874
+
+.kifi-res-sub
+  display: table
+  border-collapse: collapse
+  height: 20px
+
+.kifi-res-sub-1
+  display: table-cell
+  vertical-align: middle
+
+.kifi-res-sub-2
+  display: table-cell
+  vertical-align: middle
+  max-width: 312px
+
+.kifi-res-type-icon
+  height: 15px
+  width: 15px
+  display: inline-block
+  top: 2px
+  position: relative
+  margin-right: 5px
+
+.kifi-res-desc
+  display: block
+  white-space: nowrap
+  overflow-x: hidden
+  text-overflow: ellipsis
+
+.kifi-res-tags
+  white-space: nowrap
+  overflow-x: hidden
+  text-overflow: ellipsis
+  height: 16px
+  line-height: 16px
+  font-size: 12px
+  color: #929496
+  background: 8px top/15px 15px no-repeat
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAYAAAA71pVKAAABDklEQVR4AZWTwUrDQBRFg5/SfFXzTYoLXbhxJbgSF7roTqsgVGPBkCKiEas1KW20FmmREMv1XZhIvKjohUOYzBwyefPGq+cgXl4ymsaeMTbgnhw33bxX4dUGDeOcwi9wvqEyX4x+koSRW/+51VAXHcYr6N5u42bYRjqJ0O6t1udDepQDFUkyPAIzeOpiOk9xcbejawLKLRWPL9dRvr+BCZMt3OdnSJ8jlVuUc5X741NoXmYDlTNPxZOrDSwWJTRRf1flQr8Mbk8znT+qSDL9Z2STGBpWXWV631a797CPopyByV8TlSqC2jlrxdescB10rje/SnLOxP9nh/na2/6fetuJKuutSo3CyNw40Fv1ASZEoLaT6fGlAAAAAElFTkSuQmCC")
+  padding-left: 28px
+
+@media (min-resolution: 1.3dppx)
+  .kifi-res-tags
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAACFUlEQVR42sWXW0sCURDHg6hnP5g958ex94i8EAW9VFBR9FIUVNCNNsEou2mKlZhp7qZL5v2205k4GxXlzNkeHPmz7HFmfsw57JxzBvauxzkaEnIL+YROhPJCDam8HPNJnyFOTsrBJeQVMoSAqRcZ43IK9shqwKEw1qMCHhSaYgNoTWFOCowOa04AhNYwdy9wgEziXMG/wKNOkx5EJ+HsfklokfId/Ql2Celc0GHUB9HMJmQK51CqPYNldQENn9rtdK9YHVlfwV6VCvXXONhmid9rNQvtTh3Q4tkdKt5rg4dVvtPTuwX4asnc/se4Fp+BTrcFxXKKymEgE8FulWrNcvobOJyc+/yvXDega3XgKBag8rgR7OdCL1Kr8NOeihHYv5mA84dlsCwL0G4eN6hcAQQfc8FvtTz8Zl2r/e09Z15RubQB7vpiFVy7fdom1xnBTQqKU1lrmixotVFEfwrcZIET2V3g2nV6HWNYYINqFs12hQUt1XJ2HGuqtV5Od8+HwLXIwwoXrJGfk1FKsKCycXAVIBtIKDELZiVNgsPJeRXwiN0yC5RzLLMl1rr6GxN7Nx8qW6bSJnEUC0LWvLR59o6Es6IC9jreFnHvrdRfkItbo2q1LuIgQDeVSGoFnypgz19Hn2Afjj59OOz14XhLHuh1p0AZ6/nPFWZMqKAALGAMdYVRvbT5hUKympaULsf80meYk/Md6HeeeP8MV9EAAAAASUVORK5CYII=")
+
+.kifi-res-tag
+  color: inherit
+
+.kifi-res-tag:hover,
+.kifi-res-tag:focus
+  color: #555
+
+.kifi-who
+  margin-top: 1px
+  height: 25px
+  background-color: #fafafa
+  border-radius: 20px
+  padding-right: 8px
+  font-size: 0
+
+.kifi-who:before
+  content: " "
+  display: inline-block
+  vertical-align: middle
+  height: inherit
+
+.kifi-face
+  -moz-box-sizing: border-box
+  box-sizing: border-box
+  width: 25px
+  height: 25px
+  margin-left: 1px
+  background-color: #fff
+  vertical-align: middle
+
+.kifi-face.kifi-self
+  margin-left: 0
+  border-radius: 50% 0 0 50%
+
+.kifi-face.kifi-self.kifi-only
+  border-radius: 50%
+
+.kifi-face.kifi-friend
+  display: inline-block
+  background-size: 25px
+  background-repeat: no-repeat
+  position: relative
+
+.kifi-kcard
+  z-index: 999
+
+.kifi-globe
+  margin-left: 6px
+  width: 21px
+  height: 21px
+  vertical-align: middle
+
+.kifi-who-text
+  margin-left: 12px
+  font-size: 12px
+  color: #666
+  vertical-align: middle
+
+.kifi-face.kifi-self.kifi-only+.kifi-who-text
+  margin-left: 10px
+
+.kifi-res-private
+  margin: 0 1px
+  padding: 0 5px
+  border-radius: 4px
+  background-color: #e8e8e8
+  color: #999
+
+a.kifi-res-friends
+  color: inherit !important
+  text-decoration: none !important
+  /* FF */
+  position: relative
+
+.kifi-res-friends-hover
+  position: absolute
+  padding: 4px 8px
+  background-color: #282828
+  color: #fff
+  font-size: 11px
+  cursor: default
+  z-index: 99
+  opacity: 0
+  -webkit-transform: translate(0,3px)
+  transform: translate(0,3px)
+  transition: opacity linear, -webkit-transform ease-in-out
+  transition: opacity linear, transform ease-in-out
+  transition-duration: 120ms
+
+.kifi-res-friends-hover.kifi-showing
+  opacity: 1
+  -webkit-transform: none
+  transform: none
+  transition-duration: 60ms
+
+.kifi-res-friends-hover::after
+  content: ' '
+  position: absolute
+  left: 50%
+  margin-left: -4px
+  bottom: -5px
+  width: 0
+  height: 0
+  border-style: solid
+  border-color: #282828 transparent
+  border-width: 5px 4px 0
+
+.kifi-res-friends-list
+  margin: 0
+
+.kifi-res-friends-name
+  display: block
+  list-style: none
+  padding: 0
+  white-space: nowrap
+
+.kifi-res-end
+  min-height: 9px
+
+.kifi-res-end:empty
+  border-bottom: 1px solid #dedede
+  background: none !important
+
+.kifi-res-more
+  display: table
+
+.kifi-res-more-l,
+.kifi-res-more-r
+  display: table-cell
+  width: 49%
+  background-repeat: no-repeat
+  transition: border-top-width 70ms
+
+.kifi-res-more-l
+  background-position: right top, right 9px top
+
+.kifi-res-more-r
+  background-position: left top, 9px top
+
+.kifi-over>.kifi-res-more-l,
+.kifi-over>.kifi-res-more-r
+  border-top: 3px solid transparent
+
+.kifi-res-more-c
+  display: table-cell
+  background-position: 0 bottom
+  background-repeat: repeat-x
+  padding-bottom: 4px
+  transition: padding-bottom 70ms
+
+.kifi-over>.kifi-res-more-c
+  padding-bottom: 7px
+
+a.kifi-res-more-a
+  display: inline-block
+  margin: 2px 0
+  border: 1px solid #e5e7e8
+  border-radius: 6px
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAGCAQAAABQ+cdNAAAAW0lEQVQIHTXBsQ7BYAAGwO9/my461IJOJhvpWO9nEYNIJBIWi8VtEpt3QdLexdpZk4HK3jaJmbuTqcoOy4xsvHz0Sv50buYZmDjqk2hcXSzUDh7ajKw8vXVKfr7Ccy8ryIFvtAAAAABJRU5ErkJggg==")
+  background-size: 10px 6px
+  background-position: right 11px center
+  background-repeat: no-repeat
+  background-color: #fafafa
+  padding: 1px 28px 0 15px
+  font-size: 12px
+  line-height: 24px
+  white-space: nowrap
+  cursor: pointer
+  -webkit-user-select: none
+  -moz-user-select: none
+  user-select: none
+  text-decoration: none
+  color: #999 !important
+
+a.kifi-res-more-a:hover
+  background-color: #fcfcfc
+  color: #888 !important
+
+a.kifi-res-more-a:active
+  background-color: #f0f0f0
+  color: #888 !important
+
+@media (min-resolution: 1.3dppx)
+  a.kifi-res-more-a
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAMCAQAAADIBVVwAAAA3klEQVQYGXXBQSsDcBwA0N8sy064zJGD2i4O2J2jT8BF+QBy9A3cODlN2mkLt4VSiptSesWZk5PkplHLtr+UtC17L2RVXCrFEAqqanIhr6qjraYYAxTsakoaJuOHOReStrpi/FKwpym5tRS9LLuTdNSVTNnzIXmyKhODZKx5knR8St5sycUwcja9eLdjIvoZVXdjMXrIxh/TTjSMhTH7WrpOLcQA0ypaOo6Mxw+zjnV1nSnHLzMOtCRX5qOXRdeSrnNlMw61JA9W4j9W3EuSL8mzDSMxjBHrHr3alo8+398UpBIo7jwOAAAAAElFTkSuQmCC")
+

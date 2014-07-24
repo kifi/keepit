@@ -1,0 +1,640 @@
+.kifi-keeper.kifi-hiding+.kifi-tile-card
+  z-index: -1
+
+.kifi-keeper:not(.kifi-hiding)+.kifi-tile-card,
+.kifi-keeper~.kifi-count,
+.kifi-keeper+.kifi-tile
+  display: none
+
+.kifi-keeper
+  position: absolute
+  bottom: 6px
+  right: 6px
+  height: 42px
+  width: 136px
+  border: 6px solid transparent
+  margin: -6px
+  font-size: 12px
+  line-height: 14px
+
+.kifi-keeper:hover
+  border-width: 14px 6px 14px 14px
+  margin: -14px -6px -14px -14px
+
+.kifi-tile .kifi-keeper
+  bottom: 0
+  right: 0
+
+.kifi-pane .kifi-keeper:hover
+  border-left-width: 6px
+
+.kifi-keeper.kifi-tiny
+  width: 42px
+
+.kifi-keeper.kifi-auto
+  width: 136px
+  transition: width 200ms ease-out
+
+.kifi-keeper.kifi-wide
+  width: 310px
+  transition: width 100ms ease-out
+
+.kifi-keeper.kifi-growing
+  overflow: hidden
+
+.kifi-keeper.kifi-hiding
+  overflow: hidden
+  width: 0
+  opacity: 0
+  transition: width 100ms ease-in, opacity 60ms ease-in 40ms
+
+.kifi-keeper.kifi-hiding.kifi-auto
+  transition: width 200ms ease-in, opacity 120ms ease-in 80ms
+
+.kifi-keeper-x
+  position: absolute
+  bottom: 0
+  right: 0
+  height: 42px
+  width: 0
+  border-radius: 5px !important
+  background-position: 8px 15px
+  background-size: auto 13px
+  background-repeat: no-repeat
+  overflow: hidden
+  cursor: pointer
+  transition: width .25s ease-in
+
+html[kifi-with-pane] .kifi-keeper-x
+  width: 29px
+
+.kifi-tip
+  position: fixed
+  z-index: 999999999992
+  width: auto
+  height: auto
+  margin-bottom: 14px
+  border-radius: 6px !important
+  padding: 8px 12px 10px
+  background-color: rgba(53,60,67,.9)
+  color: #fff
+  font-size: 12px
+  line-height: normal
+  text-align: left
+  white-space: nowrap
+  cursor: default
+  opacity: 0
+  -webkit-transform: translate(0, 2px)
+  transform: translate(0, 2px)
+  transition: opacity 90ms ease-in-out, -webkit-transform 90ms ease-out
+  transition: opacity 90ms ease-in-out, transform 90ms ease-out
+
+.kifi-tip-below
+  bottom: auto
+  top: 100%
+  margin-bottom: 0
+  margin-top: 20px
+  -webkit-transform: translate(0,-2px)
+  transform: translate(0,-2px)
+
+.kifi-tip::before,
+.kifi-tip-tri
+  content: " "
+  position: absolute
+  top: 100%
+  left: 50%
+  margin-left: -8px
+  font-size: 0
+  line-height: 0
+  border-style: solid
+  border-width: 8px 8px 0
+  border-color: rgba(53,60,67,.9) transparent
+
+.kifi-tip-below::before
+  top: auto
+  bottom: 100%
+  border-width: 0 8px 8px
+
+.kifi-tip.kifi-showing
+  visibility: visible
+  opacity: 1
+  -webkit-transform: none
+  transform: none
+  transition: opacity ease-in, -webkit-transform ease-out
+  transition: opacity ease-in, transform ease-out
+  transition-duration: 50ms
+
+.kifi-keeper-x-tip::before
+  left: auto
+  right: 10px
+
+.kifi-keep-card
+  position: absolute
+  bottom: 0
+  right: 0
+  width: 178px
+  height: 42px
+  border-radius: 5px !important
+  -webkit-perspective: 200px
+  perspective: 200px
+
+html[kifi-pane-parent] .kifi-keep-card
+  left: 132px
+  right: auto
+
+html[kifi-with-pane] .kifi-keep-card
+  width: 146px
+
+.kifi-keep-card,
+.kifi-dock
+  /* width for .kifi-keep-card only */
+  transition: width .25s ease-in, -webkit-transform 50ms ease-in, box-shadow 50ms ease-in
+  transition: width .25s ease-in, transform 50ms ease-in, box-shadow 50ms ease-in
+
+.kifi-tile.ui-draggable .kifi-keep-card,
+.kifi-tile.ui-draggable .kifi-dock
+  box-shadow: 0 8px 7px -4px rgba(0,0,0,.7)
+  -webkit-transform: translate(0,-4px)
+  transform: translate(0,-4px)
+
+.kifi-keep-side,
+.kifi-kept-side
+  position: absolute
+  top: 0
+  right: 0
+  width: 100%
+  height: 100%
+  border-radius: inherit !important
+  -webkit-backface-visibility: hidden
+  backface-visibility: hidden
+  transition: -webkit-transform .25s ease-in-out, z-index .25s linear
+  transition: transform .25s ease-in-out, z-index .25s linear
+
+.kifi-keep-card.kifi-private .kifi-keep-side,
+.kifi-keep-card.kifi-public .kifi-keep-side
+  -webkit-transform: rotateX(-180deg)
+  transform: rotateX(-180deg)
+
+.kifi-keep-card.kifi-unkept .kifi-kept-side
+  -webkit-transform: rotateX(180deg)
+  transform: rotateX(180deg)
+
+.kifi-keep-card.kifi-private .kifi-kept-side,
+.kifi-keep-card.kifi-public .kifi-kept-side,
+.kifi-keep-card.kifi-unkept .kifi-keep-side
+  z-index: 100
+
+.kifi-keep-btn,
+.kifi-kept-btn
+  position: absolute
+  top: 0
+  right: 0
+  width: 100%
+  height: 100%
+  border-radius: inherit !important
+  line-height: 42px
+  color: #fff
+  text-align: center
+  cursor: pointer
+
+.kifi-keep-btn,
+.kifi-keep-btn.kifi-hoverless:hover,
+.kifi-keep-btn.kifi-hoverless:active
+  background: #22303f
+
+.kifi-keep-btn:hover
+  background: #263647
+
+.kifi-keep-btn:active
+  background: #1f2b39
+
+.kifi-keep-btn::before
+  content: "keep it"
+
+.kifi-kept-btn,
+.kifi-kept-btn.kifi-hoverless:hover,
+.kifi-kept-btn.kifi-hoverless:active
+  background: #2980b9
+
+.kifi-kept-btn:hover
+  background: #2c88c4
+
+.kifi-kept-btn:active
+  background: #2676ab
+
+.kifi-kept-btn::before,
+.kifi-kept-btn.kifi-hoverless:hover::before
+  content: "kept"
+
+.kifi-private .kifi-kept-btn::before,
+.kifi-private .kifi-kept-btn.kifi-hoverless:hover::before
+  display: block
+  line-height: 32px
+
+.kifi-private .kifi-kept-btn::after,
+.kifi-private .kifi-kept-btn.kifi-hoverless:hover::after
+  content: "(private)"
+  display: block
+  margin-top: -5px
+  font-size: 9px
+  line-height: 0
+
+.kifi-kept-btn:hover::before
+  content: "unkeep"
+  line-height: 42px
+
+.kifi-private .kifi-kept-btn:hover::after
+  content: ""
+
+.kifi-keep-lock,
+.kifi-kept-lock,
+.kifi-keep-tag,
+.kifi-kept-tag
+  position: absolute
+  background-color: #465f78
+  cursor: pointer
+
+.kifi-keep-lock,
+.kifi-kept-lock
+  top: 0
+  left: 0
+  width: 28px
+  height: 28px
+  border-top-left-radius: inherit !important
+  border-bottom-right-radius: 24px !important
+
+.kifi-keep-lock:hover,
+.kifi-kept-lock:hover,
+.kifi-keep-tag:hover,
+.kifi-kept-tag:hover
+  background-color: #7897b5
+
+.kifi-keep-lock:active,
+.kifi-kept-lock:active,
+.kifi-keep-tag:active,
+.kifi-kept-tag:active
+  background-color: #6e8aa6
+
+.kifi-private .kifi-kept-lock
+  background-color: #e78881
+
+.kifi-private .kifi-kept-lock:hover
+  background-color: #e7958f
+
+.kifi-private .kifi-kept-lock:active
+  background-color: #e77e76
+
+.kifi-tagged .kifi-kept-tag
+  background-color: #8edf58
+
+.kifi-tagged .kifi-kept-tag:hover
+  background-color: #a3e278
+
+.kifi-tagged .kifi-kept-tag:active
+  background-color: #76dc32
+
+.kifi-keep-lock::before,
+.kifi-kept-lock::before,
+.kifi-keep-tag::before,
+.kifi-kept-tag::before
+  content: " "
+  position: absolute
+  background-repeat: no-repeat
+  font-size: 0
+  opacity: .4
+
+.kifi-keep-lock::before,
+.kifi-kept-lock::before
+  top: 6px
+  left: 9px
+  width: 7px
+  height: 9px
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAASCAQAAADBVSe6AAAAhklEQVQoz9XOoQ5BARTH4ZNUxaZ5JXdTjKZx38EDCIpg3kXQRVNsgsi12e5M9CnXdW3ofid+/3AiinStXOWW2vGehWqTKg1AZmbuAjov3OGgGRGh5YT1kxpgXE6nuKtFsYV+iSNQr2KvxGGJEltwtC8uAxtJFN996hx+9G94+2p5SOWfSfoAsjiOPBfa3D8AAAAASUVORK5CYII=")
+  background-size: auto 9px
+
+.kifi-keep-lock:hover::before,
+.kifi-kept-lock:hover::before,
+.kifi-private .kifi-kept-lock::before,
+.kifi-keep-tag:hover::before,
+.kifi-kept-tag:hover::before,
+.kifi-tagged .kifi-kept-tag::before
+  opacity: 1
+
+.kifi-keep-tag,
+.kifi-kept-tag
+  top: 0
+  right: 0
+  width: 28px
+  height: 28px
+  border-top-right-radius: inherit !important
+  border-bottom-left-radius: 24px !important
+
+.kifi-keep-tag::before,
+.kifi-kept-tag::before
+  top: 7px
+  right: 7px
+  width: 10px
+  height: 10px
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAQAAAAngNWGAAAApElEQVR4AY3PwQnCQBCF4bdTiIfFkzZiISnFTsQ6vAtCDqYAVxDBCkT0eTCPxSeG/XPK8DHDwmPmgd6T20R8lbHDDL+9ookBEX/ZA3ucUaO+zBNrhXOCwbUGzlQ3zkPzsKPqpkfgik+2TW3GjQveddpZpSt2vOg38YglGgoktNSDmYWeV5jBSSpGgJNUTNCpM0GnzgSdOnNoVMygUWMGRQcOzog3KSW3ax2koYIAAAAASUVORK5CYII=")
+  background-size: auto 10px
+
+.kifi-tag-tip::before
+  left: auto
+  right: 7px
+
+.kifi-keepers-box
+  position: fixed
+  z-index: 999999999991
+  right: 16px
+  bottom: 78px
+  height: 122px
+  border: 2px solid #b8c5d2
+  border-radius: 5px !important
+  box-shadow: rgba(0,40,90,.2) 5px 4px 0 2px
+  white-space: nowrap
+  background: #fff right 12px top 12px/24px 14px no-repeat
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAOCAYAAAA1+Nx+AAABI0lEQVR4Aa3TMSiEYRjA8Wf6FumwcJ0u3SCD0zfoBt0mAzarTdksVgO7kaKbZHUlNhslGSxIUiiM+ny4CcM9/sNz9fXkvu46w++d3rd/T2+PHJ1d/0BNCdKmfqzhBI/IQBqEQxPKkCaGsIIQYqYQQRPymMEGRl0gdYJLKGIEKOATaqqYQxbfUNz4QDElcAXFOwJsQc0+xPSgBsV5O4ECVjEOwQPULKAX3RCEWEb2r0AO94jNHQaxi0VUkMMH1HlCCdtYwqEPhDiGmjqmkfEf2STwjDK0wQeq0IR1SAuBU+xhMzXgXCBoMTALMRPpAf+o/UDRB76gHm7R1XHAXaxAE3b+OzCGA2jCfKeBVyjqGEYfXqCmhjwixHjDgNuVSYgZQWyiXxD9z6vZdAj5AAAAAElFTkSuQmCC")
+  padding: 0 196px 0 0
+  margin: 0
+
+@media (min-resolution: 1.3dppx)
+  .kifi-keepers-box
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAcCAYAAAAnbDzKAAACGklEQVR4AdXTO2hTURzH8V+sBhuwIr5iwWcDDhIHLRTldhMs1NVBEXSQDg6CUEFwUkRQEIx27KqI4iTFQhGVqKAtCBmigw9EISA1KsVXbfv3O4bDvYcQb9Kb4fPbLofv4R6NPy1NwxzzCKAW24ETGMUYnmAtFEWMRRiEWmAJjqAEC5FfrIAU0pDHRhRhHjshCMuxF7lmBnTgHGYwh7tYBzly+AiDTwChH59gMNxGRszfmAPOwhxFqEYnXsMi/MYECliFFajAHJfEfIs54BUsxGYIwnlYhBGsgWoMwEKUYw/w3OxWCF34CgtxAQoRwEJMNiPgDMzxEIJwFBbiHZZ53tVzmON4MwI6cBW/sIAJdEMQbsJCXIQ8NuAOfuA9hiBfwH7oP6SRgRwvYSGGsa3GLmQhH19AAEFIoYApjz5kcQqdEISlOIkeCB9gdXoEIcAx5xfLYqTegGGYxw0Im2CYwWM8wGcY8g0EFCEMwvAFz1DCHKyegD2YhUV4gy4nwBFbgMsfgNXwHfgHvVASA/oxBvM4DSU14B7M4z5SMQYUcNDR23iAXwXroRgDDkOuZgTMYx/UrgGXoXYOuNXeAcBQAwF9SQr4iTzk6IZFCFodcA3mUUYGqrEySQEBrsM8RpMekMYLmMehJAcIW1CFRfiOnuQGAAewAIswifRiBUzBHLPIQTWuoOoxgAwqqDqmsR3CuOd7RdiNtyHK/wBxDTYwcBDc4gAAAABJRU5ErkJggg==")
+
+.kifi-keepers-box.kifi-above-count
+  bottom: 86px
+
+.kifi-keepers-box.kifi-keepers-hover
+  bottom: 70px
+  right: 6px
+
+.kifi-keepers-box.kifi-with-others
+  padding-right: 256px
+  /* +60 */
+
+.kifi-keepers-box.kifi-tip::before
+  content: none
+
+.kifi-keepers-box.kifi-keepers-hover::before
+  content: ' '
+  position: absolute
+  left: 0
+  top: 100%
+  width: 100%
+  height: 24px
+  -webkit-transform: none
+  transform: none
+  border: none
+  margin: 0
+
+.kifi-keepers-promo
+  -webkit-transform: translate(0,20px)
+  transform: translate(0,20px)
+
+.kifi-tip.kifi-keepers-promo
+  transition-duration: .5s
+
+.kifi-keepers-pics
+  margin: 17px 0 17px 17px
+  height: 88px
+  position: relative
+
+.kifi-keepers-pics-1,
+.kifi-keepers-pics-4
+  width: 88px
+
+.kifi-keepers-pics-3,
+.kifi-keepers-pics-6
+  width: 133px
+
+.kifi-keepers-pics-2,
+.kifi-keepers-pics-8
+  width: 178px
+
+.kifi-keepers-pic,
+.kifi-keepers-more
+  position: absolute
+  width: 43px
+  height: 43px
+  background-size: cover
+
+.kifi-keepers-pics-1>.kifi-keepers-pic,
+.kifi-keepers-pics-2>.kifi-keepers-pic,
+.kifi-keepers-pics-3>:last-child
+  width: 88px
+  height: 88px
+
+.kifi-keepers-pics-4>:nth-child(2n+2),
+.kifi-keepers-pics-6>:nth-child(3n+2),
+.kifi-keepers-pics-8>:nth-child(4n+2)
+  left: 45px
+
+.kifi-keepers-pics-6>:nth-child(3n+3),
+.kifi-keepers-pics-8>:nth-child(4n+3)
+  left: 90px
+
+.kifi-keepers-pics-2>:last-child,
+.kifi-keepers-pics-3>:last-child,
+.kifi-keepers-pics-8>:nth-child(4n+4)
+  right: 0
+
+.kifi-keepers-pics-3>:nth-child(2),
+.kifi-keepers-pics-4>:nth-child(n+3),
+.kifi-keepers-pics-6>:nth-child(n+4),
+.kifi-keepers-pics-8>:nth-child(n+5)
+  bottom: 0
+
+.kifi-keepers-more
+  background-color: #b8c5d2
+  text-align: center
+  line-height: 43px
+  color: #fff
+  font-weight: bold
+  -webkit-font-smoothing: bold
+
+.kifi-keepers-who
+  position: absolute
+  top: 40px
+  right: 6px
+  width: 190px
+  text-align: center
+  font-size: 13px
+  line-height: 16px
+  color: #444
+  -webkit-font-smoothing: antialiased
+
+.kifi-with-others .kifi-keepers-who
+  width: 250px
+  /* +60 */
+
+.kifi-keepers-kept-by
+  font-size: 18px
+  line-height: 24px
+  margin-bottom: 3px
+  -webkit-font-smoothing: inherit
+
+.kifi-keepers-you
+  -webkit-font-smoothing: inherit
+
+.kifi-keepers-you::before
+  content: 'You'
+  color: #a0bf67
+  font-weight: bold
+
+.kifi-keepers-you::after
+  content: ' and'
+
+.kifi-with-others .kifi-keepers-you::after
+  content: ','
+  color: #a0bf67
+  font-weight: bold
+
+.kifi-keepers-friends
+  color: #85a4ea
+  font-weight: bold
+  -webkit-font-smoothing: inherit
+
+.kifi-keepers-others
+  -webkit-font-smoothing: inherit
+
+.kifi-keepers-friends::after,
+.kifi-keepers-others::after
+  content: 's'
+
+.kifi-keepers-friends[data-n='1']::after,
+.kifi-keepers-others[data-n='1']::after
+  content: ''
+
+.kifi-keepers-box::after,
+.kifi-keepers-tri-shadow::after
+  content: ' '
+  position: absolute
+  -webkit-transform-origin: left bottom
+  transform-origin: left bottom
+  -webkit-transform: skewX(35deg) scale(.8,1.6) rotate(45deg)
+  transform: skewX(35deg) scale(.8,1.6) rotate(45deg)
+
+.kifi-keepers-box::after
+  height: 16px
+  width: 16px
+  bottom: 0
+  right: 20px
+  border: inherit
+  border-top-color: transparent
+  border-left-color: transparent
+  background-color: inherit
+
+.kifi-keepers-box.kifi-keepers-hover::after
+  right: 90px
+  /* +70 */
+
+.kifi-keepers-tri-shadow::after
+  top: -20px
+  left: 5px
+  height: 20px
+  width: 20px
+  background-color: rgba(0,40,90,.2)
+  border-bottom-right-radius: 6px !important
+
+.kifi-keepers-tri-shadow
+  position: absolute
+  bottom: -28px
+  right: 2px
+  height: 20px
+  width: 36px
+  overflow: hidden
+
+.kifi-keepers-hover>.kifi-keepers-tri-shadow
+  right: 72px
+  /* +70 */
+
+.kifi-dock
+  position: absolute
+  bottom: 0
+  right: 181px
+  width: 129px
+  height: 42px
+  background: #67829c
+  border-radius: 5px !important
+  font-size: 0
+  line-height: 0
+  text-align: right
+  /* keeps contents still during transition */
+
+.kifi-keeper.kifi-auto .kifi-dock
+  display: none
+
+.kifi-dock-btn
+  display: inline-block !important
+  height: 42px
+  width: 64px
+  background-repeat: no-repeat
+  text-align: center
+  vertical-align: top
+  cursor: pointer
+  position: relative
+
+.kifi-dock-messages
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAWCAQAAAB5nzR5AAAAq0lEQVR4AeXOPw6CMBTH8ccRCAmYeiMOoKPxHByAVep1CAteQydjBxZdGL5LHYx/mhLTOrjwvuv7JD9xjx7LdD3ymeD0BR58GJ8P/zZVcWOLBLThyuING3Tw1D27J1QMFMFTCwbUA2pqJKKaBhGWGNIomGJQgqZCIqvQwoh1asm9x5wW6zQK1qsjcVhC539NQcvKgWtsKDySvVjGKRD6zRdefoJGKDHR7Ex5B8Nlwkq31w0LAAAAAElFTkSuQmCC")
+  background-size: auto 22px
+  background-position: 18px 10px
+
+.kifi-dock-compose
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAWCAQAAAB9auREAAAA+ElEQVR4Aa3RMU7CYBiH8SYsbDB4AJKWcBs3L+AhSDhAL8Ai3kCG7hDZtJuDTg4ewWJDGIhPbV4bTb7wH3w/SOzTLm/zS9P3S34vUnJK3mm7pyQnI4nX3fSZ02BSw5x+HPfYBKLd04vhqRJpGsNvDn6N4dbBh//58piCXVfB+Nx/nlCHWc3klG1vwrYLmRexc27lnHfybn+Ef8rIKakwag4Ya1mNaYKlnE+MLy6PZnuhH4q1C66544mrMFkKXiqOlVIFWpHGsZYFnJGcg0fMWAW8YsboNDxgQYOhNdwyiOEhz9gfvTD08Q3mtPDx1sVbH5ufjx9c/PgNa9uh0qkw5XQAAAAASUVORK5CYII=")
+  background-size: auto 22px
+  background-position: 16px 10px
+
+@media (min-resolution: 1.3dppx)
+  .kifi-dock-messages
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAAsCAQAAACayLMYAAABYUlEQVR4Ae3UsUrDUBSH8dOQuHTyKdoX6CB2VKSddLZCpVTtQ4hPlCcQJQ5CwEFBnDR1kdatWAfpV+E4lEDFJm3k3kAh99vz4w+HSNqjwQDN2IAGkpyQUmYuJnMGh/8Hmwwzc28000ELrRFYXOm6XalLiHKLGCxECXEXg20UJTAK3qAo7UWgS4RyavxKeyjPuH/BDsoLnvEr9YjmN/7e17JypUcoUbxxft8jjpUrdXhCOZ4HPfoo+4ilDuKNMdhFCSlZA0vcoXRicLZvF7HYHkofD4n3XSOWC2YbhQ1eUbasg9uzjcIJyiWbCTlIxpzEb12hdIU+mtKUgPrKWJ2AKZpSJOjSphyuxLX4Rpe1CqhMqC3lakxQU6Byj5vKuTygJkHlLBXsoabBAeVErsy7eVA5TwQvUBvgFzsJv61JdtBmBViABViAH7mCn4KfK+gLVUa5cSOqglDBZ2wdG+NTQX4Afb8ZYDYTlbEAAAAASUVORK5CYII=")
+
+  .kifi-dock-compose
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAAsCAQAAACTIxNiAAAB8klEQVR4AdXWP2tTURiA8UvRK3bJJFk6dRDJpWMFyeJYCo4O7UdwaXCqOGgLjm0gVCp+A/+ga0HBtUKhWWpiyRaxWZTS6q15yM1rp8CR+3J6zzlXaJ4pcMKPXM4974n+/TDFbRq85oAfZPymT5t3POYOU0ThMr9WWaWHKPVYpRoejnnCKWLplKfEIeFZ9pELts9sKLjGACnQgCQEXKWPFKxP1R9+izj0xheeRxyb94O3neFtP7jrDHf94NQZPruUcPhHXWOTDn/O+8Imtf+zuWK2yIw1GS+4XvbrFPMByekjcbkHyHNEaavMIzNhhCiNSPKHRBJgSDQRPZr6WGxfmG3njsUOokcH/SLAGr+saMqachEYInoMbVefR/QQPe4SKYklBZ5kXPbG5/3kBJn0LDys9cr4+Qk3lXWp5XgtDMc8NPb8ATeICm+urgVWusZ93k/uoF+5lbOmhejRssN6V6jzgJd84jP3iMyYI1PZjDkd9q9l+b+lwTE7ueyONiTCdZUNxIwNk/WHlZT3t1R4hqWcUdFkiZmy4AoNdhkjSmN2aVAJC0+zzjFij2PWmQ4F1zlECnRIPQS8zBAp2JBlX3iBEeLQiAUfuMIAcWxAxR1eQTxacYf3vOA9dzj1gs/cYfHrEsLfveAjd3iRI2f2G4t/AY8njXQqewGyAAAAAElFTkSuQmCC")
+
+.kifi-keeper-x,
+.kifi-dock-btn
+  background-color: #67829c
+
+.kifi-keeper-x:hover,
+.kifi-dock-btn:hover
+  background-color: #7492af
+
+.kifi-keeper-x:active,
+.kifi-dock-btn:active,
+.kifi-dock-btn.kifi-at
+  background-color: #5e778f
+
+.kifi-dock-btn:first-child
+  border-top-left-radius: inherit !important
+  border-bottom-left-radius: inherit !important
+
+.kifi-dock-btn:last-child
+  border-top-right-radius: inherit !important
+  border-bottom-right-radius: inherit !important
+
+.kifi-keeper.kifi-growing .kifi-count,
+.kifi-keeper.kifi-hiding .kifi-count
+  display: none
+
+.kifi-dock-sep
+  display: inline-block !important
+  width: 1px
+  height: 34px
+  margin-top: 4px
+  background: #506982
+
+.kifi-titled-tip
+  margin-top: 4px
+  border-top: 1px solid #fff
+  padding-top: 6px
+
+.kifi-drag-glass
+  position: fixed
+  top: 0
+  bottom: 0
+  left: 0
+  right: 0
+  z-index: 999999999993
+  background: transparent
+  cursor: move
+

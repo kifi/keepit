@@ -1,0 +1,204 @@
+.kifi-knp-box
+  position: fixed
+  right: 0
+  bottom: 56px
+  width: 450px
+  border: 1px solid #dbe1e7
+  border-radius: 5px !important
+  background: #fff
+  text-align: center
+  color: #000
+  opacity: 0
+  -webkit-transform-origin: 80% bottom
+  transform-origin: 80% bottom
+  -webkit-transform: scale(.3,.3)
+  transform: scale(.3,.3)
+  transition: opacity .2s linear, -webkit-transform .2s ease-in
+  transition: opacity .2s linear, transform .2s ease-in
+
+.kifi-knp-box.kifi-showing
+  opacity: 1
+  -webkit-transform: none
+  transform: none
+  transition-timing-function: linear, ease-out
+
+html[kifi-with-pane] .kifi-knp-box
+  bottom: 66px
+  right: 6px
+
+.kifi-knp-box::before
+  content: attr(data-title)
+  display: block
+  line-height: 40px
+  background: #eff2f7 14px 10px/32px 18px no-repeat
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAASCAYAAAA6yNxSAAABaElEQVR4AcXRzyvDcRjA8Y/MSraWojhIRLkojTjYgVzc1kRsf8Ic5IADRwd37SQpxY2zHLSSg5tJoV02SXOZHZZf2b7ehx2enr5jttkOr8vz/fQ87zWzHQ0+IS0MwVRq6fClEVPYQAQDMJrhsaX4qnA8hAdYQqCaARNI4Bmz6vg6LBsL6EMMWaxWEhAT79Pi+CRy4ug7NjEGJw7Etzy6yg24KhJwBksIwgh7KqCj3IBx3CIJf+F4q/r1j2hQAb24QArLv/0FbsxgTgigCW0ixgU3y0ZhCQmsFazAgU4R40D7TwHHsJQteJDBEfaRwiDLfCpA8yCOE+wijlCxgLDN/BJOeNQcJQck1cw2IIw3NcugB6bMgBxcpQZkbWbzMH8MOIdRSgrQdmDqGTBc74BrNNcy4MZmFqllwDTubeaBWgX44MWHmqfR/R8Br2JRHl4YLOJLHYqiBZ9ilkM/y0aQF8tPYZQ7FeD/BocBYQajRrlUAAAAAElFTkSuQmCC")
+  font-size: 15px
+  color: #444
+  text-align: center
+
+@media (min-resolution: 1.3dppx)
+  .kifi-knp-box::before
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAkCAYAAAA5DDySAAACiklEQVR4AeXYz0tUXRzH8a+aWm6kTaYZ5lMimhKWRoabxJWziTLCQgj6A9pE0L4IolVJBAZFgWEZRUXRrh+gtchF0A8LFzY8JIyOlpmSNt/ei1nIgXPv4TLdme4sXtvhfN4MzDkjl571NuEzJizGUQfJVScGZwtRhZ3Yi0KIC+EDYlAfHTk4ugVn8Qo/oat0RTIABy7AAYxBPcQiFyD9FX8CBf7dAC14hHkkcAObfcY3IQ511ANJ24ZhzOEb7qMhWwHasAA1xFFlGV8N9/HAIQi2Igk1zKExGwFGoBZXYI4vwgjUxxKGcBLdKIbgDtTicdgBypCCWnyCGeA41MdtbICYkIRaLIYdYJ1LAOO3/SPUwwDEwzTUYiHcAMALqEW/EaAb6mESpRAPt6AWD7MRoBXzUMMkNhoBLkM9nIL4qMUU1DCD+vADAE24iynEMWCOTwd4B/XQBnFQg+uI43/cRG1OX4Q42Br8gnqogASViQA9+IAJH+OoxA5s8bkjVKUDlEMDGoTgPzRDLBrQGDTAdixAHZyG4AiWcA2HsRvtOIYH+I3mDAR4CUEHVjCMPrRjD45iCMuIBQlQhvdQB09RsCqA+sh0APURKMBVqIOvqIBEKUAv1MEKOiFRClCH71AHZyBRCtCJN1AHz1GUxQD3/kaAUaiDBKohIQSowXqYCjMfwE0KMUhIAcohHkIPcAGSrwFeoySfA9RD8jnAxXwPkML+/A0AJFET1QAzUAejKI5igD7MQh2cj2KADhyEOkihO4oBBP1QBwlsimKAUowFeBRFJAACPIujFSDAHyNduR6gFUtQi0U0QgznsAj18QVF2IdlqMUPVKYDrEUCSYu3KIF4aMA0khYz2PUHRfSJE2tmghEAAAAASUVORK5CYII=")
+
+.kifi-knp-body
+  margin: 18px 0
+  font-size: 15px
+  line-height: 24px
+  color: #444
+  -webkit-font-smoothing: antialiased
+
+.kifi-knp-input
+  display: block
+  margin: 0 auto 20px
+  border: 1px solid #dae1e8
+  border-radius: 3px !important
+  padding: 6px 8px
+  width: 350px
+  text-align: left
+  font-size: 15px
+  line-height: 18px
+  color: #5e6674
+  -webkit-font-smoothing: antialiased
+
+.kifi-knp-save
+  float: right
+  margin: 0 40px 20px 0
+  background-color: #6fa6ef
+  border-radius: 3px !important
+  padding: 8px 24px
+  font-size: 14px
+  line-height: 18px
+  color: #fff !important
+  -webkit-font-smoothing: antialiased
+  position: relative
+  overflow: hidden
+
+.kifi-knp-save[href]:hover
+  background-color: #7faeef
+
+.kifi-knp-save[href]:active
+  background-color: #5f9cef
+
+.kifi-knp-save[href]:focus
+  outline: 1px dotted #ccc !important
+
+.kifi-knp-save::after
+  content: ' '
+  position: absolute
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  background: center/17px 12px no-repeat
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAAMCAQAAAAuLJ40AAAAn0lEQVR4AXXPoUrAUBTH4f8QDAOLyTQsa9qW7QOLD+AL2Cx7FIMvYLDbjQYFbba1lRWDoCD7DIaLup1fuvBxOLfK5qhzk8P0sdWee/C8BfY9AC7XwYEXsLiQqAxORanxCr6ci8R1eYhojeDTmYjEY1kpjk3gXS8/lcMWg84M3pxIIeV7fIBZJ79J1O4ATI7kP4ldt2DUyjqJHVeeNPK3b1+v+OxMUYcDAAAAAElFTkSuQmCC")
+  opacity: 0
+  -webkit-transform: translate(-60px)
+  transform: translate(-60px)
+
+@media (min-resolution: 1.3dppx)
+  .kifi-knp-save::after
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACIAAAAYCAQAAAA1r+eCAAABOElEQVR4AZ3TsSuEcRzH8c9zT10XRaEkXaRu9TfYLCaDRcliMMgkmZRBWDC44VK6JOqmG265waJMWJRSlEvJajCc8DZd9/t2j1/3e96f/bV9lDZmeOeWcYREus3SBKBBIS0yxxet3shHKLh5lRWr3YoI3SLfuL0yGkos8YPbCxMojFjmF7dnxlAYsoolHskjFxmkgJ9Yw/bACHKRKT6AXQ+xge2eYeQi03wCAIdEicQmtjuGkItM0qRdMYHZxnbDALLIArYSltnDdk0/wiLkqGM7IUYIEXGA7Yo+1ImIHDVsp8SIiCK2S3pRMiKyVLFdkKWErU4PSkZaTAVbA1uNHPIjIuaM/6uSRR7EYcokV/ERFhEZSnR2Toy6R0TEEbayjzCIYfZpd0wGhSNC7JgTpETEOk9sdUegP6qW24x4MBuuAAAAAElFTkSuQmCC")
+
+.kifi-knp-save.kifi-done::after
+  opacity: 1
+  -webkit-transform: none
+  transform: none
+  transition: opacity .16s linear, -webkit-transform .16s ease-in-out
+  transition: opacity .16s linear, transform .16s ease-in-out
+
+.kifi-knp-save-progress
+  position: absolute
+  left: 0
+  top: 0
+  bottom: 0
+  width: 0
+  background: #93C059
+
+.kifi-done>.kifi-knp-save-progress
+  width: 100% !important
+  transition: width .16s ease-in-out
+
+.kifi-fail>.kifi-knp-save-progress
+  background: #b00
+  width: 0 !important
+  transition: width .24s ease-in-out
+
+.kifi-knp-save-text
+  display: inline-block
+  position: relative
+
+.kifi-done>.kifi-knp-save-text
+  opacity: 0
+  -webkit-transform: translate(60px)
+  transform: translate(60px)
+  transition: opacity .16s linear, -webkit-transform .16s ease-in-out
+  transition: opacity .16s linear, transform .16s ease-in-out
+
+.kifi-knp-cancel
+  float: left
+  margin: 8px 0 0 40px
+  font-size: 14px
+  line-height: 18px
+  color: #6fa6ef !important
+  -webkit-font-smoothing: antialiased
+  text-decoration: underline
+
+.kifi-knp-box::after
+  content: ' '
+  position: absolute
+  bottom: 0
+  right: 80px
+  height: 18px
+  width: 18px
+  background: inherit
+  border: inherit
+  border-top-color: transparent
+  border-left-color: transparent
+  -webkit-transform: scale(.8,1) rotate(45deg)
+  transform: scale(.8,1) rotate(45deg)
+  -webkit-transform-origin: left bottom
+  transform-origin: left bottom
+
+html[kifi-with-pane] .kifi-knp-box::after
+  right: 96px
+
+.kifi-knp-x
+  position: absolute
+  top: 8px
+  right: 8px
+  height: 24px
+  width: 24px
+  border-radius: 50% !important
+
+.kifi-knp-x:before,
+.kifi-knp-x:after
+  content: ' '
+  position: absolute
+  top: 4px
+  bottom: 4px
+  left: 50%
+  width: 1px
+  background: #b1b8c1
+  font-size: 0
+
+.kifi-knp-x:before
+  -webkit-transform: translate(-.5px) rotate(45deg)
+  transform: translate(-.5px) rotate(45deg)
+
+.kifi-knp-x:after
+  -webkit-transform: translate(-.5px) rotate(-45deg)
+  transform: translate(-.5px) rotate(-45deg)
+
+.kifi-knp-x:hover:before,
+.kifi-knp-x:hover:after,
+.kifi-knp-x:focus:before,
+.kifi-knp-x:focus:after
+  background: #8e939a
+
+.kifi-knp-x:active:before,
+.kifi-knp-x:active:after
+  background: #fff
+
+.kifi-knp-x:active
+  background: #d0d4da
+
