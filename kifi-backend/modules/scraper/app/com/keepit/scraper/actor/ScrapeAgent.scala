@@ -9,6 +9,7 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.scraper.ScrapeWorker
+import com.keepit.scraper.actor.InternalMessages.JobAborted
 
 import scala.concurrent.duration._
 
@@ -36,8 +37,11 @@ class ScrapeAgent @Inject() (
       log.info(s"[ScrapeAgent($name).idle] <ScrapeJob> got assigned $job")
       context.become(busy(job))
       SafeFuture {
-        JobDone(job, worker.safeProcessURI(job.s.uri, job.s.info, job.s.pageInfo, job.s.proxyOpt)) // blocking call (for now)
-      }.pipeTo(self)
+        JobDone(self, job, worker.safeProcessURI(job.s.uri, job.s.info, job.s.pageInfo, job.s.proxyOpt)) // blocking call (for now)
+      } map { done =>
+        parent ! done
+        self ! done
+      }
     case m =>
       log.info(s"[ScrapeAgent($name).idle] ignore event $m")
   }
@@ -58,4 +62,16 @@ class ScrapeAgent @Inject() (
 
   def receive = idle
 
+  override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
+    log.error(s"[ScrapeAgent($name).preRestart] reason=$reason message=$message")
+    message foreach { m =>
+      m match {
+        case job: ScrapeJob =>
+          log.warn(s"[ScrapeAgent($name).preRestart] died while processing job $job; notify parent")
+          parent ! JobAborted(self, job)
+        case _ =>
+      }
+    }
+    super.preRestart(reason, message)
+  }
 }

@@ -29,9 +29,10 @@ object InternalMessages {
   case class WorkerCreated(worker: ActorRef)
   case class WorkerAvail(worker: ActorRef)
   case class WorkerBusy(worker: ActorRef, job: ScrapeJob)
+  case class JobAborted(worker: ActorRef, job: ScrapeJob)
 
-  // worker => worker (self)
-  case class JobDone(job: ScrapeJob, res: Option[Article]) {
+  // worker => worker, master
+  case class JobDone(worker: ActorRef, job: ScrapeJob, res: Option[Article]) {
     override def toString = s"JobDone(request=$job,result=${res.map(_.title)})"
   }
 }
@@ -68,8 +69,17 @@ class ScrapeAgentSupervisor @Inject() (
 
   log.info(s"[Supervisor.<ctr>] children(sz=${context.children.size}):${context.children.map(_.path.name).mkString(",")}")
 
-  val scrapeJobs = Map[ActorRef, Scrape]()
+  val workerJobs = new collection.mutable.HashMap[ActorRef, ScrapeJob]()
   val scrapeQ = new collection.mutable.Queue[ScrapeJob]()
+
+  private[this] def diagnostic(): Unit = {
+    workerJobs.toSeq.foreach {
+      case (worker, job) => log.info(s"[Supervisor.diagnostic] $worker is assigned: $job")
+    }
+    scrapeQ.toSeq.zipWithIndex.foreach {
+      case (job, i) => log.info(s"[Supervisor.diagnostic] scrapeQ[$i]=$job")
+    }
+  }
 
   def receive = {
     // internal
@@ -78,13 +88,25 @@ class ScrapeAgentSupervisor @Inject() (
     case WorkerAvail(worker) =>
       log.info(s"[Supervisor] <WorkerAvail> $worker; scrapeQ(sz=${scrapeQ.size}):${scrapeQ.mkString(",")}")
       if (!scrapeQ.isEmpty) {
+        workerJobs.get(worker) foreach { assignedJob =>
+          log.warn(s"[Supervisor] <WorkerAvail> worker $worker is currently assigned $assignedJob")
+          workerJobs.remove(worker)
+        }
         val job = scrapeQ.dequeue
         log.info(s"[Supervisor] <WorkerAvail> assign job ${job.s} (submit: ${job.submitTS.toLocalTime}, waited: ${clock.now().getMillis - job.submitTS.getMillis}) to worker $worker")
+        workerJobs += (worker -> job)
         worker ! job
       }
     case WorkerBusy(worker, job) =>
-      log.info(s"[Supervisor] <WorkerBusy> worker=$sender is busy; $job rejected")
+      log.info(s"[Supervisor] <WorkerBusy> worker=$worker is busy; $job rejected")
+      workerJobs.remove(worker)
       self ! job
+    case JobDone(worker, job, res) =>
+      log.info(s"[Supervisor] <JobDone> worker=$worker job=$job res=$res")
+      workerJobs.remove(worker)
+    case JobAborted(worker, job) =>
+      log.warn(s"[Supervisor] <JobAborted> worker=$worker job=$job")
+      workerJobs.remove(worker) // move on
     case job: ScrapeJob =>
       log.info(s"[Supervisor] <ScrapeJob> enqueue $job")
       scrapeQ.enqueue(job)
@@ -97,6 +119,9 @@ class ScrapeAgentSupervisor @Inject() (
       scrapeQ.enqueue(ScrapeJob(clock.now(), s))
       scraperRouter ! Broadcast(JobAvail)
     case QueueSize =>
+      if (scrapeQ.size > Runtime.getRuntime.availableProcessors / 2) { // tweak
+        diagnostic()
+      }
       sender ! scrapeQ.size
     case m => throw new UnsupportedActorMessage(m)
   }
