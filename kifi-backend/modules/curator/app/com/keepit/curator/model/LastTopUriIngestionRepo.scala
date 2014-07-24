@@ -20,11 +20,11 @@ class LastTopUriIngestionRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  class LastTopUriIngestionTable(tag: Tag) extends RepoTable[LastTopUriIngestion](db, tag, "last_ingestion_time") {
+  class LastTopUriIngestionTable(tag: Tag) extends RepoTable[LastTopUriIngestion](db, tag, "last_top_uri_ingestion_time") {
     def userId = column[Id[User]]("user_id", O.Nullable)
     def lastIngestionTime = column[DateTime]("last_ingestion_time", O.NotNull)
 
-    def * = (id.?, createdAt.?, updatedAt.?, userId, lastIngestionTime) <> ((LastTopUriIngestion.apply _).tupled, LastTopUriIngestion.unapply _)
+    def * = (id.?, createdAt, updatedAt, userId, lastIngestionTime) <> ((LastTopUriIngestion.apply _).tupled, LastTopUriIngestion.unapply _)
   }
 
   type RepoImpl = LastTopUriIngestionTable

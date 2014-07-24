@@ -63,10 +63,7 @@ class RawSeedItemRepoImpl @Inject() (
   }
 
   def getFirstByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[RawSeedItem] = {
-    (for (row <- rows if row.uriId === uriId && row.userId.isNull) yield row).firstOption match {
-      case Some(seedItem) => Some(seedItem)
-      case None => (for (row <- rows if row.uriId === uriId) yield row).firstOption
-    }
+    (for (row <- rows if row.uriId === uriId && row.userId.isNull) yield row).firstOption
   }
 
   def getByUriIdAndUserId(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[RawSeedItem] = {

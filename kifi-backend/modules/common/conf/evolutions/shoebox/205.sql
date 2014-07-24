@@ -1,7 +1,7 @@
 #Curator
 
 
-CREATE TABLE last_ingestion_time (
+CREATE TABLE last_top_uri_ingestion_time (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
