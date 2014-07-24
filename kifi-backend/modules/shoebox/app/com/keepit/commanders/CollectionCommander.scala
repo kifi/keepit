@@ -203,7 +203,7 @@ class CollectionCommander @Inject() (
   }
 
   def getBasicCollections(ids: Seq[Id[Collection]]): Seq[BasicCollection] = { //ZZZ needs a cache for he basic collection by id
-    db.readOnlyReplica { implicit session =>
+    db.readOnlyMaster { implicit session =>
       ids.map { id =>
         basicCollectionCache.getOrElse(BasicCollectionByIdKey(id)) {
           val collection = collectionRepo.get(id)

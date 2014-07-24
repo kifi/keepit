@@ -30,6 +30,21 @@ class GlobalCacheStatistics() {
     }
   }
 
+  /**
+   * @return the 100 * #misses/(#hits + #misses) Ratio per key that exist in the misses map
+   */
+  def missRatios(minSample: Int, minRatio: Int): Seq[(String, Long)] = missesMap.keySet.toSeq map { key =>
+    getCount(key, missesMap) match {
+      case missesInt if missesInt >= minSample =>
+        val (misses, hits) = (missesInt.toDouble, getCount(key, hitsMap).toDouble)
+        (100 * misses / (hits + misses)).round match {
+          case ratio if ratio >= minRatio => Some(key -> ratio)
+          case _ => None
+        }
+      case _ => None
+    }
+  } flatten
+
   private[cache] def getCount(key: String, m: ConcurrentMap[String, AtomicInteger]): Int = {
     m.get(key) match {
       case Some(counter) => counter.get()
