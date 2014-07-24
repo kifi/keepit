@@ -1,7 +1,7 @@
 package com.keepit.heimdal
 
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.{DelightedUserCreationInfo, User}
+import com.keepit.model.{ DelightedUserCreationInfo, User }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.service.ServiceType
 import com.keepit.common.healthcheck.AirbrakeNotifier
