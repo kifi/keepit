@@ -25,7 +25,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       (userIron, userCaptain, userAgent, userHulk)
     }
     db.readOnlyMaster { implicit s =>
-      userRepo.all.length === 4
+      userRepo.count === 4
     }
     (userIron, userCaptain, userAgent, userHulk)
   }
@@ -54,7 +54,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
       allLibs.map(_.description) === Seq(None, None, None)
       allLibs.map(_.visibility) === Seq(LibraryVisibility.SECRET, LibraryVisibility.ANYONE, LibraryVisibility.LIMITED)
-      libraryMembershipRepo.all.length === 3
+      libraryMembershipRepo.count === 3
     }
     (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
   }
@@ -74,7 +74,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
     }
     db.readOnlyMaster { implicit s =>
-      libraryInviteRepo.all.length === 4
+      libraryInviteRepo.count === 4
     }
     (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
   }
@@ -98,7 +98,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv3.libraryId, userId = inv3.userId, access = inv3.access, showInSearch = true, createdAt = t1))
     }
     db.readOnlyMaster { implicit s =>
-      libraryMembershipRepo.all.length === 6
+      libraryMembershipRepo.count === 6
     }
     (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
   }
@@ -127,7 +127,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
     }
     db.readOnlyMaster { implicit s =>
-      keepRepo.all.length === 3
+      keepRepo.count === 3
     }
     (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
   }
@@ -231,8 +231,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val allLibs = libraryRepo.all
           allLibs.length === 3
           allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
-          libraryMembershipRepo.all.length === 6
-          libraryInviteRepo.all.length === 4
+          libraryMembershipRepo.count === 6
+          libraryInviteRepo.count === 4
         }
 
         val libraryCommander = inject[LibraryCommander]
@@ -389,7 +389,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val libraryCommander = inject[LibraryCommander]
 
         db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.all.length === 0
+          libraryInviteRepo.count === 0
         }
 
         val inviteList1 = Seq(
@@ -400,7 +400,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         res1.isRight === true
 
         db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.all.length === 3
+          libraryInviteRepo.count === 3
           libraryInviteRepo.all.map(x => (x.userId, x.access)) ===
             Seq((userIron.id.get, LibraryAccess.READ_ONLY),
               (userAgent.id.get, LibraryAccess.READ_ONLY),
@@ -413,7 +413,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         res2.isRight === false
 
         db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.all.length === 3
+          libraryInviteRepo.count === 3
         }
       }
     }
@@ -431,7 +431,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         }
 
         val inviteIds = db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.all.length === 6
+          libraryInviteRepo.count === 6
           libraryInviteRepo.all.map(_.id.get)
         }
         libraryCommander.joinLibrary(inviteIds(0)) // Ironman accepts invite to 'Murica'
@@ -440,7 +440,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         libraryCommander.joinLibrary(inviteIds(3)) // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access
 
         db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.all.length === 6
+          libraryInviteRepo.count === 6
           val res = for (inv <- libraryInviteRepo.all) yield {
             (inv.libraryId, inv.userId, inv.access, inv.state)
           }
@@ -463,14 +463,14 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val libraryCommander = inject[LibraryCommander]
 
         db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.all.length === 6
+          libraryMembershipRepo.count === 6
           libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 0
         }
 
         libraryCommander.leaveLibrary(libMurica.id.get, userAgent.id.get)
 
         db.readOnlyMaster { implicit s =>
-          libraryMembershipRepo.all.length === 6
+          libraryMembershipRepo.count === 6
           libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 1
         }
       }

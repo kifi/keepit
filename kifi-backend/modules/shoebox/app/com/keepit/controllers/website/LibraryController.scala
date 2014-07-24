@@ -157,9 +157,7 @@ class LibraryController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) => {
         val keeps = libraryCommander.getKeeps(id)
-        val keepInfos = for (keep <- keeps) yield {
-          KeepInfo.fromBookmark(keep)
-        }
+        val keepInfos = keeps.map(KeepInfo.fromBookmark)
         Ok(Json.toJson(keepInfos))
       }
     }
