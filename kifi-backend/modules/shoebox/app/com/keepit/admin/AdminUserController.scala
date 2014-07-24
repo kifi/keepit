@@ -832,8 +832,14 @@ class AdminUserController @Inject() (
     }
     userOpt match {
       case Some(user) =>
-        if (user.username.nonEmpty && (user.state != UserStates.ACTIVE || user.fullName.length > 30 || user.fullName.contains("@") || user.firstName.isEmpty || user.lastName.isEmpty)) {
-          if (!readOnly) {
+        if (user.state != UserStates.ACTIVE
+          || user.fullName.length > 30
+          || user.fullName.contains("@")
+          || user.firstName.isEmpty
+          || user.lastName.isEmpty
+          || user.fullName.toLowerCase.contains("test")
+          || user.primaryEmail.exists(_.address.contains("test"))) {
+          if (!readOnly && user.username.nonEmpty) {
             userCommander.removeUsername(userId)
           }
           None
