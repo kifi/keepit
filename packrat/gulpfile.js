@@ -2,7 +2,7 @@ var gulp = require('gulp');
 var rimraf = require('gulp-rimraf');
 var rename = require('gulp-rename');
 var map = require('vinyl-map');
-var stylus = require('gulp-stylus');
+var less = require('gulp-less');
 var runSequence = require('run-sequence');
 var gulpif = require('gulp-if');
 var clone = require('gulp-clone');
@@ -11,12 +11,14 @@ var es = require('event-stream');
 var fs = require('fs');
 var jeditor = require("gulp-json-editor");
 var lazypipe = require('lazypipe');
-var reload = require('./gulp/livereload.js');
+var reloader = require('./gulp/livereload.js');
 var watch = require('gulp-watch');
 var plumber = require('gulp-plumber');
 var print = require('gulp-print');
 var nib = require('nib');
 var header = require('gulp-header');
+var zip = require('gulp-zip');
+var shell = require('gulp-shell');
 
 var outDir = 'out';
 var adapterFiles = ['adapters/chrome/**', 'adapters/firefox/**', '!adapters/chrome/manifest.json', '!adapters/firefox/package.json'];
@@ -33,7 +35,7 @@ var backgroundScripts = [
 ];
 var tabScripts = ['scripts/**'];
 var htmlFiles = 'html/**/*.html';
-var styleFiles = 'styles/**/*.styl';
+var styleFiles = 'styles/**/*.*';
 
 var contentScripts = {};
 var styleDeps = {};
@@ -181,16 +183,12 @@ var stylesPipe = (function () {
     }
   }
 
-  var stylusWithConfig = lazypipe()
-    .pipe(header, 'support-for-ie ?= false\nvendor-prefixes ?= webkit moz official\n@import \'nib\'\n')
-    .pipe(stylus, {use: [nib()]});
-
   return lazypipe()
     .pipe(print, function (filepath) {
       return 'Processing ' + filepath;
     })
     .pipe(function () {
-      return gulpif(/[.]styl$/, stylusWithConfig());
+      return gulpif(/[.]less$/, less());
     })
     .pipe(mainStylesOnly(insulate))
     .pipe(mainStylesOnly(chromify))
@@ -204,6 +202,7 @@ gulp.task('styles', function () {
     .pipe(stylesPipe());
 });
 
+// Extracts dependency information
 gulp.task('extractMeta', function () {
   var extractMeta = map(function (code, filename) {
     var relativeFilename = filename.replace(new RegExp('^' + __dirname + '/'), '');
@@ -236,6 +235,7 @@ gulp.task('extractMeta', function () {
     .pipe(extractMeta)
 });
 
+// Creates meta.js
 gulp.task('meta', ['extractMeta'], function () {
   var contentScriptItems = [];
   for (var f in contentScripts) {
@@ -265,6 +265,7 @@ gulp.task('meta', ['extractMeta'], function () {
   fs.writeFile(outDir + '/firefox/lib/meta.js', firefoxMeta);
 });
 
+// Creates manifest.json (chrome) and package.json (firefox)
 gulp.task('config', ['copy'], function () {
   var version = fs.readFileSync('build.properties', {encoding: 'utf8'})
     .match('version=(.*)')[1].trim();
@@ -289,6 +290,28 @@ gulp.task('config', ['copy'], function () {
   return es.merge(chromeConfig, firefoxConfig);
 });
 
+gulp.task('config-package-chrome', ['config'], function () {
+  gulp.src(outDir + '/chrome/manifest.json', {base: './'})
+    .pipe(map(function (code) {
+      return code.toString().replace(/(http|ws):\/\/dev\.ezkeep\.com:\d+\s*/g, '');
+    }))
+    .pipe(gulp.dest('.'));
+});
+
+gulp.task('zip-chrome', ['scripts', 'styles', 'meta', 'config-package-chrome'], function () {
+  return gulp.src(outDir + '/chrome/**')
+    .pipe(zip('kifi.zip'))
+    .pipe(gulp.dest(outDir));
+});
+
+gulp.task('xpi-firefox', ['scripts', 'styles', 'meta', 'config'], shell.task([
+  'cd ' + outDir + ' && \
+  cfx xpi --pkgdir=firefox \
+    --update-link=https://www.kifi.com/assets/plugins/kifi.xpi \
+    --update-url=https://www.kifi.com/assets/plugins/kifi.update.rdf && \
+  cd - > /dev/null'
+]));
+
 /**
  * Takes a set of "actions" (lazypipes or task names), and creates corresponding
  * watchers. "actions" can be either lazypipes (good!), or task names (not as good,
@@ -310,7 +333,7 @@ function watchAndReload(target) {
   if (tasks) {
     gulp.watch(target, function () {
       // the tasks array is modified by runSequence, need to pass a copy
-      runSequence(tasks.slice(0), reload);
+      runSequence(tasks.slice(0), reloader());
     });
   }
 
@@ -321,7 +344,7 @@ function watchAndReload(target) {
           return files.pipe(pipe());
         });
         return es.merge.apply(null, withLazypipe)
-          .pipe(es.wait(reload));
+          .pipe(es.wait(reloader()));
       }));
   }
 }
@@ -337,6 +360,10 @@ gulp.task('watch', function() {
   ), 'scripts', 'meta');
 
   watchAndReload(styleFiles, 'meta', stylesPipe);
+});
+
+gulp.task('package', function () {
+  runSequence('clean', ['zip-chrome', 'xpi-firefox']);
 });
 
 gulp.task('default', function () {
