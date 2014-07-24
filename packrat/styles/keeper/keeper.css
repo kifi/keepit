@@ -1,9 +1,10 @@
-.kifi-keeper.kifi-hiding+.kifi-tile-card {
-  z-index: -1;
+.kifi-keeper.kifi-transit {
+  z-index: 1;
 }
-.kifi-keeper:not(.kifi-hiding)+.kifi-tile-card,
-.kifi-keeper~.kifi-count,
-.kifi-keeper+.kifi-tile {
+.kifi-keeper:not(.kifi-transit)+.kifi-tile-card,
+.kifi-keeper~.kifi-count {
+/*.kifi-keeper.kifi-transit .kifi-count {*/
+/*.kifi-keeper+.kifi-tile {*/
   display: none;
 }
 
@@ -25,11 +26,11 @@
   border: solid transparent;
   border-width: 14px 7px 14px 14px;
   margin: -14px -7px -14px -14px;
-  transition: opacity 60ms ease-out;
+  transition: opacity 200ms ease-out;
 }
 .kifi-tile>.kifi-keeper.kifi-hidden {
   opacity: 0;
-  transition: opacity 60ms ease-in 40ms;
+  transition: opacity 200ms ease-in;
 }
 .kifi-keeper-x {
   position: absolute;
@@ -42,10 +43,10 @@
   background-repeat: no-repeat;
   overflow: hidden;
   cursor: pointer;
-  transition: width .25s ease-in;
+  /*transition: width .25s ease-in;*/
 }
 html[kifi-with-pane] .kifi-keeper-x {
-  width: 24px;
+  /*width: 24px;*/
 }
 
 .kifi-tip {
@@ -120,26 +121,28 @@ html[kifi-with-pane] .kifi-keeper-x {
   -webkit-perspective: 200px;
   perspective: 200px;
 }
+.kifi-hidden>.kifi-keep-card {
+  width: 49px;
+}
 html[kifi-pane-parent] .kifi-keep-card {
+/*
   left: 132px;
   right: auto;
+*/
 }
 html[kifi-with-pane] .kifi-keep-card {
-  width: 146px;
+  /*width: 146px;*/
 }
 .kifi-keep-card,
-.kifi-dock { /* width for .kifi-keep-card only */
-  transition: width .25s ease-in, -webkit-transform 50ms ease-in, box-shadow 50ms ease-in;
-  transition: width .25s ease-in, transform 50ms ease-in, box-shadow 50ms ease-in;
+.kifi-dock-btn { /* width for .kifi-keep-card only */
+  transition: width 200ms ease-out, -webkit-transform 50ms ease-in, box-shadow 50ms ease-in;
+  transition: width 200ms ease-out, transform 50ms ease-in, box-shadow 50ms ease-in;
 }
 .kifi-tile.ui-draggable .kifi-keep-card,
-.kifi-tile.ui-draggable .kifi-dock {
+.kifi-tile.ui-draggable .kifi-dock-btn {
   box-shadow: 0 8px 7px -4px rgba(0,0,0,.7);
   -webkit-transform: translate(0,-4px);
   transform: translate(0,-4px);
-}
-.kifi-keep-side {
-  background: #f1f1f1;
 }
 .kifi-keep-side,
 .kifi-kept-side {
@@ -194,6 +197,7 @@ html[kifi-with-pane] .kifi-keep-card {
 .kifi-keep-btn,
 .kifi-keep-btn.kifi-hoverless:hover,
 .kifi-keep-btn.kifi-hoverless:active {
+  background-color: #f1f1f1;
 }
 .kifi-keep-btn:hover,
 .kifi-keep-lock:hover,
@@ -541,25 +545,43 @@ html[kifi-with-pane] .kifi-keep-card {
   cursor: pointer;
 }
 .kifi-dock-site {
-  -webkit-transform: translate(-259px);
-  transform: translate(-259px);
+  right: 259px;
   background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13.497 11.249"><path fill="%23464646" d="M1.617,0H0.75C0.336,0,0,0.336,0,0.75v9.749c0,0.414,0.336,0.75,0.75,0.75h0.867c0.414,0,0.75-0.336,0.75-0.75V0.75C2.367,0.336,2.031,0,1.617,0z M5.554,0H4.687c-0.414,0-0.75,0.336-0.75,0.75v9.749c0,0.414,0.336,0.75,0.75,0.75h0.867c0.414,0,0.75-0.336,0.75-0.75V0.75C6.304,0.336,5.968,0,5.554,0z M13.47,10.216l-3.278-9.664c-0.113-0.334-0.547-0.532-0.969-0.442L8.458,0.271C8.036,0.36,7.785,0.703,7.898,1.036l3.278,9.665c0.113,0.334,0.547,0.531,0.969,0.442l0.765-0.162C13.332,10.892,13.583,10.549,13.47,10.216z"/></svg>');
   background-size: 18px auto;
   background-position: center;
+  transition: -webkit-transform 200ms ease-out 20ms;
+  transition: transform 200ms ease-out 20ms;
+}
+.kifi-hidden>.kifi-dock-site {
+  -webkit-transform: translate(259px) rotate(30deg) scale(.8);
+  transform: translate(259px) rotate(30deg) scale(.8);
 }
 .kifi-dock-messages {
-  -webkit-transform: translate(-208px);
-  transform: translate(-208px);
+  right: 208px;
   background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14.998 17.998"><path fill="%23464646" d="M12.748,11.249c0-0.786-0.572-1.5-1.5-2.034V5.999h-0.046c0.017-0.125,0.046-0.246,0.046-0.375c0-1.354-0.981-2.514-2.388-3.051c0.087-0.216,0.138-0.451,0.138-0.698C8.999,0.839,8.159,0,7.124,0S5.249,0.839,5.249,1.875c0,0.247,0.051,0.482,0.138,0.699C3.98,3.111,3,4.27,3,5.624c0,0.128,0.029,0.25,0.046,0.375H3v3.215c-0.928,0.535-1.5,1.248-1.5,2.034h3.787c0.174,0.856,0.93,1.5,1.837,1.5s1.663-0.644,1.837-1.5H12.748z M7.124,0.75c0.621,0,1.125,0.504,1.125,1.125c0,0.133-0.033,0.256-0.076,0.375H6.075C6.033,2.131,5.999,2.008,5.999,1.875C5.999,1.253,6.503,0.75,7.124,0.75z"/></svg>');
   background-size: 20px auto;
   background-position: center 13px;
+  transition: -webkit-transform 200ms ease-out 40ms;
+  transition: transform 200ms ease-out 40ms;
+}
+.kifi-hidden>.kifi-dock-messages {
+  -webkit-transform: translate(208px) rotate(20deg) scale(.8);
+  transform: translate(208px) rotate(20deg) scale(.8);
 }
 .kifi-dock-compose {
-  -webkit-transform: translate(-157px);
-  transform: translate(-157px);
+  right: 157px;
   background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13.497 12.747"><path fill-rule="evenodd" clip-rule="evenodd" fill="%23464646" d="M6.748,0C3.021,0,0,2.511,0,5.609c0,1.912,1.154,3.599,2.912,4.612c-0.114,0.724-0.498,1.605-1.466,2.526c0,0,2.527-0.001,3.922-1.648c0.446,0.077,0.907,0.118,1.38,0.118c3.727,0,6.748-2.511,6.748-5.609S10.475,0,6.748,0z"/></svg>');
   background-size: auto 17px;
   background-position: center;
+  transition: -webkit-transform 200ms ease-out 60ms;
+  transition: transform 200ms ease-out 60ms;
+}
+.kifi-hidden>.kifi-dock-compose {
+  -webkit-transform: translate(157px) rotate(10deg) scale(.8);
+  transform: translate(157px) rotate(10deg) scale(.8);
+}
+.kifi-hidden>.kifi-dock-btn {
+  transition-delay: 0;
 }
 .kifi-keeper-x,
 .kifi-dock-btn {
@@ -570,9 +592,9 @@ html[kifi-with-pane] .kifi-keep-card {
 .kifi-dock-btn.kifi-at {
   background-color: blue;
 }
-.kifi-keeper.kifi-growing .kifi-count,
-.kifi-keeper.kifi-hiding .kifi-count {
-  display: none;
+.kifi-dock-messages>.kifi-count {
+  top: -8px;
+  left: -2px;
 }
 
 .kifi-titled-tip {

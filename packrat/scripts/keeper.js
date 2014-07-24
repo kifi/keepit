@@ -138,7 +138,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
     }, 400, true))
     .on('mouseover', '.kifi-keep-btn>.kifi-tip,.kifi-kept-btn>.kifi-tip', function () {
       this.parentNode.classList.add('kifi-hoverless');
-    }).hoverfu('.kifi-keep-btn,.kifi-kept-btn', function (configureHover) {
+    })
+    /*
+    .hoverfu('.kifi-keep-btn,.kifi-kept-btn', function (configureHover) {
       var btn = this;
       api.port.emit('get_keepers', function (o) {
         if (o.keepers.length) {
@@ -170,9 +172,13 @@ var keeper = keeper || function () {  // idempotent for Chrome
           });
         }
       });
-    }).on('mouseout', '.kifi-keep-btn,.kifi-kept-btn', function () {
+    })
+    */
+    .on('mouseout', '.kifi-keep-btn,.kifi-kept-btn', function () {
       this.classList.remove('kifi-hoverless');
-    }).hoverfu('.kifi-keep-lock,.kifi-kept-lock', function (configureHover) {
+    })
+    /*
+    .hoverfu('.kifi-keep-lock,.kifi-kept-lock', function (configureHover) {
       var $a = $(this);
       var $card = $(this).closest('.kifi-keep-card');
       var kept = !$card.hasClass('kifi-unkept');
@@ -194,6 +200,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
           position: {my: 'center bottom-13', at: 'center top', of: $a, collision: 'none'}});
       });
     })
+    */
     .on('click', '.kifi-keep-lock', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
         keepPage('private', e);
@@ -204,6 +211,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         toggleKeep($(this).closest('.kifi-keep-card').hasClass('kifi-public') ? 'private' : 'public');
       }
     }, 400, true))
+    /*
     .hoverfu('.kifi-keep-tag,.kifi-kept-tag', function (configureHover) {
       var btn = this;
       var kept = this.classList.contains('kifi-kept-tag');
@@ -221,6 +229,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         });
       });
     })
+    */
     .on('click', '.kifi-keep-tag,.kifi-kept-tag', _.debounce(function (e) {
       if (e.originalEvent.closedTagbox || e.originalEvent.isTrusted === false) {
         return;
@@ -234,17 +243,20 @@ var keeper = keeper || function () {  // idempotent for Chrome
         tagbox.toggle($slider, 'click:tagIcon');
       });
     }, 400, true))
+    /*
     .hoverfu('.kifi-keeper-x', function (configureHover) {
       configureHover({
         mustHoverFor: 700, hideAfter: 2500, click: 'hide',
         position: {my: 'right bottom-13', at: 'right top', of: this, collision: 'none'}
       });
     })
+    */
     .on('click', '.kifi-keeper-x', _.debounce(function (e) {
       if (e.originalEvent.isTrusted !== false) {
         pane.hide(tile.style.display !== 'none' && !tile.hasAttribute('kifi-fullscreen'));
       }
     }, 400, true))
+    /*
     .hoverfu('.kifi-dock-btn', function(configureHover) {
       var $a = $(this);
       var tip = {
@@ -262,7 +274,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
           position: {my: 'center bottom-' + px, at: 'center top', of: $a, collision: 'none'}
         });
       });
-    }).on('mousedown', '.kifi-dock-btn', function (e) {
+    })
+    */
+    .on('mousedown', '.kifi-dock-btn', function (e) {
       e.preventDefault();
     })
     .on('click', '.kifi-dock-btn', _.debounce(function (e) {
@@ -287,12 +301,12 @@ var keeper = keeper || function () {  // idempotent for Chrome
     log('[showSlider]', trigger);
 
     createSlider();
-    $slider.addClass('kifi-hidden')
+    $slider.addClass('kifi-hidden kifi-transit')
       .prependTo(tile)
       .layout()
       .on('transitionend', function f(e) {
         if (e.target === this) {
-          $(this).off('transitionend', f);
+          $(this).off('transitionend', f).removeClass('kifi-transit');
         }
       })
       .removeClass('kifi-hidden');
@@ -333,7 +347,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
       }
     })
-    .addClass('kifi-hidden');
+    .addClass('kifi-hidden kifi-transit');
     $(tile).off('mousedown click keydown keypress keyup', stopPropagation);
   }
 
