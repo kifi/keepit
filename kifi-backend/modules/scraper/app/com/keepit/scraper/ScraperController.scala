@@ -20,11 +20,11 @@ class ScraperController @Inject() (
     scrapeProcessor: ScrapeProcessor) extends ScraperServiceController with Logging {
 
   def getBasicArticle() = Action.async(parse.json) { request =>
-    log.info(s"getBasicArticle body=${request.body}")
+    println(s"getBasicArticle body=${request.body}")
     processBasicArticleRequest(request.body).map { articleOption =>
       val json = Json.toJson(articleOption)
       val url = (request.body \ "url").as[String]
-      log.info(s"[getBasicArticle($url})] result: $json")
+      println(s"[getBasicArticle($url})] result: $json")
       Ok(json)
     }(ExecutionContext.fj)
   }
