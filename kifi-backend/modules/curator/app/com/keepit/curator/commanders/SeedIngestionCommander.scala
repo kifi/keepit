@@ -1,6 +1,7 @@
 package com.keepit.curator.commanders
 
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{ SequenceNumber, Id }
@@ -9,6 +10,7 @@ import com.keepit.model.User
 import com.keepit.common.db.slick.Database
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.model.User
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -20,6 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 @Singleton
 class SeedIngestionCommander @Inject() (
     allKeepIngestor: AllKeepSeedIngestionHelper,
+    topUrisIngestor: TopUriSeedIngestionHelper,
     airbrake: AirbrakeNotifier,
     rawSeedsRepo: RawSeedItemRepo,
     keepInfoRepo: CuratorKeepInfoRepo,
@@ -45,6 +48,8 @@ class SeedIngestionCommander @Inject() (
   } else {
     Future.successful(false)
   }
+
+  def ingestTopUris(userId: Id[User]): Future[Boolean] = topUrisIngestor(userId, INGESTION_BATCH_SIZE)
 
   private def cook(userId: Id[User], rawItem: RawSeedItem, keepers: Keepers): SeedItem = SeedItem(
     userId = userId,
