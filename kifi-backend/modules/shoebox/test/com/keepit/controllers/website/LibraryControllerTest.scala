@@ -379,5 +379,60 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result1) must beSome("application/json")
       }
     }
+
+    "get keeps" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val libraryController = inject[LibraryController]
+
+        val site1 = "http://www.google.com/"
+        val site2 = "http://www.amazon.com/"
+        val (user1, lib1, keep1, keep2) = db.readWrite { implicit s =>
+          val userA = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
+
+          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = userA.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.LIMITED, isSearchableByOthers = false))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = userA.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+          val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Google")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Amazon")))
+
+          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+
+          val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = userA.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(library1.id.get)))
+          val keep2 = keepRepo.save(Keep(title = Some("k2"), userId = userA.id.get, url = url2.url, urlId = url2.id.get,
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(library1.id.get)))
+
+          (userA, library1, keep1, keep2)
+        }
+
+        val pubId1 = Library.publicId(lib1.id.get)
+        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1).url
+        val request1 = FakeRequest("POST", testPath1).withHeaders("userId" -> "1")
+        val result1: Future[SimpleResult] = libraryController.getKeeps(pubId1)(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+
+        val expected1 = Json.parse(
+          s"""
+             |[{
+             |"id":"${keep1.externalId}",
+             |"title":"k1",
+             |"url":"http://www.google.com/",
+             |"isPrivate":false
+             |},
+             |{
+             |"id":"${keep2.externalId}",
+             |"title":"k2",
+             |"url":"http://www.amazon.com/",
+             |"isPrivate":false
+             |}]
+           """.stripMargin)
+        Json.parse(contentAsString(result1)) must equalTo(expected1)
+      }
+    }
+
   }
 }
