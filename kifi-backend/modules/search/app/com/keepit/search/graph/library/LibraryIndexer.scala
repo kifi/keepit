@@ -1,6 +1,6 @@
 package com.keepit.search.graph.library
 
-import com.keepit.model.{ User, Library }
+import com.keepit.model.{ LibraryMembership, User, Library }
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.search.index._
 import com.keepit.search.LangDetector
@@ -15,16 +15,27 @@ object LibraryFields {
   val descriptionStemmedField = "ds"
   val visibilityField = "v"
   val usersField = "u"
+  val hiddenUsersField = "h"
   val recordField = "rec"
 
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
 
-class LibraryIndexable(library: Library, users: Seq[Id[User]]) extends Indexable[Library, Library] {
+class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) extends Indexable[Library, Library] {
 
   val id = library.id.get
   val sequenceNumber = library.seq
-  val isDeleted: Boolean = users.isEmpty
+  val isDeleted: Boolean = memberships.isEmpty
+
+  private val (users, hiddenUsers) = {
+    var hiddenUsers = Set.empty[Id[User]]
+    val users = memberships.map { membership =>
+      require(membership.libraryId == id, s"This membership is unrelated to library $id: $membership")
+      if (!membership.showInSearch) { hiddenUsers += membership.userId }
+      membership.userId
+    }
+    (users, hiddenUsers)
+  }
 
   override def buildDocument = {
     import LibraryFields._
@@ -42,6 +53,7 @@ class LibraryIndexable(library: Library, users: Seq[Id[User]]) extends Indexable
 
     doc.add(buildKeywordField(visibilityField, library.visibility.value))
     doc.add(buildIteratorField(usersField, users.iterator) { id => id.id.toString })
+    doc.add(buildIteratorField(hiddenUsersField, hiddenUsers.iterator) { id => id.id.toString })
 
     val record = LibraryRecord(library.name, library.description, library.id.get)
     doc.add(buildBinaryDocValuesField(recordField, record))
@@ -56,17 +68,10 @@ class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClie
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-  def fetchUpdates(seq: SequenceNumber[Library], fetchSize: Int): Future[Seq[Indexable[Library, Library]]] = {
+  def fetchUpdates(seq: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryIndexable]] = {
     shoebox.getLibrariesWithMembersChanged(seq, fetchSize).map {
       case libraries =>
-        libraries.map {
-          case (library, memberships) =>
-            val users = memberships.flatMap { membership =>
-              if (membership.libraryId != library.id.get) { throw new IllegalArgumentException(s"Inconsistent membership for library ${library.id.get}: $membership") }
-              Some(membership.userId) //todo(Léo): filter this once LibraryMembership tracks searchability
-            }
-            new LibraryIndexable(library, users)
-        }
+        libraries.map { case (library, memberships) => new LibraryIndexable(library, memberships) }
     }
   }
 
