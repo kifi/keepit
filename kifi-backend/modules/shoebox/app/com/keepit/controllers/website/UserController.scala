@@ -207,7 +207,7 @@ class UserController @Inject() (
     db.readOnlyMaster { implicit session =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailRecord) =>
-          val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, "pending_primary_email")
+          val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
           if (emailRecord.userId == request.userId) {
             Ok(Json.toJson(EmailInfo(
               address = emailRecord.address,
@@ -258,7 +258,12 @@ class UserController @Inject() (
     ))
   }
 
-  private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "onboarding_seen", "show_delighted_question")
+  private val SitePrefNames = Set(
+    UserValueName.SITE_LEFT_COL_WIDTH,
+    UserValueName.SITE_WELCOMED,
+    UserValueName.ONBOARDING_SEEN,
+    UserValueName.SHOW_DELIGHTED_QUESTION
+  )
 
   def getPrefs() = JsonAction.authenticatedAsync { request =>
     // The prefs endpoint is used as an indicator that the user is active
@@ -268,11 +273,13 @@ class UserController @Inject() (
 
   def savePrefs() = JsonAction.authenticatedParseJson { request =>
     val o = request.request.body.as[JsObject]
-    if (o.keys.subsetOf(SitePrefNames)) {
-      userCommander.savePrefs(request.userId, o)
+    val map = o.value.map(t => UserValueName(t._1) -> t._2).toMap
+    val keyNames = map.keys.toSet
+    if (keyNames.subsetOf(SitePrefNames)) {
+      userCommander.savePrefs(request.userId, map)
       Ok(o)
     } else {
-      BadRequest(Json.obj("error" -> ((SitePrefNames -- o.keys).mkString(", ") + " not recognized")))
+      BadRequest(Json.obj("error" -> ((SitePrefNames -- keyNames).mkString(", ") + " not recognized")))
     }
   }
 
@@ -380,7 +387,7 @@ class UserController @Inject() (
     val networkStatuses = Future {
       JsObject(db.readOnlyMaster { implicit session =>
         networks.map { network =>
-          userValueRepo.getValueStringOpt(request.userId, s"import_in_progress_${network}").flatMap { r =>
+          userValueRepo.getValueStringOpt(request.userId, UserValueName.importInProgress(network)).flatMap { r =>
             if (r == "false") {
               None
             } else {
@@ -440,7 +447,7 @@ class UserController @Inject() (
     val finishedImportAnnounced = new AtomicBoolean(false)
     def check(): Option[JsValue] = {
       val v = db.readOnlyMaster { implicit session =>
-        userValueRepo.getValueStringOpt(request.userId, s"import_in_progress_${network}")
+        userValueRepo.getValueStringOpt(request.userId, UserValueName.importInProgress(network))
       }
       if (v.isEmpty && clock.now.minusSeconds(20).compareTo(startTime) > 0) {
         None

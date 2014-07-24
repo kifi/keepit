@@ -169,7 +169,7 @@ class AuthHelper @Inject() (
         emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
           userRepo.save(user.copy(primaryEmail = Some(emailAddr.address)))
         }
-        userValueRepo.clearValue(user.id.get, "pending_primary_email")
+        userValueRepo.clearValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
       }
       SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = false) }
     }
@@ -346,7 +346,7 @@ class AuthHelper @Inject() (
     db.readWrite { implicit s =>
       emailAddressRepo.getByCode(code).map { address =>
         lazy val isPendingPrimaryEmail = {
-          val pendingEmail = userValueRepo.getValueStringOpt(address.userId, "pending_primary_email").map(EmailAddress(_))
+          val pendingEmail = userValueRepo.getValueStringOpt(address.userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
           pendingEmail.isDefined && address.address == pendingEmail.get
         }
         val user = userRepo.get(address.userId)

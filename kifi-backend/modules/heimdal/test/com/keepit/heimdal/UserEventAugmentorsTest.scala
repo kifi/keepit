@@ -1,10 +1,9 @@
 package com.keepit.heimdal
 
-import com.keepit.model.{ UserIdAugmentor, UserValuesAugmentor, ExtensionVersionAugmentor, EventAugmentor }
+import com.keepit.model._
 import org.specs2.mutable.Specification
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import scala.concurrent.{ Await, Future }
-import com.keepit.model.{ KifiInstallation, Gender }
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.common.db.{ ExternalId, Id }
 import scala.concurrent.duration._
@@ -34,7 +33,7 @@ class UserEventAugmentorsTest extends Specification with FutureTestScope {
     "Augment event with gender when it's available" in {
       val event = new UserEvent(Id(134), new HeimdalContext(Map("name" -> ContextStringData("Léo"))), EventType("fake"))
       Await.result(userValuesAugmentor(event), 1 seconds) === Seq.empty
-      shoeboxClient.setUserValue(Id(134), "gender", "male")
+      shoeboxClient.setUserValue(Id(134), UserValueName.GENDER, "male")
       Await.result(userValuesAugmentor(event), 1 seconds) === Seq("gender" -> ContextStringData(Gender.Male.toString))
     }
   }
