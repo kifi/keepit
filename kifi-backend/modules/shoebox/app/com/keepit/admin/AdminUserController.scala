@@ -833,7 +833,7 @@ class AdminUserController @Inject() (
     if (user.username.isEmpty) {
       userCommander.autoSetUsername(user, readOnly = readOnly)
     } else {
-      None
+      user.username
     }
   }
 
