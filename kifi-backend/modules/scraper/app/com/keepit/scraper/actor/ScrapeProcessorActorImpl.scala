@@ -36,7 +36,7 @@ class ScrapeProcessorActorImpl @Inject() (
 
   import ScraperMessages._
 
-  val PULL_THRESHOLD = Runtime.getRuntime.availableProcessors() / 2
+  val PULL_THRESHOLD = Runtime.getRuntime.availableProcessors()
   val WARNING_THRESHOLD = 100
 
   implicit val fj = ExecutionContext.fj
