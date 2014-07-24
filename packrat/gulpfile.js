@@ -20,6 +20,8 @@ var header = require('gulp-header');
 var zip = require('gulp-zip');
 var shell = require('gulp-shell');
 
+var isRelease = false;
+
 var outDir = 'out';
 var adapterFiles = ['adapters/chrome/**', 'adapters/firefox/**', '!adapters/chrome/manifest.json', '!adapters/firefox/package.json'];
 var sharedAdapterFiles = ['adapters/shared/*.js', 'adapters/shared/*.min.map'];
@@ -30,9 +32,9 @@ var backgroundScripts = [
   'threadlist.js',
   'lzstring.min.js',
   'scorefilter.js',
-  'friend_search_cache.js',
-  'livereload.js'
+  'friend_search_cache.js'
 ];
+var devBackgroundScripts = ['livereload.js']
 var tabScripts = ['scripts/**'];
 var htmlFiles = 'html/**/*.html';
 var styleFiles = 'styles/**/*.*';
@@ -88,7 +90,9 @@ gulp.task('copy', function () {
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/data/scripts/lib'));
 
-  var background = gulp.src(backgroundScripts)
+  var scripts = isRelease ? backgroundScripts : backgroundScripts.concat(devBackgroundScripts);
+
+  var background = gulp.src(scripts)
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
@@ -274,7 +278,9 @@ gulp.task('config', ['copy'], function () {
     .pipe(rename('chrome/manifest.json'))
     .pipe(jeditor(function(json) {
       json.version = version;
-      json.background.scripts.push('livereload.js');
+      if (!isRelease) {
+        json.background.scripts.push('livereload.js');
+      }
       return json;
     }))
     .pipe(gulp.dest(outDir))
@@ -337,15 +343,14 @@ function watchAndReload(target) {
     });
   }
 
-  if (pipes) {
-    gulp.src(target, {base: './'})
-      .pipe(watch(function(files) {
-        var withLazypipe = pipes.map(function (pipe) {
-          return files.pipe(pipe());
-        });
-        return es.merge.apply(null, withLazypipe)
-          .pipe(es.wait(reloader()));
-      }));
+  if (pipes.length > 0) {
+    var watchers = pipes.map(function (pipe) {
+      return watch({glob:target, base: './', emitOnGlob: false})
+        .pipe(plumber())
+        .pipe(pipe());
+    });
+    es.merge.apply(null, watchers)
+      .pipe(es.wait(reloader()));
   }
 }
 
@@ -363,6 +368,7 @@ gulp.task('watch', function() {
 });
 
 gulp.task('package', function () {
+  isRelease = true;
   runSequence('clean', ['zip-chrome', 'xpi-firefox']);
 });
 
