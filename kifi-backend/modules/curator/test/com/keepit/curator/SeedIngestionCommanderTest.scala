@@ -75,7 +75,7 @@ class SeedIngestionCommanderTest extends Specification with DbTestInjector {
         val seedItemRepo = inject[RawSeedItemRepo]
         val commander = inject[SeedIngestionCommander]
         db.readOnlyMaster { implicit session => keepInfoRepo.all() }.length === 0
-        Await.result(commander.ingestAll(), Duration(10, "seconds"))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readOnlyMaster { implicit session => keepInfoRepo.all() }.length === 60
         db.readOnlyMaster { implicit session => systemValueRepo.getSequenceNumber(Name[SequenceNumber[Keep]]("all_keeps_seq_num")).get } === SequenceNumber[Keep](60)
 
@@ -103,7 +103,7 @@ class SeedIngestionCommanderTest extends Specification with DbTestInjector {
         shoebox.saveBookmarks(user2Keeps(3).copy(
           createdAt = new DateTime(2022, 10, 1, 9, 18, 44)))
 
-        Await.result(commander.ingestAll(), Duration(10, "seconds"))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readOnlyMaster { implicit session =>
           keepInfoRepo.all().length === 60
           keepInfoRepo.getByKeepId(user1Keeps(0).id.get).get.state.value == KeepStates.INACTIVE.value
@@ -140,7 +140,7 @@ class SeedIngestionCommanderTest extends Specification with DbTestInjector {
         shoebox.saveBookmarks(user1Keeps(1).copy(
           state = KeepStates.ACTIVE))
 
-        Await.result(commander.ingestAll(), Duration(10, "seconds"))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readOnlyMaster { implicit session => keepInfoRepo.all() }.length === 60
 
         var seedItemsAfter2 = db.readOnlyMaster { implicit session => seedItemRepo.all() }
@@ -168,7 +168,7 @@ class SeedIngestionCommanderTest extends Specification with DbTestInjector {
         val commander = inject[SeedIngestionCommander]
         val seedItemRepo = inject[RawSeedItemRepo]
 
-        Await.result(commander.ingestAll(), Duration(10, "seconds"))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
 
         val user1SeedItems = Await.result(commander.getBySeqNumAndUser(SequenceNumber.ZERO, user1, 20), Duration(10, "seconds"))
@@ -197,7 +197,7 @@ class SeedIngestionCommanderTest extends Specification with DbTestInjector {
         val commander = inject[SeedIngestionCommander]
         val seedItemRepo = inject[RawSeedItemRepo]
 
-        Await.result(commander.ingestAll(), Duration(10, "seconds"))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
 
         val items = Await.result(commander.getRecentItems(user1, 2), Duration(10, "seconds"))
@@ -218,13 +218,13 @@ class SeedIngestionCommanderTest extends Specification with DbTestInjector {
         makeKeeps(user2, 5, shoebox)
         val seedItemRepo = inject[RawSeedItemRepo]
         val commander = inject[SeedIngestionCommander]
-        Await.result(commander.ingestAll(), Duration(10, "seconds"))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
 
         val graph = inject[GraphServiceClient].asInstanceOf[FakeGraphServiceClientImpl]
         graph.getUriAndScorePairs(user1Keeps.map { x => x.uriId }.toList, user1)
 
         val result = commander.ingestTopUris(user1)
-        Await.result(result, Duration(10, "seconds")) === false
+        Await.result(result, Duration(10, "seconds"))
 
         db.readOnlyMaster { implicit session =>
           val seedItem1: Option[RawSeedItem] = seedItemRepo.getByUriIdAndUserId(user1Keeps.head.uriId, user1)
