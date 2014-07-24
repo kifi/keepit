@@ -11,7 +11,16 @@ var es = require('event-stream');
 var fs = require('fs');
 var jeditor = require("gulp-json-editor");
 var lazypipe = require('lazypipe');
-var reload = require('./gulp/livereload.js');
+var reloader = require('./gulp/livereload.js');
+var watch = require('gulp-watch');
+var plumber = require('gulp-plumber');
+var print = require('gulp-print');
+var nib = require('nib');
+var header = require('gulp-header');
+var zip = require('gulp-zip');
+var shell = require('gulp-shell');
+
+var isRelease = false;
 
 var outDir = 'out';
 var adapterFiles = ['adapters/chrome/**', 'adapters/firefox/**', '!adapters/chrome/manifest.json', '!adapters/firefox/package.json'];
@@ -23,9 +32,9 @@ var backgroundScripts = [
   'threadlist.js',
   'lzstring.min.js',
   'scorefilter.js',
-  'friend_search_cache.js',
-  'livereload.js'
+  'friend_search_cache.js'
 ];
+var devBackgroundScripts = ['livereload.js']
 var tabScripts = ['scripts/**'];
 var htmlFiles = 'html/**/*.html';
 var styleFiles = 'styles/**/*.*';
@@ -81,7 +90,9 @@ gulp.task('copy', function () {
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/data/scripts/lib'));
 
-  var background = gulp.src(backgroundScripts)
+  var scripts = isRelease ? backgroundScripts : backgroundScripts.concat(devBackgroundScripts);
+
+  var background = gulp.src(scripts)
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
@@ -124,7 +135,8 @@ gulp.task('scripts', ['html2js', 'copy'], function () {
     .pipe(gulp.dest(outDir));
 });
 
-gulp.task('styles', function () {
+var stylesPipe = (function () {
+
   function insulateSelectors(rule) {
     if (rule.selectors) {
       rule.selectors = rule.selectors.map(function (selector) {
@@ -140,44 +152,61 @@ gulp.task('styles', function () {
     }
   }
 
-  var insulate = map(function (code) {
-    // too slow (and probably wrong):
-    //return line.replace(/^(([^().]*|\([^)]*\))*)(\.[a-zA-Z0-9_-]*).*$/gm, '$1$3$3$3');
+  var insulate = function () {
+    return map(function (code) {
+      // too slow (and probably wrong):
+      //return line.replace(/^(([^().]*|\([^)]*\))*)(\.[a-zA-Z0-9_-]*).*$/gm, '$1$3$3$3');
 
-    // reasonably fast (but slower than sed):
-    /*return code.toString().split('\n').map(function (line) {
-      return line.replace(/(\.[a-zA-Z0-9_-]*)(?![^(]*\))/m, '$1$1$1');
-    }).join('\n');*/
+      // reasonably fast (but slower than sed):
+      /*return code.toString().split('\n').map(function (line) {
+        return line.replace(/(\.[a-zA-Z0-9_-]*)(?![^(]*\))/m, '$1$1$1');
+      }).join('\n');*/
 
-    // a bit slower than above, but much safer and more readable/maintainable
-    var obj = css.parse(code.toString())
-    obj.stylesheet.rules.map(insulateRule);
-    return css.stringify(obj);
-  });
+      // a bit slower than above, but much safer and more readable/maintainable
+      var obj = css.parse(code.toString())
+      obj.stylesheet.rules.map(insulateRule);
+      return css.stringify(obj);
+    });
+  };
 
-  var imageUrlChrome = map(function (code) {
-    return code.toString().replace(/\/images\//g, 'chrome-extension://__MSG_@@extension_id__/images/');
-  });
+  var chromify = function () {
+    return map(function (code) {
+      return code.toString().replace(/\/images\//g, 'chrome-extension://__MSG_@@extension_id__/images/');
+    });
+  };
 
-  var imageUrlFirefox = map(function (code) {
-    return code.toString().replace(/\/images\//g, 'resource://kifi-at-42go-dot-com/kifi/data/images/');
-  });
+  var firefoxify = function () {
+    return map(function (code, filename) {
+      return code.toString().replace(/chrome-extension:\/\/__MSG_@@extension_id__\/images\//g, 'resource://kifi-at-42go-dot-com/kifi/data/images/');
+    });
+  }
 
-  var preprocessed = gulp.src(styleFiles, {base: './'})
-    .pipe(gulpif(/[.]less$/, less()))
-    .pipe(gulpif(RegExp('^(?!' + __dirname + '/styles/(insulate\\.|iframes/))'), insulate))
-  
-  var chrome = preprocessed.pipe(clone())
-    .pipe(imageUrlChrome)
-    .pipe(gulp.dest(outDir + '/chrome'));
+  var mainStylesOnly = function (pipefun) {
+    return function () {
+      return gulpif(RegExp('^(?!' + __dirname + '/styles/(insulate\\.|iframes/))'), pipefun());
+    }
+  }
 
-  var firefox = preprocessed.pipe(clone())
-    .pipe(imageUrlFirefox)
-    .pipe(gulp.dest(outDir + '/firefox/data'));
+  return lazypipe()
+    .pipe(print, function (filepath) {
+      return 'Processing ' + filepath;
+    })
+    .pipe(function () {
+      return gulpif(/[.]less$/, less());
+    })
+    .pipe(mainStylesOnly(insulate))
+    .pipe(mainStylesOnly(chromify))
+    .pipe(gulp.dest, outDir + '/chrome')
+    .pipe(mainStylesOnly(firefoxify)) // order is important! firefoxify operates on chromified styles (makes code simpler - one unique stream)
+    .pipe(gulp.dest, outDir + '/firefox/data');
+})();
 
-  return es.merge(chrome, firefox);
+gulp.task('styles', function () {
+  return gulp.src(styleFiles, {base: './'})
+    .pipe(stylesPipe());
 });
 
+// Extracts dependency information
 gulp.task('extractMeta', function () {
   var extractMeta = map(function (code, filename) {
     var relativeFilename = filename.replace(new RegExp('^' + __dirname + '/'), '');
@@ -192,7 +221,7 @@ gulp.task('extractMeta', function () {
         if (depMatch) {
           var base = depMatch[1];
           var ext = depMatch[2];
-          if (ext === 'css' || ext === 'less' || ext === 'styl') {
+          if (ext === 'css' || ext === 'styl') {
             styleDeps[relativeFilename] = styleDeps[relativeFilename] || [];
             styleDeps[relativeFilename].push(base + '.css');
           } else if (ext === 'js') {
@@ -210,6 +239,7 @@ gulp.task('extractMeta', function () {
     .pipe(extractMeta)
 });
 
+// Creates meta.js
 gulp.task('meta', ['extractMeta'], function () {
   var contentScriptItems = [];
   for (var f in contentScripts) {
@@ -239,6 +269,7 @@ gulp.task('meta', ['extractMeta'], function () {
   fs.writeFile(outDir + '/firefox/lib/meta.js', firefoxMeta);
 });
 
+// Creates manifest.json (chrome) and package.json (firefox)
 gulp.task('config', ['copy'], function () {
   var version = fs.readFileSync('build.properties', {encoding: 'utf8'})
     .match('version=(.*)')[1].trim();
@@ -247,7 +278,9 @@ gulp.task('config', ['copy'], function () {
     .pipe(rename('chrome/manifest.json'))
     .pipe(jeditor(function(json) {
       json.version = version;
-      json.background.scripts.push('livereload.js');
+      if (!isRelease) {
+        json.background.scripts.push('livereload.js');
+      }
       return json;
     }))
     .pipe(gulp.dest(outDir))
@@ -263,11 +296,62 @@ gulp.task('config', ['copy'], function () {
   return es.merge(chromeConfig, firefoxConfig);
 });
 
-function watchAndReload(targets, tasks) {
-  gulp.watch(targets, function () {
-    // the tasks array is modified by runSequence, need to pass a copy
-    runSequence(tasks.slice(0), reload);
+gulp.task('config-package-chrome', ['config'], function () {
+  gulp.src(outDir + '/chrome/manifest.json', {base: './'})
+    .pipe(map(function (code) {
+      return code.toString().replace(/(http|ws):\/\/dev\.ezkeep\.com:\d+\s*/g, '');
+    }))
+    .pipe(gulp.dest('.'));
+});
+
+gulp.task('zip-chrome', ['scripts', 'styles', 'meta', 'config-package-chrome'], function () {
+  return gulp.src(outDir + '/chrome/**')
+    .pipe(zip('kifi.zip'))
+    .pipe(gulp.dest(outDir));
+});
+
+gulp.task('xpi-firefox', ['scripts', 'styles', 'meta', 'config'], shell.task([
+  'cd ' + outDir + ' && \
+  cfx xpi --pkgdir=firefox \
+    --update-link=https://www.kifi.com/assets/plugins/kifi.xpi \
+    --update-url=https://www.kifi.com/assets/plugins/kifi.update.rdf && \
+  cd - > /dev/null'
+]));
+
+/**
+ * Takes a set of "actions" (lazypipes or task names), and creates corresponding
+ * watchers. "actions" can be either lazypipes (good!), or task names (not as good,
+ * because the task is run on all files, not just the modified ones)
+ */
+function watchAndReload(target) {
+  var actions = Array.prototype.slice.call(arguments, 1);
+  var tasks = [];
+  var pipes = [];
+
+  actions.forEach(function (a) {
+    if (typeof a === 'string') {
+      tasks.push(a);
+    } else {
+      pipes.push(a);
+    }
   });
+
+  if (tasks) {
+    gulp.watch(target, function () {
+      // the tasks array is modified by runSequence, need to pass a copy
+      runSequence(tasks.slice(0), reloader());
+    });
+  }
+
+  if (pipes.length > 0) {
+    var watchers = pipes.map(function (pipe) {
+      return watch({glob:target, base: './', emitOnGlob: false})
+        .pipe(plumber())
+        .pipe(pipe());
+    });
+    es.merge.apply(null, watchers)
+      .pipe(es.wait(reloader()));
+  }
 }
 
 gulp.task('watch', function() {
@@ -278,8 +362,14 @@ gulp.task('watch', function() {
     rwsocketScript,
     backgroundScripts,
     htmlFiles
-  ), ['scripts', 'meta']);
-  watchAndReload(styleFiles, ['styles', 'meta']);
+  ), 'scripts', 'meta');
+
+  watchAndReload(styleFiles, 'meta', stylesPipe);
+});
+
+gulp.task('package', function () {
+  isRelease = true;
+  runSequence('clean', ['zip-chrome', 'xpi-firefox']);
 });
 
 gulp.task('default', function () {

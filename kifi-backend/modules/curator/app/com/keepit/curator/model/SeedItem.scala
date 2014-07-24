@@ -15,16 +15,17 @@ case class SeedItem(
   userId: Id[User],
   uriId: Id[NormalizedURI],
   seq: SequenceNumber[SeedItem],
+  priorScore: Option[Float],
   timesKept: Int,
   lastSeen: DateTime,
   keepers: Keepers)
 
 case class UriScores(
-  socialScore: Float, //s
-  popularityScore: Float, //k
-  overallInterestScore: Float, //i
-  recencyScore: Float, //r
-  priorScore: Float //p
-  )
+  socialScore: Float,
+  popularityScore: Float,
+  overallInterestScore: Float,
+  recentInterestScore: Float,
+  recencyScore: Float,
+  priorScore: Float)
 
 case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores)
