@@ -40,7 +40,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
             val user2 = userRepo.save(User(firstName = "abc", lastName = "xyz"))
 
-            val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), isSearchableByAnyone = false))
+            val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), isSearchableByOthers = false))
 
             val hover = KeepSource.keeper
             val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = nuri0.id.get, source = hover, libraryId = Some(lib1.id.get)))
@@ -150,7 +150,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val url1 = urlRepo.save(URLFactory("http://www.google.com/drive", uri1.id.get))
             val url2 = urlRepo.save(URLFactory("http://www.google.com/mail", uri2.id.get))
 
-            val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), isSearchableByAnyone = false))
+            val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), isSearchableByOthers = false))
 
             val hover = KeepSource.keeper
             val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0.id.get, source = hover, libraryId = Some(lib1.id.get)))

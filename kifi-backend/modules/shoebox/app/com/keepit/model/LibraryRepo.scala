@@ -1,15 +1,12 @@
 package com.keepit.model
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.actor.ActorInstance
-import com.keepit.common.db.slick.DBSession.RSession
+import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
+import com.keepit.common.db.{ State, ExternalId, Id }
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ DbSequenceAssigner, Id, State }
-import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time.Clock
-import scala.concurrent.duration._
+import scala.slick.lifted.{ TableQuery, Tag }
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
@@ -26,7 +23,8 @@ class LibraryRepoImpl @Inject() (
   val idCache: LibraryIdCache)
     extends DbRepo[Library] with LibraryRepo with SeqNumberDbFunction[Library] with Logging {
 
-  import com.keepit.common.db.slick.DBSession._
+  import scala.slick.lifted.Query
+  import DBSession._
   import db.Driver.simple._
   private val sequence = db.getSequence[Library]("library_sequence")
 
@@ -45,11 +43,6 @@ class LibraryRepoImpl @Inject() (
 
   def table(tag: Tag) = new LibraryTable(tag)
   initTable()
-
-  override def save(library: Library)(implicit session: RWSession): Library = {
-    val toSave = library.copy(seq = deferredSeqNum())
-    super.save(toSave)
-  }
 
   override def get(id: Id[Library])(implicit session: RSession): Library = {
     idCache.getOrElse(LibraryIdKey(id)) {
@@ -94,20 +87,3 @@ class LibraryRepoImpl @Inject() (
   }
 
 }
-
-trait LibrarySequencingPlugin extends SequencingPlugin
-
-class LibrarySequencingPluginImpl @Inject() (
-    override val actor: ActorInstance[LibrarySequencingActor],
-    override val scheduling: SchedulingProperties) extends LibrarySequencingPlugin {
-
-  override val interval: FiniteDuration = 20.seconds
-}
-
-@Singleton
-class LibrarySequenceNumberAssigner @Inject() (db: Database, repo: LibraryRepo, airbrake: AirbrakeNotifier)
-  extends DbSequenceAssigner[Library](db, repo, airbrake)
-
-class LibrarySequencingActor @Inject() (
-  assigner: LibrarySequenceNumberAssigner,
-  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)
