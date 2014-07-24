@@ -36,11 +36,11 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     val t2 = new DateTime(2014, 8, 1, 1, 0, 0, 1, DEFAULT_DATE_TIME_ZONE)
     val (libShield, libMurica, libScience) = db.readWrite { implicit s =>
       val libShield = libraryRepo.save(Library(name = "Avengers Missions", slug = LibrarySlug("avengers"),
-        visibility = LibraryVisibility.SECRET, ownerId = userAgent.id.get, createdAt = t1, isSearchableByOthers = false))
+        visibility = LibraryVisibility.SECRET, ownerId = userAgent.id.get, createdAt = t1, isSearchableByAnyone = false))
       val libMurica = libraryRepo.save(Library(name = "MURICA", slug = LibrarySlug("murica"),
-        visibility = LibraryVisibility.ANYONE, ownerId = userCaptain.id.get, createdAt = t1, isSearchableByOthers = true))
+        visibility = LibraryVisibility.ANYONE, ownerId = userCaptain.id.get, createdAt = t1, isSearchableByAnyone = true))
       val libScience = libraryRepo.save(Library(name = "Science & Stuff", slug = LibrarySlug("science"),
-        visibility = LibraryVisibility.LIMITED, ownerId = userIron.id.get, createdAt = t1, isSearchableByOthers = true))
+        visibility = LibraryVisibility.LIMITED, ownerId = userIron.id.get, createdAt = t1, isSearchableByAnyone = true))
 
       libraryMembershipRepo.save(LibraryMembership(libraryId = libShield.id.get, userId = userAgent.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true))
       libraryMembershipRepo.save(LibraryMembership(libraryId = libMurica.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, createdAt = t2, showInSearch = true))
@@ -364,7 +364,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         // Removes dupes
         db.readWrite { implicit session =>
-          val lib = libraryRepo.save(Library(ownerId = userIron.id.get, name = "Main 2!", kind = LibraryKind.SYSTEM_MAIN, visibility = LibraryVisibility.LIMITED, slug = LibrarySlug("main2"), isSearchableByOthers = true))
+          val lib = libraryRepo.save(Library(ownerId = userIron.id.get, name = "Main 2!", kind = LibraryKind.SYSTEM_MAIN, visibility = LibraryVisibility.LIMITED, slug = LibrarySlug("main2"), isSearchableByAnyone = true))
           libraryMembershipRepo.save(LibraryMembership(userId = userIron.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           println(libraryRepo.all.mkString("\n"))
