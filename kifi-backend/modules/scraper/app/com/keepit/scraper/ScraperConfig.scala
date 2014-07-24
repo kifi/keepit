@@ -27,7 +27,7 @@ case class ScraperConfig(
   val numCores = Runtime.getRuntime.availableProcessors
   val pullMax = numCores * pullMultiplier
   val pullThreshold = numCores // tweak
-  val numWorkers = numCores * math.max(pullMultiplier, 2) // tweak
+  val numWorkers = numCores * math.max(pullMultiplier / 2, 2) // tweak
 }
 
 object ScraperConfig {
