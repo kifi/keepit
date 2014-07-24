@@ -425,11 +425,11 @@ class KeepsController @Inject() (
 
   def importStatus() = JsonAction.authenticated { request =>
     val values = db.readOnlyMaster { implicit session =>
-      userValueRepo.getValues(request.user.id.get, "bookmark_import_last_start", "bookmark_import_done", "bookmark_import_total")
+      userValueRepo.getValues(request.user.id.get, UserValueName.BOOKMARK_IMPORT_LAST_START, UserValueName.BOOKMARK_IMPORT_DONE, UserValueName.BOOKMARK_IMPORT_TOTAL)
     }
-    val lastStartOpt = values("bookmark_import_last_start")
-    val done = values("bookmark_import_done")
-    val total = values("bookmark_import_total")
+    val lastStartOpt = values(UserValueName.BOOKMARK_IMPORT_LAST_START)
+    val done = values(UserValueName.BOOKMARK_IMPORT_DONE)
+    val total = values(UserValueName.BOOKMARK_IMPORT_TOTAL)
     val lastStart = lastStartOpt.map { lastStart =>
       Seconds.secondsBetween(parseStandardTime(lastStart), clock.now).getSeconds
     }

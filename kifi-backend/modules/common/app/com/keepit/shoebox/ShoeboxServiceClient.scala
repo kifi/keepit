@@ -104,8 +104,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getProxy(url: String): Future[Option[HttpProxy]]
   def getProxyP(url: String): Future[Option[HttpProxy]]
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
-  def getUserValue(userId: Id[User], key: String): Future[Option[String]]
-  def setUserValue(userId: Id[User], key: String, value: String): Unit
+  def getUserValue(userId: Id[User], key: UserValueName): Future[Option[String]]
+  def setUserValue(userId: Id[User], key: UserValueName, value: String): Unit
   def getUserSegment(userId: Id[User]): Future[UserSegment]
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String]
   def triggerRawKeepImport(): Unit
@@ -125,6 +125,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
+  def getLibrariesWithMembersChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[(Library, Seq[LibraryMembership])]] = Future.successful(Seq.empty) // todo(Léo): implement
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -701,13 +702,13 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getUserValue(userId: Id[User], key: String): Future[Option[String]] = {
+  def getUserValue(userId: Id[User], key: UserValueName): Future[Option[String]] = {
     cacheProvider.userValueCache.getOrElseFutureOpt(UserValueKey(userId, key)) {
       call(Shoebox.internal.getUserValue(userId, key)).map(_.json.asOpt[String])
     }
   }
 
-  def setUserValue(userId: Id[User], key: String, value: String): Unit = { call(Shoebox.internal.setUserValue(userId, key), JsString(value)) }
+  def setUserValue(userId: Id[User], key: UserValueName, value: String): Unit = { call(Shoebox.internal.setUserValue(userId, key), JsString(value)) }
 
   def getUserSegment(userId: Id[User]): Future[UserSegment] = {
     cacheProvider.userSegmentCache.getOrElseFuture(UserSegmentKey(userId)) {

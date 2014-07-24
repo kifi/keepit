@@ -18,10 +18,6 @@ import play.api.libs.json.Json
 import com.keepit.heimdal.{ ContextDoubleData, HeimdalServiceClient }
 import com.keepit.common.performance.timing
 
-object UserConnectionCreator {
-  private val UpdatedUserConnectionsKey = "updated_user_connections"
-}
-
 class UserConnectionCreator @Inject() (
   db: Database,
   socialRepo: SocialUserInfoRepo,
@@ -48,7 +44,7 @@ class UserConnectionCreator @Inject() (
   }
 
   def getConnectionsLastUpdated(userId: Id[User]): Option[DateTime] = db.readOnlyMaster { implicit s =>
-    userValueRepo.getValueStringOpt(userId, UserConnectionCreator.UpdatedUserConnectionsKey) map parseStandardTime
+    userValueRepo.getValueStringOpt(userId, UserValueName.UPDATED_USER_CONNECTIONS) map parseStandardTime
   }
 
   def updateUserConnections(userId: Id[User]) = timing(s"updateUserConnections($userId)") {
@@ -58,7 +54,7 @@ class UserConnectionCreator @Inject() (
 
       val newConnections = socialConnections -- existingConnections
       userConnectionRepo.addConnections(userId, newConnections)
-      userValueRepo.setValue(userId, UserConnectionCreator.UpdatedUserConnectionsKey, clock.now.toStandardTimeString)
+      userValueRepo.setValue(userId, UserValueName.UPDATED_USER_CONNECTIONS, clock.now.toStandardTimeString)
 
       newConnections.foreach { connId =>
         log.info(s"Sending new connection to user $connId (to $userId)")

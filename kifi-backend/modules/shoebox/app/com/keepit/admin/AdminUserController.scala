@@ -492,7 +492,7 @@ class AdminUserController @Inject() (
 
   def userValue(userId: Id[User]) = AdminJsonAction.authenticated { implicit request =>
     val req = request.body.asJson.map { json =>
-      ((json \ "name").asOpt[String], (json \ "value").asOpt[String], (json \ "clear").asOpt[Boolean]) match {
+      ((json \ "name").asOpt[UserValueName], (json \ "value").asOpt[String], (json \ "clear").asOpt[Boolean]) match {
         case (Some(name), Some(value), None) =>
           Some(db.readWrite { implicit session => // set it
             userValueRepo.setValue(userId, name, value)
@@ -655,7 +655,7 @@ class AdminUserController @Inject() (
 
         val allInstallations = kifiInstallationRepo.all(userId)
         if (allInstallations.nonEmpty) { properties += ("installedExtension", allInstallations.maxBy(_.updatedAt).version.toString) }
-        userValueRepo.getValueStringOpt(userId, Gender.key).foreach { gender => properties += (Gender.key, Gender(gender).toString) }
+        userValueRepo.getValueStringOpt(userId, Gender.key).foreach { gender => properties += (Gender.key.name, Gender(gender).toString) }
       }
       heimdal.setUserProperties(userId, properties.data.toSeq: _*)
     }
@@ -818,5 +818,11 @@ class AdminUserController @Inject() (
     }
     log.info(s"Deactivated UserEmailAddress $inactiveEmail")
     Ok(JsString(inactiveEmail.toString))
+  }
+
+  def setUsername(userId: Id[User], username: String, overrideRestrictions: Boolean = false) = AdminHtmlAction.authenticated { request =>
+    val res = userCommander.setUsername(userId, Username(username), overrideRestrictions)
+
+    Ok(res.toString)
   }
 }

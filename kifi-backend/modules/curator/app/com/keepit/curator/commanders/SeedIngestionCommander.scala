@@ -3,6 +3,10 @@ package com.keepit.curator.commanders
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.curator.model.{ SeedItem, RawSeedItem, Keepers, RawSeedItemRepo, CuratorKeepInfoRepo }
+import com.keepit.model.User
+import com.keepit.common.db.slick.Database
 
 import com.google.inject.{ Inject, Singleton }
 
@@ -16,7 +20,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 @Singleton
 class SeedIngestionCommander @Inject() (
     allKeepIngestor: AllKeepSeedIngestionHelper,
-    airbrake: AirbrakeNotifier) extends Logging {
+    airbrake: AirbrakeNotifier,
+    rawSeedsRepo: RawSeedItemRepo,
+    keepInfoRepo: CuratorKeepInfoRepo,
+    db: Database) extends Logging {
 
   val INGESTION_BATCH_SIZE = 50
 
@@ -37,6 +44,42 @@ class SeedIngestionCommander @Inject() (
     fut.map(_ => true)
   } else {
     Future.successful(false)
+  }
+
+  private def cook(userId: Id[User], rawItem: RawSeedItem, keepers: Keepers): SeedItem = SeedItem(
+    userId = userId,
+    uriId = rawItem.uriId,
+    seq = SequenceNumber[SeedItem](rawItem.seq.value),
+    timesKept = rawItem.timesKept,
+    lastSeen = rawItem.lastSeen,
+    keepers = keepers
+  )
+
+  def getBySeqNumAndUser(start: SequenceNumber[SeedItem], userId: Id[User], maxBatchSize: Int): Future[Seq[SeedItem]] = {
+    db.readOnlyReplicaAsync { implicit session =>
+      rawSeedsRepo.getBySeqNumAndUser(SequenceNumber[RawSeedItem](start.value), userId, maxBatchSize).map { rawItem =>
+        val keepers = if (rawItem.timesKept > 100) {
+          Keepers.TooMany
+        } else {
+          Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
+        }
+        cook(userId, rawItem, keepers)
+      }
+    }
+  }
+
+  //this is a methods for (manual, not unit) testing of data flow and scoring, not meant for user facing content or scale
+  def getRecentItems(userId: Id[User], howManyMax: Int): Future[Seq[SeedItem]] = {
+    db.readOnlyReplicaAsync { implicit session =>
+      rawSeedsRepo.getRecent(userId, howManyMax).map { rawItem =>
+        val keepers = if (rawItem.timesKept > 100) {
+          Keepers.TooMany
+        } else {
+          Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
+        }
+        cook(userId, rawItem, keepers)
+      }
+    }
   }
 
 }

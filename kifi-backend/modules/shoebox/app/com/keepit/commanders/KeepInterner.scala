@@ -76,10 +76,10 @@ class KeepInterner @Inject() (
       db.readWrite(attempts = 3) { implicit session =>
         // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.
         // If it happens, the user will experience the % complete jumping around a bit until it's finished.
-        userValueRepo.setValue(userId, "bookmark_import_last_start", clock.now)
-        userValueRepo.setValue(userId, "bookmark_import_done", 0)
-        userValueRepo.setValue(userId, "bookmark_import_total", total)
-        userValueRepo.setValue(userId, s"bookmark_import_${newImportId}_context", Json.toJson(context))
+        userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_LAST_START, clock.now)
+        userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_DONE, 0)
+        userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_TOTAL, total)
+        userValueRepo.setValue(userId, UserValueName.bookmarkImportContextName(newImportId), Json.toJson(context))
       }
 
       deduped.grouped(500).toList.map { rawKeepGroup =>

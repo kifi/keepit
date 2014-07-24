@@ -7,8 +7,7 @@ import com.keepit.common.controller.CortexServiceController
 import com.keepit.common.commanders.LDACommander
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.utils.TextUtils
-import com.keepit.cortex.models.lda.LDATopicConfiguration
-import com.keepit.cortex.models.lda.LDATopicInfo
+import com.keepit.cortex.models.lda.{ LDATopicConfigurations, LDATopicConfiguration, LDATopicInfo }
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import com.keepit.model.{ User, NormalizedURI }
@@ -53,6 +52,10 @@ class LDAController @Inject() (
     Ok
   }
 
+  def ldaConfigurations = Action { request =>
+    Ok(Json.toJson(lda.ldaConfigurations))
+  }
+
   def getLDAFeatures() = Action.async(parse.tolerantJson) { request =>
     implicit val format = Id.format[NormalizedURI]
     val ids = (request.body).as[Seq[Id[NormalizedURI]]]
@@ -64,12 +67,18 @@ class LDAController @Inject() (
   }
 
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    val score = lda.userUriInterest(userId, uriId)
-    Ok(Json.toJson(score))
+    val (globalScore, recencyScore) = lda.userUriInterest(userId, uriId)
+    Ok(Json.obj("global" -> globalScore, "recency" -> recencyScore))
   }
 
   def userTopicMean(userId: Id[User]) = Action { request =>
     val meanOpt = lda.userTopicMean(userId)
     Ok(Json.toJson(meanOpt.map { _.mean }))
   }
+
+  def sampleURIs(topicId: Int) = Action { request =>
+    val uris = lda.sampleURIs(topicId)
+    Ok(Json.toJson(uris))
+  }
+
 }

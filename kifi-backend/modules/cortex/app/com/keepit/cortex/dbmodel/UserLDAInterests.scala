@@ -17,6 +17,8 @@ case class UserLDAInterests(
     version: ModelVersion[DenseLDA],
     numOfEvidence: Int, // num of keeps used to compute userTopicMean. This affects the confidence of model.
     userTopicMean: Option[UserTopicMean],
+    numOfRecentEvidence: Int,
+    userRecentTopicMean: Option[UserTopicMean],
     state: State[UserLDAInterests] = UserLDAInterestsStates.ACTIVE) extends ModelWithState[UserLDAInterests] {
   def withId(id: Id[UserLDAInterests]): UserLDAInterests = copy(id = Some(id))
   def withUpdateTime(time: DateTime): UserLDAInterests = copy(updatedAt = time)
