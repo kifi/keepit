@@ -10,7 +10,12 @@ import com.keepit.common.store.ProdOrElseDevStoreModule
 import com.keepit.common.store.StoreModule
 import com.keepit.common.logging.Logging
 
-trait LDAInfoStoreModule extends StoreModule
+trait LDAInfoStoreModule extends StoreModule {
+  protected def generateDefaultConfig(dim: Int): LDATopicConfigurations = {
+    val conf = (0 until dim).map { i => (i.toString, LDATopicConfiguration.default) }.toMap
+    LDATopicConfigurations(conf)
+  }
+}
 
 case class LDAInfoStoreProdModule() extends LDAInfoStoreModule with Logging {
   def configure() {}
@@ -39,12 +44,16 @@ case class LDAInfoStoreProdModule() extends LDAInfoStoreModule with Logging {
 
   @Singleton
   @Provides
-  def topicConfigs(store: LDAConfigStore): LDATopicConfigurations = {
+  def topicConfigs(store: LDAConfigStore, rep: LDAWordRepresenter): LDATopicConfigurations = {
     log.info("loading lda topic configs")
     val version = ModelVersions.denseLDAVersion
     store.get(MiscPrefix.LDA.topicConfigsJsonFile, version) match {
       case Some(configs) => configs
-      case None => LDATopicConfigurations(Map[String, LDATopicConfiguration]())
+      case None => {
+        val conf = generateDefaultConfig(rep.lda.dimension)
+        store.+=(MiscPrefix.LDA.topicConfigsJsonFile, version, conf)
+        conf
+      }
     }
   }
 
@@ -59,7 +68,7 @@ case class LDAInfoStoreDevModule() extends ProdOrElseDevStoreModule(LDAInfoStore
     whenConfigured(S3_CORTEX_BUCKET)(
       prodStoreModule.topicWordsStore(amazonS3Client, accessLog)
     ) getOrElse {
-        val topicWords = Array(Map("a" -> 0.1f, "b" -> 0.2f), Map("c" -> 0.4f, "d" -> 0.2f, "e" -> 0.005f))
+        val topicWords = Array(Map("scala" -> 0.1f, "kifi" -> 0.2f), Map("food" -> 0.4f, "recipe" -> 0.005f))
         val version = ModelVersions.denseLDAVersion
         val store = new InMemoryLDATopicWordsStore
         store.+=(MiscPrefix.LDA.topicWordsJsonFile, version, DenseLDATopicWords(topicWords))
@@ -90,12 +99,16 @@ case class LDAInfoStoreDevModule() extends ProdOrElseDevStoreModule(LDAInfoStore
 
   @Singleton
   @Provides
-  def topicConfigs(store: LDAConfigStore): LDATopicConfigurations = {
+  def topicConfigs(store: LDAConfigStore, rep: LDAWordRepresenter): LDATopicConfigurations = {
     log.info("loading lda topic configs")
     val version = ModelVersions.denseLDAVersion
     store.get(MiscPrefix.LDA.topicConfigsJsonFile, version) match {
       case Some(config) => config
-      case None => LDATopicConfigurations(Map())
+      case None => {
+        val conf = generateDefaultConfig(rep.lda.dimension)
+        store.+=(MiscPrefix.LDA.topicConfigsJsonFile, version, conf)
+        conf
+      }
     }
   }
 
