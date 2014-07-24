@@ -29,7 +29,7 @@ class LibraryCommander @Inject() (
     clock: Clock) extends Logging {
 
   def createFullLibraryInfo(library: Library): FullLibraryInfo = {
-    val (lib, owner, collabs, follows) = db.readOnlyReplica { implicit s =>
+    val (lib, owner, collabs, follows, numKeeps) = db.readOnlyReplica { implicit s =>
       val owner = basicUserRepo.load(library.ownerId)
       val memberships = libraryMembershipRepo.getWithLibraryId(library.id.get)
       val (collabs, follows) = memberships.foldLeft(List.empty[BasicUser], List.empty[BasicUser]) {
@@ -40,7 +40,8 @@ class LibraryCommander @Inject() (
           case _ => (c1, f1)
         }
       }
-      (library, owner, collabs, follows)
+      val numKeeps = keepRepo.getByLibrary(library.id.get).length
+      (library, owner, collabs, follows, numKeeps)
     }
     val collabGroup = GroupHolder(count = collabs.length, users = collabs, isMore = false)
     val followerGroup = GroupHolder(count = follows.length, users = follows, isMore = false)
@@ -53,7 +54,7 @@ class LibraryCommander @Inject() (
       visibility = lib.visibility,
       collaborators = collabGroup,
       followers = followerGroup,
-      keepCount = 0)
+      keepCount = numKeeps)
   }
 
   def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, Library] = {
@@ -287,6 +288,58 @@ class LibraryCommander @Inject() (
   def getKeeps(libraryId: Id[Library]): Seq[Keep] = {
     db.readOnlyMaster { implicit s =>
       keepRepo.getByLibrary(libraryId)
+    }
+  }
+
+  def copyKeeps(userId: Id[User], fromLibraryId: Id[Library], toLibraryId: Id[Library], keeps: Set[Id[Keep]]): Either[LibraryFail, Library] = {
+    db.readWrite { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdandUserId(fromLibraryId, userId) match {
+        case None => Left(LibraryFail("no membership from library"))
+        case Some(member) => {
+
+          libraryMembershipRepo.getWithLibraryIdandUserId(toLibraryId, userId) match {
+            case None => Left(LibraryFail("no membership to library"))
+            case Some(mem) if mem.access == LibraryAccess.READ_ONLY => Left(LibraryFail("invalid access to library"))
+            case _ => {
+              val existingURIs = keepRepo.getByLibrary(toLibraryId).map(_.uriId)
+              keeps.map { keepId =>
+                val oldKeep = keepRepo.get(keepId)
+                if (!existingURIs.contains(oldKeep.uriId)) {
+                  keepRepo.save(Keep(title = oldKeep.title, uriId = oldKeep.uriId, url = oldKeep.url, urlId = oldKeep.urlId,
+                    userId = oldKeep.userId, source = oldKeep.source, libraryId = Some(toLibraryId)))
+                }
+              }
+              Right(libraryRepo.get(toLibraryId))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def moveKeeps(userId: Id[User], fromLibraryId: Id[Library], toLibraryId: Id[Library], keeps: Set[Id[Keep]]): Either[LibraryFail, Library] = {
+    db.readWrite { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdandUserId(fromLibraryId, userId) match {
+        case None => Left(LibraryFail("no membership from library"))
+        case Some(memFrom) if memFrom.access == LibraryAccess.READ_ONLY || memFrom.access == LibraryAccess.READ_INSERT => Left(LibraryFail("invalid access from library"))
+        case _ => {
+          
+          libraryMembershipRepo.getWithLibraryIdandUserId(toLibraryId, userId) match {
+            case None => Left(LibraryFail("no membership to library"))
+            case Some(memTo) if memTo.access == LibraryAccess.READ_ONLY => Left(LibraryFail("invalid access to library"))
+            case _ => {
+              val existingURIs = keepRepo.getByLibrary(toLibraryId).map(_.uriId)
+              keeps.map { keepId =>
+                val oldKeep = keepRepo.get(keepId)
+                if (!existingURIs.contains(oldKeep.uriId)) {
+                  keepRepo.save(oldKeep.copy(libraryId = Some(toLibraryId)))
+                }
+              }
+              Right(libraryRepo.get(toLibraryId))
+            }
+          }
+        }
+      }
     }
   }
 

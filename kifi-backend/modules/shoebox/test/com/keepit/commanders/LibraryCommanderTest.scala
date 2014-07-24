@@ -161,9 +161,15 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           visibility = LibraryVisibility.SECRET, collaborators = noInvites, followers = noInvites, isSearchableByOthers = true)
 
         val libraryCommander = inject[LibraryCommander]
-        libraryCommander.addLibrary(lib1Request, userAgent.id.get).isRight === true
-        libraryCommander.addLibrary(lib2Request, userCaptain.id.get).isRight === true
-        libraryCommander.addLibrary(lib3Request, userIron.id.get).isRight === true
+        val add1 = libraryCommander.addLibrary(lib1Request, userAgent.id.get)
+        add1.isRight === true
+        add1.right.get.name === "Avengers Missions"
+        val add2 = libraryCommander.addLibrary(lib2Request, userCaptain.id.get)
+        add2.isRight === true
+        add2.right.get.name === "MURICA"
+        val add3 = libraryCommander.addLibrary(lib3Request, userIron.id.get)
+        add3.isRight === true
+        add3.right.get.name === "Science and Stuff"
         libraryCommander.addLibrary(lib4Request, userIron.id.get).isRight === false
         libraryCommander.addLibrary(lib5Request, userIron.id.get).isRight === false
 
@@ -199,12 +205,19 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val mod1 = libraryCommander.modifyLibrary(libraryId = libShield.id.get, userId = userAgent.id.get,
           description = Some("Samuel L. Jackson was here"))
         mod1.isRight === true
+        mod1.right.get.description === Some("Samuel L. Jackson was here")
+
         val mod2 = libraryCommander.modifyLibrary(libraryId = libMurica.id.get, userId = userCaptain.id.get,
           name = Some("MURICA #1!!!!!"), slug = Some("murica_#1"))
         mod2.isRight === true
+        mod2.right.get.name === "MURICA #1!!!!!"
+        mod2.right.get.slug === LibrarySlug("murica_#1")
+
         val mod3 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
           visibility = Some(LibraryVisibility.ANYONE))
         mod3.isRight === true
+        mod3.right.get.visibility === LibraryVisibility.ANYONE
+
         val mod4 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userHulk.id.get,
           name = Some("HULK SMASH"))
         mod4.isRight === false
@@ -398,6 +411,9 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           (userHulk.id.get, LibraryAccess.READ_ONLY))
         val res1 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1)
         res1.isRight === true
+        res1.right.get === Seq((userIron.externalId, LibraryAccess.READ_ONLY),
+          (userAgent.externalId, LibraryAccess.READ_ONLY),
+          (userHulk.externalId, LibraryAccess.READ_ONLY))
 
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 3
@@ -434,10 +450,10 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryInviteRepo.count === 6
           libraryInviteRepo.all.map(_.id.get)
         }
-        libraryCommander.joinLibrary(inviteIds(0)) // Ironman accepts invite to 'Murica'
-        libraryCommander.joinLibrary(inviteIds(1)) // Agent accepts invite to 'Murica'
+        libraryCommander.joinLibrary(inviteIds(0)) === libMurica // Ironman accepts invite to 'Murica'
+        libraryCommander.joinLibrary(inviteIds(1)) === libMurica // Agent accepts invite to 'Murica'
         libraryCommander.declineLibrary(inviteIds(2)) // Hulk declines invite to 'Murica'
-        libraryCommander.joinLibrary(inviteIds(3)) // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access
+        libraryCommander.joinLibrary(inviteIds(3)) === libScience // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access
 
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 6
@@ -467,7 +483,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 0
         }
 
-        libraryCommander.leaveLibrary(libMurica.id.get, userAgent.id.get)
+        libraryCommander.leaveLibrary(libMurica.id.get, userAgent.id.get).isRight === true
 
         db.readOnlyMaster { implicit s =>
           libraryMembershipRepo.count === 6
@@ -487,6 +503,74 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val res = libraryCommander.getKeeps(libMurica.id.get)
         res.length === 3
         res.map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+      }
+    }
+
+    "copy and move keeps to another library" in {
+      withDb(TestCryptoModule()) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
+        val libraryCommander = inject[LibraryCommander]
+
+        val (libFreedom, libIronmanMurica, keepsInMurica) = db.readWrite { implicit s =>
+          val libFreedom = libraryRepo.save(Library(name = "Freedom", slug = LibrarySlug("freedom"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.ANYONE, isSearchableByOthers = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libFreedom.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          val libIronMurica = libraryRepo.save(Library(name = "MyMurica", slug = LibrarySlug("mymurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.ANYONE, isSearchableByOthers = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          keepRepo.count === 3
+          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get).map(_.id.get).toSet
+          (libFreedom, libIronMurica, keepsInMurica)
+        }
+
+        // copy 3 keeps from Murica to Freedom
+        val copy1 = libraryCommander.copyKeeps(userCaptain.id.get, libMurica.id.get, libFreedom.id.get, keepsInMurica)
+        copy1.isRight === true
+        copy1.right.get.slug === LibrarySlug("freedom")
+
+        // invalid move (ironman only has read_only access to Murica)
+        val move2 = libraryCommander.moveKeeps(userIron.id.get, libMurica.id.get, libIronmanMurica.id.get, keepsInMurica)
+        move2.isRight === false
+
+        // copy 2 keeps from Murica to Ironman's Murica
+        val copy3 = libraryCommander.copyKeeps(userIron.id.get, libMurica.id.get, libIronmanMurica.id.get, keepsInMurica.slice(0, 2))
+        copy3.isRight === true
+        copy3.right.get.slug === LibrarySlug("mymurica")
+
+        val keepSubset = db.readOnlyMaster { implicit s =>
+          keepRepo.count === 8
+          keepRepo.getByLibrary(libMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libFreedom.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libIronmanMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom")
+          keepRepo.getByLibrary(libIronmanMurica.id.get).slice(0, 1).map(_.id.get).toSet
+        }
+
+        // move 1 keep (Reddit) from Ironman's Murica to Science
+        val move4 = libraryCommander.moveKeeps(userIron.id.get, libIronmanMurica.id.get, libScience.id.get, keepSubset)
+        move4.isRight === true
+        move4.right.get.slug === LibrarySlug("science")
+
+        db.readOnlyMaster { implicit s =>
+          keepRepo.count === 8
+          keepRepo.getByLibrary(libIronmanMurica.id.get).map(_.title.get) === Seq("Freedom")
+          keepRepo.getByLibrary(libScience.id.get).map(_.title.get) === Seq("Reddit")
+        }
+
+        // copy 2 keeps (Reddit, Freedom*duplicate) from Murica to Ironman's Murica
+        val copy5 = libraryCommander.copyKeeps(userIron.id.get, libMurica.id.get, libIronmanMurica.id.get, keepsInMurica.slice(0, 2))
+        copy5.isRight === true
+        copy5.right.get.slug === LibrarySlug("mymurica")
+
+        // move 1 keep (Reddit)*duplicate from Ironman's Murica to Science
+        val move6 = libraryCommander.copyKeeps(userIron.id.get, libIronmanMurica.id.get, libScience.id.get, keepSubset)
+        move6.isRight === true
+        move6.right.get.slug === LibrarySlug("science")
+
+        db.readOnlyMaster { implicit s =>
+          keepRepo.count === 9
+          keepRepo.getByLibrary(libIronmanMurica.id.get).map(_.title.get) === Seq("Freedom", "Reddit")
+          keepRepo.getByLibrary(libScience.id.get).map(_.title.get) === Seq("Reddit")
+        }
+
       }
     }
   }
