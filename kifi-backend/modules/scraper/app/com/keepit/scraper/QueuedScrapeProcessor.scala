@@ -126,16 +126,12 @@ class QueuedScrapeProcessor @Inject() (
     }
   }
 
-  val NUM_CORES = Runtime.getRuntime.availableProcessors
-  val PULL_MAX = NUM_CORES * config.pullMultiplier
-  val PULL_THRESHOLD = config.queueConfig.pullThreshold.getOrElse(NUM_CORES / 2)
-
   override def pull(): Unit = {
-    log.info(s"[QScraper.puller] look for things to do ... q.size=${submittedQ.size} threshold=$PULL_THRESHOLD")
-    if (submittedQ.isEmpty || submittedQ.size <= PULL_THRESHOLD) {
+    log.info(s"[QScraper.puller] look for things to do ... q.size=${submittedQ.size} threshold=${config.pullThreshold}")
+    if (submittedQ.isEmpty || submittedQ.size <= config.pullThreshold) {
       serviceDiscovery.thisInstance.map { inst =>
         if (inst.isHealthy) {
-          asyncHelper.assignTasks(inst.id.id, PULL_MAX).onComplete {
+          asyncHelper.assignTasks(inst.id.id, config.pullMax).onComplete {
             case Failure(t) =>
               log.error(s"[puller(${inst.id.id})] Caught exception $t while pulling for tasks", t) // move along
             case Success(requests) =>

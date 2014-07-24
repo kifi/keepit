@@ -10,6 +10,7 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.scraper.ScraperConfig
 import com.keepit.search.Article
 import org.joda.time.DateTime
 
@@ -40,6 +41,7 @@ object InternalMessages {
 class ScrapeAgentSupervisor @Inject() (
     airbrake: AirbrakeNotifier,
     clock: Clock,
+    config: ScraperConfig,
     sysProvider: Provider[ActorSystem],
     fetcherAgentProvider: Provider[FetchAgent],
     scrapeAgentProvider: Provider[ScrapeAgent]) extends FortyTwoActor(airbrake) with Logging {
@@ -55,13 +57,13 @@ class ScrapeAgentSupervisor @Inject() (
   lazy val system = sysProvider.get
   log.info(s"[Supervisor.<ctr>] config=${system.settings.config}")
 
-  val scrapers = (0 until Runtime.getRuntime.availableProcessors() * 2).map { i =>
+  val scrapers = (0 until config.numWorkers).map { i =>
     context.actorOf(Props(scrapeAgentProvider.get), s"scrape-agent$i")
   }
   val scraperRouter = context.actorOf(Props.empty.withRouter(SmallestMailboxRouter(routees = scrapers)), "scraper-router")
   log.info(s"[Supervisor.<ctr>] scraperRouter=$scraperRouter scrapers(sz=${scrapers.size}):${scrapers.mkString(",")}")
 
-  val fetchers = (0 until Runtime.getRuntime.availableProcessors()).map { i =>
+  val fetchers = (0 until config.numWorkers / 2).map { i =>
     context.actorOf(Props(fetcherAgentProvider.get), s"fetch-agent$i")
   }
   val fetcherRouter = context.actorOf(Props.empty.withRouter(SmallestMailboxRouter(routees = fetchers)), "fetcher-router")
@@ -119,7 +121,7 @@ class ScrapeAgentSupervisor @Inject() (
       scrapeQ.enqueue(ScrapeJob(clock.now(), s))
       scraperRouter ! Broadcast(JobAvail)
     case QueueSize =>
-      if (scrapeQ.size > Runtime.getRuntime.availableProcessors / 2) { // tweak
+      if (scrapeQ.size > config.pullMax / 2) { // tweak
         diagnostic()
       }
       sender ! scrapeQ.size
