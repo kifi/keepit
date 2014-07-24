@@ -1,8 +1,9 @@
 package com.keepit.model
 
-import com.keepit.common.db.{ Id, Model }
+import com.keepit.common.db.{ ExternalId, Id, Model }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
+import com.kifi.macros.json
 import org.joda.time.DateTime
 
 case class DelightedUser(
@@ -16,3 +17,10 @@ case class DelightedUser(
   def withId(id: Id[DelightedUser]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
+
+// Contains the information used to register a user to Delighted
+@json case class DelightedUserCreationInfo(
+  userId: Id[User],
+  externalId: ExternalId[User],
+  email: Option[EmailAddress],
+  name: String)

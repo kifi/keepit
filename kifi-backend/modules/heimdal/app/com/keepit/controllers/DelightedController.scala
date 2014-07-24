@@ -22,21 +22,30 @@ class DelightedController @Inject() (
     Ok(Json.toJson(delightedCommander.getUserLastInteractedDate(userId)))
   }
 
-  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String) = Action.async(parse.tolerantJson) { request =>
-    request.body.asOpt[BasicDelightedAnswer] map { answer =>
-      delightedCommander.postDelightedAnswer(userId, externalId, email, name, answer) map {
+  def postDelightedAnswer() = Action.async(parse.tolerantJson) { request =>
+    val resultFutOpt = for {
+      userCreationInfo <- (request.body \ "user").asOpt[DelightedUserCreationInfo]
+      answer <- (request.body \ "answer").asOpt[BasicDelightedAnswer]
+    } yield {
+      delightedCommander.postDelightedAnswer(userCreationInfo, answer) map {
         case Left(error) => Ok(Json.obj("error" -> error))
         case Right(answer) => Ok(Json.toJson(BasicDelightedAnswer(Some(answer.score), answer.comment, answer.source, Some(answer.externalId))))
       }
-    } getOrElse {
+    }
+    resultFutOpt getOrElse {
       airbrake.notify(s"Error parsing postDelightedAnswer request: ${request.body}")
       Future.successful(BadRequest)
     }
   }
 
-  def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String) = Action.async { request =>
-    delightedCommander.cancelDelightedSurvey(userId, externalId, email, name) map { success =>
-      Ok(JsString(if (success) "success" else "error"))
+  def cancelDelightedSurvey() = Action.async(parse.tolerantJson) { request =>
+    (request.body \ "user").asOpt[DelightedUserCreationInfo] map { userCreationInfo =>
+      delightedCommander.cancelDelightedSurvey(userCreationInfo) map { success =>
+        Ok(JsString(if (success) "success" else "error"))
+      }
+    } getOrElse {
+      airbrake.notify(s"Error parsing cancelDelightedSurvey request: ${request.body}")
+      Future.successful(BadRequest)
     }
   }
 }

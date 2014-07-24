@@ -1,7 +1,7 @@
 package com.keepit.heimdal
 
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.User
+import com.keepit.model.{DelightedUserCreationInfo, User}
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.service.ServiceType
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -47,7 +47,7 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]] = Future.successful(None)
 
-  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]] = Future.successful(None)
+  def postDelightedAnswer(userCreationInfo: DelightedUserCreationInfo, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]] = Future.successful(None)
 
-  def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Boolean] = Future.successful(true)
+  def cancelDelightedSurvey(userCreationInfo: DelightedUserCreationInfo): Future[Boolean] = Future.successful(true)
 }

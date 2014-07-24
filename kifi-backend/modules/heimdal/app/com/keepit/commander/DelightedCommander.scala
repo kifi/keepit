@@ -1,11 +1,11 @@
 package com.keepit.commander
 
 import com.google.inject.{ Inject, ImplementedBy }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.heimdal.{ DelightedAnswerSources, DelightedAnswerSource, BasicDelightedAnswer }
 import com.keepit.model._
@@ -13,22 +13,23 @@ import com.keepit.common.collection._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.ning.http.client.Realm.AuthScheme
 import org.joda.time.DateTime
-import play.api.libs.json.{ JsString, JsValue, Json }
+import play.api.libs.json.JsValue
 import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws.WS
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import play.api.http.Status
+import com.keepit.common.KestrelCombinator
 
 case class DelightedConfig(url: String, apiKey: String)
 
 @ImplementedBy(classOf[DelightedCommanderImpl])
 trait DelightedCommander {
   def getUserLastInteractedDate(userId: Id[User]): Option[DateTime]
-  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Either[String, DelightedAnswer]]
+  def postDelightedAnswer(userCreationInfo: DelightedUserCreationInfo, answer: BasicDelightedAnswer): Future[Either[String, DelightedAnswer]]
   def fetchNewDelightedAnswers()
-  def scheduleSurveyForLapsedUsers()
-  def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Boolean]
+  def scheduleSurveyForLapsedUsers(skipCount: Int): Future[Int]
+  def cancelDelightedSurvey(userCreationInfo: DelightedUserCreationInfo): Future[Boolean]
 }
 
 class DelightedCommanderImpl @Inject() (
@@ -51,11 +52,11 @@ class DelightedCommanderImpl @Inject() (
     db.readOnlyReplica { implicit s => delightedUserRepo.getLastInteractedDateForUserId(userId) }
   }
 
-  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Either[String, DelightedAnswer]] = {
+  def postDelightedAnswer(userCreationInfo: DelightedUserCreationInfo, answer: BasicDelightedAnswer): Future[Either[String, DelightedAnswer]] = {
     if (answer.score.isEmpty && answer.answerId.isEmpty) {
       return Future.successful(Left("Delighted answer must contain at least a score or the id of an existing answer"))
     }
-    getOrCreateDelightedUser(userId, externalId, email, name) flatMap { userOpt =>
+    getOrCreateDelightedUser(userCreationInfo) flatMap { userOpt =>
       userOpt map { user =>
         val data = Map(
           "person" -> Seq(user.delightedExtUserId),
@@ -86,8 +87,8 @@ class DelightedCommanderImpl @Inject() (
     }
   }
 
-  def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Boolean] = {
-    getOrCreateDelightedUser(userId, externalId, email, name) map { userOpt =>
+  def cancelDelightedSurvey(userCreationInfo: DelightedUserCreationInfo): Future[Boolean] = {
+    getOrCreateDelightedUser(userCreationInfo) map { userOpt =>
       userOpt flatMap (_.id) map { delightedUserId =>
         db.readWrite { implicit session =>
           delightedUserRepo.setLastInteractedDate(delightedUserId, clock.now())
@@ -116,8 +117,14 @@ class DelightedCommanderImpl @Inject() (
     }
   }
 
-  def scheduleSurveyForLapsedUsers() = {
-    // todo(martin)
+  def scheduleSurveyForLapsedUsers(skipCount: Int): Future[Int] = {
+    val now = clock.now()
+    shoebox.getLapsedUsersForDelighted(now.minusDays(8), Some(now.minusDays(7)), 100, skipCount) map { userInfos =>
+      userInfos map { info =>
+        SafeFuture { getOrCreateDelightedUser(info, true) }
+      }
+      userInfos.size
+    }
   }
 
   private def saveAnswerForResponse(json: JsValue): Option[DelightedAnswer] = {
@@ -152,28 +159,33 @@ class DelightedCommanderImpl @Inject() (
     }
   }
 
-  private def getOrCreateDelightedUser(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Option[DelightedUser]] = {
+  private def getOrCreateDelightedUser(userCreationInfo: DelightedUserCreationInfo, scheduleSurvey: Boolean = false): Future[Option[DelightedUser]] = {
     db.readOnlyReplica {
-      implicit s => delightedUserRepo.getByUserId(userId)
+      implicit s => delightedUserRepo.getByUserId(userCreationInfo.userId)
     } map { user => Future.successful(Some(user)) } getOrElse {
       val data = Map(
-        "email" -> Seq(email.map(_.address).getOrElse(s"delighted+$externalId@kifi.com")),
-        "name" -> Seq(name),
-        "send" -> Seq("false"),
-        "properties[customer_id]" -> Seq(externalId.id)
-      )
+        "email" -> Seq(userCreationInfo.email.map(_.address).getOrElse(s"delighted+${userCreationInfo.externalId}@kifi.com")),
+        "name" -> Seq(userCreationInfo.name),
+        "properties[customer_id]" -> Seq(userCreationInfo.externalId.id)
+      ).withOpt(
+          "send" -> (if (scheduleSurvey) None else Some(Seq("false")))
+        )
       delightedRequest("/v1/people.json").post(data).map { response =>
-        if (response.status == Status.OK || response.status == Status.CREATED) {
+        val delightedUserOpt = if (response.status == Status.OK || response.status == Status.CREATED) {
           (response.json \ "id").asOpt[String] map { id =>
             val user = DelightedUser(
               delightedExtUserId = id,
-              userId = userId,
-              email = email,
+              userId = userCreationInfo.userId,
+              email = userCreationInfo.email,
               userLastInteracted = None
             )
             db.readWrite { implicit s => delightedUserRepo.save(user) }
           }
         } else None
+        delightedUserOpt tap {
+          case Some(delightedUser) => log.info(s"Created delighted user with delighted id ${delightedUser.delightedExtUserId}")
+          case None => log.info(s"Could no register delighted user with info $userCreationInfo")
+        }
       }
     }
   }
@@ -183,12 +195,15 @@ class DevDelightedCommander extends DelightedCommander with Logging {
 
   def getUserLastInteractedDate(userId: Id[User]): Option[DateTime] = None
 
-  def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String, answer: BasicDelightedAnswer): Future[Either[String, DelightedAnswer]] =
+  def postDelightedAnswer(userCreationInfo: DelightedUserCreationInfo, answer: BasicDelightedAnswer): Future[Either[String, DelightedAnswer]] =
     Future.successful(Left("Cannot create Delighted answers in dev mode"))
 
   def fetchNewDelightedAnswers() = log.info("Fake fetching new Delighted answers")
 
-  def scheduleSurveyForLapsedUsers() = log.info("Fake scheduling survey for lapsed users")
+  def scheduleSurveyForLapsedUsers(skipCount: Int): Future[Int] = {
+    log.info("Fake scheduling survey for lapsed users")
+    Future.successful(0)
+  }
 
-  def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String): Future[Boolean] = Future.successful(true)
+  def cancelDelightedSurvey(userCreationInfo: DelightedUserCreationInfo): Future[Boolean] = Future.successful(true)
 }
