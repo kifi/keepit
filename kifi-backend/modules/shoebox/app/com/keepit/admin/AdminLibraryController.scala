@@ -27,5 +27,15 @@ class AdminLibraryController @Inject() (
 
     Ok(res.toString)
   }
+
+  def internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
+    val ids = (startingUserId.id to endingUserId.id).map(Id[User])
+
+    val result = ids.map { userId =>
+      userId.id + " -> " + libraryCommander.internSystemGeneratedLibraries(userId)
+    }
+
+    Ok(s"count: ${result.size}<br>\n<br>\n" + result.mkString("<br>\n"))
+  }
 }
 

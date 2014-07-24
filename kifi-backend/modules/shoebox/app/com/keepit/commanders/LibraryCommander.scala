@@ -185,9 +185,9 @@ class LibraryCommander @Inject() (
         .groupBy(_._2.kind)
         .map {
           case (kind, libs) =>
-            val (slug, name) = if (kind == LibraryKind.SYSTEM_MAIN) ("main", "Main Library") else ("secret", "Secret Library")
+            val (slug, name, searchableByOthers) = if (kind == LibraryKind.SYSTEM_MAIN) ("main", "Main Library", true) else ("secret", "Secret Library", false)
 
-            val activeLib = libs.head._2.copy(state = LibraryStates.ACTIVE, slug = LibrarySlug(slug), name = name, visibility = LibraryVisibility.SECRET)
+            val activeLib = libs.head._2.copy(state = LibraryStates.ACTIVE, slug = LibrarySlug(slug), name = name, visibility = LibraryVisibility.SECRET, isSearchableByOthers = searchableByOthers)
             val activeMembership = libMem.find(m => m.libraryId == activeLib.id.get && m.access == LibraryAccess.OWNER)
               .getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
               .copy(state = LibraryMembershipStates.ACTIVE)

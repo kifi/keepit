@@ -521,8 +521,9 @@ POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminC
 POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
 
 
-GET     /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
+POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
 GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
+POST    /admin/libraries/internForAllUsers   @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
 
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index

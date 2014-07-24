@@ -126,6 +126,7 @@ class UserCommander @Inject() (
     fortytwoConfig: FortyTwoConfig,
     bookmarkClicksRepo: UserBookmarkClicksRepo,
     userImageUrlCache: UserImageUrlCache,
+    libraryCommander: LibraryCommander,
     airbrake: AirbrakeNotifier) extends Logging {
 
   def updateUserDescription(userId: Id[User], description: String): Unit = {
@@ -243,7 +244,7 @@ class UserCommander @Inject() (
 
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
     val newUser = db.readWrite { implicit session =>
-      userRepo.save(User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state, username = None)) // todo(andrew): add usernames for library purposes
+      userRepo.save(User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state, username = None))
     }
     SafeFuture {
       db.readWrite { implicit session =>
@@ -252,6 +253,11 @@ class UserCommander @Inject() (
       searchClient.warmUpUser(newUser.id.get)
       searchClient.updateUserIndex()
     }
+    db.readWrite { implicit session =>
+      autoSetUsername(newUser, readOnly = false)
+    }
+    libraryCommander.internSystemGeneratedLibraries(newUser.id.get)
+
     newUser
   }
 
