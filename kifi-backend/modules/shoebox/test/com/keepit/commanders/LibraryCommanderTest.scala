@@ -84,13 +84,13 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     val t1 = new DateTime(2014, 8, 1, 3, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
     db.readWrite { implicit s =>
       // Hulk accepts Ironman's invite to see 'Science & Stuff'
-      val inv1 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libScience.id.get, userId = userHulk.id.get).get
+      val inv1 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libScience.id.get, userId = userHulk.id.get).head
       libraryInviteRepo.save(inv1.withState(LibraryInviteStates.ACCEPTED))
 
       // Ironman & NickFury accept Captain's invite to see 'MURICA'
-      val inv2 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libMurica.id.get, userId = userIron.id.get).get
+      val inv2 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libMurica.id.get, userId = userIron.id.get).head
       libraryInviteRepo.save(inv2.withState(LibraryInviteStates.ACCEPTED))
-      val inv3 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libMurica.id.get, userId = userAgent.id.get).get
+      val inv3 = libraryInviteRepo.getWithLibraryIdandUserId(libraryId = libMurica.id.get, userId = userAgent.id.get).head
       libraryInviteRepo.save(inv3.withState(LibraryInviteStates.ACCEPTED))
 
       libraryMembershipRepo.save(LibraryMembership(libraryId = inv1.libraryId, userId = inv1.userId, access = inv1.access, showInSearch = true, createdAt = t1))
@@ -229,24 +229,18 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get full library info by publicId" in {
+    "get library by publicId" in {
       withDb(TestCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         val libraryCommander = inject[LibraryCommander]
 
-        val libInfo1 = libraryCommander.getLibraryById(libShield.id.get)
-        libInfo1.slug.value === "avengers"
-        libInfo1.collaborators.users.length === 0
-        libInfo1.followers.users.length === 0
-        val libInfo2 = libraryCommander.getLibraryById(libMurica.id.get)
-        libInfo2.slug.value === "murica"
-        libInfo2.collaborators.users.length === 0
-        libInfo2.followers.users.length === 2
-        val libInfo3 = libraryCommander.getLibraryById(libScience.id.get)
-        libInfo3.slug.value === "science"
-        libInfo3.collaborators.users.length === 1
-        libInfo3.followers.users.length === 0
+        val lib1 = libraryCommander.getLibraryById(libShield.id.get)
+        lib1 === libShield
+        val lib2 = libraryCommander.getLibraryById(libMurica.id.get)
+        lib2 === libMurica
+        val lib3 = libraryCommander.getLibraryById(libScience.id.get)
+        lib3 === libScience
       }
     }
 
@@ -395,5 +389,54 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "let users join or decline library invites" in {
+      withDb(TestCryptoModule()) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
+        val libraryCommander = inject[LibraryCommander]
+
+        val inviteIds = db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.all.length === 4
+          libraryInviteRepo.all.map(_.id.get)
+        }
+        libraryCommander.joinLibrary(inviteIds(0))
+        libraryCommander.joinLibrary(inviteIds(1))
+        libraryCommander.declineLibrary(inviteIds(2))
+        libraryCommander.joinLibrary(inviteIds(3))
+
+        db.readOnlyMaster { implicit s =>
+          libraryInviteRepo.all.length === 4
+          val res = for (inv <- libraryInviteRepo.all) yield {
+            (inv.libraryId, inv.userId, inv.access, inv.state)
+          }
+          res === Seq(
+            (libMurica.id.get, userIron.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED),
+            (libMurica.id.get, userAgent.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED),
+            (libMurica.id.get, userHulk.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.DECLINED),
+            (libScience.id.get, userHulk.id.get, LibraryAccess.READ_INSERT, LibraryInviteStates.ACCEPTED)
+          )
+        }
+      }
+    }
+
+    "let users leave library" in {
+      withDb(TestCryptoModule()) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
+        val libraryCommander = inject[LibraryCommander]
+
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.all.length === 6
+          libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 0
+        }
+
+        libraryCommander.leaveLibrary(libMurica.id.get, userAgent.id.get)
+
+        db.readOnlyMaster { implicit s =>
+          libraryMembershipRepo.all.length === 6
+          libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 1
+        }
+      }
+    }
   }
 }

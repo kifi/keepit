@@ -5,7 +5,7 @@
 }
 
 @admin("Keeper Rules", stylesheets = List("admin_slider")) {
-<h3>Rules for Automatically Showing the Keep Button</h3>
+<h3>Rules for Automatic Engagement (Friends Who Kept)</h3>
 
 <div><span class="label">Note:</span> Changes take effect immediately for all kifi users when you click <b>Save</b> below.</div>
 
@@ -50,31 +50,15 @@
       <td>kept
       <td>
     <tr>
-      <td>@checkbox("scroll")
+      <td>
       <td class="y">
       <td>scrolled on page
-      <td>
-        <div style="margin-bottom:3px">
-          <input type="number" name="scrollParams" value="@rules("scroll").parameters.get(0)" min="1" step=".1">
-          <span class="help-inline">min page height : viewport height ratio</span>
-        </div>
-        <div>
-          <span class="input-append">
-            <input type="number" name="scrollParams" value="@rules("scroll").parameters.get(1)" min="0">
-            <span class="add-on">%</span>
-          </span>
-          <span class="help-inline">of page revealed</span>
-        </div>
+      <td>retired as of kifi extension 3.1.7
     <tr>
-      <td>@checkbox("focus")
-      <td class="y">
-      <td>on page
       <td>
-        <span class="input-append">
-          <input type="number" name="focusParams" value="@rules("focus").parameters.get(0)" min="0">
-          <span class="add-on">sec</span>
-        </span>
-        <span class="help-inline">consecutive focus</span>
+      <td class="y">
+      <td>focus on page
+      <td>retired as of kifi extension 3.1.7
   </table>
   <button type="submit" class="btn btn-primary" data-loading-text="Saving...">Save</button>
   <button type="reset" class="btn">Clear unsaved changes</button>

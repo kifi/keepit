@@ -305,6 +305,7 @@ object Cortex extends Service {
     def ldaShowTopics(fromId: Int, toId: Int, topN: Int) = ServiceRoute(GET, "/internal/cortex/lda/showTopics", Param("fromId", fromId), Param("toId", toId), Param("topN", topN))
     def ldaWordTopic(word: String) = ServiceRoute(GET, "/internal/cortex/lda/wordTopic", Param("word", word))
     def ldaDocTopic() = ServiceRoute(POST, "/internal/cortex/lda/docTopic")
+    def ldaConfigurations() = ServiceRoute(GET, "/internal/cortex/lda/confs")
     def saveEdits() = ServiceRoute(POST, "/internal/cortex/lda/saveEdits")
     def getLDAFeatures() = ServiceRoute(POST, "/internal/cortex/lda/ldaFeatures")
     def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/cortex/lda/userUriInterest", Param("userId", userId), Param("uriId", uriId))

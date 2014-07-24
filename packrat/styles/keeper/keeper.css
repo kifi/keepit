@@ -42,12 +42,6 @@
 .kifi-keeper.kifi-tiny {
   /*width: 49px;*/
 }
-.kifi-keeper.kifi-auto {
-/*
-  width: 136px;
-  transition: width 200ms ease-out;
-*/
-}
 .kifi-keeper.kifi-wide {
 /*
   width: 310px;
@@ -63,10 +57,6 @@
   opacity: 0;
   transition: opacity 60ms ease-in 40ms;
   /*transition: width 100ms ease-in, opacity 60ms ease-in 40ms;*/
-}
-.kifi-keeper.kifi-hiding.kifi-auto {
-  /*transition: width 200ms ease-in, opacity 120ms ease-in 80ms;*/
-  transition: opacity 120ms ease-in 80ms;
 }
 .kifi-keeper-x {
   position: absolute;
