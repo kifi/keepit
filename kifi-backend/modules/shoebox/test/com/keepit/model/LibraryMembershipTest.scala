@@ -17,9 +17,9 @@ class LibraryMembershipTest extends Specification with ShoeboxTestInjector {
       val user1 = userRepo.save(u1)
       val user2 = userRepo.save(u2)
       val library1 = libraryRepo.save(Library(name = "Lib1", ownerId = user1.id.get, createdAt = t1.plusMinutes(2),
-        visibility = LibraryVisibility.ANYONE, slug = LibrarySlug("A"), isSearchableByAnyone = true))
+        visibility = LibraryVisibility.ANYONE, slug = LibrarySlug("A"), keepDiscoveryEnabled = true))
       val library2 = libraryRepo.save(Library(name = "Lib2", ownerId = user2.id.get, createdAt = t1.plusMinutes(5),
-        visibility = LibraryVisibility.ANYONE, slug = LibrarySlug("B"), isSearchableByAnyone = true))
+        visibility = LibraryVisibility.ANYONE, slug = LibrarySlug("B"), keepDiscoveryEnabled = true))
       val lm1 = libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get,
         access = LibraryAccess.READ_WRITE, createdAt = t1.plusHours(1), showInSearch = true))
       val lm2 = libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user2.id.get,
