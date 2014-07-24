@@ -1,11 +1,17 @@
 package com.keepit.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.{ State, ExternalId, Id }
+import com.keepit.common.db.{ DbSequenceAssigner, State, ExternalId, Id }
 import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.time.Clock
+import scala.concurrent.duration._
+
+import scala.concurrent.duration.FiniteDuration
 
 @ImplementedBy(classOf[LibraryMembershipRepoImpl])
 trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[LibraryMembership] with SeqNumberFunction[LibraryMembership] {
@@ -38,6 +44,11 @@ class LibraryMembershipRepoImpl @Inject() (
   def table(tag: Tag) = new LibraryMemberTable(tag)
 
   initTable()
+
+  override def save(libraryMembership: LibraryMembership)(implicit session: RWSession): LibraryMembership = {
+    val toSave = libraryMembership.copy(seq = deferredSeqNum())
+    super.save(toSave)
+  }
 
   override def get(id: Id[LibraryMembership])(implicit session: RSession): LibraryMembership = {
     memberIdCache.getOrElse(LibraryMembershipIdKey(id)) {
@@ -72,3 +83,20 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
 }
+
+trait LibraryMembershipSequencingPlugin extends SequencingPlugin
+
+class LibraryMembershipSequencingPluginImpl @Inject() (
+    override val actor: ActorInstance[LibraryMembershipSequencingActor],
+    override val scheduling: SchedulingProperties) extends LibraryMembershipSequencingPlugin {
+
+  override val interval: FiniteDuration = 20.seconds
+}
+
+@Singleton
+class LibraryMembershipSequenceNumberAssigner @Inject() (db: Database, repo: LibraryMembershipRepo, airbrake: AirbrakeNotifier)
+  extends DbSequenceAssigner[LibraryMembership](db, repo, airbrake)
+
+class LibraryMembershipSequencingActor @Inject() (
+  assigner: LibraryMembershipSequenceNumberAssigner,
+  airbrake: AirbrakeNotifier) extends SequencingActor(assigner, airbrake)
