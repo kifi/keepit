@@ -106,8 +106,6 @@ class QueuedScrapeProcessor @Inject() (
 
   log.info(s"[QScraper.ctr] pool=$fjPool")
 
-  def status: Future[Seq[ScrapeJobStatus]] = Future.successful(Seq.empty)
-
   private def removeRef(iter: java.util.Iterator[_], msgOpt: Option[String] = None) {
     try {
       msgOpt.foreach { log.info(_) }

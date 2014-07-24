@@ -9,8 +9,8 @@ import scala.concurrent.Future
 trait ScrapeProcessor {
   def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]]
   def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, pageInfo: Option[PageInfo], proxyOpt: Option[HttpProxy]): Unit
-  def status: Future[Seq[ScrapeJobStatus]]
-  def pull: Unit = {}
+  def status(): Future[Seq[ScrapeJobStatus]] = Future.successful(Seq.empty)
+  def pull(): Unit = {}
 }
 
 case class ScrapeJobStatus(worker: String, submit: DateTime, uri: NormalizedURI, info: ScrapeInfo)

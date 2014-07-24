@@ -28,7 +28,6 @@ case class TestScraperProcessorModule() extends ScrapeProcessorModule {
   def scrapeProcessor: ScrapeProcessor = new ScrapeProcessor {
     def fetchBasicArticle(url: String, proxyOpt: Option[HttpProxy], extractorProviderTypeOpt: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = Future.successful(None)
     def asyncScrape(uri: NormalizedURI, info: ScrapeInfo, pageInfo: Option[PageInfo], proxyOpt: Option[HttpProxy]): Unit = ()
-    def status: Future[Seq[ScrapeJobStatus]] = Future.successful(Seq.empty)
   }
 
 }
