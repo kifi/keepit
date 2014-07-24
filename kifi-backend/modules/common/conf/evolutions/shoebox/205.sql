@@ -5,7 +5,7 @@ CREATE TABLE last_ingestion_time (
     id bigint(20) NOT NULL AUTO_INCREMENT,
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
-    user_id bigint(20) NULL,
+    user_id bigint(20) NOT NULL,
     last_ingestion_time datetime NOT NULL,
 );
 

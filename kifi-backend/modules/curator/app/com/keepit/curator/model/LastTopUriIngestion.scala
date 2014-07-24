@@ -7,8 +7,8 @@ import org.joda.time.DateTime
 
 case class LastTopUriIngestion(
     id: Option[Id[LastTopUriIngestion]] = None,
-    createdAt: Option[DateTime] = None,
-    updatedAt: Option[DateTime] = None,
+    createdAt: Option[DateTime] = currentDateTime,
+    updatedAt: Option[DateTime] = currentDateTime,
     userId: Id[User],
     lastIngestionTime: DateTime = currentDateTime) extends Model[LastTopUriIngestion] {
 
