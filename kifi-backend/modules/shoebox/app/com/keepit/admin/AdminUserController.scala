@@ -827,14 +827,20 @@ class AdminUserController @Inject() (
   }
 
   private def autoSetUsername(userId: Id[User], readOnly: Boolean): Option[Username] = {
-    val user = db.readOnlyMaster { implicit session =>
-      userRepo.get(userId)
+    val userOpt = db.readOnlyMaster { implicit session =>
+      Try(userRepo.get(userId)).toOption // Opt because we're enumerating userIds, and it may be invalid
     }
-    if (user.username.isEmpty) {
-      userCommander.autoSetUsername(user, readOnly = readOnly)
-    } else {
-      user.username
+    userOpt match {
+      case Some(user) =>
+        if (user.username.isEmpty) {
+          userCommander.autoSetUsername(user, readOnly = readOnly)
+        } else {
+          user.username
+        }
+      case None =>
+        None
     }
+
   }
 
   def autoSetUsernames(startingUserId: Id[User], endingUserId: Id[User], readOnly: Boolean = true) = AdminHtmlAction.authenticated { request =>
