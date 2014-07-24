@@ -43,6 +43,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps]
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
+  def getByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
 }
 
 @Singleton
@@ -347,4 +348,12 @@ class KeepRepoImpl @Inject() (
       group by url order by k.id desc"""
     sql_query.as[(DateTime, Option[String], String, Option[String])].list.map { case (created_at, title, url, tags) => KeepExport(created_at, title, url, tags) }
   }
+
+  private def getByLibraryCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {
+    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b)
+  }
+  def getByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] = {
+    getByLibraryCompiled(libraryId, excludeState).list
+  }
+
 }

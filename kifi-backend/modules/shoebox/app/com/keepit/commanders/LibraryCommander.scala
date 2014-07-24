@@ -284,6 +284,12 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def getKeeps(libraryId: Id[Library]): Seq[Keep] = {
+    db.readOnlyMaster { implicit s =>
+      keepRepo.getByLibrary(libraryId)
+    }
+  }
+
 }
 
 case class LibraryFail(message: String) extends AnyVal
