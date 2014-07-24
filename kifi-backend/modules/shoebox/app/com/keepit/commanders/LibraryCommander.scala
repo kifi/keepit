@@ -295,11 +295,10 @@ class LibraryCommander @Inject() (
     db.readWrite { implicit s =>
       libraryMembershipRepo.getWithLibraryIdandUserId(fromLibraryId, userId) match {
         case None => Left(LibraryFail("no membership from library"))
-        case Some(member) => {
-
+        case Some(memFrom) => {
           libraryMembershipRepo.getWithLibraryIdandUserId(toLibraryId, userId) match {
             case None => Left(LibraryFail("no membership to library"))
-            case Some(mem) if mem.access == LibraryAccess.READ_ONLY => Left(LibraryFail("invalid access to library"))
+            case Some(memTo) if memTo.access == LibraryAccess.READ_ONLY => Left(LibraryFail("invalid access to library"))
             case _ => {
               val existingURIs = keepRepo.getByLibrary(toLibraryId).map(_.uriId)
               keeps.map { keepId =>
@@ -323,7 +322,6 @@ class LibraryCommander @Inject() (
         case None => Left(LibraryFail("no membership from library"))
         case Some(memFrom) if memFrom.access == LibraryAccess.READ_ONLY || memFrom.access == LibraryAccess.READ_INSERT => Left(LibraryFail("invalid access from library"))
         case _ => {
-          
           libraryMembershipRepo.getWithLibraryIdandUserId(toLibraryId, userId) match {
             case None => Left(LibraryFail("no membership to library"))
             case Some(memTo) if memTo.access == LibraryAccess.READ_ONLY => Left(LibraryFail("invalid access to library"))

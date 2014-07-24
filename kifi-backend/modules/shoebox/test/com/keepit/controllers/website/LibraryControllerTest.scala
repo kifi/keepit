@@ -520,6 +520,16 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result4) must equalTo(OK)
         contentType(result4) must beSome("application/json")
         Json.parse(contentAsString(result4)).as[LibraryInfo].name === "Library5"
+
+        // BadRequest UserA copy from Lib5 to Lib1 (invalid accessing)
+        val inputJson5 = Json.obj(
+          "from" -> Library.publicId(lib5.id.get),
+          "to" -> Library.publicId(lib1.id.get),
+          "keeps" -> Seq(keep1.externalId, keep2.externalId)
+        )
+        val request5 = FakeRequest("POST", testPathMove).withBody(inputJson5).withHeaders("userId" -> "1")
+        val result5 = libraryController.copyKeeps()(request5)
+        status(result5) must equalTo(BAD_REQUEST)
       }
     }
 
