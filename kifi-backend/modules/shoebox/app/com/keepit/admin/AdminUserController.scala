@@ -832,7 +832,12 @@ class AdminUserController @Inject() (
     }
     userOpt match {
       case Some(user) =>
-        if (user.username.isEmpty) {
+        if (user.username.nonEmpty && (user.state != UserStates.ACTIVE || user.fullName.length > 30 || user.fullName.contains("@") || user.firstName.isEmpty || user.lastName.isEmpty)) {
+          if (!readOnly) {
+            userCommander.removeUsername(userId)
+          }
+          None
+        } else if (user.username.isEmpty) {
           userCommander.autoSetUsername(user, readOnly = readOnly)
         } else {
           user.username
