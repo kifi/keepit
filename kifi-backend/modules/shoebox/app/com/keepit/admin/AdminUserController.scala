@@ -868,4 +868,13 @@ class AdminUserController @Inject() (
     userCommander.removeUsername(userId)
     Ok
   }
+
+  def findInvalidEmailAddresses() = AdminJsonAction.authenticated { request =>
+    val invalidEmails = db.readOnlyReplica { implicit session =>
+      emailRepo.all().filter(email => EmailAddress.validate(email.address.address).isFailure)
+    }
+    val json = JsArray(invalidEmails.map { email => Json.obj("id" -> email.id.get, "user" -> email.userId, "email" -> email.address, "state" -> email.state) })
+    Ok(json)
+  }
 }
+
