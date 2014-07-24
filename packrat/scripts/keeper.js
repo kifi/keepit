@@ -287,28 +287,27 @@ var keeper = keeper || function () {  // idempotent for Chrome
     log('[showSlider]', trigger);
 
     createSlider();
-    $slider.prependTo(tile);
+    $slider.addClass('kifi-hidden')
+      .prependTo(tile)
+      .layout()
+      .on('transitionend', function f(e) {
+        if (e.target === this) {
+          $(this).off('transitionend', f);
+        }
+      })
+      .removeClass('kifi-hidden');
     $(tile).on('mousedown click keydown keypress keyup', stopPropagation);
 
     api.port.emit('keeper_shown', withUrls({trigger: trigger, onPageMs: String(lastCreatedAt - tile.dataset.t0)}));
   }
 
-  function growSlider(fromClass, toClass) {
-    $slider.addClass(fromClass).layout().addClass(toClass + ' kifi-growing').removeClass(fromClass)
-    .on('transitionend', function f(e) {
-      if (e.target === this) {
-        $(this).off('transitionend', f).removeClass('kifi-growing');
-      }
-    });
-  }
-
   // trigger is for the event log (e.g. 'key', 'icon')
   function hideSlider(trigger) {
     log('[hideSlider]', trigger);
-    $slider.addClass('kifi-hiding')
+    $slider
     .off('transitionend')
     .on('transitionend', function (e) {
-      if (e.target === this && e.originalEvent.propertyName === 'opacity') {
+      if (e.target === this) {
         var css = JSON.parse(tile.dataset.pos || 0);
         if (css && !tile.style.top && !tile.style.bottom) {
           var y = css.top >= 0 ? window.innerHeight - css.top - 54 : (css.bottom || 0);
@@ -323,16 +322,18 @@ var keeper = keeper || function () {  // idempotent for Chrome
           });
         }
         $slider.remove(), $slider = null;
+
+        if (justKept && !window.guide) {
+          api.port.emit('prefs', function (prefs) {
+            if (prefs.showExtMsgIntro) {
+              setTimeout(api.require.bind(api, 'scripts/external_messaging_intro.js', api.noop), 1000);
+            }
+          });
+          justKept = false;
+        }
       }
-      if (justKept && !window.guide) {
-        api.port.emit('prefs', function (prefs) {
-          if (prefs.showExtMsgIntro) {
-            setTimeout(api.require.bind(api, 'scripts/external_messaging_intro.js', api.noop), 1000);
-          }
-        });
-        justKept = false;
-      }
-    });
+    })
+    .addClass('kifi-hidden');
     $(tile).off('mousedown click keydown keypress keyup', stopPropagation);
   }
 
@@ -507,12 +508,11 @@ var keeper = keeper || function () {  // idempotent for Chrome
         log('[show]', trigger);
         $(tile).hoverfu('destroy');
         showSlider(trigger);
-        growSlider('', 'kifi-wide');
       }
     },
     create: function(locator) {
       createSlider(locator);
-      return $slider.addClass('kifi-wide');
+      return $slider;
     },
     discard: function() {
       $slider.off();
