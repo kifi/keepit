@@ -64,7 +64,6 @@ class FixedScoreWeight(query: FixedScoreQuery, searcher: IndexSearcher) extends 
   }
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, liveDocs: Bits): Scorer = {
-    println("\t\t SCORER")
     val subScorer = subWeight.scorer(context, true, false, liveDocs)
     if (subScorer == null) null else new FixedScoreScorer(this, subScorer, query.getBoost)
   }
@@ -74,17 +73,13 @@ class FixedScoreScorer(weight: FixedScoreWeight, subScorer: Scorer, scoreVal: Fl
   override def docID(): Int = subScorer.docID()
   override def nextDoc(): Int = {
     val doc = subScorer.nextDoc()
-    println(s"\t\t NEXT=$doc")
     doc
   }
   override def advance(target: Int): Int = {
-    println(s"\t\t ADVANCE TO=$target")
     val doc = subScorer.advance(target)
-    println(s"\t\t ADVANCED=$doc")
     doc
   }
   override def score(): Float = {
-    println(s"\t\t SCORE=$scoreVal")
     if (docID < DocIdSetIterator.NO_MORE_DOCS) scoreVal else 0.0f
   }
   override def freq(): Int = 1

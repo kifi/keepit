@@ -1,6 +1,9 @@
 package com.keepit.model
 
+import javax.crypto.spec.IvParameterSpec
+
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
@@ -18,7 +21,7 @@ case class LibraryInvite(
     access: LibraryAccess,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    state: State[LibraryInvite] = LibraryInviteStates.ACTIVE) extends ModelWithState[LibraryInvite] {
+    state: State[LibraryInvite] = LibraryInviteStates.ACTIVE) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
 
   def withId(id: Id[LibraryInvite]): LibraryInvite = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryInvite = this.copy(updatedAt = now)
@@ -27,7 +30,11 @@ case class LibraryInvite(
   override def toString: String = s"LibraryInvite[id=$id,libraryId=$libraryId,ownerId=$ownerId,userId=$userId,access=$access,state=$state]"
 }
 
-object LibraryInvite {
+object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
+
+  protected[this] val publicIdPrefix = "l"
+  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-20, -76, -59, 85, 85, -2, 72, 61, 58, 38, 60, -2, -128, 79, 9, -87))
+
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[LibraryInvite]) and
     (__ \ 'libraryId).format[Id[Library]] and
@@ -40,6 +47,7 @@ object LibraryInvite {
   )(LibraryInvite.apply, unlift(LibraryInvite.unapply))
 }
 
+// Not sure we need this cache?
 case class LibraryInviteIdKey(id: Id[LibraryInvite]) extends Key[LibraryInvite] {
   val namespace = "library_invite_by_id"
   def toKey(): String = id.id.toString

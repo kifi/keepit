@@ -123,10 +123,6 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
         loadJsonImportFriends("facebook_graph_andrew_min.json")
         loadJsonImportFriends("facebook_graph_eishay_min.json")
 
-        inject[Database].readOnlyMaster { implicit s =>
-          println("Connections: " + inject[SocialUserInfoRepo].all.size)
-        }
-
         val userRepo = inject[UserRepo]
         val socialRepo = inject[SocialUserInfoRepo]
         val eishaySocialUserInfo = inject[Database].readWrite { implicit s =>
@@ -201,10 +197,6 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
         }
 
         loadJsonImportFriends(Seq("facebook_graph_eishay_min_page1.json", "facebook_graph_eishay_min_page2.json"))
-
-        inject[Database].readOnlyMaster { implicit s =>
-          println("Connections: " + inject[SocialUserInfoRepo].all.size)
-        }
 
         val socialRepo = inject[SocialUserInfoRepo]
         val connectionRepo = inject[SocialConnectionRepo]
