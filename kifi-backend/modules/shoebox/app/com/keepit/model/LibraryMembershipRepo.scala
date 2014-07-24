@@ -56,14 +56,18 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   override def deleteCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {
-    memberIdCache.remove(LibraryMembershipIdKey(libMem.id.get))
+    libMem.id.map { id =>
+      memberIdCache.remove(LibraryMembershipIdKey(id))
+    }
   }
 
   override def invalidateCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {
-    if (libMem.state == LibraryMembershipStates.INACTIVE) {
-      deleteCache(libMem)
-    } else {
-      memberIdCache.set(LibraryMembershipIdKey(libMem.id.get), libMem)
+    libMem.id.map { id =>
+      if (libMem.state == LibraryMembershipStates.INACTIVE) {
+        deleteCache(libMem)
+      } else {
+        memberIdCache.set(LibraryMembershipIdKey(id), libMem)
+      }
     }
   }
 

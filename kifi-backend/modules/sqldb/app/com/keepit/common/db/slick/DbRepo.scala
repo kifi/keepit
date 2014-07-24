@@ -82,9 +82,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   } catch {
     case m: MySQLIntegrityConstraintViolationException =>
       session.directCacheAccess {
-        if (model.id.nonEmpty) {
-          deleteCache(model)
-        }
+        deleteCache(model)
       }
       throw new MySQLIntegrityConstraintViolationException(s"error persisting ${model.toString.abbreviate(200).trimAndRemoveLineBreaks}").initCause(m)
     case t: SQLException => throw new SQLException(s"error persisting ${model.toString.abbreviate(200).trimAndRemoveLineBreaks}", t)
