@@ -3,12 +3,10 @@ package com.keepit.scraper
 import akka.actor.ActorSystem
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.controller.FakeActionAuthenticatorModule
-import com.keepit.common.crypto.TestCryptoModule
 import com.keepit.common.store.ScraperTestStoreModule
 import com.keepit.scraper.actor.ScrapeProcessorActorImpl
 import com.keepit.scraper.embedly.TestEmbedlyModule
 import com.keepit.scraper.fetcher.TestHttpFetcherModule
-import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ ScraperApplication, ScraperApplicationInjector }
 import org.specs2.mutable.Specification
