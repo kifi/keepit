@@ -19,7 +19,7 @@ case class DelightedUser(
 }
 
 // Contains the information used to register a user to Delighted
-@json case class DelightedUserCreationInfo(
+@json case class DelightedUserRegistrationInfo(
   userId: Id[User],
   externalId: ExternalId[User],
   email: Option[EmailAddress],

@@ -24,10 +24,10 @@ class DelightedController @Inject() (
 
   def postDelightedAnswer() = Action.async(parse.tolerantJson) { request =>
     val resultFutOpt = for {
-      userCreationInfo <- (request.body \ "user").asOpt[DelightedUserCreationInfo]
+      userRegistrationInfo <- (request.body \ "user").asOpt[DelightedUserRegistrationInfo]
       answer <- (request.body \ "answer").asOpt[BasicDelightedAnswer]
     } yield {
-      delightedCommander.postDelightedAnswer(userCreationInfo, answer) map {
+      delightedCommander.postDelightedAnswer(userRegistrationInfo, answer) map {
         case Left(error) => Ok(Json.obj("error" -> error))
         case Right(answer) => Ok(Json.toJson(BasicDelightedAnswer(Some(answer.score), answer.comment, answer.source, Some(answer.externalId))))
       }
@@ -39,8 +39,8 @@ class DelightedController @Inject() (
   }
 
   def cancelDelightedSurvey() = Action.async(parse.tolerantJson) { request =>
-    (request.body \ "user").asOpt[DelightedUserCreationInfo] map { userCreationInfo =>
-      delightedCommander.cancelDelightedSurvey(userCreationInfo) map { success =>
+    (request.body \ "user").asOpt[DelightedUserRegistrationInfo] map { userRegistrationInfo =>
+      delightedCommander.cancelDelightedSurvey(userRegistrationInfo) map { success =>
         Ok(JsString(if (success) "success" else "error"))
       }
     } getOrElse {

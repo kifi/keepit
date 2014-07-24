@@ -23,7 +23,7 @@ import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
-import com.keepit.model.{ DelightedUserCreationInfo, User }
+import com.keepit.model.{ DelightedUserRegistrationInfo, User }
 import com.keepit.common.db.{ ExternalId, Id }
 import org.joda.time.DateTime
 import com.kifi.franz.SQSQueue
@@ -53,9 +53,9 @@ trait HeimdalServiceClient extends ServiceClient {
 
   def getLastDelightedAnswerDate(userId: Id[User]): Future[Option[DateTime]]
 
-  def postDelightedAnswer(userCreationInfo: DelightedUserCreationInfo, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]]
+  def postDelightedAnswer(userRegistrationInfo: DelightedUserRegistrationInfo, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]]
 
-  def cancelDelightedSurvey(userCreationInfo: DelightedUserCreationInfo): Future[Boolean]
+  def cancelDelightedSurvey(userRegistrationInfo: DelightedUserRegistrationInfo): Future[Boolean]
 }
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
@@ -152,32 +152,32 @@ class HeimdalServiceClientImpl @Inject() (
     }
   }
 
-  def postDelightedAnswer(userCreationInfo: DelightedUserCreationInfo, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]] = {
+  def postDelightedAnswer(userRegistrationInfo: DelightedUserRegistrationInfo, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]] = {
     call(Heimdal.internal.postDelightedAnswer(), Json.obj(
-      "user" -> Json.toJson(userCreationInfo),
+      "user" -> Json.toJson(userRegistrationInfo),
       "answer" -> Json.toJson(answer)
     )).map { response =>
       val json = Json.parse(response.body)
       json.asOpt[BasicDelightedAnswer] orElse {
         (json \ "error").asOpt[String].map { msg =>
-          log.warn(s"Error posting delighted answer $answer for user ${userCreationInfo.userId}: $msg")
+          log.warn(s"Error posting delighted answer $answer for user ${userRegistrationInfo.userId}: $msg")
         }
         None
       }
     }
   }
 
-  def cancelDelightedSurvey(userCreationInfo: DelightedUserCreationInfo): Future[Boolean] = {
+  def cancelDelightedSurvey(userRegistrationInfo: DelightedUserRegistrationInfo): Future[Boolean] = {
     call(Heimdal.internal.cancelDelightedSurvey(), Json.obj(
-      "user" -> Json.toJson(userCreationInfo)
+      "user" -> Json.toJson(userRegistrationInfo)
     )).map { response =>
       Json.parse(response.body) match {
         case JsString(s) if s == "success" => true
         case json =>
           (json \ "error").asOpt[String].map { msg =>
-            log.warn(s"Error cancelling delighted survey for user ${userCreationInfo.userId}: $msg")
+            log.warn(s"Error cancelling delighted survey for user ${userRegistrationInfo.userId}: $msg")
           } getOrElse {
-            log.warn(s"Error cancelling delighted survey for user ${userCreationInfo.userId}")
+            log.warn(s"Error cancelling delighted survey for user ${userRegistrationInfo.userId}")
           }
           false
       }
