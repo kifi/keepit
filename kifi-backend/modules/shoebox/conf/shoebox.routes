@@ -417,6 +417,7 @@ GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.
 GET     /admin/users/reindex        @com.keepit.controllers.admin.AdminUserIndexController.reindex()
 
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
+POST    /admin/users/autoSetUsernames   @com.keepit.controllers.admin.AdminUserController.autoSetUsernames(startingUserId: Id[User], endingUserId: Id[User], readOnly: Boolean ?= true)
 GET     /admin/realUsers            @com.keepit.controllers.admin.AdminUserController.allRegisteredUsersView
 GET     /admin/fakeUsers            @com.keepit.controllers.admin.AdminUserController.allFakeUsersView
 POST    /admin/users/merge          @com.keepit.controllers.admin.AdminUserController.merge
@@ -447,6 +448,7 @@ POST    /admin/user/:id/deactivate  @com.keepit.controllers.admin.AdminUserContr
 GET     /admin/user/:id/mixpanel/reset    @com.keepit.controllers.admin.AdminUserController.resetMixpanelProfile(id: Id[User])
 POST    /admin/user/:id/uservalue   @com.keepit.controllers.admin.AdminUserController.userValue(id: Id[User])
 POST    /admin/user/:id/username   @com.keepit.controllers.admin.AdminUserController.setUsername(id: Id[User], username: String, overrideRestrictions: Boolean ?= false)
+DELETE  /admin/user/:id/username    @com.keepit.controllers.admin.AdminUserController.removeUsername(id: Id[User])
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
 POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()

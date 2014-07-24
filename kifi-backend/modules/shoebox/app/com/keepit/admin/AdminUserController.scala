@@ -825,4 +825,30 @@ class AdminUserController @Inject() (
 
     Ok(res.toString)
   }
+
+  private def autoSetUsername(userId: Id[User], readOnly: Boolean): Option[Username] = {
+    val user = db.readOnlyMaster { implicit session =>
+      userRepo.get(userId)
+    }
+    if (user.username.isEmpty) {
+      userCommander.autoSetUsername(user, readOnly = readOnly)
+    } else {
+      None
+    }
+  }
+
+  def autoSetUsernames(startingUserId: Id[User], endingUserId: Id[User], readOnly: Boolean = true) = AdminHtmlAction.authenticated { request =>
+    val ids = (startingUserId.id to endingUserId.id).map(Id[User])
+
+    val result = ids.map { userId =>
+      userId.id + " -> " + autoSetUsername(userId, readOnly = readOnly)
+    }
+
+    Ok(s"readOnly: $readOnly<br>\ncount: ${result.size}<br>\n<br>\n" + result.mkString("<br>\n"))
+  }
+
+  def removeUsername(userId: Id[User]) = AdminHtmlAction.authenticated { request =>
+    userCommander.removeUsername(userId)
+    Ok
+  }
 }
