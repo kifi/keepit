@@ -6,6 +6,7 @@ import com.keepit.inject.CommonDevModule
 import com.keepit.common.store.ScraperTestStoreModule
 import com.keepit.common.concurrent.DevForkJoinContextMonitorModule
 import com.keepit.scraper.embedly.DevEmbedlyModule
+import com.keepit.scraper.fetcher.{ HttpFetcherModule, TestHttpFetcherModule }
 
 case class TestScraperServiceModule() extends ScraperServiceModule(
   cacheModule = ScraperCacheModule(HashMapMemoryCacheModule()),
@@ -14,5 +15,5 @@ case class TestScraperServiceModule() extends ScraperServiceModule(
   scrapeProcessorModule = TestScraperProcessorModule(),
   embedlyModule = DevEmbedlyModule()
 ) with CommonDevModule {
-
+  val fetcherModule: HttpFetcherModule = TestHttpFetcherModule()
 }
