@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryInfo, LibraryCommander, LibraryAddRequest, LibraryFail }
+import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteController, ActionAuthenticator }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
@@ -150,5 +150,20 @@ class LibraryController @Inject() (
       }
     }
   }
+
+  def getKeeps(pubId: PublicId[Library]) = JsonAction.authenticated { request =>
+    val idTry = Library.decodePublicId(pubId)
+    idTry match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
+      case Success(id) => {
+        val keeps = libraryCommander.getKeeps(id)
+        val keepInfos = for (keep <- keeps) yield {
+          KeepInfo.fromBookmark(keep)
+        }
+        Ok(Json.toJson(keepInfos))
+      }
+    }
+  }
+
 }
 

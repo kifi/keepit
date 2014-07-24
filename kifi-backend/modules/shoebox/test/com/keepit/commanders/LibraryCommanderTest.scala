@@ -103,6 +103,35 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
   }
 
+  def setupKeeps()(implicit injector: Injector) = {
+    val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
+    val t1 = new DateTime(2014, 8, 1, 4, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+    val site1 = "http://www.reddit.com/r/murica"
+    val site2 = "http://www.freedom.org/"
+    val site3 = "http://www.mcdonalds.com/"
+
+    db.readWrite { implicit s =>
+      val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Reddit")))
+      val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))
+      val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds")))
+
+      val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+      val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+      val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
+
+      val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
+        uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+      val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
+        uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+      val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
+        uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+    }
+    db.readOnlyMaster { implicit s =>
+      keepRepo.all.length === 3
+    }
+    (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
+  }
+
   "LibraryCommander" should {
     "create libraries, memberships & invites" in {
       withDb(TestCryptoModule()) { implicit injector =>
@@ -395,17 +424,23 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
         val libraryCommander = inject[LibraryCommander]
 
+        val t1 = new DateTime(2014, 8, 1, 3, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        db.readWrite { implicit s =>
+          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = userHulk.id.get, access = LibraryAccess.READ_WRITE, createdAt = t1))
+          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = userHulk.id.get, access = LibraryAccess.READ_ONLY, createdAt = t1))
+        }
+
         val inviteIds = db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.all.length === 4
+          libraryInviteRepo.all.length === 6
           libraryInviteRepo.all.map(_.id.get)
         }
-        libraryCommander.joinLibrary(inviteIds(0))
-        libraryCommander.joinLibrary(inviteIds(1))
-        libraryCommander.declineLibrary(inviteIds(2))
-        libraryCommander.joinLibrary(inviteIds(3))
+        libraryCommander.joinLibrary(inviteIds(0)) // Ironman accepts invite to 'Murica'
+        libraryCommander.joinLibrary(inviteIds(1)) // Agent accepts invite to 'Murica'
+        libraryCommander.declineLibrary(inviteIds(2)) // Hulk declines invite to 'Murica'
+        libraryCommander.joinLibrary(inviteIds(3)) // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access
 
         db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.all.length === 4
+          libraryInviteRepo.all.length === 6
           val res = for (inv <- libraryInviteRepo.all) yield {
             (inv.libraryId, inv.userId, inv.access, inv.state)
           }
@@ -413,7 +448,9 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
             (libMurica.id.get, userIron.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED),
             (libMurica.id.get, userAgent.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED),
             (libMurica.id.get, userHulk.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.DECLINED),
-            (libScience.id.get, userHulk.id.get, LibraryAccess.READ_INSERT, LibraryInviteStates.ACCEPTED)
+            (libScience.id.get, userHulk.id.get, LibraryAccess.READ_INSERT, LibraryInviteStates.ACCEPTED),
+            (libScience.id.get, userHulk.id.get, LibraryAccess.READ_WRITE, LibraryInviteStates.ACCEPTED),
+            (libScience.id.get, userHulk.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED)
           )
         }
       }
@@ -436,6 +473,20 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.all.length === 6
           libraryMembershipRepo.all.count(x => x.state == LibraryMembershipStates.INACTIVE) === 1
         }
+      }
+    }
+
+    "get keeps" in {
+      withDb(TestCryptoModule()) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
+        val libraryCommander = inject[LibraryCommander]
+
+        libraryCommander.getKeeps(libShield.id.get).length === 0
+        libraryCommander.getKeeps(libScience.id.get).length === 0
+        val res = libraryCommander.getKeeps(libMurica.id.get)
+        res.length === 3
+        res.map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
       }
     }
   }
