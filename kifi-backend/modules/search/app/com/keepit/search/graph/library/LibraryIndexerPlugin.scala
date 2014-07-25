@@ -23,12 +23,5 @@ class LibraryIndexerActor @Inject() (
     airbrake: AirbrakeNotifier,
     indexer: LibraryIndexer) extends CoordinatingIndexerActor(airbrake, indexer) with Logging {
 
-  protected def update(): Future[Boolean] = {
-    val fetchSize = indexer.commitBatchSize
-    indexer.fetchIndexables(indexer.sequenceNumber, fetchSize).map {
-      case (indexables, exhausted) =>
-        indexer.processIndexables(indexables)
-        exhausted
-    }
-  }
+  protected def update(): Future[Boolean] = indexer.asyncUpdate()
 }
