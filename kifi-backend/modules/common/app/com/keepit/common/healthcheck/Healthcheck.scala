@@ -130,7 +130,7 @@ class HealthcheckActor @Inject() (
     case email: ElectronicMail =>
       emailSender.sendMail(email)
     case CheckCacheMissRatio =>
-      val misses = globalCacheStatistics.missRatios(minSample = 1000, minRatio = 20) // I rather have minRatio set to 2% but one step at a time...
+      val misses = globalCacheStatistics.missRatios(minSample = 1000, minRatio = 10) // I rather have minRatio set to 2% but one step at a time...
       if (!misses.isEmpty) {
         val message = misses.map {
           case (key, ratio) =>
@@ -187,7 +187,7 @@ class HealthcheckPluginImpl @Inject() (
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 30 minutes, actor.ref, ReportErrorsAction)
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 60 minutes, actor.ref, CheckDiskSpace)
     scheduleTaskOnAllMachines(actor.system, 3 days, 1 days, actor.ref, CheckUpdateStatusOfService)
-    scheduleTaskOnAllMachines(actor.system, 1 hour, 6 hour, actor.ref, CheckCacheMissRatio)
+    scheduleTaskOnAllMachines(actor.system, 1 hour, 3 hour, actor.ref, CheckCacheMissRatio)
   }
 
   def errorCount(): Int = Await.result((actor.ref ? ErrorCount).mapTo[Int], 1 seconds)
