@@ -5,7 +5,7 @@ import com.keepit.commanders.LibraryCommander
 import com.keepit.common.controller.{ ActionAuthenticator, AdminController }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ LibraryMembershipRepo, LibraryRepo, KeepRepo, User }
+import com.keepit.model._
 
 class AdminLibraryController @Inject() (
     actionAuthenticator: ActionAuthenticator,
@@ -13,6 +13,7 @@ class AdminLibraryController @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryCommander: LibraryCommander,
+    userRepo: UserRepo,
     db: Database) extends AdminController(actionAuthenticator) {
 
   def index(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
@@ -31,7 +32,13 @@ class AdminLibraryController @Inject() (
   def internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     val ids = (startingUserId.id to endingUserId.id).map(Id[User])
 
-    val result = ids.map { userId =>
+    val confirmedIds = db.readOnlyReplica { implicit session =>
+      ids.map { idCandidate =>
+        scala.util.Try(userRepo.getNoCache(idCandidate)).toOption.map(_.id.get)
+      }
+    }.flatten
+
+    val result = confirmedIds.map { userId =>
       userId.id + " -> " + libraryCommander.internSystemGeneratedLibraries(userId)
     }
 

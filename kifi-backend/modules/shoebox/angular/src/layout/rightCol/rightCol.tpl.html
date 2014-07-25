@@ -20,8 +20,10 @@
       <div class="kf-horizontal-separator"></div>
     </div>
 
-    <h2 class="kf-footer-header">Friends on Kifi</h2>
-    <div kf-compact-friends-view></div>
+    <div class="kf-rightcol-friends">
+      <div ng-show="hasNoFriendsOrConnections()" kf-no-friends-or-connections-view></div>
+      <div ng-hide="hasNoFriendsOrConnections()" kf-compact-friends-view></div>
+    </div>
 
 
     <div class="kf-horizontal-separator"></div>

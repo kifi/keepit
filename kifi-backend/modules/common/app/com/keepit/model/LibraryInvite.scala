@@ -47,6 +47,7 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
   )(LibraryInvite.apply, unlift(LibraryInvite.unapply))
 }
 
+// Not sure we need this cache?
 case class LibraryInviteIdKey(id: Id[LibraryInvite]) extends Key[LibraryInvite] {
   val namespace = "library_invite_by_id"
   def toKey(): String = id.id.toString

@@ -14,7 +14,7 @@ trait AlertingActor extends Actor {
 
   override def preRestart(reason: Throwable, message: Option[Any]) {
     alert(reason, message)
-    postStop()
+    super.preRestart(reason, message)
   }
 }
 
