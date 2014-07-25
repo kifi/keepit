@@ -118,3 +118,9 @@ object LibraryKind {
     }
   }
 }
+
+case class LibraryAndMemberships(library: Library, memberships: Seq[LibraryMembership])
+
+object LibraryAndMemberships {
+  implicit val format = Json.format[LibraryAndMemberships]
+}

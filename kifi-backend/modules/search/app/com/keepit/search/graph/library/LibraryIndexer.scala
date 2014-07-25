@@ -1,6 +1,6 @@
 package com.keepit.search.graph.library
 
-import com.keepit.model.{ LibraryMembership, User, Library }
+import com.keepit.model._
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.search.index._
 import com.keepit.search.LangDetector
@@ -14,6 +14,7 @@ object LibraryFields {
   val descriptionField = "d"
   val descriptionStemmedField = "ds"
   val visibilityField = "v"
+  val searchabilityField = "s"
   val usersField = "u"
   val hiddenUsersField = "h"
   val recordField = "rec"
@@ -51,7 +52,13 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) ex
       doc.add(buildTextField(descriptionStemmedField, description, DefaultAnalyzer.getAnalyzerWithStemmer(descriptionLang)))
     }
 
-    doc.add(buildKeywordField(visibilityField, library.visibility.value))
+    library.visibility match {
+      case LibraryVisibility.ANYONE => doc.add(buildKeywordField(visibilityField, "anyone"))
+      case _ =>
+    }
+
+    if (library.isSearchableByOthers) { doc.add(buildKeywordField(searchabilityField, "anyone")) }
+
     doc.add(buildIteratorField(usersField, users.iterator) { id => id.id.toString })
     doc.add(buildIteratorField(hiddenUsersField, hiddenUsers.iterator) { id => id.id.toString })
 
@@ -69,9 +76,8 @@ class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClie
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
   def fetchUpdates(seq: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryIndexable]] = {
-    shoebox.getLibrariesWithMembersChanged(seq, fetchSize).map {
-      case libraries =>
-        libraries.map { case (library, memberships) => new LibraryIndexable(library, memberships) }
+    shoebox.getLibrariesAndMembershipsChanged(seq, fetchSize).map { updates =>
+      updates.map { case LibraryAndMemberships(library, memberships) => new LibraryIndexable(library, memberships) }
     }
   }
 
