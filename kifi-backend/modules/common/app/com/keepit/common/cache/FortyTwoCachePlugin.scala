@@ -184,8 +184,12 @@ class MemcachedCache @Inject() (
     )
   }
 
-  override def toString = "Memcached"
+  override def toString = MemcachedCache.name
 
+}
+
+object MemcachedCache {
+  val name = "Memcached"
 }
 
 class EhCacheConfiguration extends CacheConfiguration

@@ -37,4 +37,15 @@ angular.module('kifi.friends.compactFriendsView', [])
       };
     }
   };
+}])
+
+.directive('kfNoFriendsOrConnectionsView', ['socialService', function (socialService) {
+  return {
+    replace: true,
+    restrict: 'A',
+    templateUrl: 'friends/noFriendsOrConnectionsView.tpl.html',
+    link: function (scope) {
+      scope.connectFacebook = socialService.connectFacebook;
+    }
+  };
 }]);
