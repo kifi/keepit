@@ -82,7 +82,7 @@ object TracedCallable {
 }
 
 abstract class ScrapeCallable(val uri: NormalizedURI, val info: ScrapeInfo, val proxyOpt: Option[HttpProxy]) extends TracedCallable[Option[Article]] {
-  override def getTaskDetails(name: String) = ScraperTaskDetails(name, uri.url, submitDateTime, callDateTime, ScraperTaskType.SCRAPE, uri.id, info.id, Some(killCount.get), None)
+  override def getTaskDetails(name: String) = ScraperTaskDetails(name, uri.url, submitDateTime, Some(callDateTime), ScraperTaskType.SCRAPE, uri.id, info.id, Some(killCount.get), None)
 }
 
 @Singleton
@@ -237,7 +237,7 @@ class QueuedScrapeProcessor @Inject() (
         }
         res
       }
-      override def getTaskDetails(name: String) = ScraperTaskDetails(name, url, submitDateTime, callDateTime, ScraperTaskType.FETCH_BASIC, None, None, None, extractorProviderTypeOpt map { _.name })
+      override def getTaskDetails(name: String) = ScraperTaskDetails(name, url, submitDateTime, Some(callDateTime), ScraperTaskType.FETCH_BASIC, None, None, None, extractorProviderTypeOpt map { _.name })
     }
     fjPool.submit(callable)
     callable.future
