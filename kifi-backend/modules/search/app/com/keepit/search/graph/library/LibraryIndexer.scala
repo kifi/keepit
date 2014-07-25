@@ -13,7 +13,7 @@ import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.logging.Logging
 
 class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClient, val airbrake: AirbrakeNotifier) extends Indexer[Library, Library, LibraryIndexer](indexDirectory, LibraryFields.decoders) {
-
+  val name = "LibraryIndexer"
   def update(): Int = throw new UnsupportedOperationException()
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -36,8 +36,8 @@ class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClie
     }
   }
 
-  private def processIndexables(updates: Seq[Indexable[Library, Library]]): Int = updateLock.synchronized {
-    doUpdate("LibraryIndex")(updates.iterator)
+  private def processIndexables(indexables: Seq[LibraryIndexable]): Int = updateLock.synchronized {
+    doUpdate(name)(indexables.iterator)
   }
 }
 
