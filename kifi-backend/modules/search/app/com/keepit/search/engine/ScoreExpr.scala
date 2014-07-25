@@ -6,6 +6,12 @@ abstract class ScoreExpr { // using abstract class for performance. trait is slo
   def isNullExpr: Boolean = false
 }
 
+// Null Expr
+object NullExpr extends ScoreExpr {
+  def apply()(implicit hitJoiner: ScoreContext): Float = 0.0f
+  override def isNullExpr: Boolean = true
+}
+
 object MaxExpr {
 
   class MaxExpr(index: Int) extends ScoreExpr {
@@ -86,7 +92,7 @@ object ExistsExpr {
     def apply()(implicit hitJoiner: ScoreContext): Float = {
       var i = 0
       while (i < elems.length) { // using while for performance
-        if (elems(i).apply() > 0.0f) 1.0f
+        if (elems(i).apply() > 0.0f) return 1.0f
         i += 1
       }
       0.0f
@@ -146,7 +152,7 @@ object FilterExpr {
 
   class FilterExpr(expr: ScoreExpr, filter: ScoreExpr) extends ScoreExpr {
     def apply()(implicit hitJoiner: ScoreContext): Float = {
-      if (filter() <= 0.0f) expr() else 0.0f
+      if (filter() > 0.0f) expr() else 0.0f
     }
   }
 
@@ -181,10 +187,4 @@ object BoostExpr {
   def apply(expr: ScoreExpr, booster: ScoreExpr, boostStrength: Float): ScoreExpr = {
     if (expr.isNullExpr) NullExpr else if (booster.isNullExpr) expr else new BoostExpr(expr, booster, boostStrength)
   }
-}
-
-// Null Expr
-object NullExpr extends ScoreExpr {
-  def apply()(implicit hitJoiner: ScoreContext): Float = 0.0f
-  override def isNullExpr: Boolean = true
 }

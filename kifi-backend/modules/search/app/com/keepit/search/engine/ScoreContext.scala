@@ -27,7 +27,7 @@ class ScoreContext(
     pct
   }
 
-  def clean(): Unit = {
+  def clear(): Unit = {
     Arrays.fill(scoreMax, 0.0f)
     Arrays.fill(scoreSum, 0.0f)
   }
@@ -43,11 +43,17 @@ class ScoreContext(
 
   def flush(): Unit = {
     val factor = matchFactor()
-    if (matchFactor > 0.0f) {
+    if (factor > 0.0f) {
       val score = scoreExpr()(this) * factor
       if (score > 0.0f) {
         collector.collect(this.id, score)
       }
     }
+  }
+
+  // for testing
+  private[engine] def addScore(idx: Int, scr: Float) = {
+    if (scoreMax(idx) < scr) scoreMax(idx) = scr
+    scoreSum(idx) += scr
   }
 }

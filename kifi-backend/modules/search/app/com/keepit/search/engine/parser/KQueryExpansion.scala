@@ -2,11 +2,10 @@ package com.keepit.search.engine.parser
 
 import com.keepit.classify.Domain
 import com.keepit.search.Lang
-import com.keepit.search.engine.query.KTextQuery
+import com.keepit.search.engine.query.{ KSiteQuery, KMediaQuery, KTextQuery }
 import com.keepit.search.index.Analyzer
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.parser.{ QueryParser, QueryParserException, QuerySpec }
-import com.keepit.search.query.{ MediaQuery, SiteQuery }
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur._
 import org.apache.lucene.search.{ BooleanClause, BooleanQuery, PhraseQuery, Query, TermQuery }
@@ -34,12 +33,12 @@ trait KQueryExpansion extends QueryParser {
   override def getFieldQuery(field: String, queryText: String, quoted: Boolean): Option[Query] = {
     field.toLowerCase match {
       case "site" => getSiteQuery(queryText)
-      case "media" => Option(MediaQuery(queryText))
+      case "media" => Option(KMediaQuery(queryText))
       case _ => getTextQuery(queryText, quoted)
     }
   }
 
-  protected def getSiteQuery(domain: String): Option[Query] = if (domain != null) Option(SiteQuery(domain)) else None
+  protected def getSiteQuery(domain: String): Option[Query] = if (domain != null) Option(KSiteQuery(domain)) else None
 
   private def mayConvertQuery(query: Query, language: Lang): Query = {
     if (KQueryExpansion.useBooleanForPhrase(language)) {
@@ -70,7 +69,7 @@ trait KQueryExpansion extends QueryParser {
     }
 
     def addSiteQuery(baseQuery: KTextQuery, queryText: String) {
-      if (Domain.isValid(queryText)) baseQuery.addQuery(SiteQuery(queryText), siteBoost)
+      if (Domain.isValid(queryText)) baseQuery.addQuery(KSiteQuery(queryText), siteBoost)
     }
 
     def isNumericTermQuery(query: Query): Boolean = query match {

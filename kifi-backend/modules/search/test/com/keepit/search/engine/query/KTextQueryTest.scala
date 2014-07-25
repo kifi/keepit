@@ -16,7 +16,7 @@ class KTextQueryTest extends Specification {
       indexer.index(Id[Tst](id), text, fallbackText)
   }
 
-  "TextQuery" should {
+  "KTextQuery" should {
     "not fail even when there is no subquery" in {
       val q = new KTextQuery
       indexer.getPersonalizedSearcher(Set(0L)).search(q).map(_.id).toSet === Set.empty[Long]

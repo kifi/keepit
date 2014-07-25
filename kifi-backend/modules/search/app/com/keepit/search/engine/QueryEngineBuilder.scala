@@ -1,7 +1,6 @@
 package com.keepit.search.engine
 
-import com.keepit.search.engine.query.{ KWrapperQuery, KTextQuery, KBoostQuery, KBooleanQuery }
-import com.keepit.search.query.{ MediaQuery, SiteQuery }
+import com.keepit.search.engine.query._
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanClause.Occur._
 import scala.collection.JavaConversions._
@@ -10,18 +9,17 @@ import scala.collection.mutable.ArrayBuffer
 class QueryEngineBuilder(query: Query) {
 
   private[this] var _query: Query = query
-  private[this] var _expression: ScoreExpr = initExpr(query)
+  private[this] var _expr: ScoreExpr = buildExpr(query)
   private[this] var _index: Int = 0
   private[this] var _threshold: Float = 0.0f
-  private[this] var _filter: Option[Query] = None
   private[this] var _collector: ResultCollector = null
 
   def build(): QueryEngine = {
 
-    new QueryEngine(_expression, _query, _index, _threshold, _collector)
+    new QueryEngine(_expr, _query, _index, _threshold, _collector)
   }
 
-  private[this] def initExpr(query: Query): ScoreExpr = {
+  private[this] def buildExpr(query: Query): ScoreExpr = {
     query match {
       case booleanQuery: KBooleanQuery =>
         val clauses = booleanQuery.clauses
@@ -35,14 +33,14 @@ class QueryEngineBuilder(query: Query) {
             case MUST_NOT => filterOut += MaxExpr(_index)
             case occur =>
               clause.getQuery match {
-                case q: SiteQuery => filter += MaxExpr(_index)
-                case q: MediaQuery => filter += MaxExpr(_index)
+                case q: KFilterQuery => filter += MaxExpr(_index)
                 case _ => (if (occur == MUST) required else optional) += MaxWithTieBreakerExpr(_index, 0.5f)
               }
           }
           _index += 1
         }
 
+        // put all together and build a score expression
         FilterExpr(
           expr = FilterOutExpr(
             expr = BooleanExpr(
@@ -67,11 +65,7 @@ class QueryEngineBuilder(query: Query) {
     _query = new KBoostQuery(_query, booster, boostStrength)
     val boosterExpr = MaxExpr(_index)
     _index += 1
-    _expression = BoostExpr(_expression, boosterExpr, boostStrength)
-  }
-
-  def setFilter(filter: Query): Unit = {
-    _filter = Some(filter)
+    _expr = BoostExpr(_expr, boosterExpr, boostStrength)
   }
 
   def setPercentMatchThreshold(threshold: Float): Unit = {
