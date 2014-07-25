@@ -84,7 +84,7 @@ object ScraperTaskDetails {
   )(ScraperTaskDetails.apply _, unlift(ScraperTaskDetails.unapply))
 }
 
-case class ScraperThreadDetails(state: Option[String], share: Option[String], description: Either[ScraperTaskDetails, String])
+case class ScraperThreadDetails(state: Option[String], share: Option[String], description: Either[ScraperTaskDetails, String]) // todo(ray): removeme
 object ScraperThreadDetails {
   def buildFromString(details: String): Option[ScraperThreadDetails] = {
     val re = """^(.*?)\s+(\w+)\s+([0-9]*\.?[0-9]*%)\s+share""".r
