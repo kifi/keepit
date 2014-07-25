@@ -2,6 +2,7 @@
 #INTERNAL ROUTES/Scraper
 ##########################################
 
+GET     /internal/scraper/status                        @com.keepit.scraper.ScraperController.status
 POST    /internal/scraper/getBasicArticle               @com.keepit.scraper.ScraperController.getBasicArticle
 POST    /internal/scraper/getSignature                  @com.keepit.scraper.ScraperController.getSignature
 GET     /internal/scraper/getPornDetectorModel          @com.keepit.controllers.scraper.PornDetectorController.getModel

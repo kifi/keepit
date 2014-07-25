@@ -27,6 +27,7 @@ import play.api.Mode._
 import play.api.templates.Html
 import com.keepit.model.NotificationCategory
 import java.io.File
+import com.keepit.common.cache.GlobalCacheStatistics
 
 object Healthcheck {
 
@@ -43,6 +44,7 @@ object Healthcheck {
 
 case object ReportErrorsAction
 case object CheckDiskSpace
+case object CheckCacheMissRatio
 case object ErrorCount
 case object ResetErrorCount
 case object GetErrors
@@ -96,7 +98,8 @@ case class AirbrakeErrorHistory(signature: AirbrakeErrorSignature, count: Int, c
 class HealthcheckActor @Inject() (
   services: FortyTwoServices,
   host: HealthcheckHost,
-  emailSender: MailSender)
+  emailSender: MailSender,
+  globalCacheStatistics: GlobalCacheStatistics)
 
     extends AlertingActor with Logging {
   def alert(reason: Throwable, message: Option[Any]) = self ! error(reason, message)
@@ -124,7 +127,17 @@ class HealthcheckActor @Inject() (
           errors(signature).addError(error)
       }
       errors(signature) = history
-    case email: ElectronicMail => emailSender.sendMail(email)
+    case email: ElectronicMail =>
+      emailSender.sendMail(email)
+    case CheckCacheMissRatio =>
+      val misses = globalCacheStatistics.missRatios(minSample = 1000, minRatio = 10) // I rather have minRatio set to 2% but one step at a time...
+      if (!misses.isEmpty) {
+        val message = misses.map {
+          case (key, ratio) =>
+            s"$key:$ratio%"
+        } mkString ", "
+        self ! AirbrakeError(message = Some(s"there are too many cache misses: $message"))
+      }
     case CheckDiskSpace =>
       val GB = 1024 * 1024 * 1024
       val usableDiskSpace = new File(".").getUsableSpace
@@ -174,6 +187,7 @@ class HealthcheckPluginImpl @Inject() (
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 30 minutes, actor.ref, ReportErrorsAction)
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 60 minutes, actor.ref, CheckDiskSpace)
     scheduleTaskOnAllMachines(actor.system, 3 days, 1 days, actor.ref, CheckUpdateStatusOfService)
+    scheduleTaskOnAllMachines(actor.system, 1 hour, 3 hour, actor.ref, CheckCacheMissRatio)
   }
 
   def errorCount(): Int = Await.result((actor.ref ? ErrorCount).mapTo[Int], 1 seconds)
