@@ -20,14 +20,14 @@ class GlobalCacheStatistics() {
   }
 
   /**
-   * @return the 100 * #misses/(#hits + #misses) Ratio per key that exist in the misses map
+   * @return the 100 * #misses/(#hits + #misses + #sets) Ratio per key that exist in the misses map
    */
   def missRatios(minSample: Int, minRatio: Int, cacheName: String = MemcachedCache.name): Seq[(String, Long)] =
     missesMap.keySet.toSeq.filter(_.startsWith(cacheName)) map { key =>
       getCount(key, missesMap) match {
-        case missesInt if missesInt >= minSample =>
-          val (misses, hits) = (missesInt.toDouble, getCount(key, hitsMap).toDouble)
-          (100 * misses / (hits + misses)).round match {
+        case misses if misses >= minSample =>
+          val (hits, sets) = (getCount(key, hitsMap), getCount(key, setsMap))
+          (100d * misses / (hits + misses + sets).toDouble).round match {
             case ratio if ratio >= minRatio => Some(key.substring(cacheName.length + 1) -> ratio)
             case _ => None
           }
