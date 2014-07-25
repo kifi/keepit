@@ -19,7 +19,7 @@ class UserConnectionSequencingPluginImpl @Inject() (
 }
 
 @Singleton
-class UserConnectionSequenceNumberAssigner @Inject() (db: Database, repo: UserConnectionRepo, airbrake: AirbrakeNotifier)
+class UserConnectionSequenceNumberAssigner @Inject() (db: Database, repo: UserConnectionRepo, val airbrake: AirbrakeNotifier)
   extends DbSequenceAssigner[UserConnection](db, repo, airbrake)
 
 class UserConnectionSequencingActor @Inject() (

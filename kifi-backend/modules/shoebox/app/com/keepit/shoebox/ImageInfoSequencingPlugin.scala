@@ -21,7 +21,7 @@ class ImageInfoSequencingPluginImpl @Inject() (
 }
 
 @Singleton
-class ImageInfoSequenceNumberAssigner @Inject() (db: Database, repo: ImageInfoRepo, airbrake: AirbrakeNotifier)
+class ImageInfoSequenceNumberAssigner @Inject() (db: Database, repo: ImageInfoRepo, val airbrake: AirbrakeNotifier)
   extends DbSequenceAssigner[ImageInfo](db, repo, airbrake)
 
 class ImageInfoSequencingActor @Inject() (

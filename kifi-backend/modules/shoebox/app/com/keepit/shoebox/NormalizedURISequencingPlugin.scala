@@ -15,7 +15,7 @@ class NormalizedURISequencingPluginImpl @Inject() (
   override val scheduling: SchedulingProperties) extends NormalizedURISequencingPlugin
 
 @Singleton
-class NormalizedURISequenceNumberAssigner @Inject() (db: Database, repo: NormalizedURIRepo, airbrake: AirbrakeNotifier)
+class NormalizedURISequenceNumberAssigner @Inject() (db: Database, repo: NormalizedURIRepo, val airbrake: AirbrakeNotifier)
   extends DbSequenceAssigner[NormalizedURI](db, repo, airbrake)
 
 class NormalizedURISequencingActor @Inject() (

@@ -99,7 +99,7 @@ class RawSeedItemSequencingPluginImpl @Inject() (
 }
 
 @Singleton
-class RawSeedItemSequenceNumberAssigner @Inject() (db: Database, repo: RawSeedItemRepo, airbrake: AirbrakeNotifier)
+class RawSeedItemSequenceNumberAssigner @Inject() (db: Database, repo: RawSeedItemRepo, val airbrake: AirbrakeNotifier)
   extends DbSequenceAssigner[RawSeedItem](db, repo, airbrake)
 
 class RawSeedItemSequencingActor @Inject() (

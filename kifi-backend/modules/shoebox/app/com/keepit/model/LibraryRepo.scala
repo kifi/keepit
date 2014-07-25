@@ -115,7 +115,7 @@ class LibrarySequencingPluginImpl @Inject() (
 }
 
 @Singleton
-class LibrarySequenceNumberAssigner @Inject() (db: Database, repo: LibraryRepo, airbrake: AirbrakeNotifier)
+class LibrarySequenceNumberAssigner @Inject() (db: Database, repo: LibraryRepo, val airbrake: AirbrakeNotifier)
   extends DbSequenceAssigner[Library](db, repo, airbrake)
 
 class LibrarySequencingActor @Inject() (
