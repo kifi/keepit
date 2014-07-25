@@ -40,14 +40,14 @@ class UriScoringHelper @Inject() (
   }
 
   private def getRawInterestScores(items: Seq[SeedItem]): Future[(Seq[Float], Seq[Float])] = {
-    val scoreTuples: Seq[Future[(Float, Float)]] = items.map { item =>
-      cortex.userUriInterest(item.userId, item.uriId).map { score => //to be replaced with batch call when available
+    val interestScores = cortex.batchUserURIsInterests(items.head.userId, items.map(_.uriId))
+    interestScores.map { scores =>
+      scores.map { score =>
         val (overallOpt, recentOpt) = (score.global, score.recency)
         (overallOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat,
           recentOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat)
-      }
+      }.unzip
     }
-    Future.sequence(scoreTuples).map(_.unzip)
   }
 
   // assume all items have same userId
