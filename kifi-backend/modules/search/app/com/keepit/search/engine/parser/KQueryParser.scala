@@ -5,7 +5,7 @@ import org.apache.lucene.search._
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.search.engine.EngineBuilder
+import com.keepit.search.engine.QueryEngineBuilder
 import com.keepit.search.Lang
 import com.keepit.search.index.Analyzer
 import com.keepit.search.phrasedetector.PhraseDetector
@@ -44,14 +44,14 @@ class KQueryParser(
 
   var totalParseTime: Long = 0L
 
-  def parse(queryText: CharSequence): Option[EngineBuilder] = {
+  def parse(queryText: CharSequence): Option[QueryEngineBuilder] = {
     val tParse = System.currentTimeMillis
 
     val builderOpt = parser.parse(queryText).map { query =>
       val numTextQueries = parser.textQueries.size
 
       if (numTextQueries <= 0 || numTextQueries > ProximityQuery.maxLength) { // no terms or too many terms, skip proximity and semantic vector
-        new EngineBuilder(query)
+        new QueryEngineBuilder(query)
       } else {
         val phrasesFuture = if (numTextQueries > 1 && phraseBoost > 0.0f) detectPhrases(queryText, parser.lang) else null
 
@@ -62,7 +62,7 @@ class KQueryParser(
           }
         }
 
-        val exprBuilder = new EngineBuilder(query)
+        val exprBuilder = new QueryEngineBuilder(query)
 
         if (proximityBoost > 0.0f && numTextQueries > 1) {
           val phrases = if (phrasesFuture != null) monitoredAwait.result(phrasesFuture, 3 seconds, "phrase detection") else Set.empty[(Int, Int)]

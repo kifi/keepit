@@ -4,11 +4,12 @@ import java.util.Arrays
 
 import com.keepit.search.util.join.{ DataBufferReader, Joiner }
 
-abstract class ScoreContext(
-    scoreExpr: ScoreExpression,
+class ScoreContext(
+    scoreExpr: ScoreExpr,
     scoreArraySize: Int,
     matchWeight: Array[Float],
-    threshold: Float) extends Joiner {
+    threshold: Float,
+    collector: ResultCollector) extends Joiner {
 
   private[engine] val scoreMax = new Array[Float](scoreArraySize)
   private[engine] val scoreSum = new Array[Float](scoreArraySize)
@@ -25,8 +26,6 @@ abstract class ScoreContext(
     }
     pct
   }
-
-  def hit(id: Long, score: Float): Unit
 
   def clean(): Unit = {
     Arrays.fill(scoreMax, 0.0f)
@@ -47,7 +46,7 @@ abstract class ScoreContext(
     if (matchFactor > 0.0f) {
       val score = scoreExpr()(this) * factor
       if (score > 0.0f) {
-        hit(this.id, score)
+        collector.collect(this.id, score)
       }
     }
   }

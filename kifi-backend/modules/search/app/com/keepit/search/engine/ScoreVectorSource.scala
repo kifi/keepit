@@ -31,6 +31,7 @@ class ScoreVectorSourceImpl(override val sourceId: Int, scorers: Array[Scorer], 
   final class TaggedScorer(tag: Byte, scorer: Scorer) {
     def doc = scorer.docID()
     def next = scorer.nextDoc()
+    def advance(docId: Int) = scorer.advance(docId)
     def taggedScore = DataBuffer.taggedFloatBits(tag, scorer.score)
   }
 
