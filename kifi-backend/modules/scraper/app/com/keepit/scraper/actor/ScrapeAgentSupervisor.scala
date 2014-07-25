@@ -10,7 +10,8 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.scraper.{ ScrapeJobStatus, ScraperConfig }
+import com.keepit.model.ScrapeJobStatus
+import com.keepit.scraper.ScraperConfig
 import com.keepit.search.Article
 import org.joda.time.DateTime
 

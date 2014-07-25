@@ -8,10 +8,9 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.model.{ HttpProxy, NormalizedURI, PageInfo, ScrapeInfo }
+import com.keepit.model._
 import com.keepit.scraper._
 import com.keepit.scraper.extractor._
-import org.joda.time.DateTime
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
