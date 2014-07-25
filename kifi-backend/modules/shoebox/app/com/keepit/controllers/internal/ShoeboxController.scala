@@ -417,7 +417,7 @@ class ShoeboxController @Inject() (
 
   def getLatestKeep() = Action(parse.json) { request =>
     val url = request.body.as[String]
-    val bookmarkOpt = db.readOnlyReplica(2) { implicit session =>
+    val bookmarkOpt = db.readOnlyMaster(2) { implicit session =>
       latestKeepUrlCache.getOrElseOpt(LatestKeepUrlKey(url)) {
         normUriRepo.getByNormalizedUrl(url).flatMap { uri =>
           keepRepo.latestKeep(uri.id.get, url)

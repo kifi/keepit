@@ -1,9 +1,9 @@
 package com.keepit.scraper
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.inject.AppScoped
-import com.keepit.model.{HttpProxy, NormalizedURI, PageInfo, ScrapeInfo}
-import com.keepit.scraper.extractor.{ExtractorFactory, ExtractorFactoryImpl, ExtractorProviderType}
+import com.keepit.model.{ HttpProxy, NormalizedURI, PageInfo, ScrapeInfo }
+import com.keepit.scraper.extractor.{ ExtractorFactory, ExtractorFactoryImpl, ExtractorProviderType }
 
 import scala.concurrent.Future
 
