@@ -130,7 +130,7 @@ class HealthcheckActor @Inject() (
     case email: ElectronicMail =>
       emailSender.sendMail(email)
     case CheckCacheMissRatio =>
-      val misses = globalCacheStatistics.missRatios(minSample = 1000, minRatio = 10) // I rather have minRatio set to 2% but one step at a time...
+      val misses = globalCacheStatistics.missRatios(minSample = 1000, minRatio = 5) // I rather have minRatio set to 2% but one step at a time...
       if (!misses.isEmpty) {
         val message = misses.map {
           case (key, ratio) =>
