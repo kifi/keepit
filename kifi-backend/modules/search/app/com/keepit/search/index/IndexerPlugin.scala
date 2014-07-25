@@ -15,6 +15,8 @@ import com.keepit.common.service.ServiceStatus
 import com.keepit.search.IndexInfo
 import scala.concurrent.duration._
 import java.util.Random
+import scala.concurrent.Future
+import scala.util.{ Failure, Success }
 
 object IndexerPluginMessages {
   case object UpdateIndex
@@ -130,9 +132,11 @@ abstract class IndexerPluginImpl[S, I <: Indexer[_, S, I], A <: IndexerActor[S, 
   def indexInfos: Seq[IndexInfo] = indexer.indexInfos("")
 }
 
-class IndexerActor[S, I <: Indexer[_, S, I]](
+sealed abstract class IndexerActor[S, I <: Indexer[_, S, I]](airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake)
+
+class BasicIndexerActor[S, I <: Indexer[_, S, I]](
     airbrake: AirbrakeNotifier,
-    indexer: IndexManager[S, I]) extends FortyTwoActor(airbrake) with Logging {
+    indexer: IndexManager[S, I]) extends IndexerActor[S, I](airbrake) {
 
   import IndexerPluginMessages._
 
@@ -150,3 +154,48 @@ class IndexerActor[S, I <: Indexer[_, S, I]](
   }
 }
 
+abstract class CoordinatingIndexerActor[S, I <: Indexer[_, S, I]](
+    airbrake: AirbrakeNotifier,
+    indexer: IndexManager[S, I]) extends IndexerActor[S, I](airbrake) {
+
+  protected def update(): Future[Boolean]
+
+  import IndexerPluginMessages._
+
+  private case class SuccessfulUpdate(done: Boolean)
+  private case class FailedUpdate(ex: Throwable)
+
+  private var updating = false
+
+  implicit val executionContext = com.keepit.common.concurrent.ExecutionContext.immediate
+
+  private def startUpdate(): Unit = {
+    updating = true
+    update().onComplete {
+      case Success(done) => self ! SuccessfulUpdate(done)
+      case Failure(ex) => self ! FailedUpdate(ex)
+    }
+  }
+
+  private def endUpdate(): Unit = { updating = false }
+
+  override def receive() = {
+    case UpdateIndex => if (!updating) { startUpdate() }
+    case FailedUpdate(ex) => {
+      airbrake.notify(s"Failed to update index $indexer", ex)
+      endUpdate()
+    }
+    case SuccessfulUpdate(done) => {
+      if (done) { endUpdate() }
+      else { startUpdate() }
+    }
+    case BackUpIndex => {
+      val minBackupInterval = 600000 // 10 minutes
+      if (System.currentTimeMillis - indexer.lastBackup > minBackupInterval) indexer.backup()
+    }
+    case RefreshSearcher => indexer.refreshSearcher()
+    case RefreshWriter => indexer.refreshWriter()
+    case WarmUpIndexDirectory => indexer.warmUpIndexDirectory()
+    case m => throw new UnsupportedActorMessage(m)
+  }
+}

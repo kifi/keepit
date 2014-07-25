@@ -75,13 +75,15 @@ class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClie
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-  def fetchUpdates(seq: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryIndexable]] = {
+  def fetchIndexables(seq: SequenceNumber[Library], fetchSize: Int): Future[(Seq[LibraryIndexable], Boolean)] = {
     shoebox.getLibrariesAndMembershipsChanged(seq, fetchSize).map { updates =>
-      updates.map { case LibraryAndMemberships(library, memberships) => new LibraryIndexable(library, memberships) }
+      val indexables = updates.map { case LibraryAndMemberships(library, memberships) => new LibraryIndexable(library, memberships) }
+      val exhausted = updates.length < fetchSize
+      (indexables, exhausted)
     }
   }
 
-  def processUpdates(updates: Seq[Indexable[Library, Library]]): Int = updateLock.synchronized {
+  def processIndexables(updates: Seq[Indexable[Library, Library]]): Int = updateLock.synchronized {
     doUpdate("LibraryIndex")(updates.iterator)
   }
 }
