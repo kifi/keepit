@@ -67,8 +67,8 @@ trait IndexModule extends ScalaModule with Logging {
     bind[SpellIndexerPlugin].to[SpellIndexerPluginImpl].in[AppScoped]
     bind[UserGraphPlugin].to[UserGraphPluginImpl].in[AppScoped]
     bind[SearchFriendGraphPlugin].to[SearchFriendGraphPluginImpl].in[AppScoped]
-    bind[LibraryIndexerPlugin].to[LibraryIndexerPluginImpl].in[AppScoped] // todo(Léo): activate once Shoebox is ready
-    bind[KeepIndexerPlugin].to[KeepIndexerPluginImpl].in[AppScoped] // todo(Léo): activate once Shoebox is ready
+    // bind[LibraryIndexerPlugin].to[LibraryIndexerPluginImpl].in[AppScoped] // todo(Léo): activate once Shoebox is ready
+    // bind[KeepIndexerPlugin].to[KeepIndexerPluginImpl].in[AppScoped] // todo(Léo): activate once Shoebox is ready
   }
 
   private[this] val noShard = Shard[Any](0, 1)
