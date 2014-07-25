@@ -30,9 +30,10 @@ class LDACommander @Inject() (
 
   val ldaDimMap = mutable.Map(wordRep.version -> wordRep.lda.dimension)
 
+  // consumers of lda service might query dim of some previous lda model
   def getLDADimension(version: ModelVersion[DenseLDA]): Int = {
     ldaDimMap.getOrElseUpdate(version, {
-      val conf = configStore.get(MiscPrefix.LDA.topicConfigsJsonFile, wordRep.version).get
+      val conf = configStore.get(MiscPrefix.LDA.topicConfigsJsonFile, version).get
       conf.configs.size
     }
     )
