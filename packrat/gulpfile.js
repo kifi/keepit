@@ -130,7 +130,7 @@ gulp.task('scripts', ['html2js', 'copy'], function () {
   var chromeInjectionFooter = map(function (code, filename) {
     var relativeFilename = filename.replace(new RegExp('^' + __dirname + '/' + outDir + '/chrome/'), '');
     var shortName = relativeFilename.replace(/^scripts\//, '');
-    return code.toString() + 'api.injected["' + relativeFilename + '"]=1;\n//@ sourceURL=http://kifi/' + shortName + '\n';
+    return code.toString() + "api.injected['" + relativeFilename + "']=1;\n//@ sourceURL=http://kifi/" + shortName + '\n';
   });
 
   return gulp.src([outDir + '/chrome/scripts/**/*.js', '!**/iframes/**'], {base: outDir})
@@ -291,7 +291,7 @@ gulp.task('meta', ['extract-meta'], function () {
         JSON.stringify(scriptDeps, undefined, 2)
       ]);
     }))
-  
+
   var chromeMeta = snippets.pipe(clone())
     .pipe(map(function (code) {
       var data = JSON.parse(code.toString());
