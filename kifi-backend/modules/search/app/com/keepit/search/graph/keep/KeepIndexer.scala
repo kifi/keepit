@@ -84,7 +84,7 @@ trait KeepIndexerPlugin extends IndexerPlugin[Keep, KeepIndexer]
 
 class KeepIndexerPluginImpl @Inject() (
   actor: ActorInstance[KeepIndexerActor],
-  indexer: KeepIndexer,
+  indexer: ShardedKeepIndexer,
   airbrake: AirbrakeNotifier,
   serviceDiscovery: ServiceDiscovery,
   val scheduling: SchedulingProperties) extends IndexerPluginImpl(indexer, actor, serviceDiscovery) with KeepIndexerPlugin

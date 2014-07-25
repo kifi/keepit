@@ -44,6 +44,7 @@ trait SearchServices { self: FortyTwoGlobal =>
     require(injector.instance[SearchFriendGraphPlugin] != null)
     require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
     // require(injector.instance[LibraryIndexerPlugin] != null) //make sure its not lazy loaded todo(Léo): activate once Shoebox is ready
+    // require(injector.instance[KeepIndexerPlugin] != null) //make sure its not lazy loaded todo(Léo): activate once Shoebox is ready
     require(NlpParser.enabled)
   }
 }
