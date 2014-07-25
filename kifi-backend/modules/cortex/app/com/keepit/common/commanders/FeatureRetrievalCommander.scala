@@ -18,8 +18,8 @@ class FeatureRetrievalCommander @Inject() (
     val dim = ldaCommander.getLDADimension(version)
     val feats = ldaRetriever.getLDAFeaturesChanged(lowSeq, fetchSize, version)
     feats.map { feat =>
-      if (feat.state == URILDATopicStates.ACTIVE) UriSparseLDAFeatures(feat.uriId, feat.uriSeq, generateSparseRepresentation(feat.sparseFeature.get, sparsity), isActive = true)
-      else UriSparseLDAFeatures(feat.uriId, feat.uriSeq, SparseTopicRepresentation(dim, Map()), isActive = false)
+      if (feat.state == URILDATopicStates.ACTIVE) UriSparseLDAFeatures(feat.uriId, feat.uriSeq, generateSparseRepresentation(feat.sparseFeature.get, sparsity))
+      else UriSparseLDAFeatures(feat.uriId, feat.uriSeq, SparseTopicRepresentation(dim, Map()))
     }
   }
 
