@@ -71,7 +71,7 @@
   visibility: hidden;
 }
 .kifi-tile .kifi-tile-kept::before {
-  content: "Kept";
+  content: 'Kept';
   position: absolute;
   top: 0;
   left: 0;
@@ -79,6 +79,7 @@
   text-align: center;
   color: #fff;
   font-size: 12px;
+  font-weight: 500;
   line-height: 44px;
   text-shadow: 0 0 2px rgba(0,0,0,.3);
 }

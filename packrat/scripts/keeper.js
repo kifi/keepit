@@ -94,9 +94,11 @@ var keeper = keeper || function () {  // idempotent for Chrome
         startDrag(data);
       } else if (!data.stickiness && !data.dragStarting && !data.$dragGlass) {
         if (e.relatedTarget) {
-          if (!this.contains(e.relatedTarget)) {
-            log('[slider.mouseout] hiding');
+          if (!this.parentNode.contains(e.relatedTarget)) {
+            log('[slider.mouseout] hiding', e.relatedTarget);
             hideSlider('mouseout');
+          } else {
+            log('[slider.mouseout] not hiding', this.parentNode, 'does not contain', e.relatedTarget);
           }
         } else {  // out of window
           log('[slider.mouseout] out of window');
