@@ -45,12 +45,13 @@ class URILDATopicRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id")
     def uriSeq = column[SequenceNumber[NormalizedURI]]("uri_seq")
     def version = column[ModelVersion[DenseLDA]]("version")
+    def numOfWords = column[Int]("num_words")
     def firstTopic = column[LDATopic]("first_topic", O.Nullable)
     def secondTopic = column[LDATopic]("second_topic", O.Nullable)
     def thirdTopic = column[LDATopic]("third_topic", O.Nullable)
     def sparseFeature = column[SparseTopicRepresentation]("sparse_feature", O.Nullable)
     def feature = column[LDATopicFeature]("feature", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, uriId, uriSeq, version, firstTopic.?, secondTopic.?, thirdTopic.?, sparseFeature.?, feature.?, state) <> ((URILDATopic.apply _).tupled, URILDATopic.unapply _)
+    def * = (id.?, createdAt, updatedAt, uriId, uriSeq, version, numOfWords, firstTopic.?, secondTopic.?, thirdTopic.?, sparseFeature.?, feature.?, state) <> ((URILDATopic.apply _).tupled, URILDATopic.unapply _)
   }
 
   def table(tag: Tag) = new URILDATopicTable(tag)
