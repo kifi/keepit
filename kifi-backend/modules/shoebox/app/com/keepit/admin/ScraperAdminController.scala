@@ -30,6 +30,12 @@ class ScraperAdminController @Inject() (
 
   val MAX_COUNT_DISPLAY = 25
 
+  def status = AdminJsonAction.authenticatedAsync { implicit request =>
+    Future.sequence(scraperServiceClient.status()).map { res =>
+      Ok(Json.toJson(res.map { case (_, jobs) => jobs }.flatten))
+    }
+  }
+
   def searchScraper = AdminHtmlAction.authenticated { implicit request => Ok(html.admin.searchScraper()) }
 
   def scraperRequests(stateFilter: Option[String] = None) = AdminHtmlAction.authenticatedAsync { implicit request =>
