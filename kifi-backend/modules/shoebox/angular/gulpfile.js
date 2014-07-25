@@ -13,44 +13,45 @@ var plumber = require('gulp-plumber');
 var livereload = require('gulp-livereload');
 var es = require('event-stream');
 var cache = require('gulp-cached');
+var remember = require('gulp-remember');
 
 var outDir = 'dist';
-var tmpDir = 'tmp';
 
 var stylFiles = ['src/**/*.styl', '!src/common/build-css/*.styl'];
-var cssTmpFiles = [tmpDir + '/**/*.css'];
+
+var stylesCache = 'styles';
+
+var cacheUpdater = function (cacheName) {
+  return function (event) {
+    if (event.type === 'deleted') {
+      delete cache.caches[cacheName][event.path];
+      remember.forget(cacheName, event.path);
+    }
+  }
+}
 
 gulp.task('clean', function () {
-  return gulp.src([outDir, tmpDir], {read: false})
+  return gulp.src(outDir, {read: false})
     .pipe(rimraf());
 });
 
-gulp.task('styles-compile', function () {
+gulp.task('styles', function () {
   return gulp.src(stylFiles, {base: './'})
-    .pipe(cache('styles-compile'))
+    .pipe(cache(stylesCache))
     .pipe(stylus({use: [nib()], import: ['nib', __dirname + '/src/common/build-css/*.styl']}))
-    .pipe(gulp.dest(tmpDir));
-});
-
-gulp.task('styles-concat', ['styles-compile'], function () {
-  return gulp.src(tmpDir + '/src/**/*.css')
+    .pipe(remember(stylesCache))
     .pipe(concat('kifi.css'))
-    .pipe(gulp.dest(outDir));
-});
-
-gulp.task('styles-minify', ['styles-concat'], function () {
-  return gulp.src(outDir + '/kifi.css')
-    .pipe(cssmin())
+    .pipe(gulp.dest(outDir))
     .pipe(rename({suffix: '.min'}))
     .pipe(gulp.dest(outDir));
 });
 
 gulp.task('watch', function () {
   livereload.listen();
-  gulp.watch(stylFiles, ['styles-minify']);
+  gulp.watch(stylFiles, ['styles']).on('change', cacheUpdater(stylesCache));
   gulp.watch(outDir + '/kifi.css').on('change', livereload.changed);
 });
 
 gulp.task('default', function () {
-  runSequence('clean', ['watch', 'styles-minify']);
+  runSequence('clean', ['watch', 'styles']);
 });
