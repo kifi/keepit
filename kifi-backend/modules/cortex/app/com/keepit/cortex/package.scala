@@ -50,7 +50,7 @@ package object cortex {
   }
 
   object PublishedModels {
-    val denseLDAVersion = ModelVersion[DenseLDA](1) // doesn't have to sync with cortex lda version
+    val denseLDAVersion = ModelVersion[DenseLDA](2) // doesn't have to sync with cortex lda version
     val defaultSparsity = 5
   }
 
