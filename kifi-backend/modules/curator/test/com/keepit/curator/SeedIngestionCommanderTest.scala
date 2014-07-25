@@ -221,7 +221,7 @@ class SeedIngestionCommanderTest extends Specification with DbTestInjector {
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
 
         val graph = inject[GraphServiceClient].asInstanceOf[FakeGraphServiceClientImpl]
-        graph.getUriAndScorePairs(user1Keeps.map { x => x.uriId }.toList, user1)
+        graph.getUriAndScorePairs(user1Keeps.map { x => x.uriId }.toList)
 
         val result = commander.ingestTopUris(user1)
         Await.result(result, Duration(10, "seconds"))

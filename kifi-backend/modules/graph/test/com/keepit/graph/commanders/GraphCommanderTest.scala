@@ -31,6 +31,7 @@ class GraphCommanderTest extends Specification with GraphTestInjector with Graph
 
         res1(1).score should be_>=(res1(2).score)
 
+        res1(1).score should be <= 1.0d
       }
     }
 
@@ -46,6 +47,8 @@ class GraphCommanderTest extends Specification with GraphTestInjector with Graph
         res2 must have size (4)
 
         res2(1).score should be_>=(res2(2).score)
+
+        res2(1).score should be <= 1.0d
       }
     }
   }

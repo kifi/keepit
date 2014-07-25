@@ -23,8 +23,7 @@ import org.joda.time.Days
 class UriScoringHelper @Inject() (
     graph: GraphServiceClient,
     keepInfoRepo: CuratorKeepInfoRepo,
-    cortex: CortexServiceClient,
-    db: Database) {
+    cortex: CortexServiceClient) {
 
   private def getRawRecencyScores(items: Seq[SeedItem]): Seq[Float] = items.map { item =>
     val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays()
@@ -46,8 +45,7 @@ class UriScoringHelper @Inject() (
         case (overallOpt, recentOpt) =>
           (
             overallOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat,
-            recentOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat
-          )
+            recentOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat)
       }
     }
     Future.sequence(scoreTuples).map(_.unzip)
@@ -68,12 +66,10 @@ class UriScoringHelper @Inject() (
         items.map(item =>
           item.keepers match {
             case Keepers.TooMany => 0.0f
-            case Keepers.ReasonableNumber(_) => {
+            case Keepers.ReasonableNumber(users) => {
               var itemScore = 0.0f
-              db.readOnlyReplica { implicit session =>
-                keepInfoRepo.getKeepersByUriId(item.uriId).map(userId => itemScore += socialScoreMap.getOrElse(userId, itemScore))
-                itemScore
-              }
+              users.map(userId => itemScore += socialScoreMap.getOrElse(userId, itemScore))
+              itemScore
             }
           })
       }
@@ -101,8 +97,7 @@ class UriScoringHelper @Inject() (
           overallInterestScore = overallInterestScores(i),
           recentInterestScore = recentInterestScores(i),
           recencyScore = recencyScores(i),
-          priorScore = priorScores(i)
-        )
+          priorScore = priorScores(i))
         ScoredSeedItem(items(i).userId, items(i).uriId, scores)
       }
     }
