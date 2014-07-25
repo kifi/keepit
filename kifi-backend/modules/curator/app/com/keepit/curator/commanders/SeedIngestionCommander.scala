@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{ SequenceNumber, Id }
-import com.keepit.curator.model.{ SeedItem, RawSeedItem, Keepers, RawSeedItemRepo, CuratorKeepInfoRepo }
+import com.keepit.curator.model._
 import com.keepit.model.User
 import com.keepit.common.db.slick.Database
 
