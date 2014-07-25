@@ -7,7 +7,6 @@ var concat = require('gulp-concat');
 var rename = require('gulp-rename');
 var cssmin = require('gulp-cssmin');
 var nib = require('nib');
-var watch = require('gulp-watch');
 var lazypipe = require('lazypipe');
 var plumber = require('gulp-plumber');
 var livereload = require('gulp-livereload');
