@@ -58,7 +58,7 @@ object ErrorWithStack {
 class AirbrakeFormatter(val apiKey: String, val playMode: Mode, service: FortyTwoServices, serviceDiscovery: ServiceDiscovery) {
 
   val deploymentMessage: String = {
-    val repo = "https://github.com/FortyTwoEng/keepit"
+    val repo = "https://github.com/kifi/keepit"
     val version = service.currentVersion
     s"api_key=$apiKey&deploy[rails_env]=$modeToRailsNaming&deploy[scm_repository]=$repo&deploy[scm_revision]=$version"
   }
