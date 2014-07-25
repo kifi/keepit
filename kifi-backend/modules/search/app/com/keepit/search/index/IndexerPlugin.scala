@@ -154,6 +154,9 @@ class BasicIndexerActor[S, I <: Indexer[_, S, I]](
   }
 }
 
+// todo(Léo): Switch all indexers to using a coordinating actor *internally* to manage their state
+// todo(Léo): Expose indexers instead of multiple plugins for API calls, have a single plugin that schedules all of them
+
 abstract class CoordinatingIndexerActor[S, I <: Indexer[_, S, I]](
     airbrake: AirbrakeNotifier,
     indexer: IndexManager[S, I]) extends IndexerActor[S, I](airbrake) {
