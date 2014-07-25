@@ -19,8 +19,10 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[RawSeedItemRepoImpl])
 trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeedItem] {
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[RawSeedItem]
+  def getByUriIdAndUserId(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[RawSeedItem]
   def getBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
   def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
+  def getFirstByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[RawSeedItem]
 }
 
 @Singleton
@@ -58,6 +60,14 @@ class RawSeedItemRepoImpl @Inject() (
 
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[RawSeedItem] = {
     (for (row <- rows if row.uriId === uriId) yield row).list
+  }
+
+  def getFirstByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[RawSeedItem] = {
+    (for (row <- rows if row.uriId === uriId && row.userId.isNull) yield row).firstOption
+  }
+
+  def getByUriIdAndUserId(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[RawSeedItem] = {
+    (for (row <- rows if row.uriId === uriId && row.userId === userId) yield row).firstOption
   }
 
   def getBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {

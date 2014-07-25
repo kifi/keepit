@@ -492,7 +492,7 @@ class AdminUserController @Inject() (
 
   def userValue(userId: Id[User]) = AdminJsonAction.authenticated { implicit request =>
     val req = request.body.asJson.map { json =>
-      ((json \ "name").asOpt[String], (json \ "value").asOpt[String], (json \ "clear").asOpt[Boolean]) match {
+      ((json \ "name").asOpt[UserValueName], (json \ "value").asOpt[String], (json \ "clear").asOpt[Boolean]) match {
         case (Some(name), Some(value), None) =>
           Some(db.readWrite { implicit session => // set it
             userValueRepo.setValue(userId, name, value)
@@ -655,7 +655,7 @@ class AdminUserController @Inject() (
 
         val allInstallations = kifiInstallationRepo.all(userId)
         if (allInstallations.nonEmpty) { properties += ("installedExtension", allInstallations.maxBy(_.updatedAt).version.toString) }
-        userValueRepo.getValueStringOpt(userId, Gender.key).foreach { gender => properties += (Gender.key, Gender(gender).toString) }
+        userValueRepo.getValueStringOpt(userId, Gender.key).foreach { gender => properties += (Gender.key.name, Gender(gender).toString) }
       }
       heimdal.setUserProperties(userId, properties.data.toSeq: _*)
     }
@@ -824,5 +824,48 @@ class AdminUserController @Inject() (
     val res = userCommander.setUsername(userId, Username(username), overrideRestrictions)
 
     Ok(res.toString)
+  }
+
+  private def autoSetUsername(userId: Id[User], readOnly: Boolean): Option[Username] = {
+    val userOpt = db.readOnlyMaster { implicit session =>
+      Try(userRepo.get(userId)).toOption // Opt because we're enumerating userIds, and it may be invalid
+    }
+    userOpt match {
+      case Some(user) =>
+        if (user.state != UserStates.ACTIVE
+          || user.fullName.length > 30
+          || user.fullName.contains("@")
+          || user.firstName.isEmpty
+          || user.lastName.isEmpty
+          || user.fullName.toLowerCase.contains("test")
+          || user.primaryEmail.exists(_.address.contains("test"))) {
+          if (!readOnly && user.username.nonEmpty) {
+            userCommander.removeUsername(userId)
+          }
+          None
+        } else if (user.username.isEmpty) {
+          userCommander.autoSetUsername(user, readOnly = readOnly)
+        } else {
+          user.username
+        }
+      case None =>
+        None
+    }
+
+  }
+
+  def autoSetUsernames(startingUserId: Id[User], endingUserId: Id[User], readOnly: Boolean = true) = AdminHtmlAction.authenticated { request =>
+    val ids = (startingUserId.id to endingUserId.id).map(Id[User])
+
+    val result = ids.map { userId =>
+      userId.id + " -> " + autoSetUsername(userId, readOnly = readOnly)
+    }
+
+    Ok(s"readOnly: $readOnly<br>\ncount: ${result.size}<br>\n<br>\n" + result.mkString("<br>\n"))
+  }
+
+  def removeUsername(userId: Id[User]) = AdminHtmlAction.authenticated { request =>
+    userCommander.removeUsername(userId)
+    Ok
   }
 }

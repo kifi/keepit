@@ -23,7 +23,8 @@ case class Library(
     slug: LibrarySlug,
     state: State[Library] = LibraryStates.ACTIVE,
     seq: SequenceNumber[Library] = SequenceNumber.ZERO,
-    kind: LibraryKind = LibraryKind.USER_CREATED) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
+    kind: LibraryKind = LibraryKind.USER_CREATED,
+    keepDiscoveryEnabled: Boolean) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def withId(id: Id[Library]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -47,7 +48,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'state).format(State.format[Library]) and
     (__ \ 'seq).format(SequenceNumber.format[Library]) and
-    (__ \ 'kind).format[LibraryKind]
+    (__ \ 'kind).format[LibraryKind] and
+    (__ \ 'keepDiscoveryEnabled).format[Boolean]
   )(Library.apply, unlift(Library.unapply))
 
   val maxNameLength = 50
@@ -57,7 +59,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
-  override val version = 0
+  override val version = 2
   val namespace = "library_by_id"
   def toKey(): String = id.id.toString
 }

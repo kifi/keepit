@@ -9,6 +9,7 @@ import com.keepit.common.cache.MemcachedCacheModule
 import com.keepit.common.store.ScraperProdStoreModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
 import com.keepit.scraper.embedly.ProdEmbedlyModule
+import com.keepit.scraper.fetcher.ProdHttpFetcherModule
 
 case class ProdScraperServiceModule() extends ScraperServiceModule(
   cacheModule = ScraperCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
@@ -18,4 +19,5 @@ case class ProdScraperServiceModule() extends ScraperServiceModule(
   embedlyModule = ProdEmbedlyModule()
 ) with CommonProdModule {
   val discoveryModule = new ProdDiscoveryModule(ServiceType.SCRAPER, ServiceType.SHOEBOX :: Nil)
+  val fetcherModule = ProdHttpFetcherModule()
 }

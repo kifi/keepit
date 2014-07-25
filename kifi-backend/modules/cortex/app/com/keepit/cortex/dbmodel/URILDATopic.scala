@@ -17,6 +17,7 @@ case class URILDATopic(
     uriId: Id[NormalizedURI],
     uriSeq: SequenceNumber[NormalizedURI],
     version: ModelVersion[DenseLDA],
+    numOfWords: Int,
     firstTopic: Option[LDATopic] = None,
     secondTopic: Option[LDATopic] = None,
     thirdTopic: Option[LDATopic] = None,

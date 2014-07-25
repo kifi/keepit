@@ -11,7 +11,7 @@ import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.net.FakeHttpClientModule
 import play.api.libs.json.JsString
-import com.keepit.common.social.FakeShoeboxSecureSocialModule
+import com.keepit.common.social.TestShoeboxAppSecureSocialModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.search.TestSearchServiceClientModule
 import play.api.libs.json.JsObject
@@ -26,7 +26,7 @@ class DeskControllerTest extends Specification with ShoeboxApplicationInjector {
   def requiredModules = Seq(
     TestSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
-    FakeShoeboxSecureSocialModule(),
+    TestShoeboxAppSecureSocialModule(),
     ShoeboxFakeStoreModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),

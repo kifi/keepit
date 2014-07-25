@@ -106,6 +106,7 @@ class LDADbUpdaterImpl @Inject() (
           uriId = uri.uriId,
           uriSeq = uri.seq,
           version = representer.version,
+          numOfWords = newFeat.numOfWords,
           firstTopic = newFeat.firstTopic,
           secondTopic = newFeat.secondTopic,
           thirdTopic = newFeat.thirdTopic,
@@ -143,9 +144,9 @@ class LDADbUpdaterImpl @Inject() (
 
   private def computeFeature(uri: CortexURI): URILDATopic = {
     val normUri = NormalizedURI(id = Some(uri.uriId), seq = SequenceNumber[NormalizedURI](uri.seq.value), url = "", urlHash = UrlHash(""))
-    representer(normUri) match {
-      case None => URILDATopic(uriId = uri.uriId, uriSeq = SequenceNumber[NormalizedURI](uri.seq.value), version = representer.version, state = URILDATopicStates.NOT_APPLICABLE)
-      case Some(feat) => {
+    representer.genFeatureAndWordCount(normUri) match {
+      case (None, cnt) => URILDATopic(uriId = uri.uriId, uriSeq = SequenceNumber[NormalizedURI](uri.seq.value), version = representer.version, numOfWords = cnt, state = URILDATopicStates.NOT_APPLICABLE)
+      case (Some(feat), cnt) => {
         val arr = feat.vectorize
         val sparse = arr.zipWithIndex.sortBy(-1f * _._1).take(sparsity).map { case (score, idx) => (LDATopic(idx), score) }
         val Array(first, second, third) = sparse.take(3).map { _._1 }
@@ -153,6 +154,7 @@ class LDADbUpdaterImpl @Inject() (
           uriId = uri.uriId,
           uriSeq = uri.seq,
           version = representer.version,
+          numOfWords = cnt,
           firstTopic = Some(first),
           secondTopic = Some(second),
           thirdTopic = Some(third),

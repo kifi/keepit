@@ -5,14 +5,12 @@ import com.keepit.common.db.Id
 import com.keepit.model.{ User, NormalizedURI, Word2VecKeywords }
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.models.lda.{ UriSparseLDAFeatures, DenseLDA }
+import com.keepit.cortex.models.lda._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.service.ServiceType
 import com.google.inject.util.Providers
 import com.keepit.common.actor.FakeScheduler
-import com.keepit.cortex.models.lda.LDATopicConfiguration
-import com.keepit.cortex.models.lda.LDATopicInfo
 
 class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends CortexServiceClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
@@ -30,11 +28,12 @@ class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extend
 
   override def ldaNumOfTopics(): Future[Int] = ???
   override def ldaShowTopics(fromId: Int, toId: Int, topN: Int): Future[Seq[LDATopicInfo]] = ???
+  override def ldaConfigurations: Future[LDATopicConfigurations] = Future.successful(LDATopicConfigurations(Map()))
   override def ldaWordTopic(word: String): Future[Option[Array[Float]]] = ???
   override def ldaDocTopic(doc: String): Future[Option[Array[Float]]] = ???
   override def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit = ???
   override def getLDAFeatures(uris: Seq[Id[NormalizedURI]]): Future[Seq[Array[Float]]] = ???
-  override def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[Option[Float]] = ???
+  override def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[(Option[LDAUserURIInterestScore], Option[LDAUserURIInterestScore])] = ???
   override def userTopicMean(userId: Id[User]): Future[Option[Array[Float]]] = ???
   override def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]] = ???
 
