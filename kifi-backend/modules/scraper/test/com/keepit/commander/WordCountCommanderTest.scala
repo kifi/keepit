@@ -2,18 +2,18 @@ package com.keepit.commander
 
 import com.keepit.commanders.WordCountCommanderImpl
 import com.keepit.common.db.Id
-import com.keepit.common.time.{DEFAULT_DATE_TIME_ZONE, currentDateTime}
+import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.inject.ApplicationInjector
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model._
-import com.keepit.scraper.{BasicArticle, ScrapeProcessor, Signature, TestScraperServiceModule}
+import com.keepit.scraper.{ BasicArticle, ScrapeProcessor, Signature, TestScraperServiceModule }
 import com.keepit.scraper.extractor._
-import com.keepit.search.{Article, ArticleStore, Lang}
+import com.keepit.search.{ Article, ArticleStore, Lang }
 import com.keepit.test.TestApplication
 import org.specs2.mutable.Specification
 import play.api.test.Helpers.running
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 
 class WordCountCommanderTest extends Specification with ApplicationInjector {
