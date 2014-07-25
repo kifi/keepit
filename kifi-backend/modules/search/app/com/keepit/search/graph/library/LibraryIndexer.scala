@@ -62,8 +62,7 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) ex
     doc.add(buildIteratorField(usersField, users.iterator) { id => id.id.toString })
     doc.add(buildIteratorField(hiddenUsersField, hiddenUsers.iterator) { id => id.id.toString })
 
-    val record = LibraryRecord(library.name, library.description, library.id.get)
-    doc.add(buildBinaryDocValuesField(recordField, record))
+    doc.add(buildBinaryDocValuesField(recordField, LibraryRecord(library)))
 
     doc
   }
