@@ -30,17 +30,19 @@ class SeedIngestionCommander @Inject() (
 
   val INGESTION_BATCH_SIZE = 50
 
+  val GRAPH_INGESTION_WHITELIST: Seq[Id[User]] = Seq(243, 6498, 134, 3, 1, 9, 2538, 61, 115).map(Id[User](_)) //will go away once we release, just saving some computation for now
+
   val ingestionInProgress: AtomicBoolean = new AtomicBoolean(false)
 
   def ingestAll(): Future[Boolean] = if (ingestionInProgress.compareAndSet(false, true)) {
-    val fut = FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {
-      log.info("Ingested one batch of keeps.")
+    val fut = ingestAllKeeps().flatMap { _ =>
+      FutureHelpers.sequentialExec(GRAPH_INGESTION_WHITELIST)(ingestTopUris)
     }
     fut.onComplete {
       case Success(_) => ingestionInProgress.set(false)
       case Failure(ex) => {
-        log.error("Failure occured during all keeps ingestion.")
-        airbrake.notify("Failure occured during all keeps ingestion.", ex)
+        log.error("Failure occured during ingestion.")
+        airbrake.notify("Failure occured during ingestion.", ex)
         ingestionInProgress.set(false)
       }
     }
@@ -49,7 +51,11 @@ class SeedIngestionCommander @Inject() (
     Future.successful(false)
   }
 
-  def ingestTopUris(userId: Id[User]): Future[Boolean] = topUrisIngestor(userId, INGESTION_BATCH_SIZE)
+  def ingestAllKeeps(): Future[Unit] = FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {
+    log.info("Ingested one batch of keeps.")
+  }
+
+  def ingestTopUris(userId: Id[User]): Future[Unit] = topUrisIngestor(userId, INGESTION_BATCH_SIZE).map(_ => ())
 
   private def cook(userId: Id[User], rawItem: RawSeedItem, keepers: Keepers): SeedItem = SeedItem(
     userId = userId,

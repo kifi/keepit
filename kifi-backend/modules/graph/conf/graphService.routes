@@ -3,5 +3,7 @@ POST    /internal/graph/wander          @com.keepit.graph.controllers.internal.G
 GET     /internal/graph/statistics      @com.keepit.graph.controllers.internal.GraphController.getGraphStatistics()
 GET     /internal/graph/state           @com.keepit.graph.controllers.internal.GraphController.getGraphUpdaterState()
 GET     /internal/graph/kinds           @com.keepit.graph.controllers.internal.GraphController.getGraphKinds()
+GET     /internal/graph/getUriAndScorePairs @com.keepit.graph.controllers.internal.GraphController.getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean)
+GET     /internal/graph/getUserAndScorePairs @com.keepit.graph.controllers.internal.GraphController.getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean)
 
 ->  / common.Routes

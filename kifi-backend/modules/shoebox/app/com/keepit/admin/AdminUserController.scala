@@ -502,7 +502,7 @@ class AdminUserController @Inject() (
             userValueRepo.clearValue(userId, name).toString
           })
         case (Some(name), _, _) => // get it
-          db.readOnlyReplica { implicit session =>
+          db.readOnlyMaster { implicit session =>
             userValueRepo.getValueStringOpt(userId, name)
           }
         case _ =>
@@ -634,7 +634,7 @@ class AdminUserController @Inject() (
       heimdal.deleteUser(userId)
     else {
       val properties = new HeimdalContextBuilder
-      db.readOnlyReplica { implicit session =>
+      db.readOnlyMaster { implicit session =>
         properties += ("$first_name", user.firstName)
         properties += ("$last_name", user.lastName)
         properties += ("$created", user.createdAt)

@@ -1,17 +1,8 @@
-# SHOEBOX
+# CORTEX
 
 # --- !Ups
+alter table uri_lda_topic add column num_words smallint unsigned default 0;
 
--- MySQL:
--- CREATE TABLE library_sequence (id BIGINT(20) NOT NULL);
--- INSERT INTO library_sequence VALUES (0);
--- CREATE TABLE library_membership_sequence (id BIGINT(20) NOT NULL);
--- INSERT INTO library_membership_sequence VALUES (0);
--- H2:
-CREATE SEQUENCE library_sequence;
-CREATE SEQUENCE library_membership_sequence;
-
-insert into evolutions (name, description) values('206.sql', 'adding new sequences for library and library_membership');
-
+insert into evolutions (name, description) values('206.sql', 'add num_words to uri_lda_topic');
 
 # --- !Downs
