@@ -720,8 +720,7 @@ class UserCommander @Inject() (
       else if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
         heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
           val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
-          (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate) &&
-            experiments.contains(ExperimentType.DELIGHTED_SURVEY)
+          (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate)
         }
       } else Future.successful(false)
       shouldShowDelightedQuestionFut map { shouldShowDelightedQuestion =>
