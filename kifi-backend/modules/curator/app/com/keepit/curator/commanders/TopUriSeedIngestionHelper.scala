@@ -77,7 +77,7 @@ class TopUriSeedIngestionHelper @Inject() (
     val betweenHours = Hours.hoursBetween(currentDateTime, lastIngestionTime).getHours
 
     if (betweenHours > uriIngestionFreq || firstTimeIngesting) {
-      graph.getListOfUriAndScorePairs(userId, avoidFirstDegreeConnections = true).flatMap { uriScores =>
+      graph.getConnectedUriScores(userId, avoidFirstDegreeConnections = true).flatMap { uriScores =>
         db.readWriteAsync { implicit session =>
           if (firstTimeIngesting) {
             lastTopUriIngestionRepo.save(LastTopUriIngestion(userId = userId, lastIngestionTime = currentDateTime))

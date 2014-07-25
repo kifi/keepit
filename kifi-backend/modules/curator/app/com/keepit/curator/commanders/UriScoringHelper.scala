@@ -1,10 +1,17 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ SeedItem, ScoredSeedItem, UriScores }
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
+import com.keepit.curator.model.{ CuratorKeepInfoRepo, Keepers, SeedItem, ScoredSeedItem, UriScores }
+
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.graph.GraphServiceClient
+import com.keepit.model.User
+
+import scala.concurrent.Future
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -13,7 +20,11 @@ import scala.concurrent.Future
 import org.joda.time.Days
 
 @Singleton
-class UriScoringHelper @Inject() (cortex: CortexServiceClient) {
+class UriScoringHelper @Inject() (
+    graph: GraphServiceClient,
+    keepInfoRepo: CuratorKeepInfoRepo,
+    cortex: CortexServiceClient,
+    db: Database) {
 
   private def getRawRecencyScores(items: Seq[SeedItem]): Seq[Float] = items.map { item =>
     val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays()
@@ -42,8 +53,31 @@ class UriScoringHelper @Inject() (cortex: CortexServiceClient) {
     Future.sequence(scoreTuples).map(_.unzip)
   }
 
+  // assume all items have same userId
   private def getRawSocialScores(items: Seq[SeedItem]): Future[Seq[Float]] = {
-    Future.successful(items.map(_ => 0.0f)) //to be filled in by Tan
+    if (items.isEmpty) {
+      Future.successful(Seq.empty)
+    } else {
+
+      //convert user scores seq to map, assume there is no duplicate userId from graph service
+      graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
+        val socialScoreMap = socialScores.map { socialScore =>
+          (socialScore.userId, socialScore.score.toFloat)
+        }.toMap
+
+        items.map(item =>
+          item.keepers match {
+            case Keepers.TooMany => 0.0f
+            case Keepers.ReasonableNumber(_) => {
+              var itemScore = 0.0f
+              db.readOnlyReplica { implicit session =>
+                keepInfoRepo.getKeepersByUriId(item.uriId).map(userId => itemScore += socialScoreMap.getOrElse(userId, itemScore))
+                itemScore
+              }
+            }
+          })
+      }
+    }
   }
 
   def apply(items: Seq[SeedItem]): Future[Seq[ScoredSeedItem]] = {
