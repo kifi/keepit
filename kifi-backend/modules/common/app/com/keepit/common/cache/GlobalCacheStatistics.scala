@@ -12,22 +12,25 @@ class GlobalCacheStatistics() {
   private[cache] val missesMap = ConcurrentMap[String, AtomicInteger]()
   private[cache] val setsMap = ConcurrentMap[String, AtomicInteger]()
 
-  def getStatistics: Seq[(String, Int, Int, Int)] = {
+  def getStatistics: Seq[(String, Int, Int, Int, Int)] = {
     val keys = (hitsMap.keySet ++ missesMap.keySet ++ setsMap.keySet).toSeq.sorted
     keys map { key =>
-      (key, getCount(key, hitsMap), getCount(key, missesMap), getCount(key, setsMap))
+      val (hits, misses, sets) = (getCount(key, hitsMap), getCount(key, missesMap), getCount(key, setsMap))
+      (key, hits, misses, sets, missRatio(misses = misses, hits = hits, sets = sets))
     }
   }
 
+  private def missRatio(hits: Int, misses: Int, sets: Int): Int = (100d * misses / (hits + misses + sets).toDouble).round.toInt
+
   /**
-   * @return the 100 * #misses/(#hits + #misses) Ratio per key that exist in the misses map
+   * @return the 100 * #misses/(#hits + #misses + #sets) Ratio per key that exist in the misses map
    */
-  def missRatios(minSample: Int, minRatio: Int, cacheName: String = MemcachedCache.name): Seq[(String, Long)] =
+  def missRatios(minSample: Int, minRatio: Int, cacheName: String = MemcachedCache.name): Seq[(String, Int)] =
     missesMap.keySet.toSeq.filter(_.startsWith(cacheName)) map { key =>
       getCount(key, missesMap) match {
-        case missesInt if missesInt >= minSample =>
-          val (misses, hits) = (missesInt.toDouble, getCount(key, hitsMap).toDouble)
-          (100 * misses / (hits + misses)).round match {
+        case misses if misses >= minSample =>
+          val (hits, sets) = (getCount(key, hitsMap), getCount(key, setsMap))
+          missRatio(misses = misses, hits = hits, sets = sets) match {
             case ratio if ratio >= minRatio => Some(key.substring(cacheName.length + 1) -> ratio)
             case _ => None
           }

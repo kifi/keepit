@@ -1,14 +1,17 @@
 package com.keepit.common.commanders
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.db.slick.Database
-import com.keepit.cortex.dbmodel.{ UserLDAInterests, URILDATopicRepo, UserTopicMean, UserLDAInterestsRepo }
-import com.keepit.cortex.models.lda._
-import com.keepit.cortex.features.Document
-import com.keepit.cortex.MiscPrefix
 import com.keepit.common.db.Id
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.common.db.slick.Database
+import com.keepit.cortex.MiscPrefix
+import com.keepit.cortex.core.ModelVersion
+import com.keepit.cortex.dbmodel.{ URILDATopicRepo, UserLDAInterests, UserLDAInterestsRepo, UserTopicMean }
+import com.keepit.cortex.features.Document
+import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils.cosineDistance
+import com.keepit.model.{ NormalizedURI, User }
+
+import scala.collection.mutable
 import scala.math.exp
 
 @Singleton
@@ -25,6 +28,17 @@ class LDACommander @Inject() (
   assume(ldaTopicWords.topicWords.length == wordRep.lda.dimension)
 
   var currentConfig = ldaConfigs
+
+  val ldaDimMap = mutable.Map(wordRep.version -> wordRep.lda.dimension)
+
+  // consumers of lda service might query dim of some previous lda model
+  def getLDADimension(version: ModelVersion[DenseLDA]): Int = {
+    ldaDimMap.getOrElseUpdate(version, {
+      val conf = configStore.get(MiscPrefix.LDA.topicConfigsJsonFile, version).get
+      conf.configs.size
+    }
+    )
+  }
 
   def numOfTopics: Int = ldaTopicWords.topicWords.length
 

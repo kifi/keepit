@@ -104,6 +104,13 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           uriTopicRepo.getHighestSeqNumber(ModelVersion[DenseLDA](3)).value === 0
         }
 
+        db.readOnlyMaster { implicit s =>
+          uriTopicRepo.getFeaturesSince(SequenceNumber[NormalizedURI](0), ModelVersion[DenseLDA](1), limit = 5).map { _.uriSeq.value } === List(1, 2, 3, 4, 5)
+          uriTopicRepo.getFeaturesSince(SequenceNumber[NormalizedURI](7), ModelVersion[DenseLDA](2), limit = 5).map { _.uriSeq.value } === List(8, 9, 10)
+          uriTopicRepo.getFeaturesSince(SequenceNumber[NormalizedURI](10), ModelVersion[DenseLDA](2), limit = 5).map { _.uriSeq.value } === List()
+          uriTopicRepo.getFeaturesSince(SequenceNumber[NormalizedURI](0), ModelVersion[DenseLDA](3), limit = 5).map { _.uriSeq.value } === List()
+        }
+
       }
     }
   }
