@@ -162,7 +162,7 @@ class EContactSequencingPluginImpl @Inject() (
 }
 
 @Singleton
-class EContactSequenceNumberAssigner @Inject() (db: Database, repo: EContactRepo, airbrake: AirbrakeNotifier)
+class EContactSequenceNumberAssigner @Inject() (db: Database, repo: EContactRepo, val airbrake: AirbrakeNotifier)
   extends DbSequenceAssigner[EContact](db, repo, airbrake)
 
 class EContactSequencingActor @Inject() (

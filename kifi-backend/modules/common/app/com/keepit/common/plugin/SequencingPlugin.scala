@@ -34,10 +34,14 @@ trait SequencingPlugin extends SchedulerPlugin {
 
 trait SequenceAssigner extends RecurringTaskManager {
 
+  val airbrake: AirbrakeNotifier
   def assignSequenceNumbers(): Unit
   def sanityCheck(): Unit
 
   override def doTask(): Unit = assignSequenceNumbers()
+  override def onError(e: Throwable): Unit = {
+    airbrake.notify("Error during SequenceAssigner task", e)
+  }
 }
 
 class SequenceNumberAssignmentStalling(seq: Long) extends Exception(s"sequence number assignment may be stalling: $seq")

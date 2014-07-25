@@ -101,7 +101,7 @@ class EmailAccountSequencingPluginImpl @Inject() (
 }
 
 @Singleton
-class EmailAccountSequenceNumberAssigner @Inject() (db: Database, repo: EmailAccountRepo, airbrake: AirbrakeNotifier)
+class EmailAccountSequenceNumberAssigner @Inject() (db: Database, repo: EmailAccountRepo, val airbrake: AirbrakeNotifier)
   extends DbSequenceAssigner[EmailAccount](db, repo, airbrake)
 
 class EmailAccountSequencingActor @Inject() (

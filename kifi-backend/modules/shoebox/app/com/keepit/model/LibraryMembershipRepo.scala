@@ -107,7 +107,7 @@ class LibraryMembershipSequencingPluginImpl @Inject() (
 }
 
 @Singleton
-class LibraryMembershipSequenceNumberAssigner @Inject() (db: Database, repo: LibraryMembershipRepo, airbrake: AirbrakeNotifier)
+class LibraryMembershipSequenceNumberAssigner @Inject() (db: Database, repo: LibraryMembershipRepo, val airbrake: AirbrakeNotifier)
   extends DbSequenceAssigner[LibraryMembership](db, repo, airbrake)
 
 class LibraryMembershipSequencingActor @Inject() (
