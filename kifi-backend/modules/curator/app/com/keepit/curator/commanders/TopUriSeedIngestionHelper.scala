@@ -18,11 +18,11 @@ import scala.concurrent.Future
 
 @Singleton
 class TopUriSeedIngestionHelper @Inject() (
-    rawSeedsRepo: RawSeedItemRepo,
-    lastTopUriIngestionRepo: LastTopUriIngestionRepo,
-    airbrake: AirbrakeNotifier,
-    db: Database,
-    graph: GraphServiceClient) extends PersonalSeedIngestionHelper with Logging {
+  rawSeedsRepo: RawSeedItemRepo,
+  lastTopUriIngestionRepo: LastTopUriIngestionRepo,
+  airbrake: AirbrakeNotifier,
+  db: Database,
+  graph: GraphServiceClient) extends PersonalSeedIngestionHelper with Logging {
 
   //re-ingest top uris for a user should be more than 12 hours later.
   val uriIngestionFreq = 12

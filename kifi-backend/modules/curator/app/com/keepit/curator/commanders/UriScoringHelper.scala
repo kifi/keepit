@@ -21,9 +21,9 @@ import org.joda.time.Days
 
 @Singleton
 class UriScoringHelper @Inject() (
-    graph: GraphServiceClient,
-    keepInfoRepo: CuratorKeepInfoRepo,
-    cortex: CortexServiceClient) {
+  graph: GraphServiceClient,
+  keepInfoRepo: CuratorKeepInfoRepo,
+  cortex: CortexServiceClient) {
 
   private def getRawRecencyScores(items: Seq[SeedItem]): Seq[Float] = items.map { item =>
     val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays()
@@ -45,7 +45,8 @@ class UriScoringHelper @Inject() (
         case (overallOpt, recentOpt) =>
           (
             overallOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat,
-            recentOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat)
+            recentOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat
+          )
       }
     }
     Future.sequence(scoreTuples).map(_.unzip)
@@ -68,7 +69,7 @@ class UriScoringHelper @Inject() (
             case Keepers.TooMany => 0.0f
             case Keepers.ReasonableNumber(users) => {
               var itemScore = 0.0f
-              users.map(userId => itemScore += socialScoreMap.getOrElse(userId, itemScore))
+              users.map(userId => itemScore += socialScoreMap.getOrElse(userId, 0.0f))
               itemScore
             }
           })
