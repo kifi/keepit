@@ -98,7 +98,8 @@ class UriScoringHelper @Inject() (
           overallInterestScore = overallInterestScores(i),
           recentInterestScore = recentInterestScores(i),
           recencyScore = recencyScores(i),
-          priorScore = priorScores(i))
+          priorScore = priorScores(i)
+        )
         ScoredSeedItem(items(i).userId, items(i).uriId, scores)
       }
     }
