@@ -35,7 +35,7 @@ class UriScoringHelperTest extends Specification with CuratorTestInjector {
     "get raw social scores" in {
       withInjector(modules: _*) { implicit injector =>
         val graph = inject[GraphServiceClient].asInstanceOf[FakeGraphServiceClientImpl]
-        graph.setUserAndScorePairs
+        graph.setUserAndScorePairs()
 
         val uriScoringHelper = inject[UriScoringHelper]
 
