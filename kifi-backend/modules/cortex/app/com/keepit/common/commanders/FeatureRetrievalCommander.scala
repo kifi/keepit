@@ -11,14 +11,15 @@ import com.keepit.cortex._
 
 @Singleton
 class FeatureRetrievalCommander @Inject() (
-    ldaRetriever: LDADbFeatureRetriever) {
+    ldaRetriever: LDADbFeatureRetriever,
+    ldaCommander: LDACommander) {
 
   def getSparseLDAFeaturesChanged(lowSeq: SequenceNumber[NormalizedURI], fetchSize: Int, version: ModelVersion[DenseLDA], sparsity: Int = PublishedModels.defaultSparsity): Seq[UriSparseLDAFeatures] = {
-
+    val dim = ldaCommander.getLDADimension(version)
     val feats = ldaRetriever.getLDAFeaturesChanged(lowSeq, fetchSize, version)
     feats.map { feat =>
       if (feat.state == URILDATopicStates.ACTIVE) UriSparseLDAFeatures(feat.uriId, feat.uriSeq, generateSparseRepresentation(feat.sparseFeature.get, sparsity), isActive = true)
-      else UriSparseLDAFeatures(feat.uriId, feat.uriSeq, SparseTopicRepresentation(0, Map()), isActive = false)
+      else UriSparseLDAFeatures(feat.uriId, feat.uriSeq, SparseTopicRepresentation(dim, Map()), isActive = false)
     }
   }
 
