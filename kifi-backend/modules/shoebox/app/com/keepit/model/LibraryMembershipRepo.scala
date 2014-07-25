@@ -10,6 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.time.Clock
 import scala.concurrent.duration._
+import scala.slick.jdbc.StaticQuery
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -83,6 +84,15 @@ class LibraryMembershipRepoImpl @Inject() (
         memberIdCache.set(LibraryMembershipIdKey(id), libMem)
       }
     }
+  }
+
+  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
+    assignSequenceNumbers(sequence, "library_membership", limit)
+  }
+
+  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
+    import StaticQuery.interpolation
+    sql"""select min(seq) from library_membership where seq < 0""".as[Option[Long]].first
   }
 
 }

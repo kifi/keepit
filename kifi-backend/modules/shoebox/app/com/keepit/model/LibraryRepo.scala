@@ -10,6 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time.Clock
 import scala.concurrent.duration._
+import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
@@ -91,6 +92,15 @@ class LibraryRepoImpl @Inject() (
       lm <- libraryMembershipRepo.rows if lm.libraryId === lib.id && lm.userId === userId && lm.state === LibraryMembershipStates.ACTIVE
     } yield (lm.access, lib)
     q.list
+  }
+
+  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
+    assignSequenceNumbers(sequence, "library", limit)
+  }
+
+  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
+    import StaticQuery.interpolation
+    sql"""select min(seq) from library where seq < 0""".as[Option[Long]].first
   }
 
 }
