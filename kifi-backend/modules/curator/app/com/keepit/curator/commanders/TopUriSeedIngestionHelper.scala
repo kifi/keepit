@@ -92,6 +92,7 @@ class TopUriSeedIngestionHelper @Inject() (
           }
 
           uriScores.foreach { uriScore =>
+            log.debug(s"ingesting uri score is: ${uriScore.score.toFloat}, related user id is: ${uriScore.uriId.toString}")
             processUriScores(uriScore, userId)
           }
 
