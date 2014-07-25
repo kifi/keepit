@@ -1,72 +1,16 @@
 package com.keepit.search.graph.library
 
-import com.keepit.model._
-import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.model.{ LibraryAndMemberships, Library }
+import com.keepit.common.db.SequenceNumber
 import com.keepit.search.index._
-import com.keepit.search.LangDetector
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.Future
 import com.keepit.shoebox.ShoeboxServiceClient
-
-object LibraryFields {
-  val nameField = "n"
-  val nameStemmedField = "ns"
-  val descriptionField = "d"
-  val descriptionStemmedField = "ds"
-  val visibilityField = "v"
-  val keepsDiscoveryField = "kd"
-  val usersField = "u"
-  val hiddenUsersField = "h"
-  val recordField = "rec"
-
-  val decoders: Map[String, FieldDecoder] = Map.empty
-}
-
-class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) extends Indexable[Library, Library] {
-
-  val id = library.id.get
-  val sequenceNumber = library.seq
-  val isDeleted: Boolean = memberships.isEmpty
-
-  private val (users, hiddenUsers) = {
-    var hiddenUsers = Set.empty[Id[User]]
-    val users = memberships.map { membership =>
-      require(membership.libraryId == id, s"This membership is unrelated to library $id: $membership")
-      if (!membership.showInSearch) { hiddenUsers += membership.userId }
-      membership.userId
-    }
-    (users, hiddenUsers)
-  }
-
-  override def buildDocument = {
-    import LibraryFields._
-    val doc = super.buildDocument
-
-    val nameLang = LangDetector.detect(library.name)
-    doc.add(buildTextField(nameField, library.name, DefaultAnalyzer.getAnalyzer(nameLang)))
-    doc.add(buildTextField(nameStemmedField, library.name, DefaultAnalyzer.getAnalyzerWithStemmer(nameLang)))
-
-    library.description.foreach { description =>
-      val descriptionLang = LangDetector.detect(description)
-      doc.add(buildTextField(descriptionField, description, DefaultAnalyzer.getAnalyzer(descriptionLang)))
-      doc.add(buildTextField(descriptionStemmedField, description, DefaultAnalyzer.getAnalyzerWithStemmer(descriptionLang)))
-    }
-
-    library.visibility match {
-      case LibraryVisibility.ANYONE => doc.add(buildKeywordField(visibilityField, "anyone"))
-      case _ =>
-    }
-
-    if (library.keepDiscoveryEnabled) { doc.add(buildKeywordField(keepsDiscoveryField, "anyone")) }
-
-    doc.add(buildIteratorField(usersField, users.iterator) { id => id.id.toString })
-    doc.add(buildIteratorField(hiddenUsersField, hiddenUsers.iterator) { id => id.id.toString })
-
-    doc.add(buildBinaryDocValuesField(recordField, LibraryRecord(library)))
-
-    doc
-  }
-}
+import com.google.inject.Inject
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.plugin.SchedulingProperties
+import com.keepit.common.logging.Logging
 
 class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClient, val airbrake: AirbrakeNotifier) extends Indexer[Library, Library, LibraryIndexer](indexDirectory, LibraryFields.decoders) {
 
@@ -96,3 +40,19 @@ class LibraryIndexer(indexDirectory: IndexDirectory, shoebox: ShoeboxServiceClie
     doUpdate("LibraryIndex")(updates.iterator)
   }
 }
+
+class LibraryIndexerActor @Inject() (
+    airbrake: AirbrakeNotifier,
+    indexer: LibraryIndexer) extends CoordinatingIndexerActor(airbrake, indexer) with Logging {
+
+  protected def update(): Future[Boolean] = indexer.asyncUpdate()
+}
+
+trait LibraryIndexerPlugin extends IndexerPlugin[Library, LibraryIndexer]
+
+class LibraryIndexerPluginImpl @Inject() (
+  actor: ActorInstance[LibraryIndexerActor],
+  indexer: LibraryIndexer,
+  airbrake: AirbrakeNotifier,
+  serviceDiscovery: ServiceDiscovery,
+  val scheduling: SchedulingProperties) extends IndexerPluginImpl(indexer, actor, serviceDiscovery) with LibraryIndexerPlugin
