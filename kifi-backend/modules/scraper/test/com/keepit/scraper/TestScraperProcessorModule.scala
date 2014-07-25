@@ -1,14 +1,9 @@
 package com.keepit.scraper
 
-import com.keepit.model.{ HttpProxy, PageInfo, ScrapeInfo, NormalizedURI }
-import com.keepit.scraper.actor.ScrapeProcessorActorImpl
-import com.keepit.scraper.extractor.{ ExtractorProviderType, ExtractorFactoryImpl, ExtractorFactory }
+import com.google.inject.{Provides, Singleton}
 import com.keepit.inject.AppScoped
-import com.google.inject.{ Provides, Singleton }
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.scraper.fetcher.HttpFetcher
-import com.keepit.scraper.fetcher.apache.ApacheHttpFetcher
+import com.keepit.model.{HttpProxy, NormalizedURI, PageInfo, ScrapeInfo}
+import com.keepit.scraper.extractor.{ExtractorFactory, ExtractorFactoryImpl, ExtractorProviderType}
 
 import scala.concurrent.Future
 
