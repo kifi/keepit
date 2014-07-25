@@ -28,7 +28,8 @@ class SeedIngestionCommanderTest extends Specification with DbTestInjector {
       FakeShoeboxServiceModule(),
       FakeGraphServiceModule(),
       FakeHttpClientModule(),
-      TestCacheModule())
+      TestCacheModule()
+    )
   }
 
   private def makeKeeps(userId: Id[User], howMany: Int, shoebox: FakeShoeboxServiceClientImpl): Seq[Keep] = {
@@ -221,7 +222,7 @@ class SeedIngestionCommanderTest extends Specification with DbTestInjector {
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
 
         val graph = inject[GraphServiceClient].asInstanceOf[FakeGraphServiceClientImpl]
-        graph.getUriAndScorePairs(user1Keeps.map { x => x.uriId }.toList)
+        graph.setUriAndScorePairs(user1Keeps.map { x => x.uriId }.toList)
 
         val result = commander.ingestTopUris(user1)
         Await.result(result, Duration(10, "seconds"))

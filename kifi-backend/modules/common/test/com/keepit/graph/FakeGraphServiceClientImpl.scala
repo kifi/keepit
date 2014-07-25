@@ -28,16 +28,16 @@ class FakeGraphServiceClientImpl(
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[ConnectedUriScore]] = Future.successful(uriAndScorePairs)
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[ConnectedUserScore]] = Future.successful(userAndScorePairs)
 
-  def getUriAndScorePairs(uris: Seq[Id[NormalizedURI]]) {
+  def setUriAndScorePairs(uris: Seq[Id[NormalizedURI]]) {
     uris.foreach(uri =>
       uriAndScorePairs = ConnectedUriScore(uri, 0.795) +: uriAndScorePairs
     )
   }
 
-  def getUserAndScorePairs() {
+  def setUserAndScorePairs() {
     val connectedUserScore1 = ConnectedUserScore(Id[User](1), 0.795)
     val connectedUserScore2 = ConnectedUserScore(Id[User](2), 0.795)
     val connectedUserScore3 = ConnectedUserScore(Id[User](3), 0.795)
-    userAndScorePairs = (connectedUserScore1 :: connectedUserScore2 :: connectedUserScore3 :: Nil)
+    userAndScorePairs = connectedUserScore1 :: connectedUserScore2 :: connectedUserScore3 :: Nil
   }
 }
