@@ -1,6 +1,7 @@
 package com.keepit.scraper
 
 import com.keepit.inject.AppScoped
+import com.keepit.scraper.actor.ScrapeProcessorActorImpl
 import com.keepit.scraper.extractor.{ ExtractorFactory, ExtractorFactoryImpl }
 import net.codingwell.scalaguice.ScalaModule
 
@@ -13,7 +14,7 @@ case class ProdScraperProcessorModule() extends ScrapeProcessorModule {
     bind[ShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[SyncShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[PullerPlugin].to[PullerPluginImpl].in[AppScoped]
-    bind[ScrapeProcessor].to[QueuedScrapeProcessor]
+    bind[ScrapeProcessor].to[ScrapeProcessorActorImpl]
     install(ProdScraperConfigModule())
     install(ProdScrapeSchedulerConfigModule())
   }
