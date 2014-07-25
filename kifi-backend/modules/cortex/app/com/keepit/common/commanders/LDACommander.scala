@@ -2,7 +2,7 @@ package com.keepit.common.commanders
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.slick.Database
-import com.keepit.cortex.dbmodel.{ URILDATopicRepo, UserTopicMean, UserLDAInterestsRepo }
+import com.keepit.cortex.dbmodel.{ UserLDAInterests, URILDATopicRepo, UserTopicMean, UserLDAInterestsRepo }
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.MiscPrefix
@@ -82,17 +82,31 @@ class LDACommander @Inject() (
     }
   }
 
-  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): (Option[LDAUserURIInterestScore], Option[LDAUserURIInterestScore]) = {
+  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): LDAUserURIInterestScores = {
     db.readOnlyReplica { implicit s =>
       val uriTopicOpt = uriTopicRepo.getFeature(uriId, wordRep.version)
       val userInterestOpt = userTopicRepo.getByUser(userId, wordRep.version)
-      (uriTopicOpt, userInterestOpt) match {
-        case (Some(uriFeat), Some(userFeat)) =>
-          val globalScore = computeInterestScore(userFeat.numOfEvidence, userFeat.userTopicMean, Some(uriFeat))
-          val recencyScore = computeInterestScore(userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, Some(uriFeat))
-          (globalScore, recencyScore)
-        case _ => (None, None)
+      computeInterestScore(uriTopicOpt, userInterestOpt)
+    }
+  }
+
+  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores] = {
+    db.readOnlyReplica { implicit s =>
+      val userInterestOpt = userTopicRepo.getByUser(userId, wordRep.version)
+      val uriTopicOpts = uriIds.map { uriId => uriTopicRepo.getFeature(uriId, wordRep.version) }
+      uriTopicOpts.map { uriTopicOpt =>
+        computeInterestScore(uriTopicOpt, userInterestOpt)
       }
+    }
+  }
+
+  private def computeInterestScore(uriTopicOpt: Option[LDATopicFeature], userInterestOpt: Option[UserLDAInterests]): LDAUserURIInterestScores = {
+    (uriTopicOpt, userInterestOpt) match {
+      case (Some(uriFeat), Some(userFeat)) =>
+        val globalScore = computeInterestScore(userFeat.numOfEvidence, userFeat.userTopicMean, Some(uriFeat))
+        val recencyScore = computeInterestScore(userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, Some(uriFeat))
+        LDAUserURIInterestScores(globalScore, recencyScore)
+      case _ => LDAUserURIInterestScores(None, None)
     }
   }
 
