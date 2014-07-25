@@ -5,10 +5,10 @@ import scala.util.Random
 import org.specs2.mutable.Specification
 
 class ScoreExprTest extends Specification {
-  val rnd = new Random()
-  val size = 5
+  private[this] val rnd = new Random()
+  private[this] val size = 5
 
-  val collector = new ResultCollector {
+  private[this] val collector = new ResultCollector {
     private var _id = -1L
     private var _score = 0.0f
 
@@ -25,13 +25,13 @@ class ScoreExprTest extends Specification {
     }
   }
 
-  def mkCtx(expr: ScoreExpr, idx: Int*): ScoreContext = {
+  private def mkCtx(expr: ScoreExpr, idx: Int*): ScoreContext = {
     val weights = new Array[Float](size)
     idx.foreach { i => weights(i) = 1.0f / idx.length.toFloat }
-    new ScoreContext(expr, size, weights, 0.3f, collector)
+    new ScoreContext(expr, size, weights, 0.0f, collector)
   }
 
-  def factor(hits: Int, total: Int): Float = {
+  private def factor(hits: Int, total: Int): Float = {
     1.0f - ((total - hits).toFloat / total.toFloat)
   }
 
@@ -77,7 +77,7 @@ class ScoreExprTest extends Specification {
     }
 
     "compute scores correctly with DisjunctiveSumExpr" in {
-      val allIdx = rnd.shuffle((0 until size).toSet).toSeq
+      val allIdx = rnd.shuffle((0 until size).toIndexedSeq)
       val idx1 = allIdx.take(3).toArray
       val idx2 = allIdx.drop(3).toArray
 
@@ -100,7 +100,7 @@ class ScoreExprTest extends Specification {
     }
 
     "compute scores correctly with ConjunctiveSumExpr" in {
-      val allIdx = rnd.shuffle((0 until size).toSet).toSeq
+      val allIdx = rnd.shuffle((0 until size).toIndexedSeq)
       val idx1 = allIdx.take(3).toArray
       val idx2 = allIdx.drop(3).toArray
 
@@ -124,7 +124,7 @@ class ScoreExprTest extends Specification {
     }
 
     "compute scores correctly with ExistsExpr" in {
-      val allIdx = rnd.shuffle((0 until size).toSet).toSeq
+      val allIdx = rnd.shuffle((0 until size).toIndexedSeq)
       val idx1 = allIdx.take(3).toArray
       val idx2 = allIdx.drop(3).toArray
 
@@ -160,7 +160,7 @@ class ScoreExprTest extends Specification {
     }
 
     "compute scores correctly with ForAllExpr" in {
-      val allIdx = rnd.shuffle((0 until size).toSet).toSeq
+      val allIdx = rnd.shuffle((0 until size).toIndexedSeq)
       val idx1 = allIdx.take(3).toArray
       val idx2 = allIdx.drop(3).toArray
 
@@ -185,7 +185,7 @@ class ScoreExprTest extends Specification {
     }
 
     "compute scores correctly with BooleanExpr" in {
-      val allIdx = rnd.shuffle((0 until size).toSet).toSeq
+      val allIdx = rnd.shuffle((0 until size).toIndexedSeq)
       val idx1 = allIdx(0)
       val idx2 = allIdx(1)
       val idx3 = allIdx(2)
@@ -217,7 +217,7 @@ class ScoreExprTest extends Specification {
     }
 
     "compute scores correctly with FilterExpr" in {
-      val allIdx = rnd.shuffle((0 until size).toSet).toSeq
+      val allIdx = rnd.shuffle((0 until size).toIndexedSeq)
       val idx1 = allIdx(0)
       val idx2 = allIdx(1)
       val idx3 = allIdx(2)
@@ -249,7 +249,7 @@ class ScoreExprTest extends Specification {
     }
 
     "compute scores correctly with FilterOutExpr" in {
-      val allIdx = rnd.shuffle((0 until size).toSet).toSeq
+      val allIdx = rnd.shuffle((0 until size).toIndexedSeq)
       val idx1 = allIdx(0)
       val idx2 = allIdx(1)
       val idx3 = allIdx(2)
@@ -272,7 +272,7 @@ class ScoreExprTest extends Specification {
       collector.score === 2.0f
 
       collector.clear()
-      ctx.set(702L)
+      ctx.set(1002L)
       ctx.addScore(idx2, 3.0f)
       ctx.addScore(idx3, 4.0f)
       ctx.flush
