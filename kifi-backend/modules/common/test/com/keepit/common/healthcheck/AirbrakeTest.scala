@@ -32,7 +32,7 @@ class AirbrakeTest extends Specification with TestInjector {
     "deployment payload" in {
       withInjector(TestFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
-        formatter.deploymentMessage === "api_key=fakeApiKey&deploy[rails_env]=test&deploy[scm_repository]=https://github.com/FortyTwoEng/keepit&deploy[scm_revision]=00000000-0000-TEST-0000000"
+        formatter.deploymentMessage === "api_key=fakeApiKey&deploy[rails_env]=test&deploy[scm_repository]=https://github.com/kifi/keepit&deploy[scm_revision]=00000000-0000-TEST-0000000"
       }
     }
 

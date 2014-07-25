@@ -178,7 +178,7 @@
             <h3>Organizations</h3>
             <ul class="avatars">
                 <li>
-                  <a href="/FortyTwoEng" class="tooltipped downwards" itemprop="follows" title="FortyTwoEng"><img height="36" src="https://secure.gravatar.com/avatar/d41d8cd98f00b204e9800998ecf8427e?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-org-420.png" width="36" /></a>
+                  <a href="/kifi" class="tooltipped downwards" itemprop="follows" title="kifi"><img height="36" src="https://secure.gravatar.com/avatar/d41d8cd98f00b204e9800998ecf8427e?s=140&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-org-420.png" width="36" /></a>
                 </li>
             </ul>
           </div>
@@ -312,11 +312,11 @@
         <ol class="mini-repo-list">
 
   <li class="private source no-description">
-    <a href="/FortyTwoEng/keepit" class="css-truncate">
+    <a href="/kifi/keepit" class="css-truncate">
         <span class="mini-icon mini-icon-private-repo"></span>
         <span class="css-truncate-target">
           <span class="repo-and-owner">
-            <span class="owner" title="FortyTwoEng">FortyTwoEng</span>/<span class="repo" title="keepit">keepit</span>
+            <span class="owner" title="kifi">kifi</span>/<span class="repo" title="keepit">keepit</span>
         </span>
       </span>
       <span class="stars">
@@ -467,8 +467,8 @@
     <div id="issues-contributed" class="contribution-type">
       <ul class="simple-conversation-list">
         <li>
-            <a href="/FortyTwoEng/keepit/commits?author=andrewconner" class="title">
-            Pushed 51 commits to FortyTwoEng/keepit
+            <a href="/kifi/keepit/commits?author=andrewconner" class="title">
+            Pushed 51 commits to kifi/keepit
             </a>
               Jan 08 - Jan 13
         </li>
@@ -486,12 +486,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/633">This should fix the error.</a>
+          <a href="/kifi/keepit/pull/633">This should fix the error.</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-11T15:49:49-08:00" title="2013-01-11 15:49:49">January 11, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/633/commits" class="cmt">2 commits</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/633/commits" class="cmt">2 commits</a> &bull;
           <span class="a">5 ++</span>
           <span class="d">2 --</span>
         </span>
@@ -499,12 +499,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/629">Duplicate document detection</a>
+          <a href="/kifi/keepit/pull/629">Duplicate document detection</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-10T19:44:14-08:00" title="2013-01-10 19:44:14">January 10, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/629/commits" class="cmt">3 commits</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/629/commits" class="cmt">3 commits</a> &bull;
           <span class="a">140 ++</span>
           <span class="d">8 --</span>
         </span>
@@ -512,12 +512,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/624">Event listening guiced up!</a>
+          <a href="/kifi/keepit/pull/624">Event listening guiced up!</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-10T12:40:29-08:00" title="2013-01-10 12:40:29">January 10, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/624/commits" class="cmt">3 commits</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/624/commits" class="cmt">3 commits</a> &bull;
           <span class="a">93 ++</span>
           <span class="d">65 --</span>
         </span>
@@ -525,12 +525,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/620">Typo ;)</a>
+          <a href="/kifi/keepit/pull/620">Typo ;)</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-09T19:21:28-08:00" title="2013-01-09 19:21:28">January 09, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/620/commits" class="cmt">1 commit</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/620/commits" class="cmt">1 commit</a> &bull;
           <span class="a">2 ++</span>
           <span class="d">2 --</span>
         </span>
@@ -538,12 +538,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/619">Useful page load</a>
+          <a href="/kifi/keepit/pull/619">Useful page load</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-09T18:26:04-08:00" title="2013-01-09 18:26:04">January 09, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/619/commits" class="cmt">8 commits</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/619/commits" class="cmt">8 commits</a> &bull;
           <span class="a">214 ++</span>
           <span class="d">25 --</span>
         </span>
@@ -551,12 +551,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/618">Event Listeners, Dead Queries, Fixed Reports</a>
+          <a href="/kifi/keepit/pull/618">Event Listeners, Dead Queries, Fixed Reports</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-09T16:54:58-08:00" title="2013-01-09 16:54:58">January 09, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/618/commits" class="cmt">7 commits</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/618/commits" class="cmt">7 commits</a> &bull;
           <span class="a">203 ++</span>
           <span class="d">25 --</span>
         </span>
@@ -564,12 +564,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/616">Result sets now return the bookmark's URL...</a>
+          <a href="/kifi/keepit/pull/616">Result sets now return the bookmark's URL...</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-09T13:12:29-08:00" title="2013-01-09 13:12:29">January 09, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/616/commits" class="cmt">3 commits</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/616/commits" class="cmt">3 commits</a> &bull;
           <span class="a">147 ++</span>
           <span class="d">4 --</span>
         </span>
@@ -577,12 +577,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/615">At times, we have constraint violations.</a>
+          <a href="/kifi/keepit/pull/615">At times, we have constraint violations.</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-09T12:41:29-08:00" title="2013-01-09 12:41:29">January 09, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/615/commits" class="cmt">1 commit</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/615/commits" class="cmt">1 commit</a> &bull;
           <span class="a">36 ++</span>
           <span class="d">15 --</span>
         </span>
@@ -590,12 +590,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/614">Two bookmarks for the same (new) normalized URI. Problem.</a>
+          <a href="/kifi/keepit/pull/614">Two bookmarks for the same (new) normalized URI. Problem.</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-09T12:26:57-08:00" title="2013-01-09 12:26:57">January 09, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/614/commits" class="cmt">1 commit</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/614/commits" class="cmt">1 commit</a> &bull;
           <span class="a">1 ++</span>
           <span class="d">1 --</span>
         </span>
@@ -603,12 +603,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/613">Depreciating grandfathering. RIP. Better report.</a>
+          <a href="/kifi/keepit/pull/613">Depreciating grandfathering. RIP. Better report.</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-09T11:42:08-08:00" title="2013-01-09 11:42:08">January 09, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/613/commits" class="cmt">2 commits</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/613/commits" class="cmt">2 commits</a> &bull;
           <span class="a">22 ++</span>
           <span class="d">152 --</span>
         </span>
@@ -616,12 +616,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/611">Didn't include toUrl in report. Might help ;)</a>
+          <a href="/kifi/keepit/pull/611">Didn't include toUrl in report. Might help ;)</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-09T11:02:15-08:00" title="2013-01-09 11:02:15">January 09, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/611/commits" class="cmt">1 commit</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/611/commits" class="cmt">1 commit</a> &bull;
           <span class="a">1 ++</span>
           <span class="d">1 --</span>
         </span>
@@ -629,12 +629,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/610">Normuri reflow</a>
+          <a href="/kifi/keepit/pull/610">Normuri reflow</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-09T10:49:27-08:00" title="2013-01-09 10:49:27">January 09, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/610/commits" class="cmt">2 commits</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/610/commits" class="cmt">2 commits</a> &bull;
           <span class="a">22 ++</span>
           <span class="d">15 --</span>
         </span>
@@ -642,12 +642,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/609">Handling of large email messages</a>
+          <a href="/kifi/keepit/pull/609">Handling of large email messages</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-09T09:57:53-08:00" title="2013-01-09 09:57:53">January 09, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/609/commits" class="cmt">1 commit</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/609/commits" class="cmt">1 commit</a> &bull;
           <span class="a">11 ++</span>
           <span class="d">4 --</span>
         </span>
@@ -655,12 +655,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/606">Async grandfathering and re-normalization, sends emails on complete</a>
+          <a href="/kifi/keepit/pull/606">Async grandfathering and re-normalization, sends emails on complete</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-08T18:48:53-08:00" title="2013-01-08 18:48:53">January 08, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/606/commits" class="cmt">1 commit</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/606/commits" class="cmt">1 commit</a> &bull;
           <span class="a">122 ++</span>
           <span class="d">57 --</span>
         </span>
@@ -668,12 +668,12 @@
       <li class="contribution">
         <span class="state state-merged">merged</span>
         <h3>
-          <a href="/FortyTwoEng/keepit/pull/605">Domain specific grandfathering, better URL normalizers</a>
+          <a href="/kifi/keepit/pull/605">Domain specific grandfathering, better URL normalizers</a>
         </h3>
         <time class="js-relative-date" datetime="2013-01-08T18:25:42-08:00" title="2013-01-08 18:25:42">January 08, 2013</time>
         <span class="cmeta">
-          <a href="/FortyTwoEng/keepit">FortyTwoEng/keepit</a> &bull;
-          <a href="/FortyTwoEng/keepit/pull/605/commits" class="cmt">4 commits</a> &bull;
+          <a href="/kifi/keepit">kifi/keepit</a> &bull;
+          <a href="/kifi/keepit/pull/605/commits" class="cmt">4 commits</a> &bull;
           <span class="a">188 ++</span>
           <span class="d">39 --</span>
         </span>
