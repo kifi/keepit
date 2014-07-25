@@ -15,9 +15,9 @@ class FeatureRetrievalCommander @Inject() (
     ldaCommander: LDACommander) {
 
   def getSparseLDAFeaturesChanged(lowSeq: SequenceNumber[NormalizedURI], fetchSize: Int, version: ModelVersion[DenseLDA], sparsity: Int = PublishedModels.defaultSparsity): Seq[UriSparseLDAFeatures] = {
+    val dim = ldaCommander.getLDADimension(version)
     val feats = ldaRetriever.getLDAFeaturesChanged(lowSeq, fetchSize, version)
     feats.map { feat =>
-      val dim = ldaCommander.getLDADimension(version)
       if (feat.state == URILDATopicStates.ACTIVE) UriSparseLDAFeatures(feat.uriId, feat.uriSeq, generateSparseRepresentation(feat.sparseFeature.get, sparsity))
       else UriSparseLDAFeatures(feat.uriId, feat.uriSeq, SparseTopicRepresentation(dim, Map()))
     }
