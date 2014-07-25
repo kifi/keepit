@@ -1,6 +1,7 @@
 package com.keepit.curator.commanders
 
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
 import com.keepit.curator.model.{ CuratorKeepInfoRepo, Keepers, SeedItem, ScoredSeedItem, UriScores }
 
 import com.keepit.common.time._
@@ -20,10 +21,10 @@ import org.joda.time.Days
 
 @Singleton
 class UriScoringHelper @Inject() (
-  graph: GraphServiceClient,
-  keepInfoRepo: CuratorKeepInfoRepo) {
-
-class UriScoringHelper @Inject() (cortex: CortexServiceClient) {
+    graph: GraphServiceClient,
+    keepInfoRepo: CuratorKeepInfoRepo,
+    cortex: CortexServiceClient,
+    db: Database) {
 
   private def getRawRecencyScores(items: Seq[SeedItem]): Seq[Float] = items.map { item =>
     val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays()
@@ -67,10 +68,12 @@ class UriScoringHelper @Inject() (cortex: CortexServiceClient) {
         items.map(item =>
           item.keepers match {
             case Keepers.TooMany => 0.0f
-            case Keepers.ReasonableNumber => {
+            case Keepers.ReasonableNumber(_) => {
               var itemScore = 0.0f
-              keepInfoRepo.getKeepersByUriId(item.uriId).map(userId => itemScore += socialScoreMap.getOrElse(userId, itemScore))
-              itemScore
+              db.readOnlyReplica { implicit session =>
+                keepInfoRepo.getKeepersByUriId(item.uriId).map(userId => itemScore += socialScoreMap.getOrElse(userId, itemScore))
+                itemScore
+              }
             }
           })
       }
