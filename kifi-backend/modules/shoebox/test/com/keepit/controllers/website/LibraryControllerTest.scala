@@ -440,7 +440,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         implicit val config = inject[PublicIdConfiguration]
         val libraryController = inject[LibraryController]
 
-        val (userA, userB, lib1, lib2, lib3, lib4, lib5, keep1, keep2) = db.readWrite { implicit s =>
+        val (userA, userB, lib1, lib2, keep1, keep2) = db.readWrite { implicit s =>
           val userA = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
           val library1 = libraryRepo.save(Library(name = "Library1", ownerId = userA.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.LIMITED, isSearchableByOthers = false))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = userA.id.get, access = LibraryAccess.OWNER, showInSearch = true))
@@ -454,82 +454,44 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = userA.id.get, url = url2.url, urlId = url2.id.get,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, libraryId = Some(library1.id.get)))
 
-          val library2 = libraryRepo.save(Library(name = "Library2", ownerId = userA.id.get, slug = LibrarySlug("lib2"), visibility = LibraryVisibility.LIMITED, isSearchableByOthers = false))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = userA.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          val library3 = libraryRepo.save(Library(name = "Library3", ownerId = userA.id.get, slug = LibrarySlug("lib3"), visibility = LibraryVisibility.LIMITED, isSearchableByOthers = false))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = library3.id.get, userId = userA.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-
           val userB = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = userB.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          val library2 = libraryRepo.save(Library(name = "Library2", ownerId = userB.id.get, slug = LibrarySlug("lib2"), visibility = LibraryVisibility.LIMITED, isSearchableByOthers = false))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = userB.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-          val library4 = libraryRepo.save(Library(name = "Library4", ownerId = userB.id.get, slug = LibrarySlug("lib4"), visibility = LibraryVisibility.LIMITED, isSearchableByOthers = false))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = library4.id.get, userId = userB.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          val library5 = libraryRepo.save(Library(name = "Library5", ownerId = userB.id.get, slug = LibrarySlug("lib5"), visibility = LibraryVisibility.LIMITED, isSearchableByOthers = false))
-          libraryMembershipRepo.save(LibraryMembership(libraryId = library5.id.get, userId = userB.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = userA.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = userB.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
 
-          (userA, userB, library1, library2, library3, library4, library5, keep1, keep2)
+          (userA, userB, library1, library2, keep1, keep2)
         }
 
         val testPathCopy = com.keepit.controllers.website.routes.LibraryController.copyKeeps().url
         val testPathMove = com.keepit.controllers.website.routes.LibraryController.moveKeeps().url
 
-        // UserA Copy from Lib1 to Lib2
-        val inputJson1 = Json.obj(
+        val inputJson1to2 = Json.obj(
           "from" -> Library.publicId(lib1.id.get),
           "to" -> Library.publicId(lib2.id.get),
           "keeps" -> Seq(keep1.externalId, keep2.externalId)
         )
-        val request1 = FakeRequest("POST", testPathCopy).withBody(inputJson1).withHeaders("userId" -> "1")
-        val result1 = libraryController.copyKeeps()(request1)
-        status(result1) must equalTo(OK)
-        contentType(result1) must beSome("application/json")
-        Json.parse(contentAsString(result1)).as[LibraryInfo].name === "Library2"
 
-        // UserA Move from Lib2 to Lib3
-        val inputJson2 = Json.obj(
-          "from" -> Library.publicId(lib2.id.get),
-          "to" -> Library.publicId(lib3.id.get),
-          "keeps" -> Seq(keep1.externalId)
-        )
-        val request2 = FakeRequest("POST", testPathMove).withBody(inputJson2).withHeaders("userId" -> "1")
+        val request1 = FakeRequest("POST", testPathCopy).withBody(inputJson1to2).withHeaders("userId" -> "1")
+        val result1 = libraryController.copyKeeps()(request1)
+        status(result1) must equalTo(BAD_REQUEST)
+
+        val request2 = FakeRequest("POST", testPathCopy).withBody(inputJson1to2).withHeaders("userId" -> "2")
         val result2 = libraryController.copyKeeps()(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
-        Json.parse(contentAsString(result2)).as[LibraryInfo].name === "Library3"
+        Json.parse(contentAsString(result2)).as[LibraryInfo].name === "Library2"
 
-        // UserB copy from Lib1 to Lib4
-        val inputJson3 = Json.obj(
-          "from" -> Library.publicId(lib1.id.get),
-          "to" -> Library.publicId(lib4.id.get),
-          "keeps" -> Seq(keep1.externalId, keep2.externalId)
-        )
-        val request3 = FakeRequest("POST", testPathCopy).withBody(inputJson3).withHeaders("userId" -> "2")
-        val result3 = libraryController.copyKeeps()(request3)
-        status(result3) must equalTo(OK)
-        contentType(result3) must beSome("application/json")
-        Json.parse(contentAsString(result3)).as[LibraryInfo].name === "Library4"
+        val request3 = FakeRequest("POST", testPathMove).withBody(inputJson1to2).withHeaders("userId" -> "1")
+        val result3 = libraryController.moveKeeps()(request3)
+        status(result3) must equalTo(BAD_REQUEST)
 
-        // UserB move from Lib4 to Lib5
-        val inputJson4 = Json.obj(
-          "from" -> Library.publicId(lib4.id.get),
-          "to" -> Library.publicId(lib5.id.get),
-          "keeps" -> Seq(keep1.externalId, keep2.externalId)
-        )
-        val request4 = FakeRequest("POST", testPathMove).withBody(inputJson4).withHeaders("userId" -> "2")
-        val result4 = libraryController.copyKeeps()(request4)
+        val request4 = FakeRequest("POST", testPathCopy).withBody(inputJson1to2).withHeaders("userId" -> "2")
+        val result4 = libraryController.moveKeeps()(request4)
         status(result4) must equalTo(OK)
         contentType(result4) must beSome("application/json")
-        Json.parse(contentAsString(result4)).as[LibraryInfo].name === "Library5"
-
-        // BadRequest UserA copy from Lib5 to Lib1 (invalid accessing)
-        val inputJson5 = Json.obj(
-          "from" -> Library.publicId(lib5.id.get),
-          "to" -> Library.publicId(lib1.id.get),
-          "keeps" -> Seq(keep1.externalId, keep2.externalId)
-        )
-        val request5 = FakeRequest("POST", testPathMove).withBody(inputJson5).withHeaders("userId" -> "1")
-        val result5 = libraryController.copyKeeps()(request5)
-        status(result5) must equalTo(BAD_REQUEST)
+        Json.parse(contentAsString(result4)).as[LibraryInfo].name === "Library2"
       }
     }
 
