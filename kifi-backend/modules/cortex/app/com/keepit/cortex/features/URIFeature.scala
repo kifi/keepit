@@ -8,7 +8,13 @@ import com.keepit.cortex.core.FeatureRepresentation
 import com.keepit.search.Article
 import com.keepit.cortex.core.FloatVecFeature
 
-trait URIFeatureRepresenter[M <: StatModel, +FT <: FeatureRepresentation[NormalizedURI, M]] extends FeatureRepresenter[NormalizedURI, M, FT]
+trait URIFeatureRepresenter[M <: StatModel, +FT <: FeatureRepresentation[NormalizedURI, M]] extends FeatureRepresenter[NormalizedURI, M, FT] {
+  def apply(uri: NormalizedURI): Option[FT] = {
+    val (featOpt, _) = genFeatureAndWordCount(uri)
+    featOpt
+  }
+  def genFeatureAndWordCount(uri: NormalizedURI): (Option[FT], Int)
+}
 
 abstract class BaseURIFeatureRepresenter[M <: StatModel](
     docRepresenter: DocRepresenter[M, FeatureRepresentation[Document, M]],
@@ -22,16 +28,16 @@ abstract class BaseURIFeatureRepresenter[M <: StatModel](
 
   private def getArticle(uri: NormalizedURI): Option[Article] = articleStore.get(uri.id.get)
 
-  override def apply(uri: NormalizedURI): Option[FeatureRepresentation[NormalizedURI, M]] = {
+  def genFeatureAndWordCount(uri: NormalizedURI): (Option[FeatureRepresentation[NormalizedURI, M]], Int) = {
     getArticle(uri) match {
-      case None => None
+      case None => (None, 0)
       case Some(article) =>
         if (isDefinedAt(article)) {
           val doc = toDocument(article)
-          val rep = docRepresenter.apply(doc)
-          rep.map { x => FloatVecFeature[NormalizedURI, M](x.vectorize) }
-        } else None
+          val (repOpt, cnt) = docRepresenter.genFeatureAndWordCount(doc)
+          val featOpt = repOpt.map { x => FloatVecFeature[NormalizedURI, M](x.vectorize) }
+          (featOpt, cnt)
+        } else (None, 0)
     }
   }
-
 }

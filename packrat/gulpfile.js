@@ -1,7 +1,6 @@
 var gulp = require('gulp');
 var rimraf = require('gulp-rimraf');
 var rename = require('gulp-rename');
-var map = require('vinyl-map');
 var less = require('gulp-less');
 var runSequence = require('run-sequence');
 var gulpif = require('gulp-if');
@@ -11,7 +10,6 @@ var es = require('event-stream');
 var fs = require('fs');
 var jeditor = require("gulp-json-editor");
 var lazypipe = require('lazypipe');
-var reloader = require('./gulp/livereload.js');
 var watch = require('gulp-watch');
 var plumber = require('gulp-plumber');
 var print = require('gulp-print');
@@ -19,10 +17,15 @@ var nib = require('nib');
 var header = require('gulp-header');
 var zip = require('gulp-zip');
 var shell = require('gulp-shell');
+var concat = require('gulp-concat');
+var reloader = require('./gulp/livereload.js');
+var map = require('./gulp/vinyl-map.js');
 
 var isRelease = false;
 
 var outDir = 'out';
+var tmpDir = 'tmp';
+
 var adapterFiles = ['adapters/chrome/**', 'adapters/firefox/**', '!adapters/chrome/manifest.json', '!adapters/firefox/package.json'];
 var sharedAdapterFiles = ['adapters/shared/*.js', 'adapters/shared/*.min.map'];
 var resourceFiles = ['icons/**', 'images/**', 'media/**', 'scripts/**', '!scripts/lib/rwsocket.js'];
@@ -70,7 +73,7 @@ var jeditor = (function () {
 })();
 
 gulp.task('clean', function () {
-  return gulp.src(outDir, {read: false})
+  return gulp.src([outDir, tmpDir], {read: false})
     .pipe(rimraf());
 });
 
@@ -206,15 +209,20 @@ gulp.task('styles', function () {
     .pipe(stylesPipe());
 });
 
-// Extracts dependency information
-gulp.task('extractMeta', function () {
-  var extractMeta = map(function (code, filename) {
+// Extracts metadata and creates corresponding snippet files
+gulp.task('extract-meta', function () {
+  var extractMeta = function (code, filename) {
     var relativeFilename = filename.replace(new RegExp('^' + __dirname + '/'), '');
     var re = /^\/\/ @(match|require|asap)([^\S\n](.+))?$/gm;
     var content = code.toString();
+    var contentScriptRe = null;
+    var styleDeps = [];
+    var scriptDeps = [];
+    var asap = 0;
+    var match = null;
     while ((match = re.exec(content)) !== null) {
       if (match[1] === 'match') {
-        contentScripts[relativeFilename] = match[3];
+        contentScriptRe = match[3];
       } else if (match[1] === 'require') {
         var dep = match[3].trim();
         var depMatch = dep.match(/^(.*)\.([^.]+)$/)
@@ -222,51 +230,89 @@ gulp.task('extractMeta', function () {
           var base = depMatch[1];
           var ext = depMatch[2];
           if (ext === 'css' || ext === 'styl') {
-            styleDeps[relativeFilename] = styleDeps[relativeFilename] || [];
-            styleDeps[relativeFilename].push(base + '.css');
+            styleDeps.push(base + '.css');
           } else if (ext === 'js') {
-            scriptDeps[relativeFilename] = scriptDeps[relativeFilename] || [];
-            scriptDeps[relativeFilename].push(dep);
+            scriptDeps.push(dep);
           }
         }
       } else if (match[1] === 'asap') {
-        asap[relativeFilename] = true;
+        asap = 1;
       }
     }
-  });
 
-  return gulp.src(tabScripts)
-    .pipe(extractMeta)
+    return new Buffer((contentScriptRe ? 'contentScripts ' + relativeFilename + ' ' + asap + ' ' + contentScriptRe : '') + '\n' +
+      styleDeps.map(function (styleDep) {
+        return 'styleDeps ' + relativeFilename + ' ' + styleDep;
+      }).join('\n') + '\n' +
+      scriptDeps.map(function (scriptDep) {
+        return 'scriptDeps ' + relativeFilename + ' ' + scriptDep;
+      }).join('\n') + '\n');
+  };
+
+  return gulp.src(tabScripts, {base: './'})
+    .pipe(map(extractMeta))
+    .pipe(gulp.dest(tmpDir));
 });
 
-// Creates meta.js
-gulp.task('meta', ['extractMeta'], function () {
-  var contentScriptItems = [];
-  for (var f in contentScripts) {
-    contentScriptItems.push('["' + f + '", ' + contentScripts[f] + ', ' + (asap[f] ? 1 : 0) + ']');
-  }
-  var contentScriptsString = ' [\n  ' + contentScriptItems.join(',\n  ') + ']';
-  var styleDepsString = JSON.stringify(styleDeps, undefined, 2);
-  var scriptDepsString = JSON.stringify(scriptDeps, undefined, 2);
+// Creates meta.js from snippet files
+gulp.task('meta', ['extract-meta'], function () {
+  var snippets = gulp.src(tmpDir + '/scripts/**')
+    .pipe(concat('meta.js'))
+    .pipe(map(function (code) {
+      var content = code.toString();
+      var contentScriptItems = [];
+      var styleDeps = {};
+      var scriptDeps = {};
+      var re = /^(contentScripts|styleDeps|scriptDeps) (\S+) (.*)$/gm;
+      var contentScriptRe = /^(\d) (.*)$/;
+      var match = null;
+      while ((match = re.exec(content)) !== null) {
+        var type = match[1];
+        var filename = match[2];
+        var payload = match[3];
+        if (type === 'contentScripts') {
+          var payloadMatch = payload.match(contentScriptRe);
+          var asap = payloadMatch[1], regex = payloadMatch[2];
+          contentScriptItems.push('["' + filename + '", ' + regex + ', ' + asap + ']');
+        } else {
+          if (type === 'styleDeps') {
+            styleDeps[filename] = styleDeps[filename] || [];
+            styleDeps[filename].push(payload);
+          } else if (type === 'scriptDeps') {
+            scriptDeps[filename] = scriptDeps[filename] || [];
+            scriptDeps[filename].push(payload);
+          }
+        }
+      }
+      var contentScriptsString = ' [\n  ' + contentScriptItems.join(',\n  ') + ']';
+      return JSON.stringify([
+        contentScriptsString,
+        JSON.stringify(styleDeps, undefined, 2),
+        JSON.stringify(scriptDeps, undefined, 2)
+      ]);
+    }))
+  
+  var chromeMeta = snippets.pipe(clone())
+    .pipe(map(function (code) {
+      var data = JSON.parse(code.toString());
+      return 'meta = {\n  contentScripts:' + data[0] +
+        ',\n  styleDeps: ' + data[1] +
+        ',\n  scriptDeps: ' + data[2] +
+        '};';
+    }))
+    .pipe(gulp.dest(outDir + '/chrome'));
 
-  var chromeMeta = 'meta = {\n  contentScripts:' +
-    contentScriptsString +
-    ',\n  styleDeps: ' +
-    styleDepsString +
-    ',\n  scriptDeps: ' +
-    scriptDepsString +
-    '};';
+  var firefoxMeta = snippets.pipe(clone())
+    .pipe(map(function (code) {
+      var data = JSON.parse(code.toString());
+      return 'exports.contentScripts =' + data[0] +
+        ';\nexports.styleDeps = ' + data[1] +
+        ';\nexports.scriptDeps = ' + data[2] +
+        ';';
+    }))
+    .pipe(gulp.dest(outDir + '/firefox/lib'));
 
-  var firefoxMeta = 'exports.contentScripts =' +
-    contentScriptsString +
-    ';\nexports.styleDeps = ' +
-    styleDepsString +
-    ';\nexports.scriptDeps = ' +
-    scriptDepsString +
-    ';';
-
-  fs.writeFile(outDir + '/chrome/meta.js', chromeMeta);
-  fs.writeFile(outDir + '/firefox/lib/meta.js', firefoxMeta);
+  return es.merge(chromeMeta, firefoxMeta);
 });
 
 // Creates manifest.json (chrome) and package.json (firefox)

@@ -1,13 +1,5 @@
 #!/bin/bash
 
-toChromeStringListJson() { # list, indent, prefix
-  echo -e "\n  $2\"$3${1//$'\n'/",\n  $2"$3}\",$2"
-}
-sedSubEsc() {
-  local s=${1//\//\\\/}
-  echo -n "${s//$'\n'/\\$'\n'}"
-}
-
 pushd "$(dirname $0)/.." > /dev/null
 
 rm -rf out/*/* out/*.*
@@ -94,9 +86,7 @@ IFS=,
 echo -e "meta = {\n  contentScripts: [${matches[*]}],\n  styleDeps: {${cssDeps[*]}},\n  scriptDeps: {${jsDeps[*]}}};" > out/chrome/meta.js
 echo -e "exports.contentScripts = [${matches[*]}];\nexports.styleDeps = {${cssDeps[*]}};\nexports.scriptDeps = {${jsDeps[*]}};" > out/firefox/lib/meta.js
 version=$(grep ^version= build.properties | cut -c9-)
-chromeResourcesJson="$(toChromeStringListJson $(find images -type f -not -name '.*') "  ")"
 sed -e "s/\"version\":.*/\"version\": \"$version\",/" \
-  -e "s/\"web_accessible_resources\": \[/\"web_accessible_resources\": [$(sedSubEsc "$chromeResourcesJson")/" \
   adapters/chrome/manifest.json > out/chrome/manifest.json
 sed -e "s/\"version\":.*/\"version\": \"$version\",/" \
   adapters/firefox/package.json > out/firefox/package.json
