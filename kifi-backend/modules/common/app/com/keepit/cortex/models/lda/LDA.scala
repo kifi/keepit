@@ -39,7 +39,7 @@ object SparseTopicRepresentation {
   }
 }
 
-case class UriSparseLDAFeatures(uriId: Id[NormalizedURI], uriSeq: SequenceNumber[NormalizedURI], features: SparseTopicRepresentation)
+case class UriSparseLDAFeatures(uriId: Id[NormalizedURI], uriSeq: SequenceNumber[NormalizedURI], features: SparseTopicRepresentation, isActive: Boolean)
 object UriSparseLDAFeatures {
   implicit val format = Json.format[UriSparseLDAFeatures]
 }

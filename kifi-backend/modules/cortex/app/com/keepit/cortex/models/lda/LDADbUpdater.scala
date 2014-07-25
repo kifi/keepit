@@ -9,7 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.time._
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.cortex.core.{ FeatureRepresentation, StatModelName }
+import com.keepit.cortex.core.{ ModelVersion, FeatureRepresentation, StatModelName }
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.plugins._
 import com.keepit.model.{ NormalizedURI, NormalizedURIStates, UrlHash }
@@ -164,4 +164,14 @@ class LDADbUpdaterImpl @Inject() (
       }
     }
   }
+}
+
+class LDADbFeatureRetriever @Inject() (
+    db: Database,
+    topicRepo: URILDATopicRepo) {
+
+  def getLDAFeaturesChanged(lowSeq: SequenceNumber[NormalizedURI], fetchSize: Int, version: ModelVersion[DenseLDA]): Seq[URILDATopic] = {
+    db.readOnlyReplica { implicit s => topicRepo.getFeaturesSince(lowSeq, version, fetchSize) }
+  }
+
 }
