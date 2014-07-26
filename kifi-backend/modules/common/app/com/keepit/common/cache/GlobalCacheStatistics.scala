@@ -20,11 +20,15 @@ class GlobalCacheStatistics() {
     }
   }
 
-  private def missRatio(hits: Int, misses: Int, sets: Int): Int = (100d * misses / (hits + misses + sets).toDouble).round.toInt
-
   /**
-   * @return the 100 * #misses/(#hits + #misses + #sets) Ratio per key that exist in the misses map
+   * Best is to read the code to understand the function.
+   * The logic is like this: If there are few #sets we don't care that much, but if the number of sets is
+   * larger then number of misses then its probably a cache that has lots of random and constantly increasing number of values like the uri space.
+   * In that case, we discount the number of misses by number of sets.
    */
+  private def missRatio(hits: Int, misses: Int, sets: Int): Int =
+    (100d * (misses - (sets - misses).max(0)).max(0) / (hits + misses).toDouble).round.toInt
+
   def missRatios(minSample: Int, minRatio: Int, cacheName: String = MemcachedCache.name): Seq[(String, Int)] =
     missesMap.keySet.toSeq.filter(_.startsWith(cacheName)) map { key =>
       getCount(key, missesMap) match {
