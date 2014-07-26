@@ -395,6 +395,7 @@ GET     /admin/data/patterns      @com.keepit.controllers.admin.UrlController.ge
 POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.savePatterns
 GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.getProxies
 POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.saveProxies
+GET     /admin/data/scraper/status      @com.keepit.controllers.admin.ScraperAdminController.status
 GET     /admin/data/scrape              @com.keepit.controllers.admin.ScraperAdminController.searchScraper
 GET     /admin/data/scrapeArticle       @com.keepit.controllers.admin.ScraperAdminController.scrapeArticle(url:String ?= "")
 GET     /admin/data/scraperRequests     @com.keepit.controllers.admin.ScraperAdminController.scraperRequests(stateFilter: Option[String] ?= None)
@@ -520,8 +521,9 @@ POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminC
 POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
 
 
-GET     /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
+POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
 GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
+POST    /admin/libraries/internForAllUsers   @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
 
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
@@ -653,6 +655,7 @@ GET     /internal/shoebox/database/getSearchFriendsChanged     @com.keepit.contr
 GET     /internal/shoebox/database/getIndexableSocialConnections   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableSocialUserInfos   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int)
 GET     /internal/shoebox/database/getEmailAccountUpdates       @com.keepit.controllers.internal.ShoeboxDataPipeController.getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int)
+GET     /internal/shoebox/database/getLibrariesAndMembershipsChanged       @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.ext.ExtDeepLinkController.getDeepUrl()

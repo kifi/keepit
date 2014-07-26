@@ -40,7 +40,7 @@ class GraphCommander @Inject() (
     (urisList, usersList)
   }
 
-  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean): Seq[ConnectedUriScore] = {
+  def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Seq[ConnectedUriScore] = {
     val wanderLust = Wanderlust.discovery(userId)
     val journal = wanderingCommander.wander(wanderLust)
 
@@ -51,7 +51,7 @@ class GraphCommander @Inject() (
     }
   }
 
-  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean): Seq[ConnectedUserScore] = {
+  def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Seq[ConnectedUserScore] = {
     val wanderLust = Wanderlust.discovery(userId)
     val journal = wanderingCommander.wander(wanderLust)
 

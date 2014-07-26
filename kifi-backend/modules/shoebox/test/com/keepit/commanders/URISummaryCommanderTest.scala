@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model._
 import scala.concurrent._

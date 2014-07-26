@@ -26,7 +26,9 @@ class ShoeboxDataPipeController @Inject() (
     searchFriendRepo: SearchFriendRepo,
     socialConnectionRepo: SocialConnectionRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
-    emailAddressRepo: UserEmailAddressRepo) extends ShoeboxServiceController with Logging {
+    emailAddressRepo: UserEmailAddressRepo,
+    libraryRepo: LibraryRepo,
+    libraryMembershipRepo: LibraryMembershipRepo) extends ShoeboxServiceController with Logging {
 
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action { request =>
     val uris = db.readOnlyReplica(2) { implicit s =>
@@ -137,5 +139,16 @@ class ShoeboxDataPipeController @Inject() (
     }
     val json = Json.toJson(updates)
     Ok(json)
+  }
+
+  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = Action { request =>
+    val librariesWithMembersChanged = db.readOnlyReplica(2) { implicit session =>
+      val changedLibraries = libraryRepo.getBySequenceNumber(seqNum, fetchSize)
+      changedLibraries.map { library =>
+        val memberships = libraryMembershipRepo.getWithLibraryId(library.id.get)
+        LibraryAndMemberships(library, memberships)
+      }
+    }
+    Ok(Json.toJson(librariesWithMembersChanged))
   }
 }

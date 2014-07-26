@@ -117,14 +117,9 @@
     "images/*.jpg",
     "images/*.png",
     "images/*.svg",
-    "styles/iframes/login.css",
-    "scripts/html/iframes/login.js",
-    "scripts/iframes/login.js",
-    "styles/iframes/view_email.css",
-    "scripts/html/iframes/view_email.js",
-    "scripts/iframes/view_email.js",
-    "scripts/iframes/lib/jquery.js",
-    "scripts/iframes/lib/jquery-ui-position.js",
-    "images/spinner_32.gif"
+    "scripts/html/iframes/*.js",
+    "scripts/iframes/*.js",
+    "scripts/iframes/lib/*.js",
+    "styles/iframes/*.css"
   ]
 }

@@ -26,6 +26,7 @@ trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getUpdateTimeAndState(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(DateTime, State[URILDATopic])]
   def getUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA], after: Option[DateTime] = None)(implicit session: RSession): Seq[(LDATopic, Int)]
   def getLatestURIsInTopic(topicId: LDATopic, version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[Id[NormalizedURI]]
+  def getFeaturesSince(seq: SequenceNumber[NormalizedURI], version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[URILDATopic]
 }
 
 @Singleton
@@ -45,12 +46,13 @@ class URILDATopicRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id")
     def uriSeq = column[SequenceNumber[NormalizedURI]]("uri_seq")
     def version = column[ModelVersion[DenseLDA]]("version")
+    def numOfWords = column[Int]("num_words")
     def firstTopic = column[LDATopic]("first_topic", O.Nullable)
     def secondTopic = column[LDATopic]("second_topic", O.Nullable)
     def thirdTopic = column[LDATopic]("third_topic", O.Nullable)
     def sparseFeature = column[SparseTopicRepresentation]("sparse_feature", O.Nullable)
     def feature = column[LDATopicFeature]("feature", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, uriId, uriSeq, version, firstTopic.?, secondTopic.?, thirdTopic.?, sparseFeature.?, feature.?, state) <> ((URILDATopic.apply _).tupled, URILDATopic.unapply _)
+    def * = (id.?, createdAt, updatedAt, uriId, uriSeq, version, numOfWords, firstTopic.?, secondTopic.?, thirdTopic.?, sparseFeature.?, feature.?, state) <> ((URILDATopic.apply _).tupled, URILDATopic.unapply _)
   }
 
   def table(tag: Tag) = new URILDATopicTable(tag)
@@ -123,5 +125,10 @@ class URILDATopicRepoImpl @Inject() (
 
     val q = sql"select uri_id from uri_lda_topic where first_topic = ${topicId.index} and version = ${version.version} order by updated_at desc limit ${limit}"
     q.as[Long].list.map { Id[NormalizedURI](_) }
+  }
+
+  def getFeaturesSince(seq: SequenceNumber[NormalizedURI], version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[URILDATopic] = {
+    val q = (for { r <- rows if (r.uriSeq > seq && r.version === version) } yield r).sortBy(_.uriSeq).take(limit)
+    q.list
   }
 }

@@ -8,7 +8,7 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.model.{ HttpProxy, NormalizedURI, PageInfo, ScrapeInfo }
+import com.keepit.model._
 import com.keepit.scraper._
 import com.keepit.scraper.extractor._
 
@@ -23,11 +23,13 @@ object ScraperMessages {
     override def toString = s"Scrape(uri=${uri.toShortString},info=${info.toShortString})"
   }
   case object QueueSize // informational; pulling
+  case object JobAssignments
 }
 
 @Singleton
 class ScrapeProcessorActorImpl @Inject() (
     airbrake: AirbrakeNotifier,
+    config: ScraperConfig,
     sysProvider: Provider[ActorSystem],
     scrapeSupervisorProvider: Provider[ScrapeAgentSupervisor],
     scrapeProcActorProvider: Provider[ScrapeAgent],
@@ -36,7 +38,6 @@ class ScrapeProcessorActorImpl @Inject() (
 
   import ScraperMessages._
 
-  val PULL_THRESHOLD = Runtime.getRuntime.availableProcessors() / 2
   val WARNING_THRESHOLD = 100
 
   implicit val fj = ExecutionContext.fj
@@ -53,16 +54,20 @@ class ScrapeProcessorActorImpl @Inject() (
     actor ! Scrape(uri, info, pageInfo, proxyOpt)
   }
 
-  private def getQueueSize(): Future[Int] = actor.ask(QueueSize).mapTo[Int]
+  override def status(): Future[Seq[ScrapeJobStatus]] = {
+    actor.ask(JobAssignments).mapTo[Seq[ScrapeJobStatus]]
+  }
+
+  private[this] def getQueueSize(): Future[Int] = actor.ask(QueueSize).mapTo[Int]
 
   override def pull(): Unit = {
     getQueueSize() onComplete {
       case Success(qSize) =>
-        if (qSize < PULL_THRESHOLD) {
+        if (qSize <= config.pullThreshold) {
           log.info(s"[ScrapeProcessorActorImpl.pull] qSize=$qSize. Let's get some work.")
           serviceDiscovery.thisInstance.map { inst =>
             if (inst.isHealthy) {
-              asyncHelper.assignTasks(inst.id.id, PULL_THRESHOLD * 2).onComplete {
+              asyncHelper.assignTasks(inst.id.id, config.pullMax).onComplete {
                 case Failure(t) =>
                   log.error(s"[ScrapeProcessorActorImpl.pull(${inst.id.id})] Caught exception $t while pulling for tasks", t) // move along
                 case Success(requests) =>

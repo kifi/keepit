@@ -152,6 +152,7 @@ object Shoebox extends Service {
     def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableSocialConnections", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableSocialUserInfos", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getEmailAccountUpdates", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesAndMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }
 }
 
@@ -277,6 +278,7 @@ object ABook extends Service {
 
 object Scraper extends Service {
   object internal {
+    def status() = ServiceRoute(GET, s"/internal/scraper/status")
     def getBasicArticle() = ServiceRoute(POST, s"/internal/scraper/getBasicArticle")
     def getSignature() = ServiceRoute(POST, s"/internal/scraper/getSignature")
     def getPornDetectorModel() = ServiceRoute(GET, s"/internal/scraper/getPornDetectorModel")
@@ -309,6 +311,7 @@ object Cortex extends Service {
     def saveEdits() = ServiceRoute(POST, "/internal/cortex/lda/saveEdits")
     def getLDAFeatures() = ServiceRoute(POST, "/internal/cortex/lda/ldaFeatures")
     def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/cortex/lda/userUriInterest", Param("userId", userId), Param("uriId", uriId))
+    def batchUserURIsInterests() = ServiceRoute(POST, "/internal/cortex/lda/batchUserUrisInterests")
     def userTopicMean(userId: Id[User]) = ServiceRoute(GET, "/internal/cortex/lda/userTopicMean", Param("userId", userId))
     def sampleURIsForTopic(topicId: Int) = ServiceRoute(GET, "/internal/cortex/lda/sampleURIs", Param("topicId", topicId))
 
@@ -322,8 +325,8 @@ object Graph extends Service {
     def getGraphUpdaterState() = ServiceRoute(GET, "/internal/graph/state")
     def getGraphKinds() = ServiceRoute(GET, "/internal/graph/kinds")
     def wander() = ServiceRoute(POST, "/internal/graph/wander")
-    def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUriAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnection", avoidFirstDegreeConnections))
-    def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUserAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnection", avoidFirstDegreeConnections))
+    def getUriAndScores(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUriAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnection", avoidFirstDegreeConnections))
+    def getUserAndScores(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUserAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnection", avoidFirstDegreeConnections))
   }
 }
 

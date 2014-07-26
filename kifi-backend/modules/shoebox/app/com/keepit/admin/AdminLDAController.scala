@@ -8,7 +8,7 @@ import views.html
 import play.api.libs.json._
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import com.keepit.cortex.models.lda.{ LDATopicConfigurations, LDATopicDetail, LDATopicConfiguration }
+import com.keepit.cortex.models.lda.{ LDAUserURIInterestScores, LDATopicConfigurations, LDATopicDetail, LDATopicConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.model.{ NormalizedURIRepo, NormalizedURI, KeepRepo, User }
 import com.keepit.common.db.Id
@@ -121,11 +121,11 @@ class AdminLDAController @Inject() (
     val userId = body.get("userId").get.toLong
     val uriId = body.get("uriId").get.toLong
     val score = cortex.userUriInterest(Id[User](userId), Id[NormalizedURI](uriId))
-    score.map {
-      case (globalScore, recencyScore) =>
-        val globalMsg = "globalScore: " + globalScore.map { _.toString }.getOrElse("n/a")
-        val recencyMsg = "recencyScore: " + recencyScore.map { _.toString }.getOrElse("n/a")
-        Ok(globalMsg + "; " + recencyMsg)
+    score.map { score =>
+      val (globalScore, recencyScore) = (score.global, score.recency)
+      val globalMsg = "globalScore: " + globalScore.map { _.toString }.getOrElse("n/a")
+      val recencyMsg = "recencyScore: " + recencyScore.map { _.toString }.getOrElse("n/a")
+      Ok(globalMsg + "; " + recencyMsg)
     }
   }
 

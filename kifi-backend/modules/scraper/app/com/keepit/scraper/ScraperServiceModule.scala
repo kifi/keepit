@@ -5,8 +5,7 @@ import com.keepit.scraper.fetcher.HttpFetcherModule
 import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
-import com.keepit.common.store.{ S3ImageConfig, StoreModule }
-import com.keepit.scraper.extractor.ExtractorFactory
+import com.keepit.common.store.StoreModule
 import com.keepit.common.concurrent.ForkJoinContextMonitorModule
 import com.keepit.scraper.embedly.EmbedlyModule
 
