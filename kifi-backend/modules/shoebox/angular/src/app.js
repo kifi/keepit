@@ -131,7 +131,7 @@ angular.module('kifi', [
 
       if ($location.path() !== '/find') {
         // For now, remove all URL parameters
-        $location.search({});
+        $location.search({}).replace();
       }
     }
 

@@ -61,7 +61,7 @@ panes.thread = function () {
       });
 
       $paneBox.on('click', '.kifi-message-header-back', function () {
-        pane.back($redirected.length ? '/messages:all' : '/messages');
+        pane.back($redirected.length ? null : '/messages');
       });
 
       var $redirected = $paneBox.find('.kifi-thread-redirected').click(function () {

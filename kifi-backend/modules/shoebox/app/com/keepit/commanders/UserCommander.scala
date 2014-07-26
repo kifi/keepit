@@ -126,6 +126,7 @@ class UserCommander @Inject() (
     fortytwoConfig: FortyTwoConfig,
     bookmarkClicksRepo: UserBookmarkClicksRepo,
     userImageUrlCache: UserImageUrlCache,
+    libraryCommander: LibraryCommander,
     airbrake: AirbrakeNotifier) extends Logging {
 
   def updateUserDescription(userId: Id[User], description: String): Unit = {
@@ -155,7 +156,7 @@ class UserCommander @Inject() (
   }
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
-    val basicUsers = db.readOnlyReplica { implicit s =>
+    val basicUsers = db.readOnlyMaster { implicit s =>
       if (canMessageAllUsers(user.id.get)) {
         userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
           .collect { case u if u.id.get != user.id.get => BasicUser.fromUser(u) }.toSet
@@ -243,7 +244,7 @@ class UserCommander @Inject() (
 
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
     val newUser = db.readWrite { implicit session =>
-      userRepo.save(User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state, username = None)) // todo(andrew): add usernames for library purposes
+      userRepo.save(User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state, username = None))
     }
     SafeFuture {
       db.readWrite { implicit session =>
@@ -252,6 +253,11 @@ class UserCommander @Inject() (
       searchClient.warmUpUser(newUser.id.get)
       searchClient.updateUserIndex()
     }
+    db.readWrite { implicit session =>
+      autoSetUsername(newUser, readOnly = false)
+    }
+    libraryCommander.internSystemGeneratedLibraries(newUser.id.get)
+
     newUser
   }
 
@@ -714,8 +720,7 @@ class UserCommander @Inject() (
       else if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
         heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
           val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
-          (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate) &&
-            experiments.contains(ExperimentType.DELIGHTED_SURVEY)
+          (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate)
         }
       } else Future.successful(false)
       shouldShowDelightedQuestionFut map { shouldShowDelightedQuestion =>

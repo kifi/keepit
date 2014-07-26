@@ -165,18 +165,12 @@
   font-size: 36px;
   border-radius: 3px !important;
 }
-.kifi-notice-mosaic-2>.kifi-notice-pic-0, {
-  line-height: 26px;
-  font-size: 20px;
-}
-.kifi-notice-mosaic-3>.kifi-notice-pic-0 {
-  font-size: 24px;
-}
 .kifi-notice-mosaic-2>.kifi-notice-pic-0,
 .kifi-notice-mosaic-3>.kifi-notice-pic-0 {
   left: 27px;
   width: 26px;
   border-radius: 0 3px 3px 0 !important;
+  font-size: 24px;
 }
 .kifi-notice-mosaic-4>.kifi-notice-pic-0 {
   top: 27px;
