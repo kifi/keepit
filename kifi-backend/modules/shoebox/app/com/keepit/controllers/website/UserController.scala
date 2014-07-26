@@ -13,6 +13,7 @@ import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.commanders._
 import com.keepit.heimdal.{ DelightedAnswerSources, BasicDelightedAnswer }
 import com.keepit.model._
+import com.keepit.social.BasicUser
 import play.api.libs.json.Json.toJson
 import com.keepit.abook.{ ABookUploadConf, ABookServiceClient }
 import scala.concurrent.Future
@@ -26,7 +27,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 import java.util.concurrent.atomic.AtomicBoolean
 import com.keepit.eliza.ElizaServiceClient
-import play.api.mvc.{ Request, MaxSizeExceeded }
+import play.api.mvc.{ Action, Request, MaxSizeExceeded }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import play.api.data.Form
@@ -199,6 +200,16 @@ class UserController @Inject() (
       userCommander.doChangePassword(request.userId, oldPassword, newPassword) match {
         case Failure(e) => Forbidden(Json.obj("error" -> e.getMessage))
         case Success(_) => Ok(Json.obj("success" -> true))
+      }
+    }
+  }
+
+  def basicUserInfo(id: ExternalId[User]) = Action {
+    db.readOnlyReplica { implicit session =>
+      userRepo.getOpt(id).map { user =>
+        Ok(Json.toJson(BasicUser.fromUser(user)))
+      } getOrElse {
+        NotFound(Json.obj("error" -> "user not found"))
       }
     }
   }
