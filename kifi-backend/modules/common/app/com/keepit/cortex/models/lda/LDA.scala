@@ -76,3 +76,4 @@ case class LDATopicDetail(
   sampleURIs: Seq[NormalizedURI])
 
 @json case class LDAUserURIInterestScore(score: Float, confidence: Float) // confidence: [0,1]. higher better
+@json case class LDAUserURIInterestScores(global: Option[LDAUserURIInterestScore], recency: Option[LDAUserURIInterestScore])

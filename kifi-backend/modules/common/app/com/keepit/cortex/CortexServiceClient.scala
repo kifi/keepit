@@ -37,7 +37,8 @@ trait CortexServiceClient extends ServiceClient {
   def ldaDocTopic(doc: String): Future[Option[Array[Float]]]
   def saveEdits(configs: Map[String, LDATopicConfiguration]): Unit
   def getLDAFeatures(uris: Seq[Id[NormalizedURI]]): Future[Seq[Array[Float]]]
-  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[(Option[LDAUserURIInterestScore], Option[LDAUserURIInterestScore])]
+  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[LDAUserURIInterestScores]
+  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[LDAUserURIInterestScores]]
   def userTopicMean(userId: Id[User]): Future[Option[Array[Float]]]
   def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]]
 
@@ -158,11 +159,13 @@ class CortexServiceClientImpl(
     }
   }
 
-  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[(Option[LDAUserURIInterestScore], Option[LDAUserURIInterestScore])] = {
-    call(Cortex.internal.userUriInterest(userId, uriId)).map { r =>
-      val js = r.json
-      ((js \ "global").asOpt[LDAUserURIInterestScore], (js \ "recency").asOpt[LDAUserURIInterestScore])
-    }
+  def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[LDAUserURIInterestScores] = {
+    call(Cortex.internal.userUriInterest(userId, uriId)).map { r => r.json.as[LDAUserURIInterestScores] }
+  }
+
+  def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[LDAUserURIInterestScores]] = {
+    val payload = Json.obj("userId" -> userId, "uriIds" -> Json.toJson(uriIds))
+    call(Cortex.internal.batchUserURIsInterests(), payload).map { r => (r.json).as[Seq[LDAUserURIInterestScores]] }
   }
 
   def userTopicMean(userId: Id[User]): Future[Option[Array[Float]]] = {
