@@ -82,7 +82,7 @@ var chromeInjectionFooter = lazypipe()
   .pipe(map, function (code, filename) {
     var relativeFilename = filename.replace(new RegExp('^' + __dirname + '/' + outDir + '/chrome/'), '');
     var shortName = relativeFilename.replace(/^scripts\//, '');
-    return code.toString() + 'api.injected["' + relativeFilename + '"]=1;\n//@ sourceURL=http://kifi/' + shortName + '\n';
+    return code.toString() + "api.injected['" + relativeFilename + "']=1;\n//@ sourceURL=http://kifi/" + shortName + '\n';
   });
 
 gulp.task('clean', function () {
