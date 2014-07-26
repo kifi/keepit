@@ -192,7 +192,7 @@ class UserCommander @Inject() (
     socialUserInfoRepo.getByUser(userId).map(BasicSocialUser.from)
   }
 
-  def abookInfo(userId: Id[User]) = abookServiceClient.getABookInfos(userId)
+  def getGmailABookInfos(userId: Id[User]) = abookServiceClient.getABookInfos(userId).map(_.filter(_.origin == ABookOrigins.GMAIL))
 
   def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[Try[ABookInfo]] = {
     abookServiceClient.uploadContacts(userId, origin, payload)
