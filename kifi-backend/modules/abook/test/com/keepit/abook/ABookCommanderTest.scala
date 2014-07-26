@@ -173,9 +173,11 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
           val factory = inject[ABookTestContactFactory]
           val (c1, c2, c3) = factory.createMany
 
-          commander.getContactsConnectedToEmailAddress(AbookTestEmails.BAR_EMAIL) === Seq(c1, c3)
-          commander.getContactsConnectedToEmailAddress(AbookTestEmails.BAZ_EMAIL) === Seq(c2)
-          commander.getContactsConnectedToEmailAddress(AbookTestEmails.FOO_EMAIL) === Seq()
+          def toUserId = (e: EContact) => e.userId
+
+          commander.getContactsConnectedToEmailAddress(AbookTestEmails.BAR_EMAIL) === Set(c1, c3).map(toUserId)
+          commander.getContactsConnectedToEmailAddress(AbookTestEmails.BAZ_EMAIL) === Set(c2).map(toUserId)
+          commander.getContactsConnectedToEmailAddress(AbookTestEmails.FOO_EMAIL) === Set.empty
         }
       }
     }

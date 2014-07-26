@@ -182,9 +182,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
           contentType(result) must beSome("application/json")
 
           val jsonResponse: String = contentAsString(result)
-          jsonResponse must contain("userId\":" + c1.userId)
-          jsonResponse must not contain ("userId\":" + c2.userId)
-          jsonResponse must contain("userId\":" + c3.userId)
+          jsonResponse must beEqualTo(s"[${c1.userId},${c3.userId}]")
         }
       }
     }
