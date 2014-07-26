@@ -62,6 +62,9 @@ trait S3ImageStore {
     URI(uri.scheme orElse protocolDefault, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment).toString
   }
 
+  def avatarUrlByUser(user: User): String =
+    avatarUrlByExternalId(Some(200), user.externalId, user.pictureName.getOrElse("0"), Some("https"))
+
   def keyByExternalId(size: String, userId: ExternalId[User], picName: String): String =
     s"users/$userId/pics/$size/$picName.jpg"
 

@@ -368,6 +368,13 @@ gulp.task('zip-chrome', ['scripts', 'styles', 'meta', 'config-package-chrome'], 
 });
 
 gulp.task('xpi-firefox', ['scripts', 'styles', 'meta', 'config'], shell.task([
+  // TODO: verify cfx version before using it
+  // cfxver=$(cfx --version)
+  // if [ "$cfxver" != "Add-on SDK 1.16 (05dab6aeb50918d4c788df9c5da39007b4fca335)" ]; then
+  //   echo "$cfxver"$'\n'"Looks like you need to download the latest Firefox Addon SDK."
+  //   echo "https://addons.mozilla.org/en-US/developers/builder"
+  //   exit 1
+  // fi
   'cd ' + outDir + ' && \
   cfx xpi --pkgdir=firefox \
     --update-link=https://www.kifi.com/assets/plugins/kifi.xpi \
