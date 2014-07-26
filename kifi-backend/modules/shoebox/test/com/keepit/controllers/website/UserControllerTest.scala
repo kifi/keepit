@@ -101,7 +101,6 @@ class UserControllerTest extends Specification with ApplicationInjector {
         body must contain("id\":\"" + user.externalId)
         body must contain("firstName\":\"Donald")
         body must contain("lastName\":\"Trump")
-        body must contain("users/" + user.externalId + "/pics")
       }
     }
   }
