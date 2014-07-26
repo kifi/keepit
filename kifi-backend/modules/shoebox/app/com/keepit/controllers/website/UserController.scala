@@ -207,10 +207,7 @@ class UserController @Inject() (
   def basicUserInfo(id: ExternalId[User]) = Action {
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id).map { user =>
-        Ok(JsObject(Seq(
-          ("user", Json.toJson(BasicUser.fromUser(user))),
-          ("avatarUrl", JsString(s3ImageStore.avatarUrlByUser(user))))
-        ))
+        Ok(Json.toJson(BasicUser.fromUser(user)))
       } getOrElse {
         NotFound(Json.obj("error" -> "user not found"))
       }
