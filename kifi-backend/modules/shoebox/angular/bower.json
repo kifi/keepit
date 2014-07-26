@@ -30,7 +30,6 @@
     "angular-animate": "~1.2.12",
     "jquery-mousewheel": "~3.1.9",
     "antiscroll": "*",
-    "angular-smart-scroll": "*",
     "underscore.string": "~2.3.3",
     "angulartics": "~0.14.15",
     "fuse.js": "1.1.0"
