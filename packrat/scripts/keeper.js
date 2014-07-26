@@ -88,9 +88,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
 
     // attach event bindings
     $slider
-    .mouseover(function () {
-      idleTimer.kill();
-    })
     .mouseout(function (e) {
       if (e.originalEvent.isTrusted === false) return;
       if (data.dragTimer) {
@@ -139,11 +136,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         this.classList.add('kifi-hoverless');
       }
     }, 400, true))
-    .on('mouseover', '.kifi-keep-card', function (e) {
-      if ($slider.hasClass('kifi-auto') && e.originalEvent.isTrusted !== false) {
-        growSlider('kifi-auto', 'kifi-wide');
-      }
-    }).on('mouseover', '.kifi-keep-btn>.kifi-tip,.kifi-kept-btn>.kifi-tip', function () {
+    .on('mouseover', '.kifi-keep-btn>.kifi-tip,.kifi-kept-btn>.kifi-tip', function () {
       this.parentNode.classList.add('kifi-hoverless');
     }).hoverfu('.kifi-keep-btn,.kifi-kept-btn', function (configureHover) {
       var btn = this;
@@ -311,7 +304,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
   // trigger is for the event log (e.g. 'key', 'icon')
   function hideSlider(trigger) {
     log('[hideSlider]', trigger);
-    idleTimer.kill();
     $slider.addClass('kifi-hiding')
     .off('transitionend')
     .on('transitionend', function (e) {
@@ -353,7 +345,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         delete data.dragStarting;
         log('[startDrag] installing draggable');
         data.$dragGlass = $('<div class="kifi-drag-glass kifi-root">').mouseup(stopDrag).appendTo(tile.parentNode);
-        $(tile).draggable({axis: 'y', containment: [0, 0, window.innerWidth, window.innerHeight - tile.offsetHeight], scroll: false, stop: stopDrag})[0]
+        $(tile).draggable({axis: 'y', containment: 'window', scroll: false, stop: stopDrag})[0]
           .dispatchEvent(new MouseEvent('mousedown', data.mousedownEvent)); // starts drag
       }
       function stopDrag() {
@@ -369,20 +361,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
       }
     });
   }
-
-  var idleTimer = {
-    start: function (ms) {
-      log('[idleTimer.start]', ms, 'ms');
-      clearTimeout(this.timeout), this.timeout = setTimeout(hideSlider.bind(null, 'idle'), ms);
-      $slider.on('mouseenter.idle', $.proxy(this, 'kill'));
-    },
-    kill: function () {
-      if (this.timeout) {
-        log('[idleTimer.kill]');
-        clearTimeout(this.timeout), delete this.timeout;
-        $slider && $slider.off('.idle');
-      }
-    }};
 
   function keepPage(how, e, suppressNamePrompt) {
     log('[keepPage]', e, how);
@@ -589,18 +567,12 @@ var keeper = keeper || function () {  // idempotent for Chrome
             setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000);
           }
         });
-      } else if (type === 'button') {
-        $tile.hoverfu('destroy');
-        showSlider(trigger);
-        growSlider('kifi-tiny', 'kifi-auto');
-        idleTimer.start(5000);
       }
     },
     onPaneChange: function (locator) {
       $slider.find('.kifi-at').removeClass('kifi-at');
       if (locator) {
         $slider.find('.kifi-dock-' + locator.split(/[\/:]/)[1]).addClass('kifi-at');
-        idleTimer.kill();
         $slider.data().stickiness |= 2;
       } else {  // dislodge from pane and prepare for x transition
         $slider.prependTo(tile).layout();

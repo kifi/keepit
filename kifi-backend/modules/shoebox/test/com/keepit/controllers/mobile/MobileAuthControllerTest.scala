@@ -21,7 +21,7 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{ FakeShoeboxSecureSocialModule, FakeSocialGraphModule }
+import com.keepit.common.social.{ TestShoeboxAppSecureSocialModule, FakeSocialGraphModule }
 import scala.util.Failure
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -35,7 +35,7 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
     TestActorSystemModule(),
     FakeAirbrakeModule(),
     FakeMailModule(),
-    FakeShoeboxSecureSocialModule(),
+    TestShoeboxAppSecureSocialModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule(),

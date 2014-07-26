@@ -13,6 +13,7 @@ import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.commanders._
 import com.keepit.heimdal.{ DelightedAnswerSources, BasicDelightedAnswer }
 import com.keepit.model._
+import com.keepit.social.BasicUser
 import play.api.libs.json.Json.toJson
 import com.keepit.abook.{ ABookUploadConf, ABookServiceClient }
 import scala.concurrent.Future
@@ -26,7 +27,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 import java.util.concurrent.atomic.AtomicBoolean
 import com.keepit.eliza.ElizaServiceClient
-import play.api.mvc.{ Request, MaxSizeExceeded }
+import play.api.mvc.{ Action, Request, MaxSizeExceeded }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import play.api.data.Form
@@ -203,11 +204,24 @@ class UserController @Inject() (
     }
   }
 
+  def basicUserInfo(id: ExternalId[User]) = Action {
+    db.readOnlyReplica { implicit session =>
+      userRepo.getOpt(id).map { user =>
+        Ok(JsObject(Seq(
+          ("user", Json.toJson(BasicUser.fromUser(user))),
+          ("avatarUrl", JsString(s3ImageStore.avatarUrlByUser(user))))
+        ))
+      } getOrElse {
+        NotFound(Json.obj("error" -> "user not found"))
+      }
+    }
+  }
+
   def getEmailInfo(email: EmailAddress) = JsonAction.authenticated(allowPending = true) { implicit request =>
     db.readOnlyMaster { implicit session =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailRecord) =>
-          val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, "pending_primary_email")
+          val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
           if (emailRecord.userId == request.userId) {
             Ok(Json.toJson(EmailInfo(
               address = emailRecord.address,
@@ -258,7 +272,12 @@ class UserController @Inject() (
     ))
   }
 
-  private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "onboarding_seen", "show_delighted_question")
+  private val SitePrefNames = Set(
+    UserValueName.SITE_LEFT_COL_WIDTH,
+    UserValueName.SITE_WELCOMED,
+    UserValueName.ONBOARDING_SEEN,
+    UserValueName.SHOW_DELIGHTED_QUESTION
+  )
 
   def getPrefs() = JsonAction.authenticatedAsync { request =>
     // The prefs endpoint is used as an indicator that the user is active
@@ -268,11 +287,13 @@ class UserController @Inject() (
 
   def savePrefs() = JsonAction.authenticatedParseJson { request =>
     val o = request.request.body.as[JsObject]
-    if (o.keys.subsetOf(SitePrefNames)) {
-      userCommander.savePrefs(request.userId, o)
+    val map = o.value.map(t => UserValueName(t._1) -> t._2).toMap
+    val keyNames = map.keys.toSet
+    if (keyNames.subsetOf(SitePrefNames)) {
+      userCommander.savePrefs(request.userId, map)
       Ok(o)
     } else {
-      BadRequest(Json.obj("error" -> ((SitePrefNames -- o.keys).mkString(", ") + " not recognized")))
+      BadRequest(Json.obj("error" -> ((SitePrefNames -- keyNames).mkString(", ") + " not recognized")))
     }
   }
 
@@ -380,7 +401,7 @@ class UserController @Inject() (
     val networkStatuses = Future {
       JsObject(db.readOnlyMaster { implicit session =>
         networks.map { network =>
-          userValueRepo.getValueStringOpt(request.userId, s"import_in_progress_${network}").flatMap { r =>
+          userValueRepo.getValueStringOpt(request.userId, UserValueName.importInProgress(network)).flatMap { r =>
             if (r == "false") {
               None
             } else {
@@ -440,7 +461,7 @@ class UserController @Inject() (
     val finishedImportAnnounced = new AtomicBoolean(false)
     def check(): Option[JsValue] = {
       val v = db.readOnlyMaster { implicit session =>
-        userValueRepo.getValueStringOpt(request.userId, s"import_in_progress_${network}")
+        userValueRepo.getValueStringOpt(request.userId, UserValueName.importInProgress(network))
       }
       if (v.isEmpty && clock.now.minusSeconds(20).compareTo(startTime) > 0) {
         None

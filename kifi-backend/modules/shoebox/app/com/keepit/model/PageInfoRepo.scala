@@ -49,7 +49,7 @@ class PageInfoRepoImpl @Inject() (
   }
 
   override def invalidateCache(model: PageInfo)(implicit session: RSession): Unit = {
-    if (model.state == ImageInfoStates.INACTIVE) {
+    if (model.state == PageInfoStates.INACTIVE) {
       deleteCache(model)
     } else {
       pageInfoUriCache.set(PageInfoUriKey(model.uriId), model)

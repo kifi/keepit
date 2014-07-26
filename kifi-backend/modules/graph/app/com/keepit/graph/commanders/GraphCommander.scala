@@ -17,18 +17,18 @@ class GraphCommander @Inject() (
   private val maxResults = 500
 
   private def getUriScoreList(vertexKind: String, vertexId: Long, journal: TeleportationJournal, avoidFirstDegreeConnections: Boolean): Seq[ConnectedUriScore] = {
-    val ls = collisionCommander.getUris(vertexKind, vertexId, journal, avoidFirstDegreeConnections).toList.sortBy(_._2)
+    val ls = collisionCommander.getUris(vertexKind, vertexId, journal, avoidFirstDegreeConnections).toList.sortWith(_._2 > _._2)
     ls.take(maxResults).map {
       case (uriId, count) =>
-        ConnectedUriScore(uriId, count / ls.head._2)
+        ConnectedUriScore(uriId, count.toDouble / ls.head._2)
     }
   }
 
   private def getUsersScoreList(vertexKind: String, vertexId: Long, journal: TeleportationJournal, avoidFirstDegreeConnections: Boolean): Seq[ConnectedUserScore] = {
-    val ls = collisionCommander.getUsers(vertexKind, vertexId, journal, avoidFirstDegreeConnections).toList.sortBy(_._2)
+    val ls = collisionCommander.getUsers(vertexKind, vertexId, journal, avoidFirstDegreeConnections).toList.sortWith(_._2 > _._2)
     ls.take(maxResults).map {
       case (userId, count) =>
-        ConnectedUserScore(userId, count / ls.head._2)
+        ConnectedUserScore(userId, count.toDouble / ls.head._2)
     }
   }
 
@@ -40,7 +40,7 @@ class GraphCommander @Inject() (
     (urisList, usersList)
   }
 
-  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean): Seq[ConnectedUriScore] = {
+  def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Seq[ConnectedUriScore] = {
     val wanderLust = Wanderlust.discovery(userId)
     val journal = wanderingCommander.wander(wanderLust)
 
@@ -51,7 +51,7 @@ class GraphCommander @Inject() (
     }
   }
 
-  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean): Seq[ConnectedUserScore] = {
+  def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Seq[ConnectedUserScore] = {
     val wanderLust = Wanderlust.discovery(userId)
     val journal = wanderingCommander.wander(wanderLust)
 

@@ -21,6 +21,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
         val uriTopicRepo = inject[URILDATopicRepo]
         val feat = URILDATopic(
           uriId = Id[NormalizedURI](1),
+          numOfWords = 100,
           firstTopic = Some(LDATopic(2)),
           secondTopic = Some(LDATopic(1)),
           thirdTopic = None,
@@ -31,7 +32,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           state = URILDATopicStates.ACTIVE
         )
 
-        val feat2 = URILDATopic(uriId = Id[NormalizedURI](2), version = ModelVersion[DenseLDA](1), uriSeq = SequenceNumber[NormalizedURI](2), state = URILDATopicStates.NOT_APPLICABLE)
+        val feat2 = URILDATopic(uriId = Id[NormalizedURI](2), version = ModelVersion[DenseLDA](1), numOfWords = 0, uriSeq = SequenceNumber[NormalizedURI](2), state = URILDATopicStates.NOT_APPLICABLE)
 
         db.readWrite { implicit s =>
           uriTopicRepo.save(feat);
@@ -71,6 +72,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           (1 to 5).map { i =>
             uriTopicRepo.save(URILDATopic(
               uriId = Id[NormalizedURI](i),
+              numOfWords = 100,
               firstTopic = Some(LDATopic(2)),
               secondTopic = Some(LDATopic(1)),
               thirdTopic = None,
@@ -84,6 +86,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           (6 to 10).map { i =>
             uriTopicRepo.save(URILDATopic(
               uriId = Id[NormalizedURI](i),
+              numOfWords = 100,
               firstTopic = Some(LDATopic(2)),
               secondTopic = Some(LDATopic(1)),
               thirdTopic = None,
@@ -101,6 +104,13 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           uriTopicRepo.getHighestSeqNumber(ModelVersion[DenseLDA](3)).value === 0
         }
 
+        db.readOnlyMaster { implicit s =>
+          uriTopicRepo.getFeaturesSince(SequenceNumber[NormalizedURI](0), ModelVersion[DenseLDA](1), limit = 5).map { _.uriSeq.value } === List(1, 2, 3, 4, 5)
+          uriTopicRepo.getFeaturesSince(SequenceNumber[NormalizedURI](7), ModelVersion[DenseLDA](2), limit = 5).map { _.uriSeq.value } === List(8, 9, 10)
+          uriTopicRepo.getFeaturesSince(SequenceNumber[NormalizedURI](10), ModelVersion[DenseLDA](2), limit = 5).map { _.uriSeq.value } === List()
+          uriTopicRepo.getFeaturesSince(SequenceNumber[NormalizedURI](0), ModelVersion[DenseLDA](3), limit = 5).map { _.uriSeq.value } === List()
+        }
+
       }
     }
   }
@@ -115,7 +125,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
         id = None,
         createdAt = currentDateTime,
         updatedAt = currentDateTime,
-        keptAt = currentDateTime,
+        keptAt = new DateTime(2014, 7, 1, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
         keepId = Id[Keep](1),
         userId = Id[User](1),
         uriId = Id[NormalizedURI](1),
@@ -128,7 +138,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           id = None,
           createdAt = currentDateTime,
           updatedAt = currentDateTime,
-          keptAt = currentDateTime,
+          keptAt = new DateTime(2014, 7, 20, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
           keepId = Id[Keep](2),
           userId = Id[User](1),
           uriId = Id[NormalizedURI](2),
@@ -142,7 +152,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           id = None,
           createdAt = currentDateTime,
           updatedAt = currentDateTime,
-          keptAt = currentDateTime,
+          keptAt = new DateTime(2014, 7, 20, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE),
           keepId = Id[Keep](3),
           userId = Id[User](1),
           uriId = Id[NormalizedURI](3),
@@ -159,6 +169,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           uriId = Id[NormalizedURI](1),
           uriSeq = SequenceNumber[NormalizedURI](1L),
           version = ModelVersion[DenseLDA](1),
+          numOfWords = 100,
           firstTopic = Some(LDATopic(1)),
           state = URILDATopicStates.ACTIVE
         ),
@@ -167,6 +178,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           uriId = Id[NormalizedURI](2),
           uriSeq = SequenceNumber[NormalizedURI](2L),
           version = ModelVersion[DenseLDA](1),
+          numOfWords = 100,
           firstTopic = Some(LDATopic(2)),
           state = URILDATopicStates.ACTIVE
         )
@@ -178,6 +190,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
 
         topicRepo.getUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1)).toList === List((LDATopic(1), 1), (LDATopic(2), 1))
         topicRepo.getUserTopicHistograms(Id[User](2), ModelVersion[DenseLDA](1)).toList === List()
+        topicRepo.getUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1), after = Some(new DateTime(2014, 7, 10, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE))).toList === List((LDATopic(2), 1))
 
       }
     }
@@ -192,6 +205,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           uriTopicRepo.save(URILDATopic(
             uriId = Id[NormalizedURI](i),
             updatedAt = time.plusMinutes(i),
+            numOfWords = 100,
             firstTopic = Some(LDATopic(2)),
             secondTopic = Some(LDATopic(1)),
             thirdTopic = None,

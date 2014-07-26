@@ -24,6 +24,7 @@ import com.google.inject.{ Inject, Provides, Singleton }
 import org.apache.commons.io.FileUtils
 import java.io.File
 import play.api.Play._
+import com.keepit.search.graph.library.{ LibraryIndexer, LibraryIndexerPluginImpl, LibraryIndexerPlugin }
 
 trait IndexModule extends ScalaModule with Logging {
 
@@ -65,6 +66,7 @@ trait IndexModule extends ScalaModule with Logging {
     bind[SpellIndexerPlugin].to[SpellIndexerPluginImpl].in[AppScoped]
     bind[UserGraphPlugin].to[UserGraphPluginImpl].in[AppScoped]
     bind[SearchFriendGraphPlugin].to[SearchFriendGraphPluginImpl].in[AppScoped]
+    // bind[LibraryIndexerPlugin].to[LibraryIndexerPluginImpl].in[AppScoped] todo(Léo): activate once Shoebox is ready
   }
 
   private[this] val noShard = Shard[Any](0, 1)
@@ -192,6 +194,13 @@ trait IndexModule extends ScalaModule with Logging {
   def spellIndexer(backup: IndexStore, shardedArticleIndexer: ShardedArticleIndexer): SpellIndexer = {
     val spellDir = getIndexDirectory("index.spell.directory", noShard, backup)
     SpellIndexer(spellDir, shardedArticleIndexer)
+  }
+
+  @Provides @Singleton
+  def libraryIndexer(backup: IndexStore, shoebox: ShoeboxServiceClient, airbrake: AirbrakeNotifier): LibraryIndexer = {
+    val libraryDir = getIndexDirectory("index.library.directory", noShard, backup)
+    log.info(s"storing library index in $libraryDir")
+    new LibraryIndexer(libraryDir, shoebox, airbrake)
   }
 
 }

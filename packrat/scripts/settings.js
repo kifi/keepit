@@ -86,7 +86,7 @@ panes.settings = function () {
   }
 
   function onClickX() {
-    pane.back('/messages:all');
+    pane.back();
   }
 
   function onScroll() {

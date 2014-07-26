@@ -417,7 +417,7 @@ class ShoeboxController @Inject() (
 
   def getLatestKeep() = Action(parse.json) { request =>
     val url = request.body.as[String]
-    val bookmarkOpt = db.readOnlyReplica(2) { implicit session =>
+    val bookmarkOpt = db.readOnlyMaster(2) { implicit session =>
       latestKeepUrlCache.getOrElseOpt(LatestKeepUrlKey(url)) {
         normUriRepo.getByNormalizedUrl(url).flatMap { uri =>
           keepRepo.latestKeep(uri.id.get, url)
@@ -585,13 +585,13 @@ class ShoeboxController @Inject() (
     Ok(JsArray(requests.map { x => Json.toJson(x) }))
   }
 
-  def setUserValue(userId: Id[User], key: String) = SafeAsyncAction(parse.tolerantJson) { request =>
+  def setUserValue(userId: Id[User], key: UserValueName) = SafeAsyncAction(parse.tolerantJson) { request =>
     val value = request.body.as[String]
     db.readWrite(attempts = 3) { implicit session => userValueRepo.setValue(userId, key, value) }
     Ok
   }
 
-  def getUserValue(userId: Id[User], key: String) = SafeAsyncAction { request =>
+  def getUserValue(userId: Id[User], key: UserValueName) = SafeAsyncAction { request =>
     val value = db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(userId, key) } //using cache
     Ok(Json.toJson(value))
   }

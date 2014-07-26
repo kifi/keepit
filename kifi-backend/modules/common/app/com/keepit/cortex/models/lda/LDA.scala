@@ -6,6 +6,7 @@ import com.keepit.model.NormalizedURI
 import com.keepit.common.db.{ SequenceNumber, Id }
 import play.api.libs.functional.syntax._
 import com.keepit.cortex.core.Versionable
+import com.kifi.macros.json
 
 trait LDA extends StatModel
 
@@ -73,3 +74,6 @@ object LDATopicInfo {
 case class LDATopicDetail(
   topicId: Int,
   sampleURIs: Seq[NormalizedURI])
+
+@json case class LDAUserURIInterestScore(score: Float, confidence: Float) // confidence: [0,1]. higher better
+@json case class LDAUserURIInterestScores(global: Option[LDAUserURIInterestScore], recency: Option[LDAUserURIInterestScore])

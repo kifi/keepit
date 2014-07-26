@@ -20,7 +20,7 @@ object SearchConfig {
       "phraseBoost" -> "0.33",
       "siteBoost" -> "1.0",
       "concatBoost" -> "0.8",
-      "homePageBoost" -> "0.1",
+      "homePageBoost" -> "0.2",
       "similarity" -> "default",
       "maxResultClickBoost" -> "20.0",
       "minMyBookmarks" -> "2",

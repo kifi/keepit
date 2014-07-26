@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxSecureSocialModule }
+import com.keepit.common.social.{ FakeSocialGraphModule, TestShoeboxAppSecureSocialModule }
 import com.keepit.social.{ ProdShoeboxSecureSocialModule, SocialId, SocialNetworks }
 import SocialNetworks.FACEBOOK
 import com.keepit.common.time._

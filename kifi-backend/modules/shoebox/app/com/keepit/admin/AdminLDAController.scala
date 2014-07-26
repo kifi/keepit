@@ -8,7 +8,7 @@ import views.html
 import play.api.libs.json._
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import com.keepit.cortex.models.lda.{ LDATopicDetail, LDATopicConfiguration }
+import com.keepit.cortex.models.lda.{ LDAUserURIInterestScores, LDATopicConfigurations, LDATopicDetail, LDATopicConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.model.{ NormalizedURIRepo, NormalizedURI, KeepRepo, User }
 import com.keepit.common.db.Id
@@ -22,6 +22,8 @@ class AdminLDAController @Inject() (
     db: Database,
     uriRepo: NormalizedURIRepo,
     keepRepo: KeepRepo) extends AdminController(actionAuthenticator) {
+
+  var ldaConf = Await.result(cortex.ldaConfigurations, 5 seconds)
 
   val MAX_WIDTH = 15
 
@@ -42,6 +44,8 @@ class AdminLDAController @Inject() (
     }.mkString("\n")
   }
 
+  private def topicName(topicId: Int): String = ldaConf.configs(topicId.toString).topicName
+
   def showTopics() = AdminHtmlAction.authenticated { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val fromId = body.get("fromId").get.toInt
@@ -58,8 +62,12 @@ class AdminLDAController @Inject() (
     Ok(js)
   }
 
-  private def showTopTopicDistributions(arr: Array[Float]): String = {
-    arr.zipWithIndex.sortBy(-1f * _._1).take(5).map { case (score, topicId) => topicId + ": " + "%.3f".format(score) }.mkString(", ")
+  private def showTopTopicDistributions(arr: Array[Float], topK: Int = 5): String = {
+    arr.zipWithIndex.sortBy(-1f * _._1).take(topK).map {
+      case (score, topicId) =>
+        val tname = topicName(topicId)
+        s"$topicId ($tname) : " + "%.3f".format(score)
+    }.mkString(", ")
   }
 
   def wordTopic() = AdminHtmlAction.authenticated { implicit request =>
@@ -78,17 +86,12 @@ class AdminLDAController @Inject() (
   def saveEdits() = AdminHtmlAction.authenticated(parse.tolerantJson) { implicit request =>
     val js = request.body
 
-    println(js)
-
     val ids = (js \ "topic_ids").as[JsArray].value.map { _.as[String] }
     val names = (js \ "topic_names").as[JsArray].value.map { _.as[String] }
     val isActive = (js \ "topic_states").as[JsArray].value.map { _.as[Boolean] }
 
-    println(ids)
-    println(names)
-    println(isActive)
-
     val config = (ids, names, isActive).zipped.map { case (id, name, active) => id -> LDATopicConfiguration(name, active) }.toMap
+    ldaConf = LDATopicConfigurations(ldaConf.configs ++ config)
     cortex.saveEdits(config)
     Ok
   }
@@ -118,20 +121,21 @@ class AdminLDAController @Inject() (
     val userId = body.get("userId").get.toLong
     val uriId = body.get("uriId").get.toLong
     val score = cortex.userUriInterest(Id[User](userId), Id[NormalizedURI](uriId))
-    score.map { s =>
-      Ok(s.map { _.toString } getOrElse "n/a")
+    score.map { score =>
+      val (globalScore, recencyScore) = (score.global, score.recency)
+      val globalMsg = "globalScore: " + globalScore.map { _.toString }.getOrElse("n/a")
+      val recencyMsg = "recencyScore: " + recencyScore.map { _.toString }.getOrElse("n/a")
+      Ok(globalMsg + "; " + recencyMsg)
     }
   }
 
   def userTopicMean() = AdminHtmlAction.authenticatedAsync { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = body.get("userId").get.toLong
-    val topK = 10
 
     cortex.userTopicMean(Id[User](userId)).map { meanOpt =>
       val res = meanOpt.map { arr =>
-        val tops = arr.zipWithIndex.toArray.sortBy(-1f * _._1).take(topK)
-        tops.map { case (score, topic) => (topic, score) }.mkString(", ")
+        showTopTopicDistributions(arr, topK = 10)
       } getOrElse "not enough information"
       Ok(Json.toJson(res))
     }

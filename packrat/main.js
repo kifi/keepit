@@ -1879,19 +1879,9 @@ function kififyWithPageData(tab, d) {
         log('[initTab]', tab.id, 'restricted');
       } else if (ruleSet.rules.shown && d.shown) {
         log('[initTab]', tab.id, 'shown before');
-      } else {
-        var focused = api.tabs.isFocused(tab);
-        if (ruleSet.rules.scroll) {
-          api.tabs.emit(tab, 'scroll_rule', ruleSet.rules.scroll, {queue: 1});
-        }
-        if ((ruleSet.rules.focus || [])[0] != null) {
-          tab.buttonSec = ruleSet.rules.focus[0];
-          if (focused) scheduleAutoEngage(tab, 'button');
-        }
-        if (d.keepers.length) {
-          tab.keepersSec = 20;
-          if (focused) scheduleAutoEngage(tab, 'keepers');
-        }
+      } else if (d.keepers.length) {
+        tab.keepersSec = 20;
+        if (api.tabs.isFocused(tab)) scheduleAutoEngage(tab, 'keepers');
       }
     }
   }
@@ -2050,13 +2040,12 @@ api.tabs.on.focus.add(function(tab) {
   }
   delete tab.focusCallbacks;
   kifify(tab);
-  scheduleAutoEngage(tab, 'button');
   scheduleAutoEngage(tab, 'keepers');
 });
 
 api.tabs.on.blur.add(function(tab) {
   log("#b8a", "[tabs.on.blur] %i %o", tab.id, tab);
-  ['button', 'keepers'].forEach(clearAutoEngageTimer.bind(null, tab));
+  clearAutoEngageTimer(tab, 'keepers');
 });
 
 api.tabs.on.loading.add(function(tab) {
@@ -2095,7 +2084,7 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   if (tabsTagging.length) {
     tabsTagging = tabsTagging.filter(idIsNot(tab.id));
   }
-  ['button', 'keepers'].forEach(clearAutoEngageTimer.bind(null, tab));
+  clearAutoEngageTimer(tab, 'keepers');
   delete tab.nUri;
   delete tab.count;
   delete tab.engaged;

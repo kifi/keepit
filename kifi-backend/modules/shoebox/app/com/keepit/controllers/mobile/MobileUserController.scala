@@ -203,7 +203,7 @@ class MobileUserController @Inject() (
     }
   }
 
-  private val MobilePrefNames = Set("show_delighted_question")
+  private val MobilePrefNames = Set(UserValueName.SHOW_DELIGHTED_QUESTION)
 
   def getPrefs() = JsonAction.authenticatedAsync { request =>
     // Make sure the user's last active date has been updated before returning the result

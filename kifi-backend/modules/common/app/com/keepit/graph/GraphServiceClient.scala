@@ -27,8 +27,8 @@ trait GraphServiceClient extends ServiceClient {
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, PrettyGraphState]]
   def getGraphKinds(): Future[GraphKinds]
   def wander(wanderlust: Wanderlust): Future[Collisions]
-  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
-  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
+  def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
+  def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
 }
 
 case class GraphCacheProvider @Inject() (
@@ -80,17 +80,17 @@ class GraphServiceClientImpl @Inject() (
     call(Graph.internal.wander(), payload, callTimeouts = longTimeout).map { response => response.json.as[Collisions] }
   }
 
-  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]] = {
+  def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]] = {
     cacheProvider.uriScoreCache.getOrElseFuture(ConnectedUriScoreCacheKey(userId, avoidFirstDegreeConnections)) {
-      call(Graph.internal.getListOfUriAndScorePairs(userId, avoidFirstDegreeConnections)).map { response =>
+      call(Graph.internal.getUriAndScores(userId, avoidFirstDegreeConnections)).map { response =>
         response.json.as[Seq[ConnectedUriScore]]
       }
     }
   }
 
-  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]] = {
+  def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]] = {
     cacheProvider.userScoreCache.getOrElseFuture(ConnectedUserScoreCacheKey(userId, avoidFirstDegreeConnections)) {
-      call(Graph.internal.getListOfUserAndScorePairs(userId, avoidFirstDegreeConnections)).map { response =>
+      call(Graph.internal.getUserAndScores(userId, avoidFirstDegreeConnections)).map { response =>
         response.json.as[Seq[ConnectedUserScore]]
       }
     }
