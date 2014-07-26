@@ -2,6 +2,7 @@ package com.keepit.cortex
 
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{ FortyTwoCachePlugin, InMemoryCachePlugin }
+import com.keepit.common.commanders.LDACommander
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.cortex.models.lda.{ LDAUserDbUpdatePlugin, LDADbUpdatePlugin, DenseLDATopicWords, LDAURIFeatureUpdatePlugin }
 import com.keepit.cortex.models.word2vec.RichWord2VecURIFeatureUpdatePlugin
@@ -29,7 +30,7 @@ trait CortexServices { self: FortyTwoGlobal =>
     require(injector.instance[LDADbUpdatePlugin] != null)
     require(injector.instance[LDAUserDbUpdatePlugin] != null)
     require(injector.instance[RichWord2VecURIFeatureUpdatePlugin] != null)
-    require(injector.instance[DenseLDATopicWords] != null)
+    require(injector.instance[LDACommander] != null)
     require(injector.instance[CortexDataIngestionPlugin] != null)
     require(POSTagger.enabled)
   }

@@ -546,7 +546,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
 
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
+  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = Future.successful(false)
 
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = {
     Future.successful(allUserFriendRequests.getOrElse(senderId, Seq()))
@@ -604,4 +604,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]] = Future.successful(Seq.empty)
 
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]] = Future.successful(Seq.empty)
+
+  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = Future.successful(Seq.empty)
 }

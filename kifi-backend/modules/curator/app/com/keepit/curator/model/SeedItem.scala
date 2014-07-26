@@ -3,6 +3,8 @@ package com.keepit.curator.model
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model.{ NormalizedURI, User }
 
+import com.kifi.macros.json
+
 import org.joda.time.DateTime
 
 sealed trait Keepers
@@ -15,16 +17,17 @@ case class SeedItem(
   userId: Id[User],
   uriId: Id[NormalizedURI],
   seq: SequenceNumber[SeedItem],
+  priorScore: Option[Float],
   timesKept: Int,
   lastSeen: DateTime,
   keepers: Keepers)
 
-case class UriScores(
-  socialScore: Float, //s
-  popularityScore: Float, //k
-  overallInterestScore: Float, //i
-  recencyScore: Float, //r
-  priorScore: Float //p
-  )
+@json case class UriScores(
+  socialScore: Float,
+  popularityScore: Float,
+  overallInterestScore: Float,
+  recentInterestScore: Float,
+  recencyScore: Float,
+  priorScore: Float)
 
 case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores)

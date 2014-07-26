@@ -55,6 +55,7 @@ var pane = pane || function () {  // idempotent for Chrome
   }
 
   function showPane(locator, back, redirected) {
+    locator = locator || '/messages:unread';
     var locatorCurr = paneHistory && paneHistory[0];
     if (locator === locatorCurr) {
       log('[showPane] already at', locator);
@@ -422,7 +423,7 @@ var pane = pane || function () {  // idempotent for Chrome
       log('[pane:compose]', trigger);
       api.require('scripts/compose_toaster.js', function () {
         if (!$pane) {
-          showPane(locator || '/messages:all');
+          showPane(locator);
         }
         if ($pane.data('state') !== 'closing') {
           if (trigger === 'deepLink' && toaster.showing()) return;  // don't clobber form

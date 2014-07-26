@@ -32,10 +32,6 @@
 .kifi-keeper.kifi-tiny {
   width: 42px;
 }
-.kifi-keeper.kifi-auto {
-  width: 136px;
-  transition: width 200ms ease-out;
-}
 .kifi-keeper.kifi-wide {
   width: 310px;
   transition: width 100ms ease-out;
@@ -48,9 +44,6 @@
   width: 0;
   opacity: 0;
   transition: width 100ms ease-in, opacity 60ms ease-in 40ms;
-}
-.kifi-keeper.kifi-hiding.kifi-auto {
-  transition: width 200ms ease-in, opacity 120ms ease-in 80ms;
 }
 .kifi-keeper-x {
   position: absolute;
@@ -560,9 +553,6 @@ html[kifi-with-pane] .kifi-keep-card {
   font-size: 0;
   line-height: 0;
   text-align: right; /* keeps contents still during transition */
-}
-.kifi-keeper.kifi-auto .kifi-dock {
-  display: none;
 }
 .kifi-dock-btn {
   display: inline-block !important;

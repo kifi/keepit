@@ -24,6 +24,7 @@ GET     /internal/cortex/lda/confs                                              
 POST    /internal/cortex/lda/saveEdits                                              @com.keepit.controllers.cortex.LDAController.saveEdits
 POST    /internal/cortex/lda/ldaFeatures                                            @com.keepit.controllers.cortex.LDAController.getLDAFeatures
 GET     /internal/cortex/lda/userUriInterest                                        @com.keepit.controllers.cortex.LDAController.userUriInterest(userId: Id[User], uriId: Id[NormalizedURI])
+POST    /internal/cortex/lda/batchUserUrisInterests                                 @com.keepit.controllers.cortex.LDAController.batchUserURIsInterests
 GET     /internal/cortex/lda/userTopicMean                                          @com.keepit.controllers.cortex.LDAController.userTopicMean(userId: Id[User])
 GET     /internal/cortex/lda/sampleURIs                                             @com.keepit.controllers.cortex.LDAController.sampleURIs(topicId: Int)
 

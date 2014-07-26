@@ -126,6 +126,7 @@ class UserCommander @Inject() (
     fortytwoConfig: FortyTwoConfig,
     bookmarkClicksRepo: UserBookmarkClicksRepo,
     userImageUrlCache: UserImageUrlCache,
+    libraryCommander: LibraryCommander,
     airbrake: AirbrakeNotifier) extends Logging {
 
   def updateUserDescription(userId: Id[User], description: String): Unit = {
@@ -155,7 +156,7 @@ class UserCommander @Inject() (
   }
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
-    val basicUsers = db.readOnlyReplica { implicit s =>
+    val basicUsers = db.readOnlyMaster { implicit s =>
       if (canMessageAllUsers(user.id.get)) {
         userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
           .collect { case u if u.id.get != user.id.get => BasicUser.fromUser(u) }.toSet
@@ -243,7 +244,7 @@ class UserCommander @Inject() (
 
   def createUser(firstName: String, lastName: String, addrOpt: Option[EmailAddress], state: State[User]) = {
     val newUser = db.readWrite { implicit session =>
-      userRepo.save(User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state, username = None)) // todo(andrew): add usernames for library purposes
+      userRepo.save(User(firstName = firstName, lastName = lastName, primaryEmail = addrOpt, state = state, username = None))
     }
     SafeFuture {
       db.readWrite { implicit session =>
@@ -252,6 +253,11 @@ class UserCommander @Inject() (
       searchClient.warmUpUser(newUser.id.get)
       searchClient.updateUserIndex()
     }
+    db.readWrite { implicit session =>
+      autoSetUsername(newUser, readOnly = false)
+    }
+    libraryCommander.internSystemGeneratedLibraries(newUser.id.get)
+
     newUser
   }
 
@@ -714,8 +720,7 @@ class UserCommander @Inject() (
       else if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
         heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
           val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
-          (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate) &&
-            experiments.contains(ExperimentType.DELIGHTED_SURVEY)
+          (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate)
         }
       } else Future.successful(false)
       shouldShowDelightedQuestionFut map { shouldShowDelightedQuestion =>
@@ -784,23 +789,51 @@ class UserCommander @Inject() (
     heimdalClient.cancelDelightedSurvey(userId, user.externalId, user.primaryEmail, user.fullName)
   }
 
-  // any letter or digit, followed by any letter, digit, ., _, or - (1 to 30 times)
-  def setUsername(userId: Id[User], username: Username, overrideRestrictions: Boolean): Either[String, Username] = {
+  def setUsername(userId: Id[User], username: Username, overrideRestrictions: Boolean = false, readOnly: Boolean = false): Either[String, Username] = {
     if (overrideRestrictions || UsernameOps.isValid(username.value)) {
-      val existingUser = db.readOnlyMaster { implicit session =>
-        userRepo.getNormalizedUsername(UsernameOps.normalize(username.value))
-      }
-      if (existingUser.isEmpty || existingUser.get.id.get == userId) {
-        db.readWrite { implicit session =>
-          userRepo.save(userRepo.get(userId).copy(username = Some(username), normalizedUsername = Some(UsernameOps.normalize(username.value))))
-        }
-        Right(username)
-      } else {
-        Left("username_exists")
-      }
+      db.readWrite { implicit session =>
+        val existingUser = userRepo.getNormalizedUsername(UsernameOps.normalize(username.value))
 
+        if (existingUser.isEmpty || existingUser.get.id.get == userId) {
+          if (!readOnly) {
+            userRepo.save(userRepo.get(userId).copy(username = Some(username), normalizedUsername = Some(UsernameOps.normalize(username.value))))
+          }
+          Right(username)
+        } else {
+          Left("username_exists")
+        }
+      }
     } else {
       Left("invalid_username")
+    }
+  }
+
+  def autoSetUsername(user: User, readOnly: Boolean): Option[Username] = {
+    val name = UsernameOps.lettersOnly((user.firstName + user.lastName).toLowerCase)
+    val seed = if (name.length < 4) {
+      name + Seq.fill(4 - name.length)(0)
+    } else name
+
+    val candidates = seed :: (1 to 30).map(n => seed + scala.util.Random.nextInt(999)).toList
+    var keepTrying = true
+    var selectedUsername: Option[Username] = None
+    var i = 0
+    while (keepTrying && i < 30) {
+      setUsername(user.id.get, Username(candidates(i)), readOnly = readOnly) match {
+        case Right(username) =>
+          keepTrying = false
+          selectedUsername = Some(username)
+        case Left(_) =>
+          i += 1
+      }
+    }
+    selectedUsername
+  }
+
+  def removeUsername(userId: Id[User]) = {
+    db.readWrite { implicit session =>
+      val user = userRepo.get(userId)
+      userRepo.save(user.copy(username = None, normalizedUsername = None))
     }
   }
 }
@@ -850,13 +883,18 @@ object UsernameOps {
     val normalized = Normalizer.normalize(username, Normalizer.Form.NFKD)
     normalized.replaceAll("[\\p{InCombiningDiacriticalMarks}]", "")
   }
-  private val letterRegex = """\p{L}?\d?""".r
+  private val letterDigitRegex = """\p{L}?\d?""".r
   private def removePunctuation(username: String): String = {
+    (letterDigitRegex findAllIn username).mkString("")
+  }
+
+  private val letterRegex = """\p{L}""".r
+  def lettersOnly(username: String) = {
     (letterRegex findAllIn username).mkString("")
   }
 
   def normalize(username: String): String = {
-    removePunctuation(engrishify(username))
+    removePunctuation(engrishify(username.toLowerCase))
   }
 
   // any letter or digit, followed by any letter, digit, ., _, or - (1 to 30 times)

@@ -66,7 +66,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getHighestUriSeq(): Future[SequenceNumber[NormalizedURI]]
   def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int): Future[Seq[User]]
   def getBookmarks(userId: Id[User]): Future[Seq[Keep]]
-  def getBookmarksChanged(seqNum: SequenceNumber[Keep], fertchSize: Int): Future[Seq[Keep]]
+  def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[Keep]]
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Keep]]
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiments: Future[Seq[SearchConfigExperiment]]
@@ -125,7 +125,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
-  def getLibrariesWithMembersChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[(Library, Seq[LibraryMembership])]] = Future.successful(Seq.empty) // todo(Léo): implement
+  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -848,4 +848,11 @@ class ShoeboxServiceClientImpl @Inject() (
       r.json.as[Seq[EmailAccountUpdate]]
     }
   }
+
+  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = {
+    call(Shoebox.internal.getLibrariesAndMembershipsChanged(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
+      r.json.as[Seq[LibraryAndMemberships]]
+    }
+  }
+
 }

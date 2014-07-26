@@ -264,6 +264,7 @@ POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryController.joinLibrary(id: PublicId[LibraryInvite])
 POST    /site/libraries/:id/decline @com.keepit.controllers.website.LibraryController.declineLibrary(id: PublicId[LibraryInvite])
 POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryController.leaveLibrary(id: PublicId[Library])
+GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library])
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
@@ -275,6 +276,7 @@ GET     /site/user/import-status    @com.keepit.controllers.website.UserControll
 GET     /site/user/import-check/:network  @com.keepit.controllers.website.UserController.checkIfImporting(network: String, callback: String)
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
 GET     /site/user/abooks           @com.keepit.controllers.website.UserController.abookInfo()
+GET     /site/user/:id              @com.keepit.controllers.website.UserController.basicUserInfo(id: ExternalId[User])
 GET     /site/user/:id/networks     @com.keepit.controllers.website.UserController.friendNetworkInfo(id: ExternalId[User])
 POST    /site/user/:id/unfriend     @com.keepit.controllers.website.UserController.unfriend(id: ExternalId[User])
 POST    /site/user/:id/friend       @com.keepit.controllers.website.UserController.friend(id: ExternalId[User])
@@ -394,6 +396,7 @@ GET     /admin/data/patterns      @com.keepit.controllers.admin.UrlController.ge
 POST    /admin/data/patterns      @com.keepit.controllers.admin.UrlController.savePatterns
 GET     /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.getProxies
 POST    /admin/data/proxies      @com.keepit.controllers.admin.ScraperAdminController.saveProxies
+GET     /admin/data/scraper/status      @com.keepit.controllers.admin.ScraperAdminController.status
 GET     /admin/data/scrape              @com.keepit.controllers.admin.ScraperAdminController.searchScraper
 GET     /admin/data/scrapeArticle       @com.keepit.controllers.admin.ScraperAdminController.scrapeArticle(url:String ?= "")
 GET     /admin/data/scraperRequests     @com.keepit.controllers.admin.ScraperAdminController.scraperRequests(stateFilter: Option[String] ?= None)
@@ -420,6 +423,7 @@ GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.
 GET     /admin/users/reindex        @com.keepit.controllers.admin.AdminUserIndexController.reindex()
 
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
+POST    /admin/users/autoSetUsernames   @com.keepit.controllers.admin.AdminUserController.autoSetUsernames(startingUserId: Id[User], endingUserId: Id[User], readOnly: Boolean ?= true)
 GET     /admin/realUsers            @com.keepit.controllers.admin.AdminUserController.allRegisteredUsersView
 GET     /admin/fakeUsers            @com.keepit.controllers.admin.AdminUserController.allFakeUsersView
 POST    /admin/users/merge          @com.keepit.controllers.admin.AdminUserController.merge
@@ -450,6 +454,7 @@ POST    /admin/user/:id/deactivate  @com.keepit.controllers.admin.AdminUserContr
 GET     /admin/user/:id/mixpanel/reset    @com.keepit.controllers.admin.AdminUserController.resetMixpanelProfile(id: Id[User])
 POST    /admin/user/:id/uservalue   @com.keepit.controllers.admin.AdminUserController.userValue(id: Id[User])
 POST    /admin/user/:id/username   @com.keepit.controllers.admin.AdminUserController.setUsername(id: Id[User], username: String, overrideRestrictions: Boolean ?= false)
+DELETE  /admin/user/:id/username    @com.keepit.controllers.admin.AdminUserController.removeUsername(id: Id[User])
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
 POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
@@ -517,8 +522,9 @@ POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminC
 POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
 
 
-GET     /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
+POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
 GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
+POST    /admin/libraries/internForAllUsers   @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
 
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
@@ -650,6 +656,7 @@ GET     /internal/shoebox/database/getSearchFriendsChanged     @com.keepit.contr
 GET     /internal/shoebox/database/getIndexableSocialConnections   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableSocialUserInfos   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int)
 GET     /internal/shoebox/database/getEmailAccountUpdates       @com.keepit.controllers.internal.ShoeboxDataPipeController.getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int)
+GET     /internal/shoebox/database/getLibrariesAndMembershipsChanged       @com.keepit.controllers.internal.ShoeboxDataPipeController.getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int)
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.ext.ExtDeepLinkController.getDeepUrl()

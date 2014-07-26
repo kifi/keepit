@@ -55,14 +55,18 @@ class LibraryInviteRepoImpl @Inject() (
   }
 
   override def deleteCache(libInv: LibraryInvite)(implicit session: RSession): Unit = {
-    inviteIdCache.remove(LibraryInviteIdKey(libInv.id.get))
+    libInv.id.map { id =>
+      inviteIdCache.remove(LibraryInviteIdKey(id))
+    }
   }
 
   override def invalidateCache(libInv: LibraryInvite)(implicit session: RSession): Unit = {
-    if (libInv.state == LibraryInviteStates.INACTIVE) {
-      deleteCache(libInv)
-    } else {
-      inviteIdCache.set(LibraryInviteIdKey(libInv.id.get), libInv)
+    libInv.id.map { id =>
+      if (libInv.state == LibraryInviteStates.INACTIVE) {
+        deleteCache(libInv)
+      } else {
+        inviteIdCache.set(LibraryInviteIdKey(id), libInv)
+      }
     }
   }
 
