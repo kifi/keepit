@@ -17,6 +17,7 @@ GET      /internal/abook/:userId/getABookRawInfos               @com.keepit.aboo
 POST     /internal/abook/:userId/getContactNameByEmail          @com.keepit.abook.controllers.ABookController.getContactNameByEmail(userId:Id[User])
 POST     /internal/abook/:userId/internKifiContact              @com.keepit.abook.controllers.ABookController.internKifiContact(userId:Id[User])
 GET      /internal/abook/:userId/getContacts                    @com.keepit.abook.controllers.ABookController.getContactsByUser(userId:Id[User], page: Int ?= 0, pageSize: Option[Int] ?= None)
+GET      /internal/abook/getContactsConnectedToEmailAddress     @com.keepit.abook.controllers.ABookController.getContactsConnectedToEmailAddress(email: EmailAddress)
 GET      /internal/abook/:userId/prefixQuery                    @com.keepit.abook.controllers.ABookController.prefixQuery(userId: Id[User], q: String, maxHits: Option[Int])
 
 GET      /internal/abook/:userId/getOAuth2Token                 @com.keepit.abook.controllers.ABookController.getOAuth2Token(userId:Id[User], abookId:Id[ABookInfo])
