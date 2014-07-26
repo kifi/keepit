@@ -836,6 +836,8 @@ class UserCommander @Inject() (
       userRepo.save(user.copy(username = None, normalizedUsername = None))
     }
   }
+
+  protected def userAvatarImageUrl(user: User) = s3ImageStore.avatarUrlByUser(user)
 }
 
 object DefaultKeeps {

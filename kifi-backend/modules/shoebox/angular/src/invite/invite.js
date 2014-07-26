@@ -222,4 +222,30 @@ angular.module('kifi.invite', [
       }
     };
   }
-]);
+])
+
+.directive('kfAutoFriendRequest', [
+  '$location', '$http', '$rootScope', 'routeService', 'inviteService', 'injectedState',
+  function ($location, $http, $rootScope, routeService, inviteService, injectedState) {
+    function link(scope, elem, attrs) {
+      var params = injectedState.state;
+      console.log(params);
+
+      if (_.isEmpty(params) || _.isEmpty(params.friend)) return;
+
+      $rootScope.autoAddFriendMessage = params.friend;
+      // rootScope is used because $location.hash() will drop the local scope
+      //inviteService.friendRequest(params.friend).then(function () {
+      //  var name = params.name || 'user';
+      //  $rootScope.autoAddFriendMessage = 'Friend request sent to ' + name;
+      //  $location.hash('');
+      //}, function () {
+      //  $rootScope.autoAddFriendMessage = 'There was an error sending the friend request';
+      //  $location.hash('');
+      //});
+    }
+    return { link: link };
+  }
+])
+
+;
