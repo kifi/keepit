@@ -8,23 +8,20 @@ var clone = require('gulp-clone');
 var css = require('css');
 var es = require('event-stream');
 var fs = require('fs');
-var jeditor = require("gulp-json-editor");
+var jeditor = require('gulp-json-editor');
 var lazypipe = require('lazypipe');
-var watch = require('gulp-watch');
-var plumber = require('gulp-plumber');
-var print = require('gulp-print');
-var nib = require('nib');
-var header = require('gulp-header');
 var zip = require('gulp-zip');
 var shell = require('gulp-shell');
 var concat = require('gulp-concat');
-var reloader = require('./gulp/livereload.js');
+var cache = require('gulp-cached');
+var remember = require('gulp-remember');
+var livereload = require('gulp-livereload');
+var gutil = require('gulp-util');
 var map = require('./gulp/vinyl-map.js');
 
 var isRelease = false;
 
 var outDir = 'out';
-var tmpDir = 'tmp';
 
 var adapterFiles = ['adapters/chrome/**', 'adapters/firefox/**', '!adapters/chrome/manifest.json', '!adapters/firefox/package.json'];
 var sharedAdapterFiles = ['adapters/shared/*.js', 'adapters/shared/*.min.map'];
@@ -41,6 +38,7 @@ var devBackgroundScripts = ['livereload.js']
 var tabScripts = ['scripts/**'];
 var htmlFiles = 'html/**/*.html';
 var styleFiles = 'styles/**/*.*';
+var distFiles = outDir + '/**';
 
 var contentScripts = {};
 var styleDeps = {};
@@ -57,7 +55,15 @@ var union = function () {
       return a.concat(b);
     }
   }, []);
-}
+};
+
+livereload.options.silent = true;
+var reload = function (file) {
+  var match = file.path.match(/\/(.*)$/);
+  gutil.log('Changed ' + (match ? gutil.colors.green(match[1]) : file.path));
+  // Reload the whole extension (partial reload not supported)
+  livereload.changed('*');
+};
 
 // gulp-json-editor but with prettier printing
 var jeditor = (function () {
@@ -72,30 +78,44 @@ var jeditor = (function () {
   }
 })();
 
+var chromeInjectionFooter = lazypipe()
+  .pipe(map, function (code, filename) {
+    var relativeFilename = filename.replace(new RegExp('^' + __dirname + '/' + outDir + '/chrome/'), '');
+    var shortName = relativeFilename.replace(/^scripts\//, '');
+    return code.toString() + 'api.injected["' + relativeFilename + '"]=1;\n//@ sourceURL=http://kifi/' + shortName + '\n';
+  });
+
 gulp.task('clean', function () {
-  return gulp.src([outDir, tmpDir], {read: false})
+  return gulp.src(outDir, {read: false})
     .pipe(rimraf());
 });
 
 gulp.task('copy', function () {
   var adapters = gulp.src(adapterFiles, {base: './adapters'})
+    .pipe(cache('adapters'))
+    .pipe(gulpif(['./adapters/chrome/scripts/*.js', '!**/iframes/**'], chromeInjectionFooter()))
     .pipe(gulp.dest(outDir));
 
   var shared = gulp.src(sharedAdapterFiles)
+    .pipe(cache('shared-adapters'))
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
   var resources = gulp.src(resourceFiles, { base: './' })
-    .pipe(gulp.dest(outDir + '/chrome'))
-    .pipe(gulp.dest(outDir + '/firefox/data'));
+    .pipe(cache('resources'))
+    .pipe(gulp.dest(outDir + '/firefox/data'))
+    .pipe(gulpif(['./scripts/\*\*/\*.js', '!**/iframes/**'], chromeInjectionFooter()))
+    .pipe(gulp.dest(outDir + '/chrome'));
 
   var rwsocket = gulp.src(rwsocketScript)
+    .pipe(cache('rwsocket'))
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/data/scripts/lib'));
 
   var scripts = isRelease ? backgroundScripts : backgroundScripts.concat(devBackgroundScripts);
 
   var background = gulp.src(scripts)
+    .pipe(cache('background'))
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
@@ -103,7 +123,7 @@ gulp.task('copy', function () {
 });
 
 gulp.task('html2js', function () {
-  var html2js = map(function (code, filename) {
+  var html2js = function (code, filename) {
     var contents = code.toString()
       .replace(/\s*\n\s*/g, ' ')
       .replace(/'/g, '\\\'')
@@ -115,30 +135,22 @@ gulp.task('html2js', function () {
       var baseFilename = relativeFilename.replace(/\.[^/.]+$/, ""); // strip file extension
       return 'render.cache[\'' + baseFilename + '\']=\'' + contents + '\';\n';
     }
-  });
+  };
 
   return gulp.src(htmlFiles, {base: './'})
-    .pipe(html2js)
+    .pipe(cache('html'))
+    .pipe(map(html2js))
     .pipe(rename(function (path) {
       path.extname = '.js';
     }))
+    .pipe(gulpif('!**/iframes/**', chromeInjectionFooter()))
     .pipe(gulp.dest(outDir + '/chrome/scripts'))
     .pipe(gulp.dest(outDir + '/firefox/data/scripts'));
 });
 
-gulp.task('scripts', ['html2js', 'copy'], function () {
-  var chromeInjectionFooter = map(function (code, filename) {
-    var relativeFilename = filename.replace(new RegExp('^' + __dirname + '/' + outDir + '/chrome/'), '');
-    var shortName = relativeFilename.replace(/^scripts\//, '');
-    return code.toString() + "api.injected['" + relativeFilename + "']=1;\n//@ sourceURL=http://kifi/" + shortName + '\n';
-  });
+gulp.task('scripts', ['html2js', 'copy']);
 
-  return gulp.src([outDir + '/chrome/scripts/**/*.js', '!**/iframes/**'], {base: outDir})
-    .pipe(chromeInjectionFooter)
-    .pipe(gulp.dest(outDir));
-});
-
-var stylesPipe = (function () {
+gulp.task('styles', function () {
 
   function insulateSelectors(rule) {
     if (rule.selectors) {
@@ -155,63 +167,37 @@ var stylesPipe = (function () {
     }
   }
 
-  var insulate = function () {
-    return map(function (code) {
-      // too slow (and probably wrong):
-      //return line.replace(/^(([^().]*|\([^)]*\))*)(\.[a-zA-Z0-9_-]*).*$/gm, '$1$3$3$3');
-
-      // reasonably fast (but slower than sed):
-      /*return code.toString().split('\n').map(function (line) {
-        return line.replace(/(\.[a-zA-Z0-9_-]*)(?![^(]*\))/m, '$1$1$1');
-      }).join('\n');*/
-
-      // a bit slower than above, but much safer and more readable/maintainable
-      var obj = css.parse(code.toString())
-      obj.stylesheet.rules.map(insulateRule);
-      return css.stringify(obj);
-    });
+  var insulate = function (code) {
+    var obj = css.parse(code.toString())
+    obj.stylesheet.rules.map(insulateRule);
+    return css.stringify(obj);
   };
 
-  var chromify = function () {
-    return map(function (code) {
-      return code.toString().replace(/\/images\//g, 'chrome-extension://__MSG_@@extension_id__/images/');
-    });
+  var chromify = function (code) {
+    return code.toString().replace(/\/images\//g, 'chrome-extension://__MSG_@@extension_id__/images/');
   };
 
-  var firefoxify = function () {
-    return map(function (code, filename) {
-      return code.toString().replace(/chrome-extension:\/\/__MSG_@@extension_id__\/images\//g, 'resource://kifi-at-42go-dot-com/kifi/data/images/');
-    });
-  }
+  var firefoxify = function (code) {
+    return code.toString().replace(/chrome-extension:\/\/__MSG_@@extension_id__\/images\//g, 'resource://kifi-at-42go-dot-com/kifi/data/images/');
+  };
 
   var mainStylesOnly = function (pipefun) {
-    return function () {
-      return gulpif(RegExp('^(?!' + __dirname + '/styles/(insulate\\.|iframes/))'), pipefun());
-    }
+    return gulpif(RegExp('^(?!' + __dirname + '/styles/(insulate\\.|iframes/))'), map(pipefun));
   }
 
-  return lazypipe()
-    .pipe(print, function (filepath) {
-      return 'Processing ' + filepath;
-    })
-    .pipe(function () {
-      return gulpif(/[.]less$/, less());
-    })
+  return gulp.src(styleFiles, {base: './'})
+    .pipe(cache('styles'))
+    .pipe(gulpif(/[.]less$/, less()))
     .pipe(mainStylesOnly(insulate))
     .pipe(mainStylesOnly(chromify))
-    .pipe(gulp.dest, outDir + '/chrome')
+    .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(mainStylesOnly(firefoxify)) // order is important! firefoxify operates on chromified styles (makes code simpler - one unique stream)
-    .pipe(gulp.dest, outDir + '/firefox/data');
-})();
-
-gulp.task('styles', function () {
-  return gulp.src(styleFiles, {base: './'})
-    .pipe(stylesPipe());
+    .pipe(gulp.dest(outDir + '/firefox/data'));
 });
 
-// Extracts metadata and creates corresponding snippet files
-gulp.task('extract-meta', function () {
-  var extractMeta = function (code, filename) {
+// Creates meta.js
+gulp.task('meta', function () {
+  var extractMetadata = function (code, filename) {
     var relativeFilename = filename.replace(new RegExp('^' + __dirname + '/'), '');
     var re = /^\/\/ @(match|require|asap)([^\S\n](.+))?$/gm;
     var content = code.toString();
@@ -240,59 +226,57 @@ gulp.task('extract-meta', function () {
       }
     }
 
-    return new Buffer((contentScriptRe ? 'contentScripts ' + relativeFilename + ' ' + asap + ' ' + contentScriptRe : '') + '\n' +
+    return (contentScriptRe ? 'contentScripts ' + relativeFilename + ' ' + asap + ' ' + contentScriptRe : '') + '\n' +
       styleDeps.map(function (styleDep) {
         return 'styleDeps ' + relativeFilename + ' ' + styleDep;
       }).join('\n') + '\n' +
       scriptDeps.map(function (scriptDep) {
         return 'scriptDeps ' + relativeFilename + ' ' + scriptDep;
-      }).join('\n') + '\n');
+      }).join('\n') + '\n';
   };
 
-  return gulp.src(tabScripts, {base: './'})
-    .pipe(map(extractMeta))
-    .pipe(gulp.dest(tmpDir));
-});
-
-// Creates meta.js from snippet files
-gulp.task('meta', ['extract-meta'], function () {
-  var snippets = gulp.src(tmpDir + '/scripts/**')
-    .pipe(concat('meta.js'))
-    .pipe(map(function (code) {
-      var content = code.toString();
-      var contentScriptItems = [];
-      var styleDeps = {};
-      var scriptDeps = {};
-      var re = /^(contentScripts|styleDeps|scriptDeps) (\S+) (.*)$/gm;
-      var contentScriptRe = /^(\d) (.*)$/;
-      var match = null;
-      while ((match = re.exec(content)) !== null) {
-        var type = match[1];
-        var filename = match[2];
-        var payload = match[3];
-        if (type === 'contentScripts') {
-          var payloadMatch = payload.match(contentScriptRe);
-          var asap = payloadMatch[1], regex = payloadMatch[2];
-          contentScriptItems.push('["' + filename + '", ' + regex + ', ' + asap + ']');
-        } else {
-          if (type === 'styleDeps') {
-            styleDeps[filename] = styleDeps[filename] || [];
-            styleDeps[filename].push(payload);
-          } else if (type === 'scriptDeps') {
-            scriptDeps[filename] = scriptDeps[filename] || [];
-            scriptDeps[filename].push(payload);
-          }
+  var buildMetaScript = function (code) {
+    var content = code.toString();
+    var contentScriptItems = [];
+    var styleDeps = {};
+    var scriptDeps = {};
+    var re = /^(contentScripts|styleDeps|scriptDeps) (\S+) (.*)$/gm;
+    var contentScriptRe = /^(\d) (.*)$/;
+    var match = null;
+    while ((match = re.exec(content)) !== null) {
+      var type = match[1];
+      var filename = match[2];
+      var payload = match[3];
+      if (type === 'contentScripts') {
+        var payloadMatch = payload.match(contentScriptRe);
+        var asap = payloadMatch[1], regex = payloadMatch[2];
+        contentScriptItems.push('["' + filename + '", ' + regex + ', ' + asap + ']');
+      } else {
+        if (type === 'styleDeps') {
+          styleDeps[filename] = styleDeps[filename] || [];
+          styleDeps[filename].push(payload);
+        } else if (type === 'scriptDeps') {
+          scriptDeps[filename] = scriptDeps[filename] || [];
+          scriptDeps[filename].push(payload);
         }
       }
-      var contentScriptsString = ' [\n  ' + contentScriptItems.join(',\n  ') + ']';
-      return JSON.stringify([
-        contentScriptsString,
-        JSON.stringify(styleDeps, undefined, 2),
-        JSON.stringify(scriptDeps, undefined, 2)
-      ]);
-    }))
+    }
+    var contentScriptsString = ' [\n  ' + contentScriptItems.join(',\n  ') + ']';
+    return JSON.stringify([
+      contentScriptsString,
+      JSON.stringify(styleDeps, undefined, 2),
+      JSON.stringify(scriptDeps, undefined, 2)
+    ]);
+  };
 
-  var chromeMeta = snippets.pipe(clone())
+  var preMeta = gulp.src(tabScripts, {base: './'})
+    .pipe(cache('meta'))
+    .pipe(map(extractMetadata))
+    .pipe(remember('meta'))
+    .pipe(concat('meta.js'))
+    .pipe(map(buildMetaScript));
+
+  var chromeMeta = preMeta.pipe(clone())
     .pipe(map(function (code) {
       var data = JSON.parse(code.toString());
       return 'meta = {\n  contentScripts:' + data[0] +
@@ -302,7 +286,7 @@ gulp.task('meta', ['extract-meta'], function () {
     }))
     .pipe(gulp.dest(outDir + '/chrome'));
 
-  var firefoxMeta = snippets.pipe(clone())
+  var firefoxMeta = preMeta.pipe(clone())
     .pipe(map(function (code) {
       var data = JSON.parse(code.toString());
       return 'exports.contentScripts =' + data[0] +
@@ -364,53 +348,20 @@ gulp.task('xpi-firefox', ['scripts', 'styles', 'meta', 'config'], shell.task([
   cd - > /dev/null'
 ]));
 
-/**
- * Takes a set of "actions" (lazypipes or task names), and creates corresponding
- * watchers. "actions" can be either lazypipes (good!), or task names (not as good,
- * because the task is run on all files, not just the modified ones)
- */
-function watchAndReload(target) {
-  var actions = Array.prototype.slice.call(arguments, 1);
-  var tasks = [];
-  var pipes = [];
-
-  actions.forEach(function (a) {
-    if (typeof a === 'string') {
-      tasks.push(a);
-    } else {
-      pipes.push(a);
-    }
-  });
-
-  if (tasks) {
-    gulp.watch(target, function () {
-      // the tasks array is modified by runSequence, need to pass a copy
-      runSequence(tasks.slice(0), reloader());
-    });
-  }
-
-  if (pipes.length > 0) {
-    var watchers = pipes.map(function (pipe) {
-      return watch({glob:target, base: './', emitOnGlob: false})
-        .pipe(plumber())
-        .pipe(pipe());
-    });
-    es.merge.apply(null, watchers)
-      .pipe(es.wait(reloader()));
-  }
-}
-
 gulp.task('watch', function() {
-  watchAndReload(union(
+  livereload.listen();
+  gulp.watch(union(
     adapterFiles,
     sharedAdapterFiles,
     resourceFiles,
     rwsocketScript,
     backgroundScripts,
+    devBackgroundScripts,
     htmlFiles
-  ), 'scripts', 'meta');
-
-  watchAndReload(styleFiles, 'meta', stylesPipe);
+  ), ['scripts']);
+  gulp.watch(styleFiles, ['styles']);
+  gulp.watch(tabScripts, ['meta']);
+  gulp.watch(distFiles).on('change', reload);
 });
 
 gulp.task('package', function () {
@@ -419,5 +370,5 @@ gulp.task('package', function () {
 });
 
 gulp.task('default', function () {
-  runSequence('clean', ['watch', 'scripts', 'styles', 'meta', 'config']);
+  runSequence('clean', ['scripts', 'styles', 'meta', 'config'], 'watch');
 });
