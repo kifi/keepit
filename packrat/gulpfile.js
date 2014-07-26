@@ -23,7 +23,8 @@ var isRelease = false;
 
 var outDir = 'out';
 
-var adapterFiles = ['adapters/chrome/**', 'adapters/firefox/**', '!adapters/chrome/manifest.json', '!adapters/firefox/package.json'];
+var chromeAdapterFiles = ['adapters/chrome/**', '!adapters/chrome/manifest.json'];
+var firefoxAdapterFiles = ['adapters/firefox/**', '!adapters/firefox/package.json'];
 var sharedAdapterFiles = ['adapters/shared/*.js', 'adapters/shared/*.min.map'];
 var resourceFiles = ['icons/**', 'images/**', 'media/**', 'scripts/**', '!scripts/lib/rwsocket.js'];
 var rwsocketScript = 'scripts/lib/rwsocket.js';
@@ -79,10 +80,11 @@ var jeditor = (function () {
 })();
 
 var chromeInjectionFooter = lazypipe()
-  .pipe(map, function (code, filename) {
-    var relativeFilename = filename.replace(new RegExp('^' + __dirname + '/' + outDir + '/chrome/'), '');
-    var shortName = relativeFilename.replace(/^scripts\//, '');
-    return code.toString() + 'api.injected["' + relativeFilename + '"]=1;\n//@ sourceURL=http://kifi/' + shortName + '\n';
+  .pipe(function () {
+    return gulpif(['scripts/**/*.js', '!**/iframes/**'], map(function (code, filename) {
+      var shortName = filename.replace(/^scripts\//, '');
+      return code.toString() + 'api.injected["' + filename + '"]=1;\n//@ sourceURL=http://kifi/' + shortName + '\n';
+    }));
   });
 
 gulp.task('clean', function () {
@@ -91,20 +93,38 @@ gulp.task('clean', function () {
 });
 
 gulp.task('copy', function () {
-  var adapters = gulp.src(adapterFiles, {base: './adapters'})
-    .pipe(cache('adapters'))
-    .pipe(gulpif(['./adapters/chrome/scripts/*.js', '!**/iframes/**'], chromeInjectionFooter()))
+
+  var chromeAdapters = gulp.src(chromeAdapterFiles, {base: './'})
+    .pipe(cache('chrome-adapters'))
+    .pipe(rename(function (path) {
+      // todo(martin): find a more elegant way to make all files move up two directories
+      if (path.dirname === 'adapters' && path.basename === 'chrome') {
+        // This is necessary, otherwise an empty 'adapters/chrome' folder is created
+        path.dirname = '.';
+      }
+      path.dirname = path.dirname.replace(/^adapters\/chrome\/?/, '');
+    }))
+    .pipe(chromeInjectionFooter())
+    .pipe(gulp.dest(outDir + '/chrome'));
+
+  var firefoxAdapters = gulp.src(firefoxAdapterFiles, {base: './adapters'})
+    .pipe(cache('firefox-adapters'))
     .pipe(gulp.dest(outDir));
 
-  var shared = gulp.src(sharedAdapterFiles)
+  var sharedAdapters = gulp.src(sharedAdapterFiles)
     .pipe(cache('shared-adapters'))
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
   var resources = gulp.src(resourceFiles, { base: './' })
-    .pipe(cache('resources'))
-    .pipe(gulp.dest(outDir + '/firefox/data'))
-    .pipe(gulpif(['./scripts/\*\*/\*.js', '!**/iframes/**'], chromeInjectionFooter()))
+    .pipe(cache('resources'));
+
+  var firefoxResources = resources.pipe(clone())
+    .pipe(gulp.dest(outDir + '/firefox/data'));
+
+  var chromeResources = resources.pipe(clone())
+    .pipe(rename(function () {})) // very obscure way to make sure filenames use a relative path
+    .pipe(chromeInjectionFooter())
     .pipe(gulp.dest(outDir + '/chrome'));
 
   var rwsocket = gulp.src(rwsocketScript)
@@ -119,7 +139,7 @@ gulp.task('copy', function () {
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
-  return es.merge(adapters, shared, resources, rwsocket, background);
+  return es.merge(chromeAdapters, firefoxAdapters, sharedAdapters, firefoxResources, chromeResources, rwsocket, background);
 });
 
 gulp.task('html2js', function () {
@@ -137,15 +157,22 @@ gulp.task('html2js', function () {
     }
   };
 
-  return gulp.src(htmlFiles, {base: './'})
+  var common = gulp.src(htmlFiles, {base: './'})
     .pipe(cache('html'))
     .pipe(map(html2js))
     .pipe(rename(function (path) {
       path.extname = '.js';
-    }))
-    .pipe(gulpif('!**/iframes/**', chromeInjectionFooter()))
-    .pipe(gulp.dest(outDir + '/chrome/scripts'))
-    .pipe(gulp.dest(outDir + '/firefox/data/scripts'));
+      path.dirname = 'scripts/' + path.dirname;
+    }));
+
+  var firefox = common.pipe(clone())
+    .pipe(gulp.dest(outDir + '/firefox/data'));
+
+  var chrome = common.pipe(clone())
+    .pipe(chromeInjectionFooter())
+    .pipe(gulp.dest(outDir + '/chrome'));
+
+  return es.merge(firefox, chrome);
 });
 
 gulp.task('scripts', ['html2js', 'copy']);
@@ -351,7 +378,8 @@ gulp.task('xpi-firefox', ['scripts', 'styles', 'meta', 'config'], shell.task([
 gulp.task('watch', function() {
   livereload.listen();
   gulp.watch(union(
-    adapterFiles,
+    chromeAdapterFiles,
+    firefoxAdapterFiles,
     sharedAdapterFiles,
     resourceFiles,
     rwsocketScript,
