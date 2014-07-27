@@ -37,7 +37,7 @@ class AdminAttributionController @Inject() (
   implicit val execCtx = fj
 
   def keepDiscoveriesView(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticated { request =>
-    val (t, count) = db.readOnlyReplica { implicit ro =>
+    val (t, count) = db.readOnlyMaster { implicit ro =>
       val t = keepDiscoveryRepo.page(page, size, Set(KeepDiscoveryStates.INACTIVE)).map { c =>
         val rc = RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, userRepo.get(c.keeperId), keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
         val pageInfoOpt = pageInfoRepo.getByUri(c.uriId)
@@ -71,7 +71,7 @@ class AdminAttributionController @Inject() (
   }
 
   private def getKeepInfos(userId: Id[User]): (User, Seq[RichKeepDiscovery], Seq[RichReKeep], Seq[RichReKeep]) = {
-    db.readOnlyReplica { implicit ro =>
+    db.readOnlyMaster { implicit ro =>
       val u = userRepo.get(userId)
       val rc = keepDiscoveryRepo.getDiscoveriesByKeeper(userId).take(10) map { c =>
         RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, u, keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
@@ -96,7 +96,7 @@ class AdminAttributionController @Inject() (
   def getReKeepInfos(userId: Id[User], n: Int = 4) = userReKeepsReqConsolidator(userId, n) {
     case (userId, n) =>
       SafeFuture {
-        val u = db.readOnlyReplica { implicit ro => userRepo.get(userId) }
+        val u = db.readOnlyMaster { implicit ro => userRepo.get(userId) }
         val rekeeps = db.readOnlyReplica { implicit ro =>
           rekeepRepo.getAllReKeepsByKeeper(userId)
         }
