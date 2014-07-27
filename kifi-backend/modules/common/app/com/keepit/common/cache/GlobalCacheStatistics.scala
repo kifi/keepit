@@ -15,7 +15,7 @@ class GlobalCacheStatistics() {
   def getStatistics: Seq[(String, Int, Int, Int, Int)] = {
     val keys = (hitsMap.keySet ++ missesMap.keySet ++ setsMap.keySet).toSeq.sorted
     keys map { key =>
-      val (hits, misses, sets) = (getCount(key, hitsMap), getCount(key, missesMap), getCount(key, setsMap))
+      val (hits, misses, sets) = (hitCount(key), missCount(key), setCount(key))
       (key, hits, misses, sets, missRatio(misses = misses, hits = hits, sets = sets))
     }
   }
@@ -33,14 +33,18 @@ class GlobalCacheStatistics() {
     missesMap.keySet.toSeq.filter(_.startsWith(cacheName)) map { key =>
       getCount(key, missesMap) match {
         case misses if misses >= minSample =>
-          val (hits, sets) = (getCount(key, hitsMap), getCount(key, setsMap))
+          val (hits, sets) = (hitCount(key), setCount(key))
           missRatio(misses = misses, hits = hits, sets = sets) match {
-            case ratio if ratio >= minRatio => Some(key.substring(cacheName.length + 1) -> ratio)
+            case ratio if ratio >= minRatio => Some(key.substring(cacheName.length + 1), ratio)
             case _ => None
           }
         case _ => None
       }
     } flatten
+
+  def hitCount(key: String): Int = getCount(key, hitsMap)
+  def missCount(key: String): Int = getCount(key, missesMap)
+  def setCount(key: String): Int = getCount(key, setsMap)
 
   private[cache] def getCount(key: String, m: ConcurrentMap[String, AtomicInteger]): Int = {
     m.get(key) match {
