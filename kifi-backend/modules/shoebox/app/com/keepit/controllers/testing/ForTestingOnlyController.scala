@@ -20,7 +20,7 @@ class ForTestingOnlyController @Inject() (
   }
 
   def me = PlainTextAction.authenticated { request =>
-    val user = db.readOnlyReplica(implicit s => userRepo.get(request.userId))
+    val user = db.readOnlyMaster(implicit s => userRepo.get(request.userId))
     Ok(user.externalId.toString)
   }
 

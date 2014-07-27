@@ -709,7 +709,7 @@ class UserCommander @Inject() (
   private def getPrefUpdates(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[ExperimentType]): Future[Map[UserValueName, JsValue]] = {
     if (prefSet.contains(UserValueName.SHOW_DELIGHTED_QUESTION)) {
       // Check if user should be shown Delighted question
-      val user = db.readOnlyReplica { implicit s =>
+      val user = db.readOnlyMaster { implicit s =>
         userRepo.get(userId)
       }
       val time = clock.now()
@@ -778,14 +778,14 @@ class UserCommander @Inject() (
   }
 
   def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Option[ExternalId[DelightedAnswer]]] = {
-    val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
+    val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
     heimdalClient.postDelightedAnswer(userId, user.externalId, user.primaryEmail, user.fullName, answer) map { answerOpt =>
       answerOpt flatMap (_.answerId)
     }
   }
 
   def cancelDelightedSurvey(userId: Id[User]): Future[Boolean] = {
-    val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
+    val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
     heimdalClient.cancelDelightedSurvey(userId, user.externalId, user.primaryEmail, user.fullName)
   }
 
