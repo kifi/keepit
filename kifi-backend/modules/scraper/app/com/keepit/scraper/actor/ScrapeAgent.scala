@@ -4,7 +4,7 @@ import akka.actor._
 import akka.pattern.pipe
 import akka.util.Timeout
 import com.google.inject.Inject
-import com.keepit.common.akka.{ FortyTwoActor, SafeFuture }
+import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor, SafeFuture }
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -31,7 +31,6 @@ class ScrapeAgent @Inject() (
 
   def idle: Receive = {
     case JobAvail =>
-      log.info(s"[ScrapeAgent($name).idle] <JobAvail> responds with <WorkerAvail>")
       parent ! WorkerAvail(self)
     case job: ScrapeJob =>
       log.info(s"[ScrapeAgent($name).idle] <ScrapeJob> got assigned $job")
@@ -42,13 +41,11 @@ class ScrapeAgent @Inject() (
         parent ! done
         self ! done
       }
-    case m =>
-      log.info(s"[ScrapeAgent($name).idle] ignore event $m")
+    case m => throw new UnsupportedActorMessage(m)
   }
 
   def busy(s: ScrapeJob): Receive = {
-    case JobAvail =>
-      log.info(s"[ScrapeAgent($name).busy] ignore event <JobAvail>")
+    case JobAvail => // ignore
     case d: JobDone =>
       log.info(s"[ScrapeAgent($name).busy] <JobDone> $d")
       context.become(idle) // unbecome shouldn't be necessary
@@ -56,8 +53,7 @@ class ScrapeAgent @Inject() (
     case job: ScrapeJob =>
       log.warn(s"[ScrapeAgent($name).busy] reject <ScrapeJob> assignment: $job")
       parent ! WorkerBusy(self, job)
-    case m =>
-      log.info(s"[ScrapeAgent($name).busy] ignore event $m")
+    case m => throw new UnsupportedActorMessage(m)
   }
 
   def receive = idle
