@@ -216,7 +216,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val mod3 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
           visibility = Some(LibraryVisibility.PUBLISHED))
         mod3.isRight === true
-        mod3.right.get.visibility === LibraryVisibility.ANYONE
+        mod3.right.get.visibility === LibraryVisibility.PUBLISHED
 
         val mod4 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userHulk.id.get,
           name = Some("HULK SMASH"))
@@ -514,11 +514,11 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         // Ironman has read-only to Murica, and read-write to Freedom, and owns 2 libraries: IronMurica & Science
         val (libFreedom, libIronMurica, keepsInMurica) = db.readWrite { implicit s =>
-          val libFreedom = libraryRepo.save(Library(name = "Freedom", slug = LibrarySlug("freedom"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.ANYONE, keepDiscoveryEnabled = true))
+          val libFreedom = libraryRepo.save(Library(name = "Freedom", slug = LibrarySlug("freedom"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libFreedom.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libFreedom.id.get, userId = userIron.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
 
-          val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.ANYONE, keepDiscoveryEnabled = true))
+          val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get).toSet
@@ -573,11 +573,11 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         // Ironman has read-only to Murica, and read-write to Freedom, and owns 2 libraries: IronMurica & Science
         val (libFreedom, libIronMurica, keepsInMurica) = db.readWrite { implicit s =>
-          val libFreedom = libraryRepo.save(Library(name = "Freedom", slug = LibrarySlug("freedom"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.ANYONE, keepDiscoveryEnabled = true))
+          val libFreedom = libraryRepo.save(Library(name = "Freedom", slug = LibrarySlug("freedom"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libFreedom.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libFreedom.id.get, userId = userIron.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
 
-          val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.ANYONE, keepDiscoveryEnabled = true))
+          val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get).toSet
