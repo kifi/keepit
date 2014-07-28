@@ -13,7 +13,7 @@ case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMa
 
   private val vertexStatistics = GraphStatistics.newVertexCounter()
   private val edgeStatistics = GraphStatistics.newEdgeCounter()
-  private val incomingEdges = TrieMap[VertexId, MutableIncomingEdges]()
+  private val incomingEdges = TrieMap[VertexId, MutableIncomingEdges]() ++= vertices.mapValues(_ => new MutableIncomingEdges(MutableMap()))
 
   vertices.foreach {
     case (sourceId, mutableVertex) =>
@@ -23,7 +23,6 @@ case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMa
         case (destinationId, edgeData) =>
           val component = (sourceKind, destinationId.kind, edgeData.kind)
           edgeStatistics(component).incrementAndGet()
-          if (!incomingEdges.contains(destinationId)) { incomingEdges += (destinationId -> new MutableIncomingEdges(MutableMap())) }
           if (!incomingEdges(destinationId).edges.contains(component)) { incomingEdges(destinationId).edges += (component -> MutableSet()) }
           incomingEdges(destinationId).edges(component) += sourceId
       }

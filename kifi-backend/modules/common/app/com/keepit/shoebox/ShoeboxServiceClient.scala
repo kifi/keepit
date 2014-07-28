@@ -34,6 +34,7 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model.serialize.{ UriIdAndSeqBatch, UriIdAndSeq }
 import org.msgpack.ScalaMessagePack
+import com.keepit.common.time.RichDateTime
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -126,6 +127,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]]
+  def getLapsedUsersForDelighted(after: DateTime, before: Option[DateTime], maxCount: Int, skipCount: Int): Future[Seq[DelightedUserRegistrationInfo]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -855,4 +857,9 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getLapsedUsersForDelighted(after: DateTime, before: Option[DateTime], maxCount: Int, skipCount: Int): Future[Seq[DelightedUserRegistrationInfo]] = {
+    call(Shoebox.internal.getLapsedUsersForDelighted(after, before, maxCount, skipCount), callTimeouts = longTimeout).map { r =>
+      r.json.as[Seq[DelightedUserRegistrationInfo]]
+    }
+  }
 }
