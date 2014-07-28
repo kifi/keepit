@@ -275,7 +275,7 @@ class InviteCommander @Inject() (
 
   private def sendEmailInvitation(inviteInfo: InviteInfo): InviteStatus = {
     val invite = getInvitation(inviteInfo)
-    val invitingUser = db.readOnlyReplica { implicit session => userRepo.get(inviteInfo.userId) }
+    val invitingUser = db.readOnlyMaster { implicit session => userRepo.get(inviteInfo.userId) }
     val c = inviteInfo.friend.right.get
     val acceptLink = baseUrl + routes.InviteController.acceptInvite(invite.externalId).url
 

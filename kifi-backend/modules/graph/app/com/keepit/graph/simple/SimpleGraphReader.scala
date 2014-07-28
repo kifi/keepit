@@ -46,6 +46,7 @@ class SimpleGlobalVertexReader(vertices: Map[VertexId, Vertex], incomingEdges: M
     Vertex.checkIfVertexExists(vertices)(vertex)
     currentVertexId = Some(vertex)
     outgoingEdgeReader.reset()
+    incomingEdgeReader.reset()
   }
   def moveTo[V <: VertexDataReader: VertexKind](vertex: VertexDataId[V]): Unit = { moveTo(VertexId(vertex)) }
 }

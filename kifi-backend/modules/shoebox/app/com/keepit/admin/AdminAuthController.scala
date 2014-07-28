@@ -24,7 +24,7 @@ class AdminAuthController @Inject() (
   }
 
   def impersonate(id: Id[User]) = AdminJsonAction.authenticated { request =>
-    val user = db.readOnlyReplica { implicit s =>
+    val user = db.readOnlyMaster { implicit s =>
       userRepo.get(id)
     }
     log.info(s"impersonating user $user")

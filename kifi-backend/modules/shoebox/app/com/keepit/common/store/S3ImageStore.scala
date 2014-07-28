@@ -177,7 +177,7 @@ class S3ImageStoreImpl @Inject() (
   }
 
   def forceUpdateSocialPictures(userId: Id[User]): Unit = {
-    val (sui, user, picName) = db.readOnlyReplica { implicit s =>
+    val (sui, user, picName) = db.readOnlyMaster { implicit s =>
       val user = userRepo.get(userId)
       val suis = suiRepo.getByUser(user.id.get)
       // If user has no picture, this is the preference order for social networks:
