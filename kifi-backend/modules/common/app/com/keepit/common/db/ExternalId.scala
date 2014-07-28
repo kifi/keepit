@@ -38,8 +38,13 @@ object ExternalId {
   }
 
   implicit def pathBinder[T] = new PathBindable[ExternalId[T]] {
-    override def bind(key: String, value: String): Either[String, ExternalId[T]] =
-      Right(ExternalId(value)) // TODO: handle errors if value is malformed
+    override def bind(key: String, value: String): Either[String, ExternalId[T]] = {
+      if (UUIDPattern.pattern.matcher(value).matches) {
+        Right(ExternalId(value))
+      } else {
+        Left("Not a valid ExternalId")
+      }
+    }
 
     override def unbind(key: String, id: ExternalId[T]): String = id.toString
   }
