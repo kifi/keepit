@@ -104,7 +104,7 @@ class UserController @Inject() (
   }
 
   def abookInfo() = JsonAction.authenticatedAsync { request =>
-    val abookF = abookServiceClient.getABookInfos(request.userId)
+    val abookF = userCommander.getGmailABookInfos(request.userId)
     abookF.map { abooks =>
       Ok(Json.toJson(abooks.map(ExternalABookInfo.fromABookInfo _)))
     }
@@ -207,10 +207,7 @@ class UserController @Inject() (
   def basicUserInfo(id: ExternalId[User]) = Action {
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id).map { user =>
-        Ok(JsObject(Seq(
-          ("user", Json.toJson(BasicUser.fromUser(user))),
-          ("avatarUrl", JsString(s3ImageStore.avatarUrlByUser(user))))
-        ))
+        Ok(Json.toJson(BasicUser.fromUser(user)))
       } getOrElse {
         NotFound(Json.obj("error" -> "user not found"))
       }
@@ -412,7 +409,7 @@ class UserController @Inject() (
       }.flatten)
     }
 
-    val abookStatuses = abookServiceClient.getABookInfos(request.userId).map { abooks =>
+    val abookStatuses = userCommander.getGmailABookInfos(request.userId).map { abooks =>
       JsObject(abooks.map { abookInfo =>
         abookInfo.state match {
           case ABookInfoStates.PENDING | ABookInfoStates.PROCESSING => // we only care if it's actively working. in all other cases, client knows when it refreshes.

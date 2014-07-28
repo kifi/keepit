@@ -134,7 +134,7 @@ class HealthcheckActor @Inject() (
       if (!misses.isEmpty) {
         val message = misses.map {
           case (key, ratio) =>
-            s"$key:$ratio%"
+            s"$key:$ratio%(h${globalCacheStatistics.hitCount(key)},m${globalCacheStatistics.missCount(key)},s${globalCacheStatistics.setCount(key)}})"
         } mkString ", "
         self ! AirbrakeError(message = Some(s"there are too many cache misses: $message"))
       }
@@ -187,7 +187,7 @@ class HealthcheckPluginImpl @Inject() (
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 30 minutes, actor.ref, ReportErrorsAction)
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 60 minutes, actor.ref, CheckDiskSpace)
     scheduleTaskOnAllMachines(actor.system, 3 days, 1 days, actor.ref, CheckUpdateStatusOfService)
-    scheduleTaskOnAllMachines(actor.system, 1 hour, 3 hour, actor.ref, CheckCacheMissRatio)
+    scheduleTaskOnAllMachines(actor.system, 1 hour, 1 days, actor.ref, CheckCacheMissRatio)
   }
 
   def errorCount(): Int = Await.result((actor.ref ? ErrorCount).mapTo[Int], 1 seconds)
