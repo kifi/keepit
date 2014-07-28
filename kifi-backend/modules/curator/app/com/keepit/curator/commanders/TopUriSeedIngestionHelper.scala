@@ -79,7 +79,7 @@ class TopUriSeedIngestionHelper @Inject() (
     if (betweenHours > uriIngestionFreq || firstTimeIngesting) {
       graph.getConnectedUriScores(userId, avoidFirstDegreeConnections = true).recover {
         case ex: Exception =>
-          airbrake.notify("Could not get uris from graph, skipping user $userId", ex)
+          airbrake.notify(s"Could not get uris from graph, skipping user $userId", ex)
           Seq.empty
       }.flatMap { uriScores =>
         db.readWriteAsync { implicit session =>
