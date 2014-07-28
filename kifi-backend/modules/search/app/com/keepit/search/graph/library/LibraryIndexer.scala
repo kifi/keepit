@@ -53,11 +53,12 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) ex
     }
 
     library.visibility match {
-      case LibraryVisibility.ANYONE => doc.add(buildKeywordField(visibilityField, "anyone"))
+      case LibraryVisibility.PUBLISHED => doc.add(buildKeywordField(visibilityField, "published"))
       case _ =>
+
     }
 
-    if (library.keepDiscoveryEnabled) { doc.add(buildKeywordField(keepsDiscoveryField, "anyone")) }
+    if (library.memberCount > 1) { doc.add(buildKeywordField(keepsDiscoveryField, "anyone")) }
 
     doc.add(buildIteratorField(usersField, users.iterator) { id => id.id.toString })
     doc.add(buildIteratorField(hiddenUsersField, hiddenUsers.iterator) { id => id.id.toString })
