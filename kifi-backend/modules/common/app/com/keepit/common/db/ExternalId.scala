@@ -28,7 +28,11 @@ object ExternalId {
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[ExternalId[T]] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, ExternalId[T]]] = {
       stringBinder.bind(key, params) map {
-        case Right(id) => Right(ExternalId(id))
+        case Right(id) =>
+          ExternalId.asOpt[T](id) match {
+            case Some(extId) => Right(extId)
+            case None => Left(s"Unable to bind an ExternalId with $id")
+          }
         case _ => Left("Unable to bind an ExternalId")
       }
     }
@@ -38,8 +42,12 @@ object ExternalId {
   }
 
   implicit def pathBinder[T] = new PathBindable[ExternalId[T]] {
-    override def bind(key: String, value: String): Either[String, ExternalId[T]] =
-      Right(ExternalId(value)) // TODO: handle errors if value is malformed
+    override def bind(key: String, value: String): Either[String, ExternalId[T]] = {
+      ExternalId.asOpt[T](value) match {
+        case Some(extId) => Right(extId)
+        case None => Left(s"Unable to bind to ExternalID with $value")
+      }
+    }
 
     override def unbind(key: String, id: ExternalId[T]): String = id.toString
   }
