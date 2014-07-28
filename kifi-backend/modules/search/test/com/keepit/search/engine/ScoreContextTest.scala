@@ -1,5 +1,6 @@
 package com.keepit.search.engine
 
+import com.keepit.search.util.join.{ DataBufferReader, DataBufferWriter, DataBuffer }
 import org.specs2.mutable.Specification
 
 import scala.util.Random
@@ -8,55 +9,88 @@ class ScoreContextTest extends Specification {
   private[this] val rnd = new Random()
 
   private[this] val collector = new ResultCollector {
-    private var _id = -1L
-    private var _score = 0.0f
+    var result = Map[Long, Float]()
 
-    def id: Long = _id
-    def score: Float = _score
     def clear(): Unit = {
-      _id = -1L
-      _score = 0.0f
+      result = Map[Long, Float]()
     }
 
     override def collect(id: Long, score: Float): Unit = {
-      _id = id
-      _score = score
+      if (result.contains(id)) throw new Exception("duplicate ids")
+      result += id -> score
     }
   }
 
-  private def factor(hits: Int, total: Int): Float = {
-    1.0f - ((total - hits).toFloat / total.toFloat)
+  def computeScore(buf: DataBuffer, reader: DataBufferReader, ctx: ScoreContext): Unit = {
+    buf.scan(reader) { reader =>
+      val id = reader.nextLong()
+      if (ctx.id != id) ctx.set(id)
+      ctx.join(reader)
+    }
+    ctx.flush
   }
 
   "ScoreContext" should {
-    "filter by threshold" in {
-      val numTerms = 16
-      val threshold = 0.3f
+    "compute max of scores" in {
+      val scores = rnd.shuffle(Seq[Float](3.0f, 2.0f, 1.0f))
+
+      val buf = new DataBuffer
+      val writer = new DataBufferWriter
+      val reader = new DataBufferReader
+
+      val numTerms = 5
       val allIdx = rnd.shuffle((0 until numTerms).toIndexedSeq)
-      val idx = (0 until 8).map { n => allIdx.take(n) }.toArray
+      val idx1 = allIdx.head
+      val idx2 = allIdx.tail.head
 
       val weights = new Array[Float](numTerms)
       allIdx.foreach { i => weights(i) = 1.0f / numTerms.toFloat }
-      val ctx = new ScoreContext(DisjunctiveSumExpr(allIdx.map(MaxExpr(_))), numTerms, weights, threshold, collector)
 
-      (0 until 8).forall { n =>
-        collector.clear()
-        val id = 1100L + n
-        ctx.set(id)
-        idx(n).foreach { i => ctx.addScore(i, (i + 1).toFloat) }
-        ctx.flush
+      scores.foreach { scr =>
+        buf.alloc(writer, 0, 12)
+        writer.putLong(123L)
+        writer.putTaggedFloat(idx1.toByte, scr)
+      }
 
-        if ((n.toFloat / numTerms.toFloat) < threshold) {
-          collector.id === -1
-          collector.score === 0.0f
-        } else {
-          val score = idx(n).map(i => (i + 1).toFloat).sum * factor(n, numTerms)
+      computeScore(buf, reader, new ScoreContext(MaxExpr(idx1), numTerms, weights, collector))
 
-          collector.id === id
-          (collector.score - score < 0.001f) === true
-        }
-        true
-      } === true
+      collector.result === Map(123L -> 3.0f)
+
+      collector.clear()
+      computeScore(buf, reader, new ScoreContext(MaxExpr(idx2), numTerms, weights, collector))
+
+      collector.result === Map()
     }
+  }
+
+  "compute sum of scores" in {
+    val scores = rnd.shuffle(Seq[Float](3.0f, 2.0f, 1.0f))
+
+    val buf = new DataBuffer
+    val writer = new DataBufferWriter
+    val reader = new DataBufferReader
+
+    val numTerms = 5
+    val allIdx = rnd.shuffle((0 until numTerms).toIndexedSeq)
+    val idx1 = allIdx.head
+    val idx2 = allIdx.tail.head
+
+    val weights = new Array[Float](numTerms)
+    allIdx.foreach { i => weights(i) = 1.0f / numTerms.toFloat }
+
+    scores.foreach { scr =>
+      buf.alloc(writer, 0, 12)
+      writer.putLong(123L)
+      writer.putTaggedFloat(idx1.toByte, scr)
+    }
+
+    computeScore(buf, reader, new ScoreContext(SumExpr(idx1), numTerms, weights, collector))
+
+    collector.result === Map(123L -> 6.0f)
+
+    collector.clear()
+    computeScore(buf, reader, new ScoreContext(SumExpr(idx2), numTerms, weights, collector))
+
+    collector.result === Map()
   }
 }

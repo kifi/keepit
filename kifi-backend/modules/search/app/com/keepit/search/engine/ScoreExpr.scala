@@ -1,34 +1,45 @@
 package com.keepit.search.engine
 
 abstract class ScoreExpr { // using abstract class for performance. trait is slower.
-  def apply()(implicit hitJoiner: ScoreContext): Float
+  def apply()(implicit ctx: ScoreContext): Float
 
   def isNullExpr: Boolean = false
 }
 
 // Null Expr
 object NullExpr extends ScoreExpr {
-  def apply()(implicit hitJoiner: ScoreContext): Float = 0.0f
+  def apply()(implicit ctx: ScoreContext): Float = 0.0f
   override def isNullExpr: Boolean = true
 }
 
 object MaxExpr {
 
   class MaxExpr(index: Int) extends ScoreExpr {
-    def apply()(implicit hitJoiner: ScoreContext): Float = {
-      hitJoiner.scoreMax(index)
+    def apply()(implicit ctx: ScoreContext): Float = {
+      ctx.scoreMax(index)
     }
   }
 
   def apply(index: Int): ScoreExpr = new MaxExpr(index)
 }
 
+object SumExpr {
+
+  class SumExpr(index: Int) extends ScoreExpr {
+    def apply()(implicit ctx: ScoreContext): Float = {
+      ctx.scoreSum(index)
+    }
+  }
+
+  def apply(index: Int): ScoreExpr = new SumExpr(index)
+}
+
 object MaxWithTieBreakerExpr {
 
   class MaxWithTieBreakerExpr(index: Int, tieBreakerMultiplier: Float) extends ScoreExpr {
-    def apply()(implicit hitJoiner: ScoreContext): Float = {
-      val scoreMax = hitJoiner.scoreMax(index)
-      scoreMax + (hitJoiner.scoreSum(index) - scoreMax) * tieBreakerMultiplier
+    def apply()(implicit ctx: ScoreContext): Float = {
+      val scoreMax = ctx.scoreMax(index)
+      scoreMax + (ctx.scoreSum(index) - scoreMax) * tieBreakerMultiplier
     }
   }
 
@@ -39,7 +50,7 @@ object MaxWithTieBreakerExpr {
 object DisjunctiveSumExpr {
 
   class DisjunctiveSumExpr(elems: Array[ScoreExpr]) extends ScoreExpr {
-    def apply()(implicit hitJoiner: ScoreContext): Float = {
+    def apply()(implicit ctx: ScoreContext): Float = {
       var sum: Float = 0.0f
       var i = 0
       while (i < elems.length) { // using while for performance
@@ -63,7 +74,7 @@ object DisjunctiveSumExpr {
 object ConjunctiveSumExpr {
 
   class ConjunctiveSumExpr(elems: Array[ScoreExpr]) extends ScoreExpr {
-    def apply()(implicit hitJoiner: ScoreContext): Float = {
+    def apply()(implicit ctx: ScoreContext): Float = {
       var sum: Float = 0.0f
       var i = 0
       while (i < elems.length) { // using while for performance
@@ -89,7 +100,7 @@ object ConjunctiveSumExpr {
 object ExistsExpr {
 
   class ExistsExpr(elems: Array[ScoreExpr]) extends ScoreExpr {
-    def apply()(implicit hitJoiner: ScoreContext): Float = {
+    def apply()(implicit ctx: ScoreContext): Float = {
       var i = 0
       while (i < elems.length) { // using while for performance
         if (elems(i).apply() > 0.0f) return 1.0f
@@ -112,7 +123,7 @@ object ExistsExpr {
 object ForAllExpr {
 
   class ForAllExpr(elems: Array[ScoreExpr]) extends ScoreExpr {
-    def apply()(implicit hitJoiner: ScoreContext): Float = {
+    def apply()(implicit ctx: ScoreContext): Float = {
       var i = 0
       while (i < elems.length) { // using while for performance
         val elemScore = elems(i).apply()
@@ -136,7 +147,7 @@ object ForAllExpr {
 object BooleanExpr {
 
   class BooleanExpr(optional: ScoreExpr, required: ScoreExpr) extends ScoreExpr {
-    def apply()(implicit hitJoiner: ScoreContext): Float = {
+    def apply()(implicit ctx: ScoreContext): Float = {
       val score = required()
       if (score > 0.0f) score + optional() else 0.0f
     }
@@ -151,7 +162,7 @@ object BooleanExpr {
 object FilterExpr {
 
   class FilterExpr(expr: ScoreExpr, filter: ScoreExpr) extends ScoreExpr {
-    def apply()(implicit hitJoiner: ScoreContext): Float = {
+    def apply()(implicit ctx: ScoreContext): Float = {
       if (filter() > 0.0f) expr() else 0.0f
     }
   }
@@ -165,7 +176,7 @@ object FilterExpr {
 object FilterOutExpr {
 
   class FilterOutExpr(textScore: ScoreExpr, filterOut: ScoreExpr) extends ScoreExpr {
-    def apply()(implicit hitJoiner: ScoreContext): Float = {
+    def apply()(implicit ctx: ScoreContext): Float = {
       if (filterOut() <= 0.0f) textScore() else 0.0f
     }
   }
@@ -179,12 +190,38 @@ object FilterOutExpr {
 object BoostExpr {
 
   class BoostExpr(expr: ScoreExpr, booster: ScoreExpr, boostStrength: Float) extends ScoreExpr {
-    def apply()(implicit hitJoiner: ScoreContext): Float = {
+    def apply()(implicit ctx: ScoreContext): Float = {
       expr() * (booster() * boostStrength + (1.0f - boostStrength))
     }
   }
 
   def apply(expr: ScoreExpr, booster: ScoreExpr, boostStrength: Float): ScoreExpr = {
-    if (expr.isNullExpr) NullExpr else if (booster.isNullExpr) expr else new BoostExpr(expr, booster, boostStrength)
+    if (expr.isNullExpr) NullExpr else if (booster.isNullExpr || boostStrength <= 0.0f) expr else new BoostExpr(expr, booster, boostStrength)
+  }
+}
+
+// Percent Match
+object PercentMatchExpr {
+
+  class PercentMatchExpr(expr: ScoreExpr, threshold: Float) extends ScoreExpr {
+    def apply()(implicit ctx: ScoreContext): Float = {
+      var pct = 1.0f
+      var i = 0
+      val scoreMax = ctx.scoreMax
+      val matchWeight = ctx.matchWeight
+      val len = scoreMax.length
+      while (i < len) { // using while for performance
+        if (scoreMax(i) <= 0.0f) {
+          pct -= matchWeight(i)
+          if (pct < threshold) return 0.0f
+        }
+        i += 1
+      }
+      expr() * pct
+    }
+  }
+
+  def apply(expr: ScoreExpr, threshold: Float): ScoreExpr = {
+    if (expr.isNullExpr) NullExpr else new PercentMatchExpr(expr, threshold)
   }
 }

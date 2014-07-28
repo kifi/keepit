@@ -7,25 +7,11 @@ import com.keepit.search.util.join.{ DataBufferReader, Joiner }
 class ScoreContext(
     scoreExpr: ScoreExpr,
     scoreArraySize: Int,
-    matchWeight: Array[Float],
-    threshold: Float,
+    val matchWeight: Array[Float],
     collector: ResultCollector) extends Joiner {
 
   private[engine] val scoreMax = new Array[Float](scoreArraySize)
   private[engine] val scoreSum = new Array[Float](scoreArraySize)
-
-  private[this] def matchFactor(): Float = {
-    var pct = 1.0f
-    var i = 0
-    while (i < scoreMax.length) { // using while for performance
-      if (scoreMax(i) <= 0.0f) {
-        pct -= matchWeight(i)
-        if (pct < threshold) return 0.0f
-      }
-      i += 1
-    }
-    pct
-  }
 
   def clear(): Unit = {
     Arrays.fill(scoreMax, 0.0f)
@@ -42,12 +28,9 @@ class ScoreContext(
   }
 
   def flush(): Unit = {
-    val factor = matchFactor()
-    if (factor > 0.0f) {
-      val score = scoreExpr()(this) * factor
-      if (score > 0.0f) {
-        collector.collect(this.id, score)
-      }
+    val score = scoreExpr()(this)
+    if (score > 0.0f) {
+      collector.collect(this.id, score)
     }
   }
 

@@ -44,6 +44,13 @@ class KQueryParser(
 
   var totalParseTime: Long = 0L
 
+  private[this] var pctMatch: Float = 0.0f
+
+  def setPercentMatch(pct: Float): KQueryParser = {
+    pctMatch = pct
+    this
+  }
+
   def parse(queryText: CharSequence): Option[QueryEngineBuilder] = {
     val tParse = System.currentTimeMillis
 
@@ -51,7 +58,7 @@ class KQueryParser(
       val numTextQueries = parser.textQueries.size
 
       if (numTextQueries <= 0 || numTextQueries > ProximityQuery.maxLength) { // no terms or too many terms, skip proximity and semantic vector
-        new QueryEngineBuilder(query)
+        new QueryEngineBuilder(query, pctMatch)
       } else {
         val phrasesFuture = if (numTextQueries > 1 && phraseBoost > 0.0f) detectPhrases(queryText, parser.lang) else null
 
@@ -62,7 +69,7 @@ class KQueryParser(
           }
         }
 
-        val exprBuilder = new QueryEngineBuilder(query)
+        val engBuilder = new QueryEngineBuilder(query, pctMatch)
 
         if (proximityBoost > 0.0f && numTextQueries > 1) {
           val phrases = if (phrasesFuture != null) monitoredAwait.result(phrasesFuture, 3 seconds, "phrase detection") else Set.empty[(Int, Int)]
@@ -70,7 +77,7 @@ class KQueryParser(
           proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold, proximityPowerFactor))
           proxQ.add(ProximityQuery(proxTermsFor("ts"), Set(), 0f, proximityGapPanelty, proximityThreshold, 1f)) // disable phrase scoring for title. penalty could be too big
           proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), Set(), 0f, proximityGapPanelty, proximityThreshold, 1f))
-          exprBuilder.addBooster(proxQ, proximityBoost)
+          engBuilder.addBooster(proxQ, proximityBoost)
         } else if (numTextQueries == 1 && phTerms.nonEmpty && homePageBoost > 0.0f) {
           val homePageQuery = if (phTerms.size == 1) {
             new FixedScoreQuery(new TermQuery(new Term("home_page", phTerms(0).text)))
@@ -79,10 +86,10 @@ class KQueryParser(
             phTerms.foreach { t => hpQ.add(new Term("home_page", t.text)) }
             new FixedScoreQuery(hpQ)
           }
-          exprBuilder.addBooster(homePageQuery, homePageBoost)
+          engBuilder.addBooster(homePageQuery, homePageBoost)
         }
 
-        exprBuilder
+        engBuilder
       }
     }
     totalParseTime = System.currentTimeMillis - tParse

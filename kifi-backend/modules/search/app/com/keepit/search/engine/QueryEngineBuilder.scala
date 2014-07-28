@@ -6,17 +6,16 @@ import org.apache.lucene.search.BooleanClause.Occur._
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
-class QueryEngineBuilder(query: Query) {
+class QueryEngineBuilder(query: Query, percentMatchThreshold: Float) {
 
   private[this] var _query: Query = query
   private[this] var _expr: ScoreExpr = buildExpr(query)
   private[this] var _index: Int = 0
-  private[this] var _threshold: Float = 0.0f
   private[this] var _collector: ResultCollector = null
 
   def build(): QueryEngine = {
 
-    new QueryEngine(_expr, _query, _index, _threshold, _collector)
+    new QueryEngine(_expr, _query, _index, _collector)
   }
 
   private[this] def buildExpr(query: Query): ScoreExpr = {
@@ -43,9 +42,12 @@ class QueryEngineBuilder(query: Query) {
         // put all together and build a score expression
         FilterExpr(
           expr = FilterOutExpr(
-            expr = BooleanExpr(
-              optional = DisjunctiveSumExpr(optional),
-              required = ConjunctiveSumExpr(required)
+            expr = PercentMatchExpr(
+              expr = BooleanExpr(
+                optional = DisjunctiveSumExpr(optional),
+                required = ConjunctiveSumExpr(required)
+              ),
+              threshold = percentMatchThreshold
             ),
             filter = ExistsExpr(filterOut)
           ),
@@ -66,10 +68,6 @@ class QueryEngineBuilder(query: Query) {
     val boosterExpr = MaxExpr(_index)
     _index += 1
     _expr = BoostExpr(_expr, boosterExpr, boostStrength)
-  }
-
-  def setPercentMatchThreshold(threshold: Float): Unit = {
-    _threshold = threshold
   }
 
   def setResultCollector(collector: ResultCollector): Unit = {

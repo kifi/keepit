@@ -8,7 +8,7 @@ import org.apache.lucene.search.{ Scorer, Query, Weight }
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
-class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArraySize: Int, threshold: Float, collector: ResultCollector) {
+class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArraySize: Int, collector: ResultCollector) {
 
   private[this] val dataBuffer: DataBuffer = new DataBuffer()
 
@@ -64,7 +64,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArra
   }
 
   def createScoreContext(): ScoreContext = {
-    new ScoreContext(scoreExpr, scoreArraySize, matchWeight, threshold, collector)
+    new ScoreContext(scoreExpr, scoreArraySize, matchWeight, collector)
   }
 
   def join(): Unit = {
