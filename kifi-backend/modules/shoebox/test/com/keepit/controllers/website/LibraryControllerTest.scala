@@ -467,31 +467,48 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPathCopy = com.keepit.controllers.website.routes.LibraryController.copyKeeps().url
         val testPathMove = com.keepit.controllers.website.routes.LibraryController.moveKeeps().url
 
-        val inputJson1to2 = Json.obj(
-          "from" -> Library.publicId(lib1.id.get),
+        val inputJsonTo2 = Json.obj(
           "to" -> Library.publicId(lib2.id.get),
           "keeps" -> Seq(keep1.externalId, keep2.externalId)
         )
 
-        val request1 = FakeRequest("POST", testPathCopy).withBody(inputJson1to2).withHeaders("userId" -> "1")
-        val result1 = libraryController.copyKeeps()(request1)
-        status(result1) must equalTo(BAD_REQUEST)
+        // keeps are all in library 1
+        // move keeps (from Lib1 to Lib2) as user 1 (should fail)
+        val request1 = FakeRequest("POST", testPathMove).withBody(inputJsonTo2).withHeaders("userId" -> "1")
+        val result1 = libraryController.moveKeeps()(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        val jsonRes1 = Json.parse(contentAsString(result1))
+        (jsonRes1 \ "library").as[LibraryInfo].name === "Library2"
+        (jsonRes1 \ "failures").as[Int] === 2
 
-        val request2 = FakeRequest("POST", testPathCopy).withBody(inputJson1to2).withHeaders("userId" -> "2")
-        val result2 = libraryController.copyKeeps()(request2)
+        // move keeps (from Lib1 to Lib2) as user 2 (ok) - keeps 1,2 in lib2
+        val request2 = FakeRequest("POST", testPathMove).withBody(inputJsonTo2).withHeaders("userId" -> "2")
+        val result2 = libraryController.moveKeeps()(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
-        Json.parse(contentAsString(result2)).as[LibraryInfo].name === "Library2"
+        val jsonRes2 = Json.parse(contentAsString(result2))
+        (jsonRes2 \ "failures").as[Int] === 0
 
-        val request3 = FakeRequest("POST", testPathMove).withBody(inputJson1to2).withHeaders("userId" -> "1")
-        val result3 = libraryController.moveKeeps()(request3)
-        status(result3) must equalTo(BAD_REQUEST)
+        // copy keeps from Lib1 to Lib2 as user 1 (should fail)
+        val request3 = FakeRequest("POST", testPathCopy).withBody(inputJsonTo2).withHeaders("userId" -> "1")
+        val result3 = libraryController.copyKeeps()(request3)
+        status(result3) must equalTo(OK)
+        val jsonRes3 = Json.parse(contentAsString(result3))
+        (jsonRes3 \ "library").as[LibraryInfo].name === "Library2"
+        (jsonRes3 \ "failures").as[Int] === 2
 
-        val request4 = FakeRequest("POST", testPathCopy).withBody(inputJson1to2).withHeaders("userId" -> "2")
-        val result4 = libraryController.moveKeeps()(request4)
+        // copy keeps from Lib2 to Lib1 as user 2 (ok) - keeps 1,2 in both lib1 & lib2
+        val inputJsonTo1 = Json.obj(
+          "to" -> Library.publicId(lib1.id.get),
+          "keeps" -> Seq(keep1.externalId, keep2.externalId)
+        )
+        val request4 = FakeRequest("POST", testPathCopy).withBody(inputJsonTo1).withHeaders("userId" -> "2")
+        val result4 = libraryController.copyKeeps()(request4)
         status(result4) must equalTo(OK)
         contentType(result4) must beSome("application/json")
-        Json.parse(contentAsString(result4)).as[LibraryInfo].name === "Library2"
+        val jsonRes4 = Json.parse(contentAsString(result4))
+        (jsonRes4 \ "failures").as[Int] === 0
       }
     }
 
