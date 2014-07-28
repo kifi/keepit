@@ -476,11 +476,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         // move keeps (from Lib1 to Lib2) as user 1 (should fail)
         val request1 = FakeRequest("POST", testPathMove).withBody(inputJsonTo2).withHeaders("userId" -> "1")
         val result1 = libraryController.moveKeeps()(request1)
-        status(result1) must equalTo(OK)
-        contentType(result1) must beSome("application/json")
-        val jsonRes1 = Json.parse(contentAsString(result1))
-        (jsonRes1 \ "library").as[LibraryInfo].name === "Library2"
-        (jsonRes1 \ "failures").as[Int] === 2
+        status(result1) must equalTo(BAD_REQUEST)
 
         // move keeps (from Lib1 to Lib2) as user 2 (ok) - keeps 1,2 in lib2
         val request2 = FakeRequest("POST", testPathMove).withBody(inputJsonTo2).withHeaders("userId" -> "2")
@@ -493,10 +489,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         // copy keeps from Lib1 to Lib2 as user 1 (should fail)
         val request3 = FakeRequest("POST", testPathCopy).withBody(inputJsonTo2).withHeaders("userId" -> "1")
         val result3 = libraryController.copyKeeps()(request3)
-        status(result3) must equalTo(OK)
-        val jsonRes3 = Json.parse(contentAsString(result3))
-        (jsonRes3 \ "library").as[LibraryInfo].name === "Library2"
-        (jsonRes3 \ "failures").as[Int] === 2
+        status(result3) must equalTo(BAD_REQUEST)
 
         // copy keeps from Lib2 to Lib1 as user 2 (ok) - keeps 1,2 in both lib1 & lib2
         val inputJsonTo1 = Json.obj(

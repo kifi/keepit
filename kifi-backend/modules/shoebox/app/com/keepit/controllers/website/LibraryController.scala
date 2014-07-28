@@ -98,7 +98,6 @@ class LibraryController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) => {
         val inviteList = (request.body \ "pairs").asOpt[Seq[(ExternalId[User], LibraryAccess)]].getOrElse(Seq.empty)
-
         val validInviteList = db.readOnlyReplica { implicit s =>
           for (i <- inviteList; user = userRepo.getOpt(i._1) if !user.isEmpty) yield {
             (user.get.id.get, i._2)
@@ -173,9 +172,12 @@ class LibraryController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid to-libraryId"))
       case Success(toId) => {
         val targetKeeps = db.readOnlyReplica { implicit s => targetKeepsExt.map { keepRepo.getOpt } }
-        val (toLib, badKeeps) = libraryCommander.copyKeeps(request.userId, toId, targetKeeps.flatten.toSet)
+        val (toLib, badKeeps, fail) = libraryCommander.copyKeeps(request.userId, toId, targetKeeps.flatten.toSet)
         val owner = db.readOnlyReplica { implicit s => userRepo.get(toLib.ownerId) }
-        Ok(Json.obj("library" -> LibraryInfo.fromLibraryAndOwner(toLib, owner), "failures" -> badKeeps.size))
+        fail match {
+          case None => Ok(Json.obj("library" -> LibraryInfo.fromLibraryAndOwner(toLib, owner), "failures" -> badKeeps.size))
+          case Some(libFail) => BadRequest(Json.obj("error" -> libFail.message))
+        }
       }
     }
   }
@@ -189,9 +191,12 @@ class LibraryController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid to-libraryId"))
       case Success(toId) => {
         val targetKeeps = db.readOnlyReplica { implicit s => targetKeepsExt.map { keepRepo.getOpt } }
-        val (toLib, badKeeps) = libraryCommander.moveKeeps(request.userId, toId, targetKeeps.flatten.toSet)
+        val (toLib, badKeeps, fail) = libraryCommander.moveKeeps(request.userId, toId, targetKeeps.flatten.toSet)
         val owner = db.readOnlyReplica { implicit s => userRepo.get(toLib.ownerId) }
-        Ok(Json.obj("library" -> LibraryInfo.fromLibraryAndOwner(toLib, owner), "failures" -> badKeeps.size))
+        fail match {
+          case None => Ok(Json.obj("library" -> LibraryInfo.fromLibraryAndOwner(toLib, owner), "failures" -> badKeeps.size))
+          case Some(libFail) => BadRequest(Json.obj("error" -> libFail.message))
+        }
       }
     }
   }

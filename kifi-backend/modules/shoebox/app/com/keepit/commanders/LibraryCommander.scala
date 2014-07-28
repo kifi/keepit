@@ -40,7 +40,6 @@ class LibraryCommander @Inject() (
           case _ => (c1, f1)
         }
       }
-
       val numKeeps = keepRepo.getCountByLibrary(library.id.get)
       (library, owner, collabs, follows, numKeeps)
     }
@@ -297,6 +296,7 @@ class LibraryCommander @Inject() (
     keepSet: Set[Keep],
     excludeFromAccess: Set[LibraryAccess],
     f: Keep => Keep): Set[Keep] = {
+
     var badKeeps = Set[Keep]()
     db.readWrite { implicit s =>
       val existingURIs = keepRepo.getByLibrary(library.id.get).map(_.uriId)
@@ -322,37 +322,37 @@ class LibraryCommander @Inject() (
     badKeeps
   }
 
-  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keepSet: Set[Keep]): (Library, Set[Keep]) = {
+  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keepSet: Set[Keep]): (Library, Set[Keep], Option[LibraryFail]) = {
     db.readWrite { implicit s =>
       val library = libraryRepo.get(toLibraryId)
       libraryMembershipRepo.getWithLibraryIdandUserId(toLibraryId, userId) match {
-        case None => (library, keepSet)
-        case Some(memTo) if memTo.access == LibraryAccess.READ_ONLY => (library, keepSet)
+        case None => (library, keepSet, Some(LibraryFail("no membership to library")))
+        case Some(memTo) if memTo.access == LibraryAccess.READ_ONLY => (library, keepSet, Some(LibraryFail("invalid access to library")))
         case Some(_) => {
           def f(k: Keep) = {
             Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId,
               userId = k.userId, source = k.source, libraryId = Some(toLibraryId))
           }
           val badKeeps = applyToKeepSet(userId, library, keepSet, Set(), f)
-          (library, badKeeps)
+          (library, badKeeps, None)
         }
       }
 
     }
   }
 
-  def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keepSet: Set[Keep]): (Library, Set[Keep]) = {
+  def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keepSet: Set[Keep]): (Library, Set[Keep], Option[LibraryFail]) = {
     db.readWrite { implicit s =>
       val library = libraryRepo.get(toLibraryId)
       libraryMembershipRepo.getWithLibraryIdandUserId(toLibraryId, userId) match {
-        case None => (library, keepSet)
-        case Some(memTo) if memTo.access == LibraryAccess.READ_ONLY => (library, keepSet)
+        case None => (library, keepSet, Some(LibraryFail("no membership to library")))
+        case Some(memTo) if memTo.access == LibraryAccess.READ_ONLY => (library, keepSet, Some(LibraryFail("invalid access to library")))
         case Some(_) => {
           def f(k: Keep) = {
             k.copy(libraryId = Some(toLibraryId))
           }
           val badKeeps = applyToKeepSet(userId, library, keepSet, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), f)
-          (library, badKeeps)
+          (library, badKeeps, None)
         }
       }
     }
