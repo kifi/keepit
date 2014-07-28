@@ -29,7 +29,7 @@ class LibraryCommander @Inject() (
     clock: Clock) extends Logging {
 
   def createFullLibraryInfo(library: Library): FullLibraryInfo = {
-    val (lib, owner, collabs, follows) = db.readOnlyReplica { implicit s =>
+    val (lib, owner, collabs, follows, numKeeps) = db.readOnlyReplica { implicit s =>
       val owner = basicUserRepo.load(library.ownerId)
       val memberships = libraryMembershipRepo.getWithLibraryId(library.id.get)
       val (collabs, follows) = memberships.foldLeft(List.empty[BasicUser], List.empty[BasicUser]) {
@@ -40,7 +40,8 @@ class LibraryCommander @Inject() (
           case _ => (c1, f1)
         }
       }
-      (library, owner, collabs, follows)
+      val numKeeps = keepRepo.getCountByLibrary(library.id.get)
+      (library, owner, collabs, follows, numKeeps)
     }
     val collabGroup = GroupHolder(count = collabs.length, users = collabs, isMore = false)
     val followerGroup = GroupHolder(count = follows.length, users = follows, isMore = false)
@@ -53,7 +54,7 @@ class LibraryCommander @Inject() (
       visibility = lib.visibility,
       collaborators = collabGroup,
       followers = followerGroup,
-      keepCount = 0)
+      keepCount = numKeeps)
   }
 
   def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, Library] = {
@@ -287,6 +288,73 @@ class LibraryCommander @Inject() (
   def getKeeps(libraryId: Id[Library]): Seq[Keep] = {
     db.readOnlyMaster { implicit s =>
       keepRepo.getByLibrary(libraryId)
+    }
+  }
+
+  private def applyToKeepSet(userId: Id[User],
+    library: Library,
+    keepSet: Set[Keep],
+    excludeFromAccess: Set[LibraryAccess],
+    f: Keep => Keep): Set[Keep] = {
+
+    var badKeeps = Set[Keep]()
+    db.readWrite { implicit s =>
+      val existingURIs = keepRepo.getByLibrary(library.id.get).map(_.uriId)
+      keepSet.groupBy(_.libraryId).map {
+        case (None, _) => {}
+        case (Some(fromLibraryId), keeps) => {
+          libraryMembershipRepo.getWithLibraryIdandUserId(fromLibraryId, userId) match {
+            case None => { badKeeps ++= keeps }
+            case Some(memFrom) if excludeFromAccess.contains(memFrom.access) => { badKeeps ++= keeps }
+            case Some(_) => {
+              keeps.map { keep =>
+                if (!existingURIs.contains(keep.uriId)) {
+                  keepRepo.save(f(keep))
+                } else {
+                  badKeeps += keep
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    badKeeps
+  }
+
+  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keepSet: Set[Keep]): (Library, Set[Keep], Option[LibraryFail]) = {
+    db.readWrite { implicit s =>
+      val library = libraryRepo.get(toLibraryId)
+      libraryMembershipRepo.getWithLibraryIdandUserId(toLibraryId, userId) match {
+        case None => (library, keepSet, Some(LibraryFail("no membership to library")))
+        case Some(memTo) if memTo.access == LibraryAccess.READ_ONLY => (library, keepSet, Some(LibraryFail("invalid access to library")))
+        case Some(_) => {
+          def f(k: Keep) = {
+            Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId,
+              userId = k.userId, source = k.source, libraryId = Some(toLibraryId))
+          }
+          val badKeeps = applyToKeepSet(userId, library, keepSet, Set(), f)
+          (library, badKeeps, None)
+        }
+      }
+
+    }
+  }
+
+  def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keepSet: Set[Keep]): (Library, Set[Keep], Option[LibraryFail]) = {
+    db.readWrite { implicit s =>
+      val library = libraryRepo.get(toLibraryId)
+      libraryMembershipRepo.getWithLibraryIdandUserId(toLibraryId, userId) match {
+        case None => (library, keepSet, Some(LibraryFail("no membership to library")))
+        case Some(memTo) if memTo.access == LibraryAccess.READ_ONLY => (library, keepSet, Some(LibraryFail("invalid access to library")))
+        case Some(_) => {
+          def f(k: Keep) = {
+            k.copy(libraryId = Some(toLibraryId))
+          }
+          val badKeeps = applyToKeepSet(userId, library, keepSet, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), f)
+          (library, badKeeps, None)
+        }
+      }
     }
   }
 
