@@ -305,12 +305,17 @@ class AuthHelper @Inject() (
           case Some(pr) if passwordResetRepo.tokenIsNotExpired(pr) =>
             val email = passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
             val results = for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) yield {
+              val pwdInfo = current.plugin[PasswordHasher].get.hash(password)
               UserService.save(UserIdentity(
                 userId = sui.userId,
                 socialUser = sui.credentials.get.copy(
-                  passwordInfo = Some(current.plugin[PasswordHasher].get.hash(password))
+                  passwordInfo = Some(pwdInfo)
                 )
               ))
+              val updated = userCredRepo.findByUserIdOpt(sui.userId.get) map { userCred =>
+                userCredRepo.save(userCred).withSalt(pwdInfo.salt.get).withCredentials(pwdInfo.password)
+              }
+              log.info(s"[doSetPassword] UserCreds updated=${updated.map(c => s"id=${c.id} userId=${c.userId} login=${c.loginName}")}")
               authenticateUser(sui.userId.get, onError = { error =>
                 throw error
               }, onSuccess = { authenticator =>
