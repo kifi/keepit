@@ -58,7 +58,7 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) ex
 
     }
 
-    if (library.memberCount > 1) { doc.add(buildKeywordField(keepsDiscoveryField, "anyone")) }
+    if (Seq(LibraryVisibility.PUBLISHED, LibraryVisibility.DISCOVERABLE).contains(library.visibility)) { doc.add(buildKeywordField(keepsDiscoveryField, "anyone")) }
 
     doc.add(buildIteratorField(usersField, users.iterator) { id => id.id.toString })
     doc.add(buildIteratorField(hiddenUsersField, hiddenUsers.iterator) { id => id.id.toString })
