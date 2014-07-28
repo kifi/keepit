@@ -35,9 +35,8 @@ class ScrapeAgent @Inject() (
     case job: ScrapeJob =>
       log.info(s"[ScrapeAgent($name).idle] <ScrapeJob> got assigned $job")
       context.become(busy(job))
-      SafeFuture {
-        JobDone(self, job, worker.safeProcessURI(job.s.uri, job.s.info, job.s.pageInfo, job.s.proxyOpt)) // blocking call (for now)
-      } map { done =>
+      worker.safeProcess(job.s.uri, job.s.info, job.s.pageInfo, job.s.proxyOpt) map { res =>
+        val done = JobDone(self, job, res)
         parent ! done
         self ! done
       }
