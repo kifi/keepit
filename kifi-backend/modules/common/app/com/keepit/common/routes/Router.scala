@@ -273,6 +273,7 @@ object ABook extends Service {
     def getContactsByUser(userId: Id[User], page: Int, pageSize: Option[Int]) = ServiceRoute(GET, s"/internal/abook/${userId}/getContacts", Param("page", page), Param("pageSize", pageSize))
     def getEmailAccountsChanged(seqNum: SequenceNumber[IngestableEmailAccount], fetchSize: Int) = ServiceRoute(GET, "/internal/abook/database/getEmailAccountsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int) = ServiceRoute(GET, "/internal/abook/database/getContactsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getUsersWithContact(email: EmailAddress) = ServiceRoute(GET, "/internal/abook/getUsersWithContact", Param("email", email))
   }
 }
 
