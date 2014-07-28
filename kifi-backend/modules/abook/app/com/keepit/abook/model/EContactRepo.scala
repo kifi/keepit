@@ -20,7 +20,7 @@ trait EContactRepo extends Repo[EContact] with SeqNumberFunction[EContact] {
   def bulkGetByIds(ids: Seq[Id[EContact]])(implicit session: RSession): Map[Id[EContact], EContact]
   def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Seq[EContact]
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[EContact]
-  def getByEmail(email: EmailAddress)(implicit session: RSession): Seq[EContact]
+  def getUserIdsByEmail(email: EmailAddress)(implicit session: RSession): Seq[Id[User]]
   def getEContactCount(userId: Id[User])(implicit session: RSession): Int
   def insertAll(contacts: Seq[EContact])(implicit session: RWSession): Int
   def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Boolean
@@ -117,8 +117,8 @@ class EContactRepoImpl @Inject() (
     (for (f <- rows if f.userId === userId && f.state === EContactStates.ACTIVE) yield f).list
   }
 
-  def getByEmail(email: EmailAddress)(implicit session: RSession): Seq[EContact] =
-    (for (f <- rows if f.email === email && f.state === EContactStates.ACTIVE) yield f).list
+  def getUserIdsByEmail(email: EmailAddress)(implicit session: RSession): Seq[Id[User]] =
+    (for (f <- rows if f.email === email && f.state === EContactStates.ACTIVE) yield f.userId).list
 
   def getEContactCount(userId: Id[User])(implicit session: RSession): Int = {
     StaticQuery.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first

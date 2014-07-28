@@ -166,7 +166,7 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
       }
     }
 
-    "getContactsConnectedToEmailAddress" should {
+    "getUsersWithContact" should {
       "return contacts for the given email" in {
         withDb(modules: _*) { implicit injector =>
           val commander = inject[ABookCommander]
@@ -175,9 +175,9 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
 
           def toUserId = (e: EContact) => e.userId
 
-          commander.getContactsConnectedToEmailAddress(AbookTestEmails.BAR_EMAIL) === Set(c1, c3).map(toUserId)
-          commander.getContactsConnectedToEmailAddress(AbookTestEmails.BAZ_EMAIL) === Set(c2).map(toUserId)
-          commander.getContactsConnectedToEmailAddress(AbookTestEmails.FOO_EMAIL) === Set.empty
+          commander.getUsersWithContact(AbookTestEmails.BAR_EMAIL) === Set(c1, c3).map(toUserId)
+          commander.getUsersWithContact(AbookTestEmails.BAZ_EMAIL) === Set(c2).map(toUserId)
+          commander.getUsersWithContact(AbookTestEmails.FOO_EMAIL) === Set.empty
         }
       }
     }

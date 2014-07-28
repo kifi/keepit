@@ -254,8 +254,8 @@ class ABookController @Inject() (
     Ok(Json.toJson(richContacts))
   }
 
-  def getContactsConnectedToEmailAddress(email: EmailAddress) = Action { request =>
-    val userIds = abookCommander.getContactsConnectedToEmailAddress(email)
+  def getUsersWithContact(email: EmailAddress) = Action { request =>
+    val userIds = abookCommander.getUsersWithContact(email)
     Ok(Json.toJson(userIds))
   }
 }

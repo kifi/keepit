@@ -159,7 +159,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
       }
     }
 
-    "getContactsConnectedToEmailAddress" should {
+    "getUsersWithContact" should {
       implicit def _db = db
       def controller = inject[ABookController] // setup
       def factory = inject[ABookTestContactFactory]
@@ -167,7 +167,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
       "return an empty array if no connections are found" in {
         running(new ABookApplication(modules: _*)) {
           val (c1, c2, c3) = factory.createMany
-          val result = controller.getContactsConnectedToEmailAddress(EmailAddress("no@mail.com"))(FakeRequest())
+          val result = controller.getUsersWithContact(EmailAddress("no@mail.com"))(FakeRequest())
           status(result) must equalTo(OK)
           contentType(result) must beSome("application/json")
           contentAsString(result) === "[]"
@@ -177,7 +177,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
       "return an array of user ids that are connected to a given email" in {
         running(new ABookApplication(modules: _*)) {
           val (c1, c2, c3) = factory.createMany
-          val result = controller.getContactsConnectedToEmailAddress(AbookTestEmails.BAR_EMAIL)(FakeRequest())
+          val result = controller.getUsersWithContact(AbookTestEmails.BAR_EMAIL)(FakeRequest())
           status(result) must equalTo(OK)
           contentType(result) must beSome("application/json")
 
