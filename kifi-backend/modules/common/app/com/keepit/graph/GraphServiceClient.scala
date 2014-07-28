@@ -82,7 +82,7 @@ class GraphServiceClientImpl @Inject() (
 
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]] = {
     cacheProvider.uriScoreCache.getOrElseFuture(ConnectedUriScoreCacheKey(userId, avoidFirstDegreeConnections)) {
-      call(Graph.internal.getUriAndScores(userId, avoidFirstDegreeConnections)).map { response =>
+      call(Graph.internal.getUriAndScores(userId, avoidFirstDegreeConnections), callTimeouts = longTimeout).map { response =>
         response.json.as[Seq[ConnectedUriScore]]
       }
     }
@@ -90,7 +90,7 @@ class GraphServiceClientImpl @Inject() (
 
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]] = {
     cacheProvider.userScoreCache.getOrElseFuture(ConnectedUserScoreCacheKey(userId, avoidFirstDegreeConnections)) {
-      call(Graph.internal.getUserAndScores(userId, avoidFirstDegreeConnections)).map { response =>
+      call(Graph.internal.getUserAndScores(userId, avoidFirstDegreeConnections), callTimeouts = longTimeout).map { response =>
         response.json.as[Seq[ConnectedUserScore]]
       }
     }
