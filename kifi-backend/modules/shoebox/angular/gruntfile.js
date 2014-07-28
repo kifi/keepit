@@ -418,8 +418,6 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-env');
   grunt.loadNpmTasks('grunt-html2js');
 
-  //Making grunt default to force in order not to break the project.
-
   // http://gruntjs.com/creating-tasks
 
   // Default task(s).
