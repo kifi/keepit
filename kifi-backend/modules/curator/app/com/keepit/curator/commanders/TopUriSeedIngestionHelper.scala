@@ -25,7 +25,7 @@ class TopUriSeedIngestionHelper @Inject() (
     graph: GraphServiceClient) extends PersonalSeedIngestionHelper with Logging {
 
   //re-ingest top uris for a user should be more than 12 hours later.
-  val uriIngestionFreq = 12
+  val uriIngestionFreq = 4
 
   private def updateUserTrackItem(userTrackItem: LastTopUriIngestion, lastSeen: DateTime)(implicit session: RWSession): Unit = {
     lastTopUriIngestionRepo.save(userTrackItem.copy(
@@ -74,10 +74,14 @@ class TopUriSeedIngestionHelper @Inject() (
       }
     }
 
-    val betweenHours = Hours.hoursBetween(currentDateTime, lastIngestionTime).getHours
+    val betweenHours = Hours.hoursBetween(lastIngestionTime, currentDateTime).getHours
 
     if (betweenHours > uriIngestionFreq || firstTimeIngesting) {
-      graph.getListOfUriAndScorePairs(userId, avoidFirstDegreeConnections = true).flatMap { uriScores =>
+      graph.getConnectedUriScores(userId, avoidFirstDegreeConnections = true).recover {
+        case ex: Exception =>
+          airbrake.notify("Could not get uris from graph, skipping user $userId", ex)
+          Seq.empty
+      }.flatMap { uriScores =>
         db.readWriteAsync { implicit session =>
           if (firstTimeIngesting) {
             lastTopUriIngestionRepo.save(LastTopUriIngestion(userId = userId, lastIngestionTime = currentDateTime))
@@ -92,6 +96,7 @@ class TopUriSeedIngestionHelper @Inject() (
           }
 
           uriScores.foreach { uriScore =>
+            log.debug(s"ingesting uri score is: ${uriScore.score.toFloat}, related user id is: ${uriScore.uriId.toString}")
             processUriScores(uriScore, userId)
           }
 

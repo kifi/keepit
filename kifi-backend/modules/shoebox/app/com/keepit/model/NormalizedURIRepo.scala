@@ -168,11 +168,9 @@ class NormalizedURIRepoImpl @Inject() (
   }
 
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
-    statsd.time(key = "normalizedURIRepo.getByNormalizedUrl", ONE_IN_HUNDRED) { timer =>
-      val hash = NormalizedURI.hashUrl(normalizedUrl)
-      urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
-        (for (t <- rows if t.urlHash === hash) yield t).firstOption
-      }
+    val hash = NormalizedURI.hashUrl(normalizedUrl)
+    urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
+      (for (t <- rows if t.urlHash === hash) yield t).firstOption
     }
   }
 

@@ -64,7 +64,7 @@ class MobileDiscoveryController @Inject() (
           pageInfos <- pageInfosFuture
         } yield {
 
-          val idToBasicUser = db.readOnlyReplica { implicit s =>
+          val idToBasicUser = db.readOnlyMaster { implicit s =>
             basicUserRepo.loadAll(sharingInfos.flatMap(_.sharingUserIds).toSet)
           }
 

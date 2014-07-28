@@ -6,7 +6,7 @@
   "author": "",
   "repository": {
     "type": "git",
-    "url": "https://github.com/FortyTwoEng/keepit"
+    "url": "https://github.com/kifi/keepit"
   },
   "engines": {
     "node": "0.10.x",

@@ -156,5 +156,5 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
 
   @Provides @Singleton
   def uriWordCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new NormalizedURIWordCountCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 60 days))
+    new NormalizedURIWordCountCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 30 days))
 }

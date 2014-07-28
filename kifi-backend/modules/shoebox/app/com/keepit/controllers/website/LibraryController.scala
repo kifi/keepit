@@ -50,7 +50,7 @@ class LibraryController @Inject() (
         res match {
           case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
           case Right(lib) => {
-            val owner = db.readOnlyReplica { implicit s => userRepo.get(lib.ownerId) }
+            val owner = db.readOnlyMaster { implicit s => userRepo.get(lib.ownerId) }
             Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner)))
           }
         }
@@ -85,7 +85,7 @@ class LibraryController @Inject() (
   def getLibrariesByUser = JsonAction.authenticated { request =>
     val res = for (tuple <- libraryCommander.getLibrariesByUser(request.userId)) yield {
       val lib = tuple._2
-      val owner = db.readOnlyReplica { implicit s => userRepo.get(lib.ownerId) }
+      val owner = db.readOnlyMaster { implicit s => userRepo.get(lib.ownerId) }
       val info = LibraryInfo.fromLibraryAndOwner(lib, owner)
       Json.obj("info" -> info, "access" -> tuple._1)
     }
@@ -122,7 +122,7 @@ class LibraryController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) => {
         val lib = libraryCommander.joinLibrary(id)
-        val owner = db.readOnlyReplica { implicit s => userRepo.get(lib.ownerId) }
+        val owner = db.readOnlyMaster { implicit s => userRepo.get(lib.ownerId) }
         Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner)))
       }
     }

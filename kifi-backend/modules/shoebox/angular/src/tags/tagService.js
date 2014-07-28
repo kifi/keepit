@@ -72,6 +72,12 @@ angular.module('kifi.tagService', [
     function reorderTag(srcTag, index) {
       var oldIndex = _.indexOf(allTags, srcTag);
       if (oldIndex !== -1) {
+        if (index < oldIndex) {
+          // if moving the tag above its old location, the oldIndex needs to
+          // be incremented because a copy of this tag is being added in front
+          // of the original old tag
+          oldIndex += 1;
+        }
         allTags.splice(index, 0, srcTag); // add to array
         allTags.splice(oldIndex, 1);      // remove from array
         api.refreshList();

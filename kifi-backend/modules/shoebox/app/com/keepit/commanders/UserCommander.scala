@@ -156,7 +156,7 @@ class UserCommander @Inject() (
   }
 
   def getFriends(user: User, experiments: Set[ExperimentType]): Set[BasicUser] = {
-    val basicUsers = db.readOnlyReplica { implicit s =>
+    val basicUsers = db.readOnlyMaster { implicit s =>
       if (canMessageAllUsers(user.id.get)) {
         userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
           .collect { case u if u.id.get != user.id.get => BasicUser.fromUser(u) }.toSet
@@ -192,7 +192,7 @@ class UserCommander @Inject() (
     socialUserInfoRepo.getByUser(userId).map(BasicSocialUser.from)
   }
 
-  def abookInfo(userId: Id[User]) = abookServiceClient.getABookInfos(userId)
+  def getGmailABookInfos(userId: Id[User]) = abookServiceClient.getABookInfos(userId).map(_.filter(_.origin == ABookOrigins.GMAIL))
 
   def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[Try[ABookInfo]] = {
     abookServiceClient.uploadContacts(userId, origin, payload)
@@ -709,7 +709,7 @@ class UserCommander @Inject() (
   private def getPrefUpdates(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[ExperimentType]): Future[Map[UserValueName, JsValue]] = {
     if (prefSet.contains(UserValueName.SHOW_DELIGHTED_QUESTION)) {
       // Check if user should be shown Delighted question
-      val user = db.readOnlyReplica { implicit s =>
+      val user = db.readOnlyMaster { implicit s =>
         userRepo.get(userId)
       }
       val time = clock.now()
@@ -720,8 +720,7 @@ class UserCommander @Inject() (
       else if (time.minusDays(DELIGHTED_INITIAL_DELAY) > user.createdAt) {
         heimdalClient.getLastDelightedAnswerDate(userId) map { lastDelightedAnswerDate =>
           val minDate = lastDelightedAnswerDate getOrElse START_OF_TIME
-          (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate) &&
-            experiments.contains(ExperimentType.DELIGHTED_SURVEY)
+          (time.minusDays(DELIGHTED_MIN_INTERVAL) > minDate)
         }
       } else Future.successful(false)
       shouldShowDelightedQuestionFut map { shouldShowDelightedQuestion =>
@@ -779,14 +778,14 @@ class UserCommander @Inject() (
   }
 
   def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Option[ExternalId[DelightedAnswer]]] = {
-    val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
+    val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
     heimdalClient.postDelightedAnswer(userId, user.externalId, user.primaryEmail, user.fullName, answer) map { answerOpt =>
       answerOpt flatMap (_.answerId)
     }
   }
 
   def cancelDelightedSurvey(userId: Id[User]): Future[Boolean] = {
-    val user = db.readOnlyReplica { implicit s => userRepo.get(userId) }
+    val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
     heimdalClient.cancelDelightedSurvey(userId, user.externalId, user.primaryEmail, user.fullName)
   }
 

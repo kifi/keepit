@@ -12,8 +12,8 @@ class BasicUserRepo @Inject() (socialUserRepo: SocialUserInfoRepo, userRepo: Use
   }
 
   def loadAll(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], BasicUser] = {
-    basicUserCache.bulkGetOrElse(userIds.map { BasicUserUserIdKey(_) }) { keys =>
-      keys.map { k => (k -> load(k.userId)) }.toMap
-    }.map { case (k, v) => (k.userId, v) }
+    basicUserCache.bulkGetOrElse(userIds map BasicUserUserIdKey) { keys =>
+      keys.map { k => k -> load(k.userId) }.toMap
+    }.map { case (k, v) => k.userId -> v }
   }
 }

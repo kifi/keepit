@@ -1,0 +1,37 @@
+{
+  "name": "angular-smart-scroll",
+  "version": "0.0.2",
+  "homepage": "https://github.com/joonhocho/angular-smart-scroll",
+  "authors": [
+    "Joon Ho Cho <joonho1101@gmail.com>"
+  ],
+  "description": "Smart infinite scroll directive for Angular.js that is customizable to support nested, horizontal, vertical, and/or bidirectional scrolls",
+  "main": "src/angular-smart-scroll.js",
+  "keywords": [
+    "smart",
+    "infinite",
+    "scroll",
+    "nested",
+    "horizontal",
+    "vertical",
+    "bidirectional",
+    "angular.js",
+    "directive"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "coverage",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "angular": "~1.2.12",
+    "jquery": "~2.1.0"
+  },
+  "devDependencies": {
+    "angular-mocks": "~1.2.12"
+  }
+}
