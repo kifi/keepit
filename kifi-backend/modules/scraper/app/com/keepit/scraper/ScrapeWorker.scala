@@ -1,7 +1,7 @@
 package com.keepit.scraper
 
 import com.google.inject.{ Inject, ImplementedBy }
-import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
@@ -16,7 +16,6 @@ import org.apache.http.HttpStatus
 import scala.util.Success
 import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.learning.porndetector.SlidingWindowPornDetector
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.Lang
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Future
@@ -45,6 +44,7 @@ class ScrapeWorkerImpl @Inject() (
 
   implicit val myConfig = config
   implicit val scheduleConfig = schedulerConfig
+  implicit val fj = ExecutionContext.fj
   val awaitTTL = (myConfig.syncAwaitTimeout seconds)
 
   def safeProcess(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Future[Option[Article]] = {
