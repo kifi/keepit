@@ -313,7 +313,7 @@ class AuthHelper @Inject() (
                 )
               ))
               val updated = userCredRepo.findByUserIdOpt(sui.userId.get) map { userCred =>
-                userCredRepo.save(userCred).withSalt(pwdInfo.salt.get).withCredentials(pwdInfo.password)
+                userCredRepo.save(userCred).withCredentials(pwdInfo.password)
               }
               log.info(s"[doSetPassword] UserCreds updated=${updated.map(c => s"id=${c.id} userId=${c.userId} login=${c.loginName}")}")
               authenticateUser(sui.userId.get, onError = { error =>
