@@ -1,22 +1,17 @@
 exports.config = {
-  seleniumAddress: 'http://localhost:4444/wd/hub',
+  // Use phantomjs for headless testing.
+  capabilities: {
+    browserName: 'phantomJS'
+  },
+
+  // Address for phantom GhostDriver.
+  // Start phantom with: "phantomjs --webdriver=9515"
+  seleniumAddress: 'http://localhost:9515',
   
   baseUrl: 'http://localhost:8080/',
 
   // Location of tests.
   specs: [
     './e2e/**/*.spec.js'
-  ],
-
-  // Browsers to run tests on.
-  multiCapabilities: [
-    {
-      name: 'Firefox',
-      browserName: 'firefox'
-    },
-    {
-      name: 'Chrome',
-      browserName: 'chrome'
-    }
   ]
 };
