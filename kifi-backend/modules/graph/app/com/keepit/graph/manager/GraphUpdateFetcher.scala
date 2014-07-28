@@ -40,13 +40,13 @@ class GraphUpdateFetcherImpl @Inject() (
 
       case KeepGraphUpdate => shoebox.getBookmarksChanged(seq.copy(), fetchSize).imap(_.map(KeepGraphUpdate.apply))
 
-      case SparseLDAGraphUpdate => Future.successful(Seq()) /*{
+      case SparseLDAGraphUpdate => {
         val cortexSeq = CortexSequenceNumber.fromLong[DenseLDA, NormalizedURI](seq.value)
         cortex.getSparseLDAFeaturesChanged(cortexSeq.modelVersion, cortexSeq.seq, fetchSize).imap {
           case (modelVersion, uriFeaturesBatch) =>
             uriFeaturesBatch.map { uriFeatures => SparseLDAGraphUpdate(modelVersion, uriFeatures) }
         }
-      }*/
+      }
 
       case NormalizedUriGraphUpdate => shoebox.getIndexableUris(seq.copy(), fetchSize).imap(_.map(NormalizedUriGraphUpdate.apply))
 
