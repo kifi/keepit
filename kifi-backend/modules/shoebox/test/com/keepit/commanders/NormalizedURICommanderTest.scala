@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+<<<<<<< HEAD
 import com.google.inject.{ Injector }
 import com.keepit.common.db.Id
 import com.keepit.model.{ NormalizedURIRepo, Restriction, UrlHash, NormalizedURI }
@@ -39,6 +40,7 @@ class NormalizedURICommanderTest extends Specification with ShoeboxTestInjector 
   "normalizedURICommander" should {
 
     "return adult restriction status for uris" in {
+
       withDb(modules: _*) { implicit injector =>
         val uris = setup()
         val commander = inject[NormalizedURICommander]
