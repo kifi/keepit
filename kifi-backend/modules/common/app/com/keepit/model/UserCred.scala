@@ -18,7 +18,6 @@ case class UserCred(id: Option[Id[UserCred]] = None,
     ) extends ModelWithState[UserCred] {
   def withId(id: Id[UserCred]) = this.copy(id = Some(id))
   def withUpdateTime(now: time.DateTime) = this.copy(updatedAt = now)
-  def withSalt(salt: String) = this.copy(salt = salt)
   def withCredentials(creds: String) = this.copy(credentials = creds)
 }
 
