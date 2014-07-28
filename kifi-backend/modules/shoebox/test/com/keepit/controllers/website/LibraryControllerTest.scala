@@ -442,7 +442,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val (userA, userB, lib1, lib2, keep1, keep2) = db.readWrite { implicit s =>
           val userA = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
-          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = userA.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.LIMITED, isSearchableByOthers = false))
+          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = userA.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.LIMITED, keepDiscoveryEnabled = false))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = userA.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
@@ -455,7 +455,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, libraryId = Some(library1.id.get)))
 
           val userB = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1))
-          val library2 = libraryRepo.save(Library(name = "Library2", ownerId = userB.id.get, slug = LibrarySlug("lib2"), visibility = LibraryVisibility.LIMITED, isSearchableByOthers = false))
+          val library2 = libraryRepo.save(Library(name = "Library2", ownerId = userB.id.get, slug = LibrarySlug("lib2"), visibility = LibraryVisibility.LIMITED, keepDiscoveryEnabled = false))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = userB.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = userA.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))

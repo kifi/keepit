@@ -450,10 +450,10 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryInviteRepo.count === 6
           libraryInviteRepo.all.map(_.id.get)
         }
-        libraryCommander.joinLibrary(inviteIds(0)) === libMurica // Ironman accepts invite to 'Murica'
-        libraryCommander.joinLibrary(inviteIds(1)) === libMurica // Agent accepts invite to 'Murica'
+        libraryCommander.joinLibrary(inviteIds(0)).name === libMurica.name // Ironman accepts invite to 'Murica'
+        libraryCommander.joinLibrary(inviteIds(1)).name === libMurica.name // Agent accepts invite to 'Murica'
         libraryCommander.declineLibrary(inviteIds(2)) // Hulk declines invite to 'Murica'
-        libraryCommander.joinLibrary(inviteIds(3)) === libScience // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access
+        libraryCommander.joinLibrary(inviteIds(3)).name === libScience.name // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access
 
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 6
@@ -514,11 +514,11 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         // Ironman has read-only to Murica, and read-write to Freedom, and owns 2 libraries: IronMurica & Science
         val (libFreedom, libIronMurica, keepsInMurica) = db.readWrite { implicit s =>
-          val libFreedom = libraryRepo.save(Library(name = "Freedom", slug = LibrarySlug("freedom"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.ANYONE, isSearchableByOthers = true))
+          val libFreedom = libraryRepo.save(Library(name = "Freedom", slug = LibrarySlug("freedom"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.ANYONE, keepDiscoveryEnabled = true))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libFreedom.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libFreedom.id.get, userId = userIron.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
 
-          val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.ANYONE, isSearchableByOthers = true))
+          val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.ANYONE, keepDiscoveryEnabled = true))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get).toSet
@@ -573,11 +573,11 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         // Ironman has read-only to Murica, and read-write to Freedom, and owns 2 libraries: IronMurica & Science
         val (libFreedom, libIronMurica, keepsInMurica) = db.readWrite { implicit s =>
-          val libFreedom = libraryRepo.save(Library(name = "Freedom", slug = LibrarySlug("freedom"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.ANYONE, isSearchableByOthers = true))
+          val libFreedom = libraryRepo.save(Library(name = "Freedom", slug = LibrarySlug("freedom"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.ANYONE, keepDiscoveryEnabled = true))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libFreedom.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libFreedom.id.get, userId = userIron.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
 
-          val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.ANYONE, isSearchableByOthers = true))
+          val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.ANYONE, keepDiscoveryEnabled = true))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get).toSet
