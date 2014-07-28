@@ -74,7 +74,7 @@ class TopUriSeedIngestionHelper @Inject() (
       }
     }
 
-    val betweenHours = Hours.hoursBetween(currentDateTime, lastIngestionTime).getHours
+    val betweenHours = Hours.hoursBetween(lastIngestionTime, currentDateTime).getHours
 
     if (betweenHours > uriIngestionFreq || firstTimeIngesting) {
       graph.getConnectedUriScores(userId, avoidFirstDegreeConnections = true).flatMap { uriScores =>

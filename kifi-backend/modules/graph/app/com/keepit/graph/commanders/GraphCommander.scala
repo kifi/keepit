@@ -17,7 +17,7 @@ class GraphCommander @Inject() (
   private val maxResults = 500
 
   private def getUriScoreList(vertexKind: String, vertexId: Long, journal: TeleportationJournal, avoidFirstDegreeConnections: Boolean): Seq[ConnectedUriScore] = {
-    val ls = collisionCommander.getUris(vertexKind, vertexId, journal, avoidFirstDegreeConnections).toList.sortWith(_._2 > _._2)
+    val ls = collisionCommander.getUris(vertexKind, vertexId, journal, avoidFirstDegreeConnections).toList.sortBy(-_._2)
     ls.take(maxResults).map {
       case (uriId, count) =>
         ConnectedUriScore(uriId, count.toDouble / ls.head._2)
@@ -25,7 +25,7 @@ class GraphCommander @Inject() (
   }
 
   private def getUsersScoreList(vertexKind: String, vertexId: Long, journal: TeleportationJournal, avoidFirstDegreeConnections: Boolean): Seq[ConnectedUserScore] = {
-    val ls = collisionCommander.getUsers(vertexKind, vertexId, journal, avoidFirstDegreeConnections).toList.sortWith(_._2 > _._2)
+    val ls = collisionCommander.getUsers(vertexKind, vertexId, journal, avoidFirstDegreeConnections).toList.sortBy(-_._2)
     ls.take(maxResults).map {
       case (userId, count) =>
         ConnectedUserScore(userId, count.toDouble / ls.head._2)
