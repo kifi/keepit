@@ -62,7 +62,8 @@ object ApplicationBuild extends Build {
 
   private def cmd(name: String, command: String, base: File, namedArgs: List[String] = Nil): Command = {
     Command.args(name, "<" + name + "-command>") { (state, args) =>
-      Process(command :: (namedArgs ++ args.toList), base).!;
+      val exitCode = Process(command :: (namedArgs ++ args.toList), base).!;
+      if (exitCode!=0) throw new Exception(s"Command '${(command :: (namedArgs ++ args.toList)).mkString(" ")}' failed with exit code $exitCode")
       state
     }
   }
