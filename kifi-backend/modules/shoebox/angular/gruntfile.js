@@ -85,7 +85,7 @@ module.exports = function (grunt) {
           'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.min.js',
           'managed-lib/ui-slider/slider.js',
           'managed-lib/libs.js',
-          'managed-lib/angular-smart-scroll/src/angular-smart-scroll.min.js',
+          'managed-lib/angular-smart-scroll/src/angular-smart-scroll.js',
           'lib/angulartics/dist/angulartics.min.js',
           'lib/fuse.js/src/fuse.min.js'
         ],
@@ -417,9 +417,6 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-spritesmith');
   grunt.loadNpmTasks('grunt-env');
   grunt.loadNpmTasks('grunt-html2js');
-
-  //Making grunt default to force in order not to break the project.
-  grunt.option('force', true);
 
   // http://gruntjs.com/creating-tasks
 

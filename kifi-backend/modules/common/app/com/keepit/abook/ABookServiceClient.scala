@@ -58,6 +58,7 @@ trait ABookServiceClient extends ServiceClient {
   def getContactsByUser(userId: Id[User], page: Int = 0, pageSize: Option[Int] = None): Future[Seq[RichContact]]
   def getEmailAccountsChanged(seqNum: SequenceNumber[IngestableEmailAccount], fetchSize: Int): Future[Seq[IngestableEmailAccount]]
   def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]]
+  def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -233,11 +234,16 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.getContactsChanged(seqNum, fetchSize)).map(_.json.as[Seq[IngestableContact]])
   }
 
+  def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] =
+    call(ABook.internal.getUsersWithContact(email)).map(_.json.as[Set[Id[User]]])
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
 
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, () => {})
+
+  // allow test clients to set expectations
+  var contactsConnectedToEmailAddress: Set[Id[User]] = Set.empty
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
@@ -295,4 +301,5 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]] = Future.successful(Seq.empty)
 
+  def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] = Future.successful(contactsConnectedToEmailAddress)
 }
