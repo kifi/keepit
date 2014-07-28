@@ -53,7 +53,7 @@ class MobileUserController @Inject() (
   }
 
   def abookInfo() = JsonAction.authenticatedAsync { request =>
-    userCommander.abookInfo(request.userId) map { abooks =>
+    userCommander.getGmailABookInfos(request.userId) map { abooks =>
       Ok(Json.toJson(abooks))
     }
   }

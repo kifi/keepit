@@ -113,7 +113,7 @@ private[integration] class AutogenReaper @Inject() (
           }
         }
         for (exp <- dues) {
-          val user = db.readOnlyReplica { implicit s => userRepo.get(exp.userId) }
+          val user = db.readOnlyMaster { implicit s => userRepo.get(exp.userId) }
           log.info(s"[reap] processing $user")
 
           db.readWrite { implicit s =>
