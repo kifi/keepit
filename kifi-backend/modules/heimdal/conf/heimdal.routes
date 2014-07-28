@@ -29,7 +29,7 @@ POST /internal/heimdal/user/increment                  @com.keepit.controllers.A
 GET  /internal/heimdal/user/alias                      @com.keepit.controllers.AnalyticsController.setUserAlias(userId: Id[User], externalId: ExternalId[User])
 
 GET  /internal/heimdal/user/delighted/time             @com.keepit.controllers.DelightedController.getUserLastInteractedDate(userId: Id[User])
-POST /internal/heimdal/user/delighted/answer           @com.keepit.controllers.DelightedController.postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String)
-POST /internal/heimdal/user/delighted/cancel           @com.keepit.controllers.DelightedController.cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String)
+POST /internal/heimdal/user/delighted/answer           @com.keepit.controllers.DelightedController.postDelightedAnswer()
+POST /internal/heimdal/user/delighted/cancel           @com.keepit.controllers.DelightedController.cancelDelightedSurvey()
 
 ->  / common.Routes

@@ -1,6 +1,7 @@
 package com.keepit.common
 
 import java.util.Locale
+import com.keepit.common.db.Id
 import org.joda.time.format._
 import org.joda.time.{ DateTime, DateTimeZone, LocalDate, LocalTime }
 import com.google.inject.{ ImplementedBy, Singleton }
@@ -9,6 +10,7 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.{ JsValue, Format }
 import play.api.libs.json.JsNumber
+import play.api.mvc.{ PathBindable, QueryStringBindable }
 
 package object time {
 
@@ -140,6 +142,27 @@ package object time {
     def toStandardTimeString: String = STANDARD_DATETIME_FORMAT.print(date)
     def toStandardDateString: String = STANDARD_DATE_FORMAT.print(date)
     def compare(that: DateTime): Int = dateTimeOrdering.compare(date, that)
+  }
+
+  implicit def dateTimeQueryStringBinder(implicit longBinder: QueryStringBindable[String]): QueryStringBindable[DateTime] = new QueryStringBindable[DateTime] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, DateTime]] = {
+      longBinder.bind(key, params) map {
+        case Right(time) => Right(parseStandardTime(time))
+        case _ => Left("Unable to bind a DateTime")
+      }
+    }
+    override def unbind(key: String, time: DateTime): String = {
+      longBinder.unbind(key, time.toStandardDateString)
+    }
+  }
+
+  implicit def dateTimePathBinder(implicit longBinder: PathBindable[String]) = new PathBindable[DateTime] {
+    override def bind(key: String, value: String): Either[String, DateTime] =
+      longBinder.bind(key, value) match {
+        case Right(time) => Right(parseStandardTime(time))
+        case _ => Left("Unable to bind an DateTime")
+      }
+    override def unbind(key: String, time: DateTime): String = time.toStandardDateString
   }
 
   implicit class RichLocalDate(val date: LocalDate) extends AnyVal {
