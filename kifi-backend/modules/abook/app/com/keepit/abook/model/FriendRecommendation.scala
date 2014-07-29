@@ -21,7 +21,6 @@ case class FriendRecommendation(
 
 @ImplementedBy(classOf[FriendRecommendationRepoImpl])
 trait FriendRecommendationRepo extends Repo[FriendRecommendation] {
-  def internFriendRecommendation(userId: Id[User], friendId: Id[User], irrelevant: Boolean)(implicit session: RWSession): FriendRecommendation
   def recordIrrelevantRecommendation(userId: Id[User], friendId: Id[User])(implicit session: RWSession): Unit
   def getIrrelevantRecommendations(userId: Id[User])(implicit session: RSession): Set[Id[User]]
 }
@@ -51,7 +50,7 @@ class FriendRecommendationRepoImpl @Inject() (
     for (row <- rows if row.userId === userId && row.friendId === friendId) yield row
   }
 
-  def internFriendRecommendation(userId: Id[User], friendId: Id[User], irrelevant: Boolean)(implicit session: RWSession): FriendRecommendation = {
+  private def internFriendRecommendation(userId: Id[User], friendId: Id[User], irrelevant: Boolean)(implicit session: RWSession): FriendRecommendation = {
     compiledGetByUserAndFriend(userId, friendId).firstOption match {
       case None => save(FriendRecommendation(userId = userId, friendId = friendId, irrelevant = irrelevant))
       case Some(recommendation) if recommendation.irrelevant == irrelevant => recommendation
