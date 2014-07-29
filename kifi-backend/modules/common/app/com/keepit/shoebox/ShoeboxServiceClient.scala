@@ -151,8 +151,7 @@ case class ShoeboxCacheProvider @Inject() (
   userBookmarkCountCache: KeepCountCache,
   userSegmentCache: UserSegmentCache,
   extensionVersionCache: ExtensionVersionInstallationIdCache,
-  urlPatternRuleAllCache: UrlPatternRuleAllCache,
-  userImageUrlCache: UserImageUrlCache)
+  urlPatternRuleAllCache: UrlPatternRuleAllCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -828,10 +827,8 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
-    cacheProvider.userImageUrlCache.getOrElseFuture(UserImageUrlCacheKey(userId, width)) {
-      call(Shoebox.internal.getUserImageUrl(userId.id, width)).map { r =>
-        r.json.as[String]
-      }
+    call(Shoebox.internal.getUserImageUrl(userId.id, width)).map { r =>
+      r.json.as[String]
     }
   }
 
