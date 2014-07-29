@@ -11,7 +11,7 @@ import scala.concurrent.duration.Duration
 case class ConnectedUserScoreCacheKey(userId: Id[User], avoidFirstDegreeConnections: Boolean) extends Key[Seq[ConnectedUserScore]] {
   override val version = 0
   val namespace = "user_connection_score"
-  def toKey(): String = userId.id.toString + avoidFirstDegreeConnections.toString
+  def toKey(): String = s"userId=${userId.id.toString}#avoidFirstDegreeConnection=${avoidFirstDegreeConnections.toString}"
 }
 
 class ConnectedUserScoreCache(stats: CacheStatistics, accessLog: AccessLog, inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
