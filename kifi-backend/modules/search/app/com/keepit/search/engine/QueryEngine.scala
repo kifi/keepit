@@ -2,13 +2,14 @@ package com.keepit.search.engine
 
 import com.keepit.search.Searcher
 import com.keepit.search.engine.query.KWeight
+import com.keepit.search.engine.result.ResultCollector
 import com.keepit.search.index.{ IdMapper, WrappedSubReader }
 import com.keepit.search.util.join.{ DataBuffer, HashJoin }
 import org.apache.lucene.search.{ Scorer, Query, Weight }
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
-class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArraySize: Int, collector: ResultCollector) {
+class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArraySize: Int, collector: ResultCollector[ScoreContext]) {
 
   private[this] val dataBuffer: DataBuffer = new DataBuffer()
 
@@ -37,7 +38,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArra
     }
   }
 
-  def execute(searcher: Searcher)(createScoreVectorSource: (Array[Scorer], IdMapper) => ScoreVectorSource): Unit = {
+  def execute(searcher: Searcher)(createScoreVectorSource: (WrappedSubReader, Array[Scorer]) => ScoreVectorSource): Unit = {
     // if NullExpr, no need to execute
     if (scoreExpr.isNullExpr) return
 
@@ -57,7 +58,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArra
           scorers(i) = weights(i)._1.scorer(subReaderContext, true, false, subReader.getLiveDocs)
           i += 1
         }
-        val source = createScoreVectorSource(scorers, subReader.getIdMapper)
+        val source = createScoreVectorSource(subReader, scorers)
         source.score(dataBuffer)
       }
     }

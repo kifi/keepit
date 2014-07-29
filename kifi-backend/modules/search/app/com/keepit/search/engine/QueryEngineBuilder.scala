@@ -1,6 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.search.engine.query._
+import com.keepit.search.engine.result.ResultCollector
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanClause.Occur._
 import scala.collection.JavaConversions._
@@ -11,7 +12,7 @@ class QueryEngineBuilder(query: Query, percentMatchThreshold: Float) {
   private[this] var _query: Query = query
   private[this] var _expr: ScoreExpr = buildExpr(query)
   private[this] var _index: Int = 0
-  private[this] var _collector: ResultCollector = null
+  private[this] var _collector: ResultCollector[ScoreContext] = null
 
   def build(): QueryEngine = {
 
@@ -70,7 +71,7 @@ class QueryEngineBuilder(query: Query, percentMatchThreshold: Float) {
     _expr = BoostExpr(_expr, boosterExpr, boostStrength)
   }
 
-  def setResultCollector(collector: ResultCollector): Unit = {
+  def setResultCollector(collector: ResultCollector[ScoreContext]): Unit = {
     _collector = collector
   }
 }

@@ -1,5 +1,7 @@
 package com.keepit.search.engine
 
+import com.keepit.search.engine.result.ResultCollector
+
 import scala.util.Random
 
 import org.specs2.mutable.Specification
@@ -8,7 +10,7 @@ class ScoreExprTest extends Specification {
   private[this] val rnd = new Random()
   private[this] val size = 5
 
-  private[this] val collector = new ResultCollector {
+  private[this] val collector = new ResultCollector[ScoreContext] {
     private var _id = -1L
     private var _score = 0.0f
 
@@ -19,9 +21,14 @@ class ScoreExprTest extends Specification {
       _score = 0.0f
     }
 
-    override def collect(id: Long, score: Float): Unit = {
-      _id = id
-      _score = score
+    override def collect(ctx: ScoreContext): Unit = {
+      val id = ctx.id
+      val score = ctx.score
+
+      if (score > 0.0f) {
+        _id = id
+        _score = score
+      }
     }
   }
 
