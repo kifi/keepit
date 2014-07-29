@@ -5,6 +5,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.time._
 import com.keepit.cortex.MiscPrefix
@@ -42,7 +43,8 @@ object UserLDAStatisticsActor {
 
 trait UserLDAStatisticsPlugin
 
-class UserLDAStatisticsPluginImpl(
+@Singleton
+class UserLDAStatisticsPluginImpl @Inject() (
     actor: ActorInstance[UserLDAStatisticsActor],
     val scheduling: SchedulingProperties) extends SchedulerPlugin with UserLDAStatisticsPlugin {
   import UserLDAStatisticsActor._
@@ -59,12 +61,17 @@ class UserLDAStatisticsUpdater @Inject() (
     db: Database,
     userTopicRepo: UserLDAInterestsRepo,
     representer: LDAURIRepresenter,
-    statsStore: UserLDAStatisticsStore) {
+    statsStore: UserLDAStatisticsStore) extends Logging {
+
+  val MIN_EVIDENCE = 30
 
   def update() {
-    val vecs = db.readOnlyReplica { implicit s => userTopicRepo.all() }.filter { _.numOfEvidence > 20 }.map { _.userTopicMean.get.mean }
-    val stats = genStats(vecs)
-    statsStore.+=(MiscPrefix.LDA.userLDAStatsJsonFile, representer.version, stats)
+    val vecs = db.readOnlyReplica { implicit s => userTopicRepo.all() }.filter { _.numOfEvidence > MIN_EVIDENCE }.map { _.userTopicMean.get.mean }
+    log.info(s"begin user LDA stats update. data size: ${vecs.size}")
+    if (vecs.size > 1) {
+      val stats = genStats(vecs)
+      statsStore.+=(MiscPrefix.LDA.userLDAStatsJsonFile, representer.version, stats)
+    }
   }
 
   private def genStats(vecs: Seq[Array[Float]]): UserLDAStatistics = {
