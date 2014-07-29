@@ -11,7 +11,7 @@ class SimpleGlobalVertexReader(vertices: Map[VertexId, Vertex]) extends GlobalVe
   @inline private def edgeData(source: VertexId, destination: VertexId, component: (VertexType, VertexType, EdgeType)) = vertices(source).outgoingEdges.edges(component)(destination)
   def id: VertexId = currentVertexId getOrElse { throw new UninitializedReaderException(s"$this is not initialized over a valid vertex") }
   def data: VertexDataReader = currentVertex.data
-  def kind: VertexKind[_ <: VertexDataReader] = data.kind
+  def kind: VertexType = data.kind
   val outgoingEdgeReader: OutgoingEdgeReader = new SimpleOutgoingEdgeReader(this, currentVertex.outgoingEdges)
   val incomingEdgeReader: IncomingEdgeReader = new SimpleIncomingEdgeReader(this, currentVertex.incomingEdges, edgeData)
   def moveTo(vertex: VertexId): Unit = {
@@ -34,7 +34,7 @@ trait SimpleLocalEdgeReader extends LocalEdgeReader {
   def source: VertexId = currentEdge.get._1
   def destination: VertexId = currentEdge.get._2
   def data: EdgeDataReader = currentEdge.get._3
-  def kind: EdgeKind[_ <: EdgeDataReader] = component._3
+  def kind: EdgeType = component._3
   def moveToNextComponent(): Boolean = components match {
     case None => throw new UninitializedReaderException(s"$this is not initialized over a valid vertex")
     case Some(iterator) if iterator.hasNext => {
@@ -80,7 +80,7 @@ class SimpleGlobalEdgeReader(vertices: Map[VertexId, Vertex]) extends GlobalEdge
   private val globalDestinationReader = new SimpleGlobalVertexReader(vertices)
   private var currentEdgeKind: Option[EdgeType] = None
 
-  def kind: EdgeKind[_ <: EdgeDataReader] = currentEdgeKind getOrElse { throw new UninitializedReaderException(s"$this is not initialized over a valid edge") }
+  def kind: EdgeType = currentEdgeKind getOrElse { throw new UninitializedReaderException(s"$this is not initialized over a valid edge") }
   def source: VertexId = globalSourceReader.id
   def destination: VertexId = globalDestinationReader.id
   private def component = (source.kind, destination.kind, kind)

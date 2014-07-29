@@ -1,10 +1,10 @@
 package com.keepit.graph.model
 
-import com.keepit.graph.model.VertexKind.VertexType
+import com.keepit.graph.model.Component.Component
 import com.keepit.graph.model.EdgeKind.EdgeType
 
 trait EdgeReader {
-  def kind: EdgeKind[_ <: EdgeDataReader]
+  def kind: EdgeType
   def source: VertexId
   def destination: VertexId
   def data: EdgeDataReader
@@ -24,7 +24,7 @@ trait GlobalEdgeReader extends EdgeReader with SourceReader with DestinationRead
 
 trait LocalEdgeReader extends EdgeReader {
   def moveToNextComponent(): Boolean
-  def component: (VertexType, VertexType, EdgeType)
+  def component: Component
   def degree: Int
   def moveToNextEdge(): Boolean
   def reset(): Unit
