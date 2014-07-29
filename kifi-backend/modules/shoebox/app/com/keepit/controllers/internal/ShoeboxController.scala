@@ -216,39 +216,41 @@ class ShoeboxController @Inject() (
   }
 
   def recordScrapedNormalization() = Action.async(parse.tolerantJson) { request =>
-    val candidateUrl = (request.body \ "url").as[String]
-    val candidateNormalization = (request.body \ "normalization").as[Normalization]
-    val scrapedCandidate = ScrapedCandidate(candidateUrl, candidateNormalization)
+    timing("recordScrapedNormalization", 10000L, Some(elapsedMili => log.warn(s"long recordScrapedNormalization time ${elapsedMili}ms for ${request.body}"))) {
+      val candidateUrl = (request.body \ "url").as[String]
+      val candidateNormalization = (request.body \ "normalization").as[Normalization]
+      val scrapedCandidate = ScrapedCandidate(candidateUrl, candidateNormalization)
 
-    val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
-    val signature = Signature((request.body \ "signature").as[String])
-    val scrapedUri = db.readOnlyMaster { implicit session => normUriRepo.get(uriId) }
+      val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
+      val signature = Signature((request.body \ "signature").as[String])
+      val scrapedUri = db.readOnlyMaster { implicit session => normUriRepo.get(uriId) }
 
-    normalizationServiceProvider.get.update(NormalizationReference(scrapedUri, signature = Some(signature)), scrapedCandidate).map { newReferenceOption =>
-      (request.body \ "alternateUrls").asOpt[Set[String]].foreach { alternateUrls =>
-        val bestReference = newReferenceOption.map { newReferenceId =>
-          db.readOnlyMaster { implicit session =>
-            normUriRepo.get(newReferenceId)
-          }
-        } getOrElse scrapedUri
-        // todo(Léo): What follows is dangerous. Someone could mess up with our data by reporting wrong alternate Urls on its website. We need to do a specific content check.
-        bestReference.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { bestCandidate =>
-          alternateUrls.foreach { alternateUrl =>
-            val uri = db.readOnlyMaster { implicit session =>
-              normalizedURIInterner.getByUri(alternateUrl)
+      normalizationServiceProvider.get.update(NormalizationReference(scrapedUri, signature = Some(signature)), scrapedCandidate).map { newReferenceOption =>
+        (request.body \ "alternateUrls").asOpt[Set[String]].foreach { alternateUrls =>
+          val bestReference = newReferenceOption.map { newReferenceId =>
+            db.readOnlyMaster { implicit session =>
+              normUriRepo.get(newReferenceId)
             }
-            uri match {
-              case Some(existingUri) if existingUri.id.get == bestReference.id.get => // ignore
-              case _ => try {
-                db.readWrite { implicit session =>
-                  normalizedURIInterner.internByUri(alternateUrl, bestCandidate)
-                }
-              } catch { case ex: Throwable => log.error(s"Failed to intern alternate url $alternateUrl for $bestCandidate") }
+          } getOrElse scrapedUri
+          // todo(Léo): What follows is dangerous. Someone could mess up with our data by reporting wrong alternate Urls on its website. We need to do a specific content check.
+          bestReference.normalization.map(ScrapedCandidate(scrapedUri.url, _)).foreach { bestCandidate =>
+            alternateUrls.foreach { alternateUrl =>
+              val uri = db.readOnlyMaster { implicit session =>
+                normalizedURIInterner.getByUri(alternateUrl)
+              }
+              uri match {
+                case Some(existingUri) if existingUri.id.get == bestReference.id.get => // ignore
+                case _ => try {
+                  db.readWrite { implicit session =>
+                    normalizedURIInterner.internByUri(alternateUrl, bestCandidate)
+                  }
+                } catch { case ex: Throwable => log.error(s"Failed to intern alternate url $alternateUrl for $bestCandidate") }
+              }
             }
           }
         }
+        Ok
       }
-      Ok
     }
   }
 
