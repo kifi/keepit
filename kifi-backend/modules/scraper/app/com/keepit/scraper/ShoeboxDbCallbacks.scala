@@ -111,6 +111,7 @@ trait ShoeboxDbCallbacks {
   def assignTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]]
   def getNormalizedUri(uri: NormalizedURI): Future[Option[NormalizedURI]]
   def saveNormalizedUri(uri: NormalizedURI): Future[NormalizedURI]
+  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit]
   def savePageInfo(info: PageInfo): Future[Unit]
   def saveImageInfo(info: ImageInfo): Future[ImageInfo]

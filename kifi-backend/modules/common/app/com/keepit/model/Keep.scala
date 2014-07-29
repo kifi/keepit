@@ -22,7 +22,7 @@ case class Keep(
     urlId: Id[URL],
     url: String, // denormalized for efficiency
     bookmarkPath: Option[String] = None,
-    isPrivate: Boolean = false,
+    isPrivate: Boolean = false, // This represents if the Keep is discoverable in search or the feed.
     userId: Id[User],
     state: State[Keep] = KeepStates.ACTIVE,
     source: KeepSource,
@@ -55,6 +55,8 @@ case class Keep(
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
   def isActive: Boolean = state == KeepStates.ACTIVE
+
+  def isDiscoverable = !isPrivate
 }
 
 object Keep {

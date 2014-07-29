@@ -85,15 +85,17 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     }
     respFuture.onFailure {
       case ex: Throwable =>
-        val stringBody = body.toString
+        val stringBody = body.toString()
         airbrakeNotifier.notify(AirbrakeError(
           exception = ex,
           message = Some(
             s"can't call [${call.path}] " +
               s"with body: ${stringBody.abbreviate(30)} (${stringBody.size} chars), " +
-              s"params: ${call.params.map(_.toString).mkString(",")}"),
+              s"params: ${call.params.map(_.toString()).mkString(",")}"),
           method = Some(call.method.toString),
           url = Some(call.path)))
+        //also dumping the full thing to the log in case we want to dig into the error details
+        log.error(s"can't call [${call.path}] with body: $stringBody , params: ${call.params.map(_.toString()).mkString(",")}", ex)
     }
     respFuture
   }

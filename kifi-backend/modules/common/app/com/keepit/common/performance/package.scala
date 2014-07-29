@@ -14,8 +14,8 @@ package object performance {
       elapsedTime
     }
 
-    def resultString(res: String) = s"[$tag] result: ${res}; elapsed milliseconds: ${(elapsedTime / 1000000d)}"
-    override def toString = s"[$tag] elapsed milliseconds: ${(elapsedTime / 1000000d)}"
+    def resultString(res: String) = s"[$tag] result: $res; elapsed milliseconds: ${elapsedTime / 1000000d}"
+    override def toString = s"[$tag] elapsed milliseconds: ${elapsedTime / 1000000d}"
 
     def logTime(resOpt: Option[String] = None)(implicit logger: Logger = log) {
       resOpt match {
@@ -33,13 +33,14 @@ package object performance {
     res
   }
 
-  def timing[A](tag: String, threshold: Long, cb: Option[() => Unit] = None)(f: => A)(implicit logger: Logger): A = {
+  def timing[A](tag: String, threshold: Long, conditionalBlock: Option[Long => Unit] = None)(f: => A)(implicit logger: Logger): A = {
     val sw = new Stopwatch(tag)
     val res = f
     val elapsed = sw.stop()
-    if ((elapsed / 1000000) > threshold) {
-      cb match {
-        case Some(c) => c()
+    val elapsedMili = elapsed / 1000000
+    if (elapsedMili > threshold) {
+      conditionalBlock match {
+        case Some(block) => block(elapsedMili)
         case None => sw.logTime(None)
       }
     }

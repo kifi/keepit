@@ -93,6 +93,7 @@ case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthe
 class UserCommander @Inject() (
     db: Database,
     userRepo: UserRepo,
+    userCredRepo: UserCredRepo,
     emailRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
     userConnectionRepo: UserConnectionRepo,
@@ -378,13 +379,22 @@ class UserCommander @Inject() (
     } map { sui =>
       val hasher = Registry.hashers.currentHasher
       val identity = sui.credentials.get
-      if (!hasher.matches(identity.passwordInfo.get, oldPassword)) throw new IllegalArgumentException("bad_old_password")
-      else {
-        val pInfo = Registry.hashers.currentHasher.hash(newPassword)
-        UserService.save(UserIdentity(
+      if (!hasher.matches(identity.passwordInfo.get, oldPassword)) {
+        log.warn(s"[doChangePassword($userId)] oldPwd=$oldPassword newPwd=$newPassword pwd=${identity.passwordInfo.get}")
+        throw new IllegalArgumentException("bad_old_password")
+      } else {
+        val pwdInfo = Registry.hashers.currentHasher.hash(newPassword)
+        val savedIdentity = UserService.save(UserIdentity(
           userId = sui.userId,
-          socialUser = sui.credentials.get.copy(passwordInfo = Some(pInfo))
+          socialUser = sui.credentials.get.copy(passwordInfo = Some(pwdInfo))
         ))
+        val updatedCred = db.readWrite { implicit session =>
+          userCredRepo.findByUserIdOpt(userId) map { userCred =>
+            userCredRepo.save(userCred.withCredentials(pwdInfo.password))
+          }
+        }
+        log.info(s"[doChangePassword] UserCreds updated=${updatedCred.map(c => s"id=${c.id} userId=${c.userId} login=${c.loginName}")}")
+        savedIdentity
       }
     }
     resOpt getOrElse { throw new IllegalArgumentException("no_user") }
@@ -700,9 +710,10 @@ class UserCommander @Inject() (
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
     val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
+    val imageName = user.pictureName.getOrElse("0")
     implicit val txn = TransactionalCaching.Implicits.directCacheAccess
-    userImageUrlCache.getOrElseFuture(UserImageUrlCacheKey(userId, width)) {
-      s3ImageStore.getPictureUrl(Some(width), user, user.pictureName.getOrElse("0"))
+    userImageUrlCache.getOrElseFuture(UserImageUrlCacheKey(userId, width, imageName)) {
+      s3ImageStore.getPictureUrl(Some(width), user, imageName)
     }
   }
 
