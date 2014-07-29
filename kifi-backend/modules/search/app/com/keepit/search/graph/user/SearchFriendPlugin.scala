@@ -5,7 +5,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.search.index.IndexerActor
+import com.keepit.search.index.BasicIndexerActor
 import com.keepit.search.index.IndexerPlugin
 import com.keepit.search.index.IndexerPluginImpl
 import com.keepit.search.index.IndexManager
@@ -21,4 +21,4 @@ class SearchFriendGraphPluginImpl @Inject() (
 
 class SearchFriendIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,
-  indexer: SearchFriendIndexer) extends IndexerActor[SearchFriend, SearchFriendIndexer](airbrake, indexer)
+  indexer: SearchFriendIndexer) extends BasicIndexerActor[SearchFriend, SearchFriendIndexer](airbrake, indexer)

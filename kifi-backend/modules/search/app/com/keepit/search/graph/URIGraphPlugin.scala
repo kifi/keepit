@@ -7,7 +7,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.model.{ Keep, NormalizedURI }
-import com.keepit.search.index.IndexerActor
+import com.keepit.search.index.BasicIndexerActor
 import com.keepit.search.index.IndexerPlugin
 import com.keepit.search.index.IndexManager
 import com.keepit.search.graph.bookmark.URIGraphIndexer
@@ -26,4 +26,4 @@ class URIGraphPluginImpl @Inject() (
 
 class URIGraphActor @Inject() (
   airbrake: AirbrakeNotifier,
-  indexer: ShardedURIGraphIndexer) extends IndexerActor[Keep, URIGraphIndexer](airbrake, indexer)
+  indexer: ShardedURIGraphIndexer) extends BasicIndexerActor[Keep, URIGraphIndexer](airbrake, indexer)
