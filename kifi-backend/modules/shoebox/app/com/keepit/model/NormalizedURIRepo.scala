@@ -199,13 +199,6 @@ class NormalizedURIRepoImpl @Inject() (
     { for (r <- rows if r.restriction === targetRestriction) yield r }.list
   }
 
-  def getRestrictionStatusOfURIs(targetRestriction: Restriction, uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
-    { for (r <- rows if r.id === uriId && r.restriction === targetRestriction) yield r }.firstOption match {
-      case Some(row) => true
-      case None => false
-    }
-  }
-
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
     assignSequenceNumbers(sequence, "normalized_uri", limit)
   }

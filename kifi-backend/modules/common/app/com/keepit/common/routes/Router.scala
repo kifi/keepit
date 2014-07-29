@@ -46,7 +46,6 @@ object ParamValue {
   implicit def modelVersionToParam[M <: StatModel](modelVersion: ModelVersion[M]) = ParamValue(Some(modelVersion.version.toString))
   implicit def emailToParam(emailAddress: EmailAddress) = ParamValue(Some(emailAddress.address))
   implicit def userValueNameToParam(userValueName: UserValueName) = ParamValue(Some(userValueName.name))
-  implicit def seqOfToParam[T](s: Seq[T]) = ParamValue(Some(s.toString))
   implicit def dateTimeToParam(dateTime: DateTime) = ParamValue(Some(dateTime.toStandardDateString))
 }
 
