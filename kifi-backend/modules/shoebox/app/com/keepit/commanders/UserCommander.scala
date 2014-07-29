@@ -390,7 +390,7 @@ class UserCommander @Inject() (
         ))
         val updatedCred = db.readWrite { implicit session =>
           userCredRepo.findByUserIdOpt(userId) map { userCred =>
-            userCredRepo.save(userCred).withCredentials(pwdInfo.password)
+            userCredRepo.save(userCred.withCredentials(pwdInfo.password))
           }
         }
         log.info(s"[doChangePassword] UserCreds updated=${updatedCred.map(c => s"id=${c.id} userId=${c.userId} login=${c.loginName}")}")
