@@ -125,9 +125,19 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
       val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
         uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+
+      val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "USA"))
+      val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "food"))
+
+      keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
+      keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
+      keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag1.id.get))
+      keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
     }
     db.readOnlyMaster { implicit s =>
       keepRepo.count === 3
+      collectionRepo.count(userCaptain.id.get) === 2
+      keepToCollectionRepo.count === 4
     }
     (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
   }

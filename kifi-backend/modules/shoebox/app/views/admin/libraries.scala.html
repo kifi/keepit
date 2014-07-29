@@ -1,0 +1,49 @@
+@(libraryData: com.keepit.controllers.admin.LibraryPageInfo)
+@import com.keepit.controllers.admin.routes
+
+@otherPagesRoute(page: Int) = {
+  @com.keepit.controllers.admin.routes.AdminLibraryController.index(page)
+}
+
+@admin(libraryData.libraryCount + " " + "Total Libraries") {
+  <h2> Showing @libraryData.libraryStats.length libraries (page @(libraryData.page + 1))</h2>
+
+  @adminHelper.pagination(libraryData.page, libraryData.libraryCount, libraryData.pageSize, otherPagesRoute _) {
+      <table class="table table-bordered">
+        <tr>
+          <th>#</th>
+          <th>Id</th>
+          <th>Owner</th>
+          <th>Name</th>
+          <th>Visibility</th>
+          <th>Slug</th>
+          <th># Keeps</th>
+          <th># Members</th>
+          <th># Invites</th>
+          <th>Keep Discovery Enabled</th>
+          <th>State</th>
+          <th>Kind</th>
+          <th>Date Created</th>
+          <th>Date Updated</th>
+        </tr>
+      @for((libStat,i) <- libraryData.libraryStats.zipWithIndex) {
+        <tr>
+          <td>@{i+1}</td>
+          <td><span class="badge">@libStat.library.id.get</span></td>
+          <td>@adminHelper.userDisplay(libStat.owner)</td>
+          <td>@libStat.library.name</td>
+          <td>@libStat.library.visibility.value</td>
+          <td>@libStat.library.slug.value</td>
+          <td>@libStat.numKeeps</td>
+          <td>@libStat.numMembers</td>
+          <td>@libStat.numInvites</td>
+          <td>@libStat.library.keepDiscoveryEnabled</td>
+          <td>@libStat.library.state</td>
+          <td>@libStat.library.kind</td>
+          <td>@libStat.library.createdAt</td>
+          <td>@libStat.library.updatedAt</td>
+        </tr>
+      }
+      </table>
+  }
+}
