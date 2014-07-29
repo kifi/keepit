@@ -29,6 +29,7 @@ trait GraphServiceClient extends ServiceClient {
   def wander(wanderlust: Wanderlust): Future[Collisions]
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
+  def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]]
 }
 
 case class GraphCacheProvider @Inject() (
@@ -96,4 +97,15 @@ class GraphServiceClientImpl @Inject() (
     }
   }
 
+  def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]] = {
+    val futureUserScores = cacheProvider.userScoreCache.get(ConnectedUserScoreCacheKey(userId, false)) match {
+      case Some(userScores) => Future.successful(userScores)
+      case None =>
+        val futureActualUserScores = call(Graph.internal.getUserAndScores(userId, false)).map { response =>
+          response.json.as[Seq[ConnectedUserScore]]
+        }
+        if (bePatient) futureActualUserScores else Future.successful(Seq.empty)
+    }
+    futureUserScores.map(userScores => userScores.map { case ConnectedUserScore(friendId, score) => friendId -> score })
+  }
 }

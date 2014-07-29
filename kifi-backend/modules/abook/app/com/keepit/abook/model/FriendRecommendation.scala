@@ -6,7 +6,7 @@ import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.google.inject.{ Inject, ImplementedBy, Singleton }
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 
 case class FriendRecommendation(
     id: Option[Id[FriendRecommendation]] = None,
