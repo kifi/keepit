@@ -78,11 +78,10 @@ var libJsFiles = [
   ['lib/angular-sanitize/angular-sanitize.js', 'lib/angular-sanitize/angular-sanitize.min.js'],
   ['lib/angular-route/angular-route.js', 'lib/angular-route/angular-route.min.js'],
   ['lib/angular-animate/angular-animate.js', 'lib/angular-animate/angular-animate.min.js'],
-  'lib/jquery.mousewheel/jquery.mousewheel.js',
+  'lib/jquery-mousewheel/jquery.mousewheel.js',
   'lib/antiscroll/antiscroll.js',
   ['lib/moment/moment.js', 'lib/moment/min/moment.min.js'],
   'lib/angular-moment/angular-moment.js',
-  ['lib/angular-facebook-api/dist/angular-facebook-api.js', 'lib/angular-facebook-api/dist/angular-facebook-api.min.js'],
   ['managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.js', 'managed-lib/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.min.js'],
   'managed-lib/ui-slider/slider.js',
   'managed-lib/libs.js',
@@ -171,7 +170,62 @@ gulp.task('clean', function () {
     .pipe(rimraf());
 });
 
-gulp.task('styles', function () {
+gulp.task('sprite-imports', function () {
+  var spriteData = gulp.src('img/sprites/*.png').pipe(spritesmith({
+    imgName: 'sprites.png',
+    imgPath: '/img/sprites.png',
+    cssName: 'sprites.styl',
+    algorithm: 'binary-tree',
+    padding: 2,
+    cssFormat: 'stylus',
+    cssTemplate: 'src/common/build-css/sprites.styl.tpl',
+    cssVarMap: function (sprite) {
+      // useful to override template variables
+    }
+  }));
+  var img = spriteData.img.pipe(gulp.dest('img'));
+  var css = spriteData.css.pipe(gulp.dest('src/common/build-css'));
+  return es.merge(img, css);
+});
+
+gulp.task('sprite-classes', function () {
+  var spriteData = gulp.src('img/sprites/*.png').pipe(spritesmith({
+    imgName: 'sprites.png',
+    imgPath: '/img/sprites.png',
+    cssName: 'spritesClasses.styl',
+    algorithm: 'binary-tree',
+    padding: 2,
+    cssFormat: 'stylus',
+    cssTemplate: 'src/common/build-css/spritesClasses.styl.tpl',
+    cssVarMap: function (sprite) {
+      var cssSelector = '';
+      var pseudoClasses = ['hover', 'active'];
+      var names = sprite.name.split('-');
+      var modifier = names[names.length - 1];
+      var root = names.slice(0, names.length - 1).join('-');
+
+      if (sprite.width % 2 !== 0 || sprite.height % 2 !== 0) {
+        grunt.fail.warn("sprite " + sprite.name + " is not retina: " + sprite.width + " x " + sprite.height);
+      }
+
+      if (pseudoClasses.indexOf(modifier) !== -1) {
+        cssSelector += '.sprite-' + sprite.name + ',\n.sprite-' + root + ':' + modifier + '\n  sprite2x($' + sprite.name + ')\n';
+      } else if (modifier === 'default') {
+        cssSelector += '.sprite-' + root + '\n  sprite2x($' + sprite.name + ')\n';
+      } else {
+        cssSelector += '.sprite-' + sprite.name + '\n  sprite2x($' + sprite.name + ')\n';
+      }
+      sprite.cssSelector = cssSelector;
+    }
+  }));
+  var img = spriteData.img.pipe(gulp.dest('img'));
+  var css = spriteData.css.pipe(gulp.dest('src/common'));
+  return es.merge(img, css);
+});
+
+gulp.task('sprite', ['sprite-imports', 'sprite-classes']);
+
+gulp.task('styles', ['sprite'], function () {
   return gulp.src(stylFiles, {base: './'})
     .pipe(cache(stylesCache))
     .pipe(stylus({use: [nib()], import: ['nib', __dirname + '/src/common/build-css/*.styl']}))
@@ -184,15 +238,15 @@ gulp.task('styles', function () {
 gulp.task('jshint', function () {
   var srcHint = gulp.src(jsFiles)
     .pipe(cache(jsHintSrcCache))
-    .pipe(jshint('.jshintrc'))
-    .pipe(jshint.reporter('jshint-stylish'));
+    .pipe(jshint('.jshintrc'));
 
   var testHint = gulp.src(testJsFiles)
     .pipe(cache(jsHintTestCache))
-    .pipe(jshint('test/.jshintrc'))
-    .pipe(jshint.reporter('jshint-stylish'));
+    .pipe(jshint('test/.jshintrc'));
 
-  return es.merge(srcHint, testHint);
+  return es.merge(srcHint, testHint)
+    .pipe(jshint.reporter('jshint-stylish'))
+    .pipe(gulpif(isRelease, jshint.reporter('fail')));
 });
 
 gulp.task('scripts', ['jshint'], function () {
@@ -247,59 +301,8 @@ gulp.task('watch', function () {
   gulp.watch(outDir + '/**').on('change', livereload.changed);
 });
 
-gulp.task('sprite-base-2x', function () {
-  var spriteData = gulp.src('img/sprites/*.png').pipe(spritesmith({
-    imgName: 'sprites.png',
-    cssName: 'sprites.styl',
-    algorithm: 'binary-tree',
-    padding: 2,
-    cssFormat: 'stylus',
-    cssVarMap: function (sprite) {
-      // useful to override template variables
-    }
-  }));
-  spriteData.img.pipe(gulp.dest('img'));
-  spriteData.css.pipe(gulp.dest('src/common/build-css'));
-});
-
-gulp.task('sprite-base-css-2x', function () {
-  var spriteData = gulp.src('img/sprites/*.png').pipe(spritesmith({
-    imgName: 'sprites.png',
-    cssName: 'spriteClasses.styl',
-    algorithm: 'binary-tree',
-    padding: 2,
-    cssFormat: 'stylus',
-    cssTemplate: 'src/common/build-css/spritesClasses.styl.tpl',
-    cssVarMap: function (sprite) {
-      var cssSelector = '';
-      var pseudoClasses = ['hover', 'active'];
-      var names = sprite.name.split('-');
-      var modifier = names[names.length - 1];
-      var root = names.slice(0, names.length - 1).join('-');
-
-      if (sprite.width % 2 !== 0 || sprite.height % 2 !== 0) {
-        grunt.fail.warn("sprite " + sprite.name + " is not retina: " + sprite.width + " x " + sprite.height);
-      }
-
-      if (pseudoClasses.indexOf(modifier) !== -1) {
-        cssSelector += '.sprite-' + sprite.name + ',\n.sprite-' + root + ':' + modifier + '\n  sprite2x($' + sprite.name + ')\n';
-      } else if (modifier === 'default') {
-        cssSelector += '.sprite-' + root + '\n  sprite2x($' + sprite.name + ')\n';
-      } else {
-        cssSelector += '.sprite-' + sprite.name + '\n  sprite2x($' + sprite.name + ')\n';
-      }
-      sprite.cssSelector = cssSelector;
-    }
-  }));
-  spriteData.img.pipe(gulp.dest('img'));
-  spriteData.css.pipe(gulp.dest('src/common'));
-});
-
-gulp.task('sprite', ['sprite-base-2x', 'sprite-base-css-2x']);
-
 gulp.task('templates', function () {
   return gulp.src(htmlFiles)
-    .pipe(cache(htmlCache))
     .pipe(makeTemplates())
     .pipe(concat(pkgName + '-tpl.js'))
     .pipe(gulp.dest(tmpDir));
@@ -308,13 +311,13 @@ gulp.task('templates', function () {
 gulp.task('run-tests', ['templates'], function (done) {
   karma.start({
     frameworks: ['jasmine'],
-    files: [
-      'dist/lib.js',
+    files: union(
+      prodFiles(libJsFiles),
       'lib/angular-mocks/angular-mocks.js',
       tmpDir + '/' + pkgName + '-tpl.js',
       'src/**/*.js',
       'test/**/*.js'
-    ],
+    ),
     reporters: ['dots'],
     colors: true,
     autoWatch: true,
@@ -324,8 +327,8 @@ gulp.task('run-tests', ['templates'], function (done) {
   }, done);
 });
 
-gulp.task('test', function () {
-  runSequence('templates', 'run-tests', 'clean-tmp');
+gulp.task('test', function (done) {
+  runSequence('run-tests', 'clean-tmp', done);
 });
 
 // Note: suboptimal use of connect: it already includes livereload (but part of the livereload API is not available)
@@ -341,12 +344,14 @@ gulp.task('server-dev', function() {
   });
 });
 
-gulp.task('build-prod', function () {
+// This task is the one that should be run by the build script
+gulp.task('release', function (done) {
   isRelease = true;
-  runSequence('clean', ['sprite', 'styles', 'scripts', 'lib-min-styles', 'lib-min-scripts']);
+  runSequence('clean', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], 'test', done);
 });
 
-gulp.task('prod', ['build-prod'], function () {
+// Use this task to test the production code locally
+gulp.task('prod', ['release'], function () {
   connect.server({
     port: 8080,
     host: 'dev.ezkeep.com',
@@ -354,6 +359,7 @@ gulp.task('prod', ['build-prod'], function () {
   });
 });
 
-gulp.task('default', function () {
-  runSequence('clean', ['sprite', 'styles', 'scripts', 'lib-styles', 'lib-scripts'], ['watch', 'server-dev']);
+// Use this task for normal development
+gulp.task('default', function (done) {
+  runSequence('clean', ['styles', 'scripts', 'lib-styles', 'lib-scripts'], ['watch', 'server-dev'], done);
 });
