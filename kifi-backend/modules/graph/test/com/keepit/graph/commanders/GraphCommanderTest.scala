@@ -29,6 +29,8 @@ class GraphCommanderTest extends Specification with GraphTestInjector with Graph
 
         res1 must have size (4)
 
+        res1 must not contain (ConnectedUriScore(uriid5, 0.0d))
+
         res1(1).score should be_>=(res1(2).score)
 
         res1(1).score should be <= 1.0d

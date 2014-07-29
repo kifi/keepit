@@ -13,15 +13,9 @@ import scala.collection.mutable
 
 class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends Logging {
 
-  def init(startingVertexKind: String, startingVertexId: Long, journal: TeleportationJournal, avoidFirstDegree: Boolean): Set[VertexId] = {
-    val vertexKind = VertexKind(startingVertexKind)
-    val vertexId = VertexId(vertexKind)(startingVertexId)
-    if (avoidFirstDegree) getFirstDegreeNeighbors(vertexId, VertexKind.all) else Set(vertexId)
-  }
-
   def getUsers(startingVertexKind: String, startingVertexId: Long, journal: TeleportationJournal, avoidFirstDegree: Boolean): Map[Id[User], Int] = {
     val collisionMap: Map[VertexId, Int] = journal.getVisited()
-    val firstDegreeCollisions = init(startingVertexKind: String, startingVertexId: Long, journal: TeleportationJournal, avoidFirstDegree: Boolean)
+    val firstDegreeCollisions = getFirstDegreeNeighbors(startingVertexKind, startingVertexId, avoidFirstDegree)
     val users = mutable.Map[Id[User], Int]()
     collisionMap collect {
       case (vertexId, count) if count <= 1 || firstDegreeCollisions.contains(vertexId) => //igore
@@ -32,7 +26,7 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
 
   def getUris(startingVertexKind: String, startingVertexId: Long, journal: TeleportationJournal, avoidFirstDegree: Boolean): Map[Id[NormalizedURI], Int] = {
     val collisionMap: Map[VertexId, Int] = journal.getVisited()
-    val firstDegreeCollisions = init(startingVertexKind: String, startingVertexId: Long, journal: TeleportationJournal, avoidFirstDegree: Boolean)
+    val firstDegreeCollisions = getFirstDegreeNeighbors(startingVertexKind, startingVertexId, avoidFirstDegree)
     val uris = mutable.Map[Id[NormalizedURI], Int]()
     collisionMap collect {
       case (vertexId, count) if count <= 1 || firstDegreeCollisions.contains(vertexId) => //igore
@@ -43,7 +37,7 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
 
   def getSocialUsers(startingVertexKind: String, startingVertexId: Long, journal: TeleportationJournal, avoidFirstDegree: Boolean): Map[Id[SocialUserInfo], Int] = {
     val collisionMap: Map[VertexId, Int] = journal.getVisited()
-    val firstDegreeCollisions = init(startingVertexKind: String, startingVertexId: Long, journal: TeleportationJournal, avoidFirstDegree: Boolean)
+    val firstDegreeCollisions = getFirstDegreeNeighbors(startingVertexKind, startingVertexId, avoidFirstDegree)
     val socialUsers = mutable.Map[Id[SocialUserInfo], Int]()
     collisionMap collect {
       case (vertexId, count) if count <= 1 || firstDegreeCollisions.contains(vertexId) => //igore
@@ -67,20 +61,26 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     neighbors.toSet
   }
 
-  private def getFirstDegreeNeighbors(centralVertexId: VertexId, neighborKinds: Set[VertexType]): Set[VertexId] = {
-    graph.readOnly { reader =>
-      val vertexReader = reader.getNewVertexReader()
-      val firstDegreeVertices = collectNeighbors(vertexReader)(centralVertexId, VertexKind.all)
-      val firstDegreeUriOrSocialUsers = if (centralVertexId.kind != UserReader) Set.empty
-      else {
-        firstDegreeVertices.collect {
-          case keep if keep.kind == KeepReader => collectNeighbors(vertexReader)(keep, Set(UriReader))
-          case facebookSocial if facebookSocial.kind == FacebookAccountReader => collectNeighbors(vertexReader)(facebookSocial, Set(UserReader))
-          case linkedInSocial if linkedInSocial.kind == LinkedInAccountReader => collectNeighbors(vertexReader)(linkedInSocial, Set(UserReader))
-          //ignore other vertex types of neighbors
-        }.flatten
+  private def getFirstDegreeNeighbors(startingVertexKind: String, startingVertexId: Long, avoidFirstDegree: Boolean): Set[VertexId] = {
+    val vertexKind = VertexKind(startingVertexKind)
+    val centralVertexId = VertexId(vertexKind)(startingVertexId)
+    if (avoidFirstDegree) {
+      graph.readOnly { reader =>
+        val vertexReader = reader.getNewVertexReader()
+        val firstDegreeVertices = collectNeighbors(vertexReader)(centralVertexId, VertexKind.all)
+        val firstDegreeUriAndSocialUsers = if (centralVertexId.kind != UserReader) Set.empty
+        else {
+          firstDegreeVertices.collect {
+            case keep if keep.kind == KeepReader => collectNeighbors(vertexReader)(keep, Set(UriReader))
+            case facebookSocial if facebookSocial.kind == FacebookAccountReader => collectNeighbors(vertexReader)(facebookSocial, Set(UserReader))
+            case linkedInSocial if linkedInSocial.kind == LinkedInAccountReader => collectNeighbors(vertexReader)(linkedInSocial, Set(UserReader))
+            //ignore other vertex types of neighbors
+          }.flatten
+        }
+        firstDegreeVertices ++ firstDegreeUriAndSocialUsers + centralVertexId
       }
-      firstDegreeVertices ++ firstDegreeUriOrSocialUsers + centralVertexId
+    } else {
+      Set(centralVertexId)
     }
   }
 
