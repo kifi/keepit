@@ -41,23 +41,25 @@ class GraphCommander @Inject() (
   }
 
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Seq[ConnectedUriScore] = {
-    val wanderLust = Wanderlust.discovery(userId)
-    val journal = wanderingCommander.wander(wanderLust)
-
     val result = uriScoreCache.get(ConnectedUriScoreCacheKey(userId, avoidFirstDegreeConnections))
     result match {
-      case None => updateScoreCaches(userId, wanderLust.startingVertexKind, wanderLust.startingVertexDataId, journal, avoidFirstDegreeConnections)._1
+      case None => {
+        val wanderLust = Wanderlust.discovery(userId)
+        val journal = wanderingCommander.wander(wanderLust)
+        updateScoreCaches(userId, wanderLust.startingVertexKind, wanderLust.startingVertexDataId, journal, avoidFirstDegreeConnections)._1
+      }
       case Some(data) => data
     }
   }
 
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Seq[ConnectedUserScore] = {
-    val wanderLust = Wanderlust.discovery(userId)
-    val journal = wanderingCommander.wander(wanderLust)
-
     val result = userScoreCache.get(ConnectedUserScoreCacheKey(userId, avoidFirstDegreeConnections))
     result match {
-      case None => updateScoreCaches(userId, wanderLust.startingVertexKind, wanderLust.startingVertexDataId, journal, avoidFirstDegreeConnections)._2
+      case None => {
+        val wanderLust = Wanderlust.discovery(userId)
+        val journal = wanderingCommander.wander(wanderLust)
+        updateScoreCaches(userId, wanderLust.startingVertexKind, wanderLust.startingVertexDataId, journal, avoidFirstDegreeConnections)._2
+      }
       case Some(data) => data
     }
   }
