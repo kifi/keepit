@@ -328,7 +328,7 @@ gulp.task('test', function () {
   runSequence('templates', 'run-tests', 'clean-tmp');
 });
 
-// Note: suboptimal use of connect, which includes livereload (but parts of the livereload API are not available)
+// Note: suboptimal use of connect: it already includes livereload (but part of the livereload API is not available)
 // Should switch to https://github.com/schickling/gulp-webserver when middleware is supported
 gulp.task('server-dev', function() {
   connect.server({
