@@ -43,16 +43,9 @@ var isRelease = false;
   Paths
  ********************************************************/
 
-// Used to take the union of glob descriptors
-var union = function () {
-  return Array.prototype.reduce.call(arguments, function(a, b) {
-    if (typeof b === 'string') {
-      a.push(b);
-      return a;
-    } else {
-      return a.concat(b);
-    }
-  }, []);
+// Used to turn multiple glob descriptors into one
+var flatten = function () {
+  return Array.prototype.concat.apply([],arguments);
 };
 
 var stylFiles = ['src/**/*.styl', '!src/common/build-css/*.styl'];
@@ -311,7 +304,7 @@ gulp.task('templates', function () {
 gulp.task('run-tests', ['templates'], function (done) {
   karma.start({
     frameworks: ['jasmine'],
-    files: union(
+    files: flatten(
       prodFiles(libJsFiles),
       'lib/angular-mocks/angular-mocks.js',
       tmpDir + '/' + pkgName + '-tpl.js',
