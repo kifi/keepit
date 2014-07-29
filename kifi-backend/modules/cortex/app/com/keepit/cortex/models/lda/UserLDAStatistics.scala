@@ -3,9 +3,10 @@ package com.keepit.cortex.models.lda
 import com.google.inject.{ Singleton, ImplementedBy, Inject }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.time._
 import com.keepit.cortex.MiscPrefix
@@ -28,6 +29,15 @@ case class UserLDAStatistics(
 object UserLDAStatistics {
   implicit val format = Json.format[UserLDAStatistics]
 }
+
+case class UserLDAStatisticsCacheKey(modelVersion: ModelVersion[DenseLDA]) extends Key[UserLDAStatistics] {
+  override val version = 1
+  val namespace = "user_lda_stats"
+  def toKey(): String = modelVersion.version.toString
+}
+
+class UserLDAStatisticsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UserLDAStatisticsCacheKey, UserLDAStatistics](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 class UserLDAStatisticsActor @Inject() (airbrake: AirbrakeNotifier, updater: UserLDAStatisticsUpdater) extends FortyTwoActor(airbrake) {
   import UserLDAStatisticsActor._
@@ -61,22 +71,44 @@ class UserLDAStatisticsUpdater @Inject() (
     db: Database,
     userTopicRepo: UserLDAInterestsRepo,
     representer: LDAURIRepresenter,
-    statsStore: UserLDAStatisticsStore) extends Logging {
+    statsStore: UserLDAStatisticsStore,
+    cache: UserLDAStatisticsCache) extends Logging {
+
+  import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
   val MIN_EVIDENCE = 30
 
   def update() {
-    val vecs = db.readOnlyReplica { implicit s => userTopicRepo.all() }.filter { _.numOfEvidence > MIN_EVIDENCE }.map { _.userTopicMean.get.mean }
+    val vecs = db.readOnlyReplica { implicit s => userTopicRepo.getAllUserTopicMean(representer.version, MIN_EVIDENCE) }.map { _.mean }
     log.info(s"begin user LDA stats update. data size: ${vecs.size}")
     if (vecs.size > 1) {
-      val stats = genStats(vecs)
+      val stats = genStats(vecs, representer.version)
       statsStore.+=(MiscPrefix.LDA.userLDAStatsJsonFile, representer.version, stats)
+      cache.set(UserLDAStatisticsCacheKey(representer.version), stats)
     }
   }
 
-  private def genStats(vecs: Seq[Array[Float]]): UserLDAStatistics = {
+  private def genStats(vecs: Seq[Array[Float]], version: ModelVersion[DenseLDA]): UserLDAStatistics = {
     val (min, max) = MatrixUtils.getMinAndMax(vecs)
     val (mean, std) = MatrixUtils.getMeanAndStd(vecs)
-    UserLDAStatistics(currentDateTime, representer.version, mean, std, min, max)
+    UserLDAStatistics(currentDateTime, version, mean, std, min, max)
+  }
+}
+
+trait UserLDAStatisticsRetriever {
+  def getUserLDAStats(version: ModelVersion[DenseLDA]): Option[UserLDAStatistics]
+}
+
+@Singleton
+class UserLDAStatisticsRetrieverImpl @Inject() (
+    cache: UserLDAStatisticsCache,
+    statsStore: UserLDAStatisticsStore) extends UserLDAStatisticsRetriever {
+
+  import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+
+  def getUserLDAStats(version: ModelVersion[DenseLDA]): Option[UserLDAStatistics] = {
+    cache.getOrElseOpt(UserLDAStatisticsCacheKey(version)) {
+      statsStore.get(MiscPrefix.LDA.userLDAStatsJsonFile, version)
+    }
   }
 }
