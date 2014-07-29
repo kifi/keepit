@@ -46,46 +46,74 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector with Sh
     KeepImportsModule()
   )
 
+  val oldPwd1 = "1234567"
+  val newPwd1 = "7654321"
+
+  def setUp() = {
+    db.readWrite { implicit session =>
+      val user1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
+      val email1 = emailAddressRepo.save(UserEmailAddress(userId = user1.id.get, address = EmailAddress("username@42go.com")))
+      val hasher = Registry.hashers.get("bcrypt").get
+      val pwdInfo = hasher.hash(oldPwd1)
+      val uc1 = userCredRepo.save(UserCred(userId = user1.id.get, loginName = email1.address.address, provider = "bcrypt", salt = pwdInfo.salt.getOrElse(""), credentials = pwdInfo.password))
+      val socialUserRepo = inject[SocialUserInfoRepo]
+      val socialUser = SocialUser(
+        identityId = IdentityId(email1.address.address, "userpass"),
+        firstName = user1.firstName,
+        lastName = user1.lastName,
+        fullName = user1.fullName,
+        email = Some(email1.address.address),
+        avatarUrl = None,
+        authMethod = AuthenticationMethod.UserPassword,
+        passwordInfo = Some(pwdInfo)
+      )
+      val sui1 = socialUserRepo.save(SocialUserInfo(userId = user1.id, fullName = user1.fullName, socialId = SocialId(email1.address.address), networkType = SocialNetworks.FORTYTWO, credentials = Some(socialUser)))
+      val passwordResetRepo = inject[PasswordResetRepo]
+      val resetToken1 = passwordResetRepo.createNewResetToken(user1.id.get, email1.address)
+      (user1, email1, sui1, uc1, hasher, pwdInfo, resetToken1)
+    }
+  }
   "PasswordHandler" should {
+
     "handle change password" in {
       running(new ShoeboxApplication(modules: _*)) {
-        val oldPwd = "1234567"
-        val newPwd = "7654321"
-        val hasher = Registry.hashers.get("bcrypt").get
-        val pwdInfo = hasher.hash(oldPwd)
-        val user = db.readWrite { implicit session =>
-          val user1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
-          val email1 = emailAddressRepo.save(UserEmailAddress(userId = user1.id.get, address = EmailAddress("username@42go.com")))
-          val uc1 = userCredRepo.save(UserCred(userId = user1.id.get, loginName = email1.address.address, provider = "bcrypt", salt = pwdInfo.salt.getOrElse(""), credentials = pwdInfo.password))
-          val socialUserRepo = inject[SocialUserInfoRepo]
-          val socialUser = SocialUser(
-            identityId = IdentityId(email1.address.address, "userpass"),
-            firstName = user1.firstName,
-            lastName = user1.lastName,
-            fullName = user1.fullName,
-            email = Some(email1.address.address),
-            avatarUrl = None,
-            authMethod = AuthenticationMethod.UserPassword,
-            passwordInfo = Some(pwdInfo)
-          )
-          socialUserRepo.save(SocialUserInfo(userId = user1.id, fullName = user1.fullName, socialId = SocialId(email1.address.address), networkType = SocialNetworks.FORTYTWO, credentials = Some(socialUser)))
-          user1
-        }
-
+        val (user, email, sui, uc, hasher, pwdInfo, _) = setUp()
         val path = com.keepit.controllers.website.routes.UserController.changePassword().toString()
         path === "/site/user/password"
 
         inject[FakeActionAuthenticator].setUser(user)
-        val payload = Json.obj("oldPassword" -> oldPwd, "newPassword" -> newPwd)
+        val payload = Json.obj("oldPassword" -> oldPwd1, "newPassword" -> newPwd1)
         val request = FakeRequest("POST", path).withJsonBody(payload)
         val result = route(request).get
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         contentAsString(result) === Json.obj("success" -> true).toString()
-        val uc = db.readOnlyMaster { implicit session =>
+        val updated = db.readOnlyMaster { implicit session =>
           userCredRepo.findByUserIdOpt(user.id.get).get
         }
-        hasher.matches(PasswordInfo(hasher = "bcrypt", password = uc.credentials, salt = None), newPwd) === true
+        hasher.matches(pwdInfo, newPwd1) === false
+        hasher.matches(PasswordInfo(hasher = "bcrypt", password = updated.credentials, salt = None), newPwd1) === true
+      }
+    }
+
+    "handle set password" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        val (user, email, sui, uc, hasher, pwdInfo, resetToken) = setUp()
+        val path = com.keepit.controllers.core.routes.AuthController.setPassword().toString
+        path === "/password/set"
+
+        inject[FakeActionAuthenticator].setUser(user)
+        val payload = Json.obj("code" -> resetToken.token, "password" -> newPwd1)
+        val request = FakeRequest("POST", path).withJsonBody(payload)
+        val result = route(request).get
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+        contentAsString(result) === Json.obj("uri" -> "/").toString()
+        val updated = db.readOnlyMaster { implicit session =>
+          userCredRepo.findByUserIdOpt(user.id.get).get
+        }
+        hasher.matches(pwdInfo, newPwd1) === false
+        hasher.matches(PasswordInfo(hasher = "bcrypt", password = updated.credentials, salt = None), newPwd1) === true
       }
     }
   }
