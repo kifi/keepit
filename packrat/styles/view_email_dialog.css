@@ -32,7 +32,7 @@
   color: #000;
   line-height: 0;
   text-align: center;
-  box-shadow: 0 10px 30px 10px #aaa
+  box-shadow: 0 10px 30px 10px #aaa;
 }
 .kifi-show>.kifi-view-email-dialog-box {
   -webkit-transform: none;

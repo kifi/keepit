@@ -120,7 +120,7 @@ class AdminSearchController @Inject() (
   def articleSearchResult(id: ExternalId[ArticleSearchResult]) = AdminHtmlAction.authenticated { implicit request =>
 
     val result = articleSearchResultStore.get(id).get
-    val metas: Seq[ArticleSearchResultHitMeta] = db.readOnlyReplica { implicit s =>
+    val metas: Seq[ArticleSearchResultHitMeta] = db.readOnlyMaster { implicit s =>
       result.hits.zip(result.scorings) map { tuple =>
         val hit = tuple._1
         val scoring = tuple._2

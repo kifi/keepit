@@ -57,7 +57,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           "visibility" -> "secret",
           "collaborators" -> Json.arr(),
           "followers" -> Json.arr(),
-          "keepDiscoveryEnabled" -> false
+          "memberCount" -> 1
         )
         val request1 = FakeRequest("POST", testPath).withBody(inputJson1).withHeaders("userId" -> "1")
         val result1 = libraryController.addLibrary()(request1)
@@ -77,7 +77,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           "visibility" -> "secret",
           "collaborators" -> Json.arr(),
           "followers" -> Json.arr(),
-          "keepDiscoveryEnabled" -> false
+          "memberCount" -> 1
         )
         val request2 = FakeRequest("POST", testPath).withBody(inputJson2).withHeaders("userId" -> "1")
         val result2: Future[SimpleResult] = libraryController.addLibrary()(request2)
@@ -96,7 +96,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           "visibility" -> "secret",
           "collaborators" -> Json.arr(),
           "followers" -> Json.arr(),
-          "keepDiscoveryEnabled" -> false
+          "memberCount" -> 1
         )
         val request4 = FakeRequest("POST", com.keepit.controllers.website.routes.LibraryController.addLibrary().url).withBody(inputJson4).withHeaders("userId" -> "1")
         val result4: Future[SimpleResult] = libraryController.addLibrary()(request4)
@@ -113,7 +113,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val (user1, lib1) = db.readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
-          val library = libraryRepo.save(Library(name = "Library1", ownerId = user.id.get, slug = LibrarySlug("lib1"), keepDiscoveryEnabled = false, visibility = LibraryVisibility.SECRET))
+          val library = libraryRepo.save(Library(name = "Library1", ownerId = user.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library.id.get, userId = user.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           (user, library)
         }
@@ -129,7 +129,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         Json.parse(contentAsString(result1)).as[LibraryInfo].name === "Library2"
 
-        val inputJson2 = Json.obj("slug" -> "lib2", "description" -> "asdf", "visibility" -> LibraryVisibility.ANYONE.value)
+        val inputJson2 = Json.obj("slug" -> "lib2", "description" -> "asdf", "visibility" -> LibraryVisibility.PUBLISHED.value)
         val request2 = FakeRequest("POST", testPath).withBody(inputJson2).withHeaders("userId" -> "1")
         val result2: Future[SimpleResult] = libraryController.modifyLibrary(pubId)(request2)
         status(result2) must equalTo(OK)
@@ -140,7 +140,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |{
              |"id":"${pubId.id}",
              |"name":"Library2",
-             |"visibility":"anyone",
+             |"visibility":"published",
              |"shortDescription":"asdf",
              |"slug":"lib2",
              |"ownerId":"${user1.externalId}"
@@ -159,9 +159,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val (user1, lib1, lib2) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
           val user2 = userRepo.save(User(firstName = "Someone", lastName = "Else", createdAt = t1))
-          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), keepDiscoveryEnabled = false, visibility = LibraryVisibility.SECRET))
+          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          val library2 = libraryRepo.save(Library(name = "Library2", ownerId = user2.id.get, slug = LibrarySlug("lib2"), keepDiscoveryEnabled = false, visibility = LibraryVisibility.SECRET))
+          val library2 = libraryRepo.save(Library(name = "Library2", ownerId = user2.id.get, slug = LibrarySlug("lib2"), memberCount = 1, visibility = LibraryVisibility.SECRET))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           (user1, library1, library2)
         }
@@ -190,7 +190,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val (user1, lib1) = db.readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
-          val library = libraryRepo.save(Library(name = "Library1", ownerId = user.id.get, slug = LibrarySlug("lib1"), keepDiscoveryEnabled = false, visibility = LibraryVisibility.SECRET))
+          val library = libraryRepo.save(Library(name = "Library1", ownerId = user.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
           (user, library)
         }
 
@@ -228,8 +228,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, lib1, lib2) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Aaron", lastName = "A", createdAt = t1))
           val user2 = userRepo.save(User(firstName = "Baron", lastName = "B", createdAt = t1))
-          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), keepDiscoveryEnabled = false, visibility = LibraryVisibility.SECRET))
-          val library2 = libraryRepo.save(Library(name = "Library2", ownerId = user2.id.get, slug = LibrarySlug("lib2"), keepDiscoveryEnabled = false, visibility = LibraryVisibility.SECRET))
+          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
+          val library2 = libraryRepo.save(Library(name = "Library2", ownerId = user2.id.get, slug = LibrarySlug("lib2"), memberCount = 1, visibility = LibraryVisibility.SECRET))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           (user1, user2, library1, library2)
@@ -270,7 +270,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val user1 = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
           val user2 = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1))
           val user3 = userRepo.save(User(firstName = "Char", lastName = "Mander", createdAt = t1))
-          val library = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.SECRET, keepDiscoveryEnabled = true))
+          val library = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.SECRET, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           (user1, user2, user3, library)
@@ -312,9 +312,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val userB = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1))
 
           // user B owns 2 libraries
-          val libraryB1 = libraryRepo.save(Library(name = "Library1", ownerId = userB.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.LIMITED, keepDiscoveryEnabled = false))
+          val libraryB1 = libraryRepo.save(Library(name = "Library1", ownerId = userB.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libraryB1.id.get, userId = userB.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-          val libraryB2 = libraryRepo.save(Library(name = "Library2", ownerId = userB.id.get, slug = LibrarySlug("lib2"), visibility = LibraryVisibility.LIMITED, keepDiscoveryEnabled = false))
+          val libraryB2 = libraryRepo.save(Library(name = "Library2", ownerId = userB.id.get, slug = LibrarySlug("lib2"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libraryB2.id.get, userId = userB.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           // user B invites A to both libraries
@@ -339,7 +339,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |{
              |"id":"${Library.publicId(lib1.id.get).id}",
              |"name":"Library1",
-             |"visibility":"limited",
+             |"visibility":"discoverable",
              |"slug":"lib1",
              |"ownerId":"${user2.externalId}"
              |}
@@ -363,7 +363,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val userA = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
           val userB = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1))
 
-          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = userB.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.LIMITED, keepDiscoveryEnabled = false))
+          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = userB.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = userB.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = userA.id.get, access = LibraryAccess.OWNER, showInSearch = true))
@@ -391,7 +391,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val (user1, lib1, keep1, keep2) = db.readWrite { implicit s =>
           val userA = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
 
-          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = userA.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.LIMITED, keepDiscoveryEnabled = false))
+          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = userA.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = userA.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Google")))
@@ -431,6 +431,77 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |}]
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
+      }
+    }
+
+    "copy & move keeps between libraries" in {
+      withDb(modules: _*) { implicit injector =>
+        val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        implicit val config = inject[PublicIdConfiguration]
+        val libraryController = inject[LibraryController]
+
+        val (userA, userB, lib1, lib2, keep1, keep2) = db.readWrite { implicit s =>
+          val userA = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1))
+          val library1 = libraryRepo.save(Library(name = "Library1", ownerId = userA.id.get, slug = LibrarySlug("lib1"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = userA.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+          val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
+          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+          val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = userA.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, libraryId = Some(library1.id.get)))
+          val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = userA.id.get, url = url2.url, urlId = url2.id.get,
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, libraryId = Some(library1.id.get)))
+
+          val userB = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1))
+          val library2 = libraryRepo.save(Library(name = "Library2", ownerId = userB.id.get, slug = LibrarySlug("lib2"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = userB.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = userA.id.get, access = LibraryAccess.READ_ONLY, showInSearch = true))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = userB.id.get, access = LibraryAccess.READ_WRITE, showInSearch = true))
+
+          (userA, userB, library1, library2, keep1, keep2)
+        }
+
+        val testPathCopy = com.keepit.controllers.website.routes.LibraryController.copyKeeps().url
+        val testPathMove = com.keepit.controllers.website.routes.LibraryController.moveKeeps().url
+
+        val inputJsonTo2 = Json.obj(
+          "to" -> Library.publicId(lib2.id.get),
+          "keeps" -> Seq(keep1.externalId, keep2.externalId)
+        )
+
+        // keeps are all in library 1
+        // move keeps (from Lib1 to Lib2) as user 1 (should fail)
+        val request1 = FakeRequest("POST", testPathMove).withBody(inputJsonTo2).withHeaders("userId" -> "1")
+        val result1 = libraryController.moveKeeps()(request1)
+        status(result1) must equalTo(BAD_REQUEST)
+
+        // move keeps (from Lib1 to Lib2) as user 2 (ok) - keeps 1,2 in lib2
+        val request2 = FakeRequest("POST", testPathMove).withBody(inputJsonTo2).withHeaders("userId" -> "2")
+        val result2 = libraryController.moveKeeps()(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        val jsonRes2 = Json.parse(contentAsString(result2))
+        (jsonRes2 \ "failures").as[Int] === 0
+
+        // copy keeps from Lib1 to Lib2 as user 1 (should fail)
+        val request3 = FakeRequest("POST", testPathCopy).withBody(inputJsonTo2).withHeaders("userId" -> "1")
+        val result3 = libraryController.copyKeeps()(request3)
+        status(result3) must equalTo(BAD_REQUEST)
+
+        // copy keeps from Lib2 to Lib1 as user 2 (ok) - keeps 1,2 in both lib1 & lib2
+        val inputJsonTo1 = Json.obj(
+          "to" -> Library.publicId(lib1.id.get),
+          "keeps" -> Seq(keep1.externalId, keep2.externalId)
+        )
+        val request4 = FakeRequest("POST", testPathCopy).withBody(inputJsonTo1).withHeaders("userId" -> "2")
+        val result4 = libraryController.copyKeeps()(request4)
+        status(result4) must equalTo(OK)
+        contentType(result4) must beSome("application/json")
+        val jsonRes4 = Json.parse(contentAsString(result4))
+        (jsonRes4 \ "failures").as[Int] === 0
       }
     }
 

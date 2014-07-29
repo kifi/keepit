@@ -40,7 +40,7 @@ class AdminBookmarksController @Inject() (
     extends AdminController(actionAuthenticator) {
 
   private def editBookmark(bookmark: Keep)(implicit request: AuthenticatedRequest[AnyContent]) = {
-    db.readOnlyReplica { implicit session =>
+    db.readOnlyMaster { implicit session =>
       val uri = uriRepo.get(bookmark.uriId)
       val user = userRepo.get(bookmark.userId)
       val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
@@ -165,7 +165,7 @@ class AdminBookmarksController @Inject() (
       future { timing(s"load $PAGE_SIZE bookmarks") { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } } } flatMap { bookmarks =>
         val usersFuture = future {
           timing("load user") {
-            db.readOnlyReplica { implicit s =>
+            db.readOnlyMaster { implicit s =>
               bookmarks map (_.userId) map { id =>
                 userMap.getOrElseUpdate(id, userRepo.get(id))
               }

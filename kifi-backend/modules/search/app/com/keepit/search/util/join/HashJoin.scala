@@ -68,27 +68,20 @@ class HashJoin(dataBuffer: DataBuffer, numHashBuckets: Int, createJoiner: => Joi
 
   @inline
   private[this] def getJoiner(id: Long, joinerMap: mutable.HashMap[Long, Joiner], joinerPool: mutable.Stack[Joiner]): Joiner = {
-    joinerMap.getOrElse(id,
-      if (joinerPool.nonEmpty) {
-        val j = joinerPool.pop()
-        j.clean()
-        joinerMap += ((id, j))
-        j.set(id)
-      } else {
-        val j = createJoiner
-        joinerMap += ((id, j))
-        j.set(id)
-      }
-    )
+    joinerMap.getOrElse(id, {
+      val j = if (joinerPool.nonEmpty) joinerPool.pop() else createJoiner
+      joinerMap += ((id, j.set(id)))
+      j
+    })
   }
 }
 
 trait Joiner {
   var _id: Long = -1
-  def set(id: Long): Joiner = { _id = id; clean(); this }
+  def set(id: Long): Joiner = { _id = id; clear(); this }
   def id = _id
 
-  def clean(): Unit
+  def clear(): Unit
   def join(reader: DataBufferReader): Unit
   def flush(): Unit
 }

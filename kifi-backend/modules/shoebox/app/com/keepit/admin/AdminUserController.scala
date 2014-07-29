@@ -139,7 +139,7 @@ class AdminUserController @Inject() (
   def moreUserInfoView(userId: Id[User], showPrivates: Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
     val contactsF = if (showPrivates) abookClient.getContactsByUser(userId) else Future.successful(Seq.empty[RichContact])
-    val (user, socialUserInfos, socialConnections) = db.readOnlyReplica { implicit s =>
+    val (user, socialUserInfos, socialConnections) = db.readOnlyMaster { implicit s =>
       val user = userRepo.get(userId)
       val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a, b) => a.fullName < b.fullName)
       val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
@@ -544,7 +544,7 @@ class AdminUserController @Inject() (
   }
 
   def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
-    val socialUserInfos = db.readOnlyReplica { implicit s =>
+    val socialUserInfos = db.readOnlyMaster { implicit s =>
       val user = userRepo.get(userId)
       socialUserInfoRepo.getByUser(user.id.get)
     }

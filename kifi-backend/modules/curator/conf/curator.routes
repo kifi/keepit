@@ -6,3 +6,6 @@
 # INTERNAL ROUTES/Curator
 ##########################################
 
+GET   /internal/curator/adHocRecos  @com.keepit.curator.controllers.internal.CuratorController.adHocRecos(userId: Id[User], n: Int)
+
+

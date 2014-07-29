@@ -2,6 +2,7 @@ package com.keepit.curator.commanders
 
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.curator.model.{ CuratorKeepInfoRepo, Keepers, SeedItem, ScoredSeedItem, UriScores }
 
 import com.keepit.common.time._
@@ -23,7 +24,7 @@ import org.joda.time.Days
 class UriScoringHelper @Inject() (
     graph: GraphServiceClient,
     keepInfoRepo: CuratorKeepInfoRepo,
-    cortex: CortexServiceClient) {
+    cortex: CortexServiceClient) extends Logging {
 
   private def getRawRecencyScores(items: Seq[SeedItem]): Seq[Float] = items.map { item =>
     val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays()
@@ -40,14 +41,14 @@ class UriScoringHelper @Inject() (
   }
 
   private def getRawInterestScores(items: Seq[SeedItem]): Future[(Seq[Float], Seq[Float])] = {
-    val scoreTuples: Seq[Future[(Float, Float)]] = items.map { item =>
-      cortex.userUriInterest(item.userId, item.uriId).map { score => //to be replaced with batch call when available
+    val interestScores = cortex.batchUserURIsInterests(items.head.userId, items.map(_.uriId))
+    interestScores.map { scores =>
+      scores.map { score =>
         val (overallOpt, recentOpt) = (score.global, score.recency)
         (overallOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat,
           recentOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat)
-      }
+      }.unzip
     }
-    Future.sequence(scoreTuples).map(_.unzip)
   }
 
   // assume all items have same userId
@@ -57,20 +58,27 @@ class UriScoringHelper @Inject() (
     } else {
 
       //convert user scores seq to map, assume there is no duplicate userId from graph service
-      graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
-        val socialScoreMap = socialScores.map { socialScore =>
-          (socialScore.userId, socialScore.score.toFloat)
-        }.toMap
+      try {
+        graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
+          val socialScoreMap = socialScores.map { socialScore =>
+            (socialScore.userId, socialScore.score.toFloat)
+          }.toMap
 
-        items.map(item =>
-          item.keepers match {
-            case Keepers.TooMany => 0.0f
-            case Keepers.ReasonableNumber(users) => {
-              var itemScore = 0.0f
-              users.map(userId => itemScore += socialScoreMap.getOrElse(userId, 0.0f))
-              itemScore
-            }
-          })
+          items.map(item =>
+            item.keepers match {
+              case Keepers.TooMany => 0.0f
+              case Keepers.ReasonableNumber(users) => {
+                var itemScore = 0.0f
+                users.map(userId => itemScore += socialScoreMap.getOrElse(userId, 0.0f))
+                itemScore
+              }
+            })
+        }
+      } catch {
+        case e: Exception => {
+          log.warn("can't get social scores from graph service. setting all social scores to 0.0f for items.")
+          Future.successful(Seq.fill[Float](items.size)(0.0f))
+        }
       }
     }
   }

@@ -1,7 +1,12 @@
 package com.keepit.abook
 
+import com.google.inject.Inject
+import com.keepit.abook.model.{ EmailAccountRepo, EContactRepo, EmailAccount, EContact }
 import com.keepit.common.db.Id
-import com.keepit.model.User
+import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.EmailAddress
+import com.keepit.model.{ ABookOrigins, ABookOriginType, ABookInfo, User }
+import com.keepit.test.DbInjectionHelper
 import play.api.libs.json.Json
 import com.keepit.abook.controllers.GmailABookOwnerInfo
 
@@ -53,5 +58,42 @@ trait ABookTestHelper {
     "ownerEmail" -> gmailOwner2.email.get,
     "contacts" -> c53
   )
+}
+
+object AbookTestEmails {
+  val FOO_EMAIL = EmailAddress("foo@mail.com")
+  val BAR_EMAIL = EmailAddress("bar@mail.com")
+  val BAZ_EMAIL = EmailAddress("baz@mail.com")
+}
+
+case class ABookTestContactFactory @Inject() (
+    econRepo: EContactRepo,
+    accRepo: EmailAccountRepo,
+    abookRepo: ABookInfoRepo)(implicit db: Database) {
+
+  import AbookTestEmails.{ FOO_EMAIL, BAR_EMAIL, BAZ_EMAIL }
+
+  def create(email: EmailAddress, contactEmail: EmailAddress): EContact =
+    db.readWrite { implicit session =>
+      val userId = Id[User](scala.util.Random.nextInt(9999999))
+      val account = EmailAccount(address = email)
+      val savedAccount = accRepo.save(account)
+      val abook = ABookInfo(origin = ABookOrigins.GMAIL, userId = userId)
+      val savedAbook = abookRepo.save(abook)
+      val contact = EContact(
+        userId = userId,
+        email = contactEmail,
+        abookId = savedAbook.id.get,
+        emailAccountId = savedAccount.id.get)
+      econRepo.save(contact)
+    }
+
+  def createMany = {
+    val c1 = create(FOO_EMAIL, BAR_EMAIL)
+    val c2 = create(BAR_EMAIL, BAZ_EMAIL)
+    val c3 = create(BAZ_EMAIL, BAR_EMAIL)
+
+    (c1, c2, c3)
+  }
 }
 
