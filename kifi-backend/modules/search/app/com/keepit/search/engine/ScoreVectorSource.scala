@@ -104,7 +104,7 @@ class LibraryArticleScoreVectorSource(reader: WrappedSubReader, scorers: Array[S
       val id = idMapper.getId(docId)
       val libId = libraryIdDocValues.get(docId)
 
-      if (libraryIds.findIndex(libId) > 0 && idFilter.findIndex(id) < 0) { // use findIndex to avoid boxing
+      if (libraryIds.findIndex(libId) >= 0 && idFilter.findIndex(id) < 0) { // use findIndex to avoid boxing
         // get all scores
         while (top.doc == docId) {
           taggedScores(size) = top.taggedScore
