@@ -1,7 +1,9 @@
 package com.keepit.graph.model
 
+import com.keepit.graph.model.VertexKind.VertexType
+
 trait VertexReader {
-  def kind: VertexKind[_ <: VertexDataReader]
+  def kind: VertexType
   def id: VertexId
   def data: VertexDataReader
   def outgoingEdgeReader: OutgoingEdgeReader

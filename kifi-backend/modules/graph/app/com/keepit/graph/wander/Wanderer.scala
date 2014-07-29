@@ -3,9 +3,9 @@ package com.keepit.graph.wander
 import com.keepit.graph.model._
 import scala.collection.mutable
 import com.keepit.common.math.ProbabilityDensity
-import scala.Some
 import com.keepit.graph.model.EdgeKind.EdgeType
 import com.keepit.graph.model.VertexKind.VertexType
+import com.keepit.graph.model.Component.Component
 import play.api.Logger
 
 trait Wanderer {
@@ -59,8 +59,8 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
     wanderer.moveTo(destination)
   }
 
-  private def sampleOutgoingComponent(resolver: EdgeResolver): Option[(VertexType, VertexType, EdgeType)] = {
-    val componentWeights = mutable.MutableList[((VertexType, VertexType, EdgeType), Double)]()
+  private def sampleOutgoingComponent(resolver: EdgeResolver): Option[Component] = {
+    val componentWeights = mutable.MutableList[(Component, Double)]()
     while (wanderer.outgoingEdgeReader.moveToNextComponent()) {
       val component @ (_, destinationKind, edgeKind) = wanderer.outgoingEdgeReader.component
       val weight = resolver.weightComponent(wanderer, destinationKind, edgeKind)
@@ -70,14 +70,14 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
     probability.sample(Math.random())
   }
 
-  private def sampleDestination(component: (VertexType, VertexType, EdgeType), resolver: EdgeResolver, cache: mutable.Map[(VertexId, VertexType, EdgeType), ProbabilityDensity[VertexId]]): Option[(VertexId, EdgeType)] = {
+  private def sampleDestination(component: Component, resolver: EdgeResolver, cache: mutable.Map[(VertexId, VertexType, EdgeType), ProbabilityDensity[VertexId]]): Option[(VertexId, EdgeType)] = {
     val (_, destinationKind, edgeKind) = component
     val key = (wanderer.id, destinationKind, edgeKind)
     val probability = cache.getOrElseUpdate(key, computeDestinationProbability(component, resolver))
     probability.sample(Math.random()).map { destination => (destination, edgeKind) }
   }
 
-  private def computeDestinationProbability(component: (VertexType, VertexType, EdgeType), resolver: EdgeResolver): ProbabilityDensity[VertexId] = {
+  private def computeDestinationProbability(component: Component, resolver: EdgeResolver): ProbabilityDensity[VertexId] = {
     val edgeWeights = mutable.MutableList[(VertexId, Double)]()
     wanderer.outgoingEdgeReader.reset()
     while (wanderer.outgoingEdgeReader.moveToNextComponent()) {
