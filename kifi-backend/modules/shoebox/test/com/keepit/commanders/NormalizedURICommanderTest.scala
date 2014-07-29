@@ -14,12 +14,6 @@ class NormalizedURICommanderTest extends Specification with ShoeboxTestInjector 
 
   def setup()(implicit injector: Injector) = {
 
-    val uriid1: Id[NormalizedURI] = Id[NormalizedURI](1)
-    val uriid2: Id[NormalizedURI] = Id[NormalizedURI](2)
-    val uriid3: Id[NormalizedURI] = Id[NormalizedURI](3)
-    val uriid4: Id[NormalizedURI] = Id[NormalizedURI](4)
-    val uriid5: Id[NormalizedURI] = Id[NormalizedURI](5)
-
     val uri1: NormalizedURI = NormalizedURI(url = "url1", urlHash = UrlHash("url1"), restriction = Some(Restriction.ADULT))
     val uri2: NormalizedURI = NormalizedURI(url = "url2", urlHash = UrlHash("url2"), restriction = Some(Restriction.ADULT))
     val uri3: NormalizedURI = NormalizedURI(url = "url3", urlHash = UrlHash("url3"))
