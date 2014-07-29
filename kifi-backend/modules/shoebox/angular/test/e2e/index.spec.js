@@ -5,7 +5,7 @@ describe('kifi angular sanity suite', function () {
     // Set up before each test.
     beforeEach(function () {
       // Navigate to home page.
-      browser.get('/#');
+      browser.get('/');
 
       // Set cookies to authenticate user.
       // See: https://github.com/kifi/keepit/blob/master/integration/auth_headers.js
@@ -26,7 +26,7 @@ describe('kifi angular sanity suite', function () {
     });
 
     it('should have a user image', function () {
-      expect(element(by.css('.kf-header-profile-picture')).getAttribute('style')).toMatch('jpg');
+      expect(element(by.css('.kf-header-profile-picture')).getAttribute('style')).toMatch('4a560421-e075-4c1b-8cc4-452e9105b6d6');
     });
 
     it('should display user profile when the upper-right settings icon is clicked', function () {
