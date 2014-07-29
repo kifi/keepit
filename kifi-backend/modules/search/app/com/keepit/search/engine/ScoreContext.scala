@@ -8,6 +8,7 @@ import com.keepit.search.util.join.{ DataBufferReader, Joiner }
 class ScoreContext(
     scoreExpr: ScoreExpr,
     scoreArraySize: Int,
+    val norm: Float,
     val matchWeight: Array[Float],
     collector: ResultCollector[ScoreContext]) extends Joiner {
 
