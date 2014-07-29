@@ -95,6 +95,7 @@ class UserLDAStatisticsUpdater @Inject() (
   }
 }
 
+@ImplementedBy(classOf[UserLDAStatisticsRetrieverImpl])
 trait UserLDAStatisticsRetriever {
   def getUserLDAStats(version: ModelVersion[DenseLDA]): Option[UserLDAStatistics]
 }
