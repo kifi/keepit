@@ -5,18 +5,18 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.controller.FakeActionAuthenticator
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.common.mail.{EmailAddress, TestMailModule}
+import com.keepit.common.mail.{ EmailAddress, TestMailModule }
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxAppSecureSocialModule}
+import com.keepit.common.social.{ FakeSocialGraphModule, TestShoeboxAppSecureSocialModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.heimdal.{HeimdalContext, TestHeimdalServiceClientModule}
+import com.keepit.heimdal.{ HeimdalContext, TestHeimdalServiceClientModule }
 import com.keepit.model._
-import com.keepit.scraper.{FakeScrapeSchedulerModule, TestScraperServiceClientModule}
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
 import com.keepit.search.TestSearchServiceClientModule
-import com.keepit.shoebox.{FakeShoeboxServiceModule, KeepImportsModule}
-import com.keepit.social.{SocialId, SocialNetworks}
-import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector, ShoeboxInjectionHelpers}
+import com.keepit.shoebox.{ FakeShoeboxServiceModule, KeepImportsModule }
+import com.keepit.social.{ SocialId, SocialNetworks }
+import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector, ShoeboxInjectionHelpers }
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.test.Helpers._
@@ -82,10 +82,10 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector with Sh
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         contentAsString(result) === Json.obj("success" -> true).toString()
-        db.readOnlyMaster { implicit session =>
-          val uc = userCredRepo.findByUserIdOpt(user.id.get).get
-          hasher.matches(hasher.hash(newPwd), newPwd) === true
+        val uc = db.readOnlyMaster { implicit session =>
+          userCredRepo.findByUserIdOpt(user.id.get).get
         }
+        hasher.matches(PasswordInfo(hasher = "bcrypt", password = uc.credentials, salt = None), newPwd) === true
       }
     }
   }
