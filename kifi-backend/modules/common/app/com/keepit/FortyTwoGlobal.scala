@@ -174,8 +174,15 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         case reported: ReportedException => reported.id
         case _ => injector.instance[AirbrakeNotifier].notify(AirbrakeError.incoming(request, ex, s"Unreported Exception $ex")).id
       }
-      System.err.println(s"Play onError (${errorId.id}): ${ex.toString}\n\t${request.path}\n\t${request.queryString}")
+      val cause = if (Option(ex.getCause).isDefined) ex.getCause else ex
+      val bareErrorMessage = s"Play onError (${errorId.id} ): ${cause.toString} : ${request.path} : ${request.queryString}"
+      val errorMessage = request match {
+        case req: WrappedRequest[_] => s"$bareErrorMessage : with body: ${req.body.toString}"
+        case _ => bareErrorMessage
+      }
+      System.err.println(errorMessage)
       ex.printStackTrace()
+      log.error(errorMessage)
       serviceDiscoveryHandleError()
       val message = if (request.path.startsWith("/internal/")) {
         //todo(eishay) consider use the original ex.getCause instead
