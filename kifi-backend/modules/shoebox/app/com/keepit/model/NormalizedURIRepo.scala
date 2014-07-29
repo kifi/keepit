@@ -34,7 +34,6 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession): Unit
   def updateScreenshotUpdatedAt(id: Id[NormalizedURI], time: DateTime)(implicit session: RWSession): Unit
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI]
-  def getRestrictionStatusOfURIs(targetRestriction: Restriction, uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
 }
 
 @Singleton
@@ -197,13 +196,6 @@ class NormalizedURIRepoImpl @Inject() (
 
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI] = {
     { for (r <- rows if r.restriction === targetRestriction) yield r }.list
-  }
-
-  def getRestrictionStatusOfURIs(targetRestriction: Restriction, uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
-    { for (r <- rows if r.id === uriId && r.restriction === targetRestriction) yield r }.firstOption match {
-      case Some(row) => true
-      case None => false
-    }
   }
 
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
