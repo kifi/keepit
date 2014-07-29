@@ -19,7 +19,7 @@ describe('kifi.profile', function () {
       routeService = $injector.get('routeService');
 
       scope = $rootScope.$new();
-      elem = angular.element("<div kf-profile-manage-account></div>");
+      elem = angular.element('<div kf-profile-manage-account></div>');
       $compile(elem)(scope);
       scope.$digest();
 
@@ -67,7 +67,7 @@ describe('kifi.profile', function () {
       it('shows an error message if the server throws an error', function () {
         expect(link.text()).toEqual('Sending...');
         $httpBackend.flush();
-        expect(link.text()).toEqual("Retry");
+        expect(link.text()).toEqual('Retry');
       });
 
       it('displays an error message after the request returns an error', function () {
