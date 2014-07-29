@@ -1,17 +1,11 @@
-# ABOOK
+# SHOEBOX
 
 # --- !Ups
 
-CREATE TABLE friend_recommendation (
-    id bigint(20) NOT NULL AUTO_INCREMENT,
-    created_at datetime NOT NULL,
-    updated_at datetime NOT NULL,
-    user_id bigint(20) NOT NULL,
-    friend_id bigint(20) NOT NULL,
-    irrelevant bool NOT NULL,
+ALTER TABLE library ADD COLUMN member_count int NOT NULL DEFAULT 1;
 
-    PRIMARY KEY (id),
-    UNIQUE INDEX friend_recommendation_u_user_id_friend_id (user_id, friend_id),
-);
+ALTER TABLE library DROP COLUMN is_searchable_by_others;
 
-insert into evolutions (name, description) values('209.sql', 'create friend_recommendation table');
+insert into evolutions (name, description) values('209.sql', 'member_count in library, drop column ');
+
+# --- !Downs

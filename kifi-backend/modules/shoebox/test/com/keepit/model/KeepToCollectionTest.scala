@@ -30,7 +30,7 @@ class KeepToCollectionTest extends Specification with ShoeboxTestInjector {
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
           val url4 = urlRepo.save(URLFactory(url = uri4.url, normalizedUriId = uri4.id.get))
 
-          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), keepDiscoveryEnabled = false))
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
           val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
