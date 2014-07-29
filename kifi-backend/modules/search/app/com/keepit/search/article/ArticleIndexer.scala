@@ -3,15 +3,12 @@ package com.keepit.search.article
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.Host
-import com.keepit.common.net.URI
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
 import com.keepit.search.semantic.SemanticVectorBuilder
 import java.io.StringReader
-import scala.util.Success
 import com.keepit.search.article.ArticleRecordSerializer._
 import com.keepit.search.index.IndexDirectory
 import com.keepit.search.index.Indexer
@@ -151,23 +148,7 @@ object ArticleIndexer extends Logging {
           builder.load(contentAnalyzerWithStemmer.tokenStream(contentField, new MultiStringReader(content)))
           doc.add(buildSemanticVectorField(semanticVectorField, builder))
 
-          val parsedURI = URI.parse(uri.url)
-          parsedURI.foreach { uri =>
-            uri.host.foreach {
-              case Host(domain @ _*) =>
-                if (domain.nonEmpty) {
-                  // index domain name
-                  doc.add(buildIteratorField(siteField, (1 to domain.size).iterator) { n => domain.take(n).reverse.mkString(".") })
-                }
-            }
-          }
-
-          // home page
-          parsedURI match {
-            case Success(URI(_, _, Some(Host(domain @ _*)), _, path, None, None)) if (!path.isDefined || path == Some("/")) =>
-              doc.add(buildTextField(homePageField, domain.reverse.mkString(" "), DefaultAnalyzer.defaultAnalyzer))
-            case _ =>
-          }
+          buildDomainFields(uri.url, siteField, homePageField).foreach(doc.add)
 
           // media keyword field
           article.media.foreach { media =>

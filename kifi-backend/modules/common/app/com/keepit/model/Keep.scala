@@ -55,6 +55,8 @@ case class Keep(
   def withTitle(title: Option[String]) = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
   def isActive: Boolean = state == KeepStates.ACTIVE
+
+  def isDiscoverable = !isPrivate
 }
 
 object Keep {
