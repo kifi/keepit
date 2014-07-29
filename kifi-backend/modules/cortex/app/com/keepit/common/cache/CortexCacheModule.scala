@@ -77,11 +77,6 @@ case class CortexCacheModule(cachePluginModules: CachePluginModule*) extends Cac
 
   @Singleton
   @Provides
-  def userImageUrlCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserImageUrlCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 10 minute))
-
-  @Singleton
-  @Provides
   def userExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserExperimentCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
 
