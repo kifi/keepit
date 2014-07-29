@@ -6,7 +6,7 @@
   "author": "",
   "repository": {
     "type": "git",
-    "url": "https://github.com/FortyTwoEng/keepit"
+    "url": "https://github.com/kifi/keepit"
   },
   "engines": {
     "node": "0.10.x",
@@ -44,7 +44,30 @@
     "karma-requirejs": "latest",
     "karma-coverage": "latest",
     "grunt-spritesmith": "latest",
+    "gulp": "~3.8.6",
+    "gulp-rimraf": "~0.1.0",
+    "run-sequence": "~0.3.6",
+    "vinyl-map": "~1.0.1",
+    "gulp-concat": "~2.3.4",
+    "gulp-rename": "~1.2.0",
+    "gulp-cssmin": "~0.1.6",
+    "gulp-stylus": "~1.1.0",
+    "gulp-plumber": "~0.6.4",
+    "gulp-livereload": "~2.1.0",
+    "lazypipe": "~0.2.2",
+    "event-stream": "~3.1.7",
+    "gulp-cached": "~1.0.1",
     "nib": "latest",
-    "jsonminify": "latest"
+    "jsonminify": "latest",
+    "gulp-remember": "~0.2.0",
+    "gulp-ng-html2js": "~0.1.7",
+    "gulp-minify-html": "~0.1.4",
+    "gulp-uglify": "~0.3.1",
+    "gulp-if": "~1.2.4",
+    "gulp.spritesmith": "~1.1.1",
+    "jshint-stylish": "~0.4.0",
+    "gulp-jshint": "~1.8.0",
+    "gulp-connect": "~2.0.6",
+    "connect-modrewrite": "~0.7.6"
   }
 }

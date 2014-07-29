@@ -62,6 +62,9 @@ trait S3ImageStore {
     URI(uri.scheme orElse protocolDefault, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment).toString
   }
 
+  def avatarUrlByUser(user: User): String =
+    avatarUrlByExternalId(Some(200), user.externalId, user.pictureName.getOrElse("0"), Some("https"))
+
   def keyByExternalId(size: String, userId: ExternalId[User], picName: String): String =
     s"users/$userId/pics/$size/$picName.jpg"
 
@@ -174,7 +177,7 @@ class S3ImageStoreImpl @Inject() (
   }
 
   def forceUpdateSocialPictures(userId: Id[User]): Unit = {
-    val (sui, user, picName) = db.readOnlyReplica { implicit s =>
+    val (sui, user, picName) = db.readOnlyMaster { implicit s =>
       val user = userRepo.get(userId)
       val suis = suiRepo.getByUser(user.id.get)
       // If user has no picture, this is the preference order for social networks:

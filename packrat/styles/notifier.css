@@ -1,9 +1,9 @@
 #kifi-notify-notice-wrapper {
-	position: fixed;
-	top: 20px;
-	right: 20px;
-	width: 315px;
-	z-index: 999999999990;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 315px;
+  z-index: 999999999990;
   text-transform: none;
 }
 
@@ -12,20 +12,20 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
 }
 
 #kifi-notify-notice-wrapper .kifi-notify-item-wrapper {
-	position: relative;
-	margin: 0 0 10px;
+  position: relative;
+  margin: 0 0 10px;
 }
 
 #kifi-notify-notice-wrapper .kifi-notify-item {
-	display: block;
+  display: block;
   background-color: #1f272f;
   opacity: .9;
-	color: #eee;
+  color: #eee;
   padding: 15px;
-	font-size: 11px;
+  font-size: 11px;
   border-radius: 10px !important;
   border: 1px solid #ddd;
-  cursor: pointer
+  cursor: pointer;
 }
 
 #kifi-notify-notice-wrapper .kifi-notify-item:hover {
@@ -33,19 +33,19 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
 }
 
 #kifi-notify-notice-wrapper .kifi-notify-close {
-	position: absolute;
-	top: 6px;
-	right: 6px;
+  position: absolute;
+  top: 6px;
+  right: 6px;
   color: #ddd;
-	cursor: pointer;
-	width: 15px;
-	height: 15px;
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
   text-align: center;
-  line-height:15px;
+  line-height: 15px;
 }
 #kifi-notify-notice-wrapper .kifi-notify-close:hover {
   color: #333;
-  background-color:#ddd;
+  background-color: #ddd;
   border-radius: 10px !important;
 }
 
@@ -98,7 +98,7 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
 
 #kifi-notify-notice-wrapper .kifi-notify-image,
 #kifi-notify-notice-wrapper .kifi-notify-email-icon {
-	float: left;
+  float: left;
   width: 42px;
   height: 42px;
   margin: 0;
@@ -131,9 +131,9 @@ html[kifi-with-pane] #kifi-notify-notice-wrapper {
 
 #kifi-notify-notice-wrapper .kifi-notify-with-image,
 #kifi-notify-notice-wrapper .kifi-notify-without-image {
-	padding: 0;
+  padding: 0;
 }
 #kifi-notify-notice-wrapper .kifi-notify-with-image {
-	float: right;
+  float: right;
   width: 230px;
 }

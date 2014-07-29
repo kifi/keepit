@@ -1,10 +1,18 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ SeedItem, ScoredSeedItem, UriScores }
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
+import com.keepit.curator.model.{ CuratorKeepInfoRepo, Keepers, SeedItem, ScoredSeedItem, UriScores }
+
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.graph.GraphServiceClient
+import com.keepit.model.User
+
+import scala.concurrent.Future
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -13,7 +21,10 @@ import scala.concurrent.Future
 import org.joda.time.Days
 
 @Singleton
-class UriScoringHelper @Inject() (cortex: CortexServiceClient) {
+class UriScoringHelper @Inject() (
+    graph: GraphServiceClient,
+    keepInfoRepo: CuratorKeepInfoRepo,
+    cortex: CortexServiceClient) extends Logging {
 
   private def getRawRecencyScores(items: Seq[SeedItem]): Seq[Float] = items.map { item =>
     val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays()
@@ -30,20 +41,46 @@ class UriScoringHelper @Inject() (cortex: CortexServiceClient) {
   }
 
   private def getRawInterestScores(items: Seq[SeedItem]): Future[(Seq[Float], Seq[Float])] = {
-    val scoreTuples: Seq[Future[(Float, Float)]] = items.map { item =>
-      cortex.userUriInterest(item.userId, item.uriId).map { //to be replaced with batch call when available
-        case (overallOpt, recentOpt) =>
-          (
-            overallOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat,
-            recentOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat
-          )
-      }
+    val interestScores = cortex.batchUserURIsInterests(items.head.userId, items.map(_.uriId))
+    interestScores.map { scores =>
+      scores.map { score =>
+        val (overallOpt, recentOpt) = (score.global, score.recency)
+        (overallOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat,
+          recentOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat)
+      }.unzip
     }
-    Future.sequence(scoreTuples).map(_.unzip)
   }
 
-  private def getRawSocialScores(items: Seq[SeedItem]): Future[Seq[Float]] = {
-    Future.successful(items.map(_ => 0.0f)) //to be filled in by Tan
+  // assume all items have same userId
+  def getRawSocialScores(items: Seq[SeedItem]): Future[Seq[Float]] = {
+    if (items.isEmpty) {
+      Future.successful(Seq.empty)
+    } else {
+
+      //convert user scores seq to map, assume there is no duplicate userId from graph service
+      try {
+        graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
+          val socialScoreMap = socialScores.map { socialScore =>
+            (socialScore.userId, socialScore.score.toFloat)
+          }.toMap
+
+          items.map(item =>
+            item.keepers match {
+              case Keepers.TooMany => 0.0f
+              case Keepers.ReasonableNumber(users) => {
+                var itemScore = 0.0f
+                users.map(userId => itemScore += socialScoreMap.getOrElse(userId, 0.0f))
+                itemScore
+              }
+            })
+        }
+      } catch {
+        case e: Exception => {
+          log.warn("can't get social scores from graph service. setting all social scores to 0.0f for items.")
+          Future.successful(Seq.fill[Float](items.size)(0.0f))
+        }
+      }
+    }
   }
 
   def apply(items: Seq[SeedItem]): Future[Seq[ScoredSeedItem]] = {

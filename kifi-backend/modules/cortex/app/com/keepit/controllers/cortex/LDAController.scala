@@ -67,8 +67,16 @@ class LDAController @Inject() (
   }
 
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    val (globalScore, recencyScore) = lda.userUriInterest(userId, uriId)
-    Ok(Json.obj("global" -> globalScore, "recency" -> recencyScore))
+    val scores = lda.userUriInterest(userId, uriId)
+    Ok(Json.toJson(scores))
+  }
+
+  def batchUserURIsInterests() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val userId = (js \ "userId").as[Id[User]]
+    val uriIds = (js \ "uriIds").as[Seq[Id[NormalizedURI]]]
+    val scores = lda.batchUserURIsInterests(userId, uriIds)
+    Ok(Json.toJson(scores))
   }
 
   def userTopicMean(userId: Id[User]) = Action { request =>

@@ -90,8 +90,6 @@
   outline: #5b9dd9 auto 4px !important;
   outline-offset: 0;
 }
-.kifi-setting-select:focus {
-}
 .kifi-setting-select {
   -moz-box-sizing: border-box;
   box-sizing: border-box;

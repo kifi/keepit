@@ -2,7 +2,7 @@
   currentVersion: com.keepit.common.service.ServiceVersion,
   compilationTime: String, started: String, errorCount: Int,
   recentErrors: Seq[com.keepit.common.healthcheck.AirbrakeError],
-  cacheStats: Seq[(String, Int, Int, Int)], totalHits: Int, totalMisses: Int, totalSets: Int)
+  cacheStats: Seq[(String, Int, Int, Int, Int)], totalHits: Int, totalMisses: Int, totalSets: Int)
 
 @admin(currentService + " service") {
    <table class="table table-bordered">
@@ -38,7 +38,8 @@
               <td>Name</td>
               <td>Hits</td>
               <td>Misses</td>
-              <td>Updates</td>
+              <td>Sets</td>
+              <td>Miss Ratio Special Edition</td>
             </tr>
           </thead>
           <tbody>
@@ -48,6 +49,7 @@
               <td>@stat._2</td>
               <td>@stat._3</td>
               <td>@stat._4</td>
+              <td>@{stat._5}%</td>
             </tr>
           }
           </tbody>
@@ -55,21 +57,4 @@
         </td>
       </tr>
   </table>
-
-  <div id="video"/>
-  <script type="text/javascript">
-	  var videos = [
-	                's6KWnVh-JDs',
-	                'MbGNcoB2Y4I',
-	                'sdUwlSwifHw',
-	                'KUQGYMvI5sk',
-	                'kyYS-GzBSIg',
-	                'ojydNb3Lrrs'
-	              ];
-
-    var index=Math.floor(Math.random() * videos.length);
-    var html='<center><iframe width="600px" height="400px" src="http://www.youtube.com/embed/' + videos[index] + '" frameborder="0" allowfullscreen></iframe></center>';
-    $('#video').append(html);
-
-  </script>
 }

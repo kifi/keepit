@@ -24,7 +24,7 @@ case class Library(
     state: State[Library] = LibraryStates.ACTIVE,
     seq: SequenceNumber[Library] = SequenceNumber.ZERO,
     kind: LibraryKind = LibraryKind.USER_CREATED,
-    keepDiscoveryEnabled: Boolean) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
+    memberCount: Int) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def withId(id: Id[Library]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -49,7 +49,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'state).format(State.format[Library]) and
     (__ \ 'seq).format(SequenceNumber.format[Library]) and
     (__ \ 'kind).format[LibraryKind] and
-    (__ \ 'keepDiscoveryEnabled).format[Boolean]
+    (__ \ 'memberCount).format[Int]
   )(Library.apply, unlift(Library.unapply))
 
   val maxNameLength = 50
@@ -75,24 +75,24 @@ object LibrarySlug {
 
   val maxSlugLength = 50
   def isValidSlug(slug: String): Boolean = {
-    (slug != "" && !slug.contains(' ') && slug.length < maxSlugLength)
+    slug != "" && !slug.contains(' ') && slug.length < maxSlugLength
   }
 }
 
 sealed abstract class LibraryVisibility(val value: String)
 
 object LibraryVisibility {
-  case object ANYONE extends LibraryVisibility("anyone")
-  case object LIMITED extends LibraryVisibility("limited")
-  case object SECRET extends LibraryVisibility("secret")
+  case object PUBLISHED extends LibraryVisibility("published") // published library, is discoverable
+  case object DISCOVERABLE extends LibraryVisibility("discoverable") // "help my friends", is discoverable
+  case object SECRET extends LibraryVisibility("secret") // secret, not discoverable
 
   implicit def format[T]: Format[LibraryVisibility] =
     Format(__.read[String].map(LibraryVisibility(_)), new Writes[LibraryVisibility] { def writes(o: LibraryVisibility) = JsString(o.value) })
 
   def apply(str: String) = {
     str match {
-      case ANYONE.value => ANYONE
-      case LIMITED.value => LIMITED
+      case PUBLISHED.value => PUBLISHED
+      case DISCOVERABLE.value => DISCOVERABLE
       case SECRET.value => SECRET
     }
   }

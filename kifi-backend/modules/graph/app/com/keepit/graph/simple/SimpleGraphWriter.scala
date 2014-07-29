@@ -96,6 +96,7 @@ class SimpleGraphWriter(
         false
       case None =>
         bufferedVertices += (vertexId -> new MutableVertex(data, new MutableOutgoingEdges(MutableMap())))
+        getBufferedIncomingEdges(vertexId)
         vertexDeltas(data.kind).incrementAndGet()
         true
     }
