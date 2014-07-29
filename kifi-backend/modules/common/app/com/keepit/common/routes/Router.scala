@@ -339,6 +339,7 @@ object Graph extends Service {
 
 object Curator extends Service {
   object internal {
+    def adHocRecos(userId: Id[User], n: Int) = ServiceRoute(GET, "/internal/curator/adHocRecos", Param("userId", userId), Param("n", n))
   }
 }
 

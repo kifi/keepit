@@ -22,12 +22,15 @@ case class SeedItem(
   lastSeen: DateTime,
   keepers: Keepers)
 
-@json case class UriScores(
-  socialScore: Float,
-  popularityScore: Float,
-  overallInterestScore: Float,
-  recentInterestScore: Float,
-  recencyScore: Float,
-  priorScore: Float)
+case class UriScores(
+    socialScore: Float,
+    popularityScore: Float,
+    overallInterestScore: Float,
+    recentInterestScore: Float,
+    recencyScore: Float,
+    priorScore: Float) {
+
+  override def toString = s"social:$socialScore --- popularity:$popularityScore --- overallInterest:$overallInterestScore --- recentInterest:$recentInterestScore --- recency:$recencyScore --- prior:$priorScore"
+}
 
 case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores)
