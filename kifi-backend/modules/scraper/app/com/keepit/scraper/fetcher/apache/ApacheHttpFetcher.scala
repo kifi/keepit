@@ -8,6 +8,8 @@ import java.util.concurrent.{ ConcurrentLinkedQueue, Executors, ThreadFactory, T
 import java.util.zip.ZipException
 import javax.net.ssl.{ SSLException, SSLHandshakeException }
 
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.ExecutionContext
 import play.api.Play.current
 
 import com.keepit.common.time._
@@ -39,6 +41,7 @@ import org.joda.time.DateTime
 import play.api.Play
 import sun.security.validator.ValidatorException
 
+import scala.concurrent.Future
 import scala.ref.WeakReference
 import scala.util.Try
 
@@ -328,4 +331,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
+  def get(url: String, ifModifiedSince: Option[DateTime], proxy: Option[HttpProxy])(f: (HttpInputStream) => Unit): Future[HttpFetchStatus] = SafeFuture {
+    fetch(url, ifModifiedSince, proxy)(f)
+  }(ExecutionContext.fj)
 }
