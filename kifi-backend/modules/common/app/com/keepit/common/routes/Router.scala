@@ -12,6 +12,8 @@ import com.keepit.cortex.core.{ StatModel, ModelVersion }
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.common.mail.EmailAddress
 import com.keepit.abook.model.{ IngestableContact, IngestableEmailAccount }
+import org.joda.time.DateTime
+import com.keepit.common.time._
 
 trait Service
 
@@ -45,6 +47,7 @@ object ParamValue {
   implicit def emailToParam(emailAddress: EmailAddress) = ParamValue(Some(emailAddress.address))
   implicit def userValueNameToParam(userValueName: UserValueName) = ParamValue(Some(userValueName.name))
   implicit def seqOfToParam[T](s: Seq[T]) = ParamValue(Some(s.toString))
+  implicit def dateTimeToParam(dateTime: DateTime) = ParamValue(Some(dateTime.toStandardDateString))
 }
 
 abstract class Method(name: String)
@@ -155,6 +158,7 @@ object Shoebox extends Service {
     def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableSocialUserInfos", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getEmailAccountUpdates", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesAndMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getLapsedUsersForDelighted(after: DateTime, before: Option[DateTime], maxCount: Int, skipCount: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLapsedUsersForDelighted", Param("after", after), Param("before", before), Param("maxCount", maxCount), Param("skipCount", skipCount))
   }
 }
 
@@ -238,8 +242,8 @@ object Heimdal extends Service {
     def setUserProperties(userId: Id[User]) = ServiceRoute(POST, s"/internal/heimdal/user/set", Param("userId", userId))
     def setUserAlias(userId: Id[User], externalId: ExternalId[User]) = ServiceRoute(GET, "/internal/heimdal/user/alias", Param("userId", userId), Param("externalId", externalId))
     def getLastDelightedAnswerDate(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/user/delighted/time", Param("userId", userId))
-    def postDelightedAnswer(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String) = ServiceRoute(POST, s"/internal/heimdal/user/delighted/answer", Param("userId", userId), Param("externalId", externalId), Param("email", email), Param("name", name))
-    def cancelDelightedSurvey(userId: Id[User], externalId: ExternalId[User], email: Option[EmailAddress], name: String) = ServiceRoute(POST, s"/internal/heimdal/user/delighted/cancel", Param("userId", userId), Param("externalId", externalId), Param("email", email), Param("name", name))
+    def postDelightedAnswer() = ServiceRoute(POST, s"/internal/heimdal/user/delighted/answer")
+    def cancelDelightedSurvey() = ServiceRoute(POST, s"/internal/heimdal/user/delighted/cancel")
   }
 }
 

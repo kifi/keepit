@@ -20,11 +20,12 @@ import com.keepit.search.sharding._
 import com.keepit.search.spellcheck.{ SpellIndexerPlugin, SpellIndexerPluginImpl, SpellIndexer }
 import com.keepit.search.user._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.google.inject.{ Inject, Provides, Singleton }
+import com.google.inject.{ Provides, Singleton }
 import org.apache.commons.io.FileUtils
 import java.io.File
 import play.api.Play._
-import com.keepit.search.graph.library.{ LibraryIndexer, LibraryIndexerPluginImpl, LibraryIndexerPlugin }
+import com.keepit.search.graph.library.{ LibraryIndexerPluginImpl, LibraryIndexerPlugin, LibraryIndexer }
+import com.keepit.search.graph.keep.{ KeepIndexer, KeepIndexerPluginImpl, KeepIndexerPlugin, ShardedKeepIndexer }
 
 trait IndexModule extends ScalaModule with Logging {
 
@@ -66,7 +67,8 @@ trait IndexModule extends ScalaModule with Logging {
     bind[SpellIndexerPlugin].to[SpellIndexerPluginImpl].in[AppScoped]
     bind[UserGraphPlugin].to[UserGraphPluginImpl].in[AppScoped]
     bind[SearchFriendGraphPlugin].to[SearchFriendGraphPluginImpl].in[AppScoped]
-    // bind[LibraryIndexerPlugin].to[LibraryIndexerPluginImpl].in[AppScoped] todo(Léo): activate once Shoebox is ready
+    // bind[LibraryIndexerPlugin].to[LibraryIndexerPluginImpl].in[AppScoped] // todo(Léo): activate once Shoebox is ready
+    // bind[KeepIndexerPlugin].to[KeepIndexerPluginImpl].in[AppScoped] // todo(Léo): activate once Shoebox is ready
   }
 
   private[this] val noShard = Shard[Any](0, 1)
@@ -203,6 +205,17 @@ trait IndexModule extends ScalaModule with Logging {
     new LibraryIndexer(libraryDir, shoebox, airbrake)
   }
 
+  @Provides @Singleton
+  def shardedKeepIndexer(activeShards: ActiveShards, backup: IndexStore, shoeboxClient: ShoeboxServiceClient, airbrake: AirbrakeNotifier): ShardedKeepIndexer = {
+    def keepIndexer(shard: Shard[NormalizedURI]) = {
+      val dir = getIndexDirectory("index.keep.directory", shard, backup)
+      log.info(s"storing KeepIndex${shard.indexNameSuffix} in $dir")
+      new KeepIndexer(dir, shard, airbrake)
+    }
+
+    val indexShards = activeShards.local.map { shard => (shard, keepIndexer(shard)) }
+    new ShardedKeepIndexer(indexShards.toMap, shoeboxClient, airbrake)
+  }
 }
 
 case class ProdIndexModule() extends IndexModule {

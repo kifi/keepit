@@ -204,7 +204,7 @@ class UserController @Inject() (
     }
   }
 
-  def basicUserInfo(id: ExternalId[User]) = Action {
+  def basicUserInfo(id: ExternalId[User]) = JsonAction.authenticated { implicit request =>
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id).map { user =>
         Ok(Json.toJson(BasicUser.fromUser(user)))

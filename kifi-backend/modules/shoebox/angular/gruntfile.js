@@ -397,7 +397,7 @@ module.exports = function (grunt) {
       },
       livereload: {
         options: {
-          livereload: 8079
+          livereload: 35729
         },
         files: ['index.html', '<%= path.dist.dir %>/**/*']
       }
@@ -417,9 +417,6 @@ module.exports = function (grunt) {
   grunt.loadNpmTasks('grunt-spritesmith');
   grunt.loadNpmTasks('grunt-env');
   grunt.loadNpmTasks('grunt-html2js');
-
-  //Making grunt default to force in order not to break the project.
-  grunt.option('force', true);
 
   // http://gruntjs.com/creating-tasks
 

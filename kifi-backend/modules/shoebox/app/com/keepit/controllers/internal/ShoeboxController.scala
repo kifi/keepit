@@ -14,6 +14,7 @@ import com.keepit.model._
 import com.keepit.normalizer._
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
 import com.keepit.common.performance._
+import org.joda.time.DateTime
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -640,5 +641,15 @@ class ShoeboxController @Inject() (
     userCommander.getUserImageUrl(Id[User](id), width).map { url =>
       Ok(Json.toJson(url))
     }
+  }
+
+  def getLapsedUsersForDelighted(after: DateTime, before: Option[DateTime], maxCount: Int, skipCount: Int) = Action { request =>
+    val userInfos = db.readOnlyReplica { implicit session =>
+      userRepo.getUsers(userValueRepo.getLastActive(after, before, maxCount, skipCount)) map {
+        case (userId, user) =>
+          DelightedUserRegistrationInfo(userId, user.externalId, user.primaryEmail, user.fullName)
+      }
+    }
+    Ok(Json.toJson(userInfos))
   }
 }
