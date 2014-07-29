@@ -76,7 +76,7 @@ class UserLDAStatisticsUpdater @Inject() (
 
   import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
-  val MIN_EVIDENCE = 30
+  private val MIN_EVIDENCE = 30
 
   def update() {
     val vecs = db.readOnlyReplica { implicit s => userTopicRepo.getAllUserTopicMean(representer.version, MIN_EVIDENCE) }.map { _.mean }
