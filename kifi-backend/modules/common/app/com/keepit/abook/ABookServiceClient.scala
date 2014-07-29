@@ -59,6 +59,8 @@ trait ABookServiceClient extends ServiceClient {
   def getEmailAccountsChanged(seqNum: SequenceNumber[IngestableEmailAccount], fetchSize: Int): Future[Seq[IngestableEmailAccount]]
   def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]]
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]]
+  def getRecommendedUsers(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]]
+  def reportIrrelevantUserRecommendations(userId: Id[User], irrelevantUserIds: Seq[Id[User]]): Future[Unit]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -236,6 +238,15 @@ class ABookServiceClientImpl @Inject() (
 
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] =
     call(ABook.internal.getUsersWithContact(email)).map(_.json.as[Set[Id[User]]])
+
+  def getRecommendedUsers(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = {
+    call(ABook.internal.getRecommendedUsers(userId: Id[User], page: Int, pageSize: Int)).map(_.json.as[Seq[Id[User]]])
+  }
+
+  def reportIrrelevantUserRecommendations(userId: Id[User], irrelevantUserIds: Seq[Id[User]]): Future[Unit] = {
+    val json = Json.toJson(irrelevantUserIds)
+    call(ABook.internal.reportIrrelevantUserRecommendations(userId: Id[User]), json).map(_ => ())
+  }
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
@@ -302,4 +313,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]] = Future.successful(Seq.empty)
 
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] = Future.successful(contactsConnectedToEmailAddress)
+
+  def getRecommendedUsers(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = Future.successful(Seq.empty)
+
+  def reportIrrelevantUserRecommendations(userId: Id[User], irrelevantUserIds: Seq[Id[User]]): Future[Unit] = Future.successful(())
 }
