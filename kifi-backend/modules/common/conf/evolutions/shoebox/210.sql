@@ -11,7 +11,7 @@ CREATE TABLE friend_recommendation (
     irrelevant bool NOT NULL,
 
     PRIMARY KEY (id),
-    UNIQUE INDEX friend_recommendation_u_user_id_friend_id (user_id, friend_id),
+    UNIQUE INDEX friend_recommendation_u_user_id_friend_id (user_id, friend_id)
 );
 
 insert into evolutions (name, description) values('210.sql', 'create friend_recommendation table');
