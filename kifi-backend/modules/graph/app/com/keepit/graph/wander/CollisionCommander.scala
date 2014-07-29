@@ -15,10 +15,10 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
 
   def getUsers(startingVertexId: VertexId, journal: TeleportationJournal, avoidFirstDegree: Boolean): Map[Id[User], Int] = {
     val collisionMap: Map[VertexId, Int] = journal.getVisited()
-    val firstDegreeCollisions = getVerticesToAvoid(startingVertexId, avoidFirstDegree)
+    val avoidedVertices = getVerticesToAvoid(startingVertexId, avoidFirstDegree)
     val users = mutable.Map[Id[User], Int]()
     collisionMap collect {
-      case (vertexId, count) if count <= 1 || firstDegreeCollisions.contains(vertexId) => //igore
+      case (vertexId, count) if count <= 1 || avoidedVertices.contains(vertexId) => //igore
       case (vertexId, count) if vertexId.kind == UserReader => users += VertexDataId.toUserId(vertexId.asId[UserReader]) -> count
     }
     users.toMap
@@ -26,10 +26,10 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
 
   def getUris(startingVertexId: VertexId, journal: TeleportationJournal, avoidFirstDegree: Boolean): Map[Id[NormalizedURI], Int] = {
     val collisionMap: Map[VertexId, Int] = journal.getVisited()
-    val firstDegreeCollisions = getVerticesToAvoid(startingVertexId, avoidFirstDegree)
+    val avoidedVertices = getVerticesToAvoid(startingVertexId, avoidFirstDegree)
     val uris = mutable.Map[Id[NormalizedURI], Int]()
     collisionMap collect {
-      case (vertexId, count) if count <= 1 || firstDegreeCollisions.contains(vertexId) => //igore
+      case (vertexId, count) if count <= 1 || avoidedVertices.contains(vertexId) => //igore
       case (vertexId, count) if vertexId.kind == UriReader => uris += VertexDataId.toNormalizedUriId(vertexId.asId[UriReader]) -> count
     }
     uris.toMap
@@ -37,10 +37,10 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
 
   def getSocialUsers(startingVertexId: VertexId, journal: TeleportationJournal, avoidFirstDegree: Boolean): Map[Id[SocialUserInfo], Int] = {
     val collisionMap: Map[VertexId, Int] = journal.getVisited()
-    val firstDegreeCollisions = getVerticesToAvoid(startingVertexId, avoidFirstDegree)
+    val avoidedVertices = getVerticesToAvoid(startingVertexId, avoidFirstDegree)
     val socialUsers = mutable.Map[Id[SocialUserInfo], Int]()
     collisionMap collect {
-      case (vertexId, count) if count <= 1 || firstDegreeCollisions.contains(vertexId) => //igore
+      case (vertexId, count) if count <= 1 || avoidedVertices.contains(vertexId) => //igore
       case (vertexId, count) if vertexId.kind == FacebookAccountReader => socialUsers += VertexDataId.fromFacebookAccountIdtoSocialUserId(vertexId.asId[FacebookAccountReader]) -> count
       case (vertexId, count) if vertexId.kind == LinkedInAccountReader => socialUsers += VertexDataId.fromLinkedInAccountIdtoSocialUserId(vertexId.asId[LinkedInAccountReader]) -> count
     }
