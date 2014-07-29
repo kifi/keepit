@@ -240,7 +240,7 @@ gulp.task('lib-min-scripts', function () {
 gulp.task('watch', function () {
   livereload.listen();
   gulp.watch(stylFiles, ['styles']).on('change', cacheUpdater(stylesCache));
-  gulp.watch(jsFiles, ['scripts']).on('change', cacheUpdater(jsCache, jsHintCache));
+  gulp.watch(jsFiles, ['scripts']).on('change', cacheUpdater(jsCache, jsHintSrcCache, jsHintTestCache));
   gulp.watch(htmlFiles, ['scripts']).on('change', cacheUpdater(htmlCache));
   gulp.watch(libCssFiles, ['lib-styles']);
   gulp.watch(libJsFiles, ['lib-scripts']);
