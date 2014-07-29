@@ -39,6 +39,7 @@ class MutableVertex(var data: VertexDataReader, val outgoingEdges: MutableOutgoi
 object MutableVertex {
   def apply(data: VertexDataReader): MutableVertex = new MutableVertex(data, MutableOutgoingEdges(), MutableIncomingEdges())
 
+  // This "lossy" formatter ignores the vertex's incoming edges, which have to be recovered globally (see initializeIncomingEdges method)
   val lossyFormat = new Format[MutableVertex] {
     def writes(vertex: MutableVertex): JsValue = Json.obj(
       "data" -> VertexDataReader.writes.writes(vertex.data),
