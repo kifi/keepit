@@ -91,7 +91,7 @@ class UserController @Inject() (
   }
 
   def findFriends(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
-    abookServiceClient.getRecommendedUsers(request.userId, page, pageSize).map { recommendedUsers =>
+    abookServiceClient.findFriends(request.userId, page, pageSize).map { recommendedUsers =>
       val basicUsers = db.readOnlyReplica { implicit session => basicUserRepo.loadAll(recommendedUsers.toSet) }
       val recommendedBasicUsers = recommendedUsers.map(basicUsers(_))
       val json = Json.obj("users" -> recommendedBasicUsers)

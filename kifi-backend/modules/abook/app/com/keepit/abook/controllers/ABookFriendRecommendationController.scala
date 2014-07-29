@@ -12,7 +12,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 class ABookFriendRecommendationController @Inject() (
     friendRecommendationCommander: FriendRecommendationCommander) extends ABookServiceController {
 
-  def getRecommendedUsers(userId: Id[User], page: Int, pageSize: Int) = Action.async { request =>
+  def findFriends(userId: Id[User], page: Int, pageSize: Int) = Action.async { request =>
     friendRecommendationCommander.getRecommendedUsers(userId, page, pageSize).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
