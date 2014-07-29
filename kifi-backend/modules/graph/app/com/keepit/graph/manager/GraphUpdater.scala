@@ -1,5 +1,6 @@
 package com.keepit.graph.manager
 
+import com.keepit.common.logging.Logging
 import com.keepit.graph.model._
 import com.google.inject.Inject
 import com.keepit.model._
@@ -10,7 +11,7 @@ trait GraphUpdater {
   def apply(update: GraphUpdate)(implicit writer: GraphWriter): Unit
 }
 
-class GraphUpdaterImpl @Inject() () extends GraphUpdater {
+class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
   def apply(update: GraphUpdate)(implicit writer: GraphWriter): Unit = update match {
     case userGraphUpdate: UserGraphUpdate => processUserGraphUpdate(userGraphUpdate)
     case userConnectionGraphUpdate: UserConnectionGraphUpdate => processUserConnectionGraphUpdate(userConnectionGraphUpdate)
@@ -119,11 +120,35 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater {
 
   private def processLDAUpdate(update: SparseLDAGraphUpdate)(implicit writer: GraphWriter) = {
 
+    def printVertexComponents(topicId: LDATopicId): Unit = {
+      val reader = writer.getNewVertexReader()
+      reader.moveTo(topicId)
+      val edgeReader = reader.incomingEdgeReader
+      while (edgeReader.moveToNextComponent()) {
+        val comp = edgeReader.component
+        log.info("components ==============>    " + comp.toString)
+      }
+    }
+
     def removeOldURITopicsIfExists(uriVertexId: VertexDataId[UriReader], numTopics: Int): Unit = {
+      log.info(s"removing old topics for uri: $uriVertexId")
       (0 until numTopics).foreach { i =>
+        log.info(s"topicId: $i")
         val topicId = LDATopicId(update.modelVersion, LDATopic(i))
+
+        printVertexComponents(topicId)
         writer.removeEdgeIfExists(uriVertexId, topicId, WeightedEdgeReader)
-        writer.removeEdgeIfExists(topicId, uriVertexId, WeightedEdgeReader)
+
+        log.info("after removing uri-topic edge --------------------------------:")
+        printVertexComponents(topicId)
+
+        try {
+          writer.removeEdgeIfExists(topicId, uriVertexId, WeightedEdgeReader)
+        } catch {
+          case e: Exception =>
+            throw new Exception(s"exception in removing edge: $topicId, $uriVertexId")
+
+        }
       }
     }
 
