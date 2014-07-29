@@ -1,5 +1,6 @@
 package com.keepit.search.engine
 
+import com.keepit.search.engine.result.ResultCollector
 import com.keepit.search.util.join.{ DataBufferReader, DataBufferWriter, DataBuffer }
 import org.specs2.mutable.Specification
 
@@ -8,16 +9,20 @@ import scala.util.Random
 class ScoreContextTest extends Specification {
   private[this] val rnd = new Random()
 
-  private[this] val collector = new ResultCollector {
+  private[this] val collector = new ResultCollector[ScoreContext] {
     var result = Map[Long, Float]()
 
     def clear(): Unit = {
       result = Map[Long, Float]()
     }
 
-    override def collect(id: Long, score: Float): Unit = {
+    override def collect(ctx: ScoreContext): Unit = {
+      val id = ctx.id
+      val score = ctx.score
+
       if (result.contains(id)) throw new Exception("duplicate ids")
-      result += id -> score
+
+      if (score > 0.0f) result += id -> score
     }
   }
 
