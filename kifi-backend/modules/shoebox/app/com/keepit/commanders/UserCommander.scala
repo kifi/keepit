@@ -254,9 +254,7 @@ class UserCommander @Inject() (
       searchClient.warmUpUser(newUser.id.get)
       searchClient.updateUserIndex()
     }
-    db.readWrite { implicit session =>
-      autoSetUsername(newUser, readOnly = false)
-    }
+
     libraryCommander.internSystemGeneratedLibraries(newUser.id.get)
 
     newUser
