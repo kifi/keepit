@@ -165,9 +165,23 @@ trait Indexable[T, S] extends Logging {
     }
   }
 
-  def buildTokenizedDomainField(fieldName: String, host: Seq[String], analyzer: Analyzer = DefaultAnalyzer.defaultAnalyzer): Field = {
-    val text = host.map { name => "-_".foldLeft(name) { (n, c) => n.replace(c, ' ') } }.mkString(" ")
-    buildTextField(fieldName, text)
+  def buildDomainFields(url: String, siteField: String, homePageField: String): Seq[Field] = {
+    URI.parse(url).map {
+      case uri =>
+        // index domain name
+        val domainName = uri.host.collect {
+          case Host(domain @ _*) if domain.nonEmpty =>
+            buildIteratorField(siteField, (1 to domain.size).iterator) { n => domain.take(n).reverse.mkString(".") }
+        }
+
+        // home page
+        val homePage = Some(uri) collect {
+          case URI(_, _, Some(Host(domain @ _*)), _, path, None, None) if (path.isEmpty || path == Some("/")) =>
+            buildTextField(homePageField, domain.reverse.mkString(" "), DefaultAnalyzer.defaultAnalyzer)
+        }
+
+        Seq(domainName, homePage).flatten
+    } getOrElse Seq.empty
   }
 
   def urlToIndexableString(url: String): Option[String] = {

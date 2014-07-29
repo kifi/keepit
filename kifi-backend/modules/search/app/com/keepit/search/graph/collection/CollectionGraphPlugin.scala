@@ -7,7 +7,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.model.{ Collection, NormalizedURI }
-import com.keepit.search.index.IndexerActor
+import com.keepit.search.index.BasicIndexerActor
 import com.keepit.search.index.IndexerPlugin
 import com.keepit.search.index.IndexManager
 import com.keepit.search.sharding.ShardedCollectionIndexer
@@ -24,4 +24,4 @@ class CollectionGraphPluginImpl @Inject() (
 
 class CollectionGraphActor @Inject() (
   airbrake: AirbrakeNotifier,
-  indexer: ShardedCollectionIndexer) extends IndexerActor[Collection, CollectionIndexer](airbrake, indexer)
+  indexer: ShardedCollectionIndexer) extends BasicIndexerActor[Collection, CollectionIndexer](airbrake, indexer)

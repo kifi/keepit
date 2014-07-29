@@ -265,6 +265,8 @@ POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/:id/decline @com.keepit.controllers.website.LibraryController.declineLibrary(id: PublicId[LibraryInvite])
 POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryController.leaveLibrary(id: PublicId[Library])
 GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library])
+POST    /site/libraries/copy        @com.keepit.controllers.website.LibraryController.copyKeeps()
+POST    /site/libraries/move        @com.keepit.controllers.website.LibraryController.moveKeeps()
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
@@ -288,6 +290,7 @@ GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
+GET     /site/user/friends/find    @com.keepit.controllers.website.UserController.findFriends(page: Int ?= 0, pageSize: Int ?= 5)
 POST    /site/user/invite           @com.keepit.controllers.website.InviteController.inviteV2()
 POST    /site/user/delighted/answer @com.keepit.controllers.website.UserController.postDelightedAnswer()
 POST    /site/user/delighted/cancel @com.keepit.controllers.website.UserController.cancelDelightedSurvey()
