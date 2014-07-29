@@ -64,7 +64,18 @@ class SecureSocialUserPluginImpl @Inject() (
           emailRepo.getByAddressOpt(email).flatMap { emailAddr =>
             // todo(andrew): Don't let unverified people log in. For now, we are, but come up with something better.
             socialUserInfoRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap { sui =>
-              sui.credentials
+              sui.credentials map { creds =>
+                val pwdInfo = userCredRepo.findByUserIdOpt(sui.userId.get) map { userCred =>
+                  PasswordInfo("bcrypt", userCred.credentials, None)
+                }
+                pwdInfo match {
+                  case Some(pInfo) =>
+                    creds.copy(passwordInfo = Some(pInfo))
+                  case None =>
+                    log.warn(s"[find($id)] cannot find credentials for userId=${sui.userId}")
+                    creds
+                }
+              }
             }
           }
         } tap { res =>
