@@ -1,9 +1,9 @@
 <div ng-controller="InviteCtrl">
   <div class="invite-wrapper" smart-scroll scroll-distance="wtiScrollDistance" scroll-disabled="isWTIScrollDisabled()" scroll-next="wtiScrollNext()">
     <div class="invite">
-      <h2 class="invite-title">Find people to invite</h2>
-
       <div kf-friend-request-banner></div>
+
+      <h2 class="invite-title">Find people to invite</h2>
 
       <div class="import-wrapper" ng-if="isRefreshingSocialGraph">
         <div class="bouncy-ball">

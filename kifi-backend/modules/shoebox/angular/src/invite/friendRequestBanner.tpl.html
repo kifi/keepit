@@ -1,45 +1,19 @@
-<div class="invite-friend-request-banner-wrap"
+<div class="invite-friend-request-banner-wrap kf-connection-card-container"
     ng-show="showFriendRequestBanner" ng-switch="state"
     ng-class="{hide: hideBanner}">
 
-  <div class="invite-friend-request-banner-body">
+  <h2 class="invite-title">Send a friend request to your email contact</h2>
 
-    <div ng-switch-when="user-load-error">
-      There was an error finding this user.
+  <div class="kf-connection-card" ng-class="{'kf-connection-invited': invited}" ng-hide="hidden">
+    <img class="kf-connection-card-image" onerror="this.src='/assets/img/ghost.200.png'" ng-src="{{mainImage}}" ng-class="{'kf-connection-card-email-image': email}"/>
+    <span class="kf-connection-card-who">
+      <span class="kf-main-label" title="{{user.name}}">{{user.name}}</span>
+      <div class="kf-friend-card-count" title="{{friendCount}}"><ng-pluralize count="friendCount" when="{'one': '1 friend ', 'other': '{} friends '}"></ng-pluralize>on Kifi</div>
+    </span>
+    <div test="test" kf-social-invite-action class="social-invite-action clickable" result="result">
+      <div class="social-invite-button" ng-click="invite(result, $event)"><span class="sprite sprite-tag-new-plus-icon"> </span>Add</div>
     </div>
-
-    <div class="user-loaded-wrapper " ng-show="user">
-      <img class="invite-friend-request-banner-avatar"
-          onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'"
-          ng-src="{{ user.picUrl }}" title="{{ name }}"/>
-
-      <div class="user-info state-user-loaded" ng-switch-when="user-loaded">
-        <div class="banner-title">
-          Want to connect with {{ user.firstName }} {{ user.lastName }}?
-        </div>
-
-        <div class="social-invite-action clickable">
-          <div class="social-invite-button user-add-button" ng-click="confirmFriendRequest()">
-            <span class="sprite sprite-tag-new-plus-icon"></span> Add
-          </div>
-        </div>
-      </div>
-
-      <div class='user-info state-friend-request-complete' ng-switch-when="friend-request-complete">
-        <div class="banner-title">
-          Friend request send to {{ user.firstName }}
-        </div>
-      </div>
-
-      <div class='user-info state-friend-request-error' ng-switch-when="friend-request-error">
-        <div class="banner-title">
-          Error adding {{ user.firstName }}
-        </div>
-      </div>
-
-    </div>
-
-    <div class="sprite sprite-close-x-icon invite-friend-request-banner-cancel" ng-click="close()"></div>
-
+    <span class="kf-connection-card-close" ng-click="close()">✕</span>
   </div>
+
 </div>

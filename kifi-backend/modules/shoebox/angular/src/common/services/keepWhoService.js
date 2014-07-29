@@ -6,7 +6,7 @@ angular.module('kifi.keepWhoService', [])
   function () {
     var api = {
       getPicUrl: function (user, width) {
-        width = width || 100;
+        width = width > 100 ? 200 : 100;
         if (user && user.id && user.pictureName) {
           return '//djty7jcqog9qu.cloudfront.net/users/' + user.id + '/pics/' + width + '/' + user.pictureName;
         }
