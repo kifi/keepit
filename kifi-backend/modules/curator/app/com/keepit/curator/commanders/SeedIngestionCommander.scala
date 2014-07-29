@@ -94,4 +94,22 @@ class SeedIngestionCommander @Inject() (
     }
   }
 
+  //this is a methods for (manual, not unit) testing of data flow and scoring, not meant for user facing content or scale
+  def getTopItems(userId: Id[User], howManyMax: Int): Future[Seq[SeedItem]] = {
+    //gets higest scoring ruis for the user. If that's not enough get recent items as well
+    db.readOnlyReplicaAsync { implicit session =>
+      var items = rawSeedsRepo.getByTopPriorScore(userId, howManyMax)
+      if (items.length < howManyMax) items = (items ++ rawSeedsRepo.getRecent(userId, howManyMax)).toSet.toSeq
+      items.map { rawItem =>
+        val keepers = if (rawItem.timesKept > 100) {
+          Keepers.TooMany
+        } else {
+          Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
+        }
+        cook(userId, rawItem, keepers)
+      }
+
+    }
+  }
+
 }
