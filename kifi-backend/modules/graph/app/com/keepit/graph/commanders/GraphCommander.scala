@@ -16,25 +16,25 @@ class GraphCommander @Inject() (
     uriScoreCache: ConnectedUriScoreCache) extends Logging {
   private val maxResults = 500
 
-  private def getUriScoreList(vertexKind: String, vertexId: Long, journal: TeleportationJournal, avoidFirstDegreeConnections: Boolean): Seq[ConnectedUriScore] = {
-    val ls = collisionCommander.getUris(vertexKind, vertexId, journal, avoidFirstDegreeConnections).toList.sortBy(-_._2)
+  private def getUriScoreList(startingVertexId: VertexId, journal: TeleportationJournal, avoidFirstDegreeConnections: Boolean): Seq[ConnectedUriScore] = {
+    val ls = collisionCommander.getUris(startingVertexId, journal, avoidFirstDegreeConnections).toList.sortBy(-_._2)
     ls.take(maxResults).map {
       case (uriId, count) =>
         ConnectedUriScore(uriId, count.toDouble / ls.head._2)
     }
   }
 
-  private def getUsersScoreList(vertexKind: String, vertexId: Long, journal: TeleportationJournal, avoidFirstDegreeConnections: Boolean): Seq[ConnectedUserScore] = {
-    val ls = collisionCommander.getUsers(vertexKind, vertexId, journal, avoidFirstDegreeConnections).toList.sortBy(-_._2)
+  private def getUsersScoreList(startingVertexId: VertexId, journal: TeleportationJournal, avoidFirstDegreeConnections: Boolean): Seq[ConnectedUserScore] = {
+    val ls = collisionCommander.getUsers(startingVertexId, journal, avoidFirstDegreeConnections).toList.sortBy(-_._2)
     ls.take(maxResults).map {
       case (userId, count) =>
         ConnectedUserScore(userId, count.toDouble / ls.head._2)
     }
   }
 
-  private def updateScoreCaches(userId: Id[User], vertexKind: String, vertexId: Long, journal: TeleportationJournal, avoidFirstDegreeConnection: Boolean): (Seq[ConnectedUriScore], Seq[ConnectedUserScore]) = {
-    val urisList = getUriScoreList(vertexKind, vertexId, journal, avoidFirstDegreeConnection)
-    val usersList = getUsersScoreList(vertexKind, vertexId, journal, avoidFirstDegreeConnection)
+  private def updateScoreCaches(userId: Id[User], startingVertexId: VertexId, journal: TeleportationJournal, avoidFirstDegreeConnection: Boolean): (Seq[ConnectedUriScore], Seq[ConnectedUserScore]) = {
+    val urisList = getUriScoreList(startingVertexId, journal, avoidFirstDegreeConnection)
+    val usersList = getUsersScoreList(startingVertexId, journal, avoidFirstDegreeConnection)
     uriScoreCache.set(ConnectedUriScoreCacheKey(userId, avoidFirstDegreeConnection), urisList)
     userScoreCache.set(ConnectedUserScoreCacheKey(userId, avoidFirstDegreeConnection), usersList)
     (urisList, usersList)
@@ -46,7 +46,8 @@ class GraphCommander @Inject() (
       case None => {
         val wanderLust = Wanderlust.discovery(userId)
         val journal = wanderingCommander.wander(wanderLust)
-        updateScoreCaches(userId, wanderLust.startingVertexKind, wanderLust.startingVertexDataId, journal, avoidFirstDegreeConnections)._1
+
+        updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._1
       }
       case Some(data) => data
     }
@@ -58,7 +59,7 @@ class GraphCommander @Inject() (
       case None => {
         val wanderLust = Wanderlust.discovery(userId)
         val journal = wanderingCommander.wander(wanderLust)
-        updateScoreCaches(userId, wanderLust.startingVertexKind, wanderLust.startingVertexDataId, journal, avoidFirstDegreeConnections)._2
+        updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._2
       }
       case Some(data) => data
     }

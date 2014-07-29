@@ -13,9 +13,9 @@ import scala.collection.mutable
 
 class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends Logging {
 
-  def getUsers(startingVertexKind: String, startingVertexId: Long, journal: TeleportationJournal, avoidFirstDegree: Boolean): Map[Id[User], Int] = {
+  def getUsers(startingVertexId: VertexId, journal: TeleportationJournal, avoidFirstDegree: Boolean): Map[Id[User], Int] = {
     val collisionMap: Map[VertexId, Int] = journal.getVisited()
-    val firstDegreeCollisions = getFirstDegreeNeighbors(startingVertexKind, startingVertexId, avoidFirstDegree)
+    val firstDegreeCollisions = getFirstDegreeNeighbors(startingVertexId, avoidFirstDegree)
     val users = mutable.Map[Id[User], Int]()
     collisionMap collect {
       case (vertexId, count) if count <= 1 || firstDegreeCollisions.contains(vertexId) => //igore
@@ -24,9 +24,9 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     users.toMap
   }
 
-  def getUris(startingVertexKind: String, startingVertexId: Long, journal: TeleportationJournal, avoidFirstDegree: Boolean): Map[Id[NormalizedURI], Int] = {
+  def getUris(startingVertexId: VertexId, journal: TeleportationJournal, avoidFirstDegree: Boolean): Map[Id[NormalizedURI], Int] = {
     val collisionMap: Map[VertexId, Int] = journal.getVisited()
-    val firstDegreeCollisions = getFirstDegreeNeighbors(startingVertexKind, startingVertexId, avoidFirstDegree)
+    val firstDegreeCollisions = getFirstDegreeNeighbors(startingVertexId, avoidFirstDegree)
     val uris = mutable.Map[Id[NormalizedURI], Int]()
     collisionMap collect {
       case (vertexId, count) if count <= 1 || firstDegreeCollisions.contains(vertexId) => //igore
@@ -35,9 +35,9 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     uris.toMap
   }
 
-  def getSocialUsers(startingVertexKind: String, startingVertexId: Long, journal: TeleportationJournal, avoidFirstDegree: Boolean): Map[Id[SocialUserInfo], Int] = {
+  def getSocialUsers(startingVertexId: VertexId, journal: TeleportationJournal, avoidFirstDegree: Boolean): Map[Id[SocialUserInfo], Int] = {
     val collisionMap: Map[VertexId, Int] = journal.getVisited()
-    val firstDegreeCollisions = getFirstDegreeNeighbors(startingVertexKind, startingVertexId, avoidFirstDegree)
+    val firstDegreeCollisions = getFirstDegreeNeighbors(startingVertexId, avoidFirstDegree)
     val socialUsers = mutable.Map[Id[SocialUserInfo], Int]()
     collisionMap collect {
       case (vertexId, count) if count <= 1 || firstDegreeCollisions.contains(vertexId) => //igore
@@ -61,14 +61,12 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     neighbors.toSet
   }
 
-  private def getFirstDegreeNeighbors(startingVertexKind: String, startingVertexId: Long, avoidFirstDegree: Boolean): Set[VertexId] = {
-    val vertexKind = VertexKind(startingVertexKind)
-    val centralVertexId = VertexId(vertexKind)(startingVertexId)
+  private def getFirstDegreeNeighbors(startingVertexId: VertexId, avoidFirstDegree: Boolean): Set[VertexId] = {
     if (avoidFirstDegree) {
       graph.readOnly { reader =>
         val vertexReader = reader.getNewVertexReader()
-        val firstDegreeVertices = collectNeighbors(vertexReader)(centralVertexId, VertexKind.all)
-        val firstDegreeUriAndSocialUsers = if (centralVertexId.kind != UserReader) Set.empty
+        val firstDegreeVertices = collectNeighbors(vertexReader)(startingVertexId, VertexKind.all)
+        val firstDegreeUriAndSocialUsers = if (startingVertexId.kind != UserReader) Set.empty
         else {
           firstDegreeVertices.collect {
             case keep if keep.kind == KeepReader => collectNeighbors(vertexReader)(keep, Set(UriReader))
@@ -77,10 +75,10 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
             //ignore other vertex types of neighbors
           }.flatten
         }
-        firstDegreeVertices ++ firstDegreeUriAndSocialUsers + centralVertexId
+        firstDegreeVertices ++ firstDegreeUriAndSocialUsers + startingVertexId
       }
     } else {
-      Set(centralVertexId)
+      Set(startingVertexId)
     }
   }
 
