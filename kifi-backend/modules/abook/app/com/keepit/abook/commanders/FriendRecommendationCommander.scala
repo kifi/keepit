@@ -30,14 +30,16 @@ class FriendRecommendationCommander @Inject() (
     val rejectedRecommendations = db.readOnlyMaster { implicit session =>
       friendRecommendationRepo.getIrrelevantRecommendations(userId)
     }
-    for {
-      friendships <- futureFriendships
-      friends <- futureFriends
-      friendRequests <- futureFriendRequests
-    } yield {
-      val irrelevantRecommendations = rejectedRecommendations ++ friends ++ friendRequests.map(_.recipientId)
-      val recommendations = friendships.iterator.filter { case (friendId, _) => !irrelevantRecommendations.contains(friendId) }
-      recommendations.drop(page * pageSize).take(pageSize).map(_._1).toSeq
+    futureFriendships.flatMap { friendships =>
+      if (friendships.isEmpty) Future.successful(Seq.empty)
+      else for {
+        friends <- futureFriends
+        friendRequests <- futureFriendRequests
+      } yield {
+        val irrelevantRecommendations = rejectedRecommendations ++ friends ++ friendRequests.map(_.recipientId)
+        val recommendations = friendships.iterator.filter { case (friendId, _) => !irrelevantRecommendations.contains(friendId) }
+        recommendations.drop(page * pageSize).take(pageSize).map(_._1).toSeq
+      }
     }
   }
 }
