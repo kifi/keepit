@@ -120,20 +120,27 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
 
   private def processLDAUpdate(update: SparseLDAGraphUpdate)(implicit writer: GraphWriter) = {
 
+    def printVertexComponents(topicId: LDATopicId): Unit = {
+      val reader = writer.getNewVertexReader()
+      reader.moveTo(topicId)
+      val edgeReader = reader.incomingEdgeReader
+      while (edgeReader.moveToNextComponent()) {
+        val comp = edgeReader.component
+        log.info("components ==============>    " + comp.toString)
+      }
+    }
+
     def removeOldURITopicsIfExists(uriVertexId: VertexDataId[UriReader], numTopics: Int): Unit = {
       log.info(s"removing old topics for uri: $uriVertexId")
       (0 until numTopics).foreach { i =>
         log.info(s"topicId: $i")
         val topicId = LDATopicId(update.modelVersion, LDATopic(i))
+
+        printVertexComponents(topicId)
         writer.removeEdgeIfExists(uriVertexId, topicId, WeightedEdgeReader)
 
-        val reader = writer.getNewVertexReader()
-        reader.moveTo(topicId)
-        val edgeReader = reader.incomingEdgeReader
-        while (edgeReader.moveToNextComponent()) {
-          val comp = edgeReader.component
-          log.info("components ==============>    " + comp.toString)
-        }
+        log.info("after removing uri-topic edge --------------------------------:")
+        printVertexComponents(topicId)
 
         try {
           writer.removeEdgeIfExists(topicId, uriVertexId, WeightedEdgeReader)
