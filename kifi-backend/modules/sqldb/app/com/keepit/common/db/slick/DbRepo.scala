@@ -6,11 +6,9 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import DBSession._
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
-import java.sql.{ PreparedStatement, Statement, Timestamp, SQLException }
+import java.sql.{ Statement, SQLException }
 import play.api.Logger
-import scala.slick.driver.JdbcDriver.DDL
 import scala.slick.ast.{ TypedType, ColumnOption }
-import scala.slick.driver.{ JdbcDriver, JdbcProfile, H2Driver, SQLiteDriver }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.keepit.common.logging.Logging
@@ -65,17 +63,13 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
 
   def save(model: M)(implicit session: RWSession): M = try {
     val toUpdate = model.withUpdateTime(clock.now)
-    val (result, newItem) = model.id match {
-      case Some(id) => (update(toUpdate), false)
-      case None => (toUpdate.withId(insert(toUpdate)), true)
-    }
+    val result = if (model.id.isDefined) update(toUpdate) else toUpdate.withId(insert(toUpdate))
     model match {
       case m: ModelWithState[M] if m.state == State[M]("inactive") => deleteCache(result)
       case _ => invalidateCache(result)
     }
-
     if (changeListener.isDefined) session.onTransactionSuccess {
-      if (newItem) changeListener.get(RepoEntryAdded(result))
+      if (model.id.isDefined) changeListener.get(RepoEntryAdded(result))
       else changeListener.get(RepoEntryUpdated(result))
     }
     result
@@ -288,11 +282,7 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends ExternalId
   protected val getByExtIdCompiled = Compiled { id: Column[ExternalId[M]] =>
     for (f <- rowsWithExternalIdColumn if f.externalId is id) yield f
   }
-  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = {
-    val startTime = System.currentTimeMillis()
-    val model = getByExtIdCompiled(id).firstOption
-    val time = System.currentTimeMillis - startTime
-    model
-  }
+
+  def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = getByExtIdCompiled(id).firstOption
 }
 
