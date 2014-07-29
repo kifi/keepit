@@ -13,7 +13,7 @@
               <span class="social-network-icon kf-icon-micro" ng-class="result.iconStyle"></span>{{result.network}}
             </div>
           </div>
-          <div class="social-invite-action clickable">
+          <div kf-social-invite-action class="social-invite-action clickable" result="result">
             <div class="social-invite-button" ng-click="invite(result, $event)"><span class="sprite sprite-tag-new-plus-icon"> </span>Invite</div>
           </div>
         </div>
@@ -43,7 +43,7 @@
               Kifi user
             </div>
           </div>
-          <div class="social-invite-action clickable">
+          <div kf-social-invite-action class="social-invite-action clickable" result="result">
             <div class="social-invite-button user-add-button" ng-click="invite(result, $event)"><span class="sprite sprite-tag-new-plus-icon"></span> Add</div>
           </div>
         </div>
@@ -55,7 +55,7 @@
               <span class="social-network-icon kf-icon-micro" ng-class="result.iconStyle"></span>{{result.inviteText}}
             </div>
           </div>
-          <div class="social-invite-action clickable">
+          <div kf-social-invite-action class="social-invite-action clickable" result="result">
             <div class="social-invite-button" ng-click="invite(result, $event)">Resend</div>
           </div>
         </div>
@@ -70,7 +70,7 @@
             {{result.label}}
           </div>
         </div>
-        <div class="social-invite-action clickable">
+        <div kf-social-invite-action class="social-invite-action clickable" result="result">
           <div class="social-invite-button" ng-click="invite(result, $event)"><span class="sprite sprite-tag-new-plus-icon"></span> Invite</div>
         </div>
       </div>
