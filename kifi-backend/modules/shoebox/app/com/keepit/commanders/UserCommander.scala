@@ -710,9 +710,10 @@ class UserCommander @Inject() (
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
     val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
+    val imageName = user.pictureName.getOrElse("0")
     implicit val txn = TransactionalCaching.Implicits.directCacheAccess
-    userImageUrlCache.getOrElseFuture(UserImageUrlCacheKey(userId, width)) {
-      s3ImageStore.getPictureUrl(Some(width), user, user.pictureName.getOrElse("0"))
+    userImageUrlCache.getOrElseFuture(UserImageUrlCacheKey(userId, width, imageName)) {
+      s3ImageStore.getPictureUrl(Some(width), user, imageName)
     }
   }
 
