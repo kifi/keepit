@@ -1,7 +1,6 @@
 package com.keepit.graph.simple
 
 import scala.collection.concurrent.{ Map => ConcurrentMap, TrieMap }
-import scala.collection.mutable.{ Map => MutableMap, Set => MutableSet }
 import com.keepit.graph.model._
 import play.api.libs.json._
 import com.keepit.graph.manager.GraphStatistics
@@ -11,31 +10,15 @@ import scala.collection.JavaConversions._
 
 case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMap()) {
 
-  private val vertexStatistics = GraphStatistics.newVertexCounter()
-  private val edgeStatistics = GraphStatistics.newEdgeCounter()
-  private val incomingEdges = TrieMap[VertexId, MutableIncomingEdges]() ++= vertices.mapValues(_ => new MutableIncomingEdges(MutableMap()))
-
-  vertices.foreach {
-    case (sourceId, mutableVertex) =>
-      val sourceKind = mutableVertex.data.kind
-      vertexStatistics(sourceKind).incrementAndGet()
-      mutableVertex.outgoingEdges.edges.valuesIterator.flatten.foreach {
-        case (destinationId, edgeData) =>
-          val component = (sourceKind, destinationId.kind, edgeData.kind)
-          edgeStatistics(component).incrementAndGet()
-          if (!incomingEdges(destinationId).edges.contains(component)) { incomingEdges(destinationId).edges += (component -> MutableSet()) }
-          incomingEdges(destinationId).edges(component) += sourceId
-      }
-  }
+  private val (vertexStatistics, edgeStatistics) = SimpleGraph.initializeGraphStatistics(vertices.valuesIterator)
 
   def statistics = GraphStatistics.filter(vertexStatistics, edgeStatistics)
 
-  def getNewReader(): GraphReader = new SimpleGraphReader(vertices, incomingEdges)
+  def getNewReader(): GraphReader = new SimpleGraphReader(vertices)
 
   def getNewWriter(): GraphWriter = {
     val bufferedVertices = new BufferedMap(vertices)
-    val bufferedIncomingEdges = new BufferedMap(incomingEdges)
-    new SimpleGraphWriter(bufferedVertices, bufferedIncomingEdges, vertexStatistics, edgeStatistics)
+    new SimpleGraphWriter(bufferedVertices, vertexStatistics, edgeStatistics)
   }
 
   def readWrite[T](f: GraphWriter => T): T = {
@@ -50,8 +33,10 @@ case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMa
 }
 
 object SimpleGraph {
+  implicit val vertexFormat = MutableVertex.lossyFormat
+
   def write(graph: SimpleGraph, graphFile: File): Unit = {
-    val lines: Iterable[String] = graph.vertices.map {
+    val lines: Iterable[String] = graph.vertices.toIterable.map {
       case (vertexId, vertex) => Json.stringify(
         Json.arr(JsNumber(vertexId.id), Json.toJson(vertex))
       )
@@ -68,11 +53,26 @@ object SimpleGraph {
           val JsArray(Seq(idJson, vertexJson)) = Json.parse(line)
           val vertexId = idJson.as[VertexId]
           val vertex = vertexJson.as[MutableVertex]
+          require(vertex.data.kind == vertexId.kind, s"Inconsistent serialized data for vertex $vertexId: ${vertex.data}")
           vertices += (vertexId -> vertex)
       }
+      MutableVertex.initializeIncomingEdges(vertices)
     } finally {
       LineIterator.closeQuietly(lineIterator)
     }
     SimpleGraph(vertices)
+  }
+
+  def initializeGraphStatistics(vertices: Iterator[Vertex]) = {
+    val vertexStatistics = GraphStatistics.newVertexCounter()
+    val edgeStatistics = GraphStatistics.newEdgeCounter()
+    vertices.foreach { vertex =>
+      vertexStatistics(vertex.data.kind).incrementAndGet()
+      vertex.outgoingEdges.edges.foreach {
+        case (component, destinations) =>
+          edgeStatistics(component).addAndGet(destinations.size)
+      }
+    }
+    (vertexStatistics, edgeStatistics)
   }
 }
