@@ -1,0 +1,52 @@
+.invite-friend-request-banner-wrap
+  overflow: hidden
+  max-height 200px
+  margin: 0 10px 15px
+
+  &.hide
+    transition: opacity .4s, max-height .4s .4s
+    max-height: 0
+    opacity: 0
+
+.invite-friend-request-banner-body
+  padding: 6px
+  background-color: #fff
+  border-radius: 3px
+  box-shadow: 0 1px 1px 0 #dadae2
+  border: 1px solid #dadae2
+  text-align: center
+  position: relative
+  clearfix()
+
+.invite-friend-request-banner-avatar
+  display: inline-block
+  height: 60px
+  width: 60px
+  border-radius: 4px
+
+.user-loaded-wrapper
+  max-width: 550px
+  margin: 0 auto
+  padding: 8px 44px // make sure the title doesn't underlap the cancel button & avatar
+
+  .banner-title
+    font-family: "Georgia", Arial, sans-serif
+    font-style: italic
+    font-size: 18px
+    display: inline-block
+    margin: 0 10px
+
+  .social-invite-action
+    font-style: normal
+    position: inherit
+    display: inline-block
+
+.user-info
+  display: inline-block
+  margin-left: 10px
+
+.invite-friend-request-banner-cancel
+  position: absolute
+  top: 10px
+  right: 10px
+  cursor: pointer

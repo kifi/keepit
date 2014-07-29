@@ -1,11 +1,14 @@
 'use strict';
 
 angular.module('kifi.invite', [
+  'kifi',
   'util',
   'kifi.profileService',
   'kifi.routeService',
   'jun.facebook',
   'kifi.inviteService',
+  'kifi.userService',
+  'kifi.keepWhoService',
   'kifi.social',
   'kifi.modal'
 ])
@@ -222,4 +225,87 @@ angular.module('kifi.invite', [
       }
     };
   }
-]);
+])
+
+// we don't want to call inviteService.friendRequest twice; this factory
+// prevents an invite from being sent to the same externalId more than once;
+// because of the injectedState and $location.search({}),
+// controllers/directives are called twice
+.factory('friendRequestFactory', [
+  '$location', '$http', '$rootScope', '$q', 'routeService', 'inviteService',
+  function ($location, $http, $rootScope, $q, routeService, inviteService) {
+    var runs = {};
+
+    function runOnce(externalId) {
+      if (runs.hasOwnProperty(externalId)) {
+        return runs[externalId];
+      }
+
+      var deferred = $q.defer();
+      inviteService.friendRequest(externalId).then(function (res) {
+        deferred.resolve(res);
+      }, function (res) {
+        deferred.reject(res);
+      });
+
+      return (runs[externalId] = deferred.promise);
+    }
+
+    return { 'run': runOnce };
+  }
+])
+
+.directive('kfFriendRequestBanner', [
+  'injectedState', 'friendRequestFactory', 'routeService', 'userService', 'keepWhoService', 'profileService',
+  function (injectedState, friendRequestFactory, routeService, userService, keepWhoService, profileService) {
+
+    function setupShowFriendRequestBanner(scope, externalId) {
+      userService.getBasicUserInfo(externalId).then(function (res) {
+        var user = res.data,
+            picUrl = keepWhoService.getPicUrl(user, 200);
+        scope.user = _.extend(user, { picUrl: picUrl });
+        scope.name = user.firstName + ' ' + user.lastName;
+        scope.state = 'user-loaded';
+      }, function () {
+        scope.state = 'user-load-error';
+      });
+
+      scope.confirmFriendRequest = function () {
+        friendRequestFactory.run(externalId).then(function () {
+          scope.state = 'friend-request-complete';
+        }, function () {
+          scope.state = 'friend-request-error';
+        });
+      };
+
+      scope.close = function () {
+        scope.hideBanner = true;
+      };
+    }
+
+    function link(scope) {
+      var externalId = injectedState.state.friend;
+
+      if (_.isEmpty(externalId)) {
+        return;
+      }
+
+      profileService.getMe().then(function (me) {
+        scope.showFriendRequestBanner = me.experiments && me.experiments.indexOf('notify_user_when_contacts_join') > -1;
+        if (scope.showFriendRequestBanner) {
+          setupShowFriendRequestBanner(scope, externalId);
+        }
+      });
+    }
+
+    return {
+      restrict: 'A',
+      templateUrl: 'invite/friendRequestBanner.tpl.html',
+      replace: true,
+      scope: {},
+      link: link
+    };
+  }
+])
+
+;

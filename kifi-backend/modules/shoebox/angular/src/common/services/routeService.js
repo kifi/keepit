@@ -75,7 +75,8 @@ angular.module('kifi.routeService', [])
       exportKeeps: route('/keeps/export'),
       postDelightedAnswer: route('/user/delighted/answer'),
       cancelDelightedSurvey: route('/user/delighted/cancel'),
-      userCloseAccount: route('/user/close')
+      userCloseAccount: route('/user/close'),
+      basicUserInfo: function (id) { return route('/user/' + id); }
     };
   }
 ]);
