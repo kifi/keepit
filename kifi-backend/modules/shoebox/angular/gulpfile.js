@@ -155,9 +155,9 @@ var makeTemplates = lazypipe()
   Servers
  ********************************************************/
 
-function startDevServer() {
+function startDevServer(port) {
   connect.server({
-    port: 8080,
+    port: port || 8080,
     host: 'dev.ezkeep.com',
     fallback: 'dev.html',
     middleware: function () {
@@ -166,9 +166,9 @@ function startDevServer() {
   });
 }
 
-function startProdServer() {
+function startProdServer(port) {
   connect.server({
-    port: 8080,
+    port: port || 8080,
     host: 'dev.ezkeep.com',
     fallback: 'index.html'
   });
@@ -349,7 +349,7 @@ gulp.task('karma', ['templates'], function (done) {
 });
 
 gulp.task('protractor', ['build-release'], function () {
-  startProdServer();
+  startProdServer(9080);
 
   return gulp.src(['test/e2e/**/*.js'])
     .pipe(protractor({
