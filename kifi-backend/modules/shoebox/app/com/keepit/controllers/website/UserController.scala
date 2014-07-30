@@ -100,7 +100,7 @@ class UserController @Inject() (
   }
 
   def hideUserRecommendation(id: ExternalId[User]) = JsonAction.authenticatedAsync { request =>
-    val irrelevantUserId = db.readOnlyReplica { implicit session => userRepo.get(id) }
+    val irrelevantUserId = db.readOnlyReplica { implicit session => userRepo.get(id).id.get }
     abookServiceClient.hideUserRecommendation(request.userId, irrelevantUserId).map { _ =>
       Ok(Json.obj("hidden" -> true))
     }
