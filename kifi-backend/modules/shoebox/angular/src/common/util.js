@@ -6,6 +6,12 @@ angular.module('util', [])
   '$document', '$window',
   function ($document, $window) {
     return {
+      /**
+       * Return a random integer between min and max, both inclusive.
+       */
+      getRandomInt: function (min, max) {
+          return Math.floor(Math.random() * (max - min + 1)) + min;
+      },
       startsWith: function (str, prefix) {
         return str === prefix || str.lastIndexOf(prefix, 0) === 0;
       },
