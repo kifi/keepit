@@ -21,7 +21,7 @@ import org.joda.time.DateTime
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import org.h2.jdbc.JdbcSQLException
 
-class SlickTest extends Specification with DbTestInjector {
+class SlickTest extends Specification with SqlDbTestInjector {
 
   "Slick" should {
 
