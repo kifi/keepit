@@ -1,7 +1,25 @@
 'use strict';
 
 describe('kifi.invite', function () {
-  var $injector, $rootScope, $httpBackend, routeService, $location, injectedState, profileService;
+  var $injector, $rootScope, $httpBackend, routeService, $location, $compile,
+    injectedState, profileService, inviteService, elem, scope;
+
+  var fakeSocialId = '29a10380-166a-11e4-8c21-0800200c9a66'
+
+  // helper to get an element's isolated scope
+  // precondion: elem var has been set
+  function iscope() {
+    return elem.isolateScope();
+  }
+
+  function compile() {
+    $compile(elem)(scope);
+    scope.$digest();
+  };
+
+  function mockPromise() {
+    return $injector.get('$q').defer().promise;
+  }
 
   beforeEach(module('kifi.invite'));
   beforeEach(inject(function (_$injector_) {
@@ -9,30 +27,93 @@ describe('kifi.invite', function () {
     $rootScope = $injector.get('$rootScope');
     $httpBackend = $injector.get('$httpBackend');
     $location = $injector.get('$location');
+    $compile = $injector.get('$compile');
     routeService = $injector.get('routeService');
     injectedState = $injector.get('injectedState');
     profileService = $injector.get('profileService');
+    inviteService = $injector.get('inviteService');
+
+    scope = $rootScope.$new();
   }));
 
+  describe('kfSocialInviteAction', function () {
+    beforeEach(function () {
+      var html =
+        '<div kf-social-invite-action class="clickable kf-add-friend-banner-action" result="result">' +
+          '<a href="javascript:" class="kf-add-friend-banner-add-button clickable-target" ng-click="invite(result, $event)"><span class="sprite sprite-tag-new-plus-icon"> </span>Add</a>' +
+        '</div>';
+      elem = angular.element(html);
+    });
+
+    it('creates a 2-way binding with parent scope\'s "result"', function () {
+      $rootScope.result = { foo: 'bar' };
+      compile();
+      var scope = iscope();
+      expect(scope.result.foo).toEqual('bar');
+
+      // test that changes from the outer scope updates the isolated scope
+      $rootScope.result.foo = 'baz';
+      expect(scope.result.foo).toEqual('baz');
+
+      // test that changes from the isolated scope updates the outer scope
+      scope.result.foo = 'moo';
+      expect($rootScope.result.foo).toEqual('moo');
+    });
+
+    describe('scope.invite()', function () {
+      it('is defined by the directive', function () {
+        compile();
+        expect(typeof iscope().invite).toEqual('function');
+      });
+
+      xit('is called on element click', function () {
+        compile();
+        var scope = iscope();
+        spyOn(scope, 'invite');
+        elem.find('a').click();
+        expect(scope.invite).toHaveBeenCalled();
+      });
+
+      it('it calls inviteService.invite when user is not in fortytwo network', function () {
+        $rootScope.result = {
+          networkType: 'facebook',
+          socialId: fakeSocialId
+        };
+
+        compile();
+        // better to stub the http call and test the success/error functions, but I'm out of time
+        spyOn(inviteService, 'invite').andReturn(mockPromise());
+        iscope().invite();
+        expect(inviteService.invite).toHaveBeenCalledWith('facebook', fakeSocialId);
+      });
+
+      it('it calls inviteService.friendRequest when user is in fortytwo network', function () {
+        $rootScope.result = {
+          networkType: 'fortytwo',
+          socialId: fakeSocialId
+        };
+
+        compile();
+        // better to stub the http call and test the success/error functions, but I'm out of time
+        spyOn(inviteService, 'friendRequest').andReturn(mockPromise());
+        iscope().invite();
+        expect(inviteService.friendRequest).toHaveBeenCalledWith(fakeSocialId);
+      });
+    });
+  });
+
   describe('friend request banner', function () {
-    var scope, iscope, elem, friendRequestUrl, basicUserInfoUrl, profileUrl, expectGetProfile;
-    var compile = function () {
-      $injector.get('$compile')(elem)(scope);
-      scope.$digest();
-      iscope = elem.isolateScope();
-    };
-    var externalId = '29a10380-166a-11e4-8c21-0800200c9a66'
+    var friendRequestUrl, basicUserInfoUrl, profileUrl, expectGetProfile;
 
     beforeEach(function () {
-      injectedState.state.friend = externalId;
-      scope = $rootScope.$new();
+      injectedState.state.friend = fakeSocialId;
       elem = angular.element("<div kf-friend-request-banner></div>");
-      friendRequestUrl = routeService.friendRequest(externalId);
-      basicUserInfoUrl = routeService.basicUserInfo(externalId);
+      friendRequestUrl = routeService.friendRequest(fakeSocialId);
+      basicUserInfoUrl = routeService.basicUserInfo(fakeSocialId);
       profileUrl = routeService.profileUrl;
 
       expectGetProfile = function () {
-        var json = '{"id":"' + externalId + '","firstName":"John","lastName":"Doe","pictureName":"7kSuC.jpg","username":"johndoe","emails":[{"address":"johndoe@gmail.com","isPrimary":true,"isVerified":true,"isPendingPrimary":false}],"notAuthed":[],"experiments":["notify_user_when_contacts_join"],"uniqueKeepsClicked":5,"totalKeepsClicked":5,"clickCount":2,"rekeepCount":0,"rekeepTotalCount":0}';
+        var json = '{"id":"' + fakeSocialId + '","firstName":"John","lastName":"Doe","pictureName":"7kSuC.jpg","username":"johndoe","emails":[{"address":"johndoe@gmail.com","isPrimary":true,"isVerified":true,"isPendingPrimary":false}],"notAuthed":[],"experiments":["notify_user_when_contacts_join"],"uniqueKeepsClicked":5,"totalKeepsClicked":5,"clickCount":2,"rekeepCount":0,"rekeepTotalCount":0}';
         $httpBackend.expectGET(profileUrl).respond(200, json);
       };
     });
@@ -40,44 +121,27 @@ describe('kifi.invite', function () {
     it('shows a success message after server response ok', function () {
       expectGetProfile();
       $httpBackend.expectGET(basicUserInfoUrl).respond(200,
-        '{"id":"' + externalId + '","firstName":"John","lastName":"Doe","pictureName":"123.jpg","username":"johndoe"}');
+        '{"id":"' + fakeSocialId + '","firstName":"John","lastName":"Doe","pictureName":"123.jpg","username":"johndoe"}');
 
       compile();
-
-      expect(iscope.state).toBeFalsy();
+      var scope = iscope();
       $httpBackend.flush();
 
-      expect(iscope.state).toEqual('user-loaded');
       $httpBackend.expectPOST(friendRequestUrl).respond(200, '{}');
-      elem.find('div.state-user-loaded div.user-add-button').click();
-      $httpBackend.flush();
+      var target = elem.find('div.clickable-target');
+      target.click();
 
-      expect(iscope.state).toEqual('friend-request-complete');
+      expect(target.text()).toEqual('Sending');
+      $httpBackend.flush();
+      expect(target.text()).toEqual('Sent!');
     });
 
-    it('shows an error message after server response to get user info fails', function () {
+    it('does not show banner if get user info fails', function () {
       expectGetProfile();
       $httpBackend.expectGET(basicUserInfoUrl).respond(404, '{}');
 
       compile();
-      expect(iscope.state).toBeFalsy();
-      $httpBackend.flush();
-      expect(iscope.state).toEqual('user-load-error');
-    });
-
-    it('shows an error message after server response to add user fails', function () {
-      expectGetProfile();
-      $httpBackend.expectGET(basicUserInfoUrl).respond(200,
-        '{"id":"' + externalId + '","firstName":"John","lastName":"Doe","pictureName":"123.jpg","username":"johndoe"}');
-
-      compile();
-      $httpBackend.flush();
-      expect(iscope.state).toEqual('user-loaded');
-
-      $httpBackend.expectPOST(friendRequestUrl).respond(500, '{}');
-      elem.find('div.state-user-loaded div.user-add-button').click();
-      $httpBackend.flush();
-      expect(iscope.state).toEqual('friend-request-error');
+      expect(elem.hasClass('hidden')).toBe(true);
     });
   });
 });
