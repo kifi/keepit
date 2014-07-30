@@ -153,8 +153,8 @@ class LDACommander @Inject() (
 
   private def scale(datum: Array[Float], mean: Array[Float], std: Array[Float]): Array[Float] = {
     assume(datum.size == mean.size && mean.size == std.size)
-    (0 until datum.size).map{ i =>
-      if (std(i) == 0) datum(i) - mean(i) else (datum(i) - mean(i))/std(i)
+    (0 until datum.size).map { i =>
+      if (std(i) == 0) datum(i) - mean(i) else (datum(i) - mean(i)) / std(i)
     }.toArray
   }
 
