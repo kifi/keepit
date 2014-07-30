@@ -14,9 +14,7 @@ class NormalizedURICommander @Inject() (
 
   def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
     db.readOnlyReplicaAsync { implicit session =>
-      uris.map { uri =>
-        normalizedURIRepo.getRestrictionStatusOfURIs(Restriction.ADULT, uri)
-      }
+      normalizedURIRepo.getRestrictionStatusOfURIs(Restriction.ADULT, uris)
     }
   }
 
