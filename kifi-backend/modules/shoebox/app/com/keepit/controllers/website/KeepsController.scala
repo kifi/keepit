@@ -34,7 +34,6 @@ class KeepsController @Inject() (
   pageInfoRepo: PageInfoRepo,
   actionAuthenticator: ActionAuthenticator,
   uriSummaryCommander: URISummaryCommander,
-  shoebox: ShoeboxServiceClient,
   collectionCommander: CollectionCommander,
   bookmarksCommander: KeepsCommander,
   userValueRepo: UserValueRepo,

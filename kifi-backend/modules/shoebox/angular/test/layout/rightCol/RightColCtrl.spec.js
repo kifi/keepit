@@ -23,14 +23,4 @@ describe('kifi.layout.rightCol', function () {
     });
   }));
 
-  describe('RightColCtrl', function () {
-    it('should call $element.css to set height', function () {
-      expect($element.css).not.toHaveBeenCalled();
-
-      $timeout.flush();
-
-      expect($element.css).toHaveBeenCalledWith('height', $window.innerHeight + 'px');
-    });
-  });
-
 });

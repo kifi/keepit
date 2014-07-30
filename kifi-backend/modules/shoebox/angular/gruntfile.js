@@ -397,7 +397,7 @@ module.exports = function (grunt) {
       },
       livereload: {
         options: {
-          livereload: 8079
+          livereload: 35729
         },
         files: ['index.html', '<%= path.dist.dir %>/**/*']
       }

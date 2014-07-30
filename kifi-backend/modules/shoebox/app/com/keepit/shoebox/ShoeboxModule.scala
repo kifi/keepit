@@ -13,6 +13,7 @@ import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.integrity.DataIntegrityModule
 import com.keepit.search.{ SearchServiceClientModule, ProdSearchServiceClientModule }
 import com.keepit.eliza.{ ElizaServiceClientModule, ProdElizaServiceClientModule }
+import com.keepit.curator.CuratorServiceClientModule
 import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.heimdal.{ HeimdalServiceClientModule, ProdHeimdalServiceClientModule }
 import com.keepit.abook.{ ABookServiceClientModule, ProdABookServiceClientModule }
@@ -53,6 +54,7 @@ abstract class ShoeboxModule(
   val scraperServiceClientModule: ScraperServiceClientModule
   val cortexServiceClientModule: CortexServiceClientModule
   val graphServiceClientModule: GraphServiceClientModule
+  val curatorServiceClientModule: CuratorServiceClientModule
 
   val abuseControlModule = AbuseControlModule()
   val slickModule = ShoeboxSlickModule()

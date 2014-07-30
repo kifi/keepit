@@ -34,6 +34,7 @@ import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.graph.TestGraphServiceClientModule
 import com.keepit.signal.TestReKeepStatsUpdaterModule
 import com.keepit.normalizer.{ NormalizationServiceImpl, NormalizedURIInterner }
+import com.keepit.curator.FakeCuratorServiceClientModule
 import controllers.AssetsBuilder
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
@@ -63,6 +64,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         FakeDomainTagImporterModule(),
         FakeCortexServiceClientModule(),
         TestGraphServiceClientModule(),
+        FakeCuratorServiceClientModule(),
         GeckoboardModule(),
         FakeShoeboxServiceModule(), // This one should not be required once the Scraper is off Shoebox
         FakeScrapeSchedulerModule(),
