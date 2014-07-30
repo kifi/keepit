@@ -6,7 +6,6 @@ import scala.util.Try
 import play.api.{ Logger }
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
-import play.api.Play.current
 
 class SafeFuture[+T](future: Future[T], name: Option[String] = None)(implicit executor: ExecutionContext) extends Future[T] {
 
@@ -20,10 +19,10 @@ class SafeFuture[+T](future: Future[T], name: Option[String] = None)(implicit ex
           try {
             // Needs a running Play application. May fail.
             Logger(getClass).error(s"[SafeFuture] Failure of future [${name.getOrElse("")}]", cause)
-            val fortyTwoInjector = current.global.asInstanceOf[FortyTwoGlobal].injector
-            fortyTwoInjector.getInstance(classOf[AirbrakeNotifier]).notify(
+            val fortyTwoInjectorOpt = play.api.Play.maybeApplication.map(a => a.global.asInstanceOf[FortyTwoGlobal].injector)
+            fortyTwoInjectorOpt.map(_.getInstance(classOf[AirbrakeNotifier]).notify(
               AirbrakeError(cause, Some(s"SafeFuture[${name.getOrElse("")}]"))
-            )
+            ))
           } catch {
             case _: Throwable => // tried our best.
           }
