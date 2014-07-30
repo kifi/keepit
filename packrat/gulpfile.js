@@ -46,18 +46,6 @@ var styleDeps = {};
 var scriptDeps = {};
 var asap = {};
 
-// Used to take the union of glob descriptors
-var union = function () {
-  return Array.prototype.reduce.call(arguments, function(a, b) {
-    if (typeof b === 'string') {
-      a.push(b);
-      return a;
-    } else {
-      return a.concat(b);
-    }
-  }, []);
-};
-
 livereload.options.silent = true;
 var reload = function (file) {
   var match = file.path.match(/\/(.*)$/);
@@ -386,16 +374,17 @@ gulp.task('xpi-firefox', ['build'], shell.task([
 
 gulp.task('watch', function() {
   livereload.listen();
-  gulp.watch(union(
-    chromeAdapterFiles,
-    firefoxAdapterFiles,
-    sharedAdapterFiles,
-    resourceFiles,
-    rwsocketScript,
-    backgroundScripts,
-    devBackgroundScripts,
-    htmlFiles
-  ), ['scripts']);
+  gulp.watch(
+    [].concat(
+      chromeAdapterFiles,
+      firefoxAdapterFiles,
+      sharedAdapterFiles,
+      resourceFiles,
+      rwsocketScript,
+      backgroundScripts,
+      devBackgroundScripts,
+      htmlFiles),
+    ['scripts']);
   gulp.watch(styleFiles, ['styles']);
   gulp.watch(tabScripts, ['meta']);
   gulp.watch(distFiles).on('change', reload);
