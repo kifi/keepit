@@ -11,6 +11,8 @@
 @pane-box-width: @pane-width - 2 * @pane-edge-width;
 @pane-side-padding: 9px;
 @pane-color: #333;
+@pane-hover-color: tint(@pane-color, 10%);
+@pane-active-color: shade(@pane-color, 15%);
 .kifi-pane {
   position: fixed;
   top: 0;
@@ -64,14 +66,29 @@ html[kifi-pane-parent][kifi-with-pane]:not(.kifi-snapshot-mode) .kifi-pane {
   height: 44px;
   background-color: inherit;
 }
-.kifi-pane-head-logo {
+.kifi-pane-head-pic {
   position: absolute;
   top: 7px;
-  left: 46px;
-  width: 43px;
+  left: 12px;
   height: 30px;
-  background: url(/images/keeper/tile_logo.svg) center 6px/auto 18px no-repeat;
+  width: 30px;
+  border-radius: 50%;
+}
+.kifi-pane-head-logo {
+  position: absolute;
+  top: 9px;
+  left: 45px;
+  width: 33px;
+  height: 26px;
+  background: url(/images/keeper/tile_logo.svg) center 4px/auto 18px no-repeat;
   border-radius: 4px;
+  &:hover,
+  &:focus {
+    background-color: @pane-hover-color;
+  }
+  &:active {
+    background-color: @pane-active-color;
+  }
 }
 .kifi-pane-head-title {
   text-align: center;
@@ -82,7 +99,7 @@ html[kifi-pane-parent][kifi-with-pane]:not(.kifi-snapshot-mode) .kifi-pane {
   -webkit-font-smoothing: antialiased;
 }
 .kifi-pane .kifi-pane-head-title::before {
-  content: 'Message Box';
+  content: 'Inbox';
 }
 .kifi-pane[data-locator^='/messages/'] .kifi-pane-head-title::before {
   content: 'Same-Page Chat';
@@ -92,47 +109,41 @@ html[kifi-pane-parent][kifi-with-pane]:not(.kifi-snapshot-mode) .kifi-pane {
 }
 a.kifi-pane-top-menu-a {
   position: absolute;
-  top: 0;
-  right: 6px;
-  width: 64px;
-  height: 100%;
-  background-position: 99px;
-  background-repeat: no-repeat;
-}
-a.kifi-pane-top-menu-a::before {
-  content: ' ';
-  display: inline-block;
-  vertical-align: middle;
-  margin: 7px 7px 7px 10px;
+  top: 7px;
+  right: 14px;
   width: 30px;
   height: 30px;
-  background-image: inherit;
-  background-size: 30px;
-  background-repeat: no-repeat;
-  border-radius: 50% !important;
-}
-.kifi-pane-top-menu-a::after {
-  content: ' ';
-  display: inline-block;
-  vertical-align: middle;
-  font-size: 0;
-  line-height: 0;
-  height: 0;
-  width: 0;
-  border-style: solid;
-  border-color: #b8c5d1 transparent;
-  border-width: 4px 4px 0;
-}
-a.kifi-pane-head-logo:hover,
-a.kifi-pane-head-logo:focus,
-a.kifi-pane-top-menu-a:hover,
-a.kifi-pane-top-menu-a:focus {
-  background-color: tint(@pane-color, 10%);
-}
-a.kifi-pane-head-logo:active,
-a.kifi-pane-top-menu-a:active,
-a.kifi-pane-top-menu-a.kifi-active {
-  background-color: shade(@pane-color, 15%);
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  border: 2px solid #707070;
+  border-radius: 50%;
+  padding-top: 12px;
+  text-align: center;
+  &:hover,
+  &:focus {
+    background-color: @pane-hover-color;
+  }
+  &:active,
+  &.kifi-active {
+    background-color: #fff;
+    border-color: #fff;
+  }
+  &::after {
+    content: ' ';
+    display: inline-block;
+    vertical-align: middle;
+    font-size: 0;
+    line-height: 0;
+    height: 0;
+    width: 0;
+    border-style: solid;
+    border-color: #969696 transparent;
+    border-width: 4px 4px 0;
+  }
+  &:active::after,
+  &.kifi-active::after {
+    border-top-color: #000;
+  }
 }
 .kifi-pane-settings-tip::before {
   left: auto;
