@@ -267,39 +267,44 @@ class UserCommander @Inject() (
   def tellUsersWithContactOfNewUserImmediate(newUser: User): Option[Future[Set[Id[User]]]] = synchronized {
     require(newUser.id.isDefined, "UserCommander.tellUsersWithContactOfNewUserImmediate: newUser.id is required")
 
-    newUser.primaryEmail.map { email =>
-      // get users who have this user's email in their contacts
-      abookServiceClient.getUsersWithContact(email).map {
-        case contacts if contacts.size > 0 => {
+    val newUserId = newUser.id.get
+    if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING).exists(_ == "true") }) {
+      db.readWrite { implicit session => userValueRepo.setValue(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING, true) }
 
-          val toNotify = db.readOnlyReplica { implicit session =>
-            val alreadyConnectedUsers = userConnectionRepo.getConnectedUsers(newUser.id.get)
+      newUser.primaryEmail.map { email =>
+        // get users who have this user's email in their contacts
+        abookServiceClient.getUsersWithContact(email).map {
+          case contacts if contacts.size > 0 => {
 
-            // only notify users who are not already connected to our list of users with the contact email
-            for {
-              userId <- contacts.diff(alreadyConnectedUsers)
-              if userExperimentCommander.userHasExperiment(userId, ExperimentType.NOTIFY_USER_WHEN_CONTACTS_JOIN)
-            } yield userId
+            val toNotify = db.readOnlyReplica { implicit session =>
+              val alreadyConnectedUsers = userConnectionRepo.getConnectedUsers(newUser.id.get)
+
+              // only notify users who are not already connected to our list of users with the contact email
+              for {
+                userId <- contacts.diff(alreadyConnectedUsers)
+                if userExperimentCommander.userHasExperiment(userId, ExperimentType.NOTIFY_USER_WHEN_CONTACTS_JOIN)
+              } yield userId
+            }
+
+            sendEmailToNewUserContactsHelper(newUser, toNotify)
+
+            elizaServiceClient.sendGlobalNotification(
+              userIds = toNotify,
+              title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
+              body = s"To discover ${newUser.firstName}’s public keeps while searching, get connected!",
+              linkText = s"Click this to send a friend request to ${newUser.firstName}.",
+              linkUrl = "https://www.kifi.com/invite?friend=" + newUser.externalId,
+              imageUrl = userAvatarImageUrl(newUser),
+              sticky = false,
+              category = NotificationCategory.User.CONTACT_JOINED
+            )
+
+            toNotify
           }
-
-          sendEmailToNewUserContactsHelper(newUser, toNotify)
-
-          elizaServiceClient.sendGlobalNotification(
-            userIds = toNotify,
-            title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
-            body = s"To discover ${newUser.firstName}’s public keeps while searching, get connected!",
-            linkText = s"Click this to send a friend request to ${newUser.firstName}.",
-            linkUrl = "https://www.kifi.com/invite?" + newUser.externalId,
-            imageUrl = userAvatarImageUrl(newUser),
-            sticky = false,
-            category = NotificationCategory.User.CONTACT_JOINED
-          )
-
-          toNotify
+          case _ => Set.empty
         }
-        case _ => Set.empty
       }
-    }
+    } else Option(Future.successful(Set.empty))
   }
 
   def tellAllFriendsAboutNewUserImmediate(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = synchronized {

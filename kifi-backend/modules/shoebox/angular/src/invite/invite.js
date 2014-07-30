@@ -104,29 +104,37 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfSocialInviteAction', [
-  '$log', 'inviteService',
-  function ($log, inviteService) {
+  '$log', 'inviteService', '$timeout',
+  function ($log, inviteService, $timeout) {
     return {
       restrict: 'A',
       scope: {
-        result: '='
+        result: '=',
+        onAfterInvite: '&'
       },
+      replace: true,
+      transclude: true,
+      template: '<div ng-transclude></div>',
       link: function (scope, elem) {
         var ignoreClick = {};
 
-        console.log('created kfSocialInviteAction', elem);
-        console.log('scope.result', scope.result);
+        // This is a **hack** because ng-click was not invoking scope.invite(),
+        // NOTE: this REQUIRES that the arbitrary contents of this directive contains
+        // the "div.clicktable-target" element or the click event will not work
+        var link = elem.find('div.clickable-target');
+        link.click(function (elem, $event) {
+          scope.invite(scope.result, $event);
+        });
 
         scope.invite = function (result, $event) {
-          console.log('kfSocialInviteAction.link', scope.result);
-          return;
+          result = result || scope.result;
           $log.log('this person:', result);
           if (ignoreClick[result.socialId]) {
             return;
           }
           ignoreClick[result.socialId] = true;
 
-          var $elem = angular.element($event.target);
+          var $elem = $event && angular.element($event.target) || elem.find('div.clickable-target');
           $elem.text('Sending');
           $elem.parent().removeClass('clickable');
           if (result.networkType === 'fortytwo' || result.networkType === 'fortytwoNF') {
@@ -139,6 +147,10 @@ angular.module('kifi.invite', [
                 $elem.parent().addClass('clickable');
               }, 4000);
               inviteService.expireSocialSearch();
+
+              if (typeof scope.onAfterInvite === 'function') {
+                scope.onAfterInvite();
+              }
             }, function (err) {
               $log.log('err:', err, result);
               delete ignoreClick[result.socialId];
@@ -156,6 +168,10 @@ angular.module('kifi.invite', [
                 $elem.parent().addClass('clickable');
               }, 4000);
               inviteService.expireSocialSearch();
+
+              if (typeof scope.onAfterInvite === 'function') {
+                scope.onAfterInvite();
+              }
             }, function (err) {
               $log.log('err:', err, result);
               delete ignoreClick[result.socialId];
@@ -166,7 +182,7 @@ angular.module('kifi.invite', [
           }
         };
       }
-    }
+    };
   }
 ])
 
@@ -219,57 +235,6 @@ angular.module('kifi.invite', [
             });
           }
         }
-
-        var ignoreClick = {};
-
-        /*
-        scope.invite = function (result, $event) {
-          $log.log('this person:', result);
-          if (ignoreClick[result.socialId]) {
-            return;
-          }
-          ignoreClick[result.socialId] = true;
-
-          var $elem = angular.element($event.target);
-          $elem.text('Sending');
-          $elem.parent().removeClass('clickable');
-          if (result.networkType === 'fortytwo' || result.networkType === 'fortytwoNF') {
-            // Existing user, friend request
-            inviteService.friendRequest(result.socialId).then(function () {
-              $elem.text('Sent!');
-              $timeout(function () {
-                delete ignoreClick[result.socialId];
-                $elem.text('Resend');
-                $elem.parent().addClass('clickable');
-              }, 4000);
-              inviteService.expireSocialSearch();
-            }, function (err) {
-              $log.log('err:', err, result);
-              delete ignoreClick[result.socialId];
-              $elem.text('Error. Retry?');
-              $elem.parent().addClass('clickable');
-              inviteService.expireSocialSearch();
-            });
-          } else {
-            // Request to external person
-            inviteService.invite(result.networkType, result.socialId).then(function () {
-              $elem.text('Sent!');
-              $timeout(function () {
-                delete ignoreClick[result.socialId];
-                $elem.text('Resend');
-                $elem.parent().addClass('clickable');
-              }, 4000);
-              inviteService.expireSocialSearch();
-            }, function (err) {
-              $log.log('err:', err, result);
-              delete ignoreClick[result.socialId];
-              $elem.text('Error. Retry?');
-              $elem.parent().addClass('clickable');
-              inviteService.expireSocialSearch();
-            });
-          }
-        };
-        */
 
         scope.$on('$destroy', function () {
           $document.off('click', clickOutside);
@@ -325,64 +290,46 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfFriendRequestBanner', [
-  'injectedState', 'friendRequestFactory', 'routeService', 'userService', 'keepWhoService', 'profileService',
-  function (injectedState, friendRequestFactory, routeService, userService, keepWhoService, profileService) {
+  'injectedState', 'friendRequestFactory', 'routeService', 'userService', 'keepWhoService', 'profileService', '$timeout',
+  function (injectedState, friendRequestFactory, routeService, userService, keepWhoService, profileService, $timeout) {
 
     function setupShowFriendRequestBanner(scope, externalId) {
       userService.getBasicUserInfo(externalId).then(function (res) {
         var user = res.data,
             picUrl = keepWhoService.getPicUrl(user, 200);
-        scope.user = _.extend(user, {
-          mainImage: picUrl,
-          name: user.firstName + ' ' + user.lastName
-        });
-        scope.state = 'user-loaded';
-        scope.friendCount = 1;
+        scope.user = user;
+        scope.friendCount = 0; // TODO
         scope.mainImage = picUrl;
+        scope.mainLabel = user.firstName + ' ' + user.lastName;
         scope.hidden = false;
         scope.actionText = 'Add';
-        scope.mainLabel = scope.name;
         scope.result = {
           socialId: externalId,
           networkType: 'fortytwo'
         };
-        console.log(scope.result);
-      }, function () {
-        scope.state = 'user-load-error';
+
+        scope.onAfterInvite = function () {
+          $timeout(function () {
+            scope.hidden = true;
+          }, 3000);
+        };
       });
 
-      scope.confirmFriendRequest = function () {
-        scope.state = 'Sending';
-        var retries = 3;
-        $timeout(function () {
-          friendRequestFactory.run(externalId).then(function () {
-            scope.state = 'Sent!';
-            scope.state = 'friend-request-complete';
-          }, function () {
-            scope.state = 'Error';
-            scope.state = 'friend-request-error';
-          });
-        });
-      };
-
       scope.close = function () {
-        scope.hideBanner = true;
+        scope.hidden = true;
       };
     }
 
     function link(scope) {
-      scope.hidden = true;
       var externalId = injectedState.state.friend;
-      externalId = '75669bca-b570-4884-8f7a-2e22efd99d05';
-
+      scope.hidden = true;
       if (!externalId) {
         return;
       }
 
       profileService.getMe().then(function (me) {
-        scope.showFriendRequestBanner = true || me.experiments && me.experiments.indexOf('notify_user_when_contacts_join') > -1;
+        scope.showFriendRequestBanner = me.experiments && me.experiments.indexOf('notify_user_when_contacts_join') > -1;
         if (scope.showFriendRequestBanner) {
-        console.log(me);
           setupShowFriendRequestBanner(scope, externalId);
         }
       });
