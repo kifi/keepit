@@ -27,8 +27,9 @@ var spritesmith = require('gulp.spritesmith');
 var jshint = require('gulp-jshint');
 var connect = require('gulp-connect');
 var modRewrite = require('connect-modrewrite');
+var gutil = require('gulp-util');
 var karma = require('karma').server;
-var protractor = require("gulp-protractor").protractor;
+var protractor = require('gulp-protractor').protractor;
 
 /********************************************************
   Globals
@@ -222,7 +223,10 @@ gulp.task('sprite-classes', function () {
       var root = names.slice(0, names.length - 1).join('-');
 
       if (sprite.width % 2 !== 0 || sprite.height % 2 !== 0) {
-        grunt.fail.warn("sprite " + sprite.name + " is not retina: " + sprite.width + " x " + sprite.height);
+        throw new gutil.PluginError('spritesmith', {
+          message: 'sprite ' + sprite.name + ' is not retina: ' + sprite.width + ' x ' + sprite.height,
+          showStack: false
+        });
       }
 
       if (pseudoClasses.indexOf(modifier) !== -1) {
