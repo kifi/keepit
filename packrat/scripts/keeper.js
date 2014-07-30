@@ -283,15 +283,19 @@ var keeper = keeper || function () {  // idempotent for Chrome
     })
     .on('click', '.kifi-dock-btn', _.debounce(function (e) {
       if (e.originalEvent.isTrusted === false) return;
-      $slider.data().stickiness |= 2;
-      var btn = this;
-      api.require('scripts/pane.js', function () {
-        if (btn.dataset.compose) {
-          pane.compose('keeper');
-        } else {
-          pane.toggle('keeper');
-        }
-      });
+      var $btn = $(this);
+      if ($btn.hasClass('kifi-dock-site')) {
+        api.port.emit('open_tab', '');
+      } else {
+        $slider.data().stickiness |= 2;
+        api.require('scripts/pane.js', function () {
+          if ($btn.hasClass('kifi-dock-compose')) {
+            pane.compose('keeper');
+          } else {
+            pane.toggle('keeper');
+          }
+        });
+      }
     }, 400, true));
   }
 

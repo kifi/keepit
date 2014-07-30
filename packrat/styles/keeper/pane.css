@@ -229,8 +229,8 @@ a.kifi-pane-top-menu-a.kifi-active {
 }
 .kifi-pane-box-cart.kifi-back:not(.kifi-roll),
 .kifi-pane-box-cart.kifi-roll.kifi-forward {
-  -webkit-transform: translate3d(-316px, 0, 0);
-  transform: translate3d(-316px, 0, 0);
+  -webkit-transform: translate3d(-@pane-box-width, 0, 0);
+  transform: translate3d(-@pane-box-width, 0, 0);
 }
 .kifi-pane-box {
   position: absolute;
@@ -251,7 +251,7 @@ a.kifi-pane-top-menu-a.kifi-active {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #fafafa;
+  /*background: #fafafa;*/
 }
 .kifi-pane-notices > .kifi-pane-tall {
   top: 30px;
