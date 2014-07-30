@@ -353,6 +353,8 @@ gulp.task('config', ['copy'], function () {
   return es.merge(chromeConfig, firefoxConfig);
 });
 
+gulp.task('build', ['scripts', 'styles', 'meta', 'config']);
+
 gulp.task('config-package-chrome', ['config'], function () {
   gulp.src(outDir + '/chrome/manifest.json', {base: './'})
     .pipe(map(function (code) {
@@ -361,13 +363,13 @@ gulp.task('config-package-chrome', ['config'], function () {
     .pipe(gulp.dest('.'));
 });
 
-gulp.task('zip-chrome', ['scripts', 'styles', 'meta', 'config-package-chrome'], function () {
+gulp.task('zip-chrome', ['build', 'config-package-chrome'], function () {
   return gulp.src(outDir + '/chrome/**')
     .pipe(zip('kifi.zip'))
     .pipe(gulp.dest(outDir));
 });
 
-gulp.task('xpi-firefox', ['scripts', 'styles', 'meta', 'config'], shell.task([
+gulp.task('xpi-firefox', ['build'], shell.task([
   // TODO: verify cfx version before using it
   // cfxver=$(cfx --version)
   // if [ "$cfxver" != "Add-on SDK 1.16 (05dab6aeb50918d4c788df9c5da39007b4fca335)" ]; then
@@ -405,5 +407,5 @@ gulp.task('package', function () {
 });
 
 gulp.task('default', function () {
-  runSequence('clean', ['scripts', 'styles', 'meta', 'config'], 'watch');
+  runSequence('clean', 'build', 'watch');
 });
