@@ -78,4 +78,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArra
       hashJoin.execute()
     }
   }
+
+  def getScoreExpr(): ScoreExpr = scoreExpr
+  def getQuery(): Query = query
 }
