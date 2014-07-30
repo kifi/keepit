@@ -297,7 +297,7 @@ class LibraryCommander @Inject() (
     library: Library,
     keepSet: Set[Keep],
     excludeFromAccess: Set[LibraryAccess],
-    f: Keep => RWSession => Unit): Set[Keep] = {
+    saveKeep: Keep => RWSession => Unit): Set[Keep] = {
 
     var badKeeps = Set[Keep]()
     db.readWrite { implicit s =>
@@ -311,7 +311,7 @@ class LibraryCommander @Inject() (
             case Some(_) => {
               keeps.map { keep =>
                 if (!existingURIs.contains(keep.uriId)) {
-                  f(keep)(s)
+                  saveKeep(keep)(s)
                 } else {
                   badKeeps += keep
                 }
@@ -335,7 +335,7 @@ class LibraryCommander @Inject() (
       case Some(memTo) if memTo.access == LibraryAccess.READ_ONLY => (library, keepSet, Some(LibraryFail("invalid access to library")))
       case Some(_) => {
 
-        def f(k: Keep)(s: RWSession) = {
+        def saveKeep(k: Keep)(s: RWSession) = {
           implicit val session = s
           val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId,
             userId = k.userId, source = k.source, libraryId = Some(toLibraryId)))
@@ -344,7 +344,7 @@ class LibraryCommander @Inject() (
           }
         }
 
-        val badKeeps = applyToKeepSet(userId, library, keepSet, Set(), f)
+        val badKeeps = applyToKeepSet(userId, library, keepSet, Set(), saveKeep)
         (library, badKeeps, None)
       }
     }
@@ -361,12 +361,12 @@ class LibraryCommander @Inject() (
       case Some(memTo) if memTo.access == LibraryAccess.READ_ONLY => (library, keepSet, Some(LibraryFail("invalid access to library")))
       case Some(_) => {
 
-        def f(k: Keep)(s: RWSession) = {
+        def saveKeep(k: Keep)(s: RWSession) = {
           implicit val session = s
           keepRepo.save(k.copy(libraryId = Some(toLibraryId)))
         }
 
-        val badKeeps = applyToKeepSet(userId, library, keepSet, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), f)
+        val badKeeps = applyToKeepSet(userId, library, keepSet, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
         (library, badKeeps, None)
       }
     }
