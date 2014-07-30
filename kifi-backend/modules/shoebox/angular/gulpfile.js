@@ -27,7 +27,9 @@ var spritesmith = require('gulp.spritesmith');
 var jshint = require('gulp-jshint');
 var connect = require('gulp-connect');
 var modRewrite = require('connect-modrewrite');
+var gutil = require('gulp-util');
 var karma = require('karma').server;
+var protractor = require('gulp-protractor').protractor;
 
 /********************************************************
   Globals
@@ -150,6 +152,29 @@ var makeTemplates = lazypipe()
   });
 
 /********************************************************
+  Servers
+ ********************************************************/
+
+function startDevServer() {
+  connect.server({
+    port: 8080,
+    host: 'dev.ezkeep.com',
+    fallback: 'dev.html',
+    middleware: function () {
+      return [modRewrite(['^(?!/(dist|img)) /dev.html'])];
+    }
+  });
+}
+
+function startProdServer() {
+  connect.server({
+    port: 8080,
+    host: 'dev.ezkeep.com',
+    fallback: 'index.html'
+  });
+}
+
+/********************************************************
   Tasks
  ********************************************************/
 
@@ -198,7 +223,10 @@ gulp.task('sprite-classes', function () {
       var root = names.slice(0, names.length - 1).join('-');
 
       if (sprite.width % 2 !== 0 || sprite.height % 2 !== 0) {
-        grunt.fail.warn("sprite " + sprite.name + " is not retina: " + sprite.width + " x " + sprite.height);
+        throw new gutil.PluginError('spritesmith', {
+          message: 'sprite ' + sprite.name + ' is not retina: ' + sprite.width + ' x ' + sprite.height,
+          showStack: false
+        });
       }
 
       if (pseudoClasses.indexOf(modifier) !== -1) {
@@ -284,7 +312,7 @@ gulp.task('lib-min-scripts', function () {
     .pipe(gulp.dest(outDir))
 });
 
-gulp.task('watch', function () {
+gulp.task('watch', ['build-dev'], function () {
   livereload.listen();
   gulp.watch(stylFiles, ['styles']).on('change', cacheUpdater(stylesCache));
   gulp.watch(jsFiles, ['scripts']).on('change', cacheUpdater(jsCache, jsHintSrcCache, jsHintTestCache));
@@ -301,7 +329,7 @@ gulp.task('templates', function () {
     .pipe(gulp.dest(tmpDir));
 })
 
-gulp.task('run-tests', ['templates'], function (done) {
+gulp.task('karma', ['templates'], function (done) {
   karma.start({
     frameworks: ['jasmine'],
     files: flatten(
@@ -309,7 +337,7 @@ gulp.task('run-tests', ['templates'], function (done) {
       'lib/angular-mocks/angular-mocks.js',
       tmpDir + '/' + pkgName + '-tpl.js',
       'src/**/*.js',
-      'test/**/*.js'
+      'test/unit/**/*.js'
     ),
     reporters: ['dots'],
     colors: true,
@@ -320,39 +348,38 @@ gulp.task('run-tests', ['templates'], function (done) {
   }, done);
 });
 
+gulp.task('protractor', ['build-release'], function () {
+  startProdServer();
+
+  return gulp.src(['test/e2e/**/*.js'])
+    .pipe(protractor({
+      configFile: "test/protractor.conf.js"
+    }))
+    .pipe(es.wait(connect.serverClose));
+});
+
 gulp.task('test', function (done) {
-  runSequence('run-tests', 'clean-tmp', done);
+  runSequence(['run-karma-tests', 'run-protractor-tests'], 'clean-tmp', done);
+});
+
+gulp.task('build-dev', function (done) {
+  runSequence('clean', ['styles', 'scripts', 'lib-styles', 'lib-scripts'], done);
+});
+
+gulp.task('build-release', function (done) {
+  isRelease = true;
+  runSequence('clean', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], done);
 });
 
 // Note: suboptimal use of connect: it already includes livereload (but part of the livereload API is not available)
 // Should switch to https://github.com/schickling/gulp-webserver when middleware is supported
-gulp.task('server-dev', function() {
-  connect.server({
-    port: 8080,
-    host: 'dev.ezkeep.com',
-    fallback: 'dev.html',
-    middleware: function () {
-      return [modRewrite(['^(/|/index.html)$ /dev.html'])];
-    }
-  });
-});
-
-// This task is the one that should be run by the build script
-gulp.task('release', function (done) {
-  isRelease = true;
-  runSequence('clean', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], 'test', done);
-});
+gulp.task('server-dev', ['build-dev'], startDevServer);
 
 // Use this task to test the production code locally
-gulp.task('prod', ['release'], function () {
-  connect.server({
-    port: 8080,
-    host: 'dev.ezkeep.com',
-    fallback: 'index.html'
-  });
-});
+gulp.task('prod', ['build-release'], startProdServer);
+
+// This task is the one that should be run by the build script
+gulp.task('release', ['build-release', 'karma', 'protractor']);
 
 // Use this task for normal development
-gulp.task('default', function (done) {
-  runSequence('clean', ['styles', 'scripts', 'lib-styles', 'lib-scripts'], ['watch', 'server-dev'], done);
-});
+gulp.task('default', ['watch', 'server-dev']);
