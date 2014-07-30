@@ -179,7 +179,7 @@ class LDACommander @Inject() (
     val idsAndScores = (users zip vecs).map {
       case (userId, vec) =>
         val (u, v) = (scale(targetScaled, statOpt), scale(targetScaled, statOpt))
-        val score = cosineDistance(projectToActive(u), projectToActive(v))
+        val score = cosineDistance(u, v)
         (userId, score)
     }
 
