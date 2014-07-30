@@ -1,11 +1,9 @@
 package com.keepit.graph
 
-import com.keepit.common.db.Id
 import com.keepit.graph.controllers.internal.GraphController
 import com.keepit.graph.manager.GraphManager
 import com.keepit.graph.simple.SimpleGraphTestModule
 import com.keepit.graph.test.{ GraphApplication, GraphApplicationInjector }
-import com.keepit.model.User
 import org.specs2.mutable.Specification
 import play.api.test.FakeRequest
 import play.api.test.Helpers._

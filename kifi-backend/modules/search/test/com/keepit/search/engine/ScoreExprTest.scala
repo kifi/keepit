@@ -35,7 +35,7 @@ class ScoreExprTest extends Specification {
   private def mkCtx(expr: ScoreExpr, idx: Int*): ScoreContext = {
     val weights = new Array[Float](size)
     idx.foreach { i => weights(i) = 1.0f / idx.length.toFloat }
-    new ScoreContext(expr, size, weights, collector)
+    new ScoreContext(expr, size, 2.0f, weights, collector)
   }
 
   "ScoreExpr" should {
@@ -73,7 +73,7 @@ class ScoreExprTest extends Specification {
 
     "compute scores correctly with MaxWithTieBreaker" in {
       val idx = rnd.nextInt(size)
-      val ctx = mkCtx(MaxWithTieBreakerExpr(idx, 0.1f), idx)
+      val ctx = mkCtx(MaxWithTieBreakerExpr(idx, 0.2f), idx)
       ctx.set(300L)
       ctx.addScore(idx, 2.0f)
       ctx.addScore(idx, 3.0f)
@@ -294,7 +294,7 @@ class ScoreExprTest extends Specification {
 
       val weights = new Array[Float](numTerms)
       allIdx.foreach { i => weights(i) = 1.0f / numTerms.toFloat }
-      val ctx = new ScoreContext(PercentMatchExpr(DisjunctiveSumExpr(allIdx.map(MaxExpr(_))), threshold), numTerms, weights, collector)
+      val ctx = new ScoreContext(PercentMatchExpr(DisjunctiveSumExpr(allIdx.map(MaxExpr(_))), threshold), numTerms, 1.0f, weights, collector)
 
       (0 until 8).forall { n =>
         collector.clear()

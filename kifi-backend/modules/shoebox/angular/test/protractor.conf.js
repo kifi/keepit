@@ -7,5 +7,5 @@ module.exports.config = {
 
   // Locally, set protractor.kifi.com to point to where the local server
   // is running (usually localhost).
-  baseUrl: 'http://protractor.kifi.com:8080/'
+  baseUrl: 'http://protractor.kifi.com:9080/'
 };

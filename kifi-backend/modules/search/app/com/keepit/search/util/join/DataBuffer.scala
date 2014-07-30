@@ -15,6 +15,9 @@ object DataBuffer {
   val MAX_DATASIZE = 500 // this (byte size) divided by two (-> the number of short words) needs to fits in 8-bit
 
   @inline def taggedFloatBits(tag: Byte, value: Float): Int = ((tag & 0xff) << 24) | (java.lang.Float.floatToRawIntBits(value) >>> 8)
+  @inline def getTaggedFloatTag(bits: Int): Byte = (bits >>> 24).toByte
+  @inline def getTaggedFloatValue(bits: Int): Float = java.lang.Float.intBitsToFloat(bits << 8)
+
 }
 
 class DataBuffer {

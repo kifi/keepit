@@ -20,7 +20,7 @@ class ABookFriendRecommendationController @Inject() (
   }
 
   def hideUserRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = Action { request =>
-    friendRecommendationCommander.reportIrrelevantUserRecommendation(userId, irrelevantUserId)
+    friendRecommendationCommander.recordIrrelevantUserRecommendation(userId, irrelevantUserId)
     Ok
   }
 }

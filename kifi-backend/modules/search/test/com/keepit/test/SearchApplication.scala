@@ -4,7 +4,7 @@ import com.keepit.search.spellcheck.FakeSpellCorrectorModule
 import com.keepit.common.controller._
 import net.codingwell.scalaguice.{ ScalaMultibinder, ScalaModule }
 import play.api.{ Application, Mode }
-import com.keepit.inject.{ TestFortyTwoModule, ApplicationInjector, EmptyInjector }
+import com.keepit.inject.{ TestFortyTwoModule, ApplicationInjector }
 import java.io.File
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
@@ -23,32 +23,29 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.search.{ TestSearchServiceClientModule, SearchConfigModule }
 
 class SearchApplication(overridingModules: Module*)(implicit path: File = new File("./modules/search/"))
-  extends TestApplicationFromGlobal(path, new TestGlobal(
-    Seq(
-      FakeHttpClientModule(),
-      TestHeimdalServiceClientModule(),
-      FakeAirbrakeModule(),
-      FakeMemoryUsageModule(),
-      FakeClockModule(),
-      FakeHealthcheckModule(),
-      TestFortyTwoModule(),
-      DevTrackingModule(),
-      SearchFakeStoreModule(),
-      DevIndexModule(),
-      FakeDiscoveryModule(),
-      TestShoeboxServiceClientModule(),
-      TestSearchServiceClientModule(),
-      FakeElizaServiceClientModule(),
-      FakeSpellCorrectorModule(),
-      SearchCacheModule(HashMapMemoryCacheModule()),
-      SearchConfigModule()
-    ), overridingModules
+  extends TestApplication(path, overridingModules, Seq(
+    FakeHttpClientModule(),
+    TestHeimdalServiceClientModule(),
+    FakeAirbrakeModule(),
+    FakeMemoryUsageModule(),
+    FakeClockModule(),
+    FakeHealthcheckModule(),
+    TestFortyTwoModule(),
+    DevTrackingModule(),
+    SearchFakeStoreModule(),
+    DevIndexModule(),
+    FakeDiscoveryModule(),
+    TestShoeboxServiceClientModule(),
+    TestSearchServiceClientModule(),
+    FakeElizaServiceClientModule(),
+    FakeSpellCorrectorModule(),
+    SearchCacheModule(HashMapMemoryCacheModule()),
+    SearchConfigModule()
   ))
 
 trait SearchApplicationInjector extends ApplicationInjector with SearchInjectionHelpers
 
-trait SearchTestInjector extends EmptyInjector with SearchInjectionHelpers {
-  val mode = Mode.Test
+trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
   val module = Modules.combine(
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
