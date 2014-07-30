@@ -351,7 +351,8 @@ gulp.task('protractor', ['build-release'], function () {
     .pipe(protractor({
       configFile: "test/protractor.conf.js"
     }))
-    .pipe(es.wait(connect.serverClose));
+    .pipe(es.wait(connect.serverClose))
+    .on('error', function(e) { throw e });
 });
 
 gulp.task('test', function (done) {
