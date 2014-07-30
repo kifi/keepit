@@ -89,7 +89,7 @@ class LibraryCommander @Inject() (
 
             val library = db.readWrite { implicit s =>
               val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                visibility = validVisibility, slug = validSlug, kind = LibraryKind.USER_CREATED, keepDiscoveryEnabled = libAddReq.keepDiscoveryEnabled))
+                visibility = validVisibility, slug = validSlug, kind = LibraryKind.USER_CREATED, memberCount = 1))
               val libId = lib.id.get
               libraryMembershipRepo.save(LibraryMembership(libraryId = libId, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
               lib
@@ -188,9 +188,9 @@ class LibraryCommander @Inject() (
         .groupBy(_._2.kind)
         .map {
           case (kind, libs) =>
-            val (slug, name, searchableByOthers) = if (kind == LibraryKind.SYSTEM_MAIN) ("main", "Main Library", true) else ("secret", "Secret Library", false)
+            val (slug, name, visibility) = if (kind == LibraryKind.SYSTEM_MAIN) ("main", "Main Library", LibraryVisibility.DISCOVERABLE) else ("secret", "Secret Library", LibraryVisibility.SECRET)
 
-            val activeLib = libs.head._2.copy(state = LibraryStates.ACTIVE, slug = LibrarySlug(slug), name = name, visibility = LibraryVisibility.SECRET, keepDiscoveryEnabled = searchableByOthers)
+            val activeLib = libs.head._2.copy(state = LibraryStates.ACTIVE, slug = LibrarySlug(slug), name = name, visibility = visibility, memberCount = 1)
             val activeMembership = libMem.find(m => m.libraryId == activeLib.id.get && m.access == LibraryAccess.OWNER)
               .getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
               .copy(state = LibraryMembershipStates.ACTIVE)
@@ -214,13 +214,13 @@ class LibraryCommander @Inject() (
 
       // If user is missing a system lib, create it
       val mainOpt = if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_MAIN).isEmpty) {
-        val mainLib = libraryRepo.save(Library(name = "Main Library", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("main"), kind = LibraryKind.SYSTEM_MAIN, keepDiscoveryEnabled = true))
+        val mainLib = libraryRepo.save(Library(name = "Main Library", ownerId = userId, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main"), kind = LibraryKind.SYSTEM_MAIN, memberCount = 1))
         val mainMem = libraryMembershipRepo.save(LibraryMembership(libraryId = mainLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
         Some(mainLib)
       } else None
 
       val secretOpt = if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_SECRET).isEmpty) {
-        val secretLib = libraryRepo.save(Library(name = "Secret Library", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), kind = LibraryKind.SYSTEM_SECRET, keepDiscoveryEnabled = false))
+        val secretLib = libraryRepo.save(Library(name = "Secret Library", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), kind = LibraryKind.SYSTEM_SECRET, memberCount = 1))
         val secretMem = libraryMembershipRepo.save(LibraryMembership(libraryId = secretLib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
         Some(secretLib)
       } else None
@@ -382,8 +382,7 @@ case class LibraryFail(message: String) extends AnyVal
   description: Option[String] = None,
   slug: String,
   collaborators: Seq[ExternalId[User]],
-  followers: Seq[ExternalId[User]],
-  keepDiscoveryEnabled: Boolean)
+  followers: Seq[ExternalId[User]])
 
 case class LibraryInfo(
   id: PublicId[Library],

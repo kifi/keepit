@@ -16,6 +16,7 @@ trait UserValueRepo extends Repo[UserValue] {
   def getUserValue(userId: Id[User], key: UserValueName)(implicit session: RSession): Option[UserValue]
   def setValue[T](userId: Id[User], name: UserValueName, value: T)(implicit session: RWSession): T
   def clearValue(userId: Id[User], name: UserValueName)(implicit session: RWSession): Boolean
+  def getLastActive(after: DateTime, before: Option[DateTime], maxCount: Int = 100, skipCount: Int = 0)(implicit session: RSession): Seq[Id[User]]
 }
 
 @Singleton
@@ -105,4 +106,10 @@ class UserValueRepoImpl @Inject() (
     changed
   }
 
+  def getLastActive(after: DateTime, before: Option[DateTime], maxCount: Int = 1000, skipCount: Int = 0)(implicit session: RSession): Seq[Id[User]] = {
+    (for (
+      f <- rows if f.state === UserValueStates.ACTIVE && f.name === UserValueName.LAST_ACTIVE &&
+        f.value < LargeString(before.getOrElse(clock.now()).toStandardTimeString) && f.value > LargeString(after.toStandardTimeString)
+    ) yield f.userId).drop(skipCount).take(maxCount).list
+  }
 }

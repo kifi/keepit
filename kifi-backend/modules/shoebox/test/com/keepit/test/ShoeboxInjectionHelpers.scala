@@ -13,6 +13,7 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
 
   def userSessionRepo(implicit injector: Injector) = inject[UserSessionRepo]
   def userRepo(implicit injector: Injector) = inject[UserRepo]
+  def userCredRepo(implicit injector: Injector) = inject[UserCredRepo]
   def rawKeepRepo(implicit injector: Injector) = inject[RawKeepRepo]
   def userPictureRepo(implicit injector: Injector) = inject[UserPictureRepo]
   def basicUserRepo(implicit injector: Injector) = inject[BasicUserRepo]

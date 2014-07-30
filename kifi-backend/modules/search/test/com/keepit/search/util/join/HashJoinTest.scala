@@ -24,7 +24,7 @@ class HashJoinTest extends Specification {
       result += (id -> (v1, v2, v3))
     }
 
-    def clean(): Unit = {
+    def clear(): Unit = {
       v1 = None
       v2 = None
       v3 = None
