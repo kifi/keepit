@@ -1,11 +1,11 @@
 package com.keepit.graph.manager
 
-import com.keepit.graph.model.{ EdgeKind, VertexKind }
+import com.keepit.graph.model.{ Component, VertexKind }
 import java.util.concurrent.atomic.AtomicLong
 import com.keepit.graph.model.VertexKind.VertexType
-import com.keepit.graph.model.EdgeKind.EdgeType
+import com.keepit.graph.model.Component.Component
 
-case class GraphStatistics(vertexCounts: Map[VertexType, Long], edgeCounts: Map[(VertexType, VertexType, EdgeType), Long]) {
+case class GraphStatistics(vertexCounts: Map[VertexType, Long], edgeCounts: Map[Component, Long]) {
   def outgoingDegrees: Map[VertexType, Double] = {
     val edgeCountsBySource = edgeCounts.groupBy { case ((source, _, _), _) => source }
     val outgoingDegrees = edgeCountsBySource.map {
@@ -24,28 +24,22 @@ case class GraphStatistics(vertexCounts: Map[VertexType, Long], edgeCounts: Map[
     incomingDegrees.toMap
   }
 
-  def outgoingDegreesByComponent: Map[(VertexType, VertexType, EdgeType), Double] = edgeCounts.map {
+  def outgoingDegreesByComponent: Map[Component, Double] = edgeCounts.map {
     case (edgeType @ (source, _, _), count) =>
       edgeType -> count.toDouble / vertexCounts(source)
   }
 
-  def incomingDegreesByComponent: Map[(VertexType, VertexType, EdgeType), Double] = edgeCounts.map {
+  def incomingDegreesByComponent: Map[Component, Double] = edgeCounts.map {
     case (edgeType @ (_, destination, _), count) =>
       edgeType -> count.toDouble / vertexCounts(destination)
   }
 }
 
 object GraphStatistics {
-  private val allComponents: Set[(VertexType, VertexType, EdgeType)] = for {
-    sourceKind <- VertexKind.all
-    destinationKind <- VertexKind.all
-    edgeKind <- EdgeKind.all
-  } yield (sourceKind, destinationKind, edgeKind)
-
   def newVertexCounter(): Map[VertexType, AtomicLong] = VertexKind.all.map(_ -> new AtomicLong(0)).toMap
-  def newEdgeCounter(): Map[(VertexType, VertexType, EdgeType), AtomicLong] = allComponents.map(_ -> new AtomicLong(0)).toMap
+  def newEdgeCounter(): Map[Component, AtomicLong] = Component.all.map(_ -> new AtomicLong(0)).toMap
 
-  def filter(vertexCounter: Map[VertexType, AtomicLong], edgeCounter: Map[(VertexType, VertexType, EdgeType), AtomicLong]): GraphStatistics = {
+  def filter(vertexCounter: Map[VertexType, AtomicLong], edgeCounter: Map[Component, AtomicLong]): GraphStatistics = {
     GraphStatistics(vertexCounter.mapValues(_.get()).filter(_._2 > 0), edgeCounter.mapValues(_.get()).filter(_._2 > 0))
   }
 

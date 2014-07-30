@@ -13,6 +13,8 @@ object DataBuffer {
   val DESCRIPTOR_SIZE = 2
   val MAX_RECTYPEID = 100 // this needs to fit in 7-bit
   val MAX_DATASIZE = 500 // this (byte size) divided by two (-> the number of short words) needs to fits in 8-bit
+
+  @inline def taggedFloatBits(tag: Byte, value: Float): Int = ((tag & 0xff) << 24) | (java.lang.Float.floatToRawIntBits(value) >>> 8)
 }
 
 class DataBuffer {

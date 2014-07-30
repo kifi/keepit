@@ -29,6 +29,7 @@ trait GraphServiceClient extends ServiceClient {
   def wander(wanderlust: Wanderlust): Future[Collisions]
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
+  def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]]
 }
 
 case class GraphCacheProvider @Inject() (
@@ -82,7 +83,7 @@ class GraphServiceClientImpl @Inject() (
 
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]] = {
     cacheProvider.uriScoreCache.getOrElseFuture(ConnectedUriScoreCacheKey(userId, avoidFirstDegreeConnections)) {
-      call(Graph.internal.getUriAndScores(userId, avoidFirstDegreeConnections)).map { response =>
+      call(Graph.internal.getUriAndScores(userId, avoidFirstDegreeConnections), callTimeouts = longTimeout).map { response =>
         response.json.as[Seq[ConnectedUriScore]]
       }
     }
@@ -90,10 +91,21 @@ class GraphServiceClientImpl @Inject() (
 
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]] = {
     cacheProvider.userScoreCache.getOrElseFuture(ConnectedUserScoreCacheKey(userId, avoidFirstDegreeConnections)) {
-      call(Graph.internal.getUserAndScores(userId, avoidFirstDegreeConnections)).map { response =>
+      call(Graph.internal.getUserAndScores(userId, avoidFirstDegreeConnections), callTimeouts = longTimeout).map { response =>
         response.json.as[Seq[ConnectedUserScore]]
       }
     }
   }
 
+  def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]] = {
+    val futureUserScores = cacheProvider.userScoreCache.get(ConnectedUserScoreCacheKey(userId, false)) match {
+      case Some(userScores) => Future.successful(userScores)
+      case None =>
+        val futureActualUserScores = call(Graph.internal.getUserAndScores(userId, false), callTimeouts = longTimeout).map { response =>
+          response.json.as[Seq[ConnectedUserScore]]
+        }
+        if (bePatient) futureActualUserScores else Future.successful(Seq.empty)
+    }
+    futureUserScores.map(userScores => userScores.map { case ConnectedUserScore(friendId, score) => friendId -> score })
+  }
 }

@@ -69,9 +69,12 @@ class DataBufferWriter {
 
   // Tagged Float
   def putTaggedFloat(tag: Byte, value: Float): DataBufferWriter = {
+    putTaggedFloatBits(DataBuffer.taggedFloatBits(tag, value))
+  }
+
+  def putTaggedFloatBits(bits: Int): DataBufferWriter = {
     if (_current + 2 > _endoff) throw new DataBufferException("buffer overrun")
 
-    val bits = ((tag & 0xff) << 24) | (java.lang.Float.floatToRawIntBits(value) >>> 8)
     _page(_current) = (bits >>> 16).toShort
     _page(_current + 1) = bits.toShort
     _current += 2

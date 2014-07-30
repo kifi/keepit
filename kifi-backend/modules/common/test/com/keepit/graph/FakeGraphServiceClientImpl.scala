@@ -40,4 +40,6 @@ class FakeGraphServiceClientImpl(
     val connectedUserScore3 = ConnectedUserScore(Id[User](3), 0.795)
     userAndScorePairs = connectedUserScore1 :: connectedUserScore2 :: connectedUserScore3 :: Nil
   }
+
+  def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]] = Future.successful(Seq.empty)
 }

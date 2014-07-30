@@ -22,11 +22,16 @@ class UsernamePasswordProvider(application: Application)
       credentials => {
         UserService.find(IdentityId(credentials._1, id)) match {
           case Some(identity) =>
-            val result = for {
-              pInfo <- identity.passwordInfo
-              hasher <- Registry.hashers.get(pInfo.hasher) if hasher.matches(pInfo, credentials._2)
-            } yield Right(SocialUser(identity))
-            result getOrElse Left(error("wrong_password"))
+            val resOpt = identity.passwordInfo flatMap { pwdInfo =>
+              log.info(s"[doAuth($id)] email=${identity.email}")
+              val hasherOpt = Registry.hashers.get(pwdInfo.hasher)
+              hasherOpt map { hasher =>
+                val res = hasher.matches(pwdInfo, credentials._2)
+                log.info(s"[doAuth($id)] hasher=$hasher res=$res")
+                res
+              }
+            }
+            if (resOpt.exists(r => r)) Right(SocialUser(identity)) else Left(error("wrong_password"))
           case None =>
             Left(error("no_such_user"))
         }

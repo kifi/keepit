@@ -18,6 +18,7 @@ class LibraryController @Inject() (
   db: Database,
   libraryRepo: LibraryRepo,
   userRepo: UserRepo,
+  keepRepo: KeepRepo,
   libraryCommander: LibraryCommander,
   actionAuthenticator: ActionAuthenticator,
   clock: Clock,
@@ -97,7 +98,6 @@ class LibraryController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) => {
         val inviteList = (request.body \ "pairs").asOpt[Seq[(ExternalId[User], LibraryAccess)]].getOrElse(Seq.empty)
-
         val validInviteList = db.readOnlyReplica { implicit s =>
           for (i <- inviteList; user = userRepo.getOpt(i._1) if !user.isEmpty) yield {
             (user.get.id.get, i._2)
@@ -159,6 +159,44 @@ class LibraryController @Inject() (
         val keeps = libraryCommander.getKeeps(id)
         val keepInfos = keeps.map(KeepInfo.fromBookmark)
         Ok(Json.toJson(keepInfos))
+      }
+    }
+  }
+
+  def copyKeeps = JsonAction.authenticatedParseJson { request =>
+    val json = request.body
+    val toPubId = (json \ "to").as[PublicId[Library]]
+    val targetKeepsExt = (json \ "keeps").as[Seq[ExternalId[Keep]]]
+
+    Library.decodePublicId(toPubId) match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid to-libraryId"))
+      case Success(toId) => {
+        val targetKeeps = db.readOnlyReplica { implicit s => targetKeepsExt.map { keepRepo.getOpt } }
+        val (toLib, badKeeps, fail) = libraryCommander.copyKeeps(request.userId, toId, targetKeeps.flatten.toSet)
+        val owner = db.readOnlyReplica { implicit s => userRepo.get(toLib.ownerId) }
+        fail match {
+          case None => Ok(Json.obj("library" -> LibraryInfo.fromLibraryAndOwner(toLib, owner), "failures" -> badKeeps.size))
+          case Some(libFail) => BadRequest(Json.obj("error" -> libFail.message))
+        }
+      }
+    }
+  }
+
+  def moveKeeps = JsonAction.authenticatedParseJson { request =>
+    val json = request.body
+    val toPubId = (json \ "to").as[PublicId[Library]]
+    val targetKeepsExt = (json \ "keeps").as[Seq[ExternalId[Keep]]]
+
+    Library.decodePublicId(toPubId) match {
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid to-libraryId"))
+      case Success(toId) => {
+        val targetKeeps = db.readOnlyReplica { implicit s => targetKeepsExt.map { keepRepo.getOpt } }
+        val (toLib, badKeeps, fail) = libraryCommander.moveKeeps(request.userId, toId, targetKeeps.flatten.toSet)
+        val owner = db.readOnlyReplica { implicit s => userRepo.get(toLib.ownerId) }
+        fail match {
+          case None => Ok(Json.obj("library" -> LibraryInfo.fromLibraryAndOwner(toLib, owner), "failures" -> badKeeps.size))
+          case Some(libFail) => BadRequest(Json.obj("error" -> libFail.message))
+        }
       }
     }
   }
