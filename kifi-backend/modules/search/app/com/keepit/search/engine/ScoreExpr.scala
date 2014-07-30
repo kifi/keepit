@@ -39,7 +39,7 @@ object MaxWithTieBreakerExpr {
   class MaxWithTieBreakerExpr(index: Int, tieBreakerMultiplier: Float) extends ScoreExpr {
     def apply()(implicit ctx: ScoreContext): Float = {
       val scoreMax = ctx.scoreMax(index)
-      scoreMax + (ctx.scoreSum(index) - scoreMax) * tieBreakerMultiplier
+      scoreMax + (ctx.scoreSum(index) - scoreMax) * tieBreakerMultiplier / ctx.norm
     }
   }
 

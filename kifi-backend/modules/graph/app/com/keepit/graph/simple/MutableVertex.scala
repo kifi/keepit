@@ -2,7 +2,6 @@ package com.keepit.graph.simple
 
 import com.keepit.graph.model._
 import scala.collection.mutable.{ Map => MutableMap, Set => MutableSet }
-import com.keepit.graph.model.VertexKind.VertexType
 import com.keepit.graph.model.EdgeKind.EdgeType
 import com.keepit.graph.model.Component.Component
 import play.api.libs.json._
@@ -61,7 +60,11 @@ object MutableVertex {
               destinationId.as[VertexId] -> edgeData.as[EdgeData[_ <: EdgeDataReader]].asReader
           }
         }
-      } yield { new MutableVertex(data, MutableOutgoingEdges(data.kind, edgeIterator), MutableIncomingEdges()) }
+      } yield {
+        val newVertex = MutableVertex(data)
+        edgeIterator.foreach { case (destinationId, edgeData) => newVertex.saveOutgoingEdge(destinationId, edgeData) }
+        newVertex
+      }
     }
   }
 
@@ -69,15 +72,12 @@ object MutableVertex {
   def initializeIncomingEdges(vertices: scala.collection.Map[VertexId, MutableVertex]) = {
     vertices.foreach {
       case (sourceId, sourceVertex) =>
-        val sourceKind = sourceVertex.data.kind
         sourceVertex.outgoingEdges.edges.valuesIterator.flatten.foreach {
           case (destinationId, edgeData) =>
             val destinationVertex = vertices.getOrElse(destinationId,
               throw new IllegalStateException(s"Could not find destination vertex of edge ${(sourceId, destinationId, edgeData.kind)}")
             )
-            val component = (sourceKind, destinationId.kind, edgeData.kind)
-            if (!destinationVertex.incomingEdges.edges.contains(component)) { destinationVertex.incomingEdges.edges += (component -> MutableSet()) }
-            destinationVertex.incomingEdges.edges(component) += sourceId
+            destinationVertex.addIncomingEdge(sourceId, edgeData.kind)
         }
     }
   }
@@ -87,17 +87,6 @@ class MutableOutgoingEdges(val edges: MutableMap[Component, MutableMap[VertexId,
 
 object MutableOutgoingEdges {
   def apply(): MutableOutgoingEdges = new MutableOutgoingEdges(MutableMap())
-
-  def apply(sourceVertexKind: VertexType, edgeIterator: Iterator[(VertexId, EdgeDataReader)]): MutableOutgoingEdges = {
-    val mutableEdges = MutableMap[Component, MutableMap[VertexId, EdgeDataReader]]()
-    edgeIterator.foreach {
-      case (destinationId, edgeData) =>
-        val component = (sourceVertexKind, destinationId.kind, edgeData.kind)
-        if (!mutableEdges.contains(component)) { mutableEdges += (component -> MutableMap[VertexId, EdgeDataReader]()) }
-        mutableEdges(component) += (destinationId -> edgeData)
-    }
-    new MutableOutgoingEdges(mutableEdges)
-  }
 
   def apply(outgoingEdges: OutgoingEdges): MutableOutgoingEdges = {
     val mutableEdges = MutableMap[Component, MutableMap[VertexId, EdgeDataReader]]()

@@ -6,21 +6,45 @@ import com.keepit.common.controller.{ ActionAuthenticator, AdminController }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
+import views.html
+
+case class LibraryStatistic(
+  library: Library,
+  owner: User,
+  numKeeps: Int,
+  numMembers: Int,
+  numInvites: Int)
+
+case class LibraryPageInfo(
+  libraryStats: Seq[LibraryStatistic],
+  libraryCount: Int,
+  page: Int,
+  pageSize: Int)
 
 class AdminLibraryController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    libraryInviteRepo: LibraryInviteRepo,
     libraryCommander: LibraryCommander,
     userRepo: UserRepo,
     db: Database) extends AdminController(actionAuthenticator) {
 
   def index(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
-    val libs = db.readOnlyReplica { implicit session =>
-      libraryRepo.page(page, size = 30)
+    val pageSize = 30
+    val (stats, totalCount) = db.readOnlyReplica { implicit session =>
+      val stats = libraryRepo.page(page, size = pageSize).map { lib =>
+        val owner = userRepo.get(lib.ownerId)
+        val keeps = keepRepo.getByLibrary(lib.id.get)
+        val memberships = libraryMembershipRepo.getWithLibraryId(lib.id.get)
+        val invites = libraryInviteRepo.getWithLibraryId(lib.id.get)
+        LibraryStatistic(lib, owner, keeps.length, memberships.length, invites.length)
+      }
+      (stats, libraryRepo.count)
     }
-    Ok(libs.mkString("\n")) // todo(andrew): make this better ;)
+    val info = LibraryPageInfo(libraryStats = stats, libraryCount = totalCount, page = page, pageSize = pageSize)
+    Ok(html.admin.libraries(info))
   }
 
   def internUserSystemLibraries(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>

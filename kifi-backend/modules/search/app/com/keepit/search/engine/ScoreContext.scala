@@ -3,11 +3,12 @@ package com.keepit.search.engine
 import java.util.Arrays
 
 import com.keepit.search.engine.result.ResultCollector
-import com.keepit.search.util.join.{ DataBufferReader, Joiner }
+import com.keepit.search.util.join.{ DataBuffer, DataBufferReader, Joiner }
 
 class ScoreContext(
     scoreExpr: ScoreExpr,
     scoreArraySize: Int,
+    val norm: Float,
     val matchWeight: Array[Float],
     collector: ResultCollector[ScoreContext]) extends Joiner {
 
@@ -28,8 +29,9 @@ class ScoreContext(
     visibility = visibility | reader.recordType
 
     while (reader.hasMore) {
-      val idx = reader.getTaggedFloatTag()
-      val scr = reader.nextTaggedFloatValue()
+      val bits = reader.nextTaggedFloatBits()
+      val idx = DataBuffer.getTaggedFloatTag(bits)
+      val scr = DataBuffer.getTaggedFloatValue(bits)
       if (scoreMax(idx) < scr) scoreMax(idx) = scr
       scoreSum(idx) += scr
     }

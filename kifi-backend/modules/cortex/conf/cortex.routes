@@ -27,5 +27,6 @@ GET     /internal/cortex/lda/userUriInterest                                    
 POST    /internal/cortex/lda/batchUserUrisInterests                                 @com.keepit.controllers.cortex.LDAController.batchUserURIsInterests
 GET     /internal/cortex/lda/userTopicMean                                          @com.keepit.controllers.cortex.LDAController.userTopicMean(userId: Id[User])
 GET     /internal/cortex/lda/sampleURIs                                             @com.keepit.controllers.cortex.LDAController.sampleURIs(topicId: Int)
+GET     /internal/cortex/lda/getSimilarUsers                                        @com.keepit.controllers.cortex.LDAController.getSimilarUsers(userId: Id[User], topK: Int)
 
 GET     /internal/cortex/data/sparseLDAFeaturesChanged        @com.keepit.controllers.cortex.CortexDataPipeController.getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)

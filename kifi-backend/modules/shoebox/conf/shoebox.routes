@@ -194,6 +194,8 @@ GET     /profile                    @com.keepit.controllers.website.HomeControll
 GET     /find                       @com.keepit.controllers.website.HomeController.home
 GET     /blog                       @com.keepit.controllers.website.HomeController.blog
 
+GET     /kifeeeed                   @com.keepit.controllers.website.HomeController.kifeeeed
+
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
@@ -293,6 +295,7 @@ GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
 GET     /site/user/friends/find    @com.keepit.controllers.website.UserController.findFriends(page: Int ?= 0, pageSize: Int ?= 5)
+POST    /site/user/:id/hide         @com.keepit.controllers.website.UserController.hideUserRecommendation(id: ExternalId[User])
 POST    /site/user/invite           @com.keepit.controllers.website.InviteController.inviteV2()
 POST    /site/user/delighted/answer @com.keepit.controllers.website.UserController.postDelightedAnswer()
 POST    /site/user/delighted/cancel @com.keepit.controllers.website.UserController.cancelDelightedSurvey()
@@ -595,6 +598,7 @@ GET     /admin/cortex/lda/userTopicDump                    @com.keepit.controlle
 POST    /admin/cortex/lda/userUriInterest                  @com.keepit.controllers.admin.AdminLDAController.userUriInterest
 POST    /admin/cortex/lda/userTopicMean                    @com.keepit.controllers.admin.AdminLDAController.userTopicMean
 GET     /admin/cortex/lda/topicDetail                      @com.keepit.controllers.admin.AdminLDAController.topicDetail(topicId: Int)
+GET     /admin/cortex/lda/peopleLikeYou                    @com.keepit.controllers.admin.AdminLDAController.peopleLikeYou(topK: Int ?= 20)
 
 GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()

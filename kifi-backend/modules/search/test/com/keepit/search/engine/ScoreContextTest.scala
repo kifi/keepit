@@ -57,12 +57,12 @@ class ScoreContextTest extends Specification {
         writer.putTaggedFloat(idx1.toByte, scr)
       }
 
-      computeScore(buf, reader, new ScoreContext(MaxExpr(idx1), numTerms, weights, collector))
+      computeScore(buf, reader, new ScoreContext(MaxExpr(idx1), numTerms, 2.0f, weights, collector))
 
       collector.result === Map(123L -> 3.0f)
 
       collector.clear()
-      computeScore(buf, reader, new ScoreContext(MaxExpr(idx2), numTerms, weights, collector))
+      computeScore(buf, reader, new ScoreContext(MaxExpr(idx2), numTerms, 2.0f, weights, collector))
 
       collector.result === Map()
     }
@@ -89,12 +89,12 @@ class ScoreContextTest extends Specification {
       writer.putTaggedFloat(idx1.toByte, scr)
     }
 
-    computeScore(buf, reader, new ScoreContext(SumExpr(idx1), numTerms, weights, collector))
+    computeScore(buf, reader, new ScoreContext(SumExpr(idx1), numTerms, 2.0f, weights, collector))
 
     collector.result === Map(123L -> 6.0f)
 
     collector.clear()
-    computeScore(buf, reader, new ScoreContext(SumExpr(idx2), numTerms, weights, collector))
+    computeScore(buf, reader, new ScoreContext(SumExpr(idx2), numTerms, 2.0f, weights, collector))
 
     collector.result === Map()
   }

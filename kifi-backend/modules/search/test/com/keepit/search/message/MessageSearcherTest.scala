@@ -1,6 +1,6 @@
 package com.keepit.search.message
 
-import com.keepit.test.TestInjector
+import com.keepit.test.CommonTestInjector
 import com.keepit.social.BasicUser
 import com.keepit.common.db.{ Id, ExternalId, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -19,7 +19,7 @@ import play.api.libs.json.Json
 import org.specs2.mutable._
 import com.keepit.common.actor.FakeScheduler
 
-class MessageSearcherTest extends Specification with TestInjector {
+class MessageSearcherTest extends Specification with CommonTestInjector {
 
   def setupIndexer()(implicit injector: Injector) = {
 

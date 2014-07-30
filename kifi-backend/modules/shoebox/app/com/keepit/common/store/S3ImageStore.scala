@@ -29,15 +29,6 @@ import javax.imageio.ImageIO
 
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success, Try }
-import com.keepit.model.UserPictureSource
-
-object S3UserPictureConfig {
-  val ImageSizes = Seq(100, 200)
-  val sizes = ImageSizes.map(s => ImageSize(s, s))
-  val OriginalImageSize = "original"
-  val defaultImage = "https://www.kifi.com/assets/img/ghost.200.png"
-  val defaultName = "0.jpg"
-}
 
 @ImplementedBy(classOf[S3ImageStoreImpl])
 trait S3ImageStore {

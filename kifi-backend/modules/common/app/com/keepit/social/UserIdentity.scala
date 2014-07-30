@@ -3,21 +3,32 @@ package com.keepit.social
 import com.keepit.common.db.Id
 import com.keepit.model.User
 
-import securesocial.core.{ Identity, SocialUser }
+import securesocial.core.SocialUser
 
-case class UserIdentity(
+class UserIdentity(
+  val userId: Option[Id[User]],
+  val socialUser: SocialUser,
+  val allowSignup: Boolean,
+  val isComplete: Boolean)
+    extends SocialUser(
+      socialUser.identityId,
+      socialUser.firstName,
+      socialUser.lastName,
+      socialUser.fullName,
+      socialUser.email,
+      socialUser.avatarUrl,
+      socialUser.authMethod,
+      socialUser.oAuth1Info,
+      socialUser.oAuth2Info,
+      socialUser.passwordInfo
+    )
+
+object UserIdentity {
+  def apply(
     userId: Option[Id[User]],
     socialUser: SocialUser,
     allowSignup: Boolean = false,
-    isComplete: Boolean = true) extends Identity {
-  def identityId = socialUser.identityId
-  def firstName = socialUser.firstName
-  def lastName = socialUser.lastName
-  def fullName = socialUser.fullName
-  def email = socialUser.email
-  def avatarUrl = socialUser.avatarUrl
-  def authMethod = socialUser.authMethod
-  def oAuth1Info = socialUser.oAuth1Info
-  def oAuth2Info = socialUser.oAuth2Info
-  def passwordInfo = socialUser.passwordInfo
+    isComplete: Boolean = true) = new UserIdentity(userId, socialUser, allowSignup, isComplete)
+
+  def unapply(u: UserIdentity) = Some(u.userId, u.socialUser, u.allowSignup, u.isComplete)
 }

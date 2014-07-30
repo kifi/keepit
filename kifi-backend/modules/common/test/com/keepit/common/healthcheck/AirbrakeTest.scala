@@ -17,7 +17,7 @@ import scala.xml._
 import akka.actor.ActorSystem
 import com.keepit.model.User
 
-class AirbrakeTest extends Specification with TestInjector {
+class AirbrakeTest extends Specification with CommonTestInjector {
 
   def validate(xml: NodeSeq) = {
     val schemaLang = "http://www.w3.org/2001/XMLSchema"

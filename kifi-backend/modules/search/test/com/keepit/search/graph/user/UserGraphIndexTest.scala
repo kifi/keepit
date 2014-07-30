@@ -22,7 +22,7 @@ class UserGraphIndexTest extends Specification with ApplicationInjector {
   "UserGraphIndexer" should {
 
     "work" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val uids = (1 to 8).map { Id[User](_) }
         val (oddIds, evenIds) = uids.partition(id => id.id % 2 == 1)
