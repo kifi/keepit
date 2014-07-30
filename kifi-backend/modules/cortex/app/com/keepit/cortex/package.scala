@@ -42,7 +42,7 @@ package object cortex {
       val topicConfigsFolder = "misc/lda/topic_configs/"
       val topicWordsJsonFile = "topic_words"
       val topicConfigsJsonFile = "topic_configs"
-      val userLDAStatsFolder = "misc/lda/user_lda_stats"
+      val userLDAStatsFolder = "misc/lda/user_lda_stats/"
       val userLDAStatsJsonFile = "user_lda_stats"
     }
     object Stopwords {
