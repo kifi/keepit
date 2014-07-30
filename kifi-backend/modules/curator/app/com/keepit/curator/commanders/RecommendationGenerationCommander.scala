@@ -17,17 +17,17 @@ class RecommendationGenerationCommander @Inject() (
     scoringHelper: UriScoringHelper) {
 
   def getAdHocRecommendations(userId: Id[User], howManyMax: Int): Future[Seq[Recommendation]] = {
-    val seedsFuture = seedCommander.getRecentItems(userId, howManyMax)
+    val seedsFuture = seedCommander.getTopItems(userId, Math.max(howManyMax, 150))
     val scoredItemsFuture = seedsFuture.flatMap { seeds => scoringHelper(seeds) }
     scoredItemsFuture.map { scoredItems =>
       scoredItems.map { scoredItem =>
         Recommendation(
           userId = scoredItem.userId,
           uriId = scoredItem.uriId,
-          score = scoredItem.uriScores.recencyScore, //this is just for testing
-          explain = Some(Json.stringify(Json.toJson(scoredItem.uriScores)))
+          score = 0.5f * scoredItem.uriScores.recencyScore + 2 * scoredItem.uriScores.overallInterestScore + 0.25f * scoredItem.uriScores.priorScore, //this math is just for testing
+          explain = Some(scoredItem.uriScores.toString)
         )
-      }
+      }.sortBy(-1 * _.score).take(howManyMax)
     }
 
   }

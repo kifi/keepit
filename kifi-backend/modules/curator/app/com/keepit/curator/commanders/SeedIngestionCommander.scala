@@ -30,7 +30,9 @@ class SeedIngestionCommander @Inject() (
 
   val INGESTION_BATCH_SIZE = 50
 
-  val GRAPH_INGESTION_WHITELIST: Seq[Id[User]] = Seq(243, 6498, 134, 3, 1, 9, 2538, 61, 115).map(Id[User](_)) //will go away once we release, just saving some computation for now
+  val GRAPH_INGESTION_WHITELIST: Seq[Id[User]] = Seq(243, 6498, 134, 3, 1, 9, 2538, 61, 115, 100).map(Id[User](_)) //will go away once we release, just saving some computation for now
+
+  val MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER = 100
 
   val ingestionInProgress: AtomicBoolean = new AtomicBoolean(false)
 
@@ -70,7 +72,7 @@ class SeedIngestionCommander @Inject() (
   def getBySeqNumAndUser(start: SequenceNumber[SeedItem], userId: Id[User], maxBatchSize: Int): Future[Seq[SeedItem]] = {
     db.readOnlyReplicaAsync { implicit session =>
       rawSeedsRepo.getBySeqNumAndUser(SequenceNumber[RawSeedItem](start.value), userId, maxBatchSize).map { rawItem =>
-        val keepers = if (rawItem.timesKept > 100) {
+        val keepers = if (rawItem.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
           Keepers.TooMany
         } else {
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
@@ -84,13 +86,31 @@ class SeedIngestionCommander @Inject() (
   def getRecentItems(userId: Id[User], howManyMax: Int): Future[Seq[SeedItem]] = {
     db.readOnlyReplicaAsync { implicit session =>
       rawSeedsRepo.getRecent(userId, howManyMax).map { rawItem =>
-        val keepers = if (rawItem.timesKept > 100) {
+        val keepers = if (rawItem.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
           Keepers.TooMany
         } else {
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
         }
         cook(userId, rawItem, keepers)
       }
+    }
+  }
+
+  //this is a methods for (manual, not unit) testing of data flow and scoring, not meant for user facing content or scale
+  def getTopItems(userId: Id[User], howManyMax: Int): Future[Seq[SeedItem]] = {
+    //gets higest scoring ruis for the user. If that's not enough get recent items as well
+    db.readOnlyReplicaAsync { implicit session =>
+      var items = rawSeedsRepo.getByTopPriorScore(userId, howManyMax)
+      if (items.length < howManyMax) items = (items ++ rawSeedsRepo.getRecent(userId, howManyMax)).toSet.toSeq
+      items.map { rawItem =>
+        val keepers = if (rawItem.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
+          Keepers.TooMany
+        } else {
+          Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
+        }
+        cook(userId, rawItem, keepers)
+      }
+
     }
   }
 

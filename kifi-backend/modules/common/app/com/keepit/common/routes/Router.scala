@@ -279,7 +279,7 @@ object ABook extends Service {
     def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int) = ServiceRoute(GET, "/internal/abook/database/getContactsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getUsersWithContact(email: EmailAddress) = ServiceRoute(GET, "/internal/abook/getUsersWithContact", Param("email", email))
     def findFriends(userId: Id[User], page: Int, pageSize: Int) = ServiceRoute(GET, s"/internal/abook/${userId}/findFriends", Param("page", page), Param("pageSize", pageSize))
-    def reportIrrelevantUserRecommendations(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId}/reportIrrelevantUserRecommendations")
+    def hideUserRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId}/hideUserRecommendation", Param("irrelevantUserId", irrelevantUserId))
   }
 }
 
@@ -340,6 +340,7 @@ object Graph extends Service {
 
 object Curator extends Service {
   object internal {
+    def adHocRecos(userId: Id[User], n: Int) = ServiceRoute(GET, "/internal/curator/adHocRecos", Param("userId", userId), Param("n", n))
   }
 }
 

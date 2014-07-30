@@ -17,9 +17,9 @@ class FriendRecommendationCommander @Inject() (
     graph: GraphServiceClient,
     shoebox: ShoeboxServiceClient) {
 
-  def reportIrrelevantUserRecommendations(userId: Id[User], irrelevantUserIds: Seq[Id[User]]): Unit = {
+  def reportIrrelevantUserRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Unit = {
     db.readWrite { implicit session =>
-      irrelevantUserIds.foreach(friendRecommendationRepo.recordIrrelevantRecommendation(userId, _))
+      friendRecommendationRepo.recordIrrelevantRecommendation(userId, irrelevantUserId)
     }
   }
 
