@@ -178,7 +178,7 @@ class LDACommander @Inject() (
     val (users, vecs) = db.readOnlyReplica { implicit s => userTopicRepo.getAllUserTopicMean(wordRep.version, minEvidence = 30) }
     val idsAndScores = (users zip vecs).map {
       case (userId, vec) =>
-        val (u, v) = (scale(targetScaled, statOpt), scale(targetScaled, statOpt))
+        val (u, v) = (scale(targetScaled, statOpt), scale(vec.mean, statOpt))
         val score = cosineDistance(u, v)
         (userId, score)
     }
