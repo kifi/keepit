@@ -1,15 +1,15 @@
 package com.keepit.eliza.model
 
 import org.specs2.mutable.Specification
-import com.keepit.test.DbTestInjector
 import com.keepit.model.User
 import com.keepit.common.db.Id
 import play.api.libs.json.JsNull
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._
+import com.keepit.test.ElizaTestInjector
 
-class UserThreadRepoTest extends Specification with DbTestInjector {
+class UserThreadRepoTest extends Specification with ElizaTestInjector {
 
   "UserThreadRepo" should {
     "get stats" in {

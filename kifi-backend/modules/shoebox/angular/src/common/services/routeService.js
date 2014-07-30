@@ -75,7 +75,10 @@ angular.module('kifi.routeService', [])
       exportKeeps: route('/keeps/export'),
       postDelightedAnswer: route('/user/delighted/answer'),
       cancelDelightedSurvey: route('/user/delighted/cancel'),
-      userCloseAccount: route('/user/close')
+      userCloseAccount: route('/user/close'),
+      adHocRecos: function (howMany) {
+        return route('/recos/adHoc?n=' + howMany);
+      }
     };
   }
 ]);

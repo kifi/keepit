@@ -10,7 +10,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.cortex.models.lda.{ LDAUserURIInterestScores, LDATopicConfigurations, LDATopicDetail, LDATopicConfiguration }
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ NormalizedURIRepo, NormalizedURI, KeepRepo, User }
+import com.keepit.model._
 import com.keepit.common.db.Id
 import play.api.libs.concurrent.Execution.Implicits._
 import views.html
@@ -20,6 +20,7 @@ class AdminLDAController @Inject() (
     shoebox: ShoeboxServiceClient,
     actionAuthenticator: ActionAuthenticator,
     db: Database,
+    userRepo: UserRepo,
     uriRepo: NormalizedURIRepo,
     keepRepo: KeepRepo) extends AdminController(actionAuthenticator) {
 
@@ -149,5 +150,15 @@ class AdminLDAController @Inject() (
       }
       Ok(html.admin.ldaDetail(LDATopicDetail(topicId, uris)))
     }
+  }
+
+  def peopleLikeYou(topK: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    val user = request.userId
+    cortex.getSimilarUsers(user, topK).map {
+      case (userIds, scores) =>
+        val users = db.readOnlyReplica { implicit s => userIds.map { id => userRepo.get(id) } }
+        Ok(html.admin.peopleLikeYou(users, scores))
+    }
+
   }
 }

@@ -9,7 +9,7 @@ module.exports = function (config) {
       'lib/angular-mocks/angular-mocks.js',
       'dist/kifi-tpl.js',
       'src/**/*.js',
-      'test/**/*.js'
+      'test/unit/**/*.js'
     ],
     reporters: ['dots'],
     colors: true,

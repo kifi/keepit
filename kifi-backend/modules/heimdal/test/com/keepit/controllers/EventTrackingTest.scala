@@ -5,7 +5,7 @@ import org.specs2.mutable._
 
 import com.keepit.common.db.LargeString._
 import com.keepit.inject._
-import com.keepit.test.TestInjector
+import com.keepit.test.CommonTestInjector
 import com.google.inject.Injector
 import com.keepit.common.cache.HeimdalCacheModule
 import com.keepit.common.time._
@@ -18,7 +18,7 @@ import com.keepit.common.db.Id
 import akka.actor.ActorSystem
 import com.keepit.social.NonUserKinds
 
-class EventTrackingTest extends Specification with TestInjector {
+class EventTrackingTest extends Specification with CommonTestInjector {
 
   def modules = {
     implicit val system = ActorSystem("test")
