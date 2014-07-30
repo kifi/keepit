@@ -51,7 +51,7 @@ class SecureSocialUserPluginImpl @Inject() (
       throw ex
   }
 
-  def find(id: IdentityId): Option[SocialUser] = reportExceptions {
+  def find(id: IdentityId): Option[UserIdentity] = reportExceptions {
     db.readOnlyMaster { implicit s =>
       socialUserInfoRepo.getOpt(SocialId(id.userId), SocialNetworkType(id.providerId))
     } match {
@@ -65,16 +65,7 @@ class SecureSocialUserPluginImpl @Inject() (
             // todo(andrew): Don't let unverified people log in. For now, we are, but come up with something better.
             socialUserInfoRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap { sui =>
               sui.credentials map { creds =>
-                val pwdInfo = userCredRepo.findByUserIdOpt(sui.userId.get) map { userCred =>
-                  PasswordInfo("bcrypt", userCred.credentials, None)
-                }
-                pwdInfo match {
-                  case Some(pInfo) =>
-                    creds.copy(passwordInfo = Some(pInfo))
-                  case None =>
-                    log.warn(s"[find($id)] cannot find credentials for userId=${sui.userId}")
-                    creds
-                }
+                UserIdentity(Some(emailAddr.userId), creds)
               }
             }
           }
@@ -85,8 +76,8 @@ class SecureSocialUserPluginImpl @Inject() (
         log.info(s"No SocialUserInfo found for $id")
         None
       case Some(user) =>
-        log.debug(s"User found: $user for $id")
-        user.credentials
+        log.info(s"User found: $user for $id")
+        user.credentials map { UserIdentity(user.userId, _) }
     }
   }
 

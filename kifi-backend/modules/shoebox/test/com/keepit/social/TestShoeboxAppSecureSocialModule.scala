@@ -12,6 +12,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.{ UserRepo, ExperimentType, KifiInstallation, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social._
+import com.keepit.social.providers.PasswordAuthentication
 import net.codingwell.scalaguice.ScalaModule
 import play.api.mvc._
 import securesocial.core._
@@ -27,6 +28,7 @@ case class TestShoeboxAppSecureSocialModule() extends ShoeboxSecureSocialModule 
     new SecureSocialUserService().onStart()
     require(UserService.delegate.isDefined)
     install(FakeSocialGraphModule())
+    bind[PasswordAuthentication].to[UserPasswordAuthentication]
   }
 
   @Singleton
