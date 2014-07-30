@@ -24,6 +24,9 @@ case class LibraryPageInfo(
 class AdminLibraryController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     keepRepo: KeepRepo,
+    normalizedURIRepo: NormalizedURIRepo,
+    keepToCollectionRepo: KeepToCollectionRepo,
+    collectionRepo: CollectionRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryInviteRepo: LibraryInviteRepo,
@@ -47,6 +50,35 @@ class AdminLibraryController @Inject() (
     Ok(html.admin.libraries(info))
   }
 
+  def libraryView(libraryId: Id[Library]) = AdminHtmlAction.authenticated { implicit request =>
+    val (library, owner, keepCount, contributors, followers) = db.readOnlyReplica { implicit session =>
+      val lib = libraryRepo.get(libraryId)
+      val owner = userRepo.get(lib.ownerId)
+      val keepCount = keepRepo.getCountByLibrary(libraryId)
+      val members = libraryMembershipRepo.getWithLibraryId(libraryId)
+
+      val contributors = members.filter(x => (x.access == LibraryAccess.READ_WRITE || x.access == LibraryAccess.READ_INSERT)).map { m => userRepo.get(m.userId) }
+      val followers = members.filter(x => x.access == LibraryAccess.READ_ONLY).map { m => userRepo.get(m.userId) }
+
+      (lib, owner, keepCount, contributors, followers)
+    }
+    Ok(html.admin.library(library, owner, keepCount, contributors, followers))
+  }
+
+  def libraryKeepsView(libraryId: Id[Library], showPrivates: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
+    val (library, owner, totalKeepCount, keepInfos) = db.readOnlyReplica { implicit session =>
+      val lib = libraryRepo.get(libraryId)
+      val owner = userRepo.get(lib.ownerId)
+      val keeps = keepRepo.getByLibrary(libraryId)
+      val keepInfos = for (keep <- keeps) yield {
+        val tagNames = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map(collectionRepo.get).map(_.name)
+        (keep, normalizedURIRepo.get(keep.uriId), userRepo.get(keep.userId), tagNames)
+      }
+      (lib, owner, keeps.length, keepInfos)
+    }
+    Ok(html.admin.libraryKeeps(library, owner, totalKeepCount, keepInfos))
+  }
+
   def internUserSystemLibraries(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
     val res = libraryCommander.internSystemGeneratedLibraries(userId)
 
@@ -67,6 +99,15 @@ class AdminLibraryController @Inject() (
     }
 
     Ok(s"count: ${result.size}<br>\n<br>\n" + result.mkString("<br>\n"))
+  }
+
+  def changeState(libraryId: Id[Library], state: String) = AdminJsonAction.authenticated { request =>
+    val libState = state match {
+      case LibraryStates.ACTIVE.value => LibraryStates.ACTIVE
+      case LibraryStates.INACTIVE.value => LibraryStates.INACTIVE
+    }
+    db.readWrite(implicit s => libraryRepo.save(libraryRepo.get(libraryId).withState(libState)))
+    Ok
   }
 }
 
