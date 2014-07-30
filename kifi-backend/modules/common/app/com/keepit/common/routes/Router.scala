@@ -321,6 +321,7 @@ object Cortex extends Service {
     def batchUserURIsInterests() = ServiceRoute(POST, "/internal/cortex/lda/batchUserUrisInterests")
     def userTopicMean(userId: Id[User]) = ServiceRoute(GET, "/internal/cortex/lda/userTopicMean", Param("userId", userId))
     def sampleURIsForTopic(topicId: Int) = ServiceRoute(GET, "/internal/cortex/lda/sampleURIs", Param("topicId", topicId))
+    def getSimilarUsers(userId: Id[User], topK: Int) = ServiceRoute(GET, "/internal/cortex/lda/getSimilarUsers", Param("userId", userId), Param("topK", topK))
 
     def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/cortex/data/sparseLDAFeaturesChanged", Param("modelVersion", modelVersion), Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }

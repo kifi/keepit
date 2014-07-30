@@ -1,0 +1,23 @@
+@(users: Seq[User], scores: Seq[Float])
+
+@admin("People Like You"){
+
+<br>KiFi users who share interests with you<br>
+
+<table class="table table-bordered">
+  <tr>
+    <th>userId</th>
+    <th>user</th>
+    <th>similarity</th>
+  </tr>
+
+  @users.zip(scores).foreach{ case (user, score) =>
+    <tr>
+      <td><span class="badge">@user.id.get.id</span></td>
+      <td>@adminHelper.userDisplay(user)</td>
+      <td>score</td>
+    </tr>
+  }
+
+</table>
+}
