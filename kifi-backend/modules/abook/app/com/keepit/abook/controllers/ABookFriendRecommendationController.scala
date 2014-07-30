@@ -19,9 +19,8 @@ class ABookFriendRecommendationController @Inject() (
     }
   }
 
-  def reportIrrelevantUserRecommendations(userId: Id[User]) = Action(parse.json) { request =>
-    val irrelevantUsers = request.body.as[Seq[Id[User]]]
-    friendRecommendationCommander.reportIrrelevantUserRecommendations(userId, irrelevantUsers)
+  def hideUserRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = Action { request =>
+    friendRecommendationCommander.reportIrrelevantUserRecommendation(userId, irrelevantUserId)
     Ok
   }
 }

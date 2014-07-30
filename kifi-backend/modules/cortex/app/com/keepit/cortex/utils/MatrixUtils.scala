@@ -56,4 +56,37 @@ object MatrixUtils {
     res
   }
 
+  def getMinAndMax(data: Seq[Array[Float]]): (Array[Float], Array[Float]) = {
+    assume(data.size > 0)
+    val dataSize = data.size
+    val dim = data(0).size
+    val minArr = new Array[Float](dim)
+    val maxArr = new Array[Float](dim)
+    Array.copy(data(0), 0, minArr, 0, dim)
+    Array.copy(data(0), 0, maxArr, 0, dim)
+    (1 until dataSize).foreach { i =>
+      (0 until dim).foreach { j =>
+        minArr(j) = minArr(j) min data(i)(j)
+        maxArr(j) = maxArr(j) max data(i)(j)
+      }
+    }
+    (minArr, maxArr)
+  }
+
+  def getMeanAndStd(data: Seq[Array[Float]]): (Array[Float], Array[Float]) = {
+    assume(data.size > 1)
+    val dim = data(0).size
+    val dataSize = data.size
+    val dataTranspose = (0 until dim).map { j =>
+      (0 until dataSize).map { i => data(i)(j) }
+    }
+    val tuples = (0 until dim).map { d =>
+      val xs = dataTranspose(d)
+      val mean = xs.sum / xs.size
+      val variance = xs.map { x => (x - mean) * (x - mean) }.sum / (dataSize - 1)
+      (mean, math.sqrt(variance).toFloat)
+    }
+    (tuples.map { _._1 }.toArray, tuples.map { _._2 }.toArray)
+  }
+
 }

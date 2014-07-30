@@ -8,7 +8,9 @@ exports.config = {
   // Start phantom with: "phantomjs --webdriver=9515"
   seleniumAddress: 'http://localhost:9515',
   
-  baseUrl: 'http://localhost:8080/',
+  // Locally, set protractor.kifi.com to point to where the local server
+  // is running (usually localhost).
+  baseUrl: 'http://protractor.kifi.com:8080/',
 
   // Location of tests.
   specs: [

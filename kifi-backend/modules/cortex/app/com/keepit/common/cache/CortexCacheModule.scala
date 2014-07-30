@@ -1,5 +1,7 @@
 package com.keepit.common.cache
 
+import com.keepit.cortex.models.lda.UserLDAStatisticsCache
+
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
@@ -142,4 +144,8 @@ case class CortexCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Provides @Singleton
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new VerifiedEmailUserIdCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def userLDAStatsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserLDAStatisticsCache(stats, accessLog, (innerRepo, 24 hours), (outerRepo, 30 days))
 }
