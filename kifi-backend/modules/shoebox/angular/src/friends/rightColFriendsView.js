@@ -53,13 +53,12 @@ angular.module('kifi.friends.rightColFriendsView', [])
   };
 }])
 
-.directive('kfNoFriendsOrConnectionsView', ['routeService', 'socialService', function (routeService, socialService) {
+.directive('kfNoFriendsOrConnectionsView', ['socialService', function (routeService, socialService) {
   return {
     replace: true,
     restrict: 'A',
     templateUrl: 'friends/noFriendsOrConnectionsView.tpl.html',
     link: function (scope) {
-      scope.facebookConnectLink = routeService.linkNetwork('facebook');
       scope.connectFacebook = socialService.connectFacebook;
     }
   };
