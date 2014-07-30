@@ -24,7 +24,8 @@ class LDACommander @Inject() (
     ldaTopicWords: DenseLDATopicWords,
     ldaConfigs: LDATopicConfigurations,
     configStore: LDAConfigStore,
-    ldaRetriever: LDAURIFeatureRetriever) {
+    ldaRetriever: LDAURIFeatureRetriever,
+    userLDAStatsRetriever: UserLDAStatisticsRetriever) {
   assume(ldaTopicWords.topicWords.length == wordRep.lda.dimension)
 
   var currentConfig = ldaConfigs
@@ -144,5 +145,9 @@ class LDACommander @Inject() (
       uriTopicRepo.getLatestURIsInTopic(LDATopic(topicId), wordRep.version, limit = 100)
     }
     scala.util.Random.shuffle(uris).take(SAMPLE_SIZE)
+  }
+
+  def getUserLDAStats(version: ModelVersion[DenseLDA]): Option[UserLDAStatistics] = {
+    userLDAStatsRetriever.getUserLDAStats(version)
   }
 }
