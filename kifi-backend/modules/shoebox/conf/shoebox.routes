@@ -291,7 +291,7 @@ GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
 GET     /site/user/friends/find    @com.keepit.controllers.website.UserController.findFriends(page: Int ?= 0, pageSize: Int ?= 5)
-POST    /site/user/friends/hide     @com.keepit.controllers.website.UserController.hideUserRecommendation(irrelevantUserId: Id[User])
+POST    /site/user/:id/hide         @com.keepit.controllers.website.UserController.hideUserRecommendation(id: ExternalId[User])
 POST    /site/user/invite           @com.keepit.controllers.website.InviteController.inviteV2()
 POST    /site/user/delighted/answer @com.keepit.controllers.website.UserController.postDelightedAnswer()
 POST    /site/user/delighted/cancel @com.keepit.controllers.website.UserController.cancelDelightedSurvey()
