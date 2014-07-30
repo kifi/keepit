@@ -183,7 +183,7 @@ class LDACommander @Inject() (
         (userId, score)
     }
 
-    idsAndScores.sortBy(-1 * _._2).take(topK + 1).filter(_._1 == userId).unzip
+    idsAndScores.sortBy(-1 * _._2).take(topK + 1).filter(_._1 != userId).unzip
   }
 
 }
