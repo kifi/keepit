@@ -128,7 +128,11 @@ class LDACommander @Inject() (
   private def computeInterestScore(numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeatOpt: Option[LDATopicFeature]): Option[LDAUserURIInterestScore] = {
     (userFeatOpt, uriFeatOpt) match {
       case (Some(userFeat), Some(uriFeat)) =>
-        val (u, v) = (projectToActive(userFeat.mean), projectToActive(uriFeat.value))
+        val userVec = getUserLDAStats(wordRep.version) match {
+          case None => userFeat.mean
+          case Some(stat) => scale(userFeat.mean, stat.mean, stat.std)
+        }
+        val (u, v) = (projectToActive(userVec), projectToActive(uriFeat.value))
         Some(LDAUserURIInterestScore(cosineDistance(u, v), computeConfidence(numOfEvidenceForUser)))
       case _ => None
     }
@@ -145,6 +149,13 @@ class LDACommander @Inject() (
       uriTopicRepo.getLatestURIsInTopic(LDATopic(topicId), wordRep.version, limit = 100)
     }
     scala.util.Random.shuffle(uris).take(SAMPLE_SIZE)
+  }
+
+  private def scale(datum: Array[Float], mean: Array[Float], std: Array[Float]): Array[Float] = {
+    assume(datum.size == mean.size && mean.size == std.size)
+    (0 until datum.size).map { i =>
+      if (std(i) == 0) datum(i) - mean(i) else (datum(i) - mean(i)) / std(i)
+    }.toArray
   }
 
   def getUserLDAStats(version: ModelVersion[DenseLDA]): Option[UserLDAStatistics] = {

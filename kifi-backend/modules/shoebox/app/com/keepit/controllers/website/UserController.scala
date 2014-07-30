@@ -99,6 +99,12 @@ class UserController @Inject() (
     }
   }
 
+  def hideUserRecommendation(irrelevantUserId: Id[User]) = JsonAction.authenticatedAsync { request =>
+    abookServiceClient.hideUserRecommendation(request.userId, irrelevantUserId).map { _ =>
+      Ok(Json.obj("hidden" -> true))
+    }
+  }
+
   def friendCount() = JsonAction.authenticated { request =>
     db.readOnlyMaster { implicit s =>
       Ok(Json.obj(
