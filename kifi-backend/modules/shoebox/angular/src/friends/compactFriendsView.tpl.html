@@ -1,11 +1,12 @@
 <div>
-  <h2 class="kf-footer-header">Friends on Kifi</h2>
-  <div class="kf-compact-friends-image-row" ng-if="friendGroup.length > 0" ng-repeat="friendGroup in friendGroups">
-    <a href="/friends" ng-repeat="friend in friendGroup">
+  <h2 class="kf-rightcol-header">Friends on Kifi</h2>
+  <div class="kf-rightcol-friends-links">
+    <div><ng-pluralize count="friendCount()" when="{'one': '1 friend', 'other': '{} friends'}"></ng-pluralize></div>
+    <a ng-href="{{friendsLink()}}">See all &#0187;</a>
+  </div>
+  <div class="kf-compact-friends-image-row" ng-if="friends.length > 0">
+    <a href="/friends" ng-repeat="friend in friends | limitTo: 4">
       <img class="kf-compact-friend-image" title="{{friend.firstName}}" ng-src="{{friend.pictureUrl}}">
     </a>
-  </div>
-  <div class="kf-footer-friends-links">
-    <a ng-href="{{friendsLink()}}"><ng-pluralize count="friendCount()" when="{'one': '1 friend', 'other': '{} friends'}"></ng-pluralize></a> <span class="kf-friends-links-divider">|</span> <a href="/invite">Invite more friends...</a>
   </div>
 </div>

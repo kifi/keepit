@@ -23,7 +23,7 @@ angular.module('kifi', [
   'kifi.friendService',
   'kifi.friends.friendCard',
   'kifi.friends.friendRequestCard',
-  'kifi.friends.compactFriendsView',
+  'kifi.friends.rightColFriendsView',
   'kifi.social',
   'kifi.social.networksNeedAttention',
   'kifi.socialService',
