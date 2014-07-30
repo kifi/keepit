@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.friends.compactFriendsView', [])
+angular.module('kifi.friends.rightColFriendsView', [])
 
 
 .directive('kfCompactFriendsView', ['$log', 'friendService', function ($log, friendService) {
@@ -9,23 +9,37 @@ angular.module('kifi.friends.compactFriendsView', [])
     restrict: 'A',
     templateUrl: 'friends/compactFriendsView.tpl.html',
     link: function (scope/*, element, attrs*/) {
+      // Configuration.
+      scope.friendsDisplayLimit = 4;
+
+      // Get number of friends.
       scope.friendCount = friendService.totalFriends;
+
+      // Populate local friends list.
       friendService.getKifiFriends().then(function (data) {
         var actualFriends = _.filter(data, function (friend) {
+          // Attach friend's picture url to local friends list.
           friend.pictureUrl = friendService.getPictureUrlForUser(friend);
+
+          // Filter out friends who have been unfriended.
           return !friend.unfriended;
         });
-        var goodFriends = [];
-        var badFriends = [];
+
+        // Reorder local friends list to list friends with pics first.
+        var hasPicFriends = [];
+        var noPicFriends = [];
+
         actualFriends.forEach(function (friend) {
-          if (friend.pictureName==='0.jpg' || friend.pictureName==='0.jpg.jpg') {
-            badFriends.push(friend);
+          // TODO(yiping): figure out when we can remove the '0.jpg.jpg' check.
+          if ((friend.pictureName === '0.jpg') || (friend.pictureName === '0.jpg.jpg')) {
+            noPicFriends.push(friend);
           } else {
-            goodFriends.push(friend);
+            hasPicFriends.push(friend);
           }
         });
-        actualFriends = goodFriends.concat(badFriends);
-        scope.friendGroups = [actualFriends.slice(0,5), actualFriends.slice(5,10)];
+
+        // Expose local friends list on scope.
+        scope.friends = hasPicFriends.concat(noPicFriends);
       });
 
       scope.friendsLink = function () {
@@ -39,12 +53,13 @@ angular.module('kifi.friends.compactFriendsView', [])
   };
 }])
 
-.directive('kfNoFriendsOrConnectionsView', ['socialService', function (socialService) {
+.directive('kfNoFriendsOrConnectionsView', ['routeService', 'socialService', function (routeService, socialService) {
   return {
     replace: true,
     restrict: 'A',
     templateUrl: 'friends/noFriendsOrConnectionsView.tpl.html',
     link: function (scope) {
+      scope.facebookConnectLink = routeService.linkNetwork('facebook');
       scope.connectFacebook = socialService.connectFacebook;
     }
   };
