@@ -142,10 +142,10 @@ class ArticleFromKeepsScoreVectorSource(reader: WrappedSubReader, scorers: Array
 //  query Library index and Keep index and aggregate the hits by Library Id
 //
 
-class LibraryScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer], idFilter: LongArraySet, userId: Long) extends ScoreVectorSource {
+class LibraryScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer], libraryIds: LongArraySet, idFilter: LongArraySet) extends ScoreVectorSource {
 
   private[this] val pq = createScorerQueue(scorers)
-  // TODO: private[this] val libraryVisibility = LibraryVisibility(reader, userId)
+  // TODO: private[this] val libraryVisibility = LibraryVisibility(reader)
 
   def score(output: DataBuffer): Unit = {
     val idMapper = reader.getIdMapper
@@ -160,7 +160,8 @@ class LibraryScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer],
       val libId = idMapper.getId(docId)
 
       if (idFilter.findIndex(libId) < 0) { // use findIndex to avoid boxing
-        val visibility = Visibility.PUBLIC // TODO: if (libraryVisibility.isVisible(docId)) Visibility.PUBLIC else Visibility.RESTRICTED
+        val visibility =
+          if (libraryIds.findIndex(libId) >= 0) Visibility.MEMBER else Visibility.PUBLIC // TODO: if (libraryVisibility.isVisible(docId)) Visibility.PUBLIC else Visibility.RESTRICTED
 
         if (visibility != Visibility.RESTRICTED) {
           // get all scores
