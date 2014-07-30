@@ -38,6 +38,8 @@ angular.module('kifi', [
   'kifi.keeps',
   'kifi.keep',
   'kifi.addKeep',
+  'kifi.recos',
+  'kifi.recoService',
   'kifi.tagList',
   'kifi.layout.header',
   'kifi.layout.main',
