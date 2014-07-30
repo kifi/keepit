@@ -12,31 +12,27 @@ import com.google.inject.util.Modules
 import com.google.inject.Module
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ElizaCacheModule }
 import com.keepit.common.zookeeper.FakeDiscoveryModule
-import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
 
 class ElizaApplication(overridingModules: Module*)(implicit path: File = new File("./modules/eliza/"))
-  extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
-    Seq(
-      FakeHttpClientModule(),
-      TestABookServiceClientModule(),
-      FakeElizaServiceClientModule(),
-      FakeAirbrakeModule(),
-      FakeMemoryUsageModule(),
-      FakeClockModule(),
-      FakeHealthcheckModule(),
-      TestFortyTwoModule(),
-      TestSlickModule(TestDbInfo.dbInfo),
-      FakeDiscoveryModule(),
-      ElizaCacheModule(HashMapMemoryCacheModule())
-    ), overridingModules
+  extends DbTestApplication(path, overridingModules, Seq(
+    FakeHttpClientModule(),
+    TestABookServiceClientModule(),
+    FakeElizaServiceClientModule(),
+    FakeAirbrakeModule(),
+    FakeMemoryUsageModule(),
+    FakeClockModule(),
+    FakeHealthcheckModule(),
+    TestFortyTwoModule(),
+    TestSlickModule(TestDbInfo.dbInfo),
+    FakeDiscoveryModule(),
+    ElizaCacheModule(HashMapMemoryCacheModule())
   ))
 
 trait ElizaApplicationInjector extends ApplicationInjector with DbInjectionHelper with ElizaInjectionHelpers
 
-trait ElizaTestInjector extends EmptyInjector with DbInjectionHelper with ElizaInjectionHelpers {
-  val mode = Mode.Test
+trait ElizaTestInjector extends TestInjector with DbInjectionHelper with ElizaInjectionHelpers {
   val module = Modules.combine(
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),

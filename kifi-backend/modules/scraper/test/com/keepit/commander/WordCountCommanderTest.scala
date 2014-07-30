@@ -9,7 +9,7 @@ import com.keepit.model._
 import com.keepit.scraper.{ BasicArticle, ScrapeProcessor, Signature, TestScraperServiceModule }
 import com.keepit.scraper.extractor._
 import com.keepit.search.{ Article, ArticleStore, Lang }
-import com.keepit.test.TestApplication
+import com.keepit.test.CommonTestApplication
 import org.specs2.mutable.Specification
 import play.api.test.Helpers.running
 
@@ -49,7 +49,7 @@ class WordCountCommanderTest extends Specification with ApplicationInjector {
 
   "WordCountCommander" should {
     "get word count" in {
-      running(new TestApplication(TestScraperServiceModule())) {
+      running(new CommonTestApplication(TestScraperServiceModule())) {
         val store = inject[ArticleStore]
         val countCache = inject[NormalizedURIWordCountCache]
         val sumCache = inject[URISummaryCache]

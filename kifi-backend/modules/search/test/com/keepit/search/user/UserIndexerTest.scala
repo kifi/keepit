@@ -48,7 +48,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
 
   "UserIndxer" should {
     "persist sequence number" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer()
@@ -64,7 +64,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
   }
 
   "search users by name prefix" in {
-    running(new TestApplication(FakeShoeboxServiceModule())) {
+    running(new CommonTestApplication(FakeShoeboxServiceModule())) {
       val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
       setup(client)
       val indexer = mkUserIndexer()
@@ -87,7 +87,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
   }
 
   "search user by exact email address" in {
-    running(new TestApplication(FakeShoeboxServiceModule())) {
+    running(new CommonTestApplication(FakeShoeboxServiceModule())) {
       val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
       setup(client)
       val indexer = mkUserIndexer()
@@ -103,7 +103,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     }
 
     "store and retreive correct info" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer()
@@ -128,7 +128,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     }
 
     "paginate" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer()
@@ -157,7 +157,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     }
 
     "keep track of deleted users" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = mkUserIndexer()
@@ -178,7 +178,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     }
 
     "filter by user experiments" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         setup(client)
         val indexer = mkUserIndexer()
@@ -203,7 +203,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     }
 
     "search using prefix field" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         client.saveUsers(
           User(firstName = s"abc", lastName = s"def"),
@@ -250,7 +250,7 @@ class UserIndexerTest extends Specification with ApplicationInjector {
     }
 
     "search using prefix field when first name or last name have multiple tokens" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         client.saveUsers(
           User(firstName = s"abc", lastName = s"def ghi"),
