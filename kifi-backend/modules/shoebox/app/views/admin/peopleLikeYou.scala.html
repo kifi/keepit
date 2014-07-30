@@ -11,11 +11,11 @@
     <th>similarity</th>
   </tr>
 
-  @users.zip(scores).foreach{ case (user, score) =>
+  @users.zip(scores).map{ case (user, score) =>
     <tr>
       <td><span class="badge">@user.id.get.id</span></td>
       <td>@adminHelper.userDisplay(user)</td>
-      <td>score</td>
+      <td>@score</td>
     </tr>
   }
 
