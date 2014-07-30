@@ -1,6 +1,5 @@
 package com.keepit.commanders
 
-<<<<<<< HEAD
 import com.google.inject.{ Injector }
 import com.keepit.common.db.Id
 import com.keepit.model.{ NormalizedURIRepo, Restriction, UrlHash, NormalizedURI }
