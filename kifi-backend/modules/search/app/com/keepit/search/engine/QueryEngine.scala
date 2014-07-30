@@ -12,10 +12,11 @@ import scala.collection.mutable.ArrayBuffer
 class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArraySize: Int, collector: ResultCollector[ScoreContext]) {
 
   private[this] val dataBuffer: DataBuffer = new DataBuffer()
-
+  private[this] var execCount: Int = 0
   private[this] val matchWeight: Array[Float] = new Array[Float](scoreArraySize)
 
   private[this] def accumulateWeightInfo(weights: ArrayBuffer[(Weight, Float)]): Unit = {
+    execCount += 1
     var i = 0
     while (i < scoreArraySize) {
       matchWeight(i) += weights(i)._2
@@ -65,7 +66,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArra
   }
 
   def createScoreContext(): ScoreContext = {
-    new ScoreContext(scoreExpr, scoreArraySize, matchWeight, collector)
+    new ScoreContext(scoreExpr, scoreArraySize, execCount.toFloat, matchWeight, collector)
   }
 
   def join(): Unit = {

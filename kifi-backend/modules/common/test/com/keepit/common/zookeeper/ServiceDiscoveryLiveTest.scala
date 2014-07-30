@@ -43,7 +43,7 @@ class ServiceDiscoveryLiveTest extends Specification with ApplicationInjector {
   "discovery" should {
 
     "register" in {
-      running(new TestApplication(TestActorSystemModule())) {
+      running(new CommonTestApplication(TestActorSystemModule())) {
         val services = new FortyTwoServices(inject[Clock], Mode.Test, None, None, inject[FortyTwoConfig]) {
           override lazy val currentService: ServiceType = ServiceType.SHOEBOX
         }

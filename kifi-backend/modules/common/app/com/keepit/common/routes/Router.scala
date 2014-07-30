@@ -279,7 +279,7 @@ object ABook extends Service {
     def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int) = ServiceRoute(GET, "/internal/abook/database/getContactsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getUsersWithContact(email: EmailAddress) = ServiceRoute(GET, "/internal/abook/getUsersWithContact", Param("email", email))
     def findFriends(userId: Id[User], page: Int, pageSize: Int) = ServiceRoute(GET, s"/internal/abook/${userId}/findFriends", Param("page", page), Param("pageSize", pageSize))
-    def reportIrrelevantUserRecommendations(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId}/reportIrrelevantUserRecommendations")
+    def hideUserRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId}/hideUserRecommendation", Param("irrelevantUserId", irrelevantUserId))
   }
 }
 
@@ -321,6 +321,7 @@ object Cortex extends Service {
     def batchUserURIsInterests() = ServiceRoute(POST, "/internal/cortex/lda/batchUserUrisInterests")
     def userTopicMean(userId: Id[User]) = ServiceRoute(GET, "/internal/cortex/lda/userTopicMean", Param("userId", userId))
     def sampleURIsForTopic(topicId: Int) = ServiceRoute(GET, "/internal/cortex/lda/sampleURIs", Param("topicId", topicId))
+    def getSimilarUsers(userId: Id[User], topK: Int) = ServiceRoute(GET, "/internal/cortex/lda/getSimilarUsers", Param("userId", userId), Param("topK", topK))
 
     def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/cortex/data/sparseLDAFeaturesChanged", Param("modelVersion", modelVersion), Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }

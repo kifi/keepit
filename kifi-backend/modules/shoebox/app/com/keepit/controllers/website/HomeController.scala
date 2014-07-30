@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 
-import com.keepit.commanders.{ InviteCommander, UserCommander }
+import com.keepit.commanders.{ InviteCommander, UserCommander, LocalUserExperimentCommander }
 import com.keepit.common.KestrelCombinator
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController }
@@ -49,6 +49,7 @@ class HomeController @Inject() (
   userCommander: UserCommander,
   inviteCommander: InviteCommander,
   heimdalServiceClient: HeimdalServiceClient,
+  userExperimentCommander: LocalUserExperimentCommander,
   applicationConfig: FortyTwoConfig)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
@@ -183,6 +184,14 @@ class HomeController @Inject() (
       } else {
         Ok(views.html.marketing.landing())
       }
+    }
+  }
+
+  def kifeeeed = HtmlAction.authenticated { request =>
+    if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.ADMIN)) {
+      homeAuthed(request)
+    } else {
+      Redirect("/")
     }
   }
 

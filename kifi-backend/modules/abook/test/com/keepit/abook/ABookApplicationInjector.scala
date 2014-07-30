@@ -1,6 +1,6 @@
 package com.keepit.abook
 
-import com.keepit.test.{ TestGlobalWithDB, TestApplicationFromGlobal, DbInjectionHelper }
+import com.keepit.test.{ TestInjector, DbTestApplication, DbInjectionHelper }
 import com.keepit.inject.{ EmptyInjector, TestFortyTwoModule, ApplicationInjector }
 import com.google.inject.Module
 import java.io.File
@@ -15,28 +15,25 @@ import com.keepit.common.cache.{ HashMapMemoryCacheModule, ABookCacheModule }
 import com.keepit.common.actor.TestSchedulerModule
 
 class ABookApplication(overridingModules: Module*)(implicit path: File = new File("./modules/abook/"))
-    extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
-      Seq(
-        FakeAirbrakeModule(),
-        FakeMemoryUsageModule(),
-        FakeClockModule(),
-        FakeHealthcheckModule(),
-        TestFortyTwoModule(),
-        FakeDiscoveryModule(),
-        TestSlickModule(TestDbInfo.dbInfo),
-        FakeActionAuthenticatorModule(),
-        FakeABookStoreModule(),
-        TestABookImporterPluginModule(),
-        FakeAbookRepoChangeListenerModule()
-      ), overridingModules
+    extends DbTestApplication(path, overridingModules, Seq(
+      FakeAirbrakeModule(),
+      FakeMemoryUsageModule(),
+      FakeClockModule(),
+      FakeHealthcheckModule(),
+      TestFortyTwoModule(),
+      FakeDiscoveryModule(),
+      TestSlickModule(TestDbInfo.dbInfo),
+      FakeActionAuthenticatorModule(),
+      FakeABookStoreModule(),
+      TestABookImporterPluginModule(),
+      FakeAbookRepoChangeListenerModule()
     )) {
   println(s"[ABookApplication] path=$path canonicalPath=${path.getCanonicalPath}")
 }
 
 trait ABookApplicationInjector extends ApplicationInjector with DbInjectionHelper with ABookInjectionHelpers
 
-trait ABookTestInjector extends EmptyInjector with DbInjectionHelper with ABookInjectionHelpers {
-  val mode = Mode.Test
+trait ABookTestInjector extends TestInjector with DbInjectionHelper with ABookInjectionHelpers {
   val module = Modules.combine(
     FakeAirbrakeModule(),
     FakeClockModule(),

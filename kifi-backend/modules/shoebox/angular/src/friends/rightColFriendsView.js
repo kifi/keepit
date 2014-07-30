@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.friends.compactFriendsView', [])
+angular.module('kifi.friends.rightColFriendsView', [])
 
 
 .directive('kfCompactFriendsView', ['$log', 'friendService', function ($log, friendService) {
@@ -10,22 +10,32 @@ angular.module('kifi.friends.compactFriendsView', [])
     templateUrl: 'friends/compactFriendsView.tpl.html',
     link: function (scope/*, element, attrs*/) {
       scope.friendCount = friendService.totalFriends;
+
       friendService.getKifiFriends().then(function (data) {
         var actualFriends = _.filter(data, function (friend) {
-          friend.pictureUrl = friendService.getPictureUrlForUser(friend);
           return !friend.unfriended;
         });
-        var goodFriends = [];
-        var badFriends = [];
+
         actualFriends.forEach(function (friend) {
-          if (friend.pictureName==='0.jpg' || friend.pictureName==='0.jpg.jpg') {
-            badFriends.push(friend);
-          } else {
-            goodFriends.push(friend);
-          }
+          friend.pictureUrl = friendService.getPictureUrlForUser(friend);
         });
-        actualFriends = goodFriends.concat(badFriends);
-        scope.friendGroups = [actualFriends.slice(0,5), actualFriends.slice(5,10)];
+
+        var hasPicture = function (friend) {
+          return (friend.pictureName !== '0.jpg') && (friend.pictureName !== '0.jpg.jpg');
+        };
+        actualFriends.sort(function (friendA, friendB) {
+          if (hasPicture(friendA) && !hasPicture(friendB)) {
+            return -1;
+          }
+
+          if (!hasPicture(friendA) && hasPicture(friendB)) {
+            return 1;
+          }
+
+          return 0;
+        });
+
+        scope.friends = actualFriends;
       });
 
       scope.friendsLink = function () {
