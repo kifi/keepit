@@ -359,7 +359,7 @@ gulp.task('protractor', ['build-release'], function () {
 });
 
 gulp.task('test', function (done) {
-  runSequence(['run-karma-tests', 'run-protractor-tests'], 'clean-tmp', done);
+  runSequence(['karma', 'protractor'], 'clean-tmp', done);
 });
 
 gulp.task('build-dev', function (done) {
