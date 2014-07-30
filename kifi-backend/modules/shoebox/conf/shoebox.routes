@@ -194,6 +194,8 @@ GET     /profile                    @com.keepit.controllers.website.HomeControll
 GET     /find                       @com.keepit.controllers.website.HomeController.home
 GET     /blog                       @com.keepit.controllers.website.HomeController.blog
 
+GET     /kifeeeed                   @com.keepit.controllers.website.HomeController.kifeeeed
+
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
