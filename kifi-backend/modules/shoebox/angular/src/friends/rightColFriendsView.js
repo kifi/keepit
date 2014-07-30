@@ -53,7 +53,7 @@ angular.module('kifi.friends.rightColFriendsView', [])
   };
 }])
 
-.directive('kfNoFriendsOrConnectionsView', ['socialService', function (routeService, socialService) {
+.directive('kfNoFriendsOrConnectionsView', ['socialService', function (socialService) {
   return {
     replace: true,
     restrict: 'A',
