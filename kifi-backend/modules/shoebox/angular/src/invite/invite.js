@@ -261,37 +261,9 @@ angular.module('kifi.invite', [
   }
 ])
 
-// we don't want to call inviteService.friendRequest twice; this factory
-// prevents an invite from being sent to the same externalId more than once;
-// because of the injectedState and $location.search({}),
-// controllers/directives are called twice
-.factory('friendRequestFactory', [
-  '$location', '$http', '$rootScope', '$q', 'routeService', 'inviteService',
-  function ($location, $http, $rootScope, $q, routeService, inviteService) {
-    var runs = {};
-
-    function runOnce(externalId) {
-      if (runs.hasOwnProperty(externalId)) {
-        return runs[externalId];
-      }
-
-      var deferred = $q.defer();
-      inviteService.friendRequest(externalId).then(function (res) {
-        deferred.resolve(res);
-      }, function (res) {
-        deferred.reject(res);
-      });
-
-      return (runs[externalId] = deferred.promise);
-    }
-
-    return { 'run': runOnce };
-  }
-])
-
 .directive('kfFriendRequestBanner', [
-  'injectedState', 'friendRequestFactory', 'routeService', 'userService', 'keepWhoService', 'profileService', '$timeout',
-  function (injectedState, friendRequestFactory, routeService, userService, keepWhoService, profileService, $timeout) {
+  'injectedState', 'routeService', 'userService', 'keepWhoService', 'profileService', '$timeout',
+  function (injectedState, routeService, userService, keepWhoService, profileService, $timeout) {
 
     function setupShowFriendRequestBanner(scope, externalId) {
       userService.getBasicUserInfo(externalId).then(function (res) {
