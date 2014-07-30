@@ -267,12 +267,12 @@ var keeper = keeper || function () {  // idempotent for Chrome
     .on('click', '.kifi-dock-btn', _.debounce(function (e) {
       if (e.originalEvent.isTrusted === false) return;
       $slider.data().stickiness |= 2;
-      var locator = this.dataset.loc;
+      var btn = this;
       api.require('scripts/pane.js', function () {
-        if (locator) {
-          pane.toggle('keeper', locator);
-        } else {
+        if (btn.dataset.compose) {
           pane.compose('keeper');
+        } else {
+          pane.toggle('keeper');
         }
       });
     }, 400, true));
