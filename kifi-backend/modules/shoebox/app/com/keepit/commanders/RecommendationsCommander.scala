@@ -11,19 +11,26 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 
-class RecommendationsCommander @Inject() (curator: CuratorServiceClient, db: Database, nUriRepo: NormalizedURIRepo) {
+class RecommendationsCommander @Inject() (
+    curator: CuratorServiceClient,
+    db: Database,
+    nUriRepo: NormalizedURIRepo,
+    uriSummaryCommander: URISummaryCommander) {
 
   def adHocRecos(userId: Id[User], howManyMax: Int): Future[Seq[KeepInfo]] = {
-    curator.adHocRecos(userId, howManyMax).map { recos =>
+    curator.adHocRecos(userId, howManyMax).flatMap { recos =>
       db.readOnlyReplica { implicit session =>
-        recos.map { reco =>
+        Future.sequence(recos.map { reco =>
           val nUri = nUriRepo.get(reco.uriId)
-          KeepInfo(
-            title = nUri.title,
-            url = nUri.url,
-            isPrivate = false
-          )
-        }
+          uriSummaryCommander.getDefaultURISummary(nUri, waiting = false).map { uriSummary =>
+            KeepInfo(
+              title = nUri.title,
+              url = nUri.url,
+              isPrivate = false,
+              uriSummary = Some(uriSummary.copy(description = reco.explain))
+            )
+          }
+        })
       }
     }
   }
