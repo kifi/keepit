@@ -66,3 +66,14 @@ class S3LDAConfigStore(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, v
 
 class InMemoryLDAConfigStore extends VersionedInMemoryStore[String, DenseLDA, LDATopicConfigurations] with LDAConfigStore
 
+trait UserLDAStatisticsStore extends VersionedStore[String, DenseLDA, UserLDAStatistics]
+
+class S3UserLDAStatisticsStore(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val formatter: Format[UserLDAStatistics] = UserLDAStatistics.format)
+    extends S3JsonStore[VersionedStoreKey[String, DenseLDA], UserLDAStatistics]
+    with VersionedS3Store[String, DenseLDA, UserLDAStatistics] with UserLDAStatisticsStore {
+  val prefix: String = MiscPrefix.LDA.userLDAStatsFolder
+  override def keyPrefix() = prefix
+  override def idToKey(id: VersionedStoreKey[String, DenseLDA]) = "%s%s.json".format(prefix, id.toKey)
+}
+
+class InMemoryUserLDAStatisticsStore extends VersionedInMemoryStore[String, DenseLDA, UserLDAStatistics] with UserLDAStatisticsStore

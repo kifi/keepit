@@ -1,6 +1,7 @@
 package com.keepit.social
 
 import com.google.inject.{ Singleton, Provides }
+import com.keepit.social.providers.PasswordAuthentication
 import securesocial.controllers.TemplatesPlugin
 import com.keepit.common.social.{ ShoeboxTemplatesPlugin }
 import com.keepit.common.db.slick.Database
@@ -57,6 +58,7 @@ case class ProdShoeboxSecureSocialModule() extends ShoeboxSecureSocialModule {
 
   def configure {
     bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
+    bind[PasswordAuthentication].to[UserPasswordAuthentication]
   }
 
   @Singleton

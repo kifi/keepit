@@ -57,6 +57,13 @@ case class LDAInfoStoreProdModule() extends LDAInfoStoreModule with Logging {
     }
   }
 
+  @Singleton
+  @Provides
+  def userLDAStatisticsStore(amazonS3Client: AmazonS3, accessLog: AccessLog): UserLDAStatisticsStore = {
+    val bucketName = S3Bucket(current.configuration.getString(S3_CORTEX_BUCKET).get)
+    new S3UserLDAStatisticsStore(bucketName, amazonS3Client, accessLog)
+  }
+
 }
 
 case class LDAInfoStoreDevModule() extends ProdOrElseDevStoreModule(LDAInfoStoreProdModule()) with LDAInfoStoreModule with Logging {
@@ -110,6 +117,16 @@ case class LDAInfoStoreDevModule() extends ProdOrElseDevStoreModule(LDAInfoStore
         conf
       }
     }
+  }
+
+  @Singleton
+  @Provides
+  def userLDAStatisticsStore(amazonS3Client: AmazonS3, accessLog: AccessLog): UserLDAStatisticsStore = {
+    whenConfigured(S3_CORTEX_BUCKET)(
+      prodStoreModule.userLDAStatisticsStore(amazonS3Client, accessLog)
+    ) getOrElse {
+        new InMemoryUserLDAStatisticsStore()
+      }
   }
 
 }

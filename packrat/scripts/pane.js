@@ -55,7 +55,14 @@ var pane = pane || function () {  // idempotent for Chrome
   }
 
   function showPane(locator, back, redirected) {
-    locator = locator || '/messages:unread';
+    if (!locator) {
+      var deferred = Q.defer();
+      api.port.emit('pane?', function (locator) {
+        showPane(locator, back, redirected);
+        deferred.resolve();
+      });
+      return deferred.promise;
+    }
     var locatorCurr = paneHistory && paneHistory[0];
     if (locator === locatorCurr) {
       log('[showPane] already at', locator);
@@ -401,7 +408,6 @@ var pane = pane || function () {  // idempotent for Chrome
     },
     hide: hidePane,
     toggle: function (trigger, locator) {
-      locator = locator || '/messages:all';
       if (trigger === 'button' && window.guide && $('.kifi-gs').length) {
         log('[pane.toggle] ignoring, guide');
       } else if ($pane) {
@@ -410,10 +416,19 @@ var pane = pane || function () {  // idempotent for Chrome
         } else if (window.toaster && toaster.showing()) {
           toaster.hide();
           showPane(locator);
-        } else if (locator === paneHistory[0]) {
-          hidePane(trigger === 'keeper');
         } else {
-          showPane(locator);
+          var showOrHide = function (loc) {
+            if (loc === paneHistory[0]) {
+              hidePane(trigger === 'keeper');
+            } else {
+              showPane(loc);
+            }
+          };
+          if (locator) {
+            showOrHide(locator);
+          } else {
+            api.port.emit('pane?', showOrHide);
+          }
         }
       } else {
         showPane(locator);
@@ -422,20 +437,19 @@ var pane = pane || function () {  // idempotent for Chrome
     compose: function (trigger, locator, recipient) {
       log('[pane:compose]', trigger);
       api.require('scripts/compose_toaster.js', function () {
-        if (!$pane) {
-          showPane(locator);
-        }
-        if ($pane.data('state') !== 'closing') {
-          if (trigger === 'deepLink' && toaster.showing()) return;  // don't clobber form
-          toaster.toggle($pane).done(function (compose) {
-            if (compose) {
-              if (recipient) {
-                compose.prefill(recipient);
+        Q.when($pane || showPane(locator)).done(function () {
+          if ($pane.data('state') !== 'closing') {
+            if (trigger === 'deepLink' && toaster.showing()) return;  // don't clobber form
+            toaster.toggle($pane).done(function (compose) {
+              if (compose) {
+                if (recipient) {
+                  compose.prefill(recipient);
+                }
+                compose.snapSelection() || compose.focus();
               }
-              compose.snapSelection() || compose.focus();
-            }
-          });
-        }
+            });
+          }
+        });
       });
     },
     shade: function () {
