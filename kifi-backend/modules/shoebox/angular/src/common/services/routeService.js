@@ -76,7 +76,10 @@ angular.module('kifi.routeService', [])
       postDelightedAnswer: route('/user/delighted/answer'),
       cancelDelightedSurvey: route('/user/delighted/cancel'),
       userCloseAccount: route('/user/close'),
-      basicUserInfo: function (id) { return route('/user/' + id); }
+      basicUserInfo: function (id, friendCount) {
+        friendCount = friendCount ? 1 : 0;
+        return route('/user/' + id + '?friendCount=' + friendCount);
+      }
     };
   }
 ]);

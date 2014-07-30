@@ -94,13 +94,14 @@ class UserControllerTest extends Specification with ApplicationInjector {
         }
 
         val controller = inject[UserController] // setup
-        val result = controller.basicUserInfo(user.externalId)(FakeRequest().withHeaders("userId" -> "1"))
+        val result = controller.basicUserInfo(user.externalId, 1)(FakeRequest().withHeaders("userId" -> "1"))
         var body: String = contentAsString(result)
 
         contentType(result).get must beEqualTo("application/json")
         body must contain("id\":\"" + user.externalId)
         body must contain("firstName\":\"Donald")
         body must contain("lastName\":\"Trump")
+        body must contain("friendCount\":0")
       }
     }
   }

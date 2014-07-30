@@ -219,10 +219,14 @@ class UserController @Inject() (
     }
   }
 
-  def basicUserInfo(id: ExternalId[User]) = JsonAction.authenticated { implicit request =>
+  def basicUserInfo(id: ExternalId[User], friendCount: Int) = JsonAction.authenticated { implicit request =>
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id).map { user =>
-        Ok(Json.toJson(BasicUser.fromUser(user)))
+        Ok {
+          val userJson = Json.toJson(BasicUser.fromUser(user)).as[JsObject]
+          if (1 == friendCount) userJson ++ Json.obj("friendCount" -> userConnectionRepo.getConnectionCount(user.id.get))
+          else userJson
+        }
       } getOrElse {
         NotFound(Json.obj("error" -> "user not found"))
       }

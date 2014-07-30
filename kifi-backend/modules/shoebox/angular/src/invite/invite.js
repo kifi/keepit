@@ -266,11 +266,10 @@ angular.module('kifi.invite', [
   function (injectedState, routeService, userService, keepWhoService, profileService, $timeout) {
 
     function setupShowFriendRequestBanner(scope, externalId) {
-      userService.getBasicUserInfo(externalId).then(function (res) {
+      userService.getBasicUserInfo(externalId, true).then(function (res) {
         var user = res.data,
             picUrl = keepWhoService.getPicUrl(user, 200);
         scope.user = user;
-        scope.friendCount = 0; // TODO
         scope.mainImage = picUrl;
         scope.mainLabel = user.firstName + ' ' + user.lastName;
         scope.hidden = false;

@@ -8,7 +8,7 @@
     <img class="kf-add-friend-banner-image" onerror="this.src='/assets/img/ghost.200.png'" ng-src="{{mainImage}}"/>
     <span class="kf-add-friend-banner-who">
       <span class="kf-add-friend-banner-main-label" title="{{mainLabel}}">{{mainLabel}}</span>
-      <div class="kf-friend-card-count" title="{{friendCount}}" ng-show="friendCount > 0">
+      <div class="kf-friend-card-count" title="{{user.friendCount}}" ng-show="user.friendCount > 0">
         <span ng-pluralize count="friendCount" when="{'one': '1 friend ', 'other': '{} friends '}"></span>on Kifi
       </div>
       <div class="kf-friend-card-count" ng-show="friendCount < 1">Kifi user</div>

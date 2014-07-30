@@ -1,10 +1,11 @@
+/* global xit: false */
 'use strict';
 
 describe('kifi.invite', function () {
   var $injector, $rootScope, $httpBackend, routeService, $location, $compile,
     injectedState, profileService, inviteService, elem, scope;
 
-  var fakeSocialId = '29a10380-166a-11e4-8c21-0800200c9a66'
+  var fakeSocialId = '29a10380-166a-11e4-8c21-0800200c9a66';
 
   // helper to get an element's isolated scope
   // precondion: elem var has been set
@@ -15,7 +16,7 @@ describe('kifi.invite', function () {
   function compile() {
     $compile(elem)(scope);
     scope.$digest();
-  };
+  }
 
   function mockPromise() {
     return $injector.get('$q').defer().promise;
@@ -40,7 +41,8 @@ describe('kifi.invite', function () {
     beforeEach(function () {
       var html =
         '<div kf-social-invite-action class="clickable kf-add-friend-banner-action" result="result">' +
-          '<a href="javascript:" class="kf-add-friend-banner-add-button clickable-target" ng-click="invite(result, $event)"><span class="sprite sprite-tag-new-plus-icon"> </span>Add</a>' +
+          '<a href="javascript:" class="kf-add-friend-banner-add-button clickable-target"' +
+            'ng-click="invite(result, $event)"><span class="sprite sprite-tag-new-plus-icon"> </span>Add</a>' +
         '</div>';
       elem = angular.element(html);
     });
@@ -107,13 +109,16 @@ describe('kifi.invite', function () {
 
     beforeEach(function () {
       injectedState.state.friend = fakeSocialId;
-      elem = angular.element("<div kf-friend-request-banner></div>");
+      elem = angular.element('<div kf-friend-request-banner></div>');
       friendRequestUrl = routeService.friendRequest(fakeSocialId);
-      basicUserInfoUrl = routeService.basicUserInfo(fakeSocialId);
+      basicUserInfoUrl = routeService.basicUserInfo(fakeSocialId, true);
       profileUrl = routeService.profileUrl;
 
       expectGetProfile = function () {
-        var json = '{"id":"' + fakeSocialId + '","firstName":"John","lastName":"Doe","pictureName":"7kSuC.jpg","username":"johndoe","emails":[{"address":"johndoe@gmail.com","isPrimary":true,"isVerified":true,"isPendingPrimary":false}],"notAuthed":[],"experiments":["notify_user_when_contacts_join"],"uniqueKeepsClicked":5,"totalKeepsClicked":5,"clickCount":2,"rekeepCount":0,"rekeepTotalCount":0}';
+        var json = '{"id":"' + fakeSocialId + '","firstName":"John","lastName":"Doe","pictureName":"7kSuC.jpg",' +
+          '"username":"johndoe","emails":[{"address":"johndoe@gmail.com","isPrimary":true,"isVerified":true,' +
+          '"isPendingPrimary":false}],"notAuthed":[],"experiments":["notify_user_when_contacts_join"],' +
+          '"uniqueKeepsClicked":5,"totalKeepsClicked":5,"clickCount":2,"rekeepCount":0,"rekeepTotalCount":0}';
         $httpBackend.expectGET(profileUrl).respond(200, json);
       };
     });
@@ -124,7 +129,6 @@ describe('kifi.invite', function () {
         '{"id":"' + fakeSocialId + '","firstName":"John","lastName":"Doe","pictureName":"123.jpg","username":"johndoe"}');
 
       compile();
-      var scope = iscope();
       $httpBackend.flush();
 
       $httpBackend.expectPOST(friendRequestUrl).respond(200, '{}');
