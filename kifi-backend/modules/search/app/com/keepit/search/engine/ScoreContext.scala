@@ -18,6 +18,20 @@ class ScoreContext(
 
   def score(): Float = scoreExpr()(this)
 
+  def percentMatch(threshold: Float): Float = {
+    val len = scoreMax.length
+    var pct = 1.0f
+    var i = 0
+    while (i < len) { // using while for performance
+      if (scoreMax(i) <= 0.0f) {
+        pct -= matchWeight(i)
+        if (pct < threshold) return 0.0f
+      }
+      i += 1
+    }
+    pct
+  }
+
   def clear(): Unit = {
     visibility = 0
     Arrays.fill(scoreMax, 0.0f)

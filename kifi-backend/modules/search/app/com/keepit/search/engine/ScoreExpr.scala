@@ -217,34 +217,3 @@ object BoostExpr {
     if (expr.isNullExpr) NullExpr else if (booster.isNullExpr || boostStrength <= 0.0f) expr else new BoostExpr(expr, booster, boostStrength)
   }
 }
-
-// Percent Match
-object PercentMatchExpr {
-
-  class PercentMatchExpr(expr: ScoreExpr, threshold: Float) extends ScoreExpr {
-    def apply()(implicit ctx: ScoreContext): Float = {
-      var pct = 1.0f
-      var i = 0
-      val scoreMax = ctx.scoreMax
-      val matchWeight = ctx.matchWeight
-      val len = scoreMax.length
-      while (i < len) { // using while for performance
-        if (scoreMax(i) <= 0.0f) {
-          pct -= matchWeight(i)
-          if (pct < threshold) return 0.0f
-        }
-        i += 1
-      }
-      expr() * pct
-    }
-    override def toString(): String = s"PercentMatch(${expr.toString}, $threshold)"
-  }
-
-  def apply(expr: ScoreExpr, threshold: Float): ScoreExpr = {
-    if (expr.isNullExpr) NullExpr else {
-      // if threshold is non-negative, apply percent match even when threshold is zero because
-      // we still want to apply coord factor. set threshold to negative to disable it.
-      if (threshold < 0.0f || expr.isLeafExpr) expr else new PercentMatchExpr(expr, threshold)
-    }
-  }
-}

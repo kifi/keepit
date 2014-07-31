@@ -7,18 +7,28 @@ import org.apache.lucene.search.BooleanClause.Occur._
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
-class QueryEngineBuilder(query: Query, percentMatchThreshold: Float) {
+class QueryEngineBuilder(baseQuery: Query) {
 
-  private[this] var _index: Int = 0
-  private[this] var _query: Query = query
-  private[this] var _expr: ScoreExpr = buildExpr(query)
-  private[this] var _collector: ResultCollector[ScoreContext] = null
+  private[this] var _boosters: List[(Query, Float)] = Nil
+  private[this] var _exprIndex: Int = 0
 
-  def build(): QueryEngine = {
-    new QueryEngine(_expr, _query, _index, _collector)
+  def addBoosterQuery(booster: Query, boostStrength: Float): QueryEngineBuilder = {
+    _boosters = (booster, boostStrength) :: _boosters
+    this
   }
 
-  private[this] def buildExpr(query: Query): ScoreExpr = {
+  def build(): QueryEngine = {
+    _exprIndex = 0
+    val (query, expr) = _boosters.foldLeft(buildExpr(baseQuery)) {
+      case ((query, expr), (booster, boostStrength)) =>
+        val boosterExpr = MaxExpr(_exprIndex)
+        _exprIndex += 1
+        (new KBoostQuery(query, booster, boostStrength), BoostExpr(expr, boosterExpr, boostStrength))
+    }
+    new QueryEngine(expr, query, _exprIndex)
+  }
+
+  private[this] def buildExpr(query: Query): (Query, ScoreExpr) = {
     query match {
       case booleanQuery: KBooleanQuery =>
         val clauses = booleanQuery.clauses
@@ -28,48 +38,32 @@ class QueryEngineBuilder(query: Query, percentMatchThreshold: Float) {
 
         clauses.foreach { clause =>
           clause.getOccur match {
-            case MUST_NOT => filterOut += MaxExpr(_index)
+            case MUST_NOT => filterOut += MaxExpr(_exprIndex)
             case occur =>
               clause.getQuery match {
-                case q: KFilterQuery => required += MaxExpr(_index)
-                case _ => (if (occur == MUST) required else optional) += MaxWithTieBreakerExpr(_index, 0.5f)
+                case q: KFilterQuery => required += MaxExpr(_exprIndex)
+                case _ => (if (occur == MUST) required else optional) += MaxWithTieBreakerExpr(_exprIndex, 0.5f)
               }
           }
-          _index += 1
+          _exprIndex += 1
         }
 
         // put all together and build a score expression
-        FilterOutExpr(
-          expr = PercentMatchExpr(
-            expr = BooleanExpr(
-              optional = DisjunctiveSumExpr(optional),
-              required = ConjunctiveSumExpr(required)
-            ),
-            threshold = percentMatchThreshold
+        val expr = FilterOutExpr(
+          expr = BooleanExpr(
+            optional = DisjunctiveSumExpr(optional),
+            required = ConjunctiveSumExpr(required)
           ),
           filter = ExistsExpr(filterOut)
         )
 
+        (baseQuery, expr)
+
       case textQuery: KTextQuery =>
-        MaxWithTieBreakerExpr(0, 0.5f)
+        (baseQuery, MaxWithTieBreakerExpr(0, 0.5f))
 
       case q =>
-        _query = new KWrapperQuery(q)
-        MaxWithTieBreakerExpr(0, 0.5f)
+        (new KWrapperQuery(q), MaxWithTieBreakerExpr(0, 0.5f))
     }
   }
-
-  def addBooster(booster: Query, boostStrength: Float): QueryEngineBuilder = {
-    _query = new KBoostQuery(_query, booster, boostStrength)
-    val boosterExpr = MaxExpr(_index)
-    _index += 1
-    _expr = BoostExpr(_expr, boosterExpr, boostStrength)
-    this
-  }
-
-  def setResultCollector(collector: ResultCollector[ScoreContext]): QueryEngineBuilder = {
-    _collector = collector
-    this
-  }
 }
-
