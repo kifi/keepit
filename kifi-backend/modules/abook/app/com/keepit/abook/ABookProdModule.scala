@@ -13,5 +13,5 @@ case class ABookProdModule() extends ABookModule(
   contactsUpdaterPluginModule = ProdABookImporterPluginModule(),
   sqsModule = ProdSimpleQueueModule()
 ) with CommonProdModule {
-  val discoveryModule = new ProdDiscoveryModule(ServiceType.ABOOK, ServiceType.SHOEBOX :: Nil)
+  val discoveryModule = new ProdDiscoveryModule(ServiceType.ABOOK, ServiceType.SHOEBOX :: ServiceType.GRAPH :: Nil)
 }
