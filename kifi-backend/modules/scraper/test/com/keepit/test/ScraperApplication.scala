@@ -12,23 +12,20 @@ import com.keepit.inject.{ TestFortyTwoModule, InjectorProvider, ApplicationInje
 import play.api.Mode
 
 class ScraperApplication(overridingModules: Module*)(implicit path: File = new File("./modules/scraper/"))
-  extends TestApplicationFromGlobal(path, new TestGlobal(
-    Seq(
-      FakeHttpClientModule(),
-      FakeAirbrakeModule(),
-      FakeMemoryUsageModule(),
-      FakeClockModule(),
-      FakeHealthcheckModule(),
-      TestFortyTwoModule(),
-      FakeDiscoveryModule(),
-      ScraperCacheModule(HashMapMemoryCacheModule())
-    ), overridingModules
+  extends TestApplication(path, overridingModules, Seq(
+    FakeHttpClientModule(),
+    FakeAirbrakeModule(),
+    FakeMemoryUsageModule(),
+    FakeClockModule(),
+    FakeHealthcheckModule(),
+    TestFortyTwoModule(),
+    FakeDiscoveryModule(),
+    ScraperCacheModule(HashMapMemoryCacheModule())
   ))
 
 trait ScraperApplicationInjector extends ApplicationInjector with ScraperInjectionHelpers
 
-trait ScraperTestInjector extends EmptyInjector with ScraperInjectionHelpers {
-  val mode = Mode.Test
+trait ScraperTestInjector extends TestInjector with ScraperInjectionHelpers {
   val module = Modules.combine(
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),

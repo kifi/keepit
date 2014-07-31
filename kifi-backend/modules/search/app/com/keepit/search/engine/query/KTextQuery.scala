@@ -16,9 +16,13 @@ import scala.collection.mutable.ArrayBuffer
 import scala.math._
 import collection.JavaConversions._
 
+object KTextQuery {
+  val tieBreakerMultiplier = 0.5f
+}
+
 class KTextQuery extends Query with Logging {
 
-  private var mainQuery: Query = new DisjunctionMaxQuery(0.5f)
+  private var mainQuery: Query = new DisjunctionMaxQuery(KTextQuery.tieBreakerMultiplier)
   private var semanticVectorQuery: Query = new DisjunctionMaxQuery(0.0f)
 
   def getSemanticVectorQuery = semanticVectorQuery
@@ -70,7 +74,7 @@ class KTextQuery extends Query with Logging {
         disjunct.add(query)
         disjunct
       case _ =>
-        log.error("TextQuery: DisjunctionMaxQuery match failed")
+        log.error("KTextQuery: DisjunctionMaxQuery match failed")
         throw new Exception("Failed to add semanticVectorQuery")
     }
   }

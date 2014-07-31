@@ -2,7 +2,7 @@ package com.keepit.search.engine.parser
 
 import com.keepit.classify.Domain
 import com.keepit.search.Lang
-import com.keepit.search.engine.query.{ KSiteQuery, KMediaQuery, KTextQuery }
+import com.keepit.search.engine.query.{ KBooleanQuery, KSiteQuery, KMediaQuery, KTextQuery }
 import com.keepit.search.index.Analyzer
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.parser.{ QueryParser, QueryParserException, QuerySpec }
@@ -170,6 +170,16 @@ trait KQueryExpansion extends QueryParser {
     if (concatBoost > 0.0f && clauses.size <= 42) KConcatQueryAdder.addConcatQueries(queries, concatBoost)
 
     getBooleanQuery(clauses)
+  }
+
+  override protected def getBooleanQuery(clauses: ArrayBuffer[BooleanClause]): Option[Query] = {
+    if (clauses.isEmpty) {
+      None // all clause words were filtered away by the analyzer.
+    } else {
+      val query = new KBooleanQuery
+      clauses.foreach { clause => query.add(clause) }
+      Some(query)
+    }
   }
 }
 

@@ -25,36 +25,33 @@ import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
 import com.keepit.common.aws.AwsModule
 
 class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
-  extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
-    Seq(
-      TestABookServiceClientModule(),
-      TestHeimdalServiceClientModule(),
-      FakeElizaServiceClientModule(),
-      FakeAirbrakeModule(),
-      FakeMemoryUsageModule(),
-      FakeClockModule(),
-      FakeHealthcheckModule(),
-      TestFortyTwoModule(),
-      FakeDiscoveryModule(),
-      TestSlickModule(TestDbInfo.dbInfo),
-      ShoeboxCacheModule(HashMapMemoryCacheModule()),
-      TestNormalizationServiceModule(),
-      FakeActionAuthenticatorModule(),
-      AbuseControlModule(),
-      TestSchedulerModule(),
-      FakeKeepImportsModule(),
-      FakeSimpleQueueModule(),
-      FakeNormalizationUpdateJobQueueModule(),
-      AwsModule(),
-      FakeShoeboxRepoChangeListenerModule(),
-      TestCryptoModule()
-    ), overridingModules
+  extends DbTestApplication(path, overridingModules, Seq(
+    TestABookServiceClientModule(),
+    TestHeimdalServiceClientModule(),
+    FakeElizaServiceClientModule(),
+    FakeAirbrakeModule(),
+    FakeMemoryUsageModule(),
+    FakeClockModule(),
+    FakeHealthcheckModule(),
+    TestFortyTwoModule(),
+    FakeDiscoveryModule(),
+    TestSlickModule(TestDbInfo.dbInfo),
+    ShoeboxCacheModule(HashMapMemoryCacheModule()),
+    TestNormalizationServiceModule(),
+    FakeActionAuthenticatorModule(),
+    AbuseControlModule(),
+    TestSchedulerModule(),
+    FakeKeepImportsModule(),
+    FakeSimpleQueueModule(),
+    FakeNormalizationUpdateJobQueueModule(),
+    AwsModule(),
+    FakeShoeboxRepoChangeListenerModule(),
+    TestCryptoModule()
   ))
 
 trait ShoeboxApplicationInjector extends ApplicationInjector with DbInjectionHelper with ShoeboxInjectionHelpers
 
-trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
-  val mode = Mode.Test
+trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
   val module = Modules.combine(
     TestHeimdalServiceClientModule(),
     FakeElizaServiceClientModule(),

@@ -14,7 +14,7 @@ import com.keepit.model.NormalizedURIStates._
 class FeedMetaInfoProviderTest extends Specification with ApplicationInjector {
   "FeedMetaInfoProvider" should {
     "work" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val uris = client.saveURIs(
           NormalizedURI.withHash(title = Some("1"), normalizedUrl = "http://www.keepit.com/login", state = UNSCRAPABLE),
