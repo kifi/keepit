@@ -95,8 +95,8 @@ class LDAController @Inject() (
   }
 
   def dumpScaledUserInterest(userId: Id[User]) = Action { request =>
-   val vec = lda.dumpScaledUserInterest(userId)
-   Ok(Json.toJson(vec))
+    val vec = lda.dumpScaledUserInterest(userId)
+    Ok(Json.toJson(vec))
   }
 
 }
