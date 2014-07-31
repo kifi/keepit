@@ -6,25 +6,26 @@ import math._
 class MatrixUtilsTest extends Specification {
   "matrix utils" should {
     "correctly compute min and max" in {
-      val data = Seq(Array(1f, 2f, 3f), Array(4f, 5f, 6f), Array(7f, 8f, 9f), Array(10f, 11f, 12f))
+      val data = Seq(Array(1.0, 2.0, 3.0), Array(4.0, 5.0, 6.0), Array(7.0, 8.0, 9.0), Array(10.0, 11.0, 12.0))
       val (min, max) = MatrixUtils.getMinAndMax(data)
-      min === Array(1f, 2f, 3f)
-      max === Array(10f, 11f, 12f)
+      min === Array(1.0, 2.0, 3.0)
+      max === Array(10.0, 11.0, 12.0)
     }
   }
 
   "correctly computes mean and std" in {
-    val data = Seq(Array(1f, -2f), Array(3f, 2f))
+    val data = Seq(Array(1.0, -2.0), Array(3.0, 2.0))
     val (mean, std) = MatrixUtils.getMeanAndStd(data)
-    mean === Array(2f, 0f)
-    std === Array(sqrt(2).toFloat, sqrt(8).toFloat)
+    mean === Array(2.0, 0.0)
+    (abs(std(0) - sqrt(2.0)) < 1e-4) === true
+    (abs(std(1) - sqrt(8.0)) < 1e-4) === true
   }
 
   "compute cosine similarity" in {
-    val v = Array(0.0002f, -0.00035f, 0.0009f)
-    val w = Array(0.0001f, 0.00023f, 0.000045f)
+    val v = Array(0.0002, -0.00035, 0.0009)
+    val w = Array(0.0001, 0.00023, 0.000045)
     val s = MatrixUtils.cosineDistance(v, w)
-    val expect = -0.079593f
-    (abs(s - expect) < 1e-3) === true
+    val expect = -0.079593
+    (abs(s - expect) < 1e-4) === true
   }
 }

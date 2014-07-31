@@ -181,6 +181,8 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
     new InMemoryConfigStore()
   }
 
+  @Provides @Singleton
+  def fakeZooKeeperClient: ZooKeeperClient = new FakeZooKeeperClient()
 }
 
 case class DevDiscoveryModule() extends LocalDiscoveryModule(ServiceType.DEV_MODE) {

@@ -12,7 +12,6 @@ var rename = require('gulp-rename');
 var cssmin = require('gulp-cssmin');
 var nib = require('nib');
 var lazypipe = require('lazypipe');
-var plumber = require('gulp-plumber');
 var livereload = require('gulp-livereload');
 var es = require('event-stream');
 var cache = require('gulp-cached');
@@ -20,7 +19,6 @@ var remember = require('gulp-remember');
 var fs = require('fs');
 var ngHtml2Js = require('gulp-ng-html2js');
 var minifyHtml = require('gulp-minify-html');
-var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
 var gulpif = require('gulp-if');
 var spritesmith = require('gulp.spritesmith');
@@ -30,6 +28,12 @@ var modRewrite = require('connect-modrewrite');
 var gutil = require('gulp-util');
 var karma = require('karma').server;
 var protractor = require('gulp-protractor').protractor;
+var revall = require('gulp-rev-all');
+var awspublish = require('gulp-awspublish');
+var parallelize = require('concurrent-transform');
+var through = require('through');
+var order = require('gulp-order');
+var merge = require('merge');
 
 /********************************************************
   Globals
@@ -37,9 +41,22 @@ var protractor = require('gulp-protractor').protractor;
 
 var outDir = 'dist';
 var tmpDir = 'tmp';
+var cdnDir = 'cdn';
 var pkgName = JSON.parse(fs.readFileSync('package.json')).name;
 var banner = fs.readFileSync('banner.txt').toString();
-var isRelease = false;
+var isProdMode = false;
+
+var assetSrc = ['index.html', 'dist/**', 'img/**', '!img/sprites/**'];
+
+// awspublish
+var aws = {
+  'key': 'AKIAJZC6TMAWKQYEGBIQ',
+  'secret': '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',
+  'bucket': 'assets-b-prod',
+  'region': 'us-west-1',
+  'distributionId': null
+};
+var publisher = awspublish.create(aws);
 
 /********************************************************
   Paths
@@ -166,12 +183,13 @@ function startDevServer(port) {
   });
 }
 
-function startProdServer(port) {
-  connect.server({
-    port: +port || 8080,
+function startLocalProdServer(opts) {
+  opts = merge({
+    port: 8080,
     host: 'dev.ezkeep.com',
     fallback: 'index.html'
-  });
+  }, opts)
+  connect.server(opts);
 }
 
 /********************************************************
@@ -184,7 +202,7 @@ gulp.task('clean-tmp', function () {
 });
 
 gulp.task('clean', function () {
-  return gulp.src([outDir, tmpDir], {read: false})
+  return gulp.src([outDir, tmpDir, cdnDir, 'index_cdn.html'], {read: false})
     .pipe(rimraf());
 });
 
@@ -251,9 +269,10 @@ gulp.task('styles', ['sprite'], function () {
     .pipe(cache(stylesCache))
     .pipe(stylus({use: [nib()], import: ['nib', __dirname + '/src/common/build-css/*.styl']}))
     .pipe(remember(stylesCache))
+    .pipe(order())
     .pipe(concat(pkgName + '.css'))
-    .pipe(gulpif(!isRelease, gulp.dest(outDir)))
-    .pipe(gulpif(isRelease, makeMinCss()));
+    .pipe(gulpif(!isProdMode, gulp.dest(outDir)))
+    .pipe(gulpif(isProdMode, makeMinCss()));
 });
 
 gulp.task('jshint', function () {
@@ -267,7 +286,7 @@ gulp.task('jshint', function () {
 
   return es.merge(srcHint, testHint)
     .pipe(jshint.reporter('jshint-stylish'))
-    .pipe(gulpif(isRelease, jshint.reporter('fail')));
+    .pipe(gulpif(isProdMode, jshint.reporter('fail')));
 });
 
 gulp.task('scripts', ['jshint'], function () {
@@ -281,9 +300,10 @@ gulp.task('scripts', ['jshint'], function () {
   return es.merge(html2js, scripts)
     .pipe(remember(htmlCache))
     .pipe(remember(jsCache))
+    .pipe(order())
     .pipe(concat(pkgName + '.js'))
-    .pipe(gulpif(!isRelease, gulp.dest(outDir)))
-    .pipe(gulpif(isRelease, makeMinJs()));
+    .pipe(gulpif(!isProdMode, gulp.dest(outDir)))
+    .pipe(gulpif(isProdMode, makeMinJs()));
 });
 
 gulp.task('lib-styles', function () {
@@ -325,6 +345,7 @@ gulp.task('watch', ['build-dev'], function () {
 gulp.task('templates', function () {
   return gulp.src(htmlFiles)
     .pipe(makeTemplates())
+    .pipe(order())
     .pipe(concat(pkgName + '-tpl.js'))
     .pipe(gulp.dest(tmpDir));
 })
@@ -348,26 +369,91 @@ gulp.task('karma', ['templates'], function (done) {
   }, done);
 });
 
-gulp.task('protractor', ['build-release'], function () {
-  startProdServer(9080);
-
+function runProtractor() {
   return gulp.src(['test/e2e/**/*.js'])
     .pipe(protractor({
       configFile: "test/protractor.conf.js"
     }))
     .pipe(es.wait(connect.serverClose));
+}
+
+gulp.task('protractor', ['assets:local-prod'], function (done) {
+  startLocalProdServer({
+    port: 9080,
+    fallback: 'tmp/index.html',
+    middleware: function () {
+      return [modRewrite([
+        '^(/(dist|img)/.*) /tmp$1 [L]',
+        '^(?!/(dist|img)) /tmp/index.html'
+      ])];
+    }
+  });
+
+  return runProtractor();
+});
+
+gulp.task('protractor:release', ['assets:release'], function () {
+  startLocalProdServer({
+    port: 9080,
+    fallback: 'index_cdn.html',
+    middleware: function () {
+      return [modRewrite(['^(?!/(dist|img)) /index_cdn.html'])];
+    }
+  });
+
+  return runProtractor();
 });
 
 gulp.task('test', function (done) {
   runSequence(['karma', 'protractor'], 'clean-tmp', done);
 });
 
+function compileAssetRevs(opts, dest) {
+  opts = merge({ ignore: [ /^\/favicon.ico$/g, /^sprites\//g ], hashLength: 7 }, opts || {});
+  dest = dest || 'tmp';
+  return gulp.src(assetSrc, { base: '.' })
+    .pipe(revall(opts))
+    .pipe(gulp.dest(dest));
+}
+
+gulp.task('assets:local-prod:compile', ['build-release'], function () {
+  return compileAssetRevs();
+});
+
+gulp.task('assets:release:compile', ['build-release'], function () {
+  return compileAssetRevs({ prefix: '//d1dwdv9wd966qu.cloudfront.net/' }, cdnDir);
+});
+
+gulp.task('assets:local-prod:update_index', ['assets:local-prod:compile'], function () {
+  return gulp.src('tmp/index.???????.html')
+    .pipe(rename('index.html'))
+    .pipe(gulp.dest('tmp/'));
+});
+
+gulp.task('assets:release:update_index', ['assets:release:compile'], function () {
+  return gulp.src(cdnDir + '/index.???????.html')
+    .pipe(rename('index_cdn.html'))
+    .pipe(gulp.dest('./'));
+});
+
+gulp.task('assets:release:publish', ['assets:release:compile', 'assets:release:update_index'], function (done) {
+  return gulp.src([cdnDir + '/**', '!' + cdnDir + '/index.???????.html'])
+    .pipe(awspublish.gzip())
+    .pipe(parallelize(publisher.publish({'Cache-Control': 'max-age=315360000, no-transform, public'}), 50))
+    .pipe(publisher.cache())
+    .pipe(awspublish.reporter());
+});
+
+gulp.task('assets:local-prod', ['build-release', 'assets:local-prod:compile', 'assets:local-prod:update_index']);
+
+gulp.task('assets:release', ['assets:release:publish']);
+
 gulp.task('build-dev', function (done) {
   runSequence('clean', ['styles', 'scripts', 'lib-styles', 'lib-scripts'], done);
 });
 
 gulp.task('build-release', function (done) {
-  isRelease = true;
+  isProdMode = true;
   runSequence('clean', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], done);
 });
 
@@ -376,10 +462,10 @@ gulp.task('build-release', function (done) {
 gulp.task('server-dev', ['build-dev'], startDevServer);
 
 // Use this task to test the production code locally
-gulp.task('prod', ['build-release'], startProdServer);
+gulp.task('local-prod', ['build-release'], startLocalProdServer);
 
 // This task is the one that should be run by the build script
-gulp.task('release', ['build-release', 'karma', 'protractor']);
+gulp.task('release', ['build-release', 'karma', 'protractor:release']);
 
 // Use this task for normal development
 gulp.task('default', ['watch', 'server-dev']);
