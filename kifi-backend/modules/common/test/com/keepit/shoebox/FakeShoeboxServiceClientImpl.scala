@@ -505,8 +505,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(Seq.empty[ScrapeRequest])
   }
 
-  def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo] = ???
-
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
 
   def savePageInfo(pageInfo: PageInfo): Future[Unit] = ???

@@ -87,7 +87,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
   def kifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit]
   def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]]
-  def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo]
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]]
   def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean]
   def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean]
@@ -574,12 +573,6 @@ class ShoeboxServiceClientImpl @Inject() (
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
     call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
       r.json.as[Seq[ScrapeRequest]]
-    }
-  }
-
-  def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo] = {
-    call(Shoebox.internal.getScrapeInfo(), Json.toJson(uri)).map { r =>
-      r.json.as[ScrapeInfo]
     }
   }
 
