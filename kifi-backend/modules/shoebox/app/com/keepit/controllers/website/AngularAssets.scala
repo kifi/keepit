@@ -2,19 +2,19 @@ package com.keepit.controllers.website
 
 import java.io.StringWriter
 
+import com.keepit.common.concurrent.ExecutionContext.immediate
+import com.keepit.common.logging.Logging
 import controllers.AssetsBuilder
 import org.apache.commons.io.IOUtils
-import play.api.mvc.{ AnyContent, Action, Controller }
-import play.api.{ Mode, Play }
-import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.common.logging.Logging
+import play.api.libs.iteratee.Enumerator
+import play.api.mvc.Controller
+import play.api.{ Mode, Play }
 
-import scala.concurrent.{ Promise, ExecutionContext, Future }
-import scala.util.{ Success, Try }
+import scala.concurrent.Future
 
 object AngularDistAssets extends AssetsBuilder with Controller with Logging {
+
   private def index() = {
     val fileStream = Play.resourceAsStream("angular/index_cdn.html").orElse(Play.resourceAsStream("angular/index.html")).get
     val writer = new StringWriter()
@@ -38,7 +38,7 @@ object AngularDistAssets extends AssetsBuilder with Controller with Logging {
   private def reactiveEnumerator(futureSeq: Seq[Future[String]]) = {
     // Returns successful results of Futures in the order they are completed, reactively
     Enumerator.interleave(futureSeq.map { future =>
-      Enumerator.flatten(future.map(r => Enumerator(r)))
+      Enumerator.flatten(future.map(r => Enumerator(r))(immediate))
     })
   }
 
