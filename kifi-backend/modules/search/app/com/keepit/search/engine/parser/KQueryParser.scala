@@ -69,7 +69,6 @@ class KQueryParser(
           val proxQ = new DisjunctionMaxQuery(0.0f)
           proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold, proximityPowerFactor))
           proxQ.add(ProximityQuery(proxTermsFor("ts"), Set(), 0f, proximityGapPanelty, proximityThreshold, 1f)) // disable phrase scoring for title. penalty could be too big
-          proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), Set(), 0f, proximityGapPanelty, proximityThreshold, 1f))
           engBuilder.addBoosterQuery(proxQ, proximityBoost)
         } else if (numTextQueries == 1 && phTerms.nonEmpty && homePageBoost > 0.0f) {
           val homePageQuery = if (phTerms.size == 1) {

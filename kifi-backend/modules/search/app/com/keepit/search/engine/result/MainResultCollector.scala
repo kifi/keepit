@@ -26,18 +26,17 @@ class MainResultCollector(clickBoosts: ResultClickBoosts, friendsUris: LongArray
         // compute clickBoost and score
         var clickBoost = 0.0f
         var score = 0.0f
-        if (percentMatch < percentMatchThreshold) {
-          clickBoost = clickBoosts(id)
-          // if this is a clicked hit (clickBoost > 0.0f), ignore the threshold
-          if (clickBoost > 0.0f) score = ctx.score() * percentMatch // else score remains 0.0f
-        } else {
+
+        if (percentMatch >= percentMatchThreshold) {
           score = ctx.score() * percentMatch
-          // compute clickBoost only when score > 0.0f (percent match is above the threshold)
-          if (score > 0.0f) clickBoost = clickBoosts(id)
+          clickBoost = clickBoosts(id)
+        } else {
+          // below the threshold, but we save this if this is a clicked hit (clickBoost > 0.0f)
+          clickBoost = clickBoosts(id)
+          if (clickBoost > 1.0f) score = ctx.score() * percentMatch // else score remains 0.0f
         }
 
         if (score > 0.0f) {
-          val clickBoost = clickBoosts(id)
           if ((visibility & Visibility.MEMBER) != 0) {
             myHits.insert(id, score, clickBoost, true, false)
           } else if (friendsUris.findIndex(id) >= 0) {
