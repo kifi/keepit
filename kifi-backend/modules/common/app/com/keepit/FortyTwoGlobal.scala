@@ -1,7 +1,6 @@
 package com.keepit
 
 import java.io.File
-import akka.actor.ActorSystem
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
@@ -34,7 +33,7 @@ import java.util.concurrent.atomic.AtomicLong
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(new LoggingFilter(), new StatsdFilter()) with Logging with EmptyInjector {
 
-  //used to identify instance of applciation. used to debug intest mode
+  //used to identify instance of application. used to debug in test mode
   val globalId: ExternalId[FortyTwoGlobal] = ExternalId()
   log.debug(s"########## starting FortyTwoGlobal $globalId")
 
@@ -106,7 +105,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
       statsd.incrementOne("deploys", ALWAYS)
       injector.instance[AirbrakeNotifier].reportDeployment()
-      injector.instance[HealthcheckPlugin].reportStart()
       injector.instance[HealthcheckPlugin].warmUp(injector.instance[BenchmarkRunner])
     }
 
@@ -209,7 +207,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
           serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
           println(s"[${currentDateTime.toStandardTimeString}] [announceStopping] let clients and ELB know we're stopping")
           Thread.sleep(18000)
-          injector.instance[HealthcheckPlugin].reportStop()
           println(s"[${currentDateTime.toStandardTimeString}] [announceStopping] moving on")
         } catch {
           case t: Throwable => println(s"[${currentDateTime.toStandardTimeString}] error announcing service stop via explicit shutdown hook: $t")

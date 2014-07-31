@@ -24,15 +24,7 @@ angular.module('kifi.friends.rightColFriendsView', [])
           return friend.pictureName !== '0.jpg';
         };
         actualFriends.sort(function (friendA, friendB) {
-          if (hasPicture(friendA) && !hasPicture(friendB)) {
-            return -1;
-          }
-
-          if (!hasPicture(friendA) && hasPicture(friendB)) {
-            return 1;
-          }
-
-          return 0;
+          return -hasPicture(friendA) + hasPicture(friendB);
         });
 
         scope.friends = actualFriends;

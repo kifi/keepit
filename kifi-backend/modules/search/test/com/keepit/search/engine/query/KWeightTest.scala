@@ -13,9 +13,8 @@ import scala.collection.mutable.ArrayBuffer
 class KWeightTest extends Specification {
 
   private val indexer = new TstIndexer(new VolatileIndexDirectory)
-  Array("abc def", "abc def", "abc def", "abc ghi", "abc jkl").zip(Array("", "", "", "", "")).zipWithIndex.map {
-    case ((text, fallbackText), id) =>
-      indexer.index(Id[Tst](id), text, fallbackText)
+  Array("abc def", "abc def", "abc def", "abc ghi", "abc jkl").zipWithIndex.foreach {
+    case (text, id) => indexer.index(Id[Tst](id), text, "")
   }
   private val searcher = indexer.getSearcher
 
