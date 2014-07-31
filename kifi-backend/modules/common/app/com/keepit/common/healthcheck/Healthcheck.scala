@@ -163,8 +163,6 @@ trait HealthcheckPlugin {
   def errors(): Seq[AirbrakeError]
   def resetErrorCount(): Unit
   def addError(error: AirbrakeError): AirbrakeError
-  def reportStart(): ElectronicMail
-  def reportStop(): ElectronicMail
   def reportErrors(): Unit
   var isWarm = false
   def warmUp(benchmarkRunner: BenchmarkRunner): Unit = { isWarm = true }
@@ -202,31 +200,6 @@ class HealthcheckPluginImpl @Inject() (
     log.error(s"Healthcheck logged error: $error")
     actor.ref ! error
     error
-  }
-
-  override def reportStart() = {
-    val subject = s"Service ${services.currentService} started"
-    val message = Html(s"Service version ${services.currentVersion} started at $currentDateTime on $host. Service compiled at ${services.compilationTime}")
-    val email = ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
-      subject = subject, htmlBody = message.body,
-      category = NotificationCategory.System.HEALTHCHECK)
-
-    if (!isCanary) {
-      actor.ref ! email
-    }
-    email
-  }
-
-  override def reportStop() = {
-    val subject = s"Service ${services.currentService} stopped"
-    val message = Html(s"Service version ${services.currentVersion} stopped at $currentDateTime on $host. Service compiled at ${services.compilationTime}")
-    val email = ElectronicMail(from = SystemEmailAddress.ENG, to = List(SystemEmailAddress.ENG),
-      subject = subject, htmlBody = message.body,
-      category = NotificationCategory.System.HEALTHCHECK)
-    if (!isCanary) {
-      actor.ref ! email
-    }
-    email
   }
 
   val sleep = healthCheckConf.startupSleep
