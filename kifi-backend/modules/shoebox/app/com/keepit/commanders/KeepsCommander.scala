@@ -630,7 +630,7 @@ class KeepsCommander @Inject() (
       (discMap, rkMap)
     }
     uriIds.toSeq.map { uriId =>
-      HelpRankInfo(uriId, discMap.get(uriId).getOrElse(0), rkMap.get(uriId).getOrElse(0))
+      HelpRankInfo(uriId, discMap.getOrElse(uriId, 0), rkMap.getOrElse(uriId, 0))
     }
   }
 
