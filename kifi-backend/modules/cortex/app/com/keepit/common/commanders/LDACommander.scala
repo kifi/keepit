@@ -186,4 +186,9 @@ class LDACommander @Inject() (
     idsAndScores.sortBy(-1 * _._2).take(topK + 1).filter(_._1 != userId).unzip
   }
 
+  def dumpScaledUserInterest(userId: Id[User]): Option[Array[Float]] = {
+    val vecOpt = db.readOnlyReplica { implicit s => userTopicRepo.getTopicMeanByUser(userId, wordRep.version) }
+    vecOpt.map{ vec =>  val statOpt = getUserLDAStats(wordRep.version); scale(vec.mean, statOpt) }
+  }
+
 }
