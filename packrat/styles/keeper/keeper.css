@@ -38,22 +38,6 @@
 .kifi-pane>.kifi-keeper {
   margin: 0;
 }
-.kifi-keeper-x {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  height: 24px;
-  width: 0;
-  background-position: 8px 15px;
-  background-size: auto 13px;
-  background-repeat: no-repeat;
-  overflow: hidden;
-  cursor: pointer;
-  /*transition: width .25s ease-in;*/
-}
-html[kifi-with-pane] .kifi-keeper-x {
-  /*width: 24px;*/
-}
 
 .kifi-tip {
   position: fixed;
@@ -111,10 +95,6 @@ html[kifi-with-pane] .kifi-keeper-x {
   transition: opacity ease-in, transform ease-out;
   transition-duration: 50ms;
 }
-.kifi-keeper-x-tip::before {
-  left: auto;
-  right: 10px;
-}
 
 .kifi-keep-card {
   position: absolute;
@@ -130,14 +110,16 @@ html[kifi-with-pane] .kifi-keeper-x {
 .kifi-hidden>.kifi-keep-card {
   width: 49px;
 }
-html[kifi-pane-parent] .kifi-keep-card {
-/*
-  left: 132px;
+[kifi-pane-parent] .kifi-keep-card {
+  left: 168px;
   right: auto;
-*/
+  transition: width .25s ease-in-out;
 }
-html[kifi-with-pane] .kifi-keep-card {
-  /*width: 146px;*/
+[kifi-with-pane] .kifi-keep-card {
+  width: 124px;
+}
+.kifi-pane .kifi-keep-card {
+  left: 153px;
 }
 .kifi-keep-card,
 .kifi-dock-btn { /* width for .kifi-keep-card only */
@@ -210,6 +192,9 @@ html[kifi-with-pane] .kifi-keep-card {
 .kifi-keep-btn.kifi-hoverless:hover,
 .kifi-keep-btn.kifi-hoverless:active {
   background: linear-gradient(#fff, #f3f3f3);
+}
+.kifi-keep-btn {
+  padding-left: 16px;
 }
 .kifi-keep-btn:hover {
   color: #3f9f65;
@@ -624,7 +609,6 @@ html[kifi-with-pane] .kifi-keep-card {
 .kifi-hidden>.kifi-dock-btn {
   transition-delay: 0;
 }
-.kifi-keeper-x:active,
 .kifi-dock-btn:active,
 .kifi-dock-btn.kifi-at {
   /*background-color: blue;*/
