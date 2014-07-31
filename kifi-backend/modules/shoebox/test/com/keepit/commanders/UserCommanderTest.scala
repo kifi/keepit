@@ -2,12 +2,13 @@ package com.keepit.commanders
 
 import com.keepit.common.crypto.TestCryptoModule
 import com.keepit.shoebox.FakeKeepImportsModule
+import com.keepit.common.db.Id
 import org.specs2.mutable.Specification
 
-import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplicationInjector, ShoeboxApplication }
+import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication }
 import com.keepit.model._
 import com.keepit.common.mail._
-import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
@@ -18,6 +19,8 @@ import play.api.test.Helpers.running
 import com.google.inject.Injector
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
+import scala.concurrent.duration.Duration
+import scala.concurrent.Await
 
 class UserCommanderTest extends Specification with ShoeboxTestInjector {
 
@@ -229,6 +232,60 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         userCommander.setUsername(user3.id.get, Username("yes"), false) === Left("invalid_username")
         userCommander.setUsername(user3.id.get, Username("aes.corp"), false) === Left("invalid_username")
 
+      }
+    }
+
+    "tellContactsAboutNewUser" should {
+      // await wrapper about the commander method call
+      def tellContactsAboutNewUser(user: User)(implicit injector: Injector): Set[Id[User]] =
+        Await.result(inject[UserCommander].tellUsersWithContactOfNewUserImmediate(user).get, Duration(5, "seconds"))
+
+      "send notifications to all users connected to a user's email" in withDb(modules: _*) { implicit injector =>
+        val (user1, user2, user3) = setup()
+        val outbox = inject[FakeOutbox]
+        val user4 = db.readWrite { implicit rw =>
+          inject[UserRepo].save(User(firstName = "Jane", lastName = "Doe", primaryEmail = Some(EmailAddress("jane@doe.com"))))
+        }
+
+        // set service client response
+        inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl].contactsConnectedToEmailAddress =
+          Set(user2, user3, user4).map(_.id.get)
+
+        val userExpCommander = inject[LocalUserExperimentCommander]
+        userExpCommander.addExperimentForUser(user4.id.get, ExperimentType.NOTIFY_USER_WHEN_CONTACTS_JOIN)
+
+        outbox.size === 0
+        tellContactsAboutNewUser(user1) === Set(user4.id.get)
+        outbox.size === 1
+
+        // test the personalized parts of the email
+        val mail = outbox(0)
+        mail.subject must beEqualTo("Homer Simpson joined Kifi. Want to connect?")
+
+        val htmlBody = mail.htmlBody.value
+        htmlBody must contain("Hey Jane")
+        htmlBody must contain("welcome Homer and add him")
+        htmlBody must contain("Add Homer")
+        htmlBody must contain("/invite?friend=" + user1.externalId)
+
+        val textBody = mail.textBody.get.value
+        textBody must contain("Hey Jane")
+        textBody must contain("welcome Homer and add him")
+        textBody must contain("/invite?friend=" + user1.externalId)
+
+        NotificationCategory.fromElectronicMailCategory(mail.category) must beEqualTo(NotificationCategory.User.CONTACT_JOINED)
+      }
+
+      "do nothing if no users are connected to a user's email" in withDb(modules: _*) { implicit injector =>
+        val (user1, user2, user3) = setup()
+        val outbox = inject[FakeOutbox]
+
+        // set service client response
+        inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl].contactsConnectedToEmailAddress = Set.empty
+
+        outbox.size === 0
+        tellContactsAboutNewUser(user1) === Set.empty
+        outbox.size === 0
       }
     }
   }
