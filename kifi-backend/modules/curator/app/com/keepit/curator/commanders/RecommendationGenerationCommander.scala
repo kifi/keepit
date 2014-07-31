@@ -17,7 +17,7 @@ class RecommendationGenerationCommander @Inject() (
     scoringHelper: UriScoringHelper) {
 
   def getAdHocRecommendations(userId: Id[User], howManyMax: Int): Future[Seq[Recommendation]] = {
-    val seedsFuture = seedCommander.getTopItems(userId, Math.max(howManyMax, 150))
+    val seedsFuture = seedCommander.getTopItems(userId, Math.max(howManyMax, 100))
     val scoredItemsFuture = seedsFuture.flatMap { seeds => scoringHelper(seeds) }
     scoredItemsFuture.map { scoredItems =>
       scoredItems.map { scoredItem =>
