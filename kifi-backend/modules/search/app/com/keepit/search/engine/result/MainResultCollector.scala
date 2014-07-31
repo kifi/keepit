@@ -33,7 +33,7 @@ class MainResultCollector(clickBoosts: ResultClickBoosts, friendsUris: LongArray
         } else {
           // below the threshold, but we save this if this is a clicked hit (clickBoost > 0.0f)
           clickBoost = clickBoosts(id)
-          if (clickBoost > 0.0f) score = ctx.score() * percentMatch // else score remains 0.0f
+          if (clickBoost > 1.0f) score = ctx.score() * percentMatch // else score remains 0.0f
         }
 
         if (score > 0.0f) {
