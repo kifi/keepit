@@ -269,6 +269,19 @@ var pane = pane || function () {  // idempotent for Chrome
         window.open(this.dataset.href);
         $(this).closest(".kifi-pane-top-menu").triggerHandler("kifi:hide");
       })
+      /*
+      .hoverfu('.kifi-pane-x', function (configureHover) {
+        configureHover({
+          mustHoverFor: 700, hideAfter: 2500, click: 'hide',
+          position: {my: 'right bottom-13', at: 'right top', of: this, collision: 'none'}
+        });
+      })
+      */
+      .on('click', '.kifi-pane-x', _.debounce(function (e) {
+        if (e.originalEvent.isTrusted !== false) {
+          hidePane(tile.style.display !== 'none' && !tile.hasAttribute('kifi-fullscreen'));
+        }
+      }, 400, true))
       .on("mousedown click keydown keypress keyup", function (e) {
         e.stopPropagation();
       });
@@ -284,7 +297,6 @@ var pane = pane || function () {  // idempotent for Chrome
     if (leaveSlider) {
       $(tile).css({top: '', bottom: '', transform: ''}).insertAfter($pane);
       keeper.onPaneChange();
-      // $slider.find('.kifi-keeper-x').css('overflow', '');
     } else {
       $(tile).css('transform', '');
       keeper.discard();

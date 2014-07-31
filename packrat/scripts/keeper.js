@@ -246,19 +246,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
       });
     }, 400, true))
     /*
-    .hoverfu('.kifi-keeper-x', function (configureHover) {
-      configureHover({
-        mustHoverFor: 700, hideAfter: 2500, click: 'hide',
-        position: {my: 'right bottom-13', at: 'right top', of: this, collision: 'none'}
-      });
-    })
-    */
-    .on('click', '.kifi-keeper-x', _.debounce(function (e) {
-      if (e.originalEvent.isTrusted !== false) {
-        pane.hide(tile.style.display !== 'none' && !tile.hasAttribute('kifi-fullscreen'));
-      }
-    }, 400, true))
-    /*
     .hoverfu('.kifi-dock-btn', function(configureHover) {
       var $a = $(this);
       var tip = {
@@ -536,7 +523,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
     },
     discard: function() {
       $slider.off();
-      $slider.find('.kifi-keep-btn,.kifi-kept-btn,.kifi-keep-lock,.kifi-kept-lock,.kifi-keep-tag,.kifi-kept-tag,.kifi-keeper-x,.kifi-dock-btn').hoverfu('destroy');
+      $slider.find('.kifi-keep-btn,.kifi-kept-btn,.kifi-keep-lock,.kifi-kept-lock,.kifi-keep-tag,.kifi-kept-tag,.kifi-dock-btn').hoverfu('destroy');
       $slider = null;
     },
     appendTo: function(parent) {
