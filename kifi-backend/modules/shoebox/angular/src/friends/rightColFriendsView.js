@@ -1,15 +1,6 @@
 'use strict';
 
 angular.module('kifi.friends.rightColFriendsView', [])
-
-.directive('kfRightColFriendsView', [function () {
-  return {
-    replace: true,
-    restrict: 'A',
-    templateUrl: 'friends/rightColFriendsView.tpl.html'
-  };
-}])
-
 .directive('kfCompactFriendsView', ['friendService', function (friendService) {
   return {
     replace: true,
@@ -56,70 +47,34 @@ angular.module('kifi.friends.rightColFriendsView', [])
   };
 }])
 
-.directive('kfRightColConnectView', ['friendService', 'socialService', 'util', function (friendService, socialService, util) {
+.directive('kfRightColConnectView', ['friendService', 'socialService', function (friendService, socialService) {
   return {
     replace: true,
     restrict: 'A',
     templateUrl: 'friends/rightColConnectView.tpl.html',
     link: function (scope/*, element, attrs*/) {
+      scope.connectFacebook = socialService.connectFacebook;
+      scope.connectLinkedIn = socialService.connectLinkedIn;
+      scope.importGmail = socialService.importGmail;
+
       socialService.refresh();
-      scope.friendCount = friendService.totalFriends;
-      scope.showConnect = false;
+      scope.$watch(getEligibleNetworksCsv, chooseNetwork);
 
-      var connectionStatus = {
-        'Facebook': socialService.facebook && !!socialService.facebook.profileUrl,
-        'LinkedIn': socialService.linkedin && !!socialService.linkedin.profileUrl,
-        'Gmail': socialService.gmail.length > 0
-      };
-
-      // The connection badge randomly rotates among networks that have not
-      // been connected yet and is not shown if the user has connected to all
-      // networks or has more than 20 friends.
-      var updateConnectDisplayStatus = function () {
-        // Array of unconnected networks.
-        var connectOptions = [];
-
-        _.forEach(connectionStatus, function (status, name) {
-          if (!status) {
-            connectOptions.push(name);
-          }
-        });
-
-        if ((connectOptions.length === 0) || scope.friendCount >= 20) {
-          scope.showConnect = false;
+      function getEligibleNetworksCsv () {
+        if (friendService.totalFriends() < 20) {
+          return _.compact([
+            socialService.facebook && socialService.facebook.profileUrl ? null : 'facebook',
+            socialService.linkedin && socialService.linkedin.profileUrl ? null : 'linkedin',
+            socialService.gmail && socialService.gmail.length ? null : 'gmail'
+          ]).join(',');
         } else {
-          scope.showConnect = true;
+          return '';
         }
+      }
 
-        var randomConnectOption = util.getRandomInt(0, connectOptions.length - 1);
-
-        scope.showFacebookConnect = connectOptions[randomConnectOption] === 'Facebook';
-        scope.showLinkedInConnect = connectOptions[randomConnectOption] === 'LinkedIn';
-        scope.showGmailImport = connectOptions[randomConnectOption] === 'Gmail';
-      };
-
-      scope.$watch(function () {
-        return socialService.facebook && !!socialService.facebook.profileUrl;
-      }, function () {
-        connectionStatus.Facebook = socialService.facebook && !!socialService.facebook.profileUrl;
-        updateConnectDisplayStatus();
-      });
-
-      scope.$watch(function () {
-        return socialService.linkedin && !!socialService.linkedin.profileUrl;
-      }, function () {
-        connectionStatus.LinkedIn = socialService.linkedin && !!socialService.linkedin.profileUrl;
-        updateConnectDisplayStatus();
-      });
-
-      scope.$watch(function () {
-        return socialService.gmail && socialService.gmail.length > 0;
-      }, function () {
-        connectionStatus.Gmail = socialService.gmail && socialService.gmail.length > 0;
-        updateConnectDisplayStatus();
-      });
-
-      updateConnectDisplayStatus();
+      function chooseNetwork (csv) {
+        scope.network = csv ? _.sample(csv.split(',')) : null;
+      }
     }
   };
 }])
@@ -131,8 +86,6 @@ angular.module('kifi.friends.rightColFriendsView', [])
     templateUrl: 'friends/noFriendsOrConnectionsView.tpl.html',
     link: function (scope) {
       scope.connectFacebook = socialService.connectFacebook;
-      scope.connectLinkedIn = socialService.connectLinkedIn;
-      scope.importGmail = socialService.importGmail;
     }
   };
 }]);

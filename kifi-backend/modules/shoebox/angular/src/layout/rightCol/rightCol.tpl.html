@@ -21,8 +21,8 @@
     </div>
 
     <div class="kf-rightcol-friends">
-      <div ng-show="hasNoFriendsOrConnections()" kf-no-friends-or-connections-view></div>
-      <div ng-hide="hasNoFriendsOrConnections()" kf-right-col-friends-view></div>
+      <div ng-if="hasNoFriendsOrConnections()" kf-no-friends-or-connections-view></div>
+      <div ng-if="!hasNoFriendsOrConnections()" ng-include="'friends/rightColFriendsView.tpl.html'"></div>
     </div>
 
     <div class="kf-horizontal-separator"></div>
