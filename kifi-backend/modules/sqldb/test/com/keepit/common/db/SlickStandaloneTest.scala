@@ -1,4 +1,4 @@
-package com.keepit.db
+package com.keepit.common.db
 
 import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession._
@@ -6,9 +6,8 @@ import com.keepit.test._
 import org.specs2.mutable.Specification
 import com.keepit.common.db.slick._
 import org.joda.time.DateTime
-import com.keepit.common.db.{ Model, Id }
 
-class SlickStandaloneTest extends Specification with DbTestInjector {
+class SlickStandaloneTest extends Specification with SqlDbTestInjector {
 
   "Slick" should {
 

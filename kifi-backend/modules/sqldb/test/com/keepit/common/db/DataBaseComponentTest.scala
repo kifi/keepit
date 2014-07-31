@@ -8,7 +8,7 @@ import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationExceptio
 import java.sql.SQLException
 import com.google.inject.Injector
 
-class DataBaseComponentTest extends Specification with DbTestInjector {
+class DataBaseComponentTest extends Specification with SqlDbTestInjector {
 
   "Session" should {
 

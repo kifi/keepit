@@ -104,25 +104,36 @@ class DataBufferReader {
     java.lang.Float.intBitsToFloat(bits)
   }
 
-  // Tagged Float (two functions (getTaggedFloatTag, getTaggedFloatValue): avoiding tuple creation
-  def getTaggedFloatTag(): Byte = {
+  // Tagged Float Bits (Int), use DataBuffer.getTaggedFloatTag and DataBuffer.getTaggedFloatValue to decode
+  def nextTaggedFloatBits(): Int = {
+    var ret = _page(_current) & 0xffff
+    ret = ret << 16 | (_page(_current + 1) & 0xffff)
+    _current += 2
+    ret
+  }
+  // Tagged Float Tag
+  def peekTaggedFloatTag(): Byte = {
     (_page(_current) >>> 8).toByte
   }
+  // Tagged Float Value
   def nextTaggedFloatValue(): Float = {
-    val bits = ((_page(_current) & 0xff) << 24) | (_page(_current + 1) & 0xffff) << 8
-    _current += 2
-    java.lang.Float.intBitsToFloat(bits)
+    DataBuffer.getTaggedFloatValue(nextTaggedFloatBits())
   }
 
   def skipTaggedFloat(): Unit = { _current += 2 }
 
+  // Tagged Float Bits (Int), use DataBuffer.getTaggedFloatTag and DataBuffer.getTaggedFloatValue to decode
+  def getTaggedFloatBits(offset: Int): Int = {
+    val off = _offset + (offset >>> 1)
+    var ret = _page(off) & 0xffff
+    ret = ret << 16 | (_page(off + 1) & 0xffff)
+    ret
+  }
   def getTaggedFloatTag(offset: Int): Byte = {
     val off = _offset + (offset >>> 1)
     (_page(_offset) >>> 8).toByte
   }
   def getTaggedFloatValue(offset: Int): Float = {
-    val off = _offset + (offset >>> 1)
-    val bits = ((_page(off) & 0xff) << 24) | (_page(off + 1) & 0xffff) << 8
-    java.lang.Float.intBitsToFloat(bits)
+    DataBuffer.getTaggedFloatValue(getTaggedFloatBits(offset))
   }
 }

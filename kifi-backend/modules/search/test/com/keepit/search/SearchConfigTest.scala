@@ -2,7 +2,7 @@ package com.keepit.search
 
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.model.ExperimentType.NO_SEARCH_EXPERIMENTS
-import com.keepit.test.TestInjector
+import com.keepit.test.CommonTestInjector
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._
 import com.keepit.model.{ ProbabilisticExperimentGeneratorAllCache, ExperimentType, User, UserExperiment }
@@ -17,7 +17,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.cache.{ HashMapMemoryCache, CacheStatistics }
 import com.keepit.common.logging.{ AccessLog, Logging }
 
-class SearchConfigTest extends Specification with TestInjector {
+class SearchConfigTest extends Specification with CommonTestInjector {
 
   private def getUserExperiments(userId: Id[User])(implicit injector: Injector) = {
     val commander = new RemoteUserExperimentCommander(
