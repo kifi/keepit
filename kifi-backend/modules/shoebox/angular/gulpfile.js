@@ -20,7 +20,6 @@ var remember = require('gulp-remember');
 var fs = require('fs');
 var ngHtml2Js = require('gulp-ng-html2js');
 var minifyHtml = require('gulp-minify-html');
-var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
 var gulpif = require('gulp-if');
 var spritesmith = require('gulp.spritesmith');
@@ -30,6 +29,12 @@ var modRewrite = require('connect-modrewrite');
 var gutil = require('gulp-util');
 var karma = require('karma').server;
 var protractor = require('gulp-protractor').protractor;
+var revall = require('gulp-rev-all');
+var awspublish = require('gulp-awspublish');
+var parallelize = require('concurrent-transform');
+var through = require('through');
+var order = require('gulp-order');
+var merge = require('merge');
 
 /********************************************************
   Globals
@@ -40,6 +45,16 @@ var tmpDir = 'tmp';
 var pkgName = JSON.parse(fs.readFileSync('package.json')).name;
 var banner = fs.readFileSync('banner.txt').toString();
 var isRelease = false;
+
+// awspublish
+var aws = {
+  'key': 'AKIAJZC6TMAWKQYEGBIQ',
+  'secret': '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',
+  'bucket': 'assets-b-prod',
+  'region': 'us-west-1',
+  'distributionId': null
+};
+var publisher = awspublish.create(aws);
 
 /********************************************************
   Paths
@@ -166,12 +181,13 @@ function startDevServer(port) {
   });
 }
 
-function startProdServer(port) {
-  connect.server({
-    port: +port || 8080,
+function startProdServer(opts) {
+  opts = merge({
+    port: 8080,
     host: 'dev.ezkeep.com',
     fallback: 'index.html'
-  });
+  }, opts)
+  connect.server(opts);
 }
 
 /********************************************************
@@ -251,6 +267,7 @@ gulp.task('styles', ['sprite'], function () {
     .pipe(cache(stylesCache))
     .pipe(stylus({use: [nib()], import: ['nib', __dirname + '/src/common/build-css/*.styl']}))
     .pipe(remember(stylesCache))
+    .pipe(order())
     .pipe(concat(pkgName + '.css'))
     .pipe(gulpif(!isRelease, gulp.dest(outDir)))
     .pipe(gulpif(isRelease, makeMinCss()));
@@ -281,6 +298,7 @@ gulp.task('scripts', ['jshint'], function () {
   return es.merge(html2js, scripts)
     .pipe(remember(htmlCache))
     .pipe(remember(jsCache))
+    .pipe(order())
     .pipe(concat(pkgName + '.js'))
     .pipe(gulpif(!isRelease, gulp.dest(outDir)))
     .pipe(gulpif(isRelease, makeMinJs()));
@@ -325,6 +343,7 @@ gulp.task('watch', ['build-dev'], function () {
 gulp.task('templates', function () {
   return gulp.src(htmlFiles)
     .pipe(makeTemplates())
+    .pipe(order())
     .pipe(concat(pkgName + '-tpl.js'))
     .pipe(gulp.dest(tmpDir));
 })
@@ -349,7 +368,13 @@ gulp.task('karma', ['templates'], function (done) {
 });
 
 gulp.task('protractor', ['build-release'], function () {
-  startProdServer(9080);
+  startProdServer({
+    port: 9080,
+    fallback: 'index_cdn.html',
+    middleware: function () {
+      return [modRewrite(['^(?!/(dist|img)) /index_cdn.html'])];
+    }
+  });
 
   return gulp.src(['test/e2e/**/*.js'])
     .pipe(protractor({
@@ -362,13 +387,45 @@ gulp.task('test', function (done) {
   runSequence(['karma', 'protractor'], 'clean-tmp', done);
 });
 
+gulp.task('assets:compile', function () {
+  var assetSrc = ['index.html', 'dist/**', 'img/**', '!img/sprites/**'];
+
+  return gulp.src(assetSrc, { base: '.' })
+    .pipe(revall({
+      // do not rev these files
+      ignore: [ /^\/favicon.ico$/g, /^sprites\//g ],
+      prefix: '//d1dwdv9wd966qu.cloudfront.net/',
+      hashLength: 7,
+    }))
+    .pipe(gulp.dest('cdn'));
+});
+
+gulp.task('assets:rename_index', function () {
+  // depends on assets:compile creating the cdn/index file
+  return gulp.src('cdn/index.???????.html')
+    .pipe(rename('index_cdn.html'))
+    .pipe(gulp.dest('./'));
+});
+
+gulp.task('assets:publish', function (done) {
+  return gulp.src(['cdn/**', '!cdn/index.???????.html'])
+    .pipe(awspublish.gzip())
+    .pipe(parallelize(publisher.publish({'Cache-Control': 'max-age=315360000, no-transform, public'}), 50))
+    .pipe(publisher.cache())
+    .pipe(awspublish.reporter());
+});
+
+gulp.task('assets', function (done) {
+  runSequence('assets:compile', 'assets:rename_index', 'assets:publish', done);
+});
+
 gulp.task('build-dev', function (done) {
   runSequence('clean', ['styles', 'scripts', 'lib-styles', 'lib-scripts'], done);
 });
 
 gulp.task('build-release', function (done) {
   isRelease = true;
-  runSequence('clean', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], done);
+  runSequence('clean', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], 'assets', done);
 });
 
 // Note: suboptimal use of connect: it already includes livereload (but part of the livereload API is not available)
