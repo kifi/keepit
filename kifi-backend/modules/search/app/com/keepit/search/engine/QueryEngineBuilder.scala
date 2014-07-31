@@ -9,8 +9,11 @@ import scala.collection.mutable.ArrayBuffer
 
 class QueryEngineBuilder(baseQuery: Query) {
 
+  private[this] val _tieBreakerMultiplier = 0.5f
+
   private[this] var _boosters: List[(Query, Float)] = Nil
   private[this] var _exprIndex: Int = 0
+  private[this] val _base = buildExpr(baseQuery)
 
   def addBoosterQuery(booster: Query, boostStrength: Float): QueryEngineBuilder = {
     _boosters = (booster, boostStrength) :: _boosters
@@ -18,8 +21,7 @@ class QueryEngineBuilder(baseQuery: Query) {
   }
 
   def build(): QueryEngine = {
-    _exprIndex = 0
-    val (query, expr) = _boosters.foldLeft(buildExpr(baseQuery)) {
+    val (query, expr) = _boosters.foldLeft(_base) {
       case ((query, expr), (booster, boostStrength)) =>
         val boosterExpr = MaxExpr(_exprIndex)
         _exprIndex += 1
@@ -42,7 +44,7 @@ class QueryEngineBuilder(baseQuery: Query) {
             case occur =>
               clause.getQuery match {
                 case q: KFilterQuery => required += MaxExpr(_exprIndex)
-                case _ => (if (occur == MUST) required else optional) += MaxWithTieBreakerExpr(_exprIndex, 0.5f)
+                case _ => (if (occur == MUST) required else optional) += MaxWithTieBreakerExpr(_exprIndex, _tieBreakerMultiplier)
               }
           }
           _exprIndex += 1
@@ -60,10 +62,10 @@ class QueryEngineBuilder(baseQuery: Query) {
         (baseQuery, expr)
 
       case textQuery: KTextQuery =>
-        (baseQuery, MaxWithTieBreakerExpr(0, 0.5f))
+        (baseQuery, MaxWithTieBreakerExpr(0, _tieBreakerMultiplier))
 
       case q =>
-        (new KWrapperQuery(q), MaxWithTieBreakerExpr(0, 0.5f))
+        (new KWrapperQuery(q), MaxWithTieBreakerExpr(0, _tieBreakerMultiplier))
     }
   }
 }
