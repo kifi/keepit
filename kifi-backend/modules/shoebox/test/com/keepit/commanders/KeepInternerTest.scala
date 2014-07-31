@@ -359,7 +359,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           discoveriesWithCounts1(0)._1 === keeps1(1).uriId // reverse chronological
           discoveriesWithCounts1(1)._1 === keeps1(0).uriId
           discoveriesWithCounts1.forall {
-            case (uriId, userId, createdAt, count) =>
+            case (uriId, _, _, count) =>
               counts1.get(keeps1.find(_.uriId == uriId).get.id.get).get == count
           } === true
           val discoveriesWithCounts2 = keepDiscoveryRepo.getUriDiscoveriesWithCountsByKeeper(u2.id.get)
@@ -371,13 +371,13 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           val rekeepsWithCounts1 = rekeepRepo.getUriReKeepsWithCountsByKeeper(u1.id.get)
           rekeepsWithCounts1.length === 1
           rekeepsWithCounts1.forall {
-            case (uriId, userId, createdAt, count) =>
+            case (uriId, _, _, count) =>
               rkc1.get(keeps1.find(_.uriId == uriId).get.id.get).get == count
           } === true
           val rekeepsWithCounts2 = rekeepRepo.getUriReKeepsWithCountsByKeeper(u2.id.get)
           rekeepsWithCounts2.length === 2
           rekeepsWithCounts2.forall {
-            case (uriId, userId, createdAt, count) =>
+            case (uriId, _, _, count) =>
               rkc2.get(keeps2.find(_.uriId == uriId).get.id.get).get == count
           } === true
 

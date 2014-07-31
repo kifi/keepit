@@ -19,7 +19,7 @@ trait KeepDiscoveryRepo extends Repo[KeepDiscovery] {
   def getDiscoveryCountByURI(uriId: Id[NormalizedURI], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Int
   def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Map[Id[NormalizedURI], Int]
   def getDiscoveryCountsByKeeper(userId: Id[User], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Map[Id[Keep], Int]
-  def getUriDiscoveriesWithCountsByKeeper(userId: Id[User], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Seq[(Id[NormalizedURI], Id[User], DateTime, Int)]
+  def getUriDiscoveriesWithCountsByKeeper(userId: Id[User], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Seq[(Id[NormalizedURI], Id[Keep], Id[User], Int)]
   def getUriDiscoveryCountsByKeeper(userId: Id[User], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Map[Id[NormalizedURI], Int]
   def getDiscoveryCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Map[Id[Keep], Int]
 }
@@ -82,8 +82,8 @@ class KeepDiscoveryRepoImpl @Inject() (
     q.toMap()
   }
 
-  def getUriDiscoveriesWithCountsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Seq[(Id[NormalizedURI], Id[User], DateTime, Int)] = {
-    sql"select uri_id, keeper_id, created_at, count(*) c from keep_click group by uri_id, keeper_id having keeper_id=$userId order by created_at desc".as[(Id[NormalizedURI], Id[User], DateTime, Int)].list()
+  def getUriDiscoveriesWithCountsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Seq[(Id[NormalizedURI], Id[Keep], Id[User], Int)] = {
+    sql"select uri_id, keep_id, keeper_id, count(*) c from keep_click group by uri_id, keeper_id having keeper_id=$userId order by keep_id desc".as[(Id[NormalizedURI], Id[Keep], Id[User], Int)].list()
   }
 
   def getUriDiscoveryCountsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Map[Id[NormalizedURI], Int] = {

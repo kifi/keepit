@@ -190,12 +190,12 @@ class KeepsCommander @Inject() (
               val keepIds = selector.trim match {
                 case "rekeep" => {
                   val rekeepsWithCounts = rekeepRepo.getUriReKeepsWithCountsByKeeper(userId)
-                  val rekeepCounts = rekeepsWithCounts map { case (uriId, _, createdAt, count) => uriId -> count }
+                  val rekeepCounts = rekeepsWithCounts map { case (uriId, _, _, count) => uriId -> count }
                   filter(rekeepCounts)
                 }
                 case _ => {
                   val discoveriesWithCounts = keepDiscoveriesRepo.getUriDiscoveriesWithCountsByKeeper(userId)
-                  val discoveryCounts = discoveriesWithCounts map { case (uriId, _, createdAt, count) => uriId -> count }
+                  val discoveryCounts = discoveriesWithCounts map { case (uriId, _, _, count) => uriId -> count }
                   filter(discoveryCounts)
                 } // click
               }
