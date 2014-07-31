@@ -194,7 +194,7 @@ var makeTemplates = lazypipe()
 
 function startDevServer(port) {
   connect.server({
-    port: port || 8080,
+    port: +port || 8080,
     host: 'dev.ezkeep.com',
     fallback: 'dev.html',
     middleware: function () {
@@ -205,7 +205,7 @@ function startDevServer(port) {
 
 function startProdServer(port) {
   connect.server({
-    port: port || 8080,
+    port: +port || 8080,
     host: 'dev.ezkeep.com',
     fallback: 'index.html'
   });
