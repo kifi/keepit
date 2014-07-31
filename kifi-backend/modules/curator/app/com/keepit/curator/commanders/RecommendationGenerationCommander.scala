@@ -19,6 +19,8 @@ class RecommendationGenerationCommander @Inject() (
     shoebox: ShoeboxServiceClient,
     scoringHelper: UriScoringHelper) {
 
+  val defaultScore = 0.0f
+
   def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[Recommendation]] = {
     val seedsFuture = for {
       seeds <- seedCommander.getTopItems(userId, Math.max(howManyMax, 150))
@@ -33,12 +35,12 @@ class RecommendationGenerationCommander @Inject() (
         Recommendation(
           userId = scoredItem.userId,
           uriId = scoredItem.uriId,
-          score = scoreCoefficients.getOrElse(ScoreType.recencyScore, 0.0f) * scoredItem.uriScores.recencyScore
-            + scoreCoefficients.getOrElse(ScoreType.overallInterestScore, 0.0f) * scoredItem.uriScores.overallInterestScore
-            + scoreCoefficients.getOrElse(ScoreType.priorScore, 0.0f) * scoredItem.uriScores.priorScore
-            + scoreCoefficients.getOrElse(ScoreType.socialScore, 0.0f) * scoredItem.uriScores.socialScore
-            + scoreCoefficients.getOrElse(ScoreType.popularityScore, 0.0f) * scoredItem.uriScores.popularityScore
-            + scoreCoefficients.getOrElse(ScoreType.recentInterestScore, 0.0f) * scoredItem.uriScores.recentInterestScore,
+          score = scoreCoefficients.getOrElse(ScoreType.recencyScore, defaultScore) * scoredItem.uriScores.recencyScore
+            + scoreCoefficients.getOrElse(ScoreType.overallInterestScore, defaultScore) * scoredItem.uriScores.overallInterestScore
+            + scoreCoefficients.getOrElse(ScoreType.priorScore, defaultScore) * scoredItem.uriScores.priorScore
+            + scoreCoefficients.getOrElse(ScoreType.socialScore, defaultScore) * scoredItem.uriScores.socialScore
+            + scoreCoefficients.getOrElse(ScoreType.popularityScore, defaultScore) * scoredItem.uriScores.popularityScore
+            + scoreCoefficients.getOrElse(ScoreType.recentInterestScore, defaultScore) * scoredItem.uriScores.recentInterestScore,
           //this math is just for testing
           explain = Some(scoredItem.uriScores.toString)
         )
