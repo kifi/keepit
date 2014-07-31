@@ -76,8 +76,9 @@ class HashJoin(dataBuffer: DataBuffer, numHashBuckets: Int, createJoiner: => Joi
   }
 }
 
-trait Joiner {
-  var _id: Long = -1
+abstract class Joiner {
+  private[this] var _id: Long = -1
+
   def set(id: Long): Joiner = { _id = id; clear(); this }
   def id = _id
 
