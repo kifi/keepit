@@ -12,7 +12,6 @@ var rename = require('gulp-rename');
 var cssmin = require('gulp-cssmin');
 var nib = require('nib');
 var lazypipe = require('lazypipe');
-var plumber = require('gulp-plumber');
 var livereload = require('gulp-livereload');
 var es = require('event-stream');
 var cache = require('gulp-cached');
