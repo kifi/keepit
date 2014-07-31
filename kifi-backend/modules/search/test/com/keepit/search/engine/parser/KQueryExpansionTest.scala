@@ -1,7 +1,7 @@
 package com.keepit.search.engine.parser
 
 import com.keepit.search.Lang
-import com.keepit.search.engine.query.KTextQuery
+import com.keepit.search.engine.query.{ KBooleanQuery, KTextQuery }
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.parser.DefaultSyntax
 import com.keepit.search.query.parser.QueryParser
@@ -27,16 +27,22 @@ class KQueryExpansionTest extends Specification {
 
   "KQueryExpansion" should {
     "expand queries (with no concat)" in new QueryParserScope(concatBoostValue = 0.0f) {
-      parser.parse("super conductivity").get.toString ===
+      var query = parser.parse("super conductivity").get
+      query must beAnInstanceOf[KBooleanQuery]
+      query.toString ===
         s"KTextQuery((t:super | c:super | ts:super | cs:super)~$tb ()) " +
         s"KTextQuery((t:conductivity | c:conductivity | ts:conductivity | cs:conductivity)~$tb ())"
 
-      parser.parse("Electromagnetically induced transparency").get.toString ===
+      query = parser.parse("Electromagnetically induced transparency").get
+      query must beAnInstanceOf[KBooleanQuery]
+      query.toString ===
         s"KTextQuery((t:electromagnetically | c:electromagnetically | ts:electromagnet | cs:electromagnet)~$tb ()) " +
         s"KTextQuery((t:induced | c:induced | ts:induce | cs:induce)~$tb ()) " +
         s"KTextQuery((t:transparency | c:transparency | ts:transparency | cs:transparency)~$tb ())"
 
-      parser.parse("bose-einstein condensate").get.toString ===
+      query = parser.parse("bose-einstein condensate").get
+      query must beAnInstanceOf[KBooleanQuery]
+      query.toString ===
         "KTextQuery(" +
         s"""(t:"bose einstein" | c:"bose einstein" | ts:"bose einstein" | cs:"bose einstein")~$tb """ +
         "()) " +
@@ -44,7 +50,9 @@ class KQueryExpansionTest extends Specification {
         s"""(t:condensate | c:condensate | ts:condensate | cs:condensate)~$tb """ +
         "())"
 
-      parser.parse("\"Spin-statistics\" theorem").get.toString ===
+      query = parser.parse("\"Spin-statistics\" theorem").get
+      query must beAnInstanceOf[KBooleanQuery]
+      query.toString ===
         "KTextQuery(" +
         s"""(t:"spin statistics" | c:"spin statistics")~$tb """ +
         "()) " +
@@ -54,7 +62,9 @@ class KQueryExpansionTest extends Specification {
     }
 
     "expand queries (with concat)" in new QueryParserScope(concatBoostValue = 0.5f) {
-      parser.parse("super conductivity").get.toString ===
+      var query = parser.parse("super conductivity").get
+      query must beAnInstanceOf[KBooleanQuery]
+      query.toString ===
         "KTextQuery(" +
         s"(t:super | c:super | ts:super | cs:super |" +
         s" t:superconductivity^0.5 | c:superconductivity^0.5 | ts:superconductivity^0.5 | cs:superconductivity^0.5)~$tb " +
@@ -64,7 +74,9 @@ class KQueryExpansionTest extends Specification {
         s" t:superconductivity^0.5 | c:superconductivity^0.5 | ts:superconductivity^0.5 | cs:superconductivity^0.5)~$tb " +
         "())"
 
-      parser.parse("Electromagnetically induced transparency").get.toString ===
+      query = parser.parse("Electromagnetically induced transparency").get
+      query must beAnInstanceOf[KBooleanQuery]
+      query.toString ===
         "KTextQuery(" +
         s"(t:electromagnetically | c:electromagnetically | ts:electromagnet | cs:electromagnet |" +
         s" t:electromagneticallyinduced^0.5 | c:electromagneticallyinduced^0.5 |" +
@@ -80,7 +92,9 @@ class KQueryExpansionTest extends Specification {
         s" t:inducedtransparency^0.5 | c:inducedtransparency^0.5 | ts:inducedtransparency^0.5 | cs:inducedtransparency^0.5)~$tb " +
         "())"
 
-      parser.parse("bose-einstein condensate").get.toString ===
+      query = parser.parse("bose-einstein condensate").get
+      query must beAnInstanceOf[KBooleanQuery]
+      query.toString ===
         "KTextQuery(" +
         s"""(t:"bose einstein" | c:"bose einstein" | ts:"bose einstein" | cs:"bose einstein" |""" +
         s""" t:boseeinstein^0.5 | c:boseeinstein^0.5 | ts:boseeinstein^0.5 | cs:boseeinstein^0.5 |""" +
@@ -91,7 +105,9 @@ class KQueryExpansionTest extends Specification {
         s""" t:boseeinsteincondensate^0.5 | c:boseeinsteincondensate^0.5 | ts:boseeinsteincondensate^0.5 | cs:boseeinsteincondensate^0.5)~$tb """ +
         "())"
 
-      parser.parse("\"Spin-statistics\" theorem").get.toString ===
+      query = parser.parse("\"Spin-statistics\" theorem").get
+      query must beAnInstanceOf[KBooleanQuery]
+      query.toString ===
         "KTextQuery(" +
         s"""(t:"spin statistics" | c:"spin statistics")~$tb """ +
         "()) " +
