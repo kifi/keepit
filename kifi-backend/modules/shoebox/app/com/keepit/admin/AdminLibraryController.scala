@@ -39,10 +39,10 @@ class AdminLibraryController @Inject() (
     val (stats, totalCount) = db.readOnlyReplica { implicit session =>
       val stats = libraryRepo.page(page, size = pageSize).map { lib =>
         val owner = userRepo.get(lib.ownerId)
-        val keeps = keepRepo.getByLibrary(lib.id.get)
+        val keepsCount = keepRepo.getCountByLibrary(lib.id.get)
         val memberships = libraryMembershipRepo.getWithLibraryId(lib.id.get)
         val invites = libraryInviteRepo.getWithLibraryId(lib.id.get)
-        LibraryStatistic(lib, owner, keeps.length, memberships.length, invites.length)
+        LibraryStatistic(lib, owner, keepsCount, memberships.length, invites.length)
       }
       (stats, libraryRepo.count)
     }
@@ -66,10 +66,15 @@ class AdminLibraryController @Inject() (
   }
 
   def libraryKeepsView(libraryId: Id[Library], showPrivates: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
+    if (showPrivates) {
+      log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing private library $libraryId")
+    }
+
     val (library, owner, totalKeepCount, keepInfos) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(libraryId)
       val owner = userRepo.get(lib.ownerId)
-      val keeps = keepRepo.getByLibrary(libraryId)
+      val keeps = keepRepo.getByLibrary(libraryId).filter(b => showPrivates || !(b.isPrivate || lib.visibility == LibraryVisibility.SECRET))
+
       val keepInfos = for (keep <- keeps) yield {
         val tagNames = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map(collectionRepo.get).map(_.name)
         (keep, normalizedURIRepo.get(keep.uriId), userRepo.get(keep.userId), tagNames)
