@@ -69,7 +69,7 @@ class UriScoringHelper @Inject() (
             case Keepers.ReasonableNumber(users) => {
               var itemScore = 0.0f
               users.map(userId => itemScore += socialScoreMap.getOrElse(userId, 0.0f))
-              itemScore
+              Math.tanh(2 * itemScore).toFloat
             }
           })
       }.recover { //This needs to go once the graph is fixed
