@@ -109,8 +109,9 @@ class UserLDAStatisticsRetrieverImpl @Inject() (
   import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
   def getUserLDAStats(version: ModelVersion[DenseLDA]): Option[UserLDAStatistics] = {
-    cache.getOrElseOpt(UserLDAStatisticsCacheKey(version)) {
-      statsStore.get(MiscPrefix.LDA.userLDAStatsJsonFile, version)
-    }
+    statsStore.get(MiscPrefix.LDA.userLDAStatsJsonFile, version)
+    //    cache.getOrElseOpt(UserLDAStatisticsCacheKey(version)) {
+    //      statsStore.get(MiscPrefix.LDA.userLDAStatsJsonFile, version)
+    //    }
   }
 }

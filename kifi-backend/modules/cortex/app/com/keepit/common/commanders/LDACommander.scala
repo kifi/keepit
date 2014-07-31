@@ -191,4 +191,16 @@ class LDACommander @Inject() (
     vecOpt.map { vec => val statOpt = getUserLDAStats(wordRep.version); scale(vec.mean, statOpt) }
   }
 
+  def userSimilairty(userId1: Id[User], userId2: Id[User]): Option[Float] = {
+    val vecOpt1 = db.readOnlyReplica { implicit s => userTopicRepo.getTopicMeanByUser(userId1, wordRep.version) }
+    val vecOpt2 = db.readOnlyReplica { implicit s => userTopicRepo.getTopicMeanByUser(userId2, wordRep.version) }
+    val statOpt = getUserLDAStats(wordRep.version)
+
+    (vecOpt1, vecOpt2) match {
+      case (Some(v1), Some(v2)) => Some(cosineDistance(scale(v1.mean, statOpt), scale(v2.mean, statOpt)))
+      case _ => None
+    }
+
+  }
+
 }
