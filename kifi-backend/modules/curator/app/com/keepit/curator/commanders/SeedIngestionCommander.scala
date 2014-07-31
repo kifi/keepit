@@ -35,8 +35,6 @@ class SeedIngestionCommander @Inject() (
 
   val MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER = 100
 
-  val ingestionInProgress: AtomicBoolean = new AtomicBoolean(false)
-
   val ingestionLock = new ReactiveLock()
 
   def ingestAll(): Future[Boolean] = ingestionLock.withLockFuture {
