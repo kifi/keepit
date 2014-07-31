@@ -121,7 +121,7 @@ class DelightedCommanderImpl @Inject() (
     val now = clock.now()
     shoebox.getLapsedUsersForDelighted(100, skipCount, now.minusDays(8), Some(now.minusDays(7))) map { userInfos =>
       userInfos map { info =>
-        SafeFuture { /*getOrCreateDelightedUser(info, true)*/ }
+        SafeFuture { getOrCreateDelightedUser(info, true) }
       }
       userInfos.size
     }
