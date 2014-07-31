@@ -100,7 +100,6 @@ class QueryEngineBuilderTest extends Specification {
       val query = getParser().parse("information overload").get
       query must beAnInstanceOf[KBooleanQuery]
 
-      println(s"\t\t ${query.toString}")
       val builder = new QueryEngineBuilder(query, -1.0f)
       builder.addBooster(new TermQuery(new Term("", "important")), 2.0f)
       val engine = builder.build()

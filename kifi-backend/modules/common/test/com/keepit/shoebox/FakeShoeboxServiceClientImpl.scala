@@ -499,11 +499,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def kifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit] = Future.successful()
 
+  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = Future.successful(Seq.empty)
+
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
     Future.successful(Seq.empty[ScrapeRequest])
   }
-
-  def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo] = ???
 
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
 

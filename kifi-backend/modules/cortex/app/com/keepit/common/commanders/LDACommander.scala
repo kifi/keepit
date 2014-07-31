@@ -175,7 +175,7 @@ class LDACommander @Inject() (
     val statOpt = getUserLDAStats(wordRep.version)
     val targetScaled = scale(target.get.mean, statOpt)
 
-    val (users, vecs) = db.readOnlyReplica { implicit s => userTopicRepo.getAllUserTopicMean(wordRep.version, minEvidence = 30) }
+    val (users, vecs) = db.readOnlyReplica { implicit s => userTopicRepo.getAllUserTopicMean(wordRep.version, minEvidence = 100) }
     val idsAndScores = (users zip vecs).map {
       case (userId, vec) =>
         val (u, v) = (scale(targetScaled, statOpt), scale(vec.mean, statOpt))
@@ -184,6 +184,11 @@ class LDACommander @Inject() (
     }
 
     idsAndScores.sortBy(-1 * _._2).take(topK + 1).filter(_._1 != userId).unzip
+  }
+
+  def dumpScaledUserInterest(userId: Id[User]): Option[Array[Float]] = {
+    val vecOpt = db.readOnlyReplica { implicit s => userTopicRepo.getTopicMeanByUser(userId, wordRep.version) }
+    vecOpt.map { vec => val statOpt = getUserLDAStats(wordRep.version); scale(vec.mean, statOpt) }
   }
 
 }
