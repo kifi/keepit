@@ -26,13 +26,13 @@
       <th>Visibility</th><td>@library.visibility.value</td>
     </tr>
     <tr>
+      <th>Kind</th><td>@library.kind</td>
+    </tr>
+    <tr>
       <th>Contributors</th><td>@for(u <- contributors) { <div>@adminHelper.userDisplay(u)</div> }</td>
     </tr>
     <tr>
       <th>Followers</th><td>@for(u <- followers) { <div>@adminHelper.userDisplay(u)</div> }</td>
-    </tr>
-    <tr>
-      <th>Kind</th><td>@library.kind</td>
     </tr>
     <tr>
       <th>Created At</th><td>@adminHelper.dateTimeDisplay(library.createdAt)</td>
