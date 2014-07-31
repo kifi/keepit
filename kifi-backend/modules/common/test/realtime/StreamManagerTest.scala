@@ -5,7 +5,6 @@ import scala.language.implicitConversions
 import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.test.DeprecatedEmptyApplication
 import play.api.libs.iteratee._
 import play.api.libs.json._
 import play.api.test.Helpers._
