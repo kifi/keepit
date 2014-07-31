@@ -95,7 +95,7 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
           method = Some(call.method.toString),
           url = Some(call.path)))
         //also dumping the full thing to the log in case we want to dig into the error details
-        log.error(s"can't call [${call.path}] with body: $stringBody , params: ${call.params.map(_.toString()).mkString(",")}", ex)
+        log.error(s"can't call [${call.path}] with body: $stringBody , params: ${call.params.map(_.toString()).mkString(",")} because of ${ex.getMessage}", ex)
     }
     respFuture
   }
