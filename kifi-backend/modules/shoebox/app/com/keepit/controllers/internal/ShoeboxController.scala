@@ -216,15 +216,14 @@ class ShoeboxController @Inject() (
   }
 
   def recordScrapedNormalization() = Action.async(parse.tolerantJson) { request =>
-    timing("recordScrapedNormalization", 10000L, Some(elapsedMili => log.warn(s"long recordScrapedNormalization time ${elapsedMili}ms for ${request.body}"))) {
-      val candidateUrl = (request.body \ "url").as[String]
+    val candidateUrl = (request.body \ "url").as[String]
+    timing(s"recordScrapedNormalization.$candidateUrl") {
       val candidateNormalization = (request.body \ "normalization").as[Normalization]
       val scrapedCandidate = ScrapedCandidate(candidateUrl, candidateNormalization)
 
       val uriId = (request.body \ "id").as[Id[NormalizedURI]](Id.format)
       val signature = Signature((request.body \ "signature").as[String])
       val scrapedUri = db.readOnlyMaster { implicit session => normUriRepo.get(uriId) }
-
       normalizationServiceProvider.get.update(NormalizationReference(scrapedUri, signature = Some(signature)), scrapedCandidate).map { newReferenceOption =>
         (request.body \ "alternateUrls").asOpt[Set[String]].foreach { alternateUrls =>
           val bestReference = newReferenceOption.map { newReferenceId =>

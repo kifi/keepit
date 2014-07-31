@@ -144,25 +144,28 @@ package object time {
     def compare(that: DateTime): Int = dateTimeOrdering.compare(date, that)
   }
 
-  implicit def dateTimeQueryStringBinder(implicit longBinder: QueryStringBindable[String]): QueryStringBindable[DateTime] = new QueryStringBindable[DateTime] {
+  implicit def dateTimeQueryStringBinder(implicit queryStringBindable: QueryStringBindable[Long]): QueryStringBindable[DateTime] = new QueryStringBindable[DateTime] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, DateTime]] = {
-      longBinder.bind(key, params) map {
-        case Right(time) => Right(parseStandardTime(time))
+      queryStringBindable.bind(key, params) map {
+        case Right(time) => Right(new DateTime(time))
         case _ => Left("Unable to bind a DateTime")
       }
     }
     override def unbind(key: String, time: DateTime): String = {
-      longBinder.unbind(key, time.toStandardDateString)
+      queryStringBindable.unbind(key, time.getMillis)
     }
   }
 
-  implicit def dateTimePathBinder(implicit longBinder: PathBindable[String]) = new PathBindable[DateTime] {
-    override def bind(key: String, value: String): Either[String, DateTime] =
-      longBinder.bind(key, value) match {
-        case Right(time) => Right(parseStandardTime(time))
+  implicit def dateTimePathBinder(implicit pathBindable: PathBindable[Long]) = new PathBindable[DateTime] {
+    override def bind(key: String, value: String): Either[String, DateTime] = {
+      pathBindable.bind(key, value) match {
+        case Right(time) => Right(new DateTime(time))
         case _ => Left("Unable to bind an DateTime")
       }
-    override def unbind(key: String, time: DateTime): String = time.toStandardDateString
+    }
+    override def unbind(key: String, time: DateTime): String = {
+      pathBindable.unbind(key, time.getMillis)
+    }
   }
 
   implicit class RichLocalDate(val date: LocalDate) extends AnyVal {
