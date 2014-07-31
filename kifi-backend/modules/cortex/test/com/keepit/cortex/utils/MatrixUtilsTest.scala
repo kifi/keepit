@@ -19,4 +19,12 @@ class MatrixUtilsTest extends Specification {
     mean === Array(2f, 0f)
     std === Array(sqrt(2).toFloat, sqrt(8).toFloat)
   }
+
+  "compute cosine similarity" in {
+    val v = Array(0.0002f, -0.00035f, 0.0009f)
+    val w = Array(0.0001f, 0.00023f, 0.000045f)
+    val s = MatrixUtils.cosineDistance(v, w)
+    val expect = -0.079593f
+    (abs(s - expect) < 1e-3) === true
+  }
 }
