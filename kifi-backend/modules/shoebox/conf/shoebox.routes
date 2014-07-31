@@ -282,6 +282,7 @@ GET     /site/user/import-status    @com.keepit.controllers.website.UserControll
 GET     /site/user/import-check/:network  @com.keepit.controllers.website.UserController.checkIfImporting(network: String, callback: String)
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
 GET     /site/user/abooks           @com.keepit.controllers.website.UserController.abookInfo()
+# regex below prevents route from usurping requests intended for other routes, like /site/user/friends
 GET     /site/user/$id<[0-9a-f-]{36}> @com.keepit.controllers.website.UserController.basicUserInfo(id: ExternalId[User])
 GET     /site/user/:id/networks     @com.keepit.controllers.website.UserController.friendNetworkInfo(id: ExternalId[User])
 POST    /site/user/:id/unfriend     @com.keepit.controllers.website.UserController.unfriend(id: ExternalId[User])
@@ -529,11 +530,12 @@ POST    /admin/slider/killVersion   @com.keepit.controllers.admin.SliderAdminCon
 POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminController.unkillVersion(ver: String)
 POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
 
-
-POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
 GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
-POST    /admin/libraries/internForAllUsers   @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
-
+GET     /admin/libraries/:id             @com.keepit.controllers.admin.AdminLibraryController.libraryView(id: Id[Library])
+GET     /admin/libraries/:id/keeps       @com.keepit.controllers.admin.AdminLibraryController.libraryKeepsView(id: Id[Library], showPrivates: Boolean ?= false)
+POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
+POST    /admin/libraries/internForAllUsers  @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
+POST    /admin/libraries/:id/state/:state   @com.keepit.controllers.admin.AdminLibraryController.changeState(id: Id[Library], state: String)
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")
@@ -709,7 +711,7 @@ GET      /internal/shoebox/database/userSegment       @com.keepit.controllers.in
 GET      /internal/shoebox/database/extensionVersion  @com.keepit.controllers.internal.ShoeboxController.getExtensionVersion(installationId: ExternalId[KifiInstallation])
 POST     /internal/shoebox/database/triggerRawKeepImport @com.keepit.controllers.internal.ShoeboxController.triggerRawKeepImport()
 POST     /internal/shoebox/database/triggerSocialGraphFetch @com.keepit.controllers.internal.ShoeboxController.triggerSocialGraphFetch(id: Id[SocialUserInfo])
-GET      /internal/shoebox/database/getLapsedUsersForDelighted    @com.keepit.controllers.internal.ShoeboxController.getLapsedUsersForDelighted(after: DateTime, before: Option[DateTime] ?= None, maxCount: Int, skipCount: Int)
+GET      /internal/shoebox/database/getLapsedUsersForDelighted    @com.keepit.controllers.internal.ShoeboxController.getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime] ?= None)
 
 GET      /internal/shoebox/emailTest @com.keepit.controllers.internal.EmailTestController.testEmail(name: String)
 POST     /internal/shoebox/database/isSensitiveURI       @com.keepit.controllers.internal.ShoeboxPageController.isSensitiveURI()
