@@ -94,4 +94,9 @@ class LDAController @Inject() (
     Ok(Json.obj("userIds" -> ids, "scores" -> scores))
   }
 
+  def dumpScaledUserInterest(userId: Id[User]) = Action { request =>
+   val vec = lda.dumpScaledUserInterest(userId)
+   Ok(Json.toJson(vec))
+  }
+
 }
