@@ -41,9 +41,10 @@ var merge = require('merge');
 
 var outDir = 'dist';
 var tmpDir = 'tmp';
+var cdnDir = 'cdn';
 var pkgName = JSON.parse(fs.readFileSync('package.json')).name;
 var banner = fs.readFileSync('banner.txt').toString();
-var isRelease = false;
+var isProdMode = false;
 
 var assetSrc = ['index.html', 'dist/**', 'img/**', '!img/sprites/**'];
 
@@ -182,7 +183,7 @@ function startDevServer(port) {
   });
 }
 
-function startProdServer(opts) {
+function startLocalProdServer(opts) {
   opts = merge({
     port: 8080,
     host: 'dev.ezkeep.com',
@@ -201,7 +202,7 @@ gulp.task('clean-tmp', function () {
 });
 
 gulp.task('clean', function () {
-  return gulp.src([outDir, tmpDir], {read: false})
+  return gulp.src([outDir, tmpDir, cdnDir, 'index_cdn.html'], {read: false})
     .pipe(rimraf());
 });
 
@@ -270,8 +271,8 @@ gulp.task('styles', ['sprite'], function () {
     .pipe(remember(stylesCache))
     .pipe(order())
     .pipe(concat(pkgName + '.css'))
-    .pipe(gulpif(!isRelease, gulp.dest(outDir)))
-    .pipe(gulpif(isRelease, makeMinCss()));
+    .pipe(gulpif(!isProdMode, gulp.dest(outDir)))
+    .pipe(gulpif(isProdMode, makeMinCss()));
 });
 
 gulp.task('jshint', function () {
@@ -285,7 +286,7 @@ gulp.task('jshint', function () {
 
   return es.merge(srcHint, testHint)
     .pipe(jshint.reporter('jshint-stylish'))
-    .pipe(gulpif(isRelease, jshint.reporter('fail')));
+    .pipe(gulpif(isProdMode, jshint.reporter('fail')));
 });
 
 gulp.task('scripts', ['jshint'], function () {
@@ -301,8 +302,8 @@ gulp.task('scripts', ['jshint'], function () {
     .pipe(remember(jsCache))
     .pipe(order())
     .pipe(concat(pkgName + '.js'))
-    .pipe(gulpif(!isRelease, gulp.dest(outDir)))
-    .pipe(gulpif(isRelease, makeMinJs()));
+    .pipe(gulpif(!isProdMode, gulp.dest(outDir)))
+    .pipe(gulpif(isProdMode, makeMinJs()));
 });
 
 gulp.task('lib-styles', function () {
@@ -376,8 +377,8 @@ function runProtractor() {
     .pipe(es.wait(connect.serverClose));
 }
 
-gulp.task('protractor', ['assets:dev'], function (done) {
-  startProdServer({
+gulp.task('protractor', ['assets:local-prod'], function (done) {
+  startLocalProdServer({
     port: 9080,
     fallback: 'tmp/index.html',
     middleware: function () {
@@ -392,7 +393,7 @@ gulp.task('protractor', ['assets:dev'], function (done) {
 });
 
 gulp.task('protractor:release', ['assets:release'], function () {
-  startProdServer({
+  startLocalProdServer({
     port: 9080,
     fallback: 'index_cdn.html',
     middleware: function () {
@@ -415,35 +416,35 @@ function compileAssetRevs(opts, dest) {
     .pipe(gulp.dest(dest));
 }
 
-gulp.task('assets:dev:compile', ['build-release'], function () {
+gulp.task('assets:local-prod:compile', ['build-release'], function () {
   return compileAssetRevs();
 });
 
 gulp.task('assets:release:compile', ['build-release'], function () {
-  return compileAssetRevs({ prefix: '//d1dwdv9wd966qu.cloudfront.net/' }, 'cdn');
+  return compileAssetRevs({ prefix: '//d1dwdv9wd966qu.cloudfront.net/' }, cdnDir);
 });
 
-gulp.task('assets:dev:update_index', ['assets:dev:compile'], function () {
+gulp.task('assets:local-prod:update_index', ['assets:local-prod:compile'], function () {
   return gulp.src('tmp/index.???????.html')
     .pipe(rename('index.html'))
     .pipe(gulp.dest('tmp/'));
 });
 
 gulp.task('assets:release:update_index', ['assets:release:compile'], function () {
-  return gulp.src('cdn/index.???????.html')
+  return gulp.src(cdnDir + '/index.???????.html')
     .pipe(rename('index_cdn.html'))
     .pipe(gulp.dest('./'));
 });
 
 gulp.task('assets:release:publish', ['assets:release:compile', 'assets:release:update_index'], function (done) {
-  return gulp.src(['cdn/**', '!cdn/index.???????.html'])
+  return gulp.src([cdnDir + '/**', '!' + cdnDir + '/index.???????.html'])
     .pipe(awspublish.gzip())
     .pipe(parallelize(publisher.publish({'Cache-Control': 'max-age=315360000, no-transform, public'}), 50))
     .pipe(publisher.cache())
     .pipe(awspublish.reporter());
 });
 
-gulp.task('assets:dev', ['build-release', 'assets:dev:compile', 'assets:dev:update_index']);
+gulp.task('assets:local-prod', ['build-release', 'assets:local-prod:compile', 'assets:local-prod:update_index']);
 
 gulp.task('assets:release', ['assets:release:publish']);
 
@@ -452,7 +453,7 @@ gulp.task('build-dev', function (done) {
 });
 
 gulp.task('build-release', function (done) {
-  isRelease = true;
+  isProdMode = true;
   runSequence('clean', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], done);
 });
 
@@ -461,7 +462,7 @@ gulp.task('build-release', function (done) {
 gulp.task('server-dev', ['build-dev'], startDevServer);
 
 // Use this task to test the production code locally
-gulp.task('prod', ['build-release'], startProdServer);
+gulp.task('local-prod', ['build-release'], startLocalProdServer);
 
 // This task is the one that should be run by the build script
 gulp.task('release', ['build-release', 'karma', 'protractor:release']);
