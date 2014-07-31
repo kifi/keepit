@@ -8,7 +8,7 @@ import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel.{ URILDATopicRepo, UserLDAInterests, UserLDAInterestsRepo, UserTopicMean }
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.models.lda._
-import com.keepit.cortex.utils.MatrixUtils.cosineDistance
+import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.{ NormalizedURI, User }
 
 import scala.collection.mutable
@@ -179,7 +179,7 @@ class LDACommander @Inject() (
     val idsAndScores = (users zip vecs).map {
       case (userId, vec) =>
         val (u, v) = (scale(targetScaled, statOpt), scale(vec.mean, statOpt))
-        val score = cosineDistance(u, v)
+        val score = cosineDistance(u, v).toFloat
         (userId, score)
     }
 
