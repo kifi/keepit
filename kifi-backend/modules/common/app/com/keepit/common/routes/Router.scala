@@ -2,6 +2,7 @@ package com.keepit.common.routes
 
 import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
 import com.keepit.heimdal.BasicDelightedAnswer
+import com.keepit.model.ScoreType._
 import com.keepit.model._
 import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
@@ -46,7 +47,9 @@ object ParamValue {
   implicit def modelVersionToParam[M <: StatModel](modelVersion: ModelVersion[M]) = ParamValue(Some(modelVersion.version.toString))
   implicit def emailToParam(emailAddress: EmailAddress) = ParamValue(Some(emailAddress.address))
   implicit def userValueNameToParam(userValueName: UserValueName) = ParamValue(Some(userValueName.name))
+  implicit def seqToParam[T](s: Seq[Id[T]]) = ParamValue(Some((s.map { x => x.id.toString }).toString))
   implicit def dateTimeToParam(dateTime: DateTime) = ParamValue(Some(dateTime.toStandardDateString))
+  //implicit def scoreCoefficientUpdateToParam(scoreCoefficientsUpdate: Map[ScoreType, Float]) = ParamValue(Option((Some(scoreCoefficientsUpdate.map(item => (item._1.toString, item._2.toString)))).toString))
 }
 
 abstract class Method(name: String)
@@ -151,6 +154,7 @@ object Shoebox extends Service {
     def getUriImage(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/image/getUriImage", Param("id", id))
     def getUriSummary() = ServiceRoute(POST, "/internal/shoebox/image/getUriSummary")
     def getUriSummaries() = ServiceRoute(POST, "/internal/shoebox/image/getUriSummaries")
+    def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]) = ServiceRoute(POST, "/internal/shoebox/database/getAdultRestrictionOfURIs", Param("uris", uris))
     def getUserImageUrl(id: Long, width: Int) = ServiceRoute(GET, "/internal/shoebox/image/getUserImageUrl", Param("id", id), Param("width", width))
     def getUnsubscribeUrlForEmail(email: EmailAddress) = ServiceRoute(GET, "/internal/shoebox/email/getUnsubscribeUrlForEmail", Param("email", email))
     def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableSocialConnections", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
@@ -341,6 +345,7 @@ object Graph extends Service {
 
 object Curator extends Service {
   object internal {
+    //scoreCoefficient key should be one of "socialScore", "popularityScore", "overallInterestScore", "recentInterestScore", "recencyScore", "priorScore"
     def adHocRecos(userId: Id[User], n: Int) = ServiceRoute(GET, "/internal/curator/adHocRecos", Param("userId", userId), Param("n", n))
   }
 }

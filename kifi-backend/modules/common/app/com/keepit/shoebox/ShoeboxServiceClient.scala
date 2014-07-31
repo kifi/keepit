@@ -122,6 +122,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]]
   def getUriSummary(request: URISummaryRequest): Future[URISummary]
   def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]]
+  def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
   def getUserImageUrl(userId: Id[User], width: Int): Future[String]
   def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String]
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
@@ -825,6 +826,12 @@ class ShoeboxServiceClientImpl @Inject() (
         (missingKeysSeq zip uriSummaries) toMap
       }
     }.map(_ map { case (k, v) => (k.id, v) })
+  }
+
+  def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
+    call(Shoebox.internal.getAdultRestrictionOfURIs(uris)).map { r =>
+      r.json.as[Seq[Boolean]]
+    }
   }
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
