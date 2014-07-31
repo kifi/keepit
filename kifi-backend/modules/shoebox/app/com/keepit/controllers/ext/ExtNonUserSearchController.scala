@@ -19,10 +19,6 @@ class ExtNonUserSearchController @Inject() (
   typeaheadCommander: TypeaheadCommander)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  def findPeopleToInvite(q: String, n: Int) = JsonAction.authenticated { request =>
-    Ok(JsArray())
-  }
-
   def findPeopleToMessage(q: String, n: Int) = JsonAction.authenticatedAsync { request =>
     new SafeFuture({
       typeaheadCommander.queryNonUserContacts(request.userId, q, n)

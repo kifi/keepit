@@ -53,7 +53,7 @@ class MobileUserController @Inject() (
   }
 
   def abookInfo() = JsonAction.authenticatedAsync { request =>
-    userCommander.abookInfo(request.userId) map { abooks =>
+    userCommander.getGmailABookInfos(request.userId) map { abooks =>
       Ok(Json.toJson(abooks))
     }
   }
@@ -154,8 +154,10 @@ class MobileUserController @Inject() (
   def postDelightedAnswer = JsonAction.authenticatedParseJsonAsync { request =>
     implicit val source = DelightedAnswerSources.fromUserAgent(request.userAgentOpt)
     Json.fromJson[BasicDelightedAnswer](request.body) map { answer =>
-      userCommander.postDelightedAnswer(request.userId, answer) map { success =>
-        if (success) Ok else BadRequest
+      userCommander.postDelightedAnswer(request.userId, answer) map { externalIdOpt =>
+        externalIdOpt map { externalId =>
+          Ok(Json.obj("answerId" -> externalId))
+        } getOrElse NotFound
       }
     } getOrElse Future.successful(BadRequest)
   }
@@ -201,7 +203,7 @@ class MobileUserController @Inject() (
     }
   }
 
-  private val MobilePrefNames = Set("show_delighted_question")
+  private val MobilePrefNames = Set(UserValueName.SHOW_DELIGHTED_QUESTION)
 
   def getPrefs() = JsonAction.authenticatedAsync { request =>
     // Make sure the user's last active date has been updated before returning the result

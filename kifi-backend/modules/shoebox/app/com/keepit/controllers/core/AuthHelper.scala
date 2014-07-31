@@ -169,7 +169,7 @@ class AuthHelper @Inject() (
         emailAddressRepo.getByAddressOpt(emailAddress) map { emailAddr =>
           userRepo.save(user.copy(primaryEmail = Some(emailAddr.address)))
         }
-        userValueRepo.clearValue(user.id.get, "pending_primary_email")
+        userValueRepo.clearValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
       }
       SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = false) }
     }
@@ -305,12 +305,17 @@ class AuthHelper @Inject() (
           case Some(pr) if passwordResetRepo.tokenIsNotExpired(pr) =>
             val email = passwordResetRepo.useResetToken(code, request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
             val results = for (sui <- socialRepo.getByUser(pr.userId) if sui.networkType == SocialNetworks.FORTYTWO) yield {
+              val pwdInfo = current.plugin[PasswordHasher].get.hash(password)
               UserService.save(UserIdentity(
                 userId = sui.userId,
                 socialUser = sui.credentials.get.copy(
-                  passwordInfo = Some(current.plugin[PasswordHasher].get.hash(password))
+                  passwordInfo = Some(pwdInfo)
                 )
               ))
+              val updated = userCredRepo.findByUserIdOpt(sui.userId.get) map { userCred =>
+                userCredRepo.save(userCred.withCredentials(pwdInfo.password))
+              }
+              log.info(s"[doSetPassword] UserCreds updated=${updated.map(c => s"id=${c.id} userId=${c.userId} login=${c.loginName}")}")
               authenticateUser(sui.userId.get, onError = { error =>
                 throw error
               }, onSuccess = { authenticator =>
@@ -346,7 +351,7 @@ class AuthHelper @Inject() (
     db.readWrite { implicit s =>
       emailAddressRepo.getByCode(code).map { address =>
         lazy val isPendingPrimaryEmail = {
-          val pendingEmail = userValueRepo.getValueStringOpt(address.userId, "pending_primary_email").map(EmailAddress(_))
+          val pendingEmail = userValueRepo.getValueStringOpt(address.userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
           pendingEmail.isDefined && address.address == pendingEmail.get
         }
         val user = userRepo.get(address.userId)

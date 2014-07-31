@@ -32,15 +32,17 @@ class HealthcheckModuleTest extends TestKit(ActorSystem()) with SpecificationLik
       running(new ShoeboxApplication(FakeMailModule(), prodHealthCheckModuleWithLocalSender, TestActorSystemModule(Some(system)))) {
         val healthcheck = inject[HealthcheckPlugin]
 
-        val mail1 = healthcheck.reportStart()
-
         val outbox = fakeMailSender.mailQueue
-        outbox.size === 1
-        outbox(0).htmlBody === mail1.htmlBody
-        mail1.subject.endsWith("started") === true
+        outbox.size === 0
 
-        val mail2 = healthcheck.reportStop()
-        mail2.subject.endsWith("stopped") === true
+        healthcheck.errorCount() === 0
+        healthcheck.addError(AirbrakeError(new Exception("foo")))
+        healthcheck.errorCount() === 1
+
+        healthcheck.resetErrorCount()
+
+        healthcheck.errorCount() === 0
+
       }
     }
   }

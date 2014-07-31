@@ -60,12 +60,12 @@ class ProdUserEventLoggingRepo(
 }
 
 class ExtensionVersionAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugmentor[UserEvent] {
-  def isDefinedAt(userEvent: UserEvent) = userEvent.context.get[String]("extensionVersion").filter(_.nonEmpty).isEmpty
+  def isDefinedAt(userEvent: UserEvent) = userEvent.context.get[String](UserValueName.EXTENSION_VERSION.name).filter(_.nonEmpty).isEmpty
   def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
     userEvent.context.data.get("kifiInstallationId") collect {
       case ContextStringData(id) => {
         shoeboxClient.getExtensionVersion(ExternalId[KifiInstallation](id)).map {
-          version => Seq("extensionVersion" -> ContextStringData(version))
+          version => Seq(UserValueName.EXTENSION_VERSION.name -> ContextStringData(version))
         }
       }
     } getOrElse Future.successful(Seq.empty)
@@ -76,7 +76,7 @@ class UserValuesAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAugm
   def isDefinedAt(userEvent: UserEvent) = true
   def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
     shoeboxClient.getUserValue(userEvent.userId, Gender.key).map(Seq(_).flatten.map { gender =>
-      Gender.key -> ContextStringData(Gender(gender).toString)
+      Gender.key.name -> ContextStringData(Gender(gender).toString)
     })
   }
 }
@@ -86,7 +86,7 @@ class UserSegmentAugmentor(shoeboxClient: ShoeboxServiceClient) extends EventAug
   def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
     val uid = userEvent.userId
     shoeboxClient.getUserSegment(uid).map { seg =>
-      Seq(("userSegment" -> ContextStringData(UserSegment.getDescription(seg))))
+      Seq((UserValueName.USER_SEGMENT.name -> ContextStringData(UserSegment.getDescription(seg))))
     }
   }
 }

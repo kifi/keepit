@@ -19,7 +19,7 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.common.mail.TestMailModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{ FakeShoeboxSecureSocialModule, FakeSocialGraphModule }
+import com.keepit.common.social.{ FakeAuthenticator, TestShoeboxAppSecureSocialModule, FakeSocialGraphModule }
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
 
@@ -40,10 +40,10 @@ class UserControllerTest extends Specification with ApplicationInjector {
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     TestHeimdalServiceClientModule(),
-    FakeShoeboxSecureSocialModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule()
+    TestScraperServiceClientModule(),
+    FakeAuthenticator()
   )
 
   "UserController" should {
@@ -61,7 +61,7 @@ class UserControllerTest extends Specification with ApplicationInjector {
 
         inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.ADMIN))
 
-        val request = FakeRequest("GET", path)
+        val request = FakeRequest("GET", path).withHeaders("userId" -> "1")
         val result = route(request).get
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
@@ -84,6 +84,23 @@ class UserControllerTest extends Specification with ApplicationInjector {
           """)
 
         Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
+    "basicUserInfo" should {
+      "return user info when found" in running(new ShoeboxApplication(controllerTestModules: _*)) {
+        val user = inject[Database].readWrite { implicit rw =>
+          inject[UserRepo].save(User(firstName = "Donald", lastName = "Trump"))
+        }
+
+        val controller = inject[UserController] // setup
+        val result = controller.basicUserInfo(user.externalId)(FakeRequest().withHeaders("userId" -> "1"))
+        var body: String = contentAsString(result)
+
+        contentType(result).get must beEqualTo("application/json")
+        body must contain("id\":\"" + user.externalId)
+        body must contain("firstName\":\"Donald")
+        body must contain("lastName\":\"Trump")
       }
     }
   }

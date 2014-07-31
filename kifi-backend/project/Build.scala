@@ -62,7 +62,8 @@ object ApplicationBuild extends Build {
 
   private def cmd(name: String, command: String, base: File, namedArgs: List[String] = Nil): Command = {
     Command.args(name, "<" + name + "-command>") { (state, args) =>
-      Process(command :: (namedArgs ++ args.toList), base).!;
+      val exitCode = Process(command :: (namedArgs ++ args.toList), base).!;
+      if (exitCode!=0) throw new Exception(s"Command '${(command :: (namedArgs ++ args.toList)).mkString(" ")}' failed with exit code $exitCode")
       state
     }
   }
@@ -166,7 +167,10 @@ object ApplicationBuild extends Build {
     "com.keepit.search._",
     "com.keepit.cortex.core._",
     "com.keepit.cortex.models.lda._",
-    "com.keepit.common.mail.EmailAddress"
+    "com.keepit.common.mail.EmailAddress",
+    "com.keepit.common.crypto._",
+    "org.joda.time.DateTime",
+    "com.keepit.common.time._"
   )
 
   lazy val commonResolvers = Seq(
@@ -257,7 +261,7 @@ object ApplicationBuild extends Build {
     commands <++= angularDirectory { base =>
       Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
     },
-    commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) }
+    commands <+= angularDirectory { base => cmd("ng", "gulp", base, List("release")) }
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val search = play.Project("search", appVersion, searchDependencies, path = file("modules/search")).settings(
@@ -299,7 +303,7 @@ object ApplicationBuild extends Build {
     commands <++= angularDirectory { base =>
       Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
     },
-    commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) }
+    commands <+= angularDirectory { base => cmd("ng", "gulp", base, List("release")) }
   )
     .dependsOn(
     common % "test->test;compile->compile",

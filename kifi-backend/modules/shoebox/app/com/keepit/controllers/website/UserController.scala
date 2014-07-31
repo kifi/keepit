@@ -13,6 +13,7 @@ import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.commanders._
 import com.keepit.heimdal.{ DelightedAnswerSources, BasicDelightedAnswer }
 import com.keepit.model._
+import com.keepit.social.BasicUser
 import play.api.libs.json.Json.toJson
 import com.keepit.abook.{ ABookUploadConf, ABookServiceClient }
 import scala.concurrent.Future
@@ -26,7 +27,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.Play.current
 import java.util.concurrent.atomic.AtomicBoolean
 import com.keepit.eliza.ElizaServiceClient
-import play.api.mvc.{ Request, MaxSizeExceeded }
+import play.api.mvc.{ Action, Request, MaxSizeExceeded }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import play.api.data.Form
@@ -89,6 +90,22 @@ class UserController @Inject() (
     ))
   }
 
+  def findFriends(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
+    abookServiceClient.findFriends(request.userId, page, pageSize).map { recommendedUsers =>
+      val basicUsers = db.readOnlyReplica { implicit session => basicUserRepo.loadAll(recommendedUsers.toSet) }
+      val recommendedBasicUsers = recommendedUsers.map(basicUsers(_))
+      val json = Json.obj("users" -> recommendedBasicUsers)
+      Ok(json)
+    }
+  }
+
+  def hideUserRecommendation(id: ExternalId[User]) = JsonAction.authenticatedAsync { request =>
+    val irrelevantUserId = db.readOnlyReplica { implicit session => userRepo.get(id).id.get }
+    abookServiceClient.hideUserRecommendation(request.userId, irrelevantUserId).map { _ =>
+      Ok(Json.obj("hidden" -> true))
+    }
+  }
+
   def friendCount() = JsonAction.authenticated { request =>
     db.readOnlyMaster { implicit s =>
       Ok(Json.obj(
@@ -103,7 +120,7 @@ class UserController @Inject() (
   }
 
   def abookInfo() = JsonAction.authenticatedAsync { request =>
-    val abookF = abookServiceClient.getABookInfos(request.userId)
+    val abookF = userCommander.getGmailABookInfos(request.userId)
     abookF.map { abooks =>
       Ok(Json.toJson(abooks.map(ExternalABookInfo.fromABookInfo _)))
     }
@@ -119,6 +136,12 @@ class UserController @Inject() (
     } else {
       NotFound(Json.obj("error" -> s"User with id $id not found."))
     }
+  }
+
+  def closeAccount = JsonAction.authenticatedParseJson { request =>
+    val comment = (request.body \ "comment").asOpt[String].getOrElse("")
+    userCommander.sendCloseAccountEmail(request.userId, comment)
+    Ok(Json.obj("closed" -> true))
   }
 
   def friend(id: ExternalId[User]) = JsonAction.authenticated { request =>
@@ -197,11 +220,21 @@ class UserController @Inject() (
     }
   }
 
+  def basicUserInfo(id: ExternalId[User]) = JsonAction.authenticated { implicit request =>
+    db.readOnlyReplica { implicit session =>
+      userRepo.getOpt(id).map { user =>
+        Ok(Json.toJson(BasicUser.fromUser(user)))
+      } getOrElse {
+        NotFound(Json.obj("error" -> "user not found"))
+      }
+    }
+  }
+
   def getEmailInfo(email: EmailAddress) = JsonAction.authenticated(allowPending = true) { implicit request =>
     db.readOnlyMaster { implicit session =>
       emailRepo.getByAddressOpt(email) match {
         case Some(emailRecord) =>
-          val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, "pending_primary_email")
+          val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
           if (emailRecord.userId == request.userId) {
             Ok(Json.toJson(EmailInfo(
               address = emailRecord.address,
@@ -252,7 +285,12 @@ class UserController @Inject() (
     ))
   }
 
-  private val SitePrefNames = Set("site_left_col_width", "site_welcomed", "onboarding_seen", "show_delighted_question")
+  private val SitePrefNames = Set(
+    UserValueName.SITE_LEFT_COL_WIDTH,
+    UserValueName.SITE_WELCOMED,
+    UserValueName.ONBOARDING_SEEN,
+    UserValueName.SHOW_DELIGHTED_QUESTION
+  )
 
   def getPrefs() = JsonAction.authenticatedAsync { request =>
     // The prefs endpoint is used as an indicator that the user is active
@@ -262,11 +300,13 @@ class UserController @Inject() (
 
   def savePrefs() = JsonAction.authenticatedParseJson { request =>
     val o = request.request.body.as[JsObject]
-    if (o.keys.subsetOf(SitePrefNames)) {
-      userCommander.savePrefs(request.userId, o)
+    val map = o.value.map(t => UserValueName(t._1) -> t._2).toMap
+    val keyNames = map.keys.toSet
+    if (keyNames.subsetOf(SitePrefNames)) {
+      userCommander.savePrefs(request.userId, map)
       Ok(o)
     } else {
-      BadRequest(Json.obj("error" -> ((SitePrefNames -- o.keys).mkString(", ") + " not recognized")))
+      BadRequest(Json.obj("error" -> ((SitePrefNames -- keyNames).mkString(", ") + " not recognized")))
     }
   }
 
@@ -374,7 +414,7 @@ class UserController @Inject() (
     val networkStatuses = Future {
       JsObject(db.readOnlyMaster { implicit session =>
         networks.map { network =>
-          userValueRepo.getValueStringOpt(request.userId, s"import_in_progress_${network}").flatMap { r =>
+          userValueRepo.getValueStringOpt(request.userId, UserValueName.importInProgress(network)).flatMap { r =>
             if (r == "false") {
               None
             } else {
@@ -385,7 +425,7 @@ class UserController @Inject() (
       }.flatten)
     }
 
-    val abookStatuses = abookServiceClient.getABookInfos(request.userId).map { abooks =>
+    val abookStatuses = userCommander.getGmailABookInfos(request.userId).map { abooks =>
       JsObject(abooks.map { abookInfo =>
         abookInfo.state match {
           case ABookInfoStates.PENDING | ABookInfoStates.PROCESSING => // we only care if it's actively working. in all other cases, client knows when it refreshes.
@@ -413,8 +453,10 @@ class UserController @Inject() (
   def postDelightedAnswer = JsonAction.authenticatedParseJsonAsync { request =>
     implicit val source = DelightedAnswerSources.fromUserAgent(request.userAgentOpt)
     Json.fromJson[BasicDelightedAnswer](request.body) map { answer =>
-      userCommander.postDelightedAnswer(request.userId, answer) map { success =>
-        if (success) Ok else BadRequest
+      userCommander.postDelightedAnswer(request.userId, answer) map { externalIdOpt =>
+        externalIdOpt map { externalId =>
+          Ok(Json.obj("answerId" -> externalId))
+        } getOrElse NotFound
       }
     } getOrElse Future.successful(BadRequest)
   }
@@ -432,7 +474,7 @@ class UserController @Inject() (
     val finishedImportAnnounced = new AtomicBoolean(false)
     def check(): Option[JsValue] = {
       val v = db.readOnlyMaster { implicit session =>
-        userValueRepo.getValueStringOpt(request.userId, s"import_in_progress_${network}")
+        userValueRepo.getValueStringOpt(request.userId, UserValueName.importInProgress(network))
       }
       if (v.isEmpty && clock.now.minusSeconds(20).compareTo(startTime) > 0) {
         None

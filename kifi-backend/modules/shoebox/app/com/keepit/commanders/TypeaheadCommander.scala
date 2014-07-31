@@ -61,10 +61,11 @@ class TypeaheadCommander @Inject() (
   private def socialId(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
 
   private def queryContacts(userId: Id[User], search: Option[String], limit: Int): Future[Seq[RichContact]] = {
-    search match {
+    val futureContacts = search match {
       case Some(query) => abookServiceClient.prefixQuery(userId, query, Some(limit)).map { hits => hits.map(_.info) }
       case None => abookServiceClient.getContactsByUser(userId, pageSize = Some(limit))
     }
+    futureContacts.map(RichContact.deduplicateByEmailAddress)
   }
 
   def queryNonUserContacts(userId: Id[User], query: String, limit: Int): Future[Seq[RichContact]] = {

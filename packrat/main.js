@@ -649,7 +649,8 @@ api.port.on({
         url: data.url,
         canonical: data.canonical,
         og: data.og,
-        isPrivate: data.how === 'private'
+        isPrivate: data.how === 'private',
+        guided: data.guided
       }, function done(keep) {
         log('[keep:done]', keep);
         delete d.state;
@@ -979,6 +980,9 @@ api.port.on({
       });
     }
   },
+  'pane?': function (_, respond) {
+    respond(stored('unread') ? '/messages:unread' : '/messages:all');
+  },
   pane: function(o, _, tab) {
     if (o.old) {
       var arr = tabsByLocator[o.old];
@@ -1000,6 +1004,11 @@ api.port.on({
       }
       tabsByLocator[loc] = arr || [tab];
       mixpanel.track('user_viewed_pane', {type: loc.lastIndexOf('/messages/', 0) === 0 ? 'chat' : loc.substr(1)});
+      if (loc === '/messages:unread') {
+        store('unread', true);
+      } else if (loc === '/messages:all') {
+        unstore('unread');
+      }
     }
   },
   set_all_threads_read: function (msgId) {
@@ -1138,6 +1147,22 @@ api.port.on({
         api.tabs.emit(tab, 'contacts', {searchId: searchId, contacts: [], error: true});
       });
     }
+  },
+  search_contacts: function(data, respond, tab) {
+    var sf = global.scoreFilter || require('./scorefilter').scoreFilter;
+    var searchContext = {sf: sf, q: data.q}
+    ajax('GET', '/ext/contacts', {q: data.q, n: data.n}, function (contacts) {
+      respond(contacts.map(toContactResult, searchContext));
+    }, respond);
+  },
+  delete_contact: function(email, respond) {
+    ajax('POST', '/ext/contacts/hide', {email: email}, function (status) {
+      log('[delete_contact] resp:', status);
+      respond(status);
+    }, function () {
+      log('#c00', '[delete_contact] resp:', status);
+      respond(false);
+    });
   },
   open_tab: function (path) {
     api.tabs.open(webBaseUri() + path);
@@ -1776,7 +1801,7 @@ function pimpSearchHit(hit) {
 }
 
 function kifify(tab) {
-  log("[kifify]", tab.id, tab.url, tab.icon || '', tab.nUri || '', me ? '' : 'no session');
+  log('[kifify]', tab.id, tab.url, tab.icon || '', tab.nUri || '', me ? '' : 'no session');
   if (!tab.icon) {
     api.icon.set(tab, 'icons/k_gray' + (silence ? '.paused' : '') + '.png');
   } else {
@@ -1785,7 +1810,7 @@ function kifify(tab) {
 
   if (!me) {
     if (!stored('logout') || tab.url.indexOf(webBaseUri()) === 0) {
-      ajax("GET", "/ext/authed", function (loggedIn) {
+      ajax('GET', '/ext/authed', function (loggedIn) {
         if (loggedIn !== false) {
           authenticate(function() {
             if (api.tabs.get(tab.id) === tab) {  // tab still at same page
@@ -1862,19 +1887,9 @@ function kififyWithPageData(tab, d) {
         log('[initTab]', tab.id, 'restricted');
       } else if (ruleSet.rules.shown && d.shown) {
         log('[initTab]', tab.id, 'shown before');
-      } else {
-        var focused = api.tabs.isFocused(tab);
-        if (ruleSet.rules.scroll) {
-          api.tabs.emit(tab, 'scroll_rule', ruleSet.rules.scroll, {queue: 1});
-        }
-        if ((ruleSet.rules.focus || [])[0] != null) {
-          tab.buttonSec = ruleSet.rules.focus[0];
-          if (focused) scheduleAutoEngage(tab, 'button');
-        }
-        if (d.keepers.length) {
-          tab.keepersSec = 20;
-          if (focused) scheduleAutoEngage(tab, 'keepers');
-        }
+      } else if (d.keepers.length) {
+        tab.keepersSec = 20;
+        if (api.tabs.isFocused(tab)) scheduleAutoEngage(tab, 'keepers');
       }
     }
   }
@@ -1983,19 +1998,19 @@ function updateIconSilence(tab) {
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource, makePublic) {
-  log("[postBookmarks]");
+  log('[postBookmarks]');
   supplyBookmarks(function(bookmarks) {
     if (makePublic) {
       bookmarks.forEach(function (bookmark) {
         bookmark.isPrivate = false;
       });
     }
-    log("[postBookmarks] bookmarks:", bookmarks);
+    log('[postBookmarks] bookmarks:', bookmarks);
     ajax("POST", "/bookmarks/add", {
         bookmarks: bookmarks,
         source: bookmarkSource},
       function(o) {
-        log("[postBookmarks] resp:", o);
+        log('[postBookmarks] resp:', o);
       });
   });
 }
@@ -2027,28 +2042,27 @@ api.icon.on.click.add(function (tab) {
 });
 
 api.tabs.on.focus.add(function(tab) {
-  log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
+  log('#b8a', '[tabs.on.focus] %i %o', tab.id, tab);
   for (var key in tab.focusCallbacks) {
     tab.focusCallbacks[key](tab);
   }
   delete tab.focusCallbacks;
   kifify(tab);
-  scheduleAutoEngage(tab, 'button');
   scheduleAutoEngage(tab, 'keepers');
 });
 
 api.tabs.on.blur.add(function(tab) {
-  log("#b8a", "[tabs.on.blur] %i %o", tab.id, tab);
-  ['button', 'keepers'].forEach(clearAutoEngageTimer.bind(null, tab));
+  log('#b8a', '[tabs.on.blur] %i %o', tab.id, tab);
+  clearAutoEngageTimer(tab, 'keepers');
 });
 
 api.tabs.on.loading.add(function(tab) {
-  log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab);
+  log('#b8a', '[tabs.on.loading] %i %o', tab.id, tab);
   kifify(tab);
 });
 
 api.tabs.on.unload.add(function(tab, historyApi) {
-  log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
+  log('#b8a', '[tabs.on.unload] %i %o', tab.id, tab);
   var tabs = tabsByUrl[tab.nUri];
   for (var i = tabs && tabs.length; i--;) {
     if (tabs[i] === tab) {
@@ -2078,13 +2092,13 @@ api.tabs.on.unload.add(function(tab, historyApi) {
   if (tabsTagging.length) {
     tabsTagging = tabsTagging.filter(idIsNot(tab.id));
   }
-  ['button', 'keepers'].forEach(clearAutoEngageTimer.bind(null, tab));
+  clearAutoEngageTimer(tab, 'keepers');
   delete tab.nUri;
   delete tab.count;
   delete tab.engaged;
   delete tab.focusCallbacks;
   if (historyApi) {
-    api.tabs.emit(tab, "reset");
+    api.tabs.emit(tab, 'reset');
   }
 });
 
@@ -2278,7 +2292,7 @@ function toContactResult(f) {
       f.emailParts.push(f.email.substr(i));
     }
     if (!f.id) {
-      f.id = {kind: "email", email: f.email};
+      f.id = {kind: 'email', email: f.email};
     }
     if (!f.name) {
       f.name = f.email;
@@ -2492,7 +2506,7 @@ function clearSession() {
 }
 
 function deauthenticate() {
-  log("[deauthenticate]");
+  log('[deauthenticate]');
   clearSession();
   store('logout', Date.now());
   ajax('GET', '/logout');

@@ -16,6 +16,7 @@ import org.joda.time.DateTime
 trait UserLDAInterestsRepo extends DbRepo[UserLDAInterests] {
   def getByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserLDAInterests]
   def getTopicMeanByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserTopicMean]
+  def getAllUserTopicMean(version: ModelVersion[DenseLDA], minEvidence: Int)(implicit session: RSession): (Seq[Id[User]], Seq[UserTopicMean])
 }
 
 @Singleton
@@ -33,7 +34,9 @@ class UserLDAInterestsRepoImpl @Inject() (
     def version = column[ModelVersion[DenseLDA]]("version")
     def numOfEvidence = column[Int]("num_of_evidence")
     def userTopicMean = column[UserTopicMean]("user_topic_mean", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, version, numOfEvidence, userTopicMean.?, state) <> ((UserLDAInterests.apply _).tupled, UserLDAInterests.unapply _)
+    def numOfRecentEvidence = column[Int]("num_of_recent_evidence")
+    def userRecentTopicMean = column[UserTopicMean]("user_recent_topic_mean", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, userId, version, numOfEvidence, userTopicMean.?, numOfRecentEvidence, userRecentTopicMean.?, state) <> ((UserLDAInterests.apply _).tupled, UserLDAInterests.unapply _)
   }
 
   def table(tag: Tag) = new UserLDATopicTable(tag)
@@ -48,6 +51,11 @@ class UserLDAInterestsRepoImpl @Inject() (
 
   def getTopicMeanByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserTopicMean] = {
     (for { r <- rows if (r.userId === userId && r.version === version && r.state === UserLDAInterestsStates.ACTIVE) } yield r.userTopicMean).firstOption
+  }
+
+  def getAllUserTopicMean(version: ModelVersion[DenseLDA], minEvidence: Int)(implicit session: RSession): (Seq[Id[User]], Seq[UserTopicMean]) = {
+    val res = (for { r <- rows if (r.version === version && r.numOfEvidence > minEvidence && r.state === UserLDAInterestsStates.ACTIVE) } yield (r.userId, r.userTopicMean)).list
+    res.unzip
   }
 
 }

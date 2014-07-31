@@ -211,16 +211,23 @@ angular.module('kifi.profileService', [
       $window.location = routeService.logout;
     }
 
-    function postDelightedAnswer(score, comment) {
+    function postDelightedAnswer(score, comment, answerId) {
       var data = {
-        score: score,
-        comment: comment || undefined
+        score: score || undefined,
+        comment: comment || undefined,
+        answerId: answerId || undefined
       };
-      return $http.post(routeService.postDelightedAnswer, data);
+      return $http.post(routeService.postDelightedAnswer, data).then(function (res) {
+        return res.data && res.data.answerId;
+      });
     }
 
     function cancelDelightedSurvey() {
       return $http.post(routeService.cancelDelightedSurvey, {});
+    }
+
+    function closeAccountRequest(data) {
+      return $http.post(routeService.userCloseAccount, data);
     }
 
     return {
@@ -243,7 +250,8 @@ angular.module('kifi.profileService', [
       getEmailValidationError: getEmailValidationError,
       sendChangePassword: sendChangePassword,
       postDelightedAnswer: postDelightedAnswer,
-      cancelDelightedSurvey: cancelDelightedSurvey
+      cancelDelightedSurvey: cancelDelightedSurvey,
+      closeAccountRequest: closeAccountRequest
     };
   }
 ]);

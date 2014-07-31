@@ -1,0 +1,10 @@
+<div>
+  <h5>For all of your Keeps, the URL, date kept, and tags <br> will be included in an HTML netscape format file</h5>
+  <a class="profile-export" ng-href="{{getExportUrl()}}" ng-click="exportKeeps()" target="_self" ng-class="{'export-first':!exported, 'export-again':exported}">{{getExportButtonText()}}</a>
+  <p>
+  <span class="profile-export-status" ng-show="exported">
+    <span class="profile-placeholder">&nbsp;</span>
+    <span>You can find the file in your Downloads folder</span>
+  </span>
+  </p>
+</div>

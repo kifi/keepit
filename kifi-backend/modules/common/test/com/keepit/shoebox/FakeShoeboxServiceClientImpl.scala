@@ -100,7 +100,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allCollectionBookmarks = MutableMap[Id[Collection], Set[Id[Keep]]]()
   val allSearchExperiments = MutableMap[Id[SearchConfigExperiment], SearchConfigExperiment]()
   val allUserEmails = MutableMap[Id[User], Set[EmailAddress]]()
-  val allUserValues = MutableMap[(Id[User], String), String]()
+  val allUserValues = MutableMap[(Id[User], UserValueName), String]()
   val allFriendRequests = MutableMap[Id[FriendRequest], FriendRequest]()
   val allUserFriendRequests = MutableMap[Id[User], Seq[FriendRequest]]()
 
@@ -499,6 +499,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def kifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit] = Future.successful()
 
+  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = Future.successful(Seq.empty)
+
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
     Future.successful(Seq.empty[ScrapeRequest])
   }
@@ -546,15 +548,15 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
 
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
+  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = Future.successful(false)
 
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = {
     Future.successful(allUserFriendRequests.getOrElse(senderId, Seq()))
   }
 
-  def getUserValue(userId: Id[User], key: String): Future[Option[String]] = Future.successful(allUserValues.get((userId, key)))
+  def getUserValue(userId: Id[User], key: UserValueName): Future[Option[String]] = Future.successful(allUserValues.get((userId, key)))
 
-  def setUserValue(userId: Id[User], key: String, value: String): Unit = allUserValues((userId, key)) = value
+  def setUserValue(userId: Id[User], key: UserValueName, value: String): Unit = allUserValues((userId, key)) = value
 
   def getUserSegment(userId: Id[User]): Future[UserSegment] = Future.successful(UserSegment(Int.MaxValue))
 
@@ -604,4 +606,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]] = Future.successful(Seq.empty)
 
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]] = Future.successful(Seq.empty)
+
+  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = Future.successful(Seq.empty)
+
+  def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]] = Future.successful(Seq.empty)
 }

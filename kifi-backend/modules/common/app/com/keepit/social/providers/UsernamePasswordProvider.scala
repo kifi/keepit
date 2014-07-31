@@ -1,6 +1,9 @@
 package com.keepit.social.providers
 
-import com.keepit.social.UserIdentityProvider
+import com.keepit.FortyTwoGlobal
+import com.keepit.common.db.Id
+import com.keepit.model.User
+import com.keepit.social.{ UserIdentity, UserIdentityProvider }
 
 import play.api.Application
 import play.api.libs.json.Json
@@ -11,22 +14,29 @@ import securesocial.core.providers.{ UsernamePasswordProvider => UPP }
 import securesocial.core._
 import play.api.libs.ws.Response
 import securesocial.core.IdentityId
-import scala.Some
+import net.codingwell.scalaguice.InjectorExtensions._
 
-class UsernamePasswordProvider(application: Application)
-    extends UPP(application) with UserIdentityProvider {
+class UsernamePasswordProvider(app: Application)
+    extends UPP(app) with UserIdentityProvider {
 
-  override def doAuth[A]()(implicit request: Request[A]): Either[Result, SocialUser] = {
+  // see SecureSocialAuthenticatorStore
+  lazy val global = app.global.asInstanceOf[FortyTwoGlobal] // fail hard
+  lazy val passwordAuth = global.injector.instance[PasswordAuthentication]
+
+  override def doAuth[A]()(implicit request: Request[A]): Either[Result, UserIdentity] = {
     UPP.loginForm.bindFromRequest().fold(
       errors => Left(error("bad_form")),
       credentials => {
         UserService.find(IdentityId(credentials._1, id)) match {
           case Some(identity) =>
-            val result = for {
-              pInfo <- identity.passwordInfo
-              hasher <- Registry.hashers.get(pInfo.hasher) if hasher.matches(pInfo, credentials._2)
-            } yield Right(SocialUser(identity))
-            result getOrElse Left(error("wrong_password"))
+            identity match {
+              case userIdentity: UserIdentity =>
+                log.info(s"[doAuth] userIdentity=$userIdentity")
+                if (passwordAuth.authenticate(userIdentity.userId.get, credentials._2)) Right(userIdentity) else Left(error("wrong_password"))
+              case _ =>
+                log.error(s"[doAuth] identity passed in is not of type <UserIdentity>; class=${identity.getClass}; obj=$identity")
+                Left(error("wrong_password")) // wrong_password for compatibility; auth_failure/internal_error more accurate
+            }
           case None =>
             Left(error("no_such_user"))
         }
@@ -43,4 +53,8 @@ class UsernamePasswordProvider(application: Application)
   }
 
   private def error(errorCode: String) = Forbidden(Json.obj("error" -> errorCode))
+}
+
+trait PasswordAuthentication {
+  def authenticate(userId: Id[User], providedCreds: String): Boolean
 }

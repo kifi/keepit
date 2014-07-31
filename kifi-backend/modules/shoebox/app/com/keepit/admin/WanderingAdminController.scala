@@ -26,7 +26,7 @@ class WanderingAdminController @Inject() (
   private def doWander(wanderlust: Wanderlust): Future[(Seq[(User, Int)], Seq[(SocialUserInfo, Int)], Seq[(NormalizedURI, Int)], Seq[(String, Int)])] = {
     graphClient.wander(wanderlust).map { collisions =>
 
-      val sortedUsers = db.readOnlyReplica { implicit session =>
+      val sortedUsers = db.readOnlyMaster { implicit session =>
         collisions.users.map { case (userId, count) => userRepo.get(userId) -> count }
       }.toSeq.sortBy(-_._2)
 

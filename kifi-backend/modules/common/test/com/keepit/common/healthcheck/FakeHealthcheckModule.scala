@@ -38,6 +38,4 @@ class FakeHealthcheck extends HealthcheckPlugin {
     error
   }
 
-  def reportStart(): ElectronicMail = ElectronicMail(from = ENG, to = List(ENG), subject = "start", htmlBody = "", category = NotificationCategory.System.HEALTHCHECK)
-  def reportStop(): ElectronicMail = ElectronicMail(from = ENG, to = List(ENG), subject = "stop", htmlBody = "", category = NotificationCategory.System.HEALTHCHECK)
 }

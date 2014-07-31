@@ -22,6 +22,7 @@ import com.keepit.queue.ProdNormalizationUpdateJobQueueModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
 import com.keepit.common.external.ProdExternalServiceModule
 import com.keepit.signal.ProdReKeepStatsUpdaterModule
+import com.keepit.curator.ProdCuratorServiceClientModule
 
 case class ShoeboxProdModule() extends ShoeboxModule(
   secureSocialModule = ProdShoeboxSecureSocialModule(),
@@ -51,6 +52,7 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   val scraperServiceClientModule = ProdScraperServiceClientModule()
   val cortexServiceClientModule = ProdCortexServiceClientModule()
   val graphServiceClientModule = ProdGraphServiceClientModule()
+  val curatorServiceClientModule = ProdCuratorServiceClientModule()
 
   private val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.CURATOR :: Nil
   val discoveryModule = new ProdDiscoveryModule(ServiceType.SHOEBOX, servicesToListenOn)

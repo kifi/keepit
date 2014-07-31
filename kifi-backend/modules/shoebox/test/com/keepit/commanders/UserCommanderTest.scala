@@ -1,10 +1,12 @@
 package com.keepit.commanders
 
+import com.keepit.common.crypto.TestCryptoModule
+import com.keepit.shoebox.FakeKeepImportsModule
 import org.specs2.mutable.Specification
 
-import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
-import com.keepit.model.{ User, UserEmailAddressRepo, UserRepo, UserEmailAddress, UserConnectionRepo }
-import com.keepit.common.mail.{ EmailAddress, FakeMailModule, FakeOutbox }
+import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplicationInjector, ShoeboxApplication }
+import com.keepit.model._
+import com.keepit.common.mail._
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -17,7 +19,7 @@ import com.google.inject.Injector
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 
-class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
+class UserCommanderTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
     val userRepo = inject[UserRepo]
@@ -60,13 +62,15 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
     ShoeboxFakeStoreModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule()
+    TestScraperServiceClientModule(),
+    FakeKeepImportsModule(),
+    TestCryptoModule()
   )
 
   "UserCommander" should {
 
     "notify friends of new joinee" in {
-      running(new ShoeboxApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
         val (user1, user2, user3) = setup()
         val userCommander = inject[UserCommander]
         val outbox = inject[FakeOutbox]
@@ -103,7 +107,7 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
     }
 
     "welcome a joinee" in {
-      running(new ShoeboxApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
         val (user1, user2, user3) = setup()
         val userCommander = inject[UserCommander]
         val outbox = inject[FakeOutbox]
@@ -127,7 +131,7 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
     }
 
     "page through connections" in {
-      running(new ShoeboxApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
         val userRepo = inject[UserRepo]
         val connectionRepo = inject[UserConnectionRepo]
 
@@ -170,6 +174,62 @@ class UserCommanderTest extends Specification with ShoeboxApplicationInjector {
         inject[UserCommander].getConnectionsPage(user1.id.get, 2, 2)._1.size === 0
       }
     }
-  }
 
+    "send a close account email" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, user3) = setup()
+        val userCommander = inject[UserCommander]
+        val outbox = inject[FakeOutbox]
+
+        outbox.size === 0
+        // test that the angle brackets are removed
+        userCommander.sendCloseAccountEmail(user1.id.get, "<a>l</a>going amish")
+        outbox.size === 1
+
+        val mail: ElectronicMail = outbox(0)
+        mail.from === SystemEmailAddress.ENG
+        mail.to === Seq(SystemEmailAddress.SUPPORT)
+        mail.subject.toString === s"Close Account for ${user1.id.get}"
+        mail.htmlBody.toString === s"User ${user1.id.get} requested to close account.<br/>---<br/>al/agoing amish"
+        mail.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.System.ADMIN)
+      }
+    }
+
+    "normalize usernames" in {
+      UsernameOps.normalize("léo") === "leo"
+      UsernameOps.normalize("andrew.conner2") === "andrewconner2"
+      UsernameOps.normalize("康弘康弘") === "康弘康弘"
+      UsernameOps.normalize("ân_dréw-c.ön.nér") === "andrewconner"
+    }
+
+    "allow change of username" in {
+      withDb(modules: _*) { implicit injector =>
+        val userCommander = inject[UserCommander]
+        val (user1, user2, user3) = setup()
+
+        // basic changing, no dupes
+        userCommander.setUsername(user1.id.get, Username("bobz"), false) === Right(Username("bobz"))
+        userCommander.setUsername(user2.id.get, Username("bob.z"), false) === Left("username_exists")
+        userCommander.setUsername(user1.id.get, Username("bob.z"), false) === Right(Username("bob.z"))
+
+        // changes user model
+        db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username === None)
+        userCommander.setUsername(user2.id.get, Username("obama"), false) === Right(Username("obama"))
+        db.readOnlyMaster(s => userRepo.get(user2.id.get)(s).username.get === Username("obama"))
+
+        // filter out invalid names
+        userCommander.setUsername(user3.id.get, Username("a.-bc"), false) === Left("invalid_username")
+        userCommander.setUsername(user3.id.get, Username(".abc3"), false) === Left("invalid_username")
+        userCommander.setUsername(user3.id.get, Username("kifisupport"), false) === Left("invalid_username")
+        userCommander.setUsername(user3.id.get, Username("mayihelpyou"), false) === Left("invalid_username")
+        userCommander.setUsername(user3.id.get, Username("abcd?"), false) === Left("invalid_username")
+        userCommander.setUsername(user3.id.get, Username("abcd?"), false) === Left("invalid_username")
+        userCommander.setUsername(user3.id.get, Username("abcd?"), false) === Left("invalid_username")
+        userCommander.setUsername(user3.id.get, Username("amazon"), false) === Left("invalid_username")
+        userCommander.setUsername(user3.id.get, Username("yes"), false) === Left("invalid_username")
+        userCommander.setUsername(user3.id.get, Username("aes.corp"), false) === Left("invalid_username")
+
+      }
+    }
+  }
 }

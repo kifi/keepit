@@ -8,12 +8,11 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time.FakeClockModule
 import com.keepit.inject.EmptyInjector
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.test.DbInjectionHelper
+import com.keepit.test.{ TestInjector, DbInjectionHelper }
 
 import play.api.Mode
 
-trait CortexTestInjector extends EmptyInjector with DbInjectionHelper {
-  val mode = Mode.Test
+trait CortexTestInjector extends TestInjector with DbInjectionHelper {
   val module = Modules.combine(
     FakeAirbrakeModule(),
     FakeClockModule(),

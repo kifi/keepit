@@ -5,7 +5,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.zookeeper.ServiceDiscovery
-import com.keepit.search.index.IndexerActor
+import com.keepit.search.index.BasicIndexerActor
 import com.keepit.search.index.IndexerPlugin
 import com.keepit.search.index.IndexerPluginImpl
 import scala.concurrent.duration._
@@ -24,5 +24,5 @@ class PhraseIndexerPluginImpl @Inject() (
 
 class PhraseIndexerActor @Inject() (
   airbrake: AirbrakeNotifier,
-  indexer: PhraseIndexer) extends IndexerActor[Phrase, PhraseIndexer](airbrake, indexer)
+  indexer: PhraseIndexer) extends BasicIndexerActor[Phrase, PhraseIndexer](airbrake, indexer)
 

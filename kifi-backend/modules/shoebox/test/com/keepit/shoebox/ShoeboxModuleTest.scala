@@ -19,7 +19,7 @@ import scala.reflect.ManifestFactory.classType
 import com.keepit.common.net.{ FakeHttpClientModule, FakeClientResponse }
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.actor.TestActorSystemModule
-import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxSecureSocialModule }
+import com.keepit.common.social.{ FakeSocialGraphModule, TestShoeboxAppSecureSocialModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.model.TestSliderHistoryTrackerModule
@@ -34,6 +34,7 @@ import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.graph.TestGraphServiceClientModule
 import com.keepit.signal.TestReKeepStatsUpdaterModule
 import com.keepit.normalizer.{ NormalizationServiceImpl, NormalizedURIInterner }
+import com.keepit.curator.FakeCuratorServiceClientModule
 import controllers.AssetsBuilder
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
@@ -54,7 +55,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         FakeHttpClientModule(FakeClientResponse.fakeAmazonDiscoveryClient),
         FakeDiscoveryModule(),
         TestActorSystemModule(),
-        FakeShoeboxSecureSocialModule(),
+        TestShoeboxAppSecureSocialModule(),
         ShoeboxFakeStoreModule(),
         FakeSocialGraphModule(),
         TestAnalyticsModule(),
@@ -63,6 +64,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         FakeDomainTagImporterModule(),
         FakeCortexServiceClientModule(),
         TestGraphServiceClientModule(),
+        FakeCuratorServiceClientModule(),
         GeckoboardModule(),
         FakeShoeboxServiceModule(), // This one should not be required once the Scraper is off Shoebox
         FakeScrapeSchedulerModule(),

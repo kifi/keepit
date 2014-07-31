@@ -18,7 +18,7 @@ import org.specs2.mutable.Specification
 import play.api.libs.json._
 
 // http://www.geckoboard.com/developers/custom-widgets/push/
-class GeckoboardPublisherTest extends Specification with TestInjector {
+class GeckoboardPublisherTest extends Specification with CommonTestInjector {
 
   "GeckoboardPublisher" should {
 

@@ -15,7 +15,7 @@ import com.keepit.common.integration.AutogenReaperPlugin
 import com.keepit.normalizer.NormalizationUpdaterPlugin
 import com.keepit.common.concurrent.{ ForkJoinExecContextPlugin }
 import com.keepit.signal.ReKeepStatsUpdaterPlugin
-import com.keepit.model.UrlPatternRuleRepo
+import com.keepit.model.{ LibrarySequencingPlugin, LibraryMembershipSequencingPlugin, UrlPatternRuleRepo }
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
@@ -53,5 +53,7 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[ImageInfoSequencingPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[NormalizedURISequencingPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[UserConnectionSequencingPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[LibrarySequencingPlugin] != null) //make sure its not lazy loaded
+    require(injector.instance[LibraryMembershipSequencingPlugin] != null) //make sure its not lazy loaded
   }
 }

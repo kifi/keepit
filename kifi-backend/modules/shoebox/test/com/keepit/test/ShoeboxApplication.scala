@@ -1,6 +1,7 @@
 package com.keepit.test
 
 import com.keepit.common.controller._
+import com.keepit.common.crypto.TestCryptoModule
 import play.api.Mode
 import com.keepit.inject.{ TestFortyTwoModule, ApplicationInjector, EmptyInjector }
 import com.keepit.common.db.TestDbInfo
@@ -24,35 +25,33 @@ import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
 import com.keepit.common.aws.AwsModule
 
 class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
-  extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
-    Seq(
-      TestABookServiceClientModule(),
-      TestHeimdalServiceClientModule(),
-      FakeElizaServiceClientModule(),
-      FakeAirbrakeModule(),
-      FakeMemoryUsageModule(),
-      FakeClockModule(),
-      FakeHealthcheckModule(),
-      TestFortyTwoModule(),
-      FakeDiscoveryModule(),
-      TestSlickModule(TestDbInfo.dbInfo),
-      ShoeboxCacheModule(HashMapMemoryCacheModule()),
-      TestNormalizationServiceModule(),
-      FakeActionAuthenticatorModule(),
-      AbuseControlModule(),
-      TestSchedulerModule(),
-      FakeKeepImportsModule(),
-      FakeSimpleQueueModule(),
-      FakeNormalizationUpdateJobQueueModule(),
-      AwsModule(),
-      FakeShoeboxRepoChangeListenerModule()
-    ), overridingModules
+  extends DbTestApplication(path, overridingModules, Seq(
+    TestABookServiceClientModule(),
+    TestHeimdalServiceClientModule(),
+    FakeElizaServiceClientModule(),
+    FakeAirbrakeModule(),
+    FakeMemoryUsageModule(),
+    FakeClockModule(),
+    FakeHealthcheckModule(),
+    TestFortyTwoModule(),
+    FakeDiscoveryModule(),
+    TestSlickModule(TestDbInfo.dbInfo),
+    ShoeboxCacheModule(HashMapMemoryCacheModule()),
+    TestNormalizationServiceModule(),
+    FakeActionAuthenticatorModule(),
+    AbuseControlModule(),
+    TestSchedulerModule(),
+    FakeKeepImportsModule(),
+    FakeSimpleQueueModule(),
+    FakeNormalizationUpdateJobQueueModule(),
+    AwsModule(),
+    FakeShoeboxRepoChangeListenerModule(),
+    TestCryptoModule()
   ))
 
 trait ShoeboxApplicationInjector extends ApplicationInjector with DbInjectionHelper with ShoeboxInjectionHelpers
 
-trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
-  val mode = Mode.Test
+trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
   val module = Modules.combine(
     TestHeimdalServiceClientModule(),
     FakeElizaServiceClientModule(),

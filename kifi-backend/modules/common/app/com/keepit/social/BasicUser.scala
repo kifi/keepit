@@ -3,6 +3,7 @@ package com.keepit.social
 import com.keepit.common.cache._
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.model._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -60,14 +61,14 @@ object BasicUser {
       externalId = user.externalId,
       firstName = user.firstName,
       lastName = user.lastName,
-      pictureName = user.pictureName.map(_ + ".jpg").getOrElse("0.jpg"), // need support for default image
+      pictureName = user.pictureName.getOrElse(S3UserPictureConfig.defaultName) + ".jpg",
       username = user.username
     )
   }
 }
 
 case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
-  override val version = 6
+  override val version = 8
   val namespace = "basic_user_userid"
   def toKey(): String = userId.id.toString
 }

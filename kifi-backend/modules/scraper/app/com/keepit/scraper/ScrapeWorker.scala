@@ -1,5 +1,7 @@
 package com.keepit.scraper
 
+import com.google.inject.{ Inject, ImplementedBy }
+import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model._
@@ -9,54 +11,60 @@ import com.keepit.search.{ LangDetector, Article, ArticleStore }
 import scala.concurrent.duration._
 import org.joda.time.Days
 import com.keepit.common.time._
-import com.keepit.common.net.{ HttpClient, URI }
+import com.keepit.common.net.URI
 import org.apache.http.HttpStatus
 import scala.util.Success
 import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.learning.porndetector.SlidingWindowPornDetector
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.search.Lang
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Future
 import com.keepit.common.db.Id
 import com.keepit.scraper.embedly.EmbedlyCommander
 
-class ScrapeWorker(
+@ImplementedBy(classOf[ScrapeWorkerImpl])
+trait ScrapeWorker {
+  def safeProcess(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Future[Option[Article]]
+}
+
+class ScrapeWorkerImpl @Inject() (
     airbrake: AirbrakeNotifier,
     config: ScraperConfig,
     schedulerConfig: ScraperSchedulerConfig,
     httpFetcher: HttpFetcher,
-    httpClient: HttpClient,
     extractorFactory: ExtractorFactory,
     articleStore: ArticleStore,
     pornDetectorFactory: PornDetectorFactory,
-    helper: SyncShoeboxDbCallbacks,
+    syncHelper: SyncShoeboxDbCallbacks,
+    dbHelper: ShoeboxDbCallbacks,
     shoeboxClient: ShoeboxServiceClient,
     wordCountCache: NormalizedURIWordCountCache,
     uriSummaryCache: URISummaryCache,
-    embedlyCommander: EmbedlyCommander) extends Logging {
+    embedlyCommander: EmbedlyCommander) extends ScrapeWorker with Logging {
 
   implicit val myConfig = config
   implicit val scheduleConfig = schedulerConfig
+  implicit val fj = ExecutionContext.fj
   val awaitTTL = (myConfig.syncAwaitTimeout seconds)
 
-  private[scraper] def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Option[Article] = try {
-    processURI(uri, info, pageInfoOpt, proxyOpt)
-  } catch {
-    case t: Throwable => {
-      log.error(s"[safeProcessURI] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString("|")}")
-      airbrake.notify(t)
-
-      recordScrapeFailed(uri)
-      helper.syncSaveScrapeInfo(info.withFailure()) // then update the scrape schedule
-      None
+  def safeProcess(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Future[Option[Article]] = {
+    process(uri, info, pageInfoOpt, proxyOpt) recoverWith {
+      case t: Throwable =>
+        airbrake.notify(t)
+        recordScrapeFailure(uri) flatMap { _ =>
+          dbHelper.saveScrapeInfo(info.withFailure()) map { _ => None }
+        }
     }
   }
 
-  private def recordScrapeFailed(uri: NormalizedURI): Unit = {
-    helper.syncGetNormalizedUri(uri).foreach { latestUri =>
-      if (latestUri.state != NormalizedURIStates.INACTIVE && latestUri.state != NormalizedURIStates.REDIRECTED) {
-        helper.syncUpdateNormalizedURIState(latestUri.id.get, NormalizedURIStates.SCRAPE_FAILED)
+  private def recordScrapeFailure(uri: NormalizedURI): Future[Unit] = {
+    dbHelper.getNormalizedUri(uri).flatMap { latestUriOpt =>
+      latestUriOpt match {
+        case None => Future.successful[Unit]()
+        case Some(latestUri) =>
+          if (latestUri.state != NormalizedURIStates.INACTIVE && latestUri.state != NormalizedURIStates.REDIRECTED) {
+            dbHelper.updateNormalizedURIState(latestUri.id.get, NormalizedURIStates.SCRAPE_FAILED)
+          } else Future.successful[Unit]()
       }
     }
   }
@@ -121,10 +129,10 @@ class ScrapeWorker(
     val updatedUri = processRedirects(latestUri, redirects)
 
     if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED)) {
-      helper.syncSaveScrapeInfo(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
+      syncHelper.syncSaveScrapeInfo(info.withStateAndNextScrape(ScrapeInfoStates.INACTIVE))
       None
     } else if (!needReIndex(latestUri, updatedUri, article, signature, info)) {
-      helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
+      syncHelper.syncSaveScrapeInfo(info.withDocumentUnchanged())
       log.debug(s"[processURI] (${latestUri.url}) no change detected")
       None
     } else {
@@ -132,13 +140,13 @@ class ScrapeWorker(
       articleStore += (latestUri.id.get -> article)
       updateWordCountCache(latestUri.id.get, Some(article))
 
-      val scrapedURI = helper.syncSaveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+      val scrapedURI = syncHelper.syncSaveNormalizedUri(updatedUri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
 
       // scrape schedule
-      helper.syncSaveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
+      syncHelper.syncSaveScrapeInfo(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
 
-      helper.syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
-        helper.syncSaveBookmark(bookmark.copy(title = scrapedURI.title))
+      syncHelper.syncGetBookmarksByUriWithoutTitle(scrapedURI.id.get).foreach { bookmark =>
+        syncHelper.syncSaveBookmark(bookmark.copy(title = scrapedURI.title))
       }
 
       // Report canonical url
@@ -167,11 +175,11 @@ class ScrapeWorker(
     val NotScrapable(destinationUrl, redirects) = notScrapable
 
     val unscrapableURI = {
-      helper.syncSaveScrapeInfo(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
+      syncHelper.syncSaveScrapeInfo(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
       val updatedUri = processRedirects(latestUri, redirects)
       if (updatedUri.state == NormalizedURIStates.REDIRECTED || updatedUri.normalization == Some(Normalization.MOVED)) updatedUri
       else {
-        helper.syncUpdateNormalizedURIState(updatedUri.id.get, NormalizedURIStates.UNSCRAPABLE)
+        syncHelper.syncUpdateNormalizedURIState(updatedUri.id.get, NormalizedURIStates.UNSCRAPABLE)
         updatedUri.withState(NormalizedURIStates.UNSCRAPABLE)
       }
     }
@@ -184,13 +192,12 @@ class ScrapeWorker(
 
   private def handleNotModified(url: String, info: ScrapeInfo): Option[Article] = {
     // update the scrape schedule, uri is not changed
-    val updatedInfo = helper.syncSaveScrapeInfo(info.withDocumentUnchanged())
+    val updatedInfo = syncHelper.syncSaveScrapeInfo(info.withDocumentUnchanged())
     log.debug(s"[processURI] ($url not modified; updatedInfo=($updatedInfo)")
     None
   }
 
   private def handleScrapeError(latestUri: NormalizedURI, error: Error, info: ScrapeInfo): Option[Article] = {
-
     val Error(httpStatus, msg) = error
     // store a fallback article in a store map
     val article = Article(
@@ -212,8 +219,8 @@ class ScrapeWorker(
       destinationUrl = None)
     articleStore += (latestUri.id.get -> article)
     // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
-    helper.syncSaveScrapeInfo(info.withFailure())
-    helper.syncUpdateNormalizedURIState(latestUri.id.get, NormalizedURIStates.SCRAPE_FAILED)
+    syncHelper.syncSaveScrapeInfo(info.withFailure())
+    syncHelper.syncUpdateNormalizedURIState(latestUri.id.get, NormalizedURIStates.SCRAPE_FAILED)
     log.warn(s"[processURI] Error($httpStatus, $msg); errorURI=(${latestUri.id}, ${latestUri.state}, ${latestUri.url})")
     updateWordCountCache(latestUri.id.get, None)
     None
@@ -223,35 +230,39 @@ class ScrapeWorker(
     embedlyCommander.fetchEmbedlyInfo(uri.id.get, uri.url)
   }
 
-  private def processURI(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Option[Article] = {
-    log.debug(s"[processURI] scraping ${uri.url} $info")
-    val fetchedArticle = fetchArticle(uri, info, proxyOpt)
-    val latestUri = helper.syncGetNormalizedUri(uri).get
-    callEmbedly(latestUri)
+  private def process(uri: NormalizedURI, info: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]): Future[Option[Article]] = {
+    for {
+      fetchedArticle <- safeFetch(uri, info, proxyOpt)
+      uriOpt <- dbHelper.getNormalizedUri(uri)
+    } yield {
+      val articleOpt = uriOpt flatMap { latestUri =>
+        callEmbedly(latestUri) // @martin: do we need to do this for every scrape?
 
-    if (latestUri.state == NormalizedURIStates.INACTIVE) None
-    else fetchedArticle match {
-      case scraped: Scraped => handleSuccessfulScraped(latestUri, scraped, info, pageInfoOpt)
-      case notScrapable: NotScrapable => handleNotScrapable(latestUri, notScrapable, info)
-      case NotModified => handleNotModified(latestUri.url, info)
-      case error: Error => handleScrapeError(latestUri, error, info)
+        if (latestUri.state == NormalizedURIStates.INACTIVE) None
+        else fetchedArticle match { // all blocking -- next on the list
+          case scraped: Scraped => handleSuccessfulScraped(latestUri, scraped, info, pageInfoOpt)
+          case notScrapable: NotScrapable => handleNotScrapable(latestUri, notScrapable, info)
+          case NotModified => handleNotModified(latestUri.url, info)
+          case error: Error => handleScrapeError(latestUri, error, info)
+        }
+      }
+      articleOpt
     }
   }
 
-  def fetchArticle(normalizedUri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): ScraperResult = {
-    try {
-      URI.parse(normalizedUri.url) match {
-        case Success(uri) =>
-          uri.scheme match {
-            case Some("file") => Error(-1, "forbidden scheme: %s".format("file"))
-            case _ => fetchArticle(normalizedUri, httpFetcher, info, proxyOpt)
-          }
-        case _ => fetchArticle(normalizedUri, httpFetcher, info, proxyOpt)
-      }
-    } catch {
+  private def safeFetch(normalizedUri: NormalizedURI, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[ScraperResult] = {
+    val scrapeResultFuture = URI.parse(normalizedUri.url) match {
+      case Success(uri) =>
+        uri.scheme match {
+          case Some("file") => Future.successful(Error(-1, "forbidden scheme: %s".format("file")))
+          case _ => fetch(normalizedUri, httpFetcher, info, proxyOpt)
+        }
+      case _ => fetch(normalizedUri, httpFetcher, info, proxyOpt)
+    }
+    scrapeResultFuture recoverWith {
       case t: Throwable =>
         log.error(s"[fetchArticle] Caught exception: $t; Cause: ${t.getCause}; \nStackTrace:\n${t.getStackTrace.mkString("|")}")
-        fetchArticle(normalizedUri, httpFetcher, info, proxyOpt)
+        fetch(normalizedUri, httpFetcher, info, proxyOpt)
     }
   }
 
@@ -272,8 +283,8 @@ class ScrapeWorker(
         if (contentLang == Lang("en") && content.size > 100) {
           val detector = new SlidingWindowPornDetector(pornDetectorFactory())
           detector.isPorn(content.take(100000)) match {
-            case true if normalizedUri.restriction == None => helper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
-            case false if normalizedUri.restriction == Some(Restriction.ADULT) => helper.updateURIRestriction(normalizedUri.id.get, None)
+            case true if normalizedUri.restriction == None => syncHelper.updateURIRestriction(normalizedUri.id.get, Some(Restriction.ADULT)) // don't override other restrictions
+            case false if normalizedUri.restriction == Some(Restriction.ADULT) => syncHelper.updateURIRestriction(normalizedUri.id.get, None)
             case _ =>
           }
         }
@@ -283,82 +294,63 @@ class ScrapeWorker(
     }
   }
 
-  private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): ScraperResult = {
+  private def fetch(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[ScraperResult] = {
     val url = normalizedUri.url
     val extractor = extractorFactory(url)
     log.debug(s"[fetchArticle] url=${normalizedUri.url} ${extractor.getClass}")
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
 
-    try {
-      val fetchStatus = httpFetcher.fetch(url, ifModifiedSince, proxy = proxyOpt) { input => extractor.process(input) }
-
+    httpFetcher.get(url, ifModifiedSince, proxy = proxyOpt) { input => extractor.process(input) } flatMap { fetchStatus =>
       fetchStatus.statusCode match {
         case HttpStatus.SC_OK =>
-          if (helper.syncIsUnscrapableP(url, fetchStatus.destinationUrl)) {
-            NotScrapable(fetchStatus.destinationUrl, fetchStatus.redirects)
-          } else {
-            val content = extractor.getContent
-            val title = extractor.getTitle
-            val canonicalUrl = extractor.getCanonicalUrl
-            val alternateUrls = extractor.getAlternateUrls
-            val description = extractor.getDescription
-            val keywords = extractor.getKeywords
-            val media = extractor.getMediaTypeString
-            val signature = extractor.getSignature
+          dbHelper.isUnscrapableP(url, fetchStatus.destinationUrl) map { unscrapable =>
+            if (unscrapable) {
+              NotScrapable(fetchStatus.destinationUrl, fetchStatus.redirects)
+            } else {
+              val content = extractor.getContent
+              val title = extractor.getTitle
+              val description = extractor.getDescription
+              val contentLang = description match {
+                case Some(desc) => LangDetector.detect(content + " " + desc)
+                case None => LangDetector.detect(content)
+              }
 
-            val contentLang = description match {
-              case Some(desc) => LangDetector.detect(content + " " + desc)
-              case None => LangDetector.detect(content)
+              runPornDetectorIfNecessary(normalizedUri, content, contentLang)
+
+              val article: Article = Article(
+                id = normalizedUri.id.get,
+                title = title,
+                description = description,
+                canonicalUrl = extractor.getCanonicalUrl,
+                alternateUrls = extractor.getAlternateUrls,
+                keywords = extractor.getKeywords,
+                media = extractor.getMediaTypeString,
+                content = content,
+                scrapedAt = currentDateTime,
+                httpContentType = extractor.getMetadata("Content-Type"),
+                httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
+                state = NormalizedURIStates.SCRAPED,
+                message = None,
+                titleLang = Some(LangDetector.detect(title, contentLang)), // bias detection using content language
+                contentLang = Some(contentLang),
+                destinationUrl = fetchStatus.destinationUrl)
+              val res = Scraped(article, extractor.getSignature, fetchStatus.redirects)
+              log.debug(s"[fetchArticle] result=(Scraped(dstUrl=${fetchStatus.destinationUrl} redirects=${fetchStatus.redirects}) article=(${article.id}, ${article.title}, content.len=${article.content.length}})")
+              res
             }
-            val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
-
-            runPornDetectorIfNecessary(normalizedUri, content, contentLang)
-
-            val article: Article = Article(
-              id = normalizedUri.id.get,
-              title = title,
-              description = description,
-              canonicalUrl = canonicalUrl,
-              alternateUrls = alternateUrls,
-              keywords = keywords,
-              media = media,
-              content = content,
-              scrapedAt = currentDateTime,
-              httpContentType = extractor.getMetadata("Content-Type"),
-              httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
-              state = NormalizedURIStates.SCRAPED,
-              message = None,
-              titleLang = Some(titleLang),
-              contentLang = Some(contentLang),
-              destinationUrl = fetchStatus.destinationUrl)
-            val res = Scraped(article, signature, fetchStatus.redirects)
-            log.debug(s"[fetchArticle] result=(Scraped(dstUrl=${fetchStatus.destinationUrl} redirects=${fetchStatus.redirects}) article=(${article.id}, ${article.title}, content.len=${article.content.length}})")
-            res
           }
         case HttpStatus.SC_NOT_MODIFIED =>
-          com.keepit.scraper.NotModified
+          Future.successful(com.keepit.scraper.NotModified)
         case _ =>
-          Error(fetchStatus.statusCode, fetchStatus.message.getOrElse("fetch failed"))
+          Future.successful(Error(fetchStatus.statusCode, fetchStatus.message.getOrElse("fetch failed")))
       }
-    } catch {
+    } recover {
       case e: Throwable => {
-        log.error(s"[fetchArticle] fetch failed ${normalizedUri.url} $info $httpFetcher;\nException: $e; Cause: ${e.getCause};\nStack trace:\n${e.getStackTrace.mkString("|")}")
+        log.error(s"[fetchArticle] fetch failed ${normalizedUri.url} $info $httpFetcher;\nException: $e; Cause: ${e.getCause}")
         Error(-1, "fetch failed: %s".format(e.toString))
       }
     }
   }
-
-  def basicArticle(destinationUrl: String, extractor: Extractor): BasicArticle = BasicArticle(
-    title = extractor.getTitle,
-    content = extractor.getContent,
-    canonicalUrl = extractor.getCanonicalUrl,
-    description = extractor.getDescription,
-    media = extractor.getMediaTypeString,
-    httpContentType = extractor.getMetadata("Content-Type"),
-    httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
-    destinationUrl = destinationUrl,
-    signature = extractor.getSignature
-  )
 
   // Watch out: the NormalizedURI may come back as REDIRECTED
   private def processRedirects(uri: NormalizedURI, redirects: Seq[HttpRedirect]): NormalizedURI = {
@@ -370,7 +362,7 @@ class ScrapeWorker(
         HttpRedirect.resolvePermanentRedirects(uri.url, permanentsRedirects).map { absoluteDestination =>
           val validRedirect = HttpRedirect(HttpStatus.SC_MOVED_PERMANENTLY, uri.url, absoluteDestination)
           log.debug(s"Found permanent $validRedirect for $uri")
-          helper.syncRecordPermanentRedirect(removeRedirectRestriction(uri), validRedirect)
+          syncHelper.syncRecordPermanentRedirect(removeRedirectRestriction(uri), validRedirect)
         } getOrElse {
           permanentsRedirects.headOption.foreach(relative301 => log.warn(s"Ignoring relative permanent $relative301 for $uri"))
           removeRedirectRestriction(uri)
@@ -390,7 +382,7 @@ class ScrapeWorker(
 
   private def hasFishy301(movedUri: NormalizedURI): Boolean = {
     val hasFishy301Restriction = movedUri.restriction == Some(Restriction.http(301))
-    lazy val isFishy = helper.syncGetLatestKeep(movedUri.url).filter(_.createdAt.isAfter(currentDateTime.minusHours(1))) match {
+    lazy val isFishy = syncHelper.syncGetLatestKeep(movedUri.url).filter(_.createdAt.isAfter(currentDateTime.minusHours(1))) match {
       case Some(recentKeep) if recentKeep.source != KeepSource.bookmarkImport => true
       case Some(importedBookmark) =>
         val parsedBookmarkUrl = URI.parse(importedBookmark.url).get.toString()
@@ -403,7 +395,7 @@ class ScrapeWorker(
   private def recordScrapedNormalization(uri: NormalizedURI, signature: Signature, canonicalUrl: String, alternateUrls: Set[String]): Unit = {
     sanitize(uri.url, canonicalUrl).foreach { properCanonicalUrl =>
       val properAlternateUrls = alternateUrls.flatMap(sanitize(uri.url, _)) - uri.url - properCanonicalUrl
-      helper.syncRecordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL, properAlternateUrls)
+      syncHelper.syncRecordScrapedNormalization(uri.id.get, signature, properCanonicalUrl, Normalization.CANONICAL, properAlternateUrls)
     }
   }
 

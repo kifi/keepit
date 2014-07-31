@@ -1,0 +1,53 @@
+'use strict';
+
+angular.module('kifi.friends.rightColFriendsView', [])
+
+
+.directive('kfCompactFriendsView', ['$log', 'friendService', function ($log, friendService) {
+  return {
+    replace: true,
+    restrict: 'A',
+    templateUrl: 'friends/compactFriendsView.tpl.html',
+    link: function (scope/*, element, attrs*/) {
+      scope.friendCount = friendService.totalFriends;
+
+      friendService.getKifiFriends().then(function (data) {
+        var actualFriends = _.filter(data, function (friend) {
+          return !friend.unfriended;
+        });
+
+        actualFriends.forEach(function (friend) {
+          friend.pictureUrl = friendService.getPictureUrlForUser(friend);
+        });
+
+        var hasPicture = function (friend) {
+          return friend.pictureName !== '0.jpg';
+        };
+        actualFriends.sort(function (friendA, friendB) {
+          return -hasPicture(friendA) + hasPicture(friendB);
+        });
+
+        scope.friends = actualFriends;
+      });
+
+      scope.friendsLink = function () {
+        if (scope.friendCount() > 0) {
+          return '/friends';
+        } else {
+          return '/invite';
+        }
+      };
+    }
+  };
+}])
+
+.directive('kfNoFriendsOrConnectionsView', ['socialService', function (socialService) {
+  return {
+    replace: true,
+    restrict: 'A',
+    templateUrl: 'friends/noFriendsOrConnectionsView.tpl.html',
+    link: function (scope) {
+      scope.connectFacebook = socialService.connectFacebook;
+    }
+  };
+}]);

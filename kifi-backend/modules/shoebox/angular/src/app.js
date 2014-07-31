@@ -23,7 +23,7 @@ angular.module('kifi', [
   'kifi.friendService',
   'kifi.friends.friendCard',
   'kifi.friends.friendRequestCard',
-  'kifi.friends.compactFriendsView',
+  'kifi.friends.rightColFriendsView',
   'kifi.social',
   'kifi.social.networksNeedAttention',
   'kifi.socialService',
@@ -38,6 +38,8 @@ angular.module('kifi', [
   'kifi.keeps',
   'kifi.keep',
   'kifi.addKeep',
+  'kifi.recos',
+  'kifi.recoService',
   'kifi.tagList',
   'kifi.layout.header',
   'kifi.layout.main',
@@ -131,7 +133,7 @@ angular.module('kifi', [
 
       if ($location.path() !== '/find') {
         // For now, remove all URL parameters
-        $location.search({});
+        $location.search({}).replace();
       }
     }
 

@@ -7,12 +7,13 @@ import com.keepit.common.db.Id
 import play.api.libs.json._
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ABookCacheModule }
 import com.keepit.shoebox.FakeShoeboxServiceModule
+import play.api.mvc.{ AnyContent, Action }
 import play.api.test.{ FakeHeaders, FakeRequest }
 import play.api.test.Helpers._
 import com.keepit.common.queue.FakeSimpleQueueModule
 import com.keepit.typeahead.TypeaheadHit
 import com.keepit.abook.controllers.ABookController
-import com.keepit.abook.model.RichContact
+import com.keepit.abook.model._
 
 class ABookControllerTest extends Specification with ABookApplicationInjector with ABookTestHelper {
 
@@ -155,6 +156,34 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         contentType(result) must beSome("application/json")
         var content = contentAsString(result)
         content !== null
+      }
+    }
+
+    "getUsersWithContact" should {
+      implicit def _db = db
+      def controller = inject[ABookController] // setup
+      def factory = inject[ABookTestContactFactory]
+
+      "return an empty array if no connections are found" in {
+        running(new ABookApplication(modules: _*)) {
+          val (c1, c2, c3) = factory.createMany
+          val result = controller.getUsersWithContact(EmailAddress("no@mail.com"))(FakeRequest())
+          status(result) must equalTo(OK)
+          contentType(result) must beSome("application/json")
+          contentAsString(result) === "[]"
+        }
+      }
+
+      "return an array of user ids that are connected to a given email" in {
+        running(new ABookApplication(modules: _*)) {
+          val (c1, c2, c3) = factory.createMany
+          val result = controller.getUsersWithContact(AbookTestEmails.BAR_EMAIL)(FakeRequest())
+          status(result) must equalTo(OK)
+          contentType(result) must beSome("application/json")
+
+          val jsonResponse: String = contentAsString(result)
+          jsonResponse must beEqualTo(s"[${c1.userId},${c3.userId}]")
+        }
       }
     }
 

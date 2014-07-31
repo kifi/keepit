@@ -145,21 +145,21 @@ private class RawKeepImporterActor @Inject() (
         log.info(s"[RawKeepImporterActor] Interned ${successes.length + failures.length} keeps. ${successes.length} successes, ${failures.length} failures.")
 
         val (doneOpt, totalOpt) = db.readOnlyMaster { implicit session =>
-          (userValueRepo.getValueStringOpt(userId, "bookmark_import_done").map(_.toInt),
-            userValueRepo.getValueStringOpt(userId, "bookmark_import_total").map(_.toInt))
+          (userValueRepo.getValueStringOpt(userId, UserValueName.BOOKMARK_IMPORT_DONE).map(_.toInt),
+            userValueRepo.getValueStringOpt(userId, UserValueName.BOOKMARK_IMPORT_TOTAL).map(_.toInt))
         }
 
         db.readWrite { implicit session =>
           (doneOpt, totalOpt) match {
             case (Some(done), Some(total)) =>
               if (done + rawKeepGroup.length >= total) { // Import is done
-                userValueRepo.clearValue(userId, "bookmark_import_done")
-                userValueRepo.clearValue(userId, "bookmark_import_total")
+                userValueRepo.clearValue(userId, UserValueName.BOOKMARK_IMPORT_DONE)
+                userValueRepo.clearValue(userId, UserValueName.BOOKMARK_IMPORT_TOTAL)
                 importIdOpt.map { importId =>
-                  userValueRepo.clearValue(userId, s"bookmark_import_${importId}_context")
+                  userValueRepo.clearValue(userId, UserValueName.bookmarkImportContextName(importId))
                 }
               } else {
-                userValueRepo.setValue(userId, "bookmark_import_done", done + rawKeepGroup.length)
+                userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_DONE, done + rawKeepGroup.length)
               }
             case _ =>
           }
@@ -171,7 +171,7 @@ private class RawKeepImporterActor @Inject() (
   def getHeimdalContext(userId: Id[User], importId: String): Option[HeimdalContext] = {
     Try {
       db.readOnlyMaster { implicit session =>
-        userValueRepo.getValueStringOpt(userId, s"bookmark_import_${importId}_context")
+        userValueRepo.getValueStringOpt(userId, UserValueName.bookmarkImportContextName(importId))
       }.map { jsonStr =>
         Json.fromJson[HeimdalContext](Json.parse(jsonStr)).asOpt
       }.flatten

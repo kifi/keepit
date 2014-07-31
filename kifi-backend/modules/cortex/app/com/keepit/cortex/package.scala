@@ -42,6 +42,8 @@ package object cortex {
       val topicConfigsFolder = "misc/lda/topic_configs/"
       val topicWordsJsonFile = "topic_words"
       val topicConfigsJsonFile = "topic_configs"
+      val userLDAStatsFolder = "misc/lda/user_lda_stats/"
+      val userLDAStatsJsonFile = "user_lda_stats"
     }
     object Stopwords {
       val stopwordsFoler = "misc/stopwords/"
@@ -50,7 +52,7 @@ package object cortex {
   }
 
   object PublishedModels {
-    val denseLDAVersion = ModelVersion[DenseLDA](1) // doesn't have to sync with cortex lda version
+    val denseLDAVersion = ModelVersion[DenseLDA](2) // doesn't have to sync with cortex lda version
     val defaultSparsity = 5
   }
 

@@ -18,7 +18,8 @@ case class LibraryMembership(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryMembership] = LibraryMembershipStates.ACTIVE,
-    seq: SequenceNumber[LibraryMembership] = SequenceNumber.ZERO) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
+    seq: SequenceNumber[LibraryMembership] = SequenceNumber.ZERO,
+    showInSearch: Boolean) extends ModelWithState[LibraryMembership] with ModelWithSeqNumber[LibraryMembership] {
 
   def withId(id: Id[LibraryMembership]): LibraryMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryMembership = this.copy(updatedAt = now)
@@ -36,7 +37,8 @@ object LibraryMembership {
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'state).format(State.format[LibraryMembership]) and
-    (__ \ 'seq).format(SequenceNumber.format[LibraryMembership])
+    (__ \ 'seq).format(SequenceNumber.format[LibraryMembership]) and
+    (__ \ 'showInSearch).format[Boolean]
   )(LibraryMembership.apply, unlift(LibraryMembership.unapply))
 }
 

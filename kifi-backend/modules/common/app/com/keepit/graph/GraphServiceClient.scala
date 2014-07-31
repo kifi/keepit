@@ -27,8 +27,9 @@ trait GraphServiceClient extends ServiceClient {
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceId, PrettyGraphState]]
   def getGraphKinds(): Future[GraphKinds]
   def wander(wanderlust: Wanderlust): Future[Collisions]
-  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
-  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
+  def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
+  def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
+  def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]]
 }
 
 case class GraphCacheProvider @Inject() (
@@ -80,20 +81,31 @@ class GraphServiceClientImpl @Inject() (
     call(Graph.internal.wander(), payload, callTimeouts = longTimeout).map { response => response.json.as[Collisions] }
   }
 
-  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]] = {
+  def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]] = {
     cacheProvider.uriScoreCache.getOrElseFuture(ConnectedUriScoreCacheKey(userId, avoidFirstDegreeConnections)) {
-      call(Graph.internal.getListOfUriAndScorePairs(userId, avoidFirstDegreeConnections)).map { response =>
+      call(Graph.internal.getUriAndScores(userId, avoidFirstDegreeConnections), callTimeouts = longTimeout).map { response =>
         response.json.as[Seq[ConnectedUriScore]]
       }
     }
   }
 
-  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]] = {
+  def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]] = {
     cacheProvider.userScoreCache.getOrElseFuture(ConnectedUserScoreCacheKey(userId, avoidFirstDegreeConnections)) {
-      call(Graph.internal.getListOfUserAndScorePairs(userId, avoidFirstDegreeConnections)).map { response =>
+      call(Graph.internal.getUserAndScores(userId, avoidFirstDegreeConnections), callTimeouts = longTimeout).map { response =>
         response.json.as[Seq[ConnectedUserScore]]
       }
     }
   }
 
+  def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]] = {
+    val futureUserScores = cacheProvider.userScoreCache.get(ConnectedUserScoreCacheKey(userId, false)) match {
+      case Some(userScores) => Future.successful(userScores)
+      case None =>
+        val futureActualUserScores = call(Graph.internal.getUserAndScores(userId, false), callTimeouts = longTimeout).map { response =>
+          response.json.as[Seq[ConnectedUserScore]]
+        }
+        if (bePatient) futureActualUserScores else Future.successful(Seq.empty)
+    }
+    futureUserScores.map(userScores => userScores.map { case ConnectedUserScore(friendId, score) => friendId -> score })
+  }
 }

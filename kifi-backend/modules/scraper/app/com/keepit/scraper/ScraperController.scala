@@ -19,6 +19,8 @@ class ScraperController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     scrapeProcessor: ScrapeProcessor) extends ScraperServiceController with Logging {
 
+  implicit val fj = ExecutionContext.fj
+
   def getBasicArticle() = Action.async(parse.json) { request =>
     log.info(s"getBasicArticle body=${request.body}")
     processBasicArticleRequest(request.body).map { articleOption =>
@@ -26,7 +28,7 @@ class ScraperController @Inject() (
       val url = (request.body \ "url").as[String]
       log.info(s"[getBasicArticle($url})] result: $json")
       Ok(json)
-    }(ExecutionContext.fj)
+    }
   }
 
   def getSignature() = Action.async(parse.json) { request =>
@@ -37,7 +39,15 @@ class ScraperController @Inject() (
       val json = Json.toJson(signatureOption.map(_.toBase64()))
       log.info(s"[getSignature($url)] result: $json")
       Ok(json)
-    }(ExecutionContext.fj)
+    }
+  }
+
+  def status() = Action.async { request =>
+    scrapeProcessor.status.map { res =>
+      val json = Json.toJson(res)
+      log.info(s"[getStatus] result: $json")
+      Ok(json)
+    }
   }
 
   private def processBasicArticleRequest(parameters: JsValue): Future[Option[BasicArticle]] = {

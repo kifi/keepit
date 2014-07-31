@@ -1,27 +1,20 @@
 package com.keepit.commander
 
-import org.specs2.mutable.Specification
-import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.common.controller.FakeActionAuthenticatorModule
+import com.keepit.commanders.WordCountCommanderImpl
 import com.keepit.common.db.Id
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.inject.ApplicationInjector
-import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.scraper.{ TestScraperServiceClientModule, ScraperServiceClient }
-import com.keepit.search.{ Article, ArticleStore, Lang }
-import akka.actor.ActorSystem
-import play.api.test.Helpers.running
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import com.keepit.scraper.TestScraperServiceModule
+import com.keepit.model._
+import com.keepit.scraper.{ BasicArticle, ScrapeProcessor, Signature, TestScraperServiceModule }
 import com.keepit.scraper.extractor._
-import scala.concurrent.Future
-import com.keepit.scraper.BasicArticle
-import com.keepit.commanders.WordCountCommanderImpl
-import com.keepit.scraper.ScrapeProcessor
-import com.keepit.test.TestApplication
-import com.keepit.scraper.Signature
+import com.keepit.search.{ Article, ArticleStore, Lang }
+import com.keepit.test.CommonTestApplication
+import org.specs2.mutable.Specification
+import play.api.test.Helpers.running
+
+import scala.concurrent.{ Await, Future }
+import scala.concurrent.duration._
 
 class WordCountCommanderTest extends Specification with ApplicationInjector {
 
@@ -56,7 +49,7 @@ class WordCountCommanderTest extends Specification with ApplicationInjector {
 
   "WordCountCommander" should {
     "get word count" in {
-      running(new TestApplication(TestScraperServiceModule())) {
+      running(new CommonTestApplication(TestScraperServiceModule())) {
         val store = inject[ArticleStore]
         val countCache = inject[NormalizedURIWordCountCache]
         val sumCache = inject[URISummaryCache]
