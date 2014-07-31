@@ -109,6 +109,11 @@ class SeedIngestionCommander @Inject() (
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
         }
         cook(userId, rawItem, keepers)
+      }.filter { seedItem =>
+        seedItem.keepers match {
+          case Keepers.ReasonableNumber(users) => !users.contains(userId)
+          case _ => false
+        }
       }
 
     }
