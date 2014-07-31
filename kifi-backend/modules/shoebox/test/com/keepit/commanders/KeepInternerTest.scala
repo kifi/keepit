@@ -313,6 +313,35 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
             case (uriId, keep) =>
               keeps2.find(_.uriId == uriId).get == keep
           } === true
+
+          // (global) counts for scoring/recommendation
+
+          keepDiscoveryRepo.getDiscoveryCountByURI(keeps1(0).uriId) === 1
+          keepDiscoveryRepo.getDiscoveryCountByURI(keeps1(1).uriId) === 2
+          val kdcURIs1 = keepDiscoveryRepo.getDiscoveryCountsByURIs(keeps1.map(_.uriId).toSet)
+          keeps1.forall {
+            case k =>
+              kdcURIs1.get(k.uriId).get == keepDiscoveryRepo.getDiscoveryCountByURI(k.uriId)
+          } === true
+          val kdcURIs2 = keepDiscoveryRepo.getDiscoveryCountsByURIs(keeps2.map(_.uriId).toSet)
+          keeps2.forall {
+            case k =>
+              kdcURIs2.get(k.uriId).get == keepDiscoveryRepo.getDiscoveryCountByURI(k.uriId)
+          } === true
+
+          rekeepRepo.getReKeepCountByURI(keeps1(0).uriId) === 0
+          rekeepRepo.getReKeepCountByURI(keeps1(1).uriId) === 2
+          val rkcURIs1 = rekeepRepo.getReKeepCountsByURIs(keeps1.map(_.uriId).toSet)
+          rkcURIs1.get(keeps1(1).uriId).get === 2
+          keeps1.forall {
+            case k =>
+              rkcURIs1.get(k.uriId).get == rekeepRepo.getReKeepCountByURI(k.uriId)
+          } === true
+          val rkcURIs2 = rekeepRepo.getReKeepCountsByURIs(keeps2.map(_.uriId).toSet)
+          keeps2.forall {
+            case k =>
+              rkcURIs2.get(k.uriId).get == rekeepRepo.getReKeepCountByURI(k.uriId)
+          } === true
         }
 
         val attrCmdr = inject[AttributionCommander]
