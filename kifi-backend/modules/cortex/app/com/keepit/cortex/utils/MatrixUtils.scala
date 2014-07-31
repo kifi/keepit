@@ -9,7 +9,7 @@ object MatrixUtils {
 
   def L2Normalize(vec: Array[Double]): Array[Double] = {
     val s = sqrt(vec.map { x => x * x }.sum)
-    if (s == 0) vec else vec.map { x => (x / s).toFloat }
+    if (s == 0.0) vec else vec.map { x => x / s }
   }
 
   def dot(v: Array[Double], w: Array[Double]): Double = {
@@ -48,7 +48,7 @@ object MatrixUtils {
     val n = vecs.size
     assume(n > 0)
     val dim = vecs(0).size
-    val res = new Array[Float](dim)
+    val res = new Array[Double](dim)
     (0 until n).foreach { i =>
       val v = vecs(i)
       val w = weights(i)
