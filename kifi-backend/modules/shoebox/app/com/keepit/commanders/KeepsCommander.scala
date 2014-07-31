@@ -159,8 +159,8 @@ class KeepsCommander @Inject() (
     count: Int,
     userId: Id[User]): (Seq[Keep], Option[Collection], Map[Id[Keep], Int], Map[Id[Keep], Int]) = {
 
-    @inline def filter(counts: Map[Id[NormalizedURI], Int])(implicit r: RSession): Seq[Id[NormalizedURI]] = {
-      val uriIds = counts.toSeq.sortBy(_._2)(Ordering[Int].reverse).map(_._1)
+    @inline def filter(counts: Seq[(Id[NormalizedURI], Int)])(implicit r: RSession): Seq[Id[NormalizedURI]] = {
+      val uriIds = counts.map(_._1)
       val before = beforeOpt match {
         case None => uriIds
         case Some(beforeExtId) =>
@@ -188,8 +188,16 @@ class KeepsCommander @Inject() (
           helprankOpt match {
             case Some(selector) =>
               val keepIds = selector.trim match {
-                case "rekeep" => filter(rekeepRepo.getUriReKeepCountsByKeeper(userId))
-                case _ => filter(keepDiscoveriesRepo.getUriDiscoveryCountsByKeeper(userId)) // click
+                case "rekeep" => {
+                  val rekeepsWithCounts = rekeepRepo.getUriReKeepsWithCountsByKeeper(userId)
+                  val rekeepCounts = rekeepsWithCounts map { case (uriId, _, createdAt, count) => uriId -> count }
+                  filter(rekeepCounts)
+                }
+                case _ => {
+                  val discoveriesWithCounts = keepDiscoveriesRepo.getUriDiscoveriesWithCountsByKeeper(userId)
+                  val discoveryCounts = discoveriesWithCounts map { case (uriId, _, createdAt, count) => uriId -> count }
+                  filter(discoveryCounts)
+                } // click
               }
               val km = keepRepo.bulkGetByUserAndUriIds(userId, keepIds.toSet)
               log.info(s"[getKeeps($beforeOpt,$afterOpt,${helprankOpt.get},$count,$userId)] keeps=$km")

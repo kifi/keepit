@@ -7,6 +7,8 @@ import com.keepit.common.time._
 import com.google.inject.{ Singleton, ImplementedBy, Inject }
 import com.keepit.search.ArticleSearchResult
 import org.joda.time.DateTime
+import scala.slick.jdbc.{ StaticQuery => Q }
+import Q.interpolation
 
 @ImplementedBy(classOf[KeepDiscoveryRepoImpl])
 trait KeepDiscoveryRepo extends Repo[KeepDiscovery] {
@@ -17,6 +19,7 @@ trait KeepDiscoveryRepo extends Repo[KeepDiscovery] {
   def getDiscoveryCountByURI(uriId: Id[NormalizedURI], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Int
   def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Map[Id[NormalizedURI], Int]
   def getDiscoveryCountsByKeeper(userId: Id[User], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Map[Id[Keep], Int]
+  def getUriDiscoveriesWithCountsByKeeper(userId: Id[User], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Seq[(Id[NormalizedURI], Id[User], DateTime, Int)]
   def getUriDiscoveryCountsByKeeper(userId: Id[User], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Map[Id[NormalizedURI], Int]
   def getDiscoveryCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Map[Id[Keep], Int]
 }
@@ -77,6 +80,10 @@ class KeepDiscoveryRepoImpl @Inject() (
       .groupBy(_.keepId)
       .map { case (kId, kc) => (kId, kc.length) }
     q.toMap()
+  }
+
+  def getUriDiscoveriesWithCountsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Seq[(Id[NormalizedURI], Id[User], DateTime, Int)] = {
+    sql"select uri_id, keeper_id, created_at, count(*) c from keep_click group by uri_id, keeper_id having keeper_id=$userId order by created_at desc".as[(Id[NormalizedURI], Id[User], DateTime, Int)].list()
   }
 
   def getUriDiscoveryCountsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Map[Id[NormalizedURI], Int] = {
