@@ -5,6 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.curator.model._
 import com.keepit.model.User
 import com.keepit.common.db.slick.Database
@@ -36,21 +37,20 @@ class SeedIngestionCommander @Inject() (
 
   val ingestionInProgress: AtomicBoolean = new AtomicBoolean(false)
 
-  def ingestAll(): Future[Boolean] = if (ingestionInProgress.compareAndSet(false, true)) {
+  val ingestionLock = new ReactiveLock()
+
+  def ingestAll(): Future[Boolean] = ingestionLock.withLockFuture {
     val fut = ingestAllKeeps().flatMap { _ =>
       FutureHelpers.sequentialExec(GRAPH_INGESTION_WHITELIST)(ingestTopUris)
     }
     fut.onComplete {
-      case Success(_) => ingestionInProgress.set(false)
       case Failure(ex) => {
         log.error("Failure occured during ingestion.")
         airbrake.notify("Failure occured during ingestion.", ex)
-        ingestionInProgress.set(false)
       }
+      case _ =>
     }
     fut.map(_ => true)
-  } else {
-    Future.successful(false)
   }
 
   def ingestAllKeeps(): Future[Unit] = FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {
