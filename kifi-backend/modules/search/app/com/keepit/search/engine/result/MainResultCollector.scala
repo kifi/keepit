@@ -38,11 +38,11 @@ class MainResultCollector(clickBoosts: ResultClickBoosts, friendsUris: LongArray
 
         if (score > 0.0f) {
           if ((visibility & Visibility.MEMBER) != 0) {
-            myHits.insert(id, score, clickBoost, true, false)
+            myHits.insert(id, score, clickBoost, true)
           } else if (friendsUris.findIndex(id) >= 0) {
-            friendsHits.insert(id, score, clickBoost, false, false)
+            friendsHits.insert(id, score, clickBoost, false)
           } else {
-            othersHits.insert(id, score, clickBoost, false, false)
+            othersHits.insert(id, score, clickBoost, false)
           }
         }
       }
