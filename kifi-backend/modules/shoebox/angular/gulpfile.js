@@ -20,7 +20,6 @@ var remember = require('gulp-remember');
 var fs = require('fs');
 var ngHtml2Js = require('gulp-ng-html2js');
 var minifyHtml = require('gulp-minify-html');
-var concat = require('gulp-concat');
 var uglify = require('gulp-uglify');
 var gulpif = require('gulp-if');
 var spritesmith = require('gulp.spritesmith');
@@ -30,6 +29,10 @@ var modRewrite = require('connect-modrewrite');
 var gutil = require('gulp-util');
 var karma = require('karma').server;
 var protractor = require('gulp-protractor').protractor;
+var revall = require('gulp-rev-all');
+var awspublish = require('gulp-awspublish');
+var parallelize = require('concurrent-transform');
+var through = require('through');
 
 /********************************************************
   Globals
@@ -40,6 +43,40 @@ var tmpDir = 'tmp';
 var pkgName = JSON.parse(fs.readFileSync('package.json')).name;
 var banner = fs.readFileSync('banner.txt').toString();
 var isRelease = false;
+
+// awspublish
+var aws = {
+  'key': 'AKIAJZC6TMAWKQYEGBIQ',
+  'secret': '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',
+  'bucket': 'assets-b-prod',
+  'region': 'us-west-1',
+  'distributionId': null
+};
+var publisher = awspublish.create(aws);
+
+/********************************************************
+  Sort Stream
+  https://github.com/dominictarr/sort-stream/blob/master/index.js
+ ********************************************************/
+
+var sort = function (comp) {
+  var a = [];
+  return through(function (data) {
+    a.push(data);
+  }, function () {
+    a.sort(comp).forEach(this.queue);
+    this.queue(null);
+  });
+};
+
+var sortByName = function () {
+  return sort(function (a, b) {
+    var aName = a.relative, bName = b.relative;
+    if (aName < bName) return -1;
+    if (aName > bName) return 1;
+    return 0
+  });
+};
 
 /********************************************************
   Paths
@@ -251,6 +288,7 @@ gulp.task('styles', ['sprite'], function () {
     .pipe(cache(stylesCache))
     .pipe(stylus({use: [nib()], import: ['nib', __dirname + '/src/common/build-css/*.styl']}))
     .pipe(remember(stylesCache))
+    .pipe(sortByName())
     .pipe(concat(pkgName + '.css'))
     .pipe(gulpif(!isRelease, gulp.dest(outDir)))
     .pipe(gulpif(isRelease, makeMinCss()));
@@ -281,6 +319,7 @@ gulp.task('scripts', ['jshint'], function () {
   return es.merge(html2js, scripts)
     .pipe(remember(htmlCache))
     .pipe(remember(jsCache))
+    .pipe(sortByName())
     .pipe(concat(pkgName + '.js'))
     .pipe(gulpif(!isRelease, gulp.dest(outDir)))
     .pipe(gulpif(isRelease, makeMinJs()));
@@ -288,6 +327,7 @@ gulp.task('scripts', ['jshint'], function () {
 
 gulp.task('lib-styles', function () {
   return gulp.src(devFiles(libCssFiles))
+    .pipe(sortByName())
     .pipe(concat('lib.css'))
     .pipe(gulp.dest(outDir));
 });
@@ -295,12 +335,14 @@ gulp.task('lib-styles', function () {
 gulp.task('lib-min-styles', function () {
   return gulp.src(prodFiles(libCssFiles))
     .pipe(gulpif(['**/*.css','!**/*.min.css'], cssmin({keepSpecialComments: 1})))
+    .pipe(sortByName())
     .pipe(concat('lib.min.css'))
     .pipe(gulp.dest(outDir));
 });
 
 gulp.task('lib-scripts', function () {
   return gulp.src(devFiles(libJsFiles))
+    .pipe(sortByName())
     .pipe(concat('lib.js'))
     .pipe(gulp.dest(outDir));
 });
@@ -308,6 +350,7 @@ gulp.task('lib-scripts', function () {
 gulp.task('lib-min-scripts', function () {
   return gulp.src(prodFiles(libJsFiles))
     .pipe(gulpif(['**/*.js','!**/*.min.js'], uglify()))
+    .pipe(sortByName())
     .pipe(concat('lib.min.js'))
     .pipe(gulp.dest(outDir))
 });
@@ -325,6 +368,7 @@ gulp.task('watch', ['build-dev'], function () {
 gulp.task('templates', function () {
   return gulp.src(htmlFiles)
     .pipe(makeTemplates())
+    .pipe(sortByName())
     .pipe(concat(pkgName + '-tpl.js'))
     .pipe(gulp.dest(tmpDir));
 })
@@ -360,6 +404,37 @@ gulp.task('protractor', ['build-release'], function () {
 
 gulp.task('test', function (done) {
   runSequence(['karma', 'protractor'], 'clean-tmp', done);
+});
+
+gulp.task('assets:compile', function () {
+  var assetSrc = ['index.html', 'dist/**', 'img/**', '!img/sprites/**'];
+
+  return gulp.src(assetSrc, { base: '.' })
+    .pipe(revall({
+      // do not rev these files
+      ignore: [ /^\/favicon.ico$/g, /^sprites\//g ],
+      prefix: '//d1dwdv9wd966qu.cloudfront.net/'
+    }))
+    .pipe(gulp.dest('cdn'));
+});
+
+gulp.task('assets:rename_index', function () {
+  // depends on assets:compile creating the cdn/index file
+  return gulp.src('cdn/index.????????.html')
+    .pipe(rename('index_cdn.html'))
+    .pipe(gulp.dest('./'));
+});
+
+gulp.task('assets:publish', function (done) {
+  return gulp.src(['cdn/**', '!cdn/index.????????.html'])
+    .pipe(awspublish.gzip())
+    .pipe(parallelize(publisher.publish({'Cache-Control': 'max-age=315360000, no-transform, public'}), 50))
+    .pipe(publisher.cache())
+    .pipe(awspublish.reporter());
+});
+
+gulp.task('assets', function (done) {
+  runSequence('assets:compile', 'assets:rename_index', 'assets:publish', done);
 });
 
 gulp.task('build-dev', function (done) {
