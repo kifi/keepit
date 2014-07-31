@@ -2,7 +2,7 @@ package com.keepit.cortex.models.word2vec
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
-import com.keepit.cortex.utils.MatrixUtils
+import com.keepit.cortex.utils.MatrixUtils._
 
 case class CRPClusterResult(clusterSums: Array[Array[Float]], clusterIds: Array[Array[Int]])
 
@@ -30,7 +30,7 @@ class CRPImpl() extends CRP {
       val v = points(i)
 
       for (j <- (0 until ncluster)) {
-        val sim = MatrixUtils.cosineDistance(clusterSums(j), v)
+        val sim = cosineDistance(clusterSums(j), v).toFloat
         if (sim > maxSim) {
           maxIdx = j
           maxSim = sim

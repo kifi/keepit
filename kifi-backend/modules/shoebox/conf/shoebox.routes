@@ -692,7 +692,6 @@ POST    /internal/geckoboard/refresh                  @com.keepit.reports.Geckob
 POST    /internal/shoebox/email/sendUnreadMessages   @com.keepit.controllers.internal.EmailNotificationsController.sendUnreadMessages()
 
 GET      /internal/shoebox/database/assignScrapeTasks @com.keepit.controllers.internal.ShoeboxController.assignScrapeTasks(zkId:Id[ScraperWorker], max:Int ?= 1)
-POST     /internal/shoebox/database/getScrapeInfo     @com.keepit.controllers.internal.ShoeboxController.getScrapeInfo
 POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxController.saveScrapeInfo
 POST     /internal/shoebox/database/savePageInfo      @com.keepit.controllers.internal.ShoeboxController.savePageInfo
 GET      /internal/shoebox/database/getImageInfo      @com.keepit.controllers.internal.ShoeboxController.getImageInfo(id:Id[ImageInfo])
