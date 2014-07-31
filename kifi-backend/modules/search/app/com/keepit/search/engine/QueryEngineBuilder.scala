@@ -9,13 +9,12 @@ import scala.collection.mutable.ArrayBuffer
 
 class QueryEngineBuilder(query: Query, percentMatchThreshold: Float) {
 
+  private[this] var _index: Int = 0
   private[this] var _query: Query = query
   private[this] var _expr: ScoreExpr = buildExpr(query)
-  private[this] var _index: Int = 0
   private[this] var _collector: ResultCollector[ScoreContext] = null
 
   def build(): QueryEngine = {
-
     new QueryEngine(_expr, _query, _index, _collector)
   }
 
@@ -25,7 +24,6 @@ class QueryEngineBuilder(query: Query, percentMatchThreshold: Float) {
         val clauses = booleanQuery.clauses
         val required = new ArrayBuffer[ScoreExpr]()
         val optional = new ArrayBuffer[ScoreExpr]()
-        val filter = new ArrayBuffer[ScoreExpr]()
         val filterOut = new ArrayBuffer[ScoreExpr]()
 
         clauses.foreach { clause =>
@@ -33,7 +31,7 @@ class QueryEngineBuilder(query: Query, percentMatchThreshold: Float) {
             case MUST_NOT => filterOut += MaxExpr(_index)
             case occur =>
               clause.getQuery match {
-                case q: KFilterQuery => filter += MaxExpr(_index)
+                case q: KFilterQuery => required += MaxExpr(_index)
                 case _ => (if (occur == MUST) required else optional) += MaxWithTieBreakerExpr(_index, 0.5f)
               }
           }
@@ -41,18 +39,15 @@ class QueryEngineBuilder(query: Query, percentMatchThreshold: Float) {
         }
 
         // put all together and build a score expression
-        FilterExpr(
-          expr = FilterOutExpr(
-            expr = PercentMatchExpr(
-              expr = BooleanExpr(
-                optional = DisjunctiveSumExpr(optional),
-                required = ConjunctiveSumExpr(required)
-              ),
-              threshold = percentMatchThreshold
+        FilterOutExpr(
+          expr = PercentMatchExpr(
+            expr = BooleanExpr(
+              optional = DisjunctiveSumExpr(optional),
+              required = ConjunctiveSumExpr(required)
             ),
-            filter = ExistsExpr(filterOut)
+            threshold = percentMatchThreshold
           ),
-          filter = ForAllExpr(filter)
+          filter = ExistsExpr(filterOut)
         )
 
       case textQuery: KTextQuery =>
@@ -64,15 +59,17 @@ class QueryEngineBuilder(query: Query, percentMatchThreshold: Float) {
     }
   }
 
-  def addBooster(booster: Query, boostStrength: Float): Unit = {
+  def addBooster(booster: Query, boostStrength: Float): QueryEngineBuilder = {
     _query = new KBoostQuery(_query, booster, boostStrength)
     val boosterExpr = MaxExpr(_index)
     _index += 1
     _expr = BoostExpr(_expr, boosterExpr, boostStrength)
+    this
   }
 
-  def setResultCollector(collector: ResultCollector[ScoreContext]): Unit = {
+  def setResultCollector(collector: ResultCollector[ScoreContext]): QueryEngineBuilder = {
     _collector = collector
+    this
   }
 }
 

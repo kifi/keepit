@@ -31,15 +31,3 @@ case class ProdScraperServiceClientModule() extends ScraperServiceClientModule {
   }
 
 }
-
-case class TestScraperServiceClientModule() extends ScraperServiceClientModule {
-
-  def configure() {}
-
-  @Singleton
-  @Provides
-  def ScraperServiceClient(airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler): ScraperServiceClient = {
-    new FakeScraperServiceClientImpl(airbrakeNotifier, scheduler)
-  }
-
-}

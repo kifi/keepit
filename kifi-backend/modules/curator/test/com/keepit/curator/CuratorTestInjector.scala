@@ -6,14 +6,10 @@ import com.keepit.common.db.{ TestDbInfo, TestSlickModule }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time.FakeClockModule
-import com.keepit.inject.EmptyInjector
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.test.DbInjectionHelper
+import com.keepit.test.{ DbInjectionHelper, TestInjector }
 
-import play.api.Mode
-
-trait CuratorTestInjector extends EmptyInjector with DbInjectionHelper {
-  val mode = Mode.Test
+trait CuratorTestInjector extends TestInjector with DbInjectionHelper {
   val module = Modules.combine(
     FakeAirbrakeModule(),
     FakeClockModule(),

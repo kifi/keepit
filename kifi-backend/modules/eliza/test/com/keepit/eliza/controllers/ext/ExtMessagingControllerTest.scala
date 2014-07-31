@@ -6,7 +6,6 @@ import com.keepit.common.db.slick._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
 import com.keepit.inject._
-import com.keepit.test.{ DbTestInjector }
 import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._

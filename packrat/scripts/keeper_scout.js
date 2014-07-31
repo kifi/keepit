@@ -215,7 +215,7 @@ var tile = tile || function() {  // idempotent for Chrome
       var child = tileParent.lastElementChild;
       if (child !== tile && !document.documentElement.hasAttribute('kifi-pane-parent')) {
         while (child !== tile) {
-          if (!child.classList.contains('kifi-root') && !child.tagName.toLowerCase() === 'script') {
+          if (!child.classList.contains('kifi-root') && child.tagName.toLowerCase() !== 'script') {
             tileParent.appendChild(tile);
             break;
           }

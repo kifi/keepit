@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.kifi.macros.json
 import org.joda.time.DateTime
 
 import com.keepit.common.db._
@@ -26,3 +27,5 @@ case class ReKeep(
 object ReKeepStates extends States[ReKeep]
 
 case class RichReKeep(id: Option[Id[ReKeep]], createdAt: DateTime, updatedAt: DateTime, state: State[ReKeep], keeper: User, keep: Keep, uri: NormalizedURI, srcUser: User, srcKeep: Keep, attributionFactor: Int)
+
+@json case class HelpRankInfo(uriId: Id[NormalizedURI], keepDiscoveryCount: Int, rekeepCount: Int)

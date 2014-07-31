@@ -6,7 +6,7 @@ import com.keepit.model.User
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.test.TestApplication
+import com.keepit.test.CommonTestApplication
 import play.api.test.Helpers.running
 import com.keepit.search.util.IdFilterCompressor
 
@@ -30,7 +30,7 @@ class UserSearchFilterTest extends Specification with ApplicationInjector {
 
   "default search filter" should {
     "work" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         var filter = factory.default(None)
@@ -49,7 +49,7 @@ class UserSearchFilterTest extends Specification with ApplicationInjector {
 
   "friend-only filter" should {
     "work" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         var filter = factory.friendsOnly(users(0).id.get, None)
@@ -69,7 +69,7 @@ class UserSearchFilterTest extends Specification with ApplicationInjector {
 
   "Nonfriends-only filter" should {
     "work" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeShoeboxServiceModule())) {
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         var filter = factory.nonFriendsOnly(users(0).id.get, context = None)

@@ -1,10 +1,10 @@
 package com.keepit.common.service
 
 import com.keepit.test._
-import com.keepit.test.TestInjector
+import com.keepit.test.CommonTestInjector
 import org.specs2.mutable.Specification
 
-class ServiceTest extends Specification with TestInjector {
+class ServiceTest extends Specification with CommonTestInjector {
 
   "Service" should {
 

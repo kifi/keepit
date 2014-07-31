@@ -30,7 +30,7 @@
           <td>@{i+1}</td>
           <td><span class="badge">@libStat.library.id.get</span></td>
           <td>@adminHelper.userDisplay(libStat.owner)</td>
-          <td>@libStat.library.name</td>
+          <td><a href="@com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(libStat.library.id.get)">@libStat.library.name</a></td>
           <td>@libStat.library.visibility.value</td>
           <td>@libStat.library.slug.value</td>
           <td>@libStat.numKeeps</td>
@@ -38,8 +38,8 @@
           <td>@libStat.numInvites</td>
           <td>@libStat.library.state</td>
           <td>@libStat.library.kind</td>
-          <td>@libStat.library.createdAt</td>
-          <td>@libStat.library.updatedAt</td>
+          <td>@adminHelper.dateTimeDisplay(libStat.library.createdAt)</td>
+          <td>@adminHelper.dateTimeDisplay(libStat.library.updatedAt)</td>
         </tr>
       }
       </table>
