@@ -175,7 +175,7 @@ class LDACommander @Inject() (
     val statOpt = getUserLDAStats(wordRep.version)
     val targetScaled = scale(target.get.mean, statOpt)
 
-    val (users, vecs) = db.readOnlyReplica { implicit s => userTopicRepo.getAllUserTopicMean(wordRep.version, minEvidence = 30) }
+    val (users, vecs) = db.readOnlyReplica { implicit s => userTopicRepo.getAllUserTopicMean(wordRep.version, minEvidence = 100) }
     val idsAndScores = (users zip vecs).map {
       case (userId, vec) =>
         val (u, v) = (scale(targetScaled, statOpt), scale(vec.mean, statOpt))
