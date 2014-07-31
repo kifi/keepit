@@ -1,12 +1,13 @@
 package com.keepit.controllers.website
 
 import controllers.AssetsBuilder
-import play.api.mvc.{ AnyContent, Action, Controller }
+import play.api.mvc.{ AnyContent, Action }
 import scala.concurrent.Future
 import com.google.inject.Inject
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.common.controller.ShoeboxServiceController
 
-class AboutAssets @Inject() (applicationConfig: FortyTwoConfig) extends AssetsBuilder with Controller {
+class AboutAssets @Inject() (applicationConfig: FortyTwoConfig) extends AssetsBuilder with ShoeboxServiceController {
 
   val HtmlRedirects = Set("mission.html", "team.html", "culture.html", "investors.html", "join_us.html")
   val OldSiteRedirects = Map(

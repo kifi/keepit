@@ -13,7 +13,7 @@ import play.api.libs.json.Json
 import com.google.inject.Injector
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.social.{ SocialNetworks, SocialId}
+import com.keepit.social.{ SocialNetworks, SocialId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.FakeMailModule
 

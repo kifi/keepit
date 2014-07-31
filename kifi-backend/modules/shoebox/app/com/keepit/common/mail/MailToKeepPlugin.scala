@@ -170,7 +170,6 @@ class MailToKeepMessageParser @Inject() (
   }
 }
 
-@ImplementedBy(classOf[MailToKeepPluginImpl])
 trait MailToKeepPlugin extends Plugin {
   def fetchNewKeeps()
 }
