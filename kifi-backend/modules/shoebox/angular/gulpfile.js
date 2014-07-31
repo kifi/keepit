@@ -46,6 +46,8 @@ var pkgName = JSON.parse(fs.readFileSync('package.json')).name;
 var banner = fs.readFileSync('banner.txt').toString();
 var isRelease = false;
 
+var assetSrc = ['index.html', 'dist/**', 'img/**', '!img/sprites/**'];
+
 // awspublish
 var aws = {
   'key': 'AKIAJZC6TMAWKQYEGBIQ',
@@ -367,7 +369,30 @@ gulp.task('karma', ['templates'], function (done) {
   }, done);
 });
 
-gulp.task('protractor', ['build-release'], function () {
+function runProtractor() {
+  return gulp.src(['test/e2e/**/*.js'])
+    .pipe(protractor({
+      configFile: "test/protractor.conf.js"
+    }))
+    .pipe(es.wait(connect.serverClose));
+}
+
+gulp.task('protractor', ['assets:dev'], function (done) {
+  startProdServer({
+    port: 9080,
+    fallback: 'tmp/index.html',
+    middleware: function () {
+      return [modRewrite([
+        '^(/(dist|img)/.*) /tmp$1 [L]',
+        '^(?!/(dist|img)) /tmp/index.html'
+      ])];
+    }
+  });
+
+  return runProtractor();
+});
+
+gulp.task('protractor:release', ['assets:release'], function () {
   startProdServer({
     port: 9080,
     fallback: 'index_cdn.html',
@@ -376,38 +401,42 @@ gulp.task('protractor', ['build-release'], function () {
     }
   });
 
-  return gulp.src(['test/e2e/**/*.js'])
-    .pipe(protractor({
-      configFile: "test/protractor.conf.js"
-    }))
-    .pipe(es.wait(connect.serverClose));
+  return runProtractor();
 });
 
 gulp.task('test', function (done) {
   runSequence(['karma', 'protractor'], 'clean-tmp', done);
 });
 
-gulp.task('assets:compile', function () {
-  var assetSrc = ['index.html', 'dist/**', 'img/**', '!img/sprites/**'];
-
+function compileAssetRevs(opts, dest) {
+  opts = merge({ ignore: [ /^\/favicon.ico$/g, /^sprites\//g ], hashLength: 7 }, opts || {});
+  dest = dest || 'tmp';
   return gulp.src(assetSrc, { base: '.' })
-    .pipe(revall({
-      // do not rev these files
-      ignore: [ /^\/favicon.ico$/g, /^sprites\//g ],
-      prefix: '//d1dwdv9wd966qu.cloudfront.net/',
-      hashLength: 7,
-    }))
-    .pipe(gulp.dest('cdn'));
+    .pipe(revall(opts))
+    .pipe(gulp.dest(dest));
+}
+
+gulp.task('assets:dev:compile', ['build-release'], function () {
+  return compileAssetRevs();
 });
 
-gulp.task('assets:rename_index', function () {
-  // depends on assets:compile creating the cdn/index file
+gulp.task('assets:release:compile', ['build-release'], function () {
+  return compileAssetRevs({ prefix: '//d1dwdv9wd966qu.cloudfront.net/' }, 'cdn');
+});
+
+gulp.task('assets:dev:update_index', ['assets:dev:compile'], function () {
+  return gulp.src('tmp/index.???????.html')
+    .pipe(rename('index.html'))
+    .pipe(gulp.dest('tmp/'));
+});
+
+gulp.task('assets:release:update_index', ['assets:release:compile'], function () {
   return gulp.src('cdn/index.???????.html')
     .pipe(rename('index_cdn.html'))
     .pipe(gulp.dest('./'));
 });
 
-gulp.task('assets:publish', function (done) {
+gulp.task('assets:release:publish', ['assets:release:compile', 'assets:release:update_index'], function (done) {
   return gulp.src(['cdn/**', '!cdn/index.???????.html'])
     .pipe(awspublish.gzip())
     .pipe(parallelize(publisher.publish({'Cache-Control': 'max-age=315360000, no-transform, public'}), 50))
@@ -415,9 +444,9 @@ gulp.task('assets:publish', function (done) {
     .pipe(awspublish.reporter());
 });
 
-gulp.task('assets', function (done) {
-  runSequence('assets:compile', 'assets:rename_index', 'assets:publish', done);
-});
+gulp.task('assets:dev', ['build-release', 'assets:dev:compile', 'assets:dev:update_index']);
+
+gulp.task('assets:release', ['assets:release:publish']);
 
 gulp.task('build-dev', function (done) {
   runSequence('clean', ['styles', 'scripts', 'lib-styles', 'lib-scripts'], done);
@@ -425,7 +454,7 @@ gulp.task('build-dev', function (done) {
 
 gulp.task('build-release', function (done) {
   isRelease = true;
-  runSequence('clean', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], 'assets', done);
+  runSequence('clean', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], done);
 });
 
 // Note: suboptimal use of connect: it already includes livereload (but part of the livereload API is not available)
@@ -436,7 +465,7 @@ gulp.task('server-dev', ['build-dev'], startDevServer);
 gulp.task('prod', ['build-release'], startProdServer);
 
 // This task is the one that should be run by the build script
-gulp.task('release', ['build-release', 'karma', 'protractor']);
+gulp.task('release', ['build-release', 'karma', 'protractor:release']);
 
 // Use this task for normal development
 gulp.task('default', ['watch', 'server-dev']);
