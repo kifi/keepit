@@ -28,7 +28,7 @@
 
       </div>
       <div ng-if="!facebook.profileUrl">
-        <div class="social-connect-button facebook" ng-click="connectFacebook()">Connect Facebook</div>
+        <div class="social-connect-button facebook" ng-click="connectFacebook()"><a href="javascript">Connect Facebook</a></div>
       </div>
     </div>
 
@@ -58,14 +58,14 @@
 
       </div>
       <div ng-if="!linkedin.profileUrl">
-        <div class="social-connect-button linkedin" ng-click="connectLinkedIn()">Connect LinkedIn</div>
+        <div class="social-connect-button linkedin" ng-click="connectLinkedIn()"><a href="javascript">Connect LinkedIn</a></div>
       </div>
     </div>
 
 
     <!-- Gmail -->
     <div class="social-connect-row" ng-if="gmail.length === 0">
-      <div class="social-connect-button gmail" ng-click="importGmail()">Connect Gmail</div>
+      <div class="social-connect-button gmail" ng-click="importGmail()"><a href="javascript">Connect Gmail</a></div>
     </div>
 
     <div ng-repeat="account in gmail" ng-if="gmail.length > 0">
