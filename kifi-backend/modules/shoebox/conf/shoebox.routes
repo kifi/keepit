@@ -727,8 +727,7 @@ GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.int
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 
-# New site, temporary
-GET     /ng                        com.keepit.controllers.website.AngularDistAssets.home
+# Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/angular/dist", file)
 GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path="/angular/img", file)
 
