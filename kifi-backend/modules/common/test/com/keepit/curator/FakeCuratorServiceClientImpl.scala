@@ -1,5 +1,7 @@
 package com.keepit.curator
 
+import com.keepit.model.ScoreType._
+
 import scala.concurrent.Future
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.zookeeper.ServiceCluster
@@ -14,6 +16,6 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
-  def adHocRecos(userId: Id[User], n: Int): Future[Seq[Recommendation]] = Future.successful(Seq.empty)
+  def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: Map[ScoreType, Float]): Future[Seq[Recommendation]] = Future.successful(Seq.empty)
 
 }

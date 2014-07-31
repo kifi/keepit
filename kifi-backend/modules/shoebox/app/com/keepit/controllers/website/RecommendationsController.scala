@@ -3,10 +3,12 @@ package com.keepit.controllers.website
 import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
 import com.keepit.commanders.{ RecommendationsCommander, LocalUserExperimentCommander }
 import com.keepit.model.ExperimentType
+import com.keepit.model.ScoreType._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
+import play.api.libs.json._
 import play.api.mvc.Results.Forbidden
+import com.keepit.common.util.MapFormatUtil.scoreTypeMapFormat
 
 import scala.concurrent.Future
 
@@ -19,7 +21,11 @@ class RecommendationsController @Inject() (
 
   def adHocRecos(n: Int) = JsonAction.authenticatedAsync { request =>
     if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.ADMIN)) {
-      commander.adHocRecos(request.userId, n).map(fkis => Ok(Json.toJson(fkis)))
+      val content = request.body.asJson match {
+        case Some(json) => json.as[Map[ScoreType, Float]]
+        case None => Map[ScoreType, Float]()
+      }
+      commander.adHocRecos(request.userId, n, content).map(fkis => Ok(Json.toJson(fkis)))
     } else {
       Future.successful(Forbidden)
     }

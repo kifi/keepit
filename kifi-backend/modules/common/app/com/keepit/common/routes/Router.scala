@@ -2,6 +2,7 @@ package com.keepit.common.routes
 
 import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
 import com.keepit.heimdal.BasicDelightedAnswer
+import com.keepit.model.ScoreType._
 import com.keepit.model._
 import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
@@ -48,6 +49,7 @@ object ParamValue {
   implicit def userValueNameToParam(userValueName: UserValueName) = ParamValue(Some(userValueName.name))
   implicit def seqToParam[T](s: Seq[Id[T]]) = ParamValue(Some((s.map { x => x.id.toString }).toString))
   implicit def dateTimeToParam(dateTime: DateTime) = ParamValue(Some(dateTime.toStandardDateString))
+  //implicit def scoreCoefficientUpdateToParam(scoreCoefficientsUpdate: Map[ScoreType, Float]) = ParamValue(Option((Some(scoreCoefficientsUpdate.map(item => (item._1.toString, item._2.toString)))).toString))
 }
 
 abstract class Method(name: String)
@@ -341,6 +343,7 @@ object Graph extends Service {
 
 object Curator extends Service {
   object internal {
+    //scoreCoefficient key should be one of "socialScore", "popularityScore", "overallInterestScore", "recentInterestScore", "recencyScore", "priorScore"
     def adHocRecos(userId: Id[User], n: Int) = ServiceRoute(GET, "/internal/curator/adHocRecos", Param("userId", userId), Param("n", n))
   }
 }
