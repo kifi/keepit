@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 
 import com.keepit.common.KestrelCombinator
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URISanitizer
@@ -44,7 +45,7 @@ case class KeepInfo(
   siteName: Option[String] = None,
   clickCount: Option[Int] = None,
   rekeepCount: Option[Int] = None,
-  libraryId: Option[ExternalId[Library]] = None)
+  libraryId: Option[PublicId[Library]] = None)
 
 object KeepInfo {
 
@@ -62,7 +63,7 @@ object KeepInfo {
     (__ \ 'siteName).formatNullable[String] and
     (__ \ 'clickCount).formatNullable[Int] and
     (__ \ 'rekeepCount).formatNullable[Int] and
-    (__ \ 'libraryId).formatNullable(ExternalId.format[Library])
+    (__ \ 'libraryId).formatNullable(PublicId.format[Library])
   )(KeepInfo.apply _, unlift(KeepInfo.unapply))
 
   def fromFullKeepInfo(info: FullKeepInfo, sanitize: Boolean = false) = {
@@ -99,7 +100,7 @@ case class FullKeepInfo(
   uriSummary: Option[URISummary] = None,
   clickCount: Option[Int] = None,
   rekeepCount: Option[Int] = None,
-  libraryId: Option[ExternalId[Library]] = None)
+  libraryId: Option[PublicId[Library]] = None)
 
 case class KeepInfosWithCollection(
   collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[KeepInfo])
