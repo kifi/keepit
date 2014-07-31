@@ -443,7 +443,7 @@ gulp.task('build-dev', function (done) {
 
 gulp.task('build-release', function (done) {
   isRelease = true;
-  runSequence('clean', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], done);
+  runSequence('clean', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], 'assets', done);
 });
 
 // Note: suboptimal use of connect: it already includes livereload (but part of the livereload API is not available)
