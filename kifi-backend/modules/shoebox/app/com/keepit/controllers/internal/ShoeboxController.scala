@@ -645,7 +645,7 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def getLapsedUsersForDelighted(after: DateTime, before: Option[DateTime], maxCount: Int, skipCount: Int) = Action { request =>
+  def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]) = Action { request =>
     val userInfos = db.readOnlyReplica { implicit session =>
       userRepo.getUsers(userValueRepo.getLastActive(after, before, maxCount, skipCount)) map {
         case (userId, user) =>
