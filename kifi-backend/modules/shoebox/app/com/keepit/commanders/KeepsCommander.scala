@@ -622,6 +622,18 @@ class KeepsCommander @Inject() (
     }
   }
 
+  def getHelpRankInfo(uriIds: Set[Id[NormalizedURI]]): Seq[HelpRankInfo] = {
+    val (discMap, rkMap) = db.readOnlyMaster { implicit ro =>
+      val discMap = keepDiscoveriesRepo.getDiscoveryCountsByURIs(uriIds)
+      val rkMap = rekeepRepo.getReKeepCountsByURIs(uriIds)
+      log.info(s"getHelpRankInfo discMap=$discMap rkMap=$rkMap")
+      (discMap, rkMap)
+    }
+    uriIds.toSeq.map { uriId =>
+      HelpRankInfo(uriId, discMap.get(uriId).getOrElse(0), rkMap.get(uriId).getOrElse(0))
+    }
+  }
+
   def assembleKeepExport(keepExports: Seq[KeepExport]): String = {
     // HTML format that follows Delicious exports
     val before = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
