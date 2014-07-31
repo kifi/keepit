@@ -11,22 +11,22 @@ describe('kifi.keepWhoService', function () {
   }));
 
   describe('keepWhoService.getPicUrl()', function () {
-    it('returns an empty string when user is not set', function () {
-      expect(keepWhoService.getPicUrl(null)).toBe('');
+    it('returns a ghost image when user is not set', function () {
+      expect(keepWhoService.getPicUrl(null)).toBe('//www.kifi.com/assets/img/ghost.200.png');
     });
 
-    it('returns an empty string when user.id is not set', function () {
+    it('returns a ghost image when user.id is not set', function () {
       expect(keepWhoService.getPicUrl({
         id: null,
         pictureName: 'USER_PIC'
-      })).toBe('');
+      })).toBe('//www.kifi.com/assets/img/ghost.200.png');
     });
 
-    it('returns an empty string when user.pictureName is not set', function () {
+    it('returns a ghost image when user.pictureName is not set', function () {
       expect(keepWhoService.getPicUrl({
         id: 'USER_ID',
         pictureName: null
-      })).toBe('');
+      })).toBe('//www.kifi.com/assets/img/ghost.200.png');
     });
 
     it('returns a fully composed picture url with id and pictureName', function () {
