@@ -12,11 +12,9 @@ object ABookGlobal extends FortyTwoGlobal(Prod) with ABookServices {
   val module = ABookProdModule()
 
   override def onStart(app: Application) {
-    log.info("starting abook")
     startABookServices()
     super.onStart(app)
     injector.instance[LocalRichConnectionCommander].startUpdateProcessing()
-    log.info("abook started")
   }
 
 }

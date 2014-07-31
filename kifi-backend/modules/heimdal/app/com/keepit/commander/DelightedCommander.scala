@@ -119,7 +119,7 @@ class DelightedCommanderImpl @Inject() (
 
   def scheduleSurveyForLapsedUsers(skipCount: Int): Future[Int] = {
     val now = clock.now()
-    shoebox.getLapsedUsersForDelighted(now.minusDays(8), Some(now.minusDays(7)), 100, skipCount) map { userInfos =>
+    shoebox.getLapsedUsersForDelighted(100, skipCount, now.minusDays(8), Some(now.minusDays(7))) map { userInfos =>
       userInfos map { info =>
         SafeFuture { getOrCreateDelightedUser(info, true) }
       }

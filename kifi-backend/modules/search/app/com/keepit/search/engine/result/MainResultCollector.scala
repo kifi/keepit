@@ -6,7 +6,11 @@ import com.keepit.search.engine.Visibility
 import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search.util.LongArraySet
 
-class MainResultCollector(clickBoosts: ResultClickBoosts, friendsUris: LongArraySet, maxHitsPerCategory: Int) extends ResultCollector[ScoreContext] {
+object MainResultCollector {
+  val MIN_PERCENT_MATCH = 0.5f
+}
+
+class MainResultCollector(clickBoosts: ResultClickBoosts, friendsUris: LongArraySet, maxHitsPerCategory: Int, percentMatchThreshold: Float) extends ResultCollector[ScoreContext] {
 
   private[this] val myHits = createQueue(maxHitsPerCategory)
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
@@ -16,15 +20,30 @@ class MainResultCollector(clickBoosts: ResultClickBoosts, friendsUris: LongArray
     val id = ctx.id
     val visibility = ctx.visibility
     if (visibility != Visibility.RESTRICTED) {
-      val score = ctx.score()
-      if (score > 0.0f) {
-        val clickBoost = clickBoosts(id)
-        if ((visibility & Visibility.MEMBER) != 0) {
-          myHits.insert(id, score, clickBoost, true, false)
-        } else if (friendsUris.findIndex(id) >= 0) {
-          friendsHits.insert(id, score, clickBoost, false, false)
+      val percentMatch = ctx.percentMatch(MainResultCollector.MIN_PERCENT_MATCH)
+
+      if (percentMatch > 0.0f) {
+        // compute clickBoost and score
+        var clickBoost = 0.0f
+        var score = 0.0f
+
+        if (percentMatch >= percentMatchThreshold) {
+          score = ctx.score() * percentMatch
+          clickBoost = clickBoosts(id)
         } else {
-          othersHits.insert(id, score, clickBoost, false, false)
+          // below the threshold, but we save this if this is a clicked hit (clickBoost > 0.0f)
+          clickBoost = clickBoosts(id)
+          if (clickBoost > 0.0f) score = ctx.score() * percentMatch // else score remains 0.0f
+        }
+
+        if (score > 0.0f) {
+          if ((visibility & Visibility.MEMBER) != 0) {
+            myHits.insert(id, score, clickBoost, true, false)
+          } else if (friendsUris.findIndex(id) >= 0) {
+            friendsHits.insert(id, score, clickBoost, false, false)
+          } else {
+            othersHits.insert(id, score, clickBoost, false, false)
+          }
         }
       }
     }

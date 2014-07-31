@@ -154,7 +154,7 @@ class HomeController @Inject() (
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(routes.HomeController.install())
     } else if (agentOpt.exists(_.screenCanFitWebApp)) {
-      Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular/index.html").get)) as HTML
+      AngularDistAssets.angularApp()
     } else {
       Redirect(routes.HomeController.unsupported())
     }
