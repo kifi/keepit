@@ -69,7 +69,7 @@ class KeepDiscoveryRepoImpl @Inject() (
   }
 
   def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime)(implicit r: RSession): Map[Id[NormalizedURI], Int] = { // todo(ray): optimize
-    uriIds.map { uriId => uriId -> getDiscoveryCountByURI(uriId) }.toMap
+    uriIds.map { uriId => uriId -> getDiscoveryCountByURI(uriId, since) }.toMap
   }
 
   def getDiscoveryCountsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Map[Id[Keep], Int] = {
