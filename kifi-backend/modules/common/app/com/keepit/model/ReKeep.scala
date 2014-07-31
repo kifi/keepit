@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.kifi.macros.json
 import org.joda.time.DateTime
 
 import com.keepit.common.db._
@@ -27,14 +28,4 @@ object ReKeepStates extends States[ReKeep]
 
 case class RichReKeep(id: Option[Id[ReKeep]], createdAt: DateTime, updatedAt: DateTime, state: State[ReKeep], keeper: User, keep: Keep, uri: NormalizedURI, srcUser: User, srcKeep: Keep, attributionFactor: Int)
 
-case class HelpRankInfo(uriId: Id[NormalizedURI], keepDiscoveryCount: Int, rekeepCount: Int)
-
-object HelpRankInfo {
-  import play.api.libs.functional.syntax._
-  import play.api.libs.json._
-  implicit val format = (
-    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-    (__ \ 'keepDiscoveryCount).format[Int] and
-    (__ \ 'rekeepCount).format[Int]
-  )(HelpRankInfo.apply _, unlift(HelpRankInfo.unapply))
-}
+@json case class HelpRankInfo(uriId: Id[NormalizedURI], keepDiscoveryCount: Int, rekeepCount: Int)
