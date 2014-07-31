@@ -829,7 +829,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    call(Shoebox.internal.getAdultRestrictionOfURIs(uris)).map { r =>
+    call(Shoebox.internal.getAdultRestrictionOfURIs(), body = Json.toJson(uris)).map { r =>
       r.json.as[Seq[Boolean]]
     }
   }

@@ -2,10 +2,9 @@ package com.keepit.commanders
 
 import com.keepit.common.db.Id
 import com.keepit.model.ScoreType._
-import com.keepit.model.{ User, NormalizedURIRepo }
+import com.keepit.model.{ ScoreType, User, NormalizedURIRepo }
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.common.db.slick.Database
-import com.keepit.curator.model.Recommendation
 
 import com.google.inject.Inject
 
@@ -19,7 +18,7 @@ class RecommendationsCommander @Inject() (
     nUriRepo: NormalizedURIRepo,
     uriSummaryCommander: URISummaryCommander) {
 
-  def adHocRecos(userId: Id[User], howManyMax: Int, scoreCoefficientsUpdate: Map[ScoreType, Float]): Future[Seq[KeepInfo]] = {
+  def adHocRecos(userId: Id[User], howManyMax: Int, scoreCoefficientsUpdate: Map[ScoreType.Value, Float]): Future[Seq[KeepInfo]] = {
     curator.adHocRecos(userId, howManyMax, scoreCoefficientsUpdate).flatMap { recos =>
       db.readOnlyReplica { implicit session =>
         Future.sequence(recos.map { reco =>
@@ -32,7 +31,9 @@ class RecommendationsCommander @Inject() (
               uriSummary = Some(uriSummary.copy(description = reco.explain))
             )
           }
-      })
+        })
+      }
     }
   }
+
 }

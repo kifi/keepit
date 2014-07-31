@@ -19,7 +19,7 @@ class RecommendationGenerationCommander @Inject() (
     shoebox: ShoeboxServiceClient,
     scoringHelper: UriScoringHelper) {
 
-  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType, Float]): Future[Seq[Recommendation]] = {
+  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[Recommendation]] = {
     val seedsFuture = for {
       seeds <- seedCommander.getTopItems(userId, Math.max(howManyMax, 150))
       restrictions <- shoebox.getAdultRestrictionOfURIs(seeds.map { _.uriId })
@@ -33,9 +33,9 @@ class RecommendationGenerationCommander @Inject() (
         Recommendation(
           userId = scoredItem.userId,
           uriId = scoredItem.uriId,
-          score = scoreCoefficients.getOrElse(ScoreType.recencyScore, 0.5f) * scoredItem.uriScores.recencyScore
-            + scoreCoefficients.getOrElse(ScoreType.overallInterestScore, 2f) * scoredItem.uriScores.overallInterestScore
-            + scoreCoefficients.getOrElse(ScoreType.priorScore, 0.25f) * scoredItem.uriScores.priorScore
+          score = scoreCoefficients.getOrElse(ScoreType.recencyScore, 0.0f) * scoredItem.uriScores.recencyScore
+            + scoreCoefficients.getOrElse(ScoreType.overallInterestScore, 0.0f) * scoredItem.uriScores.overallInterestScore
+            + scoreCoefficients.getOrElse(ScoreType.priorScore, 0.0f) * scoredItem.uriScores.priorScore
             + scoreCoefficients.getOrElse(ScoreType.socialScore, 0.0f) * scoredItem.uriScores.socialScore
             + scoreCoefficients.getOrElse(ScoreType.popularityScore, 0.0f) * scoredItem.uriScores.popularityScore
             + scoreCoefficients.getOrElse(ScoreType.recentInterestScore, 0.0f) * scoredItem.uriScores.recentInterestScore,

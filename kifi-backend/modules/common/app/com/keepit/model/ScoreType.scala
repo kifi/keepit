@@ -12,7 +12,7 @@ object ScoreType extends Enumeration {
   val recencyScore = Value("recencyScore")
   val priorScore = Value("priorScore")
 
-  implicit val reads: Reads[ScoreType] = EnumFormatUtil.enumReads(ScoreType)
+  implicit val reads: Reads[ScoreType.Value] = EnumFormatUtil.enumReads(ScoreType)
 
-  implicit def writes: Writes[ScoreType] = EnumFormatUtil.enumWrites
+  implicit def writes: Writes[ScoreType.Value] = EnumFormatUtil.enumWrites
 }

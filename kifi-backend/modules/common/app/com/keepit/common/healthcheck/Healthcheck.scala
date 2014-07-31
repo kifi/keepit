@@ -184,7 +184,7 @@ class HealthcheckPluginImpl @Inject() (
   override def onStart() {
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 30 minutes, actor.ref, ReportErrorsAction)
     scheduleTaskOnAllMachines(actor.system, 0 seconds, 60 minutes, actor.ref, CheckDiskSpace)
-    scheduleTaskOnAllMachines(actor.system, 3 days, 1 day, actor.ref, CheckUpdateStatusOfService)
+    scheduleTaskOnAllMachines(actor.system, 10 days, 2 day, actor.ref, CheckUpdateStatusOfService)
     scheduleTaskOnAllMachines(actor.system, 1 hour, 1 day, actor.ref, CheckCacheMissRatio)
   }
 
