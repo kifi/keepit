@@ -89,4 +89,14 @@ class LDAController @Inject() (
     Ok(Json.toJson(uris))
   }
 
+  def getSimilarUsers(userId: Id[User], topK: Int) = Action { request =>
+    val (ids, scores) = lda.getSimilarUsers(userId, topK)
+    Ok(Json.obj("userIds" -> ids, "scores" -> scores))
+  }
+
+  def dumpScaledUserInterest(userId: Id[User]) = Action { request =>
+    val vec = lda.dumpScaledUserInterest(userId)
+    Ok(Json.toJson(vec))
+  }
+
 }

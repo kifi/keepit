@@ -76,10 +76,11 @@ class UserLDAStatisticsUpdater @Inject() (
 
   import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
-  private val MIN_EVIDENCE = 30
+  private val MIN_EVIDENCE = 100
 
   def update() {
-    val vecs = db.readOnlyReplica { implicit s => userTopicRepo.getAllUserTopicMean(representer.version, MIN_EVIDENCE) }.map { _.mean }
+    val (_, interests) = db.readOnlyReplica { implicit s => userTopicRepo.getAllUserTopicMean(representer.version, MIN_EVIDENCE) }
+    val vecs = interests.map { _.mean }
     log.info(s"begin user LDA stats update. data size: ${vecs.size}")
     if (vecs.size > 1) {
       val stats = genStats(vecs, representer.version)

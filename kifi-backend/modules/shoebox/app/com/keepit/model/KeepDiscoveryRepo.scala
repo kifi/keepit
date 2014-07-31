@@ -14,6 +14,8 @@ trait KeepDiscoveryRepo extends Repo[KeepDiscovery] {
   def getByKeepId(keepId: Id[Keep])(implicit r: RSession): Seq[KeepDiscovery]
   def getDiscoveriesByKeeper(userId: Id[User], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Seq[KeepDiscovery]
   def getDiscoveryCountByKeeper(userId: Id[User], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Int
+  def getDiscoveryCountByURI(uriId: Id[NormalizedURI], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Int
+  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Map[Id[NormalizedURI], Int]
   def getDiscoveryCountsByKeeper(userId: Id[User], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Map[Id[Keep], Int]
   def getUriDiscoveryCountsByKeeper(userId: Id[User], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Map[Id[NormalizedURI], Int]
   def getDiscoveryCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]], since: DateTime = currentDateTime.minusMonths(1))(implicit r: RSession): Map[Id[Keep], Int]
@@ -57,6 +59,17 @@ class KeepDiscoveryRepoImpl @Inject() (
 
   def getDiscoveryCountByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Int = {
     (for (r <- rows if (r.keeperId === userId && r.state === KeepDiscoveryStates.ACTIVE && r.createdAt >= since)) yield r).length.run
+  }
+
+  def getDiscoveryCountByURI(uriId: Id[NormalizedURI], since: DateTime)(implicit r: RSession): Int = {
+    val q = (for (r <- rows if (r.uriId === uriId && r.state === KeepDiscoveryStates.ACTIVE && r.createdAt >= since)) yield r)
+      .groupBy(_.hitUUID)
+      .map { case (uuid, kc) => (uuid, kc.length) }
+    q.length.run
+  }
+
+  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime)(implicit r: RSession): Map[Id[NormalizedURI], Int] = { // todo(ray): optimize
+    uriIds.map { uriId => uriId -> getDiscoveryCountByURI(uriId, since) }.toMap
   }
 
   def getDiscoveryCountsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Map[Id[Keep], Int] = {

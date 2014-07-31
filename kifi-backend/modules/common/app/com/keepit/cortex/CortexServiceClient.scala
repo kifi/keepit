@@ -41,6 +41,7 @@ trait CortexServiceClient extends ServiceClient {
   def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[LDAUserURIInterestScores]]
   def userTopicMean(userId: Id[User]): Future[Option[Array[Float]]]
   def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]]
+  def getSimilarUsers(userId: Id[User], topK: Int): Future[(Seq[Id[User]], Seq[Float])] // with scores
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
@@ -177,6 +178,15 @@ class CortexServiceClientImpl(
 
   def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]] = {
     call(Cortex.internal.sampleURIsForTopic(topic)).map { r => (r.json).as[Seq[Id[NormalizedURI]]] }
+  }
+
+  def getSimilarUsers(userId: Id[User], topK: Int): Future[(Seq[Id[User]], Seq[Float])] = {
+    call(Cortex.internal.getSimilarUsers(userId, topK)).map { r =>
+      val js = r.json
+      val users = (js \ "userIds").as[Seq[Id[User]]]
+      val scores = (js \ "scores").as[Seq[Float]]
+      (users, scores)
+    }
   }
 
 }

@@ -16,7 +16,7 @@ class MyTestActorB extends Actor {
   }
 }
 
-class ActorInstanceTest extends Specification with TestInjector {
+class ActorInstanceTest extends Specification with CommonTestInjector {
   implicit val system = ActorSystem("test")
 
   "ActorInstance" should {

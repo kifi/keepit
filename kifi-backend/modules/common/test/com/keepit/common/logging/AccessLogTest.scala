@@ -5,7 +5,7 @@ import com.keepit.common.time._
 import org.specs2.mutable.Specification
 import org.joda.time.{ ReadablePeriod, DateTime }
 
-class AccessLogTest extends Specification with TestInjector {
+class AccessLogTest extends Specification with CommonTestInjector {
 
   "AccessLogTimer" should {
 

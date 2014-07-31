@@ -86,6 +86,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getDeepUrl(locator: DeepLocator, recipient: Id[User]): Future[String]
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
   def kifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit]
+  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]]
   def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo]
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]]
   def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean]
@@ -128,7 +129,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]]
-  def getLapsedUsersForDelighted(after: DateTime, before: Option[DateTime], maxCount: Int, skipCount: Int): Future[Seq[DelightedUserRegistrationInfo]]
+  def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -564,6 +565,13 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.kifiHit, payload) map { r => Unit }
   }
 
+  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = {
+    val payload = Json.toJson(uriIds)
+    call(Shoebox.internal.getHelpRankInfo, payload) map { r =>
+      r.json.as[Seq[HelpRankInfo]]
+    }
+  }
+
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
     call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
       r.json.as[Seq[ScrapeRequest]]
@@ -861,8 +869,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getLapsedUsersForDelighted(after: DateTime, before: Option[DateTime], maxCount: Int, skipCount: Int): Future[Seq[DelightedUserRegistrationInfo]] = {
-    call(Shoebox.internal.getLapsedUsersForDelighted(after, before, maxCount, skipCount), callTimeouts = longTimeout).map { r =>
+  def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]] = {
+    call(Shoebox.internal.getLapsedUsersForDelighted(maxCount, skipCount, after, before), callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[DelightedUserRegistrationInfo]]
     }
   }
