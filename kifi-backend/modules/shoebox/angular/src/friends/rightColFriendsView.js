@@ -45,13 +45,6 @@ angular.module('kifi.friends.rightColFriendsView', [])
     restrict: 'A',
     templateUrl: 'friends/rightColConnectView.tpl.html',
     link: function (scope/*, element, attrs*/) {
-      scope.connectFacebook = socialService.connectFacebook;
-      scope.connectLinkedIn = socialService.connectLinkedIn;
-      scope.importGmail = socialService.importGmail;
-
-      socialService.refresh();
-      scope.$watch(getEligibleNetworksCsv, chooseNetwork);
-
       function getEligibleNetworksCsv () {
         if (friendService.totalFriends() < 20) {
           return _.compact([
@@ -67,6 +60,13 @@ angular.module('kifi.friends.rightColFriendsView', [])
       function chooseNetwork (csv) {
         scope.network = csv ? _.sample(csv.split(',')) : null;
       }
+      
+      scope.connectFacebook = socialService.connectFacebook;
+      scope.connectLinkedIn = socialService.connectLinkedIn;
+      scope.importGmail = socialService.importGmail;
+
+      socialService.refresh();
+      scope.$watch(getEligibleNetworksCsv, chooseNetwork);
     }
   };
 }])
