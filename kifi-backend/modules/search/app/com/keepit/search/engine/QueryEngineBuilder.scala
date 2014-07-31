@@ -59,15 +59,17 @@ class QueryEngineBuilder(query: Query, percentMatchThreshold: Float) {
     }
   }
 
-  def addBooster(booster: Query, boostStrength: Float): Unit = {
+  def addBooster(booster: Query, boostStrength: Float): QueryEngineBuilder = {
     _query = new KBoostQuery(_query, booster, boostStrength)
     val boosterExpr = MaxExpr(_index)
     _index += 1
     _expr = BoostExpr(_expr, boosterExpr, boostStrength)
+    this
   }
 
-  def setResultCollector(collector: ResultCollector[ScoreContext]): Unit = {
+  def setResultCollector(collector: ResultCollector[ScoreContext]): QueryEngineBuilder = {
     _collector = collector
+    this
   }
 }
 
