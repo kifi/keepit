@@ -2,20 +2,19 @@ package com.keepit.search.graph.collection
 
 import org.specs2.mutable.Specification
 
-import com.google.inject.Singleton
 import com.keepit.common.db.Id
 import com.keepit.model.Collection
 import com.keepit.model.User
 import com.keepit.search.graph.GraphTestHelper
-import com.keepit.test.DeprecatedEmptyApplication
 
 import play.api.test.Helpers.running
+import com.keepit.test.SearchApplication
 
 class CollectionSearcherTest extends Specification with GraphTestHelper {
   "collection searcher" should {
 
     "generate UserToCollectionEdgeSet" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
 
         val usersWithCollection = users.take(2)
@@ -43,7 +42,7 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
     }
 
     "generate UriToCollectionEdgeSet" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
 
         val expectedUriToUsers = uris.map { uri => (uri, users.filter(_.id.get.id == uri.id.get.id)) }
@@ -71,7 +70,7 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
     }
 
     "generate CollectionToUriEdgeSet" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
 
         val expectedUriToUsers = uris.map { uri => (uri, users.filter { _.id.get.id <= uri.id.get.id }) }
@@ -98,7 +97,7 @@ class CollectionSearcherTest extends Specification with GraphTestHelper {
     }
 
     "intersect UserToCollectionEdgeSet and UriToCollectionEdgeSet" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
 
         val expectedUriToUsers = uris.map { uri => (uri, users.filter(_.id.get.id == uri.id.get.id)) }

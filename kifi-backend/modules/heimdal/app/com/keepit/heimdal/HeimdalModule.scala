@@ -4,6 +4,13 @@ import com.keepit.common.cache.CacheModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.social.RemoteSecureSocialModule
+import com.keepit.common.zookeeper.ServiceTypeModule
+import com.keepit.common.service.ServiceType
+
+case class HeimdalServiceTypeModule() extends ServiceTypeModule {
+  val serviceType = ServiceType.HEIMDAL
+  val servicesToListenOn = ServiceType.SHOEBOX :: Nil
+}
 
 abstract class HeimdalModule(
     // Common Functional Modules
@@ -12,6 +19,7 @@ abstract class HeimdalModule(
     val heimdalQueueModule: HeimdalQueueModule,
     val delightedModule: DelightedModule) extends ConfigurationModule with CommonServiceModule {
   // Service clients
+  val serviceTypeModule = HeimdalServiceTypeModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val secureSocialModule = RemoteSecureSocialModule()
   val heimdalSlickModule = HeimdalSlickModule()

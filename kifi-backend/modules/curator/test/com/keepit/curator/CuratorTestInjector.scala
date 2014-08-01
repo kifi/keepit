@@ -11,6 +11,7 @@ import com.keepit.test.{ DbInjectionHelper, TestInjector }
 
 trait CuratorTestInjector extends TestInjector with DbInjectionHelper {
   val module = Modules.combine(
+    CuratorServiceTypeModule(),
     FakeAirbrakeModule(),
     FakeClockModule(),
     TestSlickModule(TestDbInfo.dbInfo),

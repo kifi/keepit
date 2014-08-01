@@ -11,13 +11,12 @@ import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
 import com.keepit.scraper.embedly.ProdEmbedlyModule
 import com.keepit.scraper.fetcher.ProdHttpFetcherModule
 
-case class ProdScraperServiceModule() extends ScraperServiceModule(
+case class ScraperProdModule() extends ScraperModule(
   cacheModule = ScraperCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   storeModule = ScraperProdStoreModule(),
   fjMonitorModule = ProdForkJoinContextMonitorModule(),
   scrapeProcessorModule = ProdScraperProcessorModule(),
   embedlyModule = ProdEmbedlyModule()
 ) with CommonProdModule {
-  val discoveryModule = new ProdDiscoveryModule(ServiceType.SCRAPER, ServiceType.SHOEBOX :: Nil)
   val fetcherModule = ProdHttpFetcherModule()
 }

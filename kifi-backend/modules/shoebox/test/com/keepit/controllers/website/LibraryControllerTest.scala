@@ -20,7 +20,7 @@ import play.api.libs.json.Json
 import play.api.mvc.SimpleResult
 import play.api.test.Helpers._
 import play.api.test._
-import com.keepit.common.json.JsonFormatters._
+import com.keepit.common.json._
 
 import scala.concurrent.Future
 

@@ -22,7 +22,7 @@ import com.google.inject.util.Providers
 import com.keepit.eliza.model.{ MessageHandle, UserThreadStatsForUserIdKey, UserThreadStatsForUserIdCache, UserThreadStats }
 
 import akka.actor.Scheduler
-import com.keepit.common.json.JsonFormatters._
+import com.keepit.common.json._
 
 trait ElizaServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ELIZA
