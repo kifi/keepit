@@ -34,7 +34,7 @@ case class DevTrackingModule() extends TrackingModule {
 
   @Provides @Singleton
   def clickHistoryBuilder(conf: Configuration): ClickHistoryBuilder = {
-    val filterSize = conf.getInt(".click-history-tracker.filterSize").get
+    val filterSize = conf.getInt("click-history-tracker.filterSize").get
     val numHashFuncs = conf.getInt("click-history-tracker.numHashFuncs").get
     val minHits = conf.getInt("click-history-tracker.minHits").get
     ClickHistoryBuilder(filterSize, numHashFuncs, minHits)

@@ -21,6 +21,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserSearchFilterFactory
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.util.PlayAppConfigurationModule
 
 class MobileUserSearchControllerTest extends Specification with SearchApplicationInjector {
 
@@ -55,7 +56,8 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
     Seq(
       StandaloneTestActorSystemModule(),
       FakeActionAuthenticatorModule(),
-      FakeShoeboxServiceModule()
+      FakeShoeboxServiceModule(),
+      PlayAppConfigurationModule()
     )
   }
 
