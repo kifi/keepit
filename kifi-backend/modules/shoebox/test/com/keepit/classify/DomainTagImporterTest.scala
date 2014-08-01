@@ -9,7 +9,7 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers._
 import com.keepit.common.analytics.FakeAnalyticsModule
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.{TestKitSupport, TestActorSystemModule}
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.search.TestSearchServiceClientModule
@@ -18,7 +18,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 
-class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
+class DomainTagImporterTest extends TestKitSupport with SpecificationLike with ShoeboxApplicationInjector {
 
   val domainTagImporterTestModules = Seq(
     FakeMailModule(),

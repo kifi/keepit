@@ -10,7 +10,7 @@ import akka.testkit.{ TestActorRef, TestKit }
 import play.api.test.Helpers._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
 import com.keepit.shoebox.{ TestShoeboxServiceClientModule, KeepImportsModule, FakeKeepImportsModule }
-import com.keepit.common.actor.{ ActorBuilder, TestActorSystemModule }
+import com.keepit.common.actor.{TestKitSupport, ActorBuilder, TestActorSystemModule}
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
 import java.io.File
@@ -18,7 +18,7 @@ import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
 
-class RawKeepImporterTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
+class RawKeepImporterTest extends TestKitSupport with SpecificationLike with ShoeboxApplicationInjector {
   // This is a good example of how to test actor side effects.
   implicit val context = HeimdalContext.empty
 
