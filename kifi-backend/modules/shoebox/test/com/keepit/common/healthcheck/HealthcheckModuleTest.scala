@@ -1,12 +1,13 @@
 package com.keepit.common.healthcheck
 
-import org.specs2.mutable.SpecificationLike
-
+import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.mail._
-import com.keepit.test.{ ShoeboxTestInjector }
-import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
+import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
+import org.specs2.mutable.SpecificationLike
+import play.api.test.Helpers.running
 
-class HealthcheckModuleTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
+class HealthcheckModuleTest extends TestKitSupport with SpecificationLike with ShoeboxApplicationInjector {
+
   class FakeMailSender extends MailSender(null, null) {
     var mailQueue: List[ElectronicMail] = Nil
     override def sendMail(email: ElectronicMail) = {
@@ -16,14 +17,16 @@ class HealthcheckModuleTest extends TestKitSupport with SpecificationLike with S
 
   val fakeMailSender = new FakeMailSender
 
-  val modules = Seq(
-    FakeMailModule(),
-    FakeActorSystemModule(Some(system))
-  )
+  val prodHealthCheckModuleWithLocalSender = new ProdHealthCheckModule {
+    override def configure() {
+      fakeMailSender.mailQueue = Nil
+      bind[MailSender].toInstance(fakeMailSender)
+    }
+  }
 
   "HealthcheckModule" should {
     "load" in {
-      withInjector(modules: _*) { implicit injector =>
+      running(new ShoeboxApplication(FakeMailModule(), prodHealthCheckModuleWithLocalSender, FakeActorSystemModule())) {
         val healthcheck = inject[HealthcheckPlugin]
 
         val outbox = fakeMailSender.mailQueue

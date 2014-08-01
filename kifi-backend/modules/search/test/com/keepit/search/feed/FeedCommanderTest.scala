@@ -17,7 +17,7 @@ import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.search.graph.bookmark._
 import scala.Some
 
-class FeedCommanderTest extends Specification with SearchTestInjector with SearchTestHelper {
+class FeedCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
   def setup(client: FakeShoeboxServiceClientImpl) = {
     val users = client.saveUsers(
@@ -62,7 +62,7 @@ class FeedCommanderTest extends Specification with SearchTestInjector with Searc
 
   "FeedCommander" should {
     "work" in {
-      withInjector(helperModules: _*) { implicit injector =>
+      running(application) {
         implicit val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse("0,1 / 2"))
         val shoeboxClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchClient = inject[SearchServiceClient]

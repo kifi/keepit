@@ -1,28 +1,30 @@
 package com.keepit.search
 
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import akka.actor.ActorSystem
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.aws.AwsModule
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
-import com.keepit.inject._
-import com.keepit.model._
-import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.model.User
+import com.keepit.model.{ NormalizedURI, User, _ }
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.article.ArticleIndexer
 import com.keepit.search.graph.bookmark._
 import com.keepit.search.graph.collection._
+import com.keepit.search.graph.user._
 import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.phrasedetector._
-import com.keepit.search.spellcheck.SpellCorrector
-import com.keepit.search.user.UserIndexer
 import com.keepit.search.query.parser.MainQueryParserFactory
+import com.keepit.search.sharding._
+import com.keepit.search.spellcheck.SpellCorrector
+import com.keepit.search.tracker.{ ClickHistoryTracker, InMemoryResultClickTrackerBuffer, ProbablisticLRU, ResultClickTracker }
+import com.keepit.search.user.UserIndexer
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import com.keepit.test._
-import akka.actor.ActorSystem
+
 import scala.concurrent.duration._
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
@@ -32,8 +34,6 @@ import com.keepit.search.sharding._
 import com.keepit.common.aws.AwsModule
 import com.keepit.search.graph.user._
 import com.google.inject.Injector
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.util.PlayAppConfigurationModule
 
 trait SearchTestHelper { self: SearchTestInjector =>
 
@@ -182,7 +182,12 @@ trait SearchTestHelper { self: SearchTestInjector =>
     "dampingByRank" -> "false")
   val allHitsConfig = defaultConfig.overrideWith("tailCutting" -> "0")
 
-  // implicit val system = ActorSystem("test")
-  val helperModules = Seq(StandaloneTestActorSystemModule(), FakeShoeboxServiceModule(), new AwsModule(), FakeHttpClientModule(), PlayAppConfigurationModule())
-
+  def application = {
+    implicit val system = ActorSystem("test")
+    new SearchApplication(
+      FakeActorSystemModule(),
+      FakeShoeboxServiceModule(),
+      new AwsModule()
+    )
+  }
 }

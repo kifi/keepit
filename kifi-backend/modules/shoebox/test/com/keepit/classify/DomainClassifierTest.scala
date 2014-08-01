@@ -1,10 +1,10 @@
 package com.keepit.classify
 
-import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
+import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
-import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ FakeSlickModule, TestDbInfo }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -23,7 +23,7 @@ class DomainClassifierTest extends TestKitSupport with SpecificationLike with Co
     FakeShoeboxStoreModule(),
     FakeHeimdalServiceClientModule(),
     FakeDomainTagImporterModule(),
-    FakeActorSystemModule(Some(system)),
+    FakeActorSystemModule(),
     FakeShoeboxServiceModule(),
     FakeSearchServiceClientModule(),
     FakeSlickModule(TestDbInfo.dbInfo),

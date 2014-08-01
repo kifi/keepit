@@ -1,14 +1,16 @@
 package com.keepit.controllers.ext
 
-import com.keepit.search.index.DevIndexModule
-import com.keepit.test.{ SearchTestInjector, SearchApplication, SearchApplicationInjector }
-import org.specs2.mutable._
-
+import akka.actor.ActorSystem
+import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.controller.FakeActionAuthenticatorModule
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.model._
-import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
-import com.keepit.common.actor.StandaloneTestActorSystemModule
-
+import com.keepit.search.user.{ UserIndexer, UserSearchFilterFactory }
+import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
+import com.keepit.test.{ SearchApplication, SearchApplicationInjector }
+import org.specs2.mutable._
+import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json.Json
@@ -24,7 +26,7 @@ import com.keepit.search.user.UserSearchFilterFactory
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.util.PlayAppConfigurationModule
 
-class ExtUserSearchControllerTest extends Specification with SearchTestInjector {
+class ExtUserSearchControllerTest extends Specification with SearchApplicationInjector {
 
   private def setup(client: FakeShoeboxServiceClientImpl) = {
     val extIds = (0 until 5).map { i => "4e5f7b8c-951b-4497-8661-12345678900" + i.toString }.map { ExternalId[User] }
@@ -53,11 +55,9 @@ class ExtUserSearchControllerTest extends Specification with SearchTestInjector 
   def modules = {
     implicit val system = ActorSystem("test")
     Seq(
-      StandaloneTestActorSystemModule(),
+      FakeActorSystemModule(),
       FakeActionAuthenticatorModule(),
-      FakeShoeboxServiceModule(),
-      PlayAppConfigurationModule(),
-      DevIndexModule()
+      FakeShoeboxServiceModule()
     )
   }
 

@@ -17,14 +17,14 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.User
 import scala.concurrent._
 
-class MainSearcherTest extends Specification with SearchTestInjector with SearchTestHelper {
+class MainSearcherTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
   private val singleShard = Shard[NormalizedURI](0, 1)
   implicit private val activeShards = ActiveShards(Set(singleShard))
 
   "MainSearcher" should {
     "search and categorize using social graph" in {
-      withInjector(helperModules: _*) { implicit injector =>
+      running(application) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
@@ -78,7 +78,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
     }
 
     "return a single list of hits" in {
-      withInjector(helperModules: _*) { implicit injector =>
+      running(application) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
@@ -130,7 +130,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
     }
 
     "search personal bookmark titles" in {
-      withInjector(helperModules: _*) { implicit injector =>
+      running(application) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
@@ -192,7 +192,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
     }
 
     "score using matches in a bookmark title and an article" in {
-      withInjector(helperModules: _*) { implicit injector =>
+      running(application) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
@@ -222,7 +222,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
     }
 
     "paginate" in {
-      withInjector(helperModules: _*) { implicit injector =>
+      running(application) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
@@ -265,7 +265,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
     }
 
     "boost recent bookmarks" in {
-      withInjector(helperModules: _*) { implicit injector =>
+      running(application) {
         val (users, uris) = initData(numUsers = 1, numUris = 5)
         val Seq(user) = users
         val userId = user.id.get
@@ -296,7 +296,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
     }
 
     "be able to cut the long tail" in {
-      withInjector(helperModules: _*) { implicit injector =>
+      running(application) {
         val (users, uris) = initData(numUsers = 1, numUris = 10)
         val Seq(user) = users
         val userId = user.id.get
@@ -336,7 +336,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
     }
 
     "show own private bookmarks" in {
-      withInjector(helperModules: _*) { implicit injector =>
+      running(application) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -362,7 +362,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
     }
 
     "not show friends private bookmarks" in {
-      withInjector(helperModules: _*) { implicit injector =>
+      running(application) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -394,7 +394,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
     }
 
     "search hits using a stemmed word" in {
-      withInjector(helperModules: _*) { implicit injector =>
+      running(application) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("my books"))
@@ -422,7 +422,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
     }
 
     "search within collections" in {
-      withInjector(helperModules: _*) { implicit injector =>
+      running(application) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -475,7 +475,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
     }
 
     "search thru collection names" in {
-      withInjector(helperModules: _*) { implicit injector =>
+      running(application) {
         val (users, uris) = initData(numUsers = 1, numUris = 20)
         val user1 = users(0)
         val bookmarks = saveBookmarksByUser(Seq((user1, uris)))

@@ -9,11 +9,11 @@ import com.keepit.search.sharding.Shard
 import com.keepit.search.sharding.ActiveShards
 import com.keepit.search.SearchTestHelper
 
-class URIGraphCommanderTest extends Specification with SearchTestInjector with SearchTestHelper {
+class URIGraphCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
 
   "URIGraphCommander" should {
     "work and check authorization" in {
-      withInjector(helperModules: _*) { implicit injector =>
+      running(application) {
         val shards = Seq(Shard[NormalizedURI](0, 2), Shard[NormalizedURI](1, 2))
         implicit val activeShards: ActiveShards = ActiveShards(shards.toSet)
 

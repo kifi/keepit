@@ -1,34 +1,30 @@
 package com.keepit.eliza.controllers.mobile
 
-import com.keepit.test.{ ElizaTestInjector }
-import org.specs2.mutable._
-import com.keepit.common.db.slick._
-import com.keepit.common.controller.FakeActionAuthenticator
-import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceClientImpl }
-import com.keepit.common.time._
-import com.keepit.model.User
-import com.keepit.heimdal.HeimdalContext
-import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.eliza.model._
-import play.api.test.FakeRequest
-import play.api.test.Helpers._
-import play.api.libs.json.Json
 import akka.actor.ActorSystem
-import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.common.cache.ElizaCacheModule
-import com.keepit.common.controller.FakeActionAuthenticatorModule
-import play.api.libs.json.JsArray
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.cache.ElizaCacheModule
+import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.common.db.slick._
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.store.FakeElizaStoreModule
+import com.keepit.common.time._
+import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.eliza.model._
+import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
+import com.keepit.model.User
 import com.keepit.realtime.FakeUrbanAirshipModule
 import com.keepit.scraper.FakeScraperServiceClientModule
-import com.keepit.common.store.FakeElizaStoreModule
-import com.keepit.common.actor.{ StandaloneTestActorSystemModule, FakeActorSystemModule }
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
+import com.keepit.test.{ ElizaApplication, ElizaApplicationInjector }
+import org.specs2.mutable._
+import play.api.libs.json.{ JsArray, Json }
+import play.api.test.FakeRequest
+import play.api.test.Helpers._
 
-class MobileMessagingControllerTest extends Specification with ElizaTestInjector {
+class MobileMessagingControllerTest extends Specification with ElizaApplicationInjector {
 
   implicit val context = HeimdalContext.empty
 
@@ -40,7 +36,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
       FakeShoeboxServiceModule(),
       FakeHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
-      StandaloneTestActorSystemModule(),
+      FakeActorSystemModule(),
       FakeABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeActionAuthenticatorModule(),
@@ -53,7 +49,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
   "ExtMessaging Controller" should {
 
     "send correctly" in {
-      withDb(modules: _*) { implicit injector =>
+      running(new ElizaApplication(modules: _*)) {
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
         val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
@@ -63,6 +59,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.sendMessageAction().toString
         path === "/m/1/eliza/messages"
 
+        inject[MobileMessagingController]
         inject[FakeActionAuthenticator].setUser(shanee)
         val input = Json.parse(s"""
           {
@@ -73,8 +70,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             "extVersion": "2.6.65"
           }
           """)
-        val result = inject[MobileMessagingController].sendMessageAction()(FakeRequest().withBody(input))
-
+        val request = FakeRequest("POST", path).withJsonBody(input)
+        val result = route(request).get
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all }
@@ -142,7 +139,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
     }
 
     "getCompactThread" in {
-      withDb(modules: _*) { implicit injector =>
+      running(new ElizaApplication(modules: _*)) {
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
         val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
@@ -152,30 +149,29 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         fakeClient.saveUsers(shachaf)
 
         inject[FakeActionAuthenticator].setUser(shanee)
-        val controller = inject[MobileMessagingController]
-        val sendMessageAction = controller.sendMessageAction()
-        status(sendMessageAction(FakeRequest("POST", "/m/1/eliza/messages").withBody(Json.parse(s"""{
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
             "title": "Search Experiments", "text": "message #1", "recipients":["${shachaf.externalId.toString}"],
-            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
-        status(sendMessageAction(FakeRequest("POST", "/m/1/eliza/messages").withBody(Json.parse(s"""{
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
             "title": "Search Experiments", "text": "message #2", "recipients":["${shachaf.externalId.toString}"],
-            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
-        status(sendMessageAction(FakeRequest("POST", "/m/1/eliza/messages").withBody(Json.parse(s"""{
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
             "title": "Search Experiments", "text": "message #3", "recipients":["${shachaf.externalId.toString}"],
-            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
-        status(sendMessageAction(FakeRequest("POST", "/m/1/eliza/messages").withBody(Json.parse(s"""{
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
             "title": "Search Experiments", "text": "message #4", "recipients":["${shachaf.externalId.toString}"],
-            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
-        status(sendMessageAction(FakeRequest("POST", "/m/1/eliza/messages").withBody(Json.parse(s"""{
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
             "title": "Search Experiments", "text": "message #5", "recipients":["${shachaf.externalId.toString}"],
-            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
 
         val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
 
         val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getCompactThread(thread.externalId.toString).toString
         path === s"/m/1/eliza/thread/${thread.externalId.toString}"
 
-        val result = controller.getCompactThread(thread.externalId.toString)(FakeRequest("GET", path))
+        val request = FakeRequest("GET", path)
+        val result = route(request).get
         status(result) must equalTo(OK)
 
         contentType(result) must beSome("application/json")
@@ -230,8 +226,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
     }
 
     "getPagedThread" in {
-      withDb(modules: _*) { implicit injector =>
-        val controller = inject[MobileMessagingController]
+      running(new ElizaApplication(modules: _*)) {
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
         val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
@@ -241,23 +236,21 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         fakeClient.saveUsers(shachaf)
 
         inject[FakeActionAuthenticator].setUser(shanee)
-        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.sendMessageAction().toString()
-        path === "/m/1/eliza/messages"
-        status(controller.sendMessageAction()(FakeRequest().withBody(Json.parse(s"""{
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
             "title": "Search Experiments", "text": "message #1", "recipients":["${shachaf.externalId.toString}"],
-            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
-        status(controller.sendMessageAction()(FakeRequest().withBody(Json.parse(s"""{
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
             "title": "Search Experiments", "text": "message #2", "recipients":["${shachaf.externalId.toString}"],
-            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
-        status(controller.sendMessageAction()(FakeRequest().withBody(Json.parse(s"""{
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
             "title": "Search Experiments", "text": "message #3", "recipients":["${shachaf.externalId.toString}"],
-            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
-        status(controller.sendMessageAction()(FakeRequest().withBody(Json.parse(s"""{
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
             "title": "Search Experiments", "text": "message #4", "recipients":["${shachaf.externalId.toString}"],
-            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
-        status(controller.sendMessageAction()(FakeRequest().withBody(Json.parse(s"""{
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(Json.parse(s"""{
             "title": "Search Experiments", "text": "message #5", "recipients":["${shachaf.externalId.toString}"],
-            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """)))) must equalTo(OK)
+            "url": "https://admin.kifi.com/admin/searchExperiments", "extVersion": "2.6.65" } """))).get) must equalTo(OK)
 
         val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all.head }
         val messages = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all }
@@ -267,8 +260,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.externalId.toString, 1000, None).toString
           path === s"/m/2/eliza/thread/${thread.externalId.toString}"
 
-          val action = controller.getPagedThread(thread.externalId.toString, 1000, None)
-          val result = action(FakeRequest("GET", path))
+          val request = FakeRequest("GET", path)
+          val result = route(request).get
           status(result) must equalTo(OK)
 
           contentType(result) must beSome("application/json")
@@ -323,8 +316,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           val path2 = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.externalId.toString, 3, None).toString
           path2 === s"/m/2/eliza/thread/${thread.externalId.toString}?pageSize=3"
 
-          val action2 = controller.getPagedThread(thread.externalId.toString, 3, None)
-          val res2 = Json.parse(contentAsString(action2(FakeRequest("GET", path2))))
+          val res2 = Json.parse(contentAsString(route(FakeRequest("GET", path2)).get))
 
           val expectedMessages2 = s"""[
                 { "id": "${messages(4).externalId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
@@ -362,8 +354,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           val path3 = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.externalId.toString, 3, Some(messages(2).externalId.toString)).toString
           path3 === s"/m/2/eliza/thread/${thread.externalId.toString}?pageSize=3&fromMessageId=${messages(2).externalId.toString}"
 
-          val action3 = controller.getPagedThread(thread.externalId.toString, 3, Some(messages(2).externalId.toString))
-          val res3 = Json.parse(contentAsString(action3(FakeRequest())))
+          val res3 = Json.parse(contentAsString(route(FakeRequest("GET", path3)).get))
 
           val expectedMessages3 = s"""[
                 { "id": "${messages(1).externalId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
@@ -400,7 +391,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
     }
 
     "sendMessageReplyAction" in {
-      withDb(modules: _*) { implicit injector =>
+      running(new ElizaApplication(modules: _*)) {
         inject[Database].readOnlyMaster { implicit s => inject[UserThreadRepo].count } === 0
         inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].count } === 0
         val shanee = User(id = Some(Id[User](42)), firstName = "Shanee", lastName = "Smith", externalId = ExternalId[User]("a9f67559-30fa-4bcd-910f-4c2fc8bbde85"))
@@ -408,6 +399,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee)
         inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shachaf)
 
+        inject[MobileMessagingController]
         inject[FakeActionAuthenticator].setUser(shanee)
         val createThreadJson = Json.parse(s"""
           {
@@ -418,10 +410,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             "extVersion": "2.6.65"
           }
           """)
-
-        val controller = inject[MobileMessagingController]
-
-        status(controller.sendMessageAction()(FakeRequest("POST", "/m/1/eliza/messages").withBody(createThreadJson))) must equalTo(OK)
+        status(route(FakeRequest("POST", "/m/1/eliza/messages").withJsonBody(createThreadJson)).get) must equalTo(OK)
 
         val message = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all } head
         val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all } head
@@ -438,9 +427,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             "extVersion": "2.6.65"
           }
           """)
-        val action = controller.sendMessageReplyAction(thread.externalId)
-        val request = FakeRequest("POST", path).withBody(input)
-        val result = action(request)
+        val request = FakeRequest("POST", path).withJsonBody(input)
+        val result = route(request).get
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         println(s"thread = $thread")
@@ -465,9 +453,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         val pathThread = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getCompactThread(thread.externalId.toString).toString
         pathThread === s"/m/1/eliza/thread/${thread.externalId.toString}"
 
-        val action2 = controller.getCompactThread(thread.externalId.toString)
         val request2 = FakeRequest("GET", pathThread)
-        val result2 = action2(request2)
+        val result2 = route(request2).get
         status(result2) must equalTo(OK)
 
         contentType(result2) must beSome("application/json")
