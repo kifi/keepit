@@ -50,7 +50,6 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     FakeAirbrakeModule(),
     FakeActionAuthenticatorModule(),
     FakeSocialGraphModule(),
-    TestShoeboxAppSecureSocialModule(),
     TestABookServiceClientModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
