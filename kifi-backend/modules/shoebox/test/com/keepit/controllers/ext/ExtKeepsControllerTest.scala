@@ -19,7 +19,7 @@ import org.joda.time.DateTime
 
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.google.inject.Injector
 import com.keepit.common.external.FakeExternalServiceModule
@@ -31,7 +31,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
+    FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     TestHeimdalServiceClientModule(),

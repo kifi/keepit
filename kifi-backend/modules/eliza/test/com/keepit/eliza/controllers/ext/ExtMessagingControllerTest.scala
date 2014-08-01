@@ -11,7 +11,8 @@ import com.keepit.inject._
 import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.{ FakeActorSystemModule, StandaloneTestActorSystemModule }
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model.User
 import com.keepit.realtime.{ FakeUrbanAirshipModule }
@@ -44,7 +45,7 @@ class ExtMessagingControllerTest extends TestKit(ActorSystem()) with Specificati
     TestScraperServiceClientModule(),
     ElizaFakeStoreModule(),
     FakeHttpClientModule(),
-    TestActorSystemModule(Some(system))
+    FakeActorSystemModule(Some(system))
   )
 
   "ExtMessaging Controller" should {

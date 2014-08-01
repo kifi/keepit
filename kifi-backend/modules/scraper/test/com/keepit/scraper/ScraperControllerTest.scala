@@ -1,10 +1,10 @@
 package com.keepit.scraper
 
-import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
+import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 import com.keepit.common.controller.FakeActionAuthenticatorModule
 import com.keepit.common.store.ScraperTestStoreModule
 import com.keepit.scraper.embedly.FakeEmbedlyModule
-import com.keepit.scraper.fetcher.TestHttpFetcherModule
+import com.keepit.scraper.fetcher.FakeHttpFetcherModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ScraperTestInjector
 import org.specs2.mutable.SpecificationLike
@@ -25,7 +25,7 @@ class ScraperControllerTest extends TestKitSupport with SpecificationLike with A
       def redirects: Seq[HttpRedirect] = Seq.empty
     })
   }
-  val testFetcherModule = TestHttpFetcherModule(Some(testFetcher))
+  val testFetcherModule = FakeHttpFetcherModule(Some(testFetcher))
 
   def modules = {
     Seq(
@@ -35,7 +35,7 @@ class ScraperControllerTest extends TestKitSupport with SpecificationLike with A
       ScraperTestStoreModule(),
       FakeShoeboxServiceModule(),
       FakeActionAuthenticatorModule(),
-      TestActorSystemModule(Some(system))
+      FakeActorSystemModule(Some(system))
     )
   }
 

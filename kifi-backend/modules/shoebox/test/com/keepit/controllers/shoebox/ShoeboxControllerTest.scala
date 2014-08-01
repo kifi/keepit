@@ -18,7 +18,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.scraper.{ TestScrapeSchedulerConfigModule, TestScraperServiceClientModule, FakeScrapeSchedulerModule }
@@ -35,7 +35,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
     FakeHttpClientModule(),
     FakeAnalyticsModule(),
     ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
+    FakeActorSystemModule(),
     TestSearchServiceClientModule(),
     FakeAirbrakeModule(),
     FakeActionAuthenticatorModule(),

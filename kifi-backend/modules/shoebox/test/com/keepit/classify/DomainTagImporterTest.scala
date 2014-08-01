@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.test._
 
 import com.keepit.common.analytics.FakeAnalyticsModule
-import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
+import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.search.TestSearchServiceClientModule
@@ -23,7 +23,7 @@ class DomainTagImporterTest extends TestKitSupport with SpecificationLike with S
     TestHeimdalServiceClientModule(),
     ShoeboxFakeStoreModule(),
     FakeDomainTagImporterModule(),
-    TestActorSystemModule(Some(system)),
+    FakeActorSystemModule(Some(system)),
     TestSearchServiceClientModule(),
     FakeShoeboxServiceModule(),
     FakeAirbrakeModule(),

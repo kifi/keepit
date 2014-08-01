@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.net.URI
 import scala.concurrent.Future
 
-case class TestNormalizationServiceModule() extends ScalaModule {
+case class FakeNormalizationServiceModule() extends ScalaModule {
   def configure() {
     bind[NormalizationService].toInstance(PrenormalizationService)
   }

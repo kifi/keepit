@@ -1,7 +1,7 @@
 package com.keepit.test
 
 import com.keepit.eliza.{ ElizaServiceTypeModule, FakeElizaServiceClientModule }
-import com.keepit.inject.{ TestFortyTwoModule, ApplicationInjector }
+import com.keepit.inject.{ FakeFortyTwoModule, ApplicationInjector }
 import com.keepit.common.db.TestDbInfo
 import java.io.File
 import com.keepit.common.time.FakeClockModule
@@ -24,7 +24,7 @@ class ElizaApplication(overridingModules: Module*)(implicit path: File = new Fil
     FakeMemoryUsageModule(),
     FakeClockModule(),
     FakeHealthcheckModule(),
-    TestFortyTwoModule(),
+    FakeFortyTwoModule(),
     FakeSlickModule(TestDbInfo.dbInfo),
     FakeDiscoveryModule(),
     ElizaCacheModule(HashMapMemoryCacheModule())

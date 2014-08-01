@@ -16,7 +16,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
@@ -29,7 +29,7 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
   val modules = Seq(FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
+    FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeHttpClientModule(),
     FakeMailModule(),

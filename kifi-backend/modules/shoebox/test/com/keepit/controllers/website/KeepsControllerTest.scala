@@ -36,7 +36,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.social.{ SocialNetworkType, SocialId, SocialNetworks }
@@ -49,7 +49,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
+    FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     TestHeimdalServiceClientModule(),
