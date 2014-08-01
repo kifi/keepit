@@ -33,7 +33,7 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
     FakeHttpClientModule(),
     FakeAnalyticsModule(),
     FakeShoeboxStoreModule(),
-    FakeActorSystemModule(Some(system)),
+    FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeActionAuthenticatorModule(),
     FakeSearchServiceClientModule(),

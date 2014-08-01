@@ -10,21 +10,16 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.zookeeper.ServiceDiscovery
 import net.codingwell.scalaguice.ScalaModule
 
-case class FakeActorSystemModule(systemOption: Option[ActorSystem] = None) extends ActorSystemModule {
-
-  lazy val system = systemOption.getOrElse(ActorSystem("test-actor-system", current.configuration.underlying, current.classloader))
+case class FakeActorSystemModule(implicit val system: ActorSystem = ActorTestSupport.getActorSystem()) extends ActorSystemModule {
 
   def configure() {
     install(FakeAirbrakeModule())
     install(FakeSchedulerModule())
     bind[ActorBuilder].to[TestActorBuilderImpl]
     bind[Scheduler].to[FakeScheduler]
-    bind[ActorSystem].toProvider[ActorPlugin]
+    bind[ActorSystem].toInstance(system)
   }
 
-  @Provides
-  @AppScoped
-  def actorPluginProvider: ActorPlugin = new ActorPlugin(system)
 }
 
 case class StandaloneTestActorSystemModule(implicit system: ActorSystem) extends ActorSystemModule {

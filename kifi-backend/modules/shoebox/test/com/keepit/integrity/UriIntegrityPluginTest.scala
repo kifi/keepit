@@ -17,7 +17,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 
 class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
-  val modules = Seq(FakeActorSystemModule(Some(system)), FakeScrapeSchedulerModule())
+  val modules = Seq(FakeActorSystemModule(), FakeScrapeSchedulerModule())
 
   "uri integrity plugin" should {
     "work" in {
