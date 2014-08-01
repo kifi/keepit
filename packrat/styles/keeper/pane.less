@@ -153,7 +153,6 @@ a.kifi-pane-top-menu-a {
 }
 .kifi-pane-top-menu,
 .kifi-pane-top-submenu {
-  display: none;
   position: absolute;
   width: auto;
   white-space: nowrap;
@@ -162,6 +161,17 @@ a.kifi-pane-top-menu-a {
   font-size: 12px;
   line-height: 1;
   box-shadow: -1px 2px 1px 0 rgba(0,0,0,.2);
+  -webkit-transform-origin: right top;
+  transform-origin: right top;
+  transition: opacity .12s linear, -webkit-transform .16s ease-in;
+  transition: opacity .12s linear, transform .16s ease-in;
+}
+.kifi-pane-top-menu:not(.kifi-visible),
+:not(:hover):not(.kifi-hover)>.kifi-pane-top-submenu {
+  opacity: 0;
+  -webkit-transform: scale(.001);
+  transform: scale(.001);
+  transition-timing-function: linear, ease-out;
 }
 .kifi-pane-top-menu {
   right: @pane-edge-width;
@@ -170,10 +180,6 @@ a.kifi-pane-top-menu-a {
 .kifi-pane-top-submenu {
   right: 100%;
   top: -1px;
-  .kifi-pane-top-menu-item:hover>&,
-  .kifi-pane-top-menu-item.kifi-hover>& {
-    display: block;
-  }
 }
 .kifi-pane-top-menu-item {
   padding: 15px 28px;
