@@ -13,7 +13,7 @@ import com.keepit.common.db.FakeSlickModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.mail.{ EmailAddress, BasicContact }
-import com.keepit.abook.model._
+import com.keepit.abook.model.{ EmailAccount, EContactStates, EContactRepo, EContact }
 import com.keepit.abook.commanders.ABookCommander
 
 class ABookCommanderTest extends Specification with ABookTestInjector with ABookTestHelper {
@@ -162,72 +162,6 @@ class ABookCommanderTest extends Specification with ABookTestInjector with ABook
         val result2 = commander.hideEmailFromUser(u42, EmailAddress("nonexist@email.com"))
         result2 === false
 
-      }
-    }
-
-    "addContactsForUser" should {
-      "creates EContact for each email" in {
-        withDb(modules: _*) { implicit injector =>
-          val emailAccountRepo = inject[EmailAccountRepo]
-          val abookInfoRepo = inject[ABookInfoRepo]
-          val commander = inject[ABookCommander]
-          val email1 = EmailAddress("test1@kifi.com")
-          val email2 = EmailAddress("test2@kifi.com")
-
-          val contacts = commander.addContactsForUser(Id[User](1), Seq(email1, email2))
-
-          lazy val (kifiAbook, emailAcc1, emailAcc2) = db.readOnlyMaster { implicit session =>
-            (
-              abookInfoRepo.findByUserIdAndOrigin(Id[User](1), ABookOrigins.KIFI).headOption.get,
-              emailAccountRepo.getByAddress(email1).get,
-              emailAccountRepo.getByAddress(email2).get
-            )
-          }
-
-          // both contacts did not exist
-          contacts(0).email === email1
-          contacts(0).emailAccountId === emailAcc1.id.get
-          contacts(0).abookId === kifiAbook.id.get
-
-          contacts(1).email === email2
-          contacts(1).emailAccountId === emailAcc2.id.get
-          contacts(1).abookId === kifiAbook.id.get
-        }
-      }
-
-      "does not create an EContact for email that exists" in {
-        withDb(modules: _*) { implicit injector =>
-          val emailAccountRepo = inject[EmailAccountRepo]
-          val abookInfoRepo = inject[ABookInfoRepo]
-          val commander = inject[ABookCommander]
-          val email1 = EmailAddress("test1@kifi.com")
-          val email2 = EmailAddress("test2@kifi.com")
-
-          val (gmailAbook, existingContact1, emailAcc1) = db.readWrite { implicit session =>
-            val emailAcc1 = emailAccountRepo.internByAddress(email1)
-            val gmailAbook = abookInfoRepo.save(ABookInfo(origin = ABookOrigins.GMAIL, userId = Id[User](1)))
-            (
-              gmailAbook,
-              econtactRepo.save(EContact(userId = Id[User](1), emailAccountId = emailAcc1.id.get,
-                email = email1, abookId = gmailAbook.id.get)),
-              emailAcc1
-            )
-          }
-
-          val contacts = commander.addContactsForUser(Id[User](1), Seq(email1, email2))
-          contacts.size === 2
-
-          // first contact already exists, it shouldn't be new
-          contacts(0) === existingContact1
-          contacts(0).abookId === gmailAbook.id.get
-          contacts(0).email === email1
-          contacts(0).userId === Id[User](1)
-          contacts(0).emailAccountId === emailAcc1.id.get
-
-          // second contact didn't exist, it was created
-          contacts(1).email === email2
-          contacts(1).abookId !== gmailAbook.id.get
-        }
       }
     }
 
