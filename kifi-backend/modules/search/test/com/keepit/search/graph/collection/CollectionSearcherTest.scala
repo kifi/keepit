@@ -7,12 +7,16 @@ import com.keepit.model.Collection
 import com.keepit.model.User
 import com.keepit.search.graph.GraphTestHelper
 import com.keepit.test.SearchTestInjector
+import com.keepit.common.util.PlayAppConfigurationModule
 
 class CollectionSearcherTest extends Specification with SearchTestInjector with GraphTestHelper {
+
+  val helperModules = Seq(PlayAppConfigurationModule())
+
   "collection searcher" should {
 
     "generate UserToCollectionEdgeSet" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val usersWithCollection = users.take(2)
@@ -40,7 +44,7 @@ class CollectionSearcherTest extends Specification with SearchTestInjector with 
     }
 
     "generate UriToCollectionEdgeSet" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val expectedUriToUsers = uris.map { uri => (uri, users.filter(_.id.get.id == uri.id.get.id)) }
@@ -68,7 +72,7 @@ class CollectionSearcherTest extends Specification with SearchTestInjector with 
     }
 
     "generate CollectionToUriEdgeSet" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val expectedUriToUsers = uris.map { uri => (uri, users.filter { _.id.get.id <= uri.id.get.id }) }
@@ -95,7 +99,7 @@ class CollectionSearcherTest extends Specification with SearchTestInjector with 
     }
 
     "intersect UserToCollectionEdgeSet and UriToCollectionEdgeSet" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val expectedUriToUsers = uris.map { uri => (uri, users.filter(_.id.get.id == uri.id.get.id)) }
