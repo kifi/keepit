@@ -23,8 +23,11 @@ import com.keepit.search.SearchConfig
 import com.keepit.search.SearcherHit
 import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.phrasedetector.FakePhraseIndexer
+import com.keepit.common.util.PlayAppConfigurationModule
 
 class ArticleIndexerTest extends Specification with SearchTestInjector {
+
+  val helperModules = Seq(PlayAppConfigurationModule())
 
   private class IndexerScope(injector: Injector) extends Scope {
     implicit val inj = injector
@@ -89,7 +92,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
 
   "ArticleIndexer" should {
     "index indexable URIs" in {
-      withInjector() { injector =>
+      withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
           uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(INACTIVE)).head
           uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(INACTIVE)).head
@@ -125,7 +128,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     }
 
     "search documents (hits in contents)" in {
-      withInjector() { injector =>
+      withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
           indexer.update()
 
@@ -147,7 +150,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     }
 
     "search documents (hits in titles)" in {
-      withInjector() { injector =>
+      withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
           indexer.update()
 
@@ -167,7 +170,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     }
 
     "search documents (hits in contents and titles)" in {
-      withInjector() { injector =>
+      withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
           indexer.update()
 
@@ -187,7 +190,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     }
 
     "search documents using stemming" in {
-      withInjector() { injector =>
+      withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
           indexer.update()
 
@@ -202,7 +205,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     }
 
     "limit the result by percentMatch" in {
-      withInjector() { injector =>
+      withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
           indexer.update()
 
@@ -225,7 +228,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     }
 
     "limit the result by site" in {
-      withInjector() { injector =>
+      withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
           indexer.update()
 
@@ -260,7 +263,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     }
 
     "match on the URI" in {
-      withInjector() { injector =>
+      withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
           indexer.update()
 
@@ -283,7 +286,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     }
 
     "be able to dump Lucene Document" in {
-      withInjector() { injector =>
+      withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
           indexer.update()
 
@@ -296,7 +299,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     }
 
     "delete documents with inactive, active, unscrapable, or scrape_later state" in {
-      withInjector() { injector =>
+      withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
           indexer.update()
           indexer.numDocs === 3
@@ -331,7 +334,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     }
 
     "retrieve article records from index" in {
-      withInjector() { injector =>
+      withInjector(helperModules: _*) { injector =>
         new IndexerScope(injector) {
           indexer.update()
           indexer.numDocs === 3

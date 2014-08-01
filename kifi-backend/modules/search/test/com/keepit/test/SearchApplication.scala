@@ -13,13 +13,13 @@ import com.keepit.common.cache.{ HashMapMemoryCacheModule, SearchCacheModule }
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.search.index.DevIndexModule
-import com.keepit.search.tracker.DevTrackingModule
+import com.keepit.search.index.{ DevIndexModule, FakeIndexModule }
+import com.keepit.search.tracker.{ DevTrackingModule, FakeTrackingModule }
 import com.keepit.common.store.SearchFakeStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.search.{ SearchServiceTypeModule, FakeSearchServiceClientModule, SearchConfigModule }
 import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.search.{ SearchServiceTypeModule, SearchConfigModule, FakeSearchConfigModule, FakeSearchServiceClientModule }
 
 class SearchApplication(overridingModules: Module*)(implicit path: File = new File("./modules/search/"))
   extends TestApplication(path, overridingModules, Seq(
@@ -59,15 +59,15 @@ trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
     FakeClockModule(),
     FakeHealthcheckModule(),
     FakeFortyTwoModule(),
-    DevTrackingModule(),
+    FakeTrackingModule(),
     SearchFakeStoreModule(),
-    DevIndexModule(),
+    FakeIndexModule(),
     FakeDiscoveryModule(),
     FakeShoeboxServiceModule(),
     FakeSearchServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeSpellCorrectorModule(),
     SearchCacheModule(HashMapMemoryCacheModule()),
-    SearchConfigModule()
+    FakeSearchConfigModule()
   )
 }

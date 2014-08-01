@@ -383,13 +383,9 @@ class MainSearcher(
     }
 
     if (filter.isDefault && isInitialSearch && personalizedSearcher.isDefined) {
-      val svVar = SemanticVariance.svVariance(parser.textQueries, hitList.map(_.hit.id).toSet, personalizedSearcher.get) // compute sv variance. may need to record the time elapsed.
-      val minScore = (0.9d - (0.7d / (1.0d + pow(svVar.toDouble / 0.19d, 8.0d)))).toFloat // don't ask me how I got this formula
-
       // simple classifier
-      val show = hitList.take(5).exists { h => classify(h.scoring, h.hit, minScore) }
-
-      (show, svVar)
+      val show = hitList.take(5).exists { h => classify(h.scoring, h.hit, 0.6f) }
+      (show, -1f)
     } else {
       (true, -1f)
     }

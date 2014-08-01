@@ -17,12 +17,15 @@ import scala.collection.JavaConversions._
 import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.graph.BaseGraphSearcher
 import com.keepit.search.graph.GraphTestHelper
+import com.keepit.common.util.PlayAppConfigurationModule
 
 class CollectionIndexerTest extends Specification with SearchTestInjector with GraphTestHelper {
 
+  val helperModules = Seq(PlayAppConfigurationModule())
+
   "CollectionIndexer" should {
     "maintain a sequence number on collections " in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
         val numURIs = uris.size
 
@@ -54,7 +57,7 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
     }
 
     "find collections by user" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -91,7 +94,7 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
     }
 
     "find collections by uri" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -129,7 +132,7 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
     }
 
     "store collection to uri associations in URIList" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -157,7 +160,7 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
     }
 
     "store colleciton external ids" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -186,7 +189,7 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
     }
 
     "detect collection names" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -231,7 +234,7 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
     }
 
     "detect collection names (partial match)" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -282,7 +285,7 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
     }
 
     "dump Lucene Document" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = ""))
         val uris = saveURIs(
           NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),

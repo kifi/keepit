@@ -1,16 +1,14 @@
 package com.keepit.commanders
 
 import com.keepit.common.db.Id
-import com.keepit.model.User
-import com.google.inject.Inject
-import com.keepit.model.KeepRepo
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
 import com.keepit.common.logging.Logging
+import com.keepit.model.{ KeepRepo, User }
 
 class AbuseMonitorException(message: String) extends Exception(message)
 
-class KeepsAbuseMonitor @Inject() (
+class KeepsAbuseMonitor(
     absoluteWarn: Int,
     absoluteError: Int,
     keepRepo: KeepRepo,
