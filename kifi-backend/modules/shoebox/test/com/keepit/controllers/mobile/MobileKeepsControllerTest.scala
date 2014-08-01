@@ -49,33 +49,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector {
     FakeCortexServiceClientModule()
   )
 
-  def externalIdForTitle(title: String): String = forTitle(title).externalId.id
-  def externalIdForCollection(userId: Id[User], name: String): String = forCollection(userId, name).externalId.id
-
-  def sourceForTitle(title: String): KeepSource = forTitle(title).source
-
-  def stateForTitle(title: String): String = forTitle(title).state.value
-
-  def forTitle(title: String): Keep = {
-    withDb(controllerTestModules: _*) { implicit injector =>
-      db.readOnlyMaster { implicit session =>
-        val bookmarks = keepRepo.getByTitle(s"Some($title)")
-        bookmarks.size === 1
-        bookmarks.head
-      }
-    }
-  }
-
-  def forCollection(userId: Id[User], name: String): Collection = {
-    withDb(controllerTestModules: _*) { implicit injector =>
-      db.readOnlyMaster { implicit session =>
-        val collections = collectionRepo.getByUserAndName(userId, name)
-        collections.size === 1
-        collections.head
-      }
-    }
-  }
-
   def prenormalize(url: String)(implicit injector: Injector): String = normalizationService.prenormalize(url).get
 
   "remove tag" in {
