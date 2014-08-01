@@ -1,6 +1,6 @@
 package com.keepit.common.zookeeper
 
-import net.codingwell.scalaguice.ScalaModule
+import net.codingwell.scalaguice.{ ScalaMultibinder, ScalaModule }
 
 import com.google.inject.{ Singleton, Provides, Provider }
 
@@ -16,7 +16,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import play.api.Play.current
 
-import scala.Some
 import scala.concurrent.{ Await, Future, Promise }
 import scala.collection.JavaConversions._
 import play.api.libs.ws.WS
@@ -25,6 +24,19 @@ import com.keepit.common.actor.{ DevActorSystemModule, ProdActorSystemModule }
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest
 import com.amazonaws.services.ec2.{ AmazonEC2, AmazonEC2Client }
 import com.amazonaws.auth.BasicAWSCredentials
+
+abstract class ServiceTypeModule extends ScalaModule {
+  val serviceType: ServiceType
+  val servicesToListenOn: Seq[ServiceType]
+  def configure() {
+    bind[ServiceType].toInstance(serviceType)
+    val servicesToListenOnBinder = ScalaMultibinder.newSetBinder[ServiceType](binder)
+    servicesToListenOn.foreach { nextServiceToListenOn =>
+      if (nextServiceToListenOn == serviceType) throw new IllegalArgumentException(s"Current service is included in servicesToListenOn: $servicesToListenOn")
+      servicesToListenOnBinder.addBinding.toInstance(nextServiceToListenOn)
+    }
+  }
+}
 
 trait DiscoveryModule extends ScalaModule
 
@@ -49,7 +61,7 @@ object DiscoveryModule {
     tags = Map("Capabilities" -> "foo, bar", "ShardSpec" -> "0/1"))
 }
 
-class ProdDiscoveryModule(serviceType: ServiceType, servicesToListenOn: Seq[ServiceType]) extends DiscoveryModule with Logging {
+case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
 
   def configure() {
     install(ProdActorSystemModule())
@@ -110,7 +122,7 @@ class ProdDiscoveryModule(serviceType: ServiceType, servicesToListenOn: Seq[Serv
 
   @Singleton
   @Provides
-  def myAmazonInstanceInfo(info: AmazonInstanceInfo): MyInstanceInfo = MyInstanceInfo(info, serviceType)
+  def myAmazonInstanceInfo(info: AmazonInstanceInfo, serviceType: ServiceType): MyInstanceInfo = MyInstanceInfo(info, serviceType)
 
   @Singleton
   @Provides
@@ -121,11 +133,12 @@ class ProdDiscoveryModule(serviceType: ServiceType, servicesToListenOn: Seq[Serv
 
   @Singleton
   @Provides
-  def serviceDiscovery(zk: ZooKeeperClient, airbrake: Provider[AirbrakeNotifier], services: FortyTwoServices,
+  def serviceDiscovery(serviceType: ServiceType, servicesToListenOn: Set[ServiceType],
+    zk: ZooKeeperClient, airbrake: Provider[AirbrakeNotifier], services: FortyTwoServices,
     amazonInstanceInfo: AmazonInstanceInfo, scheduler: Scheduler): ServiceDiscovery = {
     val isCanary = DiscoveryModule.isCanary
     if (serviceType == ServiceType.SHOEBOX && isCanary) {
-      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = isCanary, servicesToListenOn = servicesToListenOn :+ ServiceType.SHOEBOX)
+      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = isCanary, servicesToListenOn = servicesToListenOn + ServiceType.SHOEBOX)
     } else {
       new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo, scheduler, airbrake, isCanary = isCanary, servicesToListenOn = servicesToListenOn)
     }
@@ -158,13 +171,14 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
 
   @Singleton
   @Provides
-  def serviceDiscovery(services: FortyTwoServices, amazonInstanceInfo: AmazonInstanceInfo, cluster: ServiceCluster): ServiceDiscovery =
+  def serviceDiscovery(actualServiceType: ServiceType, serviceType: ServiceType, servicesToListenOn: Set[ServiceType], services: FortyTwoServices, amazonInstanceInfo: AmazonInstanceInfo, cluster: ServiceCluster): ServiceDiscovery =
     new ServiceDiscovery {
+      val availableServices = servicesToListenOn + actualServiceType
       var state: Option[ServiceStatus] = Some(ServiceStatus.UP)
       def timeSinceLastStatusChange: Long = 0L
       def thisInstance = Some(new ServiceInstance(Node(cluster.servicePath, cluster.serviceType.name + "_0"), true, RemoteService(amazonInstanceInfo, ServiceStatus.UP, cluster.serviceType)))
       def thisService: ServiceType = cluster.serviceType
-      def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
+      def serviceCluster(serviceType: ServiceType): ServiceCluster = if (availableServices.contains(serviceType)) cluster else throw new UnknownServiceException(s"DiscoveryService is not listening to service $serviceType.")
       def register() = thisInstance.get
       def isLeader() = true
       def changeStatus(newStatus: ServiceStatus): Unit = { state = Some(newStatus) }
