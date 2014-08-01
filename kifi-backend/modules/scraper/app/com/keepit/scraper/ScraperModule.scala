@@ -4,7 +4,7 @@ import com.keepit.common.cache.CacheModule
 import com.keepit.scraper.fetcher.HttpFetcherModule
 import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
-import com.keepit.shoebox.ProdShoeboxServiceClientModule
+import com.keepit.shoebox.{ ProdShoeboxScraperClientModule, ProdShoeboxServiceClientModule }
 import com.keepit.common.store.StoreModule
 import com.keepit.common.concurrent.ForkJoinContextMonitorModule
 import com.keepit.scraper.embedly.EmbedlyModule
@@ -25,6 +25,7 @@ abstract class ScraperModule(
   // Service clients
   val serviceTypeModule = ScraperServiceTypeModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
+  val shoeboxScraperClientModule = ProdShoeboxScraperClientModule()
   val secureSocialModule = RemoteSecureSocialModule()
 
   val fetcherModule: HttpFetcherModule
