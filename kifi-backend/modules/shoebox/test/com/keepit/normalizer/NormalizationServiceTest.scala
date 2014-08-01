@@ -6,7 +6,7 @@ import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.inject.TestFortyTwoModule
+import com.keepit.inject.FakeFortyTwoModule
 import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.model._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeSignatureBuilder, Signature, BasicArticle }
@@ -44,7 +44,7 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
   }
 
   val modules = Seq(
-    TestFortyTwoModule(),
+    FakeFortyTwoModule(),
     FakeDiscoveryModule(),
     FakeScrapeSchedulerModule(Some(fakeArticles)),
     FakeAirbrakeModule(),

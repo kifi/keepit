@@ -27,7 +27,7 @@ import com.keepit.model.UserConnection
 import scala.Some
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.TestSearchServiceClientModule
@@ -45,7 +45,7 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     FakeHttpClientModule(),
     FakeAnalyticsModule(),
     ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
+    FakeActorSystemModule(),
     TestSearchServiceClientModule(),
     FakeAirbrakeModule(),
     FakeSocialGraphModule(),

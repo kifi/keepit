@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Injector
 import com.keepit.commanders._
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
@@ -33,7 +33,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
+    FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     TestHeimdalServiceClientModule(),

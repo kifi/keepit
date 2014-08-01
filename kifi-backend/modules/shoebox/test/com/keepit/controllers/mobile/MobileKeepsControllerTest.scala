@@ -33,7 +33,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.social.{ SocialNetworkType, SocialId, SocialNetworks }
@@ -51,7 +51,7 @@ import play.api.libs.json.JsString
 import scala.Some
 import com.keepit.model.KeepDiscovery
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.model.KeepToCollection
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
@@ -68,7 +68,7 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
+    FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
     TestHeimdalServiceClientModule(),

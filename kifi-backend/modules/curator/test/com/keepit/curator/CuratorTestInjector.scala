@@ -2,7 +2,7 @@ package com.keepit.curator
 
 import com.google.inject.util.Modules
 import com.keepit.common.cache.{ CuratorCacheModule, HashMapMemoryCacheModule }
-import com.keepit.common.db.{ TestDbInfo, TestSlickModule }
+import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time.FakeClockModule
@@ -14,7 +14,7 @@ trait CuratorTestInjector extends TestInjector with DbInjectionHelper {
     CuratorServiceTypeModule(),
     FakeAirbrakeModule(),
     FakeClockModule(),
-    TestSlickModule(TestDbInfo.dbInfo),
+    FakeSlickModule(TestDbInfo.dbInfo),
     FakeShoeboxServiceModule(),
     CuratorCacheModule(HashMapMemoryCacheModule()),
     FakeHttpClientModule()

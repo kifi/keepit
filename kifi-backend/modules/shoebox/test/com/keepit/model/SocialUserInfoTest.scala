@@ -4,7 +4,7 @@ import org.specs2.mutable._
 
 import com.google.inject.Injector
 import com.keepit.akka.TestAkkaSystem
-import com.keepit.common.db.{ TestSlickSessionProvider, Id }
+import com.keepit.common.db.{ FakeSlickSessionProvider, Id }
 import com.keepit.common.time._
 import com.keepit.test._
 
@@ -113,7 +113,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
           sui.fullName === "John Smith"
           networkCache.get(cacheKey).isDefined === true
         }
-        val socialUserOpt = inject[TestSlickSessionProvider].doWithoutCreatingSessions {
+        val socialUserOpt = inject[FakeSlickSessionProvider].doWithoutCreatingSessions {
           db.readOnlyMaster { implicit s => socialUserInfoRepo.getOpt(SocialId("eishay"), SocialNetworks.FACEBOOK) }
         }
         socialUserOpt.map(_.fullName) must beSome("John Smith")

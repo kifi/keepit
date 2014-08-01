@@ -6,17 +6,17 @@ import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 import scala.concurrent.ExecutionContext.Implicits.{ global => globalExecutionContext }
 import com.keepit.common.db.slick.DbExecutionContext
 
-case class TestSlickModule(dbInfo: DbInfo) extends SlickModule(dbInfo) {
+case class FakeSlickModule(dbInfo: DbInfo) extends SlickModule(dbInfo) {
 
   @Provides @Singleton
-  def slickSessionProvider: SlickSessionProvider = TestSlickSessionProvider()
+  def slickSessionProvider: SlickSessionProvider = FakeSlickSessionProvider()
 
   @Provides @Singleton
   def dbExecutionContextProvider: DbExecutionContext = DbExecutionContext(globalExecutionContext)
 
 }
 
-case class TestSlickSessionProvider() extends SlickSessionProviderImpl {
+case class FakeSlickSessionProvider() extends SlickSessionProviderImpl {
 
   private[this] var _readOnlySessionsCreated = 0
   def readOnlySessionsCreated: Long = _readOnlySessionsCreated

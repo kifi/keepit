@@ -9,7 +9,7 @@ import com.keepit.common.time.FakeClockModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.common.cache.ABookCacheModule
 import play.api.libs.json.JsString
-import com.keepit.common.db.TestSlickModule
+import com.keepit.common.db.FakeSlickModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.mail.{ EmailAddress, BasicContact }
@@ -25,7 +25,7 @@ class ABookCommanderTest extends Specification with ABookTestInjector with ABook
     TestABookImporterPluginModule(),
     TestABookServiceClientModule(),
     FakeShoeboxServiceModule(),
-    TestSlickModule(TestDbInfo.dbInfo),
+    FakeSlickModule(TestDbInfo.dbInfo),
     FakeClockModule(),
     FakeAirbrakeModule(),
     ABookCacheModule(HashMapMemoryCacheModule()),

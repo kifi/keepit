@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.abook.TestABookServiceClientModule
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.FakeActionAuthenticator
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -32,7 +32,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector with Sh
     TestSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
+    FakeActorSystemModule(),
     FakeAirbrakeModule(),
     TestABookServiceClientModule(),
     FakeMailModule(),
