@@ -3,10 +3,8 @@ package com.keepit.common.healthcheck
 import org.specs2.mutable.SpecificationLike
 
 import com.keepit.common.mail._
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
 import play.api.test.Helpers.running
-import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
+import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxApplication}
 import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 
 class HealthcheckModuleTest extends TestKitSupport with SpecificationLike with ShoeboxApplicationInjector {
@@ -27,9 +25,16 @@ class HealthcheckModuleTest extends TestKitSupport with SpecificationLike with S
     }
   }
 
+  val modules = Seq(
+    FakeMailModule(),
+    prodHealthCheckModuleWithLocalSender,
+    FakeActorSystemModule(Some(system))
+  )
+
   "HealthcheckModule" should {
     "load" in {
-      running(new ShoeboxApplication(FakeMailModule(), prodHealthCheckModuleWithLocalSender, FakeActorSystemModule(Some(system)))) {
+      running(new ShoeboxApplication(modules: _*)) {
+
         val healthcheck = inject[HealthcheckPlugin]
 
         val outbox = fakeMailSender.mailQueue
