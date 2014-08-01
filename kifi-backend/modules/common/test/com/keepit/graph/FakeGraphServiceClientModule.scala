@@ -6,7 +6,7 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.{ ServiceCluster, ServiceDiscovery }
 import com.keepit.common.service.ServiceType
 
-case class TestGraphServiceClientModule() extends GraphServiceClientModule {
+case class FakeGraphServiceClientModule() extends GraphServiceClientModule {
 
   def configure() {}
 

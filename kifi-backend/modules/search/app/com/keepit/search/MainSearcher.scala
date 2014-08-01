@@ -16,13 +16,11 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.modules.statsd.api.Statsd
 import scala.math._
 import scala.concurrent.{ Future, Promise }
 import scala.concurrent.duration._
 import com.keepit.search.util.Hit
 import com.keepit.search.util.HitQueue
-import com.keepit.search.semantic.SemanticVariance
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search.result.PartialSearchResult
@@ -383,13 +381,9 @@ class MainSearcher(
     }
 
     if (filter.isDefault && isInitialSearch && personalizedSearcher.isDefined) {
-      val svVar = SemanticVariance.svVariance(parser.textQueries, hitList.map(_.hit.id).toSet, personalizedSearcher.get) // compute sv variance. may need to record the time elapsed.
-      val minScore = (0.9d - (0.7d / (1.0d + pow(svVar.toDouble / 0.19d, 8.0d)))).toFloat // don't ask me how I got this formula
-
       // simple classifier
-      val show = hitList.take(5).exists { h => classify(h.scoring, h.hit, minScore) }
-
-      (show, svVar)
+      val show = hitList.take(5).exists { h => classify(h.scoring, h.hit, 0.6f) }
+      (show, -1f)
     } else {
       (true, -1f)
     }

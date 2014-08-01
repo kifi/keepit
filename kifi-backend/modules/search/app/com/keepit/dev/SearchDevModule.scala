@@ -11,6 +11,7 @@ import com.keepit.inject.CommonDevModule
 import com.keepit.search.spellcheck.SpellCorrectorModule
 import com.keepit.search.tracker.DevTrackingModule
 import com.keepit.search.index.DevIndexModule
+import com.keepit.common.util.PlayAppConfigurationModule
 
 case class SearchDevModule() extends SearchModule(
 
@@ -28,5 +29,6 @@ case class SearchDevModule() extends SearchModule(
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val heimdalServiceClientModule = DevHeimdalServiceClientModule()
+  val configurationModule = PlayAppConfigurationModule()
 }
 

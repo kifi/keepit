@@ -4,7 +4,7 @@ import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.controller.ReportedException
 import com.keepit.common.zookeeper._
 import com.keepit.test._
-import com.keepit.inject.TestFortyTwoModule
+import com.keepit.inject.FakeFortyTwoModule
 import com.keepit.common.actor._
 import org.specs2.mutable.Specification
 
@@ -30,14 +30,14 @@ class AirbrakeTest extends Specification with CommonTestInjector {
   "AirbrakeTest" should {
 
     "deployment payload" in {
-      withInjector(TestFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
+      withInjector(FakeFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         formatter.deploymentMessage === "api_key=fakeApiKey&deploy[rails_env]=test&deploy[scm_repository]=https://github.com/kifi/keepit&deploy[scm_revision]=00000000-0000-TEST-0000000"
       }
     }
 
     "format stack trace with x2 cause" in {
-      withInjector(TestFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
+      withInjector(FakeFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         val error = new IllegalArgumentException("hi there", new Exception("middle thing", new IllegalStateException("its me")))
         val xml = formatter.noticeError(ErrorWithStack(error), None)
@@ -49,7 +49,7 @@ class AirbrakeTest extends Specification with CommonTestInjector {
     }
 
     "format stack trace with x1 cause" in {
-      withInjector(TestFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
+      withInjector(FakeFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         val error = new IllegalArgumentException("hi there", new IllegalStateException("its me"))
         val xml = formatter.noticeError(ErrorWithStack(error), None)
@@ -78,7 +78,7 @@ class AirbrakeTest extends Specification with CommonTestInjector {
 
     "format with url and no params" in {
       implicit val system = ActorSystem("test")
-      withInjector(TestFortyTwoModule(), FakeDiscoveryModule(), StandaloneTestActorSystemModule()) { implicit injector =>
+      withInjector(FakeFortyTwoModule(), FakeDiscoveryModule(), StandaloneTestActorSystemModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         val error = AirbrakeError(
           exception = new IllegalArgumentException("hi there"),
@@ -101,7 +101,7 @@ class AirbrakeTest extends Specification with CommonTestInjector {
 
     "format with user info" in {
       implicit val system = ActorSystem("test")
-      withInjector(TestFortyTwoModule(), FakeDiscoveryModule(), StandaloneTestActorSystemModule()) { implicit injector =>
+      withInjector(FakeFortyTwoModule(), FakeDiscoveryModule(), StandaloneTestActorSystemModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         val error = AirbrakeError(
           exception = new IllegalArgumentException("hi there"),
@@ -149,7 +149,7 @@ class AirbrakeTest extends Specification with CommonTestInjector {
     }
 
     "cleanError cleans Option" in {
-      withInjector(TestFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
+      withInjector(FakeFortyTwoModule(), FakeDiscoveryModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         def method1() = try {
           Option(null).get

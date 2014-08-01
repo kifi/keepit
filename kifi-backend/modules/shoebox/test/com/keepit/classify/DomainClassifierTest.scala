@@ -1,6 +1,6 @@
 package com.keepit.classify
 
-import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
+import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
@@ -8,9 +8,9 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.search.TestSearchServiceClientModule
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
+import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ CommonTestInjector, DbInjectionHelper }
 import org.specs2.mutable.SpecificationLike
@@ -20,12 +20,12 @@ class DomainClassifierTest extends TestKitSupport with SpecificationLike with Co
   val domainClassifierTestModules = Seq(
     FakeMailModule(),
     FakeAnalyticsModule(),
-    ShoeboxFakeStoreModule(),
-    TestHeimdalServiceClientModule(),
+    FakeShoeboxStoreModule(),
+    FakeHeimdalServiceClientModule(),
     FakeDomainTagImporterModule(),
-    TestActorSystemModule(Some(system)),
+    FakeActorSystemModule(Some(system)),
     FakeShoeboxServiceModule(),
-    TestSearchServiceClientModule(),
+    FakeSearchServiceClientModule(),
     FakeSlickModule(TestDbInfo.dbInfo),
     ShoeboxCacheModule(HashMapMemoryCacheModule()),
     FakeAirbrakeModule()

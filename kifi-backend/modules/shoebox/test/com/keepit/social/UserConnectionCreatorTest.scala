@@ -6,24 +6,24 @@ import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.model._
-import com.keepit.shoebox.TestShoeboxServiceClientModule
+import com.keepit.shoebox.FakeShoeboxServiceClientModule
 import com.keepit.social.{ SocialNetworks, SocialId }
-import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
+import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplicationInjector, ShoeboxApplication }
 import com.keepit.eliza.FakeElizaServiceClientModule
 
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 import com.keepit.common.mail.FakeMailModule
 
-class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInjector {
+class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
 
-  val modules = Seq(FakeHttpClientModule(), ShoeboxFakeStoreModule(), TestShoeboxServiceClientModule(), FakeElizaServiceClientModule(), FakeMailModule())
+  val modules = Seq(FakeHttpClientModule(), FakeShoeboxStoreModule(), FakeShoeboxServiceClientModule(), FakeElizaServiceClientModule(), FakeMailModule())
 
   "UserConnectionCreator" should {
     "create connections between friends for social users and kifi users" in {
-      running(new ShoeboxApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
 
         /*
          * grab json
@@ -75,7 +75,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
     }
 
     "disable non existing connections for social users but not kifi users" in {
-      running(new ShoeboxApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
 
         val json1 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
 

@@ -5,7 +5,7 @@ import com.keepit.common.healthcheck._
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
 
-case class TestShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
+case class FakeShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
 
   def configure() {}
 
@@ -19,7 +19,7 @@ case class TestShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
     new ShoeboxServiceClientImpl(serviceCluster, httpClient, airbrakeNotifier, shoeboxCacheProvided)
 }
 
-case class TestShoeboxScraperClientModule() extends ShoeboxScraperClientModule {
+case class FakeShoeboxScraperClientModule() extends ShoeboxScraperClientModule {
 
   def configure() {}
 

@@ -6,7 +6,7 @@ import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.db.{ FakeSlickModule, TestDbInfo, Id, SequenceNumber }
 import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.test.{ ShoeboxInjectionHelpers, CommonTestInjector, DbInjectionHelper, ShoeboxApplication }
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -14,7 +14,7 @@ import play.api.test.Helpers._
 
 class CollectionTest extends Specification with CommonTestInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
 
-  val modules = FakeSlickModule(TestDbInfo.dbInfo) :: TestHeimdalServiceClientModule() :: FakeSlickModule(TestDbInfo.dbInfo) ::
+  val modules = FakeSlickModule(TestDbInfo.dbInfo) :: FakeHeimdalServiceClientModule() :: FakeSlickModule(TestDbInfo.dbInfo) ::
     ShoeboxCacheModule(HashMapMemoryCacheModule()) :: FakeElizaServiceClientModule() :: Nil
 
   def setup()(implicit injector: Injector) = {

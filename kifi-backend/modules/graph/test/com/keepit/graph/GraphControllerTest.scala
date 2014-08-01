@@ -3,7 +3,8 @@ package com.keepit.graph
 import com.keepit.graph.controllers.internal.GraphController
 import com.keepit.graph.manager.GraphManager
 import com.keepit.graph.simple.SimpleGraphTestModule
-import com.keepit.graph.test.{ GraphTestInjector, GraphApplication, GraphApplicationInjector }
+import com.keepit.graph.test.{ GraphTestInjector }
+
 import org.specs2.mutable.Specification
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -11,7 +12,7 @@ import play.api.test.Helpers._
 class GraphControllerTest extends Specification with GraphTestInjector with GraphTestHelper {
   "graph controller" should {
     val modules = Seq(
-      TestGraphServiceClientModule(),
+      FakeGraphServiceClientModule(),
       SimpleGraphTestModule())
 
     "get list of uri and score pairs" in {

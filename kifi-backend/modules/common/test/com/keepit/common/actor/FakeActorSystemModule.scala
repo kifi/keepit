@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.zookeeper.ServiceDiscovery
 import net.codingwell.scalaguice.ScalaModule
 
-case class TestActorSystemModule(systemOption: Option[ActorSystem] = None) extends ActorSystemModule {
+case class FakeActorSystemModule(systemOption: Option[ActorSystem] = None) extends ActorSystemModule {
 
   lazy val system = systemOption.getOrElse(ActorSystem("test-actor-system", current.configuration.underlying, current.classloader))
 
