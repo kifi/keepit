@@ -12,14 +12,14 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import scala.concurrent._
 
-class IndexShardingTest extends Specification with SearchApplicationInjector with SearchTestHelper {
+class IndexShardingTest extends Specification with SearchTestInjector with SearchTestHelper {
 
   implicit private val activeShards = ActiveShards((new ShardSpecParser).parse("0,1/2"))
   val emptyFuture = Future.successful(Set[Long]())
 
   "ShardedArticleIndexer" should {
     "create index shards" in {
-      running(application) {
+      withInjector() { implicit injector =>
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.take(9).toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
@@ -102,7 +102,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
     }
 
     "handle URI migration" in {
-      running(application) {
+      withInjector() { implicit injector =>
         val (Seq(user), uris) = initData(numUsers = 1, numUris = 20)
         val userId = user.id.get
         val expectedUriToUserEdges = uris.take(5).map(_ -> Seq(user))
@@ -177,7 +177,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
     }
 
     "correctly reindex" in {
-      running(application) {
+      withInjector() { implicit injector =>
         val numUris = 5
         val (uris, shoebox) = {
           val uris = (0 until numUris).map { n =>
@@ -209,7 +209,7 @@ class IndexShardingTest extends Specification with SearchApplicationInjector wit
     }
 
     "skip active uris when build index from scratch" in {
-      running(application) {
+      withInjector() { implicit injector =>
         val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val numUris = 10
         val uris = (0 until numUris).map { n =>
