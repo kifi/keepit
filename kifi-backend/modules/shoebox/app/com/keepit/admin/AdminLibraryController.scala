@@ -122,11 +122,16 @@ class AdminLibraryController @Inject() (
   def updateLibraries() = AdminHtmlAction.authenticated { request =>
     def toBoolean(str: String) = str.trim.toInt == 1
 
-    def setToSecret(id: Id[Library])(implicit session: RWSession): Id[User] = {
+    def setToVisibility(id: Id[Library], newVisibility: String)(implicit session: RWSession): Id[User] = {
       val lib = libraryRepo.get(id)
-      log.info("updating library %s to secret".format(lib))
-      libraryRepo.save(lib.copy(visibility = LibraryVisibility.SECRET))
-      log.info("updated library %s".format(lib))
+      log.info("updating library %s to %s".format(lib, newVisibility))
+      newVisibility match {
+        case LibraryVisibility.PUBLISHED.value => libraryRepo.save(lib.copy(visibility = LibraryVisibility.PUBLISHED))
+        case LibraryVisibility.DISCOVERABLE.value => libraryRepo.save(lib.copy(visibility = LibraryVisibility.DISCOVERABLE))
+        case LibraryVisibility.SECRET.value => libraryRepo.save(lib.copy(visibility = LibraryVisibility.SECRET))
+      }
+
+      log.info("updated library %s to %s".format(lib, newVisibility))
       lib.ownerId
     }
 
@@ -146,11 +151,7 @@ class AdminLibraryController @Inject() (
         case (key, values) =>
           key.split("_") match {
             case Array("active", id) => setIsActive(Id[Library](id.toInt), toBoolean(values.last))
-            case Array("secret", id) => {
-              if (toBoolean(values.last) == true) {
-                setToSecret(Id[Library](id.toInt))
-              }
-            }
+            case Array("visib", id) => setToVisibility(Id[Library](id.toInt), values.last)
           }
       }
     }
