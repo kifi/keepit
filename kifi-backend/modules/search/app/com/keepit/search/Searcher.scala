@@ -73,25 +73,6 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     }
   }
 
-  def doSearch(query: Query, filter: Filter)(f: (Scorer, DocIdSetIterator, WrappedSubReader) => Unit) {
-    val rewrittenQuery = rewrite(query)
-    if (rewrittenQuery != null) {
-      val weight = createNormalizedWeight(rewrittenQuery)
-      if (weight != null) {
-        indexReader.getContext.leaves.foreach { subReaderContext =>
-          val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
-          if (!subReader.skip) {
-            val scorer = weight.scorer(subReaderContext, true, false, subReader.getLiveDocs)
-            val iterator = filter.getDocIdSet(subReaderContext, subReader.getLiveDocs).iterator
-            if (scorer != null || iterator != null) {
-              f(scorer, iterator, subReader)
-            }
-          }
-        }
-      }
-    }
-  }
-
   def foreachReader(f: WrappedSubReader => Unit) {
     indexReader.getContext.leaves.foreach { subReaderContext =>
       val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
@@ -247,37 +228,6 @@ trait SearchSemanticContext extends Searcher {
         contextVector = Some(vector)
         vector
     }
-  }
-}
-
-class MutableHit(var id: Long, var score: Float) {
-  def apply(newId: Long, newScore: Float) = {
-    id = newId
-    score = newScore
-  }
-}
-
-class SearcherHitQueue(sz: Int) extends PriorityQueue[MutableHit](sz) {
-  override def lessThan(a: MutableHit, b: MutableHit) = (a.score < b.score || (a.score == b.score && a.id < b.id))
-
-  var overflow: MutableHit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
-
-  def insert(id: Long, score: Float) {
-    if (overflow == null) overflow = new MutableHit(id, score)
-    else overflow(id, score)
-
-    overflow = insertWithOverflow(overflow)
-  }
-
-  // the following method is destructive. after the call SearcherHitQueue is unusable
-  def toList: List[MutableHit] = {
-    var res: List[MutableHit] = Nil
-    var i = size()
-    while (i > 0) {
-      i -= 1
-      res = pop() :: res
-    }
-    res
   }
 }
 
