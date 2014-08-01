@@ -26,7 +26,7 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.realtime.FakeUrbanAirshipModule
 import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.common.store.FakeElizaStoreModule
-import com.keepit.common.actor.{StandaloneTestActorSystemModule, FakeActorSystemModule}
+import com.keepit.common.actor.{ StandaloneTestActorSystemModule, FakeActorSystemModule }
 
 class MobileMessagingControllerTest extends Specification with ElizaTestInjector {
 
@@ -41,7 +41,6 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
       FakeHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
       StandaloneTestActorSystemModule(),
-      FakeActorSystemModule(),
       FakeABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeActionAuthenticatorModule(),
