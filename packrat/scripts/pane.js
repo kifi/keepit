@@ -171,9 +171,6 @@ var pane = pane || function () {  // idempotent for Chrome
           });
         });
       })
-      .on("dragstart", ".kifi-pane-top-menu-a", function (e) {
-        e.preventDefault();
-      })
       .on("mousedown", ".kifi-pane-top-menu-a", function (e) {
         if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
