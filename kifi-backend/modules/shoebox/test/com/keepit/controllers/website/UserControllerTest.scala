@@ -19,7 +19,7 @@ import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{ TestShoeboxAppSecureSocialModule, FakeSocialGraphModule }
+import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule, FakeSocialGraphModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 

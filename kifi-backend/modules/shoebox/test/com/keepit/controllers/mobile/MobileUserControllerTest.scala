@@ -53,7 +53,7 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
-    TestShoeboxAppSecureSocialModule()
+    FakeShoeboxAppSecureSocialModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {

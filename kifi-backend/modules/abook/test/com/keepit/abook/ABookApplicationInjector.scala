@@ -25,7 +25,7 @@ class ABookApplication(overridingModules: Module*)(implicit path: File = new Fil
       FakeSlickModule(TestDbInfo.dbInfo),
       FakeActionAuthenticatorModule(),
       FakeABookStoreModule(),
-      TestABookImporterPluginModule(),
+      FakeABookImporterPluginModule(),
       FakeAbookRepoChangeListenerModule()
     )) {
   println(s"[ABookApplication] path=$path canonicalPath=${path.getCanonicalPath}")

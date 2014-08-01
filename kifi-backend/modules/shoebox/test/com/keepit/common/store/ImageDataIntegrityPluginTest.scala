@@ -13,7 +13,7 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
 import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
-import com.keepit.common.social.{ FakeSocialGraphModule, TestShoeboxAppSecureSocialModule }
+import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxAppSecureSocialModule }
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeAirbrakeNotifier }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -39,7 +39,7 @@ class ImageDataIntegrityPluginTest extends TestKitSupport with SpecificationLike
         FakeScrapeSchedulerModule(),
         imageDataIntegrityTestPluginModule,
         FakeActorSystemModule(Some(system)),
-        TestShoeboxAppSecureSocialModule(),
+        FakeShoeboxAppSecureSocialModule(),
         FakeSocialGraphModule(),
         FakeHeimdalServiceClientModule(),
         FakeMailModule(),

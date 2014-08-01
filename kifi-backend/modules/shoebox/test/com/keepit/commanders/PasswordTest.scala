@@ -7,7 +7,7 @@ import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{ FakeSocialGraphModule, TestShoeboxAppSecureSocialModule }
+import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxAppSecureSocialModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
@@ -39,7 +39,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector with Sh
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeHeimdalServiceClientModule(),
-    TestShoeboxAppSecureSocialModule(),
+    FakeShoeboxAppSecureSocialModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
