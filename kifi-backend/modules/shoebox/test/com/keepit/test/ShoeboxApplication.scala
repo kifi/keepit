@@ -72,6 +72,7 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeShoeboxRepoChangeListenerModule(),
     TestCryptoModule(),
     TestActorSystemModule(),
-    FakeActionAuthenticatorModule()
+    FakeActionAuthenticatorModule(),
+    FakeKeepImportsModule()
   )
 }

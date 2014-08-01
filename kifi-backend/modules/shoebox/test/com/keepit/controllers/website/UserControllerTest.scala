@@ -38,8 +38,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeExternalServiceModule(),
-    FakeCortexServiceClientModule(),
-    FakeKeepImportsModule()
+    FakeCortexServiceClientModule()
   )
 
   "UserController" should {
