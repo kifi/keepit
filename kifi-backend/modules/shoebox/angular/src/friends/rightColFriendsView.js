@@ -45,7 +45,7 @@ angular.module('kifi.friends.rightColFriendsView', [])
     restrict: 'A',
     templateUrl: 'friends/rightColConnectView.tpl.html',
     link: function (scope/*, element, attrs*/) {
-      function getEligibleNetworksCsv () {
+      function getEligibleNetworksCsv() {
         if (friendService.totalFriends() < 20) {
           return _.compact([
             socialService.facebook && socialService.facebook.profileUrl ? null : 'facebook',
@@ -57,7 +57,7 @@ angular.module('kifi.friends.rightColFriendsView', [])
         }
       }
 
-      function chooseNetwork (csv) {
+      function chooseNetwork(csv) {
         scope.network = csv ? _.sample(csv.split(',')) : null;
       }
       
