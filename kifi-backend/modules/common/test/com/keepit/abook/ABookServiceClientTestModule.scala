@@ -9,7 +9,7 @@ import play.api.Play._
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.actor.FakeScheduler
 
-case class TestABookServiceClientModule() extends ABookServiceClientModule {
+case class FakeABookServiceClientModule() extends ABookServiceClientModule {
 
   def configure() {}
 

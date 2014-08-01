@@ -28,11 +28,11 @@ import scala.Some
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.search.TestSearchServiceClientModule
+import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
 
@@ -46,13 +46,13 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     FakeAnalyticsModule(),
     ShoeboxFakeStoreModule(),
     FakeActorSystemModule(),
-    TestSearchServiceClientModule(),
+    FakeSearchServiceClientModule(),
     FakeAirbrakeModule(),
     FakeSocialGraphModule(),
-    TestABookServiceClientModule(),
+    FakeABookServiceClientModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule(),
+    FakeScraperServiceClientModule(),
     TestShoeboxAppSecureSocialModule()
   )
 

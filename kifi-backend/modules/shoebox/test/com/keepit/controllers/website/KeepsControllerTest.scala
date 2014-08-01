@@ -11,20 +11,19 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.heimdal.{ HeimdalContext, KifiHitContext, SanitizedKifiHit, TestHeimdalServiceClientModule }
+import com.keepit.heimdal.{FakeHeimdalServiceClientModule, HeimdalContext, KifiHitContext, SanitizedKifiHit}
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
+import com.keepit.scraper.{FakeScrapeSchedulerModule, FakeScraperServiceClientModule}
 import com.keepit.search._
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsArray, JsString, Json }
+import play.api.libs.json.{JsArray, JsString, Json}
 import play.api.test.Helpers._
 import play.api.test._
 
 import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 class KeepsControllerTest extends Specification with ShoeboxTestInjector {
@@ -36,9 +35,9 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
-    TestScraperServiceClientModule(),
+    FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule()
   )
 

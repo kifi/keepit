@@ -11,14 +11,14 @@ import com.google.inject.util.Modules
 import com.google.inject.Module
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ElizaCacheModule }
 import com.keepit.common.zookeeper.FakeDiscoveryModule
-import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
 
 class ElizaApplication(overridingModules: Module*)(implicit path: File = new File("./modules/eliza/"))
   extends DbTestApplication(path, overridingModules, Seq(
     ElizaServiceTypeModule(),
     FakeHttpClientModule(),
-    TestABookServiceClientModule(),
+    FakeABookServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),

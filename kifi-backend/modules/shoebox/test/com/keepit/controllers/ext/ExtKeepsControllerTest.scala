@@ -3,8 +3,8 @@ package com.keepit.controllers.ext
 import org.specs2.mutable.Specification
 
 import com.keepit.normalizer._
-import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.common.controller._
 import com.keepit.search._
 import com.keepit.common.time._
@@ -34,10 +34,10 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule(),
+    FakeScraperServiceClientModule(),
     FakeActionAuthenticatorModule(),
     FakeKeepImportsModule()
   )

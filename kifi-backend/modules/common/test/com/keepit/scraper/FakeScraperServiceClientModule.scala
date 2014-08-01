@@ -4,7 +4,7 @@ import akka.actor.Scheduler
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
-case class TestScraperServiceClientModule() extends ScraperServiceClientModule {
+case class FakeScraperServiceClientModule() extends ScraperServiceClientModule {
 
   def configure() {}
 

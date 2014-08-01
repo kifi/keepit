@@ -9,22 +9,22 @@ import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.mail.FakeMailModule
-import com.keepit.search.TestSearchServiceClientModule
+import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 
 class DomainTagImporterTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
   val domainTagImporterTestModules = Seq(
     FakeMailModule(),
     FakeAnalyticsModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     ShoeboxFakeStoreModule(),
     FakeDomainTagImporterModule(),
     FakeActorSystemModule(Some(system)),
-    TestSearchServiceClientModule(),
+    FakeSearchServiceClientModule(),
     FakeShoeboxServiceModule(),
     FakeAirbrakeModule(),
     FakeElizaServiceClientModule()

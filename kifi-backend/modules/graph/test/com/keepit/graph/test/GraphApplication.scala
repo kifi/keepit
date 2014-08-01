@@ -4,7 +4,7 @@ import com.google.inject.Module
 import java.io.File
 import com.keepit.test.{ TestInjector, TestApplication }
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.healthcheck.{ FakeHealthcheckModule, FakeMemoryUsageModule, FakeAirbrakeModule }
 import com.keepit.common.time.FakeClockModule
@@ -21,7 +21,7 @@ class GraphApplication(overridingModules: Module*)(implicit path: File = new Fil
   extends TestApplication(path, overridingModules, Seq(
     GraphServiceTypeModule(),
     FakeHttpClientModule(),
-    TestABookServiceClientModule(),
+    FakeABookServiceClientModule(),
     TestShoeboxServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeAirbrakeModule(),
