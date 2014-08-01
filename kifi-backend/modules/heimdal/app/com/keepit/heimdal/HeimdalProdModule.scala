@@ -12,7 +12,5 @@ case class HeimdalProdModule() extends HeimdalModule(
   mongoModule = ProdMongoModule(),
   heimdalQueueModule = HeimdalQueueProdModule(),
   delightedModule = ProdDelightedModule()
-) with CommonProdModule {
-  val discoveryModule = new ProdDiscoveryModule(ServiceType.HEIMDAL, ServiceType.SHOEBOX :: Nil)
-}
+) with CommonProdModule
 

@@ -15,9 +15,11 @@ import play.api.Mode
 import com.google.inject.util.Modules
 import com.keepit.shoebox.TestShoeboxServiceClientModule
 import com.keepit.graph.common.cache.GraphCacheModule
+import com.keepit.graph.GraphServiceTypeModule
 
 class GraphApplication(overridingModules: Module*)(implicit path: File = new File("./modules/graph/"))
   extends TestApplication(path, overridingModules, Seq(
+    GraphServiceTypeModule(),
     FakeHttpClientModule(),
     TestABookServiceClientModule(),
     TestShoeboxServiceClientModule(),
@@ -35,6 +37,7 @@ trait GraphApplicationInjector extends ApplicationInjector
 
 trait GraphTestInjector extends TestInjector {
   val module = Modules.combine(
+    GraphServiceTypeModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),

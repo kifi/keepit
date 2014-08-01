@@ -19,14 +19,9 @@ import play.api.test.Helpers._
 import scala.collection.JavaConversions._
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient }
 import com.keepit.search.SearchConfig
-import com.google.inject.Singleton
-import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.SearcherHit
 import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.phrasedetector.FakePhraseIndexer
-import com.keepit.search.sharding.Shard
-import scala.concurrent.Await
-import scala.concurrent.duration._
 
 class ArticleIndexerTest extends Specification with ApplicationInjector {
 
@@ -89,7 +84,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
   }
 
   "ArticleIndexer" should {
-    "index indexable URIs" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule())(new IndexerScope {
+    "index indexable URIs" in running(new SearchApplication())(new IndexerScope {
 
       uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(INACTIVE)).head
       uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(INACTIVE)).head
@@ -122,7 +117,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       indexer.sequenceNumber.value === currentSeqNum
     })
 
-    "search documents (hits in contents)" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
+    "search documents (hits in contents)" in running(new SearchApplication())(new IndexerScope {
       indexer.update()
 
       indexer.search("alldocs").size === 3
@@ -140,7 +135,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       res.head.id === uriIdArray(2)
     })
 
-    "search documents (hits in titles)" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
+    "search documents (hits in titles)" in running(new SearchApplication())(new IndexerScope {
       indexer.update()
 
       var res = indexer.search("title1")
@@ -156,7 +151,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       res.head.id === uriIdArray(2)
     })
 
-    "search documents (hits in contents and titles)" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
+    "search documents (hits in contents and titles)" in running(new SearchApplication())(new IndexerScope {
       indexer.update()
 
       var res = indexer.search("title1 alldocs")
@@ -172,7 +167,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       res.head.id === uriIdArray(2)
     })
 
-    "search documents using stemming" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
+    "search documents using stemming" in running(new SearchApplication())(new IndexerScope {
       indexer.update()
 
       indexer.search("alldoc").size === 3
@@ -183,7 +178,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       indexer.search("+body +soul").size === 3
     })
 
-    "limit the result by percentMatch" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
+    "limit the result by percentMatch" in running(new SearchApplication())(new IndexerScope {
       indexer.update()
 
       var res = indexer.search("title1 alldocs", percentMatch = 0.0f)
@@ -202,7 +197,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       res.size === 0
     })
 
-    "limit the result by site" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
+    "limit the result by site" in running(new SearchApplication())(new IndexerScope {
       indexer.update()
 
       var res = indexer.search("alldocs")
@@ -233,7 +228,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       res.size === 2
     })
 
-    "match on the URI" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
+    "match on the URI" in running(new SearchApplication())(new IndexerScope {
       indexer.update()
 
       var res = indexer.search("keepit")
@@ -252,7 +247,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       res.size === 1
     })
 
-    "be able to dump Lucene Document" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
+    "be able to dump Lucene Document" in running(new SearchApplication())(new IndexerScope {
       indexer.update()
 
       store += (uri1.id.get -> mkArticle(uri1.id.get, "title1 titles", "content1 alldocs body soul"))
@@ -261,7 +256,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       doc.getFields.forall { f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
     })
 
-    "delete documents with inactive, active, unscrapable, or scrape_later state" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
+    "delete documents with inactive, active, unscrapable, or scrape_later state" in running(new SearchApplication())(new IndexerScope {
       indexer.update()
       indexer.numDocs === 3
 
@@ -292,7 +287,7 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
       indexer.search("content3").size === 0
     })
 
-    "retrieve article records from index" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
+    "retrieve article records from index" in running(new SearchApplication())(new IndexerScope {
       indexer.update()
       indexer.numDocs === 3
       import com.keepit.search.article.ArticleRecordSerializer._

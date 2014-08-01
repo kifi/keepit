@@ -11,20 +11,27 @@ import com.keepit.classify.DomainTagImporterModule
 import com.keepit.common.store.ShoeboxDevStoreModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.integrity.DataIntegrityModule
-import com.keepit.search.{ SearchServiceClientModule, ProdSearchServiceClientModule }
-import com.keepit.eliza.{ ElizaServiceClientModule, ProdElizaServiceClientModule }
+import com.keepit.search.{ SearchServiceClientModule }
+import com.keepit.eliza.{ ElizaServiceClientModule }
 import com.keepit.curator.CuratorServiceClientModule
 import com.keepit.common.social.ProdSocialGraphModule
-import com.keepit.heimdal.{ HeimdalServiceClientModule, ProdHeimdalServiceClientModule }
-import com.keepit.abook.{ ABookServiceClientModule, ProdABookServiceClientModule }
+import com.keepit.heimdal.{ HeimdalServiceClientModule }
+import com.keepit.abook.{ ABookServiceClientModule }
 import com.keepit.common.integration.ReaperModule
 import com.keepit.common.queue.SimpleQueueModule
 import com.keepit.queue.{ NormalizationUpdateJobQueueModule }
 import com.keepit.common.concurrent.ForkJoinContextMonitorModule
-import com.keepit.cortex.{ CortexServiceClientModule, ProdCortexServiceClientModule }
+import com.keepit.cortex.{ CortexServiceClientModule }
 import com.keepit.common.external.ExternalServiceModule
-import com.keepit.graph.{ GraphServiceClientModule, ProdGraphServiceClientModule }
+import com.keepit.graph.{ GraphServiceClientModule }
 import com.keepit.signal.ReKeepStatsUpdaterModule
+import com.keepit.common.zookeeper.ServiceTypeModule
+import com.keepit.common.service.ServiceType
+
+case class ShoeboxServiceTypeModule() extends ServiceTypeModule {
+  val serviceType = ServiceType.SHOEBOX
+  val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.CURATOR :: Nil
+}
 
 abstract class ShoeboxModule(
     //these are modules that inheriting modules need to provide
@@ -46,6 +53,7 @@ abstract class ShoeboxModule(
     val rekeepStatsUpdaterModule: ReKeepStatsUpdaterModule) extends ConfigurationModule with CommonServiceModule {
   //these are modules that are provided here (but can be overriden by inheriting modules)
   // Service clients
+  val serviceTypeModule = ShoeboxServiceTypeModule()
   val searchServiceClientModule: SearchServiceClientModule
   val shoeboxServiceClientModule: ShoeboxServiceClientModule
   val elizaServiceClientModule: ElizaServiceClientModule

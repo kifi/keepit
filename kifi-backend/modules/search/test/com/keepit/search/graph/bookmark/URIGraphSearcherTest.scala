@@ -16,6 +16,7 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import com.keepit.search.graph.GraphTestHelper
 import com.keepit.search.Lang
+import com.keepit.common.actor.TestActorSystemModule
 
 class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
@@ -64,7 +65,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
 
   "URIGraph" should {
     "generate UriToUsrEdgeSet" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
@@ -86,7 +87,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     }
 
     "generate UserToUriEdgeSet" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
@@ -113,7 +114,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     }
 
     "generate UserToUriEdgeSet in extreme case" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = superBigData
         val expectedUriToUserEdges = uris.dropRight(1).map { uri => (uri, Seq(users(0))) }.toList ::: List((uris.last, Seq(users(1))))
         expectedUriToUserEdges.size === bigDataSize
@@ -134,7 +135,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     }
 
     "intersect UserToUserEdgeSet and UriToUserEdgeSet" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
@@ -166,7 +167,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     }
 
     "intersect empty sets" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
         val indexer = mkURIGraphIndexer()
 
@@ -190,7 +191,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     }
 
     "determine whether intersection is empty" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val indexer = mkURIGraphIndexer()
         indexer.update()
 
@@ -204,7 +205,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     }
 
     "search personal bookmark titles" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
         val store = setupArticleStore(uris)
         val edges = uris.map { uri => (uri, users((uri.id.get.id % 2L).toInt), Some("personaltitle bmt" + uri.id.get.id)) }
@@ -237,7 +238,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     }
 
     "search personal bookmark domains" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
         val store = setupArticleStore(uris)
         val edges = uris.map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id)) }
@@ -278,7 +279,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     }
 
     "search personal bookmark url keyowrd" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
         val store = setupArticleStore(uris)
         val edges = uris.map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id)) }
@@ -317,7 +318,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     }
 
     "retrieve bookmark records from bookmark store" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
         val store = setupArticleStore(uris)
         val edges = uris.take(3).map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id)) }
@@ -347,7 +348,7 @@ class URIGraphSearcherTest extends Specification with GraphTestHelper {
     }
 
     "retrieve language profile" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
         val store = setupArticleStore(uris)
         val edges = uris.take(3).map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id)) }
