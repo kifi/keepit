@@ -1,8 +1,6 @@
 package com.keepit.scraper
 
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
 import com.keepit.common.controller.FakeActionAuthenticatorModule
 import com.keepit.common.store.ScraperTestStoreModule
 import com.keepit.scraper.embedly.TestEmbedlyModule
@@ -10,6 +8,7 @@ import com.keepit.scraper.fetcher.TestHttpFetcherModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ScraperTestInjector
 import org.specs2.mutable.SpecificationLike
+import org.specs2.specification.After
 import play.api.http.Status
 import play.api.libs.json.Json
 import play.api.mvc.SimpleResult
@@ -18,7 +17,7 @@ import play.api.test.Helpers._
 
 import scala.concurrent.Future
 
-class ScraperControllerTest extends TestKit(ActorSystem()) with SpecificationLike with ScraperTestInjector {
+class ScraperControllerTest extends TestKitSupport with SpecificationLike with After with ScraperTestInjector {
 
   val testFetcher: PartialFunction[String, HttpFetchStatus] = {
     case "https://www.google.com/" => HttpFetchStatus(Status.OK, None, new FetcherHttpContext {
