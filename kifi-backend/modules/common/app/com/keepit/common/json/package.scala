@@ -24,6 +24,7 @@ package object json {
 
   implicit class PimpedFormat[A](format: Format[A]) {
     private implicit val implicitFormat: Format[A] = format
+
     def convert[B](atob: A => B, btoa: B => A): Format[B] = Format(
       Reads(Json.fromJson[A](_).map(atob)),
       Writes(obj => Json.toJson(btoa(obj)))
