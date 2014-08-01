@@ -1,50 +1,39 @@
 package com.keepit.eliza
 
-import org.specs2.mutable._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.Id
-import com.keepit.inject._
-import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
-import com.keepit.common.cache.ElizaCacheModule
-import com.keepit.common.time._
-import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.common.db.Id
-import com.keepit.model.User
-import com.keepit.social.BasicUser
-import com.keepit.realtime.{ UrbanAirship, FakeUrbanAirship, FakeUrbanAirshipModule }
-import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
-import com.keepit.common.healthcheck.FakeAirbrakeNotifier
-import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
-import com.keepit.eliza.controllers.WebSocketRouter
-import com.keepit.eliza.commanders.{ MessageFetchingCommander, NotificationCommander, MessagingCommander }
-import com.keepit.eliza.controllers.internal.MessagingController
-import com.keepit.eliza.model._
-import com.keepit.common.crypto.FakeCryptoModule
 import com.google.inject.Injector
-import play.api.test.Helpers._
-import play.api.libs.json.{ Json, JsObject }
+import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.cache.ElizaCacheModule
+import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.common.db.Id
+import com.keepit.common.store.FakeElizaStoreModule
+import com.keepit.eliza.commanders.{ MessageFetchingCommander, MessagingCommander, NotificationCommander }
+import com.keepit.eliza.controllers.WebSocketRouter
+import com.keepit.eliza.model._
+import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
+import com.keepit.model.User
+import com.keepit.realtime.FakeUrbanAirshipModule
+import com.keepit.scraper.FakeScraperServiceClientModule
+import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
+import com.keepit.social.BasicUser
+import com.keepit.test.ElizaTestInjector
+import org.specs2.mutable._
+import play.api.libs.json.{ JsObject, Json }
+
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
-import akka.actor.ActorSystem
-import com.keepit.scraper.FakeScraperServiceClientModule
-import com.keepit.common.store.ElizaDevStoreModule
-import com.keepit.common.aws.AwsModule
-import com.keepit.common.store.FakeStoreModule
-import com.keepit.common.store.FakeElizaStoreModule
-import com.keepit.test.ElizaTestInjector
 
 class MessagingTest extends Specification with ElizaTestInjector {
 
   implicit val context = HeimdalContext.empty
 
   def modules = {
-    implicit val system = ActorSystem("test")
     Seq(
       ElizaCacheModule(),
       FakeShoeboxServiceModule(),
       FakeHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
-      StandaloneTestActorSystemModule(),
+      FakeActorSystemModule(),
       FakeABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeCryptoModule(),

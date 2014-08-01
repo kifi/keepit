@@ -1,19 +1,17 @@
 package com.keepit.classify
 
-import org.specs2.mutable._
-
-import com.keepit.common.db.slick.Database
-import com.keepit.test._
-
+import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.analytics.FakeAnalyticsModule
-import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
-import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.common.mail.FakeMailModule
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.test._
+import org.specs2.mutable._
 
 class DomainTagImporterTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
@@ -23,7 +21,7 @@ class DomainTagImporterTest extends TestKitSupport with SpecificationLike with S
     FakeHeimdalServiceClientModule(),
     FakeShoeboxStoreModule(),
     FakeDomainTagImporterModule(),
-    FakeActorSystemModule(Some(system)),
+    FakeActorSystemModule(),
     FakeSearchServiceClientModule(),
     FakeShoeboxServiceModule(),
     FakeAirbrakeModule(),

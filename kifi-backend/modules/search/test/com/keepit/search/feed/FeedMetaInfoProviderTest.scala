@@ -1,24 +1,19 @@
 package com.keepit.search.feed
 
-import org.specs2.mutable._
-import com.keepit.common.db.Id
-import com.keepit.shoebox.ShoeboxServiceClient
-import play.api.test.Helpers._
-import com.keepit.inject._
-import com.keepit.test._
-import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.shoebox.FakeShoeboxServiceClientImpl
+import akka.actor.ActorSystem
+import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
-import akka.actor.ActorSystem
-import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
+import com.keepit.test._
+import org.specs2.mutable._
 
 class FeedMetaInfoProviderTest extends Specification with SearchTestInjector {
   "FeedMetaInfoProvider" should {
     "work" in {
       implicit val system = ActorSystem("test")
-      withInjector(FakeShoeboxServiceModule(), StandaloneTestActorSystemModule(), FakeHttpClientModule()) { implicit injector =>
+      withInjector(FakeShoeboxServiceModule(), FakeActorSystemModule(), FakeHttpClientModule()) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val uris = client.saveURIs(
           NormalizedURI.withHash(title = Some("1"), normalizedUrl = "http://www.keepit.com/login", state = UNSCRAPABLE),

@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
+import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.controller.FakeActionAuthenticatorModule
 import com.keepit.common.store.ScraperTestStoreModule
 import com.keepit.scraper.embedly.FakeEmbedlyModule
@@ -35,7 +35,7 @@ class ScraperControllerTest extends TestKitSupport with SpecificationLike with A
       ScraperTestStoreModule(),
       FakeShoeboxServiceModule(),
       FakeActionAuthenticatorModule(),
-      FakeActorSystemModule(Some(system))
+      FakeActorSystemModule()
     )
   }
 

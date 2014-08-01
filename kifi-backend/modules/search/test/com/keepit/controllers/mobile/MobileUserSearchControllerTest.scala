@@ -1,26 +1,18 @@
 package com.keepit.controllers.mobile
 
+import akka.actor.ActorSystem
+import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.controller.FakeActionAuthenticatorModule
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.mail.EmailAddress
+import com.keepit.model._
+import com.keepit.search.user.{ UserIndexer, UserSearchFilterFactory }
+import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import com.keepit.test.{ SearchApplication, SearchApplicationInjector }
 import org.specs2.mutable._
-
-import com.keepit.model._
-import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
-import com.keepit.common.actor.StandaloneTestActorSystemModule
-
+import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.libs.json.Json
-
-import akka.actor.ActorSystem
-
-import com.keepit.shoebox.FakeShoeboxServiceClientImpl
-import com.keepit.shoebox.FakeShoeboxServiceModule
-
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.search.user.UserIndexer
-import com.keepit.search.user.UserSearchFilterFactory
-import com.keepit.common.mail.EmailAddress
 
 class MobileUserSearchControllerTest extends Specification with SearchApplicationInjector {
 
@@ -53,7 +45,7 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
   def modules = {
     implicit val system = ActorSystem("test")
     Seq(
-      StandaloneTestActorSystemModule(),
+      FakeActorSystemModule(),
       FakeActionAuthenticatorModule(),
       FakeShoeboxServiceModule()
     )

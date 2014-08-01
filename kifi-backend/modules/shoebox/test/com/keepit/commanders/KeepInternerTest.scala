@@ -1,27 +1,24 @@
 package com.keepit.commanders
 
+import akka.actor.ActorSystem
+import com.keepit.common.concurrent.ExecutionContext.fj
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck._
+import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.heimdal.{ HeimdalContext, KifiHitContext, SanitizedKifiHit }
+import com.keepit.model._
+import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.search.ArticleSearchResult
+import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test._
 import net.codingwell.scalaguice.ScalaModule
-import play.api.test.Helpers._
 import org.specs2.mutable.Specification
-import com.keepit.model._
 import play.api.libs.json.Json
-import com.keepit.common.healthcheck._
-import com.keepit.scraper.FakeScrapeSchedulerModule
-import com.keepit.heimdal.{ KifiHitContext, SanitizedKifiHit, HeimdalContext }
-import com.keepit.shoebox.{ FakeKeepImportsModule, KeepImportsModule }
-import com.keepit.common.actor.{ StandaloneTestActorSystemModule, FakeActorSystemModule }
-import akka.actor.ActorSystem
-import com.keepit.search.ArticleSearchResult
-import com.keepit.common.db.{ Id, ExternalId }
-import org.joda.time.DateTime
-import com.keepit.common.time._
-import play.api.libs.json.Json.JsValueWrapper
-import com.keepit.common.concurrent.ExecutionContext.fj
+
 import scala.collection.mutable
-import scala.concurrent.duration._
 import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class KeepInternerTest extends Specification with ShoeboxTestInjector {
 
