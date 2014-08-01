@@ -171,7 +171,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         path === s"/tags/${collections(0).externalId}/removeFromKeep"
 
         inject[FakeActionAuthenticator].setUser(user)
-        val request = FakeRequest("POST", path, FakeHeaders(), JsObject(Seq("url" -> JsString("http://www.google.com/"))))
+        val request = FakeRequest("POST", path).withBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
         val result = extBookmarksController.removeTag(collections(0).externalId)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json");
@@ -236,7 +236,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         path === s"/tags/${collections(0).externalId}/addToKeep"
 
         inject[FakeActionAuthenticator].setUser(user)
-        val request = FakeRequest("POST", path, FakeHeaders(), JsObject(Seq("url" -> JsString("http://www.google.com/"))))
+        val request = FakeRequest("POST", path).withBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
         val result = extBookmarksController.addTag(collections(0).externalId)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
@@ -293,7 +293,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         path === s"/tags/${collections(0).externalId}/addToKeep"
 
         inject[FakeActionAuthenticator].setUser(user)
-        val request = FakeRequest("POST", path, FakeHeaders(), JsObject(Seq("url" -> JsString("http://www.google.com/"))))
+        val request = FakeRequest("POST", path).withBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
         val result = extBookmarksController.addTag(collections(0).externalId)(request)
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json")
