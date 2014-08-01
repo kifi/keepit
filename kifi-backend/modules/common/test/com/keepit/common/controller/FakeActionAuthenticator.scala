@@ -8,7 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
-import com.keepit.social.{ SocialNetworkType, SocialId }
+import com.keepit.social.{ SecureSocialClientIds, SocialNetworkType, SocialId }
 
 import play.api.mvc._
 import securesocial.core._
@@ -27,6 +27,10 @@ case class FakeActionAuthenticatorModule() extends ScalaModule with Logging {
   @Singleton
   @Provides
   def fakeActionAuthenticator: FakeActionAuthenticator = new FakeActionAuthenticator
+
+  @Singleton
+  @Provides
+  def secureSocialClientIds: SecureSocialClientIds = SecureSocialClientIds("ovlhms1y0fjr", "530357056981814")
 
 }
 
