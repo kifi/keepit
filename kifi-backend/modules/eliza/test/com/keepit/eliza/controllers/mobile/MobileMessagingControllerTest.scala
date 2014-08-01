@@ -41,7 +41,6 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
       FakeHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
       StandaloneTestActorSystemModule(),
-      FakeActorSystemModule(),
       FakeABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeActionAuthenticatorModule(),
