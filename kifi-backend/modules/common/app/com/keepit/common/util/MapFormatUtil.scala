@@ -4,6 +4,9 @@ import com.keepit.model.ScoreType
 import com.keepit.model.ScoreType._
 import play.api.libs.json._
 
+import com.keepit.common.collection._
+import com.keepit.common.json._
+
 object MapFormatUtil {
   implicit val scoreTypeMapFormat = new Format[Map[ScoreType.Value, Float]] {
     def writes(map: Map[ScoreType.Value, Float]): JsValue =
@@ -19,5 +22,8 @@ object MapFormatUtil {
         }
       })
   }
+
+  implicit def scoreTypeMapFormat(implicit f: Format[Map[String, Float]]): Format[Map[ScoreType.Value, Float]] =
+    f.convert(_.mapKeys(ScoreType.withName _), _.mapKeys(_.toString))
 
 }

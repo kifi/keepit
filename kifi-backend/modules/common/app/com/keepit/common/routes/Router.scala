@@ -343,8 +343,7 @@ object Graph extends Service {
 
 object Curator extends Service {
   object internal {
-    //scoreCoefficient key should be one of "socialScore", "popularityScore", "overallInterestScore", "recentInterestScore", "recencyScore", "priorScore"
-    def adHocRecos(userId: Id[User], n: Int) = ServiceRoute(GET, "/internal/curator/adHocRecos", Param("userId", userId), Param("n", n))
+    def adHocRecos(userId: Id[User], n: Int) = ServiceRoute(POST, "/internal/curator/adHocRecos", Param("userId", userId), Param("n", n))
   }
 }
 
