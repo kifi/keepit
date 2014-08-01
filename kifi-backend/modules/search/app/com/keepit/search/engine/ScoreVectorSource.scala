@@ -51,6 +51,8 @@ class ArticleScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer],
     val taggedScores: Array[Int] = new Array[Int](pq.size) // tagged floats
     var size: Int = 0
 
+    if (pq.size <= 0) return // no scorer
+
     var top = pq.top
     var docId = top.doc
     while (docId < NO_MORE_DOCS) {

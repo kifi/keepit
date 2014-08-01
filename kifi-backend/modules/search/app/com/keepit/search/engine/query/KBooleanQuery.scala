@@ -61,7 +61,7 @@ class KBooleanQuery() extends BooleanQuery(false) {
   }
 
   override def createWeight(searcher: IndexSearcher) = {
-    new BooleanWeight(searcher, false) {
+    new BooleanWeight(searcher, false) with KWeight {
       private[this] val weightList = new ArrayBuffer[(Weight, Float)]
       private[this] val normalizationValue: Float = {
         var sum = 0.0d

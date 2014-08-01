@@ -499,11 +499,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def kifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit] = Future.successful()
 
+  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = Future.successful(Seq.empty)
+
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
     Future.successful(Seq.empty[ScrapeRequest])
   }
-
-  def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo] = ???
 
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
 
@@ -607,5 +607,5 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = Future.successful(Seq.empty)
 
-  def getLapsedUsersForDelighted(after: DateTime, before: Option[DateTime], maxCount: Int, skipCount: Int): Future[Seq[DelightedUserRegistrationInfo]] = Future.successful(Seq.empty)
+  def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]] = Future.successful(Seq.empty)
 }

@@ -46,6 +46,7 @@ case class PageInfo(
   def withId(pageInfoId: Id[PageInfo]) = copy(id = Some(pageInfoId))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
   def withImageInfoId(imgInfoId: Id[ImageInfo]) = copy(imageInfoId = Some(imgInfoId))
+  override def toString: String = s"PageInfo[id=$id,uri=$uriId]"
 }
 
 object PageInfo {

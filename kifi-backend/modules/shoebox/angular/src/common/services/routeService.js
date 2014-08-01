@@ -78,6 +78,10 @@ angular.module('kifi.routeService', [])
       userCloseAccount: route('/user/close'),
       adHocRecos: function (howMany) {
         return route('/recos/adHoc?n=' + howMany);
+      },
+      basicUserInfo: function (id, friendCount) {
+        friendCount = friendCount ? 1 : 0;
+        return route('/user/' + id + '?friendCount=' + friendCount);
       }
     };
   }

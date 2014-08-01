@@ -19,6 +19,7 @@ angular.module('kifi.layout.header', ['kifi.profileService'])
     });
 
     $scope.me = profileService.me;
+    $scope.me.picUrl = '//www.kifi.com/assets/img/ghost.200.png';
     profileService.getMe();
 
     $scope.isActive = function (path) {

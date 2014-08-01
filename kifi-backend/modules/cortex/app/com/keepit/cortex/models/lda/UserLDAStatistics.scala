@@ -12,7 +12,7 @@ import com.keepit.common.time._
 import com.keepit.cortex.MiscPrefix
 import com.keepit.cortex.core.{ Versionable, ModelVersion }
 import com.keepit.cortex.dbmodel.UserLDAInterestsRepo
-import com.keepit.cortex.utils.MatrixUtils
+import com.keepit.cortex.utils.MatrixUtils._
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 import scala.concurrent.duration._
@@ -76,7 +76,7 @@ class UserLDAStatisticsUpdater @Inject() (
 
   import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
-  private val MIN_EVIDENCE = 30
+  private val MIN_EVIDENCE = 100
 
   def update() {
     val (_, interests) = db.readOnlyReplica { implicit s => userTopicRepo.getAllUserTopicMean(representer.version, MIN_EVIDENCE) }
@@ -90,8 +90,8 @@ class UserLDAStatisticsUpdater @Inject() (
   }
 
   private def genStats(vecs: Seq[Array[Float]], version: ModelVersion[DenseLDA]): UserLDAStatistics = {
-    val (min, max) = MatrixUtils.getMinAndMax(vecs)
-    val (mean, std) = MatrixUtils.getMeanAndStd(vecs)
+    val (min, max) = getMinAndMax(vecs.map { vec => toDoubleArray(vec) })
+    val (mean, std) = getMeanAndStd(vecs.map { vec => toDoubleArray(vec) })
     UserLDAStatistics(currentDateTime, version, mean, std, min, max)
   }
 }
