@@ -32,7 +32,6 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
     FakeAirbrakeModule(),
     FakeMailModule(),
     FakeActionAuthenticatorModule(),
@@ -53,7 +52,6 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
 
       val userRepo = inject[UserRepo]
       val installationRepo = inject[KifiInstallationRepo]
-      val db = inject[Database]
       val mobileAuthController = inject[MobileAuthController]
 
       val user = db.readWrite { implicit s =>
