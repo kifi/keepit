@@ -19,6 +19,7 @@ angular.module('kifi.friendService', [
     var friendsPageSize = 20;
     var currentPage = 0;
     var totalFriends = 0;
+    var peopleYouMayKnowPageSize = 10;
 
     var clutchParams = {
       cacheDuration: 20000
@@ -44,6 +45,12 @@ angular.module('kifi.friendService', [
         util.replaceArrayInPlace(requests, res.data);
 
         return requests;
+      });
+    }, clutchParams);
+
+    var kifiPeopleYouMayKnowService = new Clutch(function (page) {
+      return $http.get(routeService.peopleYouMayKnow(page, peopleYouMayKnowPageSize)).then(function (res) {
+        return (res && res.data && res.data.users) ? res.data.users : [];
       });
     }, clutchParams);
 
@@ -133,9 +140,15 @@ angular.module('kifi.friendService', [
 
       getPictureUrlForUser: function (user) {
         return '//djty7jcqog9qu.cloudfront.net/users/' + user.id + '/pics/200/' + user.pictureName;
+      },
+
+      getPeopleYouMayKnow: function (page) {
+        return kifiPeopleYouMayKnowService.get(page || 0);
+      },
+
+      hidePeopleYouMayKnow: function (id) {
+        return $http.post(routeService.hideUserRecommendation(id));
       }
-
-
     };
 
     return api;
