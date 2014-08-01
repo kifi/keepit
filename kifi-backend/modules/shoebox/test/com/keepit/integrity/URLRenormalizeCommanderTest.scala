@@ -1,14 +1,17 @@
 package com.keepit.integrity
 
-import com.keepit.common.mail.ElectronicMail
-import org.specs2.mutable.Specification
-import com.keepit.test.ShoeboxTestInjector
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.db.slick.Database
-import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.common.healthcheck.SystemAdminMailSender
+import com.keepit.common.mail.ElectronicMail
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.model._
-
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.shoebox.FakeShoeboxServiceClientModule
+import com.keepit.test.{ ShoeboxApplication, ShoeboxTestInjector }
+import org.specs2.mutable.Specification
+import play.api.test.Helpers.running
 
 class URLRenormalizeCommanderTest extends Specification with ShoeboxTestInjector {
   "renormalizer" should {

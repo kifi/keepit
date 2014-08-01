@@ -222,15 +222,10 @@ object ApplicationBuild extends Build {
     EclipseKeys.skipParents in ThisBuild := false,
     sources in doc in Compile := List(),
     Keys.fork := false,
-    // Keys.fork in Test := false, // uncomment to hook debugger while running tests
-    /*skip in update := true,
-     *skip in update in (Compile, test) := true*/
     aggregate in update := false,
     emojiLogs,
-    // incOptions := incOptions.value.withNameHashing(true) // see https://groups.google.com/forum/#!msg/play-framework/S_-wYW5Tcvw/OjJuB4iUwD8J
     ScalariformKeys.preferences := ScalariformKeys.preferences.value
       .setPreference(DoubleIndentClassDeclaration, true)
-    //,     offline := true
   )
 
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(

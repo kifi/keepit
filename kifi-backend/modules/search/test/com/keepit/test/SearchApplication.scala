@@ -3,7 +3,7 @@ package com.keepit.test
 import akka.actor.ActorSystem
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.search.spellcheck.FakeSpellCorrectorModule
-import com.keepit.inject.{ TestFortyTwoModule, ApplicationInjector }
+import com.keepit.inject.{ FakeFortyTwoModule, ApplicationInjector }
 import java.io.File
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
@@ -11,37 +11,37 @@ import com.google.inject.util.Modules
 import com.google.inject.Module
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, SearchCacheModule }
 import com.keepit.common.zookeeper.FakeDiscoveryModule
-import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.search.index.DevIndexModule
-import com.keepit.search.tracker.DevTrackingModule
+import com.keepit.search.index.{ DevIndexModule, FakeIndexModule }
+import com.keepit.search.tracker.{ DevTrackingModule, FakeTrackingModule }
 import com.keepit.common.store.SearchFakeStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.search.{ SearchServiceTypeModule, TestSearchServiceClientModule, SearchConfigModule }
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.search.{ SearchServiceTypeModule, SearchConfigModule, FakeSearchConfigModule, FakeSearchServiceClientModule }
 
 class SearchApplication(overridingModules: Module*)(implicit path: File = new File("./modules/search/"))
   extends TestApplication(path, overridingModules, Seq(
     SearchServiceTypeModule(),
     FakeHttpClientModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),
     FakeHealthcheckModule(),
-    TestFortyTwoModule(),
+    FakeFortyTwoModule(),
     DevTrackingModule(),
     SearchFakeStoreModule(),
     DevIndexModule(),
     FakeDiscoveryModule(),
     FakeShoeboxServiceModule(),
-    TestSearchServiceClientModule(),
+    FakeSearchServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeSpellCorrectorModule(),
     SearchCacheModule(HashMapMemoryCacheModule()),
     SearchConfigModule(),
-    TestActorSystemModule()
+    FakeActorSystemModule()
   ))
 
 trait SearchApplicationInjector extends ApplicationInjector with SearchInjectionHelpers
@@ -52,22 +52,22 @@ trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
   val module = Modules.combine(
     StandaloneTestActorSystemModule(),
     FakeHttpClientModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     SearchServiceTypeModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),
     FakeHealthcheckModule(),
-    TestFortyTwoModule(),
-    DevTrackingModule(),
+    FakeFortyTwoModule(),
+    FakeTrackingModule(),
     SearchFakeStoreModule(),
-    DevIndexModule(),
+    FakeIndexModule(),
     FakeDiscoveryModule(),
     FakeShoeboxServiceModule(),
-    TestSearchServiceClientModule(),
+    FakeSearchServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeSpellCorrectorModule(),
     SearchCacheModule(HashMapMemoryCacheModule()),
-    SearchConfigModule()
+    FakeSearchConfigModule()
   )
 }

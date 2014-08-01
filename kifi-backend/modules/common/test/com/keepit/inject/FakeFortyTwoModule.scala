@@ -7,7 +7,7 @@ import play.api.Mode._
 import org.joda.time.DateTime
 import com.keepit.common.service.ServiceVersion
 
-case class TestFortyTwoModule() extends FortyTwoModule {
+case class FakeFortyTwoModule() extends FortyTwoModule {
   override def configure(): Unit = {
     install(FakeServiceModule())
     super.configure()

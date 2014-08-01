@@ -8,7 +8,7 @@ import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeMemoryUsageModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
-import com.keepit.inject.{ TestFortyTwoModule, InjectorProvider, ApplicationInjector, EmptyInjector }
+import com.keepit.inject.{ FakeFortyTwoModule, InjectorProvider, ApplicationInjector, EmptyInjector }
 import play.api.Mode
 import com.keepit.scraper.ScraperServiceTypeModule
 import com.keepit.common.store.ScraperTestStoreModule
@@ -21,7 +21,7 @@ class ScraperApplication(overridingModules: Module*)(implicit path: File = new F
     FakeMemoryUsageModule(),
     FakeClockModule(),
     FakeHealthcheckModule(),
-    TestFortyTwoModule(),
+    FakeFortyTwoModule(),
     FakeDiscoveryModule(),
     ScraperTestStoreModule(),
     ScraperCacheModule(HashMapMemoryCacheModule())

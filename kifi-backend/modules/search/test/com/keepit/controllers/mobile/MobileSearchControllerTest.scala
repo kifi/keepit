@@ -1,46 +1,46 @@
 package com.keepit.controllers.mobile
 
-import com.keepit.test.{ SearchApplication, SearchApplicationInjector }
-import org.specs2.mutable._
-import com.keepit.model._
-import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.inject._
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.inject._
+import com.keepit.model._
+import com.keepit.search._
+import com.keepit.search.index.{ IndexDirectory, IndexModule, IndexStore, VolatileIndexDirectory }
+import com.keepit.search.result.{ DecoratedResult, _ }
+import com.keepit.search.sharding.Shard
+import com.keepit.social.BasicUser
+import com.keepit.test.SearchTestInjector
+import org.apache.lucene.search.{ Explanation, Query }
+import com.keepit.common.util.Configuration
+import com.keepit.common.util.PlayAppConfigurationModule
+import org.specs2.mutable._
+import play.api.libs.json._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.libs.json._
-import akka.actor.ActorSystem
-import com.keepit.search._
-import com.keepit.search.index.{ IndexStore, VolatileIndexDirectory, IndexDirectory, DefaultAnalyzer }
-import com.keepit.social.BasicUser
-import com.keepit.search.sharding.Shard
-import com.keepit.search.index.IndexModule
-import com.keepit.search.result._
-import com.keepit.search.result.DecoratedResult
-import org.apache.lucene.search.{ Explanation, Query }
 
-class MobileSearchControllerTest extends Specification with SearchApplicationInjector {
+class MobileSearchControllerTest extends SpecificationLike with SearchTestInjector {
 
-  def modules = {
-    implicit val system = ActorSystem("test")
-    Seq(
-      StandaloneTestActorSystemModule(),
-      FakeActionAuthenticatorModule(),
-      FixedResultIndexModule()
-    )
-  }
+  def modules = Seq(
+    StandaloneTestActorSystemModule(),
+    FakeActionAuthenticatorModule(),
+    FixedResultIndexModule(),
+    FakeHttpClientModule(),
+    PlayAppConfigurationModule()
+  )
 
   "MobileSearchController" should {
     "search keeps (V1)" in {
-      running(new SearchApplication(modules: _*)) {
+      withInjector(modules: _*) { implicit injector =>
+        val mobileSearchController = inject[MobileSearchController]
         val path = com.keepit.controllers.mobile.routes.MobileSearchController.searchV1("test", None, 7, None, None, None, None, None, None, None).toString
         path === "/m/1/search?q=test&maxHits=7"
 
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom")
         inject[FakeActionAuthenticator].setUser(user)
         val request = FakeRequest("GET", path)
-        val result = route(request).get
+        val result = mobileSearchController.searchV1("test", None, 7, None, None, None, None, None, None, None)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
@@ -102,7 +102,7 @@ class MobileSearchControllerTest extends Specification with SearchApplicationInj
 case class FixedResultIndexModule() extends IndexModule {
   var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory] // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
-  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory = {
+  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore, conf: Configuration): IndexDirectory = {
     volatileDirMap.getOrElse((configName, shard), {
       val newdir = new VolatileIndexDirectory()
       volatileDirMap += (configName, shard) -> newdir

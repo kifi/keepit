@@ -12,9 +12,9 @@ import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.social.BasicUser
 import com.keepit.realtime.{ UrbanAirship, FakeUrbanAirship, FakeUrbanAirshipModule }
-import com.keepit.heimdal.{ HeimdalContext, TestHeimdalServiceClientModule }
+import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
-import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule }
+import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.commanders.{ MessageFetchingCommander, NotificationCommander, MessagingCommander }
 import com.keepit.eliza.controllers.internal.MessagingController
@@ -26,11 +26,11 @@ import play.api.libs.json.{ Json, JsObject }
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import akka.actor.ActorSystem
-import com.keepit.scraper.TestScraperServiceClientModule
+import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.common.store.ElizaDevStoreModule
 import com.keepit.common.aws.AwsModule
 import com.keepit.common.store.FakeStoreModule
-import com.keepit.common.store.ElizaFakeStoreModule
+import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.test.ElizaTestInjector
 
 class MessagingTest extends Specification with ElizaTestInjector {
@@ -42,14 +42,14 @@ class MessagingTest extends Specification with ElizaTestInjector {
     Seq(
       ElizaCacheModule(),
       FakeShoeboxServiceModule(),
-      TestHeimdalServiceClientModule(),
+      FakeHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
       StandaloneTestActorSystemModule(),
-      TestABookServiceClientModule(),
+      FakeABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeCryptoModule(),
-      TestScraperServiceClientModule(),
-      ElizaFakeStoreModule()
+      FakeScraperServiceClientModule(),
+      FakeElizaStoreModule()
     )
   }
 

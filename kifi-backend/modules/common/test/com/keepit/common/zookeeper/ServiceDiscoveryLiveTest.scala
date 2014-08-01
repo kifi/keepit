@@ -1,7 +1,7 @@
 package com.keepit.common.zookeeper
 
 import com.keepit.test._
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.amazon._
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.common.service._
@@ -43,7 +43,7 @@ class ServiceDiscoveryLiveTest extends Specification with CommonTestInjector {
   "discovery" should {
 
     "register" in {
-      withInjector(TestActorSystemModule()) { implicit injector =>
+      withInjector(FakeActorSystemModule()) { implicit injector =>
         val services = new FortyTwoServices(inject[Clock], Mode.Test, None, None, inject[FortyTwoConfig]) {
           override lazy val currentService: ServiceType = ServiceType.SHOEBOX
         }

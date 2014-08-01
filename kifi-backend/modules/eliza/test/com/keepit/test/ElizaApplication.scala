@@ -1,7 +1,7 @@
 package com.keepit.test
 
 import com.keepit.eliza.{ ElizaServiceTypeModule, FakeElizaServiceClientModule }
-import com.keepit.inject.{ TestFortyTwoModule, ApplicationInjector }
+import com.keepit.inject.{ FakeFortyTwoModule, ApplicationInjector }
 import com.keepit.common.db.TestDbInfo
 import java.io.File
 import com.keepit.common.time.FakeClockModule
@@ -11,20 +11,20 @@ import com.google.inject.util.Modules
 import com.google.inject.Module
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ElizaCacheModule }
 import com.keepit.common.zookeeper.FakeDiscoveryModule
-import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
 
 class ElizaApplication(overridingModules: Module*)(implicit path: File = new File("./modules/eliza/"))
   extends DbTestApplication(path, overridingModules, Seq(
     ElizaServiceTypeModule(),
     FakeHttpClientModule(),
-    TestABookServiceClientModule(),
+    FakeABookServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),
     FakeHealthcheckModule(),
-    TestFortyTwoModule(),
+    FakeFortyTwoModule(),
     FakeSlickModule(TestDbInfo.dbInfo),
     FakeDiscoveryModule(),
     ElizaCacheModule(HashMapMemoryCacheModule())

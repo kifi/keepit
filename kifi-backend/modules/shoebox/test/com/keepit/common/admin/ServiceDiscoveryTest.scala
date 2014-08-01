@@ -1,18 +1,20 @@
 package com.keepit.common.admin
 
-import play.api.test.Helpers._
-import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
-import play.api.test.FakeRequest
-import org.specs2.mutable.Specification
-import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceStatus
+import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.test.ShoeboxTestInjector
+import org.specs2.mutable.Specification
+import play.api.test.FakeRequest
+import play.api.test.Helpers._
 
 /**
  * Running in shoebox project instead of commons project since we need an actual module to run play with
  */
-class ServiceDiscoveryTest extends Specification with ShoeboxApplicationInjector {
+class ServiceDiscoveryTest extends Specification with ShoeboxTestInjector {
+  val modules = Seq.empty
+
   "up for deployment" in {
-    running(new ShoeboxApplication()) {
+    withDb(modules: _*) { implicit injector =>
       val route = com.keepit.common.admin.routes.ServiceController.upForDeployment().toString
       route === "/up/deployment"
 
@@ -24,7 +26,7 @@ class ServiceDiscoveryTest extends Specification with ShoeboxApplicationInjector
     }
   }
   "down for deployment" in {
-    running(new ShoeboxApplication()) {
+    withDb(modules: _*) { implicit injector =>
       val discovery = inject[ServiceDiscovery]
       discovery.changeStatus(ServiceStatus.STARTING)
       discovery.myStatus.get === ServiceStatus.STARTING
@@ -35,7 +37,7 @@ class ServiceDiscoveryTest extends Specification with ShoeboxApplicationInjector
     }
   }
   "up for elb" in {
-    running(new ShoeboxApplication()) {
+    withDb(modules: _*) { implicit injector =>
       val route = com.keepit.common.admin.routes.ServiceController.upForElb().toString
       route === "/up/elb"
 
@@ -47,7 +49,7 @@ class ServiceDiscoveryTest extends Specification with ShoeboxApplicationInjector
     }
   }
   "down for elb" in {
-    running(new ShoeboxApplication()) {
+    withDb(modules: _*) { implicit injector =>
       inject[ServiceDiscovery].changeStatus(ServiceStatus.STARTING)
       val controller = inject[ServiceController]
       val result = controller.upForElb()(FakeRequest())
@@ -56,7 +58,7 @@ class ServiceDiscoveryTest extends Specification with ShoeboxApplicationInjector
     }
   }
   "up for pingdom" in {
-    running(new ShoeboxApplication()) {
+    withDb(modules: _*) { implicit injector =>
       val route = com.keepit.common.admin.routes.ServiceController.upForPingdom().toString
       route === "/up/pingdom"
 
@@ -68,7 +70,7 @@ class ServiceDiscoveryTest extends Specification with ShoeboxApplicationInjector
     }
   }
   "down for pingdom" in {
-    running(new ShoeboxApplication()) {
+    withDb(modules: _*) { implicit injector =>
       inject[ServiceDiscovery].changeStatus(ServiceStatus.STARTING)
       val controller = inject[ServiceController]
       val result = controller.upForPingdom()(FakeRequest())
