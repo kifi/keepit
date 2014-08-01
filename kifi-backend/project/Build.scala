@@ -261,7 +261,7 @@ object ApplicationBuild extends Build {
     commands <++= angularDirectory { base =>
       Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
     },
-    commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) }
+    commands <+= angularDirectory { base => cmd("ng", "gulp", base, List("release")) }
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val search = play.Project("search", appVersion, searchDependencies, path = file("modules/search")).settings(
@@ -303,7 +303,7 @@ object ApplicationBuild extends Build {
     commands <++= angularDirectory { base =>
       Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
     },
-    commands <+= angularDirectory { base => cmd("ng", "grunt", base, List("dev")) }
+    commands <+= angularDirectory { base => cmd("ng", "gulp", base, List("release")) }
   )
     .dependsOn(
     common % "test->test;compile->compile",

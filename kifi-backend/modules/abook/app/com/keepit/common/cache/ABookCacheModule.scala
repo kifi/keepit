@@ -9,6 +9,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.abook.typeahead.EContactTypeaheadCache
 import com.keepit.abook.model.EContactCache
+import com.keepit.graph.model.{ ConnectedUserScoreCache, ConnectedUriScoreCache }
 
 case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
 
@@ -76,11 +77,6 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def userIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 24 hours))
-
-  @Singleton
-  @Provides
-  def userImageUrlCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserImageUrlCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 10 minute))
 
   @Singleton
   @Provides
@@ -159,4 +155,14 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides @Singleton
   def verifiedEmailUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new VerifiedEmailUserIdCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def uriScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ConnectedUriScoreCache(stats, accessLog, (innerRepo, 30 seconds), (outerRepo, 10 minutes))
+
+  @Singleton
+  @Provides
+  def userScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ConnectedUserScoreCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 5 hours))
 }

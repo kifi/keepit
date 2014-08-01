@@ -66,7 +66,7 @@ object User {
 case class Username(value: String)
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
-  override val version = 6
+  override val version = 7
   val namespace = "user_by_external_id"
   def toKey(): String = externalId.id
 }
@@ -75,7 +75,7 @@ class UserExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[UserExternalIdKey, User](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class UserIdKey(id: Id[User]) extends Key[User] {
-  override val version = 7
+  override val version = 8
   val namespace = "user_by_id"
   def toKey(): String = id.id.toString
 }
@@ -92,10 +92,10 @@ case class ExternalUserIdKey(id: ExternalId[User]) extends Key[Id[User]] {
 class ExternalUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[ExternalUserIdKey, Id[User]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(Id.format[User])
 
-case class UserImageUrlCacheKey(userId: Id[User], width: Int) extends Key[String] {
+case class UserImageUrlCacheKey(userId: Id[User], width: Int, imageName: String) extends Key[String] {
   override val version = 1
   val namespace = "user_image_by_width"
-  def toKey(): String = s"$userId#$width"
+  def toKey(): String = s"$userId#$width#$imageName"
 }
 
 class UserImageUrlCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)

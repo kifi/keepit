@@ -70,9 +70,8 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
         val path = com.keepit.controllers.ext.routes.ExtUserSearchController.search("woody", None, None, 3).toString
         path === "/search/users/search?query=woody&maxHits=3"
 
-        inject[FakeActionAuthenticator].setUser(users(0))
         val request = FakeRequest("GET", path)
-        val result = route(request).get
+        val result = inject[ExtUserSearchController].search("woody", None, None, 3)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
@@ -109,9 +108,8 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
         val path = com.keepit.controllers.ext.routes.ExtUserSearchController.page("firstNa", None, 0, 10).toString
         path === "/search/users/page?query=firstNa&pageNum=0&pageSize=10"
 
-        inject[FakeActionAuthenticator].setUser(users(0))
         val request = FakeRequest("GET", path)
-        val result = route(request).get
+        val result = inject[ExtUserSearchController].page("firstNa", None, 0, 10)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
@@ -162,9 +160,8 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
         val path = com.keepit.controllers.ext.routes.ExtUserSearchController.page("woody@fox.com", None, 0, 10).toString
         path === "/search/users/page?query=woody%40fox.com&pageNum=0&pageSize=10"
 
-        inject[FakeActionAuthenticator].setUser(users(0))
         val request = FakeRequest("GET", path)
-        val result = route(request).get
+        val result = inject[ExtUserSearchController].page("woody@fox.com", None, 0, 10)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 

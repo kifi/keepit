@@ -1,42 +1,39 @@
 package com.keepit.classify
 
+import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
+import com.keepit.common.analytics.FakeAnalyticsModule
+import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
+import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.search.TestSearchServiceClientModule
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.test.{ CommonTestInjector, DbInjectionHelper }
 import org.specs2.mutable.SpecificationLike
 
-import com.keepit.common.db.slick.Database
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.inject._
-import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
-
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
-import play.api.test.Helpers.running
-import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.analytics.TestAnalyticsModule
-import com.keepit.common.actor.TestActorSystemModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.search.TestSearchServiceClientModule
-import com.keepit.akka.TestKitScope
-import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.heimdal.TestHeimdalServiceClientModule
-
-class DomainClassifierTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
+class DomainClassifierTest extends TestKitSupport with SpecificationLike with CommonTestInjector with DbInjectionHelper {
 
   val domainClassifierTestModules = Seq(
     FakeMailModule(),
-    TestAnalyticsModule(),
+    FakeAnalyticsModule(),
     ShoeboxFakeStoreModule(),
     TestHeimdalServiceClientModule(),
     FakeDomainTagImporterModule(),
-    TestActorSystemModule(Some(system)),
+    FakeActorSystemModule(Some(system)),
     FakeShoeboxServiceModule(),
     TestSearchServiceClientModule(),
+    FakeSlickModule(TestDbInfo.dbInfo),
+    ShoeboxCacheModule(HashMapMemoryCacheModule()),
     FakeAirbrakeModule()
   )
 
   "The domain classifier" should {
     "use imported classifications and not fetch for known domains" in {
-      running(new ShoeboxApplication(domainClassifierTestModules :+ FakeHttpClientModule(): _*)) {
+      withDb(domainClassifierTestModules :+ FakeHttpClientModule(): _*) { implicit injector =>
         val classifier = inject[DomainClassifierImpl]
         val tagRepo = inject[DomainTagRepo]
         val importer = inject[DomainTagImporterImpl]
@@ -58,14 +55,14 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with SpecificationLike
       }
     }
     "fetch if necessary" in {
-      running(new ShoeboxApplication(domainClassifierTestModules :+ FakeHttpClientModule {
+      withDb(domainClassifierTestModules :+ FakeHttpClientModule {
         case s if s.url.contains("yahoo.com") => "FR~Search engines"
         case s if s.url.contains("zdnet.com") => "FM~Technology and computers,News and magazines"
         case s if s.url.contains("schwab.com") => "FM~Business and services,Finance (Banks, Real estate, Insurance)"
         case s if s.url.contains("hover.com") => "FM~Business and services,Web hosting"
         case s if s.url.contains("42go.com") || s.url.contains("addepar.com") => "FM~Technology and computers"
         case s if s.url.contains("playboy.com") || s.url.contains("porn.com") => "FM~Porn"
-      }: _*)) {
+      }: _*) { implicit injector =>
         val classifier = inject[DomainClassifierImpl]
         val domainRepo = inject[DomainRepo]
         val tagRepo = inject[DomainTagRepo]

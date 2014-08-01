@@ -3,7 +3,11 @@ package com.keepit.graph
 import com.keepit.graph.controllers.internal.GraphController
 import com.keepit.graph.manager.GraphManager
 import com.keepit.graph.simple.SimpleGraphTestModule
+<<<<<<< HEAD
 import com.keepit.graph.test.{ GraphTestInjector }
+=======
+import com.keepit.graph.test.{ GraphApplication, GraphApplicationInjector }
+>>>>>>> 3f1caafd07888b4a7d3c4a121c9568f1fbee27f9
 import org.specs2.mutable.Specification
 import play.api.test.FakeRequest
 import play.api.test.Helpers._

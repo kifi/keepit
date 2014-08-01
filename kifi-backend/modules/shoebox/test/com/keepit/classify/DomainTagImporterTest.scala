@@ -5,11 +5,8 @@ import org.specs2.mutable._
 import com.keepit.common.db.slick.Database
 import com.keepit.test._
 
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
-import play.api.test.Helpers._
-import com.keepit.common.analytics.TestAnalyticsModule
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.analytics.FakeAnalyticsModule
+import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.search.TestSearchServiceClientModule
@@ -18,15 +15,15 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 
-class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
+class DomainTagImporterTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
   val domainTagImporterTestModules = Seq(
     FakeMailModule(),
-    TestAnalyticsModule(),
+    FakeAnalyticsModule(),
     TestHeimdalServiceClientModule(),
     ShoeboxFakeStoreModule(),
     FakeDomainTagImporterModule(),
-    TestActorSystemModule(Some(system)),
+    FakeActorSystemModule(Some(system)),
     TestSearchServiceClientModule(),
     FakeShoeboxServiceModule(),
     FakeAirbrakeModule(),
@@ -35,7 +32,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
 
   "The domain tag importer" should {
     "load domain sensitivity from a map of tags to domains" in {
-      running(new ShoeboxApplication(domainTagImporterTestModules: _*)) {
+      withDb(domainTagImporterTestModules: _*) { implicit injector =>
         val db = inject[Database]
         val tagRepo = inject[DomainTagRepo]
         val domainTagImporter = inject[DomainTagImporterImpl]
@@ -69,7 +66,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
       }
     }
     "properly remove domain tags" in {
-      running(new ShoeboxApplication(domainTagImporterTestModules: _*)) {
+      withDb(domainTagImporterTestModules: _*) { implicit injector =>
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val db = inject[Database]
@@ -102,7 +99,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
       }
     }
     "respect manual overrides" in {
-      running(new ShoeboxApplication(domainTagImporterTestModules: _*)) {
+      withDb(domainTagImporterTestModules: _*) { implicit injector =>
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val db = inject[Database]

@@ -59,6 +59,8 @@ trait ABookServiceClient extends ServiceClient {
   def getEmailAccountsChanged(seqNum: SequenceNumber[IngestableEmailAccount], fetchSize: Int): Future[Seq[IngestableEmailAccount]]
   def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]]
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]]
+  def findFriends(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]]
+  def hideUserRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -236,6 +238,14 @@ class ABookServiceClientImpl @Inject() (
 
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] =
     call(ABook.internal.getUsersWithContact(email)).map(_.json.as[Set[Id[User]]])
+
+  def findFriends(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = {
+    call(ABook.internal.findFriends(userId: Id[User], page: Int, pageSize: Int)).map(_.json.as[Seq[Id[User]]])
+  }
+
+  def hideUserRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit] = {
+    call(ABook.internal.hideUserRecommendation(userId: Id[User], irrelevantUserId: Id[User])).map(_ => ())
+  }
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
@@ -302,4 +312,8 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]] = Future.successful(Seq.empty)
 
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] = Future.successful(contactsConnectedToEmailAddress)
+
+  def findFriends(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = Future.successful(Seq.empty)
+
+  def hideUserRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit] = Future.successful(())
 }

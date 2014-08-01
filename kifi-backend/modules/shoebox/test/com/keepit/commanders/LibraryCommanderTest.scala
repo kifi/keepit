@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Injector
-import com.keepit.common.crypto.{ PublicIdConfiguration, TestCryptoModule }
+import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.time._
 import com.keepit.model._
@@ -125,16 +125,26 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
       val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
         uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+
+      val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "USA"))
+      val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "food"))
+
+      keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
+      keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
+      keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag1.id.get))
+      keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
     }
     db.readOnlyMaster { implicit s =>
       keepRepo.count === 3
+      collectionRepo.count(userCaptain.id.get) === 2
+      keepToCollectionRepo.count === 4
     }
     (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
   }
 
   "LibraryCommander" should {
     "create libraries, memberships & invites" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         val (userIron, userCaptain, userAgent, userHulk) = setupUsers()
 
         db.readOnlyMaster { implicit s =>
@@ -198,7 +208,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "modify library" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
 
         val libraryCommander = inject[LibraryCommander]
@@ -237,7 +247,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "remove library, memberships & invites" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         db.readOnlyMaster { implicit s =>
@@ -272,7 +282,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "get library by publicId" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         val libraryCommander = inject[LibraryCommander]
@@ -287,7 +297,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "get libraries by user (which libs am I following / contributing to?)" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
 
@@ -318,7 +328,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "intern user system libraries" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val libraryCommander = inject[LibraryCommander]
 
@@ -396,7 +406,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "invite users" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
         val libraryCommander = inject[LibraryCommander]
@@ -435,7 +445,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "let users join or decline library invites" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
         val libraryCommander = inject[LibraryCommander]
@@ -473,7 +483,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "let users leave library" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         val libraryCommander = inject[LibraryCommander]
@@ -493,7 +503,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "get keeps" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
         val libraryCommander = inject[LibraryCommander]
@@ -507,7 +517,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "copy keeps to another library" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
         val libraryCommander = inject[LibraryCommander]
@@ -566,7 +576,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "move keeps to another library" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
         val libraryCommander = inject[LibraryCommander]

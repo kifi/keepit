@@ -29,7 +29,6 @@ case class Library(
   def withId(id: Id[Library]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(myState: State[Library]) = this.copy(state = myState)
-
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {

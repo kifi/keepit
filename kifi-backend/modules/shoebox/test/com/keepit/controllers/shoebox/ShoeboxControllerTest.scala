@@ -3,52 +3,52 @@ package com.keepit.controllers.internal
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.slick._
-import com.keepit.common.social.{ TestShoeboxAppSecureSocialModule, FakeSocialGraphModule, BasicUserRepo }
+import com.keepit.common.social.{ FakeSocialGraphModule, BasicUserRepo }
 import com.keepit.model._
 import com.keepit.search.{ TestSearchServiceClientModule, Lang }
-import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
+import com.keepit.test.{ ShoeboxTestInjector }
 import com.keepit.common.controller._
 
-import play.api.Play
 import play.api.libs.json.{ Json, JsNumber, JsArray }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import com.google.inject.Injector
-import com.keepit.shoebox.{ ShoeboxSlickModule, FakeShoeboxServiceModule }
+import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.analytics.TestAnalyticsModule
+import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.scraper.{ TestScrapeSchedulerConfigModule, TestScraperServiceClientModule, FakeScrapeSchedulerModule }
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{ SequenceNumber }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.common.crypto.FakeCryptoModule
 
-class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjector {
+class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
 
   val shoeboxControllerTestModules = Seq(
-    ShoeboxSlickModule(),
     FakeShoeboxServiceModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
-    TestAnalyticsModule(),
+    FakeAnalyticsModule(),
     ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
+    FakeActorSystemModule(),
     TestSearchServiceClientModule(),
     FakeAirbrakeModule(),
     FakeActionAuthenticatorModule(),
-    TestShoeboxAppSecureSocialModule(),
     TestABookServiceClientModule(),
     FakeSocialGraphModule(),
     FakeScrapeSchedulerModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     TestScraperServiceClientModule(),
-    TestScrapeSchedulerConfigModule()
+    TestScrapeSchedulerConfigModule(),
+    FakeKeepImportsModule(),
+    FakeCryptoModule(),
+    UrlPatternRuleModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {
@@ -83,12 +83,11 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
   "ShoeboxController" should {
 
     "return users from the database" in {
-      running(new ShoeboxApplication(shoeboxControllerTestModules: _*)) {
+      withDb(shoeboxControllerTestModules: _*) { implicit injector =>
         val (user1965, friends) = setupSomeUsers()
         val users = user1965 :: friends
-        val shoeboxController = inject[ShoeboxController]
         val query = users.map(_.id.get).mkString(",")
-        val result = shoeboxController.getUsers(query)(FakeRequest())
+        val result = inject[ShoeboxController].getUsers(query)(FakeRequest())
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
         contentAsString(result) must equalTo(JsArray(users.map(Json.toJson(_))).toString())
@@ -96,7 +95,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     }
 
     "return basic users from the database" in {
-      running(new ShoeboxApplication(shoeboxControllerTestModules: _*)) {
+      withDb(shoeboxControllerTestModules: _*) { implicit injector =>
         val (user1965, friends) = setupSomeUsers()
         val users = user1965 :: friends
         val basicUserRepo = inject[BasicUserRepo]
@@ -104,10 +103,8 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
           users.map { u => (u.id.get.id.toString -> Json.toJson(basicUserRepo.load(u.id.get))) }.toMap
         }
 
-        val query = users.map(_.id.get).mkString(",")
         val payload = JsArray(users.map(_.id.get).map(x => JsNumber(x.id)))
-        val path = com.keepit.controllers.internal.routes.ShoeboxController.getBasicUsers().toString
-        val result = route(FakeRequest("POST", path).withJsonBody(payload)).get
+        val result = inject[ShoeboxController].getBasicUsers()(FakeRequest().withBody(payload))
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
         contentAsString(result) must equalTo(Json.toJson(basicUsersJson).toString())
@@ -115,10 +112,9 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     }
 
     "return connected users' ids from the database" in {
-      running(new ShoeboxApplication(shoeboxControllerTestModules: _*)) {
+      withDb(shoeboxControllerTestModules: _*) { implicit injector =>
         val (user1965, friends) = setupSomeUsers()
-        val shoeboxController = inject[ShoeboxController]
-        val result = shoeboxController.getConnectedUsers(user1965.id.get)(FakeRequest())
+        val result = inject[ShoeboxController].getConnectedUsers(user1965.id.get)(FakeRequest())
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
         contentAsString(result) must equalTo(JsArray(friends.map(friend => JsNumber(friend.id.get.id))).toString())
@@ -126,12 +122,9 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     }
 
     "return phrases changed from the database" in {
-      running(new ShoeboxApplication(shoeboxControllerTestModules: _*)) {
+      withDb(shoeboxControllerTestModules: _*) { implicit injector =>
         setupSomePhrases()
-        val route = com.keepit.controllers.internal.routes.ShoeboxDataPipeController.getPhrasesChanged(SequenceNumber(4), 2).toString
-        route === "/internal/shoebox/database/getPhrasesChanged?seqNum=4&fetchSize=2"
-        val shoeboxController = inject[ShoeboxDataPipeController]
-        val result = shoeboxController.getPhrasesChanged(SequenceNumber(4), 2)(FakeRequest())
+        val result = inject[ShoeboxDataPipeController].getPhrasesChanged(SequenceNumber(4), 2)(FakeRequest())
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
         contentAsString(result) must contain("gaz parfait");

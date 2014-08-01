@@ -8,7 +8,7 @@ import play.api.libs.functional.syntax._
 import com.keepit.common.db._
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import com.keepit.common.json.JsonFormatters._
+import com.keepit.common.json._
 import org.apache.commons.lang3.RandomStringUtils
 import com.keepit.common.store.ImageSize
 import com.keepit.scraper.embedly.EmbedlyKeyword
@@ -46,6 +46,7 @@ case class PageInfo(
   def withId(pageInfoId: Id[PageInfo]) = copy(id = Some(pageInfoId))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
   def withImageInfoId(imgInfoId: Id[ImageInfo]) = copy(imageInfoId = Some(imgInfoId))
+  override def toString: String = s"PageInfo[id=$id,uri=$uriId]"
 }
 
 object PageInfo {

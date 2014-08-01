@@ -16,6 +16,7 @@ import org.joda.time.DateTime
 trait UserLDAInterestsRepo extends DbRepo[UserLDAInterests] {
   def getByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserLDAInterests]
   def getTopicMeanByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserTopicMean]
+  def getAllUserTopicMean(version: ModelVersion[DenseLDA], minEvidence: Int)(implicit session: RSession): (Seq[Id[User]], Seq[UserTopicMean])
 }
 
 @Singleton
@@ -50,6 +51,11 @@ class UserLDAInterestsRepoImpl @Inject() (
 
   def getTopicMeanByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserTopicMean] = {
     (for { r <- rows if (r.userId === userId && r.version === version && r.state === UserLDAInterestsStates.ACTIVE) } yield r.userTopicMean).firstOption
+  }
+
+  def getAllUserTopicMean(version: ModelVersion[DenseLDA], minEvidence: Int)(implicit session: RSession): (Seq[Id[User]], Seq[UserTopicMean]) = {
+    val res = (for { r <- rows if (r.version === version && r.numOfEvidence > minEvidence && r.state === UserLDAInterestsStates.ACTIVE) } yield (r.userId, r.userTopicMean)).list
+    res.unzip
   }
 
 }

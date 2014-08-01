@@ -5,7 +5,7 @@ import org.specs2.mutable._
 
 import com.keepit.common.db.LargeString._
 import com.keepit.inject._
-import com.keepit.test.TestInjector
+import com.keepit.test.CommonTestInjector
 import com.google.inject.Injector
 import com.keepit.common.cache.HeimdalCacheModule
 import com.keepit.common.time._
@@ -18,11 +18,11 @@ import com.keepit.common.db.Id
 import akka.actor.ActorSystem
 import com.keepit.social.NonUserKinds
 
-class EventTrackingTest extends Specification with TestInjector {
+class EventTrackingTest extends Specification with CommonTestInjector {
 
   def modules = {
     implicit val system = ActorSystem("test")
-    Seq(TestMongoModule(), StandaloneTestActorSystemModule(), HeimdalQueueDevModule())
+    Seq(FakeMongoModule(), StandaloneTestActorSystemModule(), HeimdalQueueDevModule(), HeimdalServiceTypeModule())
   }
 
   def setup()(implicit injector: Injector) = {
@@ -31,10 +31,10 @@ class EventTrackingTest extends Specification with TestInjector {
     val testContext = HeimdalContext(Map(
       "testField" -> ContextStringData("Yay!")
     ))
-    val userEventRepo = inject[UserEventLoggingRepo].asInstanceOf[TestUserEventLoggingRepo]
-    val systemEventRepo = inject[SystemEventLoggingRepo].asInstanceOf[TestSystemEventLoggingRepo]
-    val anonymousEventRepo = inject[AnonymousEventLoggingRepo].asInstanceOf[TestAnonymousEventLoggingRepo]
-    val nonUserEventRepo = inject[NonUserEventLoggingRepo].asInstanceOf[TestNonUserEventLoggingRepo]
+    val userEventRepo = inject[UserEventLoggingRepo].asInstanceOf[FakeUserEventLoggingRepo]
+    val systemEventRepo = inject[SystemEventLoggingRepo].asInstanceOf[FakeSystemEventLoggingRepo]
+    val anonymousEventRepo = inject[AnonymousEventLoggingRepo].asInstanceOf[FakeAnonymousEventLoggingRepo]
+    val nonUserEventRepo = inject[NonUserEventLoggingRepo].asInstanceOf[FakeNonUserEventLoggingRepo]
 
     (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, nonUserEventRepo, testContext)
   }

@@ -7,7 +7,7 @@ import org.joda.time._
 import com.google.inject.Injector
 import com.keepit.test._
 
-class DatabaseDialectTest extends Specification with DbTestInjector {
+class DatabaseDialectTest extends Specification with SqlDbTestInjector {
 
   val dec_20_2013 = new DateTime(2013, 12, 20, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
 

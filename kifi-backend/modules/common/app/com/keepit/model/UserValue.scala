@@ -58,6 +58,7 @@ object UserValueName {
   val PENDING_PRIMARY_EMAIL = UserValueName("pending_primary_email")
   val EXT_SHOW_EXT_MSG_INTRO = UserValueName("ext_show_ext_msg_intro")
   val FRIENDS_NOTIFIED_ABOUT_JOINING = UserValueName("friendsNotifiedAboutJoining")
+  val CONTACTS_NOTIFIED_ABOUT_JOINING = UserValueName("contactsNotifiedAboutJoining")
   val UPDATED_USER_CONNECTIONS = UserValueName("updated_user_connections")
   val SITE_LEFT_COL_WIDTH = UserValueName("site_left_col_width")
   val SITE_WELCOMED = UserValueName("site_welcomed")

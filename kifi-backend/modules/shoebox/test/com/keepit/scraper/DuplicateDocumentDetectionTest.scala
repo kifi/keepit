@@ -7,14 +7,14 @@ import com.keepit.test.ShoeboxTestInjector
 import javax.xml.bind.DatatypeConverter._
 import com.google.inject.Injector
 import com.keepit.integrity.DuplicateDocumentDetection
-import com.keepit.common.mail.TestMailModule
+import com.keepit.common.mail.FakeMailModule
 
 class DuplicateDocumentDetectionTest extends Specification with ShoeboxTestInjector {
 
   "Signature" should {
 
     "find similar documents of different thresholds" in {
-      withDb(TestMailModule(), FakeScrapeSchedulerModule()) { implicit injector: Injector =>
+      withDb(FakeMailModule(), FakeScrapeSchedulerModule()) { implicit injector: Injector =>
 
         val builder1 = new FakeSignatureBuilder(3)
         val builder2 = new FakeSignatureBuilder(3)

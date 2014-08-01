@@ -7,9 +7,9 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
 import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 
-class HealthcheckModuleTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
+class HealthcheckModuleTest extends TestKitSupport with SpecificationLike with ShoeboxApplicationInjector {
 
   class FakeMailSender extends MailSender(null, null) {
     var mailQueue: List[ElectronicMail] = Nil
@@ -29,18 +29,20 @@ class HealthcheckModuleTest extends TestKit(ActorSystem()) with SpecificationLik
 
   "HealthcheckModule" should {
     "load" in {
-      running(new ShoeboxApplication(FakeMailModule(), prodHealthCheckModuleWithLocalSender, TestActorSystemModule(Some(system)))) {
+      running(new ShoeboxApplication(FakeMailModule(), prodHealthCheckModuleWithLocalSender, FakeActorSystemModule(Some(system)))) {
         val healthcheck = inject[HealthcheckPlugin]
 
-        val mail1 = healthcheck.reportStart()
-
         val outbox = fakeMailSender.mailQueue
-        outbox.size === 1
-        outbox(0).htmlBody === mail1.htmlBody
-        mail1.subject.endsWith("started") === true
+        outbox.size === 0
 
-        val mail2 = healthcheck.reportStop()
-        mail2.subject.endsWith("stopped") === true
+        healthcheck.errorCount() === 0
+        healthcheck.addError(AirbrakeError(new Exception("foo")))
+        healthcheck.errorCount() === 1
+
+        healthcheck.resetErrorCount()
+
+        healthcheck.errorCount() === 0
+
       }
     }
   }

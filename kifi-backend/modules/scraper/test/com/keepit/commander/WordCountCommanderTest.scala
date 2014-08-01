@@ -1,22 +1,20 @@
 package com.keepit.commander
 
 import com.keepit.commanders.WordCountCommanderImpl
+import com.keepit.common.cache.{ HashMapMemoryCacheModule, ScraperCacheModule }
 import com.keepit.common.db.Id
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
-import com.keepit.inject.ApplicationInjector
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model._
-import com.keepit.scraper.{ BasicArticle, ScrapeProcessor, Signature, TestScraperServiceModule }
+import com.keepit.scraper.{ BasicArticle, ScrapeProcessor, Signature }
 import com.keepit.scraper.extractor._
-import com.keepit.search.{ Article, ArticleStore, Lang }
-import com.keepit.test.TestApplication
+import com.keepit.search.{ InMemoryArticleStoreImpl, Article, Lang }
+import com.keepit.test.CommonTestInjector
 import org.specs2.mutable.Specification
-import play.api.test.Helpers.running
-
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 
-class WordCountCommanderTest extends Specification with ApplicationInjector {
+class WordCountCommanderTest extends Specification with CommonTestInjector {
 
   val english = Lang("en")
 
@@ -49,8 +47,8 @@ class WordCountCommanderTest extends Specification with ApplicationInjector {
 
   "WordCountCommander" should {
     "get word count" in {
-      running(new TestApplication(TestScraperServiceModule())) {
-        val store = inject[ArticleStore]
+      withInjector(ScraperCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
+        val store = new InMemoryArticleStoreImpl()
         val countCache = inject[NormalizedURIWordCountCache]
         val sumCache = inject[URISummaryCache]
         val uids = (1 to 3).map { i => Id[NormalizedURI](i) }

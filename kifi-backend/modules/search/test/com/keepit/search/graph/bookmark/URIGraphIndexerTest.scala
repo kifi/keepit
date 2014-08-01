@@ -6,7 +6,6 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db._
 import com.keepit.test._
 import org.specs2.mutable._
-import play.api.test.Helpers._
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.TermQuery
@@ -15,11 +14,11 @@ import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.graph.BaseGraphSearcher
 import com.keepit.search.graph.GraphTestHelper
 
-class URIGraphIndexerTest extends Specification with GraphTestHelper {
+class URIGraphIndexerTest extends Specification with SearchTestInjector with GraphTestHelper {
 
   "URIGraphIndexer" should {
     "maintain a sequence number on bookmarks " in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      withInjector() { implicit injector =>
         val (users, uris) = initData
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
@@ -38,7 +37,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
     }
 
     "find users by uri" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      withInjector() { implicit injector =>
         val (users, uris) = initData
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
 
@@ -69,7 +68,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
     }
 
     "store user to keep associations in URILists" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      withInjector() { implicit injector =>
         val (users, uris) = initData
 
         val indexer = mkURIGraphIndexer()
@@ -97,7 +96,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
     }
 
     "dump Lucene Document" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      withInjector() { implicit injector =>
         val store = new FakeArticleStore()
 
         val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = ""))

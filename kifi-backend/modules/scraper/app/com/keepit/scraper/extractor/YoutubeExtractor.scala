@@ -1,21 +1,23 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.scraper.ScraperConfig
+import java.net.URLEncoder
+
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.net.{ Host, URI }
+import com.keepit.model.HttpProxy
+import com.keepit.scraper.ScraperConfig
 import com.keepit.scraper.fetcher.HttpFetcher
 import com.keepit.search.Lang
-import org.jsoup.nodes.{ Element, Document }
-import java.net.URLEncoder
-import com.google.inject.{ Inject, Singleton }
+import com.keepit.shoebox.ShoeboxScraperClient
 import org.apache.commons.lang3.StringEscapeUtils
+import org.jsoup.nodes.{ Document, Element }
+
 import scala.collection.JavaConversions._
-import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
-import com.keepit.model.HttpProxy
-import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.{ Await, Future }
 
 @Singleton
-class YoutubeExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeboxServiceClient: ShoeboxServiceClient) extends ExtractorProvider {
+class YoutubeExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeboxScraperClient: ShoeboxScraperClient) extends ExtractorProvider {
   def isDefinedAt(uri: URI) = {
     uri match {
       case URI(_, _, Some(Host("com", "youtube", _*)), _, Some(path), Some(query), _) =>
@@ -23,10 +25,10 @@ class YoutubeExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeboxServi
       case _ => false
     }
   }
-  def apply(uri: URI) = new YoutubeExtractor(uri.toString, ScraperConfig.maxContentChars, httpFetcher, shoeboxServiceClient)
+  def apply(uri: URI) = new YoutubeExtractor(uri.toString, ScraperConfig.maxContentChars, httpFetcher, shoeboxScraperClient)
 }
 
-class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetcher, shoeboxServiceClient: ShoeboxServiceClient) extends JsoupBasedExtractor(url, maxContentChars) {
+class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetcher, shoeboxScraperClient: ShoeboxScraperClient) extends JsoupBasedExtractor(url, maxContentChars) {
 
   def parse(doc: Document): String = {
     val headline = Option(doc.getElementById("watch-headline-title")).map(_.text).getOrElse("")
@@ -83,7 +85,7 @@ class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetch
 
   private def getProxy(url: String) = syncGetProxyP(url)
 
-  private[extractor] def getProxyP(url: String): Future[Option[HttpProxy]] = shoeboxServiceClient.getProxyP(url)
+  private[extractor] def getProxyP(url: String): Future[Option[HttpProxy]] = shoeboxScraperClient.getProxyP(url)
   private[extractor] def syncGetProxyP(url: String): Option[HttpProxy] = Await.result(getProxyP(url), 10 seconds)
 }
 

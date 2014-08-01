@@ -6,17 +6,14 @@ import java.io.File
 
 import org.specs2.mutable._
 
-import com.keepit.common.db.Id
-import com.keepit.inject._
 import com.keepit.model.{ SocialUserInfoRepo, User, UserRepo, SocialUserInfo }
-import com.keepit.test.{ ShoeboxTestInjector, TestInjector, DeprecatedEmptyApplication }
+import com.keepit.test.{ ShoeboxTestInjector }
 
 import play.api.libs.json.Json
-import play.api.test.Helpers._
 import com.google.inject.Injector
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.social.{ SocialNetworks, SocialId, SocialUserRawInfo, SocialUserRawInfoStore }
+import com.keepit.social.{ SocialNetworks, SocialId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.FakeMailModule
 

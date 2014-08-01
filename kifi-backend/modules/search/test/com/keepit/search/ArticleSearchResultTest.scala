@@ -3,8 +3,6 @@ package com.keepit.search
 import com.keepit.common.db._
 import com.keepit.model._
 import org.specs2.mutable._
-import com.keepit.test.TestApplication
-import play.api.test.Helpers._
 import play.api.libs.json.{ JsObject, Json }
 
 class ArticleSearchResultTest extends Specification {
@@ -72,20 +70,18 @@ class ArticleSearchResultTest extends Specification {
     }
 
     "be stored and retrieved" in {
-      running(new TestApplication()) {
-        val store = new InMemoryArticleSearchResultStoreImpl()
+      val store = new InMemoryArticleSearchResultStoreImpl()
 
-        store += (initialResult.uuid, initialResult)
-        store += (nextResult.uuid, nextResult)
+      store += (initialResult.uuid, initialResult)
+      store += (nextResult.uuid, nextResult)
 
-        store.get(initialResult.uuid) === Some(initialResult)
-        store.get(nextResult.uuid) === Some(nextResult)
+      store.get(initialResult.uuid) === Some(initialResult)
+      store.get(nextResult.uuid) === Some(nextResult)
 
-        store.getInitialSearchId(initialResult) === initialResult.uuid
-        store.getInitialSearchId(initialResult.uuid) === initialResult.uuid
-        store.getInitialSearchId(nextResult) === initialResult.uuid
-        store.getInitialSearchId(nextResult.uuid) === initialResult.uuid
-      }
+      store.getInitialSearchId(initialResult) === initialResult.uuid
+      store.getInitialSearchId(initialResult.uuid) === initialResult.uuid
+      store.getInitialSearchId(nextResult) === initialResult.uuid
+      store.getInitialSearchId(nextResult.uuid) === initialResult.uuid
     }
   }
 }

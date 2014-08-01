@@ -8,7 +8,7 @@ import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel.{ URILDATopicRepo, UserLDAInterests, UserLDAInterestsRepo, UserTopicMean }
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.models.lda._
-import com.keepit.cortex.utils.MatrixUtils.cosineDistance
+import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.{ NormalizedURI, User }
 
 import scala.collection.mutable
@@ -24,7 +24,8 @@ class LDACommander @Inject() (
     ldaTopicWords: DenseLDATopicWords,
     ldaConfigs: LDATopicConfigurations,
     configStore: LDAConfigStore,
-    ldaRetriever: LDAURIFeatureRetriever) {
+    ldaRetriever: LDAURIFeatureRetriever,
+    userLDAStatsRetriever: UserLDAStatisticsRetriever) {
   assume(ldaTopicWords.topicWords.length == wordRep.lda.dimension)
 
   var currentConfig = ldaConfigs
@@ -127,7 +128,11 @@ class LDACommander @Inject() (
   private def computeInterestScore(numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeatOpt: Option[LDATopicFeature]): Option[LDAUserURIInterestScore] = {
     (userFeatOpt, uriFeatOpt) match {
       case (Some(userFeat), Some(uriFeat)) =>
-        val (u, v) = (projectToActive(userFeat.mean), projectToActive(uriFeat.value))
+        val userVec = getUserLDAStats(wordRep.version) match {
+          case None => userFeat.mean
+          case Some(stat) => scale(userFeat.mean, stat.mean, stat.std)
+        }
+        val (u, v) = (projectToActive(userVec), projectToActive(uriFeat.value))
         Some(LDAUserURIInterestScore(cosineDistance(u, v), computeConfidence(numOfEvidenceForUser)))
       case _ => None
     }
@@ -145,4 +150,57 @@ class LDACommander @Inject() (
     }
     scala.util.Random.shuffle(uris).take(SAMPLE_SIZE)
   }
+
+  private def scale(datum: Array[Float], mean: Array[Float], std: Array[Float]): Array[Float] = {
+    assume(datum.size == mean.size && mean.size == std.size)
+    (0 until datum.size).map { i =>
+      if (std(i) == 0) datum(i) - mean(i) else (datum(i) - mean(i)) / std(i)
+    }.toArray
+  }
+
+  private def scale(datum: Array[Float], userLDAStats: Option[UserLDAStatistics]): Array[Float] = {
+    userLDAStats match {
+      case Some(stat) => scale(datum, stat.mean, stat.std)
+      case None => datum
+    }
+  }
+
+  def getUserLDAStats(version: ModelVersion[DenseLDA]): Option[UserLDAStatistics] = {
+    userLDAStatsRetriever.getUserLDAStats(version)
+  }
+
+  def getSimilarUsers(userId: Id[User], topK: Int): (Seq[Id[User]], Seq[Float]) = {
+    val target = db.readOnlyReplica { implicit s => userTopicRepo.getTopicMeanByUser(userId, wordRep.version) }
+    if (target.isEmpty) return (Seq(), Seq())
+    val statOpt = getUserLDAStats(wordRep.version)
+    val targetScaled = scale(target.get.mean, statOpt)
+
+    val (users, vecs) = db.readOnlyReplica { implicit s => userTopicRepo.getAllUserTopicMean(wordRep.version, minEvidence = 100) }
+    val idsAndScores = (users zip vecs).map {
+      case (userId, vec) =>
+        val (u, v) = (targetScaled, scale(vec.mean, statOpt))
+        val score = cosineDistance(u, v).toFloat
+        (userId, score)
+    }
+
+    idsAndScores.sortBy(-1 * _._2).take(topK + 1).filter(_._1 != userId).unzip
+  }
+
+  def dumpScaledUserInterest(userId: Id[User]): Option[Array[Float]] = {
+    val vecOpt = db.readOnlyReplica { implicit s => userTopicRepo.getTopicMeanByUser(userId, wordRep.version) }
+    vecOpt.map { vec => val statOpt = getUserLDAStats(wordRep.version); scale(vec.mean, statOpt) }
+  }
+
+  def userSimilairty(userId1: Id[User], userId2: Id[User]): Option[Float] = {
+    val vecOpt1 = db.readOnlyReplica { implicit s => userTopicRepo.getTopicMeanByUser(userId1, wordRep.version) }
+    val vecOpt2 = db.readOnlyReplica { implicit s => userTopicRepo.getTopicMeanByUser(userId2, wordRep.version) }
+    val statOpt = getUserLDAStats(wordRep.version)
+
+    (vecOpt1, vecOpt2) match {
+      case (Some(v1), Some(v2)) => Some(cosineDistance(scale(v1.mean, statOpt), scale(v2.mean, statOpt)))
+      case _ => None
+    }
+
+  }
+
 }

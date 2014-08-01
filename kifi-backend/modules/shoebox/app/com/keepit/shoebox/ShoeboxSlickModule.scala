@@ -8,7 +8,6 @@ import com.keepit.common.db.slick._
 import play.api.db.DB
 import play.api.Play
 import akka.actor.ActorSystem
-import com.keepit.model.{ UrlPatternRuleRepoImpl, UrlPatternRuleRepo }
 
 case class ShoeboxDbInfo() extends DbInfo {
   def masterDatabase = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
@@ -28,12 +27,4 @@ case class ShoeboxSlickModule() extends SlickModule(ShoeboxDbInfo()) {
   @Provides @Singleton
   def dbExecutionContextProvider(system: ActorSystem): DbExecutionContext =
     DbExecutionContext(system.dispatchers.lookup("db-thread-pool-dispatcher"))
-
-  @Provides @Singleton
-  def UrlPatternRuleRepoProvider(db: Database, urlPatternRuleRepo: UrlPatternRuleRepoImpl): UrlPatternRuleRepo = {
-    db.readWrite { implicit session =>
-      urlPatternRuleRepo.loadCache()
-    }
-    urlPatternRuleRepo
-  }
 }

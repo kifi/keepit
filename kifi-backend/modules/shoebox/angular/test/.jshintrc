@@ -96,7 +96,10 @@
     "inject": true,
     "expect": true,
     "module": true,
-    "spyOn": true
+    "spyOn": true,
+    "browser": true,
+    "element": true,
+    "by": true
   },
 
   "-W024": true

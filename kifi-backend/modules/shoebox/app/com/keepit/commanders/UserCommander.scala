@@ -48,7 +48,7 @@ import com.keepit.model.SocialUserConnectionsKey
 import com.keepit.common.mail.EmailAddress
 import play.api.libs.json.JsObject
 import com.keepit.common.cache.TransactionalCaching
-import com.keepit.commanders.emails.EmailOptOutCommander
+import com.keepit.commanders.emails.{ SendEmailToNewUserFriendsHelper, SendEmailToNewUserContactsHelper, EmailOptOutCommander }
 import com.keepit.common.db.slick.Database.Replica
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -128,7 +128,9 @@ class UserCommander @Inject() (
     bookmarkClicksRepo: UserBookmarkClicksRepo,
     userImageUrlCache: UserImageUrlCache,
     libraryCommander: LibraryCommander,
-    airbrake: AirbrakeNotifier) extends Logging {
+    sendEmailToNewUserFriendsHelper: SendEmailToNewUserFriendsHelper,
+    sendEmailToNewUserContactsHelper: SendEmailToNewUserContactsHelper,
+    airbrake: AirbrakeNotifier) extends Logging { self =>
 
   def updateUserDescription(userId: Id[User], description: String): Unit = {
     db.readWrite { implicit session =>
@@ -254,42 +256,69 @@ class UserCommander @Inject() (
       searchClient.warmUpUser(newUser.id.get)
       searchClient.updateUserIndex()
     }
-    db.readWrite { implicit session =>
-      autoSetUsername(newUser, readOnly = false)
-    }
+
     libraryCommander.internSystemGeneratedLibraries(newUser.id.get)
 
     newUser
   }
 
+  def tellUsersWithContactOfNewUserImmediate(newUser: User): Option[Future[Set[Id[User]]]] = synchronized {
+    require(newUser.id.isDefined, "UserCommander.tellUsersWithContactOfNewUserImmediate: newUser.id is required")
+
+    val newUserId = newUser.id.get
+    if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING).exists(_ == "true") }) {
+      newUser.primaryEmail.map { email =>
+        db.readWrite { implicit session => userValueRepo.setValue(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING, true) }
+
+        // get users who have this user's email in their contacts
+        abookServiceClient.getUsersWithContact(email).map {
+          case contacts if contacts.size > 0 => {
+
+            val toNotify = db.readOnlyReplica { implicit session =>
+              val alreadyConnectedUsers = userConnectionRepo.getConnectedUsers(newUser.id.get)
+
+              // only notify users who are not already connected to our list of users with the contact email
+              for {
+                userId <- contacts.diff(alreadyConnectedUsers)
+                if userExperimentCommander.userHasExperiment(userId, ExperimentType.NOTIFY_USER_WHEN_CONTACTS_JOIN)
+              } yield userId
+            }
+
+            log.info("sending new user contact notifications to: " + toNotify)
+            sendEmailToNewUserContactsHelper(newUser, toNotify)
+
+            elizaServiceClient.sendGlobalNotification(
+              userIds = toNotify,
+              title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
+              body = s"To discover ${newUser.firstName}’s public keeps while searching, get connected!",
+              linkText = s"Click this to send a friend request to ${newUser.firstName}.",
+              linkUrl = "https://www.kifi.com/invite?friend=" + newUser.externalId,
+              imageUrl = userAvatarImageUrl(newUser),
+              sticky = false,
+              category = NotificationCategory.User.CONTACT_JOINED
+            )
+
+            toNotify
+          }
+          case _ => {
+            log.info("cannot send contact notifications: primary email empty for user.id=" + newUserId)
+            Set.empty
+          }
+        }
+      }
+    } else Option(Future.successful(Set.empty))
+  }
+
   def tellAllFriendsAboutNewUserImmediate(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = synchronized {
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, UserValueName.FRIENDS_NOTIFIED_ABOUT_JOINING).exists(_ == "true") }) {
       db.readWrite { implicit session => userValueRepo.setValue(newUserId, UserValueName.FRIENDS_NOTIFIED_ABOUT_JOINING, true) }
-      val (newUser, toNotify, id2Email) = db.readOnlyReplica { implicit session =>
+      val (newUser: User, toNotify: Set[Id[User]]) = db.readOnlyReplica { implicit session =>
         val newUser = userRepo.get(newUserId)
         val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
-        val id2Email = toNotify.map { userId =>
-          (userId, emailRepo.getByUser(userId))
-        }.toMap
-        (newUser, toNotify, id2Email)
+        (newUser, toNotify)
       }
-      val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), newUser.externalId, newUser.pictureName.getOrElse("0"), Some("https"))
-      toNotify.foreach { userId =>
-        val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(id2Email(userId)))}"
-        db.readWrite { implicit session =>
-          val user = userRepo.get(userId)
-          postOffice.sendMail(ElectronicMail(
-            senderUserId = None,
-            from = SystemEmailAddress.NOTIFICATIONS,
-            fromName = Some(s"${newUser.firstName} ${newUser.lastName} (via Kifi)"),
-            to = List(id2Email(userId)),
-            subject = s"${newUser.firstName} ${newUser.lastName} joined Kifi",
-            htmlBody = views.html.email.friendJoinedInlined(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body,
-            textBody = Some(views.html.email.friendJoinedText(user.firstName, newUser.firstName, newUser.lastName, imageUrl, unsubLink).body),
-            category = NotificationCategory.User.FRIEND_JOINED)
-          )
-        }
-      }
+
+      sendEmailToNewUserFriendsHelper(newUser, toNotify)
 
       elizaServiceClient.sendGlobalNotification(
         userIds = toNotify,
@@ -297,11 +326,26 @@ class UserCommander @Inject() (
         body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly. Invite friends to join Kifi.",
         linkText = "Invite more friends to Kifi.",
         linkUrl = "https://www.kifi.com/friends/invite",
-        imageUrl = imageUrl,
+        imageUrl = userAvatarImageUrl(newUser),
         sticky = false,
         category = NotificationCategory.User.FRIEND_JOINED
       )
     }
+  }
+
+  def tellAllFriendsAboutNewUser(newUserId: Id[User]): Unit = {
+    val toBeNotified = db.readWrite(attempts = 3) { implicit session =>
+      for {
+        su <- socialUserRepo.getByUser(newUserId)
+        invite <- invitationRepo.getByRecipientSocialUserId(su.id.get) if (invite.state != InvitationStates.JOINED)
+        senderUserId <- {
+          invitationRepo.save(invite.withState(InvitationStates.JOINED))
+          invite.senderUserId
+        }
+      } yield senderUserId
+    }
+
+    tellAllFriendsAboutNewUser(newUserId, toBeNotified)
   }
 
   def tellAllFriendsAboutNewUser(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = {
@@ -407,8 +451,8 @@ class UserCommander @Inject() (
     val (respondingUser, respondingUserImage) = db.readWrite { implicit session =>
       val respondingUser = userRepo.get(myUserId)
       val destinationEmail = emailRepo.getByUser(friend.id.get)
-      val respondingUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), respondingUser.externalId, respondingUser.pictureName.getOrElse("0"), Some("https"))
-      val targetUserImage = s3ImageStore.avatarUrlByExternalId(Some(200), friend.externalId, friend.pictureName.getOrElse("0"), Some("https"))
+      val respondingUserImage = userAvatarImageUrl(respondingUser)
+      val targetUserImage = userAvatarImageUrl(friend)
       val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(destinationEmail))}"
 
       postOffice.sendMail(ElectronicMail(
@@ -710,9 +754,10 @@ class UserCommander @Inject() (
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
     val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
+    val imageName = user.pictureName.getOrElse("0")
     implicit val txn = TransactionalCaching.Implicits.directCacheAccess
-    userImageUrlCache.getOrElseFuture(UserImageUrlCacheKey(userId, width)) {
-      s3ImageStore.getPictureUrl(Some(width), user, user.pictureName.getOrElse("0"))
+    userImageUrlCache.getOrElseFuture(UserImageUrlCacheKey(userId, width, imageName)) {
+      s3ImageStore.getPictureUrl(Some(width), user, imageName)
     }
   }
 
@@ -846,6 +891,8 @@ class UserCommander @Inject() (
       userRepo.save(user.copy(username = None, normalizedUsername = None))
     }
   }
+
+  protected def userAvatarImageUrl(user: User) = s3ImageStore.avatarUrlByUser(user)
 }
 
 object DefaultKeeps {

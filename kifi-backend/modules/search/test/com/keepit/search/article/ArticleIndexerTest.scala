@@ -1,5 +1,6 @@
 package com.keepit.search.article
 
+import com.google.inject.Injector
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db._
 import com.keepit.common.time._
@@ -19,18 +20,14 @@ import play.api.test.Helpers._
 import scala.collection.JavaConversions._
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient }
 import com.keepit.search.SearchConfig
-import com.google.inject.Singleton
-import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.SearcherHit
 import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.phrasedetector.FakePhraseIndexer
-import com.keepit.search.sharding.Shard
-import scala.concurrent.Await
-import scala.concurrent.duration._
 
-class ArticleIndexerTest extends Specification with ApplicationInjector {
+class ArticleIndexerTest extends Specification with SearchTestInjector {
 
-  private trait IndexerScope extends Scope {
+  private class IndexerScope(injector: Injector) extends Scope {
+    implicit val inj = injector
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     val ramDir = new VolatileIndexDirectory()
     val store = new FakeArticleStore()
@@ -52,6 +49,8 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
     uriIdArray(0) = uri1.id.get.id
     uriIdArray(1) = uri2.id.get.id
     uriIdArray(2) = uri3.id.get.id
+
+    lazy val shoeboxClient = inject[ShoeboxServiceClient]
 
     def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
       Article(
@@ -89,225 +88,268 @@ class ArticleIndexerTest extends Specification with ApplicationInjector {
   }
 
   "ArticleIndexer" should {
-    "index indexable URIs" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule())(new IndexerScope {
+    "index indexable URIs" in {
+      withInjector() { injector =>
+        new IndexerScope(injector) {
+          uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(INACTIVE)).head
+          uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(INACTIVE)).head
+          uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(INACTIVE)).head
 
-      uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(INACTIVE)).head
-      uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(INACTIVE)).head
-      uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(INACTIVE)).head
+          indexer.update()
+          indexer.numDocs === 0
 
-      indexer.update()
-      indexer.numDocs === 0
+          var currentSeqNum = indexer.sequenceNumber.value
 
-      var currentSeqNum = indexer.sequenceNumber.value
+          uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
 
-      uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
+          indexer.sequenceNumber.value === currentSeqNum
+          indexer.update()
+          currentSeqNum += 1
+          indexer.sequenceNumber.value === currentSeqNum
+          indexer.numDocs === 1
 
-      indexer.sequenceNumber.value === currentSeqNum
-      indexer.update()
-      currentSeqNum += 1
-      indexer.sequenceNumber.value === currentSeqNum
-      indexer.numDocs === 1
+          uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPED)).head
+          uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
+          uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(SCRAPED)).head
 
-      uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPED)).head
-      uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
-      uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(SCRAPED)).head
+          indexer.update()
+          currentSeqNum += 3
+          indexer.sequenceNumber.value === currentSeqNum
+          indexer.numDocs === 3
+          indexer.close()
 
-      indexer.update()
-      currentSeqNum += 3
-      indexer.sequenceNumber.value === currentSeqNum
-      indexer.numDocs === 3
-      indexer.close()
-
-      indexer = new StandaloneArticleIndexer(ramDir, store, null, inject[ShoeboxServiceClient])
-      indexer.sequenceNumber.value === currentSeqNum
-    })
-
-    "search documents (hits in contents)" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.update()
-
-      indexer.search("alldocs").size === 3
-
-      var res = indexer.search("content1")
-      res.size === 1
-      res.head.id === uriIdArray(0)
-
-      res = indexer.search("content2")
-      res.size === 1
-      res.head.id === uriIdArray(1)
-
-      res = indexer.search("content3")
-      res.size === 1
-      res.head.id === uriIdArray(2)
-    })
-
-    "search documents (hits in titles)" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.update()
-
-      var res = indexer.search("title1")
-      res.size === 1
-      res.head.id === uriIdArray(0)
-
-      res = indexer.search("title2")
-      res.size === 1
-      res.head.id === uriIdArray(1)
-
-      res = indexer.search("title3")
-      res.size === 1
-      res.head.id === uriIdArray(2)
-    })
-
-    "search documents (hits in contents and titles)" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.update()
-
-      var res = indexer.search("title1 alldocs")
-      res.size === 3
-      res.head.id === uriIdArray(0)
-
-      res = indexer.search("title2 alldocs")
-      res.size === 3
-      res.head.id === uriIdArray(1)
-
-      res = indexer.search("title3 alldocs")
-      res.size === 3
-      res.head.id === uriIdArray(2)
-    })
-
-    "search documents using stemming" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.update()
-
-      indexer.search("alldoc").size === 3
-      indexer.search("title").size === 3
-      indexer.search("bodies").size === 3
-      indexer.search("soul").size === 3
-      indexer.search("+bodies +souls").size === 3
-      indexer.search("+body +soul").size === 3
-    })
-
-    "limit the result by percentMatch" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.update()
-
-      var res = indexer.search("title1 alldocs", percentMatch = 0.0f)
-      res.size === 3
-
-      res = indexer.search("title1 alldocs", percentMatch = 40.0f)
-      res.size === 3
-
-      res = indexer.search("title1 alldocs", percentMatch = 60.0f)
-      res.size === 1
-
-      res = indexer.search("title1 title2 alldocs", percentMatch = 60.0f)
-      res.size === 2
-
-      res = indexer.search("title1 title2 alldocs", percentMatch = 75.0f)
-      res.size === 0
-    })
-
-    "limit the result by site" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.update()
-
-      var res = indexer.search("alldocs")
-      res.size === 3
-
-      res = indexer.search("alldocs site:com")
-      res.size === 2
-
-      res = indexer.search("alldocs site:org")
-      res.size === 1
-
-      res = indexer.search("alldocs site:keepit.com")
-      res.size === 1
-
-      res = indexer.search("site:com")
-      res.size === 2
-
-      res = indexer.search("site:keepit.com")
-      res.size === 1
-
-      res = indexer.search("alldocs site:com -site:keepit.org")
-      res.size === 2
-
-      res = indexer.search("alldocs site:com -site:keepit.com")
-      res.size === 1
-
-      res = indexer.search("alldocs -site:keepit.org")
-      res.size === 2
-    })
-
-    "match on the URI" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.update()
-
-      var res = indexer.search("keepit")
-      res.size === 2
-
-      res = indexer.search("keepit.com")
-      res.size === 1
-
-      res = indexer.search("find-it")
-      res.size === 1
-
-      res = indexer.search("find")
-      res.size === 1
-
-      res = indexer.search("find-it.com")
-      res.size === 1
-    })
-
-    "be able to dump Lucene Document" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.update()
-
-      store += (uri1.id.get -> mkArticle(uri1.id.get, "title1 titles", "content1 alldocs body soul"))
-
-      val doc = indexer.buildIndexable(IndexableUri(uri1)).buildDocument
-      doc.getFields.forall { f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
-    })
-
-    "delete documents with inactive, active, unscrapable, or scrape_later state" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.update()
-      indexer.numDocs === 3
-
-      uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(ACTIVE)).head
-      indexer.update()
-      indexer.numDocs === 2
-      indexer.search("content1").size === 0
-      indexer.search("content2").size === 1
-      indexer.search("content3").size === 1
-
-      uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPED)).head
-      uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(INACTIVE)).head
-
-      indexer.update()
-      indexer.numDocs === 2
-      indexer.search("content1").size === 1
-      indexer.search("content2").size === 0
-      indexer.search("content3").size === 1
-
-      uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPED)).head
-      uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
-      uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(UNSCRAPABLE)).head
-
-      indexer.update()
-      indexer.numDocs === 2
-      indexer.search("content1").size === 1
-      indexer.search("content2").size === 1
-      indexer.search("content3").size === 0
-    })
-
-    "retrieve article records from index" in running(new DeprecatedEmptyApplication().withShoeboxServiceModule)(new IndexerScope {
-      indexer.update()
-      indexer.numDocs === 3
-      import com.keepit.search.article.ArticleRecordSerializer._
-
-      val searcher = indexer.getSearcher
-      Seq(uri1, uri2, uri3).map { uri =>
-        val recOpt: Option[ArticleRecord] = searcher.getDecodedDocValue("rec", uri.id.get.id)
-        recOpt must beSome[ArticleRecord]
-        recOpt.map { rec =>
-          rec.title === uri.title.get
-          rec.url === uri.url
+          indexer = new StandaloneArticleIndexer(ramDir, store, null, shoeboxClient)
+          indexer.sequenceNumber.value === currentSeqNum
         }
       }
-      val recOpt: Option[ArticleRecord] = searcher.getDecodedDocValue("rec", 999999L)
-      recOpt must beNone
-    })
+    }
+
+    "search documents (hits in contents)" in {
+      withInjector() { injector =>
+        new IndexerScope(injector) {
+          indexer.update()
+
+          indexer.search("alldocs").size === 3
+
+          var res = indexer.search("content1")
+          res.size === 1
+          res.head.id === uriIdArray(0)
+
+          res = indexer.search("content2")
+          res.size === 1
+          res.head.id === uriIdArray(1)
+
+          res = indexer.search("content3")
+          res.size === 1
+          res.head.id === uriIdArray(2)
+        }
+      }
+    }
+
+    "search documents (hits in titles)" in {
+      withInjector() { injector =>
+        new IndexerScope(injector) {
+          indexer.update()
+
+          var res = indexer.search("title1")
+          res.size === 1
+          res.head.id === uriIdArray(0)
+
+          res = indexer.search("title2")
+          res.size === 1
+          res.head.id === uriIdArray(1)
+
+          res = indexer.search("title3")
+          res.size === 1
+          res.head.id === uriIdArray(2)
+        }
+      }
+    }
+
+    "search documents (hits in contents and titles)" in {
+      withInjector() { injector =>
+        new IndexerScope(injector) {
+          indexer.update()
+
+          var res = indexer.search("title1 alldocs")
+          res.size === 3
+          res.head.id === uriIdArray(0)
+
+          res = indexer.search("title2 alldocs")
+          res.size === 3
+          res.head.id === uriIdArray(1)
+
+          res = indexer.search("title3 alldocs")
+          res.size === 3
+          res.head.id === uriIdArray(2)
+        }
+      }
+    }
+
+    "search documents using stemming" in {
+      withInjector() { injector =>
+        new IndexerScope(injector) {
+          indexer.update()
+
+          indexer.search("alldoc").size === 3
+          indexer.search("title").size === 3
+          indexer.search("bodies").size === 3
+          indexer.search("soul").size === 3
+          indexer.search("+bodies +souls").size === 3
+          indexer.search("+body +soul").size === 3
+        }
+      }
+    }
+
+    "limit the result by percentMatch" in {
+      withInjector() { injector =>
+        new IndexerScope(injector) {
+          indexer.update()
+
+          var res = indexer.search("title1 alldocs", percentMatch = 0.0f)
+          res.size === 3
+
+          res = indexer.search("title1 alldocs", percentMatch = 40.0f)
+          res.size === 3
+
+          res = indexer.search("title1 alldocs", percentMatch = 60.0f)
+          res.size === 1
+
+          res = indexer.search("title1 title2 alldocs", percentMatch = 60.0f)
+          res.size === 2
+
+          res = indexer.search("title1 title2 alldocs", percentMatch = 75.0f)
+          res.size === 0
+        }
+      }
+    }
+
+    "limit the result by site" in {
+      withInjector() { injector =>
+        new IndexerScope(injector) {
+          indexer.update()
+
+          var res = indexer.search("alldocs")
+          res.size === 3
+
+          res = indexer.search("alldocs site:com")
+          res.size === 2
+
+          res = indexer.search("alldocs site:org")
+          res.size === 1
+
+          res = indexer.search("alldocs site:keepit.com")
+          res.size === 1
+
+          res = indexer.search("site:com")
+          res.size === 2
+
+          res = indexer.search("site:keepit.com")
+          res.size === 1
+
+          res = indexer.search("alldocs site:com -site:keepit.org")
+          res.size === 2
+
+          res = indexer.search("alldocs site:com -site:keepit.com")
+          res.size === 1
+
+          res = indexer.search("alldocs -site:keepit.org")
+          res.size === 2
+        }
+      }
+    }
+
+    "match on the URI" in {
+      withInjector() { injector =>
+        new IndexerScope(injector) {
+          indexer.update()
+
+          var res = indexer.search("keepit")
+          res.size === 2
+
+          res = indexer.search("keepit.com")
+          res.size === 1
+
+          res = indexer.search("find-it")
+          res.size === 1
+
+          res = indexer.search("find")
+          res.size === 1
+
+          res = indexer.search("find-it.com")
+          res.size === 1
+        }
+      }
+    }
+
+    "be able to dump Lucene Document" in {
+      withInjector() { injector =>
+        new IndexerScope(injector) {
+          indexer.update()
+
+          store += (uri1.id.get -> mkArticle(uri1.id.get, "title1 titles", "content1 alldocs body soul"))
+
+          val doc = indexer.buildIndexable(IndexableUri(uri1)).buildDocument
+          doc.getFields.forall { f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
+        }
+      }
+    }
+
+    "delete documents with inactive, active, unscrapable, or scrape_later state" in {
+      withInjector() { injector =>
+        new IndexerScope(injector) {
+          indexer.update()
+          indexer.numDocs === 3
+
+          uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(ACTIVE)).head
+          indexer.update()
+          indexer.numDocs === 2
+          indexer.search("content1").size === 0
+          indexer.search("content2").size === 1
+          indexer.search("content3").size === 1
+
+          uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPED)).head
+          uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(INACTIVE)).head
+
+          indexer.update()
+          indexer.numDocs === 2
+          indexer.search("content1").size === 1
+          indexer.search("content2").size === 0
+          indexer.search("content3").size === 1
+
+          uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPED)).head
+          uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
+          uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(UNSCRAPABLE)).head
+
+          indexer.update()
+          indexer.numDocs === 2
+          indexer.search("content1").size === 1
+          indexer.search("content2").size === 1
+          indexer.search("content3").size === 0
+        }
+      }
+    }
+
+    "retrieve article records from index" in {
+      withInjector() { injector =>
+        new IndexerScope(injector) {
+          indexer.update()
+          indexer.numDocs === 3
+          import com.keepit.search.article.ArticleRecordSerializer._
+
+          val searcher = indexer.getSearcher
+          Seq(uri1, uri2, uri3).map { uri =>
+            val recOpt: Option[ArticleRecord] = searcher.getDecodedDocValue("rec", uri.id.get.id)
+            recOpt must beSome[ArticleRecord]
+            recOpt.map { rec =>
+              rec.title === uri.title.get
+              rec.url === uri.url
+            }
+          }
+          val recOpt: Option[ArticleRecord] = searcher.getDecodedDocValue("rec", 999999L)
+          recOpt must beNone
+        }
+      }
+    }
   }
 }

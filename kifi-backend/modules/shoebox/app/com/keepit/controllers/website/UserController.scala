@@ -90,6 +90,22 @@ class UserController @Inject() (
     ))
   }
 
+  def findFriends(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
+    abookServiceClient.findFriends(request.userId, page, pageSize).map { recommendedUsers =>
+      val basicUsers = db.readOnlyReplica { implicit session => basicUserRepo.loadAll(recommendedUsers.toSet) }
+      val recommendedBasicUsers = recommendedUsers.map(basicUsers(_))
+      val json = Json.obj("users" -> recommendedBasicUsers)
+      Ok(json)
+    }
+  }
+
+  def hideUserRecommendation(id: ExternalId[User]) = JsonAction.authenticatedAsync { request =>
+    val irrelevantUserId = db.readOnlyReplica { implicit session => userRepo.get(id).id.get }
+    abookServiceClient.hideUserRecommendation(request.userId, irrelevantUserId).map { _ =>
+      Ok(Json.obj("hidden" -> true))
+    }
+  }
+
   def friendCount() = JsonAction.authenticated { request =>
     db.readOnlyMaster { implicit s =>
       Ok(Json.obj(
@@ -204,10 +220,14 @@ class UserController @Inject() (
     }
   }
 
-  def basicUserInfo(id: ExternalId[User]) = JsonAction.authenticated { implicit request =>
+  def basicUserInfo(id: ExternalId[User], friendCount: Boolean) = JsonAction.authenticated { implicit request =>
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id).map { user =>
-        Ok(Json.toJson(BasicUser.fromUser(user)))
+        Ok {
+          val userJson = Json.toJson(BasicUser.fromUser(user)).as[JsObject]
+          if (friendCount) userJson ++ Json.obj("friendCount" -> userConnectionRepo.getConnectionCount(user.id.get))
+          else userJson
+        }
       } getOrElse {
         NotFound(Json.obj("error" -> "user not found"))
       }

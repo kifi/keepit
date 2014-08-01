@@ -149,11 +149,11 @@ class MainSearcher(
             val clickBoost = clickBoosts(id)
             val luceneScore = scorer.score()
             if (myUriEdgeAccessor.seek(id) && mySearchUris.findIndex(id) >= 0) { // use findIndex to avoid boxing
-              myHits.insert(id, luceneScore, clickBoost, true, !myUriEdgeAccessor.isPublic)
+              myHits.insert(id, luceneScore, clickBoost, true)
             } else if (friendSearchUris.findIndex(id) >= 0) {
-              if (visibility.isVisible(doc)) friendsHits.insert(id, luceneScore, clickBoost, false, false)
+              if (visibility.isVisible(doc)) friendsHits.insert(id, luceneScore, clickBoost, false)
             } else {
-              if (visibility.isVisible(doc)) othersHits.insert(id, luceneScore, clickBoost, false, false)
+              if (visibility.isVisible(doc)) othersHits.insert(id, luceneScore, clickBoost, false)
             }
           }
           doc = scorer.nextDoc()
@@ -333,6 +333,8 @@ class MainSearcher(
   }
 
   private[this] def toDetailedSearchHits(hitList: List[Hit[MutableArticleHit]]): List[DetailedSearchHit] = {
+    val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
+
     hitList.map { hit =>
       val h = hit.hit
       if (hit.score.isInfinity) {
@@ -343,13 +345,15 @@ class MainSearcher(
         hit.score = -1.0f
       }
 
+      val isPrivate = (h.isMyBookmark && myUriEdgeAccessor.seek(h.id) && !myUriEdgeAccessor.isPublic)
+
       DetailedSearchHit(
         h.id,
         h.bookmarkCount,
         toBasicSearchHit(h),
         h.isMyBookmark,
         h.users.nonEmpty, // isFriendsBookmark
-        h.isPrivate,
+        isPrivate,
         h.users.toSeq,
         hit.score,
         hit.scoring
@@ -438,11 +442,11 @@ class ArticleHitQueue(sz: Int) extends HitQueue[MutableArticleHit](sz) {
 
   override def lessThan(a: Hit[MutableArticleHit], b: Hit[MutableArticleHit]) = (a.score < b.score || (a.score == b.score && a.hit.id < b.hit.id))
 
-  def insert(id: Long, textScore: Float, clickBoost: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS) {
+  def insert(id: Long, textScore: Float, clickBoost: Float, isMyBookmark: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS) {
     if (overflow == null) {
-      insert(textScore * clickBoost, null, new MutableArticleHit(id, textScore, clickBoost, isMyBookmark, isPrivate, friends, 0))
+      insert(textScore * clickBoost, null, new MutableArticleHit(id, textScore, clickBoost, isMyBookmark, friends, 0))
     } else {
-      insert(textScore * clickBoost, null, overflow.hit(id, textScore, clickBoost, isMyBookmark, isPrivate, friends, 0))
+      insert(textScore * clickBoost, null, overflow.hit(id, textScore, clickBoost, isMyBookmark, friends, 0))
     }
   }
 }
@@ -453,7 +457,6 @@ class MutableArticleHit(
     var luceneScore: Float,
     var clickBoost: Float,
     var isMyBookmark: Boolean,
-    var isPrivate: Boolean,
     var users: Set[Id[User]],
     var bookmarkCount: Int) {
   def apply(
@@ -461,14 +464,12 @@ class MutableArticleHit(
     newLuceneScore: Float,
     newClickBoost: Float,
     newIsMyBookmark: Boolean,
-    newIsPrivate: Boolean,
     newUsers: Set[Id[User]],
     newBookmarkCount: Int): MutableArticleHit = {
     id = newId
     luceneScore = newLuceneScore
     clickBoost = newClickBoost
     isMyBookmark = newIsMyBookmark
-    isPrivate = newIsPrivate
     users = newUsers
     bookmarkCount = newBookmarkCount
     this

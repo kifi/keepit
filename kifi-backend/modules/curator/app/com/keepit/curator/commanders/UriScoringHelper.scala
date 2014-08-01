@@ -45,8 +45,8 @@ class UriScoringHelper @Inject() (
     interestScores.map { scores =>
       scores.map { score =>
         val (overallOpt, recentOpt) = (score.global, score.recency)
-        (overallOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat,
-          recentOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat)
+        (overallOpt.map(uis => if (uis.confidence > 0.5 && uis.score > 0) uis.score else 0.0).getOrElse(0.0).toFloat,
+          recentOpt.map(uis => if (uis.confidence > 0.3 && uis.score > 0) uis.score else 0.0).getOrElse(0.0).toFloat)
       }.unzip
     }
   }
@@ -58,27 +58,24 @@ class UriScoringHelper @Inject() (
     } else {
 
       //convert user scores seq to map, assume there is no duplicate userId from graph service
-      try {
-        graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
-          val socialScoreMap = socialScores.map { socialScore =>
-            (socialScore.userId, socialScore.score.toFloat)
-          }.toMap
+      graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
+        val socialScoreMap = socialScores.map { socialScore =>
+          (socialScore.userId, socialScore.score.toFloat)
+        }.toMap
 
-          items.map(item =>
-            item.keepers match {
-              case Keepers.TooMany => 0.0f
-              case Keepers.ReasonableNumber(users) => {
-                var itemScore = 0.0f
-                users.map(userId => itemScore += socialScoreMap.getOrElse(userId, 0.0f))
-                itemScore
-              }
-            })
-        }
-      } catch {
-        case e: Exception => {
-          log.warn("can't get social scores from graph service. setting all social scores to 0.0f for items.")
-          Future.successful(Seq.fill[Float](items.size)(0.0f))
-        }
+        items.map(item =>
+          item.keepers match {
+            case Keepers.TooMany => 0.0f
+            case Keepers.ReasonableNumber(users) => {
+              var itemScore = 0.0f
+              users.map(userId => itemScore += socialScoreMap.getOrElse(userId, 0.0f))
+              Math.tanh(itemScore).toFloat
+            }
+          })
+      }.recover { //This needs to go once the graph is fixed
+        case t: Throwable =>
+          log.warn("Can't get social scores from graph.")
+          Seq.fill[Float](items.size)(0.0f)
       }
     }
   }

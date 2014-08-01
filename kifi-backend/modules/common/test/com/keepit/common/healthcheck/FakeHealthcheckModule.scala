@@ -1,14 +1,14 @@
 package com.keepit.common.healthcheck
 
 import com.google.inject.Singleton
-import com.keepit.common.mail.{ TestAmazonMailModule, PostOffice, ElectronicMail }
+import com.keepit.common.mail.{ FakeAmazonMailModule, PostOffice, ElectronicMail }
 import com.keepit.common.mail.SystemEmailAddress.ENG
 import scala.collection.mutable.MutableList
 import com.keepit.model.NotificationCategory
 
 case class FakeHealthcheckModule() extends HealthCheckModule {
   def configure(): Unit = {
-    install(TestAmazonMailModule())
+    install(FakeAmazonMailModule())
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[Babysitter].to[FakeBabysitter]
   }
@@ -38,6 +38,4 @@ class FakeHealthcheck extends HealthcheckPlugin {
     error
   }
 
-  def reportStart(): ElectronicMail = ElectronicMail(from = ENG, to = List(ENG), subject = "start", htmlBody = "", category = NotificationCategory.System.HEALTHCHECK)
-  def reportStop(): ElectronicMail = ElectronicMail(from = ENG, to = List(ENG), subject = "stop", htmlBody = "", category = NotificationCategory.System.HEALTHCHECK)
 }

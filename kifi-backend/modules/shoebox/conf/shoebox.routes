@@ -194,6 +194,8 @@ GET     /profile                    @com.keepit.controllers.website.HomeControll
 GET     /find                       @com.keepit.controllers.website.HomeController.home
 GET     /blog                       @com.keepit.controllers.website.HomeController.blog
 
+GET     /kifeeeed                   @com.keepit.controllers.website.HomeController.kifeeeed
+
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
@@ -268,6 +270,8 @@ GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/copy        @com.keepit.controllers.website.LibraryController.copyKeeps()
 POST    /site/libraries/move        @com.keepit.controllers.website.LibraryController.moveKeeps()
 
+GET     /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
+
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
 GET     /site/user/email            @com.keepit.controllers.website.UserController.getEmailInfo(email: EmailAddress)
@@ -278,7 +282,8 @@ GET     /site/user/import-status    @com.keepit.controllers.website.UserControll
 GET     /site/user/import-check/:network  @com.keepit.controllers.website.UserController.checkIfImporting(network: String, callback: String)
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
 GET     /site/user/abooks           @com.keepit.controllers.website.UserController.abookInfo()
-GET     /site/user/$id<[0-9a-f-]{36}> @com.keepit.controllers.website.UserController.basicUserInfo(id: ExternalId[User])
+# regex below prevents route from usurping requests intended for other routes, like /site/user/friends
+GET     /site/user/$id<[0-9a-f-]{36}> @com.keepit.controllers.website.UserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
 GET     /site/user/:id/networks     @com.keepit.controllers.website.UserController.friendNetworkInfo(id: ExternalId[User])
 POST    /site/user/:id/unfriend     @com.keepit.controllers.website.UserController.unfriend(id: ExternalId[User])
 POST    /site/user/:id/friend       @com.keepit.controllers.website.UserController.friend(id: ExternalId[User])
@@ -290,6 +295,8 @@ GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
+GET     /site/user/friends/find    @com.keepit.controllers.website.UserController.findFriends(page: Int ?= 0, pageSize: Int ?= 5)
+POST    /site/user/:id/hide         @com.keepit.controllers.website.UserController.hideUserRecommendation(id: ExternalId[User])
 POST    /site/user/invite           @com.keepit.controllers.website.InviteController.inviteV2()
 POST    /site/user/delighted/answer @com.keepit.controllers.website.UserController.postDelightedAnswer()
 POST    /site/user/delighted/cancel @com.keepit.controllers.website.UserController.cancelDelightedSurvey()
@@ -435,6 +442,7 @@ GET     /admin/fakeUsers/page/:page @com.keepit.controllers.admin.AdminUserContr
 POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserController.searchUsers()
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userViewByEitherId(id: String, showPrivates: Boolean ?= false)
 GET     /admin/user/:id/keeps       @com.keepit.controllers.admin.AdminUserController.userKeepsView(id: Id[User], showPrivates: Boolean ?= false)
+GET     /admin/user/:id/libraries   @com.keepit.controllers.admin.AdminUserController.userLibrariesView(id: Id[User], showSecrets: Boolean ?= false)
 POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/prefixSearch @com.keepit.controllers.admin.AdminUserController.prefixSearch(id:Id[User], query:String ?= "")
@@ -523,11 +531,13 @@ POST    /admin/slider/killVersion   @com.keepit.controllers.admin.SliderAdminCon
 POST    /admin/slider/unkillVersion   @com.keepit.controllers.admin.SliderAdminController.unkillVersion(ver: String)
 POST    /admin/slider/goldenVersion   @com.keepit.controllers.admin.SliderAdminController.goldenVersion(ver: String)
 
-
-POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
 GET     /admin/libraries                 @com.keepit.controllers.admin.AdminLibraryController.index(page: Int ?= 0)
-POST    /admin/libraries/internForAllUsers   @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
-
+GET     /admin/libraries/:id             @com.keepit.controllers.admin.AdminLibraryController.libraryView(id: Id[Library])
+GET     /admin/libraries/:id/keeps       @com.keepit.controllers.admin.AdminLibraryController.libraryKeepsView(id: Id[Library], showPrivates: Boolean ?= false)
+POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
+POST    /admin/libraries/internForAllUsers  @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
+POST    /admin/libraries/:id/state/:state   @com.keepit.controllers.admin.AdminLibraryController.changeState(id: Id[Library], state: String)
+POST    /admin/libraries/update             @com.keepit.controllers.admin.AdminLibraryController.updateLibraries
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")
@@ -592,6 +602,7 @@ GET     /admin/cortex/lda/userTopicDump                    @com.keepit.controlle
 POST    /admin/cortex/lda/userUriInterest                  @com.keepit.controllers.admin.AdminLDAController.userUriInterest
 POST    /admin/cortex/lda/userTopicMean                    @com.keepit.controllers.admin.AdminLDAController.userTopicMean
 GET     /admin/cortex/lda/topicDetail                      @com.keepit.controllers.admin.AdminLDAController.topicDetail(topicId: Int)
+GET     /admin/cortex/lda/peopleLikeYou                    @com.keepit.controllers.admin.AdminLDAController.peopleLikeYou(topK: Int ?= 20)
 
 GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
@@ -663,6 +674,7 @@ GET     /internal/shoebox/database/getLibrariesAndMembershipsChanged       @com.
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.ext.ExtDeepLinkController.getDeepUrl()
 POST    /internal/shoebox/database/kifiHit   @com.keepit.controllers.internal.ShoeboxController.kifiHit()
+POST    /internal/shoebox/database/getHelpRankInfo    @com.keepit.controllers.internal.ShoeboxController.getHelpRankInfo()
 
 GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.internal.ShoeboxController.getActiveExperiments
 GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.internal.ShoeboxController.getExperiments
@@ -682,7 +694,6 @@ POST    /internal/geckoboard/refresh                  @com.keepit.reports.Geckob
 POST    /internal/shoebox/email/sendUnreadMessages   @com.keepit.controllers.internal.EmailNotificationsController.sendUnreadMessages()
 
 GET      /internal/shoebox/database/assignScrapeTasks @com.keepit.controllers.internal.ShoeboxController.assignScrapeTasks(zkId:Id[ScraperWorker], max:Int ?= 1)
-POST     /internal/shoebox/database/getScrapeInfo     @com.keepit.controllers.internal.ShoeboxController.getScrapeInfo
 POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxController.saveScrapeInfo
 POST     /internal/shoebox/database/savePageInfo      @com.keepit.controllers.internal.ShoeboxController.savePageInfo
 GET      /internal/shoebox/database/getImageInfo      @com.keepit.controllers.internal.ShoeboxController.getImageInfo(id:Id[ImageInfo])
@@ -702,7 +713,7 @@ GET      /internal/shoebox/database/userSegment       @com.keepit.controllers.in
 GET      /internal/shoebox/database/extensionVersion  @com.keepit.controllers.internal.ShoeboxController.getExtensionVersion(installationId: ExternalId[KifiInstallation])
 POST     /internal/shoebox/database/triggerRawKeepImport @com.keepit.controllers.internal.ShoeboxController.triggerRawKeepImport()
 POST     /internal/shoebox/database/triggerSocialGraphFetch @com.keepit.controllers.internal.ShoeboxController.triggerSocialGraphFetch(id: Id[SocialUserInfo])
-GET      /internal/shoebox/database/getLapsedUsersForDelighted    @com.keepit.controllers.internal.ShoeboxController.getLapsedUsersForDelighted(after: DateTime, before: Option[DateTime] ?= None, maxCount: Int, skipCount: Int)
+GET      /internal/shoebox/database/getLapsedUsersForDelighted    @com.keepit.controllers.internal.ShoeboxController.getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime] ?= None)
 
 GET      /internal/shoebox/emailTest @com.keepit.controllers.internal.EmailTestController.testEmail(name: String)
 POST     /internal/shoebox/database/isSensitiveURI       @com.keepit.controllers.internal.ShoeboxPageController.isSensitiveURI()
@@ -717,8 +728,7 @@ GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.int
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 
-# New site, temporary
-GET     /ng                        com.keepit.controllers.website.AngularDistAssets.home
+# Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/angular/dist", file)
 GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path="/angular/img", file)
 

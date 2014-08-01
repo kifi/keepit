@@ -3,7 +3,7 @@ package com.keepit.social
 import org.joda.time.DateTime
 import org.specs2.mutable._
 
-import com.keepit.common.db.{ TestSlickSessionProvider, ExternalId }
+import com.keepit.common.db.{ FakeSlickSessionProvider, ExternalId }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.model.{ User, SocialUserInfo, UserSession }
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
@@ -83,7 +83,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxAppl
         val authenticator = plugin.find(id.id).right.get.get
         authenticator.identityId.userId === socialId.id
         authenticator.identityId.providerId === provider.name
-        inject[TestSlickSessionProvider].doWithoutCreatingSessions {
+        inject[FakeSlickSessionProvider].doWithoutCreatingSessions {
           // we should have an old session in the cache and we shouldn't care about updating the last used time
           plugin.save(authenticator.copy(lastUsed = authenticator.lastUsed.plusDays(1)))
         }

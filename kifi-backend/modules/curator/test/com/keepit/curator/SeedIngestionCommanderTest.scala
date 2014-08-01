@@ -5,13 +5,12 @@ import com.keepit.graph.{ FakeGraphServiceClientImpl, GraphServiceClient, FakeGr
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.slick._
-import com.keepit.test.DbTestInjector
 import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.model.{ User, Keep, KeepSource, NormalizedURI, URL, KeepStates, SystemValueRepo, Name }
 import com.keepit.curator.model._
 import com.keepit.curator.commanders.SeedIngestionCommander
-import com.keepit.common.cache.TestCacheModule
+import com.keepit.common.cache.FakeCacheModule
 
 import com.google.inject.Injector
 
@@ -21,14 +20,14 @@ import scala.concurrent.duration.Duration
 import org.joda.time.DateTime
 import com.keepit.common.concurrent.ExecutionContext
 
-class SeedIngestionCommanderTest extends Specification with DbTestInjector {
+class SeedIngestionCommanderTest extends Specification with CuratorTestInjector {
 
   private def modules = {
     Seq(
       FakeShoeboxServiceModule(),
       FakeGraphServiceModule(),
       FakeHttpClientModule(),
-      TestCacheModule()
+      FakeCacheModule()
     )
   }
 
