@@ -17,7 +17,7 @@ import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.FakeAnalyticsModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.abook.FakeABookServiceClientModule
@@ -34,7 +34,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
     FakeMailModule(),
     FakeHttpClientModule(),
     FakeAnalyticsModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeSearchServiceClientModule(),
     FakeAirbrakeModule(),

@@ -13,7 +13,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.actor.FakeActorSystemModule
@@ -28,7 +28,7 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
 
   val modules = Seq(FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeHttpClientModule(),

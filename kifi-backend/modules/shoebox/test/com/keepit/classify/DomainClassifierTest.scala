@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -20,7 +20,7 @@ class DomainClassifierTest extends TestKitSupport with SpecificationLike with Co
   val domainClassifierTestModules = Seq(
     FakeMailModule(),
     FakeAnalyticsModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeHeimdalServiceClientModule(),
     FakeDomainTagImporterModule(),
     FakeActorSystemModule(Some(system)),

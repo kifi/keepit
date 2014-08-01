@@ -21,7 +21,7 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.FakeAnalyticsModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 
@@ -32,7 +32,7 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
     FakeMailModule(),
     FakeHttpClientModule(),
     FakeAnalyticsModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeActorSystemModule(Some(system)),
     FakeAirbrakeModule(),
     FakeActionAuthenticatorModule(),

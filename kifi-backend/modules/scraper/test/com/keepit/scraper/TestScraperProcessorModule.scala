@@ -15,7 +15,7 @@ case class TestScraperProcessorModule() extends ScrapeProcessorModule {
     bind[ShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[SyncShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[PullerPlugin].to[PullerPluginImpl].in[AppScoped]
-    install(TestScraperConfigModule())
+    install(FakeScraperConfigModule())
     install(FakeScrapeSchedulerConfigModule())
   }
 
@@ -36,7 +36,7 @@ case class FakeScraperProcessorActorModule() extends ScrapeProcessorModule {
     bind[SyncShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[PullerPlugin].to[PullerPluginImpl].in[AppScoped]
     bind[ScrapeProcessor].to[ScrapeProcessorActorImpl]
-    install(TestScraperConfigModule())
+    install(FakeScraperConfigModule())
     install(FakeScrapeSchedulerConfigModule())
   }
 
