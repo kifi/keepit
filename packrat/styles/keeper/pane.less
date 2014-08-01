@@ -8,8 +8,7 @@
 
 @pane-width: 322px;
 @pane-edge-width: 3px;
-@pane-box-width: @pane-width - 2 * @pane-edge-width;
-@pane-side-padding: 9px;
+@pane-head-height: 44px;
 @pane-color: #333;
 @pane-hover-color: tint(@pane-color, 10%);
 @pane-active-color: shade(@pane-color, 15%);
@@ -21,7 +20,9 @@
   left: auto;
   width: @pane-width;
   height: auto;
-  background: @pane-color;
+  border: solid @pane-color;
+  border-width: @pane-head-height @pane-edge-width 0;
+  background: #f1f1f1;
   font-size: 12px;
   line-height: 15px;
   text-align: left;
@@ -60,12 +61,13 @@ html[kifi-pane-parent][kifi-with-pane]:not(.kifi-snapshot-mode) .kifi-pane {
   transition: transform .25s ease-out;
 }
 
-@pane-head-height: 44px;
 .kifi-pane-head {
-  position: relative;
+  position: absolute;
   z-index: 3;
+  top: -@pane-head-height;
   height: @pane-head-height;
-  background-color: inherit;
+  left: -@pane-edge-width;
+  right: -@pane-edge-width;
 }
 .kifi-pane-head-pic {
   position: absolute;
@@ -183,6 +185,7 @@ a.kifi-pane-top-menu-a {
 .kifi-pane-top-submenu {
   right: 100%;
   top: -1px;
+  transition-duration: 60ms, 80ms;
 }
 .kifi-pane-top-menu-item {
   padding: 15px 28px;
@@ -277,18 +280,21 @@ a.kifi-pane-top-menu-a {
 }
 
 // shared
+@cubby-side-space: 9px;
+@cubby-width: @pane-width - 2 * (@pane-edge-width + @cubby-side-space);
+@cubby-border-width: 1px;
+@box-width: @cubby-width - 2 * (@cubby-border-width);
 .kifi-pane-cubby {
   position: absolute;
-  top: @pane-head-height;
-  bottom: 0;
-  left: @pane-edge-width;
-  right: @pane-edge-width;
-  width: @pane-box-width;
-  background-color: #f1f1f1;
-  border: solid transparent;
-  border-width: 8px @pane-side-padding 62px;
+  top: 8px;
+  bottom: 62px;
+  left: @cubby-side-space;
+  width: @cubby-width;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
+  border: @cubby-border-width solid #ccc;
+  border-radius: 12px;
+  overflow: hidden;
 }
 .kifi-pane-box-cart {
   position: absolute;
@@ -299,7 +305,7 @@ a.kifi-pane-top-menu-a {
 }
 .kifi-pane-box-cart.kifi-forward,
 .kifi-pane-box-cart.kifi-back {
-  width: @pane-box-width;
+  width: @box-width;
 }
 .kifi-pane-box-cart.kifi-animated {
   transition: -webkit-transform .2s ease-in-out;
@@ -315,11 +321,7 @@ a.kifi-pane-top-menu-a {
   top: 0;
   bottom: 0;
   left: 0;
-  width: @pane-box-width - 2 * @pane-side-padding;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-  border: 1px solid #ccc;
-  border-radius: 12px;
+  width: @box-width;
 }
 .kifi-pane-box-cart.kifi-back .kifi-pane-box:last-child,
 .kifi-pane-box-cart.kifi-forward .kifi-pane-box:nth-child(2) {
