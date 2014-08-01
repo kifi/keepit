@@ -3,7 +3,7 @@ package com.keepit.classify
 import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
-import com.keepit.common.db.{ TestDbInfo, TestSlickModule }
+import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.FakeMailModule
@@ -26,7 +26,7 @@ class DomainClassifierTest extends TestKitSupport with SpecificationLike with Co
     TestActorSystemModule(Some(system)),
     FakeShoeboxServiceModule(),
     TestSearchServiceClientModule(),
-    TestSlickModule(TestDbInfo.dbInfo),
+    FakeSlickModule(TestDbInfo.dbInfo),
     ShoeboxCacheModule(HashMapMemoryCacheModule()),
     FakeAirbrakeModule()
   )

@@ -25,7 +25,7 @@ import com.keepit.scraper.{ TestScrapeSchedulerConfigModule, TestScraperServiceC
 import com.keepit.common.db.{ SequenceNumber }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.common.crypto.TestCryptoModule
+import com.keepit.common.crypto.FakeCryptoModule
 
 class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
 
@@ -47,7 +47,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
     TestScraperServiceClientModule(),
     TestScrapeSchedulerConfigModule(),
     FakeKeepImportsModule(),
-    TestCryptoModule(),
+    FakeCryptoModule(),
     UrlPatternRuleModule()
   )
 
