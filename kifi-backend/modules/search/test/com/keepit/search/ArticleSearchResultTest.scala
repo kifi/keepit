@@ -3,8 +3,6 @@ package com.keepit.search
 import com.keepit.common.db._
 import com.keepit.model._
 import org.specs2.mutable._
-import com.keepit.test.CommonTestApplication
-import play.api.test.Helpers._
 import play.api.libs.json.{ JsObject, Json }
 
 class ArticleSearchResultTest extends Specification {
