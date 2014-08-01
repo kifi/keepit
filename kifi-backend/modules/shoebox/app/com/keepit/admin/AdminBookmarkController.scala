@@ -35,6 +35,7 @@ class AdminBookmarksController @Inject() (
   userRepo: UserRepo,
   scrapeRepo: ScrapeInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
+  libraryRepo: LibraryRepo,
   uriSummaryCommander: URISummaryCommander,
   clock: Clock)
     extends AdminController(actionAuthenticator) {
@@ -46,13 +47,14 @@ class AdminBookmarksController @Inject() (
       val scrapeInfo = scrapeRepo.getByUriId(bookmark.uriId)
       val keywordsFut = uriSummaryCommander.getKeywordsSummary(uri.id.get)
       val imageUrlOptFut = uriSummaryCommander.getURIImage(uri)
+      val libraryOpt = bookmark.libraryId.map { opt => libraryRepo.get(opt) }
 
       for {
         keywords <- keywordsFut
         imageUrlOpt <- imageUrlOptFut
       } yield {
         val screenshotUrl = uriSummaryCommander.getScreenshotURL(uri).getOrElse("")
-        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), screenshotUrl, keywords))
+        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, imageUrlOpt.getOrElse(""), screenshotUrl, keywords, libraryOpt))
       }
     }
   }

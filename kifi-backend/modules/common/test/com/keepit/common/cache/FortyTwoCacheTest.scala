@@ -6,8 +6,6 @@ import com.keepit.test._
 import com.keepit.common.logging.AccessLog
 import org.specs2.mutable.Specification
 import scala.concurrent.duration.Duration
-import com.keepit.inject._
-import play.api.test.Helpers._
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 
 case class TestJsonCacheData(name: String, age: Int)
@@ -62,12 +60,14 @@ case class TestStringCacheKey(id: String) extends Key[String] {
 class TestStringCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends StringCacheImpl[TestStringCacheKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
+class FortyTwoCacheTest extends Specification with CommonTestInjector {
+
+  val cacheTestModules = Seq(FakeAirbrakeModule(), FakeCacheModule())
 
   import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
   "JsonCacheImpl Instance" should {
-    withInjector(EhCacheCacheModule(), FakeAirbrakeModule()) { implicit injector =>
+    withInjector(cacheTestModules: _*) { implicit injector =>
       val cachePlugin = inject[FortyTwoCachePlugin]
       val cache = new TestJsonCache(inject[CacheStatistics],
         inject[AccessLog], (cachePlugin, Duration(7, "days")))
@@ -82,7 +82,7 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
   }
 
   "BinaryCacheImpl Instance" should {
-    withInjector(EhCacheCacheModule(), FakeAirbrakeModule()) { implicit injector =>
+    withInjector(cacheTestModules: _*) { implicit injector =>
       val cachePlugin = inject[FortyTwoCachePlugin]
       val cache = new TestBinaryCache(inject[CacheStatistics],
         inject[AccessLog], (cachePlugin, Duration(7, "days")))
@@ -107,7 +107,7 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
   }
 
   "PrimitiveCacheImpl Instance" should {
-    withInjector(EhCacheCacheModule(), FakeAirbrakeModule()) { implicit injector =>
+    withInjector(cacheTestModules: _*) { implicit injector =>
       val cachePlugin = inject[FortyTwoCachePlugin]
       val cache = new TestPrimitiveCache(inject[CacheStatistics],
         inject[AccessLog], (cachePlugin, Duration(7, "days")))
@@ -122,7 +122,7 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
   }
 
   "StringCacheImpl Instance" should {
-    withInjector(EhCacheCacheModule(), FakeAirbrakeModule()) { implicit injector =>
+    withInjector(cacheTestModules: _*) { implicit injector =>
       val cache = new TestStringCache(inject[CacheStatistics],
         inject[AccessLog], (inject[FortyTwoCachePlugin], Duration(7, "days")))
       "yield the value 'fortytwo'" in {

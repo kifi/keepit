@@ -102,6 +102,7 @@ class AuthCommander @Inject() (
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
     userExperimentCommander: LocalUserExperimentCommander,
+    userCommander: UserCommander,
     heimdalServiceClient: HeimdalServiceClient) extends Logging {
 
   def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
@@ -176,6 +177,8 @@ class AuthCommander @Inject() (
         userRepo.get(userId)
       }
 
+      userCommander.autoSetUsername(user, readOnly = false)
+
       reportUserRegistration(user, inviteExtIdOpt)
 
       val cropAttributes = parseCropForm(sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize) tap (r => log.info(s"Cropped attributes for ${user.id.get}: " + r))
@@ -201,6 +204,8 @@ class AuthCommander @Inject() (
       val email = EmailAddress.validate(identity.email.get).get
       val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
       val user = db.readOnlyMaster(userRepo.get(userId)(_))
+
+      userCommander.autoSetUsername(user, readOnly = false)
 
       reportUserRegistration(user, inviteExtIdOpt)
 

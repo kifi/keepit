@@ -16,12 +16,14 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.search.index.DevIndexModule
 import com.keepit.search.tracker.DevTrackingModule
 import com.keepit.common.store.SearchFakeStoreModule
-import com.keepit.shoebox.{ FakeShoeboxServiceModule, TestShoeboxServiceClientModule }
+import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.search.{ TestSearchServiceClientModule, SearchConfigModule }
+import com.keepit.search.{ SearchServiceTypeModule, TestSearchServiceClientModule, SearchConfigModule }
+import com.keepit.common.actor.TestActorSystemModule
 
 class SearchApplication(overridingModules: Module*)(implicit path: File = new File("./modules/search/"))
   extends TestApplication(path, overridingModules, Seq(
+    SearchServiceTypeModule(),
     FakeHttpClientModule(),
     TestHeimdalServiceClientModule(),
     FakeAirbrakeModule(),
@@ -33,12 +35,13 @@ class SearchApplication(overridingModules: Module*)(implicit path: File = new Fi
     SearchFakeStoreModule(),
     DevIndexModule(),
     FakeDiscoveryModule(),
-    TestShoeboxServiceClientModule(),
+    FakeShoeboxServiceModule(),
     TestSearchServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeSpellCorrectorModule(),
     SearchCacheModule(HashMapMemoryCacheModule()),
-    SearchConfigModule()
+    SearchConfigModule(),
+    TestActorSystemModule()
   ))
 
 trait SearchApplicationInjector extends ApplicationInjector with SearchInjectionHelpers
@@ -50,6 +53,7 @@ trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
     StandaloneTestActorSystemModule(),
     FakeHttpClientModule(),
     TestHeimdalServiceClientModule(),
+    SearchServiceTypeModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),

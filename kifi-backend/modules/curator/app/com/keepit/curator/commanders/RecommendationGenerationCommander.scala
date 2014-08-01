@@ -24,7 +24,9 @@ class RecommendationGenerationCommander @Inject() (
         Recommendation(
           userId = scoredItem.userId,
           uriId = scoredItem.uriId,
-          score = 0.5f * scoredItem.uriScores.recencyScore + 2 * scoredItem.uriScores.overallInterestScore + 0.25f * scoredItem.uriScores.priorScore, //this math is just for testing
+          score = 0.5f * scoredItem.uriScores.socialScore +
+            1.5f * scoredItem.uriScores.overallInterestScore +
+            0.5f * scoredItem.uriScores.priorScore, //this math is just for testing
           explain = Some(scoredItem.uriScores.toString)
         )
       }.sortBy(-1 * _.score).take(howManyMax)

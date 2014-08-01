@@ -31,7 +31,7 @@ import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.analytics.TestAnalyticsModule
+import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -505,30 +505,30 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
                    "after":null,
                    "keeps":[
                     {
-                      "id":"${keeps1(0).externalId.toString}",
-                      "url":"${keeps1(0).url}",
-                      "isPrivate":${keeps1(0).isPrivate},
-                      "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
-                      "others":1,
-                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg"}],
-                      "collections":[],
-                      "tags":[],
-                      "siteName":"FortyTwo",
-                      "clickCount":1
-                    },
-                    {
                       "id":"${keeps1(1).externalId.toString}",
                       "url":"${keeps1(1).url}",
                       "isPrivate":${keeps1(1).isPrivate},
                       "createdAt":"${keeps1(1).createdAt.toStandardTimeString}",
-                      "others":-1,
-                      "keepers":[],
+                      "others":1,
+                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg"}],
                       "clickCount":1,
                       "collections":[],
                       "tags":[],
                       "siteName":"kifi.com",
                       "clickCount":1,
                       "rekeepCount":1
+                    },
+                    {
+                      "id":"${keeps1(0).externalId.toString}",
+                      "url":"${keeps1(0).url}",
+                      "isPrivate":${keeps1(0).isPrivate},
+                      "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
+                      "others":-1,
+                      "keepers":[],
+                      "collections":[],
+                      "tags":[],
+                      "siteName":"FortyTwo",
+                      "clickCount":1
                     }
                   ],
                   "helprank":"click"
@@ -625,8 +625,8 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
       clicks.keySet.size === 2
       rekeeps.keySet.size === 1
 
-      val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.allKeeps(before = Some(keeps1(0).externalId.toString), after = None, collection = None, helprank = Some("click")).toString
-      path === s"/m/1/keeps/all?before=${keeps1(0).externalId.toString}&helprank=click"
+      val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.allKeeps(before = Some(keeps1(1).externalId.toString), after = None, collection = None, helprank = Some("click")).toString
+      path === s"/m/1/keeps/all?before=${keeps1(1).externalId.toString}&helprank=click"
       inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
       val sharingUserInfo = Seq(SharingUserInfo(Set(u2.id.get), 3), SharingUserInfo(Set(), 0))
       inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
@@ -645,27 +645,26 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 
       val expected = Json.parse(s"""
                   {"collection":null,
-                   "before":"${keeps1(0).externalId.toString}",
+                   "before":"${keeps1(1).externalId.toString}",
                    "after":null,
                    "keeps":[
                     {
-                      "id":"${keeps1(1).externalId.toString}",
-                      "url":"${keeps1(1).url}",
-                      "isPrivate":${keeps1(1).isPrivate},
-                      "createdAt":"${keeps1(1).createdAt.toStandardTimeString}",
+                      "id":"${keeps1(0).externalId.toString}",
+                      "url":"${keeps1(0).url}",
+                      "isPrivate":${keeps1(0).isPrivate},
+                      "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
                       "others":1,
                       "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg"}],
-                      "clickCount":1,
                       "collections":[],
                       "tags":[],
-                      "siteName":"kifi.com",
-                      "clickCount":1,
-                      "rekeepCount":1
+                      "siteName":"FortyTwo",
+                      "clickCount":1
                     }
                   ],
                   "helprank":"click"
                   }
                 """)
+
       Json.parse(contentAsString(result)) must equalTo(expected)
     }
   }

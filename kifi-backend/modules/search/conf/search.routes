@@ -18,7 +18,6 @@ GET         /m/1/search/users/page        @com.keepit.controllers.mobile.MobileU
 GET         /m/1/search/users/search        @com.keepit.controllers.mobile.MobileUserSearchController.searchV1(query: String, filter: Option[String], context: Option[String], maxHits: Int)
 POST        /m/1/search/events/clickedSearchResult        @com.keepit.controllers.mobile.MobileSearchEventController.clickedSearchResult()
 POST        /m/1/search/events/searched        @com.keepit.controllers.mobile.MobileSearchEventController.searched()
-GET         /m/1/search/feeds/page              @com.keepit.controllers.mobile.MobileFeedController.pageV1(pageNum: Int, pageSize: Int)
 GET         /m/1/search/message        @com.keepit.controllers.mobile.MobileMessageSearchController.search(q: String, page: Int ?= 0)
 
 

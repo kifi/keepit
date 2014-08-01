@@ -1,0 +1,58 @@
+@(user: User,
+  libraryList: Seq[(LibraryAccess, Library)]
+)
+
+@admin("User: " + user.firstName + " " + user.lastName, stylesheets = List("admin_user")) {
+    <br/>
+    <table class="user-summary table table-bordered">
+      <tr>
+        <th>Name</th><td><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(100, user.externalId)" height=25 width=25>@user.firstName @user.lastName</td>
+      </tr>
+      <tr>
+        <th>Id</th><td>@user.id</td>
+      </tr>
+    </table>
+
+  <h2>Showing @libraryList.size Libraries</h2>
+  <form class="navbar-form" action="@com.keepit.controllers.admin.routes.AdminLibraryController.updateLibraries()"
+  method="POST">
+    <button type="submit" class="btn">Update</button><br/><br/>
+			<table class="table table-bordered">
+		    <tr>
+		      <th>#</th>
+		      <th>Library ID</th>
+          <th>Secret</th>
+          <th>Active</th>
+          <th>Library</th>
+		      <th>Kind</th>
+          <th>Updated At</th>
+          <th>Created At</th>
+          <th>State</th>
+		    </tr>
+			 @for(((access, lib), i) <- libraryList.zipWithIndex) {
+			   <tr>
+		        <td>@{i+1}</td>
+		        <td><span class="badge">@lib.id.get.id</span></td>
+		        <td>
+                <input type="radio" id="visib_@{lib.id.get.id}" name="visib_@{lib.id.get.id}" value="published" @if(lib.visibility.value=="published") {checked="checked"}/> Publish<br>
+                <input type="radio" id="visib_@{lib.id.get.id}" name="visib_@{lib.id.get.id}" value="discoverable" @if(lib.visibility.value=="discoverable") {checked="checked"}/> Discover<br>
+                <input type="radio" id="visib_@{lib.id.get.id}" name="visib_@{lib.id.get.id}" value="secret" @if(lib.visibility.value=="secret") {checked="checked"}/> Secret<br>
+            </td>
+            <td>
+              <input type="hidden" name="active_@{lib.id.get.id}" value="0" />
+              <center><input type="checkbox" id="active_@lib.id.get.id" name="active_@{lib.id.get.id}" value="1" @if(lib.state.value == "active") {checked="checked"}></input></center>
+            </td>
+		        <td>@adminHelper.libraryDisplay(lib)</td>
+            <td>@lib.kind</td>
+            <td>@adminHelper.dateTimeDisplay(lib.updatedAt)</td>
+            <td>@adminHelper.dateTimeDisplay(lib.createdAt)</td>
+            <td>?</td>
+			   </tr>
+			 }
+			</table>
+    <button type="submit" class="btn">Update</button>
+  </form>
+
+  <script type="text/javascript">
+  </script>
+}

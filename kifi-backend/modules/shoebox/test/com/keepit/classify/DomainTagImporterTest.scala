@@ -8,7 +8,7 @@ import com.keepit.test._
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers._
-import com.keepit.common.analytics.TestAnalyticsModule
+import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.mail.FakeMailModule
@@ -22,7 +22,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with SpecificationLik
 
   val domainTagImporterTestModules = Seq(
     FakeMailModule(),
-    TestAnalyticsModule(),
+    FakeAnalyticsModule(),
     TestHeimdalServiceClientModule(),
     ShoeboxFakeStoreModule(),
     FakeDomainTagImporterModule(),

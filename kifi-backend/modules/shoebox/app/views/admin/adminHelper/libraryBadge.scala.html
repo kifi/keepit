@@ -1,0 +1,11 @@
+@(lib: Library)
+
+@{if (lib.state.value == "inactive") {
+  <span class="label label-important">INACTIVE</span>
+} else if (lib.visibility.value == "secret") {
+  <span class="badge badge-inverse">SECRET</span>
+} else if (lib.visibility.value == "discoverable") {
+  <span class="badge badge-info">DISCOVERABLE</span>
+} else {
+  <span class="badge badge-success">PUBLISHED</span>
+}}
