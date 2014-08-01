@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Provides, Singleton }
 import com.keepit.commanders.UserCommander
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.concurrent.ExecutionContext
-import com.keepit.common.controller.{ ActionAuthenticator, AuthenticatedRequest, ReportedException }
+import com.keepit.common.controller.{ FakeActionAuthenticator, ActionAuthenticator, AuthenticatedRequest, ReportedException }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
@@ -34,4 +34,12 @@ case class TestShoeboxAppSecureSocialModule() extends ShoeboxSecureSocialModule 
   @Singleton
   @Provides
   def secureSocialClientIds: SecureSocialClientIds = SecureSocialClientIds("ovlhms1y0fjr", "530357056981814")
+
+  @Singleton
+  @Provides
+  def actionAuthenticator(myFakeActionAuthenticator: FakeActionAuthenticator): ActionAuthenticator = myFakeActionAuthenticator
+
+  @Singleton
+  @Provides
+  def fakeActionAuthenticator: FakeActionAuthenticator = new FakeActionAuthenticator
 }
