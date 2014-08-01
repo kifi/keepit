@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.zookeeper.ServiceDiscovery
 import net.codingwell.scalaguice.ScalaModule
 
-case class FakeActorSystemModule(implicit val system: ActorSystem = ActorTestSupport.getActorSystem()) extends ActorSystemModule {
+case class FakeActorSystemModule(implicit system: ActorSystem = ActorTestSupport.getActorSystem()) extends ActorSystemModule {
 
   def configure() {
     install(FakeAirbrakeModule())
@@ -18,16 +18,6 @@ case class FakeActorSystemModule(implicit val system: ActorSystem = ActorTestSup
     bind[ActorBuilder].to[TestActorBuilderImpl]
     bind[Scheduler].to[FakeScheduler]
     bind[ActorSystem].toInstance(system)
-  }
-
-}
-
-case class StandaloneTestActorSystemModule(implicit system: ActorSystem) extends ActorSystemModule {
-
-  def configure() {
-    bind[ActorBuilder].to[TestActorBuilderImpl]
-    bind[ActorSystem].toInstance(system)
-    install(FakeSchedulerModule())
   }
 
 }
