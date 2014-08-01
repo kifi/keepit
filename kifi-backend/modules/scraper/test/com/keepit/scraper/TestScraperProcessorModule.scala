@@ -16,7 +16,7 @@ case class TestScraperProcessorModule() extends ScrapeProcessorModule {
     bind[SyncShoeboxDbCallbacks].to[ShoeboxDbCallbackHelper].in[AppScoped]
     bind[PullerPlugin].to[PullerPluginImpl].in[AppScoped]
     install(TestScraperConfigModule())
-    install(TestScrapeSchedulerConfigModule())
+    install(FakeScrapeSchedulerConfigModule())
   }
 
   @Singleton
@@ -28,7 +28,7 @@ case class TestScraperProcessorModule() extends ScrapeProcessorModule {
 
 }
 
-case class TestScraperProcessorActorModule() extends ScrapeProcessorModule {
+case class FakeScraperProcessorActorModule() extends ScrapeProcessorModule {
 
   def configure {
     bind[ExtractorFactory].to[ExtractorFactoryImpl].in[AppScoped]
@@ -37,7 +37,7 @@ case class TestScraperProcessorActorModule() extends ScrapeProcessorModule {
     bind[PullerPlugin].to[PullerPluginImpl].in[AppScoped]
     bind[ScrapeProcessor].to[ScrapeProcessorActorImpl]
     install(TestScraperConfigModule())
-    install(TestScrapeSchedulerConfigModule())
+    install(FakeScrapeSchedulerConfigModule())
   }
 
 }

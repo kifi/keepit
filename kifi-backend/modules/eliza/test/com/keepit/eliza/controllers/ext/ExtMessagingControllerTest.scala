@@ -16,8 +16,8 @@ import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model.User
 import com.keepit.realtime.{ FakeUrbanAirshipModule }
-import com.keepit.heimdal.{ HeimdalContext, TestHeimdalServiceClientModule }
-import com.keepit.abook.{ TestABookServiceClientModule }
+import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
+import com.keepit.abook.{ FakeABookServiceClientModule }
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.model._
 import com.keepit.common.crypto.FakeCryptoModule
@@ -25,8 +25,8 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json.Json
 import akka.actor.ActorSystem
-import com.keepit.scraper.TestScraperServiceClientModule
-import com.keepit.common.store.ElizaFakeStoreModule
+import com.keepit.scraper.FakeScraperServiceClientModule
+import com.keepit.common.store.FakeElizaStoreModule
 
 class ExtMessagingControllerTest extends TestKit(ActorSystem()) with SpecificationLike with ElizaTestInjector with DbInjectionHelper {
 
@@ -36,14 +36,14 @@ class ExtMessagingControllerTest extends TestKit(ActorSystem()) with Specificati
     FakeSearchServiceClientModule(),
     ElizaCacheModule(),
     FakeShoeboxServiceModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     FakeElizaServiceClientModule(),
-    TestABookServiceClientModule(),
+    FakeABookServiceClientModule(),
     FakeUrbanAirshipModule(),
     FakeActionAuthenticatorModule(),
     FakeCryptoModule(),
-    TestScraperServiceClientModule(),
-    ElizaFakeStoreModule(),
+    FakeScraperServiceClientModule(),
+    FakeElizaStoreModule(),
     FakeHttpClientModule(),
     FakeActorSystemModule(Some(system))
   )

@@ -13,5 +13,5 @@ case class ABookTestModule() extends ABookModule(
   sqsModule = FakeSimpleQueueModule()
 ) with CommonDevModule {
   override val shoeboxServiceClientModule = TestShoeboxServiceClientModule()
-  override val abookServiceClientModule = TestABookServiceClientModule()
+  override val abookServiceClientModule = FakeABookServiceClientModule()
 }

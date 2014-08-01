@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.FakeActionAuthenticator
 import com.keepit.common.external.FakeExternalServiceModule
@@ -10,10 +10,10 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.{ FakeSocialGraphModule, TestShoeboxAppSecureSocialModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.heimdal.{ HeimdalContext, TestHeimdalServiceClientModule }
+import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
-import com.keepit.search.TestSearchServiceClientModule
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
+import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, KeepImportsModule }
 import com.keepit.social.{ SocialId, SocialNetworks }
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector, ShoeboxInjectionHelpers }
@@ -29,20 +29,20 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector with Sh
 
   def modules = Seq(
     FakeShoeboxServiceModule(),
-    TestSearchServiceClientModule(),
+    FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
-    TestABookServiceClientModule(),
+    FakeABookServiceClientModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     TestShoeboxAppSecureSocialModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule(),
+    FakeScraperServiceClientModule(),
     KeepImportsModule()
   )
 

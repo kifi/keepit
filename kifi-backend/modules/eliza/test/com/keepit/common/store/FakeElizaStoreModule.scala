@@ -5,7 +5,7 @@ import com.keepit.search.ArticleStore
 import com.keepit.scraper.FakeArticleStore
 import com.google.inject.{ Singleton, Provides }
 
-case class ElizaFakeStoreModule() extends ScalaModule {
+case class FakeElizaStoreModule() extends ScalaModule {
   def configure() {}
 
   @Singleton

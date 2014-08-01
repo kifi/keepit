@@ -8,7 +8,7 @@ import play.api.test.FakeRequest
 import com.keepit.social.{ SocialId, SocialNetworks }
 import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
-import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import securesocial.core._
 import org.joda.time.DateTime
 import play.api.libs.json.JsArray
@@ -24,25 +24,25 @@ import com.keepit.common.social.{ FakeSocialGraphModule, TestShoeboxAppSecureSoc
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
-import com.keepit.search.TestSearchServiceClientModule
-import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 
 class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjector {
 
   def requiredModules = Seq(
-    TestSearchServiceClientModule(),
+    FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
     TestShoeboxAppSecureSocialModule(),
     ShoeboxFakeStoreModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     FakeMailModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule()
+    FakeScraperServiceClientModule()
   )
 
   "ExtAuthController" should {

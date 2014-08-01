@@ -8,10 +8,10 @@ import org.specs2.mutable.Specification
 import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication }
 import com.keepit.model._
 import com.keepit.common.mail._
-import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule }
+import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
 
 import play.api.test.Helpers.running
@@ -58,14 +58,14 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
 
   val modules = Seq(
     FakeMailModule(),
-    TestABookServiceClientModule(),
+    FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule(),
+    FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),
     FakeCryptoModule()
   )

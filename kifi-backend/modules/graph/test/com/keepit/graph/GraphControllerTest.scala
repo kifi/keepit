@@ -11,7 +11,7 @@ import play.api.test.Helpers._
 class GraphControllerTest extends Specification with GraphApplicationInjector with GraphTestHelper {
   "graph controller" should {
     val modules = Seq(
-      TestGraphServiceClientModule(),
+      FakeGraphServiceClientModule(),
       SimpleGraphTestModule())
 
     "get list of uri and score pairs" in {

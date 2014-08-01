@@ -2,8 +2,8 @@ package com.keepit.controllers.website
 
 import org.specs2.mutable.Specification
 import net.codingwell.scalaguice.ScalaModule
-import com.keepit.heimdal.{ HeimdalContext, KifiHitContext, SanitizedKifiHit, TestHeimdalServiceClientModule }
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
+import com.keepit.heimdal.{ HeimdalContext, KifiHitContext, SanitizedKifiHit, FakeHeimdalServiceClientModule }
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.commanders.KeepInfo._
 import com.keepit.commanders.KeepInfosWithCollection._
 import com.keepit.commanders._
@@ -52,9 +52,9 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
-    TestScraperServiceClientModule(),
+    FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule()
   )
 

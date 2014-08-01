@@ -7,7 +7,7 @@ import com.keepit.common.actor.{ ActorPlugin, FakeActorSystemModule }
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, ProdScrapeSchedulerModule, TestScraperServiceClientModule }
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, ProdScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.shoebox.{ FakeKeepImportsModule, ShoeboxSlickModule, FakeShoeboxServiceModule }
 import com.google.inject.Module
