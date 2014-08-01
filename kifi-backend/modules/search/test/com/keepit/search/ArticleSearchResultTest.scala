@@ -72,20 +72,18 @@ class ArticleSearchResultTest extends Specification {
     }
 
     "be stored and retrieved" in {
-      running(new CommonTestApplication()) {
-        val store = new InMemoryArticleSearchResultStoreImpl()
+      val store = new InMemoryArticleSearchResultStoreImpl()
 
-        store += (initialResult.uuid, initialResult)
-        store += (nextResult.uuid, nextResult)
+      store += (initialResult.uuid, initialResult)
+      store += (nextResult.uuid, nextResult)
 
-        store.get(initialResult.uuid) === Some(initialResult)
-        store.get(nextResult.uuid) === Some(nextResult)
+      store.get(initialResult.uuid) === Some(initialResult)
+      store.get(nextResult.uuid) === Some(nextResult)
 
-        store.getInitialSearchId(initialResult) === initialResult.uuid
-        store.getInitialSearchId(initialResult.uuid) === initialResult.uuid
-        store.getInitialSearchId(nextResult) === initialResult.uuid
-        store.getInitialSearchId(nextResult.uuid) === initialResult.uuid
-      }
+      store.getInitialSearchId(initialResult) === initialResult.uuid
+      store.getInitialSearchId(initialResult.uuid) === initialResult.uuid
+      store.getInitialSearchId(nextResult) === initialResult.uuid
+      store.getInitialSearchId(nextResult.uuid) === initialResult.uuid
     }
   }
 }
