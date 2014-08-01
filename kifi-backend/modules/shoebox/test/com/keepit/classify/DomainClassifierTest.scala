@@ -1,8 +1,6 @@
 package com.keepit.classify
 
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.db.{ TestDbInfo, TestSlickModule }
@@ -17,7 +15,7 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ CommonTestInjector, DbInjectionHelper }
 import org.specs2.mutable.SpecificationLike
 
-class DomainClassifierTest extends TestKit(ActorSystem()) with SpecificationLike with CommonTestInjector with DbInjectionHelper {
+class DomainClassifierTest extends TestKitSupport with SpecificationLike with CommonTestInjector with DbInjectionHelper {
 
   val domainClassifierTestModules = Seq(
     FakeMailModule(),
