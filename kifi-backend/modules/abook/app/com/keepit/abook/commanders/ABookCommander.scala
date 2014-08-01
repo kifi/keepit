@@ -243,7 +243,8 @@ class ABookCommander @Inject() (
       emails.map { email =>
         econtactRepo.getByUserIdAndEmail(userId, email).headOption.getOrElse {
           val emailAccount = emailAccountRepo.internByAddress(email)
-          EContact(abookId = kifiAbook.id.get, emailAccountId = emailAccount.id.get, userId = userId, email = email)
+          econtactRepo.save(EContact(abookId = kifiAbook.id.get, emailAccountId = emailAccount.id.get,
+            userId = userId, email = email))
         }
       }
     }
