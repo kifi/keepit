@@ -1,12 +1,13 @@
 package com.keepit.controllers.mobile
 
+import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.model._
 import org.specs2.mutable.Specification
 
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
-import com.keepit.inject.ApplicationInjector
-import com.keepit.test.ShoeboxApplication
+import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
 
 import play.api.libs.json.Json
 import play.api.test._
@@ -16,17 +17,16 @@ import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.actor.TestActorSystemModule
-import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{ TestShoeboxAppSecureSocialModule, FakeSocialGraphModule }
-import scala.util.Failure
+import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 
-class MobileAuthControllerTest extends Specification with ApplicationInjector {
+class MobileAuthControllerTest extends Specification with ShoeboxTestInjector with DbInjectionHelper {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
@@ -35,22 +35,26 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
     TestActorSystemModule(),
     FakeAirbrakeModule(),
     FakeMailModule(),
-    TestShoeboxAppSecureSocialModule(),
+    FakeActionAuthenticatorModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule(),
     TestHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule()
+    TestScraperServiceClientModule(),
+    FakeKeepImportsModule(),
+    TestABookServiceClientModule(),
+    FakeCryptoModule()
   )
 
   "register iphone version" in {
-    running(new ShoeboxApplication(controllerTestModules: _*)) {
+    withDb(controllerTestModules: _*) { implicit injector =>
 
       val userRepo = inject[UserRepo]
       val installationRepo = inject[KifiInstallationRepo]
       val db = inject[Database]
+      val mobileAuthController = inject[MobileAuthController]
 
       val user = db.readWrite { implicit s =>
         userRepo.save(User(firstName = "Andrew", lastName = "C"))
@@ -61,10 +65,10 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
 
       inject[FakeActionAuthenticator].setUser(user)
       val existing = {
-        val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.3"))
-        val result = route(request).get
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
+        val request = FakeRequest("POST", path).withBody(Json.obj("version" -> "1.2.3"))
+        val result = mobileAuthController.registerIPhoneVersion()(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
 
         val installation = db.readWrite { implicit s =>
           val all = installationRepo.all()(s)
@@ -80,8 +84,8 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
         installation
       }
       {
-        val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.3", "installation" -> existing.externalId.toString))
-        val result = route(request).get
+        val request = FakeRequest("POST", path).withBody(Json.obj("version" -> "1.2.3", "installation" -> existing.externalId.toString))
+        val result = mobileAuthController.registerIPhoneVersion()(request)
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
@@ -99,10 +103,10 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
           installationRepo.get(existing.externalId).version.toString === "1.2.3"
           installationRepo.get(existing.externalId) === existing
         }
-        val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.4", "installation" -> existing.externalId.toString))
-        val result = route(request).get
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
+        val request = FakeRequest("POST", path).withBody(Json.obj("version" -> "1.2.4", "installation" -> existing.externalId.toString))
+        val result = mobileAuthController.registerIPhoneVersion()(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
 
         val expected = Json.parse(s"""
           {"installation":"${existing.externalId}","newInstallation":false}
@@ -115,10 +119,10 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
         }
       }
       {
-        val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.3"))
-        val result = route(request).get
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
+        val request = FakeRequest("POST", path).withBody(Json.obj("version" -> "1.2.3"))
+        val result = mobileAuthController.registerIPhoneVersion()(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
 
         val newOne = db.readWrite { implicit s =>
           val all = installationRepo.all()
@@ -135,11 +139,12 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
   }
 
   "register android version" in {
-    running(new ShoeboxApplication(controllerTestModules: _*)) {
+    withDb(controllerTestModules: _*) { implicit injector =>
 
       val userRepo = inject[UserRepo]
       val installationRepo = inject[KifiInstallationRepo]
       val db = inject[Database]
+      val mobileAuthController = inject[MobileAuthController]
 
       val user = db.readWrite { implicit s =>
         userRepo.save(User(firstName = "Andrew", lastName = "C"))
@@ -150,9 +155,9 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
 
       inject[FakeActionAuthenticator].setUser(user)
       val existing = {
-        val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.3"))
-        val result = route(request).get
-        status(result) must equalTo(OK);
+        val request = FakeRequest("POST", path).withBody(Json.obj("version" -> "1.2.3"))
+        val result = mobileAuthController.registerAndroidVersion()(request)
+        status(result) must equalTo(OK)
         contentType(result) must beSome("application/json");
 
         val installation = db.readWrite { implicit s =>
@@ -169,10 +174,10 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
         installation
       }
       {
-        val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.3", "installation" -> existing.externalId.toString))
-        val result = route(request).get
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
+        val request = FakeRequest("POST", path).withBody(Json.obj("version" -> "1.2.3", "installation" -> existing.externalId.toString))
+        val result = mobileAuthController.registerAndroidVersion()(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
 
         val expected = Json.parse(s"""
           {"installation":"${existing.externalId}","newInstallation":false}
@@ -188,10 +193,10 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
           installationRepo.get(existing.externalId).version.toString === "1.2.3"
           installationRepo.get(existing.externalId) === existing
         }
-        val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.4", "installation" -> existing.externalId.toString))
-        val result = route(request).get
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
+        val request = FakeRequest("POST", path).withBody(Json.obj("version" -> "1.2.4", "installation" -> existing.externalId.toString))
+        val result = mobileAuthController.registerAndroidVersion()(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
 
         val expected = Json.parse(s"""
           {"installation":"${existing.externalId}","newInstallation":false}
@@ -204,10 +209,10 @@ class MobileAuthControllerTest extends Specification with ApplicationInjector {
         }
       }
       {
-        val request = FakeRequest("POST", path).withJsonBody(Json.obj("version" -> "1.2.3"))
-        val result = route(request).get
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
+        val request = FakeRequest("POST", path).withBody(Json.obj("version" -> "1.2.3"))
+        val result = mobileAuthController.registerAndroidVersion()(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
 
         val newOne = db.readWrite { implicit s =>
           val all = installationRepo.all()
