@@ -2,7 +2,7 @@ package com.keepit.common
 
 package object collection {
 
-  implicit class PimpedMap[A, B](val m: Map[A, B]) {
+  implicit class PimpedMap[A, B](m: Map[A, B]) {
     /**
      * Adds given (key, value) pairs to the map, where each value is wrapped in an Option.
      * For each value, if the Option is None, the pair is dropped.
