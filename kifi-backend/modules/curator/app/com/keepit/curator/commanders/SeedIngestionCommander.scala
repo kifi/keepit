@@ -31,7 +31,29 @@ class SeedIngestionCommander @Inject() (
 
   val INGESTION_BATCH_SIZE = 50
 
-  val GRAPH_INGESTION_WHITELIST: Seq[Id[User]] = Seq(243, 6498, 134, 3, 1, 9, 2538, 61, 115, 100).map(Id[User](_)) //will go away once we release, just saving some computation for now
+  val GRAPH_INGESTION_WHITELIST: Seq[Id[User]] = Seq(
+    1, //Eishay
+    3, //Andrew
+    7, //Yasu
+    9, //Danny
+    48, //Jared
+    61, //Jen
+    100, //Tamila
+    115, //Yingjie
+    134, //Léo
+    243, //Stephen
+    460, //Ray
+    1114, //Martin
+    2538, //Mark
+    3466, //JP
+    6498, //Tan
+    6622, //David
+    7100, //Aaron
+    7456, //Josh
+    7589, //Lydia
+    8465, //Yiping
+    8476 //Tommy
+  ).map(Id[User](_)) //will go away once we release, just saving some computation/time for now
 
   val MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER = 100
 
@@ -107,6 +129,11 @@ class SeedIngestionCommander @Inject() (
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
         }
         cook(userId, rawItem, keepers)
+      }.filter { seedItem =>
+        seedItem.keepers match {
+          case Keepers.ReasonableNumber(users) => !users.contains(userId)
+          case _ => false
+        }
       }
 
     }
