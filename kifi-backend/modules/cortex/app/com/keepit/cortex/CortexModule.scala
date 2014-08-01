@@ -8,6 +8,13 @@ import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.cortex.models.lda.LDAInfoStoreModule
 import com.keepit.cortex.dbmodel.CortexDataIngestionModule
+import com.keepit.common.zookeeper.ServiceTypeModule
+import com.keepit.common.service.ServiceType
+
+case class CortexServiceTypeModule() extends ServiceTypeModule {
+  val serviceType = ServiceType.CORTEX
+  val servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.GRAPH :: ServiceType.HEIMDAL :: Nil
+}
 
 abstract class CortexModule(
     val cacheModule: CacheModule,
@@ -22,4 +29,5 @@ abstract class CortexModule(
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val secureSocialModule = RemoteSecureSocialModule()
   val cortexSlickModule = CortexSlickModule()
+  val serviceTypeModule = CortexServiceTypeModule()
 }

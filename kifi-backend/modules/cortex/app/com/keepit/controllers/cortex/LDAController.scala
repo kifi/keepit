@@ -99,4 +99,9 @@ class LDAController @Inject() (
     Ok(Json.toJson(vec))
   }
 
+  def userSimilarity(userId1: Id[User], userId2: Id[User]) = Action { request =>
+    val score = lda.userSimilairty(userId1, userId2)
+    Ok(Json.toJson(score))
+  }
+
 }

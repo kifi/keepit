@@ -12,6 +12,4 @@ case class ABookProdModule() extends ABookModule(
   storeModule = ABookProdStoreModule(),
   contactsUpdaterPluginModule = ProdABookImporterPluginModule(),
   sqsModule = ProdSimpleQueueModule()
-) with CommonProdModule {
-  val discoveryModule = new ProdDiscoveryModule(ServiceType.ABOOK, ServiceType.SHOEBOX :: Nil)
-}
+) with CommonProdModule

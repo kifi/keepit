@@ -27,7 +27,5 @@ case class SearchProdModule() extends SearchModule(
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val heimdalServiceClientModule = ProdHeimdalServiceClientModule()
-
-  val discoveryModule = new ProdDiscoveryModule(ServiceType.SEARCH, ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: ServiceType.ELIZA :: Nil)
 }
 

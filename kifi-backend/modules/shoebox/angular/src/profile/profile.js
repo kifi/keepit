@@ -36,9 +36,8 @@ angular.module('kifi.profile', [
     $scope.showEmailChangeDialog = {value: false};
     $scope.showResendVerificationEmailDialog = {value: false};
 
-    profileService.getMe().then(function (data) {
-      $scope.me = data;
-    });
+    $scope.me = profileService.me;
+    profileService.getMe();
 
     $scope.descInput = {};
     $scope.$watch('me.description', function (val) {

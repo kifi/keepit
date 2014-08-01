@@ -19,7 +19,7 @@ class ScoreTypeMapFormatTest extends Specification {
 
       val map = inputJson.as[Map[ScoreType.Value, Float]]
 
-      map.get(ScoreType.socialScore) === 1f
+      map.get(ScoreType.socialScore).get === 1f
       map.get(ScoreType.overallInterestScore).get === 2f
       map.get(ScoreType.priorScore).get === 3f
 

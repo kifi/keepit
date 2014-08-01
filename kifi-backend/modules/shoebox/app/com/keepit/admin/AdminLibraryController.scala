@@ -2,10 +2,13 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 import com.keepit.commanders.LibraryCommander
-import com.keepit.common.controller.{ ActionAuthenticator, AdminController }
+import com.keepit.common.controller.{ AuthenticatedRequest, ActionAuthenticator, AdminController }
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.net.RichRequestHeader
 import com.keepit.model._
+import play.api.mvc.AnyContent
 import views.html
 
 case class LibraryStatistic(
@@ -37,7 +40,7 @@ class AdminLibraryController @Inject() (
   def index(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
     val pageSize = 30
     val (stats, totalCount) = db.readOnlyReplica { implicit session =>
-      val stats = libraryRepo.page(page, size = pageSize).map { lib =>
+      val stats = libraryRepo.page(page, size = pageSize).filter(_.visibility != LibraryVisibility.SECRET).map { lib =>
         val owner = userRepo.get(lib.ownerId)
         val keepsCount = keepRepo.getCountByLibrary(lib.id.get)
         val memberships = libraryMembershipRepo.getWithLibraryId(lib.id.get)
@@ -114,5 +117,47 @@ class AdminLibraryController @Inject() (
     db.readWrite(implicit s => libraryRepo.save(libraryRepo.get(libraryId).withState(libState)))
     Ok
   }
+
+  //post request with a list of private/public and active/inactive
+  def updateLibraries() = AdminHtmlAction.authenticated { request =>
+    def toBoolean(str: String) = str.trim.toInt == 1
+
+    def setToVisibility(id: Id[Library], newVisibility: String)(implicit session: RWSession): Id[User] = {
+      val lib = libraryRepo.get(id)
+      log.info("updating library %s to %s".format(lib, newVisibility))
+      newVisibility match {
+        case LibraryVisibility.PUBLISHED.value => libraryRepo.save(lib.copy(visibility = LibraryVisibility.PUBLISHED))
+        case LibraryVisibility.DISCOVERABLE.value => libraryRepo.save(lib.copy(visibility = LibraryVisibility.DISCOVERABLE))
+        case LibraryVisibility.SECRET.value => libraryRepo.save(lib.copy(visibility = LibraryVisibility.SECRET))
+      }
+
+      log.info("updated library %s to %s".format(lib, newVisibility))
+      lib.ownerId
+    }
+
+    def setIsActive(id: Id[Library], isActive: Boolean)(implicit session: RWSession): Id[User] = {
+      val lib = libraryRepo.get(id)
+      log.info("updating bookmark %s with active = %s".format(lib, isActive))
+      if (isActive)
+        libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
+      else
+        libraryRepo.save(lib.copy(state = LibraryStates.INACTIVE))
+      log.info("updated bookmark %s".format(lib))
+      lib.ownerId
+    }
+
+    db.readWrite { implicit s =>
+      request.body.asFormUrlEncoded.get foreach {
+        case (key, values) =>
+          key.split("_") match {
+            case Array("active", id) => setIsActive(Id[Library](id.toInt), toBoolean(values.last))
+            case Array("visib", id) => setToVisibility(Id[Library](id.toInt), values.last)
+          }
+      }
+    }
+    log.info("updating changed users")
+    Redirect(request.request.referer)
+  }
+
 }
 

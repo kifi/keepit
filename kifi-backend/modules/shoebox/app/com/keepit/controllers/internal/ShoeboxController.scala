@@ -340,23 +340,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(res))
   }
 
-  def getScrapeInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val ts = System.currentTimeMillis
-    val json = request.body
-    val uri = json.as[NormalizedURI]
-    //Openning two sessions may be slower, the assumption is that >99% of the cases only one session is needed
-    val infoOpt = db.readOnlyReplica(2) { implicit s => //no cache used
-      scrapeInfoRepo.getByUriId(uri.id.get)
-    }
-    val info = infoOpt.getOrElse {
-      db.readWrite(attempts = 3) { implicit s =>
-        scrapeInfoRepo.save(ScrapeInfo(uriId = uri.id.get))
-      }
-    }
-    log.debug(s"[getScrapeInfo] time-lapsed:${System.currentTimeMillis - ts} url=${uri.url} result=$info")
-    Ok(Json.toJson(info))
-  }
-
   def getImageInfo(id: Id[ImageInfo]) = SafeAsyncAction { request =>
     val imageInfo = db.readOnlyReplica { implicit ro =>
       imageInfoRepo.get(id)

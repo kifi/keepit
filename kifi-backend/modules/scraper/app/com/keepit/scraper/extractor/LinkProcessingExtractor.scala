@@ -1,17 +1,18 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.scraper.fetcher.HttpFetcher
-import org.apache.tika.parser.html.HtmlMapper
-import com.keepit.scraper.ScraperConfig
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.net.URI
+import com.keepit.model.HttpProxy
+import com.keepit.scraper.ScraperConfig
+import com.keepit.scraper.fetcher.HttpFetcher
+import com.keepit.shoebox.ShoeboxScraperClient
+import org.apache.tika.parser.html.HtmlMapper
 import org.apache.tika.sax.{ Link, LinkContentHandler, TeeContentHandler }
 import org.xml.sax.ContentHandler
+
 import scala.collection.JavaConversions._
-import com.keepit.shoebox.ShoeboxServiceClient
-import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
-import com.keepit.model.HttpProxy
+import scala.concurrent.{ Await, Future }
 
 class LinkProcessingExtractor(
   url: String,
@@ -19,7 +20,7 @@ class LinkProcessingExtractor(
   htmlMapper: Option[HtmlMapper],
   processLink: Link => Option[String],
   httpFetcher: HttpFetcher,
-  shoeboxServiceClient: ShoeboxServiceClient)
+  shoeboxScraperClient: ShoeboxScraperClient)
     extends DefaultExtractor(url, maxContentChars, htmlMapper) {
 
   private val linkHandler = new LinkContentHandler()
@@ -53,14 +54,14 @@ class LinkProcessingExtractor(
     if (keywords.isEmpty) None else Some(keywords)
   }
 
-  private[extractor] def getProxyP(url: String): Future[Option[HttpProxy]] = shoeboxServiceClient.getProxyP(url)
+  private[extractor] def getProxyP(url: String): Future[Option[HttpProxy]] = shoeboxScraperClient.getProxyP(url)
   private[extractor] def syncGetProxyP(url: String): Option[HttpProxy] = Await.result(getProxyP(url), 10 seconds)
 }
 
 @Singleton
-class LinkProcessingExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeboxServiceClient: ShoeboxServiceClient) extends ExtractorProvider {
+class LinkProcessingExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeboxScraperClient: ShoeboxScraperClient) extends ExtractorProvider {
   def isDefinedAt(uri: URI) = true
-  def apply(uri: URI) = new LinkProcessingExtractor(uri.toString, ScraperConfig.maxContentChars, DefaultExtractorProvider.htmlMapper, processLink(uri), httpFetcher, shoeboxServiceClient) // TODO
+  def apply(uri: URI) = new LinkProcessingExtractor(uri.toString, ScraperConfig.maxContentChars, DefaultExtractorProvider.htmlMapper, processLink(uri), httpFetcher, shoeboxScraperClient) // TODO
 
   private def processLink(uri: URI)(link: Link): Option[String] = {
     val url = uri.toString()

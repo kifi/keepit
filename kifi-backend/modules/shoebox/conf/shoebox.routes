@@ -443,6 +443,7 @@ GET     /admin/fakeUsers/page/:page @com.keepit.controllers.admin.AdminUserContr
 POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserController.searchUsers()
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userViewByEitherId(id: String, showPrivates: Boolean ?= false)
 GET     /admin/user/:id/keeps       @com.keepit.controllers.admin.AdminUserController.userKeepsView(id: Id[User], showPrivates: Boolean ?= false)
+GET     /admin/user/:id/libraries   @com.keepit.controllers.admin.AdminUserController.userLibrariesView(id: Id[User], showSecrets: Boolean ?= false)
 POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User], showPrivates: Boolean ?= false)
 GET     /admin/user/:id/prefixSearch @com.keepit.controllers.admin.AdminUserController.prefixSearch(id:Id[User], query:String ?= "")
@@ -537,6 +538,7 @@ GET     /admin/libraries/:id/keeps       @com.keepit.controllers.admin.AdminLibr
 POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibraryController.internUserSystemLibraries(userId: Id[User])
 POST    /admin/libraries/internForAllUsers  @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
 POST    /admin/libraries/:id/state/:state   @com.keepit.controllers.admin.AdminLibraryController.changeState(id: Id[Library], state: String)
+POST    /admin/libraries/update             @com.keepit.controllers.admin.AdminLibraryController.updateLibraries
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")
@@ -693,7 +695,6 @@ POST    /internal/geckoboard/refresh                  @com.keepit.reports.Geckob
 POST    /internal/shoebox/email/sendUnreadMessages   @com.keepit.controllers.internal.EmailNotificationsController.sendUnreadMessages()
 
 GET      /internal/shoebox/database/assignScrapeTasks @com.keepit.controllers.internal.ShoeboxController.assignScrapeTasks(zkId:Id[ScraperWorker], max:Int ?= 1)
-POST     /internal/shoebox/database/getScrapeInfo     @com.keepit.controllers.internal.ShoeboxController.getScrapeInfo
 POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxController.saveScrapeInfo
 POST     /internal/shoebox/database/savePageInfo      @com.keepit.controllers.internal.ShoeboxController.savePageInfo
 GET      /internal/shoebox/database/getImageInfo      @com.keepit.controllers.internal.ShoeboxController.getImageInfo(id:Id[ImageInfo])
@@ -729,8 +730,7 @@ GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.int
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 
-# New site, temporary
-GET     /ng                        com.keepit.controllers.website.AngularDistAssets.home
+# Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/angular/dist", file)
 GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path="/angular/img", file)
 

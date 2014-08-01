@@ -5,6 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.curator.model._
 import com.keepit.model.User
 import com.keepit.common.db.slick.Database
@@ -30,27 +31,46 @@ class SeedIngestionCommander @Inject() (
 
   val INGESTION_BATCH_SIZE = 50
 
-  val GRAPH_INGESTION_WHITELIST: Seq[Id[User]] = Seq(243, 6498, 134, 3, 1, 9, 2538, 61, 115, 100).map(Id[User](_)) //will go away once we release, just saving some computation for now
+  val GRAPH_INGESTION_WHITELIST: Seq[Id[User]] = Seq(
+    1, //Eishay
+    3, //Andrew
+    7, //Yasu
+    9, //Danny
+    48, //Jared
+    61, //Jen
+    100, //Tamila
+    115, //Yingjie
+    134, //Léo
+    243, //Stephen
+    460, //Ray
+    1114, //Martin
+    2538, //Mark
+    3466, //JP
+    6498, //Tan
+    6622, //David
+    7100, //Aaron
+    7456, //Josh
+    7589, //Lydia
+    8465, //Yiping
+    8476 //Tommy
+  ).map(Id[User](_)) //will go away once we release, just saving some computation/time for now
 
   val MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER = 100
 
-  val ingestionInProgress: AtomicBoolean = new AtomicBoolean(false)
+  val ingestionLock = new ReactiveLock()
 
-  def ingestAll(): Future[Boolean] = if (ingestionInProgress.compareAndSet(false, true)) {
+  def ingestAll(): Future[Boolean] = ingestionLock.withLockFuture {
     val fut = ingestAllKeeps().flatMap { _ =>
       FutureHelpers.sequentialExec(GRAPH_INGESTION_WHITELIST)(ingestTopUris)
     }
     fut.onComplete {
-      case Success(_) => ingestionInProgress.set(false)
       case Failure(ex) => {
         log.error("Failure occured during ingestion.")
         airbrake.notify("Failure occured during ingestion.", ex)
-        ingestionInProgress.set(false)
       }
+      case _ =>
     }
     fut.map(_ => true)
-  } else {
-    Future.successful(false)
   }
 
   def ingestAllKeeps(): Future[Unit] = FutureHelpers.whilef(allKeepIngestor(INGESTION_BATCH_SIZE)) {
@@ -100,8 +120,7 @@ class SeedIngestionCommander @Inject() (
   def getTopItems(userId: Id[User], howManyMax: Int): Future[Seq[SeedItem]] = {
     //gets higest scoring ruis for the user. If that's not enough get recent items as well
     db.readOnlyReplicaAsync { implicit session =>
-      var items = rawSeedsRepo.getByTopPriorScore(userId, howManyMax)
-      if (items.length < howManyMax) items = (items ++ rawSeedsRepo.getRecent(userId, howManyMax)).toSet.toSeq
+      val items = (rawSeedsRepo.getByTopPriorScore(userId, howManyMax / 2) ++ rawSeedsRepo.getRecentGeneric(howManyMax / 2)).toSet.toSeq
       items.map { rawItem =>
         val keepers = if (rawItem.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
           Keepers.TooMany
@@ -109,6 +128,11 @@ class SeedIngestionCommander @Inject() (
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
         }
         cook(userId, rawItem, keepers)
+      }.filter { seedItem =>
+        seedItem.keepers match {
+          case Keepers.ReasonableNumber(users) => !users.contains(userId)
+          case _ => false
+        }
       }
 
     }

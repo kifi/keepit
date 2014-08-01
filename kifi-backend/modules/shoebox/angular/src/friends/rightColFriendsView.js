@@ -1,9 +1,7 @@
 'use strict';
 
 angular.module('kifi.friends.rightColFriendsView', [])
-
-
-.directive('kfCompactFriendsView', ['$log', 'friendService', function ($log, friendService) {
+.directive('kfCompactFriendsView', ['friendService', function (friendService) {
   return {
     replace: true,
     restrict: 'A',
@@ -37,6 +35,38 @@ angular.module('kifi.friends.rightColFriendsView', [])
           return '/invite';
         }
       };
+    }
+  };
+}])
+
+.directive('kfRightColConnectView', ['friendService', 'socialService', function (friendService, socialService) {
+  return {
+    replace: true,
+    restrict: 'A',
+    templateUrl: 'friends/rightColConnectView.tpl.html',
+    link: function (scope/*, element, attrs*/) {
+      function getEligibleNetworksCsv() {
+        if (friendService.totalFriends() < 20) {
+          return _.compact([
+            socialService.facebook && socialService.facebook.profileUrl ? null : 'facebook',
+            socialService.linkedin && socialService.linkedin.profileUrl ? null : 'linkedin',
+            socialService.gmail && socialService.gmail.length ? null : 'gmail'
+          ]).join(',');
+        } else {
+          return '';
+        }
+      }
+
+      function chooseNetwork(csv) {
+        scope.network = csv ? _.sample(csv.split(',')) : null;
+      }
+      
+      scope.connectFacebook = socialService.connectFacebook;
+      scope.connectLinkedIn = socialService.connectLinkedIn;
+      scope.importGmail = socialService.importGmail;
+
+      socialService.refresh();
+      scope.$watch(getEligibleNetworksCsv, chooseNetwork);
     }
   };
 }])

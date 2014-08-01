@@ -1,5 +1,6 @@
 package com.keepit.common.crypto
 
+import com.keepit.common.util.Configuration
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{ Provides, Singleton }
 import play.api.Play._
@@ -11,7 +12,7 @@ case class ShoeboxCryptoModule() extends CryptoModule {
 
   @Singleton
   @Provides
-  def publicIdConfiguration: PublicIdConfiguration = {
-    PublicIdConfiguration(current.configuration.getString("public-id.secret").get)
+  def publicIdConfiguration(config: Configuration): PublicIdConfiguration = {
+    PublicIdConfiguration(config.getString("public-id.secret").get)
   }
 }
