@@ -1,0 +1,13 @@
+{{^new}}
+<a class="kifi-tagbox-suggestion" href="javascript:" data-id="{{id}}" data-name="{{name}}">
+  {{name}}
+</a>
+{{/new}}
+{{#new}}
+<a class="kifi-tagbox-suggestion kifi-tagbox-suggestion-new" href="javascript:" data-name="{{name}}">
+  add as a new tag:
+  <div class="kifi-tagbox-new-tag-line">
+    <span class="kifi-tagbox-new-tag">{{name}}</span>
+  </div>
+</a>
+{{/new}}
