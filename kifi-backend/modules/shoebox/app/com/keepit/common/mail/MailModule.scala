@@ -40,30 +40,15 @@ case class ProdMailModule() extends MailModule {
 
 case class DevMailModule() extends MailModule {
 
+  protected def whenConfigured[T](parameter: String)(expression: => T): Option[T] =
+    current.configuration.getString(parameter).map(_ => expression)
+
   def configure() {
     bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
     bind[SystemAdminMailSender].to[LocalSystemAdminMailSender]
-  }
-
-  @Provides
-  @Singleton
-  def mailToKeepServerSettingsOpt: Option[MailToKeepServerSettings] =
-    current.configuration.getString("mailtokeep").map(_ => ProdMailModule().mailToKeepServerSettings)
-
-  @Provides
-  @Singleton
-  def mailToKeepServerSettings: MailToKeepServerSettings = mailToKeepServerSettingsOpt.get
-
-  @AppScoped
-  @Provides
-  def mailToKeepPlugin(
-    actor: ActorInstance[MailToKeepActor],
-    mailToKeepServerSettings: Option[MailToKeepServerSettings],
-    schedulingProperties: SchedulingProperties): MailToKeepPlugin = {
-    mailToKeepServerSettingsOpt match {
-      case None => new FakeMailToKeepPlugin()
-      case _ => new MailToKeepPluginImpl(actor, schedulingProperties)
+    whenConfigured("mailtokeep") { bind[MailToKeepPlugin].to[MailToKeepPluginImpl].in[AppScoped] } getOrElse {
+      bind[MailToKeepPlugin].to[FakeMailToKeepPlugin].in[AppScoped]
     }
   }
 }

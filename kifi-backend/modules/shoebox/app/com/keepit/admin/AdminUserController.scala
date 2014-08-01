@@ -88,6 +88,7 @@ class AdminUserController @Inject() (
     userValueRepo: UserValueRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
+    libraryRepo: LibraryRepo,
     invitationRepo: InvitationRepo,
     userSessionRepo: UserSessionRepo,
     imageStore: S3ImageStore,
@@ -868,4 +869,17 @@ class AdminUserController @Inject() (
     userCommander.removeUsername(userId)
     Ok
   }
+
+  def userLibrariesView(ownerId: Id[User], showSecrets: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
+    if (showSecrets) {
+      log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing secret libraries of $ownerId")
+    }
+    val (owner, accessToLibs) = db.readOnlyReplica { implicit session =>
+      val owner = userRepo.get(ownerId)
+      val libs = libraryRepo.getByUser(ownerId).filter(pair => showSecrets || !(pair._2.visibility == LibraryVisibility.SECRET))
+      (owner, libs)
+    }
+    Ok(html.admin.userLibraries(owner, accessToLibs))
+  }
+
 }

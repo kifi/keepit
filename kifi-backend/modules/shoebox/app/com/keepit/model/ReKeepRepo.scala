@@ -21,6 +21,7 @@ trait ReKeepRepo extends Repo[ReKeep] {
   def getReKeepCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]])(implicit r: RSession): Map[Id[Keep], Int]
   def getReKeepCountByURI(uriId: Id[NormalizedURI])(implicit r: RSession): Int
   def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]])(implicit r: RSession): Map[Id[NormalizedURI], Int]
+  def getUriReKeepsWithCountsByKeeper(userId: Id[User])(implicit r: RSession): Seq[(Id[NormalizedURI], Id[Keep], Id[User], Int)]
   def getUriReKeepCountsByKeeper(userId: Id[User])(implicit r: RSession): Map[Id[NormalizedURI], Int]
   def getReKeeps(keepIds: Set[Id[Keep]])(implicit r: RSession): Map[Id[Keep], Seq[ReKeep]]
   def getAllReKeepCountsByUser()(implicit r: RSession): Map[Id[User], Int]
@@ -87,6 +88,10 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
       .groupBy(_.keepId)
       .map { case (kId, rk) => (kId, rk.length) }
     q.toMap()
+  }
+
+  def getUriReKeepsWithCountsByKeeper(userId: Id[User])(implicit r: RSession): Seq[(Id[NormalizedURI], Id[Keep], Id[User], Int)] = {
+    sql"select uri_id, keep_id, keeper_id, count(*) c from rekeep where keeper_id=$userId group by uri_id order by keep_id desc".as[(Id[NormalizedURI], Id[Keep], Id[User], Int)].list()
   }
 
   def getUriReKeepCountsByKeeper(userId: Id[User])(implicit r: RSession): Map[Id[NormalizedURI], Int] = {

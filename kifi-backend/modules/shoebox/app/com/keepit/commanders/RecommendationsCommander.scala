@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ User, NormalizedURIRepo, NormalizedURI }
+import com.keepit.model.{ User, NormalizedURIRepo, NormalizedURI, NormalizedURIStates }
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.common.db.slick.Database
 import com.keepit.curator.model.Recommendation
@@ -22,7 +22,7 @@ class RecommendationsCommander @Inject() (
     curator.adHocRecos(userId, howManyMax).flatMap { recos =>
       val recosWithUris: Seq[(Recommendation, NormalizedURI)] = db.readOnlyReplica { implicit session =>
         recos.map { reco => (reco, nUriRepo.get(reco.uriId)) }
-      }.filterNot(_._2.restriction.isDefined) //simple (overly strict) porn filter stop gap until proper curator integration is done
+      }.filter(x => x._2.restriction.isEmpty && x._2.state == NormalizedURIStates.SCRAPED) //simple (overly strict) porn filter/login wall stop gap until proper curator integration is done
 
       Future.sequence(recosWithUris.map {
         case (reco, nUri) =>

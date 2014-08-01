@@ -12,11 +12,25 @@ class ScoreContext(
     val matchWeight: Array[Float],
     collector: ResultCollector[ScoreContext]) extends Joiner {
 
-  private[engine] var visibility: Int = 0 // 0: restricted, 1: public, 2: member
+  private[engine] var visibility: Int = 0 // 0: restricted, 1: public, 2: member (see Visibility)
   private[engine] val scoreMax = new Array[Float](scoreArraySize)
   private[engine] val scoreSum = new Array[Float](scoreArraySize)
 
   def score(): Float = scoreExpr()(this)
+
+  def percentMatch(threshold: Float): Float = {
+    val len = scoreMax.length
+    var pct = 1.0f
+    var i = 0
+    while (i < len) { // using while for performance
+      if (scoreMax(i) <= 0.0f) {
+        pct -= matchWeight(i)
+        if (pct < threshold) return 0.0f
+      }
+      i += 1
+    }
+    pct
+  }
 
   def clear(): Unit = {
     visibility = 0

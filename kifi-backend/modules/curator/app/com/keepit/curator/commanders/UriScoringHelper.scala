@@ -45,8 +45,8 @@ class UriScoringHelper @Inject() (
     interestScores.map { scores =>
       scores.map { score =>
         val (overallOpt, recentOpt) = (score.global, score.recency)
-        (overallOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat,
-          recentOpt.map(uis => (0.5 * uis.score + 0.5) * uis.confidence).getOrElse(0.0).toFloat)
+        (overallOpt.map(uis => if (uis.confidence > 0.5 && uis.score > 0) uis.score else 0.0).getOrElse(0.0).toFloat,
+          recentOpt.map(uis => if (uis.confidence > 0.3 && uis.score > 0) uis.score else 0.0).getOrElse(0.0).toFloat)
       }.unzip
     }
   }
@@ -69,7 +69,7 @@ class UriScoringHelper @Inject() (
             case Keepers.ReasonableNumber(users) => {
               var itemScore = 0.0f
               users.map(userId => itemScore += socialScoreMap.getOrElse(userId, 0.0f))
-              itemScore
+              Math.tanh(itemScore).toFloat
             }
           })
       }.recover { //This needs to go once the graph is fixed

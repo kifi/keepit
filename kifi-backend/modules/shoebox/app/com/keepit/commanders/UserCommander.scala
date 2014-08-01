@@ -257,9 +257,7 @@ class UserCommander @Inject() (
       searchClient.updateUserIndex()
       tellUsersWithContactOfNewUserImmediate(newUser)
     }
-    db.readWrite { implicit session =>
-      autoSetUsername(newUser, readOnly = false)
-    }
+
     libraryCommander.internSystemGeneratedLibraries(newUser.id.get)
 
     newUser

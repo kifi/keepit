@@ -178,7 +178,7 @@ class LDACommander @Inject() (
     val (users, vecs) = db.readOnlyReplica { implicit s => userTopicRepo.getAllUserTopicMean(wordRep.version, minEvidence = 100) }
     val idsAndScores = (users zip vecs).map {
       case (userId, vec) =>
-        val (u, v) = (scale(targetScaled, statOpt), scale(vec.mean, statOpt))
+        val (u, v) = (targetScaled, scale(vec.mean, statOpt))
         val score = cosineDistance(u, v).toFloat
         (userId, score)
     }
@@ -189,6 +189,18 @@ class LDACommander @Inject() (
   def dumpScaledUserInterest(userId: Id[User]): Option[Array[Float]] = {
     val vecOpt = db.readOnlyReplica { implicit s => userTopicRepo.getTopicMeanByUser(userId, wordRep.version) }
     vecOpt.map { vec => val statOpt = getUserLDAStats(wordRep.version); scale(vec.mean, statOpt) }
+  }
+
+  def userSimilairty(userId1: Id[User], userId2: Id[User]): Option[Float] = {
+    val vecOpt1 = db.readOnlyReplica { implicit s => userTopicRepo.getTopicMeanByUser(userId1, wordRep.version) }
+    val vecOpt2 = db.readOnlyReplica { implicit s => userTopicRepo.getTopicMeanByUser(userId2, wordRep.version) }
+    val statOpt = getUserLDAStats(wordRep.version)
+
+    (vecOpt1, vecOpt2) match {
+      case (Some(v1), Some(v2)) => Some(cosineDistance(scale(v1.mean, statOpt), scale(v2.mean, statOpt)))
+      case _ => None
+    }
+
   }
 
 }
