@@ -7,7 +7,7 @@ import com.keepit.common.net.{ FakeHttpClientModule, FakeClientResponse, DirectU
 import com.keepit.inject._
 import com.keepit.model.{ UserPictureSources, UserPicture, User }
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
-import com.keepit.common.mail.TestMailModule
+import com.keepit.common.mail.FakeMailModule
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
@@ -42,7 +42,7 @@ class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specifica
         TestShoeboxAppSecureSocialModule(),
         FakeSocialGraphModule(),
         TestHeimdalServiceClientModule(),
-        TestMailModule(),
+        FakeMailModule(),
         FakeExternalServiceModule(),
         FakeCortexServiceClientModule(),
         TestScraperServiceClientModule(),
