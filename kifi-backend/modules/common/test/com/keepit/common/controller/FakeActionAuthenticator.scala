@@ -43,7 +43,7 @@ case class FakeIdentity(user: User) extends Identity {
   def passwordInfo: Option[PasswordInfo] = None
 }
 
-class FakeActionAuthenticator extends ActionAuthenticator with SecureSocial with Logging {
+class FakeActionAuthenticator extends ActionAuthenticator with Logging {
   log.debug("using new FakeActionAuthenticator")
 
   var fixedUser: Option[User] = None
