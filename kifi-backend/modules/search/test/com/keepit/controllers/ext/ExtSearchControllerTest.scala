@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import com.keepit.test.{ SearchApplication, SearchApplicationInjector }
+import com.keepit.test.{ SearchApplication, SearchTestInjector }
 import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.common.db.{ Id, ExternalId }
@@ -22,7 +22,7 @@ import org.apache.lucene.search.{ Explanation, Query }
 import com.keepit.common.util.Configuration
 import com.keepit.common.util.PlayAppConfigurationModule
 
-class ExtSearchControllerTest extends Specification with SearchApplicationInjector {
+class ExtSearchControllerTest extends Specification with SearchTestInjector {
 
   def modules = {
     implicit val system = ActorSystem("test")
@@ -36,7 +36,7 @@ class ExtSearchControllerTest extends Specification with SearchApplicationInject
 
   "ExtSearchController" should {
     "search keeps" in {
-      running(new SearchApplication(modules: _*)) {
+      withInjector(modules: _*) { implicit injector =>
         val path = com.keepit.controllers.ext.routes.ExtSearchController.search("test", None, 7, None, None, None, None, None, None, None, None).toString
         path === "/search?q=test&maxHits=7"
 
