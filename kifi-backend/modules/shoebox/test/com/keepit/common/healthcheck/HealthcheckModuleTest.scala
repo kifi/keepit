@@ -18,7 +18,7 @@ class HealthcheckModuleTest extends TestKitSupport with SpecificationLike with S
 
   val modules = Seq(
     FakeMailModule(),
-    FakeActorSystemModule(Some(system))
+    FakeActorSystemModule()
   )
 
   "HealthcheckModule" should {

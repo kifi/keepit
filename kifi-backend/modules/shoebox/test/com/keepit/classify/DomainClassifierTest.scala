@@ -23,7 +23,7 @@ class DomainClassifierTest extends TestKitSupport with SpecificationLike with Co
     FakeShoeboxStoreModule(),
     FakeHeimdalServiceClientModule(),
     FakeDomainTagImporterModule(),
-    FakeActorSystemModule(Some(system)),
+    FakeActorSystemModule(),
     FakeShoeboxServiceModule(),
     FakeSearchServiceClientModule(),
     FakeSlickModule(TestDbInfo.dbInfo),

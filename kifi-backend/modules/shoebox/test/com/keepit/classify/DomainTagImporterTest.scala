@@ -23,7 +23,7 @@ class DomainTagImporterTest extends TestKitSupport with SpecificationLike with S
     FakeHeimdalServiceClientModule(),
     FakeShoeboxStoreModule(),
     FakeDomainTagImporterModule(),
-    FakeActorSystemModule(Some(system)),
+    FakeActorSystemModule(),
     FakeSearchServiceClientModule(),
     FakeShoeboxServiceModule(),
     FakeAirbrakeModule(),

@@ -35,7 +35,7 @@ class ScraperControllerTest extends TestKitSupport with SpecificationLike with A
       ScraperTestStoreModule(),
       FakeShoeboxServiceModule(),
       FakeActionAuthenticatorModule(),
-      FakeActorSystemModule(Some(system))
+      FakeActorSystemModule()
     )
   }
 
