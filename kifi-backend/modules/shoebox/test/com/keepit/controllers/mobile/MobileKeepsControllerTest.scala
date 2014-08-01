@@ -32,7 +32,7 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.FakeAnalyticsModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -60,14 +60,14 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import play.api.libs.json.JsObject
 import com.keepit.model.KifiHitKey
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 
 class MobileKeepsControllerTest extends Specification with ApplicationInjector {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),

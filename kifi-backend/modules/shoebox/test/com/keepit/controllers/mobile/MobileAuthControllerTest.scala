@@ -19,7 +19,7 @@ import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerM
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -31,7 +31,7 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeAirbrakeModule(),
     FakeMailModule(),
     FakeActionAuthenticatorModule(),

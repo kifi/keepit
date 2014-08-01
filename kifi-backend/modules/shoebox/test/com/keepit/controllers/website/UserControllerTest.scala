@@ -14,12 +14,12 @@ import play.api.test.Helpers._
 import play.api.test._
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{ TestShoeboxAppSecureSocialModule, FakeSocialGraphModule }
+import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule, FakeSocialGraphModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 
@@ -32,7 +32,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     FakeShoeboxServiceModule(),
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeABookServiceClientModule(),
     FakeMailModule(),
     FakeHttpClientModule(),

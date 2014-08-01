@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.common.social.{ FakeSocialGraphModule, TestShoeboxAppSecureSocialModule }
+import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxAppSecureSocialModule }
 import com.keepit.social.{ ProdShoeboxSecureSocialModule, SocialId, SocialNetworks }
 import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
@@ -19,7 +19,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
@@ -33,7 +33,7 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
     FakeScrapeSchedulerModule(),
     ProdShoeboxSecureSocialModule(),
     FakeHttpClientModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeSocialGraphModule(),
     FakeAirbrakeModule(),
     FakeHeimdalServiceClientModule(),

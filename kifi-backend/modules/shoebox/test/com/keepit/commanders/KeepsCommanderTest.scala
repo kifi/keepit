@@ -14,7 +14,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import play.api.libs.json.{ JsArray, JsString, Json }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -22,7 +22,7 @@ import play.api.test.Helpers._
 class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
   def modules = FakeKeepImportsModule() ::
-    ShoeboxFakeStoreModule() ::
+    FakeShoeboxStoreModule() ::
     FakeExternalServiceModule() ::
     FakeSearchServiceClientModule() ::
     FakeCortexServiceClientModule() ::

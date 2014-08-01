@@ -7,7 +7,7 @@ import com.keepit.test._
 
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -21,7 +21,7 @@ class DomainTagImporterTest extends TestKitSupport with SpecificationLike with S
     FakeMailModule(),
     FakeAnalyticsModule(),
     FakeHeimdalServiceClientModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeDomainTagImporterModule(),
     FakeActorSystemModule(Some(system)),
     FakeSearchServiceClientModule(),

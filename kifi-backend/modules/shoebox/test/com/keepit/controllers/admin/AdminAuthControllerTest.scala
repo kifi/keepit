@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import org.specs2.mutable.Specification
 
-import com.keepit.common.social.TestShoeboxAppSecureSocialModule
+import com.keepit.common.social.FakeShoeboxAppSecureSocialModule
 import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
 import com.keepit.social.{ SocialId, SocialNetworks }
 import SocialNetworks.FACEBOOK
@@ -13,7 +13,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.actor.FakeActorSystemModule
@@ -28,14 +28,14 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
 
   val modules = Seq(FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeHttpClientModule(),
     FakeMailModule(),
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
-    TestShoeboxAppSecureSocialModule(),
+    FakeShoeboxAppSecureSocialModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule())

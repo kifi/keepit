@@ -20,7 +20,7 @@ import securesocial.core._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-case class TestShoeboxAppSecureSocialModule() extends ShoeboxSecureSocialModule {
+case class FakeShoeboxAppSecureSocialModule() extends ShoeboxSecureSocialModule {
   // This has a Play Application dependency.
   // If possible, use `TestActionAuthenticator`! See https://team42.atlassian.net/wiki/display/ENG/Testing+at+FortyTwo
   override def configure(): Unit = {

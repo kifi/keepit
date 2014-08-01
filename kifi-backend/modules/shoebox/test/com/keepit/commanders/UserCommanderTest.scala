@@ -12,7 +12,7 @@ import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeAB
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 
 import play.api.test.Helpers.running
 
@@ -62,7 +62,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),

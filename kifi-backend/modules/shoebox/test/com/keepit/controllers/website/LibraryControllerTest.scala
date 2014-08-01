@@ -7,7 +7,7 @@ import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model._
@@ -29,7 +29,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     FakeCryptoModule(),
     FakeActionAuthenticatorModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeABookServiceClientModule(),
     FakeKeepImportsModule(),
     FakeMailModule(),
