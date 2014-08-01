@@ -3,19 +3,19 @@ package com.keepit.model
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.heimdal._
 
-case class TestMongoModule() extends MongoModule {
+case class FakeMongoModule() extends MongoModule {
 
   def configure() = {}
 
   @Provides @Singleton
-  def userEventLoggingRepo: UserEventLoggingRepo = new TestUserEventLoggingRepo
+  def userEventLoggingRepo: UserEventLoggingRepo = new FakeUserEventLoggingRepo
 
   @Provides @Singleton
-  def systemEventLoggingRepo: SystemEventLoggingRepo = new TestSystemEventLoggingRepo
+  def systemEventLoggingRepo: SystemEventLoggingRepo = new FakeSystemEventLoggingRepo
 
   @Provides @Singleton
-  def anonymousEventLoggingRepo: AnonymousEventLoggingRepo = new TestAnonymousEventLoggingRepo
+  def anonymousEventLoggingRepo: AnonymousEventLoggingRepo = new FakeAnonymousEventLoggingRepo
 
   @Provides @Singleton
-  def nonUserEventLoggingRepo: NonUserEventLoggingRepo = new TestNonUserEventLoggingRepo
+  def nonUserEventLoggingRepo: NonUserEventLoggingRepo = new FakeNonUserEventLoggingRepo
 }

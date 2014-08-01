@@ -11,7 +11,7 @@ import com.keepit.common.db.{ TestDbInfo, TestSlickModule }
 import com.keepit.common.controller.FakeActionAuthenticatorModule
 import com.google.inject.util.Modules
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ABookCacheModule }
-import com.keepit.common.actor.TestSchedulerModule
+import com.keepit.common.actor.FakeSchedulerModule
 
 class ABookApplication(overridingModules: Module*)(implicit path: File = new File("./modules/abook/"))
     extends DbTestApplication(path, overridingModules, Seq(
@@ -41,7 +41,7 @@ trait ABookTestInjector extends TestInjector with DbInjectionHelper with ABookIn
     FakeHealthcheckModule(),
     TestSlickModule(TestDbInfo.dbInfo),
     ABookCacheModule(HashMapMemoryCacheModule()),
-    TestSchedulerModule(),
+    FakeSchedulerModule(),
     FakeAbookRepoChangeListenerModule()
   )
 }
