@@ -122,8 +122,7 @@ class SeedIngestionCommander @Inject() (
   def getTopItems(userId: Id[User], howManyMax: Int): Future[Seq[SeedItem]] = {
     //gets higest scoring ruis for the user. If that's not enough get recent items as well
     db.readOnlyReplicaAsync { implicit session =>
-      var items = rawSeedsRepo.getByTopPriorScore(userId, howManyMax)
-      if (items.length < howManyMax) items = (items ++ rawSeedsRepo.getRecent(userId, howManyMax)).toSet.toSeq
+      val items = (rawSeedsRepo.getByTopPriorScore(userId, howManyMax / 2) ++ rawSeedsRepo.getRecentGeneric(howManyMax / 2)).toSet.toSeq
       items.map { rawItem =>
         val keepers = if (rawItem.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
           Keepers.TooMany
