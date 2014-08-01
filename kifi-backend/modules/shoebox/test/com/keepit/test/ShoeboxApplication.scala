@@ -37,7 +37,6 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     FakeDiscoveryModule(),
     TestSlickModule(TestDbInfo.dbInfo),
     ShoeboxCacheModule(HashMapMemoryCacheModule()),
-
     TestNormalizationServiceModule(),
     FakeActionAuthenticatorModule(),
     AbuseControlModule(),
