@@ -34,8 +34,9 @@
 		        <td>@{i+1}</td>
 		        <td><span class="badge">@lib.id.get.id</span></td>
 		        <td>
-              <input type="hidden" name="secret_@{lib.id.get.id}" value="0" />
-              <center><input type="checkbox" id="secret_@lib.id.get.id" name="secret_@{lib.id.get.id}" value="1" @if(lib.visibility.value == "secret") {checked="checked"}></input></center>
+                <input type="radio" id="visib_@{lib.id.get.id}" name="visib_@{lib.id.get.id}" value="published" @if(lib.visibility.value=="published") {checked="checked"}/> Publish<br>
+                <input type="radio" id="visib_@{lib.id.get.id}" name="visib_@{lib.id.get.id}" value="discoverable" @if(lib.visibility.value=="discoverable") {checked="checked"}/> Discover<br>
+                <input type="radio" id="visib_@{lib.id.get.id}" name="visib_@{lib.id.get.id}" value="secret" @if(lib.visibility.value=="secret") {checked="checked"}/> Secret<br>
             </td>
             <td>
               <input type="hidden" name="active_@{lib.id.get.id}" value="0" />
