@@ -6,7 +6,7 @@ import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.model._
 import com.keepit.shoebox.TestShoeboxServiceClientModule
 import com.keepit.social.{ SocialNetworks, SocialId }
@@ -19,7 +19,7 @@ import com.keepit.common.mail.FakeMailModule
 
 class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
 
-  val modules = Seq(FakeHttpClientModule(), ShoeboxFakeStoreModule(), TestShoeboxServiceClientModule(), FakeElizaServiceClientModule(), FakeMailModule())
+  val modules = Seq(FakeHttpClientModule(), FakeShoeboxStoreModule(), TestShoeboxServiceClientModule(), FakeElizaServiceClientModule(), FakeMailModule())
 
   "UserConnectionCreator" should {
     "create connections between friends for social users and kifi users" in {

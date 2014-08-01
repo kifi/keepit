@@ -31,7 +31,7 @@ import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
@@ -44,7 +44,7 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     FakeMailModule(),
     FakeHttpClientModule(),
     FakeAnalyticsModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeSearchServiceClientModule(),
     FakeAirbrakeModule(),

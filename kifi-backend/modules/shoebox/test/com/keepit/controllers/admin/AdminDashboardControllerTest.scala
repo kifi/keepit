@@ -19,7 +19,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
@@ -33,7 +33,7 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
     FakeScrapeSchedulerModule(),
     ProdShoeboxSecureSocialModule(),
     FakeHttpClientModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeSocialGraphModule(),
     FakeAirbrakeModule(),
     FakeHeimdalServiceClientModule(),

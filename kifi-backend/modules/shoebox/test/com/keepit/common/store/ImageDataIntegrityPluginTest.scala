@@ -24,7 +24,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 class ImageDataIntegrityPluginTest extends TestKitSupport with SpecificationLike with ShoeboxApplicationInjector {
 
   val imageDataIntegrityTestPluginModule =
-    new ShoeboxFakeStoreModule() {
+    new FakeShoeboxStoreModule() {
       override def configure() {
         bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
         bind[S3ImageConfig].toInstance(S3ImageConfig("test-bucket", "//cloudfront", isLocal = false))

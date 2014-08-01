@@ -14,7 +14,7 @@ import com.keepit.common.actor.{ TestKitSupport, ActorBuilder, FakeActorSystemMo
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
 import java.io.File
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
 
@@ -29,7 +29,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
     TestShoeboxServiceClientModule(),
     FakeHttpClientModule(),
     FakeScrapeSchedulerModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule()

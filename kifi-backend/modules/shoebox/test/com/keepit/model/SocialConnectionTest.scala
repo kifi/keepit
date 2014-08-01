@@ -7,7 +7,7 @@ import java.io.File
 import org.specs2.mutable._
 import play.api.libs.json._
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.google.inject.Injector
 import com.keepit.shoebox.TestShoeboxServiceClientModule
 import com.keepit.social.{ SocialNetworks, SocialId }
@@ -18,7 +18,7 @@ import com.keepit.common.mail.FakeMailModule
 
 class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
-  val socialConnectionTestModules = Seq(FakeHttpClientModule(), ShoeboxFakeStoreModule(), TestShoeboxServiceClientModule(), FakeElizaServiceClientModule(), FakeMailModule())
+  val socialConnectionTestModules = Seq(FakeHttpClientModule(), FakeShoeboxStoreModule(), TestShoeboxServiceClientModule(), FakeElizaServiceClientModule(), FakeMailModule())
 
   private def extractFacebookFriendInfo(json: JsValue)(implicit injector: Injector): Seq[SocialUserInfo] = {
     inject[FacebookSocialGraph].extractFriends(json)
