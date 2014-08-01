@@ -3,48 +3,52 @@ package com.keepit.cortex.utils
 import scala.math.sqrt
 
 object MatrixUtils {
-  def L2Normalize(vec: Array[Float]): Array[Float] = {
+  implicit def toDoubleArray(vec: Array[Float]): Array[Double] = vec.map { _.toDouble }
+  implicit def toFloatArray(vec: Array[Double]): Array[Float] = vec.map { _.toFloat }
+  implicit def toFloat(x: Double): Float = x.toFloat
+
+  def L2Normalize(vec: Array[Double]): Array[Double] = {
     val s = sqrt(vec.map { x => x * x }.sum)
-    if (s == 0) vec else vec.map { x => (x / s).toFloat }
+    if (s == 0.0) vec else vec.map { x => x / s }
   }
 
-  def dot(v: Array[Float], w: Array[Float]): Float = {
+  def dot(v: Array[Double], w: Array[Double]): Double = {
     val n = v.size
     assert(n == w.size)
     var i = 0
-    var s = 0f
+    var s = 0.0
     while (i < n) { s += v(i) * w(i); i += 1 }
     s
   }
 
-  def add(v: Array[Float], w: Array[Float]): Array[Float] = {
+  def add(v: Array[Double], w: Array[Double]): Array[Double] = {
     val n = v.size
     assert(n == w.size)
-    val rv = new Array[Float](n)
+    val rv = new Array[Double](n)
     (0 until n).foreach { j =>
       rv(j) = v(j) + w(j)
     }
     rv
   }
 
-  def cosineDistance(v: Array[Float], w: Array[Float]): Float = {
+  def cosineDistance(v: Array[Double], w: Array[Double]): Double = {
     val nv = L2Normalize(v)
     val nw = L2Normalize(w)
     dot(nv, nw)
   }
 
-  def average(vecs: Seq[Array[Float]]): Array[Float] = {
+  def average(vecs: Seq[Array[Double]]): Array[Double] = {
     val n = vecs.size
     assume(n > 0)
     val s = vecs.reduce(add)
     s.map { _ / n }
   }
 
-  def weightedAverage(vecs: Seq[Array[Float]], weights: Array[Float]): Array[Float] = {
+  def weightedAverage(vecs: Seq[Array[Double]], weights: Array[Double]): Array[Double] = {
     val n = vecs.size
     assume(n > 0)
     val dim = vecs(0).size
-    val res = new Array[Float](dim)
+    val res = new Array[Double](dim)
     (0 until n).foreach { i =>
       val v = vecs(i)
       val w = weights(i)
@@ -56,12 +60,12 @@ object MatrixUtils {
     res
   }
 
-  def getMinAndMax(data: Seq[Array[Float]]): (Array[Float], Array[Float]) = {
+  def getMinAndMax(data: Seq[Array[Double]]): (Array[Double], Array[Double]) = {
     assume(data.size > 0)
     val dataSize = data.size
     val dim = data(0).size
-    val minArr = new Array[Float](dim)
-    val maxArr = new Array[Float](dim)
+    val minArr = new Array[Double](dim)
+    val maxArr = new Array[Double](dim)
     Array.copy(data(0), 0, minArr, 0, dim)
     Array.copy(data(0), 0, maxArr, 0, dim)
     (1 until dataSize).foreach { i =>
@@ -73,7 +77,7 @@ object MatrixUtils {
     (minArr, maxArr)
   }
 
-  def getMeanAndStd(data: Seq[Array[Float]]): (Array[Float], Array[Float]) = {
+  def getMeanAndStd(data: Seq[Array[Double]]): (Array[Double], Array[Double]) = {
     assume(data.size > 1)
     val dim = data(0).size
     val dataSize = data.size
@@ -88,5 +92,4 @@ object MatrixUtils {
     }
     (tuples.map { _._1 }.toArray, tuples.map { _._2 }.toArray)
   }
-
 }

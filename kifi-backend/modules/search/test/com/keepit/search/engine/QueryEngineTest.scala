@@ -48,11 +48,10 @@ class QueryEngineTest extends Specification {
     "find matches with index1" in {
       val query = getParser().parse("abc def").get
       val collector = new TstResultCollector
-      val builder = new QueryEngineBuilder(query, -1.0f).setResultCollector(collector)
-      val engine = builder.build
+      val engine = new QueryEngineBuilder(query).build
 
       engine.execute(searcher1) { (reader, scorers) => new ArticleScoreVectorSource(reader, scorers, LongArraySet.empty) }
-      engine.join()
+      engine.join(collector)
 
       collector.hits === Set(0, 2, 4, 6, 8)
 
@@ -61,11 +60,10 @@ class QueryEngineTest extends Specification {
     "find matches with index2" in {
       val query = getParser().parse("abc def").get
       val collector = new TstResultCollector
-      val builder = new QueryEngineBuilder(query, -1.0f).setResultCollector(collector)
-      val engine = builder.build
+      val engine = new QueryEngineBuilder(query).build
 
       engine.execute(searcher2) { (reader, scorers) => new ArticleScoreVectorSource(reader, scorers, LongArraySet.empty) }
-      engine.join()
+      engine.join(collector)
 
       collector.hits === Set(0, 3, 6, 9)
     }
@@ -73,12 +71,11 @@ class QueryEngineTest extends Specification {
     "find matches with index1 and index2 using Disjunction" in {
       val query = getParser().parse("abc def").get
       val collector = new TstResultCollector
-      val builder = new QueryEngineBuilder(query, -1.0f).setResultCollector(collector)
-      val engine = builder.build
+      val engine = new QueryEngineBuilder(query).build
 
       engine.execute(searcher1) { (reader, scorers) => new ArticleScoreVectorSource(reader, scorers, LongArraySet.empty) }
       engine.execute(searcher2) { (reader, scorers) => new ArticleScoreVectorSource(reader, scorers, LongArraySet.empty) }
-      engine.join()
+      engine.join(collector)
 
       collector.hits === Set(0, 2, 3, 4, 6, 8, 9)
     }
@@ -86,12 +83,11 @@ class QueryEngineTest extends Specification {
     "find matches with index1 and index2 using Conjunction" in {
       val query = getParser().parse("+abc +def").get
       val collector = new TstResultCollector
-      val builder = new QueryEngineBuilder(query, -1.0f).setResultCollector(collector)
-      val engine = builder.build
+      val engine = new QueryEngineBuilder(query).build
 
       engine.execute(searcher1) { (reader, scorers) => new ArticleScoreVectorSource(reader, scorers, LongArraySet.empty) }
       engine.execute(searcher2) { (reader, scorers) => new ArticleScoreVectorSource(reader, scorers, LongArraySet.empty) }
-      engine.join()
+      engine.join(collector)
 
       collector.hits === Set(0, 6)
     }
