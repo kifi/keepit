@@ -3,7 +3,7 @@ package com.keepit.integrity
 import org.specs2.mutable.Specification
 import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication, ShoeboxApplicationInjector }
 import play.api.test.Helpers.running
-import com.keepit.common.actor.{ ActorPlugin, TestActorSystemModule }
+import com.keepit.common.actor.{ ActorPlugin, FakeActorSystemModule }
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id

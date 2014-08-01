@@ -8,7 +8,7 @@ import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.healthcheck.{ FakeHealthcheckModule, FakeMemoryUsageModule, FakeAirbrakeModule }
 import com.keepit.common.time.FakeClockModule
-import com.keepit.inject.{ EmptyInjector, ApplicationInjector, TestFortyTwoModule }
+import com.keepit.inject.{ EmptyInjector, ApplicationInjector, FakeFortyTwoModule }
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule }
 import play.api.Mode
@@ -28,7 +28,7 @@ class GraphApplication(overridingModules: Module*)(implicit path: File = new Fil
     FakeMemoryUsageModule(),
     FakeClockModule(),
     FakeHealthcheckModule(),
-    TestFortyTwoModule(),
+    FakeFortyTwoModule(),
     FakeDiscoveryModule(),
     GraphCacheModule(HashMapMemoryCacheModule())
   ))

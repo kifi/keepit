@@ -16,7 +16,7 @@ import play.api.test.Helpers._
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule

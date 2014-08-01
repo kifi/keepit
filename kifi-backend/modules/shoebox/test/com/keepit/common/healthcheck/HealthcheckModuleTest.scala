@@ -7,7 +7,7 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
 import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
-import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
+import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 
 class HealthcheckModuleTest extends TestKitSupport with SpecificationLike with ShoeboxApplicationInjector {
 
@@ -29,7 +29,7 @@ class HealthcheckModuleTest extends TestKitSupport with SpecificationLike with S
 
   "HealthcheckModule" should {
     "load" in {
-      running(new ShoeboxApplication(FakeMailModule(), prodHealthCheckModuleWithLocalSender, TestActorSystemModule(Some(system)))) {
+      running(new ShoeboxApplication(FakeMailModule(), prodHealthCheckModuleWithLocalSender, FakeActorSystemModule(Some(system)))) {
         val healthcheck = inject[HealthcheckPlugin]
 
         val outbox = fakeMailSender.mailQueue

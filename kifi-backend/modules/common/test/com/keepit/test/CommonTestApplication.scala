@@ -1,7 +1,7 @@
 package com.keepit.test
 
 import java.io.File
-import com.keepit.inject.{ TestFortyTwoModule }
+import com.keepit.inject.{ FakeFortyTwoModule }
 import com.google.inject.Module
 import com.google.inject.util.Modules
 import com.keepit.common.time.FakeClockModule
@@ -25,7 +25,7 @@ class CommonTestApplication(overridingModules: Module*)(implicit path: File = ne
       FakeHealthcheckModule(),
       FakeAirbrakeModule(),
       FakeMemoryUsageModule(),
-      TestFortyTwoModule(),
+      FakeFortyTwoModule(),
       FakeDiscoveryModule(),
       FakeSchedulerModule()
     )

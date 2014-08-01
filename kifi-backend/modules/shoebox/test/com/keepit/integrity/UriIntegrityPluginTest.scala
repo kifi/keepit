@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import com.keepit.test.ShoeboxApplication
 import com.keepit.test.ShoeboxApplicationInjector
 import play.api.test.Helpers.running
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.test.ShoeboxTestInjector
 import com.google.inject.Injector
 import com.keepit.model._
@@ -18,7 +18,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
   "uri integrity plugin" should {
     "work" in {
-      running(new ShoeboxApplication(TestActorSystemModule(), FakeScrapeSchedulerModule(), FakeAirbrakeModule())) {
+      running(new ShoeboxApplication(FakeActorSystemModule(), FakeScrapeSchedulerModule(), FakeAirbrakeModule())) {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
@@ -107,7 +107,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
     "handle collections correctly when migrating bookmarks" in {
 
-      running(new ShoeboxApplication(TestActorSystemModule(), FakeScrapeSchedulerModule(), FakeAirbrakeModule())) {
+      running(new ShoeboxApplication(FakeActorSystemModule(), FakeScrapeSchedulerModule(), FakeAirbrakeModule())) {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]

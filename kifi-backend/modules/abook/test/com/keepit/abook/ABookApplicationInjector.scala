@@ -1,7 +1,7 @@
 package com.keepit.abook
 
 import com.keepit.test.{ TestInjector, DbTestApplication, DbInjectionHelper }
-import com.keepit.inject.{ TestFortyTwoModule, ApplicationInjector }
+import com.keepit.inject.{ FakeFortyTwoModule, ApplicationInjector }
 import com.google.inject.Module
 import java.io.File
 import com.keepit.common.healthcheck.{ FakeHealthcheckModule, FakeMemoryUsageModule, FakeAirbrakeModule }
@@ -20,7 +20,7 @@ class ABookApplication(overridingModules: Module*)(implicit path: File = new Fil
       FakeMemoryUsageModule(),
       FakeClockModule(),
       FakeHealthcheckModule(),
-      TestFortyTwoModule(),
+      FakeFortyTwoModule(),
       FakeDiscoveryModule(),
       FakeSlickModule(TestDbInfo.dbInfo),
       FakeActionAuthenticatorModule(),

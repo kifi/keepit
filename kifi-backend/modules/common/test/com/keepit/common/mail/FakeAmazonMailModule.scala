@@ -2,7 +2,7 @@ package com.keepit.common.mail
 
 import com.google.inject.{ Provides, Singleton }
 
-case class TestAmazonMailModule() extends AmazonMailModule {
+case class FakeAmazonMailModule() extends AmazonMailModule {
 
   def configure() {
   }

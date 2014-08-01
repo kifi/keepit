@@ -3,7 +3,7 @@ package com.keepit.test
 import akka.actor.ActorSystem
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.keepit.search.spellcheck.FakeSpellCorrectorModule
-import com.keepit.inject.{ TestFortyTwoModule, ApplicationInjector }
+import com.keepit.inject.{ FakeFortyTwoModule, ApplicationInjector }
 import java.io.File
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
@@ -19,7 +19,7 @@ import com.keepit.common.store.SearchFakeStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.search.{ SearchServiceTypeModule, TestSearchServiceClientModule, SearchConfigModule }
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 
 class SearchApplication(overridingModules: Module*)(implicit path: File = new File("./modules/search/"))
   extends TestApplication(path, overridingModules, Seq(
@@ -30,7 +30,7 @@ class SearchApplication(overridingModules: Module*)(implicit path: File = new Fi
     FakeMemoryUsageModule(),
     FakeClockModule(),
     FakeHealthcheckModule(),
-    TestFortyTwoModule(),
+    FakeFortyTwoModule(),
     DevTrackingModule(),
     SearchFakeStoreModule(),
     DevIndexModule(),
@@ -41,7 +41,7 @@ class SearchApplication(overridingModules: Module*)(implicit path: File = new Fi
     FakeSpellCorrectorModule(),
     SearchCacheModule(HashMapMemoryCacheModule()),
     SearchConfigModule(),
-    TestActorSystemModule()
+    FakeActorSystemModule()
   ))
 
 trait SearchApplicationInjector extends ApplicationInjector with SearchInjectionHelpers
@@ -58,7 +58,7 @@ trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
     FakeMemoryUsageModule(),
     FakeClockModule(),
     FakeHealthcheckModule(),
-    TestFortyTwoModule(),
+    FakeFortyTwoModule(),
     DevTrackingModule(),
     SearchFakeStoreModule(),
     DevIndexModule(),

@@ -8,7 +8,7 @@ import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.model._
 import com.keepit.test.ShoeboxApplicationInjector
 import play.api.test.Helpers.running
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.test.ShoeboxApplication
 import com.keepit.shoebox.TestShoeboxServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
@@ -17,7 +17,7 @@ import com.keepit.normalizer.NormalizedURIInterner
 class URLRenormalizeCommanderTest extends Specification with ShoeboxApplicationInjector {
   "renormalizer" should {
     "word" in {
-      running(new ShoeboxApplication(TestActorSystemModule(), FakeHttpClientModule(), TestShoeboxServiceClientModule())) {
+      running(new ShoeboxApplication(FakeActorSystemModule(), FakeHttpClientModule(), TestShoeboxServiceClientModule())) {
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]

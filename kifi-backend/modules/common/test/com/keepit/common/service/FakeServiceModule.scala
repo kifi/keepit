@@ -6,12 +6,12 @@ import play.api.Mode
 import play.api.Mode.Mode
 import com.keepit.common.time._
 import net.codingwell.scalaguice.ScalaModule
-import com.keepit.inject.{ TestFortyTwoModule, FortyTwoConfig }
+import com.keepit.inject.{ FakeFortyTwoModule, FortyTwoConfig }
 
 case class FakeServiceModule() extends ScalaModule {
 
   def configure(): Unit = {
-    install(TestFortyTwoModule())
+    install(FakeFortyTwoModule())
   }
 
   @Provides
