@@ -1,8 +1,8 @@
 package com.keepit.test
 
-import java.sql.{Driver, DriverManager}
+import java.sql.{ Driver, DriverManager }
 
-import com.google.inject.{Injector, Module}
+import com.google.inject.{ Injector, Module }
 import com.keepit.common.db.TestDbInfo
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
@@ -10,7 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.inject._
 import com.keepit.macros.Location
 
-import scala.slick.driver.JdbcDriver.simple.{Database => SlickDatabase}
+import scala.slick.driver.JdbcDriver.simple.{ Database => SlickDatabase }
 import scala.slick.jdbc.ResultSetConcurrency
 
 trait DbInjectionHelper extends Logging { self: InjectorProvider =>
