@@ -9,7 +9,7 @@ import com.keepit.serializer.TraversableFormat
 import scala.concurrent.duration.Duration
 
 case class ConnectedUserScoreCacheKey(userId: Id[User], avoidFirstDegreeConnections: Boolean) extends Key[Seq[ConnectedUserScore]] {
-  override val version = 0
+  override val version = 1
   val namespace = "user_connection_score"
   def toKey(): String = s"userId=${userId.id.toString}#avoidFirstDegreeConnection=${avoidFirstDegreeConnections.toString}"
 }
