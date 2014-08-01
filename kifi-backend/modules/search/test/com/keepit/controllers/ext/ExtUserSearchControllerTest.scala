@@ -13,6 +13,18 @@ import org.specs2.mutable._
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import play.api.libs.json.Json
+
+import akka.actor.ActorSystem
+
+import com.keepit.shoebox.FakeShoeboxServiceClientImpl
+import com.keepit.shoebox.FakeShoeboxServiceModule
+
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.search.user.UserIndexer
+import com.keepit.search.user.UserSearchFilterFactory
+import com.keepit.common.mail.EmailAddress
+import com.keepit.common.util.PlayAppConfigurationModule
 
 class ExtUserSearchControllerTest extends Specification with SearchApplicationInjector {
 
@@ -40,8 +52,6 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
     usersWithId
   }
 
-  def filterFactory = inject[UserSearchFilterFactory]
-
   def modules = {
     implicit val system = ActorSystem("test")
     Seq(
@@ -53,7 +63,7 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
 
   "ExtUserSearchController" should {
     "search user" in {
-      running(new SearchApplication(modules: _*)) {
+      withInjector(modules: _*) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
@@ -91,7 +101,7 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
     }
 
     "page user by name" in {
-      running(new SearchApplication(modules: _*)) {
+      withInjector(modules: _*) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
@@ -143,7 +153,7 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
     }
 
     "page user by email" in {
-      running(new SearchApplication(modules: _*)) {
+      withInjector(modules: _*) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]

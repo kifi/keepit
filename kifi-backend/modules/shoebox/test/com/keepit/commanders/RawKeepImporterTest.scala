@@ -1,28 +1,39 @@
 package com.keepit.commanders
 
-import org.specs2.mutable.SpecificationLike
-import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
-import com.keepit.heimdal.HeimdalContext
-import akka.actor.ActorSystem
-import com.keepit.model.{ RawKeepFactory, KeepSource, User }
-import play.api.libs.json.Json
-import akka.testkit.{ TestActorRef, TestKit }
-import play.api.test.Helpers._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
-import com.keepit.shoebox.{ FakeShoeboxServiceClientModule, KeepImportsModule, FakeKeepImportsModule }
-import com.keepit.common.actor.{ TestKitSupport, ActorBuilder, FakeActorSystemModule }
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.common.net.FakeHttpClientModule
 import java.io.File
+
+import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
+import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
+import com.keepit.common.db.{ FakeSlickModule, TestDbInfo }
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.queue.FakeSimpleQueueModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext, HeimdalQueueDevModule }
+import com.keepit.model.{ KeepSource, RawKeepFactory, UrlPatternRuleModule, User }
+import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.shoebox.{ AbuseControlModule, FakeShoeboxServiceClientModule, KeepImportsModule }
+import com.keepit.test._
+import org.specs2.mutable.SpecificationLike
+import play.api.libs.json.Json
 
-class RawKeepImporterTest extends TestKitSupport with SpecificationLike with ShoeboxApplicationInjector {
+class RawKeepImporterTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   // This is a good example of how to test actor side effects.
   implicit val context = HeimdalContext.empty
 
   def modules = Seq(
+    FakeSlickModule(TestDbInfo.dbInfo),
+    FakeElizaServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
+    UrlPatternRuleModule(),
+    FakeSimpleQueueModule(),
+    HeimdalQueueDevModule(),
+    FakeNormalizationUpdateJobQueueModule(),
+    ShoeboxCacheModule(HashMapMemoryCacheModule()),
     KeepImportsModule(),
     FakeActorSystemModule(),
     FakeSearchServiceClientModule(),
@@ -32,13 +43,14 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
     FakeShoeboxStoreModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    FakeScraperServiceClientModule()
+    FakeScraperServiceClientModule(),
+    AbuseControlModule()
   )
 
   "RawKeepImporter" should {
 
     "properly handle imports" in {
-      running(new ShoeboxApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
