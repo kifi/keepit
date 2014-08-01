@@ -19,10 +19,10 @@ class SafeFuture[+T](future: Future[T], name: Option[String] = None)(implicit ex
           try {
             // Needs a running Play application. May fail.
             Logger(getClass).error(s"[SafeFuture] Failure of future [${name.getOrElse("")}]", cause)
-            val fortyTwoInjectorOpt = play.api.Play.maybeApplication.map(a => a.global.asInstanceOf[FortyTwoGlobal].injector)
-            fortyTwoInjectorOpt.map(_.getInstance(classOf[AirbrakeNotifier]).notify(
-              AirbrakeError(cause, Some(s"SafeFuture[${name.getOrElse("")}]"))
-            ))
+            play.api.Play.maybeApplication.foreach { app =>
+              app.global.asInstanceOf[FortyTwoGlobal].injector.getInstance(classOf[AirbrakeNotifier])
+                .notify(AirbrakeError(cause, Some(s"SafeFuture[${name.getOrElse("")}]")))
+            }
           } catch {
             case _: Throwable => // tried our best.
           }
