@@ -39,7 +39,7 @@ class ExtDeepLinkControllerTest extends Specification with ShoeboxTestInjector w
           val path = com.keepit.controllers.ext.routes.ExtDeepLinkController.createDeepLink().toString()
           path === "/internal/shoebox/database/createDeepLink"
 
-          val request = FakeRequest("POST", path, FakeHeaders(), Json.obj(
+          val request = FakeRequest("POST", path).withBody(Json.obj(
             "initiator" -> heinlein.id.get.id,
             "recipient" -> niven.id.get.id,
             "uriId" -> uri.id.get.id,

@@ -9,7 +9,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.classify.DomainCache
 
-case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
+case class FakeCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
 
   @Singleton
   @Provides

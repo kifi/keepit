@@ -1,6 +1,9 @@
 package com.keepit.controllers.mobile
 
-import org.specs2.mutable.Specification
+import akka.actor.ActorSystem
+import akka.testkit.TestKit
+import com.keepit.classify.FakeDomainTagImporterModule
+import org.specs2.mutable.{ SpecificationLike, Specification }
 
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -9,7 +12,7 @@ import com.keepit.search._
 import com.keepit.common.controller._
 import com.keepit.common.db._
 import com.keepit.model._
-import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
+import com.keepit.test.{ ShoeboxTestInjector, DbInjectionHelper, ShoeboxApplication }
 
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
@@ -17,20 +20,20 @@ import play.api.test.Helpers._
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.analytics.TestAnalyticsModule
+import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 
-class MobilePageControllerTest extends Specification with ShoeboxApplicationInjector {
+class MobilePageControllerTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxTestInjector with DbInjectionHelper {
 
   val mobileControllerTestModules = Seq(
     FakeShoeboxServiceModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
-    TestAnalyticsModule(),
+    FakeAnalyticsModule(),
     ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
+    TestActorSystemModule(Some(system)),
     FakeAirbrakeModule(),
     FakeActionAuthenticatorModule(),
     FakeSearchServiceClientModule(),
@@ -39,7 +42,7 @@ class MobilePageControllerTest extends Specification with ShoeboxApplicationInje
 
   "mobileController" should {
     "return connected users from the database" in {
-      running(new ShoeboxApplication(mobileControllerTestModules: _*)) {
+      withDb(mobileControllerTestModules: _*) { implicit injector =>
         val path = com.keepit.controllers.mobile.routes.MobilePageController.getPageDetails().toString
         path === "/m/1/page/details"
 
@@ -85,8 +88,8 @@ class MobilePageControllerTest extends Specification with ShoeboxApplicationInje
         }
 
         inject[FakeActionAuthenticator].setUser(user1)
-        val request = FakeRequest("POST", path).withJsonBody(Json.obj("url" -> "http://www.google.com"))
-        val result = route(request).get
+        val request = FakeRequest("POST", path).withBody(Json.obj("url" -> "http://www.google.com"))
+        val result = inject[MobilePageController].getPageDetails()(request)
 
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")

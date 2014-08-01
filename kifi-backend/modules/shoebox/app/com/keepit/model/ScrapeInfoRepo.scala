@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.Id
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -19,6 +19,7 @@ trait ScrapeInfoRepo extends Repo[ScrapeInfo] {
   def getAssignedCount(due: DateTime = currentDateTime)(implicit session: RSession): Int
   def getAssignedList(limit: Int = -1, due: DateTime = currentDateTime)(implicit session: RSession): Seq[ScrapeInfo]
   def setForRescrapeByRegex(urlRegex: String, withinMinutes: Int)(implicit session: RSession): Int
+  def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -99,5 +100,25 @@ class ScrapeInfoRepoImpl @Inject() (
 
   }
 
+  def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit = {
+    val uriId = uri.id.get
+    if (!NormalizedURIStates.DO_NOT_SCRAPE.contains(uri.state)) {
+      val info = getByUriId(uriId)
+      val toSave = info match {
+        case Some(s) => s.state match {
+          case ScrapeInfoStates.ACTIVE => s.withNextScrape(date)
+          case ScrapeInfoStates.ASSIGNED => s // no change
+          case ScrapeInfoStates.INACTIVE => {
+            log.warn(s"[scheduleScrape(${uri.toShortString})] scheduling INACTIVE $s")
+            s.withState(ScrapeInfoStates.ACTIVE).withNextScrape(date) // todo(Ray): dangerous; revisit
+          }
+        }
+        case None => ScrapeInfo(uriId = uriId, nextScrape = date)
+      }
+      val saved = save(toSave)
+      log.info(s"[scheduleScrape] scheduled for ${uri.toShortString}; saved=$saved")
+      // todo(Ray): It may be nice to force trigger a scrape directly
+    }
+  }
 }
 

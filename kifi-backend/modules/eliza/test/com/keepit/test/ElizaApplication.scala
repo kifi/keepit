@@ -5,7 +5,7 @@ import com.keepit.inject.{ TestFortyTwoModule, ApplicationInjector }
 import com.keepit.common.db.TestDbInfo
 import java.io.File
 import com.keepit.common.time.FakeClockModule
-import com.keepit.common.db.TestSlickModule
+import com.keepit.common.db.FakeSlickModule
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
 import com.google.inject.util.Modules
 import com.google.inject.Module
@@ -25,7 +25,7 @@ class ElizaApplication(overridingModules: Module*)(implicit path: File = new Fil
     FakeClockModule(),
     FakeHealthcheckModule(),
     TestFortyTwoModule(),
-    TestSlickModule(TestDbInfo.dbInfo),
+    FakeSlickModule(TestDbInfo.dbInfo),
     FakeDiscoveryModule(),
     ElizaCacheModule(HashMapMemoryCacheModule())
   ))
@@ -39,7 +39,7 @@ trait ElizaTestInjector extends TestInjector with DbInjectionHelper with ElizaIn
     FakeMemoryUsageModule(),
     FakeClockModule(),
     FakeHealthcheckModule(),
-    TestSlickModule(TestDbInfo.dbInfo),
+    FakeSlickModule(TestDbInfo.dbInfo),
     ElizaCacheModule(HashMapMemoryCacheModule())
   )
 }

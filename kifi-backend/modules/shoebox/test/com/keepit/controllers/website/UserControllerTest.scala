@@ -17,7 +17,7 @@ import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.abook.TestABookServiceClientModule
-import com.keepit.common.mail.TestMailModule
+import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.{ TestShoeboxAppSecureSocialModule, FakeSocialGraphModule }
 import com.keepit.search.TestSearchServiceClientModule
@@ -34,7 +34,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     FakeScrapeSchedulerModule(),
     ShoeboxFakeStoreModule(),
     TestABookServiceClientModule(),
-    TestMailModule(),
+    FakeMailModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeExternalServiceModule(),

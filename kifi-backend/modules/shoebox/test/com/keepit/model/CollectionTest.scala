@@ -3,7 +3,7 @@ package com.keepit.model
 import com.google.inject.Injector
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
-import com.keepit.common.db.{ TestSlickModule, TestDbInfo, Id, SequenceNumber }
+import com.keepit.common.db.{ FakeSlickModule, TestDbInfo, Id, SequenceNumber }
 import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
@@ -14,7 +14,7 @@ import play.api.test.Helpers._
 
 class CollectionTest extends Specification with CommonTestInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
 
-  val modules = TestSlickModule(TestDbInfo.dbInfo) :: TestHeimdalServiceClientModule() :: TestSlickModule(TestDbInfo.dbInfo) ::
+  val modules = FakeSlickModule(TestDbInfo.dbInfo) :: TestHeimdalServiceClientModule() :: FakeSlickModule(TestDbInfo.dbInfo) ::
     ShoeboxCacheModule(HashMapMemoryCacheModule()) :: FakeElizaServiceClientModule() :: Nil
 
   def setup()(implicit injector: Injector) = {

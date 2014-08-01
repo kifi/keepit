@@ -1,11 +1,9 @@
 package com.keepit.classify
 
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
-import com.keepit.common.actor.TestActorSystemModule
-import com.keepit.common.analytics.TestAnalyticsModule
+import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
+import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
-import com.keepit.common.db.{ TestDbInfo, TestSlickModule }
+import com.keepit.common.db.{ TestDbInfo, FakeSlickModule }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.FakeMailModule
@@ -17,18 +15,18 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ CommonTestInjector, DbInjectionHelper }
 import org.specs2.mutable.SpecificationLike
 
-class DomainClassifierTest extends TestKit(ActorSystem()) with SpecificationLike with CommonTestInjector with DbInjectionHelper {
+class DomainClassifierTest extends TestKitSupport with SpecificationLike with CommonTestInjector with DbInjectionHelper {
 
   val domainClassifierTestModules = Seq(
     FakeMailModule(),
-    TestAnalyticsModule(),
+    FakeAnalyticsModule(),
     ShoeboxFakeStoreModule(),
     TestHeimdalServiceClientModule(),
     FakeDomainTagImporterModule(),
     TestActorSystemModule(Some(system)),
     FakeShoeboxServiceModule(),
     TestSearchServiceClientModule(),
-    TestSlickModule(TestDbInfo.dbInfo),
+    FakeSlickModule(TestDbInfo.dbInfo),
     ShoeboxCacheModule(HashMapMemoryCacheModule()),
     FakeAirbrakeModule()
   )
