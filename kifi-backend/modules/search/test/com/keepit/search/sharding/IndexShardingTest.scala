@@ -19,7 +19,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
 
   "ShardedArticleIndexer" should {
     "create index shards" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.take(9).toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
@@ -102,7 +102,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
     }
 
     "handle URI migration" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (Seq(user), uris) = initData(numUsers = 1, numUris = 20)
         val userId = user.id.get
         val expectedUriToUserEdges = uris.take(5).map(_ -> Seq(user))
@@ -177,7 +177,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
     }
 
     "correctly reindex" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val numUris = 5
         val (uris, shoebox) = {
           val uris = (0 until numUris).map { n =>
@@ -209,7 +209,7 @@ class IndexShardingTest extends Specification with SearchTestInjector with Searc
     }
 
     "skip active uris when build index from scratch" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val numUris = 10
         val uris = (0 until numUris).map { n =>

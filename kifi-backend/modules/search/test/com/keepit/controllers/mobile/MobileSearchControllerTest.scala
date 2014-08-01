@@ -22,6 +22,7 @@ import com.keepit.search.result._
 import com.keepit.search.result.DecoratedResult
 import org.apache.lucene.search.{ Explanation, Query }
 import com.keepit.common.util.Configuration
+import com.keepit.common.util.PlayAppConfigurationModule
 
 class MobileSearchControllerTest extends SpecificationLike with SearchTestInjector {
 
@@ -29,7 +30,8 @@ class MobileSearchControllerTest extends SpecificationLike with SearchTestInject
     StandaloneTestActorSystemModule(),
     FakeActionAuthenticatorModule(),
     FixedResultIndexModule(),
-    FakeHttpClientModule()
+    FakeHttpClientModule(),
+    PlayAppConfigurationModule()
   )
 
   "MobileSearchController" should {

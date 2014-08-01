@@ -13,7 +13,7 @@ class URIGraphCommanderTest extends Specification with SearchTestInjector with S
 
   "URIGraphCommander" should {
     "work and check authorization" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val shards = Seq(Shard[NormalizedURI](0, 2), Shard[NormalizedURI](1, 2))
         implicit val activeShards: ActiveShards = ActiveShards(shards.toSet)
 
