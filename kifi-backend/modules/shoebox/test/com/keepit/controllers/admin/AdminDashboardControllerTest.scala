@@ -13,7 +13,7 @@ import com.keepit.model.User
 import com.keepit.model.UserExperiment
 import com.keepit.test._
 import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.common.mail.TestMailModule
+import com.keepit.common.mail.FakeMailModule
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -37,7 +37,7 @@ class AdminDashboardControllerTest extends Specification with ShoeboxApplication
     FakeSocialGraphModule(),
     FakeAirbrakeModule(),
     TestHeimdalServiceClientModule(),
-    TestMailModule(),
+    FakeMailModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     TestScraperServiceClientModule()
