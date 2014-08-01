@@ -1,5 +1,6 @@
 package com.keepit.common.actor
 
+import com.keepit.common.util.Configuration
 import net.codingwell.scalaguice.ScalaModule
 import akka.actor.{ Scheduler, ActorSystem }
 import com.keepit.inject.AppScoped
@@ -45,8 +46,8 @@ case class DevActorSystemModule() extends ActorSystemModule {
   def schedulerProvider(system: ActorSystem): Scheduler = system.scheduler
 
   @Provides
-  def globalSchedulingEnabled: SchedulingProperties = {
-    val enabledProp = current.configuration.getBoolean("scheduler.enabled").getOrElse(false)
+  def globalSchedulingEnabled(config: Configuration): SchedulingProperties = {
+    val enabledProp = config.getBoolean("scheduler.enabled").getOrElse(false)
     new SchedulingProperties {
       def enabled = enabledProp
       def enabledOnlyForLeader = enabledProp
