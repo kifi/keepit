@@ -40,6 +40,7 @@
   height: 100%;
 }
 .kifi-notices-none {
+  line-height: 1.3;
   font-size: 18px;
   color: #c2ccd6;
   -moz-box-sizing: border-box;
@@ -82,7 +83,7 @@
   position: absolute;
   bottom: 8px;
   height: 40px;
-  left: 88px;
+  left: 110px;
   padding-left: 25px;
   background: left 12px/21px auto no-repeat;
   background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAAcCAYAAACOGPReAAABOUlEQVR4Aa3TPyhFcRTA8dN9ySBleeRPvUGRRS/LK4PxjUabMmHDJpmUwW4ixWI0GJTpssjgTz2vqCelZ9QVBvXQ8R11O7n3nuvW54zfur/Okbxf/b7ZjSlso4G6MLxKWEcNLShuMe4NLuIZ+ssZ+iFZY+3YhcbU0AvJGg2wZwQjjEI80QWoYRbiiQ7h1QieIPBGt4zgN6oQT3QAkRG9QMEbnYMaliHe6KH166h4o51oGNEn9Hijw3g3olcoeKNlqCGE/BUdwzFCwzXU8ILQcIpVYRRxDv0n08IQjCCC5rQZf9OZnMFLdMSjgh1n8A1liBXtwo0jOp+0UhV8ZAjup93TpZTBOxTTRgMcJARbmMh6UX14gMKy4j3TKj6N4JH/9oG1WLCJEiRPtA0hFF+YhOSLAoN4xAYkyQ+S+qP4ZMubVAAAAABJRU5ErkJggg==);
