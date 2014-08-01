@@ -36,9 +36,9 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
   def numPayloadsUsed(term: Term): Int = numPayloadsMap.getOrElse(term, 0)
 
   // search: hits are ordered by score
-  def search(query: Query): Seq[SearcherHit] = {
+  def searchAll(query: Query): Seq[SearcherHit] = {
     val hitBuf = new ArrayBuffer[SearcherHit]()
-    doSearch(query) { (scorer, reader) =>
+    search(query) { (scorer, reader) =>
       val idMapper = reader.getIdMapper
       var doc = scorer.nextDoc()
       while (doc != NO_MORE_DOCS) {
@@ -55,11 +55,11 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     if (rewrittenQuery != null) createNormalizedWeight(rewrittenQuery) else null
   }
 
-  def doSearch(query: Query)(f: (Scorer, WrappedSubReader) => Unit) {
-    doSearch(createWeight(query: Query))(f)
+  def search(query: Query)(f: (Scorer, WrappedSubReader) => Unit) {
+    search(createWeight(query: Query))(f)
   }
 
-  def doSearch(weight: Weight)(f: (Scorer, WrappedSubReader) => Unit) {
+  def search(weight: Weight)(f: (Scorer, WrappedSubReader) => Unit) {
     if (weight != null) {
       indexReader.getContext.leaves.foreach { subReaderContext =>
         val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
