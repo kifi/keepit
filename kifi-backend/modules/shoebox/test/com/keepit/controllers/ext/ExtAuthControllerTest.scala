@@ -1,6 +1,5 @@
 package com.keepit.controllers.ext
 
-import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.test._
 import org.specs2.mutable.Specification
 import play.api.libs.json._
@@ -13,7 +12,7 @@ import com.keepit.heimdal.TestHeimdalServiceClientModule
 import securesocial.core._
 import org.joda.time.DateTime
 import play.api.libs.json.JsArray
-import com.keepit.common.controller.{ FakeActionAuthenticator, AuthenticatedRequest }
+import com.keepit.common.controller.AuthenticatedRequest
 import play.api.libs.json.JsString
 import scala.Some
 import securesocial.core.IdentityId
@@ -30,11 +29,12 @@ import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerM
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 
-class ExtAuthControllerTest extends Specification with ShoeboxTestInjector {
+class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjector {
 
   def requiredModules = Seq(
     TestSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
+    TestShoeboxAppSecureSocialModule(),
     ShoeboxFakeStoreModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
@@ -42,13 +42,12 @@ class ExtAuthControllerTest extends Specification with ShoeboxTestInjector {
     FakeMailModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule(),
-    TestABookServiceClientModule()
+    TestScraperServiceClientModule()
   )
 
   "ExtAuthController" should {
     "start" in {
-      withDb(requiredModules: _*) { implicit injector =>
+      running(new ShoeboxApplication(requiredModules: _*)) {
         val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)
@@ -65,10 +64,13 @@ class ExtAuthControllerTest extends Specification with ShoeboxTestInjector {
           user
         }
 
-        inject[FakeActionAuthenticator].setUser(user)
+        val cookie = Authenticator.create(su).right.get.toCookie
         //first round
-        val fakeRequest1 = FakeRequest().withBody(JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"))))
-        val result1 = inject[ExtAuthController].start(fakeRequest1)
+        val fakeRequest1 = FakeRequest()
+          .withCookies(cookie)
+          .withBody[JsValue](JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"))))
+        val authRequest1 = AuthenticatedRequest(null, user.id.get, user, fakeRequest1)
+        val result1 = inject[ExtAuthController].start(authRequest1)
         status(result1) must equalTo(OK)
         val kifiInstallation1 = db.readOnlyMaster { implicit s =>
           val all = installationRepo.all()(s)
@@ -86,6 +88,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxTestInjector {
 
         //second round
         val fakeRequest2 = FakeRequest()
+          .withCookies(cookie)
           .withBody[JsValue](JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"),
             "installation" -> JsString(kifiInstallation1.externalId.id))))
         val authRequest2 = AuthenticatedRequest(null, user.id.get, user, fakeRequest2)
