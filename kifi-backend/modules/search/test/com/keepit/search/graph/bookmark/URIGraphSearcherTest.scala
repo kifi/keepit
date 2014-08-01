@@ -15,8 +15,11 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import com.keepit.search.graph.GraphTestHelper
 import com.keepit.search.Lang
+import com.keepit.common.util.PlayAppConfigurationModule
 
 class URIGraphSearcherTest extends Specification with SearchTestInjector with GraphTestHelper {
+
+  val helperModules = Seq(PlayAppConfigurationModule())
 
   class Searchable(uriGraphSearcher: URIGraphSearcherWithUser) {
     def search(query: Query): Map[Long, Float] = {
@@ -63,7 +66,7 @@ class URIGraphSearcherTest extends Specification with SearchTestInjector with Gr
 
   "URIGraph" should {
     "generate UriToUsrEdgeSet" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
@@ -85,7 +88,7 @@ class URIGraphSearcherTest extends Specification with SearchTestInjector with Gr
     }
 
     "generate UserToUriEdgeSet" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
@@ -112,7 +115,7 @@ class URIGraphSearcherTest extends Specification with SearchTestInjector with Gr
     }
 
     "generate UserToUriEdgeSet in extreme case" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = superBigData
         val expectedUriToUserEdges = uris.dropRight(1).map { uri => (uri, Seq(users(0))) }.toList ::: List((uris.last, Seq(users(1))))
         expectedUriToUserEdges.size === bigDataSize
@@ -133,7 +136,7 @@ class URIGraphSearcherTest extends Specification with SearchTestInjector with Gr
     }
 
     "intersect UserToUserEdgeSet and UriToUserEdgeSet" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
@@ -165,7 +168,7 @@ class URIGraphSearcherTest extends Specification with SearchTestInjector with Gr
     }
 
     "intersect empty sets" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
         val indexer = mkURIGraphIndexer()
 
@@ -189,7 +192,7 @@ class URIGraphSearcherTest extends Specification with SearchTestInjector with Gr
     }
 
     "determine whether intersection is empty" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val indexer = mkURIGraphIndexer()
         indexer.update()
 
@@ -203,7 +206,7 @@ class URIGraphSearcherTest extends Specification with SearchTestInjector with Gr
     }
 
     "search personal bookmark titles" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
         val store = setupArticleStore(uris)
         val edges = uris.map { uri => (uri, users((uri.id.get.id % 2L).toInt), Some("personaltitle bmt" + uri.id.get.id)) }
@@ -236,7 +239,7 @@ class URIGraphSearcherTest extends Specification with SearchTestInjector with Gr
     }
 
     "search personal bookmark domains" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
         val store = setupArticleStore(uris)
         val edges = uris.map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id)) }
@@ -277,7 +280,7 @@ class URIGraphSearcherTest extends Specification with SearchTestInjector with Gr
     }
 
     "search personal bookmark url keyowrd" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
         val store = setupArticleStore(uris)
         val edges = uris.map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id)) }
@@ -316,7 +319,7 @@ class URIGraphSearcherTest extends Specification with SearchTestInjector with Gr
     }
 
     "retrieve bookmark records from bookmark store" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
         val store = setupArticleStore(uris)
         val edges = uris.take(3).map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id)) }
@@ -346,7 +349,7 @@ class URIGraphSearcherTest extends Specification with SearchTestInjector with Gr
     }
 
     "retrieve language profile" in {
-      withInjector() { implicit injector =>
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
         val store = setupArticleStore(uris)
         val edges = uris.take(3).map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id)) }
