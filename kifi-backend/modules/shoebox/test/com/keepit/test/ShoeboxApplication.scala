@@ -13,7 +13,6 @@ import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ TestDbInfo, TestSlickModule }
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
 import com.keepit.common.queue.FakeSimpleQueueModule
-import com.keepit.common.social.TestShoeboxAppSecureSocialModule
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.eliza.FakeElizaServiceClientModule
@@ -39,6 +38,7 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     TestSlickModule(TestDbInfo.dbInfo),
     ShoeboxCacheModule(HashMapMemoryCacheModule()),
     TestNormalizationServiceModule(),
+    FakeActionAuthenticatorModule(),
     AbuseControlModule(),
     TestSchedulerModule(),
     FakeKeepImportsModule(),

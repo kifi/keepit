@@ -35,11 +35,4 @@ case class TestShoeboxAppSecureSocialModule() extends ShoeboxSecureSocialModule 
   @Provides
   def secureSocialClientIds: SecureSocialClientIds = SecureSocialClientIds("ovlhms1y0fjr", "530357056981814")
 
-  @Singleton
-  @Provides
-  def actionAuthenticator(myFakeActionAuthenticator: FakeActionAuthenticator): ActionAuthenticator = myFakeActionAuthenticator
-
-  @Singleton
-  @Provides
-  def fakeActionAuthenticator: FakeActionAuthenticator = new FakeActionAuthenticator
 }
