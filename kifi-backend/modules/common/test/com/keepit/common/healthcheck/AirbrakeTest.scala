@@ -78,7 +78,7 @@ class AirbrakeTest extends Specification with CommonTestInjector {
 
     "format with url and no params" in {
       implicit val system = ActorSystem("test")
-      withInjector(FakeFortyTwoModule(), FakeDiscoveryModule(), StandaloneTestActorSystemModule()) { implicit injector =>
+      withInjector(FakeFortyTwoModule(), FakeDiscoveryModule(), FakeActorSystemModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         val error = AirbrakeError(
           exception = new IllegalArgumentException("hi there"),
@@ -101,7 +101,7 @@ class AirbrakeTest extends Specification with CommonTestInjector {
 
     "format with user info" in {
       implicit val system = ActorSystem("test")
-      withInjector(FakeFortyTwoModule(), FakeDiscoveryModule(), StandaloneTestActorSystemModule()) { implicit injector =>
+      withInjector(FakeFortyTwoModule(), FakeDiscoveryModule(), FakeActorSystemModule()) { implicit injector =>
         val formatter = inject[AirbrakeFormatter]
         val error = AirbrakeError(
           exception = new IllegalArgumentException("hi there"),

@@ -9,7 +9,7 @@ import com.keepit.test.CommonTestInjector
 import com.google.inject.Injector
 import com.keepit.common.cache.HeimdalCacheModule
 import com.keepit.common.time._
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.heimdal._
 
 import play.api.test.Helpers._
@@ -21,8 +21,7 @@ import com.keepit.social.NonUserKinds
 class EventTrackingTest extends Specification with CommonTestInjector {
 
   def modules = {
-    implicit val system = ActorSystem("test")
-    Seq(FakeMongoModule(), StandaloneTestActorSystemModule(), HeimdalQueueDevModule(), HeimdalServiceTypeModule())
+    Seq(FakeMongoModule(), FakeActorSystemModule(), HeimdalQueueDevModule(), HeimdalServiceTypeModule())
   }
 
   def setup()(implicit injector: Injector) = {

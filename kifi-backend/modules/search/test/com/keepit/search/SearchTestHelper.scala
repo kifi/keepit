@@ -1,6 +1,6 @@
 package com.keepit.search
 
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -183,6 +183,6 @@ trait SearchTestHelper { self: SearchTestInjector =>
   val allHitsConfig = defaultConfig.overrideWith("tailCutting" -> "0")
 
   // implicit val system = ActorSystem("test")
-  val helperModules = Seq(StandaloneTestActorSystemModule(), FakeShoeboxServiceModule(), new AwsModule(), FakeHttpClientModule(), PlayAppConfigurationModule())
+  val helperModules = Seq(FakeActorSystemModule(), FakeShoeboxServiceModule(), new AwsModule(), FakeHttpClientModule(), PlayAppConfigurationModule())
 
 }

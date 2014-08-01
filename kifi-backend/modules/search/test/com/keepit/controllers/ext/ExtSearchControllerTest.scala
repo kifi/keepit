@@ -5,7 +5,7 @@ import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.inject._
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -25,9 +25,8 @@ import com.keepit.common.util.PlayAppConfigurationModule
 class ExtSearchControllerTest extends Specification with SearchTestInjector {
 
   def modules = {
-    implicit val system = ActorSystem("test")
     Seq(
-      StandaloneTestActorSystemModule(),
+      FakeActorSystemModule(),
       FakeActionAuthenticatorModule(),
       FixedResultIndexModule(),
       PlayAppConfigurationModule()

@@ -1,7 +1,7 @@
 package com.keepit.test
 
 import akka.actor.ActorSystem
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.search.spellcheck.FakeSpellCorrectorModule
 import com.keepit.inject.{ FakeFortyTwoModule, ApplicationInjector }
 import java.io.File
@@ -50,7 +50,7 @@ trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
   implicit val system = ActorSystem("test")
 
   val module = Modules.combine(
-    StandaloneTestActorSystemModule(),
+    FakeActorSystemModule(),
     FakeHttpClientModule(),
     FakeHeimdalServiceClientModule(),
     SearchServiceTypeModule(),

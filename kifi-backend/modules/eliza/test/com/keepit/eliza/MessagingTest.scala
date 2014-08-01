@@ -7,7 +7,7 @@ import com.keepit.inject._
 import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.social.BasicUser
@@ -38,13 +38,12 @@ class MessagingTest extends Specification with ElizaTestInjector {
   implicit val context = HeimdalContext.empty
 
   def modules = {
-    implicit val system = ActorSystem("test")
     Seq(
       ElizaCacheModule(),
       FakeShoeboxServiceModule(),
       FakeHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
-      StandaloneTestActorSystemModule(),
+      FakeActorSystemModule(),
       FakeABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeCryptoModule(),
