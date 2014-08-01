@@ -70,9 +70,10 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
         val path = com.keepit.controllers.mobile.routes.MobileUserSearchController.searchV1("woody", None, None, 3).toString
         path === "/m/1/search/users/search?query=woody&maxHits=3"
 
-        inject[FakeActionAuthenticator].setUser(users(0))
         val request = FakeRequest("GET", path)
-        val result = route(request).get
+
+        val controller = inject[MobileUserSearchController]
+        val result = controller.searchV1("woody", None, None, 3)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
@@ -109,9 +110,10 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
         val path = com.keepit.controllers.mobile.routes.MobileUserSearchController.pageV1("firstNa", None, 0, 10).toString
         path === "/m/1/search/users/page?query=firstNa&pageNum=0&pageSize=10"
 
-        inject[FakeActionAuthenticator].setUser(users(0))
         val request = FakeRequest("GET", path)
-        val result = route(request).get
+
+        val controller = inject[MobileUserSearchController]
+        val result = controller.pageV1("firstNa", None, 0, 10)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
@@ -161,9 +163,9 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
         val path = com.keepit.controllers.mobile.routes.MobileUserSearchController.pageV1("woody@fox.com", None, 0, 10).toString
         path === "/m/1/search/users/page?query=woody%40fox.com&pageNum=0&pageSize=10"
 
-        inject[FakeActionAuthenticator].setUser(users(0))
         val request = FakeRequest("GET", path)
-        val result = route(request).get
+        val controller = inject[MobileUserSearchController]
+        val result = controller.pageV1("woody@fox.com", None, 0, 10)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
