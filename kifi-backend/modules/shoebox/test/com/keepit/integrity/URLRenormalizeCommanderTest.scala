@@ -1,23 +1,22 @@
 package com.keepit.integrity
 
-import org.specs2.mutable.Specification
-import com.keepit.test.ShoeboxTestInjector
-import com.keepit.common.db.slick.Database
-import com.keepit.common.zookeeper.CentralConfig
-import com.keepit.common.healthcheck.SystemAdminMailSender
-import com.keepit.model._
-import com.keepit.test.ShoeboxApplicationInjector
-import play.api.test.Helpers.running
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.test.ShoeboxApplication
-import com.keepit.shoebox.TestShoeboxServiceClientModule
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.SystemAdminMailSender
+import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.zookeeper.CentralConfig
+import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.shoebox.TestShoeboxServiceClientModule
+import com.keepit.test.{ ShoeboxApplication, ShoeboxTestInjector }
+import org.specs2.mutable.Specification
+import play.api.test.Helpers.running
 
-class URLRenormalizeCommanderTest extends Specification with ShoeboxApplicationInjector {
+class URLRenormalizeCommanderTest extends Specification with ShoeboxTestInjector {
   "renormalizer" should {
     "word" in {
-      running(new ShoeboxApplication(FakeActorSystemModule(), FakeHttpClientModule(), TestShoeboxServiceClientModule())) {
+      withDb() { implicit injector =>
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
@@ -25,7 +24,9 @@ class URLRenormalizeCommanderTest extends Specification with ShoeboxApplicationI
         val changedUriRepo = inject[ChangedURIRepo]
         val renormRepo = inject[RenormalizedURLRepo]
         val centralConfig = inject[CentralConfig]
-        val mailSender = inject[SystemAdminMailSender]
+        val mailSender = new SystemAdminMailSender {
+          def sendMail(email: ElectronicMail): Unit = {}
+        }
         val commander = new URLRenormalizeCommander(db, null, mailSender, uriRepo, normalizedURIInterner, urlRepo, changedUriRepo, renormRepo, centralConfig)
 
         val (uri0, uri1, url0, url1, url2, url3) = db.readWrite { implicit s =>
