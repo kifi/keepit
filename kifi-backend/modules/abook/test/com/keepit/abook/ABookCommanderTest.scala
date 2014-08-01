@@ -185,10 +185,12 @@ class ABookCommanderTest extends Specification with ABookTestInjector with ABook
           }
 
           // both contacts did not exist
+          contacts(0).id.isDefined === true
           contacts(0).email === email1
           contacts(0).emailAccountId === emailAcc1.id.get
           contacts(0).abookId === kifiAbook.id.get
 
+          contacts(1).id.isDefined === true
           contacts(1).email === email2
           contacts(1).emailAccountId === emailAcc2.id.get
           contacts(1).abookId === kifiAbook.id.get
@@ -219,12 +221,14 @@ class ABookCommanderTest extends Specification with ABookTestInjector with ABook
 
           // first contact already exists, it shouldn't be new
           contacts(0) === existingContact1
+          contacts(0).id.isDefined === true
           contacts(0).abookId === gmailAbook.id.get
           contacts(0).email === email1
           contacts(0).userId === Id[User](1)
           contacts(0).emailAccountId === emailAcc1.id.get
 
           // second contact didn't exist, it was created
+          contacts(1).id.isDefined === true
           contacts(1).email === email2
           contacts(1).abookId !== gmailAbook.id.get
         }
