@@ -41,7 +41,6 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     TestSearchServiceClientModule(),
     FakeAirbrakeModule(),
     FakeActionAuthenticatorModule(),
-    TestShoeboxAppSecureSocialModule(),
     TestABookServiceClientModule(),
     FakeSocialGraphModule(),
     FakeScrapeSchedulerModule(),
