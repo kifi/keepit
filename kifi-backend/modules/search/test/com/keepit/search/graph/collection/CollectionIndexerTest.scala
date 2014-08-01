@@ -4,7 +4,7 @@ import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.common._
-import com.keepit.common.cache.TestCacheModule
+import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.strings._
 import com.keepit.search.index.DefaultAnalyzer
@@ -26,7 +26,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
 
   "CollectionIndexer" should {
     "maintain a sequence number on collections " in {
-      running(new CommonTestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeHttpClientModule(), FakeCacheModule(), FakeShoeboxServiceModule())) {
         val (users, uris) = initData
         val numURIs = uris.size
 
@@ -58,7 +58,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
     }
 
     "find collections by user" in {
-      running(new CommonTestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeHttpClientModule(), FakeCacheModule(), FakeShoeboxServiceModule())) {
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -95,7 +95,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
     }
 
     "find collections by uri" in {
-      running(new CommonTestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeHttpClientModule(), FakeCacheModule(), FakeShoeboxServiceModule())) {
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -133,7 +133,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
     }
 
     "store collection to uri associations in URIList" in {
-      running(new CommonTestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeHttpClientModule(), FakeCacheModule(), FakeShoeboxServiceModule())) {
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -161,7 +161,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
     }
 
     "store colleciton external ids" in {
-      running(new CommonTestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeHttpClientModule(), FakeCacheModule(), FakeShoeboxServiceModule())) {
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -190,7 +190,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
     }
 
     "detect collection names" in {
-      running(new CommonTestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeHttpClientModule(), FakeCacheModule(), FakeShoeboxServiceModule())) {
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -235,7 +235,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
     }
 
     "detect collection names (partial match)" in {
-      running(new CommonTestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeHttpClientModule(), FakeCacheModule(), FakeShoeboxServiceModule())) {
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -286,7 +286,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
     }
 
     "dump Lucene Document" in {
-      running(new CommonTestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      running(new CommonTestApplication(FakeHttpClientModule(), FakeCacheModule(), FakeShoeboxServiceModule())) {
         val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = ""))
         val uris = saveURIs(
           NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),

@@ -1,6 +1,6 @@
 package com.keepit.curator
 
-import com.keepit.common.cache.TestCacheModule
+import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time._
@@ -20,7 +20,7 @@ class UriScoringHelperTest extends Specification with CuratorTestInjector {
     FakeGraphServiceModule(),
     FakeHttpClientModule(),
     FakeCortexServiceClientModule(),
-    TestCacheModule())
+    FakeCacheModule())
 
   private def makeSeedItems(): Seq[SeedItem] = {
     val seedItem1 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](1), seq = SequenceNumber[SeedItem](1), priorScore = None, timesKept = 1000, lastSeen = currentDateTime, keepers = Keepers.TooMany)

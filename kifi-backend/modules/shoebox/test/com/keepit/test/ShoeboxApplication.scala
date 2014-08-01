@@ -9,7 +9,7 @@ import com.keepit.common.actor.{ TestActorSystemModule, TestSchedulerModule }
 import com.keepit.common.aws.AwsModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.controller.FakeActionAuthenticatorModule
-import com.keepit.common.crypto.TestCryptoModule
+import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.{ TestDbInfo, TestSlickModule }
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeHealthcheckModule, FakeMemoryUsageModule }
 import com.keepit.common.queue.FakeSimpleQueueModule
@@ -37,6 +37,7 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     FakeDiscoveryModule(),
     TestSlickModule(TestDbInfo.dbInfo),
     ShoeboxCacheModule(HashMapMemoryCacheModule()),
+
     TestNormalizationServiceModule(),
     FakeActionAuthenticatorModule(),
     AbuseControlModule(),
@@ -46,7 +47,7 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     FakeNormalizationUpdateJobQueueModule(),
     AwsModule(),
     FakeShoeboxRepoChangeListenerModule(),
-    TestCryptoModule()
+    FakeCryptoModule()
   ))
 
 trait ShoeboxApplicationInjector extends ApplicationInjector with DbInjectionHelper with ShoeboxInjectionHelpers
@@ -70,7 +71,7 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeNormalizationUpdateJobQueueModule(),
     AwsModule(),
     FakeShoeboxRepoChangeListenerModule(),
-    TestCryptoModule(),
+    FakeCryptoModule(),
     TestActorSystemModule(),
     FakeActionAuthenticatorModule(),
     FakeKeepImportsModule()
