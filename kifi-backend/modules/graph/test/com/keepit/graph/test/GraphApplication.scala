@@ -38,6 +38,7 @@ trait GraphApplicationInjector extends ApplicationInjector
 trait GraphTestInjector extends TestInjector {
   val module = Modules.combine(
     GraphServiceTypeModule(),
+    FakeHttpClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),
