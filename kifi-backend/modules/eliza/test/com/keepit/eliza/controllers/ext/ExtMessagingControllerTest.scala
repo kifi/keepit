@@ -11,7 +11,7 @@ import com.keepit.inject._
 import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._
-import com.keepit.common.actor.{TestKitSupport, FakeActorSystemModule, StandaloneTestActorSystemModule}
+import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule, StandaloneTestActorSystemModule }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model.User
 import com.keepit.realtime.{ FakeUrbanAirshipModule }
