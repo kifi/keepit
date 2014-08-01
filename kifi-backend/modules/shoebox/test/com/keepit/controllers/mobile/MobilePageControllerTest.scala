@@ -37,7 +37,7 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
     FakeAirbrakeModule(),
     FakeActionAuthenticatorModule(),
     FakeSearchServiceClientModule(),
-    TestSliderHistoryTrackerModule()
+    FakeSliderHistoryTrackerModule()
   )
 
   "mobileController" should {

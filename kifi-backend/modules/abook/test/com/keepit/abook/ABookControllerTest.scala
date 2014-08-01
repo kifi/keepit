@@ -23,7 +23,7 @@ class ABookControllerTest extends Specification with ABookTestInjector with ABoo
     FakeABookServiceClientModule(),
     FakeShoeboxServiceModule(),
     FakeSimpleQueueModule(),
-    TestABookImporterPluginModule(),
+    FakeABookImporterPluginModule(),
     FakeABookStoreModule(),
     FakeActionAuthenticatorModule()
   )

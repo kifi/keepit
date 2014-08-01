@@ -1,18 +1,18 @@
 package com.keepit.controllers.mobile
 
 import com.keepit.common.actor.StandaloneTestActorSystemModule
-import com.keepit.common.controller.{FakeActionAuthenticator, FakeActionAuthenticatorModule}
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.index.{IndexDirectory, IndexModule, IndexStore, VolatileIndexDirectory}
-import com.keepit.search.result.{DecoratedResult, _}
+import com.keepit.search.index.{ IndexDirectory, IndexModule, IndexStore, VolatileIndexDirectory }
+import com.keepit.search.result.{ DecoratedResult, _ }
 import com.keepit.search.sharding.Shard
 import com.keepit.social.BasicUser
 import com.keepit.test.SearchTestInjector
-import org.apache.lucene.search.{Explanation, Query}
+import org.apache.lucene.search.{ Explanation, Query }
 import org.specs2.mutable._
 import play.api.libs.json._
 import play.api.test.FakeRequest
