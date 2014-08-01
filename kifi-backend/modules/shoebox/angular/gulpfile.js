@@ -264,7 +264,7 @@ gulp.task('sprite-classes', function () {
 
 gulp.task('sprite', ['sprite-imports', 'sprite-classes']);
 
-gulp.task('styles', ['sprite'], function () {
+gulp.task('styles', function () {
   return gulp.src(stylFiles, {base: './'})
     .pipe(cache(stylesCache))
     .pipe(stylus({use: [nib()], import: ['nib', __dirname + '/src/common/build-css/*.styl']}))
@@ -449,12 +449,12 @@ gulp.task('assets:local-prod', ['assets:local-prod:rev', 'assets:local-prod:upda
 gulp.task('assets:release', ['assets:release:publish']);
 
 gulp.task('build-dev', function (done) {
-  runSequence('clean', ['styles', 'scripts', 'lib-styles', 'lib-scripts'], done);
+  runSequence('clean', 'sprite', ['styles', 'scripts', 'lib-styles', 'lib-scripts'], done);
 });
 
 gulp.task('build-prod', function (done) {
   isProdMode = true;
-  runSequence('clean', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], done);
+  runSequence('clean', 'sprite', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], done);
 });
 
 // Note: suboptimal use of connect: it already includes livereload (but part of the livereload API is not available)
