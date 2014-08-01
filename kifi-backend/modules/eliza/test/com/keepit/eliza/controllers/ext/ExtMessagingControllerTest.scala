@@ -11,8 +11,7 @@ import com.keepit.inject._
 import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._
-import com.keepit.common.actor.{ FakeActorSystemModule, StandaloneTestActorSystemModule }
-import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.actor.{TestKitSupport, FakeActorSystemModule, StandaloneTestActorSystemModule}
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model.User
 import com.keepit.realtime.{ FakeUrbanAirshipModule }
@@ -28,7 +27,7 @@ import akka.actor.ActorSystem
 import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.common.store.FakeElizaStoreModule
 
-class ExtMessagingControllerTest extends TestKit(ActorSystem()) with SpecificationLike with ElizaTestInjector with DbInjectionHelper {
+class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with DbInjectionHelper {
 
   implicit val context = HeimdalContext.empty
 
@@ -45,7 +44,7 @@ class ExtMessagingControllerTest extends TestKit(ActorSystem()) with Specificati
     FakeScraperServiceClientModule(),
     FakeElizaStoreModule(),
     FakeHttpClientModule(),
-    FakeActorSystemModule(Some(system))
+    FakeActorSystemModule()
   )
 
   "ExtMessaging Controller" should {

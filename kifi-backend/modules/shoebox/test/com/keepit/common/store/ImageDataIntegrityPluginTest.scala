@@ -21,7 +21,7 @@ class ImageDataIntegrityPluginTest extends TestKitSupport with SpecificationLike
 
   val modules = Seq(
     imageDataIntegrityTestPluginModule,
-    FakeActorSystemModule(Some(system)),
+    FakeActorSystemModule(),
     FakeHttpClientModule(Map(
       DirectUrl("http://s3.amazonaws.com/test-bucket/users/59eba923-54cb-4257-9bb6-7c81d602bd76/pics/100/0.jpg") ->
         FakeClientResponse("image", 200),

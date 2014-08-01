@@ -9,6 +9,8 @@ import com.keepit.graph.simple.{ SimpleGraphTestModule }
 import com.keepit.graph.test.GraphTestInjector
 import com.keepit.model.{ KeepSource, User, Keep, UserConnection }
 import org.specs2.mutable.Specification
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 class GraphCommanderTest extends Specification with GraphTestInjector with GraphTestHelper {
 
@@ -25,7 +27,7 @@ class GraphCommanderTest extends Specification with GraphTestInjector with Graph
 
         manager.update(createUserUpdate, createFirstDegreeUser, keepGraphUpdate1, keepGraphUpdate2, keepGraphUpdate3, keepGraphUpdate4, keepGraphUpdate5, userConnectionGraphUpdate1, userConnectionGraphUpdate2, userConnectionGraphUpdate3)
 
-        val res1 = graphCommander.getConnectedUriScores(u42, true)
+        val res1 = Await.result(graphCommander.getConnectedUriScores(u42, true), Duration.Inf)
 
         res1 must have size (4)
 
@@ -44,7 +46,7 @@ class GraphCommanderTest extends Specification with GraphTestInjector with Graph
 
         manager.update(createUserUpdate, createFirstDegreeUser, keepGraphUpdate1, keepGraphUpdate2, keepGraphUpdate3, keepGraphUpdate4, keepGraphUpdate5, userConnectionGraphUpdate1, userConnectionGraphUpdate2, userConnectionGraphUpdate3)
 
-        val res2 = graphCommander.getConnectedUserScores(u42, false)
+        val res2 = Await.result(graphCommander.getConnectedUserScores(u42, false), Duration.Inf)
 
         res2 must have size (4)
 
