@@ -22,7 +22,7 @@ import com.keepit.search.result._
 import com.keepit.search.result.DecoratedResult
 import org.apache.lucene.search.{ Explanation, Query }
 
-class MobileSearchControllerTest extends TestKit(ActorSystem()) with SpecificationLike with SearchTestInjector {
+class MobileSearchControllerTest extends SpecificationLike with SearchTestInjector {
 
   def modules = Seq(
     StandaloneTestActorSystemModule(),
