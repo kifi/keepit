@@ -1,12 +1,12 @@
 package com.keepit.abook
 
 import akka.actor.ActorSystem
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.db.slick._
 import play.api.Play
 import play.api.db.DB
 
-import scala.slick.jdbc.JdbcBackend.{Database => SlickDatabase}
+import scala.slick.jdbc.JdbcBackend.{ Database => SlickDatabase }
 
 case class ABookDbInfo() extends DbInfo {
   def masterDatabase = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
