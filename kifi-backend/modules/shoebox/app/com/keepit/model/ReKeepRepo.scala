@@ -91,7 +91,7 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
   }
 
   def getUriReKeepsWithCountsByKeeper(userId: Id[User])(implicit r: RSession): Seq[(Id[NormalizedURI], Id[Keep], Id[User], Int)] = {
-    sql"select uri_id, keep_id, keeper_id, count(*) c from rekeep group by uri_id, keeper_id having keeper_id=$userId order by keep_id desc".as[(Id[NormalizedURI], Id[Keep], Id[User], Int)].list()
+    sql"select uri_id, keep_id, keeper_id, count(*) c from rekeep where keeper_id=$userId group by uri_id order by keep_id desc".as[(Id[NormalizedURI], Id[Keep], Id[User], Int)].list()
   }
 
   def getUriReKeepCountsByKeeper(userId: Id[User])(implicit r: RSession): Map[Id[NormalizedURI], Int] = {

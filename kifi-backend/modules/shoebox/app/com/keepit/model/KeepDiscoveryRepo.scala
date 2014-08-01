@@ -83,7 +83,7 @@ class KeepDiscoveryRepoImpl @Inject() (
   }
 
   def getUriDiscoveriesWithCountsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Seq[(Id[NormalizedURI], Id[Keep], Id[User], Int)] = {
-    sql"select uri_id, keep_id, keeper_id, count(*) c from keep_click where created_at >= $since and keeper_id=$userId group by uri_id, keeper_id order by keep_id desc".as[(Id[NormalizedURI], Id[Keep], Id[User], Int)].list()
+    sql"select uri_id, keep_id, keeper_id, count(*) c from keep_click where created_at >= $since and keeper_id=$userId group by uri_id order by keep_id desc".as[(Id[NormalizedURI], Id[Keep], Id[User], Int)].list()
   }
 
   def getUriDiscoveryCountsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Map[Id[NormalizedURI], Int] = {
