@@ -40,7 +40,7 @@ class ExtSearchControllerTest extends Specification with SearchApplicationInject
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom")
         inject[FakeActionAuthenticator].setUser(user)
         val request = FakeRequest("GET", path)
-        val result = route(request).get
+        val result = inject[ExtSearchController].search("test", None, 7, None, None, None, None, None, None, None, None)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
