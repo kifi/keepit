@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 
-import com.keepit.commanders.{ InviteCommander, UserCommander }
+import com.keepit.commanders.{ InviteCommander, UserCommander, LocalUserExperimentCommander }
 import com.keepit.common.KestrelCombinator
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController }
@@ -49,6 +49,7 @@ class HomeController @Inject() (
   userCommander: UserCommander,
   inviteCommander: InviteCommander,
   heimdalServiceClient: HeimdalServiceClient,
+  userExperimentCommander: LocalUserExperimentCommander,
   applicationConfig: FortyTwoConfig)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
@@ -153,7 +154,7 @@ class HomeController @Inject() (
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(routes.HomeController.install())
     } else if (agentOpt.exists(_.screenCanFitWebApp)) {
-      Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular/index.html").get)) as HTML
+      AngularDistAssets.angularApp()
     } else {
       Redirect(routes.HomeController.unsupported())
     }
@@ -183,6 +184,14 @@ class HomeController @Inject() (
       } else {
         Ok(views.html.marketing.landing())
       }
+    }
+  }
+
+  def kifeeeed = HtmlAction.authenticated { request =>
+    if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.ADMIN)) {
+      homeAuthed(request)
+    } else {
+      Redirect("/")
     }
   }
 
@@ -239,18 +248,10 @@ class HomeController @Inject() (
   }
 
   def install = HtmlAction.authenticated { implicit request =>
-    val toBeNotified = db.readWrite(attempts = 3) { implicit session =>
-      for {
-        su <- socialUserRepo.getByUser(request.user.id.get)
-        invite <- invitationRepo.getByRecipientSocialUserId(su.id.get) if (invite.state != InvitationStates.JOINED)
-        senderUserId <- {
-          invitationRepo.save(invite.withState(InvitationStates.JOINED))
-          invite.senderUserId
-        }
-      } yield senderUserId
-    }
     SafeFuture {
-      userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq)
+      userCommander.tellAllFriendsAboutNewUser(request.user.id.get)
+      userCommander.tellUsersWithContactOfNewUserImmediate(request.user)
+
       // Temporary event for debugging purpose
       val context = new HeimdalContextBuilder()
       context.addRequestInfo(request)

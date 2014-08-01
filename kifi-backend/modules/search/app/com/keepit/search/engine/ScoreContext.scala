@@ -3,19 +3,34 @@ package com.keepit.search.engine
 import java.util.Arrays
 
 import com.keepit.search.engine.result.ResultCollector
-import com.keepit.search.util.join.{ DataBufferReader, Joiner }
+import com.keepit.search.util.join.{ DataBuffer, DataBufferReader, Joiner }
 
 class ScoreContext(
     scoreExpr: ScoreExpr,
     scoreArraySize: Int,
+    val norm: Float,
     val matchWeight: Array[Float],
     collector: ResultCollector[ScoreContext]) extends Joiner {
 
-  private[engine] var visibility: Int = 0 // 0: restricted, 1: public, 2: member
+  private[engine] var visibility: Int = 0 // 0: restricted, 1: public, 2: member (see Visibility)
   private[engine] val scoreMax = new Array[Float](scoreArraySize)
   private[engine] val scoreSum = new Array[Float](scoreArraySize)
 
   def score(): Float = scoreExpr()(this)
+
+  def percentMatch(threshold: Float): Float = {
+    val len = scoreMax.length
+    var pct = 1.0f
+    var i = 0
+    while (i < len) { // using while for performance
+      if (scoreMax(i) <= 0.0f) {
+        pct -= matchWeight(i)
+        if (pct < threshold) return 0.0f
+      }
+      i += 1
+    }
+    pct
+  }
 
   def clear(): Unit = {
     visibility = 0
@@ -28,8 +43,9 @@ class ScoreContext(
     visibility = visibility | reader.recordType
 
     while (reader.hasMore) {
-      val idx = reader.getTaggedFloatTag()
-      val scr = reader.nextTaggedFloatValue()
+      val bits = reader.nextTaggedFloatBits()
+      val idx = DataBuffer.getTaggedFloatTag(bits)
+      val scr = DataBuffer.getTaggedFloatValue(bits)
       if (scoreMax(idx) < scr) scoreMax(idx) = scr
       scoreSum(idx) += scr
     }

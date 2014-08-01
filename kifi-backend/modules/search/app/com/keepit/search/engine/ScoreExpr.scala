@@ -4,12 +4,16 @@ abstract class ScoreExpr { // using abstract class for performance. trait is slo
   def apply()(implicit ctx: ScoreContext): Float
 
   def isNullExpr: Boolean = false
+  def isLeafExpr: Boolean = false
 }
 
 // Null Expr
 object NullExpr extends ScoreExpr {
   def apply()(implicit ctx: ScoreContext): Float = 0.0f
   override def isNullExpr: Boolean = true
+  override def isLeafExpr: Boolean = true
+
+  override def toString(): String = "Null"
 }
 
 object MaxExpr {
@@ -18,6 +22,8 @@ object MaxExpr {
     def apply()(implicit ctx: ScoreContext): Float = {
       ctx.scoreMax(index)
     }
+    override def isLeafExpr: Boolean = true
+    override def toString(): String = s"Max($index)"
   }
 
   def apply(index: Int): ScoreExpr = new MaxExpr(index)
@@ -29,6 +35,8 @@ object SumExpr {
     def apply()(implicit ctx: ScoreContext): Float = {
       ctx.scoreSum(index)
     }
+    override def isLeafExpr: Boolean = true
+    override def toString(): String = s"Sum($index)"
   }
 
   def apply(index: Int): ScoreExpr = new SumExpr(index)
@@ -39,8 +47,10 @@ object MaxWithTieBreakerExpr {
   class MaxWithTieBreakerExpr(index: Int, tieBreakerMultiplier: Float) extends ScoreExpr {
     def apply()(implicit ctx: ScoreContext): Float = {
       val scoreMax = ctx.scoreMax(index)
-      scoreMax + (ctx.scoreSum(index) - scoreMax) * tieBreakerMultiplier
+      scoreMax + (ctx.scoreSum(index) - scoreMax) * tieBreakerMultiplier / ctx.norm
     }
+    override def isLeafExpr: Boolean = true
+    override def toString(): String = s"MaxWithTieBreaker($index, $tieBreakerMultiplier)"
   }
 
   def apply(index: Int, tieBreakerMultiplier: Float): ScoreExpr = new MaxWithTieBreakerExpr(index, tieBreakerMultiplier)
@@ -59,6 +69,7 @@ object DisjunctiveSumExpr {
       }
       sum
     }
+    override def toString(): String = s"DisjunctiveSum(${elems.map(_.toString).mkString(", ")})"
   }
 
   def apply(elems: Seq[ScoreExpr]): ScoreExpr = {
@@ -85,6 +96,7 @@ object ConjunctiveSumExpr {
       }
       sum
     }
+    override def toString(): String = s"ConjunctiveSum(${elems.map(_.toString).mkString(", ")})"
   }
 
   def apply(elems: Seq[ScoreExpr]): ScoreExpr = {
@@ -108,6 +120,7 @@ object ExistsExpr {
       }
       0.0f
     }
+    override def toString(): String = s"Exists(${elems.map(_.toString).mkString(", ")})"
   }
 
   def apply(elems: Seq[ScoreExpr]): ScoreExpr = {
@@ -132,6 +145,7 @@ object ForAllExpr {
       }
       1.0f
     }
+    override def toString(): String = s"ForAll(${elems.map(_.toString).mkString(", ")})"
   }
 
   def apply(elems: Seq[ScoreExpr]): ScoreExpr = {
@@ -151,6 +165,7 @@ object BooleanExpr {
       val score = required()
       if (score > 0.0f) score + optional() else 0.0f
     }
+    override def toString(): String = s"Boolean(${optional.toString}, ${required.toString})"
   }
 
   def apply(optional: ScoreExpr, required: ScoreExpr): ScoreExpr = {
@@ -165,6 +180,7 @@ object FilterExpr {
     def apply()(implicit ctx: ScoreContext): Float = {
       if (filter() > 0.0f) expr() else 0.0f
     }
+    override def toString(): String = s"Filter(${expr.toString}, ${filter.toString})"
   }
 
   def apply(expr: ScoreExpr, filter: ScoreExpr): ScoreExpr = {
@@ -175,10 +191,11 @@ object FilterExpr {
 // Filter Out
 object FilterOutExpr {
 
-  class FilterOutExpr(textScore: ScoreExpr, filterOut: ScoreExpr) extends ScoreExpr {
+  class FilterOutExpr(expr: ScoreExpr, filter: ScoreExpr) extends ScoreExpr {
     def apply()(implicit ctx: ScoreContext): Float = {
-      if (filterOut() <= 0.0f) textScore() else 0.0f
+      if (filter() <= 0.0f) expr() else 0.0f
     }
+    override def toString(): String = s"FilterOut(${expr.toString}, ${filter.toString})"
   }
 
   def apply(expr: ScoreExpr, filter: ScoreExpr): ScoreExpr = {
@@ -193,35 +210,10 @@ object BoostExpr {
     def apply()(implicit ctx: ScoreContext): Float = {
       expr() * (booster() * boostStrength + (1.0f - boostStrength))
     }
+    override def toString(): String = s"Boost(${expr.toString}, ${booster.toString}, $boostStrength)"
   }
 
   def apply(expr: ScoreExpr, booster: ScoreExpr, boostStrength: Float): ScoreExpr = {
     if (expr.isNullExpr) NullExpr else if (booster.isNullExpr || boostStrength <= 0.0f) expr else new BoostExpr(expr, booster, boostStrength)
-  }
-}
-
-// Percent Match
-object PercentMatchExpr {
-
-  class PercentMatchExpr(expr: ScoreExpr, threshold: Float) extends ScoreExpr {
-    def apply()(implicit ctx: ScoreContext): Float = {
-      var pct = 1.0f
-      var i = 0
-      val scoreMax = ctx.scoreMax
-      val matchWeight = ctx.matchWeight
-      val len = scoreMax.length
-      while (i < len) { // using while for performance
-        if (scoreMax(i) <= 0.0f) {
-          pct -= matchWeight(i)
-          if (pct < threshold) return 0.0f
-        }
-        i += 1
-      }
-      expr() * pct
-    }
-  }
-
-  def apply(expr: ScoreExpr, threshold: Float): ScoreExpr = {
-    if (expr.isNullExpr) NullExpr else new PercentMatchExpr(expr, threshold)
   }
 }

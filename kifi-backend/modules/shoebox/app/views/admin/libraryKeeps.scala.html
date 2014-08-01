@@ -1,0 +1,90 @@
+@(library: Library,
+  owner: User,
+  totalKeepCount: Int,
+  keepInfos: Seq[(Keep, NormalizedURI, User, Seq[String])]
+)
+
+@admin(library.name, stylesheets = List("admin_library")) {
+    <br/>
+    <table class="library-summary table table-bordered">
+      <tr><th>Name</th><td>@library.name</td></tr>
+      <tr><th>Id</th><td>@library.id</td></tr>
+      <tr><th>Owner</th><td>@adminHelper.userDisplay(owner)</td></tr>
+    </table>
+
+  <h2>Library contains @totalKeepCount Keeps</h2>
+  <h3>Showing @keepInfos.size Keeps of total @totalKeepCount</h3>
+  <form class="navbar-form" action="@com.keepit.controllers.admin.routes.AdminBookmarksController.updateBookmarks()"
+  method="POST">
+    <button type="submit" class="btn">Update</button><br/><br/>
+		  <table class="table table-bordered">
+		    <tr>
+		      <th>#</th>
+		      <th>Keep ID</th>
+		      <th>Private</th>
+		      <th>Active</th>
+		      <th>Keep</th>
+          <th>Collections</th>
+          <th>Source</th>
+          <th>Created At</th>
+          <th>State</th>
+		    </tr>
+			 @for(((keep, uri, keepOwner, tags), i) <- keepInfos.zipWithIndex) {
+			   <tr>
+		        <td>@{i+1}</td>
+		        <td><span class="badge">@keep.id.get.id</span></td>
+		        <td>
+		          <input type="hidden" name="private_@{keep.id.get.id}" value="0" />
+  					  <center><input type="checkbox" id="private_@keep.id.get.id" name="private_@{keep.id.get.id}" value="1" @if(keep.isPrivate) {checked="checked"}></input></center>
+		        </td>
+		        <td>
+              <input type="hidden" name="active_@{keep.id.get.id}" value="0" />
+							<center><input type="checkbox" id="active_@keep.id.get.id" name="active_@{keep.id.get.id}" value="1" @if(keep.state.value == "active") {checked="checked"}></input></center>
+		        </td>
+		        <td>@adminHelper.bookmarkDisplay(keep)</td>
+                <td><div class="collections" data-id="@keep.id.get.id">@{tags.mkString(", ")}</div></td>
+                <td>@keep.source</td>
+            <td>@adminHelper.dateTimeDisplay(keep.createdAt)</td>
+            <td>@adminHelper.uriStateDisplay(uri)</td>
+			   </tr>
+			 }
+			</table>
+    <button type="submit" class="btn">Update</button>
+  </form>
+
+  <script type="text/javascript">
+    $(function() {
+      $('.table').on('click', 'div.collections', function () {
+        var $input = $('<input type="text">').addClass('collections').val($(this).text());
+        $(this).hide().parent().append($input);
+        $input.focus();
+      });
+      $('.table').on('keydown', 'input.collections', function (e) {
+        if (e.keyCode === 13) {
+          e.preventDefault();
+          $(this).blur();
+        }
+      });
+      $('.table').on('change', 'input.collections', function () {
+        var $div = $(this).parent().find('div.collections');
+        var $td = $div.closest("td");
+        var $sp = $("<img src='/assets/images/spinner.15.gif'>").appendTo($td);
+        var bookmarkId = $div.data("id");
+        $.post('@com.keepit.controllers.admin.routes.AdminUserController.updateCollectionsForBookmark(Id(-1))'
+            .replace('-1', bookmarkId), { collections: $(this).val() }).done(done).fail(fail);
+        function done(data) {
+          $div.text(data.collections.join(", ")).show();
+          $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+          $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+        return false;
+      });
+      $('.table').on('blur', 'input.collections', function () {
+        $(this).parent().find('.collections').show();
+        $(this).remove();
+      });
+    });
+  </script>
+}

@@ -3,19 +3,20 @@ package com.keepit.search.engine
 import com.keepit.search.Searcher
 import com.keepit.search.engine.query.KWeight
 import com.keepit.search.engine.result.ResultCollector
-import com.keepit.search.index.{ IdMapper, WrappedSubReader }
+import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.util.join.{ DataBuffer, HashJoin }
 import org.apache.lucene.search.{ Scorer, Query, Weight }
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
-class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArraySize: Int, collector: ResultCollector[ScoreContext]) {
+class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArraySize: Int) {
 
   private[this] val dataBuffer: DataBuffer = new DataBuffer()
-
+  private[this] var execCount: Int = 0
   private[this] val matchWeight: Array[Float] = new Array[Float](scoreArraySize)
 
   private[this] def accumulateWeightInfo(weights: ArrayBuffer[(Weight, Float)]): Unit = {
+    execCount += 1
     var i = 0
     while (i < scoreArraySize) {
       matchWeight(i) += weights(i)._2
@@ -64,17 +65,20 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArra
     }
   }
 
-  def createScoreContext(): ScoreContext = {
-    new ScoreContext(scoreExpr, scoreArraySize, matchWeight, collector)
+  def createScoreContext(collector: ResultCollector[ScoreContext]): ScoreContext = {
+    new ScoreContext(scoreExpr, scoreArraySize, execCount.toFloat, matchWeight, collector)
   }
 
-  def join(): Unit = {
+  def join(collector: ResultCollector[ScoreContext]): Unit = {
     val size = dataBuffer.size
     if (size > 0) {
       normalizeMatchWeight()
 
-      val hashJoin = new HashJoin(dataBuffer, (size + 10) / 10, createScoreContext())
+      val hashJoin = new HashJoin(dataBuffer, (size + 10) / 10, createScoreContext(collector))
       hashJoin.execute()
     }
   }
+
+  def getScoreExpr(): ScoreExpr = scoreExpr
+  def getQuery(): Query = query
 }

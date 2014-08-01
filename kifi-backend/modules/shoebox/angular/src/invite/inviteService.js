@@ -173,7 +173,6 @@ angular.module('kifi.inviteService', [
         }
 
         return deferred.promise;
-
       },
 
       friendRequest: function (id) {

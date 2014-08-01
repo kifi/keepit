@@ -93,7 +93,9 @@ object NormalizedURI {
   }
 }
 
-case class UrlHash(hash: String) extends AnyVal
+case class UrlHash(hash: String) extends AnyVal {
+  override def toString: String = hash
+}
 
 case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
   override val version = 6
