@@ -137,7 +137,7 @@ class MainSearcher(
 
       val tLucene = currentDateTime.getMillis()
 
-      personalizedSearcher.doSearch(weight) { (scorer, reader) =>
+      personalizedSearcher.search(weight) { (scorer, reader) =>
         val visibility = ArticleVisibility(reader)
         val mapper = reader.getIdMapper
         var doc = scorer.nextDoc()

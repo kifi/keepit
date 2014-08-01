@@ -26,10 +26,10 @@ class SemanticVectorQueryTest extends Specification {
       val searcher1 = indexer.getPersonalizedSearcher(Set(1L))
       val searcher2 = indexer.getPersonalizedSearcher(Set(2L))
       val searcher3 = indexer.getPersonalizedSearcher(Set(3L))
-      searcher0.search(q).head.id === 0
-      searcher1.search(q).head.id === 1
-      searcher2.search(q).head.id === 2
-      searcher3.search(q).head.id === 0
+      searcher0.searchAll(q).head.id === 0
+      searcher1.searchAll(q).head.id === 1
+      searcher2.searchAll(q).head.id === 2
+      searcher3.searchAll(q).head.id === 0
     }
   }
 }
