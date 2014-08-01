@@ -1,17 +1,17 @@
 package com.keepit.controllers.website
 
-import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.{ FullLibraryInfo, LibraryInfo }
 import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScrapeSchedulerConfigModule }
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScrapeSchedulerConfigModule }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.ShoeboxTestInjector
@@ -29,14 +29,14 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
   val modules = Seq(
     FakeCryptoModule(),
     FakeActionAuthenticatorModule(),
-    ShoeboxFakeStoreModule(),
-    TestABookServiceClientModule(),
+    FakeShoeboxStoreModule(),
+    FakeABookServiceClientModule(),
     FakeKeepImportsModule(),
     FakeMailModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeSearchServiceClientModule(),
-    TestScrapeSchedulerConfigModule(),
+    FakeScrapeSchedulerConfigModule(),
     FakeSocialGraphModule(),
     FakeScrapeSchedulerModule(),
     FakeShoeboxServiceModule()

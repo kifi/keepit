@@ -8,7 +8,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
-import com.keepit.shoebox.TestShoeboxServiceClientModule
+import com.keepit.shoebox.FakeShoeboxServiceClientModule
 import com.keepit.test.{ ShoeboxApplication, ShoeboxTestInjector }
 import org.specs2.mutable.Specification
 import play.api.test.Helpers.running

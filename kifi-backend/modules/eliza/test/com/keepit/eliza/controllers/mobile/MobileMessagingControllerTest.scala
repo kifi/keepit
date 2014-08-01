@@ -14,20 +14,20 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.api.libs.json.Json
 import akka.actor.ActorSystem
-import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, StandaloneTestActorSystemModule }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.controller.FakeActionAuthenticatorModule
 import play.api.libs.json.JsArray
 import scala.Some
-import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.realtime.FakeUrbanAirshipModule
-import com.keepit.scraper.TestScraperServiceClientModule
-import com.keepit.common.store.ElizaFakeStoreModule
+import com.keepit.scraper.FakeScraperServiceClientModule
+import com.keepit.common.store.FakeElizaStoreModule
 
 class MobileMessagingControllerTest extends Specification with ElizaApplicationInjector {
 
@@ -39,15 +39,15 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
       FakeSearchServiceClientModule(),
       ElizaCacheModule(),
       FakeShoeboxServiceModule(),
-      TestHeimdalServiceClientModule(),
+      FakeHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
       FakeActorSystemModule(),
-      TestABookServiceClientModule(),
+      FakeABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeActionAuthenticatorModule(),
       FakeCryptoModule(),
-      TestScraperServiceClientModule(),
-      ElizaFakeStoreModule()
+      FakeScraperServiceClientModule(),
+      FakeElizaStoreModule()
     )
   }
 

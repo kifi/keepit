@@ -3,8 +3,8 @@ package com.keepit.controllers.ext
 import org.specs2.mutable.Specification
 
 import com.keepit.normalizer._
-import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.common.controller._
 import com.keepit.search._
 import com.keepit.common.time._
@@ -18,7 +18,7 @@ import play.api.test._
 import org.joda.time.DateTime
 
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.google.inject.Injector
@@ -30,14 +30,14 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule(),
+    FakeScraperServiceClientModule(),
     FakeActionAuthenticatorModule(),
     FakeKeepImportsModule()
   )

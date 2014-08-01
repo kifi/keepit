@@ -1,48 +1,55 @@
 package com.keepit.commanders
 
-import com.keepit.abook.TestABookServiceClientModule
+import com.google.inject.Injector
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.FakeActionAuthenticator
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{ FakeSocialGraphModule, TestShoeboxAppSecureSocialModule }
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule, FakeSocialGraphModule }
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.controllers.core.AuthController
+import com.keepit.controllers.website.UserController
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.heimdal.{ HeimdalContext, TestHeimdalServiceClientModule }
+import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
-import com.keepit.search.TestSearchServiceClientModule
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
+import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, KeepImportsModule }
 import com.keepit.social.{ SocialId, SocialNetworks }
-import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector, ShoeboxInjectionHelpers }
+import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
+import play.api.mvc.{ AnyContentAsJson, SimpleResult }
 import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
 
-class PasswordTest extends Specification with ShoeboxApplicationInjector with ShoeboxInjectionHelpers {
+import scala.concurrent.Future
+
+// todo(ray): figure out how to deal with SecureSocial's dependency on application
+class PasswordTest extends Specification with ShoeboxApplicationInjector {
 
   implicit val context = HeimdalContext.empty
 
   def modules = Seq(
     FakeShoeboxServiceModule(),
-    TestSearchServiceClientModule(),
+    FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
-    TestABookServiceClientModule(),
+    FakeABookServiceClientModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
-    TestHeimdalServiceClientModule(),
-    TestShoeboxAppSecureSocialModule(),
+    FakeHeimdalServiceClientModule(),
+    FakeShoeboxAppSecureSocialModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule(),
+    FakeScraperServiceClientModule(),
     KeepImportsModule()
   )
 
@@ -77,13 +84,14 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector with Sh
     }
   }
 
-  def checkPasswordAuth(username: String, password: String, expectSuccess: Boolean) = {
+  def checkPasswordAuth(username: String, password: String, expectSuccess: Boolean)(implicit injector: Injector) = {
     val path = com.keepit.controllers.core.routes.AuthController.logInWithUserPass().toString()
     path === "/auth/log-in"
 
-    val payload = Json.obj("username" -> username, "password" -> password)
-    val request = FakeRequest("POST", path).withJsonBody(payload)
-    val result = route(request).get
+    val authController = inject[AuthController]
+    val payload = AnyContentAsJson(Json.obj("username" -> username, "password" -> password))
+    val request = FakeRequest("POST", path).withBody(payload)
+    val result: Future[SimpleResult] = authController.logInWithUserPass("")(request)
     if (expectSuccess) {
       status(result) === OK
       contentAsString(result) === Json.obj("uri" -> "/login/after").toString()
@@ -106,9 +114,10 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector with Sh
         checkPasswordAuth(email1b.address.address, oldPwd1, true)
         checkPasswordAuth(email1a.address.address, newPwd1, false)
 
+        val userController = inject[UserController]
         val payload = Json.obj("oldPassword" -> oldPwd1, "newPassword" -> newPwd1)
-        val request = FakeRequest("POST", path).withJsonBody(payload)
-        val result = route(request).get
+        val request = FakeRequest("POST", path).withBody(payload)
+        val result: Future[SimpleResult] = userController.changePassword()(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         contentAsString(result) === Json.obj("success" -> true).toString()
@@ -134,9 +143,10 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector with Sh
         checkPasswordAuth(email1b.address.address, oldPwd1, true)
         checkPasswordAuth(email1a.address.address, newPwd1, false)
 
+        val authController = inject[AuthController]
         val payload = Json.obj("code" -> resetToken.token, "password" -> newPwd1)
-        val request = FakeRequest("POST", path).withJsonBody(payload)
-        val result = route(request).get
+        val request = FakeRequest("POST", path).withBody(payload)
+        val result = authController.setPassword()(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         contentAsString(result) === Json.obj("uri" -> "/").toString()
