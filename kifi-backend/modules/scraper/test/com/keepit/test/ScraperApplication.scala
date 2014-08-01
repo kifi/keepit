@@ -10,9 +10,12 @@ import com.keepit.common.time.FakeClockModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.inject.{ TestFortyTwoModule, InjectorProvider, ApplicationInjector, EmptyInjector }
 import play.api.Mode
+import com.keepit.scraper.ScraperServiceTypeModule
+import com.keepit.common.store.ScraperTestStoreModule
 
 class ScraperApplication(overridingModules: Module*)(implicit path: File = new File("./modules/scraper/"))
   extends TestApplication(path, overridingModules, Seq(
+    ScraperServiceTypeModule(),
     FakeHttpClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
@@ -20,6 +23,7 @@ class ScraperApplication(overridingModules: Module*)(implicit path: File = new F
     FakeHealthcheckModule(),
     TestFortyTwoModule(),
     FakeDiscoveryModule(),
+    ScraperTestStoreModule(),
     ScraperCacheModule(HashMapMemoryCacheModule())
   ))
 
@@ -27,6 +31,7 @@ trait ScraperApplicationInjector extends ApplicationInjector with ScraperInjecti
 
 trait ScraperTestInjector extends TestInjector with ScraperInjectionHelpers {
   val module = Modules.combine(
+    ScraperServiceTypeModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),

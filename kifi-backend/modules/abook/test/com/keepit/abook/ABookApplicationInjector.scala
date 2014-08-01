@@ -15,6 +15,7 @@ import com.keepit.common.actor.TestSchedulerModule
 
 class ABookApplication(overridingModules: Module*)(implicit path: File = new File("./modules/abook/"))
     extends DbTestApplication(path, overridingModules, Seq(
+      ABookServiceTypeModule(),
       FakeAirbrakeModule(),
       FakeMemoryUsageModule(),
       FakeClockModule(),
@@ -34,6 +35,7 @@ trait ABookApplicationInjector extends ApplicationInjector with DbInjectionHelpe
 
 trait ABookTestInjector extends TestInjector with DbInjectionHelper with ABookInjectionHelpers {
   val module = Modules.combine(
+    ABookServiceTypeModule(),
     FakeAirbrakeModule(),
     FakeClockModule(),
     FakeHealthcheckModule(),

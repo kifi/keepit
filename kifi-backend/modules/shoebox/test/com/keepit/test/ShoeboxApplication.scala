@@ -18,14 +18,38 @@ import com.keepit.normalizer.TestNormalizationServiceModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.TestHeimdalServiceClientModule
 import com.keepit.abook.TestABookServiceClientModule
-import com.keepit.shoebox.{ AbuseControlModule, FakeKeepImportsModule, FakeShoeboxRepoChangeListenerModule }
+import com.keepit.shoebox._
 import com.keepit.common.actor.{ TestActorSystemModule, TestSchedulerModule }
 import com.keepit.common.queue.{ FakeSimpleQueueModule }
 import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
 import com.keepit.common.aws.AwsModule
+import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.inject.TestFortyTwoModule
+import com.keepit.scraper.TestScraperServiceClientModule
+import com.keepit.shoebox.AbuseControlModule
+import com.keepit.shoebox.FakeShoeboxRepoChangeListenerModule
+import com.keepit.common.controller.FakeActionAuthenticatorModule
+import com.keepit.common.queue.FakeSimpleQueueModule
+import com.keepit.common.time.FakeClockModule
+import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.common.actor.TestSchedulerModule
+import com.keepit.common.cache.ShoeboxCacheModule
+import com.keepit.common.crypto.TestCryptoModule
+import com.keepit.common.cache.HashMapMemoryCacheModule
+import com.keepit.common.healthcheck.FakeMemoryUsageModule
+import com.keepit.common.aws.AwsModule
+import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
+import com.keepit.common.zookeeper.FakeDiscoveryModule
+import com.keepit.common.healthcheck.FakeHealthcheckModule
+import com.keepit.shoebox.FakeKeepImportsModule
+import com.keepit.normalizer.TestNormalizationServiceModule
+import com.keepit.common.db.TestSlickModule
 
 class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
   extends DbTestApplication(path, overridingModules, Seq(
+    ShoeboxServiceTypeModule(),
     TestABookServiceClientModule(),
     TestHeimdalServiceClientModule(),
     FakeElizaServiceClientModule(),
@@ -53,6 +77,7 @@ trait ShoeboxApplicationInjector extends ApplicationInjector with DbInjectionHel
 
 trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
   val module = Modules.combine(
+    ShoeboxServiceTypeModule(),
     TestHeimdalServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeAirbrakeModule(),

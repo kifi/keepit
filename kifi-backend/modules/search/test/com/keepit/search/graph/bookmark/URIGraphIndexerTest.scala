@@ -19,7 +19,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
 
   "URIGraphIndexer" should {
     "maintain a sequence number on bookmarks " in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
@@ -38,7 +38,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
     }
 
     "find users by uri" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
 
@@ -69,7 +69,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
     }
 
     "store user to keep associations in URILists" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val (users, uris) = initData
 
         val indexer = mkURIGraphIndexer()
@@ -97,7 +97,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
     }
 
     "dump Lucene Document" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      running(new SearchApplication()) {
         val store = new FakeArticleStore()
 
         val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = ""))

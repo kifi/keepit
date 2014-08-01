@@ -26,6 +26,5 @@ case class ElizaProdModule() extends ElizaModule(
   val abookServiceClientModule = ProdABookServiceClientModule()
   val scraperServiceClientModule = ProdScraperServiceClientModule()
 
-  val discoveryModule = new ProdDiscoveryModule(ServiceType.ELIZA, ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil)
   val elizaExternalEmailModule = ProdElizaExternalEmailModule()
 }

@@ -5,9 +5,9 @@ import org.joda.time.DateTime
 import scala.concurrent.duration._
 import com.keepit.common.time._
 import net.codingwell.scalaguice.ScalaModule
-import com.keepit.test.DeprecatedTestInjector
+import com.keepit.test.CommonTestInjector
 
-class BabysitterTest extends Specification with DeprecatedTestInjector {
+class BabysitterTest extends Specification with CommonTestInjector {
 
   val realBabysitterModule = new ScalaModule() {
     def configure() {

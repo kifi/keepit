@@ -9,7 +9,7 @@ import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.common.concurrent.ForkJoinExecContextPlugin
 
 object ScraperGlobal extends FortyTwoGlobal(Prod) with ScraperServices {
-  val module = ProdScraperServiceModule()
+  val module = ScraperProdModule()
 
   override def onStart(app: Application) {
     startScraperServices()

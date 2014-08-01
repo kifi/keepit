@@ -7,6 +7,13 @@ import com.keepit.shoebox.{ ShoeboxServiceClientModule, ProdShoeboxServiceClient
 import com.keepit.common.store.StoreModule
 import com.keepit.common.queue.SimpleQueueModule
 import com.keepit.graph.{ ProdGraphServiceClientModule, GraphServiceClientModule }
+import com.keepit.common.zookeeper.ServiceTypeModule
+import com.keepit.common.service.ServiceType
+
+case class ABookServiceTypeModule() extends ServiceTypeModule {
+  val serviceType = ServiceType.ABOOK
+  val servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.GRAPH :: Nil
+}
 
 abstract class ABookModule(
     // Common Functional Modules
@@ -16,6 +23,7 @@ abstract class ABookModule(
     val emailAccountUpdaterPluginModule: EmailAccountUpdaterPluginModule = EmailAccountUpdaterPluginModule(),
     val sqsModule: SimpleQueueModule) extends ConfigurationModule with CommonServiceModule {
   // Service clients
+  val serviceTypeModule = ABookServiceTypeModule()
   val graphServiceClientModule: GraphServiceClientModule = ProdGraphServiceClientModule()
   val shoeboxServiceClientModule: ShoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val abookServiceClientModule: ABookServiceClientModule = ProdABookServiceClientModule()
