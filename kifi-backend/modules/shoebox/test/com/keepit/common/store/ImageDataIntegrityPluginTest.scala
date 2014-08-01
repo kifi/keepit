@@ -12,7 +12,7 @@ import com.keepit.common.mail.TestMailModule
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
-import com.keepit.common.actor.{TestKitSupport, TestActorSystemModule}
+import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
 import com.keepit.common.social.{ FakeSocialGraphModule, TestShoeboxAppSecureSocialModule }
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeAirbrakeNotifier }
 import com.keepit.heimdal.TestHeimdalServiceClientModule

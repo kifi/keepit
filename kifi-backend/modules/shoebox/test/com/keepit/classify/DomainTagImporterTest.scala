@@ -5,11 +5,9 @@ import org.specs2.mutable._
 import com.keepit.common.db.slick.Database
 import com.keepit.test._
 
-import akka.actor.ActorSystem
-import akka.testkit.TestKit
 import play.api.test.Helpers._
 import com.keepit.common.analytics.FakeAnalyticsModule
-import com.keepit.common.actor.{TestKitSupport, TestActorSystemModule}
+import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.search.TestSearchServiceClientModule

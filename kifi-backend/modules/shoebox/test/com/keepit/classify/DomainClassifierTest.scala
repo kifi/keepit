@@ -1,6 +1,6 @@
 package com.keepit.classify
 
-import com.keepit.common.actor.{TestKitSupport, TestActorSystemModule}
+import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
 import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.db.{ TestDbInfo, TestSlickModule }

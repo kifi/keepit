@@ -7,7 +7,7 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
 import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
-import com.keepit.common.actor.{TestKitSupport, TestActorSystemModule}
+import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
 
 class HealthcheckModuleTest extends TestKitSupport with SpecificationLike with ShoeboxApplicationInjector {
 

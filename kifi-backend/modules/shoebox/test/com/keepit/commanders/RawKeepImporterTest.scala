@@ -10,7 +10,7 @@ import akka.testkit.{ TestActorRef, TestKit }
 import play.api.test.Helpers._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
 import com.keepit.shoebox.{ TestShoeboxServiceClientModule, KeepImportsModule, FakeKeepImportsModule }
-import com.keepit.common.actor.{TestKitSupport, ActorBuilder, TestActorSystemModule}
+import com.keepit.common.actor.{ TestKitSupport, ActorBuilder, TestActorSystemModule }
 import com.keepit.search.TestSearchServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
 import java.io.File
