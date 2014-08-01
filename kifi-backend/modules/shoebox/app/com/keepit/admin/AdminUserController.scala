@@ -876,7 +876,7 @@ class AdminUserController @Inject() (
     }
     val (owner, accessToLibs) = db.readOnlyReplica { implicit session =>
       val owner = userRepo.get(ownerId)
-      val libs = libraryRepo.getByUser(ownerId).filter(pair => showSecrets || !(pair._2.isSecret()))
+      val libs = libraryRepo.getByUser(ownerId).filter(pair => showSecrets || !(pair._2.visibility == LibraryVisibility.SECRET))
       (owner, libs)
     }
     Ok(html.admin.userLibraries(owner, accessToLibs))

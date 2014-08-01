@@ -40,7 +40,7 @@ class AdminLibraryController @Inject() (
   def index(page: Int = 0) = AdminHtmlAction.authenticated { implicit request =>
     val pageSize = 30
     val (stats, totalCount) = db.readOnlyReplica { implicit session =>
-      val stats = libraryRepo.page(page, size = pageSize).map { lib =>
+      val stats = libraryRepo.page(page, size = pageSize).filter(_.visibility != LibraryVisibility.SECRET).map { lib =>
         val owner = userRepo.get(lib.ownerId)
         val keepsCount = keepRepo.getCountByLibrary(lib.id.get)
         val memberships = libraryMembershipRepo.getWithLibraryId(lib.id.get)
@@ -133,7 +133,10 @@ class AdminLibraryController @Inject() (
     def setIsActive(id: Id[Library], isActive: Boolean)(implicit session: RWSession): Id[User] = {
       val lib = libraryRepo.get(id)
       log.info("updating bookmark %s with active = %s".format(lib, isActive))
-      libraryRepo.save(lib.withActive(isActive))
+      if (isActive)
+        libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
+      else
+        libraryRepo.save(lib.copy(state = LibraryStates.INACTIVE))
       log.info("updated bookmark %s".format(lib))
       lib.ownerId
     }
