@@ -17,7 +17,7 @@ import com.google.inject.util._
 import com.google.inject.Injector
 import akka.actor.Scheduler
 
-class ServiceDiscoveryLiveTest extends Specification with ApplicationInjector {
+class ServiceDiscoveryLiveTest extends Specification with CommonTestInjector {
 
   args(skipAll = true)
 
@@ -43,7 +43,7 @@ class ServiceDiscoveryLiveTest extends Specification with ApplicationInjector {
   "discovery" should {
 
     "register" in {
-      running(new CommonTestApplication(TestActorSystemModule())) {
+      withInjector(TestActorSystemModule()) { implicit injector =>
         val services = new FortyTwoServices(inject[Clock], Mode.Test, None, None, inject[FortyTwoConfig]) {
           override lazy val currentService: ServiceType = ServiceType.SHOEBOX
         }

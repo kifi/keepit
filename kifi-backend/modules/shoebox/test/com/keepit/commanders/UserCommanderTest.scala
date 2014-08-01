@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.keepit.common.crypto.TestCryptoModule
+import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.common.db.Id
 import org.specs2.mutable.Specification
@@ -67,7 +67,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
     FakeCortexServiceClientModule(),
     TestScraperServiceClientModule(),
     FakeKeepImportsModule(),
-    TestCryptoModule()
+    FakeCryptoModule()
   )
 
   "UserCommander" should {

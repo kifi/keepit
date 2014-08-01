@@ -12,7 +12,7 @@ import com.keepit.search.Lang
 import com.keepit.test.CommonTestInjector
 
 import play.api.libs.json._
-import com.keepit.common.cache.TestCacheModule
+import com.keepit.common.cache.FakeCacheModule
 
 class ShoeboxServiceClientTest extends Specification with CommonTestInjector {
 
@@ -33,7 +33,7 @@ class ShoeboxServiceClientTest extends Specification with CommonTestInjector {
 
   "ShoeboxServiceClient" should {
 
-    val shoeboxServiceClientTestModules = Seq(FakeHttpClientModule(fakeShoeboxResponse), ProdShoeboxServiceClientModule(), TestCacheModule())
+    val shoeboxServiceClientTestModules = Seq(FakeHttpClientModule(fakeShoeboxResponse), ProdShoeboxServiceClientModule(), FakeCacheModule())
 
     "get users" in {
       withInjector(shoeboxServiceClientTestModules: _*) { implicit injector =>

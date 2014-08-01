@@ -62,7 +62,7 @@ class TestStringCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlu
 
 class FortyTwoCacheTest extends Specification with CommonTestInjector {
 
-  val cacheTestModules = Seq(FakeAirbrakeModule(), TestCacheModule())
+  val cacheTestModules = Seq(FakeAirbrakeModule(), FakeCacheModule())
 
   import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 

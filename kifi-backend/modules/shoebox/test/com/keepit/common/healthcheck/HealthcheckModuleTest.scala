@@ -7,9 +7,9 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
 import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
 
-class HealthcheckModuleTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
+class HealthcheckModuleTest extends TestKitSupport with SpecificationLike with ShoeboxApplicationInjector {
 
   class FakeMailSender extends MailSender(null, null) {
     var mailQueue: List[ElectronicMail] = Nil

@@ -7,12 +7,12 @@ import com.keepit.common.net.{ FakeHttpClientModule, FakeClientResponse, DirectU
 import com.keepit.inject._
 import com.keepit.model.{ UserPictureSources, UserPicture, User }
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
-import com.keepit.common.mail.TestMailModule
+import com.keepit.common.mail.FakeMailModule
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
 import com.keepit.common.social.{ FakeSocialGraphModule, TestShoeboxAppSecureSocialModule }
 import com.keepit.common.healthcheck.{ FakeAirbrakeModule, FakeAirbrakeNotifier }
 import com.keepit.heimdal.TestHeimdalServiceClientModule
@@ -21,7 +21,7 @@ import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerM
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 
-class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxApplicationInjector {
+class ImageDataIntegrityPluginTest extends TestKitSupport with SpecificationLike with ShoeboxApplicationInjector {
 
   val imageDataIntegrityTestPluginModule =
     new ShoeboxFakeStoreModule() {
@@ -42,7 +42,7 @@ class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specifica
         TestShoeboxAppSecureSocialModule(),
         FakeSocialGraphModule(),
         TestHeimdalServiceClientModule(),
-        TestMailModule(),
+        FakeMailModule(),
         FakeExternalServiceModule(),
         FakeCortexServiceClientModule(),
         TestScraperServiceClientModule(),

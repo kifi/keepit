@@ -1,9 +1,8 @@
 package com.keepit.common.crypto
 
-import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{ Provides, Singleton }
 
-case class TestCryptoModule() extends CryptoModule {
+case class FakeCryptoModule() extends CryptoModule {
   def configure() {}
 
   @Singleton

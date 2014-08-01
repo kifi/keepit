@@ -16,7 +16,10 @@ trait ElectronicMailRepo extends Repo[ElectronicMail] with ExternalIdColumnFunct
 }
 
 @Singleton
-class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[ElectronicMail] with ElectronicMailRepo with ExternalIdColumnDbFunction[ElectronicMail] {
+class ElectronicMailRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock)
+    extends DbRepo[ElectronicMail] with ElectronicMailRepo with ExternalIdColumnDbFunction[ElectronicMail] {
 
   import db.Driver.simple._
 
