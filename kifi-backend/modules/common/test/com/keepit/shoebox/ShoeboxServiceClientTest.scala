@@ -14,7 +14,7 @@ import com.keepit.test.CommonTestApplication
 
 import play.api.libs.json._
 import play.api.test.Helpers._
-import com.keepit.common.cache.TestCacheModule
+import com.keepit.common.cache.FakeCacheModule
 
 class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
 
@@ -35,7 +35,7 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
 
   "ShoeboxServiceClient" should {
 
-    val shoeboxServiceClientTestModules = Seq(FakeHttpClientModule(fakeShoeboxResponse), ProdShoeboxServiceClientModule(), TestCacheModule())
+    val shoeboxServiceClientTestModules = Seq(FakeHttpClientModule(fakeShoeboxResponse), ProdShoeboxServiceClientModule(), FakeCacheModule())
 
     "get users" in {
       running(new CommonTestApplication(shoeboxServiceClientTestModules: _*)) {

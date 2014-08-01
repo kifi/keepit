@@ -18,7 +18,7 @@ import SocialNetworks._
 import securesocial.core._
 import play.api.Play
 import securesocial.core.providers.utils.{ PasswordHasher, BCryptPasswordHasher }
-import com.keepit.common.analytics.TestAnalyticsModule
+import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.controller.FakeActionAuthenticatorModule
 import com.keepit.common.net.FakeHttpClientModule
 import play.api.libs.json.JsArray
@@ -43,7 +43,7 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     FakeScrapeSchedulerModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
-    TestAnalyticsModule(),
+    FakeAnalyticsModule(),
     ShoeboxFakeStoreModule(),
     TestActorSystemModule(),
     TestSearchServiceClientModule(),

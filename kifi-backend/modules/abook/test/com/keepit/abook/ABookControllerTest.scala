@@ -1,5 +1,6 @@
 package com.keepit.abook
 
+import com.keepit.common.controller.FakeActionAuthenticatorModule
 import com.keepit.common.mail.EmailAddress
 import org.specs2.mutable._
 import com.keepit.model._
@@ -15,24 +16,41 @@ import com.keepit.typeahead.TypeaheadHit
 import com.keepit.abook.controllers.ABookController
 import com.keepit.abook.model._
 
-class ABookControllerTest extends Specification with ABookApplicationInjector with ABookTestHelper {
+class ABookControllerTest extends Specification with ABookTestInjector with ABookTestHelper {
 
   val modules = Seq(
     ABookCacheModule(HashMapMemoryCacheModule()),
     TestABookServiceClientModule(),
     FakeShoeboxServiceModule(),
-    FakeSimpleQueueModule()
+    FakeSimpleQueueModule(),
+    TestABookImporterPluginModule(),
+    FakeABookStoreModule(),
+    FakeActionAuthenticatorModule()
   )
+
+  def waitFor(predicate: () => Boolean, maxTries: Int = 50)(f: () => Unit) = {
+    var tries = 0
+    while (predicate() && maxTries > tries) {
+      f()
+      if (predicate()) {
+        println("sleeping tries=" + tries)
+        Thread.sleep(10)
+        tries += 1
+      }
+    }
+  }
 
   "abook controller" should {
 
     "support mobile (ios) upload" in {
-      running(new ABookApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
         val uploadRoute = com.keepit.abook.controllers.routes.ABookController.uploadContacts(Id[User](1), ABookOrigins.IOS).url
         uploadRoute === "/internal/abook/ios/uploadContacts?userId=1"
+
         val payload = iosUploadJson
         val uploadRequest = FakeRequest("POST", uploadRoute, FakeHeaders(Seq("Content-Type" -> Seq("application/json"))), body = payload)
         val controller = inject[ABookController] // setup
+
         var result = controller.uploadContacts(Id[User](1), ABookOrigins.IOS)(uploadRequest)
         println(s"[ios-upload] result=$result")
         status(result) must equalTo(OK)
@@ -47,23 +65,21 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         abookInfo.state !== ABookInfoStates.UPLOAD_FAILURE
 
         // sanity check
-        var nWait = 0
-        while (abookInfo.state != ABookInfoStates.ACTIVE && nWait < 10) {
-          nWait += 1
+        waitFor(() => abookInfo.state != ABookInfoStates.ACTIVE) { () =>
           result = controller.getABookInfo(Id[User](1), abookInfo.id.get)(FakeRequest())
           status(result) must equalTo(OK)
           contentType(result) must beSome("application/json")
           val s = contentAsString(result)
           s !== null
           abookInfo = Json.fromJson[ABookInfo](Json.parse(s)).get
-          Thread.sleep(200)
         }
+
         abookInfo.state === ABookInfoStates.ACTIVE
       }
     }
 
     "support prefixQuery" in {
-      running(new ABookApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
         val uploadRoute = com.keepit.abook.controllers.routes.ABookController.uploadContacts(Id[User](1), ABookOrigins.IOS).url
         uploadRoute === "/internal/abook/ios/uploadContacts?userId=1"
         val payload = iosUploadJson
@@ -83,16 +99,13 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         abookInfo.state !== ABookInfoStates.UPLOAD_FAILURE
 
         // sanity check
-        var nWait = 0
-        while (abookInfo.state != ABookInfoStates.ACTIVE && nWait < 10) {
-          nWait += 1
+        waitFor(() => abookInfo.state != ABookInfoStates.ACTIVE) { () =>
           result = controller.getABookInfo(Id[User](1), abookInfo.id.get)(FakeRequest())
           status(result) must equalTo(OK)
           contentType(result) must beSome("application/json")
           val s = contentAsString(result)
           s !== null
           abookInfo = Json.fromJson[ABookInfo](Json.parse(s)).get
-          Thread.sleep(200)
         }
         abookInfo.state === ABookInfoStates.ACTIVE
 
@@ -147,7 +160,7 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
     }
 
     "support hide email from user" in {
-      running(new ABookApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
         val hideEmailRoute = com.keepit.abook.controllers.routes.ABookController.hideEmailFromUser(Id[User](1), EmailAddress("tan@kifi.com"))
         hideEmailRoute.toString === "/internal/abook/1/hideEmailFromUser?email=tan%40kifi.com"
         val controller = inject[ABookController] // setup
@@ -160,12 +173,12 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
     }
 
     "getUsersWithContact" should {
-      implicit def _db = db
-      def controller = inject[ABookController] // setup
-      def factory = inject[ABookTestContactFactory]
-
       "return an empty array if no connections are found" in {
-        running(new ABookApplication(modules: _*)) {
+        withDb(modules: _*) { implicit injector =>
+          // setup
+          val controller = inject[ABookController]
+          val factory = inject[ABookTestContactFactory]
+
           val (c1, c2, c3) = factory.createMany
           val result = controller.getUsersWithContact(EmailAddress("no@mail.com"))(FakeRequest())
           status(result) must equalTo(OK)
@@ -175,7 +188,11 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
       }
 
       "return an array of user ids that are connected to a given email" in {
-        running(new ABookApplication(modules: _*)) {
+        withDb(modules: _*) { implicit injector =>
+          // setup
+          val controller = inject[ABookController]
+          val factory = inject[ABookTestContactFactory]
+
           val (c1, c2, c3) = factory.createMany
           val result = controller.getUsersWithContact(AbookTestEmails.BAR_EMAIL)(FakeRequest())
           status(result) must equalTo(OK)
@@ -186,7 +203,5 @@ class ABookControllerTest extends Specification with ABookApplicationInjector wi
         }
       }
     }
-
   }
-
 }

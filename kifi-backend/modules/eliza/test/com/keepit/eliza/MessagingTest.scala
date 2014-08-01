@@ -19,7 +19,7 @@ import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.commanders.{ MessageFetchingCommander, NotificationCommander, MessagingCommander }
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
-import com.keepit.common.crypto.TestCryptoModule
+import com.keepit.common.crypto.FakeCryptoModule
 import com.google.inject.Injector
 import play.api.test.Helpers._
 import play.api.libs.json.{ Json, JsObject }
@@ -47,7 +47,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
       StandaloneTestActorSystemModule(),
       TestABookServiceClientModule(),
       FakeUrbanAirshipModule(),
-      TestCryptoModule(),
+      FakeCryptoModule(),
       TestScraperServiceClientModule(),
       ElizaFakeStoreModule()
     )
