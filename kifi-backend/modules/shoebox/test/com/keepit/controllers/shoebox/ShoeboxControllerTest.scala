@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 import com.keepit.common.db.slick._
 import com.keepit.common.social.{ FakeSocialGraphModule, BasicUserRepo }
 import com.keepit.model._
-import com.keepit.search.{ TestSearchServiceClientModule, Lang }
+import com.keepit.search.{ FakeSearchServiceClientModule, Lang }
 import com.keepit.test.{ ShoeboxTestInjector }
 import com.keepit.common.controller._
 
@@ -20,8 +20,8 @@ import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.abook.TestABookServiceClientModule
-import com.keepit.scraper.{ TestScrapeSchedulerConfigModule, TestScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.scraper.{ FakeScrapeSchedulerConfigModule, FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.db.{ SequenceNumber }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -36,16 +36,16 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
     FakeAnalyticsModule(),
     ShoeboxFakeStoreModule(),
     FakeActorSystemModule(),
-    TestSearchServiceClientModule(),
+    FakeSearchServiceClientModule(),
     FakeAirbrakeModule(),
     FakeActionAuthenticatorModule(),
-    TestABookServiceClientModule(),
+    FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
     FakeScrapeSchedulerModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule(),
-    TestScrapeSchedulerConfigModule(),
+    FakeScraperServiceClientModule(),
+    FakeScrapeSchedulerConfigModule(),
     FakeKeepImportsModule(),
     FakeCryptoModule(),
     UrlPatternRuleModule()

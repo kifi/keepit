@@ -1,6 +1,6 @@
 package com.keepit.controllers.mobile
 
-import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.model._
 import org.specs2.mutable.Specification
@@ -13,9 +13,9 @@ import play.api.libs.json.Json
 import play.api.test._
 
 import play.api.test.Helpers._
-import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.search.FakeSearchServiceClientModule
@@ -38,12 +38,12 @@ class MobileAuthControllerTest extends Specification with ShoeboxTestInjector wi
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule(),
+    FakeScraperServiceClientModule(),
     FakeKeepImportsModule(),
-    TestABookServiceClientModule(),
+    FakeABookServiceClientModule(),
     FakeCryptoModule()
   )
 

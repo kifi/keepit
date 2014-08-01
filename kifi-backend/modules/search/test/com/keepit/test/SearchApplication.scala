@@ -11,23 +11,21 @@ import com.google.inject.util.Modules
 import com.google.inject.Module
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, SearchCacheModule }
 import com.keepit.common.zookeeper.FakeDiscoveryModule
-import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.search.index.DevIndexModule
+import com.keepit.search.index.{ DevIndexModule, FakeIndexModule }
 import com.keepit.search.tracker.{ DevTrackingModule, FakeTrackingModule }
 import com.keepit.common.store.SearchFakeStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.eliza.FakeElizaServiceClientModule
-
 import com.keepit.common.actor.FakeActorSystemModule
-
-import com.keepit.search.{ SearchServiceTypeModule, TestSearchServiceClientModule, SearchConfigModule, FakeSearchConfigModule }
+import com.keepit.search.{ SearchServiceTypeModule, SearchConfigModule, FakeSearchConfigModule, FakeSearchServiceClientModule }
 
 class SearchApplication(overridingModules: Module*)(implicit path: File = new File("./modules/search/"))
   extends TestApplication(path, overridingModules, Seq(
     SearchServiceTypeModule(),
     FakeHttpClientModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),
@@ -38,7 +36,7 @@ class SearchApplication(overridingModules: Module*)(implicit path: File = new Fi
     DevIndexModule(),
     FakeDiscoveryModule(),
     FakeShoeboxServiceModule(),
-    TestSearchServiceClientModule(),
+    FakeSearchServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeSpellCorrectorModule(),
     SearchCacheModule(HashMapMemoryCacheModule()),
@@ -54,7 +52,7 @@ trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
   val module = Modules.combine(
     StandaloneTestActorSystemModule(),
     FakeHttpClientModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     SearchServiceTypeModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
@@ -63,10 +61,10 @@ trait SearchTestInjector extends TestInjector with SearchInjectionHelpers {
     FakeFortyTwoModule(),
     FakeTrackingModule(),
     SearchFakeStoreModule(),
-    DevIndexModule(),
+    FakeIndexModule(),
     FakeDiscoveryModule(),
     FakeShoeboxServiceModule(),
-    TestSearchServiceClientModule(),
+    FakeSearchServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeSpellCorrectorModule(),
     SearchCacheModule(HashMapMemoryCacheModule()),

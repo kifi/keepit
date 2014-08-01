@@ -3,7 +3,7 @@ package com.keepit.controllers.mobile
 import org.specs2.mutable.Specification
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.normalizer._
-import com.keepit.heimdal.{ KifiHitContext, SanitizedKifiHit, HeimdalContext, TestHeimdalServiceClientModule }
+import com.keepit.heimdal.{ KifiHitContext, SanitizedKifiHit, HeimdalContext, FakeHeimdalServiceClientModule }
 import com.keepit.scraper._
 import com.keepit.commanders.KeepInfo._
 import com.keepit.commanders.KeepInfosWithCollection._
@@ -27,7 +27,7 @@ import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
 import securesocial.core.providers.Token
-import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
@@ -54,7 +54,7 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.model.KeepToCollection
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -71,9 +71,9 @@ class MobileKeepsControllerTest extends Specification with ApplicationInjector {
     FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
-    TestScraperServiceClientModule(),
+    FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule()
   )
 

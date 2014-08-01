@@ -31,7 +31,7 @@ class ScraperControllerTest extends TestKitSupport with SpecificationLike with A
     Seq(
       testFetcherModule,
       FakeEmbedlyModule(),
-      TestScraperProcessorActorModule(),
+      FakeScraperProcessorActorModule(),
       ScraperTestStoreModule(),
       FakeShoeboxServiceModule(),
       FakeActionAuthenticatorModule(),
