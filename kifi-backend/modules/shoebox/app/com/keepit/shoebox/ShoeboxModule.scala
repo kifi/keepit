@@ -47,7 +47,7 @@ abstract class ShoeboxModule(
   //these are modules that are provided here (but can be overriden by inheriting modules)
   // Service clients
   val searchServiceClientModule: SearchServiceClientModule
-  val shoeboxServiceClientModule: ShoeboxServiceClientModule
+  val shoeboxServiceClientModule: ShoeboxServiceClientModule //why do we need the shoeboxServiceClientModule here?
   val elizaServiceClientModule: ElizaServiceClientModule
   val heimdalServiceClientModule: HeimdalServiceClientModule
   val abookServiceClientModule: ABookServiceClientModule
