@@ -3,7 +3,7 @@ package com.keepit.scraper
 import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
 import com.keepit.common.controller.FakeActionAuthenticatorModule
 import com.keepit.common.store.ScraperTestStoreModule
-import com.keepit.scraper.embedly.TestEmbedlyModule
+import com.keepit.scraper.embedly.FakeEmbedlyModule
 import com.keepit.scraper.fetcher.TestHttpFetcherModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ScraperTestInjector
@@ -30,7 +30,7 @@ class ScraperControllerTest extends TestKitSupport with SpecificationLike with A
   def modules = {
     Seq(
       testFetcherModule,
-      TestEmbedlyModule(),
+      FakeEmbedlyModule(),
       TestScraperProcessorActorModule(),
       ScraperTestStoreModule(),
       FakeShoeboxServiceModule(),
