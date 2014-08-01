@@ -17,7 +17,7 @@ import com.google.inject.Injector
 import com.keepit.shoebox.{ ShoeboxSlickModule, FakeShoeboxServiceModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.analytics.TestAnalyticsModule
+import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -35,7 +35,7 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     FakeShoeboxServiceModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
-    TestAnalyticsModule(),
+    FakeAnalyticsModule(),
     ShoeboxFakeStoreModule(),
     TestActorSystemModule(),
     TestSearchServiceClientModule(),

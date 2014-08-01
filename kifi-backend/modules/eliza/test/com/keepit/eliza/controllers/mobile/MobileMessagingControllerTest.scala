@@ -23,7 +23,7 @@ import scala.Some
 import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.common.crypto.TestCryptoModule
+import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.realtime.FakeUrbanAirshipModule
 import com.keepit.scraper.TestScraperServiceClientModule
@@ -45,7 +45,7 @@ class MobileMessagingControllerTest extends Specification with ElizaApplicationI
       TestABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeActionAuthenticatorModule(),
-      TestCryptoModule(),
+      FakeCryptoModule(),
       TestScraperServiceClientModule(),
       ElizaFakeStoreModule()
     )

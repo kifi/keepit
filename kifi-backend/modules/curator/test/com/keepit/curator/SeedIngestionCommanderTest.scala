@@ -10,7 +10,7 @@ import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.model.{ User, Keep, KeepSource, NormalizedURI, URL, KeepStates, SystemValueRepo, Name }
 import com.keepit.curator.model._
 import com.keepit.curator.commanders.SeedIngestionCommander
-import com.keepit.common.cache.TestCacheModule
+import com.keepit.common.cache.FakeCacheModule
 
 import com.google.inject.Injector
 
@@ -27,7 +27,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
       FakeShoeboxServiceModule(),
       FakeGraphServiceModule(),
       FakeHttpClientModule(),
-      TestCacheModule()
+      FakeCacheModule()
     )
   }
 

@@ -1,18 +1,17 @@
 package com.keepit.test
 
-import com.keepit.inject._
-import com.keepit.common.db.slick.{ SlickSessionProvider }
-import com.keepit.model._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.RWSession
+import java.sql.{Driver, DriverManager}
+
+import com.google.inject.{Injector, Module}
 import com.keepit.common.db.TestDbInfo
-import com.keepit.macros.Location
-import com.google.inject.{ Injector, Module }
-import scala.slick.jdbc.{ ResultSetConcurrency, ResultSetType }
-import scala.slick.driver.JdbcDriver.simple.{ Database => SlickDatabase, _ }
-import java.sql.{ Driver, DriverManager }
+import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
-import scala.slick.lifted.{ RefTag, AbstractTable, BaseTag }
+import com.keepit.inject._
+import com.keepit.macros.Location
+
+import scala.slick.driver.JdbcDriver.simple.{Database => SlickDatabase}
+import scala.slick.jdbc.ResultSetConcurrency
 
 trait DbInjectionHelper extends Logging { self: InjectorProvider =>
 
@@ -73,8 +72,7 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
   }
 
   def executeTableDDL(db: H2, tableName: String, ddl: { def createStatements: Iterator[String] }): Unit = {
-    log.info(s"initiating table [$tableName]")
-
+    log.debug(s"initiating table [$tableName]")
     readWrite(db) { implicit session =>
       try {
         for (s <- ddl.createStatements) {
@@ -82,11 +80,11 @@ trait DbInjectionHelper extends Logging { self: InjectorProvider =>
           try {
             session.withPreparedStatement(statement)(_.execute)
           } catch {
-            case t: Throwable => throw new Exception(s"fail initiating table ${tableName}, statement: [$statement]", t)
+            case t: Throwable => throw new Exception(s"fail initiating table $tableName, statement: [$statement]", t)
           }
         }
       } catch {
-        case t: Throwable => throw new Exception(s"fail initiating table ${tableName}", t)
+        case t: Throwable => throw new Exception(s"fail initiating table $tableName}", t)
       }
     }
   }

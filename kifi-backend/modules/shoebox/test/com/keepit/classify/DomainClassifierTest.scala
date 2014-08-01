@@ -3,7 +3,7 @@ package com.keepit.classify
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.keepit.common.actor.TestActorSystemModule
-import com.keepit.common.analytics.TestAnalyticsModule
+import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.db.{ TestDbInfo, TestSlickModule }
 import com.keepit.common.db.slick.Database
@@ -21,7 +21,7 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with SpecificationLike
 
   val domainClassifierTestModules = Seq(
     FakeMailModule(),
-    TestAnalyticsModule(),
+    FakeAnalyticsModule(),
     ShoeboxFakeStoreModule(),
     TestHeimdalServiceClientModule(),
     FakeDomainTagImporterModule(),

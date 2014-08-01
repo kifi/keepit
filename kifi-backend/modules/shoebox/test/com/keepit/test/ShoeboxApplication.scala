@@ -1,7 +1,7 @@
 package com.keepit.test
 
 import com.keepit.common.controller._
-import com.keepit.common.crypto.TestCryptoModule
+import com.keepit.common.crypto.FakeCryptoModule
 import play.api.Mode
 import com.keepit.inject.{ TestFortyTwoModule, ApplicationInjector, EmptyInjector }
 import com.keepit.common.db.TestDbInfo
@@ -36,7 +36,7 @@ import com.keepit.abook.TestABookServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.common.actor.TestSchedulerModule
 import com.keepit.common.cache.ShoeboxCacheModule
-import com.keepit.common.crypto.TestCryptoModule
+import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.common.healthcheck.FakeMemoryUsageModule
 import com.keepit.common.aws.AwsModule
@@ -70,7 +70,7 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     FakeNormalizationUpdateJobQueueModule(),
     AwsModule(),
     FakeShoeboxRepoChangeListenerModule(),
-    TestCryptoModule()
+    FakeCryptoModule()
   ))
 
 trait ShoeboxApplicationInjector extends ApplicationInjector with DbInjectionHelper with ShoeboxInjectionHelpers
