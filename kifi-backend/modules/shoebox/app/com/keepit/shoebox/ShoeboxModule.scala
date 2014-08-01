@@ -55,7 +55,7 @@ abstract class ShoeboxModule(
   // Service clients
   val serviceTypeModule = ShoeboxServiceTypeModule()
   val searchServiceClientModule: SearchServiceClientModule
-  val shoeboxServiceClientModule: ShoeboxServiceClientModule
+  val shoeboxServiceClientModule: ShoeboxServiceClientModule //why do we need the shoeboxServiceClientModule here?
   val elizaServiceClientModule: ElizaServiceClientModule
   val heimdalServiceClientModule: HeimdalServiceClientModule
   val abookServiceClientModule: ABookServiceClientModule

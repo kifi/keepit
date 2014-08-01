@@ -19,10 +19,28 @@ case class TestShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
     new ShoeboxServiceClientImpl(serviceCluster, httpClient, airbrakeNotifier, shoeboxCacheProvided)
 }
 
+case class TestShoeboxScraperClientModule() extends ShoeboxScraperClientModule {
+
+  def configure() {}
+
+  @Singleton
+  @Provides
+  def shoeboxScraperClient(
+    httpClient: HttpClient,
+    serviceCluster: ServiceCluster,
+    airbrakeNotifier: AirbrakeNotifier): ShoeboxScraperClient =
+    new ShoeboxScraperClientImpl(serviceCluster, httpClient, airbrakeNotifier)
+}
+
 case class FakeShoeboxServiceModule() extends ShoeboxServiceClientModule {
   override def configure(): Unit = {
     install(FakeAirbrakeModule())
   }
+
+  @Singleton
+  @Provides
+  def shoeboxScraperClient(airbrakeNotifier: AirbrakeNotifier): ShoeboxScraperClient =
+    new FakeShoeboxScraperClientImpl(airbrakeNotifier)
 
   @Singleton
   @Provides
