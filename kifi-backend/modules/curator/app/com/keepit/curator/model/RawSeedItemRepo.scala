@@ -22,6 +22,7 @@ trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeed
   def getByUriIdAndUserId(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[RawSeedItem]
   def getBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
   def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
+  def getRecentGeneric(maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
   def getFirstByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[RawSeedItem]
   def getByTopPriorScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
 }
@@ -77,6 +78,10 @@ class RawSeedItemRepoImpl @Inject() (
 
   def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
     (for (row <- rows if row.userId === userId || row.userId.isNull) yield row).sortBy(_.seq.desc).take(maxBatchSize).list
+  }
+
+  def getRecentGeneric(maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
+    (for (row <- rows if row.userId.isNull) yield row).sortBy(_.seq.desc).take(maxBatchSize).list
   }
 
   def getByTopPriorScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
