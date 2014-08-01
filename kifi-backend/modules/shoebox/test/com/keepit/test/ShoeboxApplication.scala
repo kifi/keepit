@@ -5,7 +5,7 @@ import java.io.File
 import com.google.inject.Module
 import com.google.inject.util.Modules
 import com.keepit.abook.TestABookServiceClientModule
-import com.keepit.common.actor.{ TestActorSystemModule, TestSchedulerModule }
+import com.keepit.common.actor.{ TestActorSystemModule, FakeSchedulerModule }
 import com.keepit.common.aws.AwsModule
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.controller.FakeActionAuthenticatorModule
@@ -40,7 +40,7 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     TestNormalizationServiceModule(),
     FakeActionAuthenticatorModule(),
     AbuseControlModule(),
-    TestSchedulerModule(),
+    FakeSchedulerModule(),
     FakeKeepImportsModule(),
     FakeSimpleQueueModule(),
     FakeNormalizationUpdateJobQueueModule(),
@@ -65,7 +65,7 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     TestNormalizationServiceModule(),
     TestScraperServiceClientModule(),
     AbuseControlModule(),
-    TestSchedulerModule(),
+    FakeSchedulerModule(),
     FakeSimpleQueueModule(),
     FakeNormalizationUpdateJobQueueModule(),
     AwsModule(),
