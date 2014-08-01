@@ -3,20 +3,18 @@ package com.keepit.commander
 import com.keepit.commanders.WordCountCommanderImpl
 import com.keepit.common.db.Id
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
-import com.keepit.inject.ApplicationInjector
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model._
 import com.keepit.scraper.{ BasicArticle, ScrapeProcessor, Signature, TestScraperServiceModule }
 import com.keepit.scraper.extractor._
 import com.keepit.search.{ Article, ArticleStore, Lang }
-import com.keepit.test.CommonTestApplication
+import com.keepit.test.CommonTestInjector
 import org.specs2.mutable.Specification
-import play.api.test.Helpers.running
 
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
 
-class WordCountCommanderTest extends Specification with ApplicationInjector {
+class WordCountCommanderTest extends Specification with CommonTestInjector {
 
   val english = Lang("en")
 
@@ -49,7 +47,7 @@ class WordCountCommanderTest extends Specification with ApplicationInjector {
 
   "WordCountCommander" should {
     "get word count" in {
-      running(new CommonTestApplication(TestScraperServiceModule())) {
+      withInjector(TestScraperServiceModule()) { implicit injector =>
         val store = inject[ArticleStore]
         val countCache = inject[NormalizedURIWordCountCache]
         val sumCache = inject[URISummaryCache]
