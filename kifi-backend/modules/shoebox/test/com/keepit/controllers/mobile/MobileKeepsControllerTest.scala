@@ -826,23 +826,26 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector {
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
         }
+        inject[FakeActionAuthenticator].setUser(user)
+
         val withCollection =
           KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false) ::
             KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
             KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
             Nil
-
         val keepsAndCollections = KeepInfosWithCollection(Some(Right("myTag")), withCollection)
 
-        inject[FakeActionAuthenticator].setUser(user)
-        val keepJson = Json.obj(
+        val addPath = com.keepit.controllers.mobile.routes.MobileBookmarksController.addKeeps().url
+        addPath === "/m/2/keeps/add"
+
+        val addJson = Json.obj(
           "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
           "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
         )
-        val keepReq = FakeRequest("POST", com.keepit.controllers.mobile.routes.MobileBookmarksController.keepMultiple().url).withBody(keepJson)
-        val keepRes = inject[MobileBookmarksController].keepMultiple()(keepReq)
-        status(keepRes) must equalTo(OK);
-        contentType(keepRes) must beSome("application/json");
+        val addRequest = FakeRequest("POST", addPath).withBody(addJson)
+        val addResult = inject[MobileBookmarksController].addKeeps()(addRequest)
+        status(addResult) must equalTo(OK);
+        contentType(addResult) must beSome("application/json");
 
         db.readOnlyMaster { implicit session =>
           val keeps = keepRepo.all
@@ -896,6 +899,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector {
         val keepRes = inject[MobileBookmarksController].keepMultiple()(keepReq)
         status(keepRes) must equalTo(OK)
         contentType(keepRes) must beSome("application/json")
+
         val keepJsonRes = Json.parse(contentAsString(keepRes))
         val savedKeeps = (keepJsonRes \ "keeps").as[Seq[KeepInfo]]
         savedKeeps.length === withCollection.size
