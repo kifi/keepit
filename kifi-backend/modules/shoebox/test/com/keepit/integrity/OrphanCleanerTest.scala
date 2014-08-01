@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import com.keepit.test.ShoeboxApplication
 import com.keepit.test.ShoeboxApplicationInjector
 import play.api.test.Helpers.running
-import com.keepit.common.actor.{ ActorPlugin, TestActorSystemModule }
+import com.keepit.common.actor.{ ActorSystemPlugin, TestActorSystemModule }
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id

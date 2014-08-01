@@ -13,7 +13,7 @@ import com.keepit.common.logging.Logging
  * Also serves as Provider[ActorSystem] so that guice can instance this actor system into
  * other services or plugins that need to use actors.
  */
-class ActorPlugin(system: ActorSystem)
+class ActorSystemPlugin(system: ActorSystem)
     extends Plugin with Provider[ActorSystem] with Logging {
 
   def get: ActorSystem = system

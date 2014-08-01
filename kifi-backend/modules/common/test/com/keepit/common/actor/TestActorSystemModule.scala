@@ -19,12 +19,12 @@ case class TestActorSystemModule(systemOption: Option[ActorSystem] = None) exten
     install(FakeSchedulerModule())
     bind[ActorBuilder].to[TestActorBuilderImpl]
     bind[Scheduler].to[FakeScheduler]
-    bind[ActorSystem].toProvider[ActorPlugin]
+    bind[ActorSystem].toProvider[ActorSystemPlugin]
   }
 
   @Provides
   @AppScoped
-  def actorPluginProvider: ActorPlugin = new ActorPlugin(system)
+  def actorPluginProvider: ActorSystemPlugin = new ActorSystemPlugin(system)
 }
 
 case class StandaloneTestActorSystemModule(implicit system: ActorSystem) extends ActorSystemModule {
