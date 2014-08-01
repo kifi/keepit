@@ -22,7 +22,7 @@ class EventTrackingTest extends Specification with CommonTestInjector {
 
   def modules = {
     implicit val system = ActorSystem("test")
-    Seq(TestMongoModule(), StandaloneTestActorSystemModule(), HeimdalQueueDevModule(), HeimdalServiceTypeModule())
+    Seq(FakeMongoModule(), StandaloneTestActorSystemModule(), HeimdalQueueDevModule(), HeimdalServiceTypeModule())
   }
 
   def setup()(implicit injector: Injector) = {
@@ -31,10 +31,10 @@ class EventTrackingTest extends Specification with CommonTestInjector {
     val testContext = HeimdalContext(Map(
       "testField" -> ContextStringData("Yay!")
     ))
-    val userEventRepo = inject[UserEventLoggingRepo].asInstanceOf[TestUserEventLoggingRepo]
-    val systemEventRepo = inject[SystemEventLoggingRepo].asInstanceOf[TestSystemEventLoggingRepo]
-    val anonymousEventRepo = inject[AnonymousEventLoggingRepo].asInstanceOf[TestAnonymousEventLoggingRepo]
-    val nonUserEventRepo = inject[NonUserEventLoggingRepo].asInstanceOf[TestNonUserEventLoggingRepo]
+    val userEventRepo = inject[UserEventLoggingRepo].asInstanceOf[FakeUserEventLoggingRepo]
+    val systemEventRepo = inject[SystemEventLoggingRepo].asInstanceOf[FakeSystemEventLoggingRepo]
+    val anonymousEventRepo = inject[AnonymousEventLoggingRepo].asInstanceOf[FakeAnonymousEventLoggingRepo]
+    val nonUserEventRepo = inject[NonUserEventLoggingRepo].asInstanceOf[FakeNonUserEventLoggingRepo]
 
     (eventTrackingController, userEventRepo, systemEventRepo, anonymousEventRepo, nonUserEventRepo, testContext)
   }
