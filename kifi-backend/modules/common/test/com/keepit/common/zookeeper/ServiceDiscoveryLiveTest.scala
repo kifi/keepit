@@ -19,7 +19,7 @@ import akka.actor.Scheduler
 
 class ServiceDiscoveryLiveTest extends Specification with CommonTestInjector {
 
-  //args(skipAll = true)
+  args(skipAll = true)
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
