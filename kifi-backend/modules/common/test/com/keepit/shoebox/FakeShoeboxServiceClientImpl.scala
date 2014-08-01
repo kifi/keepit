@@ -600,6 +600,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = Future.successful(Map.empty)
 
+  def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = Future.successful(Seq.fill(uris.size)(false))
+
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = Future.successful("https://www.kifi.com/assets/img/ghost.200.png")
 
   def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String] = Future.successful("https://kifi.com")

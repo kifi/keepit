@@ -39,6 +39,7 @@ trait GraphTestInjector extends TestInjector {
   val module = Modules.combine(
     FakeHttpClientModule(),
     GraphServiceTypeModule(),
+    FakeHttpClientModule(),
     FakeAirbrakeModule(),
     FakeMemoryUsageModule(),
     FakeClockModule(),
