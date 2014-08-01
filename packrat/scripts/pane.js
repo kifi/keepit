@@ -177,21 +177,23 @@ var pane = pane || function () {  // idempotent for Chrome
         var $a = $(this).addClass('kifi-active');
         var $menu = $(render('html/keeper/pane_top_menu', {user: me, site: location.hostname}))
           .insertAfter($a).layout().addClass('kifi-visible')
-          .on('mouseover', '.kifi-pane-top-menu-item', enterItem)
-          .on('mouseout', '.kifi-pane-top-menu-item', leaveItem)
-          .on('kifi:hide', hide);
-        document.addEventListener('mousedown', docMouseDown, true);
-        // .kifi-hover needed because :hover doesn't work during drag
-        function enterItem(e) {
-          $(e.target).closest('.kifi-pane-top-menu-item').addClass('kifi-hover');
-        }
-        function leaveItem(e) {
-          for (var $item = $(e.target); ($item = $item.closest('.kifi-pane-top-menu-item')).length; $item = $item.parent()) {
-            if (!e.relatedTarget || !$item[0].contains(e.relatedTarget)) {
-              $item.removeClass('kifi-hover');
+          .on('mouseover', '.kifi-pane-top-menu-item', function (e) {
+            // kifi-hover needed because :hover doesn't work during drag
+            $(e.target).closest('.kifi-pane-top-menu-item').addClass('kifi-hover');
+          })
+          .on('mouseout', '.kifi-pane-top-menu-item', function (e) {
+            for (var $item = $(e.target); ($item = $item.closest('.kifi-pane-top-menu-item')).length; $item = $item.parent()) {
+              if (!e.relatedTarget || !$item[0].contains(e.relatedTarget)) {
+                $item.removeClass('kifi-hover');
+              }
             }
-          }
-        }
+          })
+          .on('kifi:hide', function () {
+            document.removeEventListener('mousedown', docMouseDown, true);
+            $menu.on('transitionend', remove).removeClass('kifi-visible');
+            $a.removeClass('kifi-active');
+          });
+        document.addEventListener('mousedown', docMouseDown, true);
         function docMouseDown(e) {
           if (!$menu[0].contains(e.target)) {
             $menu.triggerHandler('kifi:hide');
@@ -199,11 +201,6 @@ var pane = pane || function () {  // idempotent for Chrome
               e.stopPropagation();
             }
           }
-        }
-        function hide() {
-          document.removeEventListener('mousedown', docMouseDown, true);
-          $menu.on('transitionend', remove).removeClass('kifi-visible');
-          $a.removeClass('kifi-active');
         }
         api.port.emit('get_suppressed', function (suppressed) {
           $menu.find('.kifi-hide-on-site').toggleClass('kifi-checked', !!suppressed);
