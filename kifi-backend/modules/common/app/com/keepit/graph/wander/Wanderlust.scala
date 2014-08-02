@@ -32,8 +32,8 @@ object Wanderlust {
     avoidTrivialCollisions = true,
     steps = 100000,
     restartProbability = 0.15,
-    recency = None,
-    halfLife = None
+    recency = Some(120 days),
+    halfLife = Some(7 days)
   )
 }
 
