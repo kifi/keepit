@@ -27,7 +27,7 @@ class ElizaNonUserEmailNotifierActor @Inject() (
       val notificationFutures = batch.participantThreads.map {
         case emailParticipantThread if emailParticipantThread.participant.kind == NonUserKinds.email => {
           elizaEmailCommander.notifyEmailParticipant(emailParticipantThread, threadEmailData).recover {
-            case _ => ()
+            case t: Throwable => airbrake.notify("Error notifying email participant", t)
           }
         }
         case unsupportedNonUserThread => {

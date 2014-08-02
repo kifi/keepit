@@ -1,10 +1,11 @@
 package com.keepit.model
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Provides, ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.Id
+import net.codingwell.scalaguice.ScalaModule
 
 trait UrlPatternRuleRepo extends Repo[UrlPatternRule] {
   def rules(): UrlPatternRules
@@ -70,4 +71,16 @@ case class UrlPatternRules(rules: Seq[UrlPatternRule]) {
   def isUnscrapable(url: String): Boolean = findFirst(url).map(_.isUnscrapable).getOrElse(false)
   def getTrustedDomain(url: String): Option[String] = for { rule <- findFirst(url); trustedDomain <- rule.trustedDomain } yield trustedDomain
   def getPreferredNormalization(url: String): Option[Normalization] = for { rule <- findFirst(url); normalization <- rule.normalization } yield normalization
+}
+
+case class UrlPatternRuleModule() extends ScalaModule {
+  def configure() = {}
+
+  @Provides @Singleton
+  def UrlPatternRuleRepoProvider(db: Database, urlPatternRuleRepo: UrlPatternRuleRepoImpl): UrlPatternRuleRepo = {
+    db.readWrite { implicit session =>
+      urlPatternRuleRepo.loadCache()
+    }
+    urlPatternRuleRepo
+  }
 }

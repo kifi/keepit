@@ -1,12 +1,13 @@
 package com.keepit.controllers.ext
 
-import com.keepit.test.{ SearchApplication, SearchApplicationInjector }
+import com.keepit.search.index.DevIndexModule
+import com.keepit.test.{ SearchTestInjector, SearchApplication, SearchApplicationInjector }
 import org.specs2.mutable._
 
 import com.keepit.model._
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -21,8 +22,9 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserSearchFilterFactory
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.util.PlayAppConfigurationModule
 
-class ExtUserSearchControllerTest extends Specification with SearchApplicationInjector {
+class ExtUserSearchControllerTest extends Specification with SearchTestInjector {
 
   private def setup(client: FakeShoeboxServiceClientImpl) = {
     val extIds = (0 until 5).map { i => "4e5f7b8c-951b-4497-8661-12345678900" + i.toString }.map { ExternalId[User] }
@@ -48,20 +50,19 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
     usersWithId
   }
 
-  def filterFactory = inject[UserSearchFilterFactory]
-
   def modules = {
-    implicit val system = ActorSystem("test")
     Seq(
-      StandaloneTestActorSystemModule(),
+      FakeActorSystemModule(),
       FakeActionAuthenticatorModule(),
-      FakeShoeboxServiceModule()
+      FakeShoeboxServiceModule(),
+      PlayAppConfigurationModule(),
+      DevIndexModule()
     )
   }
 
   "ExtUserSearchController" should {
     "search user" in {
-      running(new SearchApplication(modules: _*)) {
+      withInjector(modules: _*) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
@@ -70,9 +71,8 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
         val path = com.keepit.controllers.ext.routes.ExtUserSearchController.search("woody", None, None, 3).toString
         path === "/search/users/search?query=woody&maxHits=3"
 
-        inject[FakeActionAuthenticator].setUser(users(0))
         val request = FakeRequest("GET", path)
-        val result = route(request).get
+        val result = inject[ExtUserSearchController].search("woody", None, None, 3)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
@@ -100,7 +100,7 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
     }
 
     "page user by name" in {
-      running(new SearchApplication(modules: _*)) {
+      withInjector(modules: _*) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
@@ -109,9 +109,8 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
         val path = com.keepit.controllers.ext.routes.ExtUserSearchController.page("firstNa", None, 0, 10).toString
         path === "/search/users/page?query=firstNa&pageNum=0&pageSize=10"
 
-        inject[FakeActionAuthenticator].setUser(users(0))
         val request = FakeRequest("GET", path)
-        val result = route(request).get
+        val result = inject[ExtUserSearchController].page("firstNa", None, 0, 10)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
@@ -153,7 +152,7 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
     }
 
     "page user by email" in {
-      running(new SearchApplication(modules: _*)) {
+      withInjector(modules: _*) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
@@ -162,9 +161,8 @@ class ExtUserSearchControllerTest extends Specification with SearchApplicationIn
         val path = com.keepit.controllers.ext.routes.ExtUserSearchController.page("woody@fox.com", None, 0, 10).toString
         path === "/search/users/page?query=woody%40fox.com&pageNum=0&pageSize=10"
 
-        inject[FakeActionAuthenticator].setUser(users(0))
         val request = FakeRequest("GET", path)
-        val result = route(request).get
+        val result = inject[ExtUserSearchController].page("woody@fox.com", None, 0, 10)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 

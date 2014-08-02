@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.keepit.heimdal._
 
-class TestUserEventLoggingRepo extends DevUserEventLoggingRepo {
+class FakeUserEventLoggingRepo extends DevUserEventLoggingRepo {
 
   var events: Vector[UserEvent] = Vector()
 
@@ -13,7 +13,7 @@ class TestUserEventLoggingRepo extends DevUserEventLoggingRepo {
   override def persist(obj: UserEvent): Unit = synchronized { events = events :+ obj }
 }
 
-class TestSystemEventLoggingRepo extends DevSystemEventLoggingRepo {
+class FakeSystemEventLoggingRepo extends DevSystemEventLoggingRepo {
 
   var events: Vector[SystemEvent] = Vector()
 
@@ -24,7 +24,7 @@ class TestSystemEventLoggingRepo extends DevSystemEventLoggingRepo {
   override def persist(obj: SystemEvent): Unit = synchronized { events = events :+ obj }
 }
 
-class TestAnonymousEventLoggingRepo extends DevAnonymousEventLoggingRepo {
+class FakeAnonymousEventLoggingRepo extends DevAnonymousEventLoggingRepo {
 
   var events: Vector[AnonymousEvent] = Vector()
 
@@ -35,7 +35,7 @@ class TestAnonymousEventLoggingRepo extends DevAnonymousEventLoggingRepo {
   override def persist(obj: AnonymousEvent): Unit = synchronized { events = events :+ obj }
 }
 
-class TestNonUserEventLoggingRepo extends DevNonUserEventLoggingRepo {
+class FakeNonUserEventLoggingRepo extends DevNonUserEventLoggingRepo {
 
   var events: Vector[NonUserEvent] = Vector()
 

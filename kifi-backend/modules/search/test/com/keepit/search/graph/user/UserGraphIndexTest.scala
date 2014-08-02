@@ -13,16 +13,17 @@ import com.keepit.test._
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 
-class UserGraphIndexTest extends Specification with ApplicationInjector {
+class UserGraphIndexTest extends Specification with CommonTestInjector {
 
-  def mkUserGraphIndexer(dir: IndexDirectory = new VolatileIndexDirectory): UserGraphIndexer = {
-    new UserGraphIndexer(dir, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+  def mkUserGraphIndexer(dir: IndexDirectory = new VolatileIndexDirectory, airbrake: AirbrakeNotifier, shoebox: ShoeboxServiceClient): UserGraphIndexer = {
+    new UserGraphIndexer(dir, airbrake, shoebox)
   }
 
   "UserGraphIndexer" should {
 
     "work" in {
-      running(new CommonTestApplication(FakeShoeboxServiceModule())) {
+      withInjector(FakeShoeboxServiceModule()) { implicit injector =>
+        val airbrake = inject[AirbrakeNotifier]
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val uids = (1 to 8).map { Id[User](_) }
         val (oddIds, evenIds) = uids.partition(id => id.id % 2 == 1)
@@ -32,7 +33,7 @@ class UserGraphIndexTest extends Specification with ApplicationInjector {
         }.toMap
 
         client.saveConnections(initConn)
-        val indexer = mkUserGraphIndexer()
+        val indexer = mkUserGraphIndexer(airbrake = airbrake, shoebox = client)
         indexer.update()
         indexer.numDocs === 8
         indexer.sequenceNumber.value === 4 * 3

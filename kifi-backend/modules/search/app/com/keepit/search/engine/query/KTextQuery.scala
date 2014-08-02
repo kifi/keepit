@@ -2,7 +2,6 @@ package com.keepit.search.engine.query
 
 import com.keepit.common.logging.Logging
 import com.keepit.search.Searcher
-import com.keepit.search.query.SemanticVectorExtractorQuery
 import com.keepit.search.query.SemanticVectorQuery
 import com.keepit.search.query.SemanticVectorScorer
 import org.apache.lucene.index.AtomicReaderContext
@@ -45,19 +44,6 @@ class KTextQuery extends Query with Logging {
         log.error("TextQuery: DisjunctionMaxQuery match failed")
         throw new Exception("Failed to add personal query")
     }
-  }
-
-  def getSemanticVectorExtractorQuery(): SemanticVectorExtractorQuery = {
-    val semanticVectorQueries: Seq[SemanticVectorQuery] = semanticVectorQuery match {
-      case disjunct: DisjunctionMaxQuery =>
-        val buf = new ArrayBuffer[SemanticVectorQuery]
-        val iter = disjunct.iterator
-        while (iter.hasNext) buf += iter.next().asInstanceOf[SemanticVectorQuery]
-        buf
-      case semantic: SemanticVectorQuery =>
-        Seq[SemanticVectorQuery](semantic)
-    }
-    new SemanticVectorExtractorQuery(semanticVectorQueries, None)
   }
 
   private[this] var semanticBoost = 0.0f

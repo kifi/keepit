@@ -2,15 +2,14 @@ package com.keepit.commanders
 
 import org.specs2.mutable.Specification
 
-import com.keepit.test.ShoeboxTestInjector
-import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
+import com.keepit.test.{ ShoeboxTestInjector, DbInjectionHelper }
 import com.keepit.common.mail.{ FakeMailModule, FakeOutbox }
 import com.keepit.model.FeatureWaitlistRepo
 import com.keepit.common.db.slick.Database
 
 import play.api.test.Helpers.running
 
-class FeatureWaitlistCommanderTest extends Specification with ShoeboxApplicationInjector {
+class FeatureWaitlistCommanderTest extends Specification with ShoeboxTestInjector with DbInjectionHelper {
 
   val modules = Seq(
     FakeMailModule()
@@ -18,7 +17,7 @@ class FeatureWaitlistCommanderTest extends Specification with ShoeboxApplication
 
   "FeatureWaitlistCommander" should {
     "wait list correctly" in {
-      running(new ShoeboxApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
         val commander = inject[FeatureWaitlistCommander]
         val repo = inject[FeatureWaitlistRepo]
         val outbox = inject[FakeOutbox]

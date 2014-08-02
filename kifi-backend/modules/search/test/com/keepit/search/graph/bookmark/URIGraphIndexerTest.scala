@@ -6,7 +6,6 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db._
 import com.keepit.test._
 import org.specs2.mutable._
-import play.api.test.Helpers._
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.TermQuery
@@ -14,12 +13,15 @@ import scala.collection.JavaConversions._
 import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.graph.BaseGraphSearcher
 import com.keepit.search.graph.GraphTestHelper
+import com.keepit.common.util.PlayAppConfigurationModule
 
-class URIGraphIndexerTest extends Specification with GraphTestHelper {
+class URIGraphIndexerTest extends Specification with SearchTestInjector with GraphTestHelper {
+
+  val helperModules = Seq(PlayAppConfigurationModule())
 
   "URIGraphIndexer" should {
     "maintain a sequence number on bookmarks " in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
@@ -38,7 +40,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
     }
 
     "find users by uri" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
 
@@ -54,7 +56,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
         expectedUriToUserEdges.forall {
           case (uri, users) =>
             var hits = Set.empty[Long]
-            searcher.doSearch(new TermQuery(new Term(URIGraphFields.uriField, uri.id.get.toString))) { (scorer, reader) =>
+            searcher.search(new TermQuery(new Term(URIGraphFields.uriField, uri.id.get.toString))) { (scorer, reader) =>
               val mapper = reader.getIdMapper
               var doc = scorer.nextDoc()
               while (doc != NO_MORE_DOCS) {
@@ -69,7 +71,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
     }
 
     "store user to keep associations in URILists" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val indexer = mkURIGraphIndexer()
@@ -97,7 +99,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
     }
 
     "dump Lucene Document" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      withInjector(helperModules: _*) { implicit injector =>
         val store = new FakeArticleStore()
 
         val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = ""))

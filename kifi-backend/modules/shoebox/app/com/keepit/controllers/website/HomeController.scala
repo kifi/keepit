@@ -248,18 +248,10 @@ class HomeController @Inject() (
   }
 
   def install = HtmlAction.authenticated { implicit request =>
-    val toBeNotified = db.readWrite(attempts = 3) { implicit session =>
-      for {
-        su <- socialUserRepo.getByUser(request.user.id.get)
-        invite <- invitationRepo.getByRecipientSocialUserId(su.id.get) if (invite.state != InvitationStates.JOINED)
-        senderUserId <- {
-          invitationRepo.save(invite.withState(InvitationStates.JOINED))
-          invite.senderUserId
-        }
-      } yield senderUserId
-    }
     SafeFuture {
-      userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq)
+      userCommander.tellAllFriendsAboutNewUser(request.user.id.get)
+      userCommander.tellUsersWithContactOfNewUserImmediate(request.user)
+
       // Temporary event for debugging purpose
       val context = new HeimdalContextBuilder()
       context.addRequestInfo(request)

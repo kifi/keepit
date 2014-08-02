@@ -264,7 +264,7 @@ gulp.task('sprite-classes', function () {
 
 gulp.task('sprite', ['sprite-imports', 'sprite-classes']);
 
-gulp.task('styles', ['sprite'], function () {
+gulp.task('styles', function () {
   return gulp.src(stylFiles, {base: './'})
     .pipe(cache(stylesCache))
     .pipe(stylus({use: [nib()], import: ['nib', __dirname + '/src/common/build-css/*.styl']}))
@@ -416,27 +416,27 @@ function compileAssetRevs(opts, dest) {
     .pipe(gulp.dest(dest));
 }
 
-gulp.task('assets:local-prod:compile', ['build-release'], function () {
+gulp.task('assets:local-prod:rev', ['build-prod'], function () {
   return compileAssetRevs();
 });
 
-gulp.task('assets:release:compile', ['build-release'], function () {
+gulp.task('assets:release:rev', ['build-prod'], function () {
   return compileAssetRevs({ prefix: '//d1dwdv9wd966qu.cloudfront.net/' }, cdnDir);
 });
 
-gulp.task('assets:local-prod:update_index', ['assets:local-prod:compile'], function () {
+gulp.task('assets:local-prod:update_index', ['assets:local-prod:rev'], function () {
   return gulp.src('tmp/index.???????.html')
     .pipe(rename('index.html'))
     .pipe(gulp.dest('tmp/'));
 });
 
-gulp.task('assets:release:update_index', ['assets:release:compile'], function () {
+gulp.task('assets:release:update_index', ['assets:release:rev'], function () {
   return gulp.src(cdnDir + '/index.???????.html')
     .pipe(rename('index_cdn.html'))
     .pipe(gulp.dest('./'));
 });
 
-gulp.task('assets:release:publish', ['assets:release:compile', 'assets:release:update_index'], function (done) {
+gulp.task('assets:release:publish', ['assets:release:rev', 'assets:release:update_index'], function (done) {
   return gulp.src([cdnDir + '/**', '!' + cdnDir + '/index.???????.html'])
     .pipe(awspublish.gzip())
     .pipe(parallelize(publisher.publish({'Cache-Control': 'max-age=315360000, no-transform, public'}), 50))
@@ -444,17 +444,17 @@ gulp.task('assets:release:publish', ['assets:release:compile', 'assets:release:u
     .pipe(awspublish.reporter());
 });
 
-gulp.task('assets:local-prod', ['build-release', 'assets:local-prod:compile', 'assets:local-prod:update_index']);
+gulp.task('assets:local-prod', ['assets:local-prod:rev', 'assets:local-prod:update_index']);
 
 gulp.task('assets:release', ['assets:release:publish']);
 
 gulp.task('build-dev', function (done) {
-  runSequence('clean', ['styles', 'scripts', 'lib-styles', 'lib-scripts'], done);
+  runSequence('clean', 'sprite', ['styles', 'scripts', 'lib-styles', 'lib-scripts'], done);
 });
 
-gulp.task('build-release', function (done) {
+gulp.task('build-prod', function (done) {
   isProdMode = true;
-  runSequence('clean', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], done);
+  runSequence('clean', 'sprite', ['styles', 'scripts', 'lib-min-styles', 'lib-min-scripts'], done);
 });
 
 // Note: suboptimal use of connect: it already includes livereload (but part of the livereload API is not available)
@@ -462,10 +462,10 @@ gulp.task('build-release', function (done) {
 gulp.task('server-dev', ['build-dev'], startDevServer);
 
 // Use this task to test the production code locally
-gulp.task('local-prod', ['build-release'], startLocalProdServer);
+gulp.task('local-prod', ['build-prod'], startLocalProdServer);
 
 // This task is the one that should be run by the build script
-gulp.task('release', ['build-release', 'karma', 'protractor:release']);
+gulp.task('release', ['build-prod', 'karma', 'protractor:release']);
 
 // Use this task for normal development
 gulp.task('default', ['watch', 'server-dev']);

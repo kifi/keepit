@@ -3,43 +3,43 @@ package com.keepit.controllers.ext
 import org.specs2.mutable.Specification
 
 import com.keepit.normalizer._
-import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.common.controller._
 import com.keepit.search._
 import com.keepit.common.time._
 import com.keepit.common.db.slick.Database
-import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
-import com.keepit.test.ShoeboxApplication
+import com.keepit.test.{ ShoeboxTestInjector, DbInjectionHelper }
 
 import play.api.libs.json.{ JsObject, Json, JsString }
 import play.api.test.Helpers._
 import play.api.test._
 import org.joda.time.DateTime
 
-import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.google.inject.Injector
-import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 
-class ExtKeepsControllerTest extends Specification with ApplicationInjector {
+class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with DbInjectionHelper {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
-    ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
+    FakeShoeboxStoreModule(),
+    FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule()
+    FakeScraperServiceClientModule(),
+    FakeActionAuthenticatorModule(),
+    FakeKeepImportsModule()
   )
 
   def prenormalize(url: String)(implicit injector: Injector): String = inject[NormalizationService].prenormalize(url).get
@@ -47,7 +47,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
   "BookmarksController" should {
 
     "unkeep" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
         val userRepo = inject[UserRepo]
@@ -58,6 +58,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
         val keeper = KeepSource.keeper
         val keepToCollectionRepo = inject[KeepToCollectionRepo]
         val db = inject[Database]
+        val extBookmarksController = inject[ExtBookmarksController]
 
         val (user, k1, collections) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
@@ -101,7 +102,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
 
         inject[FakeActionAuthenticator].setUser(user)
         val request = FakeRequest("POST", path)
-        val result = route(request).get
+        val result = extBookmarksController.unkeep(k1.externalId)(request)
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
@@ -116,7 +117,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
     }
 
     "remove tag" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
         val userRepo = inject[UserRepo]
@@ -127,6 +128,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
         val keeper = KeepSource.keeper
         val keepToCollectionRepo = inject[KeepToCollectionRepo]
         val db = inject[Database]
+        val extBookmarksController = inject[ExtBookmarksController]
 
         val (user, collections) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
@@ -169,9 +171,9 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
         path === s"/tags/${collections(0).externalId}/removeFromKeep"
 
         inject[FakeActionAuthenticator].setUser(user)
-        val request = FakeRequest("POST", path).withJsonBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
-        val result = route(request).get
-        status(result) must equalTo(OK);
+        val request = FakeRequest("POST", path).withBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
+        val result = extBookmarksController.removeTag(collections(0).externalId)(request)
+        status(result) must equalTo(OK)
         contentType(result) must beSome("application/json");
 
         Json.parse(contentAsString(result)) must equalTo(Json.obj())
@@ -184,7 +186,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
     }
 
     "add tag" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
@@ -195,6 +197,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
         val libraryRepo = inject[LibraryRepo]
         val keeper = KeepSource.keeper
         val db = inject[Database]
+        val extBookmarksController = inject[ExtBookmarksController]
 
         val (user, bookmark1, bookmark2, collections) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
@@ -233,8 +236,8 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
         path === s"/tags/${collections(0).externalId}/addToKeep"
 
         inject[FakeActionAuthenticator].setUser(user)
-        val request = FakeRequest("POST", path).withJsonBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
-        val result = route(request).get
+        val request = FakeRequest("POST", path).withBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
+        val result = extBookmarksController.addTag(collections(0).externalId)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
@@ -256,7 +259,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
     }
 
     "add tag and create bookmark if not there" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
@@ -264,6 +267,7 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
         val uriRepo = inject[NormalizedURIRepo]
         val keepRepo = inject[KeepRepo]
         val db = inject[Database]
+        val extBookmarksController = inject[ExtBookmarksController]
 
         val (user, collections) = db.readWrite { implicit s =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
@@ -289,10 +293,10 @@ class ExtKeepsControllerTest extends Specification with ApplicationInjector {
         path === s"/tags/${collections(0).externalId}/addToKeep"
 
         inject[FakeActionAuthenticator].setUser(user)
-        val request = FakeRequest("POST", path).withJsonBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
-        val result = route(request).get
+        val request = FakeRequest("POST", path).withBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
+        val result = extBookmarksController.addTag(collections(0).externalId)(request)
         status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
+        contentType(result) must beSome("application/json")
 
         val expected = Json.obj("id" -> collections(0).externalId, "name" -> "myCollection1")
         Json.parse(contentAsString(result)) must equalTo(expected)

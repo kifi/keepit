@@ -26,6 +26,64 @@ import play.api.libs.json.JsObject
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model.serialize.UriIdAndSeq
 
+class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxScraperClient {
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
+
+  protected def httpClient: com.keepit.common.net.HttpClient = ???
+
+  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
+    Future.successful(Seq.empty[ScrapeRequest])
+  }
+
+  def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
+
+  def savePageInfo(pageInfo: PageInfo): Future[Unit] = ???
+
+  def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo] = ???
+
+  def saveImageInfo(imageInfo: ImageInfo): Future[ImageInfo] = ???
+
+  def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
+
+  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = ???
+
+  def updateNormalizedURI(uriId: => Id[NormalizedURI],
+    createdAt: => DateTime,
+    updatedAt: => DateTime,
+    externalId: => ExternalId[NormalizedURI],
+    title: => Option[String],
+    url: => String,
+    urlHash: => UrlHash,
+    state: => State[NormalizedURI],
+    seq: => SequenceNumber[NormalizedURI],
+    screenshotUpdatedAt: => Option[DateTime],
+    restriction: => Option[Restriction],
+    normalization: => Option[Normalization],
+    redirect: => Option[Id[NormalizedURI]],
+    redirectTime: => Option[DateTime]): Future[Unit] = Future.successful(Unit)
+
+  def scraped(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
+
+  def scrapeFailed(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
+
+  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = ???
+
+  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = ???
+
+  def getProxy(url: String): Future[Option[HttpProxy]] = ???
+
+  def getProxyP(url: String): Future[Option[HttpProxy]] = ???
+
+  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
+
+  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = Future.successful(false)
+
+  def getLatestKeep(url: String): Future[Option[Keep]] = ???
+
+  def saveBookmark(bookmark: Keep): Future[Keep] = ???
+
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]] = ???
+}
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
@@ -231,12 +289,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     val edges = for ((user, uris) <- edgesByUser; uri <- uris) yield (uri, user, uniqueTitle)
     saveBookmarksByEdges(edges, isPrivate, source)
   }
-
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]] = ???
-
-  def getLatestKeep(url: String): Future[Option[Keep]] = ???
-
-  def saveBookmark(bookmark: Keep): Future[Keep] = ???
 
   def getCollection(collectionId: Id[Collection]): Collection = {
     allCollections(collectionId)
@@ -501,53 +553,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = Future.successful(Seq.empty)
 
-  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
-    Future.successful(Seq.empty[ScrapeRequest])
-  }
-
-  def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
-
-  def savePageInfo(pageInfo: PageInfo): Future[Unit] = ???
-
-  def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo] = ???
-
-  def saveImageInfo(imageInfo: ImageInfo): Future[ImageInfo] = ???
-
-  def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
-
-  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = ???
-
-  def updateNormalizedURI(uriId: => Id[NormalizedURI],
-    createdAt: => DateTime,
-    updatedAt: => DateTime,
-    externalId: => ExternalId[NormalizedURI],
-    title: => Option[String],
-    url: => String,
-    urlHash: => UrlHash,
-    state: => State[NormalizedURI],
-    seq: => SequenceNumber[NormalizedURI],
-    screenshotUpdatedAt: => Option[DateTime],
-    restriction: => Option[Restriction],
-    normalization: => Option[Normalization],
-    redirect: => Option[Id[NormalizedURI]],
-    redirectTime: => Option[DateTime]): Future[Unit] = Future.successful(Unit)
-
-  def scraped(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
-
-  def scrapeFailed(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
-
-  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = ???
-
-  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = ???
-
-  def getProxy(url: String): Future[Option[HttpProxy]] = ???
-
-  def getProxyP(url: String): Future[Option[HttpProxy]] = ???
-
-  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
-
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = Future.successful(false)
-
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = {
     Future.successful(allUserFriendRequests.getOrElse(senderId, Seq()))
   }
@@ -594,6 +599,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
 
   def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = Future.successful(Map.empty)
+
+  def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = Future.successful(Seq.fill(uris.size)(false))
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = Future.successful("https://www.kifi.com/assets/img/ghost.200.png")
 

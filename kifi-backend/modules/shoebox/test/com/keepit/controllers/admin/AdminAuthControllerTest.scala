@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import org.specs2.mutable.Specification
 
-import com.keepit.common.social.TestShoeboxAppSecureSocialModule
+import com.keepit.common.social.FakeShoeboxAppSecureSocialModule
 import com.keepit.common.controller.FortyTwoCookies.{ ImpersonateCookie, KifiInstallationCookie }
 import com.keepit.social.{ SocialId, SocialNetworks }
 import SocialNetworks.FACEBOOK
@@ -13,13 +13,13 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.mail.{ FakeOutbox, FakeMailModule }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -28,17 +28,17 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
 
   val modules = Seq(FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
-    ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
+    FakeShoeboxStoreModule(),
+    FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeHttpClientModule(),
     FakeMailModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule(),
-    TestShoeboxAppSecureSocialModule(),
+    FakeHeimdalServiceClientModule(),
+    FakeShoeboxAppSecureSocialModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule())
+    FakeScraperServiceClientModule())
 
   "AdminAuthController" should {
     "impersonate" in {

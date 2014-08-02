@@ -15,8 +15,6 @@ import com.keepit.classify.ProdDomainTagImporterModule
 import com.keepit.inject.CommonProdModule
 import com.keepit.common.integration.ProdReaperModule
 import com.keepit.scraper.{ ProdScraperHealthMonitorModule, ProdScrapeSchedulerModule, ProdScraperServiceClientModule }
-import com.keepit.common.zookeeper.{ DiscoveryModule, ProdDiscoveryModule }
-import com.keepit.common.service.ServiceType
 import com.keepit.common.queue.ProdSimpleQueueModule
 import com.keepit.queue.ProdNormalizationUpdateJobQueueModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
@@ -53,7 +51,4 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   val cortexServiceClientModule = ProdCortexServiceClientModule()
   val graphServiceClientModule = ProdGraphServiceClientModule()
   val curatorServiceClientModule = ProdCuratorServiceClientModule()
-
-  private val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.CURATOR :: Nil
-  val discoveryModule = new ProdDiscoveryModule(ServiceType.SHOEBOX, servicesToListenOn)
 }

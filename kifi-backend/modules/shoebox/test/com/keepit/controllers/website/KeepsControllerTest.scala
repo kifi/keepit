@@ -1,71 +1,54 @@
 package com.keepit.controllers.website
 
-import org.specs2.mutable.Specification
-import net.codingwell.scalaguice.ScalaModule
-import com.keepit.heimdal.{ HeimdalContext, KifiHitContext, SanitizedKifiHit, TestHeimdalServiceClientModule }
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
-import com.keepit.commanders.KeepInfo._
-import com.keepit.commanders.KeepInfosWithCollection._
+import com.google.inject.Injector
 import com.keepit.commanders._
-import com.keepit.common.db._
-import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.common.controller.FortyTwoCookies.{ KifiInstallationCookie, ImpersonateCookie }
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
-import com.keepit.search._
-import com.keepit.common.time._
+import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.net.{ FakeHttpClient, HttpClient }
-import com.keepit.inject.ApplicationInjector
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.time._
+import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext, KifiHitContext, SanitizedKifiHit }
 import com.keepit.model._
-import com.keepit.social.{ SecureSocialUserPlugin, SecureSocialAuthenticatorPlugin, SocialId, SocialNetworks }
-import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication }
-import play.api.libs.iteratee.Iteratee
-import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration._
-import play.api.libs.json.{ JsObject, Json, JsArray, JsString }
-import play.api.mvc.Result
-import play.api.test.FakeRequest
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
+import com.keepit.search._
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.test.ShoeboxTestInjector
+import org.joda.time.DateTime
+import org.specs2.mutable.Specification
+import play.api.libs.json.{ JsArray, JsString, Json }
 import play.api.test.Helpers._
 import play.api.test._
-import securesocial.core._
-import securesocial.core.providers.Token
-import org.joda.time.DateTime
-import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.analytics.TestAnalyticsModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.common.actor.TestActorSystemModule
-import com.keepit.common.healthcheck.FakeAirbrakeModule
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.keepit.social.{ SocialNetworkType, SocialId, SocialNetworks }
-import com.keepit.common.external.FakeExternalServiceModule
-import com.keepit.cortex.FakeCortexServiceClientModule
 
-class KeepsControllerTest extends Specification with ApplicationInjector {
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
+class KeepsControllerTest extends Specification with ShoeboxTestInjector {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
     FakeScrapeSchedulerModule(),
-    ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
+    FakeShoeboxStoreModule(),
+    FakeActorSystemModule(),
     FakeAirbrakeModule(),
     FakeSearchServiceClientModule(),
-    TestHeimdalServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
-    TestScraperServiceClientModule(),
+    FakeScraperServiceClientModule(),
     FakeCortexServiceClientModule()
   )
 
-  def externalIdForTitle(title: String): String = forTitle(title).externalId.id
-  def externalIdForCollection(userId: Id[User], name: String): String = forCollection(userId, name).externalId.id
+  def externalIdForTitle(title: String)(implicit injector: Injector): String = forTitle(title).externalId.id
+  def externalIdForCollection(userId: Id[User], name: String)(implicit injector: Injector): String = forCollection(userId, name).externalId.id
 
-  def sourceForTitle(title: String): KeepSource = forTitle(title).source
+  def sourceForTitle(title: String)(implicit injector: Injector): KeepSource = forTitle(title).source
 
-  def stateForTitle(title: String): String = forTitle(title).state.value
+  def stateForTitle(title: String)(implicit injector: Injector): String = forTitle(title).state.value
 
-  def forTitle(title: String): Keep = {
+  def forTitle(title: String)(implicit injector: Injector): Keep = {
     inject[Database].readWrite { implicit session =>
       val keeps = inject[KeepRepo].getByTitle(title)
       keeps.size === 1
@@ -73,7 +56,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     }
   }
 
-  def forCollection(userId: Id[User], name: String): Collection = {
+  def forCollection(userId: Id[User], name: String)(implicit injector: Injector): Collection = {
     inject[Database].readWrite { implicit session =>
       val collections = inject[CollectionRepo].getByUserAndName(userId, name)
       collections.size === 1
@@ -84,7 +67,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
   "KeepsController" should {
 
     "allKeeps" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
@@ -134,14 +117,11 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         val controller = inject[KeepsController]
         inject[FakeActionAuthenticator].setUser(user1)
 
-        import play.api.Play.current
-        println("global id: " + current.global.asInstanceOf[com.keepit.FortyTwoGlobal].globalId)
-
         Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
-        val request = FakeRequest("GET", path)
-        val result = route(request).get
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
+        val request = FakeRequest()
+        val result = inject[KeepsController].allKeeps(before = None, after = None, collectionOpt = None, helprankOpt = None, count = 20, withPageInfo = false)(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
 
         val expected = Json.parse(s"""
           {"collection":null,
@@ -177,7 +157,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     }
 
     "allKeeps with after" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
         val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, DEFAULT_DATE_TIME_ZONE)
 
@@ -222,7 +202,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
 
         val request = FakeRequest("GET", s"/site/keeps/all?after=${bookmark1.externalId.toString}")
-        val result = route(request).get
+        val result = inject[KeepsController].allKeeps(before = None, after = Some(bookmark1.externalId.toString), collectionOpt = None, helprankOpt = None, count = 20, withPageInfo = false)(request)
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
@@ -252,7 +232,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     }
 
     "allKeeps with helprank" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
 
         val keep42 = Json.obj("url" -> "http://42go.com", "isPrivate" -> false)
         val keepKifi = Json.obj("url" -> "http://kifi.com", "isPrivate" -> false)
@@ -346,12 +326,9 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         val controller = inject[KeepsController]
         inject[FakeActionAuthenticator].setUser(u1)
 
-        import play.api.Play.current
-        println("global id: " + current.global.asInstanceOf[com.keepit.FortyTwoGlobal].globalId)
-
         Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
         val request = FakeRequest("GET", path)
-        val result = route(request).get
+        val result = inject[KeepsController].allKeeps(before = None, after = None, collectionOpt = None, helprankOpt = Some("click"), count = 20, withPageInfo = false)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
@@ -396,7 +373,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     }
 
     "allKeeps with helprank & before" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
 
         val keep42 = Json.obj("url" -> "http://42go.com", "isPrivate" -> false)
         val keepKifi = Json.obj("url" -> "http://kifi.com", "isPrivate" -> false)
@@ -490,12 +467,9 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         val controller = inject[KeepsController]
         inject[FakeActionAuthenticator].setUser(u1)
 
-        import play.api.Play.current
-        println("global id: " + current.global.asInstanceOf[com.keepit.FortyTwoGlobal].globalId)
-
         Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
         val request = FakeRequest("GET", path)
-        val result = route(request).get
+        val result = inject[KeepsController].allKeeps(before = Some(keeps1(1).externalId.toString), after = None, collectionOpt = None, helprankOpt = Some("click"), count = 20, withPageInfo = false)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
@@ -525,7 +499,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     }
 
     "allCollections" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
         val (user, collections) = inject[Database].readWrite { implicit session =>
           val user = inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
           val collections = inject[CollectionRepo].save(Collection(userId = user.id.get, name = "myCollaction1")) ::
@@ -541,9 +515,9 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[KeepsController]
         val request = FakeRequest("GET", path)
-        val result = route(request).get
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
+        val result = controller.allCollections("last_kept")(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
 
         val expected = Json.parse(s"""
           {"keeps":0,
@@ -558,7 +532,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     }
 
     "keepMultiple" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
@@ -578,10 +552,10 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         )
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[KeepsController]
-        val request = FakeRequest("POST", path).withJsonBody(json)
-        val result = route(request).get
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
+        val request = FakeRequest("POST", path).withBody(json)
+        val result = controller.keepMultiple()(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
 
         sourceForTitle("title 11") === KeepSource.site
         sourceForTitle("title 21") === KeepSource.site
@@ -605,7 +579,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     }
 
     "saveCollection create mode" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
@@ -617,7 +591,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[KeepsController]
         val request = FakeRequest("POST", path).withJsonBody(json)
-        val result = route(request).get
+        val result = inject[KeepsController].saveCollection("")(request)
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
@@ -636,7 +610,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     }
 
     "saveCollection create mode with long name" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
@@ -647,13 +621,13 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         inject[FakeActionAuthenticator].setUser(user)
         val controller = inject[KeepsController]
         val request = FakeRequest("POST", path).withJsonBody(json)
-        val result = route(request).get
-        status(result) must equalTo(400);
+        val result = inject[KeepsController].saveCollection("")(request)
+        status(result) must equalTo(400)
       }
     }
 
     "unkeepBatch" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
@@ -669,8 +643,8 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
           "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
           "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
         )
-        val keepReq = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.keepMultiple().toString).withJsonBody(keepJson)
-        val keepRes = route(keepReq).get
+        val keepReq = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.keepMultiple().toString).withBody(keepJson)
+        val keepRes = inject[KeepsController].keepMultiple()(keepReq)
         status(keepRes) must equalTo(OK)
         contentType(keepRes) must beSome("application/json")
         val keepJsonRes = Json.parse(contentAsString(keepRes))
@@ -687,9 +661,9 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
 
         implicit val keepFormat = ExternalId.format[Keep]
         val json = Json.obj("ids" -> JsArray(savedKeeps.take(2) map { k => Json.toJson(k.id.get) }))
-        val request = FakeRequest("POST", path).withJsonBody(json)
+        val request = FakeRequest("POST", path).withBody(json)
 
-        val result = route(request).get
+        val result = inject[KeepsController].unkeepBatch()(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
@@ -713,7 +687,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     }
 
     "unkeepMultiple" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit session =>
           inject[UserRepo].save(User(firstName = "Eishay", lastName = "Smith"))
         }
@@ -731,8 +705,8 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
           "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
           "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
         )
-        val keepReq = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.keepMultiple().toString).withJsonBody(keepJson)
-        val keepRes = route(keepReq).get
+        val keepReq = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.keepMultiple().toString).withBody(keepJson)
+        val keepRes = inject[KeepsController].keepMultiple()(keepReq)
         status(keepRes) must equalTo(OK);
         contentType(keepRes) must beSome("application/json");
 
@@ -746,9 +720,9 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
         val json = JsArray(withCollection.take(2) map { k => Json.toJson(k) })
         val request = FakeRequest("POST", path).withJsonBody(json)
 
-        val result = route(request).get
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
+        val result = inject[KeepsController].unkeepMultiple()(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
 
         stateForTitle("title 31") === "active"
 
@@ -766,7 +740,7 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
     }
 
     "reorder tags" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      withDb(controllerTestModules: _*) { implicit injector =>
         val (user, oldOrdering, tagA, tagB, tagC, tagD) = inject[Database].readWrite { implicit session =>
           val user1 = inject[UserRepo].save(User(firstName = "Tony", lastName = "Stark"))
 
@@ -794,37 +768,28 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
           "newIndex" -> 2
         )
         val request1 = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.
-          updateCollectionIndexOrdering().toString).withJsonBody(inputJson1)
+          updateCollectionIndexOrdering().toString).withBody(inputJson1)
 
         val inputJson2 = Json.obj(
           "tagId" -> tagD.externalId,
           "newIndex" -> 0
         )
         val request2 = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.
-          updateCollectionIndexOrdering().toString).withJsonBody(inputJson2)
+          updateCollectionIndexOrdering().toString).withBody(inputJson2)
 
         val inputJson3 = Json.obj(
           "tagId" -> tagB.externalId,
           "newIndex" -> 3
         )
         val request3 = FakeRequest("POST", com.keepit.controllers.website.routes.KeepsController.
-          updateCollectionIndexOrdering().toString).withJsonBody(inputJson3)
+          updateCollectionIndexOrdering().toString).withBody(inputJson3)
 
-        val resultFutures = for {
-          result1 <- { route(request1).get }
-          result2 <- { route(request2).get }
-          result3 <- { route(request3).get }
+        val result1 = inject[KeepsController].updateCollectionIndexOrdering()(request1)
+        val result2 = inject[KeepsController].updateCollectionIndexOrdering()(request2)
+        val result3 = inject[KeepsController].updateCollectionIndexOrdering()(request3)
 
-        } yield {
-          (result1, result2, result3)
-        }
-
-        val result1 = resultFutures.map(_._1)
-        val result2 = resultFutures.map(_._2)
-        val result3 = resultFutures.map(_._3)
-
-        status(result1) must equalTo(OK);
-        contentType(result1) must beSome("application/json");
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
 
         val expected1 = Json.parse(
           s"""{"newCollection":[
@@ -835,8 +800,8 @@ class KeepsControllerTest extends Specification with ApplicationInjector {
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
 
-        status(result2) must equalTo(OK);
-        contentType(result2) must beSome("application/json");
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
 
         val expected2 = Json.parse(
           s"""{"newCollection":[

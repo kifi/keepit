@@ -14,12 +14,12 @@ class DataBaseComponentTest extends Specification with SqlDbTestInjector {
 
     "not create real sessions if not used" in {
       withDb() { implicit injector: Injector =>
-        inject[TestSlickSessionProvider].doWithoutCreatingSessions {
+        inject[FakeSlickSessionProvider].doWithoutCreatingSessions {
           db.readOnlyMaster { implicit s =>
             1 === 1
           }
         }
-        inject[TestSlickSessionProvider].doWithoutCreatingSessions {
+        inject[FakeSlickSessionProvider].doWithoutCreatingSessions {
           db.readWrite { implicit s =>
             1 === 1
           }

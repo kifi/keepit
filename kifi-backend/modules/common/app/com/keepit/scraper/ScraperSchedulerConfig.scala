@@ -68,7 +68,7 @@ case class ProdScrapeSchedulerConfigModule() extends ScrapeSchedulerConfigModule
   override protected def conf: Configuration = Play.current.configuration
 }
 
-case class TestScrapeSchedulerConfigModule() extends ScrapeSchedulerConfigModule {
+case class FakeScrapeSchedulerConfigModule() extends ScrapeSchedulerConfigModule {
   def configure() {}
 
   override protected def conf: Configuration = new Configuration(Configuration.empty.underlying) {
