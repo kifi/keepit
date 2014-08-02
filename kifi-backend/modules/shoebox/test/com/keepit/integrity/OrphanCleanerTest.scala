@@ -1,20 +1,12 @@
 package com.keepit.integrity
 
-import org.specs2.mutable.Specification
-import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication, ShoeboxApplicationInjector }
-import play.api.test.Helpers.running
-<<<<<<< HEAD
-import com.keepit.common.actor.{ ActorSystemPlugin, TestActorSystemModule }
-=======
-import com.keepit.common.actor.{ ActorPlugin, FakeActorSystemModule }
->>>>>>> 807e99f226ad091a9ac84d97e8f4847f40e21cb7
-import com.keepit.model._
-import com.keepit.common.db.slick.Database
-import com.keepit.common.db.Id
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, ProdScrapeSchedulerModule, FakeScraperServiceClientModule }
-import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.shoebox.{ FakeKeepImportsModule, ShoeboxSlickModule, FakeShoeboxServiceModule }
 import com.google.inject.Module
+import com.keepit.common.db.slick.Database
+import com.keepit.model._
+import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.shoebox.FakeKeepImportsModule
+import com.keepit.test.ShoeboxTestInjector
+import org.specs2.mutable.Specification
 
 class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
 
