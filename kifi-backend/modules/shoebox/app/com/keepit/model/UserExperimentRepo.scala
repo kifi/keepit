@@ -22,7 +22,8 @@ class UserExperimentRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val userRepo: UserRepo,
-  userExperimentCache: UserExperimentCache)
+  userExperimentCache: UserExperimentCache,
+  allFakeUsersCache: AllFakeUsersCache)
     extends DbRepo[UserExperiment] with DbRepoWithDelete[UserExperiment] with UserExperimentRepo {
 
   import db.Driver.simple._
@@ -66,10 +67,12 @@ class UserExperimentRepoImpl @Inject() (
 
   override def invalidateCache(model: UserExperiment)(implicit session: RSession): Unit = {
     userExperimentCache.remove(UserExperimentUserIdKey(model.userId))
+    if (model.experimentType == ExperimentType.FAKE) { allFakeUsersCache.remove(AllFakeUsersKey) }
   }
 
   override def deleteCache(model: UserExperiment)(implicit session: RSession): Unit = {
     userExperimentCache.remove(UserExperimentUserIdKey(model.userId))
+    if (model.experimentType == ExperimentType.FAKE) { allFakeUsersCache.remove(AllFakeUsersKey) }
   }
 
   def getByType(experiment: ExperimentType)(implicit session: RSession): Seq[UserExperiment] = {
@@ -87,5 +90,4 @@ class UserExperimentRepoImpl @Inject() (
         (ExperimentType(name), count)
     }
   }
-
 }
