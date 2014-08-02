@@ -35,11 +35,17 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(Seq.empty[ScrapeRequest])
   }
 
+  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
+
+  def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = ???
+
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
 
   def savePageInfo(pageInfo: PageInfo): Future[Unit] = ???
 
   def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo] = ???
+
+  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit] = Future.successful(())
 
   def saveImageInfo(imageInfo: ImageInfo): Future[ImageInfo] = ???
 
@@ -589,12 +595,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getVerifiedAddressOwners(emailAddresses: Seq[EmailAddress]): Future[Map[EmailAddress, Id[User]]] = Future.successful(Map.empty)
 
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], userId: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit] = Future.successful(Unit)
-
-  def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = ???
-
-  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit] = Future.successful(())
-
-  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
 

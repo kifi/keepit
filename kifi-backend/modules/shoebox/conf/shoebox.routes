@@ -650,8 +650,8 @@ GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.in
 GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.internal.ShoeboxController.getBookmarks(userId: Id[User])
 GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.internal.ShoeboxDataPipeController.getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int)
 GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.internal.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
-GET     /internal/shoebox/database/getBookmarksByUriWithoutTitle @com.keepit.controllers.internal.ShoeboxController.getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])
-POST    /internal/shoebox/database/getLatestKeep  @com.keepit.controllers.internal.ShoeboxController.getLatestKeep()
+GET     /internal/shoebox/database/getBookmarksByUriWithoutTitle @com.keepit.controllers.internal.ShoeboxScraperController.getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI])
+POST    /internal/shoebox/database/getLatestKeep  @com.keepit.controllers.internal.ShoeboxScraperController.getLatestKeep()
 POST    /internal/shoebox/database/saveBookmark       @com.keepit.controllers.internal.ShoeboxController.saveBookmark
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.internal.ShoeboxController.sendMail
 POST    /internal/shoebox/database/sendMailToUser     @com.keepit.controllers.internal.ShoeboxController.sendMailToUser
@@ -693,19 +693,19 @@ POST    /internal/geckoboard/refresh                  @com.keepit.reports.Geckob
 
 POST    /internal/shoebox/email/sendUnreadMessages   @com.keepit.controllers.internal.EmailNotificationsController.sendUnreadMessages()
 
-GET      /internal/shoebox/database/assignScrapeTasks @com.keepit.controllers.internal.ShoeboxController.assignScrapeTasks(zkId:Id[ScraperWorker], max:Int ?= 1)
-POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxController.saveScrapeInfo
-POST     /internal/shoebox/database/savePageInfo      @com.keepit.controllers.internal.ShoeboxController.savePageInfo
-GET      /internal/shoebox/database/getImageInfo      @com.keepit.controllers.internal.ShoeboxController.getImageInfo(id:Id[ImageInfo])
-POST     /internal/shoebox/database/saveImageInfo     @com.keepit.controllers.internal.ShoeboxController.saveImageInfo
-POST     /internal/shoebox/database/saveNormalizedURI @com.keepit.controllers.internal.ShoeboxController.saveNormalizedURI
-POST     /internal/shoebox/database/updateNormalizedURI @com.keepit.controllers.internal.ShoeboxController.updateNormalizedURI(uriId: Id[NormalizedURI])
-POST     /internal/shoebox/database/recordPermanentRedirect @com.keepit.controllers.internal.ShoeboxController.recordPermanentRedirect
-POST     /internal/shoebox/database/recordScrapedNormalization @com.keepit.controllers.internal.ShoeboxController.recordScrapedNormalization
-GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.internal.ShoeboxController.getProxy(url:String)
-POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.internal.ShoeboxController.getProxyP()
-GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.internal.ShoeboxController.isUnscrapable(url: String, destinationUrl: Option[String])
-POST     /internal/shoebox/database/isUnscrapableP    @com.keepit.controllers.internal.ShoeboxController.isUnscrapableP
+GET      /internal/shoebox/database/assignScrapeTasks @com.keepit.controllers.internal.ShoeboxScraperController.assignScrapeTasks(zkId:Id[ScraperWorker], max:Int ?= 1)
+POST     /internal/shoebox/database/saveScrapeInfo    @com.keepit.controllers.internal.ShoeboxScraperController.saveScrapeInfo
+POST     /internal/shoebox/database/savePageInfo      @com.keepit.controllers.internal.ShoeboxScraperController.savePageInfo
+GET      /internal/shoebox/database/getImageInfo      @com.keepit.controllers.internal.ShoeboxScraperController.getImageInfo(id:Id[ImageInfo])
+POST     /internal/shoebox/database/saveImageInfo     @com.keepit.controllers.internal.ShoeboxScraperController.saveImageInfo
+POST     /internal/shoebox/database/saveNormalizedURI @com.keepit.controllers.internal.ShoeboxScraperController.saveNormalizedURI
+POST     /internal/shoebox/database/updateNormalizedURI @com.keepit.controllers.internal.ShoeboxScraperController.updateNormalizedURI(uriId: Id[NormalizedURI])
+POST     /internal/shoebox/database/recordPermanentRedirect @com.keepit.controllers.internal.ShoeboxScraperController.recordPermanentRedirect
+POST     /internal/shoebox/database/recordScrapedNormalization @com.keepit.controllers.internal.ShoeboxScraperController.recordScrapedNormalization
+GET      /internal/shoebox/database/getProxy          @com.keepit.controllers.internal.ShoeboxScraperController.getProxy(url:String)
+POST     /internal/shoebox/database/getProxyP         @com.keepit.controllers.internal.ShoeboxScraperController.getProxyP()
+GET      /internal/shoebox/database/isUnscrapable     @com.keepit.controllers.internal.ShoeboxScraperController.isUnscrapable(url: String, destinationUrl: Option[String])
+POST     /internal/shoebox/database/isUnscrapableP    @com.keepit.controllers.internal.ShoeboxScraperController.isUnscrapableP
 GET      /internal/shoebox/database/getFriendRequestBySender @com.keepit.controllers.internal.ShoeboxController.getFriendRequestsBySender(senderId: Id[User])
 GET      /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.getUserValue(userId: Id[User], key: UserValueName)
 POST     /internal/shoebox/database/userValue         @com.keepit.controllers.internal.ShoeboxController.setUserValue(userId: Id[User], key: UserValueName)
@@ -718,7 +718,7 @@ GET      /internal/shoebox/database/getLapsedUsersForDelighted    @com.keepit.co
 GET      /internal/shoebox/emailTest @com.keepit.controllers.internal.EmailTestController.testEmail(name: String)
 POST     /internal/shoebox/database/isSensitiveURI       @com.keepit.controllers.internal.ShoeboxPageController.isSensitiveURI()
 POST     /internal/shoebox/database/updateURIRestriction  @com.keepit.controllers.internal.ShoeboxController.updateURIRestriction()
-GET      /internal/shoebox/database/urlPatternRules         @com.keepit.controllers.internal.ShoeboxController.getAllURLPatternRules()
+GET      /internal/shoebox/database/urlPatternRules         @com.keepit.controllers.internal.ShoeboxScraperController.getAllURLPatternRules()
 
 GET      /internal/shoebox/screenshots/update        @com.keepit.controllers.internal.URISummaryController.updateUriScreenshotsForUriId(id: Id[NormalizedURI])
 GET      /internal/shoebox/image/getUriImage         @com.keepit.controllers.internal.URISummaryController.getUriImageForUriId(id: Id[NormalizedURI])
