@@ -23,7 +23,7 @@ class RecommendationGenerationCommander @Inject() (
 
   def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[Recommendation]] = {
     val seedsFuture = for {
-      seeds <- seedCommander.getTopItems(userId, Math.max(howManyMax, 150))
+      seeds <- seedCommander.getTopItems(userId, Math.max(howManyMax, 200))
       restrictions <- shoebox.getAdultRestrictionOfURIs(seeds.map { _.uriId })
     } yield {
       (seeds zip restrictions) filterNot (_._2) map (_._1)
@@ -36,7 +36,7 @@ class RecommendationGenerationCommander @Inject() (
           userId = scoredItem.userId,
           uriId = scoredItem.uriId,
           score = if (scoreCoefficients.isEmpty)
-            0.5f * scoredItem.uriScores.recencyScore + 2 * scoredItem.uriScores.overallInterestScore + 0.25f * scoredItem.uriScores.priorScore
+            0.3f * scoredItem.uriScores.socialScore + 2 * scoredItem.uriScores.overallInterestScore + 0.5f * scoredItem.uriScores.priorScore
           else
             scoreCoefficients.getOrElse(ScoreType.recencyScore, defaultScore) * scoredItem.uriScores.recencyScore
               + scoreCoefficients.getOrElse(ScoreType.overallInterestScore, defaultScore) * scoredItem.uriScores.overallInterestScore
