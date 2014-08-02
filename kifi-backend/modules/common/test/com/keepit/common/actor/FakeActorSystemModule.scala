@@ -1,13 +1,9 @@
 package com.keepit.common.actor
 
-import akka.actor.{ Cancellable, Scheduler, ActorSystem }
+import akka.actor.{ActorSystem, Cancellable, Scheduler}
 import com.google.inject.Provides
-import com.keepit.common.plugin.{ SchedulingPropertiesImpl, SchedulingProperties }
-import com.keepit.inject.AppScoped
-import play.api.Play.current
-import scala.concurrent.future
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.common.zookeeper.ServiceDiscovery
+import com.keepit.common.plugin.SchedulingProperties
 import net.codingwell.scalaguice.ScalaModule
 
 case class FakeActorSystemModule(implicit system: ActorSystem = ActorTestSupport.getActorSystem()) extends ActorSystemModule {
@@ -17,9 +13,7 @@ case class FakeActorSystemModule(implicit system: ActorSystem = ActorTestSupport
     install(FakeSchedulerModule())
     bind[ActorBuilder].to[TestActorBuilderImpl]
     bind[Scheduler].to[FakeScheduler]
-    bind[ActorSystem].toInstance(system)
   }
-
 }
 
 case class FakeSchedulerModule() extends ScalaModule {
