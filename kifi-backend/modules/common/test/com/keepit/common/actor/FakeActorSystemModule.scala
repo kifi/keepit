@@ -1,6 +1,6 @@
 package com.keepit.common.actor
 
-import akka.actor.{ActorSystem, Cancellable, Scheduler}
+import akka.actor.{ ActorSystem, Cancellable, Scheduler }
 import com.google.inject.Provides
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.plugin.SchedulingProperties
@@ -13,6 +13,7 @@ case class FakeActorSystemModule(implicit system: ActorSystem = ActorTestSupport
     install(FakeSchedulerModule())
     bind[ActorBuilder].to[TestActorBuilderImpl]
     bind[Scheduler].to[FakeScheduler]
+    bind[ActorSystem].toInstance(system)
   }
 }
 
