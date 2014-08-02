@@ -26,21 +26,20 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.realtime.FakeUrbanAirshipModule
 import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.common.store.FakeElizaStoreModule
-import com.keepit.common.actor.{ StandaloneTestActorSystemModule, FakeActorSystemModule }
+import com.keepit.common.actor.{ FakeActorSystemModule }
 
 class MobileMessagingControllerTest extends Specification with ElizaTestInjector {
 
   implicit val context = HeimdalContext.empty
 
   def modules = {
-    implicit val system = ActorSystem("test")
     Seq(
       FakeSearchServiceClientModule(),
       ElizaCacheModule(),
       FakeShoeboxServiceModule(),
       FakeHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
-      StandaloneTestActorSystemModule(),
+      FakeActorSystemModule(),
       FakeABookServiceClientModule(),
       FakeUrbanAirshipModule(),
       FakeActionAuthenticatorModule(),

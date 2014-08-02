@@ -21,7 +21,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.xml.Elem
 import com.keepit.abook.typeahead.EContactTypeahead
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
-import com.keepit.abook.model.{ EmailAccount, EmailAccountRepo, EContactRepo, EContact }
+import com.keepit.abook.model.{ EContactRepo, EContact }
 import com.keepit.abook.controllers.{ ABookOwnerInfo, GmailABookOwnerInfo }
 import com.keepit.abook.{ ABookImporterPlugin, ABookInfoRepo }
 
@@ -33,7 +33,6 @@ class ABookCommander @Inject() (
     abookInfoRepo: ABookInfoRepo,
     econtactRepo: EContactRepo,
     abookImporter: ABookImporterPlugin,
-    emailAccountRepo: EmailAccountRepo,
     contactInterner: ContactInterner) extends Logging {
 
   def toS3Key(userId: Id[User], origin: ABookOriginType, abookOwnerInfo: Option[ABookOwnerInfo]): String = {
@@ -235,19 +234,4 @@ class ABookCommander @Inject() (
 
   def getUsersWithContact(email: EmailAddress): Set[Id[User]] =
     db.readOnlyReplica { implicit session => econtactRepo.getUserIdsByEmail(email) }.toSet
-
-  def addContactsForUser(userId: Id[User], emails: Seq[EmailAddress]): Seq[EContact] = {
-    db.readWrite { implicit session =>
-      lazy val kifiAbook: ABookInfo = abookInfoRepo.internKifiABook(userId)
-
-      emails.map { email =>
-        econtactRepo.getByUserIdAndEmail(userId, email).headOption.getOrElse {
-          val emailAccount = emailAccountRepo.internByAddress(email)
-          EContact(abookId = kifiAbook.id.get, emailAccountId = emailAccount.id.get, userId = userId, email = email)
-        }
-      }
-    }
-
-  }
-
 }

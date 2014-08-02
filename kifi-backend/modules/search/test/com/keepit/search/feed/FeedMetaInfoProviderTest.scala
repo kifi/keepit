@@ -11,7 +11,7 @@ import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
 import akka.actor.ActorSystem
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.util.PlayAppConfigurationModule
 
@@ -19,7 +19,7 @@ class FeedMetaInfoProviderTest extends Specification with SearchTestInjector {
   "FeedMetaInfoProvider" should {
     "work" in {
       implicit val system = ActorSystem("test")
-      withInjector(FakeShoeboxServiceModule(), StandaloneTestActorSystemModule(), FakeHttpClientModule(), PlayAppConfigurationModule()) { implicit injector =>
+      withInjector(FakeShoeboxServiceModule(), FakeActorSystemModule(), FakeHttpClientModule(), PlayAppConfigurationModule()) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val uris = client.saveURIs(
           NormalizedURI.withHash(title = Some("1"), normalizedUrl = "http://www.keepit.com/login", state = UNSCRAPABLE),

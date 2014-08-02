@@ -71,15 +71,15 @@ class UserIndexerTest extends Specification with CommonTestInjector {
       val analyzer = DefaultAnalyzer.defaultAnalyzer
       val parser = new UserQueryParser(analyzer)
       var query = parser.parse("wood")
-      searcher.search(query.get).seq.size === 1
+      searcher.searchAll(query.get).seq.size === 1
       query = parser.parse("     woody      all    ")
-      searcher.search(query.get).seq.size === 1
+      searcher.searchAll(query.get).seq.size === 1
 
       query = parser.parse("allen")
-      searcher.search(query.get).seq.size === 1
+      searcher.searchAll(query.get).seq.size === 1
 
       query = parser.parse("firstNaM")
-      searcher.search(query.get).seq.size === 4
+      searcher.searchAll(query.get).seq.size === 4
 
     }
   }
@@ -94,10 +94,10 @@ class UserIndexerTest extends Specification with CommonTestInjector {
       val analyzer = DefaultAnalyzer.defaultAnalyzer
       val parser = new UserQueryParser(analyzer)
       val query = parser.parse("woody.allen@gmail.com")
-      searcher.search(query.get).seq.size === 1
-      searcher.search(query.get).seq.head.id === 5
+      searcher.searchAll(query.get).seq.size === 1
+      searcher.searchAll(query.get).seq.head.id === 5
       val query2 = parser.parse("user1@42go.com")
-      searcher.search(query2.get).seq.size === 1
+      searcher.searchAll(query2.get).seq.size === 1
     }
 
     "store and retreive correct info" in {
@@ -190,16 +190,16 @@ class UserIndexerTest extends Specification with CommonTestInjector {
         val parser = new UserQueryParser(analyzer)
         var query = parser.parseWithUserExperimentConstrains("firstNa", Seq())
 
-        searcher.search(query.get).seq.size === 4
+        searcher.searchAll(query.get).seq.size === 4
 
         query = parser.parseWithUserExperimentConstrains("firstNa", Seq("admin"))
-        searcher.search(query.get).seq.size === 2
+        searcher.searchAll(query.get).seq.size === 2
 
         query = parser.parseWithUserExperimentConstrains("firstNa", Seq("can_connect"))
-        searcher.search(query.get).seq.size === 3
+        searcher.searchAll(query.get).seq.size === 3
 
         query = parser.parseWithUserExperimentConstrains("firstNa", Seq("fake"))
-        searcher.search(query.get).seq.size === 3
+        searcher.searchAll(query.get).seq.size === 3
       }
     }
 

@@ -1,31 +1,27 @@
 package com.keepit.eliza.controllers.ext
 
-import akka.testkit.TestKit
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.test.{ DbInjectionHelper, ElizaTestInjector }
-import org.specs2.mutable._
-import com.keepit.common.db.slick._
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
-import com.keepit.inject._
-import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
+import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.common.actor.{FakeActorSystemModule, TestKitSupport}
 import com.keepit.common.cache.ElizaCacheModule
+import com.keepit.common.controller.{FakeActionAuthenticator, FakeActionAuthenticatorModule}
+import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
-import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule, StandaloneTestActorSystemModule }
-import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.model.User
-import com.keepit.realtime.{ FakeUrbanAirshipModule }
-import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
-import com.keepit.abook.{ FakeABookServiceClientModule }
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.model._
-import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.heimdal.{FakeHeimdalServiceClientModule, HeimdalContext}
+import com.keepit.model.User
+import com.keepit.realtime.FakeUrbanAirshipModule
+import com.keepit.scraper.FakeScraperServiceClientModule
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient}
+import com.keepit.test.{DbInjectionHelper, ElizaTestInjector}
+import org.specs2.mutable._
+import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.libs.json.Json
-import akka.actor.ActorSystem
-import com.keepit.scraper.FakeScraperServiceClientModule
-import com.keepit.common.store.FakeElizaStoreModule
 
 class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with DbInjectionHelper {
 
