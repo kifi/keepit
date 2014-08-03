@@ -1,7 +1,7 @@
 package com.keepit.curator.model
 
 import com.google.inject.{ Inject, ImplementedBy }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DBSession, DataBaseComponent, DbRepo }
 import com.keepit.common.logging.Logging
@@ -9,12 +9,16 @@ import com.keepit.common.time.Clock
 import com.keepit.model.{ User, NormalizedURI }
 import play.api.libs.json.JsObject
 
+import scala.slick.lifted
+
 @ImplementedBy(classOf[RecommendationRepoImpl])
 trait RecommendationRepo extends DbRepo[Recommendation] {
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Recommendation]
+  def getByUserId(userId: Id[User])(implicit session: RSession): Seq[Recommendation]
   def getByUriAndUserId(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Recommendation]
   def getFirstByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[Recommendation]
   def getByTopFinalScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[Recommendation]
+  def deactivateRecommendationFromUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Boolean
 }
 
 class RecommendationRepoImpl @Inject() (
@@ -45,6 +49,10 @@ class RecommendationRepoImpl @Inject() (
     (for (row <- rows if row.uriId === uriId && row.state === RecommendationStates.ACTIVE) yield row).list
   }
 
+  def getByUserId(userId: Id[User])(implicit session: RSession): Seq[Recommendation] = {
+    (for (row <- rows if row.userId === userId && row.state === RecommendationStates.ACTIVE) yield row).list
+  }
+
   def getByUriAndUserId(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Recommendation] = {
     (for (row <- rows if row.uriId === uriId && row.userId === userId && row.state === RecommendationStates.ACTIVE) yield row).firstOption
   }
@@ -55,6 +63,11 @@ class RecommendationRepoImpl @Inject() (
 
   def getByTopFinalScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[Recommendation] = {
     (for (row <- rows if row.userId === userId && row.state === RecommendationStates.ACTIVE) yield row).sortBy(_.finalScore.desc).take(maxBatchSize).list
+  }
+
+  def deactivateRecommendationFromUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Boolean = {
+    val deactivated = (for { row <- rows if row.uriId === uriId && row.userId === userId } yield row.state).update(RecommendationStates.INACTIVE)
+    deactivated > 0
   }
 
   def deleteCache(model: Recommendation)(implicit session: RSession): Unit = {}
