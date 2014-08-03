@@ -1,6 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.Recommendation
+import com.keepit.curator.model.{ AdminRecommendation }
 import com.keepit.common.db.Id
 import com.keepit.model.ScoreType._
 import com.keepit.model.{ ScoreType, User }
@@ -21,7 +21,7 @@ class RecommendationGenerationCommander @Inject() (
 
   val defaultScore = 0.0f
 
-  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[Recommendation]] = {
+  def getAdHocAdminRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[AdminRecommendation]] = {
     val seedsFuture = for {
       seeds <- seedCommander.getTopItems(userId, Math.max(howManyMax, 150))
       restrictions <- shoebox.getAdultRestrictionOfURIs(seeds.map { _.uriId })
@@ -32,7 +32,7 @@ class RecommendationGenerationCommander @Inject() (
     val scoredItemsFuture = seedsFuture.flatMap { seeds => scoringHelper(seeds) }
     scoredItemsFuture.map { scoredItems =>
       scoredItems.map { scoredItem =>
-        Recommendation(
+        AdminRecommendation(
           userId = scoredItem.userId,
           uriId = scoredItem.uriId,
           score = if (scoreCoefficients.isEmpty)
