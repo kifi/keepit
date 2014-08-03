@@ -51,8 +51,7 @@ class TopUriSeedIngestionHelper @Inject() (
             timesKept = anotherRawSeedItem.timesKept))
 
           case None => {
-            log.error("Can't find another rawSeedItem.")
-            airbrake.notify("Can't find another rawSeedItem.")
+            log.info(s"Can't find another Raw Seed Item. Must have been renormalized. UriId: ${uriScore.uriId}")
           }
         }
 

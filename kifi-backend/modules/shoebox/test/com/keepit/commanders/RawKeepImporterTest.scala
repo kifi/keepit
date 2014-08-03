@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import java.io.File
 
-import com.keepit.common.actor.{ StandaloneTestActorSystemModule, FakeActorSystemModule, TestKitSupport }
+import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
 import com.keepit.common.db.{ FakeSlickModule, TestDbInfo }
 import com.keepit.common.external.FakeExternalServiceModule
@@ -35,7 +35,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
     FakeNormalizationUpdateJobQueueModule(),
     ShoeboxCacheModule(HashMapMemoryCacheModule()),
     KeepImportsModule(),
-    StandaloneTestActorSystemModule(),
+    FakeActorSystemModule(),
     FakeSearchServiceClientModule(),
     FakeShoeboxServiceClientModule(),
     FakeHttpClientModule(),

@@ -1,6 +1,6 @@
 package com.keepit.controllers.mobile
 
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.FakeHttpClientModule
@@ -23,7 +23,7 @@ import play.api.test.Helpers._
 class MobileSearchControllerTest extends SpecificationLike with SearchTestInjector {
 
   def modules = Seq(
-    StandaloneTestActorSystemModule(),
+    FakeActorSystemModule(),
     FakeActionAuthenticatorModule(),
     FixedResultIndexModule(),
     FakeHttpClientModule(),

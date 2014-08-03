@@ -120,6 +120,7 @@ class InviteCommander @Inject() (
     s3ImageStore: S3ImageStore,
     emailOptOutCommander: EmailOptOutCommander,
     shoeboxRichConnectionCommander: ShoeboxRichConnectionCommander,
+    abookServiceClient: ABookServiceClient,
     scheduler: Scheduler) extends Logging {
 
   private lazy val baseUrl = fortytwoConfig.applicationBaseUrl
@@ -300,6 +301,10 @@ class InviteCommander @Inject() (
       postOffice.sendMail(electronicMail)
       val savedInvite = invitationRepo.save(invite.withState(InvitationStates.ACTIVE).withLastSentTime(clock.now()))
       log.info(s"[sendEmailInvitation(${inviteInfo.userId},${c},})] invitation sent")
+
+      val basicContact = BasicContact(email = c.email)
+      abookServiceClient.internKifiContact(inviteInfo.userId, basicContact)
+
       InviteStatus.sent(savedInvite)
     }
   }

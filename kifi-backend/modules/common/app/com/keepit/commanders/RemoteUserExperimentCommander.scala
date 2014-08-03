@@ -24,6 +24,5 @@ class RemoteUserExperimentCommander @Inject() (
   def getExperimentsByUser(userId: Id[User]): Future[Set[ExperimentType]] = {
     shoebox.getUserExperiments(userId).map { experimentSeq => addDynamicExperiments(userId, experimentSeq.toSet) }
   }
-
 }
 

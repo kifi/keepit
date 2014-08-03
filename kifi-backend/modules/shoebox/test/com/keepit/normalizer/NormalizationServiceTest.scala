@@ -1,7 +1,7 @@
 package com.keepit.normalizer
 
 import com.google.inject.Injector
-import com.keepit.common.actor.{ TestKitSupport, StandaloneTestActorSystemModule }
+import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.eliza.FakeElizaServiceClientModule
@@ -47,7 +47,7 @@ class NormalizationServiceTest extends TestKitSupport with SpecificationLike wit
     FakeDiscoveryModule(),
     FakeScrapeSchedulerModule(Some(fakeArticles)),
     FakeAirbrakeModule(),
-    StandaloneTestActorSystemModule(),
+    FakeActorSystemModule(),
     FakeElizaServiceClientModule(),
     FakeKeepImportsModule(),
     new ScalaModule {
