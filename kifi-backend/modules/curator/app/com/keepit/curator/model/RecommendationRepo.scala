@@ -61,3 +61,4 @@ class RecommendationRepoImpl @Inject() (
 
   def invalidateCache(model: Recommendation)(implicit session: RSession): Unit = {}
 }
+

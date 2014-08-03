@@ -24,3 +24,4 @@ case class Recommendation(
 }
 
 object RecommendationStates extends States[Recommendation]
+
