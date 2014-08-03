@@ -2,13 +2,17 @@ package com.keepit.common.actor
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
-import org.specs2.specification.After
+import com.keepit.test.specs2.BeforeAllAfterAll
+import org.specs2.mutable.SpecificationLike
 import org.specs2.time.NoTimeConversions
 import play.api.Play
 
 // shutdown() is required to ensure there's no memory leak
-abstract class TestKitSupport(testSystem: ActorSystem = ActorTestSupport.getActorSystem()) extends TestKit(testSystem) with After with NoTimeConversions {
-  def after = system.shutdown
+abstract class TestKitSupport(testSystem: ActorSystem = ActorTestSupport.getActorSystem()) extends TestKit(testSystem) with SpecificationLike with BeforeAllAfterAll with NoTimeConversions {
+  override def afterAll = {
+    system.shutdown
+    system.awaitTermination
+  }
 }
 
 object ActorTestSupport {
