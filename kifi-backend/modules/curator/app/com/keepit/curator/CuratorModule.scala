@@ -17,7 +17,7 @@ case class CuratorServiceTypeModule() extends ServiceTypeModule {
 
 abstract class CuratorModule(
     val cacheModule: CacheModule,
-    val seedIngestionPluginModule: SeedIngestionPluginModule = SeedIngestionPluginModule()) extends ConfigurationModule with CommonServiceModule {
+    val curatorTasksModule: CuratorTasksPluginModule = CuratorTasksPluginModule()) extends ConfigurationModule with CommonServiceModule {
   val serviceTypeModule = CuratorServiceTypeModule()
   val shoeboxServiceClientModule: ShoeboxServiceClientModule
   val graphServiceClientModule: GraphServiceClientModule

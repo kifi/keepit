@@ -1,12 +1,12 @@
 package com.keepit.controllers.mobile
 
-import com.keepit.test.{ SearchApplication, SearchApplicationInjector }
+import com.keepit.test.{ SearchApplication, SearchTestInjector }
 import org.specs2.mutable._
 
 import com.keepit.model._
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -21,8 +21,11 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserSearchFilterFactory
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.util.PlayAppConfigurationModule
 
-class MobileUserSearchControllerTest extends Specification with SearchApplicationInjector {
+import com.google.inject.Injector
+
+class MobileUserSearchControllerTest extends Specification with SearchTestInjector {
 
   private def setup(client: FakeShoeboxServiceClientImpl) = {
     val extIds = (0 until 5).map { i => "4e5f7b8c-951b-4497-8661-12345678900" + i.toString }.map { ExternalId[User] }
@@ -48,20 +51,20 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
     usersWithId
   }
 
-  def filterFactory = inject[UserSearchFilterFactory]
+  def filterFactory(implicit injector: Injector) = inject[UserSearchFilterFactory]
 
   def modules = {
-    implicit val system = ActorSystem("test")
     Seq(
-      StandaloneTestActorSystemModule(),
+      FakeActorSystemModule(),
       FakeActionAuthenticatorModule(),
-      FakeShoeboxServiceModule()
+      FakeShoeboxServiceModule(),
+      PlayAppConfigurationModule()
     )
   }
 
   "MobileUserSearchController" should {
     "search user" in {
-      running(new SearchApplication(modules: _*)) {
+      withInjector(modules: _*) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
@@ -101,7 +104,7 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
     }
 
     "page user by name" in {
-      running(new SearchApplication(modules: _*)) {
+      withInjector(modules: _*) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]
@@ -154,7 +157,7 @@ class MobileUserSearchControllerTest extends Specification with SearchApplicatio
     }
 
     "page user by email" in {
-      running(new SearchApplication(modules: _*)) {
+      withInjector(modules: _*) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val users = setup(client)
         val indexer = inject[UserIndexer]

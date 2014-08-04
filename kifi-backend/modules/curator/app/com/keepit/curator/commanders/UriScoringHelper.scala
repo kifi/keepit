@@ -7,6 +7,7 @@ import com.keepit.curator.model.{ CuratorKeepInfoRepo, Keepers, SeedItem, Scored
 
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
+import com.keepit.shoebox.ShoeboxServiceClient
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.graph.GraphServiceClient
@@ -24,7 +25,8 @@ import org.joda.time.Days
 class UriScoringHelper @Inject() (
     graph: GraphServiceClient,
     keepInfoRepo: CuratorKeepInfoRepo,
-    cortex: CortexServiceClient) extends Logging {
+    cortex: CortexServiceClient,
+    shoebox: ShoeboxServiceClient) extends Logging {
 
   private def getRawRecencyScores(items: Seq[SeedItem]): Seq[Float] = items.map { item =>
     val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays()
@@ -80,6 +82,15 @@ class UriScoringHelper @Inject() (
     }
   }
 
+  def getRawHelpRankScores(items: Seq[SeedItem]): Future[(Seq[Float], Seq[Float])] = {
+    val helpRankInfos = shoebox.getHelpRankInfos(items.map(_.uriId))
+    helpRankInfos.map { infos =>
+      infos.map { info =>
+        (Math.tanh(info.rekeepCount / 10).toFloat, Math.tanh(info.keepDiscoveryCount / 20).toFloat)
+      }.unzip
+    }
+  }
+
   def apply(items: Seq[SeedItem]): Future[Seq[ScoredSeedItem]] = {
     require(items.map(_.userId).toSet.size == 1, "Batch of seed items to score must be non empty and all for the same user")
 
@@ -89,10 +100,12 @@ class UriScoringHelper @Inject() (
 
     val socialScoresFuture = getRawSocialScores(items)
     val interestScoresFuture = getRawInterestScores(items)
+    // val helpRankScoresFuture = getRawHelpRankScores(items)
 
     for (
       socialScores <- socialScoresFuture;
       (overallInterestScores, recentInterestScores) <- interestScoresFuture
+    // (rekeepScores, discoveryScores) <- helpRankScoresFuture
     ) yield {
       for (i <- 0 until items.length) yield {
         val scores = UriScores(
@@ -101,7 +114,9 @@ class UriScoringHelper @Inject() (
           overallInterestScore = overallInterestScores(i),
           recentInterestScore = recentInterestScores(i),
           recencyScore = recencyScores(i),
-          priorScore = priorScores(i)
+          priorScore = priorScores(i),
+          rekeepScore = 0.0f, //rekeepScores(i),
+          discoveryScore = 0.0f //discoveryScores(i)
         )
         ScoredSeedItem(items(i).userId, items(i).uriId, scores)
       }

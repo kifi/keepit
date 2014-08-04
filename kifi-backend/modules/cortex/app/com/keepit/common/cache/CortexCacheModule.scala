@@ -148,4 +148,8 @@ case class CortexCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Provides @Singleton
   def userLDAStatsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserLDAStatisticsCache(stats, accessLog, (innerRepo, 24 hours), (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def allFakeUsersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
 }

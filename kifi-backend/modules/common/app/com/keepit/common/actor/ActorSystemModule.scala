@@ -15,7 +15,7 @@ trait ActorSystemModule extends ScalaModule
 case class ProdActorSystemModule() extends ActorSystemModule {
 
   def configure() {
-    bind[ActorSystem].toProvider[ActorPlugin]
+    bind[ActorSystem].toProvider[ActorSystemPlugin]
   }
 
   @Provides
@@ -28,8 +28,8 @@ case class ProdActorSystemModule() extends ActorSystemModule {
 
   @Provides
   @Singleton
-  def actorPluginProvider: ActorPlugin =
-    new ActorPlugin(ActorSystem("prod-actor-system",
+  def actorPluginProvider: ActorSystemPlugin =
+    new ActorSystemPlugin(ActorSystem("prod-actor-system",
       Play.current.configuration.underlying,
       Play.current.classloader))
 
@@ -38,7 +38,7 @@ case class ProdActorSystemModule() extends ActorSystemModule {
 case class DevActorSystemModule() extends ActorSystemModule {
 
   def configure() {
-    bind[ActorSystem].toProvider[ActorPlugin]
+    bind[ActorSystem].toProvider[ActorSystemPlugin]
   }
 
   @Provides
@@ -56,7 +56,7 @@ case class DevActorSystemModule() extends ActorSystemModule {
 
   @Singleton
   @Provides
-  def actorPluginProvider: ActorPlugin = {
-    new ActorPlugin(ActorSystem("dev-actor-system", Play.current.configuration.underlying, Play.current.classloader))
+  def actorPluginProvider: ActorSystemPlugin = {
+    new ActorSystemPlugin(ActorSystem("dev-actor-system", Play.current.configuration.underlying, Play.current.classloader))
   }
 }

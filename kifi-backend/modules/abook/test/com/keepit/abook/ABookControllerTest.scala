@@ -20,10 +20,10 @@ class ABookControllerTest extends Specification with ABookTestInjector with ABoo
 
   val modules = Seq(
     ABookCacheModule(HashMapMemoryCacheModule()),
-    TestABookServiceClientModule(),
+    FakeABookServiceClientModule(),
     FakeShoeboxServiceModule(),
     FakeSimpleQueueModule(),
-    TestABookImporterPluginModule(),
+    FakeABookImporterPluginModule(),
     FakeABookStoreModule(),
     FakeActionAuthenticatorModule()
   )

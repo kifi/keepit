@@ -28,9 +28,11 @@ case class UriScores(
     overallInterestScore: Float,
     recentInterestScore: Float,
     recencyScore: Float,
-    priorScore: Float) {
+    priorScore: Float,
+    rekeepScore: Float,
+    discoveryScore: Float) {
 
-  override def toString = s"social:$socialScore --- popularity:$popularityScore --- overallInterest:$overallInterestScore --- recentInterest:$recentInterestScore --- recency:$recencyScore --- prior:$priorScore"
+  override def toString = s"social:$socialScore --- popularity:$popularityScore --- overallInterest:$overallInterestScore --- recentInterest:$recentInterestScore --- recency:$recencyScore --- prior:$priorScore --- rekeep:$rekeepScore --- discovery:$discoveryScore"
 }
 
 case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores)

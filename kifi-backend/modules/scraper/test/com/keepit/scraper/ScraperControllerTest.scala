@@ -1,14 +1,12 @@
 package com.keepit.scraper
 
-import com.keepit.common.actor.{ TestKitSupport, TestActorSystemModule }
+import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 import com.keepit.common.controller.FakeActionAuthenticatorModule
 import com.keepit.common.store.ScraperTestStoreModule
 import com.keepit.scraper.embedly.FakeEmbedlyModule
-import com.keepit.scraper.fetcher.TestHttpFetcherModule
+import com.keepit.scraper.fetcher.FakeHttpFetcherModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ScraperTestInjector
-import org.specs2.mutable.SpecificationLike
-import org.specs2.specification.After
 import play.api.http.Status
 import play.api.libs.json.Json
 import play.api.mvc.SimpleResult
@@ -17,7 +15,7 @@ import play.api.test.Helpers._
 
 import scala.concurrent.Future
 
-class ScraperControllerTest extends TestKitSupport with SpecificationLike with After with ScraperTestInjector {
+class ScraperControllerTest extends TestKitSupport with ScraperTestInjector {
 
   val testFetcher: PartialFunction[String, HttpFetchStatus] = {
     case "https://www.google.com/" => HttpFetchStatus(Status.OK, None, new FetcherHttpContext {
@@ -25,17 +23,17 @@ class ScraperControllerTest extends TestKitSupport with SpecificationLike with A
       def redirects: Seq[HttpRedirect] = Seq.empty
     })
   }
-  val testFetcherModule = TestHttpFetcherModule(Some(testFetcher))
+  val testFetcherModule = FakeHttpFetcherModule(Some(testFetcher))
 
   def modules = {
     Seq(
       testFetcherModule,
       FakeEmbedlyModule(),
-      TestScraperProcessorActorModule(),
+      FakeScraperProcessorActorModule(),
       ScraperTestStoreModule(),
       FakeShoeboxServiceModule(),
       FakeActionAuthenticatorModule(),
-      TestActorSystemModule(Some(system))
+      FakeActorSystemModule()
     )
   }
 

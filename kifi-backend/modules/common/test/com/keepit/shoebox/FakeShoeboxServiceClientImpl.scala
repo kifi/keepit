@@ -35,11 +35,17 @@ class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(Seq.empty[ScrapeRequest])
   }
 
+  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
+
+  def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = ???
+
   def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
 
   def savePageInfo(pageInfo: PageInfo): Future[Unit] = ???
 
   def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo] = ???
+
+  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit] = Future.successful(())
 
   def saveImageInfo(imageInfo: ImageInfo): Future[ImageInfo] = ???
 
@@ -551,7 +557,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def kifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit] = Future.successful()
 
-  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = Future.successful(Seq.empty)
+  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = Future.successful(Seq.fill(uriIds.length)(HelpRankInfo(Id[NormalizedURI](0), 0, 0)))
 
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = {
     Future.successful(allUserFriendRequests.getOrElse(senderId, Seq()))
@@ -590,15 +596,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], userId: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit] = Future.successful(Unit)
 
-  def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = ???
-
-  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit] = Future.successful(())
-
-  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
-
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
 
   def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = Future.successful(Map.empty)
+
+  def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = Future.successful(Seq.fill(uris.size)(false))
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = Future.successful("https://www.kifi.com/assets/img/ghost.200.png")
 
@@ -613,4 +615,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = Future.successful(Seq.empty)
 
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]] = Future.successful(Seq.empty)
+
+  def getAllFakeUsers(): Future[Set[Id[User]]] = Future.successful(Set.empty)
 }

@@ -11,7 +11,7 @@ import com.keepit.common.healthcheck._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.heimdal.{ KifiHitContext, SanitizedKifiHit, HeimdalContext }
 import com.keepit.shoebox.{ FakeKeepImportsModule, KeepImportsModule }
-import com.keepit.common.actor.{ StandaloneTestActorSystemModule, TestActorSystemModule }
+import com.keepit.common.actor.{ FakeActorSystemModule }
 import akka.actor.ActorSystem
 import com.keepit.search.ArticleSearchResult
 import com.keepit.common.db.{ Id, ExternalId }
@@ -26,7 +26,6 @@ import scala.concurrent.Await
 class KeepInternerTest extends Specification with ShoeboxTestInjector {
 
   implicit val context = HeimdalContext.empty
-  implicit val system = ActorSystem("test")
   implicit val execCtx = fj
 
   def modules: Seq[ScalaModule] = Seq(FakeKeepImportsModule(), FakeScrapeSchedulerModule())
