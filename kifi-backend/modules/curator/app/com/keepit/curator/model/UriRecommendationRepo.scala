@@ -35,7 +35,7 @@ class UriRecommendationRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
     def masterScore = column[Float]("master_score", O.NotNull)
-    def allScores = column[UriScores]("all_score", O.NotNull)
+    def allScores = column[UriScores]("all_scores", O.NotNull)
     def seen = column[Boolean]("seen", O.NotNull)
     def clicked = column[Boolean]("clicked", O.NotNull)
     def kept = column[Boolean]("kept", O.NotNull)

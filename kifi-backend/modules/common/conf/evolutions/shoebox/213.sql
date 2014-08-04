@@ -11,7 +11,7 @@ CREATE TABLE if not exists uri_recommendation (
     user_id bigint(20) NOT NULL,
     uri_id bigint(20) NOT NULL,
     master_score float(10) NOT NULL,
-    all_score varchar(256) NOT NULL,
+    all_scores varchar(256) NOT NULL,
     seen boolean NOT NULL,
     clicked boolean NOT NULL,
     kept boolean NOT NULL,
