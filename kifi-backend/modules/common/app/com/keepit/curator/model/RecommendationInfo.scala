@@ -5,7 +5,7 @@ import com.keepit.model.{ NormalizedURI, User }
 
 import com.kifi.macros.json
 
-@json case class AdminRecommendation(
+@json case class RecommendationInfo(
   userId: Id[User], //who is this recommendation for
   uriId: Id[NormalizedURI], //what uri is being recommended
   score: Float, //the score of the uri

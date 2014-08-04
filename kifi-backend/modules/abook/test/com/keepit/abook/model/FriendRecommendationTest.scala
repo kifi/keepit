@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import com.keepit.abook.ABookTestInjector
 import com.keepit.common.db.Id
 
-class FriendAdminRecommendationTest extends Specification with ABookTestInjector {
+class FriendRecommendationTest extends Specification with ABookTestInjector {
 
   "FriendRecommendationRepo" should withDb() { implicit injector =>
     "track irrelevant recommendations" in {
