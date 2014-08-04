@@ -20,7 +20,7 @@ import java.sql.SQLException
 import com.keepit.common.performance._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
-import com.keepit.abook.commanders.{LocalRichConnectionCommander, ContactInterner}
+import com.keepit.abook.commanders.{ LocalRichConnectionCommander, ContactInterner }
 import com.keepit.abook.model.EContactRepo
 
 trait ABookImporterPlugin extends Plugin {
