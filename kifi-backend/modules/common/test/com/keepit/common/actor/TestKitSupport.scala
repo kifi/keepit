@@ -16,8 +16,12 @@ abstract class TestKitSupport(testSystem: ActorSystem = ActorTestSupport.getActo
 }
 
 object ActorTestSupport {
-  def getActorSystem(appOpt: Option[play.api.Application] = Play.maybeApplication) = appOpt match {
-    case Some(app) => ActorSystem("test-app-actor-system", app.configuration.underlying, app.classloader)
-    case None => ActorSystem("test-standalone-actor-system", ConfigFactory.parseString("akka.log-dead-letters-during-shutdown=false"))
+  def getActorSystem(appOpt: Option[play.api.Application] = Play.maybeApplication) = {
+    val testConfig = ConfigFactory.parseString("akka.log-dead-letters-during-shutdown=false") // reduce noise
+    appOpt match {
+      case Some(app) => ActorSystem("test-app-actor-system", app.configuration.underlying, app.classloader)
+      case None =>
+        ActorSystem("test-standalone-actor-system", ConfigFactory.load(testConfig))
+    }
   }
 }
