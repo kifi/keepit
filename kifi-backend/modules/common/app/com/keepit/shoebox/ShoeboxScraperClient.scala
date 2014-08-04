@@ -17,9 +17,11 @@ import com.keepit.common._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 trait ShoeboxScraperClient extends ServiceClient {
   private val ? = null
+  def getAllURLPatterns(): Future[Seq[UrlPatternRule]]
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]]
   def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean]
   def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean]
@@ -36,17 +38,38 @@ trait ShoeboxScraperClient extends ServiceClient {
   def getProxyP(url: String): Future[Option[HttpProxy]]
   def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]]
   def getLatestKeep(url: String): Future[Option[Keep]]
+  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit]
   def saveBookmark(bookmark: Keep): Future[Keep]
+  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]]
 }
 
 class ShoeboxScraperClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
   override val httpClient: HttpClient,
-  val airbrakeNotifier: AirbrakeNotifier)
+  val airbrakeNotifier: AirbrakeNotifier,
+  urlPatternRuleAllCache: UrlPatternRuleAllCache)
     extends ShoeboxScraperClient with Logging {
 
   val MaxUrlLength = 3000
   val longTimeout = CallTimeouts(responseTimeout = Some(60000), maxWaitTime = Some(60000), maxJsonParseTime = Some(30000))
+
+  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = {
+    call(Shoebox.internal.getUriImage(nUriId)).map { r =>
+      Json.fromJson[Option[String]](r.json).get
+    }
+  }
+
+  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit] = {
+    call(Shoebox.internal.updateScreenshots(nUriId)).map { r => assert(r.status == 202); () }
+  }
+
+  def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = {
+    urlPatternRuleAllCache.getOrElseFuture(UrlPatternRuleAllKey()) {
+      call(Shoebox.internal.allURLPatternRules()).map { r =>
+        Json.fromJson[Seq[UrlPatternRule]](r.json).get
+      }
+    }
+  }
 
   def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
     call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>

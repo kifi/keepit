@@ -96,9 +96,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def isSensitiveURI(uri: String): Future[Boolean]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], user: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit]
-  def getAllURLPatterns(): Future[Seq[UrlPatternRule]]
-  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit]
-  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]]
   def getUriSummary(request: URISummaryRequest): Future[URISummary]
   def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]]
   def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
@@ -132,7 +129,6 @@ case class ShoeboxCacheProvider @Inject() (
   userBookmarkCountCache: KeepCountCache,
   userSegmentCache: UserSegmentCache,
   extensionVersionCache: ExtensionVersionInstallationIdCache,
-  urlPatternRuleAllCache: UrlPatternRuleAllCache,
   allFakeUsersCache: AllFakeUsersCache)
 
 class ShoeboxServiceClientImpl @Inject() (
@@ -617,24 +613,6 @@ class ShoeboxServiceClientImpl @Inject() (
       "notificationUpdatedAt" -> notificationUpdatedAt
     )
     call(Shoebox.internal.sendUnreadMessages(), payload).imap(_ => {})
-  }
-
-  def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = {
-    cacheProvider.urlPatternRuleAllCache.getOrElseFuture(UrlPatternRuleAllKey()) {
-      call(Shoebox.internal.allURLPatternRules()).map { r =>
-        Json.fromJson[Seq[UrlPatternRule]](r.json).get
-      }
-    }
-  }
-
-  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit] = {
-    call(Shoebox.internal.updateScreenshots(nUriId)).map { r => assert(r.status == 202); () }
-  }
-
-  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = {
-    call(Shoebox.internal.getUriImage(nUriId)).map { r =>
-      Json.fromJson[Option[String]](r.json).get
-    }
   }
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = {
