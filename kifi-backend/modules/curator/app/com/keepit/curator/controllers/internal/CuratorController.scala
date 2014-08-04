@@ -17,7 +17,7 @@ import com.google.inject.Inject
 class CuratorController @Inject() (recoGenCommander: RecommendationGenerationCommander) extends CuratorServiceController {
 
   def adHocRecos(userId: Id[User], n: Int) = Action.async { request =>
-    recoGenCommander.getAdHocAdminRecommendations(userId, n, request.body.asJson match {
+    recoGenCommander.getAdHocRecommendations(userId, n, request.body.asJson match {
       case Some(json) => json.as[Map[ScoreType.Value, Float]]
       case None => Map[ScoreType.Value, Float]()
     }).map(recos => Ok(Json.toJson(recos)))

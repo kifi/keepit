@@ -21,7 +21,7 @@ class RecommendationGenerationCommander @Inject() (
 
   val defaultScore = 0.0f
 
-  def getAdHocAdminRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[RecommendationInfo]] = {
+  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[RecommendationInfo]] = {
     val seedsFuture = for {
       seeds <- seedCommander.getTopItems(userId, Math.max(howManyMax, 200))
       restrictions <- shoebox.getAdultRestrictionOfURIs(seeds.map { _.uriId })
