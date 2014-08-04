@@ -18,8 +18,6 @@ CREATE TABLE if not exists uri_recommendation (
 
     PRIMARY KEY (id),
 
-    CONSTRAINT user_u_external_id UNIQUE (external_id),
-
     UNIQUE INDEX recommendation_u_user_id_uri_id (user_id, uri_id)
 );
 
