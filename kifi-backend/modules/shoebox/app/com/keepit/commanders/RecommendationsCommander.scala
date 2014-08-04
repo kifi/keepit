@@ -4,7 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.ScoreType._
 import com.keepit.model.{ ScoreType, User, NormalizedURIRepo, NormalizedURI, NormalizedURIStates }
 import com.keepit.curator.CuratorServiceClient
-import com.keepit.curator.model.Recommendation
+import com.keepit.curator.model.RecommendationInfo
 import com.keepit.common.db.slick.Database
 
 import com.google.inject.Inject
@@ -21,7 +21,7 @@ class RecommendationsCommander @Inject() (
 
   def adHocRecos(userId: Id[User], howManyMax: Int, scoreCoefficientsUpdate: Map[ScoreType.Value, Float]): Future[Seq[KeepInfo]] = {
     curator.adHocRecos(userId, howManyMax, scoreCoefficientsUpdate).flatMap { recos =>
-      val recosWithUris: Seq[(Recommendation, NormalizedURI)] = db.readOnlyReplica { implicit session =>
+      val recosWithUris: Seq[(RecommendationInfo, NormalizedURI)] = db.readOnlyReplica { implicit session =>
         recos.map { reco => (reco, nUriRepo.get(reco.uriId)) }
       }.filter(_._2.state == NormalizedURIStates.SCRAPED)
 
