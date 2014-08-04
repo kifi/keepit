@@ -2,8 +2,9 @@ package com.keepit.commanders
 
 import com.keepit.common.db.Id
 import com.keepit.model.ScoreType._
-import com.keepit.model.{ ScoreType, User, NormalizedURIRepo }
+import com.keepit.model.{ ScoreType, User, NormalizedURIRepo, NormalizedURI, NormalizedURIStates }
 import com.keepit.curator.CuratorServiceClient
+import com.keepit.curator.model.Recommendation
 import com.keepit.common.db.slick.Database
 
 import com.google.inject.Inject
@@ -20,9 +21,12 @@ class RecommendationsCommander @Inject() (
 
   def adHocRecos(userId: Id[User], howManyMax: Int, scoreCoefficientsUpdate: Map[ScoreType.Value, Float]): Future[Seq[KeepInfo]] = {
     curator.adHocRecos(userId, howManyMax, scoreCoefficientsUpdate).flatMap { recos =>
-      db.readOnlyReplica { implicit session =>
-        Future.sequence(recos.map { reco =>
-          val nUri = nUriRepo.get(reco.uriId)
+      val recosWithUris: Seq[(Recommendation, NormalizedURI)] = db.readOnlyReplica { implicit session =>
+        recos.map { reco => (reco, nUriRepo.get(reco.uriId)) }
+      }.filter(_._2.state == NormalizedURIStates.SCRAPED)
+
+      Future.sequence(recosWithUris.map {
+        case (reco, nUri) =>
           uriSummaryCommander.getDefaultURISummary(nUri, waiting = false).map { uriSummary =>
             KeepInfo(
               title = nUri.title,
@@ -31,8 +35,8 @@ class RecommendationsCommander @Inject() (
               uriSummary = Some(uriSummary.copy(description = reco.explain))
             )
           }
-        })
-      }
+      })
+
     }
   }
 
