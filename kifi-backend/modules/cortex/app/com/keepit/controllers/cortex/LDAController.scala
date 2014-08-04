@@ -104,4 +104,8 @@ class LDAController @Inject() (
     Ok(Json.toJson(score))
   }
 
+  def zeroEvidencePatch() = Action { request =>
+    lda.zeroEvidencePatch()
+    Ok
+  }
 }
