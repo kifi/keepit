@@ -30,7 +30,9 @@ object UriScoresSerializer extends Format[UriScores] {
       "overallInterestScore" -> JsNumber(uriScores.overallInterestScore),
       "recentInterestScore" -> JsNumber(uriScores.recentInterestScore),
       "recencyScore" -> JsNumber(uriScores.recencyScore),
-      "priorScore" -> JsNumber(uriScores.priorScore)
+      "priorScore" -> JsNumber(uriScores.priorScore),
+      "rekeepScore" -> JsNumber(uriScores.priorScore),
+      "discoveryScore" -> JsNumber(uriScores.priorScore)
     ))
 
   def reads(json: JsValue): JsSuccess[UriScores] = JsSuccess({
@@ -40,7 +42,9 @@ object UriScoresSerializer extends Format[UriScores] {
       overallInterestScore = (json \ "overallInterestScore").as[Float],
       recentInterestScore = (json \ "recentInterestScore").as[Float],
       recencyScore = (json \ "recencyScore").as[Float],
-      priorScore = (json \ "priorScore").as[Float]
+      priorScore = (json \ "priorScore").as[Float],
+      rekeepScore = (json \ "rekeepScore").as[Float],
+      discoveryScore = (json \ "discoveryScore").as[Float]
     )
   })
 }
