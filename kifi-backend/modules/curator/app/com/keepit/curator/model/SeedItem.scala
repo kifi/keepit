@@ -22,34 +22,6 @@ case class SeedItem(
   lastSeen: DateTime,
   keepers: Keepers)
 
-//object UriScoresSerializer extends Format[UriScores] {
-//
-//  def writes(uriScores: UriScores): JsValue =
-//    JsObject(List(
-//      "socialScore" -> JsNumber(uriScores.socialScore),
-//      "popularityScore" -> JsNumber(uriScores.popularityScore),
-//      "overallInterestScore" -> JsNumber(uriScores.overallInterestScore),
-//      "recentInterestScore" -> JsNumber(uriScores.recentInterestScore),
-//      "recencyScore" -> JsNumber(uriScores.recencyScore),
-//      "priorScore" -> JsNumber(uriScores.priorScore),
-//      "rekeepScore" -> JsNumber(uriScores.priorScore),
-//      "discoveryScore" -> JsNumber(uriScores.priorScore)
-//    ))
-//
-//  def reads(json: JsValue): JsSuccess[UriScores] = JsSuccess({
-//    UriScores(
-//      socialScore = (json \ "socialScore").as[Float],
-//      popularityScore = (json \ "popularityScore").as[Float],
-//      overallInterestScore = (json \ "overallInterestScore").as[Float],
-//      recentInterestScore = (json \ "recentInterestScore").as[Float],
-//      recencyScore = (json \ "recencyScore").as[Float],
-//      priorScore = (json \ "priorScore").as[Float],
-//      rekeepScore = (json \ "rekeepScore").as[Float],
-//      discoveryScore = (json \ "discoveryScore").as[Float]
-//    )
-//  })
-//}
-
 @json case class UriScores(
     socialScore: Float,
     popularityScore: Float,
