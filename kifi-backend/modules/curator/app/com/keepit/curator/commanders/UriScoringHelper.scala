@@ -100,12 +100,12 @@ class UriScoringHelper @Inject() (
 
     val socialScoresFuture = getRawSocialScores(items)
     val interestScoresFuture = getRawInterestScores(items)
-    val helpRankScoresFuture = getRawHelpRankScores(items)
+    // val helpRankScoresFuture = getRawHelpRankScores(items)
 
     for (
       socialScores <- socialScoresFuture;
-      (overallInterestScores, recentInterestScores) <- interestScoresFuture;
-      (rekeepScores, discoveryScores) <- helpRankScoresFuture
+      (overallInterestScores, recentInterestScores) <- interestScoresFuture
+    // (rekeepScores, discoveryScores) <- helpRankScoresFuture
     ) yield {
       for (i <- 0 until items.length) yield {
         val scores = UriScores(
@@ -115,8 +115,8 @@ class UriScoringHelper @Inject() (
           recentInterestScore = recentInterestScores(i),
           recencyScore = recencyScores(i),
           priorScore = priorScores(i),
-          rekeepScore = rekeepScores(i),
-          discoveryScore = discoveryScores(i)
+          rekeepScore = 0.0f, //rekeepScores(i),
+          discoveryScore = 0.0f //discoveryScores(i)
         )
         ScoredSeedItem(items(i).userId, items(i).uriId, scores)
       }
