@@ -20,7 +20,8 @@ import java.sql.SQLException
 import com.keepit.common.performance._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
-import com.keepit.abook.commanders.ContactInterner
+import com.keepit.abook.commanders.{LocalRichConnectionCommander, ContactInterner}
+import com.keepit.abook.model.EContactRepo
 
 trait ABookImporterPlugin extends Plugin {
   def asyncProcessContacts(userId: Id[User], origin: ABookOriginType, aBookInfo: ABookInfo, s3Key: String, rawJsonRef: Option[WeakReference[JsValue]]): Unit
@@ -65,7 +66,9 @@ class ABookImporter @Inject() (
     contactInterner: ContactInterner,
     airbrake: AirbrakeNotifier,
     abookUploadConf: ABookUploadConf,
-    shoeboxClient: ShoeboxServiceClient) extends Logging {
+    shoeboxClient: ShoeboxServiceClient,
+    localRichConnectionCommander: LocalRichConnectionCommander,
+    contactRepo: EContactRepo) extends Logging {
 
   implicit class RichOptString(o: Option[String]) {
     def trimOpt = o collect { case s: String if (s != null && !s.trim.isEmpty) => s }
@@ -113,11 +116,14 @@ class ABookImporter @Inject() (
               abookInfoRepo.save(abookEntry.withNumProcessed(Some(processed))) // status update
             }
           }
-          abookEntry = db.readWrite(attempts = 2) { implicit s =>
+          val (importedABook, importedContacts) = db.readWrite(attempts = 2) { implicit s =>
             val saved = abookInfoRepo.save(abookEntry.withState(ABookInfoStates.ACTIVE))
             log.infoP(s"abook is ACTIVE! saved=$saved")
-            saved
+            val contacts = contactRepo.getByAbookId(saved.id.get)
+            (saved, contacts)
           }
+          importedContacts.foreach(localRichConnectionCommander.processEContact)
+          importedABook
         }
       }
     } catch {
