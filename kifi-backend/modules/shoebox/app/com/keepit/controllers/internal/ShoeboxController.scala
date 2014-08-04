@@ -564,8 +564,9 @@ class ShoeboxController @Inject() (
 
   def getHelpRankInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
     val uriIds = Json.fromJson[Seq[Id[NormalizedURI]]](request.body).get
-    val infos = keepsCommander.getHelpRankInfo(uriIds.toSet)
-    log.info(s"[getHelpRankInfo] infos=${infos.mkString(",")}")
+    val infos = keepsCommander.getHelpRankInfo(uriIds)
+    if (uriIds.length != infos.length) // debug
+      log.warn(s"[getHelpRankInfo] (mismatch) uriIds(len=${uriIds.length}):${uriIds.mkString(",")} res(len=${infos.length}):${infos.mkString(",")}")
     Ok(Json.toJson(infos))
   }
 
