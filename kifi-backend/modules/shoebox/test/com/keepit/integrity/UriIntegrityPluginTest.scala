@@ -1,19 +1,13 @@
 package com.keepit.integrity
 
 import org.specs2.mutable.SpecificationLike
-import org.specs2.mutable.{ After, Specification }
-import com.keepit.test.ShoeboxApplication
-import com.keepit.test.ShoeboxApplicationInjector
-import play.api.test.Helpers.running
 import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 import com.keepit.test.ShoeboxTestInjector
-import com.google.inject.Injector
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.db.SequenceNumber
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.common.zookeeper.CentralConfig
-import com.keepit.common.healthcheck.FakeAirbrakeModule
 
 class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
