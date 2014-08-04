@@ -1,6 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ Recommendation, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, ScoredSeedItem }
+import com.keepit.curator.model.{ RecommendationInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, ScoredSeedItem }
 import com.keepit.common.db.Id
 import com.keepit.model.ScoreType._
 import com.keepit.model.{ ScoreType, User }
@@ -55,7 +55,7 @@ class RecommendationGenerationCommander @Inject() (
     0.3f * scoredItem.uriScores.socialScore + 2 * scoredItem.uriScores.overallInterestScore + 0.5f * scoredItem.uriScores.priorScore
   }
 
-  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[Recommendation]] = {
+  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[RecommendationInfo]] = {
     val seedsFuture = for {
       seeds <- seedCommander.getTopItems(userId, Math.max(howManyMax, 200))
       restrictions <- shoebox.getAdultRestrictionOfURIs(seeds.map { _.uriId })
@@ -66,7 +66,7 @@ class RecommendationGenerationCommander @Inject() (
     val scoredItemsFuture = seedsFuture.flatMap { seeds => scoringHelper(seeds) }
     scoredItemsFuture.map { scoredItems =>
       scoredItems.map { scoredItem =>
-        Recommendation(
+        RecommendationInfo(
           userId = scoredItem.userId,
           uriId = scoredItem.uriId,
           score = if (scoreCoefficients.isEmpty)

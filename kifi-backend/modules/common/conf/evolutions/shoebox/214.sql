@@ -14,6 +14,6 @@ CREATE TABLE user_recommendation_generation_state (
 
 
 
-insert into evolutions (name, description) values('213.sql', 'adding user_recommendation_generation_state to curator');
+insert into evolutions (name, description) values('214.sql', 'adding user_recommendation_generation_state to curator');
 
 # --- !Downs
