@@ -626,11 +626,12 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def getHelpRankInfo(uriIds: Set[Id[NormalizedURI]]): Seq[HelpRankInfo] = {
+  def getHelpRankInfo(uriIds: Seq[Id[NormalizedURI]]): Seq[HelpRankInfo] = {
+    val uriIdSet = uriIds.toSet
     val (discMap, rkMap) = db.readOnlyMaster { implicit ro =>
-      val discMap = keepDiscoveriesRepo.getDiscoveryCountsByURIs(uriIds)
-      val rkMap = rekeepRepo.getReKeepCountsByURIs(uriIds)
-      log.info(s"getHelpRankInfo discMap=$discMap rkMap=$rkMap")
+      val discMap = keepDiscoveriesRepo.getDiscoveryCountsByURIs(uriIdSet)
+      val rkMap = rekeepRepo.getReKeepCountsByURIs(uriIdSet)
+      log.info(s"[getHelpRankInfo] discMap=$discMap rkMap=$rkMap")
       (discMap, rkMap)
     }
     uriIds.toSeq.map { uriId =>
