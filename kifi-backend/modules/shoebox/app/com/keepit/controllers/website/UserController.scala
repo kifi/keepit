@@ -94,7 +94,7 @@ class UserController @Inject() (
     abookServiceClient.findFriends(request.userId, page, pageSize).map { recommendedUsers =>
       val basicUsers = db.readOnlyReplica { implicit session => basicUserRepo.loadAll(recommendedUsers.toSet) }
       val recommendedBasicUsers = recommendedUsers.map(basicUsers(_))
-      val json = Json.obj("kifi" -> recommendedBasicUsers)
+      val json = Json.obj("users" -> recommendedBasicUsers)
       Ok(json)
     }
   }
