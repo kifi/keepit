@@ -17,7 +17,7 @@ import scala.util.Success
 import com.keepit.learning.porndetector.PornDetectorFactory
 import com.keepit.learning.porndetector.SlidingWindowPornDetector
 import com.keepit.search.Lang
-import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.shoebox.{ ShoeboxScraperClient, ShoeboxServiceClient }
 import scala.concurrent.Future
 import com.keepit.common.db.Id
 import com.keepit.scraper.embedly.EmbedlyCommander
@@ -37,6 +37,7 @@ class ScrapeWorkerImpl @Inject() (
     pornDetectorFactory: PornDetectorFactory,
     syncHelper: SyncShoeboxDbCallbacks,
     dbHelper: ShoeboxDbCallbacks,
+    shoeboxScraperClient: ShoeboxScraperClient,
     shoeboxClient: ShoeboxServiceClient,
     wordCountCache: NormalizedURIWordCountCache,
     uriSummaryCache: URISummaryCache,
@@ -155,12 +156,12 @@ class ScrapeWorkerImpl @Inject() (
       log.debug(s"[processURI] fetched uri ${scrapedURI.url} => article(${article.id}, ${article.title})")
 
       if (shouldUpdateScreenshot(scrapedURI)) {
-        scrapedURI.id map shoeboxClient.updateScreenshots
+        scrapedURI.id map shoeboxScraperClient.updateScreenshots
       }
 
       if (shouldUpdateImage(latestUri, scrapedURI, pageInfoOpt)) {
         scrapedURI.id map { id =>
-          shoeboxClient.getUriImage(id) map { res =>
+          shoeboxScraperClient.getUriImage(id) map { res =>
             log.info(s"[processURI(${latestUri.id},${latestUri.url})] (asyncGetImageUrl) imageUrl=$res")
           }
         }
@@ -413,7 +414,7 @@ class ScrapeWorkerImpl @Inject() (
   }
 
   private def isNonSensitive(url: String): Future[Boolean] = {
-    shoeboxClient.getAllURLPatterns().map { patterns =>
+    shoeboxScraperClient.getAllURLPatterns().map { patterns =>
       val pat = patterns.find(rule => url.matches(rule.pattern))
       pat.exists(_.nonSensitive)
     }
