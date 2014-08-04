@@ -628,6 +628,9 @@ class KeepsCommander @Inject() (
 
   def getHelpRankInfo(uriIds: Seq[Id[NormalizedURI]]): Seq[HelpRankInfo] = {
     val uriIdSet = uriIds.toSet
+    if (uriIdSet.size != uriIds.length) {
+      log.warn(s"[getHelpRankInfo] (duplicates!) uriIds(len=${uriIds.length}):${uriIds.mkString(",")} idSet(sz=${uriIdSet.size}):${uriIdSet.mkString(",")}")
+    }
     val (discMap, rkMap) = db.readOnlyMaster { implicit ro =>
       val discMap = keepDiscoveriesRepo.getDiscoveryCountsByURIs(uriIdSet)
       val rkMap = rekeepRepo.getReKeepCountsByURIs(uriIdSet)
