@@ -213,8 +213,8 @@ class LDACommander @Inject() (
     def countWords(uriId: Id[NormalizedURI]): Int = {
       articleStore.get(uriId).map { article =>
         if (article.contentLang == Some(Lang("en"))) {
-          val tokens = article.content.toLowerCase.split(" ").toSet.filter(x => !x.isEmpty && !stopwords.contains(x))
-          tokens.intersect(wordRep.lda.mapper.keySet).size
+          val tokens = article.content.toLowerCase.split(" ").toSet.filter(x => !x.isEmpty && !stopwords.contains(x) && wordRep.lda.mapper.keySet.contains(x))
+          tokens.size
         } else 0
       } getOrElse 0
     }
