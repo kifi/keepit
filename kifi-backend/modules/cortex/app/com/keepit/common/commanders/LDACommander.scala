@@ -3,16 +3,13 @@ package com.keepit.common.commanders
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.Logging
 import com.keepit.cortex.MiscPrefix
 import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.dbmodel._
+import com.keepit.cortex.dbmodel.{ URILDATopicRepo, UserLDAInterests, UserLDAInterestsRepo, UserTopicMean }
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.models.lda._
-import com.keepit.cortex.nlp.Stopwords
 import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.{ NormalizedURI, User }
-import com.keepit.search.{ Lang, ArticleStore }
 
 import scala.collection.mutable
 import scala.math.exp
@@ -28,9 +25,7 @@ class LDACommander @Inject() (
     ldaConfigs: LDATopicConfigurations,
     configStore: LDAConfigStore,
     ldaRetriever: LDAURIFeatureRetriever,
-    userLDAStatsRetriever: UserLDAStatisticsRetriever,
-    articleStore: ArticleStore,
-    stopwords: Stopwords) extends Logging {
+    userLDAStatsRetriever: UserLDAStatisticsRetriever) {
   assume(ldaTopicWords.topicWords.length == wordRep.lda.dimension)
 
   var currentConfig = ldaConfigs
@@ -206,30 +201,6 @@ class LDACommander @Inject() (
       case _ => None
     }
 
-  }
-
-  def zeroEvidencePatch() {
-    def fetchTasks() = db.readOnlyMaster { implicit s => uriTopicRepo.activeFeatureWithZeroEvidence(wordRep.version, limit = 100) }
-    def countWords(uriId: Id[NormalizedURI]): Int = {
-      articleStore.get(uriId).map { article =>
-        if (article.contentLang == Some(Lang("en"))) {
-          val tokens = article.content.toLowerCase.split(" ").toSet.filter(x => !x.isEmpty && !stopwords.contains(x) && wordRep.lda.mapper.keySet.contains(x))
-          tokens.size
-        } else 0
-      } getOrElse 0
-    }
-    def modify(model: URILDATopic, numOfWords: Int): URILDATopic = { val state = if (numOfWords < 20) URILDATopicStates.NOT_APPLICABLE else URILDATopicStates.ACTIVE; model.copy(numOfWords = numOfWords, state = state) }
-
-    var tasks = fetchTasks()
-    while (tasks.size > 0) {
-      log.info(s"${tasks.size} features to be patched for num of words")
-      val toSaves = tasks.map { model => val wc = countWords(model.uriId); modify(model, wc) }
-      db.readWrite { implicit s =>
-        toSaves.foreach { uriTopicRepo.save(_) }
-      }
-      log.info(s"done with one round. next round...")
-      tasks = fetchTasks()
-    }
   }
 
 }
