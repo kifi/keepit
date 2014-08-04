@@ -15,7 +15,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import akka.actor.ActorSystem
 
 @Singleton
-class SeedIngestionPlugin @Inject() (
+class CuratorTasksPlugin @Inject() (
     commander: SeedIngestionCommander,
     system: ActorSystem,
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
