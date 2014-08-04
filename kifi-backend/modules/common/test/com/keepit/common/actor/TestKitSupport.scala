@@ -11,7 +11,7 @@ import play.api.Play
 // shutdown() is required to ensure there's no memory leak
 abstract class TestKitSupport(testSystem: ActorSystem = ActorTestSupport.getActorSystem()) extends TestKit(testSystem) with SpecificationLike with BeforeAndAfterAll with NoTimeConversions {
   override def afterAll = {
-    system.shutdown
+    shutdown(system)
   }
 }
 
