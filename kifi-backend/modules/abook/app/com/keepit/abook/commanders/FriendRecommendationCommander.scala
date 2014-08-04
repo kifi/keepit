@@ -27,6 +27,7 @@ class FriendRecommendationCommander @Inject() (
     val futureFriendships = graph.getUserFriendships(userId, bePatient = false)
     val futureFriends = shoebox.getFriends(userId)
     val futureFriendRequests = shoebox.getFriendRequestsBySender(userId)
+    val futureFakeUsers = shoebox.getAllFakeUsers()
     val rejectedRecommendations = db.readOnlyMaster { implicit session =>
       friendRecommendationRepo.getIrrelevantRecommendations(userId)
     }
@@ -35,8 +36,9 @@ class FriendRecommendationCommander @Inject() (
       else for {
         friends <- futureFriends
         friendRequests <- futureFriendRequests
+        fakeUsers <- futureFakeUsers
       } yield {
-        val irrelevantRecommendations = rejectedRecommendations ++ friends ++ friendRequests.map(_.recipientId)
+        val irrelevantRecommendations = rejectedRecommendations ++ friends ++ friendRequests.map(_.recipientId) ++ fakeUsers
         val recommendations = friendships.iterator.filter { case (friendId, _) => !irrelevantRecommendations.contains(friendId) }
         recommendations.drop(page * pageSize).take(pageSize).map(_._1).toSeq
       }

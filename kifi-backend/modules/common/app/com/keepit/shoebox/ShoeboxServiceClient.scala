@@ -106,6 +106,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]]
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]]
+  def getAllFakeUsers(): Future[Set[Id[User]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -127,7 +128,8 @@ case class ShoeboxCacheProvider @Inject() (
   userConnCountCache: UserConnectionCountCache,
   userBookmarkCountCache: KeepCountCache,
   userSegmentCache: UserSegmentCache,
-  extensionVersionCache: ExtensionVersionInstallationIdCache)
+  extensionVersionCache: ExtensionVersionInstallationIdCache,
+  allFakeUsersCache: AllFakeUsersCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -678,5 +680,9 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getLapsedUsersForDelighted(maxCount, skipCount, after, before), callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[DelightedUserRegistrationInfo]]
     }
+  }
+
+  def getAllFakeUsers(): Future[Set[Id[User]]] = cacheProvider.allFakeUsersCache.getOrElseFuture(AllFakeUsersKey) {
+    call(Shoebox.internal.getAllFakeUsers()).map(_.json.as[Set[Id[User]]])
   }
 }
