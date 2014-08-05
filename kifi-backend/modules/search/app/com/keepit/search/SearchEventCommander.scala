@@ -15,7 +15,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 class SearchEventCommander @Inject() (
     shoeboxClient: ShoeboxServiceClient,
-    heimdalClient: HeimdalServiceClient,
     clickHistoryTracker: ClickHistoryTracker,
     resultClickedTracker: ResultClickTracker,
     searchAnalytics: SearchAnalytics) extends Logging {
