@@ -117,7 +117,7 @@
   transition: width .25s ease-in-out;
 }
 [kifi-with-pane] .kifi-keep-card {
-  width: 121px;
+  width: 125px;
 }
 .kifi-pane .kifi-keep-card {
   left: 153px;
