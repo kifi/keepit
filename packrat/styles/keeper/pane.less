@@ -296,6 +296,25 @@ a.kifi-pane-top-menu-a {
   border-radius: 12px;
   overflow: hidden;
 }
+.kifi-pane-cubby::before,
+.kifi-pane-cubby::after {  // crbug.com/157218 & 399785
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  height: 12px;
+  width: 12px;
+  background: url(/images/pane/corner_mask.png);
+  background-size: 12px 12px;
+}
+.kifi-pane-cubby::before {
+  left: -1px;
+  z-index: 1;
+}
+.kifi-pane-cubby::after {
+  right: -1px;
+  -webkit-transform: scale(-1, 1);
+  transform: scale(-1, 1);
+}
 .kifi-pane-box-cart {
   position: absolute;
   top: 0;
