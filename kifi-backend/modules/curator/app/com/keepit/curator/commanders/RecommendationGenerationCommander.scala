@@ -69,7 +69,7 @@ class RecommendationGenerationCommander @Inject() (
 
   def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[RecommendationInfo]] = {
     val recosFuture = db.readOnlyReplicaAsync { implicit session =>
-      recoRepo.getByTopMasterScore(userId, Math.max(howManyMax, 500))
+      recoRepo.getByTopMasterScore(userId, Math.max(howManyMax, 750))
     }
 
     recosFuture.map { recos =>
@@ -78,7 +78,7 @@ class RecommendationGenerationCommander @Inject() (
           userId = reco.userId,
           uriId = reco.uriId,
           score = if (scoreCoefficients.isEmpty)
-            reco.allScores.overallInterestScore
+            0.2f * reco.allScores.socialScore + 2.0f * reco.allScores.overallInterestScore + 1.0f * reco.allScores.recentInterestScore
           else
             scoreCoefficients.getOrElse(ScoreType.recencyScore, defaultScore) * reco.allScores.recencyScore
               + scoreCoefficients.getOrElse(ScoreType.overallInterestScore, defaultScore) * reco.allScores.overallInterestScore
