@@ -1,15 +1,22 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.mail.{ EmailAddress, SystemEmailAddress, ElectronicMail, ElectronicMailRepo }
+import com.keepit.common.mail._
 import com.keepit.common.db.slick.Database
 import com.keepit.heimdal._
 import com.keepit.common.performance.timing
-import com.keepit.model.{ NotificationCategory, UserEmailAddressRepo }
+import com.keepit.model._
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.social.NonUserKinds
-import scala.util.Try
+import org.joda.time.DateTime
+
+object SendgridEventTypes {
+  val CLICK = "click"
+  val UNSUBSCRIBE = "unsubscribe"
+  val BOUNCE = "bounce"
+  val SPAM_REPORT = "spamreport"
+}
 
 class SendgridCommander @Inject() (
     db: Database,
@@ -17,39 +24,36 @@ class SendgridCommander @Inject() (
     heimdalClient: HeimdalServiceClient,
     emailAddressRepo: UserEmailAddressRepo,
     electronicMailRepo: ElectronicMailRepo,
+    emailOptOutRepo: EmailOptOutRepo,
     heimdalContextBuilder: HeimdalContextBuilderFactory) extends Logging {
+
+  import SendgridEventTypes._
 
   def processNewEvents(events: Seq[SendgridEvent]): Unit = {
     events foreach report
   }
 
-  private val alertEventTypes = Set("bounce", "spamreport")
-
   private def emailAlert(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit =
     timing(s"sendgrid emailAlert eventType(${event.event}}) mailId(${event.mailId}}) ") {
-      event.event foreach { eventType =>
-        if (alertEventTypes.contains(eventType)) {
-          val htmlBody = emailOpt match {
-            case Some(email) => s"""|Got event:<br/> $event<br/><br/>
-                                   |Email data:<br/>
-                                   |Category: ${email.category}<br/>
-                                   |Subject: ${email.subject}<br/>
-                                   |From: ${email.from}<br/>
-                                   |To: ${email.to}<br/>
-                                   |CC: ${email.cc}<br/>
-                                   |Created at: ${email.createdAt}<br/>
-                                   |Updated at: ${email.updatedAt}<br/>""".stripMargin
-            case None => s"Got event:<br/> $event"
-          }
-          systemAdminMailSender.sendMail(
-            ElectronicMail(
-              from = SystemEmailAddress.ENG,
-              to = List(SystemEmailAddress.SUPPORT, SystemEmailAddress.SENDGRID),
-              subject = s"Sendgrid event [$eventType]",
-              htmlBody = htmlBody,
-              category = NotificationCategory.System.ADMIN))
-        }
+      val htmlBody = emailOpt match {
+        case Some(email) => s"""|Got event:<br/> $event<br/><br/>
+                               |Email data:<br/>
+                               |Category: ${email.category}<br/>
+                               |Subject: ${email.subject}<br/>
+                               |From: ${email.from}<br/>
+                               |To: ${email.to}<br/>
+                               |CC: ${email.cc}<br/>
+                               |Created at: ${email.createdAt}<br/>
+                               |Updated at: ${email.updatedAt}<br/>""".stripMargin
+        case None => s"Got event:<br/> $event"
       }
+      systemAdminMailSender.sendMail(
+        ElectronicMail(
+          from = SystemEmailAddress.ENG,
+          to = List(SystemEmailAddress.SUPPORT, SystemEmailAddress.SENDGRID),
+          subject = s"Sendgrid event [${event.event}]",
+          htmlBody = htmlBody,
+          category = NotificationCategory.System.ADMIN))
     }
 
   private def sendHeimdalEvent(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit =
@@ -89,7 +93,13 @@ class SendgridCommander @Inject() (
         mail <- db.readOnlyReplica { implicit s => electronicMailRepo.getOpt(mailId) }(captureLocation)
       } yield mail
     }
-    emailAlert(event, emailOpt)
+
+    event.event map { eventName: String =>
+      if (Seq(BOUNCE, SPAM_REPORT) contains eventName) emailAlert(event, emailOpt)
+      if (Seq(UNSUBSCRIBE, BOUNCE) contains eventName) handleUnsubscribeEvent(event, emailOpt)
+      if (CLICK == eventName) handleClickEvent(event, emailOpt)
+    }
+
     sendHeimdalEvent(event, emailOpt)
   }
 
@@ -100,4 +110,29 @@ class SendgridCommander @Inject() (
     case linkedin if linkedin.contains("linkedin.com/company/fortytwo") => "Kifi LinkedIn Page"
     case _ => "External Page"
   }
+
+  private def handleClickEvent(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit =
+    db.readWrite { implicit rw =>
+      for {
+        email <- emailOpt
+        userEmail <- email.to.headOption
+        emailAddr <- emailAddressRepo.getByAddressOpt(userEmail)
+        if !emailAddr.verified
+      } yield {
+        log.info(s"verifying email(${userEmail}) from SendGrid event(${event})")
+        emailAddressRepo.save(emailAddr.copy(state = UserEmailAddressStates.VERIFIED, verifiedAt = Some(DateTime.now)))
+      }
+    }
+
+  private def handleUnsubscribeEvent(event: SendgridEvent, emailOpt: Option[ElectronicMail]): Unit =
+    db.readWrite { implicit rw =>
+      for {
+        email <- emailOpt
+        userEmail <- email.to.headOption
+      } yield {
+        log.info(s"SendGrid unsubscribe email(${userEmail} from SendGrid event(${event})")
+        emailOptOutRepo.optOut(userEmail, NotificationCategory.ALL)
+      }
+    }
 }
+
