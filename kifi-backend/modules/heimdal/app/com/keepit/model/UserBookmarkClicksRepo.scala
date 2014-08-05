@@ -22,7 +22,7 @@ class UserBookmarkClicksRepoImpl @Inject() (
   import db.Driver.simple._
 
   type RepoImpl = UserBookmarkClicksTable
-  class UserBookmarkClicksTable(tag: Tag) extends RepoTable[UserBookmarkClicks](db, tag, "user_bookmark_clicks") {
+  class UserBookmarkClicksTable(tag: Tag) extends RepoTable[UserBookmarkClicks](db, tag, "user_keep_info") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def selfClicks = column[Int]("self_clicks", O.NotNull)

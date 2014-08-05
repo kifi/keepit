@@ -32,7 +32,7 @@ class KeepDiscoveryRepoImpl @Inject() (
   import db.Driver.simple._
 
   type RepoImpl = KeepDiscoveriesTable
-  class KeepDiscoveriesTable(tag: Tag) extends RepoTable[KeepDiscovery](db, tag, "keep_click") { // todo(ray): rename => keep_discovery
+  class KeepDiscoveriesTable(tag: Tag) extends RepoTable[KeepDiscovery](db, tag, "keep_discovery") {
     def hitUUID = column[ExternalId[ArticleSearchResult]]("hit_uuid", O.NotNull)
     def numKeepers = column[Int]("num_keepers", O.NotNull)
     def keeperId = column[Id[User]]("keeper_id", O.NotNull)

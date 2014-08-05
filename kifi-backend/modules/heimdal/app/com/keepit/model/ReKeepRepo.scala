@@ -36,7 +36,7 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
   import db.Driver.simple._
 
   type RepoImpl = ReKeepsTable
-  class ReKeepsTable(tag: Tag) extends RepoTable[ReKeep](db, tag, "rekeep") {
+  class ReKeepsTable(tag: Tag) extends RepoTable[ReKeep](db, tag, "re_keep") {
     def keeperId = column[Id[User]]("keeper_id", O.NotNull)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
