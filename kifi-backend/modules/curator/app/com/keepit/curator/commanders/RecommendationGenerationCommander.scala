@@ -12,7 +12,6 @@ import com.keepit.curator.model.{
 }
 import com.keepit.common.db.Id
 import com.keepit.model.ScoreType._
-import com.keepit.model.UriRecommendationFeedback.UriRecommendationFeedback
 import com.keepit.model.{ UriRecommendationFeedback, NormalizedURI, ScoreType, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ReactiveLock
@@ -70,10 +69,9 @@ class RecommendationGenerationCommander @Inject() (
     0.3f * scores.socialScore + 2 * scores.overallInterestScore + 0.5f * scores.priorScore
   }
 
-  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedbacks: Map[UriRecommendationFeedback.Value, Boolean]): Future[Boolean] = {
-
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: Map[UriRecommendationFeedback.Value, Boolean]): Future[Boolean] = {
     db.readWriteAsync { implicit session =>
-      uriRecRepo.updateUriRecommendationFeedback(userId, uriId, feedbacks)
+      uriRecRepo.updateUriRecommendationFeedback(userId, uriId, feedback)
     }
   }
 

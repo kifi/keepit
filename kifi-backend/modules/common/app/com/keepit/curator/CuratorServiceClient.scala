@@ -20,7 +20,7 @@ trait CuratorServiceClient extends ServiceClient {
   final val serviceType = ServiceType.CURATOR
 
   def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: Map[ScoreType.Value, Float]): Future[Seq[RecommendationInfo]]
-  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]): Future[Boolean]
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: Map[UriRecommendationFeedback.Value, Boolean]): Future[Boolean]
 
 }
 
@@ -37,8 +37,8 @@ class CuratorServiceClientImpl(
     }
   }
 
-  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]): Future[Boolean] = {
-    call(Curator.internal.updateUriRecommendationFeedback(userId, uriId), callTimeouts = longTimeout).map(response =>
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: Map[UriRecommendationFeedback.Value, Boolean]): Future[Boolean] = {
+    call(Curator.internal.updateUriRecommendationFeedback(userId, uriId), body = Json.toJson(feedback), callTimeouts = longTimeout).map(response =>
       response.json.as[Boolean]
     )
   }

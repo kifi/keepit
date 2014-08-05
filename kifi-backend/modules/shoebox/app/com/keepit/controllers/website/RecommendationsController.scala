@@ -23,16 +23,17 @@ class RecommendationsController @Inject() (
     commander: RecommendationsCommander,
     userExperimentCommander: LocalUserExperimentCommander) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
-  def adHocRecos(n: Int) = JsonAction.authenticatedAsync { request =>
+  def adHocRecos(n: Int) = JsonAction.authenticatedParseJsonAsync { request =>
     if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.ADMIN)) {
-      val body = request.body.asJson match {
-        case Some(json) => json.as[Map[ScoreType.Value, Float]]
-        case None => Map[ScoreType.Value, Float]()
-      }
-      commander.adHocRecos(request.userId, n, body).map(fkis => Ok(Json.toJson(fkis)))
+      val scores = request.body.as[Map[ScoreType.Value, Float]]
+      commander.adHocRecos(request.userId, n, scores).map(fkis => Ok(Json.toJson(fkis)))
     } else {
       Future.successful(Forbidden)
     }
   }
 
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = JsonAction.authenticatedParseJsonAsync { request =>
+    val feedback = request.body.as[Map[UriRecommendationFeedback.Value, Boolean]]
+    commander.updateUriRecommendationFeedback(userId, uriId, feedback).map(fkis => Ok(Json.toJson(fkis)))
+  }
 }

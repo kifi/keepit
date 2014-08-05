@@ -1,8 +1,9 @@
 package com.keepit.commanders
 
 import com.keepit.common.db.Id
+import com.keepit.model.ScoreType
 import com.keepit.model.ScoreType._
-import com.keepit.model.{ ScoreType, User, NormalizedURIRepo, NormalizedURI, NormalizedURIStates }
+import com.keepit.model._
 import com.keepit.model.UriRecommendationFeedback.UriRecommendationFeedback
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model.RecommendationInfo
@@ -39,6 +40,10 @@ class RecommendationsCommander @Inject() (
       })
 
     }
+  }
+
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: Map[UriRecommendationFeedback, Boolean]): Future[Boolean] = {
+    curator.updateUriRecommendationFeedback(userId, uriId, feedback)
   }
 
 }
