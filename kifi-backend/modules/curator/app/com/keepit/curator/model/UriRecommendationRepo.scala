@@ -47,6 +47,10 @@ class UriRecommendationRepoImpl @Inject() (
   def table(tag: Tag) = new RecommendationTable(tag)
   initTable()
 
+  override def save(uriRecommendation: UriRecommendation)(implicit session: RWSession): UriRecommendation = {
+    super.save(uriRecommendation)
+  }
+
   def getByUriAndUserId(uriId: Id[NormalizedURI], userId: Id[User], uriRecommendationState: Option[State[UriRecommendation]])(implicit session: RSession): Option[UriRecommendation] = {
     (for (row <- rows if row.uriId === uriId && row.userId === userId && row.state =!= uriRecommendationState.orNull) yield row).firstOption
   }
