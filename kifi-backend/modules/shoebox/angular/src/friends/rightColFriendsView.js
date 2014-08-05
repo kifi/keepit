@@ -72,8 +72,8 @@ angular.module('kifi.friends.rightColFriendsView', [])
 }])
 
 .directive('kfPeopleYouMayKnowView', 
-  ['$log', '$timeout', 'friendService', 'inviteService', 'wtiService', 
-  function ($log, $timeout, friendService, inviteService, wtiService) {
+  ['$log', '$q', '$timeout', 'friendService', 'inviteService', 'wtiService', 
+  function ($log, $q, $timeout, friendService, inviteService, wtiService) {
   return {
     replace: true,
     restrict: 'A',
@@ -87,7 +87,7 @@ angular.module('kifi.friends.rightColFriendsView', [])
           peopleYouMayKnow.push({
             id: person.id,
             fullName: name + ', ',
-            pictureUrl: friendService.getPictureUrlForUser(person) || 'https://www.kifi.com/assets/img/ghost.100.png',
+            pictureUrl: friendService.getPictureUrlForUser(person),
             actionText: 'Add',
             clickable: true,
             isKifiUser: true,
@@ -103,7 +103,9 @@ angular.module('kifi.friends.rightColFriendsView', [])
         };
 
         if (peopleYouMayKnow.length < 3) {
-          wtiService.getMore().then(function (wtiList) {
+          (wtiService.list.length > 0 ? $q.when(wtiService.list) : wtiService.getMore()).then(function () {
+            var wtiList = wtiService.list;
+
             wtiList.forEach(function (person) {
               var socialIdValues = person.fullSocialId.split('/');
               var name = '';
