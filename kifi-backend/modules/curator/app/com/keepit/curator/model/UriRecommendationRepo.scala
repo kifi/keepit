@@ -50,7 +50,7 @@ class UriRecommendationRepoImpl @Inject() (
   }
 
   def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation] = {
-    (for (row <- rows if row.userId === userId && row.state =!= uriRecommendationState.orNull) yield row).sortBy(_.masterScore.desc).take(maxBatchSize).list
+    (for (row <- rows if row.userId === userId) yield row).sortBy(_.masterScore.desc).take(maxBatchSize).list
   }
 
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}
