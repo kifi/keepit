@@ -191,6 +191,8 @@ object ApplicationBuild extends Build {
   lazy val kifiBackend = play.Project(appName, "0.42").settings(commonSettings: _*).settings(
     aggregate in update := false,
     Frontend.angularDirectory <<= (baseDirectory in Compile) { _ / "modules/shoebox/angular" }
+  ).settings(
+    Frontend.gulpCommands: _*
   ).dependsOn(
     common % "test->test;compile->compile",
     shoebox % "test->test;compile->compile",
