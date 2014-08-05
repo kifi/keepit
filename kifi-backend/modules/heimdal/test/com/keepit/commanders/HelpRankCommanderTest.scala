@@ -12,8 +12,11 @@ import com.keepit.test._
 import net.codingwell.scalaguice.ScalaModule
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
+import org.specs2.time.NoTimeConversions
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
-class HelpRankCommanderTest extends Specification with HeimdalTestInjector {
+class HelpRankCommanderTest extends Specification with HeimdalTestInjector with NoTimeConversions {
 
   implicit val execCtx = ExecutionContext.fj
 
@@ -72,8 +75,8 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector {
         )
 
         val commander = inject[HelpRankCommander]
-        commander.processKeepAttribution(u1.id.get, keeps1)
-        commander.processKeepAttribution(u2.id.get, keeps2) // nothing yet
+        Await.result(commander.processKeepAttribution(u1.id.get, keeps1), 5 seconds)
+        Await.result(commander.processKeepAttribution(u2.id.get, keeps2), 5 seconds) // nothing yet
 
         val (kc0, kc1, kc2, kc3) = db.readWrite { implicit rw =>
           val kifiHitCache = inject[KifiHitCache]
@@ -97,7 +100,7 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector {
           (kc0, kc1, kc2, kc3)
         }
 
-        commander.processKeepAttribution(u3.id.get, keeps3)
+        Await.result(commander.processKeepAttribution(u3.id.get, keeps3), 5 seconds)
 
         val kc4 = db.readWrite { implicit rw =>
           val kifiHitCache = inject[KifiHitCache]
@@ -108,7 +111,7 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector {
           kc4
         }
 
-        commander.processKeepAttribution(u4.id.get, keeps4)
+        Await.result(commander.processKeepAttribution(u4.id.get, keeps4), 5 seconds)
 
         db.readWrite { implicit session =>
 
