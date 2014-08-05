@@ -1,10 +1,11 @@
 package com.keepit.commanders
 
 import com.keepit.common.db.Id
-import com.keepit.model.{ User, NormalizedURIRepo, NormalizedURI }
+import com.keepit.model.ScoreType._
+import com.keepit.model.{ ScoreType, User, NormalizedURIRepo, NormalizedURI, NormalizedURIStates }
 import com.keepit.curator.CuratorServiceClient
+import com.keepit.curator.model.RecommendationInfo
 import com.keepit.common.db.slick.Database
-import com.keepit.curator.model.Recommendation
 
 import com.google.inject.Inject
 
@@ -18,11 +19,11 @@ class RecommendationsCommander @Inject() (
     nUriRepo: NormalizedURIRepo,
     uriSummaryCommander: URISummaryCommander) {
 
-  def adHocRecos(userId: Id[User], howManyMax: Int): Future[Seq[KeepInfo]] = {
-    curator.adHocRecos(userId, howManyMax).flatMap { recos =>
-      val recosWithUris: Seq[(Recommendation, NormalizedURI)] = db.readOnlyReplica { implicit session =>
+  def adHocRecos(userId: Id[User], howManyMax: Int, scoreCoefficientsUpdate: Map[ScoreType.Value, Float]): Future[Seq[KeepInfo]] = {
+    curator.adHocRecos(userId, howManyMax, scoreCoefficientsUpdate).flatMap { recos =>
+      val recosWithUris: Seq[(RecommendationInfo, NormalizedURI)] = db.readOnlyReplica { implicit session =>
         recos.map { reco => (reco, nUriRepo.get(reco.uriId)) }
-      }.filterNot(_._2.restriction.isDefined) //simple (overly strict) porn filter stop gap until proper curator integration is done
+      }.filter(_._2.state == NormalizedURIStates.SCRAPED)
 
       Future.sequence(recosWithUris.map {
         case (reco, nUri) =>
@@ -35,6 +36,8 @@ class RecommendationsCommander @Inject() (
             )
           }
       })
+
     }
   }
+
 }

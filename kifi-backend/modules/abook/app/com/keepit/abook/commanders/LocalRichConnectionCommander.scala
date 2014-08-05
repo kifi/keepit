@@ -2,15 +2,14 @@ package com.keepit.abook.commanders
 
 import com.keepit.common.queue._
 import com.keepit.common.db.Id
-import com.keepit.model.{ NotificationCategory, User, SocialUserInfo, Invitation }
+import com.keepit.model.{ User, SocialUserInfo }
 import com.keepit.abook.model._
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.common.akka.SafeFuture
 
-import com.google.inject.{ Inject, Singleton, Provider }
+import com.google.inject.{ Inject, Singleton }
 
 import com.kifi.franz.SQSQueue
 
@@ -22,19 +21,9 @@ import scala.util.{ Success, Failure, Left, Right }
 
 import akka.actor.Scheduler
 import com.keepit.social.SocialNetworkType
-import scala.util.Left
-import scala.util.Failure
-import scala.util.Right
-import scala.util.Success
-import scala.math
-import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, EmailAddress }
-import scala.collection.mutable
-import scala.util.Left
-import scala.util.Failure
-import scala.util.Right
-import scala.util.Success
-import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.mail.{ EmailAddress }
 import com.keepit.commanders.RichConnectionCommander
+import com.keepit.common.concurrent.ReactiveLock
 
 @Singleton
 class LocalRichConnectionCommander @Inject() (
@@ -148,7 +137,8 @@ class LocalRichConnectionCommander @Inject() (
     }
   }
 
-  def processEContact(eContact: EContact): Unit = synchronized {
+  private val eContactLock = new ReactiveLock()
+  def processEContact(eContact: EContact): Unit = eContactLock.withLock {
     db.readWrite { implicit session =>
       repo.internRichConnection(eContact.userId, None, Right(eContact))
       eContact.contactUserId.foreach { contactUserId =>

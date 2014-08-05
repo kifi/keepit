@@ -15,7 +15,7 @@
         <span class="profile-email-address-item-pending-primary" ng-if="email.isPendingPrimary && !email.isPrimary && !email.isPlaceholderPrimary">(pending primary)</span>
         <span class="profile-email-address-item-unverified" ng-if="!email.isVerified">(<a class="profile-email-pending-resend" href="javascript:" ng-click="resendVerificationEmail(email.address)">unverified</a>)</span>
         <div class="profile-email-address-item-arrow" href="javascript:" ng-if="!(email.isPrimary || email.isPendingPrimary || email.isPlaceholderPrimary)" ng-click="openDropdownForEmail($event, email.address)">
-          <img class="profile-email-address-item-arrow-image" src="../img/placeholder-icon.png">
+          <img class="profile-email-address-item-arrow-image" src="/img/placeholder-icon.png">
           <ul class="profile-email-address-item-dropdown" ng-show="emailWithActiveDropdown === email.address">
             <li>
               <a class="profile-email-address-item-make-primary" href="javascript:" ng-if="email.isVerified" ng-click="makePrimary(email.address)">Make primary</a>

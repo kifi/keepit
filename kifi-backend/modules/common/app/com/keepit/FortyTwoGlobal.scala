@@ -1,7 +1,7 @@
 package com.keepit
 
 import java.io.File
-import com.keepit.common.actor.ActorPlugin
+import com.keepit.common.actor.ActorSystemPlugin
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.controller._
 import com.keepit.common.strings._
@@ -96,7 +96,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       Some(serviceDiscovery)
     }
 
-    Try(injector.instance[ActorPlugin].onStart()) // start actor system
+    Try(injector.instance[ActorSystemPlugin].onStart()) // start actor system
     if (app.mode != Mode.Test) {
       injector.instance[AppScope].onStart(app)
       pluginsStarted = true
@@ -216,7 +216,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         if (pluginsStarted) {
           injector.instance[AppScope].onStop(app)
           if (app.mode != Mode.Test) {
-            Try(injector.instance[ActorPlugin].onStop())
+            Try(injector.instance[ActorSystemPlugin].onStop())
           }
           pluginsStarted = false
         }

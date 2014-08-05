@@ -4,6 +4,8 @@ import _root_.net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.logging.Logging
 import com.keepit.common.crypto.ShoeboxCryptoModule
 import com.keepit.common.actor.{ ActorSystemModule, ProdActorSystemModule, DevActorSystemModule }
+import com.keepit.common.zookeeper.{ ProdDiscoveryModule, ServiceTypeModule }
+import com.keepit.common.util.PlayAppConfigurationModule
 import com.keepit.common.zookeeper.{ DiscoveryModule, DevDiscoveryModule }
 import com.keepit.common.healthcheck.ProdHealthCheckModule
 import com.keepit.common.net.ProdHttpClientModule
@@ -39,6 +41,7 @@ trait ConfigurationModule extends AbstractModuleAccessor with Logging {
 trait CommonServiceModule {
   val fortyTwoModule: FortyTwoModule
   val actorSystemModule: ActorSystemModule
+  val serviceTypeModule: ServiceTypeModule
   val discoveryModule: DiscoveryModule
 
   val cryptoModule = ShoeboxCryptoModule()
@@ -46,12 +49,14 @@ trait CommonServiceModule {
   val httpClientModule = ProdHttpClientModule()
 
   val awsModule = new AwsModule()
+  val configModule = PlayAppConfigurationModule()
 }
 
 trait CommonProdModule extends CommonServiceModule {
   val fortyTwoModule = ProdFortyTwoModule()
 
   val actorSystemModule = ProdActorSystemModule()
+  val discoveryModule = ProdDiscoveryModule()
 
   val airbrakeModule = ProdAirbrakeModule()
   val memoryUsageModule = ProdMemoryUsageModule()

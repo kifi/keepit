@@ -6,17 +6,14 @@ import java.io.File
 
 import org.specs2.mutable._
 
-import com.keepit.common.db.Id
-import com.keepit.inject._
 import com.keepit.model.{ SocialUserInfoRepo, User, UserRepo, SocialUserInfo }
-import com.keepit.test.{ ShoeboxTestInjector, CommonTestInjector, DeprecatedEmptyApplication }
+import com.keepit.test.{ ShoeboxTestInjector }
 
 import play.api.libs.json.Json
-import play.api.test.Helpers._
 import com.google.inject.Injector
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.social.{ SocialNetworks, SocialId, SocialUserRawInfo, SocialUserRawInfoStore }
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.social.{ SocialNetworks, SocialId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.FakeMailModule
 
@@ -24,7 +21,7 @@ class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector
 
   "SocialUserImportFriends" should {
     "import friends" in {
-      withDb(FakeHttpClientModule(), ShoeboxFakeStoreModule(), FakeMailModule()) { implicit injector =>
+      withDb(FakeHttpClientModule(), FakeShoeboxStoreModule(), FakeMailModule()) { implicit injector =>
         val graphs = List(
           ("facebook_graph_andrew_min.json", 7),
           ("facebook_graph_eishay_super_min.json", 5),

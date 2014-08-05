@@ -255,11 +255,8 @@ class UserCommander @Inject() (
       }
       searchClient.warmUpUser(newUser.id.get)
       searchClient.updateUserIndex()
-      tellUsersWithContactOfNewUserImmediate(newUser)
     }
-    db.readWrite { implicit session =>
-      autoSetUsername(newUser, readOnly = false)
-    }
+
     libraryCommander.internSystemGeneratedLibraries(newUser.id.get)
 
     newUser
@@ -270,9 +267,9 @@ class UserCommander @Inject() (
 
     val newUserId = newUser.id.get
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING).exists(_ == "true") }) {
-      db.readWrite { implicit session => userValueRepo.setValue(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING, true) }
-
       newUser.primaryEmail.map { email =>
+        db.readWrite { implicit session => userValueRepo.setValue(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING, true) }
+
         // get users who have this user's email in their contacts
         abookServiceClient.getUsersWithContact(email).map {
           case contacts if contacts.size > 0 => {
@@ -287,6 +284,7 @@ class UserCommander @Inject() (
               } yield userId
             }
 
+            log.info("sending new user contact notifications to: " + toNotify)
             sendEmailToNewUserContactsHelper(newUser, toNotify)
 
             elizaServiceClient.sendGlobalNotification(
@@ -302,7 +300,10 @@ class UserCommander @Inject() (
 
             toNotify
           }
-          case _ => Set.empty
+          case _ => {
+            log.info("cannot send contact notifications: primary email empty for user.id=" + newUserId)
+            Set.empty
+          }
         }
       }
     } else Option(Future.successful(Set.empty))
@@ -330,6 +331,21 @@ class UserCommander @Inject() (
         category = NotificationCategory.User.FRIEND_JOINED
       )
     }
+  }
+
+  def tellAllFriendsAboutNewUser(newUserId: Id[User]): Unit = {
+    val toBeNotified = db.readWrite(attempts = 3) { implicit session =>
+      for {
+        su <- socialUserRepo.getByUser(newUserId)
+        invite <- invitationRepo.getByRecipientSocialUserId(su.id.get) if (invite.state != InvitationStates.JOINED)
+        senderUserId <- {
+          invitationRepo.save(invite.withState(InvitationStates.JOINED))
+          invite.senderUserId
+        }
+      } yield senderUserId
+    }
+
+    tellAllFriendsAboutNewUser(newUserId, toBeNotified)
   }
 
   def tellAllFriendsAboutNewUser(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = {

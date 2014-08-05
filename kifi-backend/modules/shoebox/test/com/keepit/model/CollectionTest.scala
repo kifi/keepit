@@ -1,18 +1,21 @@
 package com.keepit.model
 
+import com.google.inject.Injector
+import com.keepit.FortyTwoGlobal
+import com.keepit.common.cache.{ HashMapMemoryCacheModule, ShoeboxCacheModule }
+import com.keepit.common.db.{ FakeSlickModule, TestDbInfo, Id, SequenceNumber }
+import com.keepit.common.time._
+import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
+import com.keepit.test.{ ShoeboxInjectionHelpers, CommonTestInjector, DbInjectionHelper, ShoeboxApplication }
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-
-import com.google.inject.Injector
-import com.keepit.common.db.{ Id, SequenceNumber }
-import com.keepit.common.time._
-
-import com.keepit.test.{ ShoeboxApplication, ShoeboxTestInjector }
-
 import play.api.test.Helpers._
-import com.keepit.FortyTwoGlobal
 
-class CollectionTest extends Specification with ShoeboxTestInjector {
+class CollectionTest extends Specification with CommonTestInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
+
+  val modules = FakeSlickModule(TestDbInfo.dbInfo) :: FakeHeimdalServiceClientModule() :: FakeSlickModule(TestDbInfo.dbInfo) ::
+    ShoeboxCacheModule(HashMapMemoryCacheModule()) :: FakeElizaServiceClientModule() :: Nil
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
@@ -64,7 +67,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
       deserialized(3) === collectionSummaries(3)
     }
     "allow the keepRepo to query by a specific collection" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
           collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
@@ -84,7 +87,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
       }
     }
     "work" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
           collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
@@ -125,7 +128,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
       }
     }
     "separate collections by user" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll3.id.get))
@@ -143,7 +146,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
       }
     }
     "delete tag from keep" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
           collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
@@ -160,7 +163,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
       }
     }
     "get and cache collection ids for a bookmark" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll3.id.get))
@@ -178,7 +181,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
       }
     }
     "increment sequence number on save" in {
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
           val n = collectionRepo.save(coll1.withUpdateTime(currentDateTime)).seq.value
@@ -189,7 +192,7 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
     }
     "update sequence number when keeps are added or removed, and when keeps' uriIds are changed" in {
       skipped("No longer automatically done")
-      withDb() { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         val newSeqNum = db.readWrite { implicit s =>
           keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
@@ -218,14 +221,10 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
       }
     }
     "ignore case in getting elements" in {
-      running(new ShoeboxApplication()) {
-        import play.api.Play.current
-        implicit val applicationInjector = current.global.asInstanceOf[FortyTwoGlobal].injector
-        // TODO: figure out why this works but not withDb() - this is not even using the application injector
-        val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
+      withDb(modules: _*) { implicit injector =>
+        val (user1, _, _, _, _, _, _, _) = setup()
         db.readOnlyMaster { implicit s =>
-          collectionRepo.getByUserAndName(user1.id.get, "scala") ===
-            collectionRepo.getByUserAndName(user1.id.get, "Scala")
+          collectionRepo.getByUserAndName(user1.id.get, "scala") === collectionRepo.getByUserAndName(user1.id.get, "Scala")
         }
       }
     }

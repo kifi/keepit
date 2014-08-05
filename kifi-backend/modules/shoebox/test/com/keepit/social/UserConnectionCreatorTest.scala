@@ -6,24 +6,26 @@ import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.model._
-import com.keepit.shoebox.TestShoeboxServiceClientModule
+import com.keepit.shoebox.FakeShoeboxServiceClientModule
 import com.keepit.social.{ SocialNetworks, SocialId }
-import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
+import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplicationInjector, ShoeboxApplication }
 import com.keepit.eliza.FakeElizaServiceClientModule
 
 import play.api.libs.json.Json
 import play.api.test.Helpers._
-import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.mail.{ FakeOutbox, EmailAddress, FakeMailModule }
 
-class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInjector {
+class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
 
-  val modules = Seq(FakeHttpClientModule(), ShoeboxFakeStoreModule(), TestShoeboxServiceClientModule(), FakeElizaServiceClientModule(), FakeMailModule())
+  val modules = Seq(FakeHttpClientModule(), FakeShoeboxStoreModule(), FakeShoeboxServiceClientModule(), FakeElizaServiceClientModule(), FakeMailModule())
 
   "UserConnectionCreator" should {
     "create connections between friends for social users and kifi users" in {
-      running(new ShoeboxApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
+
+        val outbox = inject[FakeOutbox]
 
         /*
          * grab json
@@ -35,6 +37,9 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
 
         val socialUser = inject[Database].readWrite { implicit s =>
           val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
+
+          inject[UserEmailAddressRepo].save(UserEmailAddress(userId = u.id.get, address = EmailAddress("andrew@gmail.com")))
+
           val su = inject[SocialUserInfoRepo].save(SocialUserInfo(
             fullName = "Andrew Conner",
             socialId = SocialId("71105121"),
@@ -54,6 +59,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
             socialId = SocialId("gsmith"),
             networkType = SocialNetworks.FACEBOOK
           ).withUser(user))
+          inject[UserEmailAddressRepo].save(UserEmailAddress(userId = user.id.get, address = EmailAddress("greg@gmail.com")))
           (user, socialUserInfo)
         }
 
@@ -61,6 +67,10 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
           extractedFriends.map(_.socialId), SocialNetworks.FACEBOOK)
 
         connections.size === 12
+
+        outbox.size === 1
+        outbox(0).subject === "You are now friends with Greg Smith on Kifi!"
+        outbox(0).to === Seq(EmailAddress("andrew@gmail.com"))
 
         inject[Database].readOnlyMaster { implicit s =>
           val fortyTwoConnections = inject[SocialConnectionRepo].getFortyTwoUserConnections(user.id.get)
@@ -75,7 +85,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
     }
 
     "disable non existing connections for social users but not kifi users" in {
-      running(new ShoeboxApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
 
         val json1 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
 
@@ -92,6 +102,10 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
             socialId = SocialId("28779"),
             networkType = SocialNetworks.FACEBOOK
           ).withUser(u2))
+
+          inject[UserEmailAddressRepo].save(UserEmailAddress(userId = u1.id.get, address = EmailAddress("andrew@gmail.com")))
+          inject[UserEmailAddressRepo].save(UserEmailAddress(userId = u2.id.get, address = EmailAddress("igor@gmail.com")))
+
           su1
         }
 
@@ -105,6 +119,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
             socialId = SocialId("bsmith"),
             networkType = SocialNetworks.FACEBOOK
           ).withUser(user))
+          inject[UserEmailAddressRepo].save(UserEmailAddress(userId = user.id.get, address = EmailAddress("bob@gmail.com")))
           (user, socialUserInfo)
         }
 

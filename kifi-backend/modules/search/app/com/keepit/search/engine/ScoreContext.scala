@@ -12,7 +12,7 @@ class ScoreContext(
     val matchWeight: Array[Float],
     collector: ResultCollector[ScoreContext]) extends Joiner {
 
-  private[engine] var visibility: Int = 0 // 0: restricted, 1: public, 2: member
+  private[engine] var visibility: Int = 0 // 0: restricted, 1: public, 2: member (see Visibility)
   private[engine] val scoreMax = new Array[Float](scoreArraySize)
   private[engine] val scoreSum = new Array[Float](scoreArraySize)
 

@@ -23,16 +23,16 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.{ Provides, Singleton }
 import org.apache.commons.io.FileUtils
 import java.io.File
-import play.api.Play._
 import com.keepit.search.graph.library.{ LibraryIndexerPluginImpl, LibraryIndexerPlugin, LibraryIndexer }
 import com.keepit.search.graph.keep.{ KeepIndexer, KeepIndexerPluginImpl, KeepIndexerPlugin, ShardedKeepIndexer }
+import com.keepit.common.util.Configuration
 
 trait IndexModule extends ScalaModule with Logging {
 
-  protected def getArchivedIndexDirectory(maybeDir: Option[String], indexStore: IndexStore): Option[ArchivedIndexDirectory] = {
+  protected def getArchivedIndexDirectory(maybeDir: Option[String], indexStore: IndexStore, conf: Configuration): Option[ArchivedIndexDirectory] = {
     maybeDir.map { d =>
       val dir = new File(d).getCanonicalFile
-      val tempDir = new File(current.configuration.getString("search.temporary.directory").get, dir.getName)
+      val tempDir = new File(conf.getString("search.temporary.directory").get, dir.getName)
       FileUtils.deleteDirectory(tempDir)
       FileUtils.forceMkdir(tempDir)
       tempDir.deleteOnExit()
@@ -55,7 +55,7 @@ trait IndexModule extends ScalaModule with Logging {
     }
   }
 
-  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory
+  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore, conf: Configuration): IndexDirectory
 
   def configure() {
     bind[PhraseIndexerPlugin].to[PhraseIndexerPluginImpl].in[AppScoped]
@@ -75,14 +75,14 @@ trait IndexModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def activeShards(myAmazonInstanceInfo: MyInstanceInfo): ActiveShards = {
+  def activeShards(myAmazonInstanceInfo: MyInstanceInfo, conf: Configuration): ActiveShards = {
     val shards = (new ShardSpecParser).parse[NormalizedURI](
       myAmazonInstanceInfo.info.tags.get("ShardSpec") match {
         case Some(spec) =>
           log.info(s"using the shard spec [$spec] from ec2 tag")
           spec
         case _ =>
-          current.configuration.getString("index.shards") match {
+          conf.getString("index.shards") match {
             case Some(spec) =>
               log.info(s"using the shard spec [$spec] from config")
               spec
@@ -101,9 +101,9 @@ trait IndexModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def shardedArticleIndexer(activeShards: ActiveShards, articleStore: ArticleStore, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): ShardedArticleIndexer = {
+  def shardedArticleIndexer(activeShards: ActiveShards, articleStore: ArticleStore, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration): ShardedArticleIndexer = {
     def articleIndexer(shard: Shard[NormalizedURI]) = {
-      val dir = getIndexDirectory("index.article.directory", shard, backup)
+      val dir = getIndexDirectory("index.article.directory", shard, backup, conf)
       log.info(s"storing ArticleIndex${shard.indexNameSuffix} in $dir")
       new ArticleIndexer(dir, articleStore, airbrake)
     }
@@ -114,14 +114,14 @@ trait IndexModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def shardedURIGraphIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): ShardedURIGraphIndexer = {
+  def shardedURIGraphIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration): ShardedURIGraphIndexer = {
     def bookmarkStore(shard: Shard[NormalizedURI]) = {
-      val dir = getIndexDirectory("index.bookmarkStore.directory", shard, backup)
+      val dir = getIndexDirectory("index.bookmarkStore.directory", shard, backup, conf)
       log.info(s"storing BookmarkStore${shard.indexNameSuffix} in $dir")
       new BookmarkStore(dir, airbrake)
     }
     def uriGraphIndexer(shard: Shard[NormalizedURI], store: BookmarkStore): URIGraphIndexer = {
-      val dir = getIndexDirectory("index.urigraph.directory", shard, backup)
+      val dir = getIndexDirectory("index.urigraph.directory", shard, backup, conf)
       log.info(s"storing URIGraphIndex${shard.indexNameSuffix} in $dir")
       new URIGraphIndexer(dir, store, airbrake)
     }
@@ -132,14 +132,14 @@ trait IndexModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def shardedCollectionIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): ShardedCollectionIndexer = {
+  def shardedCollectionIndexer(activeShards: ActiveShards, backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration): ShardedCollectionIndexer = {
     def collectionNameIndexer(shard: Shard[NormalizedURI]) = {
-      val dir = getIndexDirectory("index.collectionName.directory", shard, backup)
+      val dir = getIndexDirectory("index.collectionName.directory", shard, backup, conf)
       log.info(s"storing CollectionNameIndex${shard.indexNameSuffix} in $dir")
       new CollectionNameIndexer(dir, airbrake)
     }
     def collectionIndexer(shard: Shard[NormalizedURI], collectionNameIndexer: CollectionNameIndexer): CollectionIndexer = {
-      val dir = getIndexDirectory("index.collection.directory", shard, backup)
+      val dir = getIndexDirectory("index.collection.directory", shard, backup, conf)
       log.info(s"storing CollectionIndex${shard.indexNameSuffix} in $dir")
       new CollectionIndexer(dir, collectionNameIndexer, airbrake)
     }
@@ -150,41 +150,41 @@ trait IndexModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def userIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient): UserIndexer = {
-    val dir = getIndexDirectory("index.user.directory", noShard, backup)
+  def userIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient, conf: Configuration): UserIndexer = {
+    val dir = getIndexDirectory("index.user.directory", noShard, backup, conf)
     log.info(s"storing user index in $dir")
     new UserIndexer(dir, airbrake, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def userGraphIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient): UserGraphIndexer = {
-    val dir = getIndexDirectory("index.userGraph.directory", noShard, backup)
+  def userGraphIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient, conf: Configuration): UserGraphIndexer = {
+    val dir = getIndexDirectory("index.userGraph.directory", noShard, backup, conf)
     log.info(s"storing user graph index in $dir")
     new UserGraphIndexer(dir, airbrake, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def searchFriendIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient): SearchFriendIndexer = {
-    val dir = getIndexDirectory("index.searchFriend.directory", noShard, backup)
+  def searchFriendIndexer(airbrake: AirbrakeNotifier, backup: IndexStore, shoeboxClient: ShoeboxServiceClient, conf: Configuration): SearchFriendIndexer = {
+    val dir = getIndexDirectory("index.searchFriend.directory", noShard, backup, conf)
     log.info(s"storing searchFriend index in $dir")
     new SearchFriendIndexer(dir, airbrake, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def messageIndexer(backup: IndexStore, eliza: ElizaServiceClient, airbrake: AirbrakeNotifier): MessageIndexer = {
-    val dir = getIndexDirectory("index.message.directory", noShard, backup)
+  def messageIndexer(backup: IndexStore, eliza: ElizaServiceClient, airbrake: AirbrakeNotifier, conf: Configuration): MessageIndexer = {
+    val dir = getIndexDirectory("index.message.directory", noShard, backup, conf)
     log.info(s"storing message index in $dir")
     new MessageIndexer(dir, eliza, airbrake)
   }
 
   @Singleton
   @Provides
-  def phraseIndexer(backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient): PhraseIndexer = {
-    val dir = getIndexDirectory("index.phrase.directory", noShard, backup)
-    val dataDir = current.configuration.getString("index.config").map { path =>
+  def phraseIndexer(backup: IndexStore, airbrake: AirbrakeNotifier, shoeboxClient: ShoeboxServiceClient, conf: Configuration): PhraseIndexer = {
+    val dir = getIndexDirectory("index.phrase.directory", noShard, backup, conf)
+    val dataDir = conf.getString("index.config").map { path =>
       val configDir = new File(path).getCanonicalFile()
       new File(configDir, "phrase")
     }
@@ -193,22 +193,22 @@ trait IndexModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def spellIndexer(backup: IndexStore, shardedArticleIndexer: ShardedArticleIndexer): SpellIndexer = {
-    val spellDir = getIndexDirectory("index.spell.directory", noShard, backup)
+  def spellIndexer(backup: IndexStore, shardedArticleIndexer: ShardedArticleIndexer, conf: Configuration): SpellIndexer = {
+    val spellDir = getIndexDirectory("index.spell.directory", noShard, backup, conf)
     SpellIndexer(spellDir, shardedArticleIndexer)
   }
 
   @Provides @Singleton
-  def libraryIndexer(backup: IndexStore, shoebox: ShoeboxServiceClient, airbrake: AirbrakeNotifier): LibraryIndexer = {
-    val libraryDir = getIndexDirectory("index.library.directory", noShard, backup)
+  def libraryIndexer(backup: IndexStore, shoebox: ShoeboxServiceClient, airbrake: AirbrakeNotifier, conf: Configuration): LibraryIndexer = {
+    val libraryDir = getIndexDirectory("index.library.directory", noShard, backup, conf)
     log.info(s"storing library index in $libraryDir")
     new LibraryIndexer(libraryDir, shoebox, airbrake)
   }
 
   @Provides @Singleton
-  def shardedKeepIndexer(activeShards: ActiveShards, backup: IndexStore, shoeboxClient: ShoeboxServiceClient, airbrake: AirbrakeNotifier): ShardedKeepIndexer = {
+  def shardedKeepIndexer(activeShards: ActiveShards, backup: IndexStore, shoeboxClient: ShoeboxServiceClient, airbrake: AirbrakeNotifier, conf: Configuration): ShardedKeepIndexer = {
     def keepIndexer(shard: Shard[NormalizedURI]) = {
-      val dir = getIndexDirectory("index.keep.directory", shard, backup)
+      val dir = getIndexDirectory("index.keep.directory", shard, backup, conf)
       log.info(s"storing KeepIndex${shard.indexNameSuffix} in $dir")
       new KeepIndexer(dir, shard, airbrake)
     }
@@ -220,15 +220,15 @@ trait IndexModule extends ScalaModule with Logging {
 
 case class ProdIndexModule() extends IndexModule {
 
-  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory =
-    getArchivedIndexDirectory(current.configuration.getString(configName).map(_ + shard.indexNameSuffix), indexStore).get
+  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore, conf: Configuration): IndexDirectory =
+    getArchivedIndexDirectory(conf.getString(configName).map(_ + shard.indexNameSuffix), indexStore, conf).get
 }
 
 case class DevIndexModule() extends IndexModule {
   var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory] // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
-  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory =
-    getArchivedIndexDirectory(current.configuration.getString(configName).map(_ + shard.indexNameSuffix), indexStore).getOrElse {
+  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore, conf: Configuration): IndexDirectory =
+    getArchivedIndexDirectory(conf.getString(configName).map(_ + shard.indexNameSuffix), indexStore, conf).getOrElse {
       volatileDirMap.getOrElse((configName, shard), {
         val newdir = new VolatileIndexDirectory()
         volatileDirMap += (configName, shard) -> newdir

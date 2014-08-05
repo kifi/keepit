@@ -74,19 +74,6 @@ class TextQuery extends Query with Logging {
     }
   }
 
-  def getSemanticVectorExtractorQuery(): SemanticVectorExtractorQuery = {
-    val semanticVectorQueries: Seq[SemanticVectorQuery] = semanticVectorQuery match {
-      case disjunct: DisjunctionMaxQuery =>
-        val buf = new ArrayBuffer[SemanticVectorQuery]
-        val iter = disjunct.iterator
-        while (iter.hasNext) buf += iter.next().asInstanceOf[SemanticVectorQuery]
-        buf
-      case semantic: SemanticVectorQuery =>
-        Seq[SemanticVectorQuery](semantic)
-    }
-    new SemanticVectorExtractorQuery(semanticVectorQueries, Option(personalQuery))
-  }
-
   private[this] var semanticBoost = 0.0f
 
   def setSemanticBoost(boost: Float): Unit = { semanticBoost = boost }

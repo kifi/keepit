@@ -22,9 +22,11 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
       return profileService.me.seqNum > 0 && friendsReady;
     };
 
-    $scope.hasNoFriendsOrConnections = function () {
-      return (friendService.totalFriends() === 0) && (socialService.networks.length === 0);
-    };
+    socialService.refresh().then(function () {
+      $scope.hasNoFriendsOrConnections = function () {
+        return (friendService.totalFriends() === 0) && (socialService.networks.length === 0);
+      };
+    });
 
     $scope.openHelpRankHelp = function () {
       $scope.data.showHelpRankHelp = true;

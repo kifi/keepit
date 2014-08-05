@@ -1,6 +1,6 @@
 package com.keepit.search
 
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -31,15 +31,18 @@ import com.keepit.search.tracker.InMemoryResultClickTrackerBuffer
 import com.keepit.search.sharding._
 import com.keepit.common.aws.AwsModule
 import com.keepit.search.graph.user._
+import com.google.inject.Injector
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.util.PlayAppConfigurationModule
 
-trait SearchTestHelper { self: SearchApplicationInjector =>
+trait SearchTestHelper { self: SearchTestInjector =>
 
   val resultClickBuffer = new InMemoryResultClickTrackerBuffer(1000)
   val resultClickTracker = new ResultClickTracker(new ProbablisticLRU(resultClickBuffer, 8, Int.MaxValue))
 
   implicit val english = Lang("en")
 
-  def initData(numUsers: Int, numUris: Int) = {
+  def initData(numUsers: Int, numUris: Int)(implicit injector: Injector) = {
     val users = (0 until numUsers).map { n => User(firstName = "foo" + n, lastName = "") }.toList
     val uris = (0 until numUris).map { n =>
       NormalizedURI.withHash(title = Some("a" + n),
@@ -49,7 +52,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
     (fakeShoeboxClient.saveUsers(users: _*), fakeShoeboxClient.saveURIs(uris: _*))
   }
 
-  def initIndexes(store: ArticleStore)(implicit activeShards: ActiveShards) = {
+  def initIndexes(store: ArticleStore)(implicit activeShards: ActiveShards, injector: Injector) = {
 
     val articleIndexers = activeShards.local.map { shard =>
       val articleIndexer = new ArticleIndexer(new VolatileIndexDirectory, store, inject[AirbrakeNotifier])
@@ -123,43 +126,43 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
       contentLang = Some(english))
   }
 
-  def setConnections(connections: Map[Id[User], Set[Id[User]]]) {
+  def setConnections(connections: Map[Id[User], Set[Id[User]]])(implicit injector: Injector) {
     val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     shoebox.clearUserConnections(connections.keys.toSeq: _*)
     shoebox.saveConnections(connections)
   }
 
-  def saveCollections(collections: Collection*): Seq[Collection] = {
+  def saveCollections(collections: Collection*)(implicit injector: Injector): Seq[Collection] = {
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveCollections(collections: _*)
   }
 
-  def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Keep*) {
+  def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Keep*)(implicit injector: Injector) {
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksToCollection(collectionId, bookmarks: _*)
   }
 
-  def saveBookmarks(bookmarks: Keep*): Seq[Keep] = {
+  def saveBookmarks(bookmarks: Keep*)(implicit injector: Injector): Seq[Keep] = {
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarks(bookmarks: _*)
   }
 
-  def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false): Seq[Keep] = {
+  def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false)(implicit injector: Injector): Seq[Keep] = {
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksByURI(edgesByURI, uniqueTitle, isPrivate, source)
   }
 
-  def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false): Seq[Keep] = {
+  def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false)(implicit injector: Injector): Seq[Keep] = {
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksByUser(edgesByUser, uniqueTitle, isPrivate, source)
   }
 
-  def getBookmarks(userId: Id[User]): Seq[Keep] = {
+  def getBookmarks(userId: Id[User])(implicit injector: Injector): Seq[Keep] = {
     val future = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].getBookmarks(userId)
     inject[MonitoredAwait].result(future, 3 seconds, "getBookmarks: this should not fail")
   }
 
-  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Option[Keep] = {
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit injector: Injector): Option[Keep] = {
     val future = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].getBookmarkByUriAndUser(uriId, userId)
     inject[MonitoredAwait].result(future, 3 seconds, "getBookmarkByUriAndUser: this should not fail")
   }
 
-  def getUriIdsInCollection(collectionId: Id[Collection]): Seq[KeepUriAndTime] = {
+  def getUriIdsInCollection(collectionId: Id[Collection])(implicit injector: Injector): Seq[KeepUriAndTime] = {
     val future = inject[ShoeboxServiceClient].getUriIdsInCollection(collectionId)
     inject[MonitoredAwait].result(future, 3 seconds, "getUriIdsInCollection: this should not fail")
   }
@@ -179,12 +182,7 @@ trait SearchTestHelper { self: SearchApplicationInjector =>
     "dampingByRank" -> "false")
   val allHitsConfig = defaultConfig.overrideWith("tailCutting" -> "0")
 
-  def application = {
-    implicit val system = ActorSystem("test")
-    new SearchApplication(
-      StandaloneTestActorSystemModule(),
-      FakeShoeboxServiceModule(),
-      new AwsModule()
-    )
-  }
+  // implicit val system = ActorSystem("test")
+  val helperModules = Seq(FakeActorSystemModule(), FakeShoeboxServiceModule(), new AwsModule(), FakeHttpClientModule(), PlayAppConfigurationModule())
+
 }

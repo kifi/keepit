@@ -656,6 +656,9 @@ api.port.on({
         delete d.state;
         d.kept = data.how;
         d.keepId = keep.id;
+        if (d.kept !== 'private') {
+          d.keeps++;
+        }
         forEachTabAt(tab.url, tab.nUri, keep.url, function (tab) {
           setIcon(tab, data.how);
         });
@@ -680,6 +683,9 @@ api.port.on({
     } else if (!d.state) {
       ajax('POST', '/ext/keeps/' + d.keepId + '/unkeep', function done(o) {
         log('[unkeep:done]', o);
+        if (d.kept !== 'private') {
+          d.keeps = Math.max(0, d.keeps - 1);
+        }
         delete d.state;
         delete d.kept;
         delete d.keepId;
@@ -699,11 +705,17 @@ api.port.on({
   },
   set_private: function(data, _, tab) {
     log("[setPrivate]", data);
+    var how = data.private ? 'private' : 'public';
+    var d = pageData[tab.nUri];
     ajax('POST', '/bookmarks/update', data, function (o) {
       log("[setPrivate] response:", o);
+      if (d && d.kept !== how) {
+        d.kept = how;
+        d.keeps = Math.max(0, d.keeps + (how === 'private' ? -1 : 1));
+      }
     });
-    forEachTabAt(tab.url, tab.nUri, function(tab) {
-      api.tabs.emit(tab, "kept", {kept: data.private ? "private" : "public"});
+    forEachTabAt(tab.url, tab.nUri, function (tab) {
+      api.tabs.emit(tab, 'kept', {kept: how});
     });
   },
   set_title: function(data, respond) {

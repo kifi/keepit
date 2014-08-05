@@ -2,10 +2,10 @@ package com.keepit.curator.model
 
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model.{ NormalizedURI, User }
-
 import com.kifi.macros.json
 
 import org.joda.time.DateTime
+import play.api.libs.json._
 
 sealed trait Keepers
 object Keepers {
@@ -22,15 +22,17 @@ case class SeedItem(
   lastSeen: DateTime,
   keepers: Keepers)
 
-case class UriScores(
+@json case class UriScores(
     socialScore: Float,
     popularityScore: Float,
     overallInterestScore: Float,
     recentInterestScore: Float,
     recencyScore: Float,
-    priorScore: Float) {
+    priorScore: Float,
+    rekeepScore: Float,
+    discoveryScore: Float) {
 
-  override def toString = s"social:$socialScore --- popularity:$popularityScore --- overallInterest:$overallInterestScore --- recentInterest:$recentInterestScore --- recency:$recencyScore --- prior:$priorScore"
+  override def toString = s"social:$socialScore --- popularity:$popularityScore --- overallInterest:$overallInterestScore --- recentInterest:$recentInterestScore --- recency:$recencyScore --- prior:$priorScore --- rekeep:$rekeepScore --- discovery:$discoveryScore"
 }
 
 case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores)

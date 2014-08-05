@@ -6,3 +6,6 @@
 /cdn/
 /index_cdn.html
 /.awspublish-*
+img/sprites.png
+src/common/spritesClasses.styl
+src/common/build-css/sprites.styl
