@@ -10,6 +10,7 @@ import com.keepit.graph.model._
 import com.keepit.model.{ NormalizedURI, SocialUserInfo, User }
 
 import scala.collection.mutable
+import com.keepit.graph.utils.GraphPrimitives
 
 class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends Logging {
 
@@ -47,31 +48,18 @@ class CollisionCommander @Inject() (graph: GraphManager, clock: Clock) extends L
     socialUsers.toMap
   }
 
-  private def collectNeighbors(vertexReader: GlobalVertexReader)(vertexId: VertexId, neighborKinds: Set[VertexType]): Set[VertexId] = {
-    vertexReader.moveTo(vertexId)
-    val neighbors = mutable.Set[VertexId]()
-    while (vertexReader.outgoingEdgeReader.moveToNextComponent()) {
-      val (_, destinationKind, _) = vertexReader.outgoingEdgeReader.component
-      if (neighborKinds.contains(destinationKind)) {
-        while (vertexReader.outgoingEdgeReader.moveToNextEdge()) {
-          neighbors += vertexReader.outgoingEdgeReader.destination
-        }
-      }
-    }
-    neighbors.toSet
-  }
-
   private def getVerticesToAvoid(startingVertexId: VertexId, avoidFirstDegree: Boolean): Set[VertexId] = {
     if (avoidFirstDegree) {
       graph.readOnly { reader =>
         val vertexReader = reader.getNewVertexReader()
-        val firstDegreeVertices = collectNeighbors(vertexReader)(startingVertexId, VertexKind.all)
+        val collectNeighbors = GraphPrimitives.collectOutgoingNeighbors(vertexReader) _
+        val firstDegreeVertices = collectNeighbors(startingVertexId, VertexKind.all)
         val firstDegreeUriAndSocialUsers = if (startingVertexId.kind != UserReader) Set.empty
         else {
           firstDegreeVertices.collect {
-            case keep if keep.kind == KeepReader => collectNeighbors(vertexReader)(keep, Set(UriReader))
-            case facebookSocial if facebookSocial.kind == FacebookAccountReader => collectNeighbors(vertexReader)(facebookSocial, Set(UserReader))
-            case linkedInSocial if linkedInSocial.kind == LinkedInAccountReader => collectNeighbors(vertexReader)(linkedInSocial, Set(UserReader))
+            case keep if keep.kind == KeepReader => collectNeighbors(keep, Set(UriReader))
+            case facebookSocial if facebookSocial.kind == FacebookAccountReader => collectNeighbors(facebookSocial, Set(UserReader))
+            case linkedInSocial if linkedInSocial.kind == LinkedInAccountReader => collectNeighbors(linkedInSocial, Set(UserReader))
             //ignore other vertex types of neighbors
           }.flatten
         }
