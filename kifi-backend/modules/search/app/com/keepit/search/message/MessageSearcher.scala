@@ -28,7 +28,7 @@ class MessageSearcher(searcher: Searcher, config: SearchConfig, clock: Clock) {
     val filterdQuery = new ConditionalQuery(query, participantFilterQuery)
 
     val allResults = ArrayBuffer[ResultWithScore]()
-    searcher.doSearch(filterdQuery) { (scorer, reader) =>
+    searcher.search(filterdQuery) { (scorer, reader) =>
       val resultDocVals = reader.getBinaryDocValues(ThreadIndexFields.resultField)
       val timestampDocVals = reader.getNumericDocValues(ThreadIndexFields.updatedAtField)
       var docNumber = scorer.nextDoc()

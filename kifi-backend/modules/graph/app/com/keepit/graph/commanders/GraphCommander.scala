@@ -7,6 +7,8 @@ import com.keepit.graph.model._
 import com.keepit.graph.wander._
 import com.keepit.model.{ NormalizedURI, User }
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 @Singleton
 class GraphCommander @Inject() (
@@ -40,28 +42,29 @@ class GraphCommander @Inject() (
     (urisList, usersList)
   }
 
-  def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Seq[ConnectedUriScore] = {
+  def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]] = {
     val result = uriScoreCache.get(ConnectedUriScoreCacheKey(userId, avoidFirstDegreeConnections))
     result match {
       case None => {
         val wanderLust = Wanderlust.discovery(userId)
-        val journal = wanderingCommander.wander(wanderLust)
-
-        updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._1
+        wanderingCommander.wander(wanderLust).map { journal =>
+          updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._1
+        }
       }
-      case Some(data) => data
+      case Some(data) => Future.successful(data)
     }
   }
 
-  def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Seq[ConnectedUserScore] = {
+  def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]] = {
     val result = userScoreCache.get(ConnectedUserScoreCacheKey(userId, avoidFirstDegreeConnections))
     result match {
       case None => {
         val wanderLust = Wanderlust.discovery(userId)
-        val journal = wanderingCommander.wander(wanderLust)
-        updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._2
+        wanderingCommander.wander(wanderLust).map { journal =>
+          updateScoreCaches(userId, journal.getStartingVertex, journal, avoidFirstDegreeConnections)._2
+        }
       }
-      case Some(data) => data
+      case Some(data) => Future.successful(data)
     }
   }
 

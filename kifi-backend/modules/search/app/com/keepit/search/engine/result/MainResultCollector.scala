@@ -33,16 +33,16 @@ class MainResultCollector(clickBoosts: ResultClickBoosts, friendsUris: LongArray
         } else {
           // below the threshold, but we save this if this is a clicked hit (clickBoost > 0.0f)
           clickBoost = clickBoosts(id)
-          if (clickBoost > 0.0f) score = ctx.score() * percentMatch // else score remains 0.0f
+          if (clickBoost > 1.0f) score = ctx.score() * percentMatch // else score remains 0.0f
         }
 
         if (score > 0.0f) {
           if ((visibility & Visibility.MEMBER) != 0) {
-            myHits.insert(id, score, clickBoost, true, false)
+            myHits.insert(id, score, clickBoost, true)
           } else if (friendsUris.findIndex(id) >= 0) {
-            friendsHits.insert(id, score, clickBoost, false, false)
+            friendsHits.insert(id, score, clickBoost, false)
           } else {
-            othersHits.insert(id, score, clickBoost, false, false)
+            othersHits.insert(id, score, clickBoost, false)
           }
         }
       }

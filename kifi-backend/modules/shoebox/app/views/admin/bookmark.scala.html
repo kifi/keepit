@@ -1,4 +1,4 @@
-@(user: User, bookmark: Keep, normalizedUri: NormalizedURI, scrapeInfo: Option[ScrapeInfo], imgUrl:String, screenshotUrl: String, keywords: KeywordsSummary)
+@(user: User, bookmark: Keep, normalizedUri: NormalizedURI, scrapeInfo: Option[ScrapeInfo], imgUrl:String, screenshotUrl: String, keywords: KeywordsSummary, libraryOpt: Option[Library])
 
 @import com.keepit.controllers.admin.routes
 
@@ -21,6 +21,9 @@
       </tr>
       <tr>
         <th>State/Visibility</th><td>@adminHelper.bookmarkBadge(bookmark)</td>
+      </tr>
+      <tr>
+        <th>Library</th><td>@libraryOpt.map(lib => adminHelper.libraryDisplay(lib))</td>
       </tr>
       <tr>
         <th>Saved by</th><td>@adminHelper.userDisplay(user)</td>

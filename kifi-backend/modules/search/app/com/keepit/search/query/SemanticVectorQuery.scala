@@ -4,31 +4,20 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.semantic.SemanticVector
 import com.keepit.search.Searcher
 import com.keepit.search.semantic.SemanticVectorEnum
-import com.keepit.search.query.QueryUtil._
-import org.apache.lucene.index.AtomicReader
 import org.apache.lucene.index.AtomicReaderContext
-import org.apache.lucene.index.DocsAndPositionsEnum
-import org.apache.lucene.index.FilterAtomicReader.FilterDocsAndPositionsEnum
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
 import org.apache.lucene.search.ComplexExplanation
-import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.IndexSearcher
-import org.apache.lucene.search.similarities.Similarity
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.BytesRef
-import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.ToStringUtils
 import java.util.{ Set => JSet }
 import java.lang.{ Float => JFloat }
-import scala.collection.JavaConversions._
-import scala.collection.mutable.ArrayBuffer
-import scala.math._
 
 object SemanticVectorQuery {
   def apply(term: Term) = new SemanticVectorQuery(term)

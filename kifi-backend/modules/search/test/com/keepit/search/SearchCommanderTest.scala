@@ -11,13 +11,13 @@ import play.api.libs.json.Json
 import com.keepit.search.sharding.ActiveShards
 import com.keepit.search.sharding.ShardSpecParser
 
-class SearchCommanderTest extends Specification with SearchApplicationInjector with SearchTestHelper {
+class SearchCommanderTest extends Specification with SearchTestInjector with SearchTestHelper {
 
   implicit private val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse("0,1 / 2"))
 
   "SearchCommander" should {
     "generate results in the correct json format" in {
-      running(application) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 4, numUris = 9)
         val expectedUriToUserEdges = Seq(uris(0) -> Seq(users(0), users(1), users(2)), uris(1) -> Seq(users(1)), uris(2) -> Seq(users(2)), uris(3) -> Seq(users(3)))
         saveBookmarksByURI(expectedUriToUserEdges)

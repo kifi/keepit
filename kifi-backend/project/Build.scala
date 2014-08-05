@@ -1,72 +1,16 @@
-import com.typesafe.sbt.packager.archetypes.JavaAppPackaging
-import sbt._
-import Keys._
-import play.Project._
-import java.io.PrintWriter
-import java.io.File
-import java.util.Locale
-import org.joda.time.{DateTime, DateTimeZone}
-import org.joda.time.format.DateTimeFormat
 import com.typesafe.sbteclipse.core.EclipsePlugin.EclipseKeys
-import com.typesafe.sbt.SbtScalariform._
-import scalariform.formatter.preferences._
+import play.Project._
+import sbt.Keys._
+import sbt._
 
 object ApplicationBuild extends Build {
 
   override def settings = super.settings ++ Seq(EclipseKeys.skipParents in ThisBuild := false)
-  val appName         = "kifi-backend"
+  val appName = "kifi-backend"
 
-  val UTC = DateTimeZone.UTC
-  val BUILD_DATETIME_FORMAT = DateTimeFormat.forPattern("yyyyMMdd-HHmm").withLocale(Locale.ENGLISH).withZone(UTC)
-  val buildTime  = BUILD_DATETIME_FORMAT.print(new DateTime(UTC))
-  val appVersion = "%s-%s-%s".format(buildTime,"git rev-parse --abbrev-ref HEAD".!!.trim, "git rev-parse --short HEAD".!!.trim)
-  val now = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z").withLocale(Locale.ENGLISH).withZone(UTC).print(new DateTime(UTC))
+  val appVersion = Version.appVersion
 
-  def writeToFile(fileName: String, value: String) = {
-    val file = new PrintWriter(new File(fileName))
-    try { file.print(value) } finally { file.close() }
-  }
-
-  writeToFile("conf/app_version.txt", appVersion)
-  writeToFile("modules/common/conf/app_version.txt", appVersion)
-  writeToFile("conf/app_compilation_date.txt", now)
-  writeToFile("modules/common/conf/app_compilation_date.txt", now)
-
-  lazy val emojiLogs = logManager ~= { lm =>
-    new LogManager {
-      def apply(data: sbt.Settings[Scope], state: State, task: Def.ScopedKey[_], writer: java.io.PrintWriter) = {
-        val l = lm.apply(data, state, task, writer)
-        val FailuresErrors = "(?s).*(\\d+) failures?, (\\d+) errors?.*".r
-        new Logger {
-          def filter(s: String) = {
-            val filtered = s.replace("\033[32m+\033[0m", "\u2705 ")
-              .replace("\033[33mx\033[0m", "\u274C ")
-              .replace("\033[31m!\033[0m", "\uD83D\uDCA5 ")
-            filtered match {
-              case FailuresErrors("0", "0") => filtered + " \uD83D\uDE04"
-              case FailuresErrors(_, _) => filtered + " \uD83D\uDE22"
-              case _ => filtered
-            }
-          }
-          def log(level: Level.Value, message: => String) = l.log(level, filter(message))
-          def success(message: => String) = l.success(message)
-          def trace(t: => Throwable) = l.trace(t)
-
-          override def ansiCodesSupported = l.ansiCodesSupported
-        }
-      }
-    }
-  }
-
-  val angularDirectory = SettingKey[File]("angular-directory")
-
-  private def cmd(name: String, command: String, base: File, namedArgs: List[String] = Nil): Command = {
-    Command.args(name, "<" + name + "-command>") { (state, args) =>
-      val exitCode = Process(command :: (namedArgs ++ args.toList), base).!;
-      if (exitCode!=0) throw new Exception(s"Command '${(command :: (namedArgs ++ args.toList)).mkString(" ")}' failed with exit code $exitCode")
-      state
-    }
-  }
+  Version.writeVersionToFile()
 
   val commonDependencies = Seq(
     jdbc, // todo(andrew): move to sqldb when we discover a way to get Play to support multiple play.plugins files.
@@ -79,7 +23,7 @@ object ApplicationBuild extends Build {
     "org.apache.commons" % "commons-compress" % "1.4.1",
     "org.apache.commons" % "commons-math3" % "3.1.1",
     "commons-io" % "commons-io" % "2.4",
-    "org.apache.zookeeper" % "zookeeper" % "3.4.5",
+    "org.apache.zookeeper" % "zookeeper" % "3.4.5" exclude("org.slf4j", "slf4j-log4j12"),
     "commons-codec" % "commons-codec" % "1.6",
     "com.cybozu.labs" % "langdetect" % "1.1-20120112", // todo(andrew): remove from common. make shared module between search and scraper.
     "org.mindrot" % "jbcrypt" % "0.3m",
@@ -90,13 +34,13 @@ object ApplicationBuild extends Build {
     "com.google.inject.extensions" % "guice-multibindings" % "3.0",
     "net.codingwell" %% "scala-guice" % "3.0.2",
     "org.imgscalr" % "imgscalr-lib" % "4.2",
-    "us.theatr" %% "akka-quartz" % "0.2.0_42.1",
+    "us.theatr" %% "akka-quartz" % "0.2.0_42.1" exclude("c3p0", "c3p0"),
     "org.jsoup" % "jsoup" % "1.7.1",
     "org.bouncycastle" % "bcprov-jdk15on" % "1.50",
     "org.msgpack" %% "msgpack-scala" % "0.6.8",
-    "com.kifi" %% "json-annotation" % "0.1"
+    "com.kifi" %% "json-annotation" % "0.1",
+    "com.mchange" % "c3p0" % "0.9.5-pre8" // todo(andrew): remove from common when C3P0 plugin is in sqldb
   ) map (_.excludeAll(
-    ExclusionRule(organization = "com.cedarsoft"),
     ExclusionRule(organization = "javax.jms"),
     ExclusionRule(organization = "com.sun.jdmk"),
     ExclusionRule(organization = "com.sun.jmx"),
@@ -156,97 +100,26 @@ object ApplicationBuild extends Build {
 
   lazy val curatorDependencies = Seq()
 
-  lazy val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
-    "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
-    "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140")
-
-  lazy val _routesImport = Seq(
-    "com.keepit.common.db.{ExternalId, Id, State, SequenceNumber}",
-    "com.keepit.model._",
-    "com.keepit.social._",
-    "com.keepit.search._",
-    "com.keepit.cortex.core._",
-    "com.keepit.cortex.models.lda._",
-    "com.keepit.common.mail.EmailAddress",
-    "com.keepit.common.crypto._",
-    "org.joda.time.DateTime",
-    "com.keepit.common.time._"
-  )
-
-  lazy val commonResolvers = Seq(
-    Resolver.url("sbt-plugin-snapshots",
-      new URL("http://repo.42go.com:4242/fortytwo/content/groups/public/"))(Resolver.ivyStylePatterns),
-    // new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
-    "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
-    // "kevoree Repository" at "http://maven2.kevoree.org/release/",
-    "FortyTwo Public Repository" at "http://repo.42go.com:4242/fortytwo/content/groups/public/",
-    "FortyTwo Towel Repository" at "http://repo.42go.com:4242/fortytwo/content/repositories/towel"
-    //for org.mongodb#casb
-    // "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-    // "releases"  at "https://oss.sonatype.org/content/groups/scala-tools",
-    // "terracotta" at "http://www.terracotta.org/download/reflector/releases/",
-    // "The Buzz Media Maven Repository" at "http://maven.thebuzzmedia.com"
-  )
-
-  lazy val _templatesImport = Seq(
-    "com.keepit.common.db.{ExternalId, Id, State}",
-    "com.keepit.model._",
-    "com.keepit.social._",
-    "com.keepit.search._"
-  )
-
-  lazy val javaTestOptions = Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m")
-
-  lazy val _testOptions = Seq(
-    Tests.Argument("sequential", "true"),
-    Tests.Argument("threadsNb", "16"),
-    Tests.Argument("showtimes", "true"),
-    Tests.Argument("stopOnFail", "true"),
-    Tests.Argument("failtrace", "true")
-  )
-
-  lazy val macroParadiseSettings = Seq(
-    resolvers += Resolver.sonatypeRepo("releases"),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full)
-  )
-
-  lazy val commonSettings = scalariformSettings ++ macroParadiseSettings ++ Seq(
-    scalacOptions ++= _scalacOptions,
-    routesImport ++= _routesImport,
-    resolvers ++= commonResolvers,
-    templatesImport ++= _templatesImport,
-
-    javaOptions in Test ++= javaTestOptions,
-    parallelExecution in Test := false,
-    testOptions in Test ++= _testOptions,
-    EclipseKeys.skipParents in ThisBuild := false,
-    sources in doc in Compile := List(),
-    Keys.fork := false,
-    // Keys.fork in Test := false, // uncomment to hook debugger while running tests
-    /*skip in update := true,
-     *skip in update in (Compile, test) := true*/
-    aggregate in update := false,
-    emojiLogs,
-    // incOptions := incOptions.value.withNameHashing(true) // see https://groups.google.com/forum/#!msg/play-framework/S_-wYW5Tcvw/OjJuB4iUwD8J
-    ScalariformKeys.preferences := ScalariformKeys.preferences.value
-      .setPreference(DoubleIndentClassDeclaration, true)
-    //,     offline := true
-  )
+  lazy val commonSettings =
+    Global.settings ++
+    PlayGlobal.settings ++
+    Seq(Logs.emojiLogs) ++
+    net.virtualvoid.sbt.graph.Plugin.graphSettings
 
   lazy val macros = Project(id = s"macros", base = file("modules/macros")).settings(
-    macroParadiseSettings ++ Seq(
-      libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.10.0",
-      libraryDependencies ++= (
-        if (scalaVersion.value.startsWith("2.10")) Seq("org.scalamacros" %% "quasiquotes" % "2.0.1")
-        else Nil
-      )
-    ): _*
+    Global.macroParadiseSettings: _*
+  ).settings(
+    libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.10.0",
+    libraryDependencies ++= (
+      if (scalaVersion.value.startsWith("2.10")) Seq("org.scalamacros" %% "quasiquotes" % "2.0.1")
+      else Nil
+    )
   )
 
   lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
-    commonSettings ++ Seq(
-      javaOptions in Test += "-Dconfig.resource=application-dev.conf"
-    ): _*
+    commonSettings: _*
+  ).settings(
+    javaOptions in Test += "-Dconfig.resource=application-dev.conf"
   ).dependsOn(macros)
 
   lazy val sqldb = play.Project("sqldb", appVersion, sqldbDependencies, path = file("modules/sqldb")).settings(
@@ -254,58 +127,73 @@ object ApplicationBuild extends Build {
   ).dependsOn(common % "test->test;compile->compile")
 
   lazy val shoebox = play.Project("shoebox", appVersion, shoeboxDependencies, path = file("modules/shoebox")).settings(
-    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"): _*
+    commonSettings: _*
   ).settings(
+    Frontend.angularDirectory <<= (baseDirectory in Compile) { _ / "angular" },
     playAssetsDirectories <+= (baseDirectory in Compile)(_ / "angular"),
-    angularDirectory <<= (baseDirectory in Compile) { _ / "angular" },
-    commands <++= angularDirectory { base =>
-      Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
-    },
-    commands <+= angularDirectory { base => cmd("ng", "gulp", base, List("release")) }
+    javaOptions in Test += "-Dconfig.resource=application-shoebox.conf"
+  ).settings(
+    Frontend.gulpCommands: _*
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val search = play.Project("search", appVersion, searchDependencies, path = file("modules/search")).settings(
-    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-search.conf"): _*
+    commonSettings: _*
+  ).settings(
+    javaOptions in Test += "-Dconfig.resource=application-search.conf"
   ).dependsOn(common % "test->test;compile->compile")
 
   lazy val eliza = play.Project("eliza", appVersion, Nil, path = file("modules/eliza")).settings(
-    (commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-eliza.conf") ++ (routesImport ++= Seq("com.keepit.eliza._", "com.keepit.eliza.model._"))) : _*
+    commonSettings: _*
+  ).settings(
+    javaOptions in Test += "-Dconfig.resource=application-eliza.conf",
+    routesImport ++= Seq(
+      "com.keepit.eliza._",
+      "com.keepit.eliza.model._"
+    )
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val heimdal = play.Project("heimdal", appVersion, heimdalDependencies, path=file("modules/heimdal")).settings(
-    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-heimdal.conf"): _*
+    commonSettings: _*
+  ).settings(
+    javaOptions in Test += "-Dconfig.resource=application-heimdal.conf"
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val abook = play.Project("abook", appVersion, abookDependencies, path=file("modules/abook")).settings(
-    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-abook.conf"): _*
+    commonSettings: _*
+  ).settings(
+    javaOptions in Test += "-Dconfig.resource=application-abook.conf"
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val scraper = play.Project("scraper", appVersion, scraperDependencies, path=file("modules/scraper")).settings(
-    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-scraper.conf"): _*
+    commonSettings: _*
+  ).settings(
+    javaOptions in Test += "-Dconfig.resource=application-scraper.conf"
   ).dependsOn(common % "test->test;compile->compile")
 
   lazy val cortex = play.Project("cortex", appVersion, cortexDependencies, path=file("modules/cortex")).settings(
-    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-cortex.conf"): _*
+    commonSettings: _*
+  ).settings(
+    javaOptions in Test += "-Dconfig.resource=application-cortex.conf"
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
   lazy val graph = play.Project("graph", appVersion, graphDependencies, path=file("modules/graph")).settings(
-    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-graph.conf"): _*
+    commonSettings: _*
+  ).settings(
+    javaOptions in Test += "-Dconfig.resource=application-graph.conf"
   ).dependsOn(common % "test->test;compile->compile")
 
   lazy val curator = play.Project("curator", appVersion, curatorDependencies, path=file("modules/curator")).settings(
-    commonSettings ++ Seq(javaOptions in Test += "-Dconfig.resource=application-curator.conf"): _*
+    commonSettings: _*
+  ).settings(
+    javaOptions in Test += "-Dconfig.resource=application-curator.conf"
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 
-  lazy val kifiBackend = play.Project(appName, "0.42").settings(commonSettings: _*)
-    .settings(
+  lazy val kifiBackend = play.Project(appName, "0.42").settings(commonSettings: _*).settings(
     aggregate in update := false,
-    angularDirectory <<= (baseDirectory in Compile) { _ / "modules/shoebox/angular" },
-    commands <++= angularDirectory { base =>
-      Seq("grunt", "bower", "npm").map(c => cmd("ng-" + c, c, base))
-    },
-    commands <+= angularDirectory { base => cmd("ng", "gulp", base, List("release")) }
-  )
-    .dependsOn(
+    Frontend.angularDirectory <<= (baseDirectory in Compile) { _ / "modules/shoebox/angular" }
+  ).settings(
+    Frontend.gulpCommands: _*
+  ).dependsOn(
     common % "test->test;compile->compile",
     shoebox % "test->test;compile->compile",
     search % "test->test;compile->compile",
@@ -315,12 +203,12 @@ object ApplicationBuild extends Build {
     scraper % "test->test;compile->compile",
     cortex % "test->test;compile->compile",
     graph % "test->test;compile->compile",
-    curator % "test->test;compile->compile")
-    .aggregate(common, shoebox, search, eliza, heimdal, abook, scraper, sqldb, cortex, graph, curator)
+    curator % "test->test;compile->compile"
+  ).aggregate(common, shoebox, search, eliza, heimdal, abook, scraper, sqldb, cortex, graph, curator)
 
-  lazy val distProject = Project(id = "dist", base = file("./.dist"))
-    .settings(aggregate in update := false)
-    .aggregate(search, shoebox, eliza, heimdal, abook, scraper, cortex, graph, curator)
+  lazy val distProject = Project(id = "dist", base = file("./.dist")).settings(
+      aggregate in update := false
+  ).aggregate(search, shoebox, eliza, heimdal, abook, scraper, cortex, graph, curator)
 
   override def rootProject = Some(kifiBackend)
 }

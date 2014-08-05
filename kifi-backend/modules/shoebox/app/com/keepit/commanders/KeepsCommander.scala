@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 
 import com.keepit.common.KestrelCombinator
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URISanitizer
@@ -44,7 +45,7 @@ case class KeepInfo(
   siteName: Option[String] = None,
   clickCount: Option[Int] = None,
   rekeepCount: Option[Int] = None,
-  libraryId: Option[ExternalId[Library]] = None)
+  libraryId: Option[PublicId[Library]] = None)
 
 object KeepInfo {
 
@@ -62,7 +63,7 @@ object KeepInfo {
     (__ \ 'siteName).formatNullable[String] and
     (__ \ 'clickCount).formatNullable[Int] and
     (__ \ 'rekeepCount).formatNullable[Int] and
-    (__ \ 'libraryId).formatNullable(ExternalId.format[Library])
+    (__ \ 'libraryId).formatNullable(PublicId.format[Library])
   )(KeepInfo.apply _, unlift(KeepInfo.unapply))
 
   def fromFullKeepInfo(info: FullKeepInfo, sanitize: Boolean = false) = {
@@ -99,7 +100,7 @@ case class FullKeepInfo(
   uriSummary: Option[URISummary] = None,
   clickCount: Option[Int] = None,
   rekeepCount: Option[Int] = None,
-  libraryId: Option[ExternalId[Library]] = None)
+  libraryId: Option[PublicId[Library]] = None)
 
 case class KeepInfosWithCollection(
   collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[KeepInfo])
@@ -159,8 +160,8 @@ class KeepsCommander @Inject() (
     count: Int,
     userId: Id[User]): (Seq[Keep], Option[Collection], Map[Id[Keep], Int], Map[Id[Keep], Int]) = {
 
-    @inline def filter(counts: Map[Id[NormalizedURI], Int])(implicit r: RSession): Seq[Id[NormalizedURI]] = {
-      val uriIds = counts.toSeq.sortBy(_._2)(Ordering[Int].reverse).map(_._1)
+    @inline def filter(counts: Seq[(Id[NormalizedURI], Int)])(implicit r: RSession): Seq[Id[NormalizedURI]] = {
+      val uriIds = counts.map(_._1)
       val before = beforeOpt match {
         case None => uriIds
         case Some(beforeExtId) =>
@@ -188,8 +189,12 @@ class KeepsCommander @Inject() (
           helprankOpt match {
             case Some(selector) =>
               val keepIds = selector.trim match {
-                case "rekeep" => filter(rekeepRepo.getUriReKeepCountsByKeeper(userId))
-                case _ => filter(keepDiscoveriesRepo.getUriDiscoveryCountsByKeeper(userId)) // click
+                case "rekeep" => {
+                  filter(rekeepRepo.getUriReKeepsWithCountsByKeeper(userId) map { case (uriId, _, _, count) => uriId -> count })
+                }
+                case _ => {
+                  filter(keepDiscoveriesRepo.getUriDiscoveriesWithCountsByKeeper(userId) map { case (uriId, _, _, count) => uriId -> count })
+                } // click
               }
               val km = keepRepo.bulkGetByUserAndUriIds(userId, keepIds.toSet)
               log.info(s"[getKeeps($beforeOpt,$afterOpt,${helprankOpt.get},$count,$userId)] keeps=$km")
@@ -622,11 +627,15 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def getHelpRankInfo(uriIds: Set[Id[NormalizedURI]]): Seq[HelpRankInfo] = {
+  def getHelpRankInfo(uriIds: Seq[Id[NormalizedURI]]): Seq[HelpRankInfo] = {
+    val uriIdSet = uriIds.toSet
+    if (uriIdSet.size != uriIds.length) {
+      log.warn(s"[getHelpRankInfo] (duplicates!) uriIds(len=${uriIds.length}):${uriIds.mkString(",")} idSet(sz=${uriIdSet.size}):${uriIdSet.mkString(",")}")
+    }
     val (discMap, rkMap) = db.readOnlyMaster { implicit ro =>
-      val discMap = keepDiscoveriesRepo.getDiscoveryCountsByURIs(uriIds)
-      val rkMap = rekeepRepo.getReKeepCountsByURIs(uriIds)
-      log.info(s"getHelpRankInfo discMap=$discMap rkMap=$rkMap")
+      val discMap = keepDiscoveriesRepo.getDiscoveryCountsByURIs(uriIdSet)
+      val rkMap = rekeepRepo.getReKeepCountsByURIs(uriIdSet)
+      log.info(s"[getHelpRankInfo] discMap=$discMap rkMap=$rkMap")
       (discMap, rkMap)
     }
     uriIds.toSeq.map { uriId =>

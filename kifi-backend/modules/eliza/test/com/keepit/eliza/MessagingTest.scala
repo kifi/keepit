@@ -7,30 +7,30 @@ import com.keepit.inject._
 import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.time._
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.social.BasicUser
 import com.keepit.realtime.{ UrbanAirship, FakeUrbanAirship, FakeUrbanAirshipModule }
-import com.keepit.heimdal.{ HeimdalContext, TestHeimdalServiceClientModule }
+import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
-import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, TestABookServiceClientModule }
+import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.commanders.{ MessageFetchingCommander, NotificationCommander, MessagingCommander }
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
-import com.keepit.common.crypto.TestCryptoModule
+import com.keepit.common.crypto.FakeCryptoModule
 import com.google.inject.Injector
 import play.api.test.Helpers._
 import play.api.libs.json.{ Json, JsObject }
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import akka.actor.ActorSystem
-import com.keepit.scraper.TestScraperServiceClientModule
+import com.keepit.scraper.FakeScraperServiceClientModule
 import com.keepit.common.store.ElizaDevStoreModule
 import com.keepit.common.aws.AwsModule
 import com.keepit.common.store.FakeStoreModule
-import com.keepit.common.store.ElizaFakeStoreModule
+import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.test.ElizaTestInjector
 
 class MessagingTest extends Specification with ElizaTestInjector {
@@ -38,18 +38,17 @@ class MessagingTest extends Specification with ElizaTestInjector {
   implicit val context = HeimdalContext.empty
 
   def modules = {
-    implicit val system = ActorSystem("test")
     Seq(
       ElizaCacheModule(),
       FakeShoeboxServiceModule(),
-      TestHeimdalServiceClientModule(),
+      FakeHeimdalServiceClientModule(),
       FakeElizaServiceClientModule(),
-      StandaloneTestActorSystemModule(),
-      TestABookServiceClientModule(),
+      FakeActorSystemModule(),
+      FakeABookServiceClientModule(),
       FakeUrbanAirshipModule(),
-      TestCryptoModule(),
-      TestScraperServiceClientModule(),
-      ElizaFakeStoreModule()
+      FakeCryptoModule(),
+      FakeScraperServiceClientModule(),
+      FakeElizaStoreModule()
     )
   }
 

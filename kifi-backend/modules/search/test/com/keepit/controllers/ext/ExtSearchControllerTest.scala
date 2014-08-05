@@ -1,11 +1,11 @@
 package com.keepit.controllers.ext
 
-import com.keepit.test.{ SearchApplication, SearchApplicationInjector }
+import com.keepit.test.{ SearchApplication, SearchTestInjector }
 import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.inject._
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -19,28 +19,30 @@ import com.keepit.search.index.IndexModule
 import com.keepit.search.result._
 import com.keepit.search.result.DecoratedResult
 import org.apache.lucene.search.{ Explanation, Query }
+import com.keepit.common.util.Configuration
+import com.keepit.common.util.PlayAppConfigurationModule
 
-class ExtSearchControllerTest extends Specification with SearchApplicationInjector {
+class ExtSearchControllerTest extends Specification with SearchTestInjector {
 
   def modules = {
-    implicit val system = ActorSystem("test")
     Seq(
-      StandaloneTestActorSystemModule(),
+      FakeActorSystemModule(),
       FakeActionAuthenticatorModule(),
-      FixedResultIndexModule()
+      FixedResultIndexModule(),
+      PlayAppConfigurationModule()
     )
   }
 
   "ExtSearchController" should {
     "search keeps" in {
-      running(new SearchApplication(modules: _*)) {
+      withInjector(modules: _*) { implicit injector =>
         val path = com.keepit.controllers.ext.routes.ExtSearchController.search("test", None, 7, None, None, None, None, None, None, None, None).toString
         path === "/search?q=test&maxHits=7"
 
         val user = User(Some(Id[User](1)), firstName = "prénom", lastName = "nom")
         inject[FakeActionAuthenticator].setUser(user)
         val request = FakeRequest("GET", path)
-        val result = route(request).get
+        val result = inject[ExtSearchController].search("test", None, 7, None, None, None, None, None, None, None, None)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
@@ -102,7 +104,7 @@ class ExtSearchControllerTest extends Specification with SearchApplicationInject
 case class FixedResultIndexModule() extends IndexModule {
   var volatileDirMap = Map.empty[(String, Shard[_]), IndexDirectory] // just in case we need to reference a volatileDir. e.g. in spellIndexer
 
-  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore): IndexDirectory = {
+  protected def getIndexDirectory(configName: String, shard: Shard[_], indexStore: IndexStore, conf: Configuration): IndexDirectory = {
     volatileDirMap.getOrElse((configName, shard), {
       val newdir = new VolatileIndexDirectory()
       volatileDirMap += (configName, shard) -> newdir

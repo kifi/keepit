@@ -1,0 +1,122 @@
+.kf-rightcol-friends
+  text-align: center
+
+  .kf-rightcol-header
+    text-align: left
+
+  .kf-friends-content
+    margin: 10px 5px
+    color: #555
+    line-height: 1.2
+
+  .kf-friends-content-bigger
+    font-size: 14px
+
+  a.social-connect-button:hover,
+  a.social-connect-button:active
+    text-decoration: none
+
+  .social-connect-button
+    position: relative
+    width: 85px
+    padding: 10px 10px 10px 40px
+    font-size: 14px
+
+  .social-connect-button::before
+    position: absolute
+    top: 0;
+    left: 0
+    width: 35px
+    height: 100%   
+    background-image: url(/img/networks2.png)
+    background-size: auto 35px;
+    background-color: rgba(0, 0, 0, 0.1)
+    display: inline-block
+    content: ''
+
+  .social-connect-button.linkedin::before
+    background-position: -35px 0px
+
+  .social-connect-button.gmail::before
+    background-position: -140px 0px
+
+  .kf-compact-friend-image,
+  .kf-pymk-image
+    width: 40px
+    height: 40px
+    padding: 1px 1px
+    border-radius: 5px
+
+  .kf-rightcol-friends-links
+    float: right
+    width: 70px
+    margin-top: 5px
+
+  .kf-rightcol-friends-connect
+    margin: 15px 15px
+    padding: 0
+    border: 1px solid #999
+    border-radius: 10px
+    background-color: #fdfdfd
+
+  .kf-people-you-may-know
+    margin-top: 10px
+    text-align: left
+
+  .kf-pymk-info
+    position: relative
+    float: right
+    width: 200px
+    margin-top: 5px
+    font-size: 12px
+
+    &.squish
+      margin-top: 2px
+      line-height: 12px
+
+  .kf-pymk-name
+    font-weight: bold
+
+  .kf-pymk-via
+    &.squish
+      display: block
+
+  .kf-pymk-action-container
+    width: 60px
+
+  .kf-pymk-action
+    display: inline-block
+    font-size: 10px
+    color: #006bb2
+    vertical-align: text-top
+
+  .kf-pymk-action-icon
+    display: inline-block
+    width: 8px
+    height: 8px
+    margin: 2px 2px 0 0
+    border: 2px solid #6fa6ef
+    border-radius: 2px
+    background-image: url(/img/sprites.png)
+    background-size: 184px auto
+    background-position: -176px -104px
+    background-color: #6fa6ef
+
+  .kf-pymk-close-icon
+    display: none
+    position: absolute
+    top: -2px
+    right: 15px
+    padding: 0 5px 5px 5px
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif
+    font-size: 14px
+    font-weight: 500
+    color: #777f88
+    cursor: pointer
+
+  .kf-pymk-info:hover .kf-pymk-close-icon
+    display: inline
+
+  .kf-pymk-invite-link
+    float: right
+

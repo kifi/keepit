@@ -18,7 +18,7 @@ import SocialNetworks._
 import securesocial.core._
 import play.api.Play
 import securesocial.core.providers.utils.{ PasswordHasher, BCryptPasswordHasher }
-import com.keepit.common.analytics.TestAnalyticsModule
+import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.controller.FakeActionAuthenticatorModule
 import com.keepit.common.net.FakeHttpClientModule
 import play.api.libs.json.JsArray
@@ -27,12 +27,12 @@ import com.keepit.model.UserConnection
 import scala.Some
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.actor.TestActorSystemModule
-import com.keepit.abook.TestABookServiceClientModule
+import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.search.TestSearchServiceClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
 
@@ -43,18 +43,17 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     FakeScrapeSchedulerModule(),
     FakeMailModule(),
     FakeHttpClientModule(),
-    TestAnalyticsModule(),
-    ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
-    TestSearchServiceClientModule(),
+    FakeAnalyticsModule(),
+    FakeShoeboxStoreModule(),
+    FakeActorSystemModule(),
+    FakeSearchServiceClientModule(),
     FakeAirbrakeModule(),
-    FakeActionAuthenticatorModule(),
     FakeSocialGraphModule(),
-    TestShoeboxAppSecureSocialModule(),
-    TestABookServiceClientModule(),
+    FakeABookServiceClientModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule()
+    FakeScraperServiceClientModule(),
+    FakeShoeboxAppSecureSocialModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {

@@ -11,7 +11,7 @@ import com.keepit.common.healthcheck._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.heimdal.{ KifiHitContext, SanitizedKifiHit, HeimdalContext }
 import com.keepit.shoebox.{ FakeKeepImportsModule, KeepImportsModule }
-import com.keepit.common.actor.{ StandaloneTestActorSystemModule, TestActorSystemModule }
+import com.keepit.common.actor.{ FakeActorSystemModule }
 import akka.actor.ActorSystem
 import com.keepit.search.ArticleSearchResult
 import com.keepit.common.db.{ Id, ExternalId }
@@ -26,7 +26,6 @@ import scala.concurrent.Await
 class KeepInternerTest extends Specification with ShoeboxTestInjector {
 
   implicit val context = HeimdalContext.empty
-  implicit val system = ActorSystem("test")
   implicit val execCtx = fj
 
   def modules: Seq[ScalaModule] = Seq(FakeKeepImportsModule(), FakeScrapeSchedulerModule())
@@ -112,7 +111,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val bookmarkInterner = inject[KeepInterner]
         val raw1 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keep42, keepKifi))
         val raw2 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepBing))
-        val raw3 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepStanford))
+        val raw3 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepStanford, keepBing))
         val raw4 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepApple))
 
         val deduped = bookmarkInterner.deDuplicate(raw1)
@@ -125,7 +124,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         keeps2.size === 3
         keeps1(1).uriId === keeps2(0).uriId
 
-        val (kc0, kc1, kc2) = db.readWrite { implicit rw =>
+        val (kc0, kc1, kc2, kc3) = db.readWrite { implicit rw =>
           val kifiHitCache = inject[KifiHitCache]
           val origin = "https://www.google.com"
           val kc0 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId))
@@ -139,32 +138,37 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           // u3 -> kifi (u1, u2) [rekeep]
           kifiHitCache.set(KifiHitKey(u3.id.get, keeps1(1).uriId), SanitizedKifiHit(kc1.hitUUID, origin, raw1(1).url, kc1.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId, u2.externalId), Seq.empty, None, 0, 0)))
 
-          (kc0, kc1, kc2)
+          // u3 -> bing (u2) [rekeep]
+          val ts3 = currentDateTime
+          val uuid3 = ExternalId[ArticleSearchResult]()
+          val kc3 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts3, hitUUID = uuid3, numKeepers = 1, keeperId = u2.id.get, keepId = keeps2(2).id.get, uriId = keeps2(2).uriId))
+          kifiHitCache.set(KifiHitKey(u3.id.get, keeps2(2).uriId), SanitizedKifiHit(kc3.hitUUID, origin, raw2(2).url, kc3.uriId, KifiHitContext(false, false, 0, Seq(u2.externalId), Seq.empty, None, 0, 0)))
+          (kc0, kc1, kc2, kc3)
         }
 
         val (keeps3, _) = bookmarkInterner.internRawBookmarks(raw3, u3.id.get, KeepSource.default, true)
 
-        val kc3 = db.readWrite { implicit rw =>
+        val kc4 = db.readWrite { implicit rw =>
           val kifiHitCache = inject[KifiHitCache]
           val origin = "https://www.google.com"
-          val kc3 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
+          val kc4 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
           // u4 -> kifi (u3) [rekeep]
-          kifiHitCache.set(KifiHitKey(u4.id.get, keeps3(0).uriId), SanitizedKifiHit(kc3.hitUUID, origin, raw3(0).url, kc3.uriId, KifiHitContext(false, false, 0, Seq(u3.externalId), Seq.empty, None, 0, 0)))
-          kc3
+          kifiHitCache.set(KifiHitKey(u4.id.get, keeps3(0).uriId), SanitizedKifiHit(kc4.hitUUID, origin, raw3(0).url, kc4.uriId, KifiHitContext(false, false, 0, Seq(u3.externalId), Seq.empty, None, 0, 0)))
+          kc4
         }
 
         val (keeps4, _) = bookmarkInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
 
         db.readWrite { implicit session =>
           userRepo.get(u1.id.get) === u1
-          keeps1.size === 2
-          keepRepo.all.size === 10
-          keeps2.size === 3
-          keeps3.size === 2
-          keeps4.size === 3
+          keeps1.size === raw1.size
+          keeps2.size === raw2.size
+          keeps3.size === raw3.size
+          keeps4.size === raw4.size
+          keepRepo.all.size === (raw1.size + raw2.size + raw3.size + raw4.size)
 
           val allDiscoveries = keepDiscoveryRepo.all()
-          allDiscoveries.size === 4
+          allDiscoveries.size === 5
 
           val cu0 = keepDiscoveryRepo.getDiscoveriesByUUID(kc0.hitUUID)
           cu0.size === 1
@@ -194,7 +198,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           ck1.size === 2
 
           val ck2 = keepDiscoveryRepo.getDiscoveriesByKeeper(u2.id.get)
-          ck2.size === 1
+          ck2.size === 2
 
           val counts1 = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u1.id.get)
           counts1.keySet.size === 2
@@ -210,10 +214,10 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           } === true
 
           val counts2 = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u2.id.get)
-          counts2.keySet.size === 1
+          counts2.keySet.size === 2
           counts2.get(keeps2(0).id.get) === Some(1)
           counts2.get(keeps2(1).id.get) === None
-          counts2.get(keeps2(2).id.get) === None
+          counts2.get(keeps2(2).id.get) === Some(1)
 
           keepDiscoveryRepo.getDiscoveryCountByKeeper(u1.id.get) === ck1.size
           keepDiscoveryRepo.getDiscoveryCountByKeeper(u2.id.get) === ck2.size
@@ -227,7 +231,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           val cm2 = keepDiscoveryRepo.getDiscoveryCountsByKeepIds(u2.id.get, keeps2.map(_.id.get).toSet)
 
           val rekeeps = rekeepRepo.all
-          rekeeps.size === 3
+          rekeeps.size === 4
 
           val rk1 = rekeeps.find(_.keeperId == u1.id.get).get
           rk1.keeperId === u1.id.get
@@ -248,12 +252,17 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           rkseq1(0).srcUserId === u3.id.get
           rkseq1(0).srcKeepId === keeps3(0).id.get
 
-          val rkmap2 = rekeepRepo.getReKeeps(Set(keeps2(0).id.get))
-          val rkseq2 = rkmap2(keeps2(0).id.get)
-          rkseq2.length === 1
-          rkseq2(0).keepId === keeps2(0).id.get
-          rkseq2(0).srcUserId === u3.id.get
-          rkseq2(0).srcKeepId === keeps3(0).id.get
+          val rkmap2 = rekeepRepo.getReKeeps(Set(keeps2(0).id.get, keeps2(2).id.get))
+          val rkseq2a = rkmap2(keeps2(0).id.get)
+          rkseq2a.length === 1
+          rkseq2a(0).keepId === keeps2(0).id.get
+          rkseq2a(0).srcUserId === u3.id.get
+          rkseq2a(0).srcKeepId === keeps3(0).id.get
+          val rkseq2b = rkmap2(keeps2(2).id.get)
+          rkseq2b.length === 1
+          rkseq2b(0).keepId === keeps2(2).id.get
+          rkseq2b(0).srcUserId === u3.id.get
+          rkseq2b(0).srcKeepId === keeps3(2).id.get
 
           val rkmap3 = rekeepRepo.getReKeeps(Set(keeps3(0).id.get))
           val rkseq3 = rkmap3(keeps3(0).id.get)
@@ -264,12 +273,12 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
 
           val rkbk1 = rekeepRepo.getReKeepsByKeeper(u1.id.get)
           rkbk1.head === rk1
-          rekeepRepo.getAllReKeepsByKeeper(u1.id.get) === rkbk1
+          rekeepRepo.getAllReKeepsByKeeper(u1.id.get).sortBy(_.createdAt) === rkbk1.sortBy(_.createdAt)
 
           val rkbk2 = rekeepRepo.getReKeepsByKeeper(u2.id.get)
           rkbk2.head === rk2
-          rekeepRepo.getReKeepsByReKeeper(u3.id.get).length === 2
-          rekeepRepo.getAllReKeepsByKeeper(u2.id.get) === rkbk2
+          rekeepRepo.getReKeepsByReKeeper(u3.id.get).length === 3
+          rekeepRepo.getAllReKeepsByKeeper(u2.id.get).sortBy(_.createdAt) === rkbk2.sortBy(_.createdAt)
 
           val rkc1 = rekeepRepo.getReKeepCountsByKeeper(u1.id.get)
           rkc1.get(keeps1(0).id.get) === None
@@ -296,7 +305,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           val rkc2 = rekeepRepo.getReKeepCountsByKeeper(u2.id.get)
           rkc2.get(keeps2(0).id.get) === Some(1)
           rkc2.get(keeps2(1).id.get) === None
-          rkc2.get(keeps2(2).id.get) === None
+          rkc2.get(keeps2(2).id.get) === Some(1)
 
           rekeepRepo.getReKeepCountByKeeper(u1.id.get) === rkc1.valuesIterator.foldLeft(0) { (a, c) => a + c }
           rekeepRepo.getReKeepCountByKeeper(u2.id.get) === rkc2.valuesIterator.foldLeft(0) { (a, c) => a + c }
@@ -342,6 +351,35 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
             case k =>
               rkcURIs2.get(k.uriId).get == rekeepRepo.getReKeepCountByURI(k.uriId)
           } === true
+
+          // rows + counts
+          val discoveriesWithCounts1 = keepDiscoveryRepo.getUriDiscoveriesWithCountsByKeeper(u1.id.get)
+          discoveriesWithCounts1.length === 2
+          discoveriesWithCounts1(0)._1 === keeps1(1).uriId // reverse chronological
+          discoveriesWithCounts1(1)._1 === keeps1(0).uriId
+          discoveriesWithCounts1.forall {
+            case (uriId, _, _, count) =>
+              counts1.get(keeps1.find(_.uriId == uriId).get.id.get).get == count
+          } === true
+          val discoveriesWithCounts2 = keepDiscoveryRepo.getUriDiscoveriesWithCountsByKeeper(u2.id.get)
+          discoveriesWithCounts2.length !== keeps2.length // not all have been discovered
+          discoveriesWithCounts2.length === 2
+          discoveriesWithCounts2(0)._1 === keeps2(2).uriId // reverse chronological
+          discoveriesWithCounts2(1)._1 === keeps2(0).uriId
+
+          val rekeepsWithCounts1 = rekeepRepo.getUriReKeepsWithCountsByKeeper(u1.id.get)
+          rekeepsWithCounts1.length === 1
+          rekeepsWithCounts1.forall {
+            case (uriId, _, _, count) =>
+              rkc1.get(keeps1.find(_.uriId == uriId).get.id.get).get == count
+          } === true
+          val rekeepsWithCounts2 = rekeepRepo.getUriReKeepsWithCountsByKeeper(u2.id.get)
+          rekeepsWithCounts2.length === 2
+          rekeepsWithCounts2.forall {
+            case (uriId, _, _, count) =>
+              rkc2.get(keeps2.find(_.uriId == uriId).get.id.get).get == count
+          } === true
+
         }
 
         val attrCmdr = inject[AttributionCommander]

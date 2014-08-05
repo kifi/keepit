@@ -1,0 +1,7 @@
+@(lib: Library)
+
+@admin.adminHelper.libraryBadge(lib)
+<br>
+<a href="@com.keepit.controllers.admin.routes.AdminLibraryController.libraryView(lib.id.get)">
+@{lib.name}
+</a>

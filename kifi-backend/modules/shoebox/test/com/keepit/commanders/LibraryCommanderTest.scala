@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.Injector
-import com.keepit.common.crypto.{ PublicIdConfiguration, TestCryptoModule }
+import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.time._
 import com.keepit.model._
@@ -144,7 +144,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
   "LibraryCommander" should {
     "create libraries, memberships & invites" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         val (userIron, userCaptain, userAgent, userHulk) = setupUsers()
 
         db.readOnlyMaster { implicit s =>
@@ -208,7 +208,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "modify library" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
 
         val libraryCommander = inject[LibraryCommander]
@@ -247,7 +247,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "remove library, memberships & invites" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         db.readOnlyMaster { implicit s =>
@@ -282,7 +282,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "get library by publicId" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         val libraryCommander = inject[LibraryCommander]
@@ -297,7 +297,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "get libraries by user (which libs am I following / contributing to?)" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
 
@@ -328,7 +328,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "intern user system libraries" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val libraryCommander = inject[LibraryCommander]
 
@@ -389,8 +389,6 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         db.readWrite { implicit session =>
           val lib = libraryRepo.save(Library(ownerId = userIron.id.get, name = "Main 2!", kind = LibraryKind.SYSTEM_MAIN, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main2"), memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(userId = userIron.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER, showInSearch = true))
-
-          println(libraryRepo.all.mkString("\n"))
         }
 
         libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
@@ -406,7 +404,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "invite users" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
         val libraryCommander = inject[LibraryCommander]
@@ -445,7 +443,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "let users join or decline library invites" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
         val libraryCommander = inject[LibraryCommander]
@@ -483,7 +481,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "let users leave library" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         val libraryCommander = inject[LibraryCommander]
@@ -503,7 +501,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "get keeps" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
         val libraryCommander = inject[LibraryCommander]
@@ -517,7 +515,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "copy keeps to another library" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
         val libraryCommander = inject[LibraryCommander]
@@ -531,30 +529,28 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get).toSet
+          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get)
           (libFreedom, libIronMurica, keepsInMurica)
         }
 
         // Ironman copies 3 keeps from Murica to IronMurica (tests RO -> RW)
         val copy1 = libraryCommander.copyKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
-        copy1._1.slug === LibrarySlug("ironmurica")
-        copy1._2.size === 0
+        copy1.size === 0
 
         val keepsInIronMurica = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
           keepRepo.getByLibrary(libMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
           keepRepo.getByLibrary(libIronMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get).toSet
+          keepRepo.getByLibrary(libIronMurica.id.get)
         }
 
         // Ironman attempts to copy from IronMurica to Murica (but only has read_only access to Murica) (tests RW -> RO)
         val copy2 = libraryCommander.copyKeeps(userIron.id.get, libMurica.id.get, keepsInIronMurica.slice(0, 2))
-        copy2._1.slug === LibrarySlug("murica")
-        copy2._2.size === 2
+        copy2.size === 2
+        copy2.head._2 === LibraryError.DestPermissionDenied
         // Ironman copies 2 keeps from IronMurica to Freedom (tests RW -> RW)
         val copy3 = libraryCommander.copyKeeps(userIron.id.get, libFreedom.id.get, keepsInIronMurica.slice(0, 2))
-        copy3._1.slug === LibrarySlug("freedom")
-        copy3._2.size === 0
+        copy3.size === 0
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
@@ -565,8 +561,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         // Ironman copies duplicates from Murica to Freedom
         val copy4 = libraryCommander.copyKeeps(userIron.id.get, libFreedom.id.get, keepsInMurica)
-        copy4._1.slug === LibrarySlug("freedom")
-        copy4._2.size === 2
+        copy4.size === 2
+        copy4.head._2 === LibraryError.AlreadyExistsInDest
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 9
@@ -576,7 +572,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "move keeps to another library" in {
-      withDb(TestCryptoModule()) { implicit injector =>
+      withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
         val libraryCommander = inject[LibraryCommander]
@@ -590,50 +586,49 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get).toSet
+          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get)
           (libFreedom, libIronMurica, keepsInMurica)
         }
 
         // Ironman attempts to move keeps from Murica to IronMurica (tests RO -> RW)
         val move1 = libraryCommander.moveKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
-        move1._1.slug === LibrarySlug("ironmurica")
-        move1._2.size === 3
+        move1.size === 3
+        move1.head._2 === LibraryError.SourcePermissionDenied
 
         libraryCommander.copyKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
         val keepsInMyMurica = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
           keepRepo.getByLibrary(libIronMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get).toSet
+          keepRepo.getByLibrary(libIronMurica.id.get)
         }
 
         // Ironman moves 2 keeps from IronMurica to Freedom (tests RW -> RW)
         val move2 = libraryCommander.moveKeeps(userIron.id.get, libFreedom.id.get, keepsInMyMurica.slice(0, 2))
-        move2._1.slug === LibrarySlug("freedom")
-        move2._2.size === 0
+        move2.size === 0
 
         val keepsInFreedom = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
           keepRepo.getByLibrary(libIronMurica.id.get).map(_.title.get) === Seq("McDonalds")
           keepRepo.getByLibrary(libFreedom.id.get).map(_.title.get) === Seq("Reddit", "Freedom")
-          keepRepo.getByLibrary(libFreedom.id.get).toSet
+          keepRepo.getByLibrary(libFreedom.id.get)
         }
 
         // Ironman attempts to move keeps from IronMurica to Murica (tests RW -> RO)
         val move3 = libraryCommander.moveKeeps(userIron.id.get, libMurica.id.get, keepsInFreedom)
-        move3._1.slug === LibrarySlug("murica")
-        move3._2.size === 2
+        move3.size === 2
+        move3.head._2 === LibraryError.DestPermissionDenied
 
         libraryCommander.copyKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
         val keepsInMyMurica2 = db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
           keepRepo.getByLibrary(libIronMurica.id.get).map(_.title.get) === Seq("McDonalds", "Reddit", "Freedom")
-          keepRepo.getByLibrary(libIronMurica.id.get).toSet
+          keepRepo.getByLibrary(libIronMurica.id.get)
         }
 
         // move duplicates (Reddit) IronMurica -> Freedom
         val move6 = libraryCommander.moveKeeps(userIron.id.get, libFreedom.id.get, keepsInMyMurica2.slice(0, 2))
-        move6._1.slug === LibrarySlug("freedom")
-        move6._2.size === 1
+        move6.size === 1
+        move6.head._2 === LibraryError.AlreadyExistsInDest
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 8

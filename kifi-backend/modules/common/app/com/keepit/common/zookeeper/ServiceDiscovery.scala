@@ -49,7 +49,7 @@ class ServiceDiscoveryImpl(
   scheduler: Scheduler,
   airbrake: Provider[AirbrakeNotifier],
   val isCanary: Boolean = false,
-  servicesToListenOn: Seq[ServiceType])
+  servicesToListenOn: Set[ServiceType])
     extends ServiceDiscovery with Logging {
 
   @volatile private var lastStatusChangeTime = System.currentTimeMillis

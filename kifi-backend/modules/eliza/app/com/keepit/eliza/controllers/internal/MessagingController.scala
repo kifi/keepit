@@ -40,7 +40,7 @@ import scala.util.{ Failure, Success, Try }
 import play.api.libs.json.JsArray
 import com.keepit.eliza.model.UserThread
 import play.api.libs.json.JsObject
-import com.keepit.common.json.JsonFormatters._
+import com.keepit.common.json._
 
 //For migration only
 import play.api.mvc.Action
