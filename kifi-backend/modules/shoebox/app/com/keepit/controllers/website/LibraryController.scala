@@ -171,16 +171,24 @@ class LibraryController @Inject() (
     Library.decodePublicId(toPubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
       case Success(toId) =>
-        val targetKeeps = db.readOnlyMaster { implicit s => targetKeepsExt.map(keepRepo.getOpt) }.flatten.toSet
+        val targetKeeps = db.readOnlyMaster { implicit s => targetKeepsExt.map(keepRepo.getOpt) }.flatten
         val badKeeps = libraryCommander.copyKeeps(request.userId, toId, targetKeeps)
         val errors = badKeeps.map {
           case (keep, error) =>
             Json.obj(
               "keep" -> KeepInfo.fromBookmark(keep),
-              "error" -> error
+              "error" -> error.message
             )
         }
-        Ok(Json.obj("failures" -> errors))
+        if (errors.nonEmpty) {
+          if (errors.length == targetKeepsExt.length) {
+            Ok(Json.obj("success" -> false, "failures" -> errors)) // complete failure
+          } else {
+            Ok(Json.obj("success" -> "partial", "failures" -> errors)) // partial failure
+          }
+        } else {
+          Ok(Json.obj("success" -> true))
+        }
     }
   }
 
@@ -192,16 +200,24 @@ class LibraryController @Inject() (
     Library.decodePublicId(toPubId) match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "dest_invalid_id"))
       case Success(toId) => {
-        val targetKeeps = db.readOnlyReplica { implicit s => targetKeepsExt.map { keepRepo.getOpt } }.flatten.toSet
+        val targetKeeps = db.readOnlyReplica { implicit s => targetKeepsExt.map { keepRepo.getOpt } }.flatten
         val badKeeps = libraryCommander.moveKeeps(request.userId, toId, targetKeeps)
         val errors = badKeeps.map {
           case (keep, error) =>
             Json.obj(
               "keep" -> KeepInfo.fromBookmark(keep),
-              "error" -> error
+              "error" -> error.message
             )
         }
-        Ok(Json.obj("failures" -> errors))
+        if (errors.nonEmpty) {
+          if (errors.length == targetKeepsExt.length) {
+            Ok(Json.obj("success" -> false, "failures" -> errors)) // complete failure
+          } else {
+            Ok(Json.obj("success" -> "partial", "failures" -> errors)) // partial failure
+          }
+        } else {
+          Ok(Json.obj("success" -> true))
+        }
       }
     }
   }

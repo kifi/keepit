@@ -293,25 +293,26 @@ class LibraryCommander @Inject() (
     }
   }
 
-  private def applyToKeepSet(userId: Id[User],
+  // Return is Set of Keep -> error message
+  private def applyToKeeps(userId: Id[User],
     library: Library,
-    keepSet: Set[Keep],
+    keeps: Seq[Keep],
     excludeFromAccess: Set[LibraryAccess],
-    saveKeep: (Keep, RWSession) => Unit): Set[(Keep, String)] = {
+    saveKeep: (Keep, RWSession) => Unit): Seq[(Keep, LibraryError)] = {
 
-    val badKeeps = collection.mutable.Set[(Keep, String)]()
+    val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
     db.readWrite { implicit s =>
       val existingURIs = keepRepo.getByLibrary(library.id.get).map(_.uriId).toSet
-      val p = keepSet.groupBy(_.libraryId).map {
+      keeps.groupBy(_.libraryId).map {
         case (None, keeps) => keeps
         case (Some(fromLibraryId), keeps) =>
           libraryMembershipRepo.getWithLibraryIdandUserId(fromLibraryId, userId) match {
             case None =>
-              badKeeps ++= keeps.map(_ -> "source_permission_denied")
-              Set[Keep]()
+              badKeeps ++= keeps.map(_ -> LibraryError.SourcePermissionDenied)
+              Seq[Keep]()
             case Some(memFrom) if excludeFromAccess.contains(memFrom.access) =>
-              badKeeps ++= keeps.map(_ -> "source_permission_denied")
-              Set[Keep]()
+              badKeeps ++= keeps.map(_ -> LibraryError.SourcePermissionDenied)
+              Seq[Keep]()
             case Some(_) =>
               keeps
           }
@@ -319,14 +320,14 @@ class LibraryCommander @Inject() (
         if (!existingURIs.contains(keep.uriId)) {
           saveKeep(keep, s)
         } else {
-          badKeeps += keep -> "already_exists_in_dest"
+          badKeeps += keep -> LibraryError.AlreadyExistsInDest
         }
       }
     }
-    badKeeps.toSet
+    badKeeps.toSeq
   }
 
-  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keepSet: Set[Keep]): Set[(Keep, String)] = {
+  def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep]): Seq[(Keep, LibraryError)] = {
     val (library, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)
       val memTo = libraryMembershipRepo.getWithLibraryIdandUserId(toLibraryId, userId)
@@ -334,7 +335,7 @@ class LibraryCommander @Inject() (
     }
     memTo match {
       case v if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
-        keepSet.map(_ -> "dest_permission_denied")
+        keeps.map(_ -> LibraryError.DestPermissionDenied)
       case Some(_) =>
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
@@ -345,12 +346,12 @@ class LibraryCommander @Inject() (
           }
         }
 
-        val badKeeps = applyToKeepSet(userId, library, keepSet, Set(), saveKeep)
+        val badKeeps = applyToKeeps(userId, library, keeps, Set(), saveKeep)
         badKeeps
     }
   }
 
-  def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keepSet: Set[Keep]): Set[(Keep, String)] = {
+  def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keeps: Seq[Keep]): Seq[(Keep, LibraryError)] = {
     val (library, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)
       val memTo = libraryMembershipRepo.getWithLibraryIdandUserId(toLibraryId, userId)
@@ -358,7 +359,7 @@ class LibraryCommander @Inject() (
     }
     memTo match {
       case v if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
-        keepSet.map(_ -> "dest_permission_denied")
+        keeps.map(_ -> LibraryError.DestPermissionDenied)
       case Some(_) =>
 
         def saveKeep(k: Keep, s: RWSession): Unit = {
@@ -366,11 +367,26 @@ class LibraryCommander @Inject() (
           keepRepo.save(k.copy(libraryId = Some(toLibraryId)))
         }
 
-        val badKeeps = applyToKeepSet(userId, library, keepSet, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
+        val badKeeps = applyToKeeps(userId, library, keeps, Set(LibraryAccess.READ_ONLY, LibraryAccess.READ_INSERT), saveKeep)
         badKeeps
     }
   }
 
+}
+
+sealed abstract class LibraryError(val message: String)
+object LibraryError {
+  case object SourcePermissionDenied extends LibraryError("source_permission_denied")
+  case object DestPermissionDenied extends LibraryError("dest_permission_denied")
+  case object AlreadyExistsInDest extends LibraryError("already_exists_in_dest")
+
+  def apply(message: String): LibraryError = {
+    message match {
+      case SourcePermissionDenied.message => SourcePermissionDenied
+      case DestPermissionDenied.message => DestPermissionDenied
+      case AlreadyExistsInDest.message => AlreadyExistsInDest
+    }
+  }
 }
 
 case class LibraryFail(message: String) extends AnyVal
