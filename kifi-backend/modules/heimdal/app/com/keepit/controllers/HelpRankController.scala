@@ -15,7 +15,7 @@ class HelpRankController @Inject() (
 
   implicit val fj = ExecutionContext.fj
 
-  def kifiHit() = SafeAsyncAction(parse.tolerantJson) { request =>
+  def processKifiHit() = SafeAsyncAction(parse.tolerantJson) { request =>
     val json = request.body
     val clicker = (json \ "clickerId").as(Id.format[User])
     val kifiHit = (json \ "kifiHit").as[SanitizedKifiHit]
@@ -23,11 +23,11 @@ class HelpRankController @Inject() (
     Ok
   }
 
-  def keepAttribution() = SafeAsyncAction(parse.tolerantJson) { request =>
+  def processKeepAttribution() = SafeAsyncAction(parse.tolerantJson) { request =>
     val json = request.body
     val userId = (json \ "userId").as(Id.format[User])
     val keeps = (json \ "keeps").as[Seq[Keep]]
-    helprankCommander.keepAttribution(userId, keeps)
+    helprankCommander.processKeepAttribution(userId, keeps)
     Ok
   }
 

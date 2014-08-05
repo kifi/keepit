@@ -59,7 +59,7 @@ class HelpRankCommander @Inject() (
     }
   }
 
-  def keepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit] = {
+  def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit] = {
     SafeFuture {
       val builder = collection.mutable.ArrayBuilder.make[Keep]
       newKeeps.foreach { keep =>
