@@ -191,10 +191,7 @@
 .kifi-keep-btn,
 .kifi-keep-btn.kifi-hoverless:hover,
 .kifi-keep-btn.kifi-hoverless:active {
-  background: linear-gradient(#fff, #f3f3f3);
-}
-.kifi-keep-btn {
-  padding-left: 16px;
+  background-image: linear-gradient(#fff, #f3f3f3);
 }
 .kifi-keep-btn:hover {
   color: #3f9f65;
@@ -204,6 +201,7 @@
 }
 .kifi-keep-btn::before {
   content: 'Keep it';
+  padding-left: 16px;
 }
 .kifi-kept-btn,
 .kifi-kept-btn.kifi-hoverless:hover,
