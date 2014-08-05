@@ -96,7 +96,7 @@ private[scraper] class ScraperHealthMonitor @Inject() (
     val msg = s"[checkOverdueCount]: overdue-count=${overdueCount}"
     if (overdueCount > config.overdueCountThreshold) {
       log.warn(msg)
-      systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = Seq(SystemEmailAddress.RAY, SystemEmailAddress.MARTIN), category = NotificationCategory.System.SCRAPER, subject = "scraper-many-overdues", htmlBody = msg))
+      systemAdminMailSender.sendMail(ElectronicMail(from = SystemEmailAddress.ENG, to = Seq(SystemEmailAddress.RAY), category = NotificationCategory.System.SCRAPER, subject = "scraper-many-overdues", htmlBody = msg))
     } else {
       log.info(msg)
     }

@@ -22,12 +22,12 @@ import org.joda.time.DateTime
 trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getFeature(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LDATopicFeature]
   def getByURI(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[URILDATopic]
+  def getActiveByURI(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[URILDATopic]
   def getHighestSeqNumber(version: ModelVersion[DenseLDA])(implicit session: RSession): SequenceNumber[NormalizedURI]
   def getUpdateTimeAndState(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(DateTime, State[URILDATopic])]
   def getUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA], after: Option[DateTime] = None)(implicit session: RSession): Seq[(LDATopic, Int)]
   def getLatestURIsInTopic(topicId: LDATopic, version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def getFeaturesSince(seq: SequenceNumber[NormalizedURI], version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[URILDATopic]
-  def activeFeatureWithZeroEvidence(version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[URILDATopic]
 }
 
 @Singleton
@@ -89,6 +89,10 @@ class URILDATopicRepoImpl @Inject() (
     q.firstOption
   }
 
+  def getActiveByURI(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[URILDATopic] = {
+    (for { r <- rows if (r.uriId === uriId && r.version === version && r.state === URILDATopicStates.ACTIVE) } yield r).firstOption
+  }
+
   def getHighestSeqNumber(version: ModelVersion[DenseLDA])(implicit session: RSession): SequenceNumber[NormalizedURI] = {
     import StaticQuery.interpolation
 
@@ -131,9 +135,5 @@ class URILDATopicRepoImpl @Inject() (
   def getFeaturesSince(seq: SequenceNumber[NormalizedURI], version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[URILDATopic] = {
     val q = (for { r <- rows if (r.uriSeq > seq && r.version === version) } yield r).sortBy(_.uriSeq).take(limit)
     q.list
-  }
-
-  def activeFeatureWithZeroEvidence(version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[URILDATopic] = {
-    (for { r <- rows if r.numOfWords === 0 && r.state === URILDATopicStates.ACTIVE && r.version === version } yield r).take(limit).list
   }
 }

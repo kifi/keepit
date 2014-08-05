@@ -16,13 +16,17 @@ import akka.actor.ActorSystem
 
 @Singleton
 class CuratorTasksPlugin @Inject() (
-    commander: SeedIngestionCommander,
+    ingestionCommander: SeedIngestionCommander,
+    generationCommander: RecommendationGenerationCommander,
     system: ActorSystem,
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
 
   override def onStart() {
     scheduleTaskOnLeader(system, 1 minutes, 5 minutes) {
-      commander.ingestAll()
+      ingestionCommander.ingestAll()
+    }
+    scheduleTaskOnLeader(system, 1 minutes, 5 minutes) {
+      generationCommander.precomputeRecommendations()
     }
   }
 }
