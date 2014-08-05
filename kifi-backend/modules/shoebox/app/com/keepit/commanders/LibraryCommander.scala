@@ -69,7 +69,7 @@ class LibraryCommander @Inject() (
     badMessage match {
       case Some(x) => Left(LibraryFail(x))
       case _ => {
-        val exists = db.readOnlyReplica { implicit s => libraryRepo.getByNameAndUser(ownerId, libAddReq.name) }
+        val exists = db.readOnlyReplica { implicit s => libraryRepo.getByNameAndUserId(ownerId, libAddReq.name) }
         exists match {
           case Some(x) => Left(LibraryFail("library name already exists for user"))
           case _ => {
@@ -277,7 +277,7 @@ class LibraryCommander @Inject() (
 
   def leaveLibrary(libraryId: Id[Library], userId: Id[User]): Either[LibraryFail, Unit] = {
     db.readWrite { implicit s =>
-      libraryMembershipRepo.getWithLibraryIdandUserId(libraryId, userId) match {
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
         case None => Left(LibraryFail("membership not found"))
         case Some(mem) => {
           libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.INACTIVE))
@@ -305,7 +305,7 @@ class LibraryCommander @Inject() (
       keepSet.groupBy(_.libraryId).map {
         case (None, _) => {}
         case (Some(fromLibraryId), keeps) => {
-          libraryMembershipRepo.getWithLibraryIdandUserId(fromLibraryId, userId) match {
+          libraryMembershipRepo.getWithLibraryIdAndUserId(fromLibraryId, userId) match {
             case None => { badKeeps ++= keeps }
             case Some(memFrom) if excludeFromAccess.contains(memFrom.access) => { badKeeps ++= keeps }
             case Some(_) => {
@@ -327,7 +327,7 @@ class LibraryCommander @Inject() (
   def copyKeeps(userId: Id[User], toLibraryId: Id[Library], keepSet: Set[Keep]): (Library, Set[Keep], Option[LibraryFail]) = {
     val (library, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)
-      val memTo = libraryMembershipRepo.getWithLibraryIdandUserId(toLibraryId, userId)
+      val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId)
       (library, memTo)
     }
     memTo match {
@@ -353,7 +353,7 @@ class LibraryCommander @Inject() (
   def moveKeeps(userId: Id[User], toLibraryId: Id[Library], keepSet: Set[Keep]): (Library, Set[Keep], Option[LibraryFail]) = {
     val (library, memTo) = db.readOnlyMaster { implicit s =>
       val library = libraryRepo.get(toLibraryId)
-      val memTo = libraryMembershipRepo.getWithLibraryIdandUserId(toLibraryId, userId)
+      val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(toLibraryId, userId)
       (library, memTo)
     }
     memTo match {
