@@ -1,6 +1,7 @@
 package com.keepit.commander
 
 import com.google.inject.Inject
+import com.keepit.common.KestrelCombinator
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
@@ -83,9 +84,9 @@ class HelpRankCommander @Inject() (
         keepDiscoveryRepo.getDiscoveriesByUUID(hit.uuid) collect {
           case c if rekeepRepo.getReKeep(c.keeperId, c.uriId, userId).isEmpty =>
             val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
-            val saved = rekeepRepo.save(rekeep)
-            log.info(s"[searchAttribution($userId,${keep.uriId})] rekeep=$saved; click=$c")
-            saved
+            rekeepRepo.save(rekeep) tap { saved =>
+              log.info(s"[searchAttribution($userId,${keep.uriId})] rekeep=$saved; click=$c")
+            }
         }
       }
       res
@@ -108,9 +109,9 @@ class HelpRankCommander @Inject() (
                     val discovery = KeepDiscovery(hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging")) // todo(ray): None for uuid
                     val savedDiscovery = keepDiscoveryRepo.save(discovery)
                     val rekeep = ReKeep(keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = 1)
-                    val saved = rekeepRepo.save(rekeep)
-                    log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; discovery=$savedDiscovery")
-                    saved
+                    rekeepRepo.save(rekeep) tap { saved =>
+                      log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; discovery=$savedDiscovery")
+                    }
                 }
               }
           }
