@@ -95,7 +95,9 @@ class RecommendationGenerationCommander @Inject() (
 
   }
 
-  private def getPerUserGenerationLock(userId: Id[User]): ReactiveLock = perUserRecommendationGenerationLocks.getOrElseUpdate(userId, new ReactiveLock())
+  private def getPerUserGenerationLock(userId: Id[User]): ReactiveLock = {
+    perUserRecommendationGenerationLocks.getOrElseUpdate(userId, new ReactiveLock())
+  }
 
   private def precomputeRecommendationsForUser(userId: Id[User]): Unit = recommendationGenerationLock.withLockFuture {
     getPerUserGenerationLock(userId).withLockFuture {
