@@ -1,8 +1,7 @@
 .kf-rightcol-friends
   text-align: center
 
-  .kf-rightcol-header,
-  .kf-rightcol-header-2
+  .kf-rightcol-header
     text-align: left
 
   .kf-friends-content
@@ -61,6 +60,7 @@
     background-color: #fdfdfd
 
   .kf-people-you-may-know
+    margin-top: 10px
     text-align: left
 
   .kf-pymk-info
@@ -81,6 +81,9 @@
     &.squish
       display: block
 
+  .kf-pymk-action-container
+    width: 60px
+
   .kf-pymk-action
     display: inline-block
     font-size: 10px
@@ -95,23 +98,21 @@
     border: 2px solid #6fa6ef
     border-radius: 2px
     background-image: url(/img/sprites.png)
-    background-size: auto 170px
-    background-position: -174px -103px
+    background-size: 184px auto
+    background-position: -176px -104px
     background-color: #6fa6ef
 
   .kf-pymk-close-icon
     display: none
     position: absolute
-    top: -10px
-    right: 10px
+    top: -2px
+    right: 15px
+    padding: 0 5px 5px 5px
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif
     font-size: 14px
     font-weight: 500
     color: #777f88
     cursor: pointer
-
-    &.squish
-      top: -3px
 
   .kf-pymk-info:hover .kf-pymk-close-icon
     display: inline
