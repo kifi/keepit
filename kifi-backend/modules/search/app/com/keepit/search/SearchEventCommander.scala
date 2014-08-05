@@ -15,6 +15,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 class SearchEventCommander @Inject() (
     shoeboxClient: ShoeboxServiceClient,
+    heimdalClient: HeimdalServiceClient,
     clickHistoryTracker: ClickHistoryTracker,
     resultClickedTracker: ResultClickTracker,
     searchAnalytics: SearchAnalytics) extends Logging {
@@ -31,6 +32,7 @@ class SearchEventCommander @Inject() (
         clickHistoryTracker.add(userId, ClickedURI(uriId))
         val hit = SanitizedKifiHit(searchContext.uuid, searchContext.origin, searchResultUrl, uriId, kifiHitContext)
         shoeboxClient.kifiHit(userId, hit)
+        heimdalClient.processKifiHit(userId, hit)
     }
     searchAnalytics.clickedSearchResult(userId, clickedAt, searchContext, SearchEngine.Kifi, resultPosition, Some(kifiHitContext), context)
   }

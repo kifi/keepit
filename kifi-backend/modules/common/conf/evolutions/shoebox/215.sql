@@ -1,29 +1,22 @@
-# HEIMDAL
+# CORTEX
 
 # --- !Ups
 
-CREATE TABLE keep_discovery (
+CREATE TABLE user_lda_stats(
   id bigint(20) NOT NULL AUTO_INCREMENT,
   created_at datetime NOT NULL,
   updated_at datetime NOT NULL,
+  user_id bigint(20) NOT NULL,
+  version tinyint(3) unsigned NOT NULL,
+  num_of_evidence int unsigned NOT NULL,
+  user_topic_mean blob DEFAULT NULL,
+  user_topic_var blob DEFAULT NULL,
   state varchar(20) NOT NULL,
 
-  hit_uuid varchar(36) NOT NULL,
-  num_keepers int NOT NULL DEFAULT 1,
-  keeper_id bigint(20) NOT NULL,
-  keep_id bigint(20) NOT NULL,
-  uri_id bigint(20) NOT NULL,
-
-  origin varchar(256) DEFAULT NULL,
-
   PRIMARY KEY (id),
-
-  INDEX keep_discovery_keeper_id (keeper_id),
-  INDEX keep_discovery_keep_id (keep_id),
-  INDEX keep_discovery_uri_id (uri_id),
-  INDEX keep_discovery_hit_uuid (hit_uuid)
+  INDEX user_lda_stats_user_version (user_id, version)
 );
 
-insert into evolutions (name, description) values('215.sql', 'adding keep_discovery table');
+insert into evolutions (name, description) values('215.sql', 'adding user_lda_stats');
 
 # --- !Downs

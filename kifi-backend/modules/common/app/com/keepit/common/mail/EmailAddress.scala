@@ -65,7 +65,6 @@ object SystemEmailAddress {
   val YINGJIE = EmailAddress("yingjie@42go.com")
   val LÉO = EmailAddress("leo@42go.com")
   val STEPHEN = EmailAddress("stephen@42go.com")
-  val EFFI = EmailAddress("effi@42go.com")
   val RAY = EmailAddress("ray@42go.com")
   val JOSH = EmailAddress("josh@kifi.com")
   val CONGRATS = EmailAddress("congrats@kifi.com")
@@ -75,7 +74,7 @@ object SystemEmailAddress {
   val OLD_SUPPORT = EmailAddress("support@42go.com") //keep for serialization of mail
 
   val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, ANDREW, YINGJIE, LÉO, STEPHEN, RAY, JOSH)
-  val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, NOTIFICATIONS, ENG, CONGRATS, EFFI, NOTIFY, SENDGRID)
+  val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, NOTIFICATIONS, ENG, CONGRATS, NOTIFY, SENDGRID)
 
   val ALL_EMAILS = ENG_EMAILS ++ NON_ENG_EMAILS
 
