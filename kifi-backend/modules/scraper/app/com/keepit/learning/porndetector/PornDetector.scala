@@ -50,7 +50,7 @@ class SlidingWindowPornDetector(detector: PornDetector, windowSize: Int = 10) ex
     val (blocks, badBlocks) = detectBlocks(text)
     if (blocks == 0) return 0f
     val r = badBlocks / blocks.toFloat
-    if (r > 0.05) return 1f else 0f // not smooth (for performance reason). could use more Bayesian style
+    if (r > 0.05 || badBlocks > 10) return 1f else 0f // not smooth (for performance reason). could use more Bayesian style
   }
 }
 

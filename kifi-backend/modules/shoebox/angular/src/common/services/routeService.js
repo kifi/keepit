@@ -64,6 +64,12 @@ angular.module('kifi.routeService', [])
       },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
+      peopleYouMayKnow: function (page, pageSize) {
+        return route('/user/friends/find') + '?page=' + page + '&pageSize=' + pageSize;
+      },
+      hideUserRecommendation: function (id) {
+        return route('/user/' + id + '/hide');
+      },
       search: searchRoute('/site/search'),
       searchResultClicked: searchRoute('/site/search/events/resultClicked'),
       searchedAnalytics: searchRoute('/site/search/events/searched'),

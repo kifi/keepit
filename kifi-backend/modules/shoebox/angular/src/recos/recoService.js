@@ -15,7 +15,7 @@ angular.module('kifi.recoService', ['util'])
 
 
     var adHocRecoService = new Clutch(function () {
-      return $http.get(routeService.adHocRecos(25)).then(function (res) {
+      return $http.get(routeService.adHocRecos(50)).then(function (res) {
         res.data.forEach( function (keep) {
           keep.tagList = [];
         });

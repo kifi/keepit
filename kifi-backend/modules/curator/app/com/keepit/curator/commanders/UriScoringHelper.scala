@@ -55,30 +55,25 @@ class UriScoringHelper @Inject() (
 
   // assume all items have same userId
   def getRawSocialScores(items: Seq[SeedItem]): Future[Seq[Float]] = {
-    if (items.isEmpty) {
-      Future.successful(Seq.empty)
-    } else {
+    //convert user scores seq to map, assume there is no duplicate userId from graph service
+    graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
+      val socialScoreMap = socialScores.map { socialScore =>
+        (socialScore.userId, socialScore.score.toFloat)
+      }.toMap
 
-      //convert user scores seq to map, assume there is no duplicate userId from graph service
-      graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
-        val socialScoreMap = socialScores.map { socialScore =>
-          (socialScore.userId, socialScore.score.toFloat)
-        }.toMap
-
-        items.map(item =>
-          item.keepers match {
-            case Keepers.TooMany => 0.0f
-            case Keepers.ReasonableNumber(users) => {
-              var itemScore = 0.0f
-              users.map(userId => itemScore += socialScoreMap.getOrElse(userId, 0.0f))
-              Math.tanh(itemScore).toFloat
-            }
-          })
-      }.recover { //This needs to go once the graph is fixed
-        case t: Throwable =>
-          log.warn("Can't get social scores from graph.")
-          Seq.fill[Float](items.size)(0.0f)
-      }
+      items.map(item =>
+        item.keepers match {
+          case Keepers.TooMany => 0.0f
+          case Keepers.ReasonableNumber(users) => {
+            var itemScore = 0.0f
+            users.map(userId => itemScore += socialScoreMap.getOrElse(userId, 0.0f))
+            Math.tanh(itemScore).toFloat
+          }
+        })
+    }.recover { //This needs to go once the graph is fixed
+      case t: Throwable =>
+        log.warn("Can't get social scores from graph.")
+        Seq.fill[Float](items.size)(0.0f)
     }
   }
 
@@ -92,36 +87,39 @@ class UriScoringHelper @Inject() (
   }
 
   def apply(items: Seq[SeedItem]): Future[Seq[ScoredSeedItem]] = {
-    require(items.map(_.userId).toSet.size == 1, "Batch of seed items to score must be non empty and all for the same user")
+    require(items.map(_.userId).toSet.size <= 1, "Batch of seed items to score must be all for the same user")
 
-    val recencyScores = getRawRecencyScores(items)
-    val popularityScores = getRawPopularityScores(items)
-    val priorScores = getRawPriorScores(items)
+    if (items.isEmpty) {
+      Future.successful(Seq.empty)
+    } else {
+      val recencyScores = getRawRecencyScores(items)
+      val popularityScores = getRawPopularityScores(items)
+      val priorScores = getRawPriorScores(items)
 
-    val socialScoresFuture = getRawSocialScores(items)
-    val interestScoresFuture = getRawInterestScores(items)
-    // val helpRankScoresFuture = getRawHelpRankScores(items)
+      val socialScoresFuture = getRawSocialScores(items)
+      val interestScoresFuture = getRawInterestScores(items)
+      // val helpRankScoresFuture = getRawHelpRankScores(items)
 
-    for (
-      socialScores <- socialScoresFuture;
-      (overallInterestScores, recentInterestScores) <- interestScoresFuture
-    // (rekeepScores, discoveryScores) <- helpRankScoresFuture
-    ) yield {
-      for (i <- 0 until items.length) yield {
-        val scores = UriScores(
-          socialScore = socialScores(i),
-          popularityScore = popularityScores(i),
-          overallInterestScore = overallInterestScores(i),
-          recentInterestScore = recentInterestScores(i),
-          recencyScore = recencyScores(i),
-          priorScore = priorScores(i),
-          rekeepScore = 0.0f, //rekeepScores(i),
-          discoveryScore = 0.0f //discoveryScores(i)
-        )
-        ScoredSeedItem(items(i).userId, items(i).uriId, scores)
+      for (
+        socialScores <- socialScoresFuture;
+        (overallInterestScores, recentInterestScores) <- interestScoresFuture
+      // (rekeepScores, discoveryScores) <- helpRankScoresFuture
+      ) yield {
+        for (i <- 0 until items.length) yield {
+          val scores = UriScores(
+            socialScore = socialScores(i),
+            popularityScore = popularityScores(i),
+            overallInterestScore = overallInterestScores(i),
+            recentInterestScore = recentInterestScores(i),
+            recencyScore = recencyScores(i),
+            priorScore = priorScores(i),
+            rekeepScore = 0.0f, //rekeepScores(i),
+            discoveryScore = 0.0f //discoveryScores(i)
+          )
+          ScoredSeedItem(items(i).userId, items(i).uriId, scores)
+        }
       }
     }
-
   }
 
 }
