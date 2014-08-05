@@ -37,6 +37,7 @@
 }
 .kifi-pane>.kifi-keeper {
   margin: 0;
+  right: -3px;
 }
 
 .kifi-tip {
@@ -116,7 +117,7 @@
   transition: width .25s ease-in-out;
 }
 [kifi-with-pane] .kifi-keep-card {
-  width: 124px;
+  width: 121px;
 }
 .kifi-pane .kifi-keep-card {
   left: 153px;
