@@ -92,7 +92,7 @@ angular.module('kifi.friends.rightColFriendsView', [])
             clickable: true,
             isKifiUser: true,
             via: 'via Kifi',
-            squish: name.length > 21
+            squish: name.length > 17
           });
         });
         
@@ -127,7 +127,7 @@ angular.module('kifi.friends.rightColFriendsView', [])
                 clickable: true,
                 isKifiUser: false,
                 via: via,
-                squish: person.name && person.name.length > 17
+                squish: person.name && person.name.length > 14
               });
             });
           });
