@@ -15,6 +15,7 @@ import com.keepit.model.{ ScoreType, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -29,6 +30,7 @@ class RecommendationGenerationCommander @Inject() (
     shoebox: ShoeboxServiceClient,
     scoringHelper: UriScoringHelper,
     db: Database,
+    airbrake: AirbrakeNotifier,
     genStateRepo: UserRecommendationGenerationStateRepo,
     recoRepo: UriRecommendationRepo) {
 
@@ -144,7 +146,9 @@ class RecommendationGenerationCommander @Inject() (
           true
         } else false
       }
-
+    }
+    res.onFailure {
+      case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
     }
     res
   }

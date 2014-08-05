@@ -31,7 +31,7 @@ class UriRecommendationRepoImpl @Inject() (
 
   type RepoImpl = RecommendationTable
 
-  class RecommendationTable(tag: Tag) extends RepoTable[UriRecommendation](db, tag, "uri_recommendation_item") {
+  class RecommendationTable(tag: Tag) extends RepoTable[UriRecommendation](db, tag, "uri_recommendation") {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
     def masterScore = column[Float]("master_score", O.NotNull)
