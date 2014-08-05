@@ -2,7 +2,6 @@ package com.keepit.controllers
 
 import com.google.inject.Inject
 import com.keepit.commander.HelpRankCommander
-import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
