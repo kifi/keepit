@@ -230,7 +230,7 @@ class InviteCommander @Inject() (
             socialConnectionRepo.save(SocialConnection(socialUser1 = su1.id.get, socialUser2 = su2.id.get, state = SocialConnectionStates.ACTIVE))
         }
       }
-      notifyClientsOfConnection(userId, senderUserId);
+      notifyClientsOfConnection(userId, senderUserId)
       userConnectionRepo.addConnections(userId, Set(senderUserId), requested = true)
     }
   }
