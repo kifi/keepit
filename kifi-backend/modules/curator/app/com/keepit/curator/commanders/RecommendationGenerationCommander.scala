@@ -22,6 +22,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
+import scala.collection.mutable
 
 import com.google.inject.{ Inject, Singleton }
 
@@ -37,7 +38,8 @@ class RecommendationGenerationCommander @Inject() (
 
   val defaultScore = 0.0f
 
-  val recommendationGenerationLock = new ReactiveLock(3)
+  val recommendationGenerationLock = new ReactiveLock(6)
+  val perUserRecommendationGenerationLocks = mutable.Map[Id[User], ReactiveLock]()
 
   val FEED_PRECOMPUTATION_WHITELIST: Seq[Id[User]] = Seq(
     1, //Eishay
@@ -69,7 +71,7 @@ class RecommendationGenerationCommander @Inject() (
 
   def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[RecommendationInfo]] = {
     val recosFuture = db.readOnlyReplicaAsync { implicit session =>
-      recoRepo.getByTopMasterScore(userId, Math.max(howManyMax, 750))
+      recoRepo.getByTopMasterScore(userId, Math.max(howManyMax, 1000))
     }
 
     recosFuture.map { recos =>
@@ -78,7 +80,7 @@ class RecommendationGenerationCommander @Inject() (
           userId = reco.userId,
           uriId = reco.uriId,
           score = if (scoreCoefficients.isEmpty)
-            0.2f * reco.allScores.socialScore + 2.0f * reco.allScores.overallInterestScore + 1.0f * reco.allScores.recentInterestScore
+            0.35f * reco.allScores.socialScore + 2.0f * reco.allScores.overallInterestScore + 1.0f * reco.allScores.recentInterestScore
           else
             scoreCoefficients.getOrElse(ScoreType.recencyScore, defaultScore) * reco.allScores.recencyScore
               + scoreCoefficients.getOrElse(ScoreType.overallInterestScore, defaultScore) * reco.allScores.overallInterestScore
@@ -93,65 +95,76 @@ class RecommendationGenerationCommander @Inject() (
 
   }
 
-  private def precomputeRecommendationsForUser(userId: Id[User]): Unit = recommendationGenerationLock.withLockFuture {
-    val state = db.readOnlyMaster { implicit session =>
-      genStateRepo.getByUserId(userId)
-    } getOrElse {
-      UserRecommendationGenerationState(userId = userId)
+  private def getPerUserGenerationLock(userId: Id[User]): ReactiveLock = perUserRecommendationGenerationLocks.synchronized {
+    val lockOption = perUserRecommendationGenerationLocks.get(userId)
+    lockOption.getOrElse {
+      val lock = new ReactiveLock()
+      perUserRecommendationGenerationLocks += (userId -> lock)
+      lock
     }
-    val seedsFuture = for {
-      seeds <- seedCommander.getBySeqNumAndUser(state.seq, userId, 300)
-      restrictions <- shoebox.getAdultRestrictionOfURIs(seeds.map { _.uriId })
-    } yield {
-      (seeds zip restrictions) filterNot (_._2) map (_._1)
-    }
+  }
 
-    val res: Future[Boolean] = seedsFuture.flatMap { seedItems =>
-      if (seedItems.isEmpty) {
-        Future.successful(false)
-      } else {
-        val newState = state.copy(seq = seedItems.map(_.seq).max)
-        val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
-          seedItem.keepers match {
-            case Keepers.ReasonableNumber(users) => !users.contains(userId)
-            case _ => false
-          }
-        }
-        scoringHelper(cleanedItems).map { scoredItems =>
-          val toBeSavedItems = scoredItems.filter(si => computeMasterScore(si.uriScores) > 0.3)
-          db.readWrite { implicit session =>
-            toBeSavedItems.map { item =>
-              val recoOpt = recoRepo.getByUriAndUserId(item.uriId, userId, None)
-              recoOpt.map { reco =>
-                recoRepo.save(reco.copy(
-                  masterScore = computeMasterScore(item.uriScores),
-                  allScores = item.uriScores
-                ))
-              } getOrElse {
-                recoRepo.save(UriRecommendation(
-                  uriId = item.uriId,
-                  userId = userId,
-                  masterScore = computeMasterScore(item.uriScores),
-                  allScores = item.uriScores,
-                  seen = false,
-                  clicked = false,
-                  kept = false
-                ))
-              }
+  private def precomputeRecommendationsForUser(userId: Id[User]): Unit = recommendationGenerationLock.withLockFuture {
+    getPerUserGenerationLock(userId).withLockFuture {
+      val state = db.readOnlyMaster { implicit session =>
+        genStateRepo.getByUserId(userId)
+      } getOrElse {
+        UserRecommendationGenerationState(userId = userId)
+      }
+      val seedsFuture = for {
+        seeds <- seedCommander.getBySeqNumAndUser(state.seq, userId, 300)
+        restrictions <- shoebox.getAdultRestrictionOfURIs(seeds.map { _.uriId })
+      } yield {
+        (seeds zip restrictions) filterNot (_._2) map (_._1)
+      }
+
+      val res: Future[Boolean] = seedsFuture.flatMap { seedItems =>
+        if (seedItems.isEmpty) {
+          Future.successful(false)
+        } else {
+          val newState = state.copy(seq = seedItems.map(_.seq).max)
+          val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
+            seedItem.keepers match {
+              case Keepers.ReasonableNumber(users) => !users.contains(userId)
+              case _ => false
             }
-            genStateRepo.save(newState)
           }
-          if (!cleanedItems.isEmpty) {
-            precomputeRecommendationsForUser(userId)
-            true
-          } else false
+          scoringHelper(cleanedItems).map { scoredItems =>
+            val toBeSavedItems = scoredItems.filter(si => computeMasterScore(si.uriScores) > 0.3)
+            db.readWrite { implicit session =>
+              toBeSavedItems.map { item =>
+                val recoOpt = recoRepo.getByUriAndUserId(item.uriId, userId, None)
+                recoOpt.map { reco =>
+                  recoRepo.save(reco.copy(
+                    masterScore = computeMasterScore(item.uriScores),
+                    allScores = item.uriScores
+                  ))
+                } getOrElse {
+                  recoRepo.save(UriRecommendation(
+                    uriId = item.uriId,
+                    userId = userId,
+                    masterScore = computeMasterScore(item.uriScores),
+                    allScores = item.uriScores,
+                    seen = false,
+                    clicked = false,
+                    kept = false
+                  ))
+                }
+              }
+              genStateRepo.save(newState)
+            }
+            if (!cleanedItems.isEmpty) {
+              precomputeRecommendationsForUser(userId)
+              true
+            } else false
+          }
         }
       }
+      res.onFailure {
+        case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
+      }
+      res
     }
-    res.onFailure {
-      case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
-    }
-    res
   }
 
   def precomputeRecommendations(): Unit = {
