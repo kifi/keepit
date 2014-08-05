@@ -1,0 +1,16 @@
+package com.keepit.test
+
+import com.keepit.inject._
+import com.keepit.common.db.slick.SlickSessionProvider
+import com.keepit.model._
+import com.keepit.common.db.FakeSlickSessionProvider
+import com.google.inject.Injector
+
+trait HeimdalInjectionHelpers { self: InjectorProvider =>
+
+  def userBookmarkClicksRepo(implicit injector: Injector) = inject[UserBookmarkClicksRepo]
+  def keepDiscoveryRepo(implicit injector: Injector) = inject[KeepDiscoveryRepo]
+  def rekeepRepo(implicit injector: Injector) = inject[ReKeepRepo]
+  def sessionProvider(implicit injector: Injector) = inject[SlickSessionProvider].asInstanceOf[FakeSlickSessionProvider]
+
+}

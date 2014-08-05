@@ -1,7 +1,7 @@
 package com.keepit.common.routes
 
 import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
-import com.keepit.heimdal.BasicDelightedAnswer
+import com.keepit.heimdal.{ SanitizedKifiHit, BasicDelightedAnswer }
 import com.keepit.model.ScoreType._
 import com.keepit.model._
 import com.keepit.search.SearchConfigExperiment
@@ -245,6 +245,8 @@ object Heimdal extends Service {
     def getLastDelightedAnswerDate(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/user/delighted/time", Param("userId", userId))
     def postDelightedAnswer() = ServiceRoute(POST, s"/internal/heimdal/user/delighted/answer")
     def cancelDelightedSurvey() = ServiceRoute(POST, s"/internal/heimdal/user/delighted/cancel")
+    def processKifiHit() = ServiceRoute(POST, "/internal/heimdal/helprank/processKifiHit")
+    def processKeepAttribution() = ServiceRoute(POST, "/internal/heimdal/helprank/processKeepAttribution")
   }
 }
 
