@@ -158,4 +158,9 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def allFakeUsersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def kifiHitCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new KifiHitCache(stats, accessLog, (outerRepo, 1 hour))
 }
