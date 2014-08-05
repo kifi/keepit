@@ -8,6 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model.{ Keep, User }
+import play.api.mvc.Action
 
 class HelpRankController @Inject() (
     airbrake: AirbrakeNotifier,
@@ -15,20 +16,22 @@ class HelpRankController @Inject() (
 
   implicit val fj = ExecutionContext.fj
 
-  def processKifiHit() = SafeAsyncAction(parse.tolerantJson) { request =>
+  def processKifiHit() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
     val clicker = (json \ "clickerId").as(Id.format[User])
     val kifiHit = (json \ "kifiHit").as[SanitizedKifiHit]
-    helprankCommander.processKifiHit(clicker, kifiHit)
-    Ok
+    helprankCommander.processKifiHit(clicker, kifiHit) map { r =>
+      Ok
+    }
   }
 
-  def processKeepAttribution() = SafeAsyncAction(parse.tolerantJson) { request =>
+  def processKeepAttribution() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
     val userId = (json \ "userId").as(Id.format[User])
     val keeps = (json \ "keeps").as[Seq[Keep]]
-    helprankCommander.processKeepAttribution(userId, keeps)
-    Ok
+    helprankCommander.processKeepAttribution(userId, keeps) map { r =>
+      Ok
+    }
   }
 
 }

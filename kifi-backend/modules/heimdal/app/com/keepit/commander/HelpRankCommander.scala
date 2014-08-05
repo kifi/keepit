@@ -22,7 +22,7 @@ class HelpRankCommander @Inject() (
     airbrake: AirbrakeNotifier,
     clock: Clock,
     kifiHitCache: KifiHitCache,
-    userBookmarkClicksRepo: UserBookmarkClicksRepo,
+    userKeepInfoRepo: UserBookmarkClicksRepo,
     keepDiscoveryRepo: KeepDiscoveryRepo,
     rekeepRepo: ReKeepRepo,
     elizaClient: ElizaServiceClient,
@@ -30,10 +30,10 @@ class HelpRankCommander @Inject() (
 
   implicit val fj = ExecutionContext.fj
 
-  def processKifiHit(discoverer: Id[User], kifiHit: SanitizedKifiHit): Unit = {
-    db.readWrite { implicit rw =>
+  def processKifiHit(discoverer: Id[User], kifiHit: SanitizedKifiHit): Future[Unit] = {
+    db.readWriteAsync { implicit rw =>
       val keepers = kifiHit.context.keepers
-      if (kifiHit.context.isOwnKeep || kifiHit.context.isPrivate || keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(discoverer, kifiHit.uriId, true)
+      if (kifiHit.context.isOwnKeep || kifiHit.context.isPrivate || keepers.isEmpty) userKeepInfoRepo.increaseCounts(discoverer, kifiHit.uriId, true)
       else {
         kifiHitCache.get(KifiHitKey(discoverer, kifiHit.uriId)) match { // simple throttling
           case Some(hit) =>
@@ -42,7 +42,7 @@ class HelpRankCommander @Inject() (
             kifiHitCache.set(KifiHitKey(discoverer, kifiHit.uriId), kifiHit)
             shoeboxClient.getUserIdsByExternalIds(keepers) map { keeperIds =>
               keeperIds foreach { keeperId =>
-                userBookmarkClicksRepo.increaseCounts(keeperId, kifiHit.uriId, false)
+                userKeepInfoRepo.increaseCounts(keeperId, kifiHit.uriId, false)
                 shoeboxClient.getBookmarkByUriAndUser(kifiHit.uriId, keeperId) map { keepOpt =>
                   keepOpt match {
                     case None =>
