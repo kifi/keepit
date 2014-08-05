@@ -1,6 +1,14 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ RecommendationInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, ScoredSeedItem }
+import com.keepit.curator.model.{
+  RecommendationInfo,
+  UserRecommendationGenerationStateRepo,
+  UserRecommendationGenerationState,
+  Keepers,
+  ScoredSeedItem,
+  UriRecommendationRepo,
+  UriRecommendation
+}
 import com.keepit.common.db.Id
 import com.keepit.model.ScoreType._
 import com.keepit.model.{ ScoreType, User }
@@ -21,7 +29,8 @@ class RecommendationGenerationCommander @Inject() (
     shoebox: ShoeboxServiceClient,
     scoringHelper: UriScoringHelper,
     db: Database,
-    genStateRepo: UserRecommendationGenerationStateRepo) {
+    genStateRepo: UserRecommendationGenerationStateRepo,
+    recoRepo: UriRecommendationRepo) {
 
   val defaultScore = 0.0f
 
@@ -109,7 +118,25 @@ class RecommendationGenerationCommander @Inject() (
       scoringHelper(cleanedItems).map { scoredItems =>
         val toBeSavedItems = scoredItems.filter(computeMasterScore(_) > 0.5)
         db.readWrite { implicit session =>
-          //actually saving the recommendation when Tans storage code is merged
+          toBeSavedItems.map { item =>
+            val recoOpt = recoRepo.getByUriAndUserId(item.uriId, userId, None)
+            recoOpt.map { reco =>
+              recoRepo.save(reco.copy(
+                masterScore = computeMasterScore(item),
+                allScores = item.uriScores
+              ))
+            } getOrElse {
+              recoRepo.save(UriRecommendation(
+                uriId = item.uriId,
+                userId = userId,
+                masterScore = computeMasterScore(item),
+                allScores = item.uriScores,
+                seen = false,
+                clicked = false,
+                kept = false
+              ))
+            }
+          }
           genStateRepo.save(newState)
         }
         if (!cleanedItems.isEmpty) {
