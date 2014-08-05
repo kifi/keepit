@@ -9,12 +9,11 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model.{ Keep, User }
 import play.api.mvc.Action
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class HelpRankController @Inject() (
     airbrake: AirbrakeNotifier,
     helprankCommander: HelpRankCommander) extends HeimdalServiceController {
-
-  implicit val fj = ExecutionContext.fj
 
   def processKifiHit() = Action.async(parse.tolerantJson) { request =>
     val json = request.body
