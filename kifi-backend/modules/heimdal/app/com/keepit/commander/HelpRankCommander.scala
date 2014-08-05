@@ -15,6 +15,7 @@ import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model._
 import com.keepit.search.ArticleSearchResult
 import com.keepit.shoebox.ShoeboxServiceClient
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 
@@ -28,8 +29,6 @@ class HelpRankCommander @Inject() (
     rekeepRepo: ReKeepRepo,
     elizaClient: ElizaServiceClient,
     shoeboxClient: ShoeboxServiceClient) extends Logging {
-
-  implicit val fj = ExecutionContext.fj
 
   def processKifiHit(discoverer: Id[User], kifiHit: SanitizedKifiHit): Future[Unit] = {
     db.readWriteAsync { implicit rw =>
