@@ -42,7 +42,7 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
           case (source, destination, edge) => !journal.getLastVisited().exists(_ == destination.id)
         }
 
-        RestrictedDestinationResolver(mayTraverse, decay)
+        RestrictedDestinationResolver(None, mayTraverse, decay)
       }
 
       val start = clock.now()

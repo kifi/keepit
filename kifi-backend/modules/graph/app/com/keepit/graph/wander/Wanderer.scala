@@ -80,8 +80,8 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
   private def sampleOutgoingComponent(resolver: EdgeResolver): Option[Component] = {
     val componentWeights = mutable.MutableList[(Component, Double)]()
     while (wanderer.outgoingEdgeReader.moveToNextComponent()) {
-      val component @ (_, destinationKind, edgeKind) = wanderer.outgoingEdgeReader.component
-      val weight = resolver.weightComponent(wanderer, destinationKind, edgeKind)
+      val component = wanderer.outgoingEdgeReader.component
+      val weight = resolver.weightComponent(component)
       componentWeights += component -> weight
     }
     val probability = ProbabilityDensity.normalized(componentWeights)
