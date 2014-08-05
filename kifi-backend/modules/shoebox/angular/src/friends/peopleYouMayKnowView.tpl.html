@@ -1,5 +1,5 @@
 <div ng-if="peopleYouMayKnow.length > 0" class="kf-people-you-may-know clearfix">
-  <h2 class="kf-rightcol-header-2">People You May Know</h2>
+  <h2 class="kf-rightcol-header">People You May Know</h2>
   <div ng-repeat="person in peopleYouMayKnow | limitTo: 3">
     <div class="kf-pymk-info" ng-class="{squish: person.squish}">
       <span class="kf-pymk-close-icon" ng-class="{squish: person.squish}" ng-click="remove(person)">x</span>
@@ -7,7 +7,7 @@
         <span class="kf-pymk-name">{{person.fullName}}</span>
         <span class="kf-pymk-via" ng-class="{squish: person.squish}">{{person.via}}</span>
       </div>
-      <div ng-click="action(person)" ng-class="{clickable: person.clickable}">
+      <div class="kf-pymk-action-container" ng-click="action(person)" ng-class="{clickable: person.clickable}">
         <span class="kf-pymk-action-icon"></span>
         <span class="kf-pymk-action">{{person.actionText}}</span>
       </div>
