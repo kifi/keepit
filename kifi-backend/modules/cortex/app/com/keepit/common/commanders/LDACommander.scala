@@ -3,16 +3,13 @@ package com.keepit.common.commanders
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.Logging
 import com.keepit.cortex.MiscPrefix
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.models.lda._
-import com.keepit.cortex.nlp.Stopwords
 import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.{ NormalizedURI, User }
-import com.keepit.search.{ Lang, ArticleStore }
 
 import scala.collection.mutable
 import scala.math.exp
@@ -28,9 +25,7 @@ class LDACommander @Inject() (
     ldaConfigs: LDATopicConfigurations,
     configStore: LDAConfigStore,
     ldaRetriever: LDAURIFeatureRetriever,
-    userLDAStatsRetriever: UserLDAStatisticsRetriever,
-    articleStore: ArticleStore,
-    stopwords: Stopwords) extends Logging {
+    userLDAStatsRetriever: UserLDAStatisticsRetriever) {
   assume(ldaTopicWords.topicWords.length == wordRep.lda.dimension)
 
   var currentConfig = ldaConfigs
@@ -104,7 +99,7 @@ class LDACommander @Inject() (
 
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): LDAUserURIInterestScores = {
     db.readOnlyReplica { implicit s =>
-      val uriTopicOpt = uriTopicRepo.getFeature(uriId, wordRep.version)
+      val uriTopicOpt = uriTopicRepo.getActiveByURI(uriId, wordRep.version)
       val userInterestOpt = userTopicRepo.getByUser(userId, wordRep.version)
       computeInterestScore(uriTopicOpt, userInterestOpt)
     }
@@ -113,24 +108,24 @@ class LDACommander @Inject() (
   def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores] = {
     db.readOnlyReplica { implicit s =>
       val userInterestOpt = userTopicRepo.getByUser(userId, wordRep.version)
-      val uriTopicOpts = uriIds.map { uriId => uriTopicRepo.getFeature(uriId, wordRep.version) }
+      val uriTopicOpts = uriIds.map { uriId => uriTopicRepo.getActiveByURI(uriId, wordRep.version) }
       uriTopicOpts.map { uriTopicOpt =>
         computeInterestScore(uriTopicOpt, userInterestOpt)
       }
     }
   }
 
-  private def computeInterestScore(uriTopicOpt: Option[LDATopicFeature], userInterestOpt: Option[UserLDAInterests]): LDAUserURIInterestScores = {
+  private def computeInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAInterests]): LDAUserURIInterestScores = {
     (uriTopicOpt, userInterestOpt) match {
       case (Some(uriFeat), Some(userFeat)) =>
-        val globalScore = computeInterestScore(userFeat.numOfEvidence, userFeat.userTopicMean, Some(uriFeat))
-        val recencyScore = computeInterestScore(userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, Some(uriFeat))
+        val globalScore = computeInterestScore(uriFeat.numOfWords, userFeat.numOfEvidence, userFeat.userTopicMean, uriFeat.feature)
+        val recencyScore = computeInterestScore(uriFeat.numOfWords, userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, uriFeat.feature)
         LDAUserURIInterestScores(globalScore, recencyScore)
       case _ => LDAUserURIInterestScores(None, None)
     }
   }
 
-  private def computeInterestScore(numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeatOpt: Option[LDATopicFeature]): Option[LDAUserURIInterestScore] = {
+  private def computeInterestScore(numOfWords: Int, numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeatOpt: Option[LDATopicFeature]): Option[LDAUserURIInterestScore] = {
     (userFeatOpt, uriFeatOpt) match {
       case (Some(userFeat), Some(uriFeat)) =>
         val userVec = getUserLDAStats(wordRep.version) match {
@@ -138,14 +133,17 @@ class LDACommander @Inject() (
           case Some(stat) => scale(userFeat.mean, stat.mean, stat.std)
         }
         val (u, v) = (projectToActive(userVec), projectToActive(uriFeat.value))
-        Some(LDAUserURIInterestScore(cosineDistance(u, v), computeConfidence(numOfEvidenceForUser)))
+        Some(LDAUserURIInterestScore(cosineDistance(u, v), computeConfidence(numOfWords, numOfEvidenceForUser)))
       case _ => None
     }
   }
 
-  private def computeConfidence(numOfEvidenceForUser: Int) = {
+  private def computeConfidence(numOfWords: Int, numOfEvidenceForUser: Int) = {
     val alpha = (numOfEvidenceForUser - 30) / 10f
-    1f / (1 + exp(-1 * alpha)).toFloat
+    val s1 = 1f / (1 + exp(-1 * alpha)).toFloat
+    val beta = (numOfWords - 50) / 50f
+    val s2 = 1f / (1 + exp(-1 * beta)).toFloat
+    s1 * s2
   }
 
   def sampleURIs(topicId: Int): Seq[Id[NormalizedURI]] = {
@@ -206,30 +204,6 @@ class LDACommander @Inject() (
       case _ => None
     }
 
-  }
-
-  def zeroEvidencePatch() {
-    def fetchTasks() = db.readOnlyMaster { implicit s => uriTopicRepo.activeFeatureWithZeroEvidence(wordRep.version, limit = 100) }
-    def countWords(uriId: Id[NormalizedURI]): Int = {
-      articleStore.get(uriId).map { article =>
-        if (article.contentLang == Some(Lang("en"))) {
-          val tokens = article.content.toLowerCase.split(" ").toSet.filter(x => !x.isEmpty && !stopwords.contains(x) && wordRep.lda.mapper.keySet.contains(x))
-          tokens.size
-        } else 0
-      } getOrElse 0
-    }
-    def modify(model: URILDATopic, numOfWords: Int): URILDATopic = { val state = if (numOfWords < 20) URILDATopicStates.NOT_APPLICABLE else URILDATopicStates.ACTIVE; model.copy(numOfWords = numOfWords, state = state) }
-
-    var tasks = fetchTasks()
-    while (tasks.size > 0) {
-      log.info(s"${tasks.size} features to be patched for num of words")
-      val toSaves = tasks.map { model => val wc = countWords(model.uriId); modify(model, wc) }
-      db.readWrite { implicit s =>
-        toSaves.foreach { uriTopicRepo.save(_) }
-      }
-      log.info(s"done with one round. next round...")
-      tasks = fetchTasks()
-    }
   }
 
 }

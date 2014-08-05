@@ -487,7 +487,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         // move keeps (from Lib1 to Lib2) as user 1 (should fail)
         val request1 = FakeRequest("POST", testPathMove).withBody(inputJsonTo2)
         val result1 = libraryController.moveKeeps()(request1)
-        status(result1) must equalTo(BAD_REQUEST)
+        (contentAsJson(result1) \ "failures" \\ "error").head.as[String] === "dest_permission_denied"
 
         inject[FakeActionAuthenticator].setUser(userB)
 
@@ -497,14 +497,17 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         val jsonRes2 = Json.parse(contentAsString(result2))
-        (jsonRes2 \ "failures").as[Int] === 0
+        (jsonRes2 \ "success").as[Boolean] === true
 
         inject[FakeActionAuthenticator].setUser(userA)
 
         // copy keeps from Lib1 to Lib2 as user 1 (should fail)
         val request3 = FakeRequest("POST", testPathCopy).withBody(inputJsonTo2)
         val result3 = libraryController.copyKeeps()(request3)
-        status(result3) must equalTo(BAD_REQUEST)
+        status(result3) must equalTo(OK)
+
+        (contentAsJson(result3) \ "success").as[Boolean] === false
+        (contentAsJson(result3) \\ "error").map(_.as[String]).toSet === Set("dest_permission_denied")
 
         inject[FakeActionAuthenticator].setUser(userB)
 
@@ -518,7 +521,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result4) must equalTo(OK)
         contentType(result4) must beSome("application/json")
         val jsonRes4 = Json.parse(contentAsString(result4))
-        (jsonRes4 \ "failures").as[Int] === 0
+        (jsonRes4 \ "success").as[Boolean] === true
+        (jsonRes4 \\ "keep").length === 0
       }
     }
 

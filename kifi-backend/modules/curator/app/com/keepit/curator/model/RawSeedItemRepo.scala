@@ -73,7 +73,7 @@ class RawSeedItemRepoImpl @Inject() (
   }
 
   def getBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
-    (for (row <- rows if row.seq > start && (row.userId === userId || row.userId.isNull)) yield row).take(maxBatchSize).list
+    (for (row <- rows if row.seq > start && (row.userId === userId || row.userId.isNull)) yield row).sortBy(_.seq.asc).take(maxBatchSize).list
   }
 
   def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {

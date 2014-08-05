@@ -176,11 +176,16 @@ angular.module('kifi.inviteService', [
       },
 
       friendRequest: function (id) {
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'addFriend',
+          'path': $location.path()
+        });
+
         return $http.post(routeService.friendRequest(id)).then(function (res) {
           return res.data;
         });
       }
-
+      
     };
 
     return api;
