@@ -1,5 +1,6 @@
 package com.keepit.common.cache
 
+import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.model.{ AnonymousEventDescriptorNameCache, UserEventDescriptorNameCache, SystemEventDescriptorNameCache, NonUserEventDescriptorNameCache }
 
 import scala.concurrent.duration._
@@ -158,6 +159,11 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def allFakeUsersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def userThreadStatsForUserIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserThreadStatsForUserIdCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 30 days))
 
   @Singleton
   @Provides
