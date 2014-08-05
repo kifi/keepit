@@ -78,7 +78,7 @@ class RecommendationGenerationCommander @Inject() (
           userId = reco.userId,
           uriId = reco.uriId,
           score = if (scoreCoefficients.isEmpty)
-            computeMasterScore(reco.allScores)
+            reco.allScores.overallInterestScore
           else
             scoreCoefficients.getOrElse(ScoreType.recencyScore, defaultScore) * reco.allScores.recencyScore
               + scoreCoefficients.getOrElse(ScoreType.overallInterestScore, defaultScore) * reco.allScores.overallInterestScore
