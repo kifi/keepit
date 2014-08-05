@@ -110,41 +110,45 @@ class RecommendationGenerationCommander @Inject() (
     }
 
     val res: Future[Boolean] = seedsFuture.flatMap { seedItems =>
-      val newState = state.copy(seq = seedItems.map(_.seq).max)
-      val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
-        seedItem.keepers match {
-          case Keepers.ReasonableNumber(users) => !users.contains(userId)
-          case _ => false
-        }
-      }
-      scoringHelper(cleanedItems).map { scoredItems =>
-        val toBeSavedItems = scoredItems.filter(computeMasterScore(_) > 0.5)
-        db.readWrite { implicit session =>
-          toBeSavedItems.map { item =>
-            val recoOpt = recoRepo.getByUriAndUserId(item.uriId, userId, None)
-            recoOpt.map { reco =>
-              recoRepo.save(reco.copy(
-                masterScore = computeMasterScore(item),
-                allScores = item.uriScores
-              ))
-            } getOrElse {
-              recoRepo.save(UriRecommendation(
-                uriId = item.uriId,
-                userId = userId,
-                masterScore = computeMasterScore(item),
-                allScores = item.uriScores,
-                seen = false,
-                clicked = false,
-                kept = false
-              ))
-            }
+      if (seedItems.isEmpty) {
+        Future.successful(false)
+      } else {
+        val newState = state.copy(seq = seedItems.map(_.seq).max)
+        val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
+          seedItem.keepers match {
+            case Keepers.ReasonableNumber(users) => !users.contains(userId)
+            case _ => false
           }
-          genStateRepo.save(newState)
         }
-        if (!cleanedItems.isEmpty) {
-          precomputeRecommendationsForUser(userId)
-          true
-        } else false
+        scoringHelper(cleanedItems).map { scoredItems =>
+          val toBeSavedItems = scoredItems.filter(computeMasterScore(_) > 0.3)
+          db.readWrite { implicit session =>
+            toBeSavedItems.map { item =>
+              val recoOpt = recoRepo.getByUriAndUserId(item.uriId, userId, None)
+              recoOpt.map { reco =>
+                recoRepo.save(reco.copy(
+                  masterScore = computeMasterScore(item),
+                  allScores = item.uriScores
+                ))
+              } getOrElse {
+                recoRepo.save(UriRecommendation(
+                  uriId = item.uriId,
+                  userId = userId,
+                  masterScore = computeMasterScore(item),
+                  allScores = item.uriScores,
+                  seen = false,
+                  clicked = false,
+                  kept = false
+                ))
+              }
+            }
+            genStateRepo.save(newState)
+          }
+          if (!cleanedItems.isEmpty) {
+            precomputeRecommendationsForUser(userId)
+            true
+          } else false
+        }
       }
     }
     res.onFailure {
