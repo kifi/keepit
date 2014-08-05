@@ -26,7 +26,7 @@ class SocialWanderingCommander @Inject() (
   private val consolidate = new RequestConsolidator[Id[User], Unit](1 minute)
   private val lock = new ReactiveLock(5)
 
-  def refresh(id: Id[User]): Unit = consolidate(id) { userId =>
+  def refresh(id: Id[User]): Future[Unit] = consolidate(id) { userId =>
     lock.withLockFuture {
       getIrrelevantVertices(userId).map { irrelevantVertices =>
         val journal = wander(userId, irrelevantVertices)

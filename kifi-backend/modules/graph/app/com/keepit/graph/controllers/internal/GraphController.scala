@@ -23,6 +23,7 @@ import com.keepit.graph.utils.GraphPrimitives
 class GraphController @Inject() (
     graphManager: GraphManager,
     wanderingCommander: WanderingCommander,
+    socialWanderingCommander: SocialWanderingCommander,
     graphCommander: GraphCommander) extends GraphServiceController with Logging {
 
   def wander() = Action.async(parse.json) { request =>
@@ -64,6 +65,10 @@ class GraphController @Inject() (
       val json = Json.toJson(userScores)
       Ok(json)
     }
+  }
+
+  def refreshSociallyRelatedEntities(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map(_ => Ok)
   }
 
   // todo(Léo): Remove this code once CollisionCommander is operational
