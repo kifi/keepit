@@ -15,7 +15,6 @@
           <th>Id</th>
           <th>Owner</th>
           <th>Name</th>
-          <th>Visibility</th>
           <th>Slug</th>
           <th># Keeps</th>
           <th># Members</th>
@@ -30,16 +29,23 @@
           <td>@{i+1}</td>
           <td><span class="badge">@libStat.library.id.get</span></td>
           <td>@adminHelper.userDisplay(libStat.owner)</td>
-          <td>@libStat.library.name</td>
-          <td>@libStat.library.visibility.value</td>
+          <td>@adminHelper.libraryDisplay(libStat.library)</td>
           <td>@libStat.library.slug.value</td>
           <td>@libStat.numKeeps</td>
           <td>@libStat.numMembers</td>
           <td>@libStat.numInvites</td>
-          <td>@libStat.library.state</td>
+          <td>@{libStat.library.state.value match {
+                case "active" => {
+                  <span class="label label-success">{libStat.library.state.value}</span>
+                }
+                case "inactive" => {
+                  <span class="label label-warning">{libStat.library.state.value}</span>
+                }
+              }}
+          </td>
           <td>@libStat.library.kind</td>
-          <td>@libStat.library.createdAt</td>
-          <td>@libStat.library.updatedAt</td>
+          <td>@adminHelper.dateTimeDisplay(libStat.library.createdAt)</td>
+          <td>@adminHelper.dateTimeDisplay(libStat.library.updatedAt)</td>
         </tr>
       }
       </table>

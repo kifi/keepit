@@ -14,7 +14,7 @@ trait StoreModule extends ScalaModule {
 
 abstract class ProdOrElseDevStoreModule[T <: StoreModule](val prodStoreModule: T) extends StoreModule {
   protected def whenConfigured[T](parameter: String)(expression: => T): Option[T] =
-    current.configuration.getString(parameter).map(_ => expression)
+    play.api.Play.maybeApplication.map(_.configuration.getString(parameter).map(_ => expression)).flatten
 }
 
 trait ProdStoreModule extends StoreModule {

@@ -64,6 +64,12 @@ angular.module('kifi.routeService', [])
       },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
+      peopleYouMayKnow: function (page, pageSize) {
+        return route('/user/friends/find') + '?page=' + page + '&pageSize=' + pageSize;
+      },
+      hideUserRecommendation: function (id) {
+        return route('/user/' + id + '/hide');
+      },
       search: searchRoute('/site/search'),
       searchResultClicked: searchRoute('/site/search/events/resultClicked'),
       searchedAnalytics: searchRoute('/site/search/events/searched'),
@@ -78,6 +84,10 @@ angular.module('kifi.routeService', [])
       userCloseAccount: route('/user/close'),
       adHocRecos: function (howMany) {
         return route('/recos/adHoc?n=' + howMany);
+      },
+      basicUserInfo: function (id, friendCount) {
+        friendCount = friendCount ? 1 : 0;
+        return route('/user/' + id + '?friendCount=' + friendCount);
       }
     };
   }

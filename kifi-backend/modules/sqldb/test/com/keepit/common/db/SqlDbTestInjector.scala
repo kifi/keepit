@@ -6,5 +6,5 @@ import com.keepit.common.time.FakeClockModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 
 private[db] trait SqlDbTestInjector extends TestInjector with DbInjectionHelper {
-  val module = Modules.combine(FakeClockModule(), FakeHealthcheckModule(), TestSlickModule(TestDbInfo.dbInfo))
+  val module = Modules.combine(FakeClockModule(), FakeHealthcheckModule(), FakeSlickModule(TestDbInfo.dbInfo))
 }

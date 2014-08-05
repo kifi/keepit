@@ -2,19 +2,14 @@ package com.keepit.graph.controllers.internal
 
 import com.google.inject.Inject
 import com.keepit.common.controller.GraphServiceController
-import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.graph.commanders.GraphCommander
-import com.keepit.graph.manager.{ NormalizedUriGraphUpdate, GraphUpdaterState, GraphStatistics, GraphManager }
-import com.keepit.model.{ SocialUserInfo, NormalizedURI, User }
-import play.api.mvc.{ BodyParsers, Action }
 import com.keepit.graph.manager.{ GraphUpdaterState, GraphStatistics, GraphManager }
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.graph.wander._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.graph.model._
-import play.api.mvc.BodyParsers.parse
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 import com.keepit.graph.model.{ EdgeKind, VertexKind, GraphKinds }
@@ -29,12 +24,13 @@ class GraphController @Inject() (
     wanderingCommander: WanderingCommander,
     graphCommander: GraphCommander) extends GraphServiceController with Logging {
 
-  def wander() = SafeAsyncAction(parse.json) { request =>
+  def wander() = Action.async(parse.json) { request =>
     val wanderlust = request.body.as[Wanderlust]
-    val journal = wanderingCommander.wander(wanderlust)
-    val collisions = getCollisions(journal, wanderlust.avoidTrivialCollisions, wanderlust.preferredCollisions.map(VertexKind(_)))
-    val json = Json.toJson(collisions)
-    Ok(json)
+    wanderingCommander.wander(wanderlust).map { journal =>
+      val collisions = getCollisions(journal, wanderlust.avoidTrivialCollisions, wanderlust.preferredCollisions.map(VertexKind(_)))
+      val json = Json.toJson(collisions)
+      Ok(json)
+    }
   }
 
   def getGraphStatistics() = Action { request =>
@@ -55,16 +51,18 @@ class GraphController @Inject() (
     Ok(json)
   }
 
-  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean) = Action { request =>
-    val urisSeq = graphCommander.getConnectedUriScores(userId, avoidFirstDegreeConnections)
-    val json = Json.toJson(urisSeq)
-    Ok(json)
+  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean) = Action.async { request =>
+    graphCommander.getConnectedUriScores(userId, avoidFirstDegreeConnections).map { uriScores =>
+      val json = Json.toJson(uriScores)
+      Ok(json)
+    }
   }
 
-  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean) = Action { request =>
-    val usersSeq = graphCommander.getConnectedUserScores(userId, avoidFirstDegreeConnections)
-    val json = Json.toJson(usersSeq)
-    Ok(json)
+  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean) = Action.async { request =>
+    graphCommander.getConnectedUserScores(userId, avoidFirstDegreeConnections).map { userScores =>
+      val json = Json.toJson(userScores)
+      Ok(json)
+    }
   }
 
   // todo(Léo): Remove this code once CollisionCommander is operational

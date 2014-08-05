@@ -18,7 +18,7 @@ describe('kifi angular sanity suite', function () {
     });
 
     it('should display the upper-left kifi logo', function () {
-      expect(element(by.css('.kf-header-logo')).getAttribute('src')).toMatch('kifi-logo.png');
+      expect(element(by.css('.kf-header-logo')).getAttribute('src')).toMatch(/kifi-logo\.[a-z0-9]{7}\.png/);
     });
 
     it('should display the friends module', function () {

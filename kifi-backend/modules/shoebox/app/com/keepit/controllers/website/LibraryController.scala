@@ -8,7 +8,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.Clock
 import com.keepit.model._
-import com.keepit.common.json.JsonFormatters._
+import com.keepit.common.json._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{ JsString, Json }
 

@@ -23,27 +23,7 @@ class ScrapeSchedulerImpl @Inject() (
   scraperClient: ScraperServiceClient) //only on leader
     extends ScrapeScheduler with Logging {
 
-  def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit = {
-    require(uri != null && !uri.id.isEmpty, "[scheduleScrape] <uri> cannot be null and <uri.id> cannot be empty")
-    val uriId = uri.id.get
-    if (!NormalizedURIStates.DO_NOT_SCRAPE.contains(uri.state)) {
-      val info = scrapeInfoRepo.getByUriId(uriId)
-      val toSave = info match {
-        case Some(s) => s.state match {
-          case ScrapeInfoStates.ACTIVE => s.withNextScrape(date)
-          case ScrapeInfoStates.ASSIGNED => s // no change
-          case ScrapeInfoStates.INACTIVE => {
-            log.warn(s"[scheduleScrape(${uri.toShortString})] scheduling INACTIVE $s")
-            s.withState(ScrapeInfoStates.ACTIVE).withNextScrape(date) // dangerous; revisit
-          }
-        }
-        case None => ScrapeInfo(uriId = uriId, nextScrape = date)
-      }
-      val saved = scrapeInfoRepo.save(toSave)
-      log.info(s"[scheduleScrape] scheduled for ${uri.toShortString}; saved=$saved")
-      // todo: It may be nice to force trigger a scrape directly
-    }
-  }
+  def scheduleScrape(uri: NormalizedURI, date: DateTime)(implicit session: RWSession): Unit = scrapeInfoRepo.scheduleScrape(uri, date)
 
   @inline private def sanityCheck(url: String): Unit = {
     val parseUriTr = Try(java.net.URI.create(url)) // java.net.URI needed for current impl of HttpFetcher

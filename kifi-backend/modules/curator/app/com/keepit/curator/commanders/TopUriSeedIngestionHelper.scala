@@ -51,8 +51,7 @@ class TopUriSeedIngestionHelper @Inject() (
             timesKept = anotherRawSeedItem.timesKept))
 
           case None => {
-            log.error("Can't find another rawSeedItem.")
-            airbrake.notify("Can't find another rawSeedItem.")
+            log.info(s"Can't find another Raw Seed Item. Must have been renormalized. UriId: ${uriScore.uriId}")
           }
         }
 
@@ -77,11 +76,7 @@ class TopUriSeedIngestionHelper @Inject() (
     val betweenHours = Hours.hoursBetween(lastIngestionTime, currentDateTime).getHours
 
     if (betweenHours > uriIngestionFreq || firstTimeIngesting) {
-      graph.getConnectedUriScores(userId, avoidFirstDegreeConnections = true).recover {
-        case ex: Exception =>
-          airbrake.notify(s"Could not get uris from graph, skipping user $userId", ex)
-          Seq.empty
-      }.flatMap { uriScores =>
+      graph.getConnectedUriScores(userId, avoidFirstDegreeConnections = true).flatMap { uriScores =>
         db.readWriteAsync { implicit session =>
           if (firstTimeIngesting) {
             lastTopUriIngestionRepo.save(LastTopUriIngestion(userId = userId, lastIngestionTime = currentDateTime))
@@ -102,6 +97,10 @@ class TopUriSeedIngestionHelper @Inject() (
 
           false
         }
+      }.recover {
+        case ex: Exception =>
+          airbrake.notify(s"Could not get uris from graph, skipping user $userId", ex)
+          false
       }
     } else {
       Future.successful(false)

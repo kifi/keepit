@@ -1,12 +1,11 @@
 package com.keepit.normalizer
 
 import com.google.inject.Injector
-import com.keepit.akka.TestKitScope
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.eliza.FakeElizaServiceClientModule
-import com.keepit.inject.TestFortyTwoModule
+import com.keepit.inject.FakeFortyTwoModule
 import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.model._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeSignatureBuilder, Signature, BasicArticle }
@@ -19,7 +18,7 @@ import org.specs2.mutable.SpecificationLike
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class NormalizationServiceTest extends TestKitScope with SpecificationLike with ShoeboxTestInjector {
+class NormalizationServiceTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
   val fakeArticles: PartialFunction[(String, Option[ExtractorProviderType]), BasicArticle] = {
     case (url @ "http://www.linkedin.com/pub/leonard\u002dgrimaldi/12/42/2b3", Some(_)) => BasicArticle("leonard grimaldi", "whatever", signature = fakeSignature("whatever"), destinationUrl = url)
@@ -44,11 +43,11 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
   }
 
   val modules = Seq(
-    TestFortyTwoModule(),
+    FakeFortyTwoModule(),
     FakeDiscoveryModule(),
     FakeScrapeSchedulerModule(Some(fakeArticles)),
     FakeAirbrakeModule(),
-    StandaloneTestActorSystemModule(),
+    FakeActorSystemModule(),
     FakeElizaServiceClientModule(),
     FakeKeepImportsModule(),
     new ScalaModule {
@@ -183,10 +182,6 @@ class NormalizationServiceTest extends TestKitScope with SpecificationLike with 
         latestHttpsUri.state === NormalizedURIStates.REDIRECTED
       }
 
-      "shutdown shared actor system" in {
-        system.shutdown()
-        1 === 1
-      }
     }
   }
 }

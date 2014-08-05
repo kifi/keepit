@@ -10,16 +10,14 @@ import com.keepit.cortex.models.lda.LDAInfoStoreProdModule
 import com.keepit.cortex.dbmodel.CortexDataIngestionProdModule
 
 case class CortexProdModule()
-    extends CortexModule(
-      cacheModule = CortexCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
-      commonStoreModule = CortexCommonProdStoreModule(),
-      commitInfoModule = CommitInfoProdStoreModule(),
-      featureStoreModule = FeatureProdStoreModule(),
-      statModelStoreModule = StatModelProdStoreModule(),
-      modelModule = CortexProdModelModule(),
-      ldaInfoModule = LDAInfoStoreProdModule(),
-      dataIngestionModule = CortexDataIngestionProdModule(),
-      nlpModule = NLPProdModule()
-    ) with CommonProdModule {
-  val discoveryModule = new ProdDiscoveryModule(ServiceType.CORTEX, ServiceType.SHOEBOX :: Nil)
-}
+  extends CortexModule(
+    cacheModule = CortexCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
+    commonStoreModule = CortexCommonProdStoreModule(),
+    commitInfoModule = CommitInfoProdStoreModule(),
+    featureStoreModule = FeatureProdStoreModule(),
+    statModelStoreModule = StatModelProdStoreModule(),
+    modelModule = CortexProdModelModule(),
+    ldaInfoModule = LDAInfoStoreProdModule(),
+    dataIngestionModule = CortexDataIngestionProdModule(),
+    nlpModule = NLPProdModule()
+  ) with CommonProdModule

@@ -220,10 +220,14 @@ class UserController @Inject() (
     }
   }
 
-  def basicUserInfo(id: ExternalId[User]) = JsonAction.authenticated { implicit request =>
+  def basicUserInfo(id: ExternalId[User], friendCount: Boolean) = JsonAction.authenticated { implicit request =>
     db.readOnlyReplica { implicit session =>
       userRepo.getOpt(id).map { user =>
-        Ok(Json.toJson(BasicUser.fromUser(user)))
+        Ok {
+          val userJson = Json.toJson(BasicUser.fromUser(user)).as[JsObject]
+          if (friendCount) userJson ++ Json.obj("friendCount" -> userConnectionRepo.getConnectionCount(user.id.get))
+          else userJson
+        }
       } getOrElse {
         NotFound(Json.obj("error" -> "user not found"))
       }
@@ -325,7 +329,7 @@ class UserController @Inject() (
     db.readWrite { implicit s =>
       postOffice.sendMail(ElectronicMail(
         from = SystemEmailAddress.INVITATION,
-        to = Seq(SystemEmailAddress.EFFI),
+        to = Seq(SystemEmailAddress.EISHAY),
         subject = s"${request.user.firstName} ${request.user.lastName} wants more invites.",
         htmlBody = s"Go to https://admin.kifi.com/admin/user/${request.userId} to give more invites.",
         category = NotificationCategory.System.ADMIN))

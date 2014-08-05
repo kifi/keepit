@@ -1,26 +1,24 @@
 package com.keepit.integrity
 
-import org.specs2.mutable.Specification
-import com.keepit.test.ShoeboxApplication
-import com.keepit.test.ShoeboxApplicationInjector
-import play.api.test.Helpers.running
-import com.keepit.common.actor.{ ActorPlugin, TestActorSystemModule }
-import com.keepit.model._
-import com.keepit.common.db.slick.Database
-import com.keepit.common.db.Id
-import com.keepit.scraper.{ ProdScrapeSchedulerModule, TestScraperServiceClientModule }
-import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.shoebox.{ ShoeboxSlickModule, FakeShoeboxServiceModule }
 import com.google.inject.Module
+import com.keepit.common.db.slick.Database
+import com.keepit.model._
+import com.keepit.scraper.FakeScrapeSchedulerModule
+import com.keepit.shoebox.FakeKeepImportsModule
+import com.keepit.test.ShoeboxTestInjector
+import org.specs2.mutable.Specification
 
-class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector {
+class OrphanCleanerTest extends Specification with ShoeboxTestInjector {
 
-  val modules: Seq[Module] = Seq(TestActorSystemModule(), ProdScrapeSchedulerModule(), TestScraperServiceClientModule(), FakeShoeboxServiceModule(), FakeAirbrakeModule(), ShoeboxSlickModule()) // todo(yingjie/ray): remove ProdScrapeSchedulerModule
+  val modules: Seq[Module] = Seq(
+    FakeScrapeSchedulerModule(),
+    FakeKeepImportsModule()
+  )
 
   "OphanCleaner" should {
 
     "clean up uris by changed uris" in {
-      running(new ShoeboxApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
@@ -124,7 +122,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector {
     }
 
     "clean up uris by bookmarks" in {
-      running(new ShoeboxApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
@@ -335,7 +333,7 @@ class OrphanCleanerTest extends Specification with ShoeboxApplicationInjector {
     }
 
     "clean up uris by normalized uris" in {
-      running(new ShoeboxApplication(modules: _*)) {
+      withDb(modules: _*) { implicit injector =>
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]

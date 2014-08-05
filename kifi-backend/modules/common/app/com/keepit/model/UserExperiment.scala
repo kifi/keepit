@@ -46,10 +46,11 @@ object ExperimentType {
   val MOBILE_REDIRECT = ExperimentType("mobile_redirect")
   val GUIDE = ExperimentType("guide")
   val DELIGHTED_SURVEY_PERMANENT = ExperimentType("permanent_delighted_survey")
+  val NOTIFY_USER_WHEN_CONTACTS_JOIN = ExperimentType("notify_user_when_contacts_join")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE ::
     CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
-    MOBILE_REDIRECT :: GUIDE :: DELIGHTED_SURVEY_PERMANENT :: Nil
+    MOBILE_REDIRECT :: GUIDE :: DELIGHTED_SURVEY_PERMANENT :: NOTIFY_USER_WHEN_CONTACTS_JOIN :: Nil
 
   private val _ALL_MAP: Map[String, ExperimentType] = _ALL map { e => e.value -> e } toMap
 
@@ -74,3 +75,13 @@ case class UserExperimentUserIdKey(userId: Id[User]) extends Key[Seq[ExperimentT
 
 class UserExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[UserExperimentUserIdKey, Seq[ExperimentType]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(TraversableFormat.seq[ExperimentType])
+
+case object AllFakeUsersKey extends Key[Set[Id[User]]] {
+  override val version = 1
+  val namespace = "fake_users"
+  def toKey(): String = "all"
+}
+
+class AllFakeUsersCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[AllFakeUsersKey.type, Set[Id[User]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(TraversableFormat.set(Id.format[User])) {
+}

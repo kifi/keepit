@@ -9,8 +9,14 @@ import com.keepit.realtime.UrbanAirshipModule
 import com.keepit.heimdal.HeimdalServiceClientModule
 import com.keepit.abook.ABookServiceClientModule
 import com.keepit.common.store.StoreModule
-import com.keepit.common.queue.SimpleQueueModule
 import com.keepit.scraper.ScraperServiceClientModule
+import com.keepit.common.zookeeper.ServiceTypeModule
+import com.keepit.common.service.ServiceType
+
+case class ElizaServiceTypeModule() extends ServiceTypeModule {
+  val serviceType = ServiceType.ELIZA
+  val servicesToListenOn = ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.SCRAPER :: Nil
+}
 
 abstract class ElizaModule(
     // Common Functional Modules
@@ -18,6 +24,7 @@ abstract class ElizaModule(
     val urbanAirshipModule: UrbanAirshipModule,
     val storeModule: StoreModule) extends ConfigurationModule with CommonServiceModule {
   // Service clients
+  val serviceTypeModule = ElizaServiceTypeModule()
   val searchServiceClientModule: SearchServiceClientModule
   val shoeboxServiceClientModule: ShoeboxServiceClientModule
   val elizaServiceClientModule: ElizaServiceClientModule

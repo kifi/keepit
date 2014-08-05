@@ -16,13 +16,11 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.modules.statsd.api.Statsd
 import scala.math._
 import scala.concurrent.{ Future, Promise }
 import scala.concurrent.duration._
 import com.keepit.search.util.Hit
 import com.keepit.search.util.HitQueue
-import com.keepit.search.semantic.SemanticVariance
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search.result.PartialSearchResult
@@ -139,7 +137,7 @@ class MainSearcher(
 
       val tLucene = currentDateTime.getMillis()
 
-      personalizedSearcher.doSearch(weight) { (scorer, reader) =>
+      personalizedSearcher.search(weight) { (scorer, reader) =>
         val visibility = ArticleVisibility(reader)
         val mapper = reader.getIdMapper
         var doc = scorer.nextDoc()
@@ -149,11 +147,11 @@ class MainSearcher(
             val clickBoost = clickBoosts(id)
             val luceneScore = scorer.score()
             if (myUriEdgeAccessor.seek(id) && mySearchUris.findIndex(id) >= 0) { // use findIndex to avoid boxing
-              myHits.insert(id, luceneScore, clickBoost, true, !myUriEdgeAccessor.isPublic)
+              myHits.insert(id, luceneScore, clickBoost, true)
             } else if (friendSearchUris.findIndex(id) >= 0) {
-              if (visibility.isVisible(doc)) friendsHits.insert(id, luceneScore, clickBoost, false, false)
+              if (visibility.isVisible(doc)) friendsHits.insert(id, luceneScore, clickBoost, false)
             } else {
-              if (visibility.isVisible(doc)) othersHits.insert(id, luceneScore, clickBoost, false, false)
+              if (visibility.isVisible(doc)) othersHits.insert(id, luceneScore, clickBoost, false)
             }
           }
           doc = scorer.nextDoc()
@@ -333,6 +331,8 @@ class MainSearcher(
   }
 
   private[this] def toDetailedSearchHits(hitList: List[Hit[MutableArticleHit]]): List[DetailedSearchHit] = {
+    val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
+
     hitList.map { hit =>
       val h = hit.hit
       if (hit.score.isInfinity) {
@@ -343,13 +343,15 @@ class MainSearcher(
         hit.score = -1.0f
       }
 
+      val isPrivate = (h.isMyBookmark && myUriEdgeAccessor.seek(h.id) && !myUriEdgeAccessor.isPublic)
+
       DetailedSearchHit(
         h.id,
         h.bookmarkCount,
         toBasicSearchHit(h),
         h.isMyBookmark,
         h.users.nonEmpty, // isFriendsBookmark
-        h.isPrivate,
+        isPrivate,
         h.users.toSeq,
         hit.score,
         hit.scoring
@@ -379,13 +381,9 @@ class MainSearcher(
     }
 
     if (filter.isDefault && isInitialSearch && personalizedSearcher.isDefined) {
-      val svVar = SemanticVariance.svVariance(parser.textQueries, hitList.map(_.hit.id).toSet, personalizedSearcher.get) // compute sv variance. may need to record the time elapsed.
-      val minScore = (0.9d - (0.7d / (1.0d + pow(svVar.toDouble / 0.19d, 8.0d)))).toFloat // don't ask me how I got this formula
-
       // simple classifier
-      val show = hitList.take(5).exists { h => classify(h.scoring, h.hit, minScore) }
-
-      (show, svVar)
+      val show = hitList.take(5).exists { h => classify(h.scoring, h.hit, 0.6f) }
+      (show, -1f)
     } else {
       (true, -1f)
     }
@@ -438,11 +436,11 @@ class ArticleHitQueue(sz: Int) extends HitQueue[MutableArticleHit](sz) {
 
   override def lessThan(a: Hit[MutableArticleHit], b: Hit[MutableArticleHit]) = (a.score < b.score || (a.score == b.score && a.hit.id < b.hit.id))
 
-  def insert(id: Long, textScore: Float, clickBoost: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS) {
+  def insert(id: Long, textScore: Float, clickBoost: Float, isMyBookmark: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS) {
     if (overflow == null) {
-      insert(textScore * clickBoost, null, new MutableArticleHit(id, textScore, clickBoost, isMyBookmark, isPrivate, friends, 0))
+      insert(textScore * clickBoost, null, new MutableArticleHit(id, textScore, clickBoost, isMyBookmark, friends, 0))
     } else {
-      insert(textScore * clickBoost, null, overflow.hit(id, textScore, clickBoost, isMyBookmark, isPrivate, friends, 0))
+      insert(textScore * clickBoost, null, overflow.hit(id, textScore, clickBoost, isMyBookmark, friends, 0))
     }
   }
 }
@@ -453,7 +451,6 @@ class MutableArticleHit(
     var luceneScore: Float,
     var clickBoost: Float,
     var isMyBookmark: Boolean,
-    var isPrivate: Boolean,
     var users: Set[Id[User]],
     var bookmarkCount: Int) {
   def apply(
@@ -461,14 +458,12 @@ class MutableArticleHit(
     newLuceneScore: Float,
     newClickBoost: Float,
     newIsMyBookmark: Boolean,
-    newIsPrivate: Boolean,
     newUsers: Set[Id[User]],
     newBookmarkCount: Int): MutableArticleHit = {
     id = newId
     luceneScore = newLuceneScore
     clickBoost = newClickBoost
     isMyBookmark = newIsMyBookmark
-    isPrivate = newIsPrivate
     users = newUsers
     bookmarkCount = newBookmarkCount
     this
