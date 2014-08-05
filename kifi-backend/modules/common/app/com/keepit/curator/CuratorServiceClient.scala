@@ -7,9 +7,10 @@ import com.keepit.common.net.{ HttpClient, CallTimeouts }
 import com.keepit.common.routes.Curator
 import com.keepit.common.db.Id
 import com.keepit.model.ScoreType._
-import com.keepit.model.{ ScoreType, User }
+import com.keepit.model.{ UriRecommendationFeedback, NormalizedURI, ScoreType, User }
 import com.keepit.curator.model.RecommendationInfo
 import com.keepit.common.util.MapFormatUtil.scoreTypeMapFormat
+import com.keepit.common.util.MapFormatUtil.uriRecommendationFeedbackMapFormat
 
 import scala.concurrent.Future
 import play.api.libs.json._
@@ -19,6 +20,8 @@ trait CuratorServiceClient extends ServiceClient {
   final val serviceType = ServiceType.CURATOR
 
   def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: Map[ScoreType.Value, Float]): Future[Seq[RecommendationInfo]]
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]): Future[Boolean]
+
 }
 
 class CuratorServiceClientImpl(
@@ -34,4 +37,9 @@ class CuratorServiceClientImpl(
     }
   }
 
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]): Future[Boolean] = {
+    call(Curator.internal.updateUriRecommendationFeedback(userId, uriId), callTimeouts = longTimeout).map(response =>
+      response.json.as[Boolean]
+    )
+  }
 }

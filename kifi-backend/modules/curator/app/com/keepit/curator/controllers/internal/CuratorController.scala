@@ -3,16 +3,18 @@ package com.keepit.curator.controllers.internal
 import com.keepit.curator.commanders.RecommendationGenerationCommander
 import com.keepit.common.controller.CuratorServiceController
 import com.keepit.common.db.Id
-import com.keepit.model.ScoreType.ScoreType
-import com.keepit.model.ScoreType.ScoreType
-import com.keepit.model.{ ScoreType, User }
+import com.keepit.model.UriRecommendationFeedback._
+import com.keepit.model.{ NormalizedURI, ScoreType, User }
 import com.keepit.common.util.MapFormatUtil.scoreTypeMapFormat
+import com.keepit.common.util.MapFormatUtil.uriRecommendationFeedbackMapFormat
 
 import play.api.mvc.Action
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
+
+import scala.concurrent.Future
 
 class CuratorController @Inject() (recoGenCommander: RecommendationGenerationCommander) extends CuratorServiceController {
 
@@ -23,4 +25,13 @@ class CuratorController @Inject() (recoGenCommander: RecommendationGenerationCom
     }).map(recos => Ok(Json.toJson(recos)))
   }
 
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = Action.async { request =>
+    val json = request.body.asJson
+    json match {
+      case Some(json) => recoGenCommander.updateUriRecommendationFeedback(userId, uriId, json.as[Map[UriRecommendationFeedback, Boolean]])
+        .map(update => Ok(Json.toJson(update)))
+      case None => Future.successful(Ok(Json.toJson(false)))
+    }
+
+  }
 }

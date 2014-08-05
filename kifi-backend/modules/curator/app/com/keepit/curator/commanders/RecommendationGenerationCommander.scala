@@ -11,7 +11,8 @@ import com.keepit.curator.model.{
 }
 import com.keepit.common.db.Id
 import com.keepit.model.ScoreType._
-import com.keepit.model.{ ScoreType, User }
+import com.keepit.model.UriRecommendationFeedback.UriRecommendationFeedback
+import com.keepit.model.{ UriRecommendationFeedback, NormalizedURI, ScoreType, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.slick.Database
@@ -31,8 +32,8 @@ class RecommendationGenerationCommander @Inject() (
     scoringHelper: UriScoringHelper,
     db: Database,
     airbrake: AirbrakeNotifier,
-    genStateRepo: UserRecommendationGenerationStateRepo,
-    recoRepo: UriRecommendationRepo) {
+    uriRecRepo: UriRecommendationRepo,
+    genStateRepo: UserRecommendationGenerationStateRepo) {
 
   val defaultScore = 0.0f
 
@@ -64,6 +65,13 @@ class RecommendationGenerationCommander @Inject() (
 
   private def computeMasterScore(scoredItem: ScoredSeedItem): Float = {
     0.3f * scoredItem.uriScores.socialScore + 2 * scoredItem.uriScores.overallInterestScore + 0.5f * scoredItem.uriScores.priorScore
+  }
+
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedbacks: Map[UriRecommendationFeedback.Value, Boolean]): Future[Boolean] = {
+
+    db.readWriteAsync { implicit session =>
+      uriRecRepo.updateUriRecommendationFeedback(userId, uriId, feedbacks)
+    }
   }
 
   def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[RecommendationInfo]] = {
@@ -121,14 +129,14 @@ class RecommendationGenerationCommander @Inject() (
         val toBeSavedItems = scoredItems.filter(computeMasterScore(_) > 0.5)
         db.readWrite { implicit session =>
           toBeSavedItems.map { item =>
-            val recoOpt = recoRepo.getByUriAndUserId(item.uriId, userId, None)
+            val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
             recoOpt.map { reco =>
-              recoRepo.save(reco.copy(
+              uriRecRepo.save(reco.copy(
                 masterScore = computeMasterScore(item),
                 allScores = item.uriScores
               ))
             } getOrElse {
-              recoRepo.save(UriRecommendation(
+              uriRecRepo.save(UriRecommendation(
                 uriId = item.uriId,
                 userId = userId,
                 masterScore = computeMasterScore(item),

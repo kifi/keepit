@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.keepit.common.db.Id
 import com.keepit.model.ScoreType._
 import com.keepit.model.{ ScoreType, User, NormalizedURIRepo, NormalizedURI, NormalizedURIStates }
+import com.keepit.model.UriRecommendationFeedback.UriRecommendationFeedback
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model.RecommendationInfo
 import com.keepit.common.db.slick.Database
