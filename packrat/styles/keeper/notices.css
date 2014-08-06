@@ -252,10 +252,11 @@
 
 .kifi-notice-state {
   position: absolute;
-  top: 26px;
-  right: 9px;
-  width: 9px;
-  height: 9px;
+  top: 25px;
+  right: 8px;
+  width: 10px;
+  height: 10px;
+  border: 1px solid transparent;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   background-color: #85a4ea;
@@ -263,23 +264,17 @@
   border-radius: 50% !important;
 }
 .kifi-notice-state:hover {
-  top: 25px;
-  right: 8px;
-  width: 11px;
-  height: 11px;
-  border: 1px solid #fff;
-  box-shadow: #fff 0 0 4px;
+  z-index: 1; /* over scrollbar */
+  border-color: #85a4ea;
+  box-shadow: inset rgba(255,255,255,.3) 0 0 0 5px;
 }
 .kifi-notice-visited>.kifi-notice-state {
-  top: 25px;
-  right: 8px;
-  width: 10px;
-  height: 10px;
-  border: 1px solid #85a4ea;
+  border-color: #85a4ea;
   background-color: #fff;
 }
 .kifi-notice-visited>.kifi-notice-state:hover {
-  box-shadow: #85a4ea 0 0 4px -1px;
+  background-color: #85a4ea;
+  box-shadow: inset rgba(255,255,255,.85) 0 0 0 5px;
 }
 .kifi-notice-visited>.kifi-notice-state {
   -webkit-transform: scale(.001,.001);
@@ -290,6 +285,14 @@
 .kifi-notice-visited:hover>.kifi-notice-state {
   -webkit-transform: none;
   transform: none;
+}
+.kifi-notice-state::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
 }
 .kifi-notice-state-tip {
   padding: 6px 10px;

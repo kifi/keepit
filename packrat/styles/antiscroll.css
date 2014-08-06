@@ -20,12 +20,12 @@
   box-shadow: 0 0 1px #fff;
 }
 .kifi-scrollbar-vertical::before {
-  content: ' ';
+  content: '';
   position: absolute;
   top: 0;
   bottom: 0;
-  left: -8px;
-  width: 8px;
+  left: -6px;
+  width: 6px;
 }
 .kifi-scroll-inner {
   overflow: scroll;
