@@ -79,8 +79,8 @@ angular.module('kifi.friends.rightColFriendsView', [
 }])
 
 .directive('kfPeopleYouMayKnowView', 
-  ['$log', '$q', '$timeout', 'friendService', 'inviteService', 'wtiService', 
-  function ($log, $q, $timeout, friendService, inviteService, wtiService) {
+  ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'savePymkService', 'wtiService', 
+  function ($log, $q, $rootScope, $timeout, friendService, inviteService, savePymkService, wtiService) {
   return {
     replace: true,
     restrict: 'A',
@@ -91,17 +91,104 @@ angular.module('kifi.friends.rightColFriendsView', [
 
         people.forEach(function (person) {
           var name = person.firstName + ' ' + person.lastName;
+          var numMutualFriends = person.numMutualFriends || 0;
+
           peopleYouMayKnow.push({
             id: person.id,
-            fullName: name + ', ',
+            fullName: name,
             pictureUrl: friendService.getPictureUrlForUser(person),
             actionText: 'Add',
             clickable: true,
             isKifiUser: true,
             via: 'via Kifi',
-            squish: name.length > 17
+            //numMutualFriends: person.mutualFriends.length
+            //mutualFriends: person.mutualFriends
+            squish: numMutualFriends > 0 || name.length > 17
           });
         });
+
+        /***** FOR DEV ONLY *****/
+
+        // Put in some fake mutual friends.
+        peopleYouMayKnow[0].mutualFriends = [
+          {
+            id: '07170014-badc-4198-a462-6ba35d2ebb78',
+            pictureName: '9gDw9.jpg',
+            firstName: 'David',
+            lastName: 'Elsonbaty',
+            friendCount: 5
+          }
+        ];
+        peopleYouMayKnow[0].numMutualFriends = 1;
+
+        peopleYouMayKnow[1].mutualFriends = [
+          {
+            id: '07170014-badc-4198-a462-6ba35d2ebb78',
+            pictureName: '9gDw9.jpg',
+            firstName: 'David',
+            lastName: 'Elsonbaty',
+            friendCount: 5
+          },
+          {
+            id: '3ad31932-f3f9-4fe3-855c-3359051212e5',
+            pictureName: 'VhYUF.jpg',
+            firstName: 'Danny',
+            lastName: 'Blumenfeld',
+            friendCount: 12
+          },
+          {
+            id: 'f2f153db-6952-4b32-8854-8c0e452e1c64',
+            pictureName: 'FSPNP.jpg',
+            firstName: 'Lydia',
+            lastName: 'Laurenson',
+            friendCount: 27
+          },
+          {
+            id: '07170014-badc-4198-a462-6ba35d2ebb78',
+            pictureName: '9gDw9.jpg',
+            firstName: 'David',
+            lastName: 'Elsonbaty',
+            friendCount: 5
+          },
+          {
+            id: '3ad31932-f3f9-4fe3-855c-3359051212e5',
+            pictureName: 'VhYUF.jpg',
+            firstName: 'Danny',
+            lastName: 'Blumenfeld',
+            friendCount: 12
+          },
+          {
+            id: 'f2f153db-6952-4b32-8854-8c0e452e1c64',
+            pictureName: 'FSPNP.jpg',
+            firstName: 'Lydia',
+            lastName: 'Laurenson',
+            friendCount: 27
+          },
+          {
+            id: '07170014-badc-4198-a462-6ba35d2ebb78',
+            pictureName: '9gDw9.jpg',
+            firstName: 'David',
+            lastName: 'Elsonbaty',
+            friendCount: 5
+          },
+          {
+            id: '3ad31932-f3f9-4fe3-855c-3359051212e5',
+            pictureName: 'VhYUF.jpg',
+            firstName: 'Danny',
+            lastName: 'Blumenfeld',
+            friendCount: 12
+          },
+          {
+            id: 'f2f153db-6952-4b32-8854-8c0e452e1c64',
+            pictureName: 'FSPNP.jpg',
+            firstName: 'Lydia',
+            lastName: 'Laurenson',
+            friendCount: 27
+          }
+        ];
+        peopleYouMayKnow[1].numMutualFriends = 9;
+
+        /***** END FOR DEV ONLY ******/
         
         var networkNamesMap = {
           'facebook': 'Facebook',
@@ -119,7 +206,7 @@ angular.module('kifi.friends.rightColFriendsView', [
               var via = '';
 
               if (person.name) {
-                name = person.name + ', ';
+                name = person.name;
                 via = 'via ' + networkNamesMap[socialIdValues[0]];
               } else if (socialIdValues[0] === 'email') {
                 name = socialIdValues[1];
@@ -190,6 +277,11 @@ angular.module('kifi.friends.rightColFriendsView', [
         _.remove(scope.peopleYouMayKnow, function (elem) {
           return elem === person;
         });
+      };
+
+      scope.showMutualFriends = function (person) {
+        savePymkService.savePersonYouMayKnow(person);
+        $rootScope.$emit('showGlobalModal', 'seeMutualFriends');
       };
     }
   };
