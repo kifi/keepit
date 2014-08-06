@@ -181,6 +181,7 @@ class KeepInterner @Inject() (
 
     keptAnalytics.keptPages(userId, createdKeeps, context)
     heimdalClient.processKeepAttribution(userId, createdKeeps)
+    keepAttribution(userId, createdKeeps)
     (newKeeps, existingKeeps, failures)
   }
 
@@ -192,6 +193,7 @@ class KeepInterner @Inject() (
       if (persistedBookmarksWithUri.isNewKeep) {
         keptAnalytics.keptPages(userId, Seq(bookmark), context)
         heimdalClient.processKeepAttribution(userId, Seq(bookmark))
+        keepAttribution(userId, Seq(bookmark))
       }
       bookmark
     }
