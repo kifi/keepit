@@ -9,7 +9,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.abook.typeahead.EContactTypeaheadCache
 import com.keepit.abook.model.EContactCache
-import com.keepit.graph.model.{ ConnectedUserScoreCache, ConnectedUriScoreCache }
+import com.keepit.graph.model._
 
 case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
 
@@ -169,4 +169,20 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides @Singleton
   def allFakeUsersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def sociallyRelatedUsersCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedUsersCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedFacebookAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedFacebookAccountsCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedLinkedInAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedLinkedInAccountsCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedEmailAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedEmailAccountsCache(stats, accessLog, (outerRepo, 1 day))
 }

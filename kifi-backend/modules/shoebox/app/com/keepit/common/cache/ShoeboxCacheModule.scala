@@ -11,7 +11,7 @@ import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.typeahead.socialusers.{ KifiUserTypeaheadCache, SocialUserTypeaheadCache }
 import com.keepit.commanders.{ LibraryInfoIdCache, BasicCollectionByIdCache }
-import com.keepit.graph.model.{ ConnectedUriScoreCache, ConnectedUserScoreCache }
+import com.keepit.graph.model._
 
 case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
 
@@ -301,4 +301,19 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   def allFakeUsersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
 
+  @Provides @Singleton
+  def sociallyRelatedUsersCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedUsersCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedFacebookAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedFacebookAccountsCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedLinkedInAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedLinkedInAccountsCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedEmailAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedEmailAccountsCache(stats, accessLog, (outerRepo, 1 day))
 }

@@ -9,7 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.graph.model._
 import com.keepit.model.{ SocialUserInfo, NormalizedURI, User }
 import scala.concurrent.{ Promise, Future }
-import com.keepit.common.routes.{ Graph }
+import com.keepit.common.routes.{ ServiceRoute, Graph }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.graph.manager.{ PrettyGraphState, PrettyGraphStatistics }
@@ -124,27 +124,35 @@ class GraphServiceClientImpl @Inject() (
   }
 
   def getSociallyRelatedUsers(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, User]]] = {
-    getOrElseRefreshRelatedEntities(userId, bePatient, id => cacheProvider.relatedUsersCache.get(SociallyRelatedUsersCacheKey(id)), refreshSociallyRelatedEntities)
+    def cached(id: Id[User]) = cacheProvider.relatedUsersCache.get(SociallyRelatedUsersCacheKey(id))
+    getOrElseRefreshRelatedEntities(userId, bePatient, cached, Graph.internal.getSociallyRelatedUsers, refreshSociallyRelatedEntities)
   }
 
   def getSociallyRelatedFacebookAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]] = {
-    getOrElseRefreshRelatedEntities(userId, bePatient, id => cacheProvider.relatedFacebookAccountsCache.get(SociallyRelatedFacebookAccountsCacheKey(id)), refreshSociallyRelatedEntities)
+    def cached(id: Id[User]) = cacheProvider.relatedFacebookAccountsCache.get(SociallyRelatedFacebookAccountsCacheKey(id))
+    getOrElseRefreshRelatedEntities(userId, bePatient, cached, Graph.internal.getSociallyRelatedFacebookAccounts, refreshSociallyRelatedEntities)
   }
 
   def getSociallyRelatedLinkedInAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]] = {
-    getOrElseRefreshRelatedEntities(userId, bePatient, id => cacheProvider.relatedLinkedInAccountsCache.get(SociallyRelatedLinkedInAccountsCacheKey(id)), refreshSociallyRelatedEntities)
+    def cached(id: Id[User]) = cacheProvider.relatedLinkedInAccountsCache.get(SociallyRelatedLinkedInAccountsCacheKey(id))
+    getOrElseRefreshRelatedEntities(userId, bePatient, cached, Graph.internal.getSociallyRelatedLinkedInAccounts, refreshSociallyRelatedEntities)
   }
 
   def getSociallyRelatedEmailAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, EmailAccountInfo]]] = {
-    getOrElseRefreshRelatedEntities(userId, bePatient, id => cacheProvider.relatedEmailAccountsCache.get(SociallyRelatedEmailAccountsCacheKey(id)), refreshSociallyRelatedEntities)
+    def cached(id: Id[User]) = cacheProvider.relatedEmailAccountsCache.get(SociallyRelatedEmailAccountsCacheKey(id))
+    getOrElseRefreshRelatedEntities(userId, bePatient, cached, Graph.internal.getSociallyRelatedEmailAccounts, refreshSociallyRelatedEntities)
   }
 
-  private def getOrElseRefreshRelatedEntities[E, R](id: Id[E], bePatient: Boolean, get: Id[E] => Option[RelatedEntities[E, R]], refresh: Id[E] => Future[Unit]): Future[Option[RelatedEntities[E, R]]] = {
+  private def getOrElseRefreshRelatedEntities[E, R](id: Id[E], bePatient: Boolean, get: Id[E] => Option[RelatedEntities[E, R]], orElseCall: Id[E] => ServiceRoute, refresh: Id[E] => Future[Unit]) = {
     get(id) match {
       case Some(relatedEntities) => Future.successful(Some(relatedEntities))
-      case None =>
-        val refreshing = refresh(id)
-        if (bePatient) refreshing.map(_ => get(id)) else Future.successful(None)
+      case None => {
+        if (bePatient) call(orElseCall(id), callTimeouts = longTimeout).map { r => Some(r.json.as[RelatedEntities[E, R]]) }
+        else {
+          refresh(id)
+          Future.successful(None)
+        }
+      }
     }
   }
 }
