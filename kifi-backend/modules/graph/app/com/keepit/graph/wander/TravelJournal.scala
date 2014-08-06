@@ -26,12 +26,14 @@ class TeleportationJournal(clock: Clock) extends TravelJournal with Logging {
   def onStart(start: VertexReader): Unit = {
     startingVertexId = Some(start.id)
     startTime = Some(clock.now())
+    log.debug(s"[Start] ${start.id}")
   }
 
   def onEdgeTraversal(source: VertexReader, destination: VertexReader, edgeKind: EdgeType) = {
     lastVisited = Some(source.id)
     visited(source.id) = visited(source.id) + 1
     steps += 1
+    log.debug(s"[Traverse] ${source.id} --> ${destination.id} | ${edgeKind.code}")
   }
 
   def onTeleportation(source: VertexReader, destination: VertexReader) = {
@@ -39,16 +41,19 @@ class TeleportationJournal(clock: Clock) extends TravelJournal with Logging {
     lastVisited = Some(source.id)
     visited(source.id) = visited(source.id) + 1
     steps += 1
+    log.debug(s"[Teleportation] ${source.id} --> ${destination.id}")
   }
 
   def onDeadend(deadend: VertexReader, restart: VertexReader): Unit = {
     lastVisited = Some(deadend.id)
     visited(deadend.id) = visited(deadend.id) + 1
     steps += 1
+    log.debug(s"[Deadend] ${deadend.id} --> ${restart.id}")
   }
 
   def onComplete(end: VertexReader): Unit = {
     val endTime = clock.now()
+    log.debug(s"[Complete] ${end.id}")
     log.info(s"Wandered for ${steps} steps during ${endTime.getMillis - startTime.get.getMillis} ms.")
   }
 
