@@ -8,7 +8,9 @@ object MatrixUtils {
   implicit def toFloat(x: Double): Float = x.toFloat
 
   def L2Normalize(vec: Array[Double]): Array[Double] = {
-    val s = sqrt(vec.map { x => x * x }.sum)
+    var s = 0.0
+    vec.foreach { x => s += x * x }
+    s = sqrt(s)
     if (s == 0.0) vec else vec.map { x => x / s }
   }
 
@@ -95,9 +97,17 @@ object MatrixUtils {
 
   def MDistanceDiagGaussian(sample: Array[Double], mean: Array[Double], variance: Array[Double]) = {
     assume(sample.size == mean.size && mean.size == variance.size)
-    val diff = (sample zip mean).map { case (x, y) => x - y }
-    val dist = (diff zip variance).map { case (d, s) => if (s == 0) d * d else d * d / s }.sum
-    dist
+    val n = sample.size
+    var i = 0
+    var s = 0.0
+    while (i < n) {
+      val v = variance(i)
+      val diff = sample(i) - mean(i)
+      if (v == 0) s += diff * diff
+      else s += diff * diff / v
+      i += 1
+    }
+    s
   }
 
 }
