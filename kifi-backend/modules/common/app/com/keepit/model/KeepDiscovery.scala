@@ -28,16 +28,16 @@ object KeepDiscovery {
   import play.api.libs.json._
   implicit val format: Format[KeepDiscovery] = (
     (__ \ 'id).formatNullable(Id.format[KeepDiscovery]) and
-      (__ \ 'createdAt).format[DateTime] and
-      (__ \ 'updatedAt).format[DateTime] and
-      (__ \ 'state).format(State.format[KeepDiscovery]) and
-      (__ \ 'hitUUID).format(ExternalId.format[ArticleSearchResult]) and
-      (__ \ 'numKeepers).format[Int] and
-      (__ \ 'keeperId).format(Id.format[User]) and
-      (__ \ 'keepId).format(Id.format[Keep]) and
-      (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-      (__ \ 'origin).formatNullable[String]
-    )(KeepDiscovery.apply, unlift(KeepDiscovery.unapply))
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'state).format(State.format[KeepDiscovery]) and
+    (__ \ 'hitUUID).format(ExternalId.format[ArticleSearchResult]) and
+    (__ \ 'numKeepers).format[Int] and
+    (__ \ 'keeperId).format(Id.format[User]) and
+    (__ \ 'keepId).format(Id.format[Keep]) and
+    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'origin).formatNullable[String]
+  )(KeepDiscovery.apply, unlift(KeepDiscovery.unapply))
 }
 
 object KeepDiscoveryStates extends States[KeepDiscovery]
