@@ -1,6 +1,6 @@
 package com.keepit.cortex.utils
 
-import scala.math.sqrt
+import scala.math._
 
 object MatrixUtils {
   implicit def toDoubleArray(vec: Array[Float]): Array[Double] = vec.map { _.toDouble }
@@ -115,4 +115,20 @@ object MatrixUtils {
     s
   }
 
+  def weightedMDistanceDiagGaussian(sample: Array[Double], mean: Array[Double], variance: Array[Double], weights: Array[Double]) = {
+    assume(sample.size == mean.size && mean.size == variance.size)
+    val n = sample.size
+    var i = 0
+    var s = 0.0
+    while (i < n) {
+      val v = variance(i)
+      val diff = sample(i) - mean(i)
+      if (v == 0) s += weights(i) * diff * diff
+      else {
+        s += exp(log(weights(i)) + 2 * log(diff) - log(v)) // numerical care
+      }
+      i += 1
+    }
+    s
+  }
 }
