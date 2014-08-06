@@ -29,7 +29,7 @@ class CuratorController @Inject() (recoGenCommander: RecommendationGenerationCom
         val feedback = json.as[UriRecommendationFeedback]
         recoGenCommander.updateUriRecommendationFeedback(userId, uriId, feedback).map(update => Ok(Json.toJson(update)))
       }
-      case None => Future.successful(Ok(Json.toJson(false)))
+      case None => Future.failed(new IllegalArgumentException("request body should have feedback body"))
     }
 
   }
