@@ -1,13 +1,14 @@
-package com.keepit.model
+package com.keepit.model.helprank
 
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.db.slick._
 import com.keepit.common.time._
-import com.google.inject.{ Singleton, ImplementedBy, Inject }
+import com.keepit.model._
 import org.joda.time.DateTime
-import scala.slick.jdbc.{ StaticQuery => Q }
-import Q.interpolation
+
+import scala.slick.jdbc.StaticQuery.interpolation
 
 @ImplementedBy(classOf[ReKeepRepoImpl])
 trait ReKeepRepo extends Repo[ReKeep] {

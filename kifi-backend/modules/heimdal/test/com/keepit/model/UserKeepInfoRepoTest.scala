@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.keepit.model.helprank.UserBookmarkClicksRepo
 import org.specs2.mutable.Specification
 import com.keepit.common.db.Id
 import com.keepit.test._
