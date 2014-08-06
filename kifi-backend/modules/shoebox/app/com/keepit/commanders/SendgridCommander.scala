@@ -10,6 +10,7 @@ import com.keepit.common.time.Clock
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.social.NonUserKinds
+import org.joda.time.DateTimeZone
 
 object SendgridEventTypes {
   val CLICK = "click"
@@ -122,7 +123,9 @@ class SendgridCommander @Inject() (
         if !emailAddr.verified
       } yield {
         log.info(s"verifying email(${userEmail}) from SendGrid event(${event})")
-        emailAddressRepo.save(emailAddr.copy(state = UserEmailAddressStates.VERIFIED, verifiedAt = Some(clock.now)))
+
+        emailAddressRepo.save(emailAddr.copy(state = UserEmailAddressStates.VERIFIED,
+          verifiedAt = Some(clock.now()(DateTimeZone.UTC))))
       }
     }
 
