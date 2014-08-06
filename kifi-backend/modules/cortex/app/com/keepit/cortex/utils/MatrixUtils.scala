@@ -9,7 +9,12 @@ object MatrixUtils {
 
   def L2Normalize(vec: Array[Double]): Array[Double] = {
     var s = 0.0
-    vec.foreach { x => s += x * x }
+    var n = vec.size
+    var i = 0
+    while (i < n) {
+      s += vec(i) * vec(i)
+      i += 1
+    }
     s = sqrt(s)
     if (s == 0.0) vec else vec.map { x => x / s }
   }
