@@ -526,7 +526,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = {
     val payload = Json.toJson(uriIds)
-    call(Shoebox.internal.getHelpRankInfo, payload) map { r =>
+    call(Shoebox.internal.getHelpRankInfo, payload, callTimeouts = longTimeout) map { r =>
       r.json.as[Seq[HelpRankInfo]]
     }
   }
