@@ -32,14 +32,13 @@ class HelpRankCommander @Inject() (
     shoeboxClient: ShoeboxServiceClient) extends Logging {
 
   def processKifiHit(discoverer: Id[User], kifiHit: SanitizedKifiHit): Future[Unit] = {
-    log.info(s"[processKifiHit($discoverer)] hit=$kifiHit")
     db.readWriteAsync { implicit rw =>
       val keepers = kifiHit.context.keepers
       if (kifiHit.context.isOwnKeep || kifiHit.context.isPrivate || keepers.isEmpty) userKeepInfoRepo.increaseCounts(discoverer, kifiHit.uriId, true)
       else {
         kifiHitCache.get(KifiHitKey(discoverer, kifiHit.uriId)) match { // simple throttling
           case Some(hit) =>
-            log.warn(s"[processKifiHit($discoverer,${kifiHit.uriId})] already recorded kifiHit ($hit) for user within threshold -- skip")
+            log.warn(s"[kifiHit($discoverer,${kifiHit.uriId})] already recorded kifiHit ($hit) for user within threshold -- skip")
           case None =>
             kifiHitCache.set(KifiHitKey(discoverer, kifiHit.uriId), kifiHit)
             shoeboxClient.getUserIdsByExternalIds(keepers) map { keeperIds =>
@@ -48,10 +47,10 @@ class HelpRankCommander @Inject() (
                 shoeboxClient.getBookmarkByUriAndUser(kifiHit.uriId, keeperId) map { keepOpt =>
                   keepOpt match {
                     case None =>
-                      log.warn(s"[processKifiHit($discoverer,${kifiHit.uriId},${keepers.mkString(",")})] keep not found for keeperId=$keeperId") // move on
+                      log.warn(s"[kifiHit($discoverer,${kifiHit.uriId},${keepers.mkString(",")})] keep not found for keeperId=$keeperId") // move on
                     case Some(keep) =>
                       val saved = keepDiscoveryRepo.save(KeepDiscovery(hitUUID = kifiHit.uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId, origin = Some(kifiHit.origin)))
-                      log.info(s"[processKifiHit($discoverer, ${kifiHit.uriId}, ${keepers.mkString(",")})] saved $saved")
+                      log.info(s"[kifiHit($discoverer, ${kifiHit.uriId}, ${keepers.mkString(",")})] saved $saved")
                   }
                 }
               }
@@ -62,7 +61,6 @@ class HelpRankCommander @Inject() (
   }
 
   def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit] = {
-    log.info(s"[processKeepAttribution($userId)] newKeeps=${newKeeps.map(k => s"Keep(${k.id},${k.uriId},${k.url})")}")
     SafeFuture {
       val builder = collection.mutable.ArrayBuilder.make[Keep]
       newKeeps.foreach { keep =>
@@ -80,7 +78,6 @@ class HelpRankCommander @Inject() (
   }
 
   private def searchAttribution(userId: Id[User], keep: Keep): Seq[ReKeep] = {
-    log.info(s"[searchAttribution($userId)] keep=$keep")
     implicit val dca = TransactionalCaching.Implicits.directCacheAccess
     kifiHitCache.get(KifiHitKey(userId, keep.uriId)) map { hit =>
       val res = db.readWrite { implicit rw =>
@@ -97,9 +94,8 @@ class HelpRankCommander @Inject() (
   }
 
   private def chatAttribution(userId: Id[User], keep: Keep): Future[Unit] = {
-    log.info(s"[chatAttribution($userId)] keep=$keep")
     elizaClient.keepAttribution(userId, keep.uriId) map { otherStarters =>
-      log.info(s"[chatAttribution($userId,${keep.uriId})] otherStarters=$otherStarters")
+      log.info(s"chatAttribution($userId,${keep.uriId})] otherStarters=$otherStarters")
       otherStarters.foreach { chatUserId =>
         db.readWrite { implicit rw =>
           rekeepRepo.getReKeep(chatUserId, keep.uriId, userId) match {
