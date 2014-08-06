@@ -180,7 +180,6 @@ class KeepInterner @Inject() (
     }
 
     keptAnalytics.keptPages(userId, createdKeeps, context)
-    keepAttribution(userId, createdKeeps)
     heimdalClient.processKeepAttribution(userId, createdKeeps)
     (newKeeps, existingKeeps, failures)
   }
@@ -192,7 +191,6 @@ class KeepInterner @Inject() (
       val bookmark = persistedBookmarksWithUri.bookmark
       if (persistedBookmarksWithUri.isNewKeep) {
         keptAnalytics.keptPages(userId, Seq(bookmark), context)
-        keepAttribution(userId, Seq(bookmark))
         heimdalClient.processKeepAttribution(userId, Seq(bookmark))
       }
       bookmark
