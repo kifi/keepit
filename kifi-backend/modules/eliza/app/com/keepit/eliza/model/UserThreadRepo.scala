@@ -39,23 +39,23 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession): Int
 
-  def getSendableNotification(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): RawNotification
+  def getRawNotification(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): RawNotification
 
-  def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
+  def getLatestRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
 
-  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
+  def getRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
 
-  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
+  def getLatestUnreadRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
 
-  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
+  def getUnreadRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
 
-  def getLatestSendableNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
+  def getLatestRawNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
 
-  def getSendableNotificationsForStartedThreadsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
+  def getRawNotificationsForStartedThreadsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
 
-  def getLatestSendableNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI], howMany: Int)(implicit session: RSession): List[RawNotification]
+  def getLatestRawNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI], howMany: Int)(implicit session: RSession): List[RawNotification]
 
-  def getSendableNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
+  def getRawNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
 
   def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): (Int, Int)
 
@@ -200,11 +200,11 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- rows if row.id === userThreadId) yield (row.muted, row.updatedAt)).update((muted, clock.now()))
   }
 
-  def getSendableNotification(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): RawNotification = {
+  def getRawNotification(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): RawNotification = {
     (for (row <- rows if row.user === userId && row.threadId === threadId) yield (row.lastNotification, row.unread)).first
   }
 
-  def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
+  def getLatestRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
     (for (
       row <- rows if row.user === userId &&
         row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
@@ -215,7 +215,7 @@ class UserThreadRepoImpl @Inject() (
       .list
   }
 
-  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
+  def getRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
     (for (
       row <- rows if row.user === userId &&
         row.notificationUpdatedAt < time &&
@@ -227,7 +227,7 @@ class UserThreadRepoImpl @Inject() (
       .list
   }
 
-  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
+  def getLatestUnreadRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
     (for (
       row <- rows if row.user === userId &&
         row.unread &&
@@ -239,7 +239,7 @@ class UserThreadRepoImpl @Inject() (
       .list
   }
 
-  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
+  def getUnreadRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
     (for (
       row <- rows if row.user === userId &&
         row.unread &&
@@ -252,7 +252,7 @@ class UserThreadRepoImpl @Inject() (
       .list
   }
 
-  def getLatestSendableNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
+  def getLatestRawNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
     (for (
       row <- rows if row.user === userId &&
         row.started &&
@@ -264,7 +264,7 @@ class UserThreadRepoImpl @Inject() (
       .list
   }
 
-  def getSendableNotificationsForStartedThreadsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
+  def getRawNotificationsForStartedThreadsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
     (for (
       row <- rows if row.user === userId &&
         row.started &&
@@ -277,7 +277,7 @@ class UserThreadRepoImpl @Inject() (
       .list
   }
 
-  def getLatestSendableNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI], howMany: Int)(implicit session: RSession): List[RawNotification] = {
+  def getLatestRawNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI], howMany: Int)(implicit session: RSession): List[RawNotification] = {
     (for (
       row <- rows if row.user === userId &&
         row.uriId === uriId &&
@@ -289,7 +289,7 @@ class UserThreadRepoImpl @Inject() (
       .list
   }
 
-  def getSendableNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
+  def getRawNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
     (for (
       row <- rows if row.user === userId &&
         row.uriId === uriId &&
