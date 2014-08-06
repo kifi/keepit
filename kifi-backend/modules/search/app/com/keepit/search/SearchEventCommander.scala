@@ -31,8 +31,8 @@ class SearchEventCommander @Inject() (
         resultClickedTracker.add(userId, query, uriId, resultPosition, kifiHitContext.isOwnKeep, isDemo)
         clickHistoryTracker.add(userId, ClickedURI(uriId))
         val hit = SanitizedKifiHit(searchContext.uuid, searchContext.origin, searchResultUrl, uriId, kifiHitContext)
-        shoeboxClient.kifiHit(userId, hit)
         heimdalClient.processKifiHit(userId, hit)
+        shoeboxClient.kifiHit(userId, hit)
     }
     searchAnalytics.clickedSearchResult(userId, clickedAt, searchContext, SearchEngine.Kifi, resultPosition, Some(kifiHitContext), context)
   }
