@@ -1,6 +1,13 @@
 'use strict';
 
-angular.module('kifi.friends.rightColFriendsView', [])
+angular.module('kifi.friends.rightColFriendsView', [
+  'kifi',
+  'kifi.friendService',
+  'kifi.inviteService',
+  'kifi.invite.wtiService',
+  'kifi.socialService'
+])
+
 .directive('kfCompactFriendsView', ['friendService', function (friendService) {
   return {
     replace: true,

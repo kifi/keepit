@@ -21,7 +21,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
-import scala.collection.mutable
+import scala.collection.concurrent.TrieMap
 
 import com.google.inject.{ Inject, Singleton }
 
@@ -38,7 +38,7 @@ class RecommendationGenerationCommander @Inject() (
   val defaultScore = 0.0f
 
   val recommendationGenerationLock = new ReactiveLock(6)
-  val perUserRecommendationGenerationLocks = mutable.Map[Id[User], ReactiveLock]()
+  val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
 
   val FEED_PRECOMPUTATION_WHITELIST: Seq[Id[User]] = Seq(
     1, //Eishay
@@ -106,13 +106,8 @@ class RecommendationGenerationCommander @Inject() (
 
   }
 
-  private def getPerUserGenerationLock(userId: Id[User]): ReactiveLock = perUserRecommendationGenerationLocks.synchronized {
-    val lockOption = perUserRecommendationGenerationLocks.get(userId)
-    lockOption.getOrElse {
-      val lock = new ReactiveLock()
-      perUserRecommendationGenerationLocks += (userId -> lock)
-      lock
-    }
+  private def getPerUserGenerationLock(userId: Id[User]): ReactiveLock = {
+    perUserRecommendationGenerationLocks.getOrElseUpdate(userId, new ReactiveLock())
   }
 
   private def precomputeRecommendationsForUser(userId: Id[User]): Unit = recommendationGenerationLock.withLockFuture {

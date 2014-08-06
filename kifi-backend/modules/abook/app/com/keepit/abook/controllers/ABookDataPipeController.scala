@@ -17,7 +17,7 @@ class ABookDataPipeController @Inject() (
     val emailAccounts = db.readOnlyReplica(2) { implicit s =>
       emailAccountRepo.getBySequenceNumber(seqNum, fetchSize)
     }
-    val ingestables = emailAccounts.map(EmailAccount.toIngestable)
+    val ingestables = emailAccounts.map(EmailAccount.toInfo)
     Ok(Json.toJson(ingestables))
   }
 

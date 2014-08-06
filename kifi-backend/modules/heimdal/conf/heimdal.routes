@@ -32,4 +32,10 @@ GET  /internal/heimdal/user/delighted/time             @com.keepit.controllers.D
 POST /internal/heimdal/user/delighted/answer           @com.keepit.controllers.DelightedController.postDelightedAnswer()
 POST /internal/heimdal/user/delighted/cancel           @com.keepit.controllers.DelightedController.cancelDelightedSurvey()
 
+GET  /internal/heimdal/data/keepDiscovery/page/:page   @com.keepit.controllers.KeepDiscoveryController.page(page:Int, size:Int)
+GET  /internal/heimdal/data/reKeep/page/:page          @com.keepit.controllers.ReKeepController.page(page:Int, size:Int)
+
+POST /internal/heimdal/helprank/processKifiHit         @com.keepit.controllers.HelpRankController.processKifiHit()
+POST /internal/heimdal/helprank/processKeepAttribution @com.keepit.controllers.HelpRankController.processKeepAttribution()
+
 ->  / common.Routes

@@ -7,7 +7,7 @@ import com.keepit.common.controller.CortexServiceController
 import com.keepit.common.commanders.LDACommander
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.utils.TextUtils
-import com.keepit.cortex.models.lda.{ LDATopicConfigurations, LDATopicConfiguration, LDATopicInfo }
+import com.keepit.cortex.models.lda.{ LDAUserURIInterestScores, LDATopicConfigurations, LDATopicConfiguration, LDATopicInfo }
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import com.keepit.model.{ User, NormalizedURI }
@@ -67,7 +67,7 @@ class LDAController @Inject() (
   }
 
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    val scores = lda.userUriInterest(userId, uriId)
+    val scores = lda.gaussianUserUriInterest(userId, uriId)
     Ok(Json.toJson(scores))
   }
 
@@ -76,6 +76,9 @@ class LDAController @Inject() (
     val userId = (js \ "userId").as[Id[User]]
     val uriIds = (js \ "uriIds").as[Seq[Id[NormalizedURI]]]
     val scores = lda.batchUserURIsInterests(userId, uriIds)
+    //    val scores1 = lda.batchUserURIsInterests(userId, uriIds)
+    //    val scores2 = lda.batchGaussianUserURIsInterests(userId, uriIds)
+    //    val scores = (scores1 zip scores2).map { case (s1, s2) => LDAUserURIInterestScores(s2.global, s1.recency) }
     Ok(Json.toJson(scores))
   }
 

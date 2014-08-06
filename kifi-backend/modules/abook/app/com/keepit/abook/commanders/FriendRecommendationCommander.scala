@@ -24,22 +24,23 @@ class FriendRecommendationCommander @Inject() (
   }
 
   def getRecommendedUsers(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = {
-    val futureFriendships = graph.getUserFriendships(userId, bePatient = false)
+    val futureRelatedUsers = graph.getSociallyRelatedUsers(userId, bePatient = false)
     val futureFriends = shoebox.getFriends(userId)
     val futureFriendRequests = shoebox.getFriendRequestsBySender(userId)
     val futureFakeUsers = shoebox.getAllFakeUsers()
     val rejectedRecommendations = db.readOnlyMaster { implicit session =>
       friendRecommendationRepo.getIrrelevantRecommendations(userId)
     }
-    futureFriendships.flatMap { friendships =>
-      if (friendships.isEmpty) Future.successful(Seq.empty)
+    futureRelatedUsers.flatMap { relatedUsersOption =>
+      val relatedUsers = relatedUsersOption.map(_.related) getOrElse Seq.empty
+      if (relatedUsers.isEmpty) Future.successful(Seq.empty)
       else for {
         friends <- futureFriends
         friendRequests <- futureFriendRequests
         fakeUsers <- futureFakeUsers
       } yield {
-        val irrelevantRecommendations = rejectedRecommendations ++ friends ++ friendRequests.map(_.recipientId) ++ fakeUsers
-        val recommendations = friendships.iterator.filter { case (friendId, _) => !irrelevantRecommendations.contains(friendId) }
+        val irrelevantRecommendations = rejectedRecommendations ++ friends ++ friendRequests.map(_.recipientId) ++ fakeUsers + userId
+        val recommendations = relatedUsers.iterator.filter { case (friendId, _) => !irrelevantRecommendations.contains(friendId) }
         recommendations.drop(page * pageSize).take(pageSize).map(_._1).toSeq
       }
     }

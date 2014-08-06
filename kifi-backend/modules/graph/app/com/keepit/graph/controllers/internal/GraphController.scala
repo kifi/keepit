@@ -18,10 +18,14 @@ import scala.collection.mutable
 import com.keepit.common.db.Id
 import com.keepit.model.{ NormalizedURI, SocialUserInfo, User }
 import com.keepit.common.time._
+import com.keepit.graph.utils.GraphPrimitives
+import scala.concurrent.Future
+import com.keepit.abook.model.EmailAccountInfo
 
 class GraphController @Inject() (
     graphManager: GraphManager,
     wanderingCommander: WanderingCommander,
+    socialWanderingCommander: SocialWanderingCommander,
     graphCommander: GraphCommander) extends GraphServiceController with Logging {
 
   def wander() = Action.async(parse.json) { request =>
@@ -65,6 +69,26 @@ class GraphController @Inject() (
     }
   }
 
+  def refreshSociallyRelatedEntities(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map(_ => Ok)
+  }
+
+  def getSociallyRelatedUsers(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.users)) }
+  }
+
+  def getSociallyRelatedFacebookAccounts(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.facebookAccounts)) }
+  }
+
+  def getSociallyRelatedLinkedInAccounts(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.linkedInAccounts)) }
+  }
+
+  def getSociallyRelatedEmailAccounts(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.emailAccounts)) }
+  }
+
   // todo(Léo): Remove this code once CollisionCommander is operational
   private def getCollisions(journal: TeleportationJournal, avoidTrivialCollisions: Boolean, collisionFilter: Set[VertexType]): Collisions = {
     val forbiddenCollisions = getForbiddenCollisions(journal.getStartingVertex(), avoidTrivialCollisions)
@@ -88,26 +112,15 @@ class GraphController @Inject() (
     Collisions(users.toMap, socialUsers.toMap, uris.toMap, extra.toMap)
   }
 
-  private def collectNeighbors(vertexReader: GlobalVertexReader)(vertexId: VertexId, neighborKinds: Set[VertexType]): Set[VertexId] = {
-    vertexReader.moveTo(vertexId)
-    val neighbors = mutable.Set[VertexId]()
-    while (vertexReader.outgoingEdgeReader.moveToNextComponent()) {
-      val (_, destinationKind, _) = vertexReader.outgoingEdgeReader.component
-      if (neighborKinds.contains(destinationKind)) {
-        while (vertexReader.outgoingEdgeReader.moveToNextEdge()) { neighbors += vertexReader.outgoingEdgeReader.destination }
-      }
-    }
-    neighbors.toSet
-  }
-
   private def getForbiddenCollisions(startingVertexId: VertexId, avoidTrivialCollisions: Boolean): Set[VertexId] = {
     val start = currentDateTime
     val forbiddenCollisions = if (!avoidTrivialCollisions) { Set(startingVertexId) }
     else graphManager.readOnly { reader =>
       val vertexReader = reader.getNewVertexReader()
-      val firstDegree = collectNeighbors(vertexReader)(startingVertexId, VertexKind.all)
+      val collectNeighbors = GraphPrimitives.collectOutgoingNeighbors(vertexReader) _
+      val firstDegree = collectNeighbors(startingVertexId, VertexKind.all)
       val forbiddenUris = if (startingVertexId.kind != UserReader) Set.empty else {
-        firstDegree.collect { case keep if keep.kind == KeepReader => collectNeighbors(vertexReader)(keep, Set(UriReader)) }.flatten
+        firstDegree.collect { case keep if keep.kind == KeepReader => collectNeighbors(keep, Set(UriReader)) }.flatten
       }
       firstDegree ++ forbiddenUris + startingVertexId
     }
