@@ -6,19 +6,16 @@ import com.keepit.common.math.ProbabilityDensity
 import com.keepit.graph.model.EdgeKind.EdgeType
 import com.keepit.graph.model.VertexKind.VertexType
 import com.keepit.graph.model.Component.Component
-import play.api.Logger
+import com.keepit.common.logging.Logging
 
 trait Wanderer {
   def wander(steps: Int, teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal): Unit
 }
 
-class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) {
+class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) extends Logging {
   type TransitionProbabilityCache = mutable.Map[(VertexId, VertexType, EdgeType), ProbabilityDensity[VertexId]]
 
-  lazy val log = Logger("com.keepit.wanderer")
-
   def wander(steps: Int, teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal): Unit = {
-    log.info(s"Wandering for $steps steps")
     val probabilityCache: TransitionProbabilityCache = mutable.Map()
     teleportTo(teleporter.surely, journal, isStart = true)
     var step = 0
@@ -26,7 +23,6 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
       tryAndMove(teleporter, resolver, journal, probabilityCache, 1)
       step += 1
     }
-    log.info(s"[Complete] ${wanderer.id}")
     journal.onComplete(wanderer)
   }
 
@@ -55,16 +51,13 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
   private def teleportTo(destination: VertexId, journal: TravelJournal, isDeadend: Boolean = false, isStart: Boolean = false): Unit = {
     if (isStart) {
       wanderer.moveTo(destination)
-      log.info(s"[Start] ${wanderer.id}")
       journal.onStart(wanderer)
     } else {
       scout.moveTo(wanderer.id)
       wanderer.moveTo(destination)
       if (isDeadend) {
-        log.info(s"[Deadend] ${scout.id} --> ${wanderer.id}")
         journal.onDeadend(scout, wanderer)
       } else {
-        log.info(s"[Teleportation] ${scout.id} --> ${wanderer.id}")
         journal.onTeleportation(scout, wanderer)
       }
     }
@@ -73,15 +66,14 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
   private def traverseTo(destination: VertexId, edgeKind: EdgeType, journal: TravelJournal): Unit = {
     scout.moveTo(wanderer.id)
     wanderer.moveTo(destination)
-    log.info(s"[Traverse] ${scout.id} --> ${wanderer.id} | ${edgeKind.code}")
     journal.onEdgeTraversal(scout, wanderer, edgeKind)
   }
 
   private def sampleOutgoingComponent(resolver: EdgeResolver): Option[Component] = {
     val componentWeights = mutable.MutableList[(Component, Double)]()
     while (wanderer.outgoingEdgeReader.moveToNextComponent()) {
-      val component @ (_, destinationKind, edgeKind) = wanderer.outgoingEdgeReader.component
-      val weight = resolver.weightComponent(wanderer, destinationKind, edgeKind)
+      val component = wanderer.outgoingEdgeReader.component
+      val weight = resolver.weightComponent(component)
       componentWeights += component -> weight
     }
     val probability = ProbabilityDensity.normalized(componentWeights)

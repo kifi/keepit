@@ -20,7 +20,20 @@ angular.module('kifi.recos', [])
 
     $scope.keeps = recoService.recos;
 
-    recoService.fetchAdHocRecos();
+    $scope.weights = $scope.weights || {
+      socialScore: 7,
+      recencyScore: 0.5,
+      popularityScore: 1,
+      overallInterestScore: 8,
+      recentInterestScore: 4,
+      priorScore: 1
+    };
+
+    $scope.reload = function () {
+      recoService.fetchAdHocRecos($scope.weights);
+    };
+
+    recoService.fetchAdHocRecos($scope.weights);
 
   }
 ]);

@@ -1,8 +1,6 @@
 package com.keepit.graph
 
-import java.util.concurrent.atomic.AtomicInteger
-
-import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.db.{ Id }
 import com.keepit.model._
 
 import scala.concurrent.Future
@@ -12,8 +10,9 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.HttpClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.graph.wander.{ Collisions, Wanderlust }
-import com.keepit.graph.model.{ ConnectedUserScore, ConnectedUriScore, GraphKinds }
+import com.keepit.graph.model.{ RelatedEntities, ConnectedUserScore, ConnectedUriScore, GraphKinds }
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.abook.model.EmailAccountInfo
 
 class FakeGraphServiceClientImpl(
     override val serviceCluster: ServiceCluster,
@@ -42,4 +41,9 @@ class FakeGraphServiceClientImpl(
   }
 
   def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]] = Future.successful(Seq.empty)
+  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit] = Future.successful(())
+  def getSociallyRelatedUsers(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, User]]] = Future.successful(None)
+  def getSociallyRelatedFacebookAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]] = Future.successful(None)
+  def getSociallyRelatedLinkedInAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]] = Future.successful(None)
+  def getSociallyRelatedEmailAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, EmailAccountInfo]]] = Future.successful(None)
 }

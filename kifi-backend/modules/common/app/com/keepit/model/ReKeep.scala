@@ -24,6 +24,23 @@ case class ReKeep(
   def withUpdateTime(now: DateTime): ReKeep = this.copy(updatedAt = now)
 }
 
+object ReKeep {
+  import play.api.libs.functional.syntax._
+  import play.api.libs.json._
+  implicit val format: Format[ReKeep] = (
+    (__ \ 'id).formatNullable(Id.format[ReKeep]) and
+      (__ \ 'createdAt).format[DateTime] and
+      (__ \ 'updatedAt).format[DateTime] and
+      (__ \ 'state).format(State.format[ReKeep]) and
+      (__ \ 'keeperId).format(Id.format[User]) and
+      (__ \ 'keepId).format(Id.format[Keep]) and
+      (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+      (__ \ 'srcUserId).format(Id.format[User]) and
+      (__ \ 'srcKeepId).format(Id.format[Keep]) and
+      (__ \ 'attributionFactor).format[Int]
+    )(ReKeep.apply, unlift(ReKeep.unapply))
+}
+
 object ReKeepStates extends States[ReKeep]
 
 case class RichReKeep(id: Option[Id[ReKeep]], createdAt: DateTime, updatedAt: DateTime, state: State[ReKeep], keeper: User, keep: Keep, uri: NormalizedURI, srcUser: User, srcKeep: Keep, attributionFactor: Int)
