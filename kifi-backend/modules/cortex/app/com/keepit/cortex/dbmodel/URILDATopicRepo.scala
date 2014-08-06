@@ -41,8 +41,6 @@ class URILDATopicRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  private lazy val cortexKeepRepo = keepRepoProvider.get
-
   type RepoImpl = URILDATopicTable
 
   class URILDATopicTable(tag: Tag) extends RepoTable[URILDATopic](db, tag, "uri_lda_topic") {

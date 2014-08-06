@@ -1,16 +1,33 @@
 package com.keepit.cortex.models.lda
 
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.time._
+import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.cortex.core.{ StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
-import com.keepit.cortex.plugins.BaseFeatureUpdater
+import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater }
 import com.keepit.model.User
 import math.abs
 import com.keepit.cortex.utils.MatrixUtils._
+import scala.concurrent.duration._
+
+class LDAUserStatDbUpdateActor @Inject() (airbrake: AirbrakeNotifier, updater: LDAUserStatDbUpdater) extends FeatureUpdateActor(airbrake, updater)
+
+trait LDAUserStatDbUpdatePlugin extends FeatureUpdatePlugin[User, DenseLDA]
+
+@Singleton
+class LDAUserStatDbUpdatePluginImpl @Inject() (
+    actor: ActorInstance[LDAUserStatDbUpdateActor],
+    discovery: ServiceDiscovery,
+    val scheduling: SchedulingProperties) extends BaseFeatureUpdatePlugin(actor, discovery) with LDAUserStatDbUpdatePlugin {
+  override val updateFrequency: FiniteDuration = 5 minutes
+}
 
 @ImplementedBy(classOf[LDAUserStatDbUpdaterImpl])
 trait LDAUserStatDbUpdater extends BaseFeatureUpdater[Id[User], User, DenseLDA, FeatureRepresentation[User, DenseLDA]]
