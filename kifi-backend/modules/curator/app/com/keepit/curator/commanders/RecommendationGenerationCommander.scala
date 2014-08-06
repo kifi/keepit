@@ -71,7 +71,7 @@ class RecommendationGenerationCommander @Inject() (
 
   def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[RecommendationInfo]] = {
     val recosFuture = db.readOnlyReplicaAsync { implicit session =>
-      recoRepo.getByTopMasterScore(userId, Math.max(howManyMax, 1000))
+      recoRepo.getByTopMasterScore(userId, Math.max(howManyMax, 1500))
     }
 
     recosFuture.map { recos =>
