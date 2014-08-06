@@ -23,7 +23,7 @@ import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
-import com.keepit.model.{ Keep, DelightedUserRegistrationInfo, User }
+import com.keepit.model.{ KeepDiscovery, Keep, DelightedUserRegistrationInfo, User }
 import com.keepit.common.db.{ ExternalId, Id }
 import org.joda.time.DateTime
 import com.kifi.franz.SQSQueue
@@ -56,6 +56,8 @@ trait HeimdalServiceClient extends ServiceClient {
   def postDelightedAnswer(userRegistrationInfo: DelightedUserRegistrationInfo, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]]
 
   def cancelDelightedSurvey(userRegistrationInfo: DelightedUserRegistrationInfo): Future[Boolean]
+
+  def getPagedKeepDiscoveries(page: Int = 0, size: Int = 20): Future[Seq[KeepDiscovery]]
 
   def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit]
 
@@ -185,6 +187,12 @@ class HeimdalServiceClientImpl @Inject() (
           }
           false
       }
+    }
+  }
+
+  def getPagedKeepDiscoveries(page: Int, size: Int): Future[Seq[KeepDiscovery]] = {
+    call(Heimdal.internal.getPagedKeepDiscoveries(page, size)) map { r =>
+      Json.parse(r.body).as[Seq[KeepDiscovery]]
     }
   }
 

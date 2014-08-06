@@ -1,6 +1,7 @@
 package com.keepit.controllers.admin
 
 import com.keepit.common.db.Id
+import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.model._
 import views.html
 import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
@@ -24,6 +25,7 @@ import play.api.libs.json.Json
 class AdminAttributionController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     db: Database,
+    heimdalClient: HeimdalServiceClient,
     attributionCmdr: AttributionCommander,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
@@ -35,6 +37,26 @@ class AdminAttributionController @Inject() (
     userBookmarkClicksRepo: UserBookmarkClicksRepo) extends AdminController(actionAuthenticator) {
 
   implicit val execCtx = fj
+
+  def keepDiscoveriesViewNew(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticatedAsync { request =>
+    heimdalClient.getPagedKeepDiscoveries(page, size) map { paged =>
+      db.readOnlyMaster { implicit session =>
+        paged map { c =>
+          val rc = RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, userRepo.get(c.keeperId), keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
+          val pageInfoOpt = pageInfoRepo.getByUri(c.uriId)
+          val imgOpt = if (!showImage) None
+          else
+            for {
+              pageInfo <- pageInfoOpt
+              imgId <- pageInfo.imageInfoId
+            } yield imageInfoRepo.get(imgId)
+          (rc, pageInfoOpt, imgOpt)
+        }
+      }
+    } map { t =>
+      Ok(html.admin.keepDiscoveries(t, false, page, 42, size))
+    }
+  }
 
   def keepDiscoveriesView(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticated { request =>
     val (t, count) = db.readOnlyMaster { implicit ro =>

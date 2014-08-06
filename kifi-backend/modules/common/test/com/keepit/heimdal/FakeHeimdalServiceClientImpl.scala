@@ -1,7 +1,7 @@
 package com.keepit.heimdal
 
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.{ Keep, DelightedUserRegistrationInfo, User }
+import com.keepit.model.{KeepDiscovery, Keep, DelightedUserRegistrationInfo, User}
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.service.ServiceType
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -50,6 +50,8 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def postDelightedAnswer(userRegistrationInfo: DelightedUserRegistrationInfo, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]] = Future.successful(None)
 
   def cancelDelightedSurvey(userRegistrationInfo: DelightedUserRegistrationInfo): Future[Boolean] = Future.successful(true)
+
+  def getPagedKeepDiscoveries(page: Int, size: Int): Future[Seq[KeepDiscovery]] = Future.successful(Seq.empty)
 
   def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit] = Future.successful[Unit]()
 
