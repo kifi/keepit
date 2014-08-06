@@ -13,6 +13,7 @@ import com.keepit.common.time.Clock
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model._
+import com.keepit.model.helprank.{ UserBookmarkClicksRepo, KeepDiscoveryRepo, ReKeepRepo }
 import com.keepit.search.ArticleSearchResult
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

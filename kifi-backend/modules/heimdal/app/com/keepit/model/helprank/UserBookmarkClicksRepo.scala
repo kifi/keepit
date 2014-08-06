@@ -1,11 +1,13 @@
-package com.keepit.model
+package com.keepit.model.helprank
 
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.db.slick._
 import com.keepit.common.time._
+import com.keepit.model.{ NormalizedURI, User, UserBookmarkClicks }
+
 import scala.slick.jdbc.StaticQuery.interpolation
-import com.google.inject.{ Singleton, ImplementedBy, Inject }
 
 @ImplementedBy(classOf[UserBookmarkClicksRepoImpl])
 trait UserBookmarkClicksRepo extends Repo[UserBookmarkClicks] {

@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.SlickSessionProvider
 import com.keepit.model._
 import com.keepit.common.db.FakeSlickSessionProvider
 import com.google.inject.Injector
+import com.keepit.model.helprank.{ UserBookmarkClicksRepo, KeepDiscoveryRepo, ReKeepRepo }
 
 trait HeimdalInjectionHelpers { self: InjectorProvider =>
 
