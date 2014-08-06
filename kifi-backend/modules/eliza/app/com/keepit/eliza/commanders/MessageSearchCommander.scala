@@ -20,10 +20,10 @@ class MessageSearchCommander @Inject() (
     userThreadRepo: UserThreadRepo,
     db: Database,
     search: SearchServiceClient,
-    notificationUpdater: NotificationUpdater,
+    notificationJsonMaker: NotificationJsonMaker,
     historyRepo: MessageSearchHistoryRepo) extends Logging {
 
-  def searchMessages(userId: Id[User], query: String, page: Int, storeInHistory: Boolean): Future[Notifications] = {
+  def searchMessages(userId: Id[User], query: String, page: Int, storeInHistory: Boolean): Future[Seq[NotificationJson]] = {
     val resultExtIdsFut = search.searchMessages(userId, query, page)
     //async update search history for the user
     if (storeInHistory) {
@@ -43,7 +43,7 @@ class MessageSearchCommander @Inject() (
           userThreadRepo.getNotificationByThread(userId, thread.id.get)
         }.filter(_.isDefined).map(_.get)
       }
-      notificationUpdater.update(notifs)
+      notificationJsonMaker.make(notifs)
     }
   }
 
