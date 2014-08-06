@@ -115,4 +115,18 @@ object MatrixUtils {
     s
   }
 
+  def weightedMDistanceDiagGaussian(sample: Array[Double], mean: Array[Double], variance: Array[Double], weights: Array[Double]) = {
+    assume(sample.size == mean.size && mean.size == variance.size)
+    val n = sample.size
+    var i = 0
+    var s = 0.0
+    while (i < n) {
+      val v = variance(i)
+      val diff = sample(i) - mean(i)
+      if (v == 0) s += weights(i) * diff * diff
+      else s += weights(i) * diff * diff / v
+      i += 1
+    }
+    s
+  }
 }
