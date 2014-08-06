@@ -323,7 +323,7 @@ class ShoeboxController @Inject() (
     val json = request.body
     val clicker = (json \ "clickerId").as(Id.format[User])
     val kifiHit = (json \ "kifiHit").as[SanitizedKifiHit]
-    keepsCommander.processKifiHit(clicker, kifiHit)
+    // keepsCommander.processKifiHit(clicker, kifiHit) // todo(ray): remove endpoint after search is upgraded
     Ok
   }
 
