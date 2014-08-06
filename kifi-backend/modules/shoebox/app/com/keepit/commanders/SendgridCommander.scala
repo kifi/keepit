@@ -12,13 +12,6 @@ import com.keepit.model._
 import com.keepit.social.NonUserKinds
 import org.joda.time.DateTimeZone
 
-object SendgridEventTypes {
-  val CLICK = "click"
-  val UNSUBSCRIBE = "unsubscribe"
-  val BOUNCE = "bounce"
-  val SPAM_REPORT = "spamreport"
-}
-
 class SendgridCommander @Inject() (
     db: Database,
     clock: Clock,
@@ -29,10 +22,10 @@ class SendgridCommander @Inject() (
     emailOptOutRepo: EmailOptOutRepo,
     heimdalContextBuilder: HeimdalContextBuilderFactory) extends Logging {
 
-  import com.keepit.commanders.SendgridEventTypes._
+  import SendgridEventTypes._
 
-  val alertEvents: Seq[String] = Seq(BOUNCE, SPAM_REPORT)
-  val unsubscribeEvents: Seq[String] = Seq(UNSUBSCRIBE, BOUNCE)
+  val alertEvents: Seq[SendgridEventType] = Seq(BOUNCE, SPAM_REPORT)
+  val unsubscribeEvents: Seq[SendgridEventType] = Seq(UNSUBSCRIBE, BOUNCE)
 
   def processNewEvents(events: Seq[SendgridEvent]): Unit = {
     events foreach report
@@ -72,7 +65,7 @@ class SendgridCommander @Inject() (
 
       lazy val context = {
         val contextBuilder = heimdalContextBuilder()
-        contextBuilder += ("action", eventType)
+        contextBuilder += ("action", eventType.name)
         event.url.foreach { url => contextBuilder += ("clicked", clicked(url)) }
         contextBuilder.addEmailInfo(email)
         contextBuilder.build
@@ -92,7 +85,7 @@ class SendgridCommander @Inject() (
   }
 
   private def report(event: SendgridEvent): Unit = {
-    val eventName: Option[String] = event.event
+    val eventName: Option[SendgridEventType] = event.event
 
     val emailOpt = for {
       mailId <- event.mailId
