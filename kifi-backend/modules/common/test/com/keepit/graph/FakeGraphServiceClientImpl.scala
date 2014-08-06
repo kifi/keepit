@@ -10,7 +10,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.HttpClient
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.graph.wander.{ Collisions, Wanderlust }
-import com.keepit.graph.model.{RelatedEntities, ConnectedUserScore, ConnectedUriScore, GraphKinds}
+import com.keepit.graph.model.{ RelatedEntities, ConnectedUserScore, ConnectedUriScore, GraphKinds }
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.abook.model.EmailAccountInfo
 

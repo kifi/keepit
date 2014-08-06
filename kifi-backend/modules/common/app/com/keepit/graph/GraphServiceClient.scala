@@ -7,7 +7,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.{ CallTimeouts, ClientResponse, HttpClient }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.graph.model._
-import com.keepit.model.{SocialUserInfo, NormalizedURI, User}
+import com.keepit.model.{ SocialUserInfo, NormalizedURI, User }
 import scala.concurrent.{ Promise, Future }
 import com.keepit.common.routes.{ Graph }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
