@@ -308,53 +308,6 @@ class UserCommander @Inject() (
     } else Option(Future.successful(Set.empty))
   }
 
-  def tellAllFriendsAboutNewUserImmediate(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = synchronized {
-    if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, UserValueName.FRIENDS_NOTIFIED_ABOUT_JOINING).exists(_ == "true") }) {
-      db.readWrite { implicit session => userValueRepo.setValue(newUserId, UserValueName.FRIENDS_NOTIFIED_ABOUT_JOINING, true) }
-      val (newUser: User, toNotify: Set[Id[User]]) = db.readOnlyReplica { implicit session =>
-        val newUser = userRepo.get(newUserId)
-        val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
-        (newUser, toNotify)
-      }
-
-      sendEmailToNewUserFriendsHelper(newUser, toNotify)
-
-      elizaServiceClient.sendGlobalNotification(
-        userIds = toNotify,
-        title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
-        body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly. Invite friends to join Kifi.",
-        linkText = "Invite more friends to Kifi.",
-        linkUrl = "https://www.kifi.com/friends/invite",
-        imageUrl = userAvatarImageUrl(newUser),
-        sticky = false,
-        category = NotificationCategory.User.FRIEND_JOINED
-      )
-    }
-  }
-
-  def tellAllFriendsAboutNewUser(newUserId: Id[User]): Unit = {
-    val toBeNotified = db.readWrite(attempts = 3) { implicit session =>
-      for {
-        su <- socialUserRepo.getByUser(newUserId)
-        invite <- invitationRepo.getByRecipientSocialUserId(su.id.get) if (invite.state != InvitationStates.JOINED)
-        senderUserId <- {
-          invitationRepo.save(invite.withState(InvitationStates.JOINED))
-          invite.senderUserId
-        }
-      } yield senderUserId
-    }
-
-    tellAllFriendsAboutNewUser(newUserId, toBeNotified)
-  }
-
-  def tellAllFriendsAboutNewUser(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = {
-    delay {
-      synchronized {
-        tellAllFriendsAboutNewUserImmediate(newUserId, additionalRecipients)
-      }
-    }
-  }
-
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None): Unit = {
     val olderUser: Boolean = newUser.createdAt.isBefore(currentDateTime.minus(24 * 3600 * 1000)) //users older than 24h get the long form welcome email
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {

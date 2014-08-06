@@ -72,43 +72,6 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
 
   "UserCommander" should {
 
-    "notify friends of new joinee" in {
-      withDb(modules: _*) { implicit injector =>
-        val (user1, user2, user3) = setup()
-        val userCommander = inject[UserCommander]
-        val outbox = inject[FakeOutbox]
-        outbox.size === 0
-        userCommander.tellAllFriendsAboutNewUserImmediate(user1.id.get, Seq(user2.id.get))
-        outbox.size === 2
-        val forUser2 = outbox.all.filter(email => email.to.length == 1 && email.to.head.address == "peteg@42go.com")
-        val forUser3 = outbox.all.filter(email => email.to.length == 1 && email.to.head.address == "superreporter@42go.com")
-        forUser2.length === 1
-        forUser3.length === 1
-        //double seding protection
-        userCommander.tellAllFriendsAboutNewUser(user1.id.get, Seq(user2.id.get))
-        outbox.size === 2
-
-        //content check
-        outbox(0).htmlBody.toString.containsSlice(s"${user1.firstName} ${user1.lastName} just joined Kifi") === true
-        outbox(1).htmlBody.toString.containsSlice(s"${user1.firstName} ${user1.lastName} just joined Kifi") === true
-
-        outbox(0).htmlBody.toString.containsSlice(user1.pictureName.get) === true
-        outbox(1).htmlBody.toString.containsSlice(user1.pictureName.get) === true
-
-        outbox(0).htmlBody.toString.containsSlice(user2.firstName) === true
-        outbox(1).htmlBody.toString.containsSlice(user3.firstName) === true
-
-        outbox(0).subject === s"${user1.firstName} ${user1.lastName} joined Kifi"
-        outbox(1).subject === s"${user1.firstName} ${user1.lastName} joined Kifi"
-
-        outbox(0).to.length === 1
-        outbox(1).to.length === 1
-
-        outbox(0).to(0).address === "peteg@42go.com"
-        outbox(1).to(0).address === "superreporter@42go.com"
-      }
-    }
-
     "welcome a joinee" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, user3) = setup()
