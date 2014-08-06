@@ -107,9 +107,11 @@ class LDACommander @Inject() (
   }
 
   def gaussianUserUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): LDAUserURIInterestScores = {
-    val uriTopicOpt = uriTopicRepo.getActiveByURI(uriId, wordRep.version)
-    val userInterestStatOpt = userLDAStatRepo.getByUser(userId, wordRep.version)
-    computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
+    db.readOnlyReplica { implicit s =>
+      val uriTopicOpt = uriTopicRepo.getActiveByURI(uriId, wordRep.version)
+      val userInterestStatOpt = userLDAStatRepo.getByUser(userId, wordRep.version)
+      computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
+    }
   }
 
   def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores] = {
