@@ -92,4 +92,12 @@ object MatrixUtils {
     }
     (tuples.map { _._1 }.toArray, tuples.map { _._2 }.toArray)
   }
+
+  def MDistanceDiagGaussian(sample: Array[Double], mean: Array[Double], variance: Array[Double]) = {
+    assume(sample.size == mean.size && mean.size == variance.size)
+    val diff = (sample zip mean).map { case (x, y) => x - y }
+    val dist = (diff zip variance).map { case (d, s) => if (s == 0) d * d else d * d / s }.sum
+    dist
+  }
+
 }

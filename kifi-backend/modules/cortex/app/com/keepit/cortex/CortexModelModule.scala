@@ -15,6 +15,7 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
     bind[RichWord2VecURIFeatureUpdatePlugin].to[RichWord2VecURIFeatureUpdatePluginImpl].in[AppScoped]
     bind[LDADbUpdatePlugin].to[LDADbUpdatePluginImpl].in[AppScoped]
     bind[LDAUserDbUpdatePlugin].to[LDAUserDbUpdatePluginImpl].in[AppScoped]
+    bind[LDAUserStatDbUpdatePlugin].to[LDAUserStatDbUpdatePluginImpl].in[AppScoped]
     bind[UserLDAStatisticsPlugin].to[UserLDAStatisticsPluginImpl].in[AppScoped]
   }
 
@@ -42,6 +43,7 @@ case class CortexDevModelModule() extends CortexModelModule {
     bind[RichWord2VecURIFeatureUpdatePlugin].to[RichWord2VecURIFeatureUpdatePluginImpl].in[AppScoped]
     bind[LDADbUpdatePlugin].to[LDADbUpdatePluginImpl].in[AppScoped]
     bind[LDAUserDbUpdatePlugin].to[LDAUserDbUpdatePluginImpl].in[AppScoped]
+    bind[LDAUserStatDbUpdatePlugin].to[LDAUserStatDbUpdatePluginImpl].in[AppScoped]
     bind[UserLDAStatisticsPlugin].to[UserLDAStatisticsPluginImpl].in[AppScoped]
   }
 
