@@ -3,6 +3,7 @@ package com.keepit.common.commanders
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.cortex.MiscPrefix
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel._
@@ -26,7 +27,7 @@ class LDACommander @Inject() (
     configStore: LDAConfigStore,
     ldaRetriever: LDAURIFeatureRetriever,
     userLDAStatsRetriever: UserLDAStatisticsRetriever,
-    userLDAStatRepo: UserLDAStatsRepo) {
+    userLDAStatRepo: UserLDAStatsRepo) extends Logging {
   assume(ldaTopicWords.topicWords.length == wordRep.lda.dimension)
 
   var currentConfig = ldaConfigs
@@ -151,6 +152,7 @@ class LDACommander @Inject() (
         val s = userMean.sum
         assume(s > 0)
         val dist = weightedMDistanceDiagGaussian(uriFeat.value, userMean, userVar, userMean.map { _ / s })
+        log.info(s"m-distance: $dist , userMean: ${userMean.take(5).mkString(", ")}, ${userVar.take(5).mkString(", ")}")
         Some(LDAUserURIInterestScore(exp(-1 * dist), computeConfidence(numOfWords, numOfEvidenceForUser)))
       case _ => None
     }
