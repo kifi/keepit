@@ -5,14 +5,11 @@ describe('kifi.friends.rightColFriendsView', function () {
   var $injector,
       $compile,
       $rootScope,
-      tpl,
       elem,
       scope,
       friendService;
 
-  tpl = '<div kf-compact-friends-view></div>';
-
-  function compile() {
+  function compile(tpl) {
     elem = angular.element(tpl);
     scope = $rootScope.$new();
     $compile(elem)(scope);
@@ -33,8 +30,10 @@ describe('kifi.friends.rightColFriendsView', function () {
   }));
 
   describe('kfCompactFriendsView', function () {
+    var tpl = '<div kf-compact-friends-view></div>';
+
     beforeEach(function () {
-      compile();
+      compile(tpl);
     });
 
     it('should have the correct friend count text', function () {
