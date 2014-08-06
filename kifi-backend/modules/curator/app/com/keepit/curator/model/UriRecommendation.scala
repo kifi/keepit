@@ -21,10 +21,10 @@ case class UriRecommendation(
 
   def withId(id: Id[UriRecommendation]): UriRecommendation = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): UriRecommendation = this.copy(updateAt = updateTime)
-  def withUpdateFeedbacks(feedbacks: Map[UriRecommendationFeedback.Value, Boolean]): UriRecommendation = this.copy(
-    seen = feedbacks.get(UriRecommendationFeedback.seen).getOrElse(seen),
-    clicked = feedbacks.get(UriRecommendationFeedback.clicked).getOrElse(clicked),
-    kept = feedbacks.get(UriRecommendationFeedback.kept).getOrElse(kept)
+  def withUpdateFeedback(feedback: UriRecommendationFeedback): UriRecommendation = this.copy(
+    seen = feedback.seen.getOrElse(seen),
+    clicked = feedback.clicked.getOrElse(clicked),
+    kept = feedback.kept.getOrElse(kept)
   )
 }
 

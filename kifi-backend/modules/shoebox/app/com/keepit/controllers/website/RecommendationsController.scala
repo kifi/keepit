@@ -12,7 +12,6 @@ import play.api.libs.json
 import play.api.libs.json._
 import play.api.mvc.Results.Forbidden
 import com.keepit.common.util.MapFormatUtil.scoreTypeMapFormat
-import com.keepit.common.util.MapFormatUtil.uriRecommendationFeedbackMapFormat
 
 import scala.concurrent.Future
 
@@ -33,7 +32,7 @@ class RecommendationsController @Inject() (
   }
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = JsonAction.authenticatedParseJsonAsync { request =>
-    val feedback = request.body.as[Map[UriRecommendationFeedback.Value, Boolean]]
+    val feedback = request.body.as[UriRecommendationFeedback]
     commander.updateUriRecommendationFeedback(userId, uriId, feedback).map(fkis => Ok(Json.toJson(fkis)))
   }
 }

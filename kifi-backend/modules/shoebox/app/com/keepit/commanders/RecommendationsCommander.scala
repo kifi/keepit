@@ -4,7 +4,6 @@ import com.keepit.common.db.Id
 import com.keepit.model.ScoreType
 import com.keepit.model.ScoreType._
 import com.keepit.model._
-import com.keepit.model.UriRecommendationFeedback.UriRecommendationFeedback
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model.RecommendationInfo
 import com.keepit.common.db.slick.Database
@@ -42,7 +41,7 @@ class RecommendationsCommander @Inject() (
     }
   }
 
-  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: Map[UriRecommendationFeedback, Boolean]): Future[Boolean] = {
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
     curator.updateUriRecommendationFeedback(userId, uriId, feedback)
   }
 

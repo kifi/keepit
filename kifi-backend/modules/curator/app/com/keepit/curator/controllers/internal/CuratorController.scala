@@ -3,12 +3,8 @@ package com.keepit.curator.controllers.internal
 import com.keepit.curator.commanders.RecommendationGenerationCommander
 import com.keepit.common.controller.CuratorServiceController
 import com.keepit.common.db.Id
-import com.keepit.model.ScoreType.ScoreType
-import com.keepit.model.ScoreType.ScoreType
-import com.keepit.model.UriRecommendationFeedback._
-import com.keepit.model.{ NormalizedURI, ScoreType, User }
+import com.keepit.model.{ UriRecommendationFeedback, NormalizedURI, ScoreType, User }
 import com.keepit.common.util.MapFormatUtil.scoreTypeMapFormat
-import com.keepit.common.util.MapFormatUtil.uriRecommendationFeedbackMapFormat
 
 import play.api.mvc.Action
 import play.api.libs.json.Json
@@ -31,7 +27,7 @@ class CuratorController @Inject() (recoGenCommander: RecommendationGenerationCom
     val json = request.body.asJson
     json match {
       case Some(json) => {
-        val feedback = json.as[Map[UriRecommendationFeedback, Boolean]]
+        val feedback = json.as[UriRecommendationFeedback]
         recoGenCommander.updateUriRecommendationFeedback(userId, uriId, feedback).map(update => Ok(Json.toJson(update)))
       }
       case None => Future.successful(Ok(Json.toJson(false)))

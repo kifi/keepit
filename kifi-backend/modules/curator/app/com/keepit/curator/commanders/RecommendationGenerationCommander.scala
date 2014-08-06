@@ -69,7 +69,7 @@ class RecommendationGenerationCommander @Inject() (
     0.3f * scores.socialScore + 2 * scores.overallInterestScore + 0.5f * scores.priorScore
   }
 
-  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: Map[UriRecommendationFeedback.Value, Boolean]): Future[Boolean] = {
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
     db.readWriteAsync { implicit session =>
       uriRecRepo.updateUriRecommendationFeedback(userId, uriId, feedback)
     }

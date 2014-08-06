@@ -15,5 +15,5 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: Map[ScoreType.Value, Float]): Future[Seq[RecommendationInfo]] = Future.successful(Seq.empty)
-  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: Map[UriRecommendationFeedback.Value, Boolean]): Future[Boolean] = Future.successful(true)
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = Future.successful(true)
 }

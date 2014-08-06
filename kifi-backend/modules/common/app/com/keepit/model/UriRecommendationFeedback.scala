@@ -1,15 +1,10 @@
 package com.keepit.model
 
-import com.keepit.common.util.EnumFormatUtil
-import play.api.libs.json.{ Writes, Reads }
+import com.kifi.macros.json
 
-object UriRecommendationFeedback extends Enumeration {
-  type UriRecommendationFeedback = Value
-  val seen = Value("seen")
-  val clicked = Value("clicked")
-  val kept = Value("kept")
-
-  implicit val reads: Reads[UriRecommendationFeedback.Value] = EnumFormatUtil.enumReads(UriRecommendationFeedback)
-
-  implicit def writes: Writes[UriRecommendationFeedback.Value] = EnumFormatUtil.enumWrites
+@json case class UriRecommendationFeedback(
+    val seen: Option[Boolean],
+    val clicked: Option[Boolean],
+    val kept: Option[Boolean]) {
+  override def toString = s"seen:$seen --- clicked:$clicked --- kept:$kept"
 }
