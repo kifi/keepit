@@ -7,7 +7,7 @@ import com.keepit.social.SocialNetworkType
 import com.keepit.cortex.models.lda.{ UriSparseLDAFeatures, DenseLDA, SparseTopicRepresentation }
 import com.keepit.cortex.core.ModelVersion
 import org.joda.time.DateTime
-import com.keepit.abook.model.{ IngestableContact, IngestableEmailAccount }
+import com.keepit.abook.model.{ IngestableContact, EmailAccountInfo }
 
 sealed trait GraphUpdate { self =>
   type U >: self.type <: GraphUpdate
@@ -106,7 +106,7 @@ case object NormalizedUriGraphUpdate extends GraphUpdateKind[NormalizedUriGraphU
   def apply(indexableUri: IndexableUri): NormalizedUriGraphUpdate = NormalizedUriGraphUpdate(indexableUri.id.get, indexableUri.state, indexableUri.seq)
 }
 
-case class EmailAccountGraphUpdate(emailAccountId: Id[IngestableEmailAccount], userId: Option[Id[User]], verified: Boolean, emailSeq: SequenceNumber[IngestableEmailAccount]) extends GraphUpdate {
+case class EmailAccountGraphUpdate(emailAccountId: Id[EmailAccountInfo], userId: Option[Id[User]], verified: Boolean, emailSeq: SequenceNumber[EmailAccountInfo]) extends GraphUpdate {
   type U = EmailAccountGraphUpdate
   def kind = EmailAccountGraphUpdate
   def seq = kind.seq(emailSeq.value)
@@ -114,12 +114,12 @@ case class EmailAccountGraphUpdate(emailAccountId: Id[IngestableEmailAccount], u
 
 case object EmailAccountGraphUpdate extends GraphUpdateKind[EmailAccountGraphUpdate] {
   val code = "email_account_graph_update"
-  def apply(emailAccount: IngestableEmailAccount): EmailAccountGraphUpdate = {
+  def apply(emailAccount: EmailAccountInfo): EmailAccountGraphUpdate = {
     EmailAccountGraphUpdate(emailAccount.emailAccountId, emailAccount.userId, emailAccount.verified, emailAccount.seq)
   }
 }
 
-case class EmailContactGraphUpdate(userId: Id[User], abookId: Id[ABookInfo], emailAccountId: Id[IngestableEmailAccount], hidden: Boolean, deleted: Boolean, emailcontactSeq: SequenceNumber[IngestableContact]) extends GraphUpdate {
+case class EmailContactGraphUpdate(userId: Id[User], abookId: Id[ABookInfo], emailAccountId: Id[EmailAccountInfo], hidden: Boolean, deleted: Boolean, emailcontactSeq: SequenceNumber[IngestableContact]) extends GraphUpdate {
   type U = EmailContactGraphUpdate
   def kind = EmailContactGraphUpdate
   def seq = kind.seq(emailcontactSeq.value)

@@ -42,4 +42,5 @@ class FakeGraphServiceClientImpl(
   }
 
   def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]] = Future.successful(Seq.empty)
+  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit] = Future.successful(())
 }

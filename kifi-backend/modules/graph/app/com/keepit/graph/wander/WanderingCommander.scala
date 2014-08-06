@@ -27,7 +27,7 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
 
       val teleporter = UniformTeleporter(Set(startingVertexId)) { Function.const(wanderlust.restartProbability) }
 
-      val journal = new TeleportationJournal()
+      val journal = new TeleportationJournal(clock)
 
       val resolver = {
         val now = clock.now().getMillis
@@ -42,7 +42,7 @@ class WanderingCommander @Inject() (graph: GraphManager, clock: Clock) extends L
           case (source, destination, edge) => !journal.getLastVisited().exists(_ == destination.id)
         }
 
-        RestrictedDestinationResolver(mayTraverse, decay)
+        RestrictedDestinationResolver(None, mayTraverse, decay)
       }
 
       val start = clock.now()

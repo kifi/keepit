@@ -29,6 +29,7 @@ trait GraphServiceClient extends ServiceClient {
   def wander(wanderlust: Wanderlust): Future[Collisions]
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
+  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit]
   def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]]
 }
 
@@ -107,5 +108,9 @@ class GraphServiceClientImpl @Inject() (
         if (bePatient) futureActualUserScores else Future.successful(Seq.empty)
     }
     futureUserScores.map(userScores => userScores.map { case ConnectedUserScore(friendId, score) => friendId -> score })
+  }
+
+  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit] = {
+    call(Graph.internal.refreshSociallyRelatedEntities(userId), callTimeouts = longTimeout).map(_ => ())
   }
 }
