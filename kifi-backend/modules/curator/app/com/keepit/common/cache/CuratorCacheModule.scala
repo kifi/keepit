@@ -1,6 +1,6 @@
 package com.keepit.common.cache
 
-import com.keepit.graph.model.{ ConnectedUriScoreCache, ConnectedUserScoreCache }
+import com.keepit.graph.model._
 
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
@@ -159,4 +159,20 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def allFakeUsersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def sociallyRelatedUsersCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedUsersCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedFacebookAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedFacebookAccountsCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedLinkedInAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedLinkedInAccountsCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedEmailAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedEmailAccountsCache(stats, accessLog, (outerRepo, 1 day))
 }

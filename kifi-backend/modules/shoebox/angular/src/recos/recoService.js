@@ -14,8 +14,8 @@ angular.module('kifi.recoService', ['util'])
     };
 
 
-    var adHocRecoService = new Clutch(function () {
-      return $http.get(routeService.adHocRecos(50)).then(function (res) {
+    var adHocRecoService = new Clutch(function (weights) {
+      return $http.post(routeService.adHocRecos(50), weights || {}).then(function (res) {
         res.data.forEach( function (keep) {
           keep.tagList = [];
         });
@@ -26,9 +26,10 @@ angular.module('kifi.recoService', ['util'])
 
     var api = {
 
-      fetchAdHocRecos: function () {
+      fetchAdHocRecos: function (weights) {
         loading = true;
-        adHocRecoService.get().then( function () {
+        recos.length = 0;
+        adHocRecoService.get(weights).then( function () {
           loading = false;
         });
       },

@@ -20,22 +20,23 @@ object RichContact {
   }
 }
 
-case class IngestableEmailAccount(emailAccountId: Id[IngestableEmailAccount], userId: Option[Id[User]], verified: Boolean, seq: SequenceNumber[IngestableEmailAccount])
-object IngestableEmailAccount {
+case class EmailAccountInfo(emailAccountId: Id[EmailAccountInfo], address: EmailAddress, userId: Option[Id[User]], verified: Boolean, seq: SequenceNumber[EmailAccountInfo])
+object EmailAccountInfo {
   implicit val format = (
-    (__ \ 'emailAccountId).format(Id.format[IngestableEmailAccount]) and
+    (__ \ 'emailAccountId).format(Id.format[EmailAccountInfo]) and
+    (__ \ 'address).format[EmailAddress] and
     (__ \ 'userId).formatNullable(Id.format[User]) and
     (__ \ 'verified).format[Boolean] and
-    (__ \ 'seq).format(SequenceNumber.format[IngestableEmailAccount])
-  )(IngestableEmailAccount.apply, unlift(IngestableEmailAccount.unapply))
+    (__ \ 'seq).format(SequenceNumber.format[EmailAccountInfo])
+  )(EmailAccountInfo.apply, unlift(EmailAccountInfo.unapply))
 }
 
-case class IngestableContact(userId: Id[User], abookId: Id[ABookInfo], emailAccountId: Id[IngestableEmailAccount], hidden: Boolean, deleted: Boolean, seq: SequenceNumber[IngestableContact])
+case class IngestableContact(userId: Id[User], abookId: Id[ABookInfo], emailAccountId: Id[EmailAccountInfo], hidden: Boolean, deleted: Boolean, seq: SequenceNumber[IngestableContact])
 object IngestableContact {
   implicit val format = (
     (__ \ 'userId).format(Id.format[User]) and
     (__ \ 'abookId).format(Id.format[ABookInfo]) and
-    (__ \ 'emailAccountId).format(Id.format[IngestableEmailAccount]) and
+    (__ \ 'emailAccountId).format(Id.format[EmailAccountInfo]) and
     (__ \ 'hidden).format[Boolean] and
     (__ \ 'deleted).format[Boolean] and
     (__ \ 'seq).format(SequenceNumber.format[IngestableContact])
