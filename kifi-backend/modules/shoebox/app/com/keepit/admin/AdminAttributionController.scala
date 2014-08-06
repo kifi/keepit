@@ -75,6 +75,24 @@ class AdminAttributionController @Inject() (
     Ok(html.admin.keepDiscoveries(t, showImage, page, count, size))
   }
 
+  def rekeepsViewNew(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticatedAsync { request =>
+    heimdalClient.getPagedReKeeps(page, size) map { paged =>
+      db.readOnlyMaster { implicit session =>
+        val t = paged map { k =>
+          val rk = RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, userRepo.get(k.keeperId), keepRepo.get(k.keepId), uriRepo.get(k.uriId), userRepo.get(k.srcUserId), keepRepo.get(k.srcKeepId), k.attributionFactor)
+          val pageInfoOpt = pageInfoRepo.getByUri(k.uriId)
+          val imgOpt = if (!showImage) None else
+            for {
+              pageInfo <- pageInfoOpt
+              imgId <- pageInfo.imageInfoId
+            } yield imageInfoRepo.get(imgId)
+          (rk, pageInfoOpt, imgOpt)
+        }
+        Ok(html.admin.rekeeps(t, showImage, page, 42, size))
+      }
+    }
+  }
+
   def rekeepsView(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticated { request =>
     val (t, count) = db.readOnlyReplica { implicit ro =>
       val t = rekeepRepo.page(page, size, Set(ReKeepStates.INACTIVE)).map { k =>
