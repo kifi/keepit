@@ -409,7 +409,7 @@ panes.notices = function () {
   function onHoverfuState(configureHover) {
     var html = $(this).is('.kifi-notice-visited *') ? 'Mark as unread' : 'Mark as read';
     configureHover($('<kifi>', {class: 'kifi-root kifi-tip kifi-notice-state-tip', html: html}), {
-      position: {my: 'left-26 bottom-7', at: 'center top', of: this, collision: 'none'},
+      position: {my: 'right+20 bottom-7', at: 'center top', of: this, collision: 'none'},
       click: 'hide'
     });
   }
