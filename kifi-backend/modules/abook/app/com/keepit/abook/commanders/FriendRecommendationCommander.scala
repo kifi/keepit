@@ -39,7 +39,7 @@ class FriendRecommendationCommander @Inject() (
         friendRequests <- futureFriendRequests
         fakeUsers <- futureFakeUsers
       } yield {
-        val irrelevantRecommendations = rejectedRecommendations ++ friends ++ friendRequests.map(_.recipientId) ++ fakeUsers
+        val irrelevantRecommendations = rejectedRecommendations ++ friends ++ friendRequests.map(_.recipientId) ++ fakeUsers + userId
         val recommendations = relatedUsers.iterator.filter { case (friendId, _) => !irrelevantRecommendations.contains(friendId) }
         recommendations.drop(page * pageSize).take(pageSize).map(_._1).toSeq
       }
