@@ -6,5 +6,5 @@ import com.kifi.macros.json
     val seen: Option[Boolean],
     val clicked: Option[Boolean],
     val kept: Option[Boolean]) {
-  override def toString = s"seen:$seen --- clicked:$clicked --- kept:$kept"
+  override def toString = s"UriRecommendationFeedback(seen:$seen, clicked:$clicked, kept:$kept)"
 }
