@@ -169,17 +169,17 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
 
   @Provides @Singleton
   def sociallyRelatedUsersCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedUsersCache(stats, accessLog, (outerRepo, 7 days))
+    new SociallyRelatedUsersCache(stats, accessLog, (outerRepo, 1 day))
 
   @Provides @Singleton
   def sociallyRelatedFacebookAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedFacebookAccountsCache(stats, accessLog, (outerRepo, 7 days))
+    new SociallyRelatedFacebookAccountsCache(stats, accessLog, (outerRepo, 1 day))
 
   @Provides @Singleton
   def sociallyRelatedLinkedInAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedLinkedInAccountsCache(stats, accessLog, (outerRepo, 7 days))
+    new SociallyRelatedLinkedInAccountsCache(stats, accessLog, (outerRepo, 1 day))
 
   @Provides @Singleton
   def sociallyRelatedEmailAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedEmailAccountsCache(stats, accessLog, (outerRepo, 7 days))
+    new SociallyRelatedEmailAccountsCache(stats, accessLog, (outerRepo, 1 day))
 }

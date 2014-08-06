@@ -19,6 +19,8 @@ import com.keepit.common.db.Id
 import com.keepit.model.{ NormalizedURI, SocialUserInfo, User }
 import com.keepit.common.time._
 import com.keepit.graph.utils.GraphPrimitives
+import scala.concurrent.Future
+import com.keepit.abook.model.EmailAccountInfo
 
 class GraphController @Inject() (
     graphManager: GraphManager,
@@ -69,6 +71,22 @@ class GraphController @Inject() (
 
   def refreshSociallyRelatedEntities(userId: Id[User]) = Action.async { request =>
     socialWanderingCommander.refresh(userId).map(_ => Ok)
+  }
+
+  def getSociallyRelatedUsers(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.users)) }
+  }
+
+  def getSociallyRelatedFacebookAccounts(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.facebookAccounts)) }
+  }
+
+  def getSociallyRelatedLinkedInAccounts(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.linkedInAccounts)) }
+  }
+
+  def getSociallyRelatedEmailAccounts(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.emailAccounts)) }
   }
 
   // todo(Léo): Remove this code once CollisionCommander is operational
