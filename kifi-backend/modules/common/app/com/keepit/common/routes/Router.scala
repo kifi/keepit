@@ -245,8 +245,6 @@ object Heimdal extends Service {
     def getLastDelightedAnswerDate(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/user/delighted/time", Param("userId", userId))
     def postDelightedAnswer() = ServiceRoute(POST, s"/internal/heimdal/user/delighted/answer")
     def cancelDelightedSurvey() = ServiceRoute(POST, s"/internal/heimdal/user/delighted/cancel")
-    def getPagedKeepDiscoveries(page: Int, size: Int) = ServiceRoute(GET, s"/internal/heimdal/data/keepDiscovery/page/$page", Param("size", size))
-    def getPagedReKeeps(page: Int, size: Int) = ServiceRoute(GET, s"/internal/heimdal/data/reKeep/page/$page", Param("size", size))
     def processKifiHit() = ServiceRoute(POST, "/internal/heimdal/helprank/processKifiHit")
     def processKeepAttribution() = ServiceRoute(POST, "/internal/heimdal/helprank/processKeepAttribution")
   }
@@ -343,6 +341,10 @@ object Graph extends Service {
     def getUriAndScores(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUriAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnections", avoidFirstDegreeConnections))
     def getUserAndScores(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUserAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnections", avoidFirstDegreeConnections))
     def refreshSociallyRelatedEntities(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/refreshSociallyRelatedEntities", Param("userId", userId))
+    def getSociallyRelatedUsers(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedUsers", Param("userId", userId))
+    def getSociallyRelatedFacebookAccounts(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedFacebookAccounts", Param("userId", userId))
+    def getSociallyRelatedLinkedInAccounts(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedLinkedInAccounts", Param("userId", userId))
+    def getSociallyRelatedEmailAccounts(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedEmailAccounts", Param("userId", userId))
   }
 }
 

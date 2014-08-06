@@ -100,6 +100,7 @@ class UserCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     keepClickRepo: KeepDiscoveryRepo,
+    rekeepRepo: ReKeepRepo,
     userExperimentCommander: LocalUserExperimentCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     socialConnectionRepo: SocialConnectionRepo,

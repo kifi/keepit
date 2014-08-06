@@ -15,6 +15,12 @@ import scala.collection.mutable.ListBuffer
 import com.keepit.abook.model.EmailAccountInfo
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
+case class SociallyRelatedPeople(
+  users: RelatedEntities[User, User],
+  facebookAccounts: RelatedEntities[User, SocialUserInfo],
+  linkedInAccounts: RelatedEntities[User, SocialUserInfo],
+  emailAccounts: RelatedEntities[User, EmailAccountInfo])
+
 class SocialWanderingCommander @Inject() (
     graph: GraphManager,
     relatedUsersCache: SociallyRelatedUsersCache,
@@ -23,20 +29,21 @@ class SocialWanderingCommander @Inject() (
     relatedEmailAccountsCache: SociallyRelatedEmailAccountsCache,
     clock: Clock) extends Logging {
 
-  private val consolidate = new RequestConsolidator[Id[User], Unit](1 minute)
+  private val consolidate = new RequestConsolidator[Id[User], SociallyRelatedPeople](1 minute)
   private val lock = new ReactiveLock(5)
 
-  def refresh(id: Id[User]): Future[Unit] = consolidate(id) { userId =>
+  def refresh(id: Id[User]): Future[SociallyRelatedPeople] = consolidate(id) { userId =>
     lock.withLockFuture {
       getIrrelevantVertices(userId).map { irrelevantVertices =>
         val journal = wander(userId, irrelevantVertices)
-        invalidateCache(userId, journal)
+        val sociallyRelatedPeople = getSociallyRelatedPeople(userId, journal, SocialWanderlust.cachedByNetwork)
+        invalidateCache(sociallyRelatedPeople)
+        sociallyRelatedPeople
       }
     }
   }
 
-  private def invalidateCache(userId: Id[User], journal: TeleportationJournal): Unit = {
-    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+  private def getSociallyRelatedPeople(userId: Id[User], journal: TeleportationJournal, limit: Int) = {
     val relatedUsers = ListBuffer[(Id[User], Double)]()
     val relatedFacebookAccounts = ListBuffer[(Id[SocialUserInfo], Double)]()
     val relatedLinkedInAccounts = ListBuffer[(Id[SocialUserInfo], Double)]()
@@ -60,10 +67,20 @@ class SocialWanderingCommander @Inject() (
       case _ => // ignore
     }
 
-    relatedUsersCache.set(SociallyRelatedUsersCacheKey(userId), RelatedEntities.top(userId, relatedUsers, SocialWanderlust.topCached))
-    relatedFacebookAccountsCache.set(SociallyRelatedFacebookAccountsCacheKey(userId), RelatedEntities.top(userId, relatedFacebookAccounts, SocialWanderlust.topCached))
-    relatedLinkedInAccountsCache.set(SociallyRelatedLinkedInAccountsCacheKey(userId), RelatedEntities.top(userId, relatedLinkedInAccounts, SocialWanderlust.topCached))
-    relatedEmailAccountsCache.set(SociallyRelatedEmailAccountsCacheKey(userId), RelatedEntities.top(userId, relatedEmailAccounts, SocialWanderlust.topCached))
+    SociallyRelatedPeople(
+      users = RelatedEntities.top(userId, relatedUsers, limit),
+      facebookAccounts = RelatedEntities.top(userId, relatedFacebookAccounts, limit),
+      linkedInAccounts = RelatedEntities.top(userId, relatedLinkedInAccounts, limit),
+      emailAccounts = RelatedEntities.top(userId, relatedEmailAccounts, limit)
+    )
+  }
+
+  private def invalidateCache(sociallyRelatedPeople: SociallyRelatedPeople): Unit = {
+    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+    relatedUsersCache.set(SociallyRelatedUsersCacheKey(sociallyRelatedPeople.users.id), sociallyRelatedPeople.users)
+    relatedFacebookAccountsCache.set(SociallyRelatedFacebookAccountsCacheKey(sociallyRelatedPeople.facebookAccounts.id), sociallyRelatedPeople.facebookAccounts)
+    relatedLinkedInAccountsCache.set(SociallyRelatedLinkedInAccountsCacheKey(sociallyRelatedPeople.linkedInAccounts.id), sociallyRelatedPeople.linkedInAccounts)
+    relatedEmailAccountsCache.set(SociallyRelatedEmailAccountsCacheKey(sociallyRelatedPeople.emailAccounts.id), sociallyRelatedPeople.emailAccounts)
   }
 
   private def wander(userId: Id[User], irrelevantVertices: Set[VertexId]): TeleportationJournal = {
@@ -93,7 +110,7 @@ object SocialWanderlust {
 
   val restartProbability = 0.15
   val steps = 100000
-  val topCached = 2000
+  val cachedByNetwork = 2000
 
   val subgraph = Set(
     // Kifi Social Graph
