@@ -19,6 +19,8 @@ object RelatedEntities {
   )(RelatedEntities.apply, unlift(RelatedEntities.unapply))
 
   def top[E, R](id: Id[E], related: Seq[(Id[R], Double)], limit: Int) = RelatedEntities(id, related.sortBy(-_._2).take(limit))
+
+  def empty[E, R](id: Id[E]) = RelatedEntities(id, Seq.empty[(Id[R], Double)])
 }
 
 case class SociallyRelatedUsersCacheKey(id: Id[User]) extends Key[RelatedEntities[User, User]] {
