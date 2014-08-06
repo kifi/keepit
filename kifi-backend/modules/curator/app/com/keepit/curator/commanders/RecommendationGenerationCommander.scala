@@ -11,8 +11,7 @@ import com.keepit.curator.model.{
   UriScores
 }
 import com.keepit.common.db.Id
-import com.keepit.model.ScoreType._
-import com.keepit.model.{ UriRecommendationFeedback, NormalizedURI, ScoreType, User }
+import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.slick.Database
@@ -75,7 +74,7 @@ class RecommendationGenerationCommander @Inject() (
     }
   }
 
-  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[RecommendationInfo]] = {
+  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecommendationInfo]] = {
     val recosFuture = db.readOnlyReplicaAsync { implicit session =>
       uriRecRepo.getByTopMasterScore(userId, Math.max(howManyMax, 1000))
     }
@@ -85,15 +84,15 @@ class RecommendationGenerationCommander @Inject() (
         RecommendationInfo(
           userId = reco.userId,
           uriId = reco.uriId,
-          score = if (scoreCoefficients.isEmpty)
-            0.35f * reco.allScores.socialScore + 2.0f * reco.allScores.overallInterestScore + 1.0f * reco.allScores.recentInterestScore
-          else
-            scoreCoefficients.getOrElse(ScoreType.recencyScore, defaultScore) * reco.allScores.recencyScore
-              + scoreCoefficients.getOrElse(ScoreType.overallInterestScore, defaultScore) * reco.allScores.overallInterestScore
-              + scoreCoefficients.getOrElse(ScoreType.priorScore, defaultScore) * reco.allScores.priorScore
-              + scoreCoefficients.getOrElse(ScoreType.socialScore, defaultScore) * reco.allScores.socialScore
-              + scoreCoefficients.getOrElse(ScoreType.popularityScore, defaultScore) * reco.allScores.popularityScore
-              + scoreCoefficients.getOrElse(ScoreType.recentInterestScore, defaultScore) * reco.allScores.recentInterestScore,
+          {
+            val score = scoreCoefficients.recencyScore.getOrElse(defaultScore) * reco.allScores.recencyScore +
+              scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * reco.allScores.overallInterestScore +
+              scoreCoefficients.priorScore.getOrElse(defaultScore) * reco.allScores.priorScore +
+              scoreCoefficients.socialScore.getOrElse(defaultScore) * reco.allScores.socialScore +
+              scoreCoefficients.popularityScore.getOrElse(defaultScore) * reco.allScores.popularityScore +
+              scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore
+            if (score != 0.0f) score else 0.35f * reco.allScores.socialScore + 2.0f * reco.allScores.overallInterestScore + 1.0f * reco.allScores.recentInterestScore
+          },
           explain = Some(reco.allScores.toString)
         )
       }.sortBy(-1 * _.score).take(howManyMax)

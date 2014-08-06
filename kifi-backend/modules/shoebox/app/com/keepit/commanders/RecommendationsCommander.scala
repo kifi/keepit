@@ -1,8 +1,6 @@
 package com.keepit.commanders
 
 import com.keepit.common.db.Id
-import com.keepit.model.ScoreType
-import com.keepit.model.ScoreType._
 import com.keepit.model._
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model.RecommendationInfo
@@ -20,7 +18,7 @@ class RecommendationsCommander @Inject() (
     nUriRepo: NormalizedURIRepo,
     uriSummaryCommander: URISummaryCommander) {
 
-  def adHocRecos(userId: Id[User], howManyMax: Int, scoreCoefficientsUpdate: Map[ScoreType.Value, Float]): Future[Seq[KeepInfo]] = {
+  def adHocRecos(userId: Id[User], howManyMax: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[KeepInfo]] = {
     curator.adHocRecos(userId, howManyMax, scoreCoefficientsUpdate).flatMap { recos =>
       val recosWithUris: Seq[(RecommendationInfo, NormalizedURI)] = db.readOnlyReplica { implicit session =>
         recos.map { reco => (reco, nUriRepo.get(reco.uriId)) }

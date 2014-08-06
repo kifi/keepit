@@ -3,8 +3,7 @@ package com.keepit.curator.controllers.internal
 import com.keepit.curator.commanders.RecommendationGenerationCommander
 import com.keepit.common.controller.CuratorServiceController
 import com.keepit.common.db.Id
-import com.keepit.model.{ UriRecommendationFeedback, NormalizedURI, ScoreType, User }
-import com.keepit.common.util.MapFormatUtil.scoreTypeMapFormat
+import com.keepit.model._
 
 import play.api.mvc.Action
 import play.api.libs.json.Json
@@ -18,8 +17,8 @@ class CuratorController @Inject() (recoGenCommander: RecommendationGenerationCom
 
   def adHocRecos(userId: Id[User], n: Int) = Action.async { request =>
     recoGenCommander.getAdHocRecommendations(userId, n, request.body.asJson match {
-      case Some(json) => json.as[Map[ScoreType.Value, Float]]
-      case None => Map[ScoreType.Value, Float]()
+      case Some(json) => json.as[UriRecommendationScores]
+      case None => UriRecommendationScores()
     }).map(recos => Ok(Json.toJson(recos)))
   }
 
