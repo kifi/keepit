@@ -1,17 +1,24 @@
 package com.keepit.controllers.website
 
-import com.google.inject.{Inject, Singleton}
-import com.keepit.common.controller.{ActionAuthenticator, ShoeboxServiceController, WebsiteController}
+import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, ShoeboxServiceController, WebsiteController}
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{LibraryRepo, LibrarySlug, UserRepo, Username}
-import play.api.mvc.Request
+import com.keepit.common.net.UserAgent
+import com.keepit.model.{ LibraryRepo, LibrarySlug, UserRepo, Username }
+import play.api.mvc.{SimpleResult, Request}
+import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 
 import scala.concurrent.Future
 
-private sealed trait Routeable
-private case class Angular(preload: Seq[Request => Future[String]] = Seq.empty) extends Routeable
-private case class AboutAssets(path: Path) extends Routeable
+sealed trait Routeable
+trait AngularRoute extends Routeable
+private case class AngularLoggedIn(preload: Seq[Request[_] => Future[String]] = Seq.empty) extends AngularRoute
+private case class Angular(preload: Seq[Request[_] => Future[String]] = Seq.empty) extends AngularRoute
+private case class AboutAssetsTwo(path: Path) extends Routeable // todo(andrew): rename to AboutAssers when that class is brought in
+private case class RedirectRoute(url: String) extends Routeable
+private case class StaticResult(result: SimpleResult) extends Routable
 private case object Error404 extends Routeable
 
 case class Path(requestPath: String) {
@@ -25,65 +32,119 @@ case class Path(requestPath: String) {
   val secondary = split.tail.headOption
 }
 
-
 @Singleton // holds state for performance reasons
 class KifiSiteRouter @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  angularRouter: AngularRouter)
+  homeController: HomeController,
+  angularRouter: AngularRouter,
+  db: Database)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
+  // Useful to route anything that a) serves the Angular app, b) requires context about if a user is logged in or not
   def app() = HtmlAction.apply(authenticatedAction = { request =>
-    AngularDistAssets.angularApp()
-    Ok
+    route(request) match {
+      case ng: AngularLoggedIn => AngularDistAssets.angularApp(ng.preload.map(s => s(request)))
+      case ng: Angular => AngularDistAssets.angularApp(ng.preload.map(s => s(request)))
+      case Error404 => NotFound
+      case about: AboutAssetsTwo => NotFound // todo: update
+    }
   }, unauthenticatedAction = { request =>
-    Ok
+    Redirect("/")
   })
 
-  def route(request: Request): Routeable = {
+  private def doApp(request: Request[_]) = {
+    // Short-circuit for landing pages
+    if (request.path == "/" && request.userIdOpt.isEmpty) {
+      landingPage(request)
+    } else {
+      (request, route(request)) match {
+        case (_, Error404) =>
+          NotFound // better 404 please!
+        case (r: AuthenticatedRequest, ng: AngularRoute) =>
+          // logged in user, logged in only ng. deliver.
+          ng match {
+            case ang: AngularLoggedIn =>
+              AngularDistAssets.angularApp(ang.preload.map(s => s(r)))
+            case ang: Angular =>
+              AngularDistAssets.angularApp()
+          }
+        case (r: Request, _) if request.identityOpt.isDefined =>
+          // non-authed client, but identity is set. Mid-signup, send them there.
+          Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
+        case (r: Request, ng: Angular) =>
+          // non-authed client, routing to ng page
+          Redirect("/") // todo: serve ng app!
+      }
+    }
+  }
+
+  private def landingPage(request: Request[_]): SimpleResult = {
+    if (request.identityOpt.isDefined) {
+      Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
+    } else {
+      val agentOpt = request.headers.get("User-Agent").map(UserAgent.fromString)
+      if (agentOpt.exists(!_.screenCanFitWebApp)) {
+        val ua = agentOpt.get.userAgent
+        val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
+        if (isIphone) {
+          homeController.iPhoneAppStoreRedirect(request)
+        } else {
+          Ok(views.html.marketing.mobileLanding(""))
+        }
+      } else {
+        Ok(views.html.marketing.landing())
+      }
+    }
+  }
+
+  def route(request: Request[_]): Routeable = {
     val path = Path(request.path)
 
-    angularRouter.route(request, path) getOrElse Error404 // todo(andrew): add about assets
+    db.readOnlyReplica { implicit session =>
+      angularRouter.route(request, path) getOrElse Error404
+    }
   }
 
 }
 
 @Singleton
-class AngularRouter @Inject() (db: Database, userRepo: UserRepo, libraryRepo: LibraryRepo) {
+class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
 
-  def route(request: Request, path: Path): Option[Routeable] = {
+  def route(request: Request[_], path: Path)(implicit session: RSession): Option[Routeable] = {
     ngStaticPage(path) orElse userOrLibrary(path)
   }
 
-  def injectUser(request: Request) = Future {
-    "hey"
+  def injectUser(request: Request[_]) = Future {
+    "" // inject user data!
   }
-  private val ngFixedRoutes: Map[String, Seq[Request => Future[String]]] = Map(
-    "invite" -> Seq(injectUser _),
-    "profile" -> Seq(injectUser _),
-    "kifeeeed" -> Seq(injectUser _),
-    "find" -> Seq(injectUser _)
+  private val ngFixedRoutes: Map[String, Seq[Request[_] => Future[String]]] = Map(
+    "" -> Seq(),
+    "invite" -> Seq(),
+    "profile" -> Seq(),
+    "kifeeeed" -> Seq(),
+    "find" -> Seq()
   )
-  private val ngPrefixRoutes: Map[String, Seq[Request => Future[String]]] = Map(
+  private val ngPrefixRoutes: Map[String, Seq[Request[_] => Future[String]]] = Map(
     "friends" -> Seq(),
     "keep" -> Seq(),
     "tag" -> Seq(),
     "helprank" -> Seq()
   )
 
-  private val dataOnEveryAngularPage = Seq(injectUser _)
+  //private val dataOnEveryAngularPage = Seq(injectUser _) // todo: Have fun with this!
 
   // combined to re-use User lookup
-  private def userOrLibrary(path: Path)(implicit session: RSession): Option[Angular] = {
+  private def userOrLibrary(path: Path)(implicit session: RSession): Option[AngularLoggedIn] = {
     if (path.split.length == 1 || path.split.length == 2) {
       val userOpt = userRepo.getUsername(Username(path.primary))
       if (userOpt.isDefined) {
         if (path.split.length == 1) { // user profile page
-          Some(Angular()) // great place to preload request data since we have `user` available
+          Some(AngularLoggedIn()) // great place to preload request data since we have `user` available
         } else {
           val libOpt = libraryRepo.getBySlugAndUserId(userOpt.get.id.get, LibrarySlug(path.secondary.get))
           if (libOpt.isDefined) {
             // todo: Determine if user has access. Else, 404 it (github style)
-            Some(Angular()) // great place to preload request data since we have `lib` available
+            Some(AngularLoggedIn()) // great place to preload request data since we have `lib` available
           } else {
             None
           }
@@ -99,7 +160,7 @@ class AngularRouter @Inject() (db: Database, userRepo: UserRepo, libraryRepo: Li
   // Some means to serve Angular. The Seq is possible injected data to include
   private def ngStaticPage(path: Path) = {
     (ngFixedRoutes.get(path.path) orElse ngPrefixRoutes.get(path.primary)).map { dataLoader =>
-      Angular(dataLoader)
+      AngularLoggedIn(dataLoader)
     }
   }
 }
