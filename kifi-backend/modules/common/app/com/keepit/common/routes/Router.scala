@@ -338,6 +338,7 @@ object Graph extends Service {
     def wander() = ServiceRoute(POST, "/internal/graph/wander")
     def getUriAndScores(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUriAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnections", avoidFirstDegreeConnections))
     def getUserAndScores(userId: Id[User], avoidFirstDegreeConnections: Boolean) = ServiceRoute(GET, "/internal/graph/getUserAndScorePairs", Param("userId", userId), Param("avoidFirstDegreeConnections", avoidFirstDegreeConnections))
+    def refreshSociallyRelatedEntities(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/refreshSociallyRelatedEntities", Param("userId", userId))
   }
 }
 
