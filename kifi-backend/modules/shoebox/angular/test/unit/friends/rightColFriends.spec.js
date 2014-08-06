@@ -2,47 +2,32 @@
 
 describe('kifi.friends.rightColFriendsView', function () {
 
-  var $injector,
-      $compile,
-      $rootScope,
-      elem,
-      scope,
-      friendService;
-
-  function compile(tpl) {
-    elem = angular.element(tpl);
-    scope = $rootScope.$new();
-    $compile(elem)(scope);
-  }
-
-  function mockPromise() {
-    return $injector.get('$q').defer().promise;
-  }
-
   beforeEach(module('kifi.friends.rightColFriendsView'));
 
-  beforeEach(inject(function (_$injector_) {
-    $injector = _$injector_;
-    $rootScope = $injector.get('$rootScope');
-    $compile = $injector.get('$compile');
+  var $q,
+      $compile,
+      $rootScope,
+      friendService;
 
+  beforeEach(inject(function ($injector) {
+    $q = $injector.get('$q');
+    $compile = $injector.get('$compile');
+    $rootScope = $injector.get('$rootScope');
     friendService = $injector.get('friendService');
   }));
 
   describe('kfCompactFriendsView', function () {
-    var tpl = '<div kf-compact-friends-view></div>';
+    var scope,
+        elem;
 
     beforeEach(function () {
-      compile(tpl);
+      scope = $rootScope.$new();
+      elem = $compile('<div kf-compact-friends-view></div>')(scope);
     });
 
     it('should have the correct friend count text', function () {
       spyOn(friendService, 'totalFriends').andReturn(2);
-      spyOn(friendService, 'getKifiFriends').andReturn(mockPromise());
-
-      // Hardcode this to be a positive number so ng-if will be true
-      // for this test.
-      scope.friends = [1, 2];
+      spyOn(friendService, 'getKifiFriends').andReturn(promise([{}, {}]));
 
       scope.$digest();
 
@@ -57,5 +42,10 @@ describe('kifi.friends.rightColFriendsView', function () {
     });
   });
 
-});
+  function promise(val) {
+    var deferred = $q.defer();
+    deferred.resolve(val);
+    return deferred.promise;
+  }
 
+});
