@@ -56,7 +56,6 @@ class MessagingCommander @Inject() (
     airbrake: AirbrakeNotifier,
     basicMessageCommander: MessageFetchingCommander,
     notificationCommander: NotificationCommander,
-    notificationUpdater: NotificationUpdater,
     messageSearchHistoryRepo: MessageSearchHistoryRepo) extends Logging {
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]): Seq[ElizaThreadInfo] = {
