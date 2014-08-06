@@ -1,15 +1,15 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.mail._
 import com.keepit.common.db.slick.Database
-import com.keepit.heimdal._
-import com.keepit.common.performance.timing
-import com.keepit.model._
-import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.SystemAdminMailSender
+import com.keepit.common.logging.Logging
+import com.keepit.common.mail._
+import com.keepit.common.performance.timing
+import com.keepit.common.time.Clock
+import com.keepit.heimdal._
+import com.keepit.model._
 import com.keepit.social.NonUserKinds
-import org.joda.time.DateTime
 
 object SendgridEventTypes {
   val CLICK = "click"
@@ -20,6 +20,7 @@ object SendgridEventTypes {
 
 class SendgridCommander @Inject() (
     db: Database,
+    clock: Clock,
     systemAdminMailSender: SystemAdminMailSender,
     heimdalClient: HeimdalServiceClient,
     emailAddressRepo: UserEmailAddressRepo,
@@ -27,7 +28,10 @@ class SendgridCommander @Inject() (
     emailOptOutRepo: EmailOptOutRepo,
     heimdalContextBuilder: HeimdalContextBuilderFactory) extends Logging {
 
-  import SendgridEventTypes._
+  import com.keepit.commanders.SendgridEventTypes._
+
+  val alertEvents: Seq[String] = Seq(BOUNCE, SPAM_REPORT)
+  val unsubscribeEvents: Seq[String] = Seq(UNSUBSCRIBE, BOUNCE)
 
   def processNewEvents(events: Seq[SendgridEvent]): Unit = {
     events foreach report
@@ -87,18 +91,18 @@ class SendgridCommander @Inject() (
     }
 
   private def report(event: SendgridEvent): Unit = {
-    val emailOpt = timing(s"sendgrid (fetch email for alert) eventType(${event.event}}) mailId(${event.mailId}}) ") {
+    val eventName: Option[String] = event.event
+
+    val emailOpt = timing(s"sendgrid (fetch email for alert) eventType(${eventName}}) mailId(${event.mailId}}) ") {
       for {
         mailId <- event.mailId
         mail <- db.readOnlyReplica { implicit s => electronicMailRepo.getOpt(mailId) }(captureLocation)
       } yield mail
     }
 
-    event.event map { eventName: String =>
-      if (Seq(BOUNCE, SPAM_REPORT) contains eventName) emailAlert(event, emailOpt)
-      if (Seq(UNSUBSCRIBE, BOUNCE) contains eventName) handleUnsubscribeEvent(event, emailOpt)
-      if (CLICK == eventName) handleClickEvent(event, emailOpt)
-    }
+    eventName.filter(alertEvents contains _).foreach(_ => emailAlert(event, emailOpt))
+    eventName.filter(unsubscribeEvents contains _).foreach(_ => handleUnsubscribeEvent(event, emailOpt))
+    eventName.filter(CLICK == _).foreach(_ => handleClickEvent(event, emailOpt))
 
     sendHeimdalEvent(event, emailOpt)
   }
@@ -120,7 +124,7 @@ class SendgridCommander @Inject() (
         if !emailAddr.verified
       } yield {
         log.info(s"verifying email(${userEmail}) from SendGrid event(${event})")
-        emailAddressRepo.save(emailAddr.copy(state = UserEmailAddressStates.VERIFIED, verifiedAt = Some(DateTime.now)))
+        emailAddressRepo.save(emailAddr.copy(state = UserEmailAddressStates.VERIFIED, verifiedAt = Some(clock.now)))
       }
     }
 
