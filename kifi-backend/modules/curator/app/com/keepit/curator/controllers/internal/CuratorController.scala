@@ -33,4 +33,16 @@ class CuratorController @Inject() (recoGenCommander: RecommendationGenerationCom
     }
 
   }
+
+  def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI]) = Action.async { request =>
+    val json = request.body.asJson
+    json match {
+      case Some(json) => {
+        val interaction = json.as[UriRecommendationUserInteraction]
+        recoGenCommander.updateUriRecommendationUserInteraction(userId, uriId, interaction).map(update => Ok(Json.toJson(update)))
+      }
+      case None => Future.successful(Ok(Json.toJson(false)))
+    }
+
+  }
 }
