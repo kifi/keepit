@@ -1,7 +1,7 @@
 package com.keepit.curator.model
 
 import com.google.inject.{ Singleton, Inject, ImplementedBy }
-import com.keepit.common.db.{ State, States, Id }
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DBSession, DataBaseComponent, DbRepo }
 import com.keepit.common.logging.Logging
@@ -55,8 +55,9 @@ class UriRecommendationRepoImpl @Inject() (
   }
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RSession): Boolean = {
-    val row = (for (row <- rows if row.uriId === uriId && row.userId === userId) yield row)
-    row.update(row.firstOption.get.withUpdateFeedback(feedback)) > 0
+    (if (feedback.seen.get) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield row.seen).update(feedback.seen.get) > 0 else true) ||
+      (if (feedback.clicked.get) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield row.clicked).update(feedback.clicked.get) > 0 else true) ||
+      (if (feedback.kept.get) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield row.kept).update(feedback.kept.get) > 0 else true)
   }
 
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}
