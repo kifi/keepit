@@ -19,8 +19,6 @@ class AttributionCommander @Inject() (
     db: Database,
     airbrake: AirbrakeNotifier,
     keepRepo: KeepRepo,
-    collectionRepo: CollectionRepo,
-    userRepo: UserRepo,
     userBookmarkClicksRepo: UserBookmarkClicksRepo,
     keepClicksRepo: KeepDiscoveryRepo,
     rekeepRepo: ReKeepRepo,

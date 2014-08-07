@@ -43,4 +43,8 @@ class RecommendationsCommander @Inject() (
     curator.updateUriRecommendationFeedback(userId, uriId, feedback)
   }
 
+  def UriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI], interaction: UriRecommendationUserInteraction): Future[Boolean] = {
+    curator.updateUriRecommendationUserInteraction(userId, uriId, interaction)
+  }
+
 }

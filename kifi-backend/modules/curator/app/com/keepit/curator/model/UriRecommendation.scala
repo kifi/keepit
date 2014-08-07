@@ -3,7 +3,7 @@ package com.keepit.curator.model
 import com.keepit.common.crypto.ModelWithPublicId
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.model.{ UriRecommendationFeedback, User, NormalizedURI }
+import com.keepit.model.{ UriRecommendationUserInteraction, UriRecommendationFeedback, User, NormalizedURI }
 import org.joda.time.DateTime
 
 case class UriRecommendation(
@@ -11,6 +11,7 @@ case class UriRecommendation(
     createdAt: DateTime = currentDateTime,
     updateAt: DateTime = currentDateTime,
     state: State[UriRecommendation] = UriRecommendationStates.ACTIVE,
+    vote: Option[Boolean] = None,
     uriId: Id[NormalizedURI],
     userId: Id[User],
     masterScore: Float,
@@ -25,6 +26,9 @@ case class UriRecommendation(
     seen = feedback.seen.getOrElse(seen),
     clicked = feedback.clicked.getOrElse(clicked),
     kept = feedback.kept.getOrElse(kept)
+  )
+  def withUpdateUserInteraction(interaction: UriRecommendationUserInteraction): UriRecommendation = this.copy(
+    vote = interaction.vote
   )
 }
 

@@ -13,7 +13,7 @@ import scala.slick.jdbc.StaticQuery.interpolation
 trait UserBookmarkClicksRepo extends Repo[UserBookmarkClicks] {
   def getByUserUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[UserBookmarkClicks]
   def increaseCounts(userId: Id[User], uriId: Id[NormalizedURI], isSelf: Boolean)(implicit session: RWSession): UserBookmarkClicks
-  def getClickCounts(userId: Id[User])(implicit session: RSession): (Int, Int)
+  def getClickCounts(userId: Id[User])(implicit session: RSession): (Int, Int) // deprecated
   def getReKeepCounts(userId: Id[User])(implicit session: RSession): (Int, Int)
 }
 

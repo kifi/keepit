@@ -123,7 +123,6 @@ class UserCommander @Inject() (
     emailOptOutCommander: EmailOptOutCommander,
     heimdalClient: HeimdalServiceClient,
     fortytwoConfig: FortyTwoConfig,
-    bookmarkClicksRepo: UserBookmarkClicksRepo,
     userImageUrlCache: UserImageUrlCache,
     libraryCommander: LibraryCommander,
     sendEmailToNewUserFriendsHelper: SendEmailToNewUserFriendsHelper,
@@ -221,18 +220,8 @@ class UserCommander @Inject() (
     BasicUserInfo(basicUser, UpdatableUserInfo(description, Some(emailInfos)), notAuthed)
   }
 
-  def getHelpCounts(user: Id[User]): (Int, Int) = {
-    //unique keeps, total clicks
-    db.readOnlyReplica { implicit session => bookmarkClicksRepo.getClickCounts(user) }
-  }
-
-  def getKeepAttributionCounts(userId: Id[User]): Future[(Int, Int, Int)] = { // (discoveryCount, rekeepCount, rekeepTotalCount)
-    heimdalClient.getDiscoveryCountByKeeper(userId) map { discoveryCount =>
-      val (rekeepCount, rekeepTotalCount) = db.readOnlyReplica { implicit ro =>
-        bookmarkClicksRepo.getReKeepCounts(userId)
-      }
-      (discoveryCount, rekeepCount, rekeepTotalCount)
-    }
+  def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
+    heimdalClient.getKeepAttributionInfo(userId)
   }
 
   def getUserSegment(userId: Id[User]): UserSegment = {

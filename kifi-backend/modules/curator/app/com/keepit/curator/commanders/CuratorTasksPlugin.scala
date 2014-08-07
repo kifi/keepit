@@ -25,7 +25,7 @@ class CuratorTasksPlugin @Inject() (
     scheduleTaskOnLeader(system, 1 minutes, 5 minutes) {
       ingestionCommander.ingestAll()
     }
-    scheduleTaskOnLeader(system, 1 minutes, 5 minutes) {
+    scheduleTaskOnLeader(system, 1 minutes, 2 minutes) {
       generationCommander.precomputeRecommendations()
     }
   }
