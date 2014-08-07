@@ -122,7 +122,7 @@ object MatrixUtils {
     var s = 0.0
     val epsilon = 1e-6
     while (i < n) {
-      val v = variance(i) max epsilon
+      val v = variance(i) + epsilon
       val diff = sample(i) - mean(i)
       val r = weights(i) / v
       s += r * diff * diff
