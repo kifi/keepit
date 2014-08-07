@@ -65,6 +65,8 @@ trait HeimdalServiceClient extends ServiceClient {
 
   def getReKeepCounts(userId: Id[User]): Future[(Int, Int)]
 
+  def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo]
+
   def getPagedReKeeps(page: Int = 0, size: Int = 50): Future[Seq[ReKeep]]
 
   def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit]
@@ -225,6 +227,12 @@ class HeimdalServiceClientImpl @Inject() (
       val rekeepCount = (json \ "rekeepCount").as[Int]
       val rekeepTotalCount = (json \ "rekeepTotalCount").as[Int]
       (rekeepCount, rekeepTotalCount)
+    }
+  }
+
+  def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
+    call(Heimdal.internal.getKeepAttributionInfo(userId)) map { r =>
+      Json.parse(r.body).as[UserKeepAttributionInfo]
     }
   }
 

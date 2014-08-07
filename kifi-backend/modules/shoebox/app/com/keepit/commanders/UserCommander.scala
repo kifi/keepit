@@ -220,18 +220,8 @@ class UserCommander @Inject() (
     BasicUserInfo(basicUser, UpdatableUserInfo(description, Some(emailInfos)), notAuthed)
   }
 
-  def getHelpCounts(user: Id[User]): Future[(Int, Int)] = {
-    //unique keeps, total clicks
-    heimdalClient.getBookmarkClickCounts(user)
-  }
-
-  def getKeepAttributionCounts(userId: Id[User]): Future[(Int, Int, Int)] = { // (discoveryCount, rekeepCount, rekeepTotalCount)
-    for {
-      discoveryCount <- heimdalClient.getDiscoveryCountByKeeper(userId) // consolidate
-      (rekeepCount, rekeepTotalCount) <- heimdalClient.getReKeepCounts(userId)
-    } yield {
-      (discoveryCount, rekeepCount, rekeepTotalCount)
-    }
+  def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
+    heimdalClient.getKeepAttributionInfo(userId)
   }
 
   def getUserSegment(userId: Id[User]): UserSegment = {
