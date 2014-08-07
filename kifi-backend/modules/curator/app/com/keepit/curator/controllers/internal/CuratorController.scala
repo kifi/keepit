@@ -3,7 +3,7 @@ package com.keepit.curator.controllers.internal
 import com.keepit.curator.commanders.{ RecommendationFeedbackCommander, RecommendationGenerationCommander }
 import com.keepit.common.controller.CuratorServiceController
 import com.keepit.common.db.Id
-import com.keepit.model.{UriRecommendationUserInteraction, UriRecommendationFeedback, NormalizedURI, UriRecommendationScores, User}
+import com.keepit.model.{ UriRecommendationUserInteraction, UriRecommendationFeedback, NormalizedURI, UriRecommendationScores, User }
 
 import play.api.mvc.Action
 import play.api.libs.json.Json

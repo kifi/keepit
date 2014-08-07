@@ -1,6 +1,6 @@
 package com.keepit.curator
 
-import com.keepit.model.{UriRecommendationUserInteraction, UriRecommendationFeedback, NormalizedURI, UriRecommendationScores, User}
+import com.keepit.model.{ UriRecommendationUserInteraction, UriRecommendationFeedback, NormalizedURI, UriRecommendationScores, User }
 
 import scala.concurrent.Future
 import com.keepit.common.healthcheck.AirbrakeNotifier
