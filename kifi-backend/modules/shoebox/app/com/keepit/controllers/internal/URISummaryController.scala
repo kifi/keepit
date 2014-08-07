@@ -30,12 +30,12 @@ class URISummaryController @Inject() (
     urlFut map { urlOpt => Ok(Json.toJson(urlOpt)) }
   }
 
-  def getURISummary() = Action.async(parse.tolerantJson) { request =>
+  def getUriSummary() = Action.async(parse.tolerantJson) { request =>
     val urlFut = uriSummaryCommander.getURISummaryForRequest(Json.fromJson[URISummaryRequest](request.body).get)
     urlFut map { urlOpt => Ok(Json.toJson(urlOpt)) }
   }
 
-  def getURISummaries() = Action.async(parse.tolerantJson) { request =>
+  def getUriSummaries() = Action.async(parse.tolerantJson) { request =>
     val uriIdsJson = (request.body \ "uriIds")
     val withDescription = (request.body \ "withDescription").asOpt[Boolean].getOrElse(true)
     val waiting = (request.body \ "waiting").asOpt[Boolean].getOrElse(false)

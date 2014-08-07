@@ -23,7 +23,9 @@ class RichWord2VecURIFeatureUpdateActor @Inject() (
   airbrake: AirbrakeNotifier,
   updater: RichWord2VecURIFeatureUpdater) extends FeatureUpdateActor(airbrake: AirbrakeNotifier, updater)
 
-trait RichWord2VecURIFeatureUpdatePlugin extends FeatureUpdatePlugin[NormalizedURI, Word2Vec]
+trait RichWord2VecURIFeatureUpdatePlugin extends FeatureUpdatePlugin[NormalizedURI, Word2Vec] {
+  override val updateFrequency: FiniteDuration = 2 days
+}
 
 @Singleton
 class RichWord2VecURIFeatureUpdatePluginImpl @Inject() (

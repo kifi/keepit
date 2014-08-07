@@ -28,4 +28,13 @@ class MatrixUtilsTest extends Specification {
     val expect = -0.079593
     (abs(s - expect) < 1e-4) === true
   }
+
+  "compute M-distance for diag Gaussian" in {
+    val sample = Array(1.0, -1.0)
+    val mean = Array(0.0, 0.5)
+    val variance = Array(1.0, 0.5)
+    val dist = MatrixUtils.MDistanceDiagGaussian(sample, mean, variance)
+    val expect = 5.5
+    (abs(dist - expect) < 1e-4) === true
+  }
 }

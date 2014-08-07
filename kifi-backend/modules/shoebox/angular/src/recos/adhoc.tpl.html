@@ -1,4 +1,18 @@
 <div ng-controller="RecoCtrl">
+  Dear Admin, this incredibly ugly control pannel lets you adjust how your recommendations weigh the individual scores.
+  Valid values are between 0 and 9 (non integers are ok) and you'll have to click the "reload" button after making changes.
+  <div class="reco-controll-panel">
+    Social: <input type="number" min="0" max="9" value="1" ng-model="weights.socialScore">
+    Recency: <input type="number" min="0" max="9" value="1" ng-model="weights.recencyScore">
+    Popularity: <input type="number" min="0" max="9" value="1" ng-model="weights.popularityScore">
+    Overall Interest: <input type="number" min="0" max="9" value="1" ng-model="weights.overallInterestScore">
+    Recent Interest: <input type="number" min="0" max="9" value="1" ng-model="weights.recentInterestScore">
+    Prior: <input type="number" min="0" max="9" value="1" ng-model="weights.priorScore">
+  </div>
+  <div>
+    <button ng-click="reload()">Reload</button>
+  </div>
+
   <div kf-keeps
     keeps="keeps()"
     keeps-loading="loading()"

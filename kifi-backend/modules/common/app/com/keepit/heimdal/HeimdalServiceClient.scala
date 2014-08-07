@@ -23,7 +23,7 @@ import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
-import com.keepit.model.{ DelightedUserRegistrationInfo, User }
+import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, Id }
 import org.joda.time.DateTime
 import com.kifi.franz.SQSQueue
@@ -56,6 +56,16 @@ trait HeimdalServiceClient extends ServiceClient {
   def postDelightedAnswer(userRegistrationInfo: DelightedUserRegistrationInfo, answer: BasicDelightedAnswer): Future[Option[BasicDelightedAnswer]]
 
   def cancelDelightedSurvey(userRegistrationInfo: DelightedUserRegistrationInfo): Future[Boolean]
+
+  def getPagedKeepDiscoveries(page: Int = 0, size: Int = 50): Future[Seq[KeepDiscovery]]
+
+  def getDiscoveryCountByKeeper(userId: Id[User]): Future[Int]
+
+  def getPagedReKeeps(page: Int = 0, size: Int = 50): Future[Seq[ReKeep]]
+
+  def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit]
+
+  def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit]
 }
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
@@ -183,4 +193,39 @@ class HeimdalServiceClientImpl @Inject() (
       }
     }
   }
+
+  def getPagedKeepDiscoveries(page: Int, size: Int): Future[Seq[KeepDiscovery]] = {
+    call(Heimdal.internal.getPagedKeepDiscoveries(page, size)) map { r =>
+      Json.parse(r.body).as[Seq[KeepDiscovery]]
+    }
+  }
+
+  def getDiscoveryCountByKeeper(userId: Id[User]): Future[Int] = {
+    call(Heimdal.internal.getDiscoveryCountByKeeper(userId)) map { r =>
+      Json.parse(r.body).as[Int]
+    }
+  }
+
+  def getPagedReKeeps(page: Int, size: Int): Future[Seq[ReKeep]] = {
+    call(Heimdal.internal.getPagedReKeeps(page, size)) map { r =>
+      Json.parse(r.body).as[Seq[ReKeep]]
+    }
+  }
+
+  def processKifiHit(clickerId: Id[User], hit: SanitizedKifiHit): Future[Unit] = {
+    val payload = Json.obj(
+      "clickerId" -> clickerId,
+      "kifiHit" -> hit
+    )
+    call(Heimdal.internal.processKifiHit, payload) map { r => Unit }
+  }
+
+  def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit] = {
+    val payload = Json.obj(
+      "userId" -> userId,
+      "keeps" -> newKeeps
+    )
+    call(Heimdal.internal.processKeepAttribution, payload) map { r => Unit }
+  }
+
 }

@@ -1,5 +1,7 @@
 package com.keepit.common.social
 
+import com.keepit.commanders.SendFriendConnectionMadeNotificationHelper
+import com.keepit.common.akka.SafeFuture
 import org.joda.time.DateTime
 
 import com.google.inject.Inject
@@ -28,7 +30,8 @@ class UserConnectionCreator @Inject() (
   airbrake: AirbrakeNotifier,
   basicUserRepo: BasicUserRepo,
   eliza: ElizaServiceClient,
-  heimdal: HeimdalServiceClient)
+  heimdal: HeimdalServiceClient,
+  sendFriendConnectionMadeHelper: SendFriendConnectionMadeNotificationHelper)
     extends Logging {
 
   def createConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
@@ -58,6 +61,7 @@ class UserConnectionCreator @Inject() (
 
       newConnections.foreach { connId =>
         log.info(s"Sending new connection to user $connId (to $userId)")
+        sendFriendConnectionMadeHelper(userId, connId)
         eliza.sendToUser(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
       }
 

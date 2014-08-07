@@ -60,6 +60,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
 
           uriTopicRepo.getFeature(Id[NormalizedURI](1), ModelVersion[DenseLDA](2)) === None
           uriTopicRepo.getFeature(Id[NormalizedURI](3), ModelVersion[DenseLDA](1)) === None
+
         }
       }
     }
@@ -171,6 +172,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           version = ModelVersion[DenseLDA](1),
           numOfWords = 100,
           firstTopic = Some(LDATopic(1)),
+          feature = Some(LDATopicFeature(Array(1f, 0f))),
           state = URILDATopicStates.ACTIVE
         ),
         URILDATopic(
@@ -180,6 +182,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           version = ModelVersion[DenseLDA](1),
           numOfWords = 100,
           firstTopic = Some(LDATopic(2)),
+          feature = Some(LDATopicFeature(Array(0.5f, 0.5f))),
           state = URILDATopicStates.ACTIVE
         )
       )
@@ -191,6 +194,8 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
         topicRepo.getUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1)).toList === List((LDATopic(1), 1), (LDATopic(2), 1))
         topicRepo.getUserTopicHistograms(Id[User](2), ModelVersion[DenseLDA](1)).toList === List()
         topicRepo.getUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1), after = Some(new DateTime(2014, 7, 10, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE))).toList === List((LDATopic(2), 1))
+        topicRepo.countUserURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0) === 2
+        topicRepo.getUserURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0).map { _.value }.flatten === List(1f, 0f, 0.5f, 0.5f)
 
       }
     }

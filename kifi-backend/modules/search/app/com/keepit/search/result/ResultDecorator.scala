@@ -42,7 +42,7 @@ class ResultDecorator(
       shoeboxClient.getBasicUsers(users.toSeq).map { _.map { case (id, bu) => (id -> Json.toJson(bu).asInstanceOf[JsObject]) } }
     }
     val uriSummariesFuture = if (hits.isEmpty || !withUriSummary) Future.successful(Map.empty[Id[NormalizedURI], URISummary]) else {
-      shoeboxClient.getURISummaries(hits.map(_.uriId))
+      shoeboxClient.getUriSummaries(hits.map(_.uriId))
     }
     val expertsFuture = Promise.successful(List.empty[Id[User]]).future // TODO: revisit
 
