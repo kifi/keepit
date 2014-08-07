@@ -23,7 +23,7 @@ CREATE TABLE if not exists linked_in_invite_recommendation (
     irrelevant bool NOT NULL,
 
     PRIMARY KEY (id),
-    UNIQUE INDEX linke_din_invite_recommendation_u_user_id_linked_in_account_id (user_id, linked_in_account_id)
+    UNIQUE INDEX linked_in_invite_recommendation_u_user_id_linked_in_account_id (user_id, linked_in_account_id)
 );
 
 CREATE TABLE if not exists email_invite_recommendation (
