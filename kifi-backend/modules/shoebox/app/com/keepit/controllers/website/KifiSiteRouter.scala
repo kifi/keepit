@@ -1,12 +1,12 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, ShoeboxServiceController, WebsiteController}
+import com.keepit.common.controller.{ AuthenticatedRequest, ActionAuthenticator, ShoeboxServiceController, WebsiteController }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.UserAgent
 import com.keepit.model.{ LibraryRepo, LibrarySlug, UserRepo, Username }
-import play.api.mvc.{SimpleResult, Request}
+import play.api.mvc.{ SimpleResult, Request }
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 
@@ -18,7 +18,7 @@ private case class AngularLoggedIn(preload: Seq[Request[_] => Future[String]] = 
 private case class Angular(preload: Seq[Request[_] => Future[String]] = Seq.empty) extends AngularRoute
 private case class AboutAssetsTwo(path: Path) extends Routeable // todo(andrew): rename to AboutAssers when that class is brought in
 private case class RedirectRoute(url: String) extends Routeable
-private case class StaticResult(result: SimpleResult) extends Routable
+private case class StaticResult(result: SimpleResult) extends Routeable
 private case object Error404 extends Routeable
 
 case class Path(requestPath: String) {
