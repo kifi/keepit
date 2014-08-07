@@ -284,8 +284,8 @@ object ABook extends Service {
     def getEmailAccountsChanged(seqNum: SequenceNumber[EmailAccountInfo], fetchSize: Int) = ServiceRoute(GET, "/internal/abook/database/getEmailAccountsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int) = ServiceRoute(GET, "/internal/abook/database/getContactsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getUsersWithContact(email: EmailAddress) = ServiceRoute(GET, "/internal/abook/getUsersWithContact", Param("email", email))
-    def findFriends(userId: Id[User], page: Int, pageSize: Int) = ServiceRoute(GET, s"/internal/abook/${userId}/findFriends", Param("page", page), Param("pageSize", pageSize))
-    def hideUserRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId}/hideUserRecommendation", Param("irrelevantUserId", irrelevantUserId))
+    def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int) = ServiceRoute(GET, s"/internal/abook/${userId}/getFriendRecommendations", Param("page", page), Param("pageSize", pageSize))
+    def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId}/hideFriendRecommendation", Param("irrelevantUserId", irrelevantUserId))
   }
 }
 
