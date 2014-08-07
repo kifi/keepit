@@ -34,7 +34,7 @@ class LinkedInInviteRecommendationRepoImpl @Inject() (
   import db.Driver.simple._
 
   type RepoImpl = LinkedInInviteRecommendationTable
-  class LinkedInInviteRecommendationTable(tag: Tag) extends RepoTable[LinkedInInviteRecommendation](db, tag, "linkedIn_invite_recommendation") {
+  class LinkedInInviteRecommendationTable(tag: Tag) extends RepoTable[LinkedInInviteRecommendation](db, tag, "linked_in_invite_recommendation") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def linkedInAccountId = column[Id[SocialUserInfo]]("linked_in_account_id", O.NotNull)
     def irrelevant = column[Boolean]("irrelevant", O.NotNull)
