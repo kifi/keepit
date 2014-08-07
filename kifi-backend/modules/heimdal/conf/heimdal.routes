@@ -37,10 +37,6 @@ GET  /internal/heimdal/data/keepDiscovery/getDiscoveryCountByKeeper @com.keepit.
 
 GET  /internal/heimdal/data/reKeep/page/:page          @com.keepit.controllers.ReKeepController.page(page:Int, size:Int)
 
-GET  /internal/heimdal/data/userKeepInfo/getClickCounts     @com.keepit.controllers.UserKeepInfoController.getClickCounts(userId: Id[User])
-GET  /internal/heimdal/data/userKeepInfo/getReKeepCounts    @com.keepit.controllers.UserKeepInfoController.getReKeepCounts(userId: Id[User])
-GET  /internal/heimdal/data/userKeepInfo/getAggregateCounts @com.keepit.controllers.UserKeepInfoController.getAggregateCounts(userId: Id[User])
-
 GET  /internal/heimdal/helprank/getKeepAttributionInfo @com.keepit.controllers.HelpRankController.getKeepAttributionInfo(userId: Id[User])
 POST /internal/heimdal/helprank/processKifiHit         @com.keepit.controllers.HelpRankController.processKifiHit()
 POST /internal/heimdal/helprank/processKeepAttribution @com.keepit.controllers.HelpRankController.processKeepAttribution()
