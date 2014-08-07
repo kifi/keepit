@@ -12,92 +12,34 @@ import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.{ NormalizedURI, User }
 import com.keepit.common.time._
-
-import scala.collection.mutable
 import scala.math.exp
 
 @Singleton
 class LDACommander @Inject() (
+    infoCommander: LDAInfoCommander,
     db: Database,
     userTopicRepo: UserLDAInterestsRepo,
     uriTopicRepo: URILDATopicRepo,
     wordRep: LDAWordRepresenter,
     docRep: LDADocRepresenter,
-    ldaTopicWords: DenseLDATopicWords,
     ldaConfigs: LDATopicConfigurations,
     configStore: LDAConfigStore,
     ldaRetriever: LDAURIFeatureRetriever,
     userLDAStatsRetriever: UserLDAStatisticsRetriever,
     topicInfoRepo: LDAInfoRepo,
     userLDAStatRepo: UserLDAStatsRepo) extends Logging {
-  assume(ldaTopicWords.topicWords.length == wordRep.lda.dimension)
 
-  private var currentConfig = getAllConfigs(wordRep.version)
+  val numOfTopics: Int = wordRep.lda.dimension
 
-  val ldaDimMap = mutable.Map(wordRep.version -> wordRep.lda.dimension)
+  def activeTopics = infoCommander.activeTopics
 
-  private def getAllConfigs(version: ModelVersion[DenseLDA]) = {
-    val info = db.readOnlyReplica { implicit s => topicInfoRepo.getAllByVersion(version) }
-
-    val updatedInfo = if (info.isEmpty) {
-      val dim = wordRep.lda.dimension
-      db.readWrite { implicit s =>
-        (0 until dim).foreach { i => topicInfoRepo.save(LDAInfo(version = version, dimension = dim, topicId = i)) }
-        topicInfoRepo.getAllByVersion(version)
-      }
-    } else info
-
-    val confMap = updatedInfo.map { case in => (in.topicId.toString, LDATopicConfiguration(in.topicName, in.isActive)) }.toMap
-    LDATopicConfigurations(confMap)
-  }
-
-  private def saveConfigs(version: ModelVersion[DenseLDA], config: Map[String, LDATopicConfiguration]): Unit = {
-    db.readWrite { implicit s =>
-      config.foreach {
-        case (topic, conf) =>
-          val model = topicInfoRepo.getByTopicId(version, topic.toInt)
-          topicInfoRepo.save(model.copy(topicName = conf.topicName, isActive = conf.isActive).withUpdateTime(currentDateTime))
-      }
-    }
-  }
-
-  // consumers of lda service might query dim of some previous lda model
   def getLDADimension(version: ModelVersion[DenseLDA]): Int = {
-    ldaDimMap.getOrElseUpdate(version, {
-      val conf = configStore.get(MiscPrefix.LDA.topicConfigsJsonFile, version).get
-      conf.configs.size
-    }
-    )
+    infoCommander.getLDADimension(version)
   }
-
-  def numOfTopics: Int = ldaTopicWords.topicWords.length
-
-  val activeTopics = currentConfig.configs.filter { case (id, conf) => conf.isActive }.map { case (id, _) => id.toInt }.toArray.sorted
 
   private def projectToActive(arr: Array[Float]): Array[Float] = {
     assume(arr.size == numOfTopics)
     activeTopics.map { i => arr(i) }.toArray
-  }
-
-  def topicWords(topicId: Int, topN: Int): Seq[(String, Float)] = {
-    assume(topicId >= 0 && topicId < numOfTopics && topN >= 0)
-
-    ldaTopicWords.topicWords(topicId).toArray.sortBy(-1f * _._2).take(topN)
-  }
-
-  def topicWords(fromId: Int, toId: Int, topN: Int): Map[Int, Seq[(String, Float)]] = {
-    assume(fromId <= toId && toId < numOfTopics && fromId >= 0)
-
-    (fromId to toId).map { id =>
-      (id, topicWords(id, topN))
-    }.toMap
-  }
-
-  def topicConfigs(fromId: Int, toId: Int): Map[String, LDATopicConfiguration] = {
-    assume(fromId <= toId && toId < numOfTopics && fromId >= 0)
-    (fromId to toId).map { id =>
-      id.toString -> currentConfig.configs.getOrElse(id.toString, LDATopicConfiguration.default)
-    }.toMap
   }
 
   def wordTopic(word: String): Option[Array[Float]] = {
@@ -108,12 +50,8 @@ class LDACommander @Inject() (
     docRep(doc).map { _.vectorize }
   }
 
-  def ldaConfigurations: LDATopicConfigurations = currentConfig
-
   def saveConfigEdits(config: Map[String, LDATopicConfiguration]) = {
-    val newConfig = LDATopicConfigurations(currentConfig.configs ++ config)
-    currentConfig = newConfig
-    saveConfigs(wordRep.version, config)
+    infoCommander.saveConfigEdits(config)
   }
 
   def getLDAFeatures(ids: Seq[Id[NormalizedURI]]) = {
@@ -275,5 +213,4 @@ class LDACommander @Inject() (
     }
 
   }
-
 }
