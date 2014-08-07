@@ -600,7 +600,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
 
-  def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = Future.successful(Map.empty)
+  def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = Future.successful(Map.empty)
 
   def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = Future.successful(Seq.fill(uris.size)(false))
 

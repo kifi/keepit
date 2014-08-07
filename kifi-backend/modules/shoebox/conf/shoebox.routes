@@ -728,8 +728,8 @@ GET      /internal/shoebox/database/getAllFakeUsers         @com.keepit.controll
 
 GET      /internal/shoebox/screenshots/update        @com.keepit.controllers.internal.URISummaryController.updateUriScreenshotsForUriId(id: Id[NormalizedURI])
 GET      /internal/shoebox/image/getUriImage         @com.keepit.controllers.internal.URISummaryController.getUriImageForUriId(id: Id[NormalizedURI])
-POST     /internal/shoebox/image/getUriSummary       @com.keepit.controllers.internal.URISummaryController.getURISummary()
-POST     /internal/shoebox/image/getUriSummaries     @com.keepit.controllers.internal.URISummaryController.getURISummaries()
+POST     /internal/shoebox/image/getUriSummary       @com.keepit.controllers.internal.URISummaryController.getUriSummary()
+POST     /internal/shoebox/image/getUriSummaries     @com.keepit.controllers.internal.URISummaryController.getUriSummaries()
 POST      /internal/shoebox/database/getAdultRestrictionOfURIs   @com.keepit.controllers.internal.NormalizedURIController.getAdultRestrictionOfURIs()
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Long, width: Int)
 
