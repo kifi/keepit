@@ -1,13 +1,11 @@
 package com.keepit.graph.wander
 
 import com.keepit.graph.model.{ VertexId, VertexReader }
-import scala.collection.mutable
 import com.keepit.graph.model.EdgeKind.EdgeType
 import com.keepit.common.logging.Logging
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import play.api.Logger
-import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 
 trait TravelJournal {
   def onStart(start: VertexReader): Unit
@@ -17,15 +15,13 @@ trait TravelJournal {
   def onComplete(end: VertexReader): Unit
 }
 
-class TeleportationJournal(name: String, clock: Clock) extends TravelJournal {
-  private val randomTeleportations = new TrieMap[VertexId, Int]().withDefaultValue(0)
-  private val visited = new TrieMap[VertexId, Int]().withDefaultValue(0)
+class TeleportationJournal(name: String, clock: Clock) extends TravelJournal with Logging {
+  private val randomTeleportations = mutable.Map[VertexId, Int]().withDefaultValue(0)
+  private val visited = mutable.Map[VertexId, Int]().withDefaultValue(0)
   private var lastVisited: Option[VertexId] = None
   private var startingVertexId: Option[VertexId] = None
   private var startTime: Option[DateTime] = None
   private var steps = 0
-
-  private val log = Logger(name)
 
   def onStart(start: VertexReader): Unit = {
     startingVertexId = Some(start.id)
@@ -58,7 +54,7 @@ class TeleportationJournal(name: String, clock: Clock) extends TravelJournal {
   def onComplete(end: VertexReader): Unit = {
     val endTime = clock.now()
     log.debug(s"[Complete] ${end.id}")
-    log.info(s"Wandered from ${getStartingVertex()} for ${steps} steps during ${endTime.getMillis - startTime.get.getMillis} ms.")
+    log.info(s"[$name] Wandered from ${getStartingVertex()} for ${steps} steps during ${endTime.getMillis - startTime.get.getMillis} ms.")
   }
 
   def getTeleportations(): Map[VertexId, Int] = randomTeleportations.toMap
