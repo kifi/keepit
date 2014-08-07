@@ -20,7 +20,7 @@ class NormalizedURIController @Inject() (
       case Some(json) => json.as[Seq[Id[NormalizedURI]]]
       case None => Seq.empty
     }
-    normalizedURICommander.getAdultRestrictionOfURIs(body).map { res =>
+    normalizedURICommander.getCandidateURIs(body).map { res =>
       Ok(Json.toJson(res))
     }
   }
