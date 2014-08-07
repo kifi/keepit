@@ -91,7 +91,7 @@ class UserController @Inject() (
   }
 
   def findFriends(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
-    abookServiceClient.findFriends(request.userId, page, pageSize).map { recommendedUsers =>
+    abookServiceClient.getFriendRecommendations(request.userId, page, pageSize).map { recommendedUsers =>
       val friends = db.readOnlyReplica { implicit session =>
         (recommendedUsers.toSet + request.userId).map(id => id -> userConnectionRepo.getConnectedUsers(id)).toMap
       }
@@ -113,9 +113,9 @@ class UserController @Inject() (
     }
   }
 
-  def hideUserRecommendation(id: ExternalId[User]) = JsonAction.authenticatedAsync { request =>
+  def hideFriendRecommendation(id: ExternalId[User]) = JsonAction.authenticatedAsync { request =>
     val irrelevantUserId = db.readOnlyReplica { implicit session => userRepo.get(id).id.get }
-    abookServiceClient.hideUserRecommendation(request.userId, irrelevantUserId).map { _ =>
+    abookServiceClient.hideFriendRecommendation(request.userId, irrelevantUserId).map { _ =>
       Ok(Json.obj("hidden" -> true))
     }
   }
