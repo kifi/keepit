@@ -114,7 +114,7 @@ class RecommendationGenerationCommander @Inject() (
         UserRecommendationGenerationState(userId = userId)
       }
       val seedsFuture = for {
-        seeds <- seedCommander.getBySeqNumAndUser(state.seq, userId, 300)
+        seeds <- seedCommander.getBySeqNumAndUser(state.seq, userId, 200)
         restrictions <- shoebox.getAdultRestrictionOfURIs(seeds.map { _.uriId })
       } yield {
         (seeds zip restrictions) filterNot (_._2) map (_._1)
