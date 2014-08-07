@@ -124,6 +124,7 @@ panes.notices = function () {
     $(window).off('resize.notices').on('resize.notices', scroller.refresh.bind(scroller));
 
     $list
+    .on('mouseenter mouseleave', '.kifi-notice', onMouseEnterLeaveNotice)
     .on('mouseover mouseout', '.kifi-notice-state', onMouseOverOrOutState)
     .on('click', '.kifi-notice-state', onClickState)
     .on('click', '.kifi-notice', onClickNotice)
@@ -330,8 +331,24 @@ panes.notices = function () {
     // not updating DOM until response received due to bulk nature of action
   }
 
+  function onMouseEnterLeaveNotice(e) {
+    updateNoticeBackground(this, e.type === 'mouseenter' && !this.classList.contains('kifi-hover-suppressed'));
+  }
+
   function onMouseOverOrOutState(e) {
-    $(this).closest('.kifi-notice').toggleClass('kifi-hover-suppressed', e.type === 'mouseover');
+    var suppressed = e.type === 'mouseover';
+    var noticeEl = $(this).closest('.kifi-notice').toggleClass('kifi-hover-suppressed', suppressed)[0];
+    updateNoticeBackground(noticeEl, !suppressed && noticeEl.contains(e.relatedTarget));
+  }
+
+  function updateNoticeBackground(el, hover) {
+    var oldValue = el.style['backgroundImage'];
+    var newValue = hover ?
+      oldValue.replace(/(rgba?)\( ?254, ?254, ?254/g, '$1(248,250,253') :
+      oldValue.replace(/(rgba?)\( ?248, ?250, ?253/g, '$1(254,254,254');
+    if (newValue !== oldValue) {
+      el.style.backgroundImage = newValue;
+    }
   }
 
   function onClickState(e) {

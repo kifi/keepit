@@ -106,10 +106,13 @@
   padding: 12px 12px 12px 71px;
   min-height: 53px;
   cursor: pointer;
-  background: #fefefe;
+  background-size: auto 100%;
+  background-repeat: no-repeat;
+  background-position: left;
+  background-color: #fefefe;
 }
 .kifi-notice:not(.kifi-hover-suppressed):hover {
-  background: #f8fafd;
+  background-color: #f8fafd;
 }
 
 /* global-specific */
