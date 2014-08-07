@@ -45,7 +45,8 @@ class HelpRankCommander @Inject() (
             shoeboxClient.getUserIdsByExternalIds(keepers) map { keeperIds =>
               keeperIds foreach { keeperId =>
                 userKeepInfoRepo.increaseCounts(keeperId, kifiHit.uriId, false)
-                shoeboxClient.getBookmarkByUriAndUser(kifiHit.uriId, keeperId) map { keepOpt =>
+                shoeboxClient.getBookmarkByUriAndUser(kifiHit.uriId, keeperId) foreach { keepOpt =>
+                  log.info(s"[kifiHit($discoverer)] getBookmarkByUriAndUser(${kifiHit.uriId},$keeperId)=$keepOpt")
                   keepOpt match {
                     case None =>
                       log.warn(s"[kifiHit($discoverer,${kifiHit.uriId},${keepers.mkString(",")})] keep not found for keeperId=$keeperId") // move on
@@ -104,17 +105,15 @@ class HelpRankCommander @Inject() (
           rekeepRepo.getReKeep(chatUserId, keep.uriId, userId) match {
             case Some(rekeep) =>
               log.info(s"[chatAttribution($userId,${keep.uriId},$chatUserId)] rekeep=$rekeep already exists. Skipped.")
-              None
             case None =>
               shoeboxClient.getBookmarkByUriAndUser(keep.uriId, chatUserId) map { keepOpt =>
-                keepOpt map {
-                  chatUserKeep =>
-                    val discovery = KeepDiscovery(hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging")) // todo(ray): None for uuid
-                    val savedDiscovery = keepDiscoveryRepo.save(discovery)
-                    val rekeep = ReKeep(keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = 1)
-                    rekeepRepo.save(rekeep) tap { saved =>
-                      log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; discovery=$savedDiscovery")
-                    }
+                log.info(s"[chatAttribution($userId)] getBookmarkByUriAndUser(${keep.uriId},$chatUserId)=$keepOpt")
+                keepOpt foreach { chatUserKeep =>
+                  val discovery = KeepDiscovery(hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging")) // todo(ray): None for uuid
+                  val savedDiscovery = keepDiscoveryRepo.save(discovery)
+                  val rekeep = ReKeep(keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = 1)
+                  val saved = rekeepRepo.save(rekeep)
+                  log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; discovery=$savedDiscovery")
                 }
               }
           }
