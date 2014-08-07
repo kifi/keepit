@@ -15,12 +15,12 @@ class NormalizedURIController @Inject() (
     db: Database,
     normalizedURICommander: NormalizedURICommander) extends ShoeboxServiceController {
 
-  def getAdultRestrictionOfURIs() = Action.async { request =>
+  def getCandidateURIs() = Action.async { request =>
     val body = request.body.asJson match {
       case Some(json) => json.as[Seq[Id[NormalizedURI]]]
       case None => Seq.empty
     }
-    normalizedURICommander.getAdultRestrictionOfURIs(body).map { res =>
+    normalizedURICommander.getCandidateURIs(body).map { res =>
       Ok(Json.toJson(res))
     }
   }
