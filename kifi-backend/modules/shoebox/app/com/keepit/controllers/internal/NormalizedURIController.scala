@@ -5,7 +5,7 @@ import com.keepit.commanders.NormalizedURICommander
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ ScoreType, NormalizedURI }
+import com.keepit.model.NormalizedURI
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.libs.concurrent.Execution.Implicits._
