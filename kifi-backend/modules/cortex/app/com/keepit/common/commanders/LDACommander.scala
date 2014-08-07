@@ -38,7 +38,16 @@ class LDACommander @Inject() (
 
   private def getAllConfigs(version: ModelVersion[DenseLDA]) = {
     val info = db.readOnlyReplica { implicit s => topicInfoRepo.getAllByVersion(version) }
-    val confMap = info.map { case in => (in.topicId.toString, LDATopicConfiguration(in.topicName, in.isUsable)) }.toMap
+
+    val updatedInfo = if (info.isEmpty) {
+      val dim = wordRep.lda.dimension
+      db.readWrite { implicit s =>
+        (0 until dim).foreach { i => topicInfoRepo.save(LDAInfo(version = version, dimension = dim, topicId = i)) }
+        topicInfoRepo.getAllByVersion(version)
+      }
+    } else info
+
+    val confMap = updatedInfo.map { case in => (in.topicId.toString, LDATopicConfiguration(in.topicName, in.isActive)) }.toMap
     LDATopicConfigurations(confMap)
   }
 
@@ -47,7 +56,7 @@ class LDACommander @Inject() (
       config.foreach {
         case (topic, conf) =>
           val model = topicInfoRepo.getByTopicId(version, topic.toInt)
-          topicInfoRepo.save(model.copy(topicName = conf.topicName, isUsable = conf.isActive).withUpdateTime(currentDateTime))
+          topicInfoRepo.save(model.copy(topicName = conf.topicName, isActive = conf.isActive).withUpdateTime(currentDateTime))
       }
     }
   }

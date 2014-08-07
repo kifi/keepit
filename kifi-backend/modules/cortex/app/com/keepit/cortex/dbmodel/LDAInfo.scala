@@ -7,15 +7,15 @@ import com.keepit.cortex.models.lda.DenseLDA
 import org.joda.time.DateTime
 
 case class LDAInfo(
-    id: Option[Id[LDAInfo]],
+    id: Option[Id[LDAInfo]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     version: ModelVersion[DenseLDA],
     dimension: Int,
     topicId: Int,
     topicName: String = LDAInfo.DEFUALT_NAME,
+    isActive: Boolean = true,
     isNameable: Boolean = true,
-    isUsable: Boolean = true,
     numOfDocs: Int = 0) extends Model[LDAInfo] {
   def withId(id: Id[LDAInfo]): LDAInfo = copy(id = Some(id))
   def withUpdateTime(time: DateTime): LDAInfo = copy(updatedAt = time)

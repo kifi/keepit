@@ -31,10 +31,10 @@ class LDAInfoRepoImpl @Inject() (
     def dimension = column[Int]("dimension")
     def topicId = column[Int]("topic_id")
     def topicName = column[String]("topic_name")
-    def isUsable = column[Boolean]("is_usable")
+    def isActive = column[Boolean]("is_active")
     def isNameable = column[Boolean]("is_nameable")
     def numOfDocs = column[Int]("num_docs")
-    def * = (id.?, createdAt, updatedAt, version, dimension, topicId, topicName, isUsable, isNameable, numOfDocs) <> ((LDAInfo.apply _).tupled, LDAInfo.unapply _)
+    def * = (id.?, createdAt, updatedAt, version, dimension, topicId, topicName, isActive, isNameable, numOfDocs) <> ((LDAInfo.apply _).tupled, LDAInfo.unapply _)
   }
 
   def table(tag: Tag) = new LDAInfoTable(tag)
