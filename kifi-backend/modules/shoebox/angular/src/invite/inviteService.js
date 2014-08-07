@@ -7,8 +7,8 @@ angular.module('kifi.inviteService', [
 ])
 
 .factory('inviteService', [
-  '$http', 'env', '$q', '$timeout', 'routeService', 'util', 'Clutch', '$window', '$log', '$analytics', '$location', '$FB',
-  function ($http, env, $q, $timeout, routeService, util, Clutch, $window, $log, $analytics, $location, $FB) {
+  '$http', 'env', '$q', 'routeService', 'util', 'Clutch', '$window', '$log', '$analytics', '$location', '$FB',
+  function ($http, env, $q, routeService, util, Clutch, $window, $log, $analytics, $location, $FB) {
     /* Naming convention:
      *  - Kifi Friend is an existing connection on Kifi
      *  - Kifi User is a user of Kifi, may not be a friend.
@@ -176,26 +176,14 @@ angular.module('kifi.inviteService', [
       },
 
       friendRequest: function (id) {
-        // Stubbing this out so I don't actually invite
-        // people while in dev.
+        $analytics.eventTrack('user_clicked_page', {
+          'action': 'addFriend',
+          'path': $location.path()
+        });
 
-        // $analytics.eventTrack('user_clicked_page', {
-        //   'action': 'addFriend',
-        //   'path': $location.path()
-        // });
-
-        // return $http.post(routeService.friendRequest(id)).then(function (res) {
-        //   return res.data;
-        // });
-
-        var deferred = $q.defer();
-        console.log('Inviting... ' + id);
-        $timeout(function () {
-          deferred.resolve();
-          //deferred.reject();
-        }, 500);
-
-        return deferred.promise;
+        return $http.post(routeService.friendRequest(id)).then(function (res) {
+          return res.data;
+        });
       }
       
     };

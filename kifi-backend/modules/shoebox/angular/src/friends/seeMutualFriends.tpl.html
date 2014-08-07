@@ -16,7 +16,7 @@
         <img class="kf-mutual-friends-image" title="{{mutualFriend.firstName}} {{mutualFriend.lastName}}" ng-src="{{mutualFriend.pictureUrl}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
         <div class="kf-mutual-friend-card-info">
           <div class="kf-mutual-friend-card-name">{{mutualFriend.firstName}} {{mutualFriend.lastName}}</div>
-          <div><ng-pluralize count="mutualFriend.friendCount" when="{'one': '1 friend ', 'other': '{} friends '}"></ng-pluralize>on Kifi</div>
+          <div><ng-pluralize count="mutualFriend.numFriends" when="{'one': '1 friend ', 'other': '{} friends '}"></ng-pluralize>on Kifi</div>
         </div>
       </div>
     </div>

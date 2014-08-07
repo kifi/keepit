@@ -91,7 +91,7 @@ angular.module('kifi.friends.rightColFriendsView', [
 
         people.forEach(function (person) {
           var name = person.firstName + ' ' + person.lastName;
-          var numMutualFriends = person.numMutualFriends || 0;
+          var numMutualFriends = person.mutualFriends.length || 0;
 
           peopleYouMayKnow.push({
             id: person.id,
@@ -101,95 +101,12 @@ angular.module('kifi.friends.rightColFriendsView', [
             clickable: true,
             isKifiUser: true,
             via: 'via Kifi',
-            //numMutualFriends: person.mutualFriends.length
-            //mutualFriends: person.mutualFriends
+            numMutualFriends: numMutualFriends,
+            mutualFriends: person.mutualFriends,
             squish: numMutualFriends > 0 || name.length > 17
           });
         });
 
-        /***** FOR DEV ONLY *****/
-
-        // Put in some fake mutual friends.
-        peopleYouMayKnow[0].mutualFriends = [
-          {
-            id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            pictureName: '9gDw9.jpg',
-            firstName: 'David',
-            lastName: 'Elsonbaty',
-            friendCount: 5
-          }
-        ];
-        peopleYouMayKnow[0].numMutualFriends = 1;
-
-        peopleYouMayKnow[1].mutualFriends = [
-          {
-            id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            pictureName: '9gDw9.jpg',
-            firstName: 'David',
-            lastName: 'Elsonbaty',
-            friendCount: 5
-          },
-          {
-            id: '3ad31932-f3f9-4fe3-855c-3359051212e5',
-            pictureName: 'VhYUF.jpg',
-            firstName: 'Danny',
-            lastName: 'Blumenfeld',
-            friendCount: 12
-          },
-          {
-            id: 'f2f153db-6952-4b32-8854-8c0e452e1c64',
-            pictureName: 'FSPNP.jpg',
-            firstName: 'Lydia',
-            lastName: 'Laurenson',
-            friendCount: 27
-          },
-          {
-            id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            pictureName: '9gDw9.jpg',
-            firstName: 'David',
-            lastName: 'Elsonbaty',
-            friendCount: 5
-          },
-          {
-            id: '3ad31932-f3f9-4fe3-855c-3359051212e5',
-            pictureName: 'VhYUF.jpg',
-            firstName: 'Danny',
-            lastName: 'Blumenfeld',
-            friendCount: 12
-          },
-          {
-            id: 'f2f153db-6952-4b32-8854-8c0e452e1c64',
-            pictureName: 'FSPNP.jpg',
-            firstName: 'Lydia',
-            lastName: 'Laurenson',
-            friendCount: 27
-          },
-          {
-            id: '07170014-badc-4198-a462-6ba35d2ebb78',
-            pictureName: '9gDw9.jpg',
-            firstName: 'David',
-            lastName: 'Elsonbaty',
-            friendCount: 5
-          },
-          {
-            id: '3ad31932-f3f9-4fe3-855c-3359051212e5',
-            pictureName: 'VhYUF.jpg',
-            firstName: 'Danny',
-            lastName: 'Blumenfeld',
-            friendCount: 12
-          },
-          {
-            id: 'f2f153db-6952-4b32-8854-8c0e452e1c64',
-            pictureName: 'FSPNP.jpg',
-            firstName: 'Lydia',
-            lastName: 'Laurenson',
-            friendCount: 27
-          }
-        ];
-        peopleYouMayKnow[1].numMutualFriends = 9;
-
-        /***** END FOR DEV ONLY ******/
-        
         var networkNamesMap = {
           'facebook': 'Facebook',
           'linkedin': 'LinkedIn',
