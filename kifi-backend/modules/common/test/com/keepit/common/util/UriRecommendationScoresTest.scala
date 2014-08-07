@@ -12,15 +12,14 @@ class UriRecommendationScoresTest extends Specification {
 
       val inputJson = Json.obj(
         "socialScore" -> 1.0,
-        "overallInterestScore" -> 2.0,
-        "priorScore" -> 3.0
+        "overallInterestScore" -> 2.0
       )
 
       val scores = inputJson.as[UriRecommendationScores]
 
       scores.socialScore.get === 1f
       scores.overallInterestScore.get === 2f
-      scores.priorScore.get === 3f
+      scores.priorScore === None
 
       val outputJson = Json.toJson(scores)
 

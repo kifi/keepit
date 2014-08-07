@@ -5,7 +5,7 @@ import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DBSession, DataBaseComponent, DbRepo }
 import com.keepit.common.logging.Logging
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.model.{ UriRecommendationFeedback, User, NormalizedURI }
 import play.api.libs.json.{ Json }
 
@@ -55,9 +55,9 @@ class UriRecommendationRepoImpl @Inject() (
   }
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RSession): Boolean = {
-    (if (feedback.seen.get) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield row.seen).update(feedback.seen.get) > 0 else true) ||
-      (if (feedback.clicked.get) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield row.clicked).update(feedback.clicked.get) > 0 else true) ||
-      (if (feedback.kept.get) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield row.kept).update(feedback.kept.get) > 0 else true)
+    (if (feedback.seen.get) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.seen, row.updatedAt)).update((feedback.seen.get, currentDateTime)) > 0 else true) ||
+      (if (feedback.clicked.get) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.clicked, row.updatedAt)).update((feedback.clicked.get, currentDateTime)) > 0 else true) ||
+      (if (feedback.kept.get) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.kept, row.updatedAt)).update((feedback.kept.get, currentDateTime)) > 0 else true)
   }
 
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}
