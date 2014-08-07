@@ -11,8 +11,7 @@ case class UriRecommendation(
     createdAt: DateTime = currentDateTime,
     updateAt: DateTime = currentDateTime,
     state: State[UriRecommendation] = UriRecommendationStates.ACTIVE,
-    good: Option[Boolean] = None,
-    bad: Option[Boolean] = None,
+    vote: Option[Boolean] = None,
     uriId: Id[NormalizedURI],
     userId: Id[User],
     masterScore: Float,
@@ -28,10 +27,8 @@ case class UriRecommendation(
     clicked = feedback.clicked.getOrElse(clicked),
     kept = feedback.kept.getOrElse(kept)
   )
-
   def withUpdateUserInteraction(interaction: UriRecommendationUserInteraction): UriRecommendation = this.copy(
-    good = interaction.good,
-    bad = interaction.bad
+    vote = interaction.vote
   )
 }
 

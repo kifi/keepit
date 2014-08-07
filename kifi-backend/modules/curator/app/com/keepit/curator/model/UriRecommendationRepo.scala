@@ -35,8 +35,7 @@ class UriRecommendationRepoImpl @Inject() (
   type RepoImpl = UriRecommendationTable
 
   class UriRecommendationTable(tag: Tag) extends RepoTable[UriRecommendation](db, tag, "uri_recommendation") {
-    def good = column[Boolean]("good", O.Nullable)
-    def bad = column[Boolean]("bad", O.Nullable)
+    def vote = column[Boolean]("vote", O.Nullable)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
     def masterScore = column[Float]("master_score", O.NotNull)
@@ -44,7 +43,7 @@ class UriRecommendationRepoImpl @Inject() (
     def seen = column[Boolean]("seen", O.NotNull)
     def clicked = column[Boolean]("clicked", O.NotNull)
     def kept = column[Boolean]("kept", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, good.?, bad.?, uriId, userId, masterScore, allScores, seen, clicked, kept) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, vote.?, uriId, userId, masterScore, allScores, seen, clicked, kept) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
   }
 
   def table(tag: Tag) = new UriRecommendationTable(tag)
@@ -65,7 +64,7 @@ class UriRecommendationRepoImpl @Inject() (
   }
 
   def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI], interaction: UriRecommendationUserInteraction)(implicit session: RSession): Boolean = {
-    (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.good.?, row.bad.?, row.updatedAt)).update((interaction.good, interaction.bad, currentDateTime)) > 0
+    (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.vote.?, row.updatedAt)).update((interaction.vote, currentDateTime)) > 0
   }
 
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}

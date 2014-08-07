@@ -3,10 +3,7 @@
 # --- !Ups
 
 ALTER TABLE uri_recommendation
-  ADD COLUMN good boolean DEFAULT NULL;
-
-ALTER TABLE uri_recommendation
-  ADD COLUMN bad boolean DEFAULT NULL;
+  ADD COLUMN vote boolean DEFAULT NULL;
 
 INSERT INTO evolutions (name, description) VALUES('219.sql', 'add user interaction columns to uri_recommendation table');
 

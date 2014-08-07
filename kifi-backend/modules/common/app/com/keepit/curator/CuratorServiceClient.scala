@@ -42,7 +42,7 @@ class CuratorServiceClientImpl(
   }
 
   def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI], interaction: UriRecommendationUserInteraction): Future[Boolean] = {
-    call(Curator.internal.updateUriRecommendationUserInteraction(userId, uriId), body = Json.toJson(interaction), callTimeouts = longTimeout).map(response =>
+    call(Curator.internal.updateUriRecommendationUserInteraction(userId, uriId), body = Json.toJson(interaction)).map(response =>
       response.json.as[Boolean]
     )
   }
