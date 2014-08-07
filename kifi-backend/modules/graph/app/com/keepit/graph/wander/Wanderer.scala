@@ -4,7 +4,6 @@ import com.keepit.graph.model._
 import scala.collection.mutable
 import com.keepit.common.math.ProbabilityDensity
 import com.keepit.graph.model.EdgeKind.EdgeType
-import com.keepit.graph.model.VertexKind.VertexType
 import com.keepit.graph.model.Component.Component
 import com.keepit.common.logging.Logging
 
@@ -13,7 +12,7 @@ trait Wanderer {
 }
 
 class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) extends Logging {
-  type TransitionProbabilityCache = mutable.Map[(VertexId, VertexType, EdgeType), ProbabilityDensity[VertexId]]
+  type TransitionProbabilityCache = mutable.Map[VertexId, mutable.Map[Component, ProbabilityDensity[VertexId]]]
 
   def wander(steps: Int, teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal): Unit = {
     val probabilityCache: TransitionProbabilityCache = mutable.Map()
@@ -31,7 +30,7 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
     catch {
       case VertexNotFoundException(id) if retries > 0 =>
         log.warn(s"Clearing probability cache and retrying (remaining attempts: $retries) after VertexNotFoundException: $id")
-        cache.clear()
+        cache.remove(wanderer.id)
         tryAndMove(teleporter, resolver, journal, cache, retries - 1)
     }
   }
@@ -81,10 +80,10 @@ class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) 
   }
 
   private def sampleDestination(component: Component, resolver: EdgeResolver, cache: TransitionProbabilityCache): Option[(VertexId, EdgeType)] = {
-    val (_, destinationKind, edgeKind) = component
-    val key = (wanderer.id, destinationKind, edgeKind)
-    val probability = cache.getOrElseUpdate(key, computeDestinationProbability(component, resolver))
-    probability.sample(Math.random()).map { destination => (destination, edgeKind) }
+    val source = wanderer.id
+    val localCache = cache.getOrElseUpdate(source, mutable.Map())
+    val probability = localCache.getOrElseUpdate(component, computeDestinationProbability(component, resolver))
+    probability.sample(Math.random()).map { destination => (destination, component._3) }
   }
 
   private def computeDestinationProbability(component: Component, resolver: EdgeResolver): ProbabilityDensity[VertexId] = {
