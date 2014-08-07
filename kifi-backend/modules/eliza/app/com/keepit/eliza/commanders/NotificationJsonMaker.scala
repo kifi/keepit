@@ -25,6 +25,7 @@ private[commanders] class NotificationJsonMaker @Inject() (
     Future.sequence(rawNotifications.map { n => makeOpt(n, includeUriSummary) }.flatten)
   }
 
+  // including URI summaries is optional because it's currently slow and only used by the canary extension (new design)
   private def makeOpt(raw: RawNotification, includeUriSummary: Boolean): Option[Future[NotificationJson]] = {
     raw._1 match {
       case o: JsObject =>
@@ -39,7 +40,7 @@ private[commanders] class NotificationJsonMaker @Inject() (
           o ++ unread(o, raw._2)
             ++ Json.obj("author" -> author)
             ++ Json.obj("participants" -> participants)
-            ++ Json.obj("uriSummary" -> uriSummary)
+            ++ if (includeUriSummary) Json.obj("uriSummary" -> uriSummary) else Json.obj()
         )
         Some(jsonFut)
       case _ =>
