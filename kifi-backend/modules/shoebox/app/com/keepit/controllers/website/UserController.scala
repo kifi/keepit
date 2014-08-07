@@ -288,16 +288,17 @@ class UserController @Inject() (
       toJson(pimpedUser.info).as[JsObject] ++
       Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
       Json.obj("experiments" -> experiments.map(_.value))
-    val (uniqueKeepsClicked, totalClicks) = userCommander.getHelpCounts(userId)
-    userCommander.getKeepAttributionCounts(userId) map {
-      case (clickCount, rekeepCount, rekeepTotalCount) =>
-        Ok(json ++ Json.obj(
-          "uniqueKeepsClicked" -> uniqueKeepsClicked,
-          "totalKeepsClicked" -> totalClicks,
-          "clickCount" -> clickCount,
-          "rekeepCount" -> rekeepCount,
-          "rekeepTotalCount" -> rekeepTotalCount
-        ))
+    for {
+      (uniqueKeepsClicked, totalClicks) <- userCommander.getHelpCounts(userId) // consolidate
+      (clickCount, rekeepCount, rekeepTotalCount) <- userCommander.getKeepAttributionCounts(userId)
+    } yield {
+      Ok(json ++ Json.obj(
+        "uniqueKeepsClicked" -> uniqueKeepsClicked,
+        "totalKeepsClicked" -> totalClicks,
+        "clickCount" -> clickCount,
+        "rekeepCount" -> rekeepCount,
+        "rekeepTotalCount" -> rekeepTotalCount
+      ))
     }
   }
 

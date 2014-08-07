@@ -55,6 +55,8 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getDiscoveryCountByKeeper(userId: Id[User]): Future[Int] = Future.successful(0)
 
+  def getBookmarkClickCounts(userId: Id[User]): Future[(Int, Int)] = Future.successful((0, 0))
+
   def getPagedReKeeps(page: Int, size: Int): Future[Seq[ReKeep]] = Future.successful(Seq.empty)
 
   def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit] = Future.successful[Unit]()

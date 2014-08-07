@@ -61,6 +61,10 @@ trait HeimdalServiceClient extends ServiceClient {
 
   def getDiscoveryCountByKeeper(userId: Id[User]): Future[Int]
 
+  def getBookmarkClickCounts(userId: Id[User]): Future[(Int, Int)]
+
+  def getReKeepCounts(userId: Id[User]): Future[(Int, Int)]
+
   def getPagedReKeeps(page: Int = 0, size: Int = 50): Future[Seq[ReKeep]]
 
   def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit]
@@ -203,6 +207,24 @@ class HeimdalServiceClientImpl @Inject() (
   def getDiscoveryCountByKeeper(userId: Id[User]): Future[Int] = {
     call(Heimdal.internal.getDiscoveryCountByKeeper(userId)) map { r =>
       Json.parse(r.body).as[Int]
+    }
+  }
+
+  def getBookmarkClickCounts(userId: Id[User]): Future[(Int, Int)] = {
+    call(Heimdal.internal.getBookmarkClickCounts(userId)) map { r =>
+      val json = r.json
+      val uniqueKeepsClicked = (json \ "uniqueKeepsClicked").as[Int]
+      val totalClicks = (json \ "totalClicks").as[Int]
+      (uniqueKeepsClicked, totalClicks)
+    }
+  }
+
+  def getReKeepCounts(userId: Id[User]): Future[(Int, Int)] = {
+    call(Heimdal.internal.getReKeepCounts(userId)) map { r =>
+      val json = r.json
+      val rekeepCount = (json \ "rekeepCount").as[Int]
+      val rekeepTotalCount = (json \ "rekeepTotalCount").as[Int]
+      (rekeepCount, rekeepTotalCount)
     }
   }
 
