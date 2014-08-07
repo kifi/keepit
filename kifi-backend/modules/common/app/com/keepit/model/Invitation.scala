@@ -21,7 +21,10 @@ case class Invitation(
     seq: SequenceNumber[Invitation] = SequenceNumber.ZERO) extends ModelWithExternalId[Invitation] with ModelWithState[Invitation] with ModelWithSeqNumber[Invitation] {
   def withId(id: Id[Invitation]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def withLastSentTime(now: DateTime) = if (lastSentAt.exists(_ == now)) this else this.copy(lastSentAt = Some(now), timesSent = this.timesSent + 1)
+  def withLastSentTime(now: DateTime) = {
+    if (lastSentAt.exists(_.isEqual(now))) throw new IllegalArgumentException("Attempt to set lastSentTime to its existing value, likely you're not sending invitations that fast :)")
+    else this.copy(lastSentAt = Some(now), timesSent = this.timesSent + 1)
+  }
   def withState(state: State[Invitation]) = copy(state = state)
   def withRecipientSocialUserId(recipientSocialUserId: Option[Id[SocialUserInfo]]) = copy(recipientSocialUserId = recipientSocialUserId)
 }
