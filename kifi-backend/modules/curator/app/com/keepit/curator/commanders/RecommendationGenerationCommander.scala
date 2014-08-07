@@ -5,7 +5,6 @@ import com.keepit.curator.model.{
   UserRecommendationGenerationStateRepo,
   UserRecommendationGenerationState,
   Keepers,
-  ScoredSeedItem,
   UriRecommendationRepo,
   UriRecommendation,
   UriScores
@@ -18,7 +17,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.collection.concurrent.TrieMap
@@ -68,12 +66,6 @@ class RecommendationGenerationCommander @Inject() (
     0.3f * scores.socialScore + 2 * scores.overallInterestScore + 0.5f * scores.priorScore
   }
 
-  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
-    db.readWriteAsync { implicit session =>
-      uriRecRepo.updateUriRecommendationFeedback(userId, uriId, feedback)
-    }
-  }
-
   def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecommendationInfo]] = {
     val recosFuture = db.readOnlyReplicaAsync { implicit session =>
       uriRecRepo.getByTopMasterScore(userId, Math.max(howManyMax, 1000))
@@ -114,7 +106,7 @@ class RecommendationGenerationCommander @Inject() (
         UserRecommendationGenerationState(userId = userId)
       }
       val seedsFuture = for {
-        seeds <- seedCommander.getBySeqNumAndUser(state.seq, userId, 300)
+        seeds <- seedCommander.getBySeqNumAndUser(state.seq, userId, 200)
         restrictions <- shoebox.getAdultRestrictionOfURIs(seeds.map { _.uriId })
       } yield {
         (seeds zip restrictions) filter (_._2) map (_._1)

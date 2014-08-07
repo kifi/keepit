@@ -1,0 +1,26 @@
+package com.keepit.abook.controllers
+
+import com.google.inject.Inject
+import com.keepit.common.controller.ABookServiceController
+import play.api.libs.json.Json
+import com.keepit.abook.commanders.ABookRecommendationCommander
+import com.keepit.common.db.Id
+import com.keepit.model.User
+import play.api.mvc.Action
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+class ABookRecommendationController @Inject() (
+    friendRecommendationCommander: ABookRecommendationCommander) extends ABookServiceController {
+
+  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int) = Action.async { request =>
+    friendRecommendationCommander.getFriendRecommendations(userId, page, pageSize).map { recommendedUsers =>
+      val json = Json.toJson(recommendedUsers)
+      Ok(json)
+    }
+  }
+
+  def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = Action { request =>
+    friendRecommendationCommander.recordIrrelevantFriendRecommendation(userId, irrelevantUserId)
+    Ok
+  }
+}

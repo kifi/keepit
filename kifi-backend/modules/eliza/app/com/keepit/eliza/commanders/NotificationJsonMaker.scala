@@ -1,13 +1,14 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.store.ImageSize
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
+import com.keepit.model.{ ImageType, URISummary, URISummaryRequest }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUserLikeEntity, BasicUser }
 
 import play.api.libs.json.{ JsValue, Json, JsObject }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
 import scala.concurrent.Future
 
 private[commanders] case class NotificationJson(obj: JsObject) extends AnyVal
@@ -16,63 +17,85 @@ private[commanders] case class NotificationJson(obj: JsObject) extends AnyVal
 private[commanders] class NotificationJsonMaker @Inject() (
     shoebox: ShoeboxServiceClient) {
 
-  def make(rawNotification: RawNotification): Future[NotificationJson] = makeOpt(rawNotification).get
-
-  def make(rawNotifications: Seq[RawNotification]): Future[Seq[NotificationJson]] = {
-    Future.sequence(rawNotifications.map(makeOpt).flatten)
+  def makeOne(rawNotification: RawNotification, includeUriSummary: Boolean = false): Future[NotificationJson] = {
+    makeOpt(rawNotification, includeUriSummary).get
   }
 
-  private def makeOpt(rawNotification: RawNotification): Option[Future[NotificationJson]] = {
-    @inline def updates(o: JsObject) = {
-      if (rawNotification._2) // unread
-        Json.obj(
-          "unread" -> true,
-          "unreadMessages" -> math.max(1, (o \ "unreadMessages").asOpt[Int].getOrElse(0)),
-          "unreadAuthors" -> math.max(1, (o \ "unreadAuthors").asOpt[Int].getOrElse(0)))
-      else
-        Json.obj(
-          "unread" -> false,
-          "unreadMessages" -> 0,
-          "unreadAuthors" -> 0)
-    }
-    rawNotification._1 match {
-      case o: JsObject => Some(updateSenderAndParticipants(o ++ updates(o)))
-      case _ => None
+  def make(rawNotifications: Seq[RawNotification], includeUriSummary: Boolean = false): Future[Seq[NotificationJson]] = {
+    Future.sequence(rawNotifications.map { n => makeOpt(n, includeUriSummary) }.flatten)
+  }
+
+  // including URI summaries is optional because it's currently slow and only used by the canary extension (new design)
+  private def makeOpt(raw: RawNotification, includeUriSummary: Boolean): Option[Future[NotificationJson]] = {
+    raw._1 match {
+      case o: JsObject =>
+        val authorFut = author(o \ "author")
+        val participantsFut = participants(o \ "participants")
+        val uriSummaryFut = if (includeUriSummary) uriSummary(o \ "url") else Future.successful(None)
+        val jsonFut = for {
+          author <- authorFut
+          participants <- participantsFut
+          uriSummary <- uriSummaryFut
+        } yield NotificationJson(
+          o ++ unread(o, raw._2)
+            ++ Json.obj("author" -> author)
+            ++ Json.obj("participants" -> participants)
+            ++ (if (includeUriSummary) Json.obj("uriSummary" -> uriSummary) else Json.obj())
+        )
+        Some(jsonFut)
+      case _ =>
+        None
     }
   }
 
-  private def updateSenderAndParticipants(data: JsObject): Future[NotificationJson] = {
-    val author: Option[BasicUserLikeEntity] = (data \ "author").asOpt[BasicUserLikeEntity]
-    val participantsOpt: Option[Seq[BasicUserLikeEntity]] = (data \ "participants").asOpt[Seq[BasicUserLikeEntity]]
-    participantsOpt.map { participants =>
-      val updatedAuthorFuture: Future[Option[BasicUserLikeEntity]] =
-        author.map { bule =>
-          bule match {
-            case bu: BasicUser => updateBasicUser(bu)
-            case x => Future.successful(x)
-          }
-        } match {
-          case None => Future.successful(None)
-          case Some(fut) => fut.map(Some(_))
-        }
-      val updatedParticipantsFuture: Future[Seq[BasicUserLikeEntity]] = Future.sequence(participants.map { participant =>
-        val updatedParticipant: Future[BasicUserLikeEntity] = participant match {
+  private def unread(o: JsObject, unread: Boolean): JsObject = {
+    if (unread) {
+      Json.obj(
+        "unread" -> true,
+        "unreadMessages" -> math.max(1, (o \ "unreadMessages").asOpt[Int].getOrElse(0)),
+        "unreadAuthors" -> math.max(1, (o \ "unreadAuthors").asOpt[Int].getOrElse(0)))
+    } else {
+      Json.obj(
+        "unread" -> false,
+        "unreadMessages" -> 0,
+        "unreadAuthors" -> 0)
+    }
+  }
+
+  private def author(value: JsValue): Future[Option[BasicUserLikeEntity]] = {
+    value.asOpt[BasicUserLikeEntity] match {
+      case Some(bu: BasicUser) => updateBasicUser(bu) map Some.apply
+      case x => Future.successful(x)
+    }
+  }
+
+  private def participants(value: JsValue): Future[Seq[BasicUserLikeEntity]] = {
+    value.asOpt[Seq[BasicUserLikeEntity]] map { participants =>
+      Future.sequence(participants.map { participant =>
+        participant match {
           case p: BasicUser => updateBasicUser(p)
-          case _ => Future.successful(participant)
+          case p => Future.successful(p)
         }
-        updatedParticipant
       })
-
-      updatedParticipantsFuture.flatMap { updatedParticipants =>
-        updatedAuthorFuture.map { updatedAuthor =>
-          NotificationJson(data.deepMerge(Json.obj(
-            "author" -> updatedAuthor,
-            "participants" -> updatedParticipants
-          )))
-        }
-      }
     } getOrElse {
-      Future.successful(NotificationJson(data))
+      Future.successful(Seq.empty)
+    }
+  }
+
+  private def uriSummary(value: JsValue): Future[Option[URISummary]] = {
+    value.asOpt[String] map { url =>
+      // TODO: utilize memcache, which will probably require dropping min size requirement here.
+      // We'll also need the Id[NormalizedURI], since arbitrary URLs are too long to be memcache keys.
+      shoebox.getUriSummary(
+        URISummaryRequest(
+          url = url,
+          imageType = ImageType.ANY,
+          minSize = ImageSize(65, 95),
+          withDescription = false,
+          waiting = true,
+          silent = false)) map Some.apply
+    } getOrElse {
+      Future.successful(None)
     }
   }
 
