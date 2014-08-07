@@ -1,5 +1,7 @@
 package com.keepit.curator
 
+import com.keepit.model.{ UriRecommendationUserInteraction, UriRecommendationFeedback, NormalizedURI, UriRecommendationScores, User }
+
 import scala.concurrent.Future
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.zookeeper.ServiceCluster
@@ -7,7 +9,6 @@ import com.keepit.common.service.ServiceType
 import com.google.inject.util.Providers
 import com.keepit.common.actor.FakeScheduler
 import com.keepit.common.db.Id
-import com.keepit.model.{ UriRecommendationScores, UriRecommendationFeedback, NormalizedURI, User }
 import com.keepit.curator.model.RecommendationInfo
 
 class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends CuratorServiceClient {
@@ -16,4 +17,5 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[RecommendationInfo]] = Future.successful(Seq.empty)
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = Future.successful(true)
+  def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI], interaction: UriRecommendationUserInteraction): Future[Boolean] = Future.successful(true)
 }

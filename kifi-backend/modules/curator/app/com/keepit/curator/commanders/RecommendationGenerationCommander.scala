@@ -5,7 +5,6 @@ import com.keepit.curator.model.{
   UserRecommendationGenerationStateRepo,
   UserRecommendationGenerationState,
   Keepers,
-  ScoredSeedItem,
   UriRecommendationRepo,
   UriRecommendation,
   UriScores
@@ -18,7 +17,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.collection.concurrent.TrieMap
@@ -66,12 +64,6 @@ class RecommendationGenerationCommander @Inject() (
 
   private def computeMasterScore(scores: UriScores): Float = {
     0.3f * scores.socialScore + 2 * scores.overallInterestScore + 0.5f * scores.priorScore
-  }
-
-  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
-    db.readWriteAsync { implicit session =>
-      uriRecRepo.updateUriRecommendationFeedback(userId, uriId, feedback)
-    }
   }
 
   def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecommendationInfo]] = {

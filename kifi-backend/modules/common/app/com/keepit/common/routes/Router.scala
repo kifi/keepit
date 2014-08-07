@@ -353,6 +353,7 @@ object Curator extends Service {
   object internal {
     def adHocRecos(userId: Id[User], n: Int) = ServiceRoute(POST, "/internal/curator/adHocRecos", Param("userId", userId), Param("n", n))
     def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/curator/updateUriRecommendationFeedback", Param("userId", userId), Param("uriId", uriId))
+    def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/curator/updateUriRecommendationUserInteraction", Param("userId", userId), Param("uriId", uriId))
   }
 }
 
