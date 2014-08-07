@@ -40,7 +40,7 @@ private[commanders] class NotificationJsonMaker @Inject() (
           o ++ unread(o, raw._2)
             ++ Json.obj("author" -> author)
             ++ Json.obj("participants" -> participants)
-            ++ if (includeUriSummary) Json.obj("uriSummary" -> uriSummary) else Json.obj()
+            ++ (if (includeUriSummary) Json.obj("uriSummary" -> uriSummary) else Json.obj())
         )
         Some(jsonFut)
       case _ =>
