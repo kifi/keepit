@@ -2,7 +2,7 @@
   <!-- Person who has mutual friends with the user -->
   <div class="kf-mutual-friends-pymk">
     <img class="kf-mutual-friends-image" title="{{name}}" ng-src="{{pictureUrl}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
-    <a class="kf-mutual-friends-action" ng-click="addFriend(id)" ng-class="{clickable: clickable}">{{actionText}}</a>
+    <a href="javascript:" class="kf-mutual-friends-action" ng-click="addFriend(id)" ng-class="{clickable: clickable}">{{actionText}}</a>
     <div class="kf-mutual-friends-pymk-info">
       <div class="kf-mutual-friends-pymk-number"><ng-pluralize count="numMutualFriends" when="{'one': '1 Mutual Friend ', 'other': '{} Mutual Friends '}"></ng-pluralize>With</div>
       <div class="kf-mutual-friends-pymk-name">{{name}}</div>
@@ -22,4 +22,3 @@
     </div>
   </div>
 </div>
- 

@@ -100,10 +100,9 @@ angular.module('kifi.friends.rightColFriendsView', [
             actionText: 'Add',
             clickable: true,
             isKifiUser: true,
-            via: 'via Kifi',
+            via: numMutualFriends > 0 ? '' : 'Kifi',
             numMutualFriends: numMutualFriends,
-            mutualFriends: person.mutualFriends,
-            squish: numMutualFriends > 0 || name.length > 17
+            mutualFriends: person.mutualFriends
           });
         });
 
@@ -124,7 +123,7 @@ angular.module('kifi.friends.rightColFriendsView', [
 
               if (person.name) {
                 name = person.name;
-                via = 'via ' + networkNamesMap[socialIdValues[0]];
+                via = networkNamesMap[socialIdValues[0]];
               } else if (socialIdValues[0] === 'email') {
                 name = socialIdValues[1];
               }
@@ -137,8 +136,7 @@ angular.module('kifi.friends.rightColFriendsView', [
                 actionText: 'Invite',
                 clickable: true,
                 isKifiUser: false,
-                via: via,
-                squish: person.name && person.name.length > 14
+                via: via
               });
             });
           });

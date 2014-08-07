@@ -70,44 +70,41 @@
     position: relative
     float: right
     width: 200px
-    margin-top: 5px
+    margin-top: 2px
     font-size: 12px
-
-    &.squish
-      margin-top: 2px
-      line-height: 12px
+    line-height: 12px
 
   .kf-pymk-name
     font-weight: bold
 
   .kf-pymk-via
-    &.squish
-      display: block
-
-  .kf-pymk-action-container
-    position: relative
-    width: 60px
-    height: 16px
-
-  .kf-pymk-action
-    position: absolute
-    top: 2px
-    left: 16px
-    display: inline-block
-    font-size: 10px
-    color: #006bb2
+    display: block
+    margin-top: 5px
 
   .kf-pymk-action-icon
-    display: inline-block
-    width: 8px
-    height: 8px
-    margin: 2px 2px 0 0
-    border: 2px solid #6fa6ef
-    border-radius: 2px
+    position: relative
+    float: right
+    margin: -5px 20px 0 0
+    border-radius: 3px
+    padding: 3px 5px 3px 14px
+    background-color: #6fa6ef
+    color: #fff
+    font-size: 12px
+
+  .kf-pymk-action-icon::before
+    position: absolute
+    top: 6px 
+    left: 3px
+    width: 10px
+    height: 10px
     background-image: url(/img/sprites.png)
     background-size: 184px auto
     background-position: -176px -104px
-    background-color: #6fa6ef
+    content: ''
+
+  a.kf-pymk-action-icon:hover,
+  a.kf-pymk-action-icon:active
+    text-decoration: none
 
   .kf-pymk-close-icon
     display: none
@@ -126,5 +123,4 @@
 
   .kf-pymk-invite-link
     float: right
-    margin-top: -5px
-
+    margin: 5px 6px 0 0
