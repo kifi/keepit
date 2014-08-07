@@ -37,6 +37,8 @@ object NotificationCategory {
     val FRIEND_JOINED = NotificationCategory("friend_joined")
     val CONTACT_JOINED = NotificationCategory("contact_joined")
 
+    val DIGEST = NotificationCategory("digest")
+
     val all = Set(ANNOUNCEMENT, MESSAGE, EMAIL_KEEP, INVITATION, EMAIL_CONFIRMATION, RESET_PASSWORD, FRIEND_REQUEST,
       FRIEND_ACCEPTED, FRIEND_JOINED, WELCOME, APPROVED, WAITLIST, WHO_KEPT_MY_KEEP, CONTACT_JOINED)
 

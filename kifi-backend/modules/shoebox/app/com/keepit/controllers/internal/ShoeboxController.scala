@@ -289,6 +289,14 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(result))
   }
 
+  def getUsersByExperiment(experiment: ExperimentType) = Action { request =>
+    val users = db.readOnlyReplica { implicit s =>
+      var userIds = userExperimentRepo.getUserIdsByExperiment(experiment)
+      userRepo.getUsers(userIds).map(_._2)
+    }
+    Ok(Json.toJson(users))
+  }
+
   def getCollectionsByUser(userId: Id[User]) = Action { request =>
     Ok(Json.toJson(db.readOnlyMaster { implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId) })) //using cache
   }

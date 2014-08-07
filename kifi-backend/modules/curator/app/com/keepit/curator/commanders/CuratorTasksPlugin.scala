@@ -1,24 +1,21 @@
 package com.keepit.curator.commanders
 
-import com.google.inject.{ Singleton, Inject }
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
-import com.keepit.common.logging.Logging
-import com.keepit.model.EmailAccountUpdate
-import com.keepit.common.db.slick.Database
-import scala.util.{ Failure, Success }
-import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
-import scala.concurrent.duration._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
 import akka.actor.ActorSystem
+import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import email.{ EngagementEmailTypes, EngagementEmailActor }
+import us.theatr.akka.quartz.QuartzActor
+
+import scala.concurrent.duration._
 
 @Singleton
 class CuratorTasksPlugin @Inject() (
     ingestionCommander: SeedIngestionCommander,
     generationCommander: RecommendationGenerationCommander,
     system: ActorSystem,
+    actor: ActorInstance[EngagementEmailActor],
+    quartz: ActorInstance[QuartzActor],
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
 
   override def onStart() {
@@ -28,5 +25,15 @@ class CuratorTasksPlugin @Inject() (
     scheduleTaskOnLeader(system, 1 minutes, 5 minutes) {
       generationCommander.precomputeRecommendations()
     }
+
+    scheduleRecommendationEmail()
+  }
+
+  private def scheduleRecommendationEmail(): Unit = {
+    //val cron = "0 0 6 * * *"
+    val cron = "* * * * * ?"
+
+    log.info("cronTaskOnLeader recomm email")
+    cronTaskOnLeader(quartz, actor.ref, cron, EngagementEmailTypes.FEED)
   }
 }

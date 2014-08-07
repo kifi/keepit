@@ -735,6 +735,8 @@ GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.int
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 
+GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controllers.internal.ShoeboxController.getUsersByExperiment(experiment: ExperimentType)
+
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/angular/dist", file)
 GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path="/angular/img", file)

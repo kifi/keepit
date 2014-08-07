@@ -1,0 +1,12 @@
+@(recos: Seq[com.keepit.curator.commanders.email.RecommendedUriSummary])
+
+@recos.foreach { reco =>
+
+    @reco.title
+    @reco.url
+    @reco.score
+    @reco.explain
+
+    -----
+}
+
