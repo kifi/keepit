@@ -63,7 +63,14 @@ class RecommendationGenerationCommander @Inject() (
   ).map(Id[User](_)) //will go away once we release, just saving some computation/time for now
 
   private def computeMasterScore(scores: UriScores): Float = {
-    0.3f * scores.socialScore + 2 * scores.overallInterestScore + 0.5f * scores.priorScore
+    7 * scores.socialScore +
+      6 * scores.overallInterestScore +
+      1 * scores.priorScore +
+      1 * scores.recencyScore +
+      1 * scores.popularityScore +
+      5 * scores.recentInterestScore +
+      6 * scores.rekeepScore +
+      2 * scores.discoveryScore
   }
 
   def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecommendationInfo]] = {
@@ -85,7 +92,7 @@ class RecommendationGenerationCommander @Inject() (
               scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore +
               scoreCoefficients.rekeepScore.getOrElse(defaultScore) * reco.allScores.rekeepScore +
               scoreCoefficients.discoveryScore.getOrElse(defaultScore) * reco.allScores.discoveryScore
-            if (score != 0.0f) score else 0.35f * reco.allScores.socialScore + 2.0f * reco.allScores.overallInterestScore + 1.0f * reco.allScores.recentInterestScore
+            if (score != 0.0f) score else computeMasterScore(reco.allScores)
           },
           explain = Some(reco.allScores.toString)
         )
