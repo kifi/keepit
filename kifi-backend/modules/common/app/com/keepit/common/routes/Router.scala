@@ -1,8 +1,6 @@
 package com.keepit.common.routes
 
 import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
-import com.keepit.heimdal.{ SanitizedKifiHit, BasicDelightedAnswer }
-import com.keepit.model.ScoreType._
 import com.keepit.model._
 import com.keepit.search.SearchConfigExperiment
 import java.net.URLEncoder
@@ -245,6 +243,8 @@ object Heimdal extends Service {
     def getLastDelightedAnswerDate(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/user/delighted/time", Param("userId", userId))
     def postDelightedAnswer() = ServiceRoute(POST, s"/internal/heimdal/user/delighted/answer")
     def cancelDelightedSurvey() = ServiceRoute(POST, s"/internal/heimdal/user/delighted/cancel")
+    def getPagedKeepDiscoveries(page: Int, size: Int) = ServiceRoute(GET, s"/internal/heimdal/data/keepDiscovery/page/$page", Param("size", size))
+    def getPagedReKeeps(page: Int, size: Int) = ServiceRoute(GET, s"/internal/heimdal/data/reKeep/page/$page", Param("size", size))
     def processKifiHit() = ServiceRoute(POST, "/internal/heimdal/helprank/processKifiHit")
     def processKeepAttribution() = ServiceRoute(POST, "/internal/heimdal/helprank/processKeepAttribution")
   }
@@ -351,6 +351,7 @@ object Graph extends Service {
 object Curator extends Service {
   object internal {
     def adHocRecos(userId: Id[User], n: Int) = ServiceRoute(POST, "/internal/curator/adHocRecos", Param("userId", userId), Param("n", n))
+    def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/curator/updateUriRecommendationFeedback", Param("userId", userId), Param("uriId", uriId))
   }
 }
 

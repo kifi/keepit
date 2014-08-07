@@ -37,7 +37,7 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
   import db.Driver.simple._
 
   type RepoImpl = ReKeepsTable
-  class ReKeepsTable(tag: Tag) extends RepoTable[ReKeep](db, tag, "re_keep") {
+  class ReKeepsTable(tag: Tag) extends RepoTable[ReKeep](db, tag, "rekeep") {
     def keeperId = column[Id[User]]("keeper_id", O.NotNull)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
@@ -92,7 +92,7 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
   }
 
   def getUriReKeepsWithCountsByKeeper(userId: Id[User])(implicit r: RSession): Seq[(Id[NormalizedURI], Id[Keep], Id[User], Int)] = {
-    sql"select uri_id, keep_id, keeper_id, count(*) c from re_keep where keeper_id=$userId group by uri_id order by keep_id desc".as[(Id[NormalizedURI], Id[Keep], Id[User], Int)].list()
+    sql"select uri_id, keep_id, keeper_id, count(*) c from rekeep where keeper_id=$userId group by uri_id order by keep_id desc".as[(Id[NormalizedURI], Id[Keep], Id[User], Int)].list()
   }
 
   def getUriReKeepCountsByKeeper(userId: Id[User])(implicit r: RSession): Map[Id[NormalizedURI], Int] = {
@@ -142,7 +142,7 @@ class ReKeepRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
   }
 
   def getAllKeepers()(implicit r: RSession): Seq[Id[User]] = {
-    sql"select distinct keeper_id from re_keep".as[Id[User]].list()
+    sql"select distinct keeper_id from rekeep".as[Id[User]].list()
   }
 
 }

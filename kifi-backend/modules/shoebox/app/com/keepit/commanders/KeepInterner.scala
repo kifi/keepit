@@ -18,7 +18,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationCandidate }
 import java.util.UUID
-import com.keepit.heimdal.HeimdalContext
+import com.keepit.heimdal.{ HeimdalServiceClient, HeimdalContext }
 import com.keepit.search.ArticleSearchResult
 import play.api.libs.json.Json
 import scala.concurrent.Future
@@ -47,6 +47,7 @@ class KeepInterner @Inject() (
   rawKeepRepo: RawKeepRepo,
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   elizaClient: ElizaServiceClient,
+  heimdalClient: HeimdalServiceClient,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
@@ -179,6 +180,7 @@ class KeepInterner @Inject() (
     }
 
     keptAnalytics.keptPages(userId, createdKeeps, context)
+    heimdalClient.processKeepAttribution(userId, createdKeeps)
     keepAttribution(userId, createdKeeps)
     (newKeeps, existingKeeps, failures)
   }
@@ -190,6 +192,7 @@ class KeepInterner @Inject() (
       val bookmark = persistedBookmarksWithUri.bookmark
       if (persistedBookmarksWithUri.isNewKeep) {
         keptAnalytics.keptPages(userId, Seq(bookmark), context)
+        heimdalClient.processKeepAttribution(userId, Seq(bookmark))
         keepAttribution(userId, Seq(bookmark))
       }
       bookmark

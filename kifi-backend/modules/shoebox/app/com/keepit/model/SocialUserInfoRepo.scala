@@ -58,7 +58,7 @@ class SocialUserInfoRepoImpl @Inject() (
 
   private val UNPROCESSED_STATES = SocialUserInfoStates.CREATED :: SocialUserInfoStates.FETCHED_USING_FRIEND :: Nil
   private val REFRESHING_STATES = SocialUserInfoStates.FETCHED_USING_SELF :: SocialUserInfoStates.FETCH_FAIL :: Nil
-  private val REFRESH_FREQUENCY = 15 // days
+  private val REFRESH_FREQUENCY = 13 // days TODO (josh) - decrement this by 1 or 2 every day until it = 2
 
   private val sequence = db.getSequence[SocialUserInfo]("social_user_info_sequence")
 

@@ -106,7 +106,7 @@ class SharedWsMessagingController @Inject() (
       case JsNumber(requestId) +: JsString(threadId) +: _ =>
         val fut = notificationCommander.getSendableNotification(socket.userId, ExternalId[MessageThread](threadId))
         fut.foreach { json =>
-          socket.channel.push(Json.arr(requestId.toLong, json))
+          socket.channel.push(Json.arr(requestId.toLong, json.obj))
         }
         fut.onFailure {
           case _ =>
@@ -118,7 +118,7 @@ class SharedWsMessagingController @Inject() (
         val fut = notificationCommander.getLatestSendableNotifications(socket.userId, howMany.toInt)
         fut.foreach { notices =>
           val (numUnread, numUnreadUnmuted) = messagingCommander.getUnreadThreadCounts(socket.userId)
-          socket.channel.push(Json.arr(requestId.toLong, notices.jsons, numUnreadUnmuted, numUnread, currentDateTime))
+          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj), numUnreadUnmuted, numUnread, currentDateTime))
         }
         fut.onFailure {
           case _ =>
@@ -129,7 +129,7 @@ class SharedWsMessagingController @Inject() (
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
         val fut = notificationCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
         fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
+          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
         fut.onFailure {
           case _ =>
@@ -141,7 +141,7 @@ class SharedWsMessagingController @Inject() (
         val fut = notificationCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt)
         fut.foreach {
           case (notices, numTotal) =>
-            socket.channel.push(Json.arr(requestId.toLong, notices.jsons, numTotal))
+            socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj), numTotal))
         }
         fut.onFailure {
           case _ =>
@@ -152,7 +152,7 @@ class SharedWsMessagingController @Inject() (
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
         val fut = notificationCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
         fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
+          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
         fut.onFailure {
           case _ =>
@@ -163,7 +163,7 @@ class SharedWsMessagingController @Inject() (
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
         val fut = notificationCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt)
         fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
+          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
         fut.onFailure {
           case _ =>
@@ -174,7 +174,7 @@ class SharedWsMessagingController @Inject() (
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
         val fut = notificationCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
         fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
+          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
         fut.onFailure {
           case _ =>
@@ -186,7 +186,7 @@ class SharedWsMessagingController @Inject() (
         val fut = notificationCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt)
         fut.foreach {
           case (nUriStr, notices, numTotal, numUnreadUnmuted) =>
-            socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.jsons, numTotal, numUnreadUnmuted))
+            socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.map(_.obj), numTotal, numUnreadUnmuted))
         }
         fut.onFailure {
           case _ =>
@@ -197,7 +197,7 @@ class SharedWsMessagingController @Inject() (
       case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: JsString(time) +: _ =>
         val fut = notificationCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt)
         fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
+          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
         fut.onFailure {
           case _ =>

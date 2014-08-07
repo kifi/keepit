@@ -40,7 +40,7 @@ class MobileMessagingController @Inject() (
     }
     noticesFuture.map { notices =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
-      Ok(Json.arr("notifications", notices.jsons, numUnreadUnmuted))
+      Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
     }
   }
 
@@ -195,7 +195,7 @@ class MobileMessagingController @Inject() (
 
   def searchMessages(query: String, page: Int, storeInHistory: Boolean) = JsonAction.authenticatedAsync { request =>
     messageSearchCommander.searchMessages(request.userId, query, page, storeInHistory).map { notifs =>
-      Ok(Json.toJson(notifs.jsons))
+      Ok(Json.toJson(notifs.map(_.obj)))
     }
   }
 

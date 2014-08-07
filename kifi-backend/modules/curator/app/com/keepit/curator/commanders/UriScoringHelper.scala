@@ -80,7 +80,9 @@ class UriScoringHelper @Inject() (
   def getRawHelpRankScores(items: Seq[SeedItem]): Future[(Seq[Float], Seq[Float])] = {
     val helpRankInfos = shoebox.getHelpRankInfos(items.map(_.uriId))
     helpRankInfos.map { infos =>
-      infos.map { info =>
+      val infosMap = infos.map { info => (info.uriId -> info) }.toMap
+      items.map { item =>
+        val info = infosMap(item.uriId)
         (Math.tanh(info.rekeepCount / 10).toFloat, Math.tanh(info.keepDiscoveryCount / 20).toFloat)
       }.unzip
     }
@@ -98,12 +100,12 @@ class UriScoringHelper @Inject() (
 
       val socialScoresFuture = getRawSocialScores(items)
       val interestScoresFuture = getRawInterestScores(items)
-      // val helpRankScoresFuture = getRawHelpRankScores(items)
+      val helpRankScoresFuture = getRawHelpRankScores(items)
 
       for (
         socialScores <- socialScoresFuture;
-        (overallInterestScores, recentInterestScores) <- interestScoresFuture
-      // (rekeepScores, discoveryScores) <- helpRankScoresFuture
+        (overallInterestScores, recentInterestScores) <- interestScoresFuture;
+        (rekeepScores, discoveryScores) <- helpRankScoresFuture
       ) yield {
         for (i <- 0 until items.length) yield {
           val scores = UriScores(
@@ -113,8 +115,8 @@ class UriScoringHelper @Inject() (
             recentInterestScore = recentInterestScores(i),
             recencyScore = recencyScores(i),
             priorScore = priorScores(i),
-            rekeepScore = 0.0f, //rekeepScores(i),
-            discoveryScore = 0.0f //discoveryScores(i)
+            rekeepScore = rekeepScores(i),
+            discoveryScore = discoveryScores(i)
           )
           ScoredSeedItem(items(i).userId, items(i).uriId, scores)
         }

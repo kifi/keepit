@@ -125,8 +125,10 @@ object MatrixUtils {
       val diff = sample(i) - mean(i)
       if (v == 0) s += weights(i) * diff * diff
       else {
-        s += exp(log(weights(i)) + 2 * log(diff) - log(v)) // numerical care
+        val r = weights(i) / v
+        s += r * diff * diff
       }
+
       i += 1
     }
     s

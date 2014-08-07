@@ -29,16 +29,16 @@ object ReKeep {
   import play.api.libs.json._
   implicit val format: Format[ReKeep] = (
     (__ \ 'id).formatNullable(Id.format[ReKeep]) and
-      (__ \ 'createdAt).format[DateTime] and
-      (__ \ 'updatedAt).format[DateTime] and
-      (__ \ 'state).format(State.format[ReKeep]) and
-      (__ \ 'keeperId).format(Id.format[User]) and
-      (__ \ 'keepId).format(Id.format[Keep]) and
-      (__ \ 'uriId).format(Id.format[NormalizedURI]) and
-      (__ \ 'srcUserId).format(Id.format[User]) and
-      (__ \ 'srcKeepId).format(Id.format[Keep]) and
-      (__ \ 'attributionFactor).format[Int]
-    )(ReKeep.apply, unlift(ReKeep.unapply))
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'state).format(State.format[ReKeep]) and
+    (__ \ 'keeperId).format(Id.format[User]) and
+    (__ \ 'keepId).format(Id.format[Keep]) and
+    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'srcUserId).format(Id.format[User]) and
+    (__ \ 'srcKeepId).format(Id.format[Keep]) and
+    (__ \ 'attributionFactor).format[Int]
+  )(ReKeep.apply, unlift(ReKeep.unapply))
 }
 
 object ReKeepStates extends States[ReKeep]
