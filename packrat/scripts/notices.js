@@ -189,7 +189,7 @@ panes.notices = function () {
       } else if (notice.firstAuthor > 1) {
         participants.splice(1, 0, participants.splice(notice.firstAuthor, 1)[0]);
       }
-      var nPicsMax = notice.isSent ? 4 : 3;
+      var nPicsMax = 3;
       notice.picturedParticipants = nParticipants <= nPicsMax ?
         notice.isReceived && nParticipants === 2 ? [notice.author] : participants :
         participants.slice(0, nPicsMax);
@@ -225,7 +225,11 @@ panes.notices = function () {
         notice.nameIndex = counter();
         notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
       }
-      notice.authorShortName = notice.author.id === me.id ? 'Me' : notice.author.firstName;
+      if (notice.isSelf) {
+        notice.multiple = notice.messages > 1;
+      } else {
+        notice.authorShortName = notice.author.id === me.id ? 'Me' : notice.author.firstName;
+      }
       notice.picturedParticipants.map(formatParticipant);
       return render('html/keeper/notice_message', notice);
     case 'triggered':

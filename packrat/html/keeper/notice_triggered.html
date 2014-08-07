@@ -1,7 +1,7 @@
 <div class="kifi-notice kifi-notice-triggered{{#isVisited}} kifi-notice-visited{{/isVisited}}" data-id="{{id}}" data-uri="{{url}}" data-thread="{{thread}}" data-created-at="{{time}}" data-category="triggered">
+  <time class="kifi-notice-time" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
   <img class="kifi-notice-global-img" src="{{image}}"/>
   <div class="kifi-notice-state"></div>
   <span class="kifi-notice-title">{{title}}</span>
   <div class="kifi-notice-announcement">{{{bodyHtml}}}</div>
-  <time class="kifi-notice-time" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
 </div>

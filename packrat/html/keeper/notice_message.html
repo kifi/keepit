@@ -1,10 +1,15 @@
-<div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}{{#isSelf}} kifi-notice-self{{/isSelf}}{{#isSent}} kifi-notice-sent{{/isSent}}{{#isReceived}} kifi-notice-received{{/isReceived}}" data-id="{{id}}" data-thread="{{thread}}" data-uri="{{url}}" data-created-at="{{time}}" data-category="message"{{#uriSummary.imageUrl}} style="background-image:linear-gradient(to right,rgba(254,254,254,.5) 0,rgba(254,254,254,1) 65px),url({{uriSummary.imageUrl}})"{{/uriSummary.imageUrl}}>
+<div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}" data-id="{{id}}" data-thread="{{thread}}" data-uri="{{url}}" data-created-at="{{time}}" data-category="message"{{#uriSummary.imageUrl}} style="background-image:linear-gradient(to right,rgba(254,254,254,.5) 0,rgba(254,254,254,1) 65px),url({{uriSummary.imageUrl}})"{{/uriSummary.imageUrl}}>
+  <time class="kifi-notice-time" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
   <div class="kifi-notice-mosaic kifi-notice-mosaic-{{picturedParticipants.length}}">
   {{#picturedParticipants}}
     <div class="kifi-notice-pic kifi-notice-pic-{{picIndex}}{{#isUser}} kifi-notice-pic-user{{/isUser}}{{#isEmail}} kifi-participant-background-{{color}}{{/isEmail}}"{{#isUser}} style="background-image:url({{cdnBase}}/users/{{id}}/pics/200/{{pictureName}})"{{/isUser}}>{{#isEmail}}{{initial}}{{/isEmail}}</div>
   {{/picturedParticipants}}
   </div>
   <div class="kifi-notice-state"></div>
+  {{#isSelf}}
+    Note{{#multiple}}s{{/multiple}}
+  {{/isSelf}}
+  {{^isSelf}}
   <div class="kifi-notice-names{{#nameSeriesLength}} kifi-notice-names-{{nameSeriesLength}}{{/nameSeriesLength}}">
     {{#namedParticipant}}
       <span class="kifi-notice-name">{{firstName}} {{lastName}}</span>
@@ -13,13 +18,15 @@
       <span class="kifi-notice-name kifi-notice-name-{{nameIndex}}">{{firstName}}</span>
     {{/namedParticipants}}
     {{#otherParticipants.length}}
-      <a class="kifi-notice-n-others" href="javascript:" data-names="{{otherParticipantsJson}}">{{otherParticipants.length}} others</a>
+      <a class="kifi-notice-n-others" href="javascript:" data-names="{{otherParticipantsJson}}">+{{otherParticipants.length}}</a>
     {{/otherParticipants.length}}
   </div>
-  <a class="kifi-notice-link" href="{{url}}" target="_blank">{{title}}</a>
+  {{/isSelf}}
   <div class="kifi-notice-blurb">
+    {{^isSelf}}
     <span class="kifi-notice-author">{{authorShortName}}:</span>
+    {{/isSelf}}
     {{#formatMessage}}{{{text}}}{{/formatMessage}}
   </div>
-  <time class="kifi-notice-time" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
+  <a class="kifi-notice-link" href="{{url}}" target="_blank">{{title}}</a>
 </div>
