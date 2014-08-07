@@ -50,7 +50,7 @@ class InvitationRepoImpl @Inject() (
     def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.Nullable)
     def recipientEmailAddress = column[EmailAddress]("recipient_email_address", O.Nullable)
     def lastSentAt = column[DateTime]("last_sent_at", O.Nullable)
-    def sent = column[Int]("sent", O.NotNull)
+    def timesSent = column[Int]("timesSent", O.NotNull)
 
     def * = (id.?, createdAt, updatedAt, sent, lastSentAt.?, externalId, senderUserId.?, recipientSocialUserId.?, recipientEmailAddress.?, state, seq) <> ((Invitation.apply _).tupled, Invitation.unapply _)
   }
