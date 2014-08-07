@@ -74,6 +74,12 @@ class RecommendationGenerationCommander @Inject() (
     }
   }
 
+  def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI], interaction: UriRecommendationUserInteraction): Future[Boolean] = {
+    db.readWriteAsync { implicit session =>
+      uriRecRepo.updateUriRecommendationUserInteraction(userId, uriId, interaction)
+    }
+  }
+
   def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecommendationInfo]] = {
     val recosFuture = db.readOnlyReplicaAsync { implicit session =>
       uriRecRepo.getByTopMasterScore(userId, Math.max(howManyMax, 1000))
