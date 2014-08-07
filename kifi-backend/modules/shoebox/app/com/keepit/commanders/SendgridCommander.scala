@@ -4,11 +4,10 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail._
-import com.keepit.common.performance.timing
+import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress, SystemEmailAddress }
 import com.keepit.common.time.Clock
-import com.keepit.heimdal._
-import com.keepit.model._
+import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalServiceClient, NonUserEvent, NonUserEventTypes, UserEvent, UserEventTypes }
+import com.keepit.model.{ EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates }
 import com.keepit.social.NonUserKinds
 import org.joda.time.DateTimeZone
 

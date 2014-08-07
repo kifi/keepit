@@ -243,6 +243,9 @@ object Heimdal extends Service {
     def getLastDelightedAnswerDate(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/user/delighted/time", Param("userId", userId))
     def postDelightedAnswer() = ServiceRoute(POST, s"/internal/heimdal/user/delighted/answer")
     def cancelDelightedSurvey() = ServiceRoute(POST, s"/internal/heimdal/user/delighted/cancel")
+    def getPagedKeepDiscoveries(page: Int, size: Int) = ServiceRoute(GET, s"/internal/heimdal/data/keepDiscovery/page/$page", Param("size", size))
+    def getDiscoveryCountByKeeper(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/data/keepDiscovery/getDiscoveryCountByKeeper", Param("userId", userId))
+    def getPagedReKeeps(page: Int, size: Int) = ServiceRoute(GET, s"/internal/heimdal/data/reKeep/page/$page", Param("size", size))
     def processKifiHit() = ServiceRoute(POST, "/internal/heimdal/helprank/processKifiHit")
     def processKeepAttribution() = ServiceRoute(POST, "/internal/heimdal/helprank/processKeepAttribution")
   }

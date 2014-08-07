@@ -99,8 +99,6 @@ class UserCommander @Inject() (
     userConnectionRepo: UserConnectionRepo,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
-    keepClickRepo: KeepDiscoveryRepo,
-    rekeepRepo: ReKeepRepo,
     userExperimentCommander: LocalUserExperimentCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     socialConnectionRepo: SocialConnectionRepo,
@@ -228,10 +226,11 @@ class UserCommander @Inject() (
     db.readOnlyReplica { implicit session => bookmarkClicksRepo.getClickCounts(user) }
   }
 
-  def getKeepAttributionCounts(userId: Id[User]): (Int, Int, Int) = { // (discoveryCount, rekeepCount, rekeepTotalCount)
-    db.readOnlyReplica { implicit ro =>
-      val discoveryCount = keepClickRepo.getDiscoveryCountByKeeper(userId)
-      val (rekeepCount, rekeepTotalCount) = bookmarkClicksRepo.getReKeepCounts(userId)
+  def getKeepAttributionCounts(userId: Id[User]): Future[(Int, Int, Int)] = { // (discoveryCount, rekeepCount, rekeepTotalCount)
+    heimdalClient.getDiscoveryCountByKeeper(userId) map { discoveryCount =>
+      val (rekeepCount, rekeepTotalCount) = db.readOnlyReplica { implicit ro =>
+        bookmarkClicksRepo.getReKeepCounts(userId)
+      }
       (discoveryCount, rekeepCount, rekeepTotalCount)
     }
   }
@@ -290,8 +289,8 @@ class UserCommander @Inject() (
             elizaServiceClient.sendGlobalNotification(
               userIds = toNotify,
               title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
-              body = s"To discover ${newUser.firstName}’s public keeps while searching, get connected!",
-              linkText = s"Click this to send a friend request to ${newUser.firstName}.",
+              body = s"To discover ${newUser.firstName}’s public keeps while searching, get connected! Click this to send a friend request to ${newUser.firstName}.",
+              linkText = "Kifi Friends",
               linkUrl = "https://www.kifi.com/invite?friend=" + newUser.externalId,
               imageUrl = userAvatarImageUrl(newUser),
               sticky = false,
@@ -307,53 +306,6 @@ class UserCommander @Inject() (
         }
       }
     } else Option(Future.successful(Set.empty))
-  }
-
-  def tellAllFriendsAboutNewUserImmediate(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = synchronized {
-    if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, UserValueName.FRIENDS_NOTIFIED_ABOUT_JOINING).exists(_ == "true") }) {
-      db.readWrite { implicit session => userValueRepo.setValue(newUserId, UserValueName.FRIENDS_NOTIFIED_ABOUT_JOINING, true) }
-      val (newUser: User, toNotify: Set[Id[User]]) = db.readOnlyReplica { implicit session =>
-        val newUser = userRepo.get(newUserId)
-        val toNotify = userConnectionRepo.getConnectedUsers(newUserId) ++ additionalRecipients
-        (newUser, toNotify)
-      }
-
-      sendEmailToNewUserFriendsHelper(newUser, toNotify)
-
-      elizaServiceClient.sendGlobalNotification(
-        userIds = toNotify,
-        title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
-        body = s"Enjoy ${newUser.firstName}'s keeps in your search results and message ${newUser.firstName} directly. Invite friends to join Kifi.",
-        linkText = "Invite more friends to Kifi.",
-        linkUrl = "https://www.kifi.com/friends/invite",
-        imageUrl = userAvatarImageUrl(newUser),
-        sticky = false,
-        category = NotificationCategory.User.FRIEND_JOINED
-      )
-    }
-  }
-
-  def tellAllFriendsAboutNewUser(newUserId: Id[User]): Unit = {
-    val toBeNotified = db.readWrite(attempts = 3) { implicit session =>
-      for {
-        su <- socialUserRepo.getByUser(newUserId)
-        invite <- invitationRepo.getByRecipientSocialUserId(su.id.get) if (invite.state != InvitationStates.JOINED)
-        senderUserId <- {
-          invitationRepo.save(invite.withState(InvitationStates.JOINED))
-          invite.senderUserId
-        }
-      } yield senderUserId
-    }
-
-    tellAllFriendsAboutNewUser(newUserId, toBeNotified)
-  }
-
-  def tellAllFriendsAboutNewUser(newUserId: Id[User], additionalRecipients: Seq[Id[User]]): Unit = {
-    delay {
-      synchronized {
-        tellAllFriendsAboutNewUserImmediate(newUserId, additionalRecipients)
-      }
-    }
   }
 
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None): Unit = {

@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.google.inject.{ Inject, ImplementedBy, Singleton }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 
+// todo(Léo): Ideally, this could be merged into FriendRequest if friend request handling ever moves from Shoebox to ABook
 case class FriendRecommendation(
     id: Option[Id[FriendRecommendation]] = None,
     createdAt: DateTime = currentDateTime,

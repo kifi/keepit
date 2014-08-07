@@ -19,13 +19,13 @@ class WebsiteMessagingController @Inject() (
   def getNotifications(howMany: Int, before: Option[String]) = JsonAction.authenticatedAsync { request =>
     val noticesFuture = before match {
       case Some(before) =>
-        notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt)
+        notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = false)
       case None =>
-        notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt)
+        notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = false)
     }
     noticesFuture.map { notices =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
-      Ok(Json.arr("notifications", notices.jsons, numUnreadUnmuted))
+      Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
     }
   }
 }

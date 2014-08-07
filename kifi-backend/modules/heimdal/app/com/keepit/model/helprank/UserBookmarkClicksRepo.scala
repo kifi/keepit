@@ -24,7 +24,7 @@ class UserBookmarkClicksRepoImpl @Inject() (
   import db.Driver.simple._
 
   type RepoImpl = UserBookmarkClicksTable
-  class UserBookmarkClicksTable(tag: Tag) extends RepoTable[UserBookmarkClicks](db, tag, "user_keep_info") {
+  class UserBookmarkClicksTable(tag: Tag) extends RepoTable[UserBookmarkClicks](db, tag, "user_bookmark_clicks") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def selfClicks = column[Int]("self_clicks", O.NotNull)
@@ -60,6 +60,6 @@ class UserBookmarkClicksRepoImpl @Inject() (
   }
 
   def getReKeepCounts(userId: Id[User])(implicit session: RSession): (Int, Int) = {
-    sql"select sum(rekeep_count), sum(rekeep_total_count) from user_keep_info where user_id=${userId}".as[(Int, Int)].first
+    sql"select sum(rekeep_count), sum(rekeep_total_count) from user_bookmark_clicks where user_id=${userId}".as[(Int, Int)].first
   }
 }

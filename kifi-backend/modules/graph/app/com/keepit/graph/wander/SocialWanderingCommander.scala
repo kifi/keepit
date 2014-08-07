@@ -85,7 +85,7 @@ class SocialWanderingCommander @Inject() (
 
   private def wander(userId: Id[User], irrelevantVertices: Set[VertexId]): TeleportationJournal = {
     val userVertexId = VertexId(userId)
-    val journal = new TeleportationJournal(clock)
+    val journal = new TeleportationJournal("SocialWanderingJournal", clock)
     val teleporter = UniformTeleporter(Set(userVertexId)) { Function.const(SocialWanderlust.restartProbability) }
     val resolver = {
       val mayTraverse: (VertexReader, VertexReader, EdgeReader) => Boolean = {
