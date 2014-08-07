@@ -45,7 +45,8 @@ class HelpRankCommander @Inject() (
             shoeboxClient.getUserIdsByExternalIds(keepers) map { keeperIds =>
               keeperIds foreach { keeperId =>
                 userKeepInfoRepo.increaseCounts(keeperId, kifiHit.uriId, false)
-                shoeboxClient.getBookmarkByUriAndUser(kifiHit.uriId, keeperId) map { keepOpt =>
+                shoeboxClient.getBookmarkByUriAndUser(kifiHit.uriId, keeperId) foreach { keepOpt =>
+                  log.info(s"[kifiHit($discoverer)] getBookmarkByUriAndUser(${kifiHit.uriId},$keeperId)=$keepOpt")
                   keepOpt match {
                     case None =>
                       log.warn(s"[kifiHit($discoverer,${kifiHit.uriId},${keepers.mkString(",")})] keep not found for keeperId=$keeperId") // move on
@@ -106,7 +107,7 @@ class HelpRankCommander @Inject() (
               log.info(s"[chatAttribution($userId,${keep.uriId},$chatUserId)] rekeep=$rekeep already exists. Skipped.")
             case None =>
               shoeboxClient.getBookmarkByUriAndUser(keep.uriId, chatUserId) map { keepOpt =>
-                log.info(s"[chatAttribution($userId,${keep.uriId},$chatUserId)] getBookmarkByUriAndUser=$keepOpt")
+                log.info(s"[chatAttribution($userId)] getBookmarkByUriAndUser(${keep.uriId},$chatUserId)=$keepOpt")
                 keepOpt foreach { chatUserKeep =>
                   val discovery = KeepDiscovery(hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging")) // todo(ray): None for uuid
                   val savedDiscovery = keepDiscoveryRepo.save(discovery)
