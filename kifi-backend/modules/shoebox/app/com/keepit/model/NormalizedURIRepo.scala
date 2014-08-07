@@ -201,9 +201,7 @@ class NormalizedURIRepoImpl @Inject() (
   }
 
   def checkUnrestrictedURIs(uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
-    { for (r <- rows if r.id.inSet(uriIds)) yield r.restriction }.list.map { restriction =>
-      restriction.map(_ => false).getOrElse(true)
-    }
+    { for (r <- rows if r.id.inSet(uriIds)) yield r.restriction.isNull }.list
   }
 
   def checkScrapedURIs(uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
