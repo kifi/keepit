@@ -75,7 +75,6 @@ class LDAUserStatDbUpdaterImpl @Inject() (
   }
 
   private def processUser(userId: Id[User]): Unit = {
-    log.info(s"processing user ${userId}")
     val model = db.readOnlyReplica { implicit s => userLDAStatsRepo.getByUser(userId, representer.version) }
     val numFeat = db.readOnlyReplica { implicit s => uriTopicRepo.countUserURIFeatures(userId, representer.version, min_num_words) }
     if (shouldComputeFeature(model, numFeat)) {
