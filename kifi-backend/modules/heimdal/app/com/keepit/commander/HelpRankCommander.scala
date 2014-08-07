@@ -123,4 +123,15 @@ class HelpRankCommander @Inject() (
     }
   }
 
+  def getKeepAttributionInfo(userId: Id[User]): UserKeepAttributionInfo = {
+    db.readOnlyMaster { implicit session =>
+      val discoveryCount = keepDiscoveryRepo.getDiscoveryCountByKeeper(userId)
+      val (rekeepCount, rekeepTotalCount) = userKeepInfoRepo.getReKeepCounts(userId)
+      val (uniqueKeepsClicked, totalClicks) = userKeepInfoRepo.getClickCounts(userId)
+      UserKeepAttributionInfo(userId, discoveryCount, rekeepCount, rekeepTotalCount, uniqueKeepsClicked, totalClicks) tap { info =>
+        log.info(s"[getKeepAttribution($userId)] info=$info")
+      }
+    }
+  }
+
 }
