@@ -90,7 +90,9 @@ class RecommendationGenerationCommander @Inject() (
               scoreCoefficients.priorScore.getOrElse(defaultScore) * reco.allScores.priorScore +
               scoreCoefficients.socialScore.getOrElse(defaultScore) * reco.allScores.socialScore +
               scoreCoefficients.popularityScore.getOrElse(defaultScore) * reco.allScores.popularityScore +
-              scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore
+              scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore +
+              scoreCoefficients.rekeepScore.getOrElse(defaultScore) * reco.allScores.rekeepScore +
+              scoreCoefficients.discoveryScore.getOrElse(defaultScore) * reco.allScores.discoveryScore
             if (score != 0.0f) score else 0.35f * reco.allScores.socialScore + 2.0f * reco.allScores.overallInterestScore + 1.0f * reco.allScores.recentInterestScore
           },
           explain = Some(reco.allScores.toString)
