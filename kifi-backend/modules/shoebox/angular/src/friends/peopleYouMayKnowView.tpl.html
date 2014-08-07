@@ -3,7 +3,8 @@
   <div class="kf-pymk" ng-repeat="person in peopleYouMayKnow | limitTo: 3">
     <div class="kf-pymk-info">
       <span class="kf-pymk-close-icon" ng-click="remove(person)">x</span>
-      <div>
+      <a href="javascript:" class="kf-pymk-action-icon" ng-click="action(person)" ng-class="{clickable: person.clickable}">{{person.actionText}}</a>
+      <div class="kf-pymk-info-content">
         <span class="kf-pymk-name">{{person.fullName}}</span>
         <span class="kf-pymk-via">{{person.via}}
           <a ng-if="person.numMutualFriends > 0" href="javascript:" ng-click="showMutualFriends(person)">
@@ -11,7 +12,6 @@
           </a>
         </span>
       </div>
-      <a href="javascript:" class="kf-pymk-action-icon" ng-click="action(person)" ng-class="{clickable: person.clickable}">{{person.actionText}}</a>
     </div>
     <img class="kf-pymk-image" title="{{person.fullName}}" ng-src="{{person.pictureUrl}}" onerror="this.src='https://www.kifi.com/assets/img/ghost.100.png'">
   </div>
