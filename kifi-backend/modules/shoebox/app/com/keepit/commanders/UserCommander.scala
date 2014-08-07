@@ -99,7 +99,6 @@ class UserCommander @Inject() (
     userConnectionRepo: UserConnectionRepo,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
-    keepClickRepo: KeepDiscoveryRepo,
     userExperimentCommander: LocalUserExperimentCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     socialConnectionRepo: SocialConnectionRepo,
@@ -227,10 +226,11 @@ class UserCommander @Inject() (
     db.readOnlyReplica { implicit session => bookmarkClicksRepo.getClickCounts(user) }
   }
 
-  def getKeepAttributionCounts(userId: Id[User]): (Int, Int, Int) = { // (discoveryCount, rekeepCount, rekeepTotalCount)
-    db.readOnlyReplica { implicit ro =>
-      val discoveryCount = keepClickRepo.getDiscoveryCountByKeeper(userId)
-      val (rekeepCount, rekeepTotalCount) = bookmarkClicksRepo.getReKeepCounts(userId)
+  def getKeepAttributionCounts(userId: Id[User]): Future[(Int, Int, Int)] = { // (discoveryCount, rekeepCount, rekeepTotalCount)
+    heimdalClient.getDiscoveryCountByKeeper(userId) map { discoveryCount =>
+      val (rekeepCount, rekeepTotalCount) = db.readOnlyReplica { implicit ro =>
+        bookmarkClicksRepo.getReKeepCounts(userId)
+      }
       (discoveryCount, rekeepCount, rekeepTotalCount)
     }
   }
