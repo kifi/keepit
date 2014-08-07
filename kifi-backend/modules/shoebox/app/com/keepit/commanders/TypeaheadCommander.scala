@@ -342,7 +342,7 @@ class TypeaheadCommander @Inject() (
           Some(ConnectionWithInviteStatus(sci.fullName, hit.score, sci.networkType.name, if (pictureUrl) sci.getPictureUrl(75, 75) else None, socialId(sci), status, None, lastSentAt))
 
         case u: User =>
-          Some(ConnectionWithInviteStatus(u.fullName, hit.score, SocialNetworks.FORTYTWO.name, if (pictureUrl) u.pictureName else None, s"fortytwo/${u.externalId}", "joined"))
+          Some(ConnectionWithInviteStatus(u.fullName, hit.score, SocialNetworks.FORTYTWO.name, if (pictureUrl) u.pictureName.map(_ + ".jpg") else None, s"fortytwo/${u.externalId}", "joined"))
 
         case bu: TypeaheadUserHit => // todo(Ray): uptake User API from search
           val name = s"${bu.firstName} ${bu.lastName}".trim // if not good enough, lookup User
