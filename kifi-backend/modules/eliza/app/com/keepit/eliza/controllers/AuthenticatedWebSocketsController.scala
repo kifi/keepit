@@ -3,7 +3,7 @@ package com.keepit.eliza.controllers
 import com.keepit.common.strings._
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.db.Id
-import com.keepit.model.{ KifiExtVersion, User, SocialUserInfo, ExperimentType }
+import com.keepit.model.{ ExperimentType, KifiVersion, KifiExtVersion, KifiIPhoneVersion, KifiAndroidVersion, User, SocialUserInfo }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.SocialNetworkType
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
@@ -44,7 +44,7 @@ case class SocketInfo(
   connectedAt: DateTime,
   userId: Id[User],
   experiments: Set[ExperimentType],
-  extVersion: Option[String],
+  kifiVersion: Option[KifiVersion],
   userAgent: String,
   var ip: Option[String],
   id: Long = Random.nextLong(),
@@ -73,8 +73,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val crypt = new RatherInsecureDESCrypt
   protected val ipkey = crypt.stringToKey("dontshowtheiptotheclient")
 
-  private def asyncIteratee(streamSession: StreamSession, extVersionOpt: Option[String])(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
-    val extVersion = extVersionOpt.getOrElse("N/A")
+  private def asyncIteratee(streamSession: StreamSession, kifiVersionOpt: Option[String])(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
+    val kifiVersion = kifiVersionOpt.getOrElse("N/A")
     import play.api.libs.iteratee._
     def step(i: Input[JsArray]): Iteratee[JsArray, Unit] = i match {
       case Input.EOF => Done(Unit, Input.EOF)
@@ -89,7 +89,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
                 exception = ex,
                 method = Some("ws"),
                 url = e.value.headOption.map(_.toString()),
-                message = Some(s"[WS] user ${streamSession.userId.id} using version $extVersion on ${streamSession.userAgent.abbreviate(30)} making call ${e.toString()}")
+                message = Some(s"[WS] user ${streamSession.userId.id} using version $kifiVersion on ${streamSession.userAgent.abbreviate(30)} making call ${e.toString()}")
               )
             )
           }
@@ -168,13 +168,18 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         case Some(streamSessionFuture) => streamSessionFuture.map { streamSession =>
           implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
 
+          val typedVersionOpt: Option[KifiVersion] = UserAgent.fromString(streamSession.userAgent).typeName match {
+            case UserAgent.KifiIphoneAppTypeName => versionOpt.map(KifiIPhoneVersion.apply)
+            case UserAgent.KifiAndroidAppTypeName => versionOpt.map(KifiAndroidVersion.apply)
+            case _ => versionOpt.map(KifiExtVersion.apply)
+          }
           val ipOpt: Option[String] = eipOpt.flatMap { eip =>
             crypt.decrypt(ipkey, eip).toOption
           }
-          val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, versionOpt, streamSession.userAgent, ipOpt)
+          val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, typedVersionOpt, streamSession.userAgent, ipOpt)
           reportConnect(streamSession, socketInfo, request, connectTimer)
           var startMessages = Seq[JsArray](Json.arr("hi"))
-          if (updateNeeded(streamSession, versionOpt)) {
+          if (updateNeeded(typedVersionOpt, streamSession.userId)) {
             startMessages = startMessages :+ Json.arr("version", "new")
           }
           onConnect(socketInfo)
@@ -224,27 +229,30 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           }
         }
       } getOrElse {
-        airbrake.notify(s"WS no handler from user ${streamSession.userId} for: " + jsArr + s"(${socketInfo.extVersion} :: ${streamSession.userAgent})")
+        airbrake.notify(s"WS no handler from user ${streamSession.userId} for: " + jsArr + s"(${socketInfo.kifiVersion} :: ${streamSession.userAgent})")
       }
     }.map(_ => endSession(streamSession, socketInfo))
   }
 
-  private def updateNeeded(streamSession: StreamSession, versionOpt: Option[String]): Boolean = {
-    if (UserAgent.fromString(streamSession.userAgent).canRunExtensionIfUpToDate) {
-      versionOpt.flatMap(v => Try(KifiExtVersion(v)).toOption).map { ver =>
+  private def updateNeeded(versionOpt: Option[KifiVersion], userId: Id[User]): Boolean = {
+    versionOpt match {
+      case Some(ver: KifiExtVersion) =>
         val details = kifInstallationStore.get()
         if (ver < details.gold) {
-          log.info(s"${streamSession.userId} is running an old extension (${ver.toString}). Upgrade incoming!")
+          log.info(s"User $userId is running an old extension ($ver). Upgrade incoming!")
           true
         } else if (details.killed.contains(ver)) {
-          log.info(s"${streamSession.userId} is running a killed extension (${ver.toString}). Upgrade incoming!")
+          log.info(s"User $userId is running a killed extension ($ver). Upgrade incoming!")
           true
         } else {
           false
         }
-      }.getOrElse(true)
-    } else { // TODO: iPhone, Android
-      false
+      case Some(ver: KifiIPhoneVersion) =>
+        false // TODO
+      case Some(ver: KifiAndroidVersion) =>
+        false // TODO
+      case _ =>
+        false
     }
   }
 
@@ -262,7 +270,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     contextBuilder.addUserAgent(socketInfo.userAgent)
     request.foreach(contextBuilder.addRequestInfo)
     socketInfo.ip.foreach(contextBuilder.addRemoteAddress)
-    socketInfo.extVersion.foreach { version => contextBuilder += ("extensionVersion", version) }
+    socketInfo.kifiVersion.foreach { ver => contextBuilder += ("extensionVersion", ver.toString) }
     contextBuilder
   }
 }
