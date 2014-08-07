@@ -11,8 +11,7 @@ import com.keepit.curator.model.{
   UriScores
 }
 import com.keepit.common.db.Id
-import com.keepit.model.ScoreType._
-import com.keepit.model.{ ScoreType, User }
+import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.slick.Database
@@ -33,8 +32,8 @@ class RecommendationGenerationCommander @Inject() (
     scoringHelper: UriScoringHelper,
     db: Database,
     airbrake: AirbrakeNotifier,
-    genStateRepo: UserRecommendationGenerationStateRepo,
-    recoRepo: UriRecommendationRepo) {
+    uriRecRepo: UriRecommendationRepo,
+    genStateRepo: UserRecommendationGenerationStateRepo) {
 
   val defaultScore = 0.0f
 
@@ -69,9 +68,15 @@ class RecommendationGenerationCommander @Inject() (
     0.3f * scores.socialScore + 2 * scores.overallInterestScore + 0.5f * scores.priorScore
   }
 
-  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: Map[ScoreType.Value, Float]): Future[Seq[RecommendationInfo]] = {
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
+    db.readWriteAsync { implicit session =>
+      uriRecRepo.updateUriRecommendationFeedback(userId, uriId, feedback)
+    }
+  }
+
+  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecommendationInfo]] = {
     val recosFuture = db.readOnlyReplicaAsync { implicit session =>
-      recoRepo.getByTopMasterScore(userId, Math.max(howManyMax, 1000))
+      uriRecRepo.getByTopMasterScore(userId, Math.max(howManyMax, 1000))
     }
 
     recosFuture.map { recos =>
@@ -79,15 +84,17 @@ class RecommendationGenerationCommander @Inject() (
         RecommendationInfo(
           userId = reco.userId,
           uriId = reco.uriId,
-          score = if (scoreCoefficients.isEmpty)
-            0.35f * reco.allScores.socialScore + 2.0f * reco.allScores.overallInterestScore + 1.0f * reco.allScores.recentInterestScore
-          else
-            scoreCoefficients.getOrElse(ScoreType.recencyScore, defaultScore) * reco.allScores.recencyScore
-              + scoreCoefficients.getOrElse(ScoreType.overallInterestScore, defaultScore) * reco.allScores.overallInterestScore
-              + scoreCoefficients.getOrElse(ScoreType.priorScore, defaultScore) * reco.allScores.priorScore
-              + scoreCoefficients.getOrElse(ScoreType.socialScore, defaultScore) * reco.allScores.socialScore
-              + scoreCoefficients.getOrElse(ScoreType.popularityScore, defaultScore) * reco.allScores.popularityScore
-              + scoreCoefficients.getOrElse(ScoreType.recentInterestScore, defaultScore) * reco.allScores.recentInterestScore,
+          {
+            val score = scoreCoefficients.recencyScore.getOrElse(defaultScore) * reco.allScores.recencyScore +
+              scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * reco.allScores.overallInterestScore +
+              scoreCoefficients.priorScore.getOrElse(defaultScore) * reco.allScores.priorScore +
+              scoreCoefficients.socialScore.getOrElse(defaultScore) * reco.allScores.socialScore +
+              scoreCoefficients.popularityScore.getOrElse(defaultScore) * reco.allScores.popularityScore +
+              scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore +
+              scoreCoefficients.rekeepScore.getOrElse(defaultScore) * reco.allScores.rekeepScore +
+              scoreCoefficients.discoveryScore.getOrElse(defaultScore) * reco.allScores.discoveryScore
+            if (score != 0.0f) score else 0.35f * reco.allScores.socialScore + 2.0f * reco.allScores.overallInterestScore + 1.0f * reco.allScores.recentInterestScore
+          },
           explain = Some(reco.allScores.toString)
         )
       }.sortBy(-1 * _.score).take(howManyMax)
@@ -128,14 +135,14 @@ class RecommendationGenerationCommander @Inject() (
             val toBeSavedItems = scoredItems.filter(si => computeMasterScore(si.uriScores) > 0.3)
             db.readWrite { implicit session =>
               toBeSavedItems.map { item =>
-                val recoOpt = recoRepo.getByUriAndUserId(item.uriId, userId, None)
+                val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
                 recoOpt.map { reco =>
-                  recoRepo.save(reco.copy(
+                  uriRecRepo.save(reco.copy(
                     masterScore = computeMasterScore(item.uriScores),
                     allScores = item.uriScores
                   ))
                 } getOrElse {
-                  recoRepo.save(UriRecommendation(
+                  uriRecRepo.save(UriRecommendation(
                     uriId = item.uriId,
                     userId = userId,
                     masterScore = computeMasterScore(item.uriScores),

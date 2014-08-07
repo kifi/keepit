@@ -1,6 +1,6 @@
 package com.keepit.cortex.utils
 
-import scala.math.sqrt
+import scala.math._
 
 object MatrixUtils {
   implicit def toDoubleArray(vec: Array[Float]): Array[Double] = vec.map { _.toDouble }
@@ -8,7 +8,14 @@ object MatrixUtils {
   implicit def toFloat(x: Double): Float = x.toFloat
 
   def L2Normalize(vec: Array[Double]): Array[Double] = {
-    val s = sqrt(vec.map { x => x * x }.sum)
+    var s = 0.0
+    var n = vec.size
+    var i = 0
+    while (i < n) {
+      s += vec(i) * vec(i)
+      i += 1
+    }
+    s = sqrt(s)
     if (s == 0.0) vec else vec.map { x => x / s }
   }
 
@@ -91,5 +98,36 @@ object MatrixUtils {
       (mean, math.sqrt(variance).toFloat)
     }
     (tuples.map { _._1 }.toArray, tuples.map { _._2 }.toArray)
+  }
+
+  def MDistanceDiagGaussian(sample: Array[Double], mean: Array[Double], variance: Array[Double]) = {
+    assume(sample.size == mean.size && mean.size == variance.size)
+    val n = sample.size
+    var i = 0
+    var s = 0.0
+    while (i < n) {
+      val v = variance(i)
+      val diff = sample(i) - mean(i)
+      if (v == 0) s += diff * diff
+      else s += diff * diff / v
+      i += 1
+    }
+    s
+  }
+
+  def weightedMDistanceDiagGaussian(sample: Array[Double], mean: Array[Double], variance: Array[Double], weights: Array[Double]) = {
+    assume(sample.size == mean.size && mean.size == variance.size)
+    val n = sample.size
+    var i = 0
+    var s = 0.0
+    val epsilon = 1e-6
+    while (i < n) {
+      val v = variance(i) + epsilon
+      val diff = sample(i) - mean(i)
+      val r = weights(i) / v
+      s += r * diff * diff
+      i += 1
+    }
+    s
   }
 }

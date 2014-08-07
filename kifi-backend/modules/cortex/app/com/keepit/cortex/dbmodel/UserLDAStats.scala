@@ -10,7 +10,7 @@ import org.joda.time.DateTime
 case class UserTopicVar(value: Array[Float])
 
 case class UserLDAStats(
-    id: Option[Id[UserLDAStats]],
+    id: Option[Id[UserLDAStats]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     userId: Id[User],
@@ -18,12 +18,12 @@ case class UserLDAStats(
     numOfEvidence: Int,
     userTopicMean: Option[UserTopicMean],
     userTopicVar: Option[UserTopicVar],
-    state: State[UserLDAStats] = UserPersonalLDAStatsStates.ACTIVE) extends ModelWithState[UserLDAStats] {
+    state: State[UserLDAStats] = UserLDAStatsStates.ACTIVE) extends ModelWithState[UserLDAStats] {
   def withId(id: Id[UserLDAStats]): UserLDAStats = copy(id = Some(id))
   def withUpdateTime(time: DateTime): UserLDAStats = copy(updatedAt = time)
   def withState(state: State[UserLDAStats]): UserLDAStats = copy(state = state)
 }
 
-object UserPersonalLDAStatsStates extends States[UserLDAStats] {
+object UserLDAStatsStates extends States[UserLDAStats] {
   val NOT_APPLICABLE = State[UserLDAStats]("not_applicable")
 }

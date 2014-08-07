@@ -4,7 +4,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders.{ MessageFetchingCommander, NotificationCommander, MessagingCommander }
 import com.keepit.common.db.{ ExternalId, State }
-import com.keepit.model.{ User, NotificationCategory, ExperimentType }
+import com.keepit.model.{ User, NotificationCategory, ExperimentType, KifiExtVersion }
 import com.keepit.common.controller.{ BrowserExtensionController, ActionAuthenticator }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
@@ -104,9 +104,9 @@ class SharedWsMessagingController @Inject() (
     // inbox notification/thread handlers
     "get_one_thread" -> {
       case JsNumber(requestId) +: JsString(threadId) +: _ =>
-        val fut = notificationCommander.getSendableNotification(socket.userId, ExternalId[MessageThread](threadId))
+        val fut = notificationCommander.getSendableNotification(socket.userId, ExternalId[MessageThread](threadId), isCanaryExtension(socket))
         fut.foreach { json =>
-          socket.channel.push(Json.arr(requestId.toLong, json))
+          socket.channel.push(Json.arr(requestId.toLong, json.obj))
         }
         fut.onFailure {
           case _ =>
@@ -115,10 +115,10 @@ class SharedWsMessagingController @Inject() (
     },
     "get_latest_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-        val fut = notificationCommander.getLatestSendableNotifications(socket.userId, howMany.toInt)
+        val fut = notificationCommander.getLatestSendableNotifications(socket.userId, howMany.toInt, isCanaryExtension(socket))
         fut.foreach { notices =>
           val (numUnread, numUnreadUnmuted) = messagingCommander.getUnreadThreadCounts(socket.userId)
-          socket.channel.push(Json.arr(requestId.toLong, notices.jsons, numUnreadUnmuted, numUnread, currentDateTime))
+          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj), numUnreadUnmuted, numUnread, currentDateTime))
         }
         fut.onFailure {
           case _ =>
@@ -127,9 +127,9 @@ class SharedWsMessagingController @Inject() (
     },
     "get_threads_before" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
+        val fut = notificationCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, isCanaryExtension(socket))
         fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
+          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
         fut.onFailure {
           case _ =>
@@ -138,10 +138,10 @@ class SharedWsMessagingController @Inject() (
     },
     "get_unread_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-        val fut = notificationCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt)
+        val fut = notificationCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt, isCanaryExtension(socket))
         fut.foreach {
           case (notices, numTotal) =>
-            socket.channel.push(Json.arr(requestId.toLong, notices.jsons, numTotal))
+            socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj), numTotal))
         }
         fut.onFailure {
           case _ =>
@@ -150,9 +150,9 @@ class SharedWsMessagingController @Inject() (
     },
     "get_unread_threads_before" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
+        val fut = notificationCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, isCanaryExtension(socket))
         fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
+          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
         fut.onFailure {
           case _ =>
@@ -161,9 +161,9 @@ class SharedWsMessagingController @Inject() (
     },
     "get_sent_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-        val fut = notificationCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt)
+        val fut = notificationCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt, isCanaryExtension(socket))
         fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
+          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
         fut.onFailure {
           case _ =>
@@ -172,9 +172,9 @@ class SharedWsMessagingController @Inject() (
     },
     "get_sent_threads_before" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
+        val fut = notificationCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, isCanaryExtension(socket))
         fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
+          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
         fut.onFailure {
           case _ =>
@@ -183,10 +183,10 @@ class SharedWsMessagingController @Inject() (
     },
     "get_page_threads" -> {
       case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: _ =>
-        val fut = notificationCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt)
+        val fut = notificationCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt, isCanaryExtension(socket))
         fut.foreach {
           case (nUriStr, notices, numTotal, numUnreadUnmuted) =>
-            socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.jsons, numTotal, numUnreadUnmuted))
+            socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.map(_.obj), numTotal, numUnreadUnmuted))
         }
         fut.onFailure {
           case _ =>
@@ -195,9 +195,9 @@ class SharedWsMessagingController @Inject() (
     },
     "get_page_threads_before" -> {
       case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt)
+        val fut = notificationCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt, isCanaryExtension(socket))
         fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.jsons))
+          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
         fut.onFailure {
           case _ =>
@@ -254,4 +254,11 @@ class SharedWsMessagingController @Inject() (
       //else discard!
     }
   )
+
+  private def isCanaryExtension(socket: SocketInfo): Boolean = {
+    socket.kifiVersion match {
+      case Some(KifiExtVersion(major, minor, patch, build)) => build > 0
+      case _ => false
+    }
+  }
 }

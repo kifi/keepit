@@ -249,7 +249,6 @@ class HomeController @Inject() (
 
   def install = HtmlAction.authenticated { implicit request =>
     SafeFuture {
-      userCommander.tellAllFriendsAboutNewUser(request.user.id.get)
       userCommander.tellUsersWithContactOfNewUserImmediate(request.user)
 
       // Temporary event for debugging purpose

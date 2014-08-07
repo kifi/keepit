@@ -92,9 +92,17 @@ class UserController @Inject() (
 
   def findFriends(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
     abookServiceClient.findFriends(request.userId, page, pageSize).map { recommendedUsers =>
-      val basicUsers = db.readOnlyReplica { implicit session => basicUserRepo.loadAll(recommendedUsers.toSet) }
-      val recommendedBasicUsers = recommendedUsers.map(basicUsers(_))
-      val json = Json.obj("users" -> recommendedBasicUsers)
+      val (basicUsers, friends) = db.readOnlyReplica { implicit session =>
+        val recommendedUserSet = recommendedUsers.toSet
+        val basicUsers = basicUserRepo.loadAll(recommendedUserSet)
+        val friends = (recommendedUserSet + request.userId).map(id => id -> userConnectionRepo.getConnectedUsers(id)).toMap
+        (basicUsers, friends)
+      }
+      val recommendedUsersArray = JsArray(recommendedUsers.map { recommendedUserId =>
+        val numMutualFriends = (friends(request.userId) intersect friends(recommendedUserId)).size
+        BasicUser.basicUserFormat.writes(basicUsers(recommendedUserId)) + ("numMutualFriends" -> JsNumber(numMutualFriends))
+      })
+      val json = Json.obj("users" -> recommendedUsersArray)
       Ok(json)
     }
   }
@@ -203,7 +211,7 @@ class UserController @Inject() (
     }
   }
 
-  def currentUser = JsonAction.authenticated(allowPending = true) { implicit request =>
+  def currentUser = JsonAction.authenticatedAsync(allowPending = true) { implicit request =>
     getUserInfo(request.userId)
   }
 
@@ -256,7 +264,7 @@ class UserController @Inject() (
   }
 
   //private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
-  def updateCurrentUser() = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
+  def updateCurrentUser() = JsonAction.authenticatedParseJsonAsync(allowPending = true) { implicit request =>
     request.body.validate[UpdatableUserInfo] match {
       case JsSuccess(userData, _) => {
         userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmail, _))
@@ -265,8 +273,10 @@ class UserController @Inject() (
         }
         getUserInfo(request.userId)
       }
-      case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } => BadRequest(Json.obj("error" -> "bad email addresses"))
-      case _ => BadRequest(Json.obj("error" -> "could not parse user info from body"))
+      case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } =>
+        Future.successful(BadRequest(Json.obj("error" -> "bad email addresses")))
+      case _ =>
+        Future.successful(BadRequest(Json.obj("error" -> "could not parse user info from body")))
     }
   }
 
@@ -279,14 +289,16 @@ class UserController @Inject() (
       Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
       Json.obj("experiments" -> experiments.map(_.value))
     val (uniqueKeepsClicked, totalClicks) = userCommander.getHelpCounts(userId)
-    val (clickCount, rekeepCount, rekeepTotalCount) = userCommander.getKeepAttributionCounts(userId)
-    Ok(json ++ Json.obj(
-      "uniqueKeepsClicked" -> uniqueKeepsClicked,
-      "totalKeepsClicked" -> totalClicks,
-      "clickCount" -> clickCount,
-      "rekeepCount" -> rekeepCount,
-      "rekeepTotalCount" -> rekeepTotalCount
-    ))
+    userCommander.getKeepAttributionCounts(userId) map {
+      case (clickCount, rekeepCount, rekeepTotalCount) =>
+        Ok(json ++ Json.obj(
+          "uniqueKeepsClicked" -> uniqueKeepsClicked,
+          "totalKeepsClicked" -> totalClicks,
+          "clickCount" -> clickCount,
+          "rekeepCount" -> rekeepCount,
+          "rekeepTotalCount" -> rekeepTotalCount
+        ))
+    }
   }
 
   private val SitePrefNames = Set(

@@ -3,6 +3,7 @@ package com.keepit.common.commanders
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.cortex.MiscPrefix
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel._
@@ -25,7 +26,8 @@ class LDACommander @Inject() (
     ldaConfigs: LDATopicConfigurations,
     configStore: LDAConfigStore,
     ldaRetriever: LDAURIFeatureRetriever,
-    userLDAStatsRetriever: UserLDAStatisticsRetriever) {
+    userLDAStatsRetriever: UserLDAStatisticsRetriever,
+    userLDAStatRepo: UserLDAStatsRepo) extends Logging {
   assume(ldaTopicWords.topicWords.length == wordRep.lda.dimension)
 
   var currentConfig = ldaConfigs
@@ -105,6 +107,14 @@ class LDACommander @Inject() (
     }
   }
 
+  def gaussianUserUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): LDAUserURIInterestScores = {
+    db.readOnlyReplica { implicit s =>
+      val uriTopicOpt = uriTopicRepo.getActiveByURI(uriId, wordRep.version)
+      val userInterestStatOpt = userLDAStatRepo.getByUser(userId, wordRep.version)
+      computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
+    }
+  }
+
   def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores] = {
     db.readOnlyReplica { implicit s =>
       val userInterestOpt = userTopicRepo.getByUser(userId, wordRep.version)
@@ -112,6 +122,39 @@ class LDACommander @Inject() (
       uriTopicOpts.map { uriTopicOpt =>
         computeInterestScore(uriTopicOpt, userInterestOpt)
       }
+    }
+  }
+
+  def batchGaussianUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores] = {
+    db.readOnlyReplica { implicit s =>
+      val userInterestStatOpt = userLDAStatRepo.getByUser(userId, wordRep.version)
+      val uriTopicOpts = uriIds.map { uriId => uriTopicRepo.getActiveByURI(uriId, wordRep.version) }
+      uriTopicOpts.map { uriTopicOpt =>
+        computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
+      }
+    }
+  }
+
+  private def computeGaussianInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAStats]): LDAUserURIInterestScores = {
+    (uriTopicOpt, userInterestOpt) match {
+      case (Some(uriFeat), Some(userFeat)) =>
+        val globalScore = computeGaussianInterestScore(uriFeat.numOfWords, userFeat.numOfEvidence, Some(userFeat), uriFeat.feature)
+        LDAUserURIInterestScores(globalScore, None)
+      case _ => LDAUserURIInterestScores(None, None)
+    }
+  }
+
+  private def computeGaussianInterestScore(numOfWords: Int, numOfEvidenceForUser: Int, userFeatOpt: Option[UserLDAStats], uriFeatOpt: Option[LDATopicFeature]): Option[LDAUserURIInterestScore] = {
+    (userFeatOpt, uriFeatOpt) match {
+      case (Some(userFeat), Some(uriFeat)) =>
+        val userMean = userFeat.userTopicMean.get.mean
+        val userVar = userFeat.userTopicVar.get.value
+        val s = userMean.sum
+        assume(s > 0)
+        val dist = weightedMDistanceDiagGaussian(uriFeat.value, userMean, userVar, userMean.map { _ / s })
+        log.info(s"m-distance: $dist , userMean: ${userMean.take(5).mkString(", ")}, ${userVar.take(5).mkString(", ")}")
+        Some(LDAUserURIInterestScore(exp(-1 * dist), computeConfidence(numOfWords, numOfEvidenceForUser)))
+      case _ => None
     }
   }
 
