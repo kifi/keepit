@@ -8,6 +8,6 @@ ALTER TABLE uri_recommendation
 ALTER TABLE uri_recommendation
   ADD COLUMN bad boolean DEFAULT NULL;
 
-INSERT INTO evolutions (name, description) VALUES('216.sql', 'add user interaction columns to uri_recommendation table');
+INSERT INTO evolutions (name, description) VALUES('219.sql', 'add user interaction columns to uri_recommendation table');
 
 # --- !Downs
