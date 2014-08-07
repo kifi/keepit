@@ -5,7 +5,6 @@ import com.keepit.model.{ NormalizedURI, User }
 import com.kifi.macros.json
 
 import org.joda.time.DateTime
-import play.api.libs.json._
 
 sealed trait Keepers
 object Keepers {
