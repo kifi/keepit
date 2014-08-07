@@ -1,22 +1,11 @@
 package com.keepit.cortex.dbmodel
 
 import com.keepit.common.db.slick._
-import com.google.inject.{ ImplementedBy, Provider, Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.db.Id
-import com.keepit.model.NormalizedURI
-import com.keepit.common.db.State
-import com.keepit.common.db.SequenceNumber
-import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.cortex.sql.CortexTypeMappers
-import scala.slick.jdbc.StaticQuery
-import com.keepit.cortex.models.lda.LDATopic
-import com.keepit.cortex.models.lda.SparseTopicRepresentation
-import com.keepit.cortex.models.lda.LDATopicFeature
-import org.joda.time.DateTime
 import com.keepit.cortex.core.StatModelName
 
 @ImplementedBy(classOf[FeatureCommitInfoRepoImpl])

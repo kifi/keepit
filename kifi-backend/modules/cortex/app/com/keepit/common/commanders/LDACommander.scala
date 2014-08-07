@@ -11,6 +11,7 @@ import com.keepit.cortex.features.Document
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.{ NormalizedURI, User }
+import com.keepit.common.time._
 
 import scala.collection.mutable
 import scala.math.exp
@@ -27,12 +28,29 @@ class LDACommander @Inject() (
     configStore: LDAConfigStore,
     ldaRetriever: LDAURIFeatureRetriever,
     userLDAStatsRetriever: UserLDAStatisticsRetriever,
+    topicInfoRepo: LDAInfoRepo,
     userLDAStatRepo: UserLDAStatsRepo) extends Logging {
   assume(ldaTopicWords.topicWords.length == wordRep.lda.dimension)
 
-  var currentConfig = ldaConfigs
+  private var currentConfig = getAllConfigs(wordRep.version)
 
   val ldaDimMap = mutable.Map(wordRep.version -> wordRep.lda.dimension)
+
+  private def getAllConfigs(version: ModelVersion[DenseLDA]) = {
+    val info = db.readOnlyReplica { implicit s => topicInfoRepo.getAllByVersion(version) }
+    val confMap = info.map { case in => (in.topicId.toString, LDATopicConfiguration(in.topicName, in.isUsable)) }.toMap
+    LDATopicConfigurations(confMap)
+  }
+
+  private def saveConfigs(version: ModelVersion[DenseLDA], config: Map[String, LDATopicConfiguration]): Unit = {
+    db.readWrite { implicit s =>
+      config.foreach {
+        case (topic, conf) =>
+          val model = topicInfoRepo.getByTopicId(version, topic.toInt)
+          topicInfoRepo.save(model.copy(topicName = conf.topicName, isUsable = conf.isActive).withUpdateTime(currentDateTime))
+      }
+    }
+  }
 
   // consumers of lda service might query dim of some previous lda model
   def getLDADimension(version: ModelVersion[DenseLDA]): Int = {
@@ -86,7 +104,7 @@ class LDACommander @Inject() (
   def saveConfigEdits(config: Map[String, LDATopicConfiguration]) = {
     val newConfig = LDATopicConfigurations(currentConfig.configs ++ config)
     currentConfig = newConfig
-    configStore.+=(MiscPrefix.LDA.topicConfigsJsonFile, wordRep.version, newConfig)
+    saveConfigs(wordRep.version, config)
   }
 
   def getLDAFeatures(ids: Seq[Id[NormalizedURI]]) = {
