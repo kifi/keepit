@@ -120,15 +120,12 @@ object MatrixUtils {
     val n = sample.size
     var i = 0
     var s = 0.0
+    val epsilon = 1e-6
     while (i < n) {
-      val v = variance(i)
+      val v = variance(i) max epsilon
       val diff = sample(i) - mean(i)
-      if (v == 0) s += weights(i) * diff * diff
-      else {
-        val r = weights(i) / v
-        s += r * diff * diff
-      }
-
+      val r = weights(i) / v
+      s += r * diff * diff
       i += 1
     }
     s
