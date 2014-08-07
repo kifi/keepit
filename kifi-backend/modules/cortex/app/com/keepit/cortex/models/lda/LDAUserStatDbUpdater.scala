@@ -26,7 +26,7 @@ class LDAUserStatDbUpdatePluginImpl @Inject() (
     actor: ActorInstance[LDAUserStatDbUpdateActor],
     discovery: ServiceDiscovery,
     val scheduling: SchedulingProperties) extends BaseFeatureUpdatePlugin(actor, discovery) with LDAUserStatDbUpdatePlugin {
-  override val updateFrequency: FiniteDuration = 5 minutes
+  override val updateFrequency: FiniteDuration = 2 minutes
 }
 
 @ImplementedBy(classOf[LDAUserStatDbUpdaterImpl])
@@ -41,7 +41,7 @@ class LDAUserStatDbUpdaterImpl @Inject() (
     userLDAStatsRepo: UserLDAStatsRepo,
     commitRepo: FeatureCommitInfoRepo) extends LDAUserStatDbUpdater with Logging {
 
-  private val fetchSize = 5000
+  private val fetchSize = 10000
   private val modelName = StatModelName.LDA_USER_STATS
   private val min_num_words = 50
   protected val min_num_evidence = 50
