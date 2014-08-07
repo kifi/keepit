@@ -4,16 +4,17 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.curator.model.{ CuratorKeepInfoRepo, Keepers, SeedItem, ScoredSeedItem, UriScores }
-
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.model.{ NormalizedURI, HelpRankInfo }
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.model.User
 
 import scala.concurrent.Future
+import scala.collection.concurrent.TrieMap
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -77,15 +78,17 @@ class UriScoringHelper @Inject() (
     }
   }
 
+  val uriHelpRankScores = TrieMap[Id[NormalizedURI], HelpRankInfo]() //This needs to go when we have proper caching on the help rank scores
   def getRawHelpRankScores(items: Seq[SeedItem]): Future[(Seq[Float], Seq[Float])] = {
-    val helpRankInfos = shoebox.getHelpRankInfos(items.map(_.uriId))
+    val helpRankInfos = shoebox.getHelpRankInfos(items.map(_.uriId).filterNot(uriHelpRankScores.contains))
     helpRankInfos.map { infos =>
-      val infosMap = infos.map { info => (info.uriId -> info) }.toMap
+      infos.foreach { info => uriHelpRankScores += (info.uriId -> info) }
       items.map { item =>
-        val info = infosMap(item.uriId)
+        val info = uriHelpRankScores(item.uriId)
         (Math.tanh(info.rekeepCount / 10).toFloat, Math.tanh(info.keepDiscoveryCount / 20).toFloat)
       }.unzip
     }
+
   }
 
   def apply(items: Seq[SeedItem]): Future[Seq[ScoredSeedItem]] = {
