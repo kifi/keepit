@@ -92,9 +92,17 @@ class UserController @Inject() (
 
   def findFriends(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
     abookServiceClient.findFriends(request.userId, page, pageSize).map { recommendedUsers =>
-      val basicUsers = db.readOnlyReplica { implicit session => basicUserRepo.loadAll(recommendedUsers.toSet) }
-      val recommendedBasicUsers = recommendedUsers.map(basicUsers(_))
-      val json = Json.obj("users" -> recommendedBasicUsers)
+      val (basicUsers, friends) = db.readOnlyReplica { implicit session =>
+        val recommendedUserSet = recommendedUsers.toSet
+        val basicUsers = basicUserRepo.loadAll(recommendedUserSet)
+        val friends = (recommendedUserSet + request.userId).map(id => id -> userConnectionRepo.getConnectedUsers(id)).toMap
+        (basicUsers, friends)
+      }
+      val recommendedUsersArray = JsArray(recommendedUsers.map { recommendedUserId =>
+        val numMutualFriends = (friends(request.userId) intersect friends(recommendedUserId)).size
+        BasicUser.basicUserFormat.writes(basicUsers(recommendedUserId)) + ("numMutualFriends" -> JsNumber(numMutualFriends))
+      })
+      val json = Json.obj("users" -> recommendedUsersArray)
       Ok(json)
     }
   }
