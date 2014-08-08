@@ -19,7 +19,7 @@
   <link rel="stylesheet" type="text/css" href="/dist/lib.min.css">
   <link rel="stylesheet" type="text/css" href="/dist/kifi.min.css">
 </head>
-<body>
+<body ng-class="{'modal-open': modalOpen}">
   <div class="kf-cols" ng-controller="AppCtrl">
     <header class="kf-header" ng-include="'layout/header/header.tpl.html'"></header>
     <div class="kf-col-island">
