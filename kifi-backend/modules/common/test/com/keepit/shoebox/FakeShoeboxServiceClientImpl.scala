@@ -537,7 +537,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]] = {
-    println("allUsers:" + allUsers.map(_._2))
     Future.successful(allUsers.map(_._2).toSet)
   }
 
