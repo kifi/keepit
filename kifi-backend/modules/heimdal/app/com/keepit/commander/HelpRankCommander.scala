@@ -91,7 +91,7 @@ class HelpRankCommander @Inject() (
           case c if rekeepRepo.getReKeep(c.keeperId, c.uriId, userId).isEmpty =>
             val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
             rekeepRepo.save(rekeep) tap { saved =>
-              log.info(s"[searchAttribution($userId,${keep.uriId})] rekeep=$saved; click=$c")
+              log.info(s"[searchAttribution($userId,${keep.uriId})] saved=$saved; click=$c")
             }
         }
       }
@@ -100,35 +100,34 @@ class HelpRankCommander @Inject() (
   }
 
   private def chatAttribution(userId: Id[User], keep: Keep): Future[Unit] = {
-    try {
-      elizaClient.keepAttribution(userId, keep.uriId) map { otherStarters =>
-        log.info(s"[chatAttribution($userId,${keep.uriId})] otherStarters=$otherStarters")
-        otherStarters.foreach { chatUserId =>
-          db.readOnlyMaster { implicit ro =>
-            rekeepRepo.getReKeep(chatUserId, keep.uriId, userId)
-          } match {
-            case Some(rekeep) =>
-              log.info(s"[chatAttribution($userId,${keep.uriId},$chatUserId)] rekeep=$rekeep already exists. Skipped.")
-            case None =>
-              shoeboxClient.getBookmarkByUriAndUser(keep.uriId, chatUserId) map { keepOpt =>
-                log.info(s"[chatAttribution($userId)] getBookmarkByUriAndUser(${keep.uriId},$chatUserId)=$keepOpt. ${if (keepOpt.isEmpty) "Skipped" else "Continue"}")
-                keepOpt foreach { chatUserKeep =>
+    elizaClient.keepAttribution(userId, keep.uriId) map { otherStarters =>
+      log.info(s"[chatAttribution($userId,${keep.uriId})] otherStarters=$otherStarters")
+      otherStarters.foreach { chatUserId =>
+        db.readOnlyMaster { implicit ro =>
+          rekeepRepo.getReKeep(chatUserId, keep.uriId, userId)
+        } match {
+          case Some(rekeep) =>
+            log.info(s"[chatAttribution($userId,${keep.uriId},$chatUserId)] rekeep=$rekeep already exists. Skipped.")
+          case None =>
+            shoeboxClient.getBookmarkByUriAndUser(keep.uriId, chatUserId) map { keepOpt =>
+              log.info(s"[chatAttribution($userId)] getBookmarkByUriAndUser(${keep.uriId},$chatUserId)=$keepOpt. ${if (keepOpt.isEmpty) "Skipped" else "Continue"}")
+              keepOpt foreach { chatUserKeep =>
+                try {
                   db.readWrite { implicit rw =>
                     val discovery = KeepDiscovery(hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging")) // todo(ray): None for uuid
                     val savedDiscovery = keepDiscoveryRepo.save(discovery)
                     val rekeep = ReKeep(keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = 1)
                     val saved = rekeepRepo.save(rekeep)
-                    log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; discovery=$savedDiscovery")
+                    log.info(s"[chatAttribution($userId,${keep.uriId})] saved=$saved; discovery=$savedDiscovery")
                   }
+                } catch {
+                  case t: Throwable =>
+                    airbrake.notify(s"[chatAttribution($userId)] failed to process $keep; exception: $t", t)
                 }
               }
-          }
+            }
         }
       }
-    } catch {
-      case t: Throwable =>
-        airbrake.notify(s"[chatAttribution($userId)] failed to process $keep; exception: $t", t)
-        Future.successful[Unit]()
     }
   }
 

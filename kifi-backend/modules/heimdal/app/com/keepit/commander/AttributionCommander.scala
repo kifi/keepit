@@ -74,7 +74,7 @@ class AttributionCommander @Inject() (
           case ((keepId, uriId), (rkCount, aggCount)) =>
             userBookmarkClicksRepo.getByUserUri(userId, uriId) match {
               case None =>
-                log.error(s"[updateReKeepStats($userId)] couldn't find bookmarkClick entry for $uriId")
+                log.error(s"[updateReKeepStats($userId)] couldn't find bookmarkClick entry for uriId=$uriId")
                 userBookmarkClicksRepo.save(UserBookmarkClicks(userId = userId, uriId = uriId, selfClicks = 0, otherClicks = 0, rekeepCount = rkCount, rekeepTotalCount = aggCount, rekeepDegree = n))
               case Some(bookmarkClick) =>
                 userBookmarkClicksRepo.save(bookmarkClick.copy(rekeepCount = rkCount, rekeepTotalCount = aggCount, rekeepDegree = n))
