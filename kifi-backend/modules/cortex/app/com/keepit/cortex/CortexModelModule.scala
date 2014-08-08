@@ -17,6 +17,7 @@ case class CortexProdModelModule() extends CortexModelModule with Logging {
     bind[LDAUserDbUpdatePlugin].to[LDAUserDbUpdatePluginImpl].in[AppScoped]
     bind[LDAUserStatDbUpdatePlugin].to[LDAUserStatDbUpdatePluginImpl].in[AppScoped]
     bind[UserLDAStatisticsPlugin].to[UserLDAStatisticsPluginImpl].in[AppScoped]
+    bind[LDAInfoUpdatePlugin].to[LDAInfoUpdatePluginImpl].in[AppScoped]
   }
 
   @Singleton
@@ -45,6 +46,7 @@ case class CortexDevModelModule() extends CortexModelModule {
     bind[LDAUserDbUpdatePlugin].to[LDAUserDbUpdatePluginImpl].in[AppScoped]
     bind[LDAUserStatDbUpdatePlugin].to[LDAUserStatDbUpdatePluginImpl].in[AppScoped]
     bind[UserLDAStatisticsPlugin].to[UserLDAStatisticsPluginImpl].in[AppScoped]
+    bind[LDAInfoUpdatePlugin].to[LDAInfoUpdatePluginImpl].in[AppScoped]
   }
 
   @Singleton
