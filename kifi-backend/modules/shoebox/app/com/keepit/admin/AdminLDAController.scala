@@ -52,7 +52,8 @@ class AdminLDAController @Inject() (
       val topics = res.map { x => getFormatted(x.topicWords) }
       val names = res.map { _.config.topicName }
       val states = res.map { _.config.isActive }
-      val js = Json.obj("ids" -> ids, "topicWords" -> topics, "topicNames" -> names, "states" -> states)
+      val nameables = res.map { _.config.isNameable }
+      val js = Json.obj("ids" -> ids, "topicWords" -> topics, "topicNames" -> names, "states" -> states, "nameables" -> nameables)
       Ok(js)
     }
   }
@@ -83,8 +84,13 @@ class AdminLDAController @Inject() (
     val ids = (js \ "topic_ids").as[JsArray].value.map { _.as[String] }
     val names = (js \ "topic_names").as[JsArray].value.map { _.as[String] }
     val isActive = (js \ "topic_states").as[JsArray].value.map { _.as[Boolean] }
+    val isNameable = (js \ "topic_nameable").as[JsArray].value.map { _.as[Boolean] }
 
-    val config = (ids, names, isActive).zipped.map { case (id, name, active) => id -> LDATopicConfiguration(name, active) }.toMap
+    val config = (0 until ids.size).map { i =>
+      val (id, name, active, nameable) = (ids(i), names(i), isActive(i), isNameable(i))
+      id.trim() -> LDATopicConfiguration(name, active, nameable)
+    }.toMap
+
     cortex.saveEdits(config)
     Ok
   }
