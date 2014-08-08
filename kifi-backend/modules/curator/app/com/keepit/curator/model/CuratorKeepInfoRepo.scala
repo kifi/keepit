@@ -14,7 +14,6 @@ import org.joda.time.DateTime
 trait CuratorKeepInfoRepo extends DbRepo[CuratorKeepInfo] {
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[CuratorKeepInfo]
   def getKeepersByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[User]]
-  def checkDiscoverableByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
 }
 
 @Singleton
@@ -30,8 +29,7 @@ class CuratorKeepInfoRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
-    def discoverable = column[Boolean]("discoverable", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, uriId, userId, keepId, state, discoverable) <> ((CuratorKeepInfo.apply _).tupled, CuratorKeepInfo.unapply _)
+    def * = (id.?, createdAt, updatedAt, uriId, userId, keepId, state) <> ((CuratorKeepInfo.apply _).tupled, CuratorKeepInfo.unapply _)
   }
 
   def table(tag: Tag) = new CuratorKeepInfoTable(tag)
@@ -46,10 +44,6 @@ class CuratorKeepInfoRepoImpl @Inject() (
 
   def getKeepersByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[User]] = {
     (for (row <- rows if row.uriId === uriId && row.state === CuratorKeepInfoStates.ACTIVE) yield row.userId).list
-  }
-
-  def checkDiscoverableByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
-    (for (row <- rows if row.uriId === uriId && row.discoverable) yield row).firstOption.isDefined
   }
 
 }
