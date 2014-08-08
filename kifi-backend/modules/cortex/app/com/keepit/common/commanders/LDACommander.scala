@@ -21,8 +21,6 @@ class LDACommander @Inject() (
     uriTopicRepo: URILDATopicRepo,
     wordRep: LDAWordRepresenter,
     docRep: LDADocRepresenter,
-    ldaConfigs: LDATopicConfigurations,
-    configStore: LDAConfigStore,
     ldaRetriever: LDAURIFeatureRetriever,
     userLDAStatsRetriever: UserLDAStatisticsRetriever,
     topicInfoRepo: LDAInfoRepo,
