@@ -50,7 +50,6 @@ class UserController @Inject() (
     db: Database,
     userRepo: UserRepo,
     userExperimentCommander: LocalUserExperimentCommander,
-    basicUserRepo: BasicUserRepo,
     userConnectionRepo: UserConnectionRepo,
     emailRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
@@ -88,36 +87,6 @@ class UserController @Inject() (
       "friends" -> friendsJsons,
       "total" -> total
     ))
-  }
-
-  def findFriends(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
-    abookServiceClient.getFriendRecommendations(request.userId, page, pageSize).map { recommendedUsers =>
-      val friends = db.readOnlyReplica { implicit session =>
-        (recommendedUsers.toSet + request.userId).map(id => id -> userConnectionRepo.getConnectedUsers(id)).toMap
-      }
-      val mutualFriends = recommendedUsers.map { recommendedUserId => recommendedUserId -> (friends(request.userId) intersect friends(recommendedUserId)) }.toMap
-      val (basicUsers, mutualFriendConnectionCounts) = db.readOnlyReplica { implicit session =>
-        val uniqueMutualFriends = mutualFriends.values.flatten.toSet
-        val basicUsers = basicUserRepo.loadAll(uniqueMutualFriends ++ recommendedUsers)
-        val mutualFriendConnectionCounts = uniqueMutualFriends.map { mutualFriendId => mutualFriendId -> userConnectionRepo.getConnectionCount(mutualFriendId) }.toMap
-        (basicUsers, mutualFriendConnectionCounts)
-      }
-      val recommendedUsersArray = JsArray(recommendedUsers.map { recommendedUserId =>
-        val mutualFriendsArray = JsArray(mutualFriends(recommendedUserId).toSeq.map { mutualFriendId =>
-          BasicUser.basicUserFormat.writes(basicUsers(mutualFriendId)) + ("numFriends" -> JsNumber(mutualFriendConnectionCounts(mutualFriendId)))
-        })
-        BasicUser.basicUserFormat.writes(basicUsers(recommendedUserId)) + ("mutualFriends" -> mutualFriendsArray)
-      })
-      val json = Json.obj("users" -> recommendedUsersArray)
-      Ok(json)
-    }
-  }
-
-  def hideFriendRecommendation(id: ExternalId[User]) = JsonAction.authenticatedAsync { request =>
-    val irrelevantUserId = db.readOnlyReplica { implicit session => userRepo.get(id).id.get }
-    abookServiceClient.hideFriendRecommendation(request.userId, irrelevantUserId).map { _ =>
-      Ok(Json.obj("hidden" -> true))
-    }
   }
 
   def friendCount() = JsonAction.authenticated { request =>

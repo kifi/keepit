@@ -27,6 +27,7 @@ case class Invitation(
   }
   def withState(state: State[Invitation]) = copy(state = state)
   def withRecipientSocialUserId(recipientSocialUserId: Option[Id[SocialUserInfo]]) = copy(recipientSocialUserId = recipientSocialUserId)
+  def canBeSent: Boolean = { timesSent < 5 }
 }
 
 object InvitationStates extends States[Invitation] {

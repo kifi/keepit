@@ -108,6 +108,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]]
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]]
   def getAllFakeUsers(): Future[Set[Id[User]]]
+  def getInvitations(senderId: Id[User]): Future[Seq[Invitation]]
+  def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -647,7 +649,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
-    call(Shoebox.internal.getUserImageUrl(userId.id, width)).map { r =>
+    call(Shoebox.internal.getUserImageUrl(userId, width)).map { r =>
       r.json.as[String]
     }
   }
@@ -689,5 +691,13 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getAllFakeUsers(): Future[Set[Id[User]]] = cacheProvider.allFakeUsersCache.getOrElseFuture(AllFakeUsersKey) {
     call(Shoebox.internal.getAllFakeUsers()).map(_.json.as[Set[Id[User]]])
+  }
+
+  def getInvitations(senderId: Id[User]): Future[Seq[Invitation]] = {
+    call(Shoebox.internal.getInvitations(senderId)).map(_.json.as[Seq[Invitation]])
+  }
+
+  def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]] = {
+    call(Shoebox.internal.getSocialConnections(userId)).map(_.json.as[Seq[SocialUserBasicInfo]])
   }
 }

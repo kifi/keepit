@@ -2,13 +2,14 @@ package com.keepit.abook.model
 
 import com.keepit.common.db._
 import com.keepit.model._
-import com.keepit.social.SocialNetworkType
+import com.keepit.social.{ SocialId, SocialNetworkType }
 
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.common.mail.EmailAddress
+import com.keepit.serializer.EitherFormat
 
 object RichSocialConnectionStates extends States[RichSocialConnection]
 
@@ -54,4 +55,22 @@ object RichSocialConnection {
     (__ \ 'invitedBy).format[Int] and
     (__ \ 'blocked).format[Boolean]
   )(RichSocialConnection.apply, unlift(RichSocialConnection.unapply))
+}
+
+case class InviteRecommendation(
+  network: SocialNetworkType,
+  identifier: Either[EmailAddress, SocialId],
+  name: String,
+  pictureUrl: Option[String],
+  lastInvitedAt: Option[DateTime])
+
+object InviteRecommendation {
+  val identifierFormat = EitherFormat[EmailAddress, SocialId]
+  implicit val format = (
+    (__ \ 'network).format[SocialNetworkType] and
+    (__ \ 'identifier).format(identifierFormat) and
+    (__ \ 'name).format[String] and
+    (__ \ 'pictureUrl).formatNullable[String] and
+    (__ \ 'lastInvitedAt).formatNullable(DateTimeJsonFormat)
+  )(InviteRecommendation.apply, unlift(InviteRecommendation.unapply))
 }

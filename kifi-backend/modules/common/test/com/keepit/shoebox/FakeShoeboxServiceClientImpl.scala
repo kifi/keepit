@@ -623,4 +623,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]] = Future.successful(Seq.empty)
 
   def getAllFakeUsers(): Future[Set[Id[User]]] = Future.successful(Set.empty)
+
+  def getInvitations(senderId: Id[User]): Future[Seq[Invitation]] = Future.successful(Seq.empty)
+
+  def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]] = Future.successful(Seq.empty)
 }
