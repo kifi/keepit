@@ -1,23 +1,22 @@
 package com.keepit.curator.controllers.internal
 
-import com.keepit.curator.commanders.RecommendationGenerationCommander
+import com.google.inject.Inject
 import com.keepit.common.controller.CuratorServiceController
 import com.keepit.common.db.Id
 import com.keepit.curator.commanders.email.EngagementFeedEmailSender
+import com.keepit.curator.commanders.{RecommendationFeedbackCommander, RecommendationGenerationCommander}
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-
-import play.api.mvc.{ SimpleResult, Action }
-import play.api.libs.json.{ JsNumber, JsObject, JsArray, JsString, Json }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
-import com.google.inject.Inject
+import play.api.libs.json.{JsString, Json}
+import play.api.mvc.Action
 
 import concurrent.Future
 
 class CuratorController @Inject() (
     shoebox: ShoeboxServiceClient,
     recoGenCommander: RecommendationGenerationCommander,
+    recoFeedbackCommander: RecommendationFeedbackCommander,
     engagaementFeedEmailSender: EngagementFeedEmailSender) extends CuratorServiceController {
 
   def adHocRecos(userId: Id[User], n: Int) = Action.async { request =>
@@ -29,7 +28,12 @@ class CuratorController @Inject() (
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = Action.async { request =>
     val json = request.body.asJson.get
-    recoGenCommander.updateUriRecommendationFeedback(userId, uriId, json.as[UriRecommendationFeedback]).map(update => Ok(Json.toJson(update)))
+    recoFeedbackCommander.updateUriRecommendationFeedback(userId, uriId, json.as[UriRecommendationFeedback]).map(update => Ok(Json.toJson(update)))
+  }
+
+  def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI]) = Action.async { request =>
+    val json = request.body.asJson.get
+    recoFeedbackCommander.updateUriRecommendationUserInteraction(userId, uriId, json.as[UriRecommendationUserInteraction]).map(update => Ok(Json.toJson(update)))
   }
 
   def triggerEmailToUser(code: String, userId: Id[User]) = Action.async { request =>

@@ -7,6 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model.{ Keep, User }
+import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -30,6 +31,10 @@ class HelpRankController @Inject() (
     helprankCommander.processKeepAttribution(userId, keeps) map { r =>
       Ok
     }
+  }
+
+  def getKeepAttributionInfo(userId: Id[User]) = Action { request =>
+    Ok(Json.toJson(helprankCommander.getKeepAttributionInfo(userId)))
   }
 
 }

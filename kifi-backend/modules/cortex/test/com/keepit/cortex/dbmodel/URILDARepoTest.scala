@@ -229,4 +229,24 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
 
     }
   }
+
+  "query num docs in topics" in {
+    withDb() { implicit injector =>
+      val uriTopicRepo = inject[URILDATopicRepo]
+      db.readWrite { implicit s =>
+        (1 to 5).map { i =>
+          uriTopicRepo.save(URILDATopic(
+            uriId = Id[NormalizedURI](i),
+            numOfWords = 100,
+            firstTopic = Some(LDATopic(i)),
+            version = ModelVersion[DenseLDA](1),
+            uriSeq = SequenceNumber[NormalizedURI](i),
+            state = URILDATopicStates.ACTIVE))
+        }
+
+        uriTopicRepo.getTopicCounts(ModelVersion[DenseLDA](1)).sortBy(_._1) === (1 to 5).map { i => (i, 1) }.toList
+
+      }
+    }
+  }
 }

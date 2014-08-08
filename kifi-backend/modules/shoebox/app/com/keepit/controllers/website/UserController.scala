@@ -91,25 +91,31 @@ class UserController @Inject() (
   }
 
   def findFriends(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
-    abookServiceClient.findFriends(request.userId, page, pageSize).map { recommendedUsers =>
-      val (basicUsers, friends) = db.readOnlyReplica { implicit session =>
-        val recommendedUserSet = recommendedUsers.toSet
-        val basicUsers = basicUserRepo.loadAll(recommendedUserSet)
-        val friends = (recommendedUserSet + request.userId).map(id => id -> userConnectionRepo.getConnectedUsers(id)).toMap
-        (basicUsers, friends)
+    abookServiceClient.getFriendRecommendations(request.userId, page, pageSize).map { recommendedUsers =>
+      val friends = db.readOnlyReplica { implicit session =>
+        (recommendedUsers.toSet + request.userId).map(id => id -> userConnectionRepo.getConnectedUsers(id)).toMap
+      }
+      val mutualFriends = recommendedUsers.map { recommendedUserId => recommendedUserId -> (friends(request.userId) intersect friends(recommendedUserId)) }.toMap
+      val (basicUsers, mutualFriendConnectionCounts) = db.readOnlyReplica { implicit session =>
+        val uniqueMutualFriends = mutualFriends.values.flatten.toSet
+        val basicUsers = basicUserRepo.loadAll(uniqueMutualFriends ++ recommendedUsers)
+        val mutualFriendConnectionCounts = uniqueMutualFriends.map { mutualFriendId => mutualFriendId -> userConnectionRepo.getConnectionCount(mutualFriendId) }.toMap
+        (basicUsers, mutualFriendConnectionCounts)
       }
       val recommendedUsersArray = JsArray(recommendedUsers.map { recommendedUserId =>
-        val numMutualFriends = (friends(request.userId) intersect friends(recommendedUserId)).size
-        BasicUser.basicUserFormat.writes(basicUsers(recommendedUserId)) + ("numMutualFriends" -> JsNumber(numMutualFriends))
+        val mutualFriendsArray = JsArray(mutualFriends(recommendedUserId).toSeq.map { mutualFriendId =>
+          BasicUser.basicUserFormat.writes(basicUsers(mutualFriendId)) + ("numFriends" -> JsNumber(mutualFriendConnectionCounts(mutualFriendId)))
+        })
+        BasicUser.basicUserFormat.writes(basicUsers(recommendedUserId)) + ("mutualFriends" -> mutualFriendsArray)
       })
       val json = Json.obj("users" -> recommendedUsersArray)
       Ok(json)
     }
   }
 
-  def hideUserRecommendation(id: ExternalId[User]) = JsonAction.authenticatedAsync { request =>
+  def hideFriendRecommendation(id: ExternalId[User]) = JsonAction.authenticatedAsync { request =>
     val irrelevantUserId = db.readOnlyReplica { implicit session => userRepo.get(id).id.get }
-    abookServiceClient.hideUserRecommendation(request.userId, irrelevantUserId).map { _ =>
+    abookServiceClient.hideFriendRecommendation(request.userId, irrelevantUserId).map { _ =>
       Ok(Json.obj("hidden" -> true))
     }
   }
@@ -288,16 +294,14 @@ class UserController @Inject() (
       toJson(pimpedUser.info).as[JsObject] ++
       Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
       Json.obj("experiments" -> experiments.map(_.value))
-    val (uniqueKeepsClicked, totalClicks) = userCommander.getHelpCounts(userId)
-    userCommander.getKeepAttributionCounts(userId) map {
-      case (clickCount, rekeepCount, rekeepTotalCount) =>
-        Ok(json ++ Json.obj(
-          "uniqueKeepsClicked" -> uniqueKeepsClicked,
-          "totalKeepsClicked" -> totalClicks,
-          "clickCount" -> clickCount,
-          "rekeepCount" -> rekeepCount,
-          "rekeepTotalCount" -> rekeepTotalCount
-        ))
+    userCommander.getKeepAttributionInfo(userId) map { info =>
+      Ok(json ++ Json.obj(
+        "uniqueKeepsClicked" -> info.uniqueKeepsClicked,
+        "totalKeepsClicked" -> info.totalClicks,
+        "clickCount" -> info.clickCount,
+        "rekeepCount" -> info.rekeepCount,
+        "rekeepTotalCount" -> info.rekeepTotalCount
+      ))
     }
   }
 

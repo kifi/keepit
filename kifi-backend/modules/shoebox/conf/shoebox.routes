@@ -299,7 +299,7 @@ GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserCo
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/count    @com.keepit.controllers.website.UserController.friendCount()
 GET     /site/user/friends/find    @com.keepit.controllers.website.UserController.findFriends(page: Int ?= 0, pageSize: Int ?= 5)
-POST    /site/user/:id/hide         @com.keepit.controllers.website.UserController.hideUserRecommendation(id: ExternalId[User])
+POST    /site/user/:id/hide         @com.keepit.controllers.website.UserController.hideFriendRecommendation(id: ExternalId[User])
 POST    /site/user/invite           @com.keepit.controllers.website.InviteController.inviteV2()
 POST    /site/user/delighted/answer @com.keepit.controllers.website.UserController.postDelightedAnswer()
 POST    /site/user/delighted/cancel @com.keepit.controllers.website.UserController.cancelDelightedSurvey()
@@ -609,6 +609,7 @@ POST    /admin/cortex/lda/userUriInterest                  @com.keepit.controlle
 POST    /admin/cortex/lda/userTopicMean                    @com.keepit.controllers.admin.AdminLDAController.userTopicMean
 GET     /admin/cortex/lda/topicDetail                      @com.keepit.controllers.admin.AdminLDAController.topicDetail(topicId: Int)
 GET     /admin/cortex/lda/peopleLikeYou                    @com.keepit.controllers.admin.AdminLDAController.peopleLikeYou(topK: Int ?= 20)
+GET     /admin/cortex/lda/unamedTopics                     @com.keepit.controllers.admin.AdminLDAController.unamedTopics(limit: Int ?= 20)
 
 GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
@@ -731,7 +732,7 @@ GET      /internal/shoebox/screenshots/update        @com.keepit.controllers.int
 GET      /internal/shoebox/image/getUriImage         @com.keepit.controllers.internal.URISummaryController.getUriImageForUriId(id: Id[NormalizedURI])
 POST     /internal/shoebox/image/getUriSummary       @com.keepit.controllers.internal.URISummaryController.getUriSummary()
 POST     /internal/shoebox/image/getUriSummaries     @com.keepit.controllers.internal.URISummaryController.getUriSummaries()
-POST      /internal/shoebox/database/getAdultRestrictionOfURIs   @com.keepit.controllers.internal.NormalizedURIController.getAdultRestrictionOfURIs()
+POST      /internal/shoebox/database/getCandidateURIs   @com.keepit.controllers.internal.NormalizedURIController.getCandidateURIs()
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Long, width: Int)
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)

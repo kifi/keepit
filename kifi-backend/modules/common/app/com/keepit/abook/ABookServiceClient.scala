@@ -59,8 +59,8 @@ trait ABookServiceClient extends ServiceClient {
   def getEmailAccountsChanged(seqNum: SequenceNumber[EmailAccountInfo], fetchSize: Int): Future[Seq[EmailAccountInfo]]
   def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]]
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]]
-  def findFriends(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]]
-  def hideUserRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit]
+  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]]
+  def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -239,12 +239,12 @@ class ABookServiceClientImpl @Inject() (
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] =
     call(ABook.internal.getUsersWithContact(email)).map(_.json.as[Set[Id[User]]])
 
-  def findFriends(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = {
-    call(ABook.internal.findFriends(userId: Id[User], page: Int, pageSize: Int)).map(_.json.as[Seq[Id[User]]])
+  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = {
+    call(ABook.internal.getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int)).map(_.json.as[Seq[Id[User]]])
   }
 
-  def hideUserRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit] = {
-    call(ABook.internal.hideUserRecommendation(userId: Id[User], irrelevantUserId: Id[User])).map(_ => ())
+  def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit] = {
+    call(ABook.internal.hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User])).map(_ => ())
   }
 }
 
@@ -313,7 +313,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] = Future.successful(contactsConnectedToEmailAddress)
 
-  def findFriends(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = Future.successful(Seq.empty)
+  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = Future.successful(Seq.empty)
 
-  def hideUserRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit] = Future.successful(())
+  def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit] = Future.successful(())
 }

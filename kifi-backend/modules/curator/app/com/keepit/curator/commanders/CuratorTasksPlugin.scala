@@ -23,7 +23,7 @@ class CuratorTasksPlugin @Inject() (
     scheduleTaskOnLeader(system, 1 minutes, 5 minutes) {
       ingestionCommander.ingestAll()
     }
-    scheduleTaskOnLeader(system, 1 minutes, 5 minutes) {
+    scheduleTaskOnLeader(system, 1 minutes, 2 minutes) {
       generationCommander.precomputeRecommendations()
     }
 
@@ -32,6 +32,6 @@ class CuratorTasksPlugin @Inject() (
 
   private def scheduleRecommendationEmail(): Unit = {
     log.info("scheduleRecommendationEmail() called")
-    cronTaskOnLeader(quartz, emailActor.ref, "0 25 22 * * ?", EngagementEmailTypes.FEED)
+    cronTaskOnLeader(quartz, emailActor.ref, "0 25 45 * * ?", EngagementEmailTypes.FEED)
   }
 }

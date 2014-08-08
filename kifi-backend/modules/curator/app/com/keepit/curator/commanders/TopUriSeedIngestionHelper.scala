@@ -48,8 +48,8 @@ class TopUriSeedIngestionHelper @Inject() (
             lastKept = anotherRawSeedItem.lastKept,
             lastSeen = currentDateTime,
             priorScore = Some(uriScore.score.toFloat),
-            timesKept = anotherRawSeedItem.timesKept))
-
+            timesKept = anotherRawSeedItem.timesKept,
+            discoverable = anotherRawSeedItem.discoverable))
           case None => {
             log.info(s"Can't find another Raw Seed Item. Must have been renormalized. UriId: ${uriScore.uriId}")
           }

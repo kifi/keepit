@@ -123,11 +123,27 @@ class AdminLDAController @Inject() (
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = body.get("userId").get.toLong
 
-    val futureMsg = cortex.userTopicMean(Id[User](userId)).flatMap {
-      case Some(arr) => showTopTopicDistributions(arr, topK = 10)
-      case None => Future.successful("not enough information")
+    cortex.userTopicMean(Id[User](userId)).flatMap {
+      case (global, recent) =>
+        val globalMsgFut = global match {
+          case Some(arr) => showTopTopicDistributions(arr, topK = 10)
+          case None => Future.successful("not enough information")
+        }
+
+        val recentMsgFut = recent match {
+          case Some(arr) => showTopTopicDistributions(arr, topK = 10)
+          case None => Future.successful("not enough information")
+        }
+
+        for {
+          globalMsg <- globalMsgFut
+          recentMsg <- recentMsgFut
+        } yield {
+          val msg = "overall: " + globalMsg + "\n" + "recent: " + recentMsg
+          Ok(msg.replaceAll("\n", "\n<br>"))
+        }
     }
-    futureMsg.map(msg => Ok(JsString(msg)))
+
   }
 
   def topicDetail(topicId: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
@@ -147,5 +163,13 @@ class AdminLDAController @Inject() (
         Ok(html.admin.peopleLikeYou(users, scores))
     }
 
+  }
+
+  def unamedTopics(limit: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    cortex.unamedTopics(limit).map {
+      case (topicInfo, topicWords) =>
+        val words = topicWords.map { case words => getFormatted(words) }
+        Ok(html.admin.unamedTopics(topicInfo, words))
+    }
   }
 }

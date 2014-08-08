@@ -11,19 +11,19 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 @Singleton
-class FriendRecommendationCommander @Inject() (
+class ABookRecommendationCommander @Inject() (
     db: Database,
     friendRecommendationRepo: FriendRecommendationRepo,
     graph: GraphServiceClient,
     shoebox: ShoeboxServiceClient) {
 
-  def recordIrrelevantUserRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Unit = {
+  def recordIrrelevantFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Unit = {
     db.readWrite { implicit session =>
       friendRecommendationRepo.recordIrrelevantRecommendation(userId, irrelevantUserId)
     }
   }
 
-  def getRecommendedUsers(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = {
+  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = {
     val futureRelatedUsers = graph.getSociallyRelatedUsers(userId, bePatient = false)
     val futureFriends = shoebox.getFriends(userId)
     val futureFriendRequests = shoebox.getFriendRequestsBySender(userId)
