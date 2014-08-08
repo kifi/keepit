@@ -1,5 +1,7 @@
 package com.keepit.cortex
 
+import com.keepit.cortex.dbmodel.LDAInfo
+
 import scala.concurrent.Future
 import com.keepit.common.db.Id
 import com.keepit.model.{ User, NormalizedURI, Word2VecKeywords }
@@ -40,6 +42,7 @@ class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extend
   override def userTopicMean(userId: Id[User]): Future[Option[Array[Float]]] = ???
   override def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]] = ???
   override def getSimilarUsers(userId: Id[User], topK: Int): Future[(Seq[Id[User]], Seq[Float])] = ???
+  override def unamedTopics(limit: Int = 20): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] = ???
 
   override def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])] = ???
 }
