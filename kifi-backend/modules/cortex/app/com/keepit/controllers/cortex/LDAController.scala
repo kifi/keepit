@@ -83,8 +83,10 @@ class LDAController @Inject() (
   }
 
   def userTopicMean(userId: Id[User]) = Action { request =>
-    val meanOpt = lda.userTopicMean(userId)
-    Ok(Json.toJson(meanOpt.map { _.mean }))
+    val feat = lda.userTopicMean(userId)
+    val meanOpt = feat.flatMap { _.userTopicMean }
+    val recentOpt = feat.flatMap { _.userRecentTopicMean }
+    Ok(Json.obj("global" -> meanOpt.map { _.mean }, "recent" -> recentOpt.map { _.mean }))
   }
 
   def sampleURIs(topicId: Int) = Action { request =>

@@ -39,7 +39,7 @@ class FakeCortexServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extend
   override def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[LDAUserURIInterestScores]] = {
     Future.successful((0 until uriIds.length).map(_ => LDAUserURIInterestScores(None, None)))
   }
-  override def userTopicMean(userId: Id[User]): Future[Option[Array[Float]]] = ???
+  override def userTopicMean(userId: Id[User]): Future[(Option[Array[Float]], Option[Array[Float]])] = ???
   override def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]] = ???
   override def getSimilarUsers(userId: Id[User], topK: Int): Future[(Seq[Id[User]], Seq[Float])] = ???
   override def unamedTopics(limit: Int = 20): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] = ???
