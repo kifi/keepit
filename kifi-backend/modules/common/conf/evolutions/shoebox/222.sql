@@ -1,13 +1,23 @@
-# CURATOR
+# CORTEX
 
 # --- !Ups
 
-ALTER TABLE curator_keep_info
-  ADD COLUMN discoverable boolean NOT NULL DEFAULT false;
+CREATE TABLE lda_info(
+  id bigint(20) NOT NULL AUTO_INCREMENT,
+  created_at datetime NOT NULL,
+  updated_at datetime NOT NULL,
+  version tinyint unsigned NOT NULL,
+  dimension smallint unsigned NOT NULL,
+  topic_id smallint unsigned NOT NULL,
+  topic_name varchar(64) NOT NULL,
+  is_active bool NOT NULL,
+  is_nameable bool NOT NULL,
+  num_docs int unsigned NOT NULL,
 
-ALTER TABLE raw_seed_item_sequence
-  ADD COLUMN discoverable boolean NOT NULL DEFAULT false;
+  PRIMARY Key (id),
+  UNIQUE INDEX lda_info_i_version_topic_id (version, topic_id)
+);
 
-INSERT INTO evolutions (name, description) VALUES('222.sql', 'add discoverable columns to curator_keep_info & raw_seed_item_sequence table');
+insert into evolutions (name, description) values('222.sql', 'adding lda_info');
 
 # --- !Downs
