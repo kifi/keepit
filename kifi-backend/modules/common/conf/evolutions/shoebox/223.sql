@@ -8,4 +8,4 @@ ALTER TABLE curator_keep_info
 ALTER TABLE raw_seed_item_sequence
   ADD COLUMN discoverable boolean NOT NULL DEFAULT false;
 
-INSERT INTO evolutions (name, description) VALUES('222.sql', 'add discoverable columns to curator_keep_info & raw_seed_item_sequence table');
+INSERT INTO evolutions (name, description) VALUES('223.sql', 'add discoverable columns to curator_keep_info & raw_seed_item_sequence table');
