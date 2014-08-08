@@ -30,6 +30,7 @@ trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getFeaturesSince(seq: SequenceNumber[NormalizedURI], version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[URILDATopic]
   def countUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Int
   def getUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Seq[LDATopicFeature]
+  def getTopicCounts(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Int, Int)] // (topic_id, counts)
 }
 
 @Singleton
@@ -149,5 +150,11 @@ class URILDATopicRepoImpl @Inject() (
     implicit val getFeature = GetResult(r => ldaTopicFeatureMapper.nextValue(r))
     val q = sql"""select tp.feature from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id and ck.user_id = ${userId.id} and ck.state = 'active' and tp.version = ${version.version} and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words}"""
     q.as[LDATopicFeature].list
+  }
+
+  def getTopicCounts(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Int, Int)] = {
+    import StaticQuery.interpolation
+    val q = sql"""select tp.first_topic, count(tp.uri_id) from uri_lda_topic as tp where tp.version = ${version.version} and tp.state = 'active' group by tp.first_topic"""
+    q.as[(Int, Int)].list
   }
 }
