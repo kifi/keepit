@@ -148,4 +148,12 @@ class AdminLDAController @Inject() (
     }
 
   }
+
+  def unamedTopics(limit: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    cortex.unamedTopics(limit).map {
+      case (topicInfo, topicWords) =>
+        val words = topicWords.map { case words => getFormatted(words) }
+        Ok(html.admin.unamedTopics(topicInfo, words))
+    }
+  }
 }

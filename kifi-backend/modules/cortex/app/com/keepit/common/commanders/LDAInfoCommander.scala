@@ -85,4 +85,10 @@ class LDAInfoCommander @Inject() (
       (id, topicWords(id, topN))
     }.toMap
   }
+
+  def unamedTopics(limit: Int): (Seq[LDAInfo], Seq[Map[String, Float]]) = {
+    val infos = db.readOnlyReplica { implicit s => topicInfoRepo.getUnamed(wordRep.version, limit) }
+    val words = infos.map { info => topicWords(topicId = info.topicId, topN = 50).toMap }
+    (infos, words)
+  }
 }

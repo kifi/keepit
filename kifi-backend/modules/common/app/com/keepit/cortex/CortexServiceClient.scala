@@ -5,6 +5,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.routes.Cortex
+import com.keepit.cortex.dbmodel.LDAInfo
 import scala.concurrent.Future
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -40,6 +41,7 @@ trait CortexServiceClient extends ServiceClient {
   def userTopicMean(userId: Id[User]): Future[Option[Array[Float]]]
   def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]]
   def getSimilarUsers(userId: Id[User], topK: Int): Future[(Seq[Id[User]], Seq[Float])] // with scores
+  def unamedTopics(limit: Int = 20): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] // with topicWords
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
@@ -184,6 +186,15 @@ class CortexServiceClientImpl(
       val users = (js \ "userIds").as[Seq[Id[User]]]
       val scores = (js \ "scores").as[Seq[Float]]
       (users, scores)
+    }
+  }
+
+  def unamedTopics(limit: Int = 20): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] = {
+    call(Cortex.internal.unamedTopics(limit)).map { r =>
+      val js = r.json
+      val infos = (js \ "infos").as[Seq[LDAInfo]]
+      val words = (js \ "words").as[Seq[Map[String, Float]]]
+      (infos, words)
     }
   }
 

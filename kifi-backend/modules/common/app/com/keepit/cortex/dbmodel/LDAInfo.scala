@@ -1,12 +1,13 @@
 package com.keepit.cortex.dbmodel
 
-import com.keepit.common.db.{ Model, Id }
+import com.keepit.common.db.{ Id, Model }
 import com.keepit.common.time._
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.models.lda.DenseLDA
 import org.joda.time.DateTime
+import com.kifi.macros.json
 
-case class LDAInfo(
+@json case class LDAInfo(
     id: Option[Id[LDAInfo]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,

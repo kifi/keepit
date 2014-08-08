@@ -108,4 +108,9 @@ class LDAController @Inject() (
     Ok(Json.toJson(score))
   }
 
+  def unamedTopics(limit: Int) = Action { request =>
+    val (infos, words) = infoCommander.unamedTopics(limit)
+    Ok(Json.obj("infos" -> infos, "words" -> words))
+  }
+
 }

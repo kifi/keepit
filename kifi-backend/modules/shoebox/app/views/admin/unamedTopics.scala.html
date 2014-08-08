@@ -1,0 +1,84 @@
+@(infos: Seq[com.keepit.cortex.dbmodel.LDAInfo], topicWords: Seq[String])
+
+@admin("unamed topics"){
+
+
+<table id = "topic_words_table" class = "table table-bordered">
+
+  <tr>
+    <th> id
+    <th> words
+    <th> topic name
+    <th> Is Active
+  <tr/>
+
+  @infos.zip(topicWords).map{ case (info, words) =>
+    <tr>
+      <td class = "ids">@info.topicId</td>
+      <td><pre>@words</pre></td>
+      <td class = "tnames"> <input type = "text" value = "@info.topicName"></td>
+      <td class = "active"><input type = "checkbox" @if(info.isActive) {checked}> </td>
+    </tr>
+  }
+
+</table>
+
+
+<form id = "save_changes">
+  <button type = "submit">Save Above Changes</button>
+</form>
+
+
+
+<script type="text/javascript">
+
+    $(document).ready(function(){
+      $.postJson = function (uri, data, done) {
+        return $.ajax({
+          url: uri,
+          type: 'POST',
+          dataType: 'json',
+          data: JSON.stringify(data),
+          contentType: 'application/json',
+          success: done || $.noop
+        });
+      };
+
+      $('#save_changes').submit(function(event){
+        event.preventDefault();
+
+        var ids = $(".ids")
+        var retIds = []
+        for(var j = 0; j < ids.length; j++){
+          retIds[j] = $(ids[j]).text()
+        }
+
+        var names = $(".tnames")
+        var retNames = []
+        for(var j = 0; j < names.length; j++){
+          retNames[j] = $(names[j]).find("input").val()
+        }
+
+        var states = $(".active")
+        var retStates = []
+        for(var j = 0; j < states.length; j++){
+          retStates[j] = $(states[j]).find("input").prop("checked")
+        }
+
+        $.postJson('@com.keepit.controllers.admin.routes.AdminLDAController.saveEdits',
+          {topic_ids: retIds, topic_names: retNames, topic_states: retStates}
+        ).done(done).fail(fail);
+
+        function done(data){ alert("changes saved") }
+        function fail() { alert("bad things happened") }
+
+
+      })
+
+    });
+
+  </script>
+}
+
+
+
