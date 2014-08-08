@@ -23,14 +23,13 @@ angular.module('kifi.friends.rightColFriendsView', [
 
         // Randomly select 4 friends to display, but always display
         // friends with pictures before friends without pictures.
-        var numFriendsToShow = 4;
         var pictureGroups = _.groupBy(actualFriends, function (friend) {
           return friend.pictureName !== '0.jpg';
         });
-        var friendsToDisplay = _.sample(pictureGroups['true'], numFriendsToShow);
-        if (friendsToDisplay.length < numFriendsToShow) {
+        var friendsToDisplay = _.sample(pictureGroups['true'], 4);
+        if (friendsToDisplay.length < 4) {
           friendsToDisplay = friendsToDisplay.concat(
-            _.sample(pictureGroups['false'], numFriendsToShow - friendsToDisplay.length)
+            _.sample(pictureGroups['false'], 4 - friendsToDisplay.length)
           );
         }
 
