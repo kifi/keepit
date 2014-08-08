@@ -19,6 +19,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
+import scala.util.{ Success, Failure }
 
 class HelpRankCommander @Inject() (
     db: Database,
@@ -76,6 +77,8 @@ class HelpRankCommander @Inject() (
     } flatMap { remainders =>
       FutureHelpers.sequentialExec(remainders) { keep =>
         chatAttribution(userId, keep)
+      } recover {
+        case t: Throwable => airbrake.notify(s"[keepAttribution($userId)] failed with $t", t)
       }
     }
   }
@@ -98,27 +101,33 @@ class HelpRankCommander @Inject() (
   }
 
   private def chatAttribution(userId: Id[User], keep: Keep): Future[Unit] = {
-    elizaClient.keepAttribution(userId, keep.uriId) map { otherStarters =>
-      log.info(s"[chatAttribution($userId,${keep.uriId})] otherStarters=$otherStarters")
-      otherStarters.foreach { chatUserId =>
-        db.readWrite { implicit rw =>
-          rekeepRepo.getReKeep(chatUserId, keep.uriId, userId) match {
-            case Some(rekeep) =>
-              log.info(s"[chatAttribution($userId,${keep.uriId},$chatUserId)] rekeep=$rekeep already exists. Skipped.")
-            case None =>
-              shoeboxClient.getBookmarkByUriAndUser(keep.uriId, chatUserId) map { keepOpt =>
-                log.info(s"[chatAttribution($userId)] getBookmarkByUriAndUser(${keep.uriId},$chatUserId)=$keepOpt")
-                keepOpt foreach { chatUserKeep =>
-                  val discovery = KeepDiscovery(hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging")) // todo(ray): None for uuid
-                  val savedDiscovery = keepDiscoveryRepo.save(discovery)
-                  val rekeep = ReKeep(keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = 1)
-                  val saved = rekeepRepo.save(rekeep)
-                  log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; discovery=$savedDiscovery")
+    try {
+      elizaClient.keepAttribution(userId, keep.uriId) map { otherStarters =>
+        log.info(s"[chatAttribution($userId,${keep.uriId})] otherStarters=$otherStarters")
+        otherStarters.foreach { chatUserId =>
+          db.readWrite { implicit rw =>
+            rekeepRepo.getReKeep(chatUserId, keep.uriId, userId) match {
+              case Some(rekeep) =>
+                log.info(s"[chatAttribution($userId,${keep.uriId},$chatUserId)] rekeep=$rekeep already exists. Skipped.")
+              case None =>
+                shoeboxClient.getBookmarkByUriAndUser(keep.uriId, chatUserId) map { keepOpt =>
+                  log.info(s"[chatAttribution($userId)] getBookmarkByUriAndUser(${keep.uriId},$chatUserId)=$keepOpt")
+                  keepOpt foreach { chatUserKeep =>
+                    val discovery = KeepDiscovery(hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging")) // todo(ray): None for uuid
+                    val savedDiscovery = keepDiscoveryRepo.save(discovery)
+                    val rekeep = ReKeep(keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = 1)
+                    val saved = rekeepRepo.save(rekeep)
+                    log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; discovery=$savedDiscovery")
+                  }
                 }
-              }
+            }
           }
         }
       }
+    } catch {
+      case t: Throwable =>
+        airbrake.notify(s"[chatAttribution($userId)] failed to process $keep; exception: $t", t)
+        Future.successful[Unit]()
     }
   }
 
