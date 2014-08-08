@@ -23,10 +23,10 @@ class UriScoringHelperTest extends Specification with CuratorTestInjector {
     FakeCacheModule())
 
   private def makeSeedItems(): Seq[SeedItem] = {
-    val seedItem1 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](1), seq = SequenceNumber[SeedItem](1), priorScore = None, timesKept = 1000, lastSeen = currentDateTime, keepers = Keepers.TooMany)
-    val seedItem2 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](2), seq = SequenceNumber[SeedItem](2), priorScore = None, timesKept = 10, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](3))))
-    val seedItem3 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](3), seq = SequenceNumber[SeedItem](3), priorScore = None, timesKept = 93, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](2))))
-    val seedItem4 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](4), seq = SequenceNumber[SeedItem](4), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))))
+    val seedItem1 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](1), seq = SequenceNumber[SeedItem](1), priorScore = None, timesKept = 1000, lastSeen = currentDateTime, keepers = Keepers.TooMany, discoverable = false)
+    val seedItem2 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](2), seq = SequenceNumber[SeedItem](2), priorScore = None, timesKept = 10, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](3))), discoverable = false)
+    val seedItem3 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](3), seq = SequenceNumber[SeedItem](3), priorScore = None, timesKept = 93, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](2))), discoverable = false)
+    val seedItem4 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](4), seq = SequenceNumber[SeedItem](4), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))), discoverable = true)
     seedItem1 :: seedItem2 :: seedItem3 :: seedItem4 :: Nil
   }
 
