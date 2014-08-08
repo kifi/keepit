@@ -152,7 +152,6 @@ class LDACommander @Inject() (
         val s = userMean.sum
         assume(s > 0)
         val dist = weightedMDistanceDiagGaussian(uriFeat.value, userMean, userVar, userMean.map { _ / s })
-        log.info(s"m-distance: $dist , userMean: ${userMean.take(5).mkString(", ")}, ${userVar.take(5).mkString(", ")}")
         Some(LDAUserURIInterestScore(exp(-1 * dist), computeConfidence(numOfWords, numOfEvidenceForUser)))
       case _ => None
     }
