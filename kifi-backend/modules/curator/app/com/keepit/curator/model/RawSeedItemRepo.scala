@@ -91,7 +91,9 @@ class RawSeedItemRepoImpl @Inject() (
   }
 
   def updateUriDiscoverability(uriId: Id[NormalizedURI], discoverable: Boolean)(implicit session: RSession): Boolean = {
-    (for (row <- rows if row.uriId === uriId) yield (row.discoverable, row.updatedAt)).update((discoverable, currentDateTime)) > 0
+    val updated = (for (row <- rows if row.uriId === uriId) yield (row.discoverable, row.updatedAt)).update((discoverable, currentDateTime)) > 0
+    getByUriId(uriId).map(invalidateCache(_))
+    updated
   }
 
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
