@@ -98,13 +98,13 @@ class LDACommander @Inject() (
   private def computeGaussianInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAStats]): LDAUserURIInterestScores = {
     (uriTopicOpt, userInterestOpt) match {
       case (Some(uriFeat), Some(userFeat)) =>
-        val globalScore = computeGaussianInterestScore(uriFeat.numOfWords, userFeat.numOfEvidence, Some(userFeat), uriFeat.feature)
+        val globalScore = computeGaussianInterestScore(uriFeat.numOfWords, userFeat.numOfEvidence, Some(userFeat), uriFeat.feature, isRecent = false)
         LDAUserURIInterestScores(globalScore, None)
       case _ => LDAUserURIInterestScores(None, None)
     }
   }
 
-  private def computeGaussianInterestScore(numOfWords: Int, numOfEvidenceForUser: Int, userFeatOpt: Option[UserLDAStats], uriFeatOpt: Option[LDATopicFeature]): Option[LDAUserURIInterestScore] = {
+  private def computeGaussianInterestScore(numOfWords: Int, numOfEvidenceForUser: Int, userFeatOpt: Option[UserLDAStats], uriFeatOpt: Option[LDATopicFeature], isRecent: Boolean): Option[LDAUserURIInterestScore] = {
     (userFeatOpt, uriFeatOpt) match {
       case (Some(userFeat), Some(uriFeat)) =>
         val userMean = userFeat.userTopicMean.get.mean
@@ -112,7 +112,7 @@ class LDACommander @Inject() (
         val s = userMean.sum
         assume(s > 0)
         val dist = weightedMDistanceDiagGaussian(uriFeat.value, userMean, userVar, userMean.map { _ / s })
-        Some(LDAUserURIInterestScore(exp(-1 * dist), computeConfidence(numOfWords, numOfEvidenceForUser)))
+        Some(LDAUserURIInterestScore(exp(-1 * dist), computeConfidence(numOfWords, numOfEvidenceForUser, isRecent)))
       case _ => None
     }
   }
@@ -120,14 +120,14 @@ class LDACommander @Inject() (
   private def computeInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAInterests]): LDAUserURIInterestScores = {
     (uriTopicOpt, userInterestOpt) match {
       case (Some(uriFeat), Some(userFeat)) =>
-        val globalScore = computeInterestScore(uriFeat.numOfWords, userFeat.numOfEvidence, userFeat.userTopicMean, uriFeat.feature)
-        val recencyScore = computeInterestScore(uriFeat.numOfWords, userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, uriFeat.feature)
+        val globalScore = computeInterestScore(uriFeat.numOfWords, userFeat.numOfEvidence, userFeat.userTopicMean, uriFeat.feature, isRecent = false)
+        val recencyScore = computeInterestScore(uriFeat.numOfWords, userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, uriFeat.feature, isRecent = true)
         LDAUserURIInterestScores(globalScore, recencyScore)
       case _ => LDAUserURIInterestScores(None, None)
     }
   }
 
-  private def computeInterestScore(numOfWords: Int, numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeatOpt: Option[LDATopicFeature]): Option[LDAUserURIInterestScore] = {
+  private def computeInterestScore(numOfWords: Int, numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeatOpt: Option[LDATopicFeature], isRecent: Boolean): Option[LDAUserURIInterestScore] = {
     (userFeatOpt, uriFeatOpt) match {
       case (Some(userFeat), Some(uriFeat)) =>
         val userVec = getUserLDAStats(wordRep.version) match {
@@ -135,13 +135,13 @@ class LDACommander @Inject() (
           case Some(stat) => scale(userFeat.mean, stat.mean, stat.std)
         }
         val (u, v) = (projectToActive(userVec), projectToActive(uriFeat.value))
-        Some(LDAUserURIInterestScore(cosineDistance(u, v), computeConfidence(numOfWords, numOfEvidenceForUser)))
+        Some(LDAUserURIInterestScore(cosineDistance(u, v), computeConfidence(numOfWords, numOfEvidenceForUser, isRecent)))
       case _ => None
     }
   }
 
-  private def computeConfidence(numOfWords: Int, numOfEvidenceForUser: Int) = {
-    val alpha = (numOfEvidenceForUser - 30) / 10f
+  private def computeConfidence(numOfWords: Int, numOfEvidenceForUser: Int, isRecent: Boolean) = {
+    val alpha = if (isRecent) (numOfEvidenceForUser - 10) / 5f else (numOfEvidenceForUser - 30) / 10f
     val s1 = 1f / (1 + exp(-1 * alpha)).toFloat
     val beta = (numOfWords - 50) / 50f
     val s2 = 1f / (1 + exp(-1 * beta)).toFloat
