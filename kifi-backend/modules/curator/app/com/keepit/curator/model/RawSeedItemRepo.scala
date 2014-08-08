@@ -3,7 +3,7 @@ package com.keepit.curator.model
 import com.keepit.common.db.slick.{ DbRepo, SeqNumberFunction, SeqNumberDbFunction, DataBaseComponent, Database }
 import com.keepit.common.db.{ Id, DbSequenceAssigner, SequenceNumber }
 import com.keepit.model.{ User, NormalizedURI }
-import com.keepit.common.time.{currentDateTime, Clock}
+import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.actor.ActorInstance
@@ -25,7 +25,7 @@ trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeed
   def getRecentGeneric(maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
   def getFirstByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[RawSeedItem]
   def getByTopPriorScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
-  def updateUriDiscoveribilityToUsers(uriId: Id[NormalizedURI], discoverable: Boolean)(implicit session: RSession): Boolean
+  def updateUriDiscoverability(uriId: Id[NormalizedURI], discoverable: Boolean)(implicit session: RSession): Boolean
 }
 
 @Singleton
@@ -90,7 +90,7 @@ class RawSeedItemRepoImpl @Inject() (
     (for (row <- rows if row.userId === userId) yield row).sortBy(_.priorScore.desc).take(maxBatchSize).list
   }
 
-  def updateUriDiscoveribilityToUsers(uriId: Id[NormalizedURI], discoverable: Boolean)(implicit session: RSession): Boolean = {
+  def updateUriDiscoverability(uriId: Id[NormalizedURI], discoverable: Boolean)(implicit session: RSession): Boolean = {
     (for (row <- rows if row.uriId === uriId) yield (row.discoverable, row.updatedAt)).update((discoverable, currentDateTime)) > 0
   }
 

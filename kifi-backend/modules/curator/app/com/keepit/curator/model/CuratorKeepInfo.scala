@@ -14,8 +14,7 @@ case class CuratorKeepInfo(
   userId: Id[User],
   keepId: Id[Keep],
   state: State[CuratorKeepInfo], //library: Id[Library]
-  discoverable: Boolean
-  )
+  discoverable: Boolean)
     extends Model[CuratorKeepInfo] with ModelWithState[CuratorKeepInfo] {
 
   def withId(id: Id[CuratorKeepInfo]): CuratorKeepInfo = this.copy(id = Some(id))

@@ -50,7 +50,7 @@ class AllKeepSeedIngestionHelper @Inject() (
 
       val discoverable = keepInfoRepo.checkDiscoverableByUriId(keep.uriId)
       if (discoverable != rawSeedItems(0).discoverable)
-        rawSeedsRepo.updateUriDiscoveribilityToUsers(keep.uriId, discoverable)
+        rawSeedsRepo.updateUriDiscoverability(keep.uriId, discoverable)
       rawSeedItems.foreach { rawSeedItem =>
         updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, countChange)
       }
@@ -84,7 +84,7 @@ class AllKeepSeedIngestionHelper @Inject() (
       } else {
         val discoverable = keepInfoRepo.checkDiscoverableByUriId(keep.uriId)
         if (discoverable != rawSeedItems(0).discoverable)
-          rawSeedsRepo.updateUriDiscoveribilityToUsers(keep.uriId, discoverable)
+          rawSeedsRepo.updateUriDiscoverability(keep.uriId, discoverable)
         rawSeedItems.foreach { rawSeedItem =>
           updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, if (keep.state == KeepStates.ACTIVE) 1 else 0)
         }
