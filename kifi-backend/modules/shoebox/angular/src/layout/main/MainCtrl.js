@@ -121,6 +121,10 @@ angular.module('kifi.layout.main', [
           $scope.modal = 'add_networks';
           $scope.data.showAddNetworks = true;
           break;
+        case 'seeMutualFriends':
+          $scope.modal = 'see_mutual_friends';
+          $scope.data.seeMutualFriends = true;
+          break;
         case 'importBookmarks':
           initBookmarkImport.apply(null, Array.prototype.slice(arguments, 2));
           break;
