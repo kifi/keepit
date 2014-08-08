@@ -61,7 +61,8 @@ class AllKeepSeedIngestionHelper @Inject() (
         uriId = keep.uriId,
         userId = keep.userId,
         keepId = keep.id.get,
-        state = State[CuratorKeepInfo](keep.state.value)
+        state = State[CuratorKeepInfo](keep.state.value),
+        discoverable = !keep.isPrivate
       ))
 
       val seedItems = rawSeedsRepo.getByUriId(keep.uriId)
@@ -73,7 +74,8 @@ class AllKeepSeedIngestionHelper @Inject() (
           lastKept = keep.createdAt,
           lastSeen = keep.createdAt,
           priorScore = None,
-          timesKept = if (keep.state == KeepStates.ACTIVE) 1 else 0
+          timesKept = if (keep.state == KeepStates.ACTIVE) 1 else 0,
+          discoverable = !keep.isPrivate
         ))
       } else {
         seedItems.foreach { seedItem =>
