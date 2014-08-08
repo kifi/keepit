@@ -19,8 +19,7 @@ case class SeedItem(
   priorScore: Option[Float],
   timesKept: Int,
   lastSeen: DateTime,
-  keepers: Keepers,
-  discoverable: Boolean)
+  keepers: Keepers)
 
 @json case class UriScores(
     socialScore: Float,
