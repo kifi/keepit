@@ -53,7 +53,7 @@ class LDAInfoRepoImpl @Inject() (
   }
 
   def getUnamed(version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[LDAInfo] = {
-    (for { r <- rows if r.version === version && r.topicName === LDAInfo.DEFUALT_NAME && r.isNameable === true } yield r).sortBy(_.numOfDocs.desc).list.take(limit)
+    (for { r <- rows if r.version === version && r.topicName === LDAInfo.DEFUALT_NAME && r.isNameable === true } yield r).sortBy(_.numOfDocs.desc).take(limit).list
   }
 
   def getByTopicId(version: ModelVersion[DenseLDA], topicId: Int)(implicit session: RSession): LDAInfo = {

@@ -15,7 +15,7 @@ CREATE TABLE lda_info(
   num_docs int unsigned NOT NULL,
 
   PRIMARY Key (id),
-  INDEX lda_info_i_version_topic_id (version, topic_id)
+  UNIQUE INDEX lda_info_i_version_topic_id (version, topic_id)
 );
 
 insert into evolutions (name, description) values('222.sql', 'adding lda_info');
