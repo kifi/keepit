@@ -64,7 +64,7 @@ class RecommendationGenerationCommander @Inject() (
 
   private def computeMasterScore(scores: UriScores): Float = {
     7 * scores.socialScore +
-      6 * scores.overallInterestScore +
+      5 * scores.overallInterestScore +
       1 * scores.priorScore +
       1 * scores.recencyScore +
       1 * scores.popularityScore +
@@ -105,6 +105,16 @@ class RecommendationGenerationCommander @Inject() (
     perUserRecommendationGenerationLocks.getOrElseUpdate(userId, new ReactiveLock())
   }
 
+  private def shouldInclude(scores: UriScores): Boolean = {
+    scores.socialScore > 0.5 ||
+    scores.overallInterestScore > 0.4 ||
+    scores.priorScore > 0 ||
+    (scores.popularityScore > 0.2 && scores.socialScore > 0.4) ||
+    scores.recentInterestScore > 0.3 ||
+    scores.rekeepScore > 0.3 ||
+    scores.discoveryScore > 0.3
+  }
+
   private def precomputeRecommendationsForUser(userId: Id[User]): Unit = recommendationGenerationLock.withLockFuture {
     getPerUserGenerationLock(userId).withLockFuture {
       val state = db.readOnlyMaster { implicit session =>
@@ -131,7 +141,7 @@ class RecommendationGenerationCommander @Inject() (
             }
           }
           scoringHelper(cleanedItems).map { scoredItems =>
-            val toBeSavedItems = scoredItems.filter(si => computeMasterScore(si.uriScores) > 0.3)
+            val toBeSavedItems = scoredItems.filter(si => shouldInclude(si.uriScores))
             db.readWrite { implicit session =>
               toBeSavedItems.map { item =>
                 val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
