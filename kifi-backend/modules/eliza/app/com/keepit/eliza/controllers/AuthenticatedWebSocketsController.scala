@@ -168,10 +168,17 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         case Some(streamSessionFuture) => streamSessionFuture.map { streamSession =>
           implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
 
-          val typedVersionOpt: Option[KifiVersion] = UserAgent.fromString(streamSession.userAgent).typeName match {
-            case UserAgent.KifiIphoneAppTypeName => versionOpt.map(KifiIPhoneVersion.apply)
-            case UserAgent.KifiAndroidAppTypeName => versionOpt.map(KifiAndroidVersion.apply)
-            case _ => versionOpt.map(KifiExtVersion.apply)
+          val typedVersionOpt: Option[KifiVersion] = try {
+            UserAgent.fromString(streamSession.userAgent).typeName match {
+              case UserAgent.KifiIphoneAppTypeName => versionOpt.map(KifiIPhoneVersion.apply)
+              case UserAgent.KifiAndroidAppTypeName => versionOpt.map(KifiAndroidVersion.apply)
+              case _ => versionOpt.map(KifiExtVersion.apply)
+            }
+          } catch {
+            case t: Throwable => {
+              log.error("Failed obtaining Kifi Version on Websocket connection")
+              None
+            }
           }
           val ipOpt: Option[String] = eipOpt.flatMap { eip =>
             crypt.decrypt(ipkey, eip).toOption
