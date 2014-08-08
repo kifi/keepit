@@ -45,11 +45,11 @@ object UriSparseLDAFeatures {
 }
 
 // editable from admin
-case class LDATopicConfiguration(topicName: String, isActive: Boolean)
+case class LDATopicConfiguration(topicName: String, isActive: Boolean, isNameable: Boolean)
 
 object LDATopicConfiguration {
   implicit val format = Json.format[LDATopicConfiguration]
-  def default = LDATopicConfiguration("n/a", true)
+  def default = LDATopicConfiguration("n/a", true, true)
 }
 
 case class LDATopicConfigurations(configs: Map[String, LDATopicConfiguration]) extends Versionable[DenseLDA]

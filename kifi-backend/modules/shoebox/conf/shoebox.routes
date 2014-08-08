@@ -195,6 +195,7 @@ GET     /find                       @com.keepit.controllers.website.HomeControll
 GET     /blog                       @com.keepit.controllers.website.HomeController.blog
 
 GET     /kifeeeed                   @com.keepit.controllers.website.HomeController.kifeeeed
+GET     /kifeeeed-mail/:code        @com.keepit.controllers.website.HomeController.kifeeeedEmail(code: String)
 
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /install                    @com.keepit.controllers.website.HomeController.install
@@ -735,6 +736,8 @@ POST      /internal/shoebox/database/getCandidateURIs   @com.keepit.controllers.
 GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Long, width: Int)
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
+
+GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controllers.internal.ShoeboxController.getUsersByExperiment(experiment: ExperimentType)
 
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/angular/dist", file)
