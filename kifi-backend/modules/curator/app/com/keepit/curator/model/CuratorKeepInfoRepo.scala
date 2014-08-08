@@ -30,7 +30,7 @@ class CuratorKeepInfoRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
     def keepId = column[Id[Keep]]("keep_id", O.NotNull)
-    def discoverable = column[Boolean]("is_private", O.NotNull)
+    def discoverable = column[Boolean]("discoverable", O.NotNull)
     def * = (id.?, createdAt, updatedAt, uriId, userId, keepId, state, discoverable) <> ((CuratorKeepInfo.apply _).tupled, CuratorKeepInfo.unapply _)
   }
 
