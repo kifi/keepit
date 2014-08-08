@@ -42,11 +42,13 @@ class ShoeboxController @Inject() (
   keepToCollectionRepo: KeepToCollectionRepo,
   basicUserRepo: BasicUserRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
+  socialConnectionRepo: SocialConnectionRepo,
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: UserEmailAddressRepo,
   keepsCommander: KeepsCommander,
   friendRequestRepo: FriendRequestRepo,
+  invitationRepo: InvitationRepo,
   userValueRepo: UserValueRepo,
   userCommander: UserCommander,
   kifiInstallationRepo: KifiInstallationRepo,
@@ -389,8 +391,8 @@ class ShoeboxController @Inject() (
     Ok
   }
 
-  def getUserImageUrl(id: Long, width: Int) = Action.async { request =>
-    userCommander.getUserImageUrl(Id[User](id), width).map { url =>
+  def getUserImageUrl(id: Id[User], width: Int) = Action.async { request =>
+    userCommander.getUserImageUrl(id, width).map { url =>
       Ok(Json.toJson(url))
     }
   }
@@ -410,5 +412,16 @@ class ShoeboxController @Inject() (
       userExperimentRepo.getByType(ExperimentType.FAKE).map(_.userId).toSet
     }
     Ok(Json.toJson(fakeUsers))
+  }
+
+  def getInvitations(senderId: Id[User]) = Action { request =>
+    val invitations = db.readOnlyMaster { implicit session => invitationRepo.getBySenderId(senderId) }
+    Ok(Json.toJson(invitations))
+  }
+
+  def getSocialConnections(userId: Id[User]) = Action { request =>
+    val connectionsByNetwork = db.readOnlyReplica { implicit session => socialConnectionRepo.getSocialConnectionInfosByUser(userId) }
+    val allConnections = connectionsByNetwork.valuesIterator.flatten.toSeq
+    Ok(Json.toJson(allConnections))
   }
 }
