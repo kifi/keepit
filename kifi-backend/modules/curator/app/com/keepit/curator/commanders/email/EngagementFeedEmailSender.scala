@@ -34,7 +34,6 @@ trait EngagementFeedEmailSender {
 class EngagementFeedEmailSenderImpl @Inject() (
     recommendationGenerationCommander: RecommendationGenerationCommander,
     userExperimentCommander: RemoteUserExperimentCommander,
-    engagementFeedSender: EngagementFeedEmailSender,
     shoebox: ShoeboxServiceClient,
     clock: Clock,
     protected val airbrake: AirbrakeNotifier) extends EngagementFeedEmailSender with Logging {
