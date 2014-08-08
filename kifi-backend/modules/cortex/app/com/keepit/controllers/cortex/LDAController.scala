@@ -49,7 +49,7 @@ class LDAController @Inject() (
   def saveEdits() = Action(parse.tolerantJson) { request =>
     val js = request.body
     val configs = js.as[Map[String, LDATopicConfiguration]]
-    lda.saveConfigEdits(configs)
+    infoCommander.saveConfigEdits(configs)
     Ok
   }
 

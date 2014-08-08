@@ -11,6 +11,7 @@ import com.keepit.cortex.sql.CortexTypeMappers
 
 @ImplementedBy(classOf[LDAInfoRepoImpl])
 trait LDAInfoRepo extends DbRepo[LDAInfo] {
+  def getDimension(version: ModelVersion[DenseLDA])(implicit session: RSession): Option[Int]
   def getAllByVersion(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[LDAInfo]
   def getUnamed(version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[LDAInfo]
   def getByTopicId(version: ModelVersion[DenseLDA], topicId: Int)(implicit session: RSession): LDAInfo
@@ -42,6 +43,10 @@ class LDAInfoRepoImpl @Inject() (
 
   def deleteCache(model: LDAInfo)(implicit session: RSession): Unit = {}
   def invalidateCache(model: LDAInfo)(implicit session: RSession): Unit = {}
+
+  def getDimension(version: ModelVersion[DenseLDA])(implicit session: RSession): Option[Int] = {
+    (for { r <- rows if r.version === version } yield r).firstOption.map { _.dimension }
+  }
 
   def getAllByVersion(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[LDAInfo] = {
     (for { r <- rows if r.version === version } yield r).list

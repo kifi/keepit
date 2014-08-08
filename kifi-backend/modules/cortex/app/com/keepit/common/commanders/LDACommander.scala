@@ -4,7 +4,6 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.cortex.MiscPrefix
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.features.Document
@@ -48,10 +47,6 @@ class LDACommander @Inject() (
 
   def docTopic(doc: Document): Option[Array[Float]] = {
     docRep(doc).map { _.vectorize }
-  }
-
-  def saveConfigEdits(config: Map[String, LDATopicConfiguration]) = {
-    infoCommander.saveConfigEdits(config)
   }
 
   def getLDAFeatures(ids: Seq[Id[NormalizedURI]]) = {

@@ -12,8 +12,6 @@ import com.keepit.common.db.Id
 import com.keepit.model.{ User, NormalizedURI, Word2VecKeywords }
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.models.lda.{ UriSparseLDAFeatures, DenseLDA }
-import com.keepit.serializer.TraversableFormat
 import com.keepit.common.net.CallTimeouts
 import com.keepit.cortex.models.lda._
 

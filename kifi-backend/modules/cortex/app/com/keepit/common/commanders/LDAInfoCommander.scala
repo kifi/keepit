@@ -7,6 +7,7 @@ import com.keepit.cortex.MiscPrefix
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel.{ LDAInfo, LDAInfoRepo }
 import com.keepit.cortex.models.lda._
+import play.api.libs.json.Json
 
 import scala.collection.mutable
 
@@ -51,7 +52,9 @@ class LDAInfoCommander @Inject() (
 
   // consumers of lda service might query dim of some previous lda model
   def getLDADimension(version: ModelVersion[DenseLDA]): Int = {
-    ldaDimMap.getOrElseUpdate(version, 512)
+    ldaDimMap.getOrElseUpdate(version,
+      db.readOnlyReplica { implicit s => topicInfoRepo.getDimension(version).get }
+    )
   }
 
   val activeTopics = currentConfig.configs.filter { case (id, conf) => conf.isActive }.map { case (id, _) => id.toInt }.toArray.sorted
@@ -82,5 +85,4 @@ class LDAInfoCommander @Inject() (
       (id, topicWords(id, topN))
     }.toMap
   }
-
 }
