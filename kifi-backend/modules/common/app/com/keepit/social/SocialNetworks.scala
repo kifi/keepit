@@ -1,10 +1,15 @@
 package com.keepit.social
 
 import com.keepit.social.SocialNetworks.FORTYTWO
-import play.api.libs.json.{ JsString, Writes, Reads, Format }
+import play.api.libs.json._
+import play.api.libs.json.JsString
 
 case class SocialId(id: String) {
   override def toString = id
+}
+
+object SocialId {
+  implicit val format: Format[SocialId] = Format(Reads.of[String].map(SocialId.apply), Writes(socialId => JsString(socialId.id)))
 }
 
 sealed abstract class SocialNetworkType(val name: String, val displayName: String, val authProvider: String) {
