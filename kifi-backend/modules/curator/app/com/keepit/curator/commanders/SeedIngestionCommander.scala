@@ -86,7 +86,8 @@ class SeedIngestionCommander @Inject() (
     priorScore = rawItem.priorScore,
     timesKept = rawItem.timesKept,
     lastSeen = rawItem.lastSeen,
-    keepers = keepers
+    keepers = keepers,
+    discoverable = rawItem.discoverable
   )
 
   def getBySeqNumAndUser(start: SequenceNumber[SeedItem], userId: Id[User], maxBatchSize: Int): Future[Seq[SeedItem]] = {
