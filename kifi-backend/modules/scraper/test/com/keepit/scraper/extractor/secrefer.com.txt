@@ -1,0 +1,199 @@
+
+
+<!DOCTYPE html>
+<html style="overflow:scroll;">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>SecureRefer - Sign In</title>
+    <meta name="description" content="Sign in with your Facebook or Linkedin account.">
+    <meta name="keywords" content="Job, Find Job, Employee Referral, Referral, Securefer, Secure Refer, Secure Referral">
+
+    <!-- Facebook sharing meta -->
+    <meta property="fb:app_id" content="639815979434862">
+    <meta property="og:url" content="http://www.secrefer.com/login/?next=/apply/company/11?location=random?location=random">
+    <meta property="og:site_name" content="Securefer">
+    <meta property="og:title" content="">
+    <meta property="og:description" content="">
+    <meta property="og:image" content="">
+
+    <!-- Twitter sharing meta -->
+    <meta property="twitter:site" content="Securefer">
+    <meta property="twitter:creator" content="Securefer">
+    <meta property="twitter:title" content="">
+    <meta property="twitter:description" content="">
+    <meta property="twitter:image:src" content="">
+  
+    <link href="/static/css/site.css" media="all" rel="stylesheet" type="text/css">
+    <link href="/static/css/progressbar.css" media="all" rel="stylesheet" type="text/css">
+    <link rel="icon" type="image/x-icon" href="/static/icons/logo.png">
+    <link rel="stylesheet" type="text/css" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1/themes/smoothness/jquery-ui.css">
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="/static/js/utils.js"></script>
+    
+    <!-- google analytics -->
+    <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    
+        ga('create', 'UA-53339834-1', 'auto');
+        ga('require', 'displayfeatures');
+        ga('send', 'pageview');
+    </script>
+    
+    <script type="text/javascript">
+		$(function() {
+		    getNotifications("/notification/getupdate", "notification-div");
+		    getReferrerProfileCount("/account/referrer_profile_count", "referrer-status-div");
+		    $("#search-select").change(function() {
+				$("#search-input").focus();
+			});
+			adjustViewport();
+		});
+		$(window).resize(function(){
+			adjustViewport();
+		});
+    </script>
+    <!-- script type="text/javascript" src="/static/js/login.js"></script>
+    <script>
+		$(function() {
+			refreh_backgound();
+		});
+    </script -->
+
+
+</head>
+<body>
+    <img id="id_background_image" class="background_image" style="display:block;" src="/static/images/bgs/background3.jpg">
+    <div id="content-container-div" >
+	    <div class="header">
+	        <div class="container clearfix">
+	            <a class="header-logo" href="/"><span style="color:#ffffff">Sec</span><span style="color:green">ure</span><span style="color:#ffffff">Refer</span></a>
+	            <div onmouseover="$('#notification-div').show();" onmouseleave="$('#notification-div').hide();" >
+	                <a href="/notification/" class="notification-indicator"> 
+	                    <span class="mail-status all-read"></span>
+	                </a>
+	                <div id="notification-div" class="popup-menu" style="left:100px; top:40px; width:170px;">
+	                    <ul><li>No new notifications</li></ul>
+	                </div>
+	            </div>
+	            
+	            <div class="command-bar">
+	                <ul class="top-nav">
+	                    <li class="explore"><a href="/apply/">Applicant</a></li>
+	                    <li><a href="/status/">Task</a></li>
+	                    <li><a href="/referrer/">Referrer</a>
+	                    	
+	                    </li>
+	                </ul>
+	            </div>
+	
+	            <ul id="user-links">
+	                
+	                <li><a href="/account/setting_basic"></a></li>
+	                
+	                    <li><a href="/login/">Log in </a></li>
+	                    <li><a href="/signup/">Sign up </a></li> 
+	                
+	            </ul>
+	        </div>
+	    </div>
+	    <div class="search-div">
+	    <form accept-charset="UTF-8" action="/apply/" method="get" id="search-form">
+	    	<div style="width:140px; float: left;">
+	        	<select name="i" style="width:200px; max-height: 30px;" id="search-select">
+	            	<option value="">---company industry---</option>
+	             		
+	           	</select>
+	        </div>
+	        <div style="margin-left:210px; margin-right:80px;">
+	         	<input id="search-input" style="width: 320px" type="text" name="q" placeholder="search companies" tabindex="1" autocapitalize="off" value=""/>
+	          	<input type="submit" style="width:80px; float: right;" value="Search"/>
+	        </div>
+	 	</form>
+		</div>
+	    <!-- header -->
+
+        <div class="content-div">
+            
+<div>&nbsp;</div>
+<div class="center_form_container rounded-corners">
+	<div id="signup_forms" class="signup_forms clearfix">
+		
+			<table class="signup_form_table">
+				<tr>
+					<td><h1>Sec<span style="color:green">ure</span>Refer</h1></td>
+				</tr>
+				<tr>
+					<td><h2>Great people help each other. We connect you.</h2>
+						<ul>
+							<li>The referred candidates have 40% better chance of being hired than others.</li>
+							<li>Many companies reward their employees to encourage internal referrals.</li>
+							<li>The #1 hired candidates source for many companies is internal referral program.</li>
+						</ul>
+					</td>
+				</tr>
+				<tr><td><br /></td></tr>
+				<tr>
+				    <td>
+				        <div align="center">
+				            <a href="/login/linkedin-oauth2/?next=/account/login_guide/1//apply/company/11%253Flocation%253Drandom"><img src="/static/images/login_ln.png" /></a>
+				        </div>
+				    </td>
+				</tr>
+				<tr>
+				    <td>
+				        <div align="center">
+				            <a href="/login/facebook/?next=/account/login_guide/1//apply/company/11%253Flocation%253Drandom"><img src="/static/images/login_fb.png" /></a>
+				        </div>
+				    </td>
+				</tr>
+				<tr><td><div align="center" ><a href="#" onclick="$('#signup_email').toggle();adjustViewport();return false;">OR BY EMAIL</a></div></td></tr>
+				<tr><td><div align="center" id="signup_email" style="display:none;">
+<div style="width: 60%">
+				<form method="post" class="signup_form_form" action="">
+				
+				<div >
+				<input id="id_email" maxlength="254" name="email"
+						type="text" class="signup_form_input" placeholder="email">
+				</div>
+				<div >
+						<input id="id_password" name="password" type="password"
+						class="signup_form_input" placeholder="password"></div>
+				<div ><input type="submit" value="login"
+						class="signup_form_button" />
+				</div>
+				<input type="hidden" name="next" value="/account/login_guide/1//apply/company/11%253Flocation%253Drandom" />
+				</form>
+</div>
+
+				</form>
+				</div>
+				</td></tr>
+				<tr><td><br /></td></tr>
+				<tr><td><span style="color:orange">Your privacy is most important to us. Please refer to our <a href="/account/privacy_policy">Privacy Policy</a> for details.</td></tr>
+			</table>	
+	</div>
+</div>
+
+        </div>
+        <!-- content-div -->
+
+	    <div class="footer">
+	    	<div class="container" align="center">
+	        <a class="link-button" href="/account/privacy_policy">Privacy Policy</a> |
+	        <a class="link-button" href="mailto:secrefer@outlook.com" >Contact Us</a>
+		    &copy; 2014 SecureRefer. All Rights Reserved.
+		    <a href="https://twitter.com/securefer" class="twitter-follow-button" data-show-count="false" data-lang="en">Follow @securefer</a>
+		    <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+		    <iframe class="btn" frameborder="0" border="0" scrolling="no" allowtransparency="true" height="20" width="113" src="http://platform.tumblr.com/v1/follow_button.html?button_type=2&tumblelog=securefer&color_scheme=dark"></iframe>
+		    </div>
+	    </div>
+    </div>
+    <!-- content-container-div -->
+</body>
+</html>
