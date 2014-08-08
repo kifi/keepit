@@ -66,6 +66,7 @@ class EngagementFeedEmailSenderImpl @Inject() (
             to = Seq(user.primaryEmail.get),
             from = SystemEmailAddress.ENG
           )
+          log.info(s"sending email to ${user.id.get} with ${feedData.size} keeps")
           shoebox.sendMail(email).map { (_, feedData) }
         }
 

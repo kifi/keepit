@@ -18,6 +18,7 @@ trait CuratorServiceClient extends ServiceClient {
 
   def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[RecommendationInfo]]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean]
+  def triggerEmail(code: String): Future[String]
 
 }
 
@@ -38,5 +39,11 @@ class CuratorServiceClientImpl(
     call(Curator.internal.updateUriRecommendationFeedback(userId, uriId), body = Json.toJson(feedback), callTimeouts = longTimeout).map(response =>
       response.json.as[Boolean]
     )
+  }
+
+  def triggerEmail(code: String) = {
+    call(Curator.internal.triggerEmail(code)).map { resp =>
+      resp.json.as[String]
+    }
   }
 }

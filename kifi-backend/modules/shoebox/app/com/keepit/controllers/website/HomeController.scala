@@ -12,6 +12,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.controllers.core.AuthController
+import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
@@ -50,6 +51,7 @@ class HomeController @Inject() (
   inviteCommander: InviteCommander,
   heimdalServiceClient: HeimdalServiceClient,
   userExperimentCommander: LocalUserExperimentCommander,
+  curatorServiceClient: CuratorServiceClient,
   applicationConfig: FortyTwoConfig)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
@@ -192,6 +194,15 @@ class HomeController @Inject() (
       homeAuthed(request)
     } else {
       Redirect("/")
+    }
+  }
+
+  def kifeeeedEmail(code: String) = HtmlAction.authenticatedAsync { request =>
+    if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.ADMIN)) {
+      log.info("triggering email " + code)
+      curatorServiceClient.triggerEmail(code).map(Ok(_))
+    } else {
+      Future.successful(Redirect("/"))
     }
   }
 

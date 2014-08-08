@@ -195,6 +195,7 @@ GET     /find                       @com.keepit.controllers.website.HomeControll
 GET     /blog                       @com.keepit.controllers.website.HomeController.blog
 
 GET     /kifeeeed                   @com.keepit.controllers.website.HomeController.kifeeeed
+GET     /kifeeeed-me/:code        	@com.keepit.controllers.website.HomeController.kifeeeedEmail(code: String)
 
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /install                    @com.keepit.controllers.website.HomeController.install
