@@ -1,0 +1,17 @@
+'use strict';
+
+angular.module('kifi.savePymkService', [])
+
+.factory('savePymkService', [function () {
+  var savedPersonYouMayKnow = null;
+
+  return {
+    savePersonYouMayKnow: function (person) {
+      savedPersonYouMayKnow = person;
+    },
+
+    getSavedPersonYouMayKnow: function () {
+      return savedPersonYouMayKnow;
+    }
+  };
+}]);
