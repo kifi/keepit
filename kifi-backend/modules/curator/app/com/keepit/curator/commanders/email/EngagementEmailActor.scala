@@ -12,7 +12,6 @@ object EngagementEmailTypes {
   object FEED
 }
 
-@Singleton
 class EngagementEmailActor @Inject() (
     engagementFeedSender: EngagementFeedEmailSender,
     protected val airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
