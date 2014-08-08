@@ -22,6 +22,8 @@ import com.keepit.common.concurrent.ExecutionContext
 
 class SeedIngestionCommanderTest extends Specification with CuratorTestInjector {
 
+  import TestHelpers.{ makeKeeps, makeUser }
+
   private def modules = {
     Seq(
       FakeShoeboxServiceModule(),
@@ -31,32 +33,9 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
     )
   }
 
-  private def makeKeeps(userId: Id[User], howMany: Int, shoebox: FakeShoeboxServiceClientImpl): Seq[Keep] = {
-    (1 to howMany).flatMap { i =>
-      shoebox.saveBookmarks(Keep(
-        uriId = Id[NormalizedURI](i),
-        urlId = Id[URL](i),
-        url = "https://kifi.com",
-        userId = userId,
-        state = KeepStates.ACTIVE,
-        source = KeepSource.keeper,
-        libraryId = None))
-    }
-  }
-
   private def setup()(implicit injector: Injector) = {
-    val user1 = Id[User](42)
-    val user2 = Id[User](43)
-
     val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    shoebox.saveUsers(User(
-      id = Some(user1),
-      firstName = "Some",
-      lastName = "User42"))
-    shoebox.saveUsers(User(
-      id = Some(user2),
-      firstName = "Some",
-      lastName = "User43"))
+    val (user1, user2) = (makeUser(42, shoebox).id.get, makeUser(43, shoebox).id.get)
 
     (user1, user2, shoebox)
   }

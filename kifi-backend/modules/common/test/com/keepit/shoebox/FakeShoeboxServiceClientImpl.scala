@@ -536,6 +536,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(allProbabilisticExperimentGenerators.values.filter(_.isActive).toSeq)
   }
 
+  def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]] = {
+    Future.successful(allUsers.map(_._2).toSet)
+  }
+
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = {
     Future.successful(allUserConnections.getOrElse(userId, Set.empty))
   }

@@ -73,6 +73,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserExperiments(userId: Id[User]): Future[Seq[ExperimentType]]
   def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[ExperimentType]]]
   def getExperimentGenerators(): Future[Seq[ProbabilisticExperimentGenerator]]
+  def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]]
   def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
   def getUnfriends(userId: Id[User]): Future[Set[Id[User]]]
@@ -411,6 +412,10 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getExperimentGenerators()).map { res =>
       res.json.as[Seq[ProbabilisticExperimentGenerator]]
     }
+  }
+
+  def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]] = {
+    call(Shoebox.internal.getUsersByExperiment(experimentType)).map(_.json.as[Set[User]])
   }
 
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {

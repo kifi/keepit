@@ -29,6 +29,7 @@ class ShoeboxServiceClientTest extends Specification with CommonTestInjector {
     case s if s.url.contains("/internal/shoebox/database/searchFriends") && s.url.contains("1965") => "[1933,1935,1927,1921]"
     case s if s.url.contains("/internal/shoebox/database/getUsers") && s.url.contains("1965%2C1933") => Json.stringify(Json.toJson(users))
     case s if s.url.contains("/internal/shoebox/database/getPhrasesChanged") && s.url.contains("seqNum=0&fetchSize=4") => Json.stringify(Json.toJson(phrases))
+    case s if s.url.contains("/internal/shoebox/database/getUsersByExperiment") => Json.stringify(Json.toJson(users))
   }
 
   "ShoeboxServiceClient" should {
@@ -58,6 +59,14 @@ class ShoeboxServiceClientTest extends Specification with CommonTestInjector {
         val phrasesFuture = shoeboxServiceClient.getPhrasesChanged(SequenceNumber(0), 4)
         Await.result(phrasesFuture, Duration(5, SECONDS)) === phrases
 
+      }
+    }
+
+    "getUsersByExperiment" in {
+      withInjector(shoeboxServiceClientTestModules: _*) { implicit injector =>
+        val shoeboxServiceClient = inject[ShoeboxServiceClient]
+        val future = shoeboxServiceClient.getUsersByExperiment(ExperimentType.ADMIN)
+        Await.result(future, Duration(5, SECONDS)) === users.toSet
       }
     }
 

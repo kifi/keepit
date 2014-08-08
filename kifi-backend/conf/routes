@@ -15,4 +15,6 @@
 
 -> /  cortex.Routes
 
+-> /  curator.Routes
+
 -> /  graphService.Routes

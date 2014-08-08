@@ -7,40 +7,12 @@ import org.specs2.mutable.Specification
 
 class UriRecommendationRepoTest extends Specification with CuratorTestInjector {
 
+  import TestHelpers.makeUriRecommendation
+
   def setup(): Seq[UriRecommendation] = {
-    val rec1 = UriRecommendation(uriId = Id[NormalizedURI](1), userId = Id[User](42), masterScore = 0.15f,
-      allScores = UriScores(socialScore = 1.0f,
-        popularityScore = 1.0f,
-        overallInterestScore = 1.0f,
-        recentInterestScore = 1.0f,
-        recencyScore = 1.0f,
-        priorScore = 1.0f,
-        rekeepScore = 1.0f,
-        discoveryScore = 1.0f),
-      seen = false, clicked = false, kept = false)
-
-    val rec2 = UriRecommendation(uriId = Id[NormalizedURI](2), userId = Id[User](42), masterScore = 0.99f,
-      allScores = UriScores(socialScore = 1.0f,
-        popularityScore = 1.0f,
-        overallInterestScore = 1.0f,
-        recentInterestScore = 1.0f,
-        recencyScore = 1.0f,
-        priorScore = 1.0f,
-        rekeepScore = 1.0f,
-        discoveryScore = 1.0f),
-      seen = false, clicked = false, kept = false)
-
-    val rec3 = UriRecommendation(uriId = Id[NormalizedURI](3), userId = Id[User](42), masterScore = 0.5f,
-      allScores = UriScores(socialScore = 1.0f,
-        popularityScore = 1.0f,
-        overallInterestScore = 1.0f,
-        recentInterestScore = 1.0f,
-        recencyScore = 1.0f,
-        priorScore = 1.0f,
-        rekeepScore = 1.0f,
-        discoveryScore = 1.0f),
-      seen = false, clicked = false, kept = false)
-
+    val rec1 = makeUriRecommendation(1, 42, 0.15f)
+    val rec2 = makeUriRecommendation(2, 42, 0.99f)
+    val rec3 = makeUriRecommendation(3, 42, 0.5f)
     Seq(rec1, rec2, rec3)
   }
 
