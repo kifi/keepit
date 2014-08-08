@@ -19,9 +19,11 @@ import com.keepit.model._
 import com.keepit.social.{ SocialNetworks, SocialNetworkType, SocialGraphPlugin }
 
 import ActionAuthenticator.MaybeAuthenticatedRequest
+import play.api
+import play.api.libs.json.{ JsValue, JsObject, JsString, Json }
+import play.api.Play
 
 import play.api.Play.current
-import play.api._
 import play.api.http.HeaderNames.USER_AGENT
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
@@ -197,11 +199,16 @@ class HomeController @Inject() (
     }
   }
 
+  // this is for testing and will eventually be thrown away
   def kifeeeedEmail(code: String) = HtmlAction.authenticatedAsync { request =>
-    if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.ADMIN)) {
-      log.info("triggering email " + code)
-      curatorServiceClient.triggerEmail(code).map(Ok(_))
+    if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.DIGEST_EMAIl)) {
+      log.info(s"kifeeeedEmail($code)requested by " + request.userId)
+      if (code.endsWith("-all"))
+        curatorServiceClient.triggerEmail(code.substring(0, code.length - 4)).map { res => Ok(JsString(res)) }
+      else
+        curatorServiceClient.triggerEmailToUser(code, request.userId).map { res => Ok(JsString(res)) }
     } else {
+      log.info(s"kifeeeedEmail($code) rejected for " + request.userId)
       Future.successful(Redirect("/"))
     }
   }

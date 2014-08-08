@@ -7,6 +7,7 @@ import com.keepit.common.akka.{ SlowRunningExecutionContext, SafeFuture }
 import com.keepit.common.concurrent.ForkJoinExecContextPlugin
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.service.ServiceType
+import com.keepit.curator.CuratorServices
 import com.keepit.eliza.ElizaServices
 import com.keepit.heimdal.HeimdalServices
 import com.keepit.search.{ SearchServices, SearchProdModule }
@@ -29,7 +30,8 @@ object DevGlobal extends FortyTwoGlobal(Dev)
     with CortexServices
     with GraphServices
     with HeimdalServices
-    with ElizaServices {
+    with ElizaServices
+    with CuratorServices {
 
   def composeModules(modules: Seq[Module]): Module = {
     modules match {
@@ -41,7 +43,7 @@ object DevGlobal extends FortyTwoGlobal(Dev)
   }
 
   // Modules are overridden on top of each other, so the last modules in this list have higher precedence
-  val modules: Seq[Module] = Seq(GraphDevModule(), CortexDevModule(), ScraperDevModule(), ABookDevModule(), HeimdalDevModule(), ElizaDevModule(), SearchDevModule(), ShoeboxDevModule())
+  val modules: Seq[Module] = Seq(CuratorDevModule(), GraphDevModule(), CortexDevModule(), ScraperDevModule(), ABookDevModule(), HeimdalDevModule(), ElizaDevModule(), SearchDevModule(), ShoeboxDevModule())
 
   override val module = composeModules(modules)
 
@@ -59,11 +61,13 @@ object DevGlobal extends FortyTwoGlobal(Dev)
       startGraphServices()
       startElizaServices()
       startHeimdalServices()
+      startCuratorServices()
       log.info(s"Started services in ${System.currentTimeMillis - t}ms")
     }
 
     app.configuration.getString("services.bootstrap") match {
       case Some("false") =>
+        log.info("Not starting services because services.bootstrap is false")
       case Some("async") =>
         Future {
           startServices()

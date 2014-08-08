@@ -5,9 +5,10 @@ import com.keepit.common.controller.CuratorServiceController
 import com.keepit.common.db.Id
 import com.keepit.curator.commanders.email.EngagementFeedEmailSender
 import com.keepit.model._
+import com.keepit.shoebox.ShoeboxServiceClient
 
-import play.api.mvc.Action
-import play.api.libs.json.{ JsString, Json }
+import play.api.mvc.{ SimpleResult, Action }
+import play.api.libs.json.{ JsNumber, JsObject, JsArray, JsString, Json }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
@@ -15,6 +16,7 @@ import com.google.inject.Inject
 import concurrent.Future
 
 class CuratorController @Inject() (
+    shoebox: ShoeboxServiceClient,
     recoGenCommander: RecommendationGenerationCommander,
     engagaementFeedEmailSender: EngagementFeedEmailSender) extends CuratorServiceController {
 
@@ -30,13 +32,30 @@ class CuratorController @Inject() (
     recoGenCommander.updateUriRecommendationFeedback(userId, uriId, json.as[UriRecommendationFeedback]).map(update => Ok(Json.toJson(update)))
   }
 
+  def triggerEmailToUser(code: String, userId: Id[User]) = Action.async { request =>
+    code match {
+      case "feed" =>
+        shoebox.getUsers(Seq(userId)).flatMap[Seq[Id[User]]] { users =>
+          Future.sequence {
+            users map { user =>
+              log.info("sending to user: " + user)
+              engagaementFeedEmailSender.sendToUser(user).map(_.userId)
+            }
+          }
+        } map { userIds => Ok(JsString("users: " + userIds.map(_.id).mkString(","))) }
+
+      case _ => Future.successful(Ok(JsString(s"error: code $code not found")))
+    }
+  }
+
   def triggerEmail(code: String) = Action.async { request =>
     code match {
       case "feed" =>
         engagaementFeedEmailSender.send().map { res =>
-          Ok(s"sent ${res.size} emails")
+          Ok(JsString("users: " + res.map(_.userId.id).mkString(", ")))
         }
-      case _ => Future.successful(Ok(s"code $code not found"))
+
+      case _ => Future.successful(Ok(JsString(s"error: code $code not found")))
     }
   }
 }

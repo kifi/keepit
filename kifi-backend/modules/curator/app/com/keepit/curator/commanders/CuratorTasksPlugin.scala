@@ -14,11 +14,12 @@ class CuratorTasksPlugin @Inject() (
     ingestionCommander: SeedIngestionCommander,
     generationCommander: RecommendationGenerationCommander,
     system: ActorSystem,
-    actor: ActorInstance[EngagementEmailActor],
+    emailActor: ActorInstance[EngagementEmailActor],
     quartz: ActorInstance[QuartzActor],
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
 
   override def onStart() {
+    log.info("CuratorTasksPlugin onStart")
     scheduleTaskOnLeader(system, 1 minutes, 5 minutes) {
       ingestionCommander.ingestAll()
     }
@@ -30,6 +31,7 @@ class CuratorTasksPlugin @Inject() (
   }
 
   private def scheduleRecommendationEmail(): Unit = {
-    cronTaskOnLeader(quartz, actor.ref, "0 0 6 * * ?", EngagementEmailTypes.FEED)
+    log.info("scheduleRecommendationEmail() called")
+    cronTaskOnLeader(quartz, emailActor.ref, "0 25 22 * * ?", EngagementEmailTypes.FEED)
   }
 }

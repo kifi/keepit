@@ -2,6 +2,7 @@ package com.keepit.curator.commanders.email
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.RemoteUserExperimentCommander
+import com.keepit.common.db.{ Id, LargeString }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
@@ -22,9 +23,12 @@ case class RecommendedUriSummary(reco: RecommendationInfo, uri: NormalizedURI, u
   val explain = reco.explain.getOrElse("")
 }
 
+case class EngagementFeedSummary(userId: Id[User], mailSent: Boolean, feed: Seq[RecommendedUriSummary])
+
 @ImplementedBy(classOf[EngagementFeedEmailSenderImpl])
 trait EngagementFeedEmailSender {
-  def send(): Future[Seq[(Boolean, Seq[RecommendedUriSummary])]]
+  def send(): Future[Seq[EngagementFeedSummary]]
+  def sendToUser(user: User): Future[EngagementFeedSummary]
 }
 
 class EngagementFeedEmailSenderImpl @Inject() (
@@ -44,11 +48,11 @@ class EngagementFeedEmailSenderImpl @Inject() (
     }
   }
 
-  def sendToUser(user: User): Future[(Boolean, Seq[RecommendedUriSummary])] = {
+  def sendToUser(user: User): Future[EngagementFeedSummary] = {
     log.info(s"sending engagement feed email to ${user.id.get}")
 
-    recommendationGenerationCommander.getAdHocRecommendations(user.id.get, recommendationCount, defaultUriRecommendationScores).flatMap[(Boolean, Seq[RecommendedUriSummary])] { recos =>
-      shoebox.getUriSummaries(recos.map(_.uriId)).flatMap[(Boolean, Seq[RecommendedUriSummary])] { summaries =>
+    recommendationGenerationCommander.getAdHocRecommendations(user.id.get, recommendationCount, defaultUriRecommendationScores).flatMap[EngagementFeedSummary] { recos =>
+      shoebox.getUriSummaries(recos.map(_.uriId)).flatMap[EngagementFeedSummary] { summaries =>
         val dataFutures: Future[Seq[RecommendedUriSummary]] = Future.sequence {
           recos.map { reco =>
             val summary = summaries(reco.uriId)
@@ -57,17 +61,20 @@ class EngagementFeedEmailSenderImpl @Inject() (
           }
         }
 
-        val resultsAndData = dataFutures.flatMap[(Boolean, Seq[RecommendedUriSummary])] { feedData =>
+        val resultsAndData = dataFutures.flatMap[EngagementFeedSummary] { feedData =>
+          val htmlBody: LargeString = views.html.email.feedRecommendationsInlined(feedData).body
+          val textBody: Some[LargeString] = Some(views.html.email.feedRecommendationsText(feedData).body)
+
           val email = ElectronicMail(
             category = NotificationCategory.User.DIGEST,
             subject = "Feed Recommendations: " + clock.now()(DateTimeZone.UTC).toString,
-            htmlBody = views.html.email.feedRecommendationsInlined(feedData).body,
-            textBody = Some(views.html.email.feedRecommendationsText(feedData).body),
+            htmlBody = htmlBody,
+            textBody = textBody,
             to = Seq(user.primaryEmail.get),
             from = SystemEmailAddress.ENG
           )
           log.info(s"sending email to ${user.id.get} with ${feedData.size} keeps")
-          shoebox.sendMail(email).map { (_, feedData) }
+          shoebox.sendMail(email).map { EngagementFeedSummary(user.id.get, _, feedData) }
         }
 
         resultsAndData

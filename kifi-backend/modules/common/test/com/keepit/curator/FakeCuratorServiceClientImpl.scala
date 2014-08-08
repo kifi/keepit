@@ -17,4 +17,5 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def adHocRecos(userId: Id[User], n: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[RecommendationInfo]] = Future.successful(Seq.empty)
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = Future.successful(true)
   def triggerEmail(code: String): Future[String] = Future.successful("done")
+  def triggerEmailToUser(code: String, userId: Id[User]): Future[String] = Future.successful("done")
 }

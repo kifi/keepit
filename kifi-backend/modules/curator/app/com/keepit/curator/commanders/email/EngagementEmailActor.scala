@@ -8,22 +8,21 @@ import com.keepit.common.logging.Logging
 import com.keepit.curator.commanders.RecommendationGenerationCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-case class EngagementEmailType(message: String) extends AnyVal
-
 object EngagementEmailTypes {
-  val FEED = EngagementEmailType("feed")
+  object FEED
 }
 
 @Singleton
 class EngagementEmailActor @Inject() (
-    recommendationGenerationCommander: RecommendationGenerationCommander,
-    userExperimentCommander: RemoteUserExperimentCommander,
     engagementFeedSender: EngagementFeedEmailSender,
     protected val airbrake: AirbrakeNotifier) extends FortyTwoActor(airbrake) with Logging {
 
   import EngagementEmailTypes._
 
   def receive(): PartialFunction[Any, Unit] = {
-    case FEED => engagementFeedSender.send()
+    case FEED => {
+      log.info("calling EngagementFeedEmailSender.send() from " + getClass.getName)
+      engagementFeedSender.send()
+    }
   }
 }
