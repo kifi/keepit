@@ -5,6 +5,7 @@ import com.keepit.common.logging.AccessLog
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
+import play.api.mvc.QueryStringBindable
 import scala.concurrent.duration._
 import com.keepit.serializer.TraversableFormat
 import play.api.libs.json._
@@ -33,6 +34,18 @@ object ExperimentType {
     new Writes[ExperimentType] { def writes(o: ExperimentType) = JsString(o.value) }
   )
 
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[ExperimentType] {
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, ExperimentType]] = {
+      stringBinder.bind(key, params) map {
+        case Right(value) => Right(ExperimentType(value))
+        case _ => Left("Unable to bind a ExperimentType")
+      }
+    }
+    override def unbind(key: String, experimentType: ExperimentType): String = {
+      stringBinder.unbind(key, experimentType.value)
+    }
+  }
+
   val ADMIN = ExperimentType("admin")
   val AUTO_GEN = ExperimentType("autogen")
   val FAKE = ExperimentType("fake")
@@ -47,10 +60,12 @@ object ExperimentType {
   val GUIDE = ExperimentType("guide")
   val DELIGHTED_SURVEY_PERMANENT = ExperimentType("permanent_delighted_survey")
   val NOTIFY_USER_WHEN_CONTACTS_JOIN = ExperimentType("notify_user_when_contacts_join")
+  val DIGEST_EMAIl = ExperimentType("digest_email")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE ::
     CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
-    MOBILE_REDIRECT :: GUIDE :: DELIGHTED_SURVEY_PERMANENT :: NOTIFY_USER_WHEN_CONTACTS_JOIN :: Nil
+    MOBILE_REDIRECT :: GUIDE :: DELIGHTED_SURVEY_PERMANENT :: NOTIFY_USER_WHEN_CONTACTS_JOIN ::
+    DIGEST_EMAIl :: Nil
 
   private val _ALL_MAP: Map[String, ExperimentType] = _ALL map { e => e.value -> e } toMap
 

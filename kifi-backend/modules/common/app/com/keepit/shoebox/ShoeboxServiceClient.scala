@@ -73,6 +73,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserExperiments(userId: Id[User]): Future[Seq[ExperimentType]]
   def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[ExperimentType]]]
   def getExperimentGenerators(): Future[Seq[ProbabilisticExperimentGenerator]]
+  def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]]
   def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
   def getUnfriends(userId: Id[User]): Future[Set[Id[User]]]
@@ -98,7 +99,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], user: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit]
   def getUriSummary(request: URISummaryRequest): Future[URISummary]
   def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]]
-  def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
+  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
   def getUserImageUrl(userId: Id[User], width: Int): Future[String]
   def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String]
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
@@ -415,6 +416,10 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]] = {
+    call(Shoebox.internal.getUsersByExperiment(experimentType)).map(_.json.as[Set[User]])
+  }
+
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
     call(Shoebox.internal.getCollectionsByUser(userId)).map { r =>
       Json.fromJson[Seq[Collection]](r.json).get
@@ -637,8 +642,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }.map(_ map { case (k, v) => (k.id, v) })
   }
 
-  def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    call(Shoebox.internal.getAdultRestrictionOfURIs(), body = Json.toJson(uris)).map { r =>
+  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
+    call(Shoebox.internal.getCandidateURIs(), body = Json.toJson(uris)).map { r =>
       r.json.as[Seq[Boolean]]
     }
   }

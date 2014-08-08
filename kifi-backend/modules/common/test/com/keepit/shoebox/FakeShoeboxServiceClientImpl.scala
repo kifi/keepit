@@ -536,6 +536,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(allProbabilisticExperimentGenerators.values.filter(_.isActive).toSeq)
   }
 
+  def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]] = {
+    Future.successful(allUsers.map(_._2).toSet)
+  }
+
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = {
     Future.successful(allUserConnections.getOrElse(userId, Set.empty))
   }
@@ -602,7 +606,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = Future.successful(Map.empty)
 
-  def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = Future.successful(Seq.fill(uris.size)(false))
+  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = Future.successful(Seq.fill(uris.size)(false))
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = Future.successful("https://www.kifi.com/assets/img/ghost.200.png")
 

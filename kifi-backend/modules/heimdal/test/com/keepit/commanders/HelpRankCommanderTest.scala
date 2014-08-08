@@ -1,18 +1,21 @@
 package com.keepit.commanders
 
-import com.keepit.commander.HelpRankCommander
+import com.keepit.commander.{ AttributionCommander, HelpRankCommander }
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time._
+import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ KifiHitContext, SanitizedKifiHit }
 import com.keepit.model._
 import com.keepit.search.ArticleSearchResult
+import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import com.keepit.test._
 import net.codingwell.scalaguice.ScalaModule
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import org.specs2.time.NoTimeConversions
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -30,12 +33,14 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
     NormalizedURI(id = Some(id), createdAt = ts, updatedAt = ts, url = url, urlHash = NormalizedURI.hashUrl(url), seq = seq)
   }
 
-  def modules: Seq[ScalaModule] = Seq(FakeHttpClientModule())
+  def modules: Seq[ScalaModule] = Seq(
+    FakeHttpClientModule(),
+    FakeShoeboxServiceModule()
+  )
 
   "HelpRankCommander" should {
 
     "track discoveries & rekeeps" in {
-
       withDb(modules: _*) { implicit injector =>
         val ts = currentDateTime
         val u1 = User(id = Some(Id[User](1)), createdAt = ts, updatedAt = ts, firstName = "Shanee", lastName = "Smith")
@@ -316,8 +321,110 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
           } === true
 
         }
-      }
 
+        db.readWrite { implicit rw =>
+          (keeps1 ++ keeps2 ++ keeps3 ++ keeps4).foreach { keep =>
+            userBookmarkClicksRepo.save(UserBookmarkClicks(userId = keep.userId, uriId = keep.uriId, selfClicks = 0, otherClicks = 0))
+          }
+        }
+        val attrCmdr = inject[AttributionCommander]
+        val rkbd1 = attrCmdr.getReKeepsByDegree(u1.id.get, keeps1(1).id.get, 3)
+        rkbd1.length === 3
+        val (ubd1, kbd1) = rkbd1.unzip
+        ubd1(0) === Set(u1.id.get)
+        ubd1(1) === Set(u3.id.get)
+        ubd1(2) === Set(u4.id.get)
+        kbd1(0) === Set(keeps1(1).id.get)
+        kbd1(1) === Set(keeps3(0).id.get)
+        kbd1(2) === Set(keeps4(0).id.get)
+
+        val bc1 = Await.result(attrCmdr.updateUserReKeepStatus(u1.id.get), Duration.Inf)
+        bc1.nonEmpty === true
+        bc1.length === 1
+        bc1(0).rekeepCount === 1
+        bc1(0).rekeepTotalCount === 2
+
+        val bc3 = Await.result(attrCmdr.updateUserReKeepStatus(u3.id.get), Duration.Inf)
+        bc3(0).rekeepCount === 1
+        bc3(0).rekeepTotalCount === 1
+
+        val users = Seq(u1, u2, u3, u4)
+        val allStats = Await.result(attrCmdr.updateUsersReKeepStats(users.map(_.id.get)), Duration.Inf)
+        allStats.foreach { s => println(s"(len=${s.length}); ${s.mkString(",")})") }
+        allStats(0).length === bc1.length
+        allStats(0)(0).rekeepCount === bc1(0).rekeepCount
+        allStats(0)(0).rekeepTotalCount === bc1(0).rekeepTotalCount
+
+        allStats(2).length === bc3.length
+        allStats(2)(0).rekeepCount === bc3(0).rekeepCount
+        allStats(2)(0).rekeepTotalCount === bc3(0).rekeepTotalCount
+
+        val (rkc1, rktc1) = db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getReKeepCounts(u1.id.get) }
+        bc1.foldLeft(0) { (a, c) => a + c.rekeepCount } === rkc1
+        bc1.foldLeft(0) { (a, c) => a + c.rekeepTotalCount } === rktc1
+
+        val (rkc3, rktc3) = db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getReKeepCounts(u3.id.get) }
+        bc3.foldLeft(0) { (a, c) => a + c.rekeepCount } === rkc3
+        bc3.foldLeft(0) { (a, c) => a + c.rekeepTotalCount } === rktc3
+
+      }
+    }
+
+    "tracking messages & rekeeps" in {
+      val attrInfo = new collection.mutable.HashMap[Id[NormalizedURI], Seq[Id[User]]]()
+      withDb((modules ++ Seq(FakeElizaServiceClientModule(attributionInfo = attrInfo))): _*) { implicit injector =>
+        try {
+          val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+          val ts = currentDateTime
+          val u1 = User(id = Some(Id[User](1)), createdAt = ts, updatedAt = ts, firstName = "Shanee", lastName = "Smith")
+          val u2 = User(id = Some(Id[User](2)), createdAt = ts, updatedAt = ts, firstName = "Foo", lastName = "Bar")
+          val savedUsers = shoebox.saveUsers(u1, u2)
+
+          val uri42 = mkURI(Id[NormalizedURI](1), "http://42go.com", SequenceNumber[NormalizedURI](1))
+          val uriKifi = mkURI(Id[NormalizedURI](2), "http://kifi.com", SequenceNumber[NormalizedURI](2))
+          val uriGoog = mkURI(Id[NormalizedURI](3), "http://google.com", SequenceNumber[NormalizedURI](3))
+          val uriBing = mkURI(Id[NormalizedURI](4), "http://bing.com", SequenceNumber[NormalizedURI](4))
+          val savedURIs = shoebox.saveURIs(uri42, uriKifi, uriGoog, uriBing)
+
+          val mkKeep1 = mkKeep(u1.id.get, Some(currentDateTime)) _
+          val keeps1 = Seq(
+            mkKeep1(Id[Keep](1), uri42),
+            mkKeep1(Id[Keep](2), uriKifi)
+          )
+          val mkKeep2 = mkKeep(u2.id.get, Some(currentDateTime)) _
+          val keeps2 = Seq(
+            mkKeep2(Id[Keep](3), uriKifi),
+            mkKeep2(Id[Keep](4), uriGoog),
+            mkKeep2(Id[Keep](5), uriBing)
+          )
+          val savedKeeps = shoebox.saveBookmarks(keeps1 ++ keeps2: _*)
+
+          attrInfo += (keeps1(1).uriId -> Seq(u1.id.get)) // u1 - chat(kifi) - u2 (rekeep)
+
+          val commander = inject[HelpRankCommander]
+          Await.result(commander.processKeepAttribution(u2.id.get, keeps2), 5 seconds)
+
+          val clicks1 = db.readOnlyMaster { implicit rw =>
+            keepDiscoveryRepo.getByKeepId(keeps1(1).id.get)
+          }
+          clicks1.size === 1
+          clicks1.headOption.exists { click =>
+            click.keeperId == u1.id.get && click.keepId == keeps1(1).id.get
+          } === true
+          val rekeeps1 = db.readOnlyMaster { implicit ro =>
+            rekeepRepo.getAllReKeepsByKeeper(u1.id.get)
+          }
+          rekeeps1.length === 1
+          val rk = rekeeps1(0)
+          rk.keeperId === u1.id.get
+          rk.keepId === keeps1(1).id.get
+          rk.srcUserId === u2.id.get
+        } catch {
+          case t: Throwable =>
+            println(s"Caught Exception $t; cause=${t.getCause}; \n\t${t.getStackTraceString}")
+            throw t
+        }
+      }
     }
 
   }

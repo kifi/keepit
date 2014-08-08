@@ -2,7 +2,6 @@ package com.keepit.model
 
 import org.joda.time.DateTime
 
-import com.keepit.common.cache._
 import com.keepit.common.db._
 import com.keepit.common.time._
 

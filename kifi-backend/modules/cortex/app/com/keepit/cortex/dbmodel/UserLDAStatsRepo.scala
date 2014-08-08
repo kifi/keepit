@@ -15,6 +15,7 @@ import com.keepit.common.db.slick._
 @ImplementedBy(classOf[UserLDAStatsRepoImpl])
 trait UserLDAStatsRepo extends DbRepo[UserLDAStats] {
   def getByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserLDAStats]
+  def getActiveByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserLDAStats]
 }
 
 @Singleton
@@ -44,6 +45,10 @@ class UserLDAStatsRepoImpl @Inject() (
 
   def getByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserLDAStats] = {
     (for { r <- rows if (r.userId === userId && r.version === version) } yield r).firstOption
+  }
+
+  def getActiveByUser(userId: Id[User], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[UserLDAStats] = {
+    (for { r <- rows if (r.userId === userId && r.version === version && r.state === UserLDAStatsStates.ACTIVE) } yield r).firstOption
   }
 
 }

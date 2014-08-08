@@ -432,29 +432,29 @@ class NotificationCommander @Inject() (
     }
   }
 
-  def getSendableNotification(userId: Id[User], threadExtId: ExternalId[MessageThread]): Future[NotificationJson] = {
-    notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
+  def getSendableNotification(userId: Id[User], threadExtId: ExternalId[MessageThread], includeUriSummary: Boolean): Future[NotificationJson] = {
+    notificationJsonMaker.makeOne(db.readOnlyReplica { implicit session =>
       val thread = threadRepo.get(threadExtId)
       userThreadRepo.getRawNotification(userId, thread.id.get)
-    })
+    }, includeUriSummary)
   }
 
-  def getLatestSendableNotifications(userId: Id[User], howMany: Int): Future[Seq[NotificationJson]] = {
+  def getLatestSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
       userThreadRepo.getLatestRawNotifications(userId, howMany)
-    })
+    }, includeUriSummary)
   }
 
-  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Seq[NotificationJson]] = {
+  def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
       userThreadRepo.getRawNotificationsBefore(userId, time, howMany)
-    })
+    }, includeUriSummary)
   }
 
-  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int): Future[(Seq[NotificationJson], Int)] = {
+  def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean): Future[(Seq[NotificationJson], Int)] = {
     val noticesFuture = notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
       userThreadRepo.getLatestUnreadRawNotifications(userId, howMany)
-    })
+    }, includeUriSummary)
     new SafeFuture(noticesFuture map { notices =>
       val numTotal = if (notices.length < howMany) {
         notices.length
@@ -467,30 +467,30 @@ class NotificationCommander @Inject() (
     })
   }
 
-  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Seq[NotificationJson]] = {
+  def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
       userThreadRepo.getUnreadRawNotificationsBefore(userId, time, howMany)
-    })
+    }, includeUriSummary)
   }
 
-  def getLatestSentSendableNotifications(userId: Id[User], howMany: Int): Future[Seq[NotificationJson]] = {
+  def getLatestSentSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
       userThreadRepo.getLatestRawNotificationsForStartedThreads(userId, howMany)
-    })
+    }, includeUriSummary)
   }
 
-  def getSentSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int): Future[Seq[NotificationJson]] = {
+  def getSentSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
       userThreadRepo.getRawNotificationsForStartedThreadsBefore(userId, time, howMany)
-    })
+    }, includeUriSummary)
   }
 
-  def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int): Future[(String, Seq[NotificationJson], Int, Int)] = {
+  def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int, includeUriSummary: Boolean): Future[(String, Seq[NotificationJson], Int, Int)] = {
     new SafeFuture(shoebox.getNormalizedUriByUrlOrPrenormalize(url) flatMap {
       case Left(nUri) =>
         val noticesFuture = notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
           userThreadRepo.getLatestRawNotificationsForUri(userId, nUri.id.get, howMany)
-        })
+        }, includeUriSummary)
         new SafeFuture(noticesFuture map { notices =>
           val (numTotal, numUnreadUnmuted): (Int, Int) = if (notices.length < howMany) {
             (notices.length, notices.count { n =>
@@ -509,12 +509,12 @@ class NotificationCommander @Inject() (
     })
   }
 
-  def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int): Future[Seq[NotificationJson]] = {
+  def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     new SafeFuture(shoebox.getNormalizedURIByURL(url) flatMap {
       case Some(nUri) =>
         notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
           userThreadRepo.getRawNotificationsForUriBefore(userId, nUri.id.get, time, howMany)
-        })
+        }, includeUriSummary)
       case _ => Promise.successful(Seq.empty).future
     })
   }

@@ -52,7 +52,8 @@ class AdminLDAController @Inject() (
       val topics = res.map { x => getFormatted(x.topicWords) }
       val names = res.map { _.config.topicName }
       val states = res.map { _.config.isActive }
-      val js = Json.obj("ids" -> ids, "topicWords" -> topics, "topicNames" -> names, "states" -> states)
+      val nameables = res.map { _.config.isNameable }
+      val js = Json.obj("ids" -> ids, "topicWords" -> topics, "topicNames" -> names, "states" -> states, "nameables" -> nameables)
       Ok(js)
     }
   }
@@ -83,8 +84,13 @@ class AdminLDAController @Inject() (
     val ids = (js \ "topic_ids").as[JsArray].value.map { _.as[String] }
     val names = (js \ "topic_names").as[JsArray].value.map { _.as[String] }
     val isActive = (js \ "topic_states").as[JsArray].value.map { _.as[Boolean] }
+    val isNameable = (js \ "topic_nameable").as[JsArray].value.map { _.as[Boolean] }
 
-    val config = (ids, names, isActive).zipped.map { case (id, name, active) => id -> LDATopicConfiguration(name, active) }.toMap
+    val config = (0 until ids.size).map { i =>
+      val (id, name, active, nameable) = (ids(i), names(i), isActive(i), isNameable(i))
+      id.trim() -> LDATopicConfiguration(name, active, nameable)
+    }.toMap
+
     cortex.saveEdits(config)
     Ok
   }
@@ -123,11 +129,27 @@ class AdminLDAController @Inject() (
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = body.get("userId").get.toLong
 
-    val futureMsg = cortex.userTopicMean(Id[User](userId)).flatMap {
-      case Some(arr) => showTopTopicDistributions(arr, topK = 10)
-      case None => Future.successful("not enough information")
+    cortex.userTopicMean(Id[User](userId)).flatMap {
+      case (global, recent) =>
+        val globalMsgFut = global match {
+          case Some(arr) => showTopTopicDistributions(arr, topK = 10)
+          case None => Future.successful("not enough information")
+        }
+
+        val recentMsgFut = recent match {
+          case Some(arr) => showTopTopicDistributions(arr, topK = 10)
+          case None => Future.successful("not enough information")
+        }
+
+        for {
+          globalMsg <- globalMsgFut
+          recentMsg <- recentMsgFut
+        } yield {
+          val msg = "overall: " + globalMsg + "\n" + "recent: " + recentMsg
+          Ok(msg.replaceAll("\n", "\n<br>"))
+        }
     }
-    futureMsg.map(msg => Ok(JsString(msg)))
+
   }
 
   def topicDetail(topicId: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
@@ -147,5 +169,13 @@ class AdminLDAController @Inject() (
         Ok(html.admin.peopleLikeYou(users, scores))
     }
 
+  }
+
+  def unamedTopics(limit: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
+    cortex.unamedTopics(limit).map {
+      case (topicInfo, topicWords) =>
+        val words = topicWords.map { case words => getFormatted(words) }
+        Ok(html.admin.unamedTopics(topicInfo, words))
+    }
   }
 }

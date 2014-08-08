@@ -54,8 +54,9 @@ class UserConnectionCreator @Inject() (
     db.readWrite { implicit s =>
       val existingConnections = userConnectionRepo.getConnectedUsers(userId)
       val socialConnections = socialConnectionRepo.getFortyTwoUserConnections(userId)
+      val unfriendedConnections = userConnectionRepo.getUnfriendedUsers(userId)
 
-      val newConnections = socialConnections -- existingConnections
+      val newConnections = socialConnections -- existingConnections -- unfriendedConnections
       userConnectionRepo.addConnections(userId, newConnections)
       userValueRepo.setValue(userId, UserValueName.UPDATED_USER_CONNECTIONS, clock.now.toStandardTimeString)
 
