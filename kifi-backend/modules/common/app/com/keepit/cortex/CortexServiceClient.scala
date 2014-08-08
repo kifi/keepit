@@ -38,7 +38,7 @@ trait CortexServiceClient extends ServiceClient {
   def getLDAFeatures(uris: Seq[Id[NormalizedURI]]): Future[Seq[Array[Float]]]
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[LDAUserURIInterestScores]
   def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[LDAUserURIInterestScores]]
-  def userTopicMean(userId: Id[User]): Future[Option[Array[Float]]]
+  def userTopicMean(userId: Id[User]): Future[(Option[Array[Float]], Option[Array[Float]])]
   def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]]
   def getSimilarUsers(userId: Id[User], topK: Int): Future[(Seq[Id[User]], Seq[Float])] // with scores
   def unamedTopics(limit: Int = 20): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] // with topicWords
@@ -169,10 +169,14 @@ class CortexServiceClientImpl(
     call(Cortex.internal.batchUserURIsInterests(), payload).map { r => (r.json).as[Seq[LDAUserURIInterestScores]] }
   }
 
-  def userTopicMean(userId: Id[User]): Future[Option[Array[Float]]] = {
+  def userTopicMean(userId: Id[User]): Future[(Option[Array[Float]], Option[Array[Float]])] = {
     call(Cortex.internal.userTopicMean(userId)).map { r =>
-      val jsArrOpt = (r.json).asOpt[JsArray]
-      jsArrOpt.map { arr => arr.value.map { x => x.as[Float] }.toArray }
+      val js = r.json
+      val globalOpt = (js \ "global").asOpt[JsArray]
+      val global = globalOpt.map { arr => arr.value.map { x => x.as[Float] }.toArray }
+      val recentOpt = (js \ "recent").asOpt[JsArray]
+      val recent = recentOpt.map { arr => arr.value.map { x => x.as[Float] }.toArray }
+      (global, recent)
     }
   }
 

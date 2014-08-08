@@ -53,9 +53,9 @@ class LDACommander @Inject() (
     ldaRetriever.getByKeys(ids, wordRep.version)
   }
 
-  def userTopicMean(userId: Id[User]): Option[UserTopicMean] = {
+  def userTopicMean(userId: Id[User]): Option[UserLDAInterests] = {
     db.readOnlyReplica { implicit s =>
-      userTopicRepo.getTopicMeanByUser(userId, wordRep.version)
+      userTopicRepo.getByUser(userId, wordRep.version)
     }
   }
 
