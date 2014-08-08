@@ -10,7 +10,7 @@ case class UriRecommendation(
     id: Option[Id[UriRecommendation]] = None,
     createdAt: DateTime = currentDateTime,
     updateAt: DateTime = currentDateTime,
-    state: State[UriRecommendation] = UriRecommendationStates.STAGED,
+    state: State[UriRecommendation] = UriRecommendationStates.ACTIVE,
     vote: Option[Boolean] = None,
     uriId: Id[NormalizedURI],
     userId: Id[User],
@@ -24,7 +24,5 @@ case class UriRecommendation(
   def withUpdateTime(updateTime: DateTime): UriRecommendation = this.copy(updateAt = updateTime)
 }
 
-object UriRecommendationStates extends States[UriRecommendation] {
-  val STAGED = State[UriRecommendation]("staged")
-}
+object UriRecommendationStates extends States[UriRecommendation]
 

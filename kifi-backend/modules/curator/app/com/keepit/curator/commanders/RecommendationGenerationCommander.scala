@@ -107,12 +107,12 @@ class RecommendationGenerationCommander @Inject() (
 
   private def shouldInclude(scores: UriScores): Boolean = {
     scores.socialScore > 0.5 ||
-    scores.overallInterestScore > 0.4 ||
-    scores.priorScore > 0 ||
-    (scores.popularityScore > 0.2 && scores.socialScore > 0.4) ||
-    scores.recentInterestScore > 0.3 ||
-    scores.rekeepScore > 0.3 ||
-    scores.discoveryScore > 0.3
+      scores.overallInterestScore > 0.4 ||
+      scores.priorScore > 0 ||
+      (scores.popularityScore > 0.2 && scores.socialScore > 0.4) ||
+      scores.recentInterestScore > 0.3 ||
+      scores.rekeepScore > 0.3 ||
+      scores.discoveryScore > 0.3
   }
 
   private def precomputeRecommendationsForUser(userId: Id[User]): Unit = recommendationGenerationLock.withLockFuture {
