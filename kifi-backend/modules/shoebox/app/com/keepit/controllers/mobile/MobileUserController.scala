@@ -90,18 +90,17 @@ class MobileUserController @Inject() (
 
   private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
     val user = userCommander.getUserInfo(request.user)
-    userCommander.getKeepAttributionCounts(request.userId) map {
-      case (clickCount, rekeepCount, rekeepTotalCount) =>
-        Ok(toJson(user.basicUser).as[JsObject] ++
-          toJson(user.info).as[JsObject] ++
-          Json.obj(
-            "notAuthed" -> user.notAuthed,
-            "experiments" -> request.experiments.map(_.value),
-            "clickCount" -> clickCount,
-            "rekeepCount" -> rekeepCount,
-            "rekeepTotalCount" -> rekeepTotalCount
-          )
+    userCommander.getKeepAttributionInfo(request.userId) map { info =>
+      Ok(toJson(user.basicUser).as[JsObject] ++
+        toJson(user.info).as[JsObject] ++
+        Json.obj(
+          "notAuthed" -> user.notAuthed,
+          "experiments" -> request.experiments.map(_.value),
+          "clickCount" -> info.clickCount,
+          "rekeepCount" -> info.rekeepCount,
+          "rekeepTotalCount" -> info.rekeepTotalCount
         )
+      )
     }
   }
 

@@ -87,7 +87,7 @@ class LDACommander @Inject() (
 
   def batchGaussianUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores] = {
     db.readOnlyReplica { implicit s =>
-      val userInterestStatOpt = userLDAStatRepo.getByUser(userId, wordRep.version)
+      val userInterestStatOpt = userLDAStatRepo.getActiveByUser(userId, wordRep.version)
       val uriTopicOpts = uriIds.map { uriId => uriTopicRepo.getActiveByURI(uriId, wordRep.version) }
       uriTopicOpts.map { uriTopicOpt =>
         computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
@@ -112,7 +112,6 @@ class LDACommander @Inject() (
         val s = userMean.sum
         assume(s > 0)
         val dist = weightedMDistanceDiagGaussian(uriFeat.value, userMean, userVar, userMean.map { _ / s })
-        log.info(s"m-distance: $dist , userMean: ${userMean.take(5).mkString(", ")}, ${userVar.take(5).mkString(", ")}")
         Some(LDAUserURIInterestScore(exp(-1 * dist), computeConfidence(numOfWords, numOfEvidenceForUser)))
       case _ => None
     }

@@ -149,7 +149,7 @@ object Shoebox extends Service {
     def getUriImage(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/image/getUriImage", Param("id", id))
     def getUriSummary() = ServiceRoute(POST, "/internal/shoebox/image/getUriSummary")
     def getUriSummaries() = ServiceRoute(POST, "/internal/shoebox/image/getUriSummaries")
-    def getAdultRestrictionOfURIs() = ServiceRoute(POST, "/internal/shoebox/database/getAdultRestrictionOfURIs")
+    def getCandidateURIs() = ServiceRoute(POST, "/internal/shoebox/database/getCandidateURIs")
     def getUserImageUrl(id: Long, width: Int) = ServiceRoute(GET, "/internal/shoebox/image/getUserImageUrl", Param("id", id), Param("width", width))
     def getUnsubscribeUrlForEmail(email: EmailAddress) = ServiceRoute(GET, "/internal/shoebox/email/getUnsubscribeUrlForEmail", Param("email", email))
     def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableSocialConnections", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
@@ -246,6 +246,7 @@ object Heimdal extends Service {
     def getPagedKeepDiscoveries(page: Int, size: Int) = ServiceRoute(GET, s"/internal/heimdal/data/keepDiscovery/page/$page", Param("size", size))
     def getDiscoveryCountByKeeper(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/data/keepDiscovery/getDiscoveryCountByKeeper", Param("userId", userId))
     def getPagedReKeeps(page: Int, size: Int) = ServiceRoute(GET, s"/internal/heimdal/data/reKeep/page/$page", Param("size", size))
+    def getKeepAttributionInfo(userId: Id[User]) = ServiceRoute(GET, "/internal/heimdal/helprank/getKeepAttributionInfo", Param("userId", userId))
     def processKifiHit() = ServiceRoute(POST, "/internal/heimdal/helprank/processKifiHit")
     def processKeepAttribution() = ServiceRoute(POST, "/internal/heimdal/helprank/processKeepAttribution")
   }

@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.keepit.commander.HelpRankCommander
+import com.keepit.commander.{ AttributionCommander, HelpRankCommander }
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
 import com.keepit.common.net.FakeHttpClientModule
@@ -316,6 +316,51 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
           } === true
 
         }
+
+        val attrCmdr = inject[AttributionCommander]
+        val rkbd1 = attrCmdr.getReKeepsByDegree(u1.id.get, keeps1(1).id.get, 3)
+        rkbd1.length === 3
+        val (ubd1, kbd1) = rkbd1.unzip
+        ubd1(0) === Set(u1.id.get)
+        ubd1(1) === Set(u3.id.get)
+        ubd1(2) === Set(u4.id.get)
+        kbd1(0) === Set(keeps1(1).id.get)
+        kbd1(1) === Set(keeps3(0).id.get)
+        kbd1(2) === Set(keeps4(0).id.get)
+
+        db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getByUserUri(u1.id.get, keeps1(1).uriId) } === None
+        val bc1 = Await.result(attrCmdr.updateUserReKeepStatus(u1.id.get), Duration.Inf)
+        bc1.nonEmpty === true
+        bc1.length === 1
+        bc1(0).rekeepCount === 1
+        bc1(0).rekeepTotalCount === 2
+
+        db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getByUserUri(u2.id.get, keeps2(0).uriId) } === None
+        db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getByUserUri(u3.id.get, keeps3(0).uriId) } === None
+
+        val bc3 = Await.result(attrCmdr.updateUserReKeepStatus(u3.id.get), Duration.Inf)
+        bc3(0).rekeepCount === 1
+        bc3(0).rekeepTotalCount === 1
+
+        val users = Seq(u1, u2, u3, u4)
+        val allStats = Await.result(attrCmdr.updateUsersReKeepStats(users.map(_.id.get)), Duration.Inf)
+        allStats.foreach { s => println(s"(len=${s.length}); ${s.mkString(",")})") }
+        allStats(0).length === bc1.length
+        allStats(0)(0).rekeepCount === bc1(0).rekeepCount
+        allStats(0)(0).rekeepTotalCount === bc1(0).rekeepTotalCount
+
+        allStats(2).length === bc3.length
+        allStats(2)(0).rekeepCount === bc3(0).rekeepCount
+        allStats(2)(0).rekeepTotalCount === bc3(0).rekeepTotalCount
+
+        val (rkc1, rktc1) = db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getReKeepCounts(u1.id.get) }
+        bc1.foldLeft(0) { (a, c) => a + c.rekeepCount } === rkc1
+        bc1.foldLeft(0) { (a, c) => a + c.rekeepTotalCount } === rktc1
+
+        val (rkc3, rktc3) = db.readOnlyMaster { implicit ro => userBookmarkClicksRepo.getReKeepCounts(u3.id.get) }
+        bc3.foldLeft(0) { (a, c) => a + c.rekeepCount } === rkc3
+        bc3.foldLeft(0) { (a, c) => a + c.rekeepTotalCount } === rktc3
+
       }
 
     }

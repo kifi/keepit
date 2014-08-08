@@ -26,7 +26,9 @@ angular.module('kifi.recos', [])
       popularityScore: 1,
       overallInterestScore: 8,
       recentInterestScore: 4,
-      priorScore: 1
+      priorScore: 1,
+      rekeepScore: 1,
+      discoveryScore: 1
     };
 
     $scope.reload = function () {
