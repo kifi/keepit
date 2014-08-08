@@ -91,7 +91,7 @@ case class LDAInfoStoreDevModule() extends ProdOrElseDevStoreModule(LDAInfoStore
     ) getOrElse {
         val version = ModelVersions.denseLDAVersion
         val store = new InMemoryLDAConfigStore
-        val config = Map("0" -> LDATopicConfiguration("foo", false), "1" -> LDATopicConfiguration("bar", false))
+        val config = Map("0" -> LDATopicConfiguration("foo", false, false), "1" -> LDATopicConfiguration("bar", false, false))
         store.+=(MiscPrefix.LDA.topicConfigsJsonFile, version, LDATopicConfigurations(config))
       }
   }

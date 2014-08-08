@@ -36,7 +36,7 @@ class LDAInfoCommander @Inject() (
       }
     } else info
 
-    val confMap = updatedInfo.map { case in => (in.topicId.toString, LDATopicConfiguration(in.topicName, in.isActive)) }.toMap
+    val confMap = updatedInfo.map { case in => (in.topicId.toString, LDATopicConfiguration(in.topicName, in.isActive, in.isNameable)) }.toMap
     LDATopicConfigurations(confMap)
   }
 
@@ -45,7 +45,7 @@ class LDAInfoCommander @Inject() (
       config.foreach {
         case (topic, conf) =>
           val model = topicInfoRepo.getByTopicId(version, topic.toInt)
-          topicInfoRepo.save(model.copy(topicName = conf.topicName, isActive = conf.isActive).withUpdateTime(currentDateTime))
+          topicInfoRepo.save(model.copy(topicName = conf.topicName, isActive = conf.isActive, isNameable = conf.isNameable).withUpdateTime(currentDateTime))
       }
     }
   }
