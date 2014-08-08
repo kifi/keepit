@@ -7,17 +7,21 @@
 
   <tr>
     <th> id
+    <th> num Docs
     <th> words
     <th> topic name
     <th> Is Active
+    <th> IsNameable
   <tr/>
 
   @infos.zip(topicWords).map{ case (info, words) =>
     <tr>
-      <td class = "ids">@info.topicId</td>
+      <td class = "ids"><a href = "@{com.keepit.controllers.admin.routes.AdminLDAController.topicDetail(info.topicId)}">@info.topicId</a></td>
+      <td>@info.numOfDocs</td>
       <td><pre>@words</pre></td>
       <td class = "tnames"> <input type = "text" value = "@info.topicName"></td>
       <td class = "active"><input type = "checkbox" @if(info.isActive) {checked}> </td>
+      <td class = "nameable"><input type = "checkbox" @if(info.isNameable) {checked}> </td>
     </tr>
   }
 
@@ -65,11 +69,17 @@
           retStates[j] = $(states[j]).find("input").prop("checked")
         }
 
+        var nameable = $(".nameable")
+        var retNameable = []
+        for(var j = 0; j < nameable.length; j++){
+          retNameable[j] = $(nameable[j]).find("input").prop("checked")
+        }
+
         $.postJson('@com.keepit.controllers.admin.routes.AdminLDAController.saveEdits',
-          {topic_ids: retIds, topic_names: retNames, topic_states: retStates}
+          {topic_ids: retIds, topic_names: retNames, topic_states: retStates, topic_nameable: retNameable}
         ).done(done).fail(fail);
 
-        function done(data){ alert("changes saved") }
+        function done(data){ alert("changes saved"); location.reload() }
         function fail() { alert("bad things happened") }
 
 

@@ -19,6 +19,7 @@
         <th> words
         <th> topic name
         <th> Is Active
+        <th> Is Nameable
       <tr/>
     </thead>
     <tbody></tbody>
@@ -96,6 +97,7 @@
           var topicWords = x.topicWords
           var topicNames = x.topicNames
           var states = x.states
+          var nameables = x.nameables
 
           var sz = topicWords.length
 
@@ -103,6 +105,7 @@
           for(var i = 0; i < sz; i++){
 
             var isActive = (states[i] == true)
+            var isNameable = (nameables[i] == true)
             var url = '@com.keepit.controllers.admin.routes.AdminLDAController.topicDetail(0)'.replace('0', topicIds[i])
             var idLink = $('<a>').attr('href', url).text(topicIds[i])
 
@@ -112,6 +115,7 @@
               "<td><pre>" + topicWords[i] + "</pre></td>" +
               "<td class = \"tnames\">" + $("<input>",{value: topicNames[i]}).prop('outerHTML') + "</td>" +
               "<td class = \"active\">" + $("<input/>", {type: "checkbox", checked: isActive}).prop('outerHTML') + "</td>" +
+              "<td class = \"nameable\">" + $("<input/>", {type: "checkbox", checked: isNameable}).prop('outerHTML') + "</td>" +
               "</tr>"
             )
           }
@@ -143,8 +147,14 @@
           retStates[j] = $(states[j]).find("input").prop("checked")
         }
 
+        var nameable = $(".nameable")
+        var retNameable = []
+        for(var j = 0; j < nameable.length; j++){
+          retNameable[j] = $(nameable[j]).find("input").prop("checked")
+        }
+
         $.postJson('@com.keepit.controllers.admin.routes.AdminLDAController.saveEdits',
-          {topic_ids: retIds, topic_names: retNames, topic_states: retStates}
+          {topic_ids: retIds, topic_names: retNames, topic_states: retStates, topic_nameable: retNameable}
         ).done(done).fail(fail);
 
         function done(data){ alert("changes saved") }

@@ -38,7 +38,6 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
   def collectionRepo(implicit injector: Injector) = inject[CollectionRepo]
   def keepToCollectionRepo(implicit injector: Injector) = inject[KeepToCollectionRepo]
   def electronicMailRepo(implicit injector: Injector) = inject[ElectronicMailRepo]
-  def userBookmarkClicksRepo(implicit injector: Injector) = inject[UserBookmarkClicksRepo]
   def failedContentCheckRepo(implicit injector: Injector) = inject[FailedContentCheckRepo]
   def changedURIRepo(implicit injector: Injector) = inject[ChangedURIRepo]
   def imageInfo(implicit injector: Injector) = inject[ImageInfoRepo]
