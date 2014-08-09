@@ -2,9 +2,12 @@ package com.keepit.curator
 
 import com.google.inject.Injector
 import com.keepit.common.db.Id
-import com.keepit.model.{ KeepSource, KeepStates, URL, NormalizedURI, Keep, User }
+import com.keepit.common.mail.EmailAddress
+import com.keepit.model._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
-import model.{ UriScores, UriRecommendation }
+import model.{ UriRecommendationStates, UriScores, UriRecommendation }
+
+import scalaz.IndexedStateT
 
 object TestHelpers {
 
@@ -25,13 +28,22 @@ object TestHelpers {
     shoebox.saveUsers(User(
       id = Some(Id[User](num)),
       firstName = "Some",
-      lastName = "User" + num))(0)
+      lastName = "User" + num,
+      primaryEmail = Some(EmailAddress(s"user$num@kifi.com"))))(0)
+
+  def makeNormalizedUri(id: Int, url: String) =
+    NormalizedURI(
+      id = Some(Id[NormalizedURI](id)),
+      urlHash = UrlHash(url),
+      url = url
+    )
 
   def makeUriRecommendation(uriId: Int, userId: Int, masterScore: Float) =
     UriRecommendation(
       uriId = Id[NormalizedURI](uriId),
       userId = Id[User](userId),
       masterScore = masterScore,
+      state = UriRecommendationStates.ACTIVE,
       allScores = UriScores(socialScore = 1.0f,
         popularityScore = 1.0f,
         overallInterestScore = 1.0f,
