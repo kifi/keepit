@@ -5,7 +5,6 @@ import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.common.db._
-import collection.mutable
 import scala.concurrent.Future
 import com.keepit.search._
 import java.util.concurrent.atomic.AtomicInteger
@@ -168,8 +167,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allUserValues = MutableMap[(Id[User], UserValueName), String]()
   val allFriendRequests = MutableMap[Id[FriendRequest], FriendRequest]()
   val allUserFriendRequests = MutableMap[Id[User], Seq[FriendRequest]]()
-  val sentMail = mutable.MutableList[ElectronicMail]()
-  val uriSummaries = MutableMap[Id[NormalizedURI], URISummary]()
 
   // Fake data initialization methods
 
@@ -426,11 +423,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(m)
   }
 
-  def sendMail(email: ElectronicMail): Future[Boolean] = synchronized {
-    sentMail += email
-    Future.successful(true)
-  }
-
+  def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]] = Future.successful(Seq())
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = ???
@@ -611,10 +604,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
 
-  def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = Future.successful {
-    val uriSet = uriIds.toSet
-    uriSummaries.toMap.filter { pair => uriSet.contains(pair._1) }
-  }
+  def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = Future.successful(Map.empty)
 
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = Future.successful(Seq.fill(uris.size)(false))
 

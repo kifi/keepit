@@ -17,9 +17,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import concurrent.Future
 
 case class RecommendedUriSummary(reco: RecommendationInfo, uri: NormalizedURI, uriSummary: URISummary) {
-  val title = uriSummary.title.getOrElse("")
-  val description = uriSummary.description.getOrElse("")
-  val imageUrl = uriSummary.imageUrl
+  val title = uri.title.getOrElse("")
   val url = uri.url
   val score = reco.score
   val explain = reco.explain.getOrElse("")
@@ -50,11 +48,6 @@ class EngagementFeedEmailSenderImpl @Inject() (
   }
 
   def sendToUser(user: User): Future[EngagementFeedSummary] = {
-    if (user.primaryEmail.isEmpty) {
-      log.info(s"NOT sending engagement feed email to ${user.id.get}; primaryEmail missing")
-      return Future.successful(EngagementFeedSummary(userId = user.id.get, mailSent = false, Seq.empty))
-    }
-
     log.info(s"sending engagement feed email to ${user.id.get}")
 
     recommendationGenerationCommander.getAdHocRecommendations(user.id.get, recommendationCount, defaultUriRecommendationScores).flatMap[EngagementFeedSummary] { recos =>

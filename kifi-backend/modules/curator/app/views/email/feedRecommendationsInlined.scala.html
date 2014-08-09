@@ -1,17 +1,12 @@
 @(recos: Seq[com.keepit.curator.commanders.email.RecommendedUriSummary])
 
-<h1>@recos.size recommendations</h1>
 <ol>
-    @recos.map { reco =>
+    @recos.foreach { reco =>
     <li>
         <h3>@reco.title</h3>
-        <div>URL: @reco.url</div>
-        <div>Description: @reco.description</div>
-        <div>Score: @reco.score</div>
-        <div>Score Explained: @reco.explain</div>
-        @reco.imageUrl.map { imageUrl =>
-        <img src="@imageUrl"/>
-        }
+        <div>@reco.url</div>
+        <div>@reco.score</div>
+        <div>@reco.explain</div>
     </li>
     }
 </ol>
