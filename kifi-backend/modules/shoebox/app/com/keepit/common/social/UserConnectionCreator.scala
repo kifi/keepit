@@ -124,16 +124,18 @@ class UserConnectionCreator @Inject() (
     network: SocialNetworkType): Seq[SocialConnection] = timing(s"disableOldConnections($socialUserInfo, $network): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     log.debug(s"looking for connections to disable for ${socialUserInfo.fullName}")
     db.readWrite { implicit s =>
-      val existingSocialUserInfoIds = socialConnectionRepo.getUserConnections(socialUserInfo.userId.get) collect {
-        case sui if sui.networkType == network => sui.socialId
+      val existingSocialUserInfos = {
+        val socialUserInfos = socialConnectionRepo.getSocialConnectionInfosByUser(socialUserInfo.userId.get).get(network) getOrElse Seq.empty
+        socialUserInfos.map { socialUserInfo => socialUserInfo.socialId -> socialUserInfo }.toMap
       }
-      val diff = existingSocialUserInfoIds diff socialIds
+
+      val diff = existingSocialUserInfos.keys.toSeq diff socialIds
       log.debug(s"socialUserInfoForAllFriendsIds = $socialIds")
-      log.debug(s"existingSocialUserInfoIds = $existingSocialUserInfoIds")
+      log.debug(s"existingSocialUserInfoIds = ${existingSocialUserInfos.keys}")
       log.debug(s"size of diff = ${diff.length}")
       diff map { socialId =>
         try {
-          val friendSocialUserInfoId = socialRepo.get(socialId, network).id.get
+          val friendSocialUserInfoId = existingSocialUserInfos(socialId).id
           log.debug(s"about to disable connection to ${socialUserInfo.id.get} for $friendSocialUserInfoId")
           socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
             case Some(c) if c.state != SocialConnectionStates.INACTIVE =>

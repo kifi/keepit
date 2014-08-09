@@ -142,7 +142,7 @@ class AdminUserController @Inject() (
     val contactsF = if (showPrivates) abookClient.getContactsByUser(userId) else Future.successful(Seq.empty[RichContact])
     val (user, socialUserInfos, socialConnections) = db.readOnlyMaster { implicit s =>
       val user = userRepo.get(userId)
-      val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a, b) => a.fullName < b.fullName)
+      val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId).valuesIterator.flatten.toSeq.sortWith((a, b) => a.fullName < b.fullName)
       val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
       (user, socialUserInfos, socialConnections)
     }
