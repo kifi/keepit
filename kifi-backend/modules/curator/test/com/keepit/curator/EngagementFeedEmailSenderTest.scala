@@ -12,8 +12,8 @@ import commanders.email.{ EngagementFeedSummary, EngagementFeedEmailSender }
 import model.UriRecommendationRepo
 import org.specs2.mutable.Specification
 
-import concurrent.{ Await, Future }
 import concurrent.duration.Duration
+import concurrent.{ Await, Future }
 
 class EngagementFeedEmailSenderTest extends Specification with CuratorTestInjector {
   import TestHelpers._
@@ -51,23 +51,23 @@ class EngagementFeedEmailSenderTest extends Specification with CuratorTestInject
           ).map(reco => uriRecoRepo.save(reco))
         }
 
-        Seq(makeNormalizedUri(1, "http://www.kifi.com"),
+        shoebox.saveURIs(Seq(makeNormalizedUri(1, "http://www.kifi.com"),
           makeNormalizedUri(2, "http://www.google.com"),
           makeNormalizedUri(3, "http://www.42go.com"),
           makeNormalizedUri(4, "http://www.yahoo.com"),
           makeNormalizedUri(5, "http://www.lycos.com")
-        ).foreach(uri => shoebox.allNormalizedURIs(uri.id.get) = uri)
+        ): _*)
 
         recos.foreach { uriReco =>
-          shoebox.uriSummaries(uriReco.uriId) = URISummary(
+          shoebox.saveURISummary(uriReco.uriId, URISummary(
             title = Some("Test " + uriReco.uriId),
             description = Some("Test Description " + uriReco.uriId),
-            imageUrl = Some("image.jpg"))
+            imageUrl = Some("image.jpg")))
         }
 
         val sendFuture: Future[Seq[EngagementFeedSummary]] = sender.send()
 
-        val summaries = Await.result(sendFuture, Duration(5, "minutes"))
+        val summaries = Await.result(sendFuture, Duration(5, "seconds"))
 
         summaries.size === 2
         summaries(0).feed.size === 2

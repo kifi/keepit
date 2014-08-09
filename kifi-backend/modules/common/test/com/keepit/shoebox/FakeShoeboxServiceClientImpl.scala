@@ -184,7 +184,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     }
   }
 
-  def saveURIs(uris: NormalizedURI*): Seq[NormalizedURI] = {
+  def saveURIs(uris: NormalizedURI*): Seq[NormalizedURI] = synchronized {
     uris.map { uri =>
       val id = uri.id.getOrElse(nextUriId())
       val updatedUri = uri.withId(id).copy(seq = nextUriSeqNum())
@@ -193,6 +193,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
       uriToUrl(id) = updatedUrl
       updatedUri
     }
+  }
+
+  def saveURISummary(uriId: Id[NormalizedURI], uriSummary: URISummary): Unit = synchronized {
+    uriSummaries(uriId) = uriSummary
   }
 
   def saveConnections(connections: Map[Id[User], Set[Id[User]]]) {

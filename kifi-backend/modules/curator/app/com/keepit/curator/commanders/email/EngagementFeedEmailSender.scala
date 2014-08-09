@@ -41,7 +41,7 @@ class EngagementFeedEmailSenderImpl @Inject() (
     protected val airbrake: AirbrakeNotifier) extends EngagementFeedEmailSender with Logging {
 
   val defaultUriRecommendationScores = UriRecommendationScores()
-  val recommendationCount = 20
+  val recommendationCount = 5
 
   def send() = {
     userExperimentCommander.getUsersByExperiment(ExperimentType.DIGEST_EMAIl).flatMap { userSet =>
