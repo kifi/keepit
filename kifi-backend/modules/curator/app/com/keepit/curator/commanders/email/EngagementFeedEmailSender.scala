@@ -20,7 +20,7 @@ case class RecommendedUriSummary(reco: RecommendationInfo, uri: NormalizedURI, u
   val title = uriSummary.title.getOrElse("")
   val description = uriSummary.description.getOrElse("")
   val imageUrl = uriSummary.imageUrl
-  val url = uri.url
+  val url = if (uri.url.startsWith("//")) "https:" + uri.url else uri.url
   val score = reco.score
   val explain = reco.explain.getOrElse("")
 }
