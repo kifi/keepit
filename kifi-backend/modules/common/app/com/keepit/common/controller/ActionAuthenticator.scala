@@ -95,7 +95,7 @@ class RemoteActionAuthenticator @Inject() (
     val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
     val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
     val socialUser = request.user
-    val newSession = session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString)
+    val newSession = request2session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString)
     impersonatedUserIdOpt match {
       case Some(impExternalUserId) =>
         val impUserIdFuture = shoeboxClient.getUserIdsByExternalIds(Seq(impExternalUserId)).map(_.head)

@@ -16,6 +16,7 @@ import org.apache.commons.io.IOUtils
 
 import play.api.libs.json._
 import play.api.libs.ws._
+import play.api.libs.ws.ning.NingWSResponse
 import play.mvc.Http.Status
 
 import scala.util.Try
@@ -46,7 +47,7 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
 
   lazy val status: Int = res.status
 
-  lazy val bytes: Array[Byte] = res.ahcResponse.getResponseBodyAsBytes()
+  lazy val bytes: Array[Byte] = res.underlying[NingWSResponse].ahcResponse.getResponseBodyAsBytes
   private var _parsingTime: Option[Long] = None
   override def parsingTime = _parsingTime
 
@@ -55,7 +56,7 @@ class ClientResponseImpl(val request: Request, val res: Response, airbrake: Prov
    */
   def isUp = res.header(CommonHeaders.IsUP).map(_ != "N").getOrElse(true)
 
-  lazy val ahcResponse = res.ahcResponse
+  lazy val ahcResponse = res.underlying[NingWSResponse].ahcResponse
 
   // the following is copied from play.api.libs.ws.WS
   // RFC-2616#3.7.1 states that any text/* mime type should default to ISO-8859-1 charset if not
