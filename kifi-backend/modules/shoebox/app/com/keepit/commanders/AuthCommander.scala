@@ -20,7 +20,7 @@ import com.keepit.social.{ SocialId, SocialNetworks, SocialNetworkType, UserIden
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.mvc.{ RequestHeader, SimpleResult }
+import play.api.mvc.{ RequestHeader, Result }
 import play.api.mvc.Results.{ NotFound, Ok }
 
 import scala.Some
@@ -243,7 +243,7 @@ class AuthCommander @Inject() (
     heimdalServiceClient.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.JOINED, user.createdAt))
   }
 
-  def loginWithTrustedSocialIdentity(identityId: IdentityId)(implicit request: RequestHeader): SimpleResult = {
+  def loginWithTrustedSocialIdentity(identityId: IdentityId)(implicit request: RequestHeader): Result = {
     log.info(s"[loginWithTrustedSocialIdentity(${identityId})]")
     UserService.find(identityId) flatMap { identity =>
       db.readOnlyMaster(attempts = 2) { implicit s =>

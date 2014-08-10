@@ -8,7 +8,7 @@ import play.api.libs.json.{ JsValue, JsNumber }
 import play.api.i18n.Messages
 import securesocial.core.SecuredRequest
 
-import play.api.mvc.SimpleResult
+import play.api.mvc.Result
 import com.keepit.common.logging.Logging
 
 trait ActionsBuilder { self: Controller =>
@@ -35,11 +35,11 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
     p
   }
 
-  private def ActionHandlerAsync[T](parser: BodyParser[T], apiClient: Boolean, allowPending: Boolean, authFilter: AuthenticatedRequest[T] => Boolean)(onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
-    onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult] = unhandledUnAuthenticated[T]("onSocial", apiClient),
-    onUnauthenticated: Request[T] => Future[SimpleResult] = unhandledUnAuthenticated[T]("onUnauth", apiClient)): Action[T] = {
+  private def ActionHandlerAsync[T](parser: BodyParser[T], apiClient: Boolean, allowPending: Boolean, authFilter: AuthenticatedRequest[T] => Boolean)(onAuthenticated: AuthenticatedRequest[T] => Future[Result],
+    onSocialAuthenticated: SecuredRequest[T] => Future[Result] = unhandledUnAuthenticated[T]("onSocial", apiClient),
+    onUnauthenticated: Request[T] => Future[Result] = unhandledUnAuthenticated[T]("onUnauth", apiClient)): Action[T] = {
 
-    val filteredAuthenticatedRequest: AuthenticatedRequest[T] => Future[SimpleResult] = { request =>
+    val filteredAuthenticatedRequest: AuthenticatedRequest[T] => Future[Result] = { request =>
       if (authFilter(request)) {
         onAuthenticated(request)
       } else {
@@ -61,7 +61,7 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
   trait AuthenticatedActions extends ActionDefaults {
     // The type is what the Content Type header is set as.
 
-    def authenticatedAsync[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending, authFilter: (AuthenticatedRequest[T] => Boolean) = globalAuthFilter[T] _)(authenticatedAction: AuthenticatedRequest[T] => Future[SimpleResult]): Action[T] = {
+    def authenticatedAsync[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending, authFilter: (AuthenticatedRequest[T] => Boolean) = globalAuthFilter[T] _)(authenticatedAction: AuthenticatedRequest[T] => Future[Result]): Action[T] = {
       contentTypeOpt match {
         case Some(contentType) =>
           ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction.andThen(_.map(_.as(contentType))))
@@ -70,31 +70,31 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
       }
     }
 
-    def authenticatedAsync(authenticatedAction: AuthenticatedRequest[AnyContent] => Future[SimpleResult]): Action[AnyContent] = {
+    def authenticatedAsync(authenticatedAction: AuthenticatedRequest[AnyContent] => Future[Result]): Action[AnyContent] = {
       authenticatedAsync[AnyContent]()(authenticatedAction)
     }
 
-    def authenticated[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[T] => SimpleResult): Action[T] = {
+    def authenticated[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[T] => Result): Action[T] = {
       authenticatedAsync(parser, apiClient, allowPending)(authenticatedAction.andThen(Future.successful))
     }
 
-    def authenticated(authenticatedAction: AuthenticatedRequest[AnyContent] => SimpleResult): Action[AnyContent] = {
+    def authenticated(authenticatedAction: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = {
       authenticated[AnyContent]()(authenticatedAction)
     }
 
-    def authenticatedParseJsonAsync(authenticatedAction: AuthenticatedRequest[JsValue] => Future[SimpleResult]): Action[JsValue] = {
+    def authenticatedParseJsonAsync(authenticatedAction: AuthenticatedRequest[JsValue] => Future[Result]): Action[JsValue] = {
       authenticatedAsync(parser = parse.tolerantJson)(authenticatedAction)
     }
 
-    def authenticatedParseJson(authenticatedAction: AuthenticatedRequest[JsValue] => SimpleResult): Action[JsValue] = {
+    def authenticatedParseJson(authenticatedAction: AuthenticatedRequest[JsValue] => Result): Action[JsValue] = {
       authenticated(parser = parse.tolerantJson)(authenticatedAction)
     }
 
-    def authenticatedParseJsonAsync(apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[JsValue] => Future[SimpleResult]): Action[JsValue] = {
+    def authenticatedParseJsonAsync(apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[JsValue] => Future[Result]): Action[JsValue] = {
       authenticatedAsync(parser = parse.tolerantJson, apiClient = apiClient, allowPending = allowPending)(authenticatedAction)
     }
 
-    def authenticatedParseJson(apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[JsValue] => SimpleResult): Action[JsValue] = {
+    def authenticatedParseJson(apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[JsValue] => Result): Action[JsValue] = {
       authenticated(parser = parse.tolerantJson, apiClient = apiClient, allowPending = allowPending)(authenticatedAction)
     }
 
@@ -103,7 +103,7 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
   trait NonAuthenticatedActions extends ActionDefaults {
     // The type is what the Content Type header is set as.
 
-    def async[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending, authFilter: AuthenticatedRequest[T] => Boolean = globalAuthFilter[T] _)(authenticatedAction: AuthenticatedRequest[T] => Future[SimpleResult], unauthenticatedAction: Request[T] => Future[SimpleResult]): Action[T] = {
+    def async[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending, authFilter: AuthenticatedRequest[T] => Boolean = globalAuthFilter[T] _)(authenticatedAction: AuthenticatedRequest[T] => Future[Result], unauthenticatedAction: Request[T] => Future[Result]): Action[T] = {
       contentTypeOpt match {
         case Some(contentType) =>
           ActionHandlerAsync(parser, apiClient, allowPending, authFilter)(onAuthenticated = authenticatedAction.andThen(_.map(_.as(contentType))), onUnauthenticated = unauthenticatedAction.andThen(_.map(_.as(contentType))), onSocialAuthenticated = unauthenticatedAction.andThen(_.map(_.as(contentType))))
@@ -112,31 +112,31 @@ class ActionsBuilder0(actionAuthenticator: ActionAuthenticator) extends Controll
       }
     }
 
-    def async(authenticatedAction: AuthenticatedRequest[AnyContent] => Future[SimpleResult], unauthenticatedAction: Request[AnyContent] => Future[SimpleResult]): Action[AnyContent] = {
+    def async(authenticatedAction: AuthenticatedRequest[AnyContent] => Future[Result], unauthenticatedAction: Request[AnyContent] => Future[Result]): Action[AnyContent] = {
       async[AnyContent]()(authenticatedAction, unauthenticatedAction)
     }
 
-    def apply[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[T] => SimpleResult, unauthenticatedAction: Request[T] => SimpleResult): Action[T] = {
+    def apply[T](parser: BodyParser[T] = parse.anyContent, apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[T] => Result, unauthenticatedAction: Request[T] => Result): Action[T] = {
       async(parser, apiClient, allowPending)(authenticatedAction.andThen(Future.successful), unauthenticatedAction.andThen(Future.successful))
     }
 
-    def apply(authenticatedAction: AuthenticatedRequest[AnyContent] => SimpleResult, unauthenticatedAction: Request[AnyContent] => SimpleResult): Action[AnyContent] = {
+    def apply(authenticatedAction: AuthenticatedRequest[AnyContent] => Result, unauthenticatedAction: Request[AnyContent] => Result): Action[AnyContent] = {
       apply[AnyContent]()(authenticatedAction, unauthenticatedAction)
     }
 
-    def parseJsonAsync(authenticatedAction: AuthenticatedRequest[JsValue] => Future[SimpleResult], unauthenticatedAction: Request[JsValue] => Future[SimpleResult]): Action[JsValue] = {
+    def parseJsonAsync(authenticatedAction: AuthenticatedRequest[JsValue] => Future[Result], unauthenticatedAction: Request[JsValue] => Future[Result]): Action[JsValue] = {
       async(parser = parse.tolerantJson)(authenticatedAction, unauthenticatedAction)
     }
 
-    def parseJson(authenticatedAction: AuthenticatedRequest[JsValue] => SimpleResult, unauthenticatedAction: Request[JsValue] => SimpleResult): Action[JsValue] = {
+    def parseJson(authenticatedAction: AuthenticatedRequest[JsValue] => Result, unauthenticatedAction: Request[JsValue] => Result): Action[JsValue] = {
       apply(parser = parse.tolerantJson)(authenticatedAction, unauthenticatedAction)
     }
 
-    def parseJsonAsync(apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[JsValue] => Future[SimpleResult], unauthenticatedAction: Request[JsValue] => Future[SimpleResult]): Action[JsValue] = {
+    def parseJsonAsync(apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[JsValue] => Future[Result], unauthenticatedAction: Request[JsValue] => Future[Result]): Action[JsValue] = {
       async(parser = parse.tolerantJson, apiClient = apiClient, allowPending = allowPending)(authenticatedAction, unauthenticatedAction)
     }
 
-    def parseJson(apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[JsValue] => SimpleResult, unauthenticatedAction: Request[JsValue] => SimpleResult): Action[JsValue] = {
+    def parseJson(apiClient: Boolean = apiClient, allowPending: Boolean = allowPending)(authenticatedAction: AuthenticatedRequest[JsValue] => Result, unauthenticatedAction: Request[JsValue] => Result): Action[JsValue] = {
       apply(parser = parse.tolerantJson, apiClient = apiClient, allowPending = allowPending)(authenticatedAction, unauthenticatedAction)
     }
   }

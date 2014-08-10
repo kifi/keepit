@@ -25,7 +25,7 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.controller.ActionAuthenticator.MaybeAuthenticatedRequest
 import scala.util.Failure
 import scala.Some
-import play.api.mvc.SimpleResult
+import play.api.mvc.Result
 import play.api.libs.json.JsNumber
 import play.api.mvc.DiscardingCookie
 import scala.util.Success
@@ -67,7 +67,7 @@ class AuthHelper @Inject() (
     secureSocialClientIds: SecureSocialClientIds,
     fortytwoConfig: FortyTwoConfig) extends HeaderNames with Results with Status with Logging {
 
-  def authHandler(request: Request[_], res: SimpleResult)(f: => (Seq[Cookie], Session) => SimpleResult) = {
+  def authHandler(request: Request[_], res: Result)(f: => (Seq[Cookie], Session) => Result) = {
     val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
     val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
     f(resCookies, resSession)
@@ -96,7 +96,7 @@ class AuthHelper @Inject() (
     val tupleOpt: Option[(Boolean, SocialUserInfo)] = checkForExistingUser(emailAddress)
     val session = request.session
     val home = com.keepit.controllers.website.routes.HomeController.home()
-    val res: SimpleResult = tupleOpt collect {
+    val res: Result = tupleOpt collect {
       case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
         // Social user exists with these credentials
         val identity = sui.credentials.get
@@ -160,7 +160,7 @@ class AuthHelper @Inject() (
 
   private val url = fortytwoConfig.applicationBaseUrl
 
-  def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): SimpleResult = timing(s"[finishSignup(${user.id}, $emailAddress}]") {
+  def finishSignup(user: User, emailAddress: EmailAddress, newIdentity: Identity, emailConfirmedAlready: Boolean)(implicit request: Request[JsValue]): Result = timing(s"[finishSignup(${user.id}, $emailAddress}]") {
     if (!emailConfirmedAlready) {
       val unverifiedEmail = newIdentity.email.map(EmailAddress(_)).getOrElse(emailAddress)
       SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = true, Some(unverifiedEmail)) }
@@ -205,7 +205,7 @@ class AuthHelper @Inject() (
         SocialFinalizeInfo(email = email, firstName = fName, lastName = lName, password = pwd.toCharArray, picToken = picToken, picHeight = picH, picWidth = picW, cropX = cX, cropY = cY, cropSize = cS))((sfi: SocialFinalizeInfo) =>
         Some(sfi.email, sfi.firstName, sfi.lastName, new String(sfi.password), sfi.picToken, sfi.picHeight, sfi.picWidth, sfi.cropX, sfi.cropY, sfi.cropSize))
   )
-  def doSocialFinalizeAccountAction(implicit request: Request[JsValue]): SimpleResult = {
+  def doSocialFinalizeAccountAction(implicit request: Request[JsValue]): Result = {
     socialFinalizeAccountForm.bindFromRequest.fold(
       formWithErrors => BadRequest(Json.obj("error" -> formWithErrors.errors.head.message)),
       {
@@ -230,7 +230,7 @@ class AuthHelper @Inject() (
     "cropY" -> optional(number),
     "cropSize" -> optional(number)
   )(EmailPassFinalizeInfo.apply)(EmailPassFinalizeInfo.unapply))
-  def doUserPassFinalizeAccountAction(implicit request: AuthenticatedRequest[JsValue]): Future[SimpleResult] = {
+  def doUserPassFinalizeAccountAction(implicit request: AuthenticatedRequest[JsValue]): Future[Result] = {
     userPassFinalizeAccountForm.bindFromRequest.fold(
       formWithErrors => Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth"))),
       {
@@ -263,7 +263,7 @@ class AuthHelper @Inject() (
     }
   }
 
-  def doForgotPassword(implicit request: Request[JsValue]): SimpleResult = {
+  def doForgotPassword(implicit request: Request[JsValue]): Result = {
     (request.body \ "email").asOpt[String] map { emailAddrStr =>
       db.readOnlyMaster { implicit session =>
         getResetEmailAddresses(emailAddrStr)
@@ -295,7 +295,7 @@ class AuthHelper @Inject() (
     } getOrElse BadRequest("0")
   }
 
-  def doSetPassword(implicit request: Request[JsValue]): SimpleResult = {
+  def doSetPassword(implicit request: Request[JsValue]): Result = {
     (for {
       code <- (request.body \ "code").asOpt[String]
       password <- (request.body \ "password").asOpt[String].filter(_.length >= 7)
@@ -347,7 +347,7 @@ class AuthHelper @Inject() (
     Authenticator.create(identity).fold(onError, onSuccess)
   }
 
-  def doVerifyEmail(code: String)(implicit request: MaybeAuthenticatedRequest): SimpleResult = {
+  def doVerifyEmail(code: String)(implicit request: MaybeAuthenticatedRequest): Result = {
     db.readWrite { implicit s =>
       emailAddressRepo.getByCode(code).map { address =>
         lazy val isPendingPrimaryEmail = {
@@ -390,7 +390,7 @@ class AuthHelper @Inject() (
     }
   }
 
-  def doUploadBinaryPicture(implicit request: Request[play.api.libs.Files.TemporaryFile]): SimpleResult = {
+  def doUploadBinaryPicture(implicit request: Request[play.api.libs.Files.TemporaryFile]): Result = {
     request.userOpt.orElse(request.identityOpt) match {
       case Some(userInfo) =>
         s3ImageStore.uploadTemporaryPicture(request.body.file) match {

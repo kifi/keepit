@@ -22,7 +22,7 @@ import com.keepit.social.{ SocialId, SocialNetworks }
 import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
-import play.api.mvc.{ AnyContentAsJson, SimpleResult }
+import play.api.mvc.{ AnyContentAsJson, Result }
 import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
@@ -91,7 +91,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
     val authController = inject[AuthController]
     val payload = AnyContentAsJson(Json.obj("username" -> username, "password" -> password))
     val request = FakeRequest("POST", path).withBody(payload)
-    val result: Future[SimpleResult] = authController.logInWithUserPass("")(request)
+    val result: Future[Result] = authController.logInWithUserPass("")(request)
     if (expectSuccess) {
       status(result) === OK
       contentAsString(result) === Json.obj("uri" -> "/login/after").toString()
@@ -117,7 +117,7 @@ class PasswordTest extends Specification with ShoeboxApplicationInjector {
         val userController = inject[UserController]
         val payload = Json.obj("oldPassword" -> oldPwd1, "newPassword" -> newPwd1)
         val request = FakeRequest("POST", path).withBody(payload)
-        val result: Future[SimpleResult] = userController.changePassword()(request)
+        val result: Future[Result] = userController.changePassword()(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         contentAsString(result) === Json.obj("success" -> true).toString()

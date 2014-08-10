@@ -6,7 +6,7 @@ import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.db.Id
 
-import play.api.mvc.{ SimpleResult, Action, Request }
+import play.api.mvc.{ Result, Action, Request }
 import play.api.libs.json.{ Json, JsString, JsObject }
 import com.keepit.common.net.UserAgent
 import scala.Some
@@ -119,10 +119,10 @@ class ExtDeepLinkController @Inject() (
     doHandleMobile(request, tokenString)
   }
 
-  private def doHandleMobile(request: Request[_], tokenString: String): SimpleResult = {
+  private def doHandleMobile(request: Request[_], tokenString: String): Result = {
     val (isIphone, isKifiIphoneApp) = mobileCheck(request)
     val token = DeepLinkToken(tokenString)
-    val result: Option[SimpleResult] = getDeepLinkAndUrl(token) map {
+    val result: Option[Result] = getDeepLinkAndUrl(token) map {
       case (deepLink, uri) =>
         if (deepLink.deepLocator.value.endsWith("#compose")) {
           log.info(s"iphone app cannot yet handle #compose")

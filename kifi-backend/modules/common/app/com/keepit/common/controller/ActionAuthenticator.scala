@@ -56,12 +56,12 @@ trait ActionAuthenticator extends SecureSocial {
     apiClient: Boolean,
     allowPending: Boolean,
     bodyParser: BodyParser[T],
-    onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
-    onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult],
-    onUnauthenticated: Request[T] => Future[SimpleResult]): Action[T]
+    onAuthenticated: AuthenticatedRequest[T] => Future[Result],
+    onSocialAuthenticated: SecuredRequest[T] => Future[Result],
+    onUnauthenticated: Request[T] => Future[Result]): Action[T]
 
   object SecureSocialUserAwareAction extends ActionBuilder[RequestWithUser] {
-    protected def invokeBlock[A](request: Request[A], block: (RequestWithUser[A]) => Future[SimpleResult]): Future[SimpleResult] = {
+    def invokeBlock[A](request: Request[A], block: (RequestWithUser[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
       val user = for (
         authenticator <- SecureSocial.authenticatorFromRequest;
@@ -90,7 +90,7 @@ class RemoteActionAuthenticator @Inject() (
 
   private def getExperiments(userId: Id[User]): Future[Set[ExperimentType]] = userExperimentCommander.getExperimentsByUser(userId)
 
-  private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Future[SimpleResult]): (SecuredRequest[T] => Future[SimpleResult]) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
+  private def authenticatedHandler[T](userId: Id[User], apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Future[Result]): (SecuredRequest[T] => Future[Result]) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
     val experimentsFuture = getExperiments(userId)
     val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
     val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
@@ -118,9 +118,9 @@ class RemoteActionAuthenticator @Inject() (
     apiClient: Boolean,
     allowPending: Boolean,
     bodyParser: BodyParser[T],
-    onAuthenticated: AuthenticatedRequest[T] => Future[SimpleResult],
-    onSocialAuthenticated: SecuredRequest[T] => Future[SimpleResult],
-    onUnauthenticated: Request[T] => Future[SimpleResult]): Action[T] = SecureSocialUserAwareAction.async(bodyParser) { request: RequestWithUser[T] =>
+    onAuthenticated: AuthenticatedRequest[T] => Future[Result],
+    onSocialAuthenticated: SecuredRequest[T] => Future[Result],
+    onUnauthenticated: Request[T] => Future[Result]): Action[T] = SecureSocialUserAwareAction.async(bodyParser) { request: RequestWithUser[T] =>
     val result = request.user match {
       case Some(socialUser) =>
         val uidOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)).orElse {
@@ -155,7 +155,7 @@ class RemoteActionAuthenticator @Inject() (
   private[controller] def isAdmin(userId: Id[User]) = monitoredAwait.result(
     getExperiments(userId).map(r => r.contains(ExperimentType.ADMIN)), 2 seconds, s"on is admin experiment for user $userId", false)
 
-  private def executeAction[T](action: AuthenticatedRequest[T] => Future[SimpleResult], userId: Id[User], identity: Identity,
+  private def executeAction[T](action: AuthenticatedRequest[T] => Future[Result], userId: Id[User], identity: Identity,
     experiments: Set[ExperimentType], kifiInstallationId: Option[ExternalId[KifiInstallation]],
     newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None) = {
     val user = shoeboxClient.getUser(userId)

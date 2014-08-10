@@ -62,7 +62,7 @@ class AuthController @Inject() (
   def logInWithUserPass(link: String) = Action.async(parse.anyContent) { implicit request =>
     val authRes = timing(s"[logInWithUserPass] authenticate") { ProviderController.authenticate("userpass")(request) }
     authRes.map {
-      case res: SimpleResult if res.header.status == 303 =>
+      case res: Result if res.header.status == 303 =>
         authHelper.authHandler(request, res) { (cookies: Seq[Cookie], sess: Session) =>
           val newSession = if (link != "") {
             sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant
@@ -121,7 +121,7 @@ class AuthController @Inject() (
   }
 
   def link(provider: String) = Action.async(parse.anyContent) { implicit request =>
-    ProviderController.authenticate(provider)(request) map { res: SimpleResult =>
+    ProviderController.authenticate(provider)(request) map { res: Result =>
       val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
       val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
       if (resSession.get(PopupKey).isDefined) {
@@ -182,7 +182,7 @@ class AuthController @Inject() (
     unauthenticatedAction = authHelper.userPasswordSignupAction(_)
   )
 
-  private def doSignupPage(implicit request: Request[_]): SimpleResult = {
+  private def doSignupPage(implicit request: Request[_]): Result = {
     def emailAddressMatchesSomeKifiUser(identity: Identity): Boolean = {
       identity.email.flatMap { addr =>
         db.readOnlyMaster { implicit s =>
@@ -314,7 +314,7 @@ class AuthController @Inject() (
     authenticatedAction = doCancelPage(_),
     unauthenticatedAction = doCancelPage(_)
   )
-  private def doCancelPage(implicit request: Request[_]): SimpleResult = {
+  private def doCancelPage(implicit request: Request[_]): Result = {
     // todo(Andrew): Remove from database: user, credentials, securesocial session
     Ok("1").withNewSession.discardingCookies(
       DiscardingCookie(Authenticator.cookieName, Authenticator.cookiePath, Authenticator.cookieDomain, Authenticator.cookieSecure))

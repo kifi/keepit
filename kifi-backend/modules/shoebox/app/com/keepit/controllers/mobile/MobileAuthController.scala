@@ -17,7 +17,7 @@ import com.keepit.social.providers.ProviderController
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsNumber, Json }
-import play.api.mvc.{ Action, Cookie, Session, SimpleResult }
+import play.api.mvc.{ Action, Cookie, Session, Result }
 
 import scala.util.{ Failure, Success, Try }
 
@@ -178,7 +178,7 @@ class MobileAuthController @Inject() (
 
   def loginWithUserPass(link: String) = Action.async(parse.anyContent) { implicit request =>
     ProviderController.authenticate("userpass")(request).map {
-      case res: SimpleResult if res.header.status == 303 =>
+      case res: Result if res.header.status == 303 =>
         authHelper.authHandler(request, res) { (cookies: Seq[Cookie], sess: Session) =>
           val newSession = if (link != "") {
             sess - SecureSocial.OriginalUrlKey + (AuthController.LinkWithKey -> link) // removal of OriginalUrlKey might be redundant

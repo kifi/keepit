@@ -18,7 +18,7 @@ import com.keepit.shoebox.{ FakeShoeboxServiceModule }
 import com.keepit.test.{ ShoeboxTestInjector }
 import org.specs2.mutable.{ SpecificationLike }
 import play.api.libs.json.{ Json }
-import play.api.mvc.SimpleResult
+import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test.{ FakeRequest }
 
@@ -68,7 +68,7 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
         val request = FakeRequest("POST", route).withBody(payload)
 
         val controller = inject[RecommendationsController]
-        val result: Future[SimpleResult] = controller.updateUriRecommendationFeedback(userId, uriId)(request)
+        val result: Future[Result] = controller.updateUriRecommendationFeedback(userId, uriId)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
       }

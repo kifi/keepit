@@ -18,7 +18,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
-import play.api.mvc.SimpleResult
+import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test._
 import com.keepit.common.json._
@@ -82,13 +82,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           "memberCount" -> 1
         )
         val request2 = FakeRequest("POST", testPath).withBody(inputJson2)
-        val result2: Future[SimpleResult] = libraryController.addLibrary()(request2)
+        val result2: Future[Result] = libraryController.addLibrary()(request2)
         status(result2) must equalTo(BAD_REQUEST)
         contentType(result2) must beSome("application/json")
 
         // Re-add Library 1
         val request3 = FakeRequest("POST", com.keepit.controllers.website.routes.LibraryController.addLibrary().url).withBody(inputJson1)
-        val result3: Future[SimpleResult] = libraryController.addLibrary()(request3)
+        val result3: Future[Result] = libraryController.addLibrary()(request3)
         status(result3) must equalTo(BAD_REQUEST)
         contentType(result3) must beSome("application/json")
 
@@ -101,7 +101,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           "memberCount" -> 1
         )
         val request4 = FakeRequest("POST", com.keepit.controllers.website.routes.LibraryController.addLibrary().url).withBody(inputJson4)
-        val result4: Future[SimpleResult] = libraryController.addLibrary()(request4)
+        val result4: Future[Result] = libraryController.addLibrary()(request4)
         status(result4) must equalTo(BAD_REQUEST)
         contentType(result4) must beSome("application/json")
       }
@@ -126,7 +126,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val inputJson1 = Json.obj("name" -> "Library2")
         val request1 = FakeRequest("POST", testPath).withBody(inputJson1)
-        val result1: Future[SimpleResult] = libraryController.modifyLibrary(pubId)(request1)
+        val result1: Future[Result] = libraryController.modifyLibrary(pubId)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -134,7 +134,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val inputJson2 = Json.obj("slug" -> "lib2", "description" -> "asdf", "visibility" -> LibraryVisibility.PUBLISHED.value)
         val request2 = FakeRequest("POST", testPath).withBody(inputJson2)
-        val result2: Future[SimpleResult] = libraryController.modifyLibrary(pubId)(request2)
+        val result2: Future[Result] = libraryController.modifyLibrary(pubId)(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
@@ -174,13 +174,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPath1 = com.keepit.controllers.website.routes.LibraryController.removeLibrary(pubId1).url
         inject[FakeActionAuthenticator].setUser(user1)
         val request1 = FakeRequest("POST", testPath1)
-        val result1: Future[SimpleResult] = libraryController.removeLibrary(pubId1)(request1)
+        val result1: Future[Result] = libraryController.removeLibrary(pubId1)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
         val testPath2 = com.keepit.controllers.website.routes.LibraryController.removeLibrary(pubId2).url
         val request2 = FakeRequest("POST", testPath2)
-        val result2: Future[SimpleResult] = libraryController.removeLibrary(pubId2)(request2)
+        val result2: Future[Result] = libraryController.removeLibrary(pubId2)(request2)
         status(result2) must equalTo(BAD_REQUEST)
         contentType(result2) must beSome("application/json")
       }
@@ -203,7 +203,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPath1 = com.keepit.controllers.website.routes.LibraryController.getLibrary(pubId1).url
         inject[FakeActionAuthenticator].setUser(user1)
         val request1 = FakeRequest("GET", testPath1)
-        val result1: Future[SimpleResult] = libraryController.getLibrary(pubId1)(request1)
+        val result1: Future[Result] = libraryController.getLibrary(pubId1)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -244,7 +244,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPath = com.keepit.controllers.website.routes.LibraryController.getLibrariesByUser.url
         inject[FakeActionAuthenticator].setUser(user1)
         val request1 = FakeRequest("GET", testPath)
-        val result1: Future[SimpleResult] = libraryController.getLibrariesByUser()(request1)
+        val result1: Future[Result] = libraryController.getLibrariesByUser()(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -293,7 +293,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           ))
 
         val request1 = FakeRequest("POST", testPath).withBody(inputJson1)
-        val result1: Future[SimpleResult] = libraryController.inviteUsersToLibrary(pubId)(request1)
+        val result1: Future[Result] = libraryController.inviteUsersToLibrary(pubId)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -338,7 +338,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         inject[FakeActionAuthenticator].setUser(user1)
 
         val request1 = FakeRequest("POST", testPathJoin)
-        val result1: Future[SimpleResult] = libraryController.joinLibrary(pubId1)(request1)
+        val result1: Future[Result] = libraryController.joinLibrary(pubId1)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -355,7 +355,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         Json.parse(contentAsString(result1)) must equalTo(expected)
 
         val request2 = FakeRequest("POST", testPathDecline)
-        val result2: Future[SimpleResult] = libraryController.declineLibrary(pubId2)(request2)
+        val result2: Future[Result] = libraryController.declineLibrary(pubId2)(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
       }
@@ -383,7 +383,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPath1 = com.keepit.controllers.website.routes.LibraryController.leaveLibrary(pubId1).url
         inject[FakeActionAuthenticator].setUser(user1)
         val request1 = FakeRequest("POST", testPath1)
-        val result1: Future[SimpleResult] = libraryController.leaveLibrary(pubId1)(request1)
+        val result1: Future[Result] = libraryController.leaveLibrary(pubId1)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
       }
@@ -421,7 +421,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPath1 = com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1).url
         inject[FakeActionAuthenticator].setUser(user1)
         val request1 = FakeRequest("POST", testPath1)
-        val result1: Future[SimpleResult] = libraryController.getKeeps(pubId1)(request1)
+        val result1: Future[Result] = libraryController.getKeeps(pubId1)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 

@@ -90,7 +90,7 @@ object ProviderController extends Controller {
     }
   }
 
-  def completeAuthentication(user: Identity, session: Session)(implicit request: RequestHeader): SimpleResult = {
+  def completeAuthentication(user: Identity, session: Session)(implicit request: RequestHeader): Result = {
     if (Logger.isDebugEnabled) {
       Logger.debug("[securesocial] user logged in : [" + user + "]")
     }
