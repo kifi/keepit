@@ -34,13 +34,12 @@ class UserConnectionCreator @Inject() (
   sendFriendConnectionMadeHelper: SendFriendConnectionMadeNotificationHelper)
     extends Logging {
 
-  def createConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
-    network: SocialNetworkType): Seq[SocialConnection] = timing(s"createConnections($socialUserInfo, $network) socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
+  def createConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId]): Seq[SocialConnection] = timing(s"createConnections($socialUserInfo) socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     if (socialIds.isEmpty) {
       Seq.empty
     } else {
-      disableOldConnections(socialUserInfo, socialIds, network)
-      val socialConnections = createNewConnections(socialUserInfo, socialIds, network)
+      disableOldConnections(socialUserInfo, socialIds)
+      val socialConnections = createNewConnections(socialUserInfo, socialIds)
       socialUserInfo.userId.map(updateUserConnections)
       socialConnections
     }
@@ -76,23 +75,21 @@ class UserConnectionCreator @Inject() (
     }
   }
 
-  private def extractFriendsWithConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
-    network: SocialNetworkType)(implicit s: RSession): Seq[(SocialUserInfo, Option[SocialConnection])] = timing(s"extractFriendsWithConnections($socialUserInfo, $network): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
+  private def extractFriendsWithConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId])(implicit s: RSession): Seq[(SocialUserInfo, Option[SocialConnection])] = timing(s"extractFriendsWithConnections($socialUserInfo): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     for {
       socialId <- socialIds
-      sui <- socialRepo.getOpt(socialId, network)
+      sui <- socialRepo.getOpt(socialId, socialUserInfo.networkType)
     } yield {
       sui -> socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, sui.id.get)
     }
   }
 
-  private def createNewConnections(socialUserInfo: SocialUserInfo, allSocialIds: Seq[SocialId],
-    network: SocialNetworkType): Seq[SocialConnection] = timing(s"createNewConnections($socialUserInfo, $network): allSocialIds(${allSocialIds.length}):${allSocialIds.mkString(",")}") {
+  private def createNewConnections(socialUserInfo: SocialUserInfo, allSocialIds: Seq[SocialId]): Seq[SocialConnection] = timing(s"createNewConnections($socialUserInfo): allSocialIds(${allSocialIds.length}):${allSocialIds.mkString(",")}") {
     log.debug(s"looking for new (or reactive) connections for user ${socialUserInfo.fullName}")
     allSocialIds.grouped(100).flatMap { socialIds =>
       db.readWrite { implicit s =>
         log.info(s"[createNewConnections] Processing group of ${socialIds.length}")
-        extractFriendsWithConnections(socialUserInfo, socialIds, network) map {
+        extractFriendsWithConnections(socialUserInfo, socialIds) map {
           case (_, Some(c)) if c.state == SocialConnectionStates.ACTIVE => Some(c)
           case (friend, Some(c)) =>
             log.info(s"activate connection between ${c.socialUser1} and ${c.socialUser2}")
@@ -116,16 +113,15 @@ class UserConnectionCreator @Inject() (
                 None
             }
         }
-      }
-    }.toList.flatten
+      }.toList.flatten
+    }
   }
 
-  private def disableOldConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
-    network: SocialNetworkType): Seq[SocialConnection] = timing(s"disableOldConnections($socialUserInfo, $network): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
+  private def disableOldConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId]): Seq[SocialConnection] = timing(s"disableOldConnections($socialUserInfo): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     log.debug(s"looking for connections to disable for ${socialUserInfo.fullName}")
     db.readWrite { implicit s =>
       val existingSocialUserInfos = {
-        val socialUserInfos = socialConnectionRepo.getSocialConnectionInfosByUser(socialUserInfo.userId.get).get(network) getOrElse Seq.empty
+        val socialUserInfos = socialConnectionRepo.getSocialConnectionInfos(socialUserInfo.id.get)
         socialUserInfos.map { socialUserInfo => socialUserInfo.socialId -> socialUserInfo }.toMap
       }
 
