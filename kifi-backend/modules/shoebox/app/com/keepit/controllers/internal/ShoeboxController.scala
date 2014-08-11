@@ -329,14 +329,6 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def kifiHit() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val json = request.body
-    val clicker = (json \ "clickerId").as(Id.format[User])
-    val kifiHit = (json \ "kifiHit").as[SanitizedKifiHit]
-    keepsCommander.processKifiHit(clicker, kifiHit)
-    Ok
-  }
-
   def getHelpRankInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
     val uriIds = Json.fromJson[Seq[Id[NormalizedURI]]](request.body).get
     val infos = keepsCommander.getHelpRankInfo(uriIds)
