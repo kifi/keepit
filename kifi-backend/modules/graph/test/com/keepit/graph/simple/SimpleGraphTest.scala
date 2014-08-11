@@ -169,20 +169,32 @@ class SimpleGraphTest() extends Specification {
       SimpleGraph.write(graph, tempFile)
       val newGraph = SimpleGraph.read(tempFile)
       val newGraphReader = newGraph.getNewReader()
-      val newGraphVertexReader = newGraphReader.getNewVertexReader()
-      newGraphVertexReader.moveTo(rearWindow)
-      newGraphVertexReader.kind === UriReader
-      newGraphVertexReader.data.id === rearWindow
-      newGraphVertexReader.moveTo(alfred)
-      newGraphVertexReader.outgoingEdgeReader.moveToNextComponent()
-      newGraphVertexReader.outgoingEdgeReader.degree === 2
-      newGraphVertexReader.moveTo(leo)
-      newGraphVertexReader.outgoingEdgeReader.moveToNextComponent() === false
 
       val newGraphEdgeReader = newGraphReader.getNewEdgeReader()
 
       newGraphEdgeReader.moveTo(alfred, rearWindow, EmptyEdgeReader)
       newGraphEdgeReader.moveTo(alfred, vertigo, EmptyEdgeReader)
+
+      val newGraphVertexReader = newGraphReader.getNewVertexReader()
+
+      newGraphVertexReader.moveTo(leo)
+      newGraphVertexReader.outgoingEdgeReader.moveToNextComponent() === false
+
+      newGraphVertexReader.moveTo(alfred)
+      newGraphVertexReader.outgoingEdgeReader.moveToNextComponent() === true
+      newGraphVertexReader.outgoingEdgeReader.degree === 2
+
+      newGraphVertexReader.moveTo(rearWindow)
+      newGraphVertexReader.kind === UriReader
+      newGraphVertexReader.data.id === rearWindow
+      newGraphVertexReader.incomingEdgeReader.moveToNextComponent() === true
+      newGraphVertexReader.incomingEdgeReader.degree === 1
+
+      newGraphVertexReader.moveTo(vertigo)
+      newGraphVertexReader.kind === UriReader
+      newGraphVertexReader.data.id === vertigo
+      newGraphVertexReader.incomingEdgeReader.moveToNextComponent() === true
+      newGraphVertexReader.incomingEdgeReader.degree === 1
 
       "All good" === "All good"
     }
