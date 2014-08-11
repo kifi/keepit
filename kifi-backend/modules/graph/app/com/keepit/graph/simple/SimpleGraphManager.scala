@@ -24,7 +24,7 @@ class SimpleGraphManager(
     r.totalMemory() - r.freeMemory()
   }
 
-  def backup(): Unit = {
+  def backup(): Unit = try {
     val runningHeapSize = currentHeapSize()
     log.info(s"Persisting SimpleGraph - Current Heap Size: ${FileUtils.byteCountToDisplaySize(runningHeapSize)}")
     val start = System.currentTimeMillis
@@ -45,6 +45,9 @@ class SimpleGraphManager(
       val end = System.currentTimeMillis
       log.info(s"Simple Graph directory has been backed up in ${(end - start) / 1000} seconds")
     }
+  } catch { case ex: Throwable =>
+    log.error(s"Failed to backup SimpleGraph to disk - ${ex}")
+    airbrake.notify("Failed to backup SimpleGraph to disk", ex)
   }
 
   def update(updates: GraphUpdate*): Unit = {
