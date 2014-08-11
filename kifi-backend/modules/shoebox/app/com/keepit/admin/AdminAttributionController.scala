@@ -39,8 +39,13 @@ class AdminAttributionController @Inject() (
   implicit val execCtx = fj
 
   def keepDiscoveriesViewNew(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticatedAsync { request =>
-    heimdalClient.getPagedKeepDiscoveries(page, size) map { paged =>
-      db.readOnlyMaster { implicit session =>
+    val countF = heimdalClient.getDiscoveryCount()
+    val pagedF = heimdalClient.getPagedKeepDiscoveries(page, size)
+    val resF = for {
+      count <- countF
+      paged <- pagedF
+    } yield {
+      val t = db.readOnlyMaster { implicit session =>
         paged map { c =>
           val rc = RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, userRepo.get(c.keeperId), keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
           val pageInfoOpt = pageInfoRepo.getByUri(c.uriId)
@@ -53,8 +58,11 @@ class AdminAttributionController @Inject() (
           (rc, pageInfoOpt, imgOpt)
         }
       }
-    } map { t =>
-      Ok(html.admin.keepDiscoveries(t, false, page, 42, size))
+      (t, count)
+    }
+    resF map {
+      case (t, count) =>
+        Ok(html.admin.keepDiscoveries(t, false, page, count, size))
     }
   }
 
@@ -76,20 +84,30 @@ class AdminAttributionController @Inject() (
   }
 
   def rekeepsViewNew(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticatedAsync { request =>
-    heimdalClient.getPagedReKeeps(page, size) map { paged =>
-      db.readOnlyMaster { implicit session =>
-        val t = paged map { k =>
+    val countF = heimdalClient.getReKeepCount()
+    val pagedF = heimdalClient.getPagedReKeeps(page, size)
+    val resF = for {
+      count <- countF
+      paged <- pagedF
+    } yield {
+      val t = db.readOnlyMaster { implicit session =>
+        paged map { k =>
           val rk = RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, userRepo.get(k.keeperId), keepRepo.get(k.keepId), uriRepo.get(k.uriId), userRepo.get(k.srcUserId), keepRepo.get(k.srcKeepId), k.attributionFactor)
           val pageInfoOpt = pageInfoRepo.getByUri(k.uriId)
-          val imgOpt = if (!showImage) None else
+          val imgOpt = if (!showImage) None
+          else
             for {
               pageInfo <- pageInfoOpt
               imgId <- pageInfo.imageInfoId
             } yield imageInfoRepo.get(imgId)
           (rk, pageInfoOpt, imgOpt)
         }
-        Ok(html.admin.rekeeps(t, showImage, page, 42, size))
       }
+      (t, count)
+    }
+    resF map {
+      case (t, count) =>
+        Ok(html.admin.rekeeps(t, showImage, page, count, size))
     }
   }
 

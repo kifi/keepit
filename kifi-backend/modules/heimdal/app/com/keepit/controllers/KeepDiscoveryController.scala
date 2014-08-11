@@ -15,6 +15,13 @@ class KeepDiscoveryController @Inject() (
     db: Database,
     keepDiscoveryRepo: KeepDiscoveryRepo) extends HeimdalServiceController {
 
+  def count() = Action { request =>
+    val res = db.readOnlyMaster { implicit session =>
+      keepDiscoveryRepo.count
+    }
+    Ok(Json.toJson(res))
+  }
+
   def page(page: Int, size: Int) = Action { request =>
     val res = db.readOnlyMaster { implicit session =>
       keepDiscoveryRepo.page(page, size)
