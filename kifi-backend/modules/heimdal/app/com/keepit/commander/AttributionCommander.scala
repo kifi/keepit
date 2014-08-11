@@ -55,7 +55,7 @@ class AttributionCommander @Inject() (
     usersByDeg zip rekeepsByDeg
   }
 
-  def updateUserReKeepStatus(userId: Id[User], n: Int = 3): Future[Seq[UserBookmarkClicks]] = { // expensive -- admin only
+  def updateUserReKeepStats(userId: Id[User], n: Int = 3): Future[Seq[UserBookmarkClicks]] = { // expensive -- admin only
     val rekeepCountsF = db.readOnlyReplicaAsync { implicit ro =>
       rekeepRepo.getAllReKeepsByKeeper(userId).groupBy(_.keepId).map {
         case (keepId, rekeeps) =>
@@ -90,7 +90,7 @@ class AttributionCommander @Inject() (
   def updateUsersReKeepStats(keepers: Seq[Id[User]], n: Int = 3): Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
     val builder = mutable.ArrayBuilder.make[Seq[UserBookmarkClicks]]
     FutureHelpers.sequentialExec(keepers) { keeperId =>
-      updateUserReKeepStatus(keeperId, n) map { res =>
+      updateUserReKeepStats(keeperId, n) map { res =>
         builder += res
       }
     } map { _ =>

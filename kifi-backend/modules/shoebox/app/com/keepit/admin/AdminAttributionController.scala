@@ -209,30 +209,30 @@ class AdminAttributionController @Inject() (
   }
 
   def updateReKeepStats() = AdminHtmlAction.authenticatedAsync { request =>
-    attributionCmdr.updateUserReKeepStatus(request.userId) map { saved =>
-      Ok(s"Updated ${saved.length} bookmarkDiscovery entries for ${request.userId}")
+    heimdalClient.updateUserReKeepStats(request.userId) map { _ =>
+      Ok(s"Update request sent for userId=${request.userId}")
     }
   }
 
   def updateUserReKeepStats() = AdminHtmlAction.authenticatedParseJsonAsync { request =>
     Json.fromJson[Id[User]](request.body).asOpt map { userId =>
-      attributionCmdr.updateUserReKeepStatus(userId) map { saved =>
-        Ok(s"Updated ${saved.length} bookmarkDiscovery entries for ${userId}")
+      heimdalClient.updateUserReKeepStats(userId) map { _ =>
+        Ok(s"Update request sent for userId=${userId}")
       }
     } getOrElse Future.successful(BadRequest(s"Illegal argument"))
   }
 
   def updateUsersReKeepStats() = AdminHtmlAction.authenticatedParseJsonAsync { request =>
     Json.fromJson[Seq[Id[User]]](request.body).asOpt map { userIds =>
-      attributionCmdr.updateUsersReKeepStats(userIds) map { saved =>
-        Ok(s"Updated bookmarkDiscovery table for ${saved.length} users")
+      heimdalClient.updateUsersReKeepStats(userIds) map { _ =>
+        Ok(s"Update request sent for ${userIds.length} users (${userIds.take(5).mkString(",")} ... )")
       }
     } getOrElse Future.successful(BadRequest(s"Illegal argument"))
   }
 
   def updateAllReKeepStats() = AdminHtmlAction.authenticatedAsync { request =>
-    attributionCmdr.updateAllReKeepStats() map { saved =>
-      Ok(s"Updated bookmarkDiscoveries table for ${saved.length} users")
+    heimdalClient.updateAllReKeepStats() map { _ =>
+      Ok(s"Update request sent for all users")
     }
   }
 
