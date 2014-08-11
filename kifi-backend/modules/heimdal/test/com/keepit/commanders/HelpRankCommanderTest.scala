@@ -371,62 +371,62 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
     }
 
     // (ray) test failing in jenkins -- temporarily comment out to unblock build
-    //    "tracking messages & rekeeps" in {
-    //      val attrInfo = new collection.mutable.HashMap[Id[NormalizedURI], Seq[Id[User]]]()
-    //      withDb((modules ++ Seq(FakeElizaServiceClientModule(attributionInfo = attrInfo))): _*) { implicit injector =>
-    //        try {
-    //          val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    //          val ts = currentDateTime
-    //          val u1 = User(id = Some(Id[User](1)), createdAt = ts, updatedAt = ts, firstName = "Shanee", lastName = "Smith")
-    //          val u2 = User(id = Some(Id[User](2)), createdAt = ts, updatedAt = ts, firstName = "Foo", lastName = "Bar")
-    //          val savedUsers = shoebox.saveUsers(u1, u2)
-    //
-    //          val uri42 = mkURI(Id[NormalizedURI](1), "http://42go.com", SequenceNumber[NormalizedURI](1))
-    //          val uriKifi = mkURI(Id[NormalizedURI](2), "http://kifi.com", SequenceNumber[NormalizedURI](2))
-    //          val uriGoog = mkURI(Id[NormalizedURI](3), "http://google.com", SequenceNumber[NormalizedURI](3))
-    //          val uriBing = mkURI(Id[NormalizedURI](4), "http://bing.com", SequenceNumber[NormalizedURI](4))
-    //          val savedURIs = shoebox.saveURIs(uri42, uriKifi, uriGoog, uriBing)
-    //
-    //          val mkKeep1 = mkKeep(u1.id.get, Some(currentDateTime)) _
-    //          val keeps1 = Seq(
-    //            mkKeep1(Id[Keep](1), uri42),
-    //            mkKeep1(Id[Keep](2), uriKifi)
-    //          )
-    //          val mkKeep2 = mkKeep(u2.id.get, Some(currentDateTime)) _
-    //          val keeps2 = Seq(
-    //            mkKeep2(Id[Keep](3), uriKifi),
-    //            mkKeep2(Id[Keep](4), uriGoog),
-    //            mkKeep2(Id[Keep](5), uriBing)
-    //          )
-    //          val savedKeeps = shoebox.saveBookmarks(keeps1 ++ keeps2: _*)
-    //
-    //          attrInfo += (keeps1(1).uriId -> Seq(u1.id.get)) // u1 - chat(kifi) - u2 (rekeep)
-    //
-    //          val commander = inject[HelpRankCommander]
-    //          Await.result(commander.processKeepAttribution(u2.id.get, keeps2), 5 seconds)
-    //
-    //          val clicks1 = db.readOnlyMaster { implicit rw =>
-    //            keepDiscoveryRepo.getByKeepId(keeps1(1).id.get)
-    //          }
-    //          clicks1.size === 1
-    //          clicks1.headOption.exists { click =>
-    //            click.keeperId == u1.id.get && click.keepId == keeps1(1).id.get
-    //          } === true
-    //          val rekeeps1 = db.readOnlyMaster { implicit ro =>
-    //            rekeepRepo.getAllReKeepsByKeeper(u1.id.get)
-    //          }
-    //          rekeeps1.length === 1
-    //          val rk = rekeeps1(0)
-    //          rk.keeperId === u1.id.get
-    //          rk.keepId === keeps1(1).id.get
-    //          rk.srcUserId === u2.id.get
-    //        } catch {
-    //          case t: Throwable =>
-    //            println(s"Caught Exception $t; cause=${t.getCause}; \n\t${t.getStackTraceString}")
-    //            throw t
-    //        }
-    //      }
-    //    }
+    "tracking messages & rekeeps" in {
+      val attrInfo = new collection.mutable.HashMap[Id[NormalizedURI], Seq[Id[User]]]()
+      withDb((modules ++ Seq(FakeElizaServiceClientModule(attributionInfo = attrInfo))): _*) { implicit injector =>
+        try {
+          val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+          val ts = currentDateTime
+          val u1 = User(id = Some(Id[User](1)), createdAt = ts, updatedAt = ts, firstName = "Shanee", lastName = "Smith")
+          val u2 = User(id = Some(Id[User](2)), createdAt = ts, updatedAt = ts, firstName = "Foo", lastName = "Bar")
+          val savedUsers = shoebox.saveUsers(u1, u2)
+
+          val uri42 = mkURI(Id[NormalizedURI](1), "http://42go.com", SequenceNumber[NormalizedURI](1))
+          val uriKifi = mkURI(Id[NormalizedURI](2), "http://kifi.com", SequenceNumber[NormalizedURI](2))
+          val uriGoog = mkURI(Id[NormalizedURI](3), "http://google.com", SequenceNumber[NormalizedURI](3))
+          val uriBing = mkURI(Id[NormalizedURI](4), "http://bing.com", SequenceNumber[NormalizedURI](4))
+          val savedURIs = shoebox.saveURIs(uri42, uriKifi, uriGoog, uriBing)
+
+          val mkKeep1 = mkKeep(u1.id.get, Some(currentDateTime)) _
+          val keeps1 = Seq(
+            mkKeep1(Id[Keep](1), uri42),
+            mkKeep1(Id[Keep](2), uriKifi)
+          )
+          val mkKeep2 = mkKeep(u2.id.get, Some(currentDateTime)) _
+          val keeps2 = Seq(
+            mkKeep2(Id[Keep](3), uriKifi),
+            mkKeep2(Id[Keep](4), uriGoog),
+            mkKeep2(Id[Keep](5), uriBing)
+          )
+          val savedKeeps = shoebox.saveBookmarks(keeps1 ++ keeps2: _*)
+
+          attrInfo += (keeps1(1).uriId -> Seq(u1.id.get)) // u1 - chat(kifi) - u2 (rekeep)
+
+          val commander = inject[HelpRankCommander]
+          Await.result(commander.processKeepAttribution(u2.id.get, keeps2), Duration.Inf)
+
+          val clicks1 = db.readOnlyMaster { implicit rw =>
+            keepDiscoveryRepo.getByKeepId(keeps1(1).id.get)
+          }
+          clicks1.size === 1
+          clicks1.headOption.exists { click =>
+            click.keeperId == u1.id.get && click.keepId == keeps1(1).id.get
+          } === true
+          val rekeeps1 = db.readOnlyMaster { implicit ro =>
+            rekeepRepo.getAllReKeepsByKeeper(u1.id.get)
+          }
+          rekeeps1.length === 1
+          val rk = rekeeps1(0)
+          rk.keeperId === u1.id.get
+          rk.keepId === keeps1(1).id.get
+          rk.srcUserId === u2.id.get
+        } catch {
+          case t: Throwable =>
+            println(s"Caught Exception $t; cause=${t.getCause}; \n\t${t.getStackTraceString}")
+            throw t
+        }
+      }
+    }
   }
 
 }
