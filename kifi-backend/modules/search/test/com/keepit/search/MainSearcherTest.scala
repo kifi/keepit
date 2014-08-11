@@ -442,7 +442,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
 
         uriGraph.update()
         indexer.update() === uris.size
-        collectionGraph.update() == 2
+        collectionGraph.update() === 2
 
         setConnections(Map(user1.id.get -> Set(user2.id.get)))
         userGraphIndexer.update()
@@ -454,7 +454,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
         val mainSearcher1 = mainSearcherFactory(singleShard, user1.id.get, "alldocs", english, None, uris.size, searchFilter1, noBoostConfig)
         val res1 = mainSearcher1.search()
 
-        res1.hits.size == coll1set.size
+        res1.hits.size === coll1set.size
         res1.hits.foreach { _.uriId.id % 3 === 0 }
 
         val coll2Future = Promise.successful(Seq(coll2.id.get)).future
@@ -462,7 +462,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
         val mainSearcher2 = mainSearcherFactory(singleShard, user1.id.get, "alldocs", english, None, uris.size, searchFilter2, noBoostConfig)
         val res2 = mainSearcher2.search()
 
-        res2.hits.size == coll2set.size
+        res2.hits.size === coll2set.size
         res2.hits.foreach { _.uriId.id % 3 === 1 }
 
         val coll3Future = Promise.successful(Seq(coll1.id.get, coll2.id.get)).future
@@ -470,7 +470,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
         val mainSearcher3 = mainSearcherFactory(singleShard, user1.id.get, "alldocs", english, None, uris.size, searchFilter3, noBoostConfig)
         val res3 = mainSearcher3.search()
 
-        res3.hits.size == (coll1set.size + coll2set.size)
+        res3.hits.size === (coll1set.size + coll2set.size)
       }
     }
 

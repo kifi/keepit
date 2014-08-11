@@ -68,7 +68,7 @@ class LDAController @Inject() (
   }
 
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    val scores = lda.gaussianUserUriInterest(userId, uriId)
+    val scores = lda.userUriInterest(userId, uriId)
     Ok(Json.toJson(scores))
   }
 
