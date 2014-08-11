@@ -53,11 +53,25 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getPagedKeepDiscoveries(page: Int, size: Int): Future[Seq[KeepDiscovery]] = Future.successful(Seq.empty)
 
+  def getDiscoveryCount(): Future[Int] = Future.successful(0)
+
   def getDiscoveryCountByKeeper(userId: Id[User]): Future[Int] = Future.successful(0)
 
   def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = Future.successful(UserKeepAttributionInfo(Id[User](1), 0, 0, 0, 0, 0))
 
   def getPagedReKeeps(page: Int, size: Int): Future[Seq[ReKeep]] = Future.successful(Seq.empty)
+
+  def getReKeepCount(): Future[Int] = Future.successful(0)
+
+  def getUserReKeepsByDegree(keepIds: Seq[KeepIdInfo]): Future[Seq[UserReKeepsAcc]] = Future.successful(Seq.empty)
+
+  def getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep]): Future[Seq[ReKeepsPerDeg]] = Future.successful(Seq.empty)
+
+  def updateUserReKeepStats(userId: Id[User]): Future[Unit] = Future.successful[Unit]()
+
+  def updateUsersReKeepStats(userIds: Seq[Id[User]]): Future[Unit] = Future.successful[Unit]()
+
+  def updateAllReKeepStats(): Future[Unit] = Future.successful[Unit]()
 
   def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit] = Future.successful[Unit]()
 

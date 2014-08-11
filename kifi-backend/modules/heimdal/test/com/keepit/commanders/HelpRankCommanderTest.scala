@@ -331,20 +331,20 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
         val rkbd1 = attrCmdr.getReKeepsByDegree(u1.id.get, keeps1(1).id.get, 3)
         rkbd1.length === 3
         val (ubd1, kbd1) = rkbd1.unzip
-        ubd1(0) === Set(u1.id.get)
-        ubd1(1) === Set(u3.id.get)
-        ubd1(2) === Set(u4.id.get)
-        kbd1(0) === Set(keeps1(1).id.get)
-        kbd1(1) === Set(keeps3(0).id.get)
-        kbd1(2) === Set(keeps4(0).id.get)
+        ubd1(0) === Seq(u1.id.get)
+        ubd1(1) === Seq(u3.id.get)
+        ubd1(2) === Seq(u4.id.get)
+        kbd1(0) === Seq(keeps1(1).id.get)
+        kbd1(1) === Seq(keeps3(0).id.get)
+        kbd1(2) === Seq(keeps4(0).id.get)
 
-        val bc1 = Await.result(attrCmdr.updateUserReKeepStatus(u1.id.get), Duration.Inf)
+        val bc1 = Await.result(attrCmdr.updateUserReKeepStats(u1.id.get), Duration.Inf)
         bc1.nonEmpty === true
         bc1.length === 1
         bc1(0).rekeepCount === 1
         bc1(0).rekeepTotalCount === 2
 
-        val bc3 = Await.result(attrCmdr.updateUserReKeepStatus(u3.id.get), Duration.Inf)
+        val bc3 = Await.result(attrCmdr.updateUserReKeepStats(u3.id.get), Duration.Inf)
         bc3(0).rekeepCount === 1
         bc3(0).rekeepTotalCount === 1
 

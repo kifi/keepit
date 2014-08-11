@@ -8,6 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import com.keepit.common.db.Id
 import com.keepit.model.helprank.{ ReKeepRepo, KeepDiscoveryRepo, UserBookmarkClicksRepo }
+import com.keepit.shoebox.ShoeboxServiceClient
 import scala.collection.mutable
 import scala.concurrent.Future
 import com.keepit.model.UserBookmarkClicks
@@ -22,8 +23,27 @@ class AttributionCommander @Inject() (
     rekeepRepo: ReKeepRepo,
     kifiHitCache: KifiHitCache) extends Logging {
 
+  // potentially expensive -- admin only
+  def getUserReKeepsByDegree(keepIds: Seq[KeepIdInfo], n: Int = 3): Map[Id[Keep], Seq[Seq[Id[User]]]] = {
+    require(keepIds.size >= 0 && keepIds.size <= 50, s"getUserReKeepsByDegree() illegal argument keepIds.size=${keepIds.size}")
+    if (keepIds.isEmpty) Map.empty[Id[Keep], Seq[Seq[Id[User]]]]
+    else {
+      val userKeeps = keepIds.groupBy(_.userId)
+
+      // sequential -- no need to overload shoebox
+      val res = userKeeps.map {
+        case (userId, keeps) =>
+          keeps.toSeq.map { keep =>
+            keep.keepId -> getReKeepsByDegree(userId, keep.keepId, n).map { case (userIdsByDeg, _) => userIdsByDeg }
+          }
+      }.flatten.toMap
+      log.info(s"getUserReKeepsByDegree res=$res")
+      res
+    }
+  }
+
   // potentially expensive -- admin only for now; will be called infrequently (cron job) later
-  def getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep], n: Int = 3): Seq[(Set[Id[User]], Set[Id[Keep]])] = timing(s"getReKeepsByDegree($keeperId,$keepId,$n)") {
+  def getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep], n: Int = 3): Seq[(Seq[Id[User]], Seq[Id[Keep]])] = timing(s"getReKeepsByDegree($keeperId,$keepId,$n)") {
     require(n > 1 && n < 5, s"getReKeepsByDegree($keeperId, $keepId) illegal argument (degree=$n)")
     val rekeepsByDeg = new Array[Set[Id[Keep]]](n)
     rekeepsByDeg(0) = Set(keepId)
@@ -52,10 +72,10 @@ class AttributionCommander @Inject() (
       }
     }
 
-    usersByDeg zip rekeepsByDeg
+    usersByDeg.map { _.toSeq } zip rekeepsByDeg.map { _.toSeq }
   }
 
-  def updateUserReKeepStatus(userId: Id[User], n: Int = 3): Future[Seq[UserBookmarkClicks]] = { // expensive -- admin only
+  def updateUserReKeepStats(userId: Id[User], n: Int = 3): Future[Seq[UserBookmarkClicks]] = { // expensive -- admin only
     val rekeepCountsF = db.readOnlyReplicaAsync { implicit ro =>
       rekeepRepo.getAllReKeepsByKeeper(userId).groupBy(_.keepId).map {
         case (keepId, rekeeps) =>
@@ -90,7 +110,7 @@ class AttributionCommander @Inject() (
   def updateUsersReKeepStats(keepers: Seq[Id[User]], n: Int = 3): Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
     val builder = mutable.ArrayBuilder.make[Seq[UserBookmarkClicks]]
     FutureHelpers.sequentialExec(keepers) { keeperId =>
-      updateUserReKeepStatus(keeperId, n) map { res =>
+      updateUserReKeepStats(keeperId, n) map { res =>
         builder += res
       }
     } map { _ =>

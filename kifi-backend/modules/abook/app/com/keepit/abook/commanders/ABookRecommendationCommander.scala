@@ -15,6 +15,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import scala.inline
 import com.keepit.common.PriorityStreamAggregator
+import com.keepit.common.logging.Logging
 
 @Singleton
 class ABookRecommendationCommander @Inject() (
@@ -28,7 +29,7 @@ class ABookRecommendationCommander @Inject() (
     emailInviteRecommendationRepo: EmailInviteRecommendationRepo,
     graph: GraphServiceClient,
     shoebox: ShoeboxServiceClient,
-    clock: Clock) {
+    clock: Clock) extends Logging {
 
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Unit = {
     db.readWrite { implicit session =>
@@ -37,7 +38,13 @@ class ABookRecommendationCommander @Inject() (
   }
 
   def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = {
-    generateFutureFriendRecommendations(userId).map(_.drop(page * pageSize).take(pageSize).map(_._1).toSeq)
+    val start = clock.now()
+    val futureRecommendations = generateFutureFriendRecommendations(userId).map(_.drop(page * pageSize).take(pageSize).map(_._1).toSeq)
+    futureRecommendations.onSuccess {
+      case recommendations =>
+        log.info(s"Computed ${recommendations.length}/${pageSize} friend recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
+    }
+    futureRecommendations
   }
 
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]) = {
@@ -54,7 +61,13 @@ class ABookRecommendationCommander @Inject() (
   }
 
   def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, relevantNetworks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = {
-    generateFutureInviteRecommendations(userId, relevantNetworks).map(_.drop(page * pageSize).take(pageSize).map(_._1).toSeq)
+    val start = clock.now()
+    val futureRecommendations = generateFutureInviteRecommendations(userId, relevantNetworks).map(_.drop(page * pageSize).take(pageSize).map(_._1).toSeq)
+    futureRecommendations.onSuccess {
+      case recommendations =>
+        log.info(s"Computed ${recommendations.length}/${pageSize} invite recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
+    }
+    futureRecommendations
   }
 
   private def generateFutureFriendRecommendations(userId: Id[User]): Future[Stream[(Id[User], Double)]] = {

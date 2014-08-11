@@ -13,6 +13,13 @@ class ReKeepController @Inject() (
     db: Database,
     rekeepRepo: ReKeepRepo) extends HeimdalServiceController {
 
+  def count() = Action { request =>
+    val res = db.readOnlyMaster { implicit session =>
+      rekeepRepo.count
+    }
+    Ok(Json.toJson(res))
+  }
+
   def page(page: Int, size: Int) = Action { request =>
     val res = db.readOnlyMaster { implicit session =>
       rekeepRepo.page(page, size)

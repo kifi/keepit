@@ -17,11 +17,11 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
     templateUrl: 'invite/connectionCard.tpl.html',
     link: function (scope/*, element, attrs*/) {
       var friend = scope.friend();
-      var network = friend.fullSocialId.split('/')[0];
-      var inNetworkId = friend.fullSocialId.split('/')[1];
+      var network = friend.network;
+      var inNetworkId = friend.identifier;
       var invited = (friend.lastInvitedAt != null);
 
-      if (friend.pictureUrl != null) {
+      if (friend.pictureUrl) {
         scope.mainImage = friend.pictureUrl;
       } else if (network === 'email') {
         scope.mainImage = '/img/email-icon.png';
@@ -59,7 +59,10 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
       };
       scope.closeAction = function () {
         scope.hidden = true;
-        var data = { 'fullSocialId' : friend.fullSocialId };
+        var data = {
+          'network': friend.network,
+          'identifier': friend.identifier
+        };
         $http.post(routeService.blockWtiConnection, data);
       };
       if (invited) {
