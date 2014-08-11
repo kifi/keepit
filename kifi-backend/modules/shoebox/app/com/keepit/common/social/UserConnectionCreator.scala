@@ -53,7 +53,7 @@ class UserConnectionCreator @Inject() (
   def updateUserConnections(userId: Id[User]) = timing(s"updateUserConnections($userId)") {
     db.readWrite { implicit s =>
       val existingConnections = userConnectionRepo.getConnectedUsers(userId)
-      val socialConnections = socialConnectionRepo.getFortyTwoUserConnections(userId)
+      val socialConnections = socialConnectionRepo.getSociallyConnectedUsers(userId)
       val unfriendedConnections = userConnectionRepo.getUnfriendedUsers(userId)
 
       val newConnections = socialConnections -- existingConnections -- unfriendedConnections

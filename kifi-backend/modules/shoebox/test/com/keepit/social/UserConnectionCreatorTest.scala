@@ -72,7 +72,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
         outbox(0).to === Seq(EmailAddress("andrew@gmail.com"))
 
         inject[Database].readOnlyMaster { implicit s =>
-          val fortyTwoConnections = inject[SocialConnectionRepo].getFortyTwoUserConnections(user.id.get)
+          val fortyTwoConnections = inject[SocialConnectionRepo].getSociallyConnectedUsers(user.id.get)
           val userConnections = inject[UserConnectionRepo].getConnectedUsers(user.id.get)
           val connectionCount = inject[UserConnectionRepo].getConnectionCount(user.id.get)
           fortyTwoConnections === userConnections
@@ -135,7 +135,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
           .createConnections(socialUserInfo, extractedFriends2.map(_.socialId), SocialNetworks.FACEBOOK)
 
         inject[Database].readOnlyMaster { implicit s =>
-          val fortyTwoConnections = inject[SocialConnectionRepo].getFortyTwoUserConnections(user.id.get)
+          val fortyTwoConnections = inject[SocialConnectionRepo].getSociallyConnectedUsers(user.id.get)
           val userConnections = inject[UserConnectionRepo].getConnectedUsers(user.id.get)
           val connectionCount = inject[UserConnectionRepo].getConnectionCount(user.id.get)
           fortyTwoConnections.size === 1

@@ -99,8 +99,8 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
         val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[Database].readOnlyMaster { implicit s =>
           connectionRepo.count === 18
-          (connectionRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
-            connectionRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
+          (connectionRepo.getSociallyConnectedUsers(eishaySocialUserInfo.userId.get),
+            connectionRepo.getSociallyConnectedUsers(andrewSocialUserInfo.userId.get))
         }
 
         eishayFortyTwoConnection.size === 3
@@ -177,8 +177,8 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
         val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[Database].readOnlyMaster { implicit s =>
           connectionRepo.all.size === 18
-          (connectionRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get),
-            connectionRepo.getFortyTwoUserConnections(andrewSocialUserInfo.userId.get))
+          (connectionRepo.getSociallyConnectedUsers(eishaySocialUserInfo.userId.get),
+            connectionRepo.getSociallyConnectedUsers(andrewSocialUserInfo.userId.get))
         }
 
         eishayFortyTwoConnection.size === 3
@@ -250,7 +250,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
         val eishayFortyTwoConnection = inject[Database].readOnlyMaster { implicit s =>
           connectionRepo.all.size === 12
-          connectionRepo.getFortyTwoUserConnections(eishaySocialUserInfo.userId.get)
+          connectionRepo.getSociallyConnectedUsers(eishaySocialUserInfo.userId.get)
         }
 
         eishayFortyTwoConnection.size === 3
