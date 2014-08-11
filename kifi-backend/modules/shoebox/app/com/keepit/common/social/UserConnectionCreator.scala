@@ -113,8 +113,8 @@ class UserConnectionCreator @Inject() (
                 None
             }
         }
-      }.toList.flatten
-    }
+      }
+    }.flatten.toSeq
   }
 
   private def disableOldConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId]): Seq[SocialConnection] = timing(s"disableOldConnections($socialUserInfo): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {

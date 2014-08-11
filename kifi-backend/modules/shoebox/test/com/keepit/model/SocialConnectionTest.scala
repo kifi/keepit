@@ -94,8 +94,8 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
           users
         }
 
-        connections.createConnections(eishaySocialUserInfo, extractFacebookFriendIds(eishayJson), SocialNetworks.FACEBOOK)
-        connections.createConnections(andrewSocialUserInfo, extractFacebookFriendIds(andrewJson), SocialNetworks.FACEBOOK)
+        connections.createConnections(eishaySocialUserInfo, extractFacebookFriendIds(eishayJson))
+        connections.createConnections(andrewSocialUserInfo, extractFacebookFriendIds(andrewJson))
 
         val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[Database].readOnlyMaster { implicit s =>
           connectionRepo.count === 18
@@ -169,9 +169,9 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
         }
 
         inject[UserConnectionCreator].createConnections(eishaySocialUserInfo,
-          extractFacebookFriendIds(eishayJson), SocialNetworks.FACEBOOK)
+          extractFacebookFriendIds(eishayJson))
         inject[UserConnectionCreator].createConnections(andrewSocialUserInfo,
-          extractFacebookFriendIds(andrewJson), SocialNetworks.FACEBOOK)
+          extractFacebookFriendIds(andrewJson))
 
         val connectionRepo = inject[SocialConnectionRepo]
 
@@ -246,7 +246,7 @@ class SocialConnectionTest extends Specification with ShoeboxTestInjector {
         }
 
         inject[UserConnectionCreator].createConnections(eishaySocialUserInfo,
-          Seq(eishay1Json, eishay2Json) flatMap extractFacebookFriendIds, SocialNetworks.FACEBOOK)
+          Seq(eishay1Json, eishay2Json) flatMap extractFacebookFriendIds)
 
         val eishayFortyTwoConnection = inject[Database].readOnlyMaster { implicit s =>
           connectionRepo.all.size === 12
