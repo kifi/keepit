@@ -4,6 +4,8 @@ import com.keepit.common.net.URI
 import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.scraper.{ BasicArticle, SignatureBuilder, Signature, HttpInputStream }
 
+import scala.util.{ Failure, Success }
+
 trait Extractor {
   def process(input: HttpInputStream): Unit
   def getContent(): String
@@ -12,7 +14,18 @@ trait Extractor {
   def getLinks(key: String): Set[String]
   def getCanonicalUrl(): Option[String] = {
     getLinks("canonical").headOption orElse getMetadata("og:url") match {
-      case Some(url) if (URI.parse(url).isSuccess) => Some(url)
+      case Some(url) =>
+        URI.parse(url) match {
+          case Success(parsed) =>
+            parsed.query match {
+              //it seems like the spec does not restricts question marks to appear in the query part http://tools.ietf.org/html/rfc3986#section-3.4
+              //still, if they exist in a query part of canonical urls its usually a bad url so we'll skip it to be safe.
+              case Some(query) if query.params.exists(p => p.name.contains("?") || p.value.exists(_.contains("?"))) => None
+              case _ => Some(url)
+            }
+          case Failure(_) =>
+            None
+        }
       case _ => None
     }
   }
