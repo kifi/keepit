@@ -1,15 +1,14 @@
 .kifi-compose {
-  padding: 10px 6px;
+  padding: 10px 0 0;
   font-size: 12px;
   line-height: 14px;
 }
 .kifi-compose-draft {
   -webkit-user-modify: read-write;
-  border: 1px solid #d2d2d2;
-  border-bottom: none;
+  border-top: 1px solid #d2d2d2;
   border-radius: 0 !important;
   background-color: #fff;
-  padding: 6px 8px;
+  padding: 6px 15px;
   min-height: 21px;
   max-height: 114px;
   overflow: auto;
@@ -44,9 +43,6 @@ textarea.kifi-compose-draft {
 @keyframes paddingLeft2 {
   50% {padding-left: 2px}
 }
-div.kifi-compose-draft:first-child {
-  border-radius: 3px 3px 0 0 !important;
-}
 .kifi-compose.kifi-empty div.kifi-compose-draft::after {
   content: attr(data-placeholder);
   color: #a9a9a9;
@@ -61,12 +57,11 @@ textarea.kifi-compose-draft::-moz-placeholder {
   opacity: .3;
 }
 .kifi-compose-bar {
-  border: 1px solid #d2d2d2;
-  border-top: none;
-  border-radius: 0 0 3px 3px !important;
-  background: #f2f4f7;
-  text-align: right;
   position: relative;
+  height: 36px;
+  border-top: 1px solid #e2e2e2;
+  background: #f6f6f6;
+  text-align: right;
 }
 .kifi-compose-highlight[href] {
   float: left;
@@ -74,12 +69,12 @@ textarea.kifi-compose-draft::-moz-placeholder {
   box-sizing: border-box;
   width: 23px;
   height: 23px;
-  margin: 3px 0 0 3px;
+  margin: 7px 0 0 7px;
   background-size: 13px 8px;
   background-position: center;
   background-repeat: no-repeat;
   border: 1px solid;
-  border-radius: 3px;
+  border-radius: 5px;
 }
 .kifi-compose-highlight:not(.kifi-disabled) {
   border-color: rgb(195,202,177);
@@ -138,13 +133,12 @@ textarea.kifi-compose-draft::-moz-placeholder {
 .kifi-compose-tip {
   display: inline-block;
   position: relative;
-  margin: -1px 0;
   border: 1px solid transparent;
   padding: 0 8px 0 12px;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   font-size: 11px;
-  line-height: 27px;
+  line-height: 28px;
   color: #999;
   cursor: pointer;
 }
@@ -174,6 +168,7 @@ span.kifi-compose-tip-tri {
 span.kifi-compose-tip-menu {
   display: inline-block;
   position: relative;
+  top: 3px;
   line-height: 28px;
   vertical-align: top;
 }
@@ -198,13 +193,12 @@ span.kifi-compose-tip-alt {
 }
 .kifi-compose a.kifi-compose-submit[href] {
   display: inline-block;
-  margin: 0 -1px -1px 0;
+  margin: 3px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
   padding: 0 18px;
-  color: #fff !important;
-  background-color: #6fa6ef;
-  border: 1px solid #6fa6ef;
-  border-top: none;
-  border-bottom-right-radius: inherit !important;
+  color: #333 !important;
+  background: linear-gradient(#fff, #f3f3f3);
   line-height: 28px;
 }
 .kifi-compose.kifi-empty a.kifi-compose-submit[href] {
@@ -281,11 +275,9 @@ a.kifi-compose-submit.kifi-active {
   width: 100%;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  border: 1px solid #d2d2d2 !important;
-  margin: 0 0 -1px !important;
 }
 .kifi-compose input.kifi-compose-to { /* initial input */
-  padding: 6px 8px;
+  padding: 6px 15px;
 }
 .kifi-compose .kifi-ti-token-for-input>input {  /* token input */
   width: 100px;
@@ -302,7 +294,7 @@ a.kifi-compose-submit.kifi-active {
   color: #a9a9a9 !important;
 }
 .kifi-ti-list {
-  padding: 4px 3px 1px !important;
+  padding: 4px 10px 1px !important;
   height: auto !important;
   min-height: 1px;
   list-style: none;
@@ -321,6 +313,7 @@ a.kifi-compose-submit.kifi-active {
   overflow: hidden;
   margin: 0 0 3px 3px !important;
   padding: 2px 0 2px 5px !important;
+  border-radius: 3px !important;
   background-color: #6fa6ef;
   color: #fff;
   cursor: default;

@@ -59,7 +59,7 @@ var toaster = (function () {
     log('[toaster:show]');
     $toaster = $(render('html/keeper/compose_toaster', {
       showTo: true,
-      draftPlaceholder: 'Type a message…',
+      draftPlaceholder: 'Write something…',
       draftDefault: 'Check this out.'
     }, {
       compose: 'compose'
