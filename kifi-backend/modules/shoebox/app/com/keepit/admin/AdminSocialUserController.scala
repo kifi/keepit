@@ -32,7 +32,7 @@ class AdminSocialUserController @Inject() (
   def socialUserView(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction.authenticatedAsync { implicit request =>
     for {
       socialUserInfo <- db.readOnlyReplicaAsync { implicit s => socialUserInfoRepo.get(socialUserId) }
-      socialConnections <- db.readOnlyReplicaAsync { implicit s => socialConnectionRepo.getSocialUserConnections(socialUserId).sortWith((a, b) => a.fullName < b.fullName) }
+      socialConnections <- db.readOnlyReplicaAsync { implicit s => socialConnectionRepo.getSocialConnectionInfo(socialUserInfo.id.get).sortWith((a, b) => a.fullName < b.fullName) }
     } yield {
       val rawInfo = socialUserRawInfoStore.get(socialUserInfo.id.get)
       Ok(html.admin.socialUser(socialUserInfo, socialConnections, rawInfo))

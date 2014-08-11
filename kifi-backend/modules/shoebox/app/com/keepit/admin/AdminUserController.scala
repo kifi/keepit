@@ -143,11 +143,11 @@ class AdminUserController @Inject() (
     val (user, socialUserInfos, socialConnections) = db.readOnlyMaster { implicit s =>
       val user = userRepo.get(userId)
       val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId).valuesIterator.flatten.toSeq.sortWith((a, b) => a.fullName < b.fullName)
-      val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
+      val socialUserInfos = socialUserInfoRepo.getSocialUserBasicInfosByUser(user.id.get)
       (user, socialUserInfos, socialConnections)
     }
     val rawInfos = socialUserInfos map { info =>
-      socialUserRawInfoStore.get(info.id.get)
+      socialUserRawInfoStore.get(info.id)
     }
     for {
       abookInfos <- abookInfoF
@@ -222,14 +222,14 @@ class AdminUserController @Inject() (
 
     val (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
-      val socialUsers = socialUserInfoRepo.getByUser(userId)
+      val socialUsers = socialUserInfoRepo.getSocialUserBasicInfosByUser(userId)
       val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
         userRepo.get(userId)
       }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a, b) => a.updatedAt.isBefore(b.updatedAt))
       val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
       val emails = emailRepo.getAllByUser(userId)
-      val invitedByUsers = invitedBy(socialUsers, emails)
+      val invitedByUsers = invitedBy(socialUsers.map(_.id), emails)
       (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
@@ -288,9 +288,9 @@ class AdminUserController @Inject() (
   def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
 
-  private def invitedBy(socialUserInfos: Seq[SocialUserInfo], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
-    val bySocial: Seq[Id[User]] = socialUserInfos map { info =>
-      invitationRepo.getByRecipientSocialUserId(info.id.get).map(_.senderUserId).flatten
+  private def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
+    val bySocial: Seq[Id[User]] = socialUserIds map { socialUserId =>
+      invitationRepo.getByRecipientSocialUserId(socialUserId).map(_.senderUserId).flatten
     } flatten
     val byEmail: Seq[Id[User]] = emails map { email =>
       invitationRepo.getByRecipientEmailAddress(email.address).map(_.senderUserId).flatten
@@ -310,7 +310,7 @@ class AdminUserController @Inject() (
     UserStatistics(user,
       userConnectionRepo.getConnectionCount(user.id.get),
       invitationRepo.countByUser(user.id.get),
-      invitedBy(socialUserInfos, emails),
+      invitedBy(socialUserInfos.map(_.id.get), emails),
       socialUserInfos,
       privateKeeps,
       publicKeeps,

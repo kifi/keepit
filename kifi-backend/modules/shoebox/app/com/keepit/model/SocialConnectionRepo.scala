@@ -16,7 +16,6 @@ import scala.concurrent.duration._
 trait SocialConnectionRepo extends Repo[SocialConnection] with SeqNumberFunction[SocialConnection] {
   def getFortyTwoUserConnections(id: Id[User])(implicit session: RSession): Set[Id[User]]
   def getConnectionOpt(u1: Id[SocialUserInfo], u2: Id[SocialUserInfo])(implicit session: RSession): Option[SocialConnection]
-  def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialConnectionInfo(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserBasicInfo]
   def getSocialConnectionInfosByUser(id: Id[User])(implicit session: RSession): Map[SocialNetworkType, Seq[SocialUserBasicInfo]]
   def deactivateAllConnections(id: Id[SocialUserInfo])(implicit session: RWSession): Int
@@ -148,7 +147,7 @@ class SocialConnectionRepoImpl @Inject() (
     Await.result(future, Duration.Inf)
   }
 
-  def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo] = {
+  private def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[Id[SocialUserInfo]] = {
     val connections = (for {
       t <- rows if (t.socialUser1 === id || t.socialUser2 === id) && t.state === SocialConnectionStates.ACTIVE
     } yield t).list
