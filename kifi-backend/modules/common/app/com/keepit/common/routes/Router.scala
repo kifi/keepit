@@ -13,6 +13,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.abook.model.{ IngestableContact, EmailAccountInfo }
 import org.joda.time.DateTime
 import com.keepit.common.time._
+import com.keepit.social.SocialNetworkType
 
 trait Service
 
@@ -80,6 +81,7 @@ object Shoebox extends Service {
     def getUserExperiments(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getUserExperiments", Param("id", id))
     def getExperimentsByUserIds() = ServiceRoute(POST, "/internal/shoebox/database/getExperimentsByUserIds")
     def getExperimentGenerators() = ServiceRoute(GET, "/internal/shoebox/database/getExperimentGenerators")
+    def getUsersByExperiment(experiment: ExperimentType) = ServiceRoute(GET, "/internal/shoebox/database/getUsersByExperiment", Param("experiment", experiment.value))
     def getConnectedUsers(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getConnectedUsers", Param("userId", userId))
     def getBrowsingHistoryFilter(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/tracker/browsingHistory", Param("userId", userId))
     def getClickHistoryFilter(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/tracker/clickHistory", Param("userId", userId))
@@ -149,8 +151,8 @@ object Shoebox extends Service {
     def getUriImage(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/image/getUriImage", Param("id", id))
     def getUriSummary() = ServiceRoute(POST, "/internal/shoebox/image/getUriSummary")
     def getUriSummaries() = ServiceRoute(POST, "/internal/shoebox/image/getUriSummaries")
-    def getAdultRestrictionOfURIs() = ServiceRoute(POST, "/internal/shoebox/database/getAdultRestrictionOfURIs")
-    def getUserImageUrl(id: Long, width: Int) = ServiceRoute(GET, "/internal/shoebox/image/getUserImageUrl", Param("id", id), Param("width", width))
+    def getUserImageUrl(id: Id[User], width: Int) = ServiceRoute(GET, "/internal/shoebox/image/getUserImageUrl", Param("id", id), Param("width", width))
+    def getCandidateURIs() = ServiceRoute(POST, "/internal/shoebox/database/getCandidateURIs")
     def getUnsubscribeUrlForEmail(email: EmailAddress) = ServiceRoute(GET, "/internal/shoebox/email/getUnsubscribeUrlForEmail", Param("email", email))
     def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableSocialConnections", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIndexableSocialUserInfos", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
@@ -158,6 +160,8 @@ object Shoebox extends Service {
     def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesAndMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]) = ServiceRoute(GET, "/internal/shoebox/database/getLapsedUsersForDelighted", Param("maxCount", maxCount), Param("skipCount", skipCount), Param("after", after), Param("before", before))
     def getAllFakeUsers() = ServiceRoute(GET, "/internal/shoebox/database/getAllFakeUsers")
+    def getInvitations(senderId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getInvitations", Param("senderId", senderId))
+    def getSocialConnections(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getSocialConnections", Param("userId", userId))
   }
 }
 
@@ -244,7 +248,9 @@ object Heimdal extends Service {
     def postDelightedAnswer() = ServiceRoute(POST, s"/internal/heimdal/user/delighted/answer")
     def cancelDelightedSurvey() = ServiceRoute(POST, s"/internal/heimdal/user/delighted/cancel")
     def getPagedKeepDiscoveries(page: Int, size: Int) = ServiceRoute(GET, s"/internal/heimdal/data/keepDiscovery/page/$page", Param("size", size))
+    def getDiscoveryCountByKeeper(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/data/keepDiscovery/getDiscoveryCountByKeeper", Param("userId", userId))
     def getPagedReKeeps(page: Int, size: Int) = ServiceRoute(GET, s"/internal/heimdal/data/reKeep/page/$page", Param("size", size))
+    def getKeepAttributionInfo(userId: Id[User]) = ServiceRoute(GET, "/internal/heimdal/helprank/getKeepAttributionInfo", Param("userId", userId))
     def processKifiHit() = ServiceRoute(POST, "/internal/heimdal/helprank/processKifiHit")
     def processKeepAttribution() = ServiceRoute(POST, "/internal/heimdal/helprank/processKeepAttribution")
   }
@@ -283,8 +289,10 @@ object ABook extends Service {
     def getEmailAccountsChanged(seqNum: SequenceNumber[EmailAccountInfo], fetchSize: Int) = ServiceRoute(GET, "/internal/abook/database/getEmailAccountsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int) = ServiceRoute(GET, "/internal/abook/database/getContactsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getUsersWithContact(email: EmailAddress) = ServiceRoute(GET, "/internal/abook/getUsersWithContact", Param("email", email))
-    def findFriends(userId: Id[User], page: Int, pageSize: Int) = ServiceRoute(GET, s"/internal/abook/${userId}/findFriends", Param("page", page), Param("pageSize", pageSize))
-    def hideUserRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId}/hideUserRecommendation", Param("irrelevantUserId", irrelevantUserId))
+    def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int) = ServiceRoute(GET, s"/internal/abook/${userId}/getFriendRecommendations", Param("page", page), Param("pageSize", pageSize))
+    def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId}/hideFriendRecommendation", Param("irrelevantUserId", irrelevantUserId))
+    def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, networks: Set[SocialNetworkType]) = ServiceRoute(GET, s"/internal/abook/${userId}/getInviteRecommendations", Param("page", page), Param("pageSize", pageSize), Param("networks", networks.mkString(",")))
+    def hideInviteRecommendation(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId}/hideInviteRecommendation")
   }
 }
 
@@ -327,6 +335,7 @@ object Cortex extends Service {
     def userTopicMean(userId: Id[User]) = ServiceRoute(GET, "/internal/cortex/lda/userTopicMean", Param("userId", userId))
     def sampleURIsForTopic(topicId: Int) = ServiceRoute(GET, "/internal/cortex/lda/sampleURIs", Param("topicId", topicId))
     def getSimilarUsers(userId: Id[User], topK: Int) = ServiceRoute(GET, "/internal/cortex/lda/getSimilarUsers", Param("userId", userId), Param("topK", topK))
+    def unamedTopics(limit: Int) = ServiceRoute(GET, "/internal/cortex/lda/unamedTopics", Param("limit", limit))
 
     def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/cortex/data/sparseLDAFeaturesChanged", Param("modelVersion", modelVersion), Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }
@@ -352,6 +361,9 @@ object Curator extends Service {
   object internal {
     def adHocRecos(userId: Id[User], n: Int) = ServiceRoute(POST, "/internal/curator/adHocRecos", Param("userId", userId), Param("n", n))
     def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/curator/updateUriRecommendationFeedback", Param("userId", userId), Param("uriId", uriId))
+    def triggerEmail(code: String) = ServiceRoute(POST, "/internal/curator/triggerEmail", Param("code", code))
+    def triggerEmailToUser(code: String, userId: Id[User]) = ServiceRoute(POST, "/internal/curator/triggerEmail", Param("code", code), Param("userId", userId))
+    def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/curator/updateUriRecommendationUserInteraction", Param("userId", userId), Param("uriId", uriId))
   }
 }
 

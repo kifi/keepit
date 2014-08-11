@@ -21,18 +21,23 @@ angular.module('kifi.friends.rightColFriendsView', [
           return !friend.unfriended;
         });
 
-        actualFriends.forEach(function (friend) {
+        // Randomly select 4 friends to display, but always display
+        // friends with pictures before friends without pictures.
+        var pictureGroups = _.groupBy(actualFriends, function (friend) {
+          return friend.pictureName !== '0.jpg';
+        });
+        var friendsToDisplay = _.sample(pictureGroups['true'], 4);
+        if (friendsToDisplay.length < 4) {
+          friendsToDisplay = friendsToDisplay.concat(
+            _.sample(pictureGroups['false'], 4 - friendsToDisplay.length)
+          );
+        }
+
+        friendsToDisplay.forEach(function (friend) {
           friend.pictureUrl = friendService.getPictureUrlForUser(friend);
         });
-
-        var hasPicture = function (friend) {
-          return friend.pictureName !== '0.jpg';
-        };
-        actualFriends.sort(function (friendA, friendB) {
-          return -hasPicture(friendA) + hasPicture(friendB);
-        });
-
-        scope.friends = actualFriends;
+        
+        scope.friends = friendsToDisplay;
       });
 
       scope.friendsLink = function () {
@@ -79,8 +84,8 @@ angular.module('kifi.friends.rightColFriendsView', [
 }])
 
 .directive('kfPeopleYouMayKnowView', 
-  ['$log', '$q', '$timeout', 'friendService', 'inviteService', 'wtiService', 
-  function ($log, $q, $timeout, friendService, inviteService, wtiService) {
+  ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'savePymkService', 'wtiService', 
+  function ($log, $q, $rootScope, $timeout, friendService, inviteService, savePymkService, wtiService) {
   return {
     replace: true,
     restrict: 'A',
@@ -91,18 +96,21 @@ angular.module('kifi.friends.rightColFriendsView', [
 
         people.forEach(function (person) {
           var name = person.firstName + ' ' + person.lastName;
+          var numMutualFriends = person.mutualFriends.length || 0;
+
           peopleYouMayKnow.push({
             id: person.id,
-            fullName: name + ', ',
+            fullName: name,
             pictureUrl: friendService.getPictureUrlForUser(person),
             actionText: 'Add',
             clickable: true,
             isKifiUser: true,
-            via: 'via Kifi',
-            squish: name.length > 17
+            via: numMutualFriends > 0 ? '' : 'Kifi',
+            numMutualFriends: numMutualFriends,
+            mutualFriends: person.mutualFriends
           });
         });
-        
+
         var networkNamesMap = {
           'facebook': 'Facebook',
           'linkedin': 'LinkedIn',
@@ -119,8 +127,8 @@ angular.module('kifi.friends.rightColFriendsView', [
               var via = '';
 
               if (person.name) {
-                name = person.name + ', ';
-                via = 'via ' + networkNamesMap[socialIdValues[0]];
+                name = person.name;
+                via = networkNamesMap[socialIdValues[0]];
               } else if (socialIdValues[0] === 'email') {
                 name = socialIdValues[1];
               }
@@ -133,8 +141,7 @@ angular.module('kifi.friends.rightColFriendsView', [
                 actionText: 'Invite',
                 clickable: true,
                 isKifiUser: false,
-                via: via,
-                squish: person.name && person.name.length > 14
+                via: via
               });
             });
           });
@@ -190,6 +197,11 @@ angular.module('kifi.friends.rightColFriendsView', [
         _.remove(scope.peopleYouMayKnow, function (elem) {
           return elem === person;
         });
+      };
+
+      scope.showMutualFriends = function (person) {
+        savePymkService.savePersonYouMayKnow(person);
+        $rootScope.$emit('showGlobalModal', 'seeMutualFriends');
       };
     }
   };

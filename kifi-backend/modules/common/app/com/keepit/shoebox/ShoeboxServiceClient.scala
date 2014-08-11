@@ -73,6 +73,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserExperiments(userId: Id[User]): Future[Seq[ExperimentType]]
   def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[ExperimentType]]]
   def getExperimentGenerators(): Future[Seq[ProbabilisticExperimentGenerator]]
+  def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]]
   def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
   def getUnfriends(userId: Id[User]): Future[Set[Id[User]]]
@@ -97,8 +98,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], user: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit]
   def getUriSummary(request: URISummaryRequest): Future[URISummary]
-  def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]]
-  def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
+  def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]]
+  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
   def getUserImageUrl(userId: Id[User], width: Int): Future[String]
   def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String]
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
@@ -107,6 +108,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]]
   def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]]
   def getAllFakeUsers(): Future[Set[Id[User]]]
+  def getInvitations(senderId: Id[User]): Future[Seq[Invitation]]
+  def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -413,6 +416,10 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]] = {
+    call(Shoebox.internal.getUsersByExperiment(experimentType)).map(_.json.as[Set[User]])
+  }
+
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
     call(Shoebox.internal.getCollectionsByUser(userId)).map { r =>
       Json.fromJson[Seq[Collection]](r.json).get
@@ -621,7 +628,7 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = {
+  def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = {
     redundantDBConnectionCheck(uriIds)
     val keys = uriIds.map(URISummaryKey)
     cacheProvider.uriSummaryCache.bulkGetOrElseFuture(keys.toSet) { missing =>
@@ -635,14 +642,14 @@ class ShoeboxServiceClientImpl @Inject() (
     }.map(_ map { case (k, v) => (k.id, v) })
   }
 
-  def getAdultRestrictionOfURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    call(Shoebox.internal.getAdultRestrictionOfURIs(), body = Json.toJson(uris)).map { r =>
+  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
+    call(Shoebox.internal.getCandidateURIs(), body = Json.toJson(uris)).map { r =>
       r.json.as[Seq[Boolean]]
     }
   }
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
-    call(Shoebox.internal.getUserImageUrl(userId.id, width)).map { r =>
+    call(Shoebox.internal.getUserImageUrl(userId, width)).map { r =>
       r.json.as[String]
     }
   }
@@ -684,5 +691,13 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getAllFakeUsers(): Future[Set[Id[User]]] = cacheProvider.allFakeUsersCache.getOrElseFuture(AllFakeUsersKey) {
     call(Shoebox.internal.getAllFakeUsers()).map(_.json.as[Set[Id[User]]])
+  }
+
+  def getInvitations(senderId: Id[User]): Future[Seq[Invitation]] = {
+    call(Shoebox.internal.getInvitations(senderId)).map(_.json.as[Seq[Invitation]])
+  }
+
+  def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]] = {
+    call(Shoebox.internal.getSocialConnections(userId)).map(_.json.as[Seq[SocialUserBasicInfo]])
   }
 }

@@ -1,5 +1,6 @@
-package com.keepit.signal
+package com.keepit.helprank
 
+import com.keepit.commander.AttributionCommander
 import play.api.Plugin
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
@@ -7,7 +8,6 @@ import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.common.logging.Logging
 import scala.concurrent.duration._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.commanders.AttributionCommander
 import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor }
 
 trait ReKeepStatsUpdaterPlugin extends Plugin {
@@ -19,6 +19,8 @@ case class UpdateStats()
 class ReKeepStatsUpdaterPluginImpl @Inject() (
     actor: ActorInstance[ReKeepStatsUpdater],
     val scheduling: SchedulingProperties) extends Logging with ReKeepStatsUpdaterPlugin with SchedulerPlugin {
+
+  log.info(s"[ReKeepStatsUpdaterPlugin.ctr] created! actor=${actor.ref.path}")
 
   override def enabled: Boolean = true
   override def onStart() {

@@ -4,73 +4,39 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.cortex.MiscPrefix
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.{ NormalizedURI, User }
-
-import scala.collection.mutable
+import com.keepit.common.time._
 import scala.math.exp
 
 @Singleton
 class LDACommander @Inject() (
+    infoCommander: LDAInfoCommander,
     db: Database,
     userTopicRepo: UserLDAInterestsRepo,
     uriTopicRepo: URILDATopicRepo,
     wordRep: LDAWordRepresenter,
     docRep: LDADocRepresenter,
-    ldaTopicWords: DenseLDATopicWords,
-    ldaConfigs: LDATopicConfigurations,
-    configStore: LDAConfigStore,
     ldaRetriever: LDAURIFeatureRetriever,
     userLDAStatsRetriever: UserLDAStatisticsRetriever,
+    topicInfoRepo: LDAInfoRepo,
     userLDAStatRepo: UserLDAStatsRepo) extends Logging {
-  assume(ldaTopicWords.topicWords.length == wordRep.lda.dimension)
 
-  var currentConfig = ldaConfigs
+  val numOfTopics: Int = wordRep.lda.dimension
 
-  val ldaDimMap = mutable.Map(wordRep.version -> wordRep.lda.dimension)
+  def activeTopics = infoCommander.activeTopics
 
-  // consumers of lda service might query dim of some previous lda model
   def getLDADimension(version: ModelVersion[DenseLDA]): Int = {
-    ldaDimMap.getOrElseUpdate(version, {
-      val conf = configStore.get(MiscPrefix.LDA.topicConfigsJsonFile, version).get
-      conf.configs.size
-    }
-    )
+    infoCommander.getLDADimension(version)
   }
-
-  def numOfTopics: Int = ldaTopicWords.topicWords.length
-
-  val activeTopics = currentConfig.configs.filter { case (id, conf) => conf.isActive }.map { case (id, _) => id.toInt }.toArray.sorted
 
   private def projectToActive(arr: Array[Float]): Array[Float] = {
     assume(arr.size == numOfTopics)
     activeTopics.map { i => arr(i) }.toArray
-  }
-
-  def topicWords(topicId: Int, topN: Int): Seq[(String, Float)] = {
-    assume(topicId >= 0 && topicId < numOfTopics && topN >= 0)
-
-    ldaTopicWords.topicWords(topicId).toArray.sortBy(-1f * _._2).take(topN)
-  }
-
-  def topicWords(fromId: Int, toId: Int, topN: Int): Map[Int, Seq[(String, Float)]] = {
-    assume(fromId <= toId && toId < numOfTopics && fromId >= 0)
-
-    (fromId to toId).map { id =>
-      (id, topicWords(id, topN))
-    }.toMap
-  }
-
-  def topicConfigs(fromId: Int, toId: Int): Map[String, LDATopicConfiguration] = {
-    assume(fromId <= toId && toId < numOfTopics && fromId >= 0)
-    (fromId to toId).map { id =>
-      id.toString -> currentConfig.configs.getOrElse(id.toString, LDATopicConfiguration.default)
-    }.toMap
   }
 
   def wordTopic(word: String): Option[Array[Float]] = {
@@ -81,21 +47,13 @@ class LDACommander @Inject() (
     docRep(doc).map { _.vectorize }
   }
 
-  def ldaConfigurations: LDATopicConfigurations = currentConfig
-
-  def saveConfigEdits(config: Map[String, LDATopicConfiguration]) = {
-    val newConfig = LDATopicConfigurations(currentConfig.configs ++ config)
-    currentConfig = newConfig
-    configStore.+=(MiscPrefix.LDA.topicConfigsJsonFile, wordRep.version, newConfig)
-  }
-
   def getLDAFeatures(ids: Seq[Id[NormalizedURI]]) = {
     ldaRetriever.getByKeys(ids, wordRep.version)
   }
 
-  def userTopicMean(userId: Id[User]): Option[UserTopicMean] = {
+  def userTopicMean(userId: Id[User]): Option[UserLDAInterests] = {
     db.readOnlyReplica { implicit s =>
-      userTopicRepo.getTopicMeanByUser(userId, wordRep.version)
+      userTopicRepo.getByUser(userId, wordRep.version)
     }
   }
 
@@ -127,7 +85,7 @@ class LDACommander @Inject() (
 
   def batchGaussianUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores] = {
     db.readOnlyReplica { implicit s =>
-      val userInterestStatOpt = userLDAStatRepo.getByUser(userId, wordRep.version)
+      val userInterestStatOpt = userLDAStatRepo.getActiveByUser(userId, wordRep.version)
       val uriTopicOpts = uriIds.map { uriId => uriTopicRepo.getActiveByURI(uriId, wordRep.version) }
       uriTopicOpts.map { uriTopicOpt =>
         computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
@@ -138,13 +96,13 @@ class LDACommander @Inject() (
   private def computeGaussianInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAStats]): LDAUserURIInterestScores = {
     (uriTopicOpt, userInterestOpt) match {
       case (Some(uriFeat), Some(userFeat)) =>
-        val globalScore = computeGaussianInterestScore(uriFeat.numOfWords, userFeat.numOfEvidence, Some(userFeat), uriFeat.feature)
+        val globalScore = computeGaussianInterestScore(uriFeat.numOfWords, userFeat.numOfEvidence, Some(userFeat), uriFeat.feature, isRecent = false)
         LDAUserURIInterestScores(globalScore, None)
       case _ => LDAUserURIInterestScores(None, None)
     }
   }
 
-  private def computeGaussianInterestScore(numOfWords: Int, numOfEvidenceForUser: Int, userFeatOpt: Option[UserLDAStats], uriFeatOpt: Option[LDATopicFeature]): Option[LDAUserURIInterestScore] = {
+  private def computeGaussianInterestScore(numOfWords: Int, numOfEvidenceForUser: Int, userFeatOpt: Option[UserLDAStats], uriFeatOpt: Option[LDATopicFeature], isRecent: Boolean): Option[LDAUserURIInterestScore] = {
     (userFeatOpt, uriFeatOpt) match {
       case (Some(userFeat), Some(uriFeat)) =>
         val userMean = userFeat.userTopicMean.get.mean
@@ -152,8 +110,7 @@ class LDACommander @Inject() (
         val s = userMean.sum
         assume(s > 0)
         val dist = weightedMDistanceDiagGaussian(uriFeat.value, userMean, userVar, userMean.map { _ / s })
-        log.info(s"m-distance: $dist , userMean: ${userMean.take(5).mkString(", ")}, ${userVar.take(5).mkString(", ")}")
-        Some(LDAUserURIInterestScore(exp(-1 * dist), computeConfidence(numOfWords, numOfEvidenceForUser)))
+        Some(LDAUserURIInterestScore(exp(-1 * dist), computeConfidence(numOfWords, numOfEvidenceForUser, isRecent)))
       case _ => None
     }
   }
@@ -161,14 +118,14 @@ class LDACommander @Inject() (
   private def computeInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAInterests]): LDAUserURIInterestScores = {
     (uriTopicOpt, userInterestOpt) match {
       case (Some(uriFeat), Some(userFeat)) =>
-        val globalScore = computeInterestScore(uriFeat.numOfWords, userFeat.numOfEvidence, userFeat.userTopicMean, uriFeat.feature)
-        val recencyScore = computeInterestScore(uriFeat.numOfWords, userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, uriFeat.feature)
+        val globalScore = computeInterestScore(uriFeat.numOfWords, userFeat.numOfEvidence, userFeat.userTopicMean, uriFeat.feature, isRecent = false)
+        val recencyScore = computeInterestScore(uriFeat.numOfWords, userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, uriFeat.feature, isRecent = true)
         LDAUserURIInterestScores(globalScore, recencyScore)
       case _ => LDAUserURIInterestScores(None, None)
     }
   }
 
-  private def computeInterestScore(numOfWords: Int, numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeatOpt: Option[LDATopicFeature]): Option[LDAUserURIInterestScore] = {
+  private def computeInterestScore(numOfWords: Int, numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeatOpt: Option[LDATopicFeature], isRecent: Boolean): Option[LDAUserURIInterestScore] = {
     (userFeatOpt, uriFeatOpt) match {
       case (Some(userFeat), Some(uriFeat)) =>
         val userVec = getUserLDAStats(wordRep.version) match {
@@ -176,13 +133,13 @@ class LDACommander @Inject() (
           case Some(stat) => scale(userFeat.mean, stat.mean, stat.std)
         }
         val (u, v) = (projectToActive(userVec), projectToActive(uriFeat.value))
-        Some(LDAUserURIInterestScore(cosineDistance(u, v), computeConfidence(numOfWords, numOfEvidenceForUser)))
+        Some(LDAUserURIInterestScore(cosineDistance(u, v), computeConfidence(numOfWords, numOfEvidenceForUser, isRecent)))
       case _ => None
     }
   }
 
-  private def computeConfidence(numOfWords: Int, numOfEvidenceForUser: Int) = {
-    val alpha = (numOfEvidenceForUser - 30) / 10f
+  private def computeConfidence(numOfWords: Int, numOfEvidenceForUser: Int, isRecent: Boolean) = {
+    val alpha = if (isRecent) (numOfEvidenceForUser - 10) / 5f else (numOfEvidenceForUser - 30) / 10f
     val s1 = 1f / (1 + exp(-1 * alpha)).toFloat
     val beta = (numOfWords - 50) / 50f
     val s2 = 1f / (1 + exp(-1 * beta)).toFloat
@@ -248,5 +205,4 @@ class LDACommander @Inject() (
     }
 
   }
-
 }

@@ -2,20 +2,19 @@ package com.keepit.common.social
 
 import java.io.File
 
-import org.specs2.mutable._
-
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.{ EmailAddress, FakeMailModule, FakeOutbox }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.model._
 import com.keepit.shoebox.FakeShoeboxServiceClientModule
-import com.keepit.social.{ SocialNetworks, SocialId }
-import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplicationInjector, ShoeboxApplication }
-import com.keepit.eliza.FakeElizaServiceClientModule
-
+import com.keepit.social.{ SocialId, SocialNetworks }
+import com.keepit.test.ShoeboxTestInjector
+import org.specs2.mutable._
 import play.api.libs.json.Json
-import play.api.test.Helpers._
-import com.keepit.common.mail.{ FakeOutbox, EmailAddress, FakeMailModule }
+
+import util.Random
 
 class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
 
@@ -144,6 +143,54 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
           connectionCount === 2
         }
         connectionsAfter.size === 5
+      }
+    }
+
+    "updateUserConnections" should {
+      "not send notifications to users already unfriended on Kifi" in {
+        withDb(modules: _*) { implicit injector =>
+          val outbox = inject[FakeOutbox]
+          val userConnRepo = inject[UserConnectionRepo]
+          val scRepo = inject[SocialConnectionRepo]
+
+          def generateUserAndSocialUser(uFirstName: String, uLastName: String) =
+            db.readWrite { implicit rw =>
+              val u1 = inject[UserRepo].save(User(
+                firstName = uFirstName,
+                lastName = uLastName,
+                primaryEmail = Some(EmailAddress(uFirstName + uLastName + "@kifi.com"))
+              ))
+
+              val su1 = inject[SocialUserInfoRepo].save(SocialUserInfo(
+                fullName = uFirstName,
+                socialId = SocialId(Random.nextInt(9999999).toString),
+                networkType = SocialNetworks.FACEBOOK
+              ).withUser(u1))
+
+              (u1, su1)
+            }
+
+          val (user1, socialUser1) = generateUserAndSocialUser("Josh", "McDade")
+          val (user2, socialUser2) = generateUserAndSocialUser("Bill", "Clinton")
+          val (user3, socialUser3) = generateUserAndSocialUser("Bob", "Dole")
+
+          db.readWrite { implicit rw =>
+            userConnRepo.save(UserConnection(
+              user1 = user1.id.get,
+              user2 = user2.id.get,
+              state = UserConnectionStates.UNFRIENDED
+            ))
+
+            scRepo.save(SocialConnection(socialUser1 = socialUser1.id.get, socialUser2 = socialUser2.id.get))
+            scRepo.save(SocialConnection(socialUser1 = socialUser2.id.get, socialUser2 = socialUser3.id.get))
+            scRepo.save(SocialConnection(socialUser1 = socialUser1.id.get, socialUser2 = socialUser3.id.get))
+          }
+
+          inject[UserConnectionCreator].updateUserConnections(user1.id.get)
+
+          // should be 1 instead of 2 b/c user1 and user2 are "unfriended"
+          outbox.size === 1
+        }
       }
     }
 

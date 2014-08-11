@@ -46,3 +46,5 @@ object ReKeepStates extends States[ReKeep]
 case class RichReKeep(id: Option[Id[ReKeep]], createdAt: DateTime, updatedAt: DateTime, state: State[ReKeep], keeper: User, keep: Keep, uri: NormalizedURI, srcUser: User, srcKeep: Keep, attributionFactor: Int)
 
 @json case class HelpRankInfo(uriId: Id[NormalizedURI], keepDiscoveryCount: Int, rekeepCount: Int)
+
+@json case class UserKeepAttributionInfo(userId: Id[User], clickCount: Int, rekeepCount: Int, rekeepTotalCount: Int, uniqueKeepsClicked: Int = 0, totalClicks: Int = 0)

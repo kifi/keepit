@@ -1,4 +1,4 @@
-package com.keepit.signal
+package com.keepit.helprank
 
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped

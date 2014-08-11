@@ -59,6 +59,10 @@ trait HeimdalServiceClient extends ServiceClient {
 
   def getPagedKeepDiscoveries(page: Int = 0, size: Int = 50): Future[Seq[KeepDiscovery]]
 
+  def getDiscoveryCountByKeeper(userId: Id[User]): Future[Int] // deprecated -- see getKeepAttributionInfo
+
+  def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo]
+
   def getPagedReKeeps(page: Int = 0, size: Int = 50): Future[Seq[ReKeep]]
 
   def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit]
@@ -195,6 +199,18 @@ class HeimdalServiceClientImpl @Inject() (
   def getPagedKeepDiscoveries(page: Int, size: Int): Future[Seq[KeepDiscovery]] = {
     call(Heimdal.internal.getPagedKeepDiscoveries(page, size)) map { r =>
       Json.parse(r.body).as[Seq[KeepDiscovery]]
+    }
+  }
+
+  def getDiscoveryCountByKeeper(userId: Id[User]): Future[Int] = {
+    call(Heimdal.internal.getDiscoveryCountByKeeper(userId)) map { r =>
+      Json.parse(r.body).as[Int]
+    }
+  }
+
+  def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
+    call(Heimdal.internal.getKeepAttributionInfo(userId)) map { r =>
+      Json.parse(r.body).as[UserKeepAttributionInfo]
     }
   }
 

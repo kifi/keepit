@@ -68,11 +68,11 @@ class MobileUserController @Inject() (
     }
   }
 
-  def currentUser = JsonAction.authenticated(allowPending = true) { implicit request =>
+  def currentUser = JsonAction.authenticatedAsync(allowPending = true) { implicit request =>
     getUserInfo(request)
   }
 
-  def updateCurrentUser = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
+  def updateCurrentUser = JsonAction.authenticatedParseJsonAsync(allowPending = true) { implicit request =>
     request.body.validate[UpdatableUserInfo] match {
       case JsSuccess(userData, _) => {
         userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmail, _))
@@ -81,24 +81,27 @@ class MobileUserController @Inject() (
         }
         getUserInfo(request)
       }
-      case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } => BadRequest(Json.obj("error" -> "bad email addresses"))
-      case _ => BadRequest(Json.obj("error" -> "could not parse user info from body"))
+      case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } =>
+        Future.successful(BadRequest(Json.obj("error" -> "bad email addresses")))
+      case _ =>
+        Future.successful(BadRequest(Json.obj("error" -> "could not parse user info from body")))
     }
   }
 
   private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
     val user = userCommander.getUserInfo(request.user)
-    val (clickCount, rekeepCount, rekeepTotalCount) = userCommander.getKeepAttributionCounts(request.userId)
-    Ok(toJson(user.basicUser).as[JsObject] ++
-      toJson(user.info).as[JsObject] ++
-      Json.obj(
-        "notAuthed" -> user.notAuthed,
-        "experiments" -> request.experiments.map(_.value),
-        "clickCount" -> clickCount,
-        "rekeepCount" -> rekeepCount,
-        "rekeepTotalCount" -> rekeepTotalCount
+    userCommander.getKeepAttributionInfo(request.userId) map { info =>
+      Ok(toJson(user.basicUser).as[JsObject] ++
+        toJson(user.info).as[JsObject] ++
+        Json.obj(
+          "notAuthed" -> user.notAuthed,
+          "experiments" -> request.experiments.map(_.value),
+          "clickCount" -> info.clickCount,
+          "rekeepCount" -> info.rekeepCount,
+          "rekeepTotalCount" -> info.rekeepTotalCount
+        )
       )
-    )
+    }
   }
 
   def changePassword = JsonAction.authenticatedParseJson(allowPending = true) { implicit request =>
