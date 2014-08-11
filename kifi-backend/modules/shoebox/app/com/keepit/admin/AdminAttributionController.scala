@@ -26,8 +26,7 @@ class AdminAttributionController @Inject() (
     rekeepRepo: ReKeepRepo,
     uriRepo: NormalizedURIRepo,
     pageInfoRepo: PageInfoRepo,
-    imageInfoRepo: ImageInfoRepo,
-    userBookmarkClicksRepo: UserBookmarkClicksRepo) extends AdminController(actionAuthenticator) {
+    imageInfoRepo: ImageInfoRepo) extends AdminController(actionAuthenticator) {
 
   implicit val execCtx = fj
 
@@ -157,14 +156,7 @@ class AdminAttributionController @Inject() (
         }
       }
       Future.sequence(resF) map { users =>
-        val counts = db.readOnlyReplica { implicit ro =>
-          users.map {
-            case (keep, _) =>
-              userBookmarkClicksRepo.getByUserUri(userId, keep.uriId) map { bc =>
-                (bc.rekeepCount, bc.rekeepTotalCount)
-              } getOrElse (-1, -1)
-          }
-        }
+        val counts = Seq.fill(users.size) { (-1, -1) } // todo(ray): add (rekeepCount, rekeepTotalCount) for (userId, keep.uriId)
         (u, n, rekeeps, users, counts)
       }
     }
