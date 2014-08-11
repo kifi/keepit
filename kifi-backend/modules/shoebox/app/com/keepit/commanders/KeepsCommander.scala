@@ -137,7 +137,6 @@ class KeepsCommander @Inject() (
     keepRepo: KeepRepo,
     collectionRepo: CollectionRepo,
     userRepo: UserRepo,
-    userBookmarkClicksRepo: UserBookmarkClicksRepo,
     keepDiscoveriesRepo: KeepDiscoveryRepo,
     rekeepRepo: ReKeepRepo,
     kifiHitCache: KifiHitCache,
@@ -596,33 +595,6 @@ class KeepsCommander @Inject() (
       keeps.zipWithIndex.foreach {
         case (keep, i) =>
           keepRepo.save(keep.copy(createdAt = origin.minusSeconds(i + 1)))
-      }
-    }
-  }
-
-  def processKifiHit(discoverer: Id[User], kifiHit: SanitizedKifiHit): Unit = {
-    db.readWrite { implicit rw =>
-      val keepers = kifiHit.context.keepers
-      if (kifiHit.context.isOwnKeep || kifiHit.context.isPrivate || keepers.isEmpty) userBookmarkClicksRepo.increaseCounts(discoverer, kifiHit.uriId, true)
-      else {
-        kifiHitCache.get(KifiHitKey(discoverer, kifiHit.uriId)) match { // simple throttling
-          case Some(hit) =>
-            log.warn(s"[kifiHit($discoverer,${kifiHit.uriId})] already recorded kifiHit ($hit) for user within threshold -- skip")
-          case None =>
-            kifiHitCache.set(KifiHitKey(discoverer, kifiHit.uriId), kifiHit)
-            keepers.foreach { extId =>
-              val keeperId: Id[User] = userRepo.get(extId).id.get
-              userBookmarkClicksRepo.increaseCounts(keeperId, kifiHit.uriId, false)
-              keepRepo.getByUriAndUser(kifiHit.uriId, keeperId) match {
-                case None =>
-                  log.warn(s"[kifiHit($discoverer,${kifiHit.uriId},${keepers.mkString(",")})] keep not found for keeperId=$keeperId")
-                // move on
-                case Some(keep) =>
-                  val saved = keepDiscoveriesRepo.save(KeepDiscovery(hitUUID = kifiHit.uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId, origin = Some(kifiHit.origin)))
-                  log.info(s"[kifiHit($discoverer, ${kifiHit.uriId}, ${keepers.mkString(",")})] saved $saved")
-              }
-            }
-        }
       }
     }
   }

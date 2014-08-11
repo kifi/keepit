@@ -33,7 +33,7 @@ class TopUriSeedIngestionHelper @Inject() (
   }
 
   def processUriScores(uriScore: ConnectedUriScore, userId: Id[User])(implicit session: RWSession): Unit = {
-    rawSeedsRepo.getByUriIdAndUserId(uriScore.uriId, userId) match {
+    rawSeedsRepo.getByUriIdAndUserId(uriScore.uriId, Some(userId)) match {
       case Some(seedItem) => {
         rawSeedsRepo.save(seedItem.copy(
           priorScore = Some(uriScore.score.toFloat),

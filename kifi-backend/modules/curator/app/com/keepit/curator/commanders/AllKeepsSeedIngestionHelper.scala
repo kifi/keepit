@@ -27,15 +27,62 @@ class AllKeepSeedIngestionHelper @Inject() (
 
   private val SEQ_NUM_NAME: Name[SequenceNumber[Keep]] = Name("all_keeps_seq_num")
 
-  private def updateRawSeedItem(rawSeedItem: RawSeedItem, uriId: Id[NormalizedURI], newDateCandidate: DateTime, countChange: Int, discoverable: Boolean)(implicit session: RWSession): Unit = {
-    rawSeedsRepo.save(rawSeedItem.copy(
-      uriId = uriId, //implicit renormalize :-)
-      firstKept = if (newDateCandidate.isBefore(rawSeedItem.firstKept)) newDateCandidate else rawSeedItem.firstKept,
-      lastKept = if (newDateCandidate.isAfter(rawSeedItem.lastKept)) newDateCandidate else rawSeedItem.lastKept,
-      lastSeen = if (newDateCandidate.isAfter(rawSeedItem.lastSeen)) newDateCandidate else rawSeedItem.lastSeen,
-      timesKept = rawSeedItem.timesKept + countChange,
-      discoverable = discoverable
-    ))
+  private def dateMin(d0: DateTime, ds: DateTime*): DateTime = {
+    var min = d0
+    ds.foreach { d =>
+      if (d.isBefore(min)) min = d
+    }
+    min
+  }
+
+  private def dateMax(d0: DateTime, ds: DateTime*): DateTime = {
+    var max = d0
+    ds.foreach { d =>
+      if (d.isAfter(max)) max = d
+    }
+    max
+  }
+
+  private def updateRawSeedItem(seedItem: RawSeedItem, uriId: Id[NormalizedURI], newDateCandidate: DateTime, countChange: Int, discoverable: Boolean)(implicit session: RWSession): Unit = {
+    if (seedItem.uriId != uriId) {
+      //there was a renormalization of this item, thus we need to check if there should be a merge
+      val existingItemOpt = rawSeedsRepo.getByUriIdAndUserId(uriId, seedItem.userId)
+      existingItemOpt.map { existingItem =>
+        //there is an item for this uriId (and possibly userId) already. Need to merge.
+        val mergedFirstKept = dateMin(seedItem.firstKept, newDateCandidate, existingItem.firstKept)
+        val mergedLastKept = dateMax(seedItem.firstKept, newDateCandidate, existingItem.firstKept)
+        val mergedLastSeen = dateMax(seedItem.lastSeen, newDateCandidate, existingItem.lastSeen)
+        val mergedTimesKept = seedItem.timesKept + countChange + existingItem.timesKept
+
+        rawSeedsRepo.save(existingItem.copy(
+          firstKept = mergedFirstKept,
+          lastKept = mergedLastKept,
+          lastSeen = mergedLastSeen,
+          priorScore = if (seedItem.updatedAt.isAfter(existingItem.updatedAt)) seedItem.priorScore else existingItem.priorScore,
+          timesKept = mergedTimesKept,
+          discoverable = discoverable
+        ))
+        rawSeedsRepo.delete(seedItem)
+      } getOrElse {
+        //no exisitng item for this uriId (and possibly userId). Good to just move over.
+        rawSeedsRepo.save(seedItem.copy(
+          uriId = uriId,
+          firstKept = if (newDateCandidate.isBefore(seedItem.firstKept)) newDateCandidate else seedItem.firstKept,
+          lastKept = if (newDateCandidate.isAfter(seedItem.lastKept)) newDateCandidate else seedItem.lastKept,
+          lastSeen = if (newDateCandidate.isAfter(seedItem.lastSeen)) newDateCandidate else seedItem.lastSeen,
+          timesKept = seedItem.timesKept + countChange,
+          discoverable = discoverable
+        ))
+      }
+    } else {
+      rawSeedsRepo.save(seedItem.copy(
+        firstKept = if (newDateCandidate.isBefore(seedItem.firstKept)) newDateCandidate else seedItem.firstKept,
+        lastKept = if (newDateCandidate.isAfter(seedItem.lastKept)) newDateCandidate else seedItem.lastKept,
+        lastSeen = if (newDateCandidate.isAfter(seedItem.lastSeen)) newDateCandidate else seedItem.lastSeen,
+        timesKept = seedItem.timesKept + countChange,
+        discoverable = discoverable
+      ))
+    }
   }
 
   private def processKeep(keep: Keep)(implicit session: RWSession): Unit = {

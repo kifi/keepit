@@ -26,7 +26,7 @@ case class AttributionInfo(
 case class RawSeedItem(
   id: Option[Id[RawSeedItem]] = None,
   createdAt: DateTime = currentDateTime,
-  updateAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
   seq: SequenceNumber[RawSeedItem] = SequenceNumber.ZERO,
   uriId: Id[NormalizedURI],
   userId: Option[Id[User]], //which user is this a seed item for. None means this is for every user.
@@ -41,5 +41,5 @@ case class RawSeedItem(
     extends Model[RawSeedItem] with ModelWithSeqNumber[RawSeedItem] {
 
   def withId(id: Id[RawSeedItem]): RawSeedItem = this.copy(id = Some(id))
-  def withUpdateTime(updateTime: DateTime): RawSeedItem = this.copy(updateAt = updateTime)
+  def withUpdateTime(updateTime: DateTime): RawSeedItem = this.copy(updatedAt = updateTime)
 }
