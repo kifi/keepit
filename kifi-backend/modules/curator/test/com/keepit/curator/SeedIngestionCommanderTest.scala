@@ -45,29 +45,39 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
     "ingest keeps and have discoverability correctly" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, shoebox) = setup()
-
-        val user1Keeps = makeKeepsWithPrivacy(user2, 5, true, shoebox)
-
+        val user1Keeps = makeKeepsWithPrivacy(user1, 5, true, shoebox)
         val keepInfoRepo = inject[CuratorKeepInfoRepo]
-        val systemValueRepo = inject[SystemValueRepo]
         val seedItemRepo = inject[RawSeedItemRepo]
         val commander = inject[SeedIngestionCommander]
 
+        db.readOnlyMaster { implicit session => keepInfoRepo.all() }
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
-
         var seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
-
         seedItems.foreach(_.discoverable === false)
 
-        val user2Keeps = makeKeepsWithPrivacy(user1, 5, false, shoebox)
-
+        shoebox.saveBookmarks(user1Keeps(4).copy(
+          userId = user2,
+          isPrivate = false))
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
-
         seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
 
-        seedItems.foreach(_.discoverable === true)
+        seedItems(4).discoverable === true
 
-        1 === 1
+        shoebox.saveBookmarks(user1Keeps(4).copy(
+          isPrivate = true))
+        shoebox.saveBookmarks(Keep(
+          uriId = Id[NormalizedURI](5),
+          urlId = Id[URL](5),
+          url = "https://kifi.com",
+          userId = user1,
+          state = KeepStates.ACTIVE,
+          source = KeepSource.keeper,
+          isPrivate = true,
+          libraryId = None))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(4).discoverable === false
       }
     }
 

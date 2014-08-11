@@ -49,16 +49,20 @@ class AllKeepSeedIngestionHelper @Inject() (
         if (keepInfo.state == CuratorKeepInfoStates.ACTIVE) -1 else if (keep.state == KeepStates.ACTIVE) 1 else 0
       } else 0
 
-      val discoverable = if (keepInfo.discoverable && keep.isPrivate) keepInfoRepo.checkDiscoverableByUriId(keep.uriId) else keepInfo.discoverable
-      rawSeedItems.foreach { rawSeedItem =>
-        updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, countChange, discoverable)
-      }
       keepInfoRepo.save(keepInfo.copy(
         uriId = keep.uriId,
         userId = keep.userId,
         state = State[CuratorKeepInfo](keep.state.value),
         discoverable = !keep.isPrivate
       ))
+
+      val discoverable = if (keepInfo.discoverable && keep.isPrivate) keepInfoRepo.checkDiscoverableByUriId(keep.uriId)
+      else (keepInfo.discoverable || !keep.isPrivate)
+
+      rawSeedItems.foreach { rawSeedItem =>
+        updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, countChange, discoverable)
+      }
+
     } getOrElse {
       keepInfoRepo.save(CuratorKeepInfo(
         uriId = keep.uriId,
@@ -81,8 +85,8 @@ class AllKeepSeedIngestionHelper @Inject() (
           discoverable = !keep.isPrivate
         ))
       } else {
+        val discoverable = rawSeedItems(0).discoverable || !keep.isPrivate
         rawSeedItems.foreach { rawSeedItem =>
-          val discoverable = rawSeedItem.discoverable || !keep.isPrivate
           updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, if (keep.state == KeepStates.ACTIVE) 1 else 0, discoverable)
         }
       }
