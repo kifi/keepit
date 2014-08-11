@@ -40,8 +40,9 @@ class ABookRecommendationCommander @Inject() (
   def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = {
     val start = clock.now()
     val futureRecommendations = generateFutureFriendRecommendations(userId).map(_.drop(page * pageSize).take(pageSize).map(_._1).toSeq)
-    futureRecommendations.onSuccess { case recommendations =>
-      log.info(s"Computed ${recommendations.length}/${pageSize} friend recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
+    futureRecommendations.onSuccess {
+      case recommendations =>
+        log.info(s"Computed ${recommendations.length}/${pageSize} friend recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
     }
     futureRecommendations
   }
@@ -62,8 +63,9 @@ class ABookRecommendationCommander @Inject() (
   def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, relevantNetworks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = {
     val start = clock.now()
     val futureRecommendations = generateFutureInviteRecommendations(userId, relevantNetworks).map(_.drop(page * pageSize).take(pageSize).map(_._1).toSeq)
-    futureRecommendations.onSuccess { case recommendations =>
-      log.info(s"Computed ${recommendations.length}/${pageSize} invite recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
+    futureRecommendations.onSuccess {
+      case recommendations =>
+        log.info(s"Computed ${recommendations.length}/${pageSize} invite recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
     }
     futureRecommendations
   }
