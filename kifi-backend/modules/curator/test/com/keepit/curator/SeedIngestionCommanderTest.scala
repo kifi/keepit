@@ -86,7 +86,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         db.readOnlyMaster { implicit session =>
           keepInfoRepo.all().length === 60
           keepInfoRepo.getByKeepId(user1Keeps(0).id.get).get.state.value === KeepStates.INACTIVE.value
-          keepInfoRepo.getByKeepId(user1Keeps(0).id.get).get.state.value === KeepStates.INACTIVE.value
+          keepInfoRepo.getByKeepId(user1Keeps(1).id.get).get.state.value === KeepStates.DUPLICATE.value
           keepInfoRepo.getByKeepId(user1Keeps(7).id.get).get.state.value === KeepStates.ACTIVE.value
           keepInfoRepo.getByKeepId(user1Keeps(0).id.get).get.uriId === Id[NormalizedURI](47)
 
