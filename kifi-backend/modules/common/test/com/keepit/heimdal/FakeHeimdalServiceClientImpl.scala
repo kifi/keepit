@@ -59,6 +59,12 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getPagedReKeeps(page: Int, size: Int): Future[Seq[ReKeep]] = Future.successful(Seq.empty)
 
+  def updateUserReKeepStats(userId: Id[User]): Future[Unit] = Future.successful[Unit]()
+
+  def updateUsersReKeepStats(userIds: Seq[Id[User]]): Future[Unit] = Future.successful[Unit]()
+
+  def updateAllReKeepStats(): Future[Unit] = Future.successful[Unit]()
+
   def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit] = Future.successful[Unit]()
 
   def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit] = Future.successful[Unit]()

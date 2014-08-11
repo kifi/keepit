@@ -65,6 +65,12 @@ trait HeimdalServiceClient extends ServiceClient {
 
   def getPagedReKeeps(page: Int = 0, size: Int = 50): Future[Seq[ReKeep]]
 
+  def updateUserReKeepStats(userId: Id[User]): Future[Unit]
+
+  def updateUsersReKeepStats(userIds: Seq[Id[User]]): Future[Unit]
+
+  def updateAllReKeepStats(): Future[Unit]
+
   def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit]
 
   def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit]
@@ -218,6 +224,20 @@ class HeimdalServiceClientImpl @Inject() (
     call(Heimdal.internal.getPagedReKeeps(page, size)) map { r =>
       Json.parse(r.body).as[Seq[ReKeep]]
     }
+  }
+
+  def updateUserReKeepStats(userId: Id[User]): Future[Unit] = {
+    val payload = Json.toJson(userId)
+    call(Heimdal.internal.updateUserReKeepStats, payload) map { _ => Unit }
+  }
+
+  def updateUsersReKeepStats(userIds: Seq[Id[User]]): Future[Unit] = {
+    val payload = Json.toJson(userIds)
+    call(Heimdal.internal.updateUsersReKeepStats, payload) map { _ => Unit }
+  }
+
+  def updateAllReKeepStats(): Future[Unit] = {
+    call(Heimdal.internal.updateAllReKeepStats) map { _ => Unit }
   }
 
   def processKifiHit(clickerId: Id[User], hit: SanitizedKifiHit): Future[Unit] = {

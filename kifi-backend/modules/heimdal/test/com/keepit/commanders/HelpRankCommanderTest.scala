@@ -338,13 +338,13 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
         kbd1(1) === Set(keeps3(0).id.get)
         kbd1(2) === Set(keeps4(0).id.get)
 
-        val bc1 = Await.result(attrCmdr.updateUserReKeepStatus(u1.id.get), Duration.Inf)
+        val bc1 = Await.result(attrCmdr.updateUserReKeepStats(u1.id.get), Duration.Inf)
         bc1.nonEmpty === true
         bc1.length === 1
         bc1(0).rekeepCount === 1
         bc1(0).rekeepTotalCount === 2
 
-        val bc3 = Await.result(attrCmdr.updateUserReKeepStatus(u3.id.get), Duration.Inf)
+        val bc3 = Await.result(attrCmdr.updateUserReKeepStats(u3.id.get), Duration.Inf)
         bc3(0).rekeepCount === 1
         bc3(0).rekeepTotalCount === 1
 

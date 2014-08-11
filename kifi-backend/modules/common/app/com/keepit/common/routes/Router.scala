@@ -251,6 +251,9 @@ object Heimdal extends Service {
     def getDiscoveryCountByKeeper(userId: Id[User]) = ServiceRoute(GET, s"/internal/heimdal/data/keepDiscovery/getDiscoveryCountByKeeper", Param("userId", userId))
     def getPagedReKeeps(page: Int, size: Int) = ServiceRoute(GET, s"/internal/heimdal/data/reKeep/page/$page", Param("size", size))
     def getKeepAttributionInfo(userId: Id[User]) = ServiceRoute(GET, "/internal/heimdal/helprank/getKeepAttributionInfo", Param("userId", userId))
+    def updateUserReKeepStats() = ServiceRoute(POST, "/internal/heimdal/helprank/updateUserReKeepStats")
+    def updateUsersReKeepStats() = ServiceRoute(POST, "/internal/heimdal/helprank/updateUsersReKeepStats")
+    def updateAllReKeepStats() = ServiceRoute(POST, "/internal/heimdal/helprank/updateAllReKeepStats")
     def processKifiHit() = ServiceRoute(POST, "/internal/heimdal/helprank/processKifiHit")
     def processKeepAttribution() = ServiceRoute(POST, "/internal/heimdal/helprank/processKeepAttribution")
   }
