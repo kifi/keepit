@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.model.{ UserRepo, UserConnectionRepo, User, SocialUserInfoRepo }
 import play.api.libs.json.{ Json, JsNumber, JsArray }
-import com.keepit.social.{ SocialNetworkType, BasicUser }
+import com.keepit.social.{SocialNetworks, SocialNetworkType, BasicUser}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.slick.Database
@@ -52,8 +52,10 @@ class PeopleRecommendationController @Inject() (
   }
 
   def getInviteRecommendations(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
-    val relevantNetworks = db.readOnlyReplica { implicit session => socialUserRepo.getByUser(request.userId).map(_.networkType) }
-    abookServiceClient.getInviteRecommendations(request.userId, page, pageSize, relevantNetworks.toSet).map { inviteRecommendations =>
+    val relevantNetworks = db.readOnlyReplica { implicit session =>
+      socialUserRepo.getByUser(request.userId).map(_.networkType).toSet - SocialNetworks.FORTYTWO + SocialNetworks.EMAIL
+    }
+    abookServiceClient.getInviteRecommendations(request.userId, page, pageSize, relevantNetworks).map { inviteRecommendations =>
       Ok(Json.toJson(inviteRecommendations))
     }
   }
