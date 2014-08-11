@@ -69,6 +69,10 @@ trait HeimdalServiceClient extends ServiceClient {
 
   def getReKeepCount(): Future[Int]
 
+  def getUserReKeepsByDegree(keepIds: Seq[KeepIdInfo]): Future[Seq[UserReKeepsAcc]]
+
+  def getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep]): Future[Seq[ReKeepsPerDeg]]
+
   def updateUserReKeepStats(userId: Id[User]): Future[Unit]
 
   def updateUsersReKeepStats(userIds: Seq[Id[User]]): Future[Unit]
@@ -236,6 +240,18 @@ class HeimdalServiceClientImpl @Inject() (
 
   def getReKeepCount(): Future[Int] = {
     call(Heimdal.internal.getReKeepCount) map { r => Json.parse(r.body).as[Int] }
+  }
+
+  def getUserReKeepsByDegree(keepIds: Seq[KeepIdInfo]): Future[Seq[UserReKeepsAcc]] = {
+    call(Heimdal.internal.getUserReKeepsByDegree, Json.toJson(keepIds)) map { r =>
+      Json.parse(r.body).as[Seq[UserReKeepsAcc]]
+    }
+  }
+
+  def getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep]): Future[Seq[ReKeepsPerDeg]] = {
+    call(Heimdal.internal.getReKeepsByDegree(keeperId, keepId)) map { r =>
+      Json.parse(r.body).as[Seq[ReKeepsPerDeg]]
+    }
   }
 
   def updateUserReKeepStats(userId: Id[User]): Future[Unit] = {

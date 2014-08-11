@@ -6,7 +6,7 @@ import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal.SanitizedKifiHit
-import com.keepit.model.{ Keep, User }
+import com.keepit.model._
 import play.api.libs.json.Json
 import play.api.mvc.Action
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -36,6 +36,19 @@ class HelpRankController @Inject() (
 
   def getKeepAttributionInfo(userId: Id[User]) = Action { request =>
     Ok(Json.toJson(helprankCommander.getKeepAttributionInfo(userId)))
+  }
+
+  def getUserReKeepsByDegree() = Action(parse.tolerantJson) { request =>
+    val keepIds = request.body.as[Seq[KeepIdInfo]]
+    val res = attributionCommander.getUserReKeepsByDegree(keepIds).toSeq.map {
+      case (keepId, userIds) => UserReKeepsAcc(keepId, userIds)
+    }
+    Ok(Json.toJson(res))
+  }
+
+  def getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep]) = Action { request =>
+    val res = attributionCommander.getReKeepsByDegree(keeperId, keepId) map { t => ReKeepsPerDeg(keepId, t._1.toSeq, t._2.toSeq) }
+    Ok(Json.toJson(res))
   }
 
   def updateUserReKeepStats() = Action.async(parse.tolerantJson) { request =>
