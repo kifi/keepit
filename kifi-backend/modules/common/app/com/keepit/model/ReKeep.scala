@@ -55,6 +55,3 @@ case class RichReKeep(id: Option[Id[ReKeep]], createdAt: DateTime, updatedAt: Da
 
 @json case class KeepIdInfo(keepId: Id[Keep], uriId: Id[NormalizedURI], userId: Id[User])
 
-object KeepIdInfo {
-  implicit def fromKeep(k: Keep): KeepIdInfo = KeepIdInfo(k.id.get, k.uriId, k.userId)
-}
