@@ -21,18 +21,23 @@ angular.module('kifi.friends.rightColFriendsView', [
           return !friend.unfriended;
         });
 
-        actualFriends.forEach(function (friend) {
+        // Randomly select 4 friends to display, but always display
+        // friends with pictures before friends without pictures.
+        var pictureGroups = _.groupBy(actualFriends, function (friend) {
+          return friend.pictureName !== '0.jpg';
+        });
+        var friendsToDisplay = _.sample(pictureGroups['true'], 4);
+        if (friendsToDisplay.length < 4) {
+          friendsToDisplay = friendsToDisplay.concat(
+            _.sample(pictureGroups['false'], 4 - friendsToDisplay.length)
+          );
+        }
+
+        friendsToDisplay.forEach(function (friend) {
           friend.pictureUrl = friendService.getPictureUrlForUser(friend);
         });
-
-        var hasPicture = function (friend) {
-          return friend.pictureName !== '0.jpg';
-        };
-        actualFriends.sort(function (friendA, friendB) {
-          return -hasPicture(friendA) + hasPicture(friendB);
-        });
-
-        scope.friends = actualFriends;
+        
+        scope.friends = friendsToDisplay;
       });
 
       scope.friendsLink = function () {
