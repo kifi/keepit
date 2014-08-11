@@ -190,6 +190,28 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
       }
     }
 
+    "merge items (on uriId merge) correctly" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, shoebox) = setup()
+        val user1Keeps = makeKeeps(user1, 2, shoebox)
+        val commander = inject[SeedIngestionCommander]
+        val seedItemRepo = inject[RawSeedItemRepo]
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        db.readOnlyMaster { implicit session => seedItemRepo.all().length === 2 }
+
+        shoebox.saveBookmarks(user1Keeps(0).copy(uriId = user1Keeps(1).uriId))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+
+        val allItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        allItems.length === 1
+        allItems(0).uriId === user1Keeps(1).uriId
+        allItems(0).timesKept === 2
+
+      }
+    }
+
     "ingest top score uris into raw seed items" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, shoebox) = setup()
@@ -206,12 +228,12 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         Await.result(result, Duration(10, "seconds"))
 
         db.readOnlyMaster { implicit session =>
-          val seedItem1: Option[RawSeedItem] = seedItemRepo.getByUriIdAndUserId(user1Keeps.head.uriId, user1)
+          val seedItem1: Option[RawSeedItem] = seedItemRepo.getByUriIdAndUserId(user1Keeps.head.uriId, Some(user1))
           seedItem1.get.priorScore === Some(0.795.toFloat)
           seedItem1.get.userId === Some(Id[User](42))
           seedItem1.get.uriId === Id[NormalizedURI](1)
 
-          val seedItem2: Option[RawSeedItem] = seedItemRepo.getByUriIdAndUserId(user1Keeps.head.uriId, user2)
+          val seedItem2: Option[RawSeedItem] = seedItemRepo.getByUriIdAndUserId(user1Keeps.head.uriId, Some(user2))
           seedItem2 === None
         }
       }
