@@ -24,8 +24,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.util.{ Success, Failure, Try }
 import play.api.libs.json.Json
 
-case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
-
 class InviteController @Inject() (db: Database,
     userRepo: UserRepo,
     socialUserRepo: SocialUserInfoRepo,

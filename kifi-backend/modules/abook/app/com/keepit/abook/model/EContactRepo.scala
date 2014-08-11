@@ -21,7 +21,7 @@ trait EContactRepo extends Repo[EContact] with SeqNumberFunction[EContact] {
   def getByUserIdAndEmail(userId: Id[User], email: EmailAddress)(implicit session: RSession): Seq[EContact]
   def getByUserId(userId: Id[User])(implicit session: RSession): Seq[EContact]
   def getUserIdsByEmail(email: EmailAddress)(implicit session: RSession): Seq[Id[User]]
-  def getEContactCount(userId: Id[User])(implicit session: RSession): Int
+  def countEmailContacts(userId: Id[User], distinctEmailAccounts: Boolean)(implicit session: RSession): Int
   def insertAll(contacts: Seq[EContact])(implicit session: RWSession): Int
   def hideEmailFromUser(userId: Id[User], email: EmailAddress)(implicit session: RSession): Boolean
   def updateOwnership(emailAccountId: Id[EmailAccount], verifiedOwner: Option[Id[User]])(implicit session: RWSession): Int
@@ -120,8 +120,10 @@ class EContactRepoImpl @Inject() (
   def getUserIdsByEmail(email: EmailAddress)(implicit session: RSession): Seq[Id[User]] =
     (for (f <- rows if f.email === email && f.state === EContactStates.ACTIVE) yield f.userId).list
 
-  def getEContactCount(userId: Id[User])(implicit session: RSession): Int = {
-    StaticQuery.queryNA[Int](s"select count(*) from econtact where user_id=$userId and state='active'").first
+  def countEmailContacts(userId: Id[User], distinctEmailAccounts: Boolean)(implicit session: RSession): Int = {
+    import scala.slick.jdbc.StaticQuery.interpolation
+    if (distinctEmailAccounts) sql"""select count(distinct email_account_id) from econtact where user_id=$userId and state='#${EContactStates.ACTIVE}'""".as[Int].first
+    else sql"""select count(*) from econtact where user_id=$userId and state='#${EContactStates.ACTIVE}'""".as[Int].first
   }
 
   def getByAbookIdAndEmailId(abookId: Id[ABookInfo], emailId: Id[EmailAccount])(implicit session: RSession): Option[EContact] = {
