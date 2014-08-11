@@ -22,6 +22,7 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[Social
   def getSocialUserOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUser]
   def getSocialUserBasicInfos(ids: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], SocialUserBasicInfo]
   def getSocialUserBasicInfosByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserBasicInfo]
+  def getAllUsersToRefresh()(implicit session: RSession): Seq[SocialUserInfo]
 }
 
 @Singleton
@@ -107,6 +108,13 @@ class SocialUserInfoRepoImpl @Inject() (
     }
   } catch {
     case e: Throwable => throw new Exception(s"Can't get social user info for social id [$id] on network [$networkType]", e)
+  }
+
+  def getAllUsersToRefresh()(implicit session: RSession): Seq[SocialUserInfo] = {
+    (for (
+      f <- rows if f.userId.isNotNull && f.credentials.isNotNull
+        && f.networkType.inSet(SocialNetworks.REFRESHING) && f.state.inSet(REFRESHING_STATES)
+    ) yield f).list
   }
 
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo] = {
