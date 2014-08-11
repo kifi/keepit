@@ -66,7 +66,7 @@ class GraphManagerPlugin @Inject() (
   import GraphManagerActorMessage._
 
   override def onStart() {
-    scheduleTaskOnAllMachines(actor.system, 2 minutes, 1 minutes, actor.ref, UpdateGraph(Map(), 100))
-    scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackupGraph)
+    //scheduleTaskOnAllMachines(actor.system, 2 minutes, 1 minutes, actor.ref, UpdateGraph(Map(), 100))
+    //scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackupGraph)
   }
 }
