@@ -22,7 +22,7 @@ import com.keepit.common.concurrent.ExecutionContext
 
 class SeedIngestionCommanderTest extends Specification with CuratorTestInjector {
 
-  import TestHelpers.{ makeKeeps, makeUser }
+  import TestHelpers.{ makeKeeps, makeUser, makeKeepsWithPrivacy }
 
   private def modules = {
     Seq(
@@ -42,6 +42,35 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
 
   "SeedIngestionCommander" should {
 
+    "ingest keeps and have discoverability correctly" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, shoebox) = setup()
+
+        val user1Keeps = makeKeepsWithPrivacy(user2, 5, true, shoebox)
+
+        val keepInfoRepo = inject[CuratorKeepInfoRepo]
+        val systemValueRepo = inject[SystemValueRepo]
+        val seedItemRepo = inject[RawSeedItemRepo]
+        val commander = inject[SeedIngestionCommander]
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+
+        var seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems.foreach(_.discoverable === false)
+
+        val user2Keeps = makeKeepsWithPrivacy(user1, 5, false, shoebox)
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems.foreach(_.discoverable === true)
+
+        1 === 1
+      }
+    }
+
     //this is in one test case instead of a bunch to reduce run time (i.e. avoid repeated db initialization) as we are moving quite a bit of data.
     //Already takes several seconds as it is.
     "ingest multiple batches and update sequence number and raw seed items correctly" in {
@@ -53,6 +82,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         val systemValueRepo = inject[SystemValueRepo]
         val seedItemRepo = inject[RawSeedItemRepo]
         val commander = inject[SeedIngestionCommander]
+
         db.readOnlyMaster { implicit session => keepInfoRepo.all() }.length === 0
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readOnlyMaster { implicit session => keepInfoRepo.all() }.length === 60
