@@ -81,8 +81,8 @@ class AllKeepSeedIngestionHelper @Inject() (
           discoverable = !keep.isPrivate
         ))
       } else {
-        val discoverable = !keep.isPrivate
         rawSeedItems.foreach { rawSeedItem =>
+          val discoverable = rawSeedItem.discoverable || !keep.isPrivate
           updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, if (keep.state == KeepStates.ACTIVE) 1 else 0, discoverable)
         }
       }
