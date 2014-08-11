@@ -33,14 +33,18 @@ POST /internal/heimdal/user/delighted/answer           @com.keepit.controllers.D
 POST /internal/heimdal/user/delighted/cancel           @com.keepit.controllers.DelightedController.cancelDelightedSurvey()
 
 GET  /internal/heimdal/data/keepDiscovery/page/:page   @com.keepit.controllers.KeepDiscoveryController.page(page:Int, size:Int)
+GET  /internal/heimdal/data/keepDiscovery/count        @com.keepit.controllers.KeepDiscoveryController.count
 GET  /internal/heimdal/data/keepDiscovery/getDiscoveryCountByKeeper @com.keepit.controllers.KeepDiscoveryController.getDiscoveryCountByKeeper(userId: Id[User])
 
 GET  /internal/heimdal/data/reKeep/page/:page          @com.keepit.controllers.ReKeepController.page(page:Int, size:Int)
+GET  /internal/heimdal/data/reKeep/count               @com.keepit.controllers.ReKeepController.count
 
 POST /internal/heimdal/helprank/updateUserReKeepStats   @com.keepit.controllers.HelpRankController.updateUserReKeepStats()
 POST /internal/heimdal/helprank/updateUsersReKeepStats  @com.keepit.controllers.HelpRankController.updateUsersReKeepStats()
 POST /internal/heimdal/helprank/updateAllReKeepStats    @com.keepit.controllers.HelpRankController.updateAllReKeepStats()
 
+POST /internal/heimdal/helprank/getUserReKeepsByDegree @com.keepit.controllers.HelpRankController.getUserReKeepsByDegree()
+GET  /internal/heimdal/helprank/getReKeepsByDegree     @com.keepit.controllers.HelpRankController.getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep])
 GET  /internal/heimdal/helprank/getKeepAttributionInfo @com.keepit.controllers.HelpRankController.getKeepAttributionInfo(userId: Id[User])
 POST /internal/heimdal/helprank/processKifiHit         @com.keepit.controllers.HelpRankController.processKifiHit()
 POST /internal/heimdal/helprank/processKeepAttribution @com.keepit.controllers.HelpRankController.processKeepAttribution()
