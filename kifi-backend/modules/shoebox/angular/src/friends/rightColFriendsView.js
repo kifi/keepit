@@ -125,12 +125,8 @@ angular.module('kifi.friends.rightColFriendsView', [
               var name = '';
               var via = '';
 
-              if (person.name) {
-                name = person.name;
-                via = networkNamesMap[person.network];
-              } else if (person.network === 'email') {
-                name = person.identifier;  // Email address
-              }
+              name = person.name;
+              via = (person.network === 'email' && person.identifier) || networkNamesMap[person.network];
 
               peopleYouMayKnow.push({
                 networkType: person.network,

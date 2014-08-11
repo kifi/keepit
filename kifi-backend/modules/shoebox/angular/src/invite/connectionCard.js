@@ -21,7 +21,7 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
       var inNetworkId = friend.identifier;
       var invited = (friend.lastInvitedAt != null);
 
-      if (friend.pictureUrl !== null) {
+      if (friend.pictureUrl) {
         scope.mainImage = friend.pictureUrl;
       } else if (network === 'email') {
         scope.mainImage = '/img/email-icon.png';
