@@ -298,12 +298,8 @@ angular.module('kifi.invite', [
         return;
       }
 
-      profileService.getMe().then(function (me) {
-        scope.showFriendRequestBanner = me.experiments && me.experiments.indexOf('notify_user_when_contacts_join') > -1;
-        if (scope.showFriendRequestBanner) {
-          setupShowFriendRequestBanner(scope, externalId);
-        }
-      });
+      scope.showFriendRequestBanner = true;
+      setupShowFriendRequestBanner(scope, externalId);
     }
 
     return {
