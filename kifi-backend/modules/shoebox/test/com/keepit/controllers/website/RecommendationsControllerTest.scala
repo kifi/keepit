@@ -58,7 +58,7 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
         val userId = Id[User](42)
         val url = "id1"
         val route = com.keepit.controllers.website.routes.RecommendationsController.updateUriRecommendationFeedback(userId, url).url
-        route === "/site/recos/updateUriRecommendationFeedback?userId=42&url=id1"
+        route === "/site/recos/feedback?userId=42&url=id1"
 
         val payload = Json.obj(
           "seen" -> true,

@@ -52,13 +52,12 @@ class RecommendationsCommander @Inject() (
     }
   }
 
-  def updateUriRecommendationUserInteraction(userId: Id[User], url: String, vote: Option[Boolean]): Future[Boolean] = {
-    val interaction = UriRecommendationUserInteraction(vote = vote)
+  def updateUriRecommendationUserInteraction(userId: Id[User], url: String, vote: UriRecommendationUserInteraction): Future[Boolean] = {
     val uriOpt = db.readOnlyMaster { implicit s =>
       normalizedURIInterner.getByUri(url) //using cache
     }
     uriOpt match {
-      case Some(uri) => curator.updateUriRecommendationUserInteraction(userId, uri.id.get, interaction)
+      case Some(uri) => curator.updateUriRecommendationUserInteraction(userId, uri.id.get, vote)
       case None => Future.successful(false)
     }
   }

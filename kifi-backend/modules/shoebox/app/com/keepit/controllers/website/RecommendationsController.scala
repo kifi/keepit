@@ -31,7 +31,8 @@ class RecommendationsController @Inject() (
     commander.updateUriRecommendationFeedback(userId, url, feedback).map(fkis => Ok(Json.toJson(fkis)))
   }
 
-  def updateUriRecommendationUserInteraction(userId: Id[User], url: String, vote: Option[Boolean]) = JsonAction.authenticatedParseJsonAsync { request =>
+  def updateUriRecommendationUserInteraction(userId: Id[User], url: String) = JsonAction.authenticatedParseJsonAsync { request =>
+    val vote = request.body.as[UriRecommendationUserInteraction]
     commander.updateUriRecommendationUserInteraction(userId, url, vote).map(fkis => Ok(Json.toJson(fkis)))
   }
 }
