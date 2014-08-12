@@ -13,6 +13,7 @@ import scala.reflect.ClassTag
 @ImplementedBy(classOf[SocialUserInfoRepoImpl])
 trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[SocialUserInfo] with SeqNumberFunction[SocialUserInfo] {
   def getByUser(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
+  def getByUsers(userIds: Seq[Id[User]])(implicit session: RSession): Seq[SocialUserInfo]
   def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialUserByUser(id: Id[User])(implicit session: RSession): Seq[SocialUser]
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo
@@ -93,6 +94,10 @@ class SocialUserInfoRepoImpl @Inject() (
     userCache.getOrElse(SocialUserInfoUserKey(userId)) {
       (for (f <- rows if f.userId === userId && f.state =!= SocialUserInfoStates.INACTIVE) yield f).list
     }
+
+  def getByUsers(ids: Seq[Id[User]])(implicit session: RSession): Seq[SocialUserInfo] = {
+    (for (f <- rows if f.userId.inSet(ids)) yield f).list
+  }
 
   def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] =
     (for (f <- rows if f.userId === userId && f.state === SocialUserInfoStates.APP_NOT_AUTHORIZED) yield f).list
