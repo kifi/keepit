@@ -95,9 +95,6 @@ class AllKeepSeedIngestionHelper @Inject() (
       val countChange = if (keep.state.value != keepInfo.state.value) {
         if (keepInfo.state == CuratorKeepInfoStates.ACTIVE) -1 else if (keep.state == KeepStates.ACTIVE) 1 else 0
       } else 0
-      rawSeedItems.foreach { rawSeedItem =>
-        updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, countChange, rawSeedItem.discoverable)
-      }
 
       keepInfoRepo.save(keepInfo.copy(
         uriId = keep.uriId,
