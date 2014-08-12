@@ -100,17 +100,17 @@ class AllKeepSeedIngestionHelper @Inject() (
         uriId = keep.uriId,
         userId = keep.userId,
         state = State[CuratorKeepInfo](keep.state.value),
-        discoverable = !keep.isPrivate && (State[CuratorKeepInfo](keep.state.value) == CuratorKeepInfoStates.ACTIVE)
+        discoverable = !keep.isPrivate && keep.state == KeepStates.ACTIVE
       ))
 
       val discoverable = {
         {
           if (keepInfo.discoverable && keep.isPrivate) keepInfoRepo.checkDiscoverableByUriId(keep.uriId)
-          else (keepInfo.discoverable || !keep.isPrivate)
+          else keepInfo.discoverable || !keep.isPrivate
         } && {
           if (keepInfo.state == CuratorKeepInfoStates.ACTIVE && keep.state != KeepStates.ACTIVE)
             keepInfoRepo.checkActiveByUriId(keep.uriId)
-          else (keepInfo.state == CuratorKeepInfoStates.ACTIVE || keep.state == KeepStates.ACTIVE)
+          else keepInfo.state == CuratorKeepInfoStates.ACTIVE || keep.state == KeepStates.ACTIVE
         }
       }
 
@@ -124,7 +124,7 @@ class AllKeepSeedIngestionHelper @Inject() (
         userId = keep.userId,
         keepId = keep.id.get,
         state = State[CuratorKeepInfo](keep.state.value),
-        discoverable = !keep.isPrivate && (State[CuratorKeepInfo](keep.state.value) == CuratorKeepInfoStates.ACTIVE)
+        discoverable = !keep.isPrivate && keep.state == KeepStates.ACTIVE
       ))
 
       val rawSeedItems = rawSeedsRepo.getByUriId(keep.uriId)
@@ -137,7 +137,7 @@ class AllKeepSeedIngestionHelper @Inject() (
           lastSeen = keep.createdAt,
           priorScore = None,
           timesKept = if (keep.state == KeepStates.ACTIVE) 1 else 0,
-          discoverable = !keep.isPrivate && (State[CuratorKeepInfo](keep.state.value) == CuratorKeepInfoStates.ACTIVE)
+          discoverable = !keep.isPrivate && keep.state == KeepStates.ACTIVE
         ))
       } else {
         val discoverable = (rawSeedItems(0).discoverable || (!keep.isPrivate && keep.state == KeepStates.ACTIVE))
