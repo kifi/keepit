@@ -23,7 +23,8 @@ case class UriRecommendation(
 
   def withId(id: Id[UriRecommendation]): UriRecommendation = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): UriRecommendation = this.copy(updateAt = updateTime)
-  def withLastPushedAt(pushedAt: Option[DateTime]): UriRecommendation = this.copy(lastPushedAt = pushedAt)
+  def withLastPushedAt(pushedAt: DateTime): UriRecommendation = this.copy(lastPushedAt = Some(pushedAt))
+  def withNoLastPushedAt(): UriRecommendation = this.copy(lastPushedAt = None)
 }
 
 object UriRecommendationStates extends States[UriRecommendation]

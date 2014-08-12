@@ -1,15 +1,12 @@
 package com.keepit.curator
 
-import com.google.inject.Injector
 import com.keepit.common.cache.FakeCacheModule
-import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
-import com.keepit.model.URISummary
-import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl }
-import commanders.email.{ EngagementFeedSummary, EngagementFeedEmailSender }
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import commanders.email.{ EngagementFeedEmailSender, EngagementFeedSummary }
 import model.UriRecommendationRepo
 import org.specs2.mutable.Specification
 

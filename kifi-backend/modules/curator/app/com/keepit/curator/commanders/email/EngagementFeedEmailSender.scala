@@ -8,14 +8,11 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 import com.keepit.curator.commanders.RecommendationGenerationCommander
-import com.keepit.curator.model.{ UriRecommendationRepo, UriRecommendation, RecommendationInfo }
+import com.keepit.curator.model.{ UriRecommendationRepo, UriRecommendation }
 import com.keepit.model.{ URISummary, NormalizedURI, User, UriRecommendationScores, NotificationCategory, ExperimentType }
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.time.Clock
-import org.joda.time.DateTimeZone
-import play.api
-import play.api.db
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 
 import concurrent.Future
 
@@ -41,7 +38,6 @@ class EngagementFeedEmailSenderImpl @Inject() (
     userExperimentCommander: RemoteUserExperimentCommander,
     uriRecommendationRepo: UriRecommendationRepo,
     shoebox: ShoeboxServiceClient,
-    clock: Clock,
     db: Database,
     protected val airbrake: AirbrakeNotifier) extends EngagementFeedEmailSender with Logging {
 
@@ -86,11 +82,11 @@ class EngagementFeedEmailSenderImpl @Inject() (
           )
 
           log.info(s"sending email to ${user.id.get} with ${feedData.size} keeps")
-          lazy val now = clock.now()(DateTimeZone.UTC)
+          val now = currentDateTime
           shoebox.sendMail(email).map { sent =>
             if (sent) {
               db.readWrite { implicit rw =>
-                recos.foreach { reco => uriRecommendationRepo.save(reco.withLastPushedAt(Some(now))) }
+                recos.foreach { reco => uriRecommendationRepo.save(reco.withLastPushedAt(now)) }
               }
             }
             EngagementFeedSummary(user.id.get, sent, feedData)
