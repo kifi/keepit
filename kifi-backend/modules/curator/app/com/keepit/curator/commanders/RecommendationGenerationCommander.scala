@@ -73,12 +73,14 @@ class RecommendationGenerationCommander @Inject() (
       3 * scores.discoveryScore
   }
 
-  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecommendationInfo]] = {
-    val recosFuture = db.readOnlyReplicaAsync { implicit session =>
+  def getTopRecommendations(userId: Id[User], howManyMax: Int): Future[Seq[UriRecommendation]] = {
+    db.readOnlyReplicaAsync { implicit session =>
       uriRecRepo.getByTopMasterScore(userId, Math.max(howManyMax, 1000))
     }
+  }
 
-    recosFuture.map { recos =>
+  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecommendationInfo]] = {
+    getTopRecommendations(userId, howManyMax).map { recos =>
       recos.map { reco =>
         RecommendationInfo(
           userId = reco.userId,
@@ -98,7 +100,6 @@ class RecommendationGenerationCommander @Inject() (
         )
       }.sortBy(-1 * _.score).take(howManyMax)
     }
-
   }
 
   private def getPerUserGenerationLock(userId: Id[User]): ReactiveLock = {

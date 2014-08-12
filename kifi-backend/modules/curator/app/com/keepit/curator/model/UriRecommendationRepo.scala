@@ -8,6 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.time.Clock
 import com.keepit.model.{ UriRecommendationUserInteraction, UriRecommendationFeedback, User, NormalizedURI }
+import org.joda.time.DateTime
 import play.api.libs.json.{ Json }
 
 @ImplementedBy(classOf[UriRecommendationRepoImpl])
@@ -43,7 +44,9 @@ class UriRecommendationRepoImpl @Inject() (
     def seen = column[Boolean]("seen", O.NotNull)
     def clicked = column[Boolean]("clicked", O.NotNull)
     def kept = column[Boolean]("kept", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, vote.?, uriId, userId, masterScore, allScores, seen, clicked, kept) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
+    def lastPushedAt = column[DateTime]("last_pushed_at", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, vote.?, uriId, userId, masterScore, allScores, seen, clicked,
+      kept, lastPushedAt.?) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
   }
 
   def table(tag: Tag) = new UriRecommendationTable(tag)
