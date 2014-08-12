@@ -1,6 +1,7 @@
 @(socialUserInfos: Seq[SocialUserInfo], page: Int)
+@import com.keepit.commanders.BasicSocialUser
 
-@pagination(page: Int, pageCount: Int) = {
+    @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
     <ul>
       <li>
@@ -53,9 +54,9 @@
     <tr>
       <td>@{i+1}</td>
       <td><span class="badge">@socialUserInfo.id.get</span></td>
-      <td>@adminHelper.socialUserDisplay(socialUserInfo, true)</td>
+      <td>@adminHelper.socialUserDisplay(SocialUserBasicInfo.fromSocialUser(socialUserInfo), true)</td>
       <td>@if(socialUserInfo.userId.isDefined) {
-        @adminHelper.socialUserDisplay(socialUserInfo)
+        @adminHelper.socialUserDisplay(SocialUserBasicInfo.fromSocialUser(socialUserInfo))
       }</td>
       <td>@adminHelper.dateDisplay(socialUserInfo.createdAt)</td>
     </tr>

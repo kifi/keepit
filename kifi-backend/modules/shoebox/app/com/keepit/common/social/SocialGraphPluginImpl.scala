@@ -102,7 +102,7 @@ private[social] class SocialGraphActor @Inject() (
           friends.map(_.socialId)
         }.toList.flatten
 
-        val connections = socialUserCreateConnections.createConnections(socialUserInfo, friendsSocialId, graph.networkType)
+        val connections = socialUserCreateConnections.createConnections(socialUserInfo, friendsSocialId)
 
         val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
         val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
