@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.model.{ UserRepo, UserConnectionRepo, User, SocialUserInfoRepo }
 import play.api.libs.json.{ Json, JsNumber, JsArray }
-import com.keepit.social.{SocialNetworks, SocialNetworkType, BasicUser}
+import com.keepit.social.{ SocialNetworks, SocialNetworkType, BasicUser }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.slick.Database

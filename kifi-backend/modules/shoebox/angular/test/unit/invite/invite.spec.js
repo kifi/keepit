@@ -105,7 +105,7 @@ describe('kifi.invite', function () {
   });
 
   describe('friend request banner', function () {
-    var friendRequestUrl, basicUserInfoUrl, profileUrl, expectGetProfile;
+    var friendRequestUrl, basicUserInfoUrl, profileUrl;
 
     beforeEach(function () {
       injectedState.state.friend = fakeSocialId;
@@ -113,18 +113,9 @@ describe('kifi.invite', function () {
       friendRequestUrl = routeService.friendRequest(fakeSocialId);
       basicUserInfoUrl = routeService.basicUserInfo(fakeSocialId, true);
       profileUrl = routeService.profileUrl;
-
-      expectGetProfile = function () {
-        var json = '{"id":"' + fakeSocialId + '","firstName":"John","lastName":"Doe","pictureName":"7kSuC.jpg",' +
-          '"username":"johndoe","emails":[{"address":"johndoe@gmail.com","isPrimary":true,"isVerified":true,' +
-          '"isPendingPrimary":false}],"notAuthed":[],"experiments":["notify_user_when_contacts_join"],' +
-          '"uniqueKeepsClicked":5,"totalKeepsClicked":5,"clickCount":2,"rekeepCount":0,"rekeepTotalCount":0}';
-        $httpBackend.expectGET(profileUrl).respond(200, json);
-      };
     });
 
     it('shows a success message after server response ok', function () {
-      expectGetProfile();
       $httpBackend.expectGET(basicUserInfoUrl).respond(200,
         '{"id":"' + fakeSocialId + '","firstName":"John","lastName":"Doe","pictureName":"123.jpg","username":"johndoe"}');
 
@@ -141,7 +132,6 @@ describe('kifi.invite', function () {
     });
 
     it('does not show banner if get user info fails', function () {
-      expectGetProfile();
       $httpBackend.expectGET(basicUserInfoUrl).respond(404, '{}');
 
       compile();
