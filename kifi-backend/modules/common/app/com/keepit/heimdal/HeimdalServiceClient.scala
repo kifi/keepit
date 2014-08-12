@@ -81,6 +81,8 @@ trait HeimdalServiceClient extends ServiceClient {
 
   def updateAllReKeepStats(): Future[Unit]
 
+  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]]
+
   def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit]
 
   def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit]
@@ -277,6 +279,13 @@ class HeimdalServiceClientImpl @Inject() (
 
   def updateAllReKeepStats(): Future[Unit] = {
     call(Heimdal.internal.updateAllReKeepStats) map { _ => Unit }
+  }
+
+  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = {
+    val payload = Json.toJson(uriIds)
+    call(Heimdal.internal.getHelpRankInfo, payload, callTimeouts = longTimeout) map { r =>
+      r.json.as[Seq[HelpRankInfo]]
+    }
   }
 
   def processKifiHit(clickerId: Id[User], hit: SanitizedKifiHit): Future[Unit] = {

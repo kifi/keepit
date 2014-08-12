@@ -142,4 +142,20 @@ class HelpRankCommander @Inject() (
     }
   }
 
+  def getHelpRankInfo(uriIds: Seq[Id[NormalizedURI]]): Seq[HelpRankInfo] = {
+    val uriIdSet = uriIds.toSet
+    if (uriIdSet.size != uriIds.length) {
+      log.warn(s"[getHelpRankInfo] (duplicates!) uriIds(len=${uriIds.length}):${uriIds.mkString(",")} idSet(sz=${uriIdSet.size}):${uriIdSet.mkString(",")}")
+    }
+    val (discMap, rkMap) = db.readOnlyMaster { implicit ro =>
+      val discMap = keepDiscoveryRepo.getDiscoveryCountsByURIs(uriIdSet)
+      val rkMap = rekeepRepo.getReKeepCountsByURIs(uriIdSet)
+      log.info(s"[getHelpRankInfo] discMap=$discMap rkMap=$rkMap")
+      (discMap, rkMap)
+    }
+    uriIds.toSeq.map { uriId =>
+      HelpRankInfo(uriId, discMap.getOrElse(uriId, 0), rkMap.getOrElse(uriId, 0))
+    }
+  }
+
 }
