@@ -24,6 +24,20 @@ object TestHelpers {
     }
   }
 
+  def makeKeepsWithPrivacy(userId: Id[User], howMany: Int, isPrivate: Boolean, shoebox: FakeShoeboxServiceClientImpl): Seq[Keep] = {
+    (1 to howMany).flatMap { i =>
+      shoebox.saveBookmarks(Keep(
+        uriId = Id[NormalizedURI](i),
+        urlId = Id[URL](i),
+        url = "https://kifi.com",
+        userId = userId,
+        state = KeepStates.ACTIVE,
+        source = KeepSource.keeper,
+        isPrivate = isPrivate,
+        libraryId = None))
+    }
+  }
+
   def makeUser(num: Int, shoebox: FakeShoeboxServiceClientImpl) =
     shoebox.saveUsers(User(
       id = Some(Id[User](num)),
