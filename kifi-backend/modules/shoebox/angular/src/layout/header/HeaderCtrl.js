@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('HeaderCtrl', [
-  '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService', '$location', 'util', 'keyIndices',
-  function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService, $location, util, keyIndices) {
+  '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService', '$location', 'util', 'keyIndices', 'modalService',
+  function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService, $location, util, keyIndices, modalService) {
 
     $scope.toggleMenu = function () {
       $rootElement.find('html').toggleClass('kf-sidebar-active');
@@ -32,7 +32,9 @@ angular.module('kifi')
     };
 
     $scope.addKeeps = function () {
-      $rootScope.$emit('showGlobalModal', 'addKeeps');
+      modalService.open({
+        template: 'keeps/addKeepsModal.tpl.html'
+      });
     };
 
     function addKeepsShortcut(e) {

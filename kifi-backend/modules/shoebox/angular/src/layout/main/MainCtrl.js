@@ -106,42 +106,13 @@ angular.module('kifi')
       fileInput.replaceWith(fileInput = fileInput.clone(true));
     }
 
-    function initAddKeep() {
-      $scope.modal = 'add_keeps';
-      $scope.data.initAddKeeps = true;
-      $scope.data.showAddKeeps = true;
-    }
-
     $rootScope.$on('showGlobalModal', function (e, modal) {
       switch (modal) {
-        case 'addNetworks':
-          $scope.modal = 'add_networks';
-          $scope.data.showAddNetworks = true;
-          break;
-        case 'seeMutualFriends':
-          $scope.modal = 'see_mutual_friends';
-          $scope.data.seeMutualFriends = true;
-          break;
         case 'importBookmarks':
           initBookmarkImport.apply(null, Array.prototype.slice(arguments, 2));
           break;
         case 'importBookmarkFile':
           initBookmarkFileUpload();
-          break;
-        case 'addKeeps':
-          initAddKeep();
-          break;
-        case 'genericError':
-          $scope.modal = 'generic_error';
-          $scope.data.showGenericErrorModal = true;
-          break;
-        case 'installExtension':
-          $scope.modal = 'install_extension';
-          $scope.data.showInstallExtension = true;
-          break;
-        case 'installExtensionError':
-          $scope.modal = 'install_extension_error';
-          $scope.data.showInstallErrorModal = true;
           break;
         case 'manageLibrary':
           $scope.modal = 'manage_library';
@@ -317,12 +288,6 @@ angular.module('kifi')
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
     }
-
-    $scope.triggerInstall = function () {
-      installService.triggerInstall(function () {
-        $rootScope.$emit('showGlobalModal','installExtensionError');
-      });
-    };
 
     $scope.showDelightedSurvey = function () {
       return profileService.prefs && profileService.prefs.show_delighted_question;
