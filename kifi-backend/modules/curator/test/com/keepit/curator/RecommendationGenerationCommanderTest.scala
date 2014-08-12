@@ -6,6 +6,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.commanders.RecommendationGenerationCommander
 import com.keepit.curator.model.{ UriRecommendationRepo, UriScores, UriRecommendation }
 import com.keepit.graph.FakeGraphServiceModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ UriRecommendationScores, User, NormalizedURI }
 import org.specs2.mutable.Specification
 
@@ -17,7 +18,8 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
   def modules = Seq(
     FakeHttpClientModule(),
     FakeGraphServiceModule(),
-    FakeCortexServiceClientModule())
+    FakeCortexServiceClientModule(),
+    FakeHeimdalServiceClientModule())
 
   def setup(): Seq[UriRecommendation] = {
     val rec1 = UriRecommendation(uriId = Id[NormalizedURI](1), userId = Id[User](42), masterScore = 0.15f,
