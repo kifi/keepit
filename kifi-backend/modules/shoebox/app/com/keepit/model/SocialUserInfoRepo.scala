@@ -17,6 +17,7 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[Social
   def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialUserByUser(id: Id[User])(implicit session: RSession): Seq[SocialUser]
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo
+  def get(ids: Seq[SocialId])(implicit session: RSession): Seq[SocialUserInfo]
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo]
   def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo]
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo]
