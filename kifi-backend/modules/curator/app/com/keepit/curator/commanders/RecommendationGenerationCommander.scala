@@ -162,7 +162,6 @@ class RecommendationGenerationCommander @Inject() (
               db.readWrite { implicit s =>
                 (toBeSavedItems zip attribution) foreach {
                   case (item, attr) =>
-                    // attr will be saved soon -- Yingjie
                     toBeSavedItems.map { item =>
                       val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
                       recoOpt.map { reco =>

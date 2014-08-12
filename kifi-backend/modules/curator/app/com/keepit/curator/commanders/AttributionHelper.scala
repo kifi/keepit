@@ -1,6 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.google.inject.Inject
+import com.google.inject.{Inject, Singleton}
 import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.model.ScoredSeedItem
@@ -20,6 +20,7 @@ object SeedAttribution {
   val EMPTY = SeedAttribution()
 }
 
+@Singleton
 class SeedAttributionHelper @Inject() (cortex: CortexServiceClient) {
 
   def getSeedAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[SeedAttribution]] = {
