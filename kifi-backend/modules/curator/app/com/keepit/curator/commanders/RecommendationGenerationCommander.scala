@@ -84,16 +84,18 @@ class RecommendationGenerationCommander @Inject() (
           userId = reco.userId,
           uriId = reco.uriId,
           {
-            if (scoreCoefficients.isEmpty)
+            if (scoreCoefficients.isEmpty) {
               computeMasterScore(reco.allScores)
-            else scoreCoefficients.recencyScore.getOrElse(defaultScore) * reco.allScores.recencyScore +
-              scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * reco.allScores.overallInterestScore +
-              scoreCoefficients.priorScore.getOrElse(defaultScore) * reco.allScores.priorScore +
-              scoreCoefficients.socialScore.getOrElse(defaultScore) * reco.allScores.socialScore +
-              scoreCoefficients.popularityScore.getOrElse(defaultScore) * reco.allScores.popularityScore +
-              scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore +
-              scoreCoefficients.rekeepScore.getOrElse(defaultScore) * reco.allScores.rekeepScore +
-              scoreCoefficients.discoveryScore.getOrElse(defaultScore) * reco.allScores.discoveryScore
+            } else {
+              scoreCoefficients.recencyScore.getOrElse(defaultScore) * reco.allScores.recencyScore +
+                scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * reco.allScores.overallInterestScore +
+                scoreCoefficients.priorScore.getOrElse(defaultScore) * reco.allScores.priorScore +
+                scoreCoefficients.socialScore.getOrElse(defaultScore) * reco.allScores.socialScore +
+                scoreCoefficients.popularityScore.getOrElse(defaultScore) * reco.allScores.popularityScore +
+                scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore +
+                scoreCoefficients.rekeepScore.getOrElse(defaultScore) * reco.allScores.rekeepScore +
+                scoreCoefficients.discoveryScore.getOrElse(defaultScore) * reco.allScores.discoveryScore
+            }
           },
           explain = Some(reco.allScores.toString)
         )

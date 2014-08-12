@@ -15,8 +15,6 @@ class RecommendationsController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     commander: RecommendationsCommander,
     userExperimentCommander: LocalUserExperimentCommander,
-    //normalizedURIRepo: NormalizedURIRepo,
-    normalizedURIInterner: NormalizedURIInterner,
     db: Database) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def adHocRecos(n: Int) = JsonAction.authenticatedParseJsonAsync { request =>
@@ -30,25 +28,10 @@ class RecommendationsController @Inject() (
 
   def updateUriRecommendationFeedback(userId: Id[User], url: String) = JsonAction.authenticatedParseJsonAsync { request =>
     val feedback = request.body.as[UriRecommendationFeedback]
-    val uriOpt = db.readOnlyMaster { implicit s =>
-      normalizedURIInterner.getByUri(url) //using cache
-    }
-    uriOpt match {
-      case Some(uri) => commander.updateUriRecommendationFeedback(userId, uri.id.get, feedback).map(fkis => Ok(Json.toJson(fkis)))
-      case None => Future.successful(Ok(JsNull))
-    }
-
+    commander.updateUriRecommendationFeedback(userId, url, feedback).map(fkis => Ok(Json.toJson(fkis)))
   }
 
   def updateUriRecommendationUserInteraction(userId: Id[User], url: String, vote: Option[Boolean]) = JsonAction.authenticatedParseJsonAsync { request =>
-    val interaction = UriRecommendationUserInteraction(vote = vote)
-    val uriOpt = db.readOnlyMaster { implicit s =>
-      normalizedURIInterner.getByUri(url) //using cache
-    }
-    uriOpt match {
-      case Some(uri) => commander.UriRecommendationUserInteraction(userId, uri.id.get, interaction).map(fkis => Ok(Json.toJson(fkis)))
-      case None => Future.successful(Ok(JsNull))
-    }
-
+    commander.updateUriRecommendationUserInteraction(userId, url, vote).map(fkis => Ok(Json.toJson(fkis)))
   }
 }
