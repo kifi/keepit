@@ -106,7 +106,7 @@ class AllKeepSeedIngestionHelper @Inject() (
       val discoverable = {
         {
           if (keepInfo.discoverable && keep.isPrivate) keepInfoRepo.checkDiscoverableByUriId(keep.uriId)
-          else keepInfo.discoverable || !keep.isPrivate
+          else keepInfo.discoverable || (!keep.isPrivate && keep.state == KeepStates.ACTIVE)
         } && {
           if (keepInfo.state == CuratorKeepInfoStates.ACTIVE && keep.state != KeepStates.ACTIVE)
             keepInfoRepo.checkActiveByUriId(keep.uriId)
