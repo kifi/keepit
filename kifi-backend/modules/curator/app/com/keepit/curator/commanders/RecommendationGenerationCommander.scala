@@ -35,7 +35,7 @@ class RecommendationGenerationCommander @Inject() (
 
   val defaultScore = 0.0f
 
-  val recommendationGenerationLock = new ReactiveLock(6)
+  val recommendationGenerationLock = new ReactiveLock(10)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
 
   val FEED_PRECOMPUTATION_WHITELIST: Seq[Id[User]] = Seq(

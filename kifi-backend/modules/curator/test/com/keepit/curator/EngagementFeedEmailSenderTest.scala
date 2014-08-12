@@ -11,6 +11,7 @@ import com.keepit.shoebox.{ ShoeboxServiceClient, FakeShoeboxServiceModule, Fake
 import commanders.email.{ EngagementFeedSummary, EngagementFeedEmailSender }
 import model.UriRecommendationRepo
 import org.specs2.mutable.Specification
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 
 import concurrent.duration.Duration
 import concurrent.{ Await, Future }
@@ -24,6 +25,7 @@ class EngagementFeedEmailSenderTest extends Specification with CuratorTestInject
     FakeHttpClientModule(),
     FakeShoeboxServiceModule(),
     FakeCortexServiceClientModule(),
+    FakeHeimdalServiceClientModule(),
     FakeCacheModule())
 
   def setup()(implicit injector: Injector) = {
