@@ -61,7 +61,6 @@ angular.module('kifi')
   };
 }])
 
-
 .directive('kfPeopleYouMayKnowView',
   ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'modalService', 'wtiService',
   function ($log, $q, $rootScope, $timeout, friendService, inviteService, modalService, wtiService) {
@@ -178,7 +177,11 @@ angular.module('kifi')
       };
 
       scope.showMutualFriends = function (person) {
-        modalService.open({ person: person });
+        modalService.open({
+          template: '<div kf-see-mutual-friends></div>',
+          className: 'kf-see-mutual-friends-modal',
+          modalData: { savedPymk: person }
+        });
       };
     }
   };

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfModal', [
-  '$document',
-  function ($document) {
+  '$document', 'modalService',
+  function ($document, modalService) {
     return {
       restrict: 'A',
       replace: true,
@@ -14,50 +14,63 @@ angular.module('kifi')
       templateUrl: 'common/modal/modal.tpl.html',
       transclude: true,
       controller: ['$scope', function ($scope) {
-        var defaultHideAction = null;
-
-        this.setDefaultHideAction = function (action) {
-          defaultHideAction = action;
+        $scope.close = this.close = function () {
+          $document.off('keydown', escapeModal);
+          modalService.close();
         };
 
-        this.hideModal = function (hideAction) {
-          if ($scope.noUserHide && $scope.show) {
-            // hide is disabled for user and was not triggered by change of state
-            return;
-          }
-          if (typeof hideAction === 'function') {
-            hideAction();
-          } else if (defaultHideAction) {
-            defaultHideAction();
-          }
-          $scope.show = false;
-        };
-
-        this.show = $scope.show || false;
-
-        $scope.hideModal = this.hideModal;
-
-        function exitModal(evt) {
-          if (evt.which === 27) {
-            $scope.hideModal(evt);
-            $scope.$apply();
+        function escapeModal (event) {
+          if (event.which === 27) {  // Escape key
+            $scope.close();
           }
         }
+        $document.on('keydown', escapeModal);
 
-        $scope.$watch(function () {
-          return $scope.show;
-        }, function () {
-          this.show = $scope.show || false;
-          if ($scope.show) {
-            $document.on('keydown', exitModal);
-          } else {
-            $document.off('keydown', exitModal);
-          }
-        });
+        // var defaultHideAction = null;
 
-        $scope.$on('$destroy', function () {
-          $document.off('keydown', exitModal);
-        });
+        // this.setDefaultHideAction = function (action) {
+        //   defaultHideAction = action;
+        // };
+
+        // this.hideModal = function (hideAction) {
+        //   if ($scope.noUserHide && $scope.show) {
+        //     // hide is disabled for user and was not triggered by change of state
+        //     return;
+        //   }
+        //   if (typeof hideAction === 'function') {
+        //     hideAction();
+        //   } else if (defaultHideAction) {
+        //     defaultHideAction();
+        //   }
+        //   $scope.show = false;
+        // };
+
+        // this.show = $scope.show || false;
+
+        // $scope.hideModal = this.hideModal;
+
+        // function exitModal(evt) {
+        //   if (evt.which === 27) {
+        //     $scope.hideModal(evt);
+
+        //     $scope.$apply();
+        //   }
+        // }
+
+        // $scope.$watch(function () {
+        //   return $scope.show;
+        // }, function () {
+        //   this.show = $scope.show || false;
+        //   if ($scope.show) {
+        //     $document.on('keydown', exitModal);
+        //   } else {
+        //     $document.off('keydown', exitModal);
+        //   }
+        // });
+
+        // $scope.$on('$destroy', function () {
+        //   $document.off('keydown', exitModal);
+        // });
       }],
       link: function (scope, element, attrs) {
         scope.dialogStyle = {};
@@ -79,8 +92,8 @@ angular.module('kifi')
 ])
 
 .directive('kfBasicModalContent', [
-  '$window',
-  function ($window) {
+  '$window', 'modalService',
+  function ($window, modalService) {
     return {
       restrict: 'A',
       replace: true,
@@ -100,12 +113,12 @@ angular.module('kifi')
         scope.withWarning = (attrs.withWarning !== void 0) || false;
         scope.cancelText = attrs.cancelText;
         scope.centered = attrs.centered;
-        kfModalCtrl.setDefaultHideAction(scope.cancel);
+        // kfModalCtrl.setDefaultHideAction(scope.cancel);
 
-        scope.hideAndCancel = kfModalCtrl.hideModal;
-        scope.hideAndAction = function () {
-          kfModalCtrl.hideModal(scope.action);
-        };
+        // scope.hideAndCancel = kfModalCtrl.hideModal;
+        // scope.hideAndAction = function () {
+        //   kfModalCtrl.hideModal(scope.action);
+        // };
 
         var wrap = element.find('.dialog-body-wrap');
 
@@ -114,20 +127,22 @@ angular.module('kifi')
           wrap.css({'max-height': winHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'hidden'});
         }, 100);
 
-        scope.$watch(function () {
-          return kfModalCtrl.show;
-        }, function (show) {
-          if (show) {
-            resizeWindow();
-            $window.addEventListener('resize', resizeWindow);
-          } else {
-            $window.removeEventListener('resize', resizeWindow);
-          }
-        });
+        // scope.$watch(function () {
+        //   return kfModalCtrl.show;
+        // }, function (show) {
+        //   if (show) {
+        //     resizeWindow();
+        //     $window.addEventListener('resize', resizeWindow);
+        //   } else {
+        //     $window.removeEventListener('resize', resizeWindow);
+        //   }
+        // });
 
-        scope.$on('$destroy', function () {
-          $window.removeEventListener('resize', resizeWindow);
-        });
+        // scope.$on('$destroy', function () {
+        //   $window.removeEventListener('resize', resizeWindow);
+        // });
+
+        scope.close = kfModalCtrl.close;
       }
     };
   }

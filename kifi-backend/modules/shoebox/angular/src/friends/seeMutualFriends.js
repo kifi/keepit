@@ -9,11 +9,10 @@ angular.module('kifi')
   'inviteService',
   function ($rootScope, $timeout, friendService, inviteService) {
     return {
-      //scope: {},
       replace: true,
       restrict: 'A',
       templateUrl: 'friends/seeMutualFriends.tpl.html',
-      link: function (scope, element/*, attrs*/) {
+      link: function (scope/*, element, attrs*/) {
         scope.actionText = 'Add Friend';
         scope.clickable = true;
 
@@ -49,7 +48,7 @@ angular.module('kifi')
           scope.mutualFriendsPairs = mutualFriendsPairs;
         }
 
-        updateScopeValues(scope.person);
+        updateScopeValues(scope.modalData.savedPymk);
 
         scope.addFriend = function (id) {
           if (!scope.clickable) {
@@ -71,14 +70,14 @@ angular.module('kifi')
         // A 100ms delay is inserted to wait for the Main controller
         // to respond to the 'showGlobalModal' event and display the
         // modal (we cannot scroll hidden elements).
-        var mutualFriendsContainer = element.find('.kf-mutual-friends-friends');
-        $rootScope.$on('showGlobalModal', function (e, modal) {
-          if (modal === 'seeMutualFriends') {
-            $timeout(function () {
-              mutualFriendsContainer.scrollTop(0);
-            }, 100);
-          }
-        });
+        // var mutualFriendsContainer = element.find('.kf-mutual-friends-friends');
+        // $rootScope.$on('showGlobalModal', function (e, modal) {
+        //   if (modal === 'seeMutualFriends') {
+        //     $timeout(function () {
+        //       mutualFriendsContainer.scrollTop(0);
+        //     }, 100);
+        //   }
+        // });
       }
     };
   }

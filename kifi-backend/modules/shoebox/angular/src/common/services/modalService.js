@@ -2,31 +2,46 @@
 
 angular.module('kifi.modalService', [])
 
-.factory('modalService', ['$compile', '$rootScope', '$templateCache', '$timeout',
-  function ($compile, $rootScope, $templateCache, $timeout) {
+.factory('modalService', ['$compile', '$rootScope', '$timeout',
+  function ($compile, $rootScope, $timeout) {
     function open (opts) {
       opts = opts || {};
 
-      var $modalParent = angular.element(document.querySelector('.kf-main'));  // $('.kf-main') instead? $(body) instead?
+      if (!opts.template) {
+        return;
+      }
+      var template = opts.template;
+
       var scope = $rootScope.$new();
-      var template = $templateCache.get('friends/seeMutualFriends.tpl.html'); // need to parameterize this
+      scope.show = true;
+      var $modal = angular.element('<div id="kf-modal" kf-modal show="show" kf-width="600px"></div>');
+      $modal.html('<div kf-basic-modal-content single-action="false">' + template + '</div>');
 
-      // need to parameterize class
-      var $modal = angular.element('<div kf-modal class="kf-see-mutual-friends-modal" show="true" kf-width="600px"></div>');
-      $modal.html('<div kf-basic-modal-content single-action="false">' + '<div kf-see-mutual-friends></div>' + '</div>');
+      
 
-      if (opts.person) {
-        scope.person = opts.person;
+      if (opts.className) {
+        $modal.addClass(opts.className);
+      }
+
+      if (opts.modalData) {
+        scope.modalData = opts.modalData;
       }
 
       $timeout(function () {
         $compile($modal)(scope);
-        $modalParent.append($modal);
+        angular.element(document.body).append($modal);
       });
     }
 
+    function close () {
+      var $modal = angular.element(document.getElementById('kf-modal'));
+      $modal.scope().$destroy();
+      $modal.remove();
+    }
+
     return {
-      open: open
+      open: open,
+      close: close
     };
   }
 ]);
