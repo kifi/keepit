@@ -28,6 +28,7 @@ class RecommendationGenerationCommander @Inject() (
     seedCommander: SeedIngestionCommander,
     shoebox: ShoeboxServiceClient,
     scoringHelper: UriScoringHelper,
+    attributionHelper: SeedAttributionHelper,
     db: Database,
     airbrake: AirbrakeNotifier,
     uriRecRepo: UriRecommendationRepo,
@@ -149,34 +150,47 @@ class RecommendationGenerationCommander @Inject() (
                 case _ => false
               }
             }
-            scoringHelper(cleanedItems).map { scoredItems =>
-              val toBeSavedItems = scoredItems.filter(si => shouldInclude(si.uriScores))
-              db.readWrite { implicit session =>
-                toBeSavedItems.map { item =>
-                  val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
-                  recoOpt.map { reco =>
-                    uriRecRepo.save(reco.copy(
-                      masterScore = computeMasterScore(item.uriScores),
-                      allScores = item.uriScores
-                    ))
-                  } getOrElse {
-                    uriRecRepo.save(UriRecommendation(
-                      uriId = item.uriId,
-                      userId = userId,
-                      masterScore = computeMasterScore(item.uriScores),
-                      allScores = item.uriScores,
-                      seen = false,
-                      clicked = false,
-                      kept = false
-                    ))
-                  }
+
+            val scoredItemsFut = scoringHelper(cleanedItems)
+            val toBeSavedItemsFut = scoredItemsFut.map { scoredItems => scoredItems.filter(si => shouldInclude(si.uriScores)) }
+            val attributionFut = toBeSavedItemsFut.flatMap { items => attributionHelper.getSeedAttribution(items) }
+
+            for {
+              toBeSavedItems <- toBeSavedItemsFut
+              attribution <- attributionFut
+            } yield {
+              db.readWrite { implicit s =>
+                (toBeSavedItems zip attribution) foreach {
+                  case (item, attr) =>
+                    // attr will be saved soon -- Yingjie
+                    toBeSavedItems.map { item =>
+                      val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
+                      recoOpt.map { reco =>
+                        uriRecRepo.save(reco.copy(
+                          masterScore = computeMasterScore(item.uriScores),
+                          allScores = item.uriScores
+                        ))
+                      } getOrElse {
+                        uriRecRepo.save(UriRecommendation(
+                          uriId = item.uriId,
+                          userId = userId,
+                          masterScore = computeMasterScore(item.uriScores),
+                          allScores = item.uriScores,
+                          seen = false,
+                          clicked = false,
+                          kept = false
+                        ))
+                      }
+                    }
                 }
                 genStateRepo.save(newState)
               }
+
               if (!cleanedItems.isEmpty) {
                 precomputeRecommendationsForUser(userId)
                 true
               } else false
+
             }
           }
       }
