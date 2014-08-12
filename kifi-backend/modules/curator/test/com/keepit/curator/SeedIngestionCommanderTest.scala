@@ -20,9 +20,7 @@ import scala.concurrent.duration.Duration
 import org.joda.time.DateTime
 import com.keepit.common.concurrent.ExecutionContext
 
-class SeedIngestionCommanderTest extends Specification with CuratorTestInjector {
-
-  import TestHelpers.{ makeKeeps, makeUser, makeKeepsWithPrivacy }
+class SeedIngestionCommanderTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
 
   private def modules = {
     Seq(
@@ -34,7 +32,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
   }
 
   private def setup()(implicit injector: Injector) = {
-    val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+    val shoebox = shoeboxClientInstance()
     val (user1, user2) = (makeUser(42, shoebox).id.get, makeUser(43, shoebox).id.get)
 
     (user1, user2, shoebox)

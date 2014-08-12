@@ -31,7 +31,8 @@ class CuratorTasksPlugin @Inject() (
   }
 
   private def scheduleRecommendationEmail(): Unit = {
-    log.info("scheduleRecommendationEmail() called")
-    cronTaskOnLeader(quartz, emailActor.ref, "0 45 23 * * ?", EngagementEmailTypes.FEED)
+    // <sec> <min> <hr> <day of mo> <mo> <day of wk> <yr>
+    val cronTime = "0 0 14 * * ?" // 2pm UTC == 7am PDT
+    cronTaskOnLeader(quartz, emailActor.ref, cronTime, EngagementEmailTypes.FEED)
   }
 }

@@ -5,9 +5,7 @@ import com.keepit.curator.model.{ UriScores, UriRecommendation, UriRecommendatio
 import com.keepit.model.{ UriRecommendationFeedback, User, NormalizedURI }
 import org.specs2.mutable.Specification
 
-class UriRecommendationRepoTest extends Specification with CuratorTestInjector {
-
-  import TestHelpers.makeUriRecommendation
+class UriRecommendationRepoTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
 
   def setup(): Seq[UriRecommendation] = {
     val rec1 = makeUriRecommendation(1, 42, 0.15f)
