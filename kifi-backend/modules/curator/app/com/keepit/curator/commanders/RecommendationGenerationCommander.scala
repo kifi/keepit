@@ -63,14 +63,14 @@ class RecommendationGenerationCommander @Inject() (
   ).map(Id[User](_)) //will go away once we release, just saving some computation/time for now
 
   private def computeMasterScore(scores: UriScores): Float = {
-    7 * scores.socialScore +
-      5 * scores.overallInterestScore +
-      1 * scores.priorScore +
+    5 * scores.socialScore +
+      6 * scores.overallInterestScore +
+      2 * scores.priorScore +
       1 * scores.recencyScore +
       1 * scores.popularityScore +
-      5 * scores.recentInterestScore +
+      9 * scores.recentInterestScore +
       6 * scores.rekeepScore +
-      2 * scores.discoveryScore
+      3 * scores.discoveryScore
   }
 
   def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecommendationInfo]] = {
@@ -107,13 +107,17 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   private def shouldInclude(scores: UriScores): Boolean = {
-    scores.socialScore > 0.5 ||
-      scores.overallInterestScore > 0.4 ||
-      scores.priorScore > 0 ||
-      (scores.popularityScore > 0.2 && scores.socialScore > 0.4) ||
-      scores.recentInterestScore > 0.3 ||
-      scores.rekeepScore > 0.3 ||
-      scores.discoveryScore > 0.3
+    if (scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0) {
+      scores.socialScore > 0.8 ||
+        scores.overallInterestScore > 0.65 ||
+        scores.priorScore > 0 ||
+        (scores.popularityScore > 0.2 && scores.socialScore > 0.4) ||
+        scores.recentInterestScore > 0.15 ||
+        scores.rekeepScore > 0.3 ||
+        scores.discoveryScore > 0.3
+    } else { //Yes, this could be expressed purly with a logic expression, but I think this is clearer -Stephen
+      false
+    }
   }
 
   private def precomputeRecommendationsForUser(userId: Id[User]): Unit = recommendationGenerationLock.withLockFuture {

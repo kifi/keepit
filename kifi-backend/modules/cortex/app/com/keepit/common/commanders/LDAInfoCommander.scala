@@ -25,6 +25,11 @@ class LDAInfoCommander @Inject() (
   val numOfTopics: Int = wordRep.lda.dimension
   val ldaDimMap = mutable.Map(wordRep.version -> wordRep.lda.dimension)
 
+  def getTopicName(topicId: Int): Option[String] = {
+    val conf = currentConfig.configs(topicId.toString)
+    if (conf.isNameable && conf.topicName != LDAInfo.DEFUALT_NAME) Some(conf.topicName) else None
+  }
+
   private def getAllConfigs(version: ModelVersion[DenseLDA]) = {
     val info = db.readOnlyReplica { implicit s => topicInfoRepo.getAllByVersion(version) }
 
