@@ -137,7 +137,7 @@ class AllKeepSeedIngestionHelper @Inject() (
           lastSeen = keep.createdAt,
           priorScore = None,
           timesKept = if (keep.state == KeepStates.ACTIVE) 1 else 0,
-          discoverable = !keep.isPrivate
+          discoverable = !keep.isPrivate && keep.state == KeepStates.ACTIVE
         ))
       } else {
         val discoverable = rawSeedItems(0).discoverable || (!keep.isPrivate && keep.state == KeepStates.ACTIVE)
