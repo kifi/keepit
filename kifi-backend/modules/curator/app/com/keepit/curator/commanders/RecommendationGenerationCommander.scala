@@ -168,7 +168,8 @@ class RecommendationGenerationCommander @Inject() (
                       recoOpt.map { reco =>
                         uriRecRepo.save(reco.copy(
                           masterScore = computeMasterScore(item.uriScores),
-                          allScores = item.uriScores
+                          allScores = item.uriScores,
+                          attribution = attr
                         ))
                       } getOrElse {
                         uriRecRepo.save(UriRecommendation(
@@ -178,7 +179,8 @@ class RecommendationGenerationCommander @Inject() (
                           allScores = item.uriScores,
                           seen = false,
                           clicked = false,
-                          kept = false
+                          kept = false,
+                          attribution = attr
                         ))
                       }
                     }

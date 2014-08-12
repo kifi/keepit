@@ -1,6 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.model.ScoredSeedItem
@@ -14,10 +14,13 @@ import scala.concurrent.Future
 @json case class UserAttribution(friends: Seq[Id[User]], others: Int)
 @json case class KeepAttribution(keeps: Seq[Id[Keep]])
 @json case class TopicAttribution(topicName: String)
-@json case class SeedAttribution(user: Option[UserAttribution], keep: Option[KeepAttribution], topic: Option[TopicAttribution])
+@json case class SeedAttribution(user: Option[UserAttribution] = None, keep: Option[KeepAttribution] = None, topic: Option[TopicAttribution] = None)
 
-@ImplementedBy(classOf[SeedAttributionHelperImpl])
-trait SeedAttributionHelper {
+object SeedAttribution {
+  val EMPTY = SeedAttribution()
+}
+
+class SeedAttributionHelper @Inject() (cortex: CortexServiceClient) {
 
   def getSeedAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[SeedAttribution]] = {
     val userAttrFut = getUserAttribution(seeds)
@@ -34,23 +37,15 @@ trait SeedAttributionHelper {
     }
   }
 
-  def getUserAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[UserAttribution]]]
-  def getKeepAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[KeepAttribution]]]
-  def getTopicAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[TopicAttribution]]]
-}
-
-@Singleton
-class SeedAttributionHelperImpl @Inject() (cortex: CortexServiceClient) extends SeedAttributionHelper {
-
-  def getUserAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[UserAttribution]]] = {
+  private def getUserAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[UserAttribution]]] = {
     Future.successful(Seq.fill(seeds.size)(None))
   }
 
-  def getKeepAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[KeepAttribution]]] = {
+  private def getKeepAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[KeepAttribution]]] = {
     Future.successful(Seq.fill(seeds.size)(None))
   }
 
-  def getTopicAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[TopicAttribution]]] = {
+  private def getTopicAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[TopicAttribution]]] = {
     cortex.getTopicNames(seeds.map { _.uriId }).map { names =>
       names.map { nameOpt => nameOpt.map { TopicAttribution(_) } }
     }

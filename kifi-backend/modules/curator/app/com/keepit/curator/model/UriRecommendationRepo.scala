@@ -7,6 +7,7 @@ import com.keepit.common.db.slick.{ DBSession, DataBaseComponent, DbRepo }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.time.Clock
+import com.keepit.curator.commanders.SeedAttribution
 import com.keepit.model.{ UriRecommendationUserInteraction, UriRecommendationFeedback, User, NormalizedURI }
 import play.api.libs.json.{ Json }
 
@@ -32,6 +33,11 @@ class UriRecommendationRepoImpl @Inject() (
     { jstr => Json.parse(jstr).as[UriScores] }
   )
 
+  implicit val attributionMapper = MappedColumnType.base[SeedAttribution, String](
+    { attr => Json.stringify(Json.toJson(attr)) },
+    { jstr => Json.parse(jstr).as[SeedAttribution] }
+  )
+
   type RepoImpl = UriRecommendationTable
 
   class UriRecommendationTable(tag: Tag) extends RepoTable[UriRecommendation](db, tag, "uri_recommendation") {
@@ -43,7 +49,8 @@ class UriRecommendationRepoImpl @Inject() (
     def seen = column[Boolean]("seen", O.NotNull)
     def clicked = column[Boolean]("clicked", O.NotNull)
     def kept = column[Boolean]("kept", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, vote.?, uriId, userId, masterScore, allScores, seen, clicked, kept) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
+    def attribution = column[SeedAttribution]("attribution", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, vote.?, uriId, userId, masterScore, allScores, seen, clicked, kept, attribution) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
   }
 
   def table(tag: Tag) = new UriRecommendationTable(tag)

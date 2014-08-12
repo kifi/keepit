@@ -3,6 +3,7 @@ package com.keepit.curator
 import com.google.inject.Injector
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
+import com.keepit.curator.commanders.SeedAttribution
 import com.keepit.model._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import model.{ UriRecommendationStates, UriScores, UriRecommendation }
@@ -66,5 +67,5 @@ object TestHelpers {
         priorScore = 1.0f,
         rekeepScore = 1.0f,
         discoveryScore = 1.0f),
-      seen = false, clicked = false, kept = false)
+      seen = false, clicked = false, kept = false, attribution = SeedAttribution.EMPTY)
 }
