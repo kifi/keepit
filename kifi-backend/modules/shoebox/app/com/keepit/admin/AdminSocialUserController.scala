@@ -88,9 +88,9 @@ class AdminSocialUserController @Inject() (
         socialUserInfoRepo.getAllUsersToRefresh().map(_.socialId)
       }
 
-      socialIds.grouped(10).map { idGroup =>
+      socialIds.grouped(10).foreach { idGroup =>
         db.readWrite { implicit s =>
-          socialUserInfoRepo.get(idGroup).foreach { socialUser =>
+          socialUserInfoRepo.getBySocialIds(idGroup).foreach { socialUser =>
             val minutesToSubtract = Random.nextInt(minutesFromNow)
             val updatedUser = socialUser.withLastGraphRefresh(Some(now.minusMinutes(minutesToSubtract)))
             socialUserInfoRepo.save(updatedUser)
