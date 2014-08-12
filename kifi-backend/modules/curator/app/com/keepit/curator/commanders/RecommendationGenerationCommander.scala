@@ -126,55 +126,59 @@ class RecommendationGenerationCommander @Inject() (
       } getOrElse {
         UserRecommendationGenerationState(userId = userId)
       }
-      val seedsFuture = for {
+      val seedsAndSeqFuture = for {
         seeds <- seedCommander.getBySeqNumAndUser(state.seq, userId, 200)
         discoverableSeeds = seeds.filter(_.discoverable)
         candidateURIs <- shoebox.getCandidateURIs(discoverableSeeds.map { _.uriId })
       } yield {
-        (discoverableSeeds zip candidateURIs) filter (_._2) map (_._1)
+        ((discoverableSeeds zip candidateURIs) filter (_._2) map (_._1), if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
       }
 
-      val res: Future[Boolean] = seedsFuture.flatMap { seedItems =>
-        if (seedItems.isEmpty) {
-          Future.successful(false)
-        } else {
-          val newState = state.copy(seq = seedItems.map(_.seq).max)
-          val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
-            seedItem.keepers match {
-              case Keepers.ReasonableNumber(users) => !users.contains(userId)
-              case _ => false
-            }
-          }
-          scoringHelper(cleanedItems).map { scoredItems =>
-            val toBeSavedItems = scoredItems.filter(si => shouldInclude(si.uriScores))
+      val res: Future[Boolean] = seedsAndSeqFuture.flatMap {
+        case (seedItems, newSeqNum) =>
+          val newState = state.copy(seq = newSeqNum)
+          if (seedItems.isEmpty) {
             db.readWrite { implicit session =>
-              toBeSavedItems.map { item =>
-                val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
-                recoOpt.map { reco =>
-                  uriRecRepo.save(reco.copy(
-                    masterScore = computeMasterScore(item.uriScores),
-                    allScores = item.uriScores
-                  ))
-                } getOrElse {
-                  uriRecRepo.save(UriRecommendation(
-                    uriId = item.uriId,
-                    userId = userId,
-                    masterScore = computeMasterScore(item.uriScores),
-                    allScores = item.uriScores,
-                    seen = false,
-                    clicked = false,
-                    kept = false
-                  ))
-                }
-              }
               genStateRepo.save(newState)
             }
-            if (!cleanedItems.isEmpty) {
-              precomputeRecommendationsForUser(userId)
-              true
-            } else false
+            Future.successful(false)
+          } else {
+            val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
+              seedItem.keepers match {
+                case Keepers.ReasonableNumber(users) => !users.contains(userId)
+                case _ => false
+              }
+            }
+            scoringHelper(cleanedItems).map { scoredItems =>
+              val toBeSavedItems = scoredItems.filter(si => shouldInclude(si.uriScores))
+              db.readWrite { implicit session =>
+                toBeSavedItems.map { item =>
+                  val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
+                  recoOpt.map { reco =>
+                    uriRecRepo.save(reco.copy(
+                      masterScore = computeMasterScore(item.uriScores),
+                      allScores = item.uriScores
+                    ))
+                  } getOrElse {
+                    uriRecRepo.save(UriRecommendation(
+                      uriId = item.uriId,
+                      userId = userId,
+                      masterScore = computeMasterScore(item.uriScores),
+                      allScores = item.uriScores,
+                      seen = false,
+                      clicked = false,
+                      kept = false
+                    ))
+                  }
+                }
+                genStateRepo.save(newState)
+              }
+              if (!cleanedItems.isEmpty) {
+                precomputeRecommendationsForUser(userId)
+                true
+              } else false
+            }
           }
-        }
       }
       res.onFailure {
         case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
