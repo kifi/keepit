@@ -84,13 +84,13 @@ class AdminSocialUserController @Inject() (
   def smoothLastGraphRefreshTimes(minutesFromNow: Int) = AdminJsonAction.authenticated() { implicit request =>
     Ok {
       val now = clock.now()(DateTimeZone.UTC)
-      val userIds: Seq[Id[User]] = db.readOnlyReplica { implicit s =>
-        socialUserInfoRepo.getAllUsersToRefresh().map(_.userId.get)
+      val socialIds = db.readOnlyReplica { implicit s =>
+        socialUserInfoRepo.getAllUsersToRefresh().map(_.socialId)
       }
 
-      userIds.grouped(10).map { idGroup =>
+      socialIds.grouped(10).foreach { idGroup =>
         db.readWrite { implicit s =>
-          socialUserInfoRepo.getByUsers(idGroup).foreach { socialUser =>
+          socialUserInfoRepo.getBySocialIds(idGroup).foreach { socialUser =>
             val minutesToSubtract = Random.nextInt(minutesFromNow)
             val updatedUser = socialUser.withLastGraphRefresh(Some(now.minusMinutes(minutesToSubtract)))
             socialUserInfoRepo.save(updatedUser)
@@ -98,7 +98,7 @@ class AdminSocialUserController @Inject() (
         }
       }
 
-      JsString(s"updated ${userIds.size} records")
+      JsString(s"updated ${socialIds.size} records")
     }
   }
 }

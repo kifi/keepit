@@ -4,7 +4,7 @@ import com.keepit.common.db.slick.{ DbRepo, SeqNumberFunction, SeqNumberDbFuncti
 import com.keepit.common.db.slick.{ RepoWithDelete, DbRepoWithDelete }
 import com.keepit.common.db.{ Id, DbSequenceAssigner, SequenceNumber }
 import com.keepit.model.{ User, NormalizedURI }
-import com.keepit.common.time.Clock
+import com.keepit.common.time.{ currentDateTime, Clock }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.actor.ActorInstance
@@ -47,7 +47,8 @@ class RawSeedItemRepoImpl @Inject() (
     def lastSeen = column[DateTime]("last_seen", O.NotNull)
     def priorScore = column[Float]("prior_score", O.Nullable)
     def timesKept = column[Int]("times_kept", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, seq, uriId, userId.?, firstKept, lastKept, lastSeen, priorScore.?, timesKept) <> ((RawSeedItem.apply _).tupled, RawSeedItem.unapply _)
+    def discoverable = column[Boolean]("discoverable", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, seq, uriId, userId.?, firstKept, lastKept, lastSeen, priorScore.?, timesKept, discoverable) <> ((RawSeedItem.apply _).tupled, RawSeedItem.unapply _)
   }
 
   def table(tag: Tag) = new RawSeedItemTable(tag)
