@@ -95,7 +95,7 @@ class AuthHelper @Inject() (
     val hasher = Registry.hashers.currentHasher
     val tupleOpt: Option[(Boolean, SocialUserInfo)] = checkForExistingUser(emailAddress)
     val session = request.session
-    val home = com.keepit.controllers.website.routes.HomeController.home()
+    val home = com.keepit.controllers.website.routes.KifiSiteRouter.home()
     val res: SimpleResult = tupleOpt collect {
       case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
         // Social user exists with these credentials
@@ -319,7 +319,7 @@ class AuthHelper @Inject() (
               authenticateUser(sui.userId.get, onError = { error =>
                 throw error
               }, onSuccess = { authenticator =>
-                Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url))
+                Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.KifiSiteRouter.home.url))
                   .withSession(request.request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
                   .withCookies(authenticator.toCookie)
               })

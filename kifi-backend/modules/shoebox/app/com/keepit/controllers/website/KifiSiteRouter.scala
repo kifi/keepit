@@ -16,7 +16,6 @@ sealed trait Routeable
 trait AngularRoute extends Routeable
 private case class AngularLoggedIn(preload: Seq[Request[_] => Future[String]] = Seq.empty) extends AngularRoute
 private case class Angular(preload: Seq[Request[_] => Future[String]] = Seq.empty) extends AngularRoute
-private case class AboutAssetsTwo(path: Path) extends Routeable // todo(andrew): rename to AboutAssers when that class is brought in
 private case class RedirectRoute(url: String) extends Routeable
 private case class StaticResult(result: SimpleResult) extends Routeable
 private case object Error404 extends Routeable
@@ -41,18 +40,17 @@ class KifiSiteRouter @Inject() (
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   // Useful to route anything that a) serves the Angular app, b) requires context about if a user is logged in or not
-  def app() = HtmlAction.apply(authenticatedAction = { request =>
-    route(request) match {
-      case ng: AngularLoggedIn => AngularDistAssets.angularApp(ng.preload.map(s => s(request)))
-      case ng: Angular => AngularDistAssets.angularApp(ng.preload.map(s => s(request)))
-      case Error404 => NotFound
-      case about: AboutAssetsTwo => NotFound // todo: update
-    }
+  def app(path: String) = HtmlAction.apply(authenticatedAction = { request =>
+    println("Routing " + request.path)
+    doApp(request)
   }, unauthenticatedAction = { request =>
-    Redirect("/")
+    doApp(request)
   })
 
-  private def doApp(request: Request[_]) = {
+  def home = app("home")
+
+  // When we refactor the authenticator to stop requiring two functions, this can be simplified.
+  private def doApp[T](request: Request[T]) = {
     // Short-circuit for landing pages
     if (request.path == "/" && request.userIdOpt.isEmpty) {
       landingPage(request)
@@ -60,7 +58,7 @@ class KifiSiteRouter @Inject() (
       (request, route(request)) match {
         case (_, Error404) =>
           NotFound // better 404 please!
-        case (r: AuthenticatedRequest, ng: AngularRoute) =>
+        case (r: AuthenticatedRequest[T], ng: AngularRoute) =>
           // logged in user, logged in only ng. deliver.
           ng match {
             case ang: AngularLoggedIn =>
@@ -68,10 +66,10 @@ class KifiSiteRouter @Inject() (
             case ang: Angular =>
               AngularDistAssets.angularApp()
           }
-        case (r: Request, _) if request.identityOpt.isDefined =>
+        case (r: Request[T], _) if request.identityOpt.isDefined =>
           // non-authed client, but identity is set. Mid-signup, send them there.
           Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-        case (r: Request, ng: Angular) =>
+        case (r: Request[T], ng: Angular) =>
           // non-authed client, routing to ng page
           Redirect("/") // todo: serve ng app!
       }
@@ -87,7 +85,7 @@ class KifiSiteRouter @Inject() (
         val ua = agentOpt.get.userAgent
         val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
         if (isIphone) {
-          homeController.iPhoneAppStoreRedirect(request)
+          homeController.iPhoneAppStoreRedirectWithTracking(request)
         } else {
           Ok(views.html.marketing.mobileLanding(""))
         }

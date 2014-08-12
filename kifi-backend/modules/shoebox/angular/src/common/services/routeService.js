@@ -39,7 +39,7 @@ angular.module('kifi.routeService', [])
       },
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
-      logout: 'https://www.kifi.com/logout',
+      logout: '/logout',
       emailInfoUrl: route('/user/email'),
       abooksUrl: route('/user/abooks'),
       resendVerificationUrl: route('/user/resend-verification'),

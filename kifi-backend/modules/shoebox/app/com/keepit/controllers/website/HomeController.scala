@@ -115,7 +115,7 @@ class HomeController @Inject() (
   }
 
   def iPhoneAppStoreRedirect = HtmlAction(authenticatedAction = iPhoneAppStoreRedirectWithTracking(_), unauthenticatedAction = iPhoneAppStoreRedirectWithTracking(_))
-  private def iPhoneAppStoreRedirectWithTracking(implicit request: RequestHeader): SimpleResult = {
+  def iPhoneAppStoreRedirectWithTracking(implicit request: RequestHeader): SimpleResult = {
     val context = new HeimdalContextBuilder()
     context.addRequestInfo(request)
     context += ("type", "landing")
