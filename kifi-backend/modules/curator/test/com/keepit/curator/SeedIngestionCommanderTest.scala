@@ -42,6 +42,53 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
 
   "SeedIngestionCommander" should {
 
+    "ingest keeps and have discoverability correctly" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, shoebox) = setup()
+        val user1Keeps = makeKeepsWithPrivacy(user1, 5, true, shoebox)
+        val keepInfoRepo = inject[CuratorKeepInfoRepo]
+        val seedItemRepo = inject[RawSeedItemRepo]
+        val commander = inject[SeedIngestionCommander]
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        var seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+        seedItems.foreach(_.discoverable === false)
+
+        shoebox.saveBookmarks(user1Keeps(4).copy(
+          userId = user2,
+          isPrivate = false))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(4).discoverable === true
+
+        shoebox.saveBookmarks(user1Keeps(4).copy(
+          isPrivate = true))
+        shoebox.saveBookmarks(Keep(
+          uriId = Id[NormalizedURI](5),
+          urlId = Id[URL](5),
+          url = "https://kifi.com",
+          userId = user1,
+          state = KeepStates.ACTIVE,
+          source = KeepSource.keeper,
+          isPrivate = true,
+          libraryId = None))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(4).discoverable === false
+
+        shoebox.saveBookmarks(user1Keeps(4).copy(
+          isPrivate = false,
+          state = KeepStates.INACTIVE))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(4).discoverable === false
+
+      }
+    }
+
     //this is in one test case instead of a bunch to reduce run time (i.e. avoid repeated db initialization) as we are moving quite a bit of data.
     //Already takes several seconds as it is.
     "ingest multiple batches and update sequence number and raw seed items correctly" in {

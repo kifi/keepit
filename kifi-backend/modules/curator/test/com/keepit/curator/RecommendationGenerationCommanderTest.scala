@@ -81,7 +81,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
       }
     }
 
-    "pre compute Recommendations" in {
+    "pre-compute Recommendations" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[RecommendationGenerationCommander]
         commander.precomputeRecommendations()

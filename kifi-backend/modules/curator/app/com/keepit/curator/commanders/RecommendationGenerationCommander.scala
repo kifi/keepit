@@ -84,7 +84,9 @@ class RecommendationGenerationCommander @Inject() (
           userId = reco.userId,
           uriId = reco.uriId,
           {
-            val score = scoreCoefficients.recencyScore.getOrElse(defaultScore) * reco.allScores.recencyScore +
+            if (scoreCoefficients.isEmpty)
+              computeMasterScore(reco.allScores)
+            else scoreCoefficients.recencyScore.getOrElse(defaultScore) * reco.allScores.recencyScore +
               scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * reco.allScores.overallInterestScore +
               scoreCoefficients.priorScore.getOrElse(defaultScore) * reco.allScores.priorScore +
               scoreCoefficients.socialScore.getOrElse(defaultScore) * reco.allScores.socialScore +
@@ -92,7 +94,6 @@ class RecommendationGenerationCommander @Inject() (
               scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore +
               scoreCoefficients.rekeepScore.getOrElse(defaultScore) * reco.allScores.rekeepScore +
               scoreCoefficients.discoveryScore.getOrElse(defaultScore) * reco.allScores.discoveryScore
-            if (score != 0.0f) score else computeMasterScore(reco.allScores)
           },
           explain = Some(reco.allScores.toString)
         )
