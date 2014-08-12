@@ -1,16 +1,19 @@
 package com.keepit.controllers.admin
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
 import com.google.inject.Inject
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
+import com.keepit.abook.ABookServiceClient
+import com.keepit.common.controller.{ ActionAuthenticator, AdminController }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
+import com.keepit.common.time.Clock
 import com.keepit.model._
-import com.keepit.abook.ABookServiceClient
-
-import views.html
 import com.keepit.social.{ SocialGraphPlugin, SocialUserRawInfoStore }
+import org.joda.time.DateTimeZone
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.JsString
+import views.html
+
+import util.Random
 
 class AdminSocialUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -19,7 +22,8 @@ class AdminSocialUserController @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   socialUserRawInfoStore: SocialUserRawInfoStore,
   socialGraphPlugin: SocialGraphPlugin,
-  abook: ABookServiceClient)
+  abook: ABookServiceClient,
+  clock: Clock)
     extends AdminController(actionAuthenticator) {
 
   def resetSocialUser(socialUserId: Id[SocialUserInfo]) = AdminHtmlAction.authenticated { implicit request =>
@@ -73,6 +77,24 @@ class AdminSocialUserController @Inject() (
     abook.ripestFruit(user, howManyReally).map { socialIds =>
       val socialUsers = db.readOnlyReplica { implicit session => socialIds.map(socialUserInfoRepo.get(_)) }
       Ok(html.admin.socialUsers(socialUsers, 0))
+    }
+  }
+
+  // randomizes that last_graph_refresh datetime for all users between now and X minutes ago
+  def smoothLastGraphRefreshTimes(minutesFromNow: Int) = AdminJsonAction.authenticated() { implicit request =>
+    Ok {
+      val now = clock.now()(DateTimeZone.UTC)
+      db.readWrite { implicit s =>
+        val socialUsers = socialUserInfoRepo.getAllUsersToRefresh()
+
+        socialUsers.foreach { socialUser =>
+          val minutesToSubtract = Random.nextInt(minutesFromNow)
+          val updatedUser = socialUser.withLastGraphRefresh(Some(now.minusMinutes(minutesToSubtract)))
+          socialUserInfoRepo.save(updatedUser)
+        }
+
+        JsString(s"updated ${socialUsers.size} records")
+      }
     }
   }
 }
