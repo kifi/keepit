@@ -1,4 +1,4 @@
-@(socialUserInfo: SocialUserInfo, socialConnections: Seq[SocialUserInfo], rawInfo: Option[SocialUserRawInfo])
+@(socialUserInfo: SocialUserInfo, socialConnections: Seq[SocialUserBasicInfo], rawInfo: Option[SocialUserRawInfo])
 
 @userWithSocialDisplay = {
   <span style="margin:2px">
@@ -27,7 +27,7 @@
    Last updated: @adminHelper.dateTimeDisplay(socialUserInfo.updatedAt)
 
    @if(socialUserInfo.userId.isDefined) {
-     <h3>Forty Two User: @adminHelper.socialUserDisplay(socialUserInfo)</h3>
+     <h3>Forty Two User: @adminHelper.socialUserDisplay(SocialUserBasicInfo.fromSocialUser(socialUserInfo))</h3>
    }
    <p>
     <button class="btn btn-primary" onclick="refreshSociaUserInfo()">Refresh Social User Info!</button>

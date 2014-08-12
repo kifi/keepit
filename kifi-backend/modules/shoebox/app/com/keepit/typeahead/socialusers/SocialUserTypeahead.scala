@@ -59,19 +59,9 @@ class SocialUserTypeahead @Inject() (
   }
 
   protected def getAllInfosForUser(id: Id[User]): Future[Seq[SocialUserBasicInfo]] = SafeFuture {
-    val builder = new mutable.ArrayBuffer[SocialUserBasicInfo]
     db.readOnlyMaster { implicit session =>
-      val infos = socialUserRepo.getSocialUserBasicInfosByUser(id) // todo: filter out fortytwo?
-      log.debug(s"[social.getAllInfosForUser($id)] res(len=${infos.length}):${infos.mkString(",")}")
-      for (info <- infos) {
-        val connInfos = socialConnRepo.getSocialUserConnections(info.id)
-        log.debug(s"[social.getConns($id)] (${info.id},${info.networkType}).conns(len=${connInfos.length}):${connInfos.mkString(",")}")
-        builder ++= connInfos.map { SocialUserBasicInfo.fromSocialUser(_) } // conversion overhead
-      }
+      socialConnRepo.getSocialConnectionInfosByUser(id).valuesIterator.flatten.toSeq
     }
-    val res = builder.result
-    log.debug(s"[social.getAllInfosForUser($id)] res(len=${res.length}): ${res.mkString(",")}")
-    res
   }
 
   override protected def extractId(info: SocialUserBasicInfo): Id[SocialUserInfo] = info.id

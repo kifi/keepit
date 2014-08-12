@@ -214,9 +214,6 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl].contactsConnectedToEmailAddress =
           Set(user2, user3, user4).map(_.id.get)
 
-        val userExpCommander = inject[LocalUserExperimentCommander]
-        userExpCommander.addExperimentForUser(user4.id.get, ExperimentType.NOTIFY_USER_WHEN_CONTACTS_JOIN)
-
         outbox.size === 0
         tellContactsAboutNewUser(user1) === Set(user4.id.get)
         outbox.size === 1

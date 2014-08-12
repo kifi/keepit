@@ -62,8 +62,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
           (user, socialUserInfo)
         }
 
-        val connections = inject[UserConnectionCreator].createConnections(socialUserInfo,
-          extractedFriends.map(_.socialId), SocialNetworks.FACEBOOK)
+        val connections = inject[UserConnectionCreator].createConnections(socialUserInfo, extractedFriends.map(_.socialId))
 
         connections.size === 12
 
@@ -72,7 +71,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
         outbox(0).to === Seq(EmailAddress("andrew@gmail.com"))
 
         inject[Database].readOnlyMaster { implicit s =>
-          val fortyTwoConnections = inject[SocialConnectionRepo].getFortyTwoUserConnections(user.id.get)
+          val fortyTwoConnections = inject[SocialConnectionRepo].getSociallyConnectedUsers(user.id.get)
           val userConnections = inject[UserConnectionRepo].getConnectedUsers(user.id.get)
           val connectionCount = inject[UserConnectionRepo].getConnectionCount(user.id.get)
           fortyTwoConnections === userConnections
@@ -123,7 +122,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
         }
 
         val connections = inject[UserConnectionCreator].createConnections(socialUserInfo,
-          extractedFriends.map(_.socialId), SocialNetworks.FACEBOOK)
+          extractedFriends.map(_.socialId))
 
         connections.size === 12
 
@@ -132,13 +131,13 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
         val extractedFriends2 = inject[FacebookSocialGraph].extractFriends(json2)
 
         val connectionsAfter = inject[UserConnectionCreator]
-          .createConnections(socialUserInfo, extractedFriends2.map(_.socialId), SocialNetworks.FACEBOOK)
+          .createConnections(socialUserInfo, extractedFriends2.map(_.socialId))
 
         inject[Database].readOnlyMaster { implicit s =>
-          val fortyTwoConnections = inject[SocialConnectionRepo].getFortyTwoUserConnections(user.id.get)
+          val sociallyConnectedUsers = inject[SocialConnectionRepo].getSociallyConnectedUsers(user.id.get)
           val userConnections = inject[UserConnectionRepo].getConnectedUsers(user.id.get)
           val connectionCount = inject[UserConnectionRepo].getConnectionCount(user.id.get)
-          fortyTwoConnections.size === 1
+          sociallyConnectedUsers.size === 1
           connectionCount === userConnections.size
           connectionCount === 2
         }
