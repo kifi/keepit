@@ -7,10 +7,9 @@ angular.module('kifi')
   '$timeout',
   'friendService',
   'inviteService',
-  'savePymkService',
-  function ($rootScope, $timeout, friendService, inviteService, savePymkService) {
+  function ($rootScope, $timeout, friendService, inviteService) {
     return {
-      scope: {},
+      //scope: {},
       replace: true,
       restrict: 'A',
       templateUrl: 'friends/seeMutualFriends.tpl.html',
@@ -50,14 +49,7 @@ angular.module('kifi')
           scope.mutualFriendsPairs = mutualFriendsPairs;
         }
 
-        // Retrieve a person you may know and his mutual friends,
-        // and update the people displayed in the modal.
-        updateScopeValues(savePymkService.getSavedPersonYouMayKnow());
-        scope.$watch(function () {
-          return savePymkService.getSavedPersonYouMayKnow();
-        }, function (newVal/*, oldVal, scope*/) {
-          updateScopeValues(newVal);
-        });
+        updateScopeValues(scope.person);
 
         scope.addFriend = function (id) {
           if (!scope.clickable) {
