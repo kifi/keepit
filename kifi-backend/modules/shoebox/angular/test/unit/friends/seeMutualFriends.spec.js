@@ -99,7 +99,7 @@ describe('kifi.friends.seeMutualFriends', function () {
 
     });
 
-    it('should reload when there is a new saved person', function () {
+    it('should update modal content when saved person changes', function () {
       testSavedPerson = savedPerson1;
       scope.$digest();
       expect(elem.find('.kf-mutual-friends-pymk-name').text()).toBe('Alexander Willis Schultz');
