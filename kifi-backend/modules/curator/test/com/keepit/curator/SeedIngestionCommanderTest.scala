@@ -22,7 +22,7 @@ import com.keepit.common.concurrent.ExecutionContext
 
 class SeedIngestionCommanderTest extends Specification with CuratorTestInjector {
 
-  import TestHelpers.{ makeKeeps, makeUser }
+  import TestHelpers.{ makeKeeps, makeUser, makeKeepsWithPrivacy }
 
   private def modules = {
     Seq(
@@ -85,7 +85,6 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
 
         seedItems(4).discoverable === false
-
       }
     }
 
@@ -100,6 +99,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         val systemValueRepo = inject[SystemValueRepo]
         val seedItemRepo = inject[RawSeedItemRepo]
         val commander = inject[SeedIngestionCommander]
+
         db.readOnlyMaster { implicit session => keepInfoRepo.all() }.length === 0
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readOnlyMaster { implicit session => keepInfoRepo.all() }.length === 60
@@ -276,7 +276,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
 
         db.readOnlyMaster { implicit session =>
           val seedItem1: Option[RawSeedItem] = seedItemRepo.getByUriIdAndUserId(user1Keeps.head.uriId, Some(user1))
-          seedItem1.get.priorScore === Some(0.795.toFloat)
+          seedItem1.get.priorScore === Some(0.795f)
           seedItem1.get.userId === Some(Id[User](42))
           seedItem1.get.uriId === Id[NormalizedURI](1)
 

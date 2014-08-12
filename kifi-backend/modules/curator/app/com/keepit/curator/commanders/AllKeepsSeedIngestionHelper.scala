@@ -6,7 +6,6 @@ import com.keepit.common.db.{ SequenceNumber, State }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.time._
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 
@@ -88,21 +87,23 @@ class AllKeepSeedIngestionHelper @Inject() (
 
   private def processKeep(keep: Keep)(implicit session: RWSession): Unit = {
     keepInfoRepo.getByKeepId(keep.id.get).map { keepInfo =>
-      val seedItemsByOldUriId = rawSeedsRepo.getByUriId(keepInfo.uriId)
+      val rawSeedItemsByOldUriId = rawSeedsRepo.getByUriId(keepInfo.uriId)
       //deal correctly with the case where the item was renormalized by a previously ingested keep
-      val rawSeedItems = if (seedItemsByOldUriId.isEmpty) rawSeedsRepo.getByUriId(keep.uriId) else seedItemsByOldUriId
+      val rawSeedItems = if (rawSeedItemsByOldUriId.isEmpty) rawSeedsRepo.getByUriId(keep.uriId) else rawSeedItemsByOldUriId
       log.info(s"Got seed items: ${rawSeedItems} for keepInfo ${keepInfo} and keep ${keep}")
       require(rawSeedItems.length > 0, s"Missing RSI: keepId ${keepInfo.keepId}, uriId ${keepInfo.uriId}")
       val countChange = if (keep.state.value != keepInfo.state.value) {
         if (keepInfo.state == CuratorKeepInfoStates.ACTIVE) -1 else if (keep.state == KeepStates.ACTIVE) 1 else 0
       } else 0
       rawSeedItems.foreach { rawSeedItem =>
-        updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, countChange, discoverable)
+        updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, countChange, rawSeedItem.discoverable)
       }
+
       keepInfoRepo.save(keepInfo.copy(
         uriId = keep.uriId,
         userId = keep.userId,
-        state = State[CuratorKeepInfo](keep.state.value)
+        state = State[CuratorKeepInfo](keep.state.value),
+        discoverable = !keep.isPrivate
       ))
 
       val discoverable = if (keepInfo.discoverable && keep.isPrivate) keepInfoRepo.checkDiscoverableByUriId(keep.uriId)
@@ -117,11 +118,12 @@ class AllKeepSeedIngestionHelper @Inject() (
         uriId = keep.uriId,
         userId = keep.userId,
         keepId = keep.id.get,
-        state = State[CuratorKeepInfo](keep.state.value)
+        state = State[CuratorKeepInfo](keep.state.value),
+        discoverable = !keep.isPrivate
       ))
 
-      val seedItems = rawSeedsRepo.getByUriId(keep.uriId)
-      if (seedItems.isEmpty) {
+      val rawSeedItems = rawSeedsRepo.getByUriId(keep.uriId)
+      if (rawSeedItems.isEmpty) {
         rawSeedsRepo.save(RawSeedItem(
           uriId = keep.uriId,
           userId = None,
@@ -129,7 +131,8 @@ class AllKeepSeedIngestionHelper @Inject() (
           lastKept = keep.createdAt,
           lastSeen = keep.createdAt,
           priorScore = None,
-          timesKept = if (keep.state == KeepStates.ACTIVE) 1 else 0
+          timesKept = if (keep.state == KeepStates.ACTIVE) 1 else 0,
+          discoverable = !keep.isPrivate
         ))
       } else {
         val discoverable = ((rawSeedItems(0).discoverable || !keep.isPrivate) && keep.state == KeepStates.ACTIVE)
