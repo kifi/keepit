@@ -31,15 +31,17 @@ object Vertex {
     checkIfVertexExists(vertices)(destinationVertexId)
 
     val component = (sourceVertexId.kind, destinationVertexId.kind, edgeKind)
-
     val sourceVertex = vertices(sourceVertexId)
-    if (!sourceVertex.outgoingEdges.edges.contains(component) || !sourceVertex.outgoingEdges.edges(component).contains(destinationVertexId)) {
-      throw new EdgeNotFoundException(sourceVertexId, destinationVertexId, edgeKind)
-    }
-
     val destinationVertex = vertices(destinationVertexId)
-    if (!destinationVertex.incomingEdges.edges.contains(component) || !destinationVertex.incomingEdges.edges(component).contains(sourceVertexId)) {
-      throw new EdgeNotFoundException(sourceVertexId, destinationVertexId, edgeKind)
+
+    val outgoingEdgeExists = sourceVertex.outgoingEdges.edges.contains(component) && sourceVertex.outgoingEdges.edges(component).contains(destinationVertexId)
+    val incomingEdgeExists = destinationVertex.incomingEdges.edges.contains(component) && destinationVertex.incomingEdges.edges(component).contains(sourceVertexId)
+
+    (outgoingEdgeExists, incomingEdgeExists) match {
+      case (true, true) => // all good
+      case (false, false) => throw new EdgeNotFoundException(sourceVertexId, destinationVertexId, edgeKind)
+      case (true, false) => throw new IllegalStateException(s"Could not find incoming edge matching outgoing edge ${(sourceVertexId, destinationVertexId, edgeKind)}")
+      case (false, true) => throw new IllegalStateException(s"Could not find outgoing edge matching incoming edge ${(sourceVertexId, destinationVertexId, edgeKind)}")
     }
   }
 }
