@@ -262,8 +262,8 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfFriendRequestBanner', [
-  'injectedState', 'routeService', 'userService', 'keepWhoService', 'profileService', '$timeout',
-  function (injectedState, routeService, userService, keepWhoService, profileService, $timeout) {
+  'injectedState', 'routeService', 'userService', 'keepWhoService', 'profileService', '$timeout', '$analytics',
+  function (injectedState, routeService, userService, keepWhoService, profileService, $timeout, $analytics) {
 
     function setupShowFriendRequestBanner(scope, externalId) {
       userService.getBasicUserInfo(externalId, true).then(function (res) {
@@ -280,6 +280,12 @@ angular.module('kifi.invite', [
         };
 
         scope.onAfterInvite = function () {
+          $analytics.eventTrack('user_clicked_page', {
+            type: 'addFriends',
+            subtype: 'contactJoined',
+            action: 'addFriend'
+          });
+
           $timeout(function () {
             scope.hidden = true;
           }, 3000);
@@ -287,6 +293,12 @@ angular.module('kifi.invite', [
       });
 
       scope.close = function () {
+        $analytics.eventTrack('user_clicked_page', {
+          type: 'addFriends',
+          subtype: 'contactJoined',
+          action: 'close'
+        });
+
         scope.hidden = true;
       };
     }
