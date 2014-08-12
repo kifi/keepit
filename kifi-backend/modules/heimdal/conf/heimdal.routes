@@ -35,9 +35,15 @@ POST /internal/heimdal/user/delighted/cancel           @com.keepit.controllers.D
 GET  /internal/heimdal/data/keepDiscovery/page/:page   @com.keepit.controllers.KeepDiscoveryController.page(page:Int, size:Int)
 GET  /internal/heimdal/data/keepDiscovery/count        @com.keepit.controllers.KeepDiscoveryController.count
 GET  /internal/heimdal/data/keepDiscovery/getDiscoveryCountByKeeper @com.keepit.controllers.KeepDiscoveryController.getDiscoveryCountByKeeper(userId: Id[User])
+GET  /internal/heimdal/data/keepDiscovery/getUriDiscoveriesWithCountsByKeeper   @com.keepit.controllers.KeepDiscoveryController.getUriDiscoveriesWithCountsByKeeper(userId: Id[User])
+POST /internal/heimdal/data/keepDiscovery/getDiscoveryCountsByURIs              @com.keepit.controllers.KeepDiscoveryController.getDiscoveryCountsByURIs()
+POST /internal/heimdal/data/keepDiscovery/getDiscoveryCountsByKeepIds           @com.keepit.controllers.KeepDiscoveryController.getDiscoveryCountsByKeepIds()
 
 GET  /internal/heimdal/data/reKeep/page/:page          @com.keepit.controllers.ReKeepController.page(page:Int, size:Int)
 GET  /internal/heimdal/data/reKeep/count               @com.keepit.controllers.ReKeepController.count
+GET  /internal/heimdal/data/reKeep/getUriReKeepsWithCountsByKeeper  @com.keepit.controllers.ReKeepController.getUriReKeepsWithCountsByKeeper(userId: Id[User])
+POST /internal/heimdal/data/reKeep/getReKeepCountsByURIs            @com.keepit.controllers.ReKeepController.getReKeepCountsByURIs()
+POST /internal/heimdal/data/reKeep/getReKeepCountsByKeepIds         @com.keepit.controllers.ReKeepController.getReKeepCountsByKeepIds()
 
 GET  /internal/heimdal/data/userKeepInfo/getReKeepCountsByUserUri @com.keepit.controllers.UserKeepInfoController.getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI])
 

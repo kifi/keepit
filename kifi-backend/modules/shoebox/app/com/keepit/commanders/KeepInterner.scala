@@ -37,9 +37,6 @@ class KeepInterner @Inject() (
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   airbrake: AirbrakeNotifier,
-  kifiHitCache: KifiHitCache,
-  keepDiscoveryRepo: KeepDiscoveryRepo,
-  rekeepRepo: ReKeepRepo,
   keptAnalytics: KeepingAnalytics,
   keepsAbuseMonitor: KeepsAbuseMonitor,
   rawBookmarkFactory: RawBookmarkFactory,
@@ -108,63 +105,6 @@ class KeepInterner @Inject() (
     }
   }
 
-  def keepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit] = {
-    SafeFuture {
-      val builder = collection.mutable.ArrayBuilder.make[Keep]
-      newKeeps.foreach { keep =>
-        val rekeeps = searchAttribution(userId, keep)
-        if (rekeeps.isEmpty) {
-          builder += keep
-        }
-      }
-      builder.result
-    } flatMap { remainders =>
-      FutureHelpers.sequentialExec(remainders) { keep =>
-        chatAttribution(userId, keep)
-      }
-    }
-  }
-
-  def searchAttribution(userId: Id[User], keep: Keep): Seq[ReKeep] = {
-    implicit val dca = TransactionalCaching.Implicits.directCacheAccess
-    kifiHitCache.get(KifiHitKey(userId, keep.uriId)) map { hit =>
-      val res = db.readWrite { implicit rw =>
-        keepDiscoveryRepo.getDiscoveriesByUUID(hit.uuid) collect {
-          case c if rekeepRepo.getReKeep(c.keeperId, c.uriId, userId).isEmpty =>
-            val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
-            val saved = rekeepRepo.save(rekeep)
-            log.info(s"[searchAttribution($userId,${keep.uriId})] rekeep=$saved; click=$c")
-            saved
-        }
-      }
-      res
-    } getOrElse Seq.empty
-  }
-
-  def chatAttribution(userId: Id[User], keep: Keep): Future[Unit] = {
-    elizaClient.keepAttribution(userId, keep.uriId) map { otherStarters =>
-      log.info(s"chatAttribution($userId,${keep.uriId})] otherStarters=$otherStarters")
-      otherStarters.foreach { chatUserId =>
-        db.readWrite { implicit rw =>
-          rekeepRepo.getReKeep(chatUserId, keep.uriId, userId) match {
-            case Some(rekeep) =>
-              log.info(s"[chatAttribution($userId,${keep.uriId},$chatUserId)] rekeep=$rekeep already exists. Skipped.")
-              None
-            case None =>
-              keepRepo.getByUriAndUser(keep.uriId, chatUserId) map { chatUserKeep =>
-                val discovery = KeepDiscovery(hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging")) // todo(ray): None for uuid
-                val savedDiscovery = keepDiscoveryRepo.save(discovery)
-                val rekeep = ReKeep(keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = 1)
-                val saved = rekeepRepo.save(rekeep)
-                log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; discovery=$savedDiscovery")
-                saved
-              }
-          }
-        }
-      }
-    }
-  }
-
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
     val (newKeeps, existingKeeps, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, source, mutatePrivacy, installationId)
     (newKeeps ++ existingKeeps, failures)
@@ -181,7 +121,6 @@ class KeepInterner @Inject() (
 
     keptAnalytics.keptPages(userId, createdKeeps, context)
     heimdalClient.processKeepAttribution(userId, createdKeeps)
-    keepAttribution(userId, createdKeeps)
     (newKeeps, existingKeeps, failures)
   }
 
@@ -193,7 +132,6 @@ class KeepInterner @Inject() (
       if (persistedBookmarksWithUri.isNewKeep) {
         keptAnalytics.keptPages(userId, Seq(bookmark), context)
         heimdalClient.processKeepAttribution(userId, Seq(bookmark))
-        keepAttribution(userId, Seq(bookmark))
       }
       bookmark
     }
