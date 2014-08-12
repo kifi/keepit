@@ -122,20 +122,15 @@ angular.module('kifi.friends.rightColFriendsView', [
             var wtiList = wtiService.list;
 
             wtiList.forEach(function (person) {
-              var socialIdValues = person.fullSocialId.split('/');
               var name = '';
               var via = '';
 
-              if (person.name) {
-                name = person.name;
-                via = networkNamesMap[socialIdValues[0]];
-              } else if (socialIdValues[0] === 'email') {
-                name = socialIdValues[1];
-              }
+              name = person.name;
+              via = (person.network === 'email' && person.identifier) || networkNamesMap[person.network];
 
               peopleYouMayKnow.push({
-                networkType: socialIdValues[0],
-                id: socialIdValues[1],
+                networkType: person.network,
+                id: person.identifier,
                 fullName: name,
                 pictureUrl: person.pictureUrl || 'https://www.kifi.com/assets/img/ghost.100.png',
                 actionText: 'Invite',

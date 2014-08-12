@@ -13,6 +13,7 @@ import scala.reflect.ClassTag
 @ImplementedBy(classOf[SocialUserInfoRepoImpl])
 trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[SocialUserInfo] with SeqNumberFunction[SocialUserInfo] {
   def getByUser(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
+  def getByUsers(userIds: Seq[Id[User]])(implicit session: RSession): Seq[SocialUserInfo]
   def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialUserByUser(id: Id[User])(implicit session: RSession): Seq[SocialUser]
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo
@@ -22,6 +23,7 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[Social
   def getSocialUserOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUser]
   def getSocialUserBasicInfos(ids: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], SocialUserBasicInfo]
   def getSocialUserBasicInfosByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserBasicInfo]
+  def getAllUsersToRefresh()(implicit session: RSession): Seq[SocialUserInfo]
 }
 
 @Singleton
@@ -58,7 +60,7 @@ class SocialUserInfoRepoImpl @Inject() (
 
   private val UNPROCESSED_STATES = SocialUserInfoStates.CREATED :: SocialUserInfoStates.FETCHED_USING_FRIEND :: Nil
   private val REFRESHING_STATES = SocialUserInfoStates.FETCHED_USING_SELF :: SocialUserInfoStates.FETCH_FAIL :: Nil
-  private val REFRESH_FREQUENCY = 11 // days TODO (josh) - decrement this by 1 or 2 every day until it = 2
+  private val REFRESH_FREQUENCY = 9 // days TODO (josh) - decrement this by 1 or 2 every day until it = 2
 
   private val sequence = db.getSequence[SocialUserInfo]("social_user_info_sequence")
 
@@ -93,6 +95,10 @@ class SocialUserInfoRepoImpl @Inject() (
       (for (f <- rows if f.userId === userId && f.state =!= SocialUserInfoStates.INACTIVE) yield f).list
     }
 
+  def getByUsers(ids: Seq[Id[User]])(implicit session: RSession): Seq[SocialUserInfo] = {
+    (for (f <- rows if f.userId.inSet(ids)) yield f).list
+  }
+
   def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] =
     (for (f <- rows if f.userId === userId && f.state === SocialUserInfoStates.APP_NOT_AUTHORIZED) yield f).list
 
@@ -107,6 +113,13 @@ class SocialUserInfoRepoImpl @Inject() (
     }
   } catch {
     case e: Throwable => throw new Exception(s"Can't get social user info for social id [$id] on network [$networkType]", e)
+  }
+
+  def getAllUsersToRefresh()(implicit session: RSession): Seq[SocialUserInfo] = {
+    (for (
+      f <- rows if f.userId.isNotNull && f.credentials.isNotNull
+        && f.networkType.inSet(SocialNetworks.REFRESHING) && f.state.inSet(REFRESHING_STATES)
+    ) yield f).list
   }
 
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo] = {

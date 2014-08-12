@@ -11,6 +11,11 @@ class URITest extends Specification {
       URI.parse("javascript://").isFailure === false
     }
 
+    "bad fragment" in {
+      URI.parse("http://www.facebook.com/justcreativedesign#!/posted.php?id=12415723757&share_id=125818997465306&comments=1#s125818997465306 ").isFailure === true
+      URI.parse("http://www.facebook.com/justcreativedesign#!/posted.php?id=12415723757&share_id=125818997465306&comments=1s125818997465306 ").isFailure === false
+    }
+
     "parse URLs" in {
       URI.parse("http://google.com/").get.host.get.name === "google.com"
       URI.parse("https://sub.domain.com").get.host.get.name === "sub.domain.com"

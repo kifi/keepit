@@ -43,6 +43,14 @@ class DefaultExtractorTest extends Specification {
       extractor.getMetadata("og:url") === Some("http://www.cnn.com/2014/01/24/health/pregnant-brain-dead-woman-texas/index.html")
     }
 
+    "parse doc with strange alternates" in {
+      val extractor = setup("http://www.secrefer.com/login/?next=/apply/company/11", "secrefer.com.txt")
+      extractor.getCanonicalUrl() === None
+      extractor.getLinks("canonical") === Set.empty
+      extractor.getLinks("alternate") === Set.empty
+      extractor.getMetadata("og:url") === Some("http://www.secrefer.com/login/?next=/apply/company/11?location=random?location=random")
+    }
+
     "parse doc with alternates" in {
       val extractor = setup("http://www.bbc.co.uk/news/technology-25233230", "cnn.uk.txt")
       extractor.getCanonicalUrl() === Some("http://www.bbc.co.uk/news/technology-25233230")
