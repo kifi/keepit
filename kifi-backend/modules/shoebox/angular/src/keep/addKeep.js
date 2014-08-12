@@ -159,7 +159,7 @@ angular.module('kifi')
 
         scope.resetAndHide = function () {
           reset();
-          kfModalCtrl.hideModal();
+          kfModalCtrl.close();
         };
       }
     };

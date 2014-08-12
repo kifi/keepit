@@ -14,10 +14,8 @@ angular.module('kifi.modalService', [])
 
       var scope = $rootScope.$new();
       scope.show = true;
-      var $modal = angular.element('<div id="kf-modal" kf-modal show="show" kf-width="600px"></div>');
-      $modal.html('<div kf-basic-modal-content single-action="false">' + template + '</div>');
-
-      
+      var $modal = angular.element('<div id="kf-modal" kf-modal show="show" single-action="false" kf-width="600px"></div>');
+      $modal.html('<div kf-basic-modal-content>' + template + '</div>');
 
       if (opts.className) {
         $modal.addClass(opts.className);

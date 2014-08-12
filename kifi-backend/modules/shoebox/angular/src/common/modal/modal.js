@@ -14,8 +14,20 @@ angular.module('kifi')
       templateUrl: 'common/modal/modal.tpl.html',
       transclude: true,
       controller: ['$scope', function ($scope) {
-        $scope.close = this.close = function () {
+        var defaultCloseAction = null;
+        this.setDefaultCloseAction = function (action) {
+          defaultCloseAction = action || null;
+        };
+
+        $scope.close = this.close = function (closeAction) {
+          if (angular.isFunction(closeAction)) {
+            closeAction();
+          } else if (defaultCloseAction) {
+            defaultCloseAction();
+          }
+
           $document.off('keydown', escapeModal);
+          
           modalService.close();
         };
 
@@ -25,52 +37,6 @@ angular.module('kifi')
           }
         }
         $document.on('keydown', escapeModal);
-
-        // var defaultHideAction = null;
-
-        // this.setDefaultHideAction = function (action) {
-        //   defaultHideAction = action;
-        // };
-
-        // this.hideModal = function (hideAction) {
-        //   if ($scope.noUserHide && $scope.show) {
-        //     // hide is disabled for user and was not triggered by change of state
-        //     return;
-        //   }
-        //   if (typeof hideAction === 'function') {
-        //     hideAction();
-        //   } else if (defaultHideAction) {
-        //     defaultHideAction();
-        //   }
-        //   $scope.show = false;
-        // };
-
-        // this.show = $scope.show || false;
-
-        // $scope.hideModal = this.hideModal;
-
-        // function exitModal(evt) {
-        //   if (evt.which === 27) {
-        //     $scope.hideModal(evt);
-
-        //     $scope.$apply();
-        //   }
-        // }
-
-        // $scope.$watch(function () {
-        //   return $scope.show;
-        // }, function () {
-        //   this.show = $scope.show || false;
-        //   if ($scope.show) {
-        //     $document.on('keydown', exitModal);
-        //   } else {
-        //     $document.off('keydown', exitModal);
-        //   }
-        // });
-
-        // $scope.$on('$destroy', function () {
-        //   $document.off('keydown', exitModal);
-        // });
       }],
       link: function (scope, element, attrs) {
         scope.dialogStyle = {};
@@ -92,8 +58,8 @@ angular.module('kifi')
 ])
 
 .directive('kfBasicModalContent', [
-  '$window', 'modalService',
-  function ($window, modalService) {
+  '$window',
+  function ($window) {
     return {
       restrict: 'A',
       replace: true,
@@ -113,12 +79,14 @@ angular.module('kifi')
         scope.withWarning = (attrs.withWarning !== void 0) || false;
         scope.cancelText = attrs.cancelText;
         scope.centered = attrs.centered;
-        // kfModalCtrl.setDefaultHideAction(scope.cancel);
-
-        // scope.hideAndCancel = kfModalCtrl.hideModal;
-        // scope.hideAndAction = function () {
-        //   kfModalCtrl.hideModal(scope.action);
-        // };
+        
+        kfModalCtrl.setDefaultCloseAction(scope.cancel);
+        scope.cancelAndClose = function () {
+          kfModalCtrl.close(scope.cancel);
+        };
+        scope.actionAndClose = function () {
+          kfModalCtrl.close(scope.action);
+        };
 
         var wrap = element.find('.dialog-body-wrap');
 
