@@ -2,7 +2,7 @@ package com.keepit.graph
 
 import com.google.inject.Inject
 import com.keepit.common.db.Id
-import com.keepit.common.service.{ ServiceClient, ServiceType }
+import com.keepit.common.service.{RequestConsolidator, ServiceClient, ServiceType}
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.{ CallTimeouts, ClientResponse, HttpClient }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -16,10 +16,11 @@ import com.keepit.graph.manager.{ PrettyGraphState, PrettyGraphStatistics }
 import play.api.Mode
 import play.api.Mode.Mode
 import com.keepit.graph.wander.{ Wanderlust, Collisions }
-import play.api.libs.json.{ JsArray, JsObject, Json }
+import play.api.libs.json.{ Json }
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.graph.model.GraphKinds
 import com.keepit.abook.model.EmailAccountInfo
+import scala.concurrent.duration._
 
 trait GraphServiceClient extends ServiceClient {
   final val serviceType = ServiceType.GRAPH
@@ -119,8 +120,9 @@ class GraphServiceClientImpl @Inject() (
     futureUserScores.map(userScores => userScores.map { case ConnectedUserScore(friendId, score) => friendId -> score })
   }
 
-  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit] = {
-    call(Graph.internal.refreshSociallyRelatedEntities(userId), callTimeouts = longTimeout).map(_ => ())
+  private val consolidateSociallyRelatedEntities = new RequestConsolidator[Id[User], Unit](10 seconds)
+  def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit] = consolidateSociallyRelatedEntities(userId) { id =>
+    call(Graph.internal.refreshSociallyRelatedEntities(id), callTimeouts = longTimeout).map(_ => ())
   }
 
   def getSociallyRelatedUsers(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, User]]] = {
