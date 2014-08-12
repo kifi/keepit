@@ -17,7 +17,11 @@ class UserKeepInfoController @Inject() (
     userKeepInfoRepo: UserBookmarkClicksRepo) extends HeimdalServiceController with Logging {
 
   def getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    val res = db.readOnlyMaster { implicit ro => userKeepInfoRepo.getByUserUri(userId, uriId).map { row => (row.rekeepCount, row.rekeepTotalCount) } } getOrElse (0, 0)
+    val res = db.readOnlyMaster { implicit ro =>
+      userKeepInfoRepo.getByUserUri(userId, uriId).map { r =>
+        (r.rekeepCount, r.rekeepTotalCount)
+      } getOrElse (0, 0)
+    }
     Ok(Json.obj("rekeepCount" -> res._1, "rekeepTotalCount" -> res._2))
   }
 
