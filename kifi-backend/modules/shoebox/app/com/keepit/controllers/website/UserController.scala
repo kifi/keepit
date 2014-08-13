@@ -45,6 +45,7 @@ import play.api.libs.json.JsObject
 import com.keepit.search.SearchServiceClient
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.http._
+import com.keepit.common.AnyExtensionOps
 
 class UserController @Inject() (
     db: Database,
@@ -246,6 +247,25 @@ class UserController @Inject() (
         userData.description.foreach { description =>
           userCommander.updateUserDescription(request.userId, description)
         }
+        if (userData.firstName.isDefined || userData.lastName.isDefined) {
+          db.readWrite { implicit session =>
+            val user = userRepo.getNoCache(request.userId)
+
+            val updatedUser = user |> { u =>
+              userData.firstName match {
+                case Some(name) if name.length > 0 => u.copy(firstName = name)
+                case _ => u
+              }
+            } |> { u =>
+              userData.lastName match {
+                case Some(name) if name.length > 0 => u.copy(lastName = name)
+                case _ => u
+              }
+            }
+            userRepo.save(updatedUser)
+          }
+        }
+
         getUserInfo(request.userId)
       }
       case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } =>
