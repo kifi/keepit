@@ -6,7 +6,6 @@ import com.keepit.common.db.{ SequenceNumber, State }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.time._
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 
@@ -44,7 +43,7 @@ class AllKeepSeedIngestionHelper @Inject() (
     max
   }
 
-  private def updateRawSeedItem(seedItem: RawSeedItem, uriId: Id[NormalizedURI], newDateCandidate: DateTime, countChange: Int)(implicit session: RWSession): Unit = {
+  private def updateRawSeedItem(seedItem: RawSeedItem, uriId: Id[NormalizedURI], newDateCandidate: DateTime, countChange: Int, discoverable: Boolean)(implicit session: RWSession): Unit = {
     if (seedItem.uriId != uriId) {
       //there was a renormalization of this item, thus we need to check if there should be a merge
       val existingItemOpt = rawSeedsRepo.getByUriIdAndUserId(uriId, seedItem.userId)
@@ -60,7 +59,8 @@ class AllKeepSeedIngestionHelper @Inject() (
           lastKept = mergedLastKept,
           lastSeen = mergedLastSeen,
           priorScore = if (seedItem.updatedAt.isAfter(existingItem.updatedAt)) seedItem.priorScore else existingItem.priorScore,
-          timesKept = mergedTimesKept
+          timesKept = mergedTimesKept,
+          discoverable = discoverable
         ))
         rawSeedsRepo.delete(seedItem)
       } getOrElse {
@@ -70,7 +70,8 @@ class AllKeepSeedIngestionHelper @Inject() (
           firstKept = if (newDateCandidate.isBefore(seedItem.firstKept)) newDateCandidate else seedItem.firstKept,
           lastKept = if (newDateCandidate.isAfter(seedItem.lastKept)) newDateCandidate else seedItem.lastKept,
           lastSeen = if (newDateCandidate.isAfter(seedItem.lastSeen)) newDateCandidate else seedItem.lastSeen,
-          timesKept = seedItem.timesKept + countChange
+          timesKept = seedItem.timesKept + countChange,
+          discoverable = discoverable
         ))
       }
     } else {
@@ -78,39 +79,48 @@ class AllKeepSeedIngestionHelper @Inject() (
         firstKept = if (newDateCandidate.isBefore(seedItem.firstKept)) newDateCandidate else seedItem.firstKept,
         lastKept = if (newDateCandidate.isAfter(seedItem.lastKept)) newDateCandidate else seedItem.lastKept,
         lastSeen = if (newDateCandidate.isAfter(seedItem.lastSeen)) newDateCandidate else seedItem.lastSeen,
-        timesKept = seedItem.timesKept + countChange
+        timesKept = seedItem.timesKept + countChange,
+        discoverable = discoverable
       ))
     }
   }
 
   private def processKeep(keep: Keep)(implicit session: RWSession): Unit = {
     keepInfoRepo.getByKeepId(keep.id.get).map { keepInfo =>
-      val seedItemsByOldUriId = rawSeedsRepo.getByUriId(keepInfo.uriId)
+      val rawSeedItemsByOldUriId = rawSeedsRepo.getByUriId(keepInfo.uriId)
       //deal correctly with the case where the item was renormalized by a previously ingested keep
-      val seedItems = if (seedItemsByOldUriId.isEmpty) rawSeedsRepo.getByUriId(keep.uriId) else seedItemsByOldUriId
-      log.info(s"Got seed items: ${seedItems} for keepInfo ${keepInfo} and keep ${keep}")
-      require(seedItems.length > 0, s"Missing RSI: keepId ${keepInfo.keepId}, uriId ${keepInfo.uriId}")
+      val rawSeedItems = if (rawSeedItemsByOldUriId.isEmpty) rawSeedsRepo.getByUriId(keep.uriId) else rawSeedItemsByOldUriId
+      log.info(s"Got seed items: ${rawSeedItems} for keepInfo ${keepInfo} and keep ${keep}")
+      require(rawSeedItems.length > 0, s"Missing RSI: keepId ${keepInfo.keepId}, uriId ${keepInfo.uriId}")
       val countChange = if (keep.state.value != keepInfo.state.value) {
         if (keepInfo.state == CuratorKeepInfoStates.ACTIVE) -1 else if (keep.state == KeepStates.ACTIVE) 1 else 0
       } else 0
-      seedItems.foreach { seedItem =>
-        updateRawSeedItem(seedItem, keep.uriId, keep.createdAt, countChange)
-      }
+
       keepInfoRepo.save(keepInfo.copy(
         uriId = keep.uriId,
         userId = keep.userId,
-        state = State[CuratorKeepInfo](keep.state.value)
+        state = State[CuratorKeepInfo](keep.state.value),
+        discoverable = !keep.isPrivate
       ))
+
+      val discoverable = if (keepInfo.discoverable && keep.isPrivate) keepInfoRepo.checkDiscoverableByUriId(keep.uriId)
+      else (keepInfo.discoverable || (!keep.isPrivate && keep.state == KeepStates.ACTIVE))
+
+      rawSeedItems.foreach { rawSeedItem =>
+        updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, countChange, discoverable)
+      }
+
     } getOrElse {
       keepInfoRepo.save(CuratorKeepInfo(
         uriId = keep.uriId,
         userId = keep.userId,
         keepId = keep.id.get,
-        state = State[CuratorKeepInfo](keep.state.value)
+        state = State[CuratorKeepInfo](keep.state.value),
+        discoverable = !keep.isPrivate
       ))
 
-      val seedItems = rawSeedsRepo.getByUriId(keep.uriId)
-      if (seedItems.isEmpty) {
+      val rawSeedItems = rawSeedsRepo.getByUriId(keep.uriId)
+      if (rawSeedItems.isEmpty) {
         rawSeedsRepo.save(RawSeedItem(
           uriId = keep.uriId,
           userId = None,
@@ -118,11 +128,13 @@ class AllKeepSeedIngestionHelper @Inject() (
           lastKept = keep.createdAt,
           lastSeen = keep.createdAt,
           priorScore = None,
-          timesKept = if (keep.state == KeepStates.ACTIVE) 1 else 0
+          timesKept = if (keep.state == KeepStates.ACTIVE) 1 else 0,
+          discoverable = !keep.isPrivate
         ))
       } else {
-        seedItems.foreach { seedItem =>
-          updateRawSeedItem(seedItem, keep.uriId, keep.createdAt, if (keep.state == KeepStates.ACTIVE) 1 else 0)
+        val discoverable = (rawSeedItems(0).discoverable || (!keep.isPrivate && keep.state == KeepStates.ACTIVE))
+        rawSeedItems.foreach { rawSeedItem =>
+          updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, if (keep.state == KeepStates.ACTIVE) 1 else 0, discoverable)
         }
       }
 

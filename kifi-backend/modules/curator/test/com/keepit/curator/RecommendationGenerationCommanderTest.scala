@@ -6,6 +6,7 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.commanders.RecommendationGenerationCommander
 import com.keepit.curator.model.{ UriRecommendationRepo, UriScores, UriRecommendation }
 import com.keepit.graph.FakeGraphServiceModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ UriRecommendationScores, User, NormalizedURI }
 import org.specs2.mutable.Specification
 
@@ -17,7 +18,8 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
   def modules = Seq(
     FakeHttpClientModule(),
     FakeGraphServiceModule(),
-    FakeCortexServiceClientModule())
+    FakeCortexServiceClientModule(),
+    FakeHeimdalServiceClientModule())
 
   def setup(): Seq[UriRecommendation] = {
     val rec1 = UriRecommendation(uriId = Id[NormalizedURI](1), userId = Id[User](42), masterScore = 0.15f,
@@ -72,16 +74,16 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         val recs1 = Await.result(result1, Duration(10, "seconds"))
         println(recs1(0).toString)
         recs1(0).userId === Id[User](42)
-        recs1(0).score === 21.0f
+        recs1(0).score === 0.5f
         recs1(1).score === 0.5f
 
         val result2 = commander.getAdHocRecommendations(Id[User](42), 1, UriRecommendationScores())
         val recs2 = Await.result(result2, Duration(10, "seconds"))
-        recs2(0).score === 28.0f
+        recs2(0).score === 33.0f
       }
     }
 
-    "pre compute Recommendations" in {
+    "pre-compute Recommendations" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[RecommendationGenerationCommander]
         commander.precomputeRecommendations()

@@ -69,6 +69,8 @@ trait HeimdalServiceClient extends ServiceClient {
 
   def getReKeepCount(): Future[Int]
 
+  def getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI]): Future[(Int, Int)]
+
   def getUserReKeepsByDegree(keepIds: Seq[KeepIdInfo]): Future[Seq[UserReKeepsAcc]]
 
   def getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep]): Future[Seq[ReKeepsPerDeg]]
@@ -78,6 +80,8 @@ trait HeimdalServiceClient extends ServiceClient {
   def updateUsersReKeepStats(userIds: Seq[Id[User]]): Future[Unit]
 
   def updateAllReKeepStats(): Future[Unit]
+
+  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]]
 
   def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit]
 
@@ -242,6 +246,15 @@ class HeimdalServiceClientImpl @Inject() (
     call(Heimdal.internal.getReKeepCount) map { r => Json.parse(r.body).as[Int] }
   }
 
+  def getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI]): Future[(Int, Int)] = {
+    call(Heimdal.internal.getReKeepCountsByUserUri(userId, uriId)) map { r =>
+      val json = r.json
+      val rekeepCount = (json \ "rekeepCount").as[Int]
+      val rekeepTotalCount = (json \ "rekeepTotalCount").as[Int]
+      (rekeepCount, rekeepTotalCount)
+    }
+  }
+
   def getUserReKeepsByDegree(keepIds: Seq[KeepIdInfo]): Future[Seq[UserReKeepsAcc]] = {
     call(Heimdal.internal.getUserReKeepsByDegree, Json.toJson(keepIds)) map { r =>
       Json.parse(r.body).as[Seq[UserReKeepsAcc]]
@@ -266,6 +279,13 @@ class HeimdalServiceClientImpl @Inject() (
 
   def updateAllReKeepStats(): Future[Unit] = {
     call(Heimdal.internal.updateAllReKeepStats) map { _ => Unit }
+  }
+
+  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = {
+    val payload = Json.toJson(uriIds)
+    call(Heimdal.internal.getHelpRankInfo, payload, callTimeouts = longTimeout) map { r =>
+      r.json.as[Seq[HelpRankInfo]]
+    }
   }
 
   def processKifiHit(clickerId: Id[User], hit: SanitizedKifiHit): Future[Unit] = {

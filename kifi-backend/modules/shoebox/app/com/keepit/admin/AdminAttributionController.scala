@@ -26,8 +26,7 @@ class AdminAttributionController @Inject() (
     rekeepRepo: ReKeepRepo,
     uriRepo: NormalizedURIRepo,
     pageInfoRepo: PageInfoRepo,
-    imageInfoRepo: ImageInfoRepo,
-    userBookmarkClicksRepo: UserBookmarkClicksRepo) extends AdminController(actionAuthenticator) {
+    imageInfoRepo: ImageInfoRepo) extends AdminController(actionAuthenticator) {
 
   implicit val execCtx = fj
 
@@ -150,22 +149,21 @@ class AdminAttributionController @Inject() (
       val rekeeps = db.readOnlyReplica { implicit ro => rekeepRepo.getAllReKeepsByKeeper(userId) }
       val grouped = rekeeps.groupBy(_.keepId)
       val sorted = grouped.toSeq.sortBy(_._2.length)(Ordering[Int].reverse).take(10)
+      // todo(ray): batch
       val resF = sorted.map(_._1).map { keepId =>
         heimdalClient.getReKeepsByDegree(userId, keepId).map { res => res.map(_.userIds) } map { userIds =>
           val users = db.readOnlyReplica { implicit ro => userRepo.getUsers(userIds.foldLeft(Seq.empty[Id[User]]) { (a, c) => a ++ c }) }
           db.readOnlyReplica { implicit ro => keepRepo.get(keepId) } -> userIds.map(_.map(uId => users(uId)))
         }
       }
-      Future.sequence(resF) map { users =>
-        val counts = db.readOnlyReplica { implicit ro =>
-          users.map {
-            case (keep, _) =>
-              userBookmarkClicksRepo.getByUserUri(userId, keep.uriId) map { bc =>
-                (bc.rekeepCount, bc.rekeepTotalCount)
-              } getOrElse (-1, -1)
-          }
+      Future.sequence(resF) flatMap { users =>
+        val countsF = Future.sequence(users map {
+          case (keep, _) =>
+            heimdalClient.getReKeepCountsByUserUri(userId, keep.uriId)
+        })
+        countsF map { counts =>
+          (u, n, rekeeps, users, counts)
         }
-        (u, n, rekeeps, users, counts)
       }
     }
   }

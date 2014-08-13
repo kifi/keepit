@@ -254,7 +254,9 @@ object Heimdal extends Service {
     def getReKeepCount() = ServiceRoute(GET, "/internal/heimdal/data/reKeep/count")
     def getUserReKeepsByDegree() = ServiceRoute(POST, "/internal/heimdal/helprank/getUserReKeepsByDegree")
     def getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep]) = ServiceRoute(GET, "/internal/heimdal/helprank/getReKeepsByDegree", Param("keeperId", keeperId), Param("keepId", keepId))
+    def getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/heimdal/data/userKeepInfo/getReKeepCountsByUserUri", Param("userId", userId), Param("uriId", uriId))
     def getKeepAttributionInfo(userId: Id[User]) = ServiceRoute(GET, "/internal/heimdal/helprank/getKeepAttributionInfo", Param("userId", userId))
+    def getHelpRankInfo() = ServiceRoute(POST, "/internal/heimdal/helprank/getHelpRankInfo")
     def updateUserReKeepStats() = ServiceRoute(POST, "/internal/heimdal/helprank/updateUserReKeepStats")
     def updateUsersReKeepStats() = ServiceRoute(POST, "/internal/heimdal/helprank/updateUsersReKeepStats")
     def updateAllReKeepStats() = ServiceRoute(POST, "/internal/heimdal/helprank/updateAllReKeepStats")
@@ -343,6 +345,7 @@ object Cortex extends Service {
     def sampleURIsForTopic(topicId: Int) = ServiceRoute(GET, "/internal/cortex/lda/sampleURIs", Param("topicId", topicId))
     def getSimilarUsers(userId: Id[User], topK: Int) = ServiceRoute(GET, "/internal/cortex/lda/getSimilarUsers", Param("userId", userId), Param("topK", topK))
     def unamedTopics(limit: Int) = ServiceRoute(GET, "/internal/cortex/lda/unamedTopics", Param("limit", limit))
+    def getTopicNames() = ServiceRoute(POST, "/internal/cortex/lda/getTopicNames")
 
     def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = ServiceRoute(GET, "/internal/cortex/data/sparseLDAFeaturesChanged", Param("modelVersion", modelVersion), Param("seqNum", seqNum), Param("fetchSize", fetchSize))
   }

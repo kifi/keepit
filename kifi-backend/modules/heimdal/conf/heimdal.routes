@@ -39,10 +39,13 @@ GET  /internal/heimdal/data/keepDiscovery/getDiscoveryCountByKeeper @com.keepit.
 GET  /internal/heimdal/data/reKeep/page/:page          @com.keepit.controllers.ReKeepController.page(page:Int, size:Int)
 GET  /internal/heimdal/data/reKeep/count               @com.keepit.controllers.ReKeepController.count
 
+GET  /internal/heimdal/data/userKeepInfo/getReKeepCountsByUserUri @com.keepit.controllers.UserKeepInfoController.getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI])
+
 POST /internal/heimdal/helprank/updateUserReKeepStats   @com.keepit.controllers.HelpRankController.updateUserReKeepStats()
 POST /internal/heimdal/helprank/updateUsersReKeepStats  @com.keepit.controllers.HelpRankController.updateUsersReKeepStats()
 POST /internal/heimdal/helprank/updateAllReKeepStats    @com.keepit.controllers.HelpRankController.updateAllReKeepStats()
 
+POST /internal/heimdal/helprank/getHelpRankInfo        @com.keepit.controllers.HelpRankController.getHelpRankInfo()
 POST /internal/heimdal/helprank/getUserReKeepsByDegree @com.keepit.controllers.HelpRankController.getUserReKeepsByDegree()
 GET  /internal/heimdal/helprank/getReKeepsByDegree     @com.keepit.controllers.HelpRankController.getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep])
 GET  /internal/heimdal/helprank/getKeepAttributionInfo @com.keepit.controllers.HelpRankController.getKeepAttributionInfo(userId: Id[User])

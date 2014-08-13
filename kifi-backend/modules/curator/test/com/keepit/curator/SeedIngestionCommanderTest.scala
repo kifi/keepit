@@ -20,9 +20,7 @@ import scala.concurrent.duration.Duration
 import org.joda.time.DateTime
 import com.keepit.common.concurrent.ExecutionContext
 
-class SeedIngestionCommanderTest extends Specification with CuratorTestInjector {
-
-  import TestHelpers.{ makeKeeps, makeUser }
+class SeedIngestionCommanderTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
 
   private def modules = {
     Seq(
@@ -34,13 +32,60 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
   }
 
   private def setup()(implicit injector: Injector) = {
-    val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+    val shoebox = shoeboxClientInstance()
     val (user1, user2) = (makeUser(42, shoebox).id.get, makeUser(43, shoebox).id.get)
 
     (user1, user2, shoebox)
   }
 
   "SeedIngestionCommander" should {
+
+    "ingest keeps and have discoverability correctly" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, shoebox) = setup()
+        val user1Keeps = makeKeepsWithPrivacy(user1, 5, true, shoebox)
+        val keepInfoRepo = inject[CuratorKeepInfoRepo]
+        val seedItemRepo = inject[RawSeedItemRepo]
+        val commander = inject[SeedIngestionCommander]
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        var seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+        seedItems.foreach(_.discoverable === false)
+
+        shoebox.saveBookmarks(user1Keeps(4).copy(
+          userId = user2,
+          isPrivate = false))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(4).discoverable === true
+
+        shoebox.saveBookmarks(user1Keeps(4).copy(
+          isPrivate = true))
+        shoebox.saveBookmarks(Keep(
+          uriId = Id[NormalizedURI](5),
+          urlId = Id[URL](5),
+          url = "https://kifi.com",
+          userId = user1,
+          state = KeepStates.ACTIVE,
+          source = KeepSource.keeper,
+          isPrivate = true,
+          libraryId = None))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(4).discoverable === false
+
+        shoebox.saveBookmarks(user1Keeps(4).copy(
+          isPrivate = false,
+          state = KeepStates.INACTIVE))
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(4).discoverable === false
+      }
+    }
 
     //this is in one test case instead of a bunch to reduce run time (i.e. avoid repeated db initialization) as we are moving quite a bit of data.
     //Already takes several seconds as it is.
@@ -53,6 +98,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         val systemValueRepo = inject[SystemValueRepo]
         val seedItemRepo = inject[RawSeedItemRepo]
         val commander = inject[SeedIngestionCommander]
+
         db.readOnlyMaster { implicit session => keepInfoRepo.all() }.length === 0
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readOnlyMaster { implicit session => keepInfoRepo.all() }.length === 60
@@ -89,7 +135,6 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           keepInfoRepo.getByKeepId(user1Keeps(1).id.get).get.state.value === KeepStates.DUPLICATE.value
           keepInfoRepo.getByKeepId(user1Keeps(7).id.get).get.state.value === KeepStates.ACTIVE.value
           keepInfoRepo.getByKeepId(user1Keeps(0).id.get).get.uriId === Id[NormalizedURI](47)
-
           seedItemRepo.getByUriId(user1Keeps(0).uriId).length === 0
           seedItemRepo.getByUriId(Id[NormalizedURI](47)).length === 1
 
@@ -229,7 +274,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
 
         db.readOnlyMaster { implicit session =>
           val seedItem1: Option[RawSeedItem] = seedItemRepo.getByUriIdAndUserId(user1Keeps.head.uriId, Some(user1))
-          seedItem1.get.priorScore === Some(0.795.toFloat)
+          seedItem1.get.priorScore === Some(0.795f)
           seedItem1.get.userId === Some(Id[User](42))
           seedItem1.get.uriId === Id[NormalizedURI](1)
 

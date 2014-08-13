@@ -42,6 +42,7 @@ trait CortexServiceClient extends ServiceClient {
   def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]]
   def getSimilarUsers(userId: Id[User], topK: Int): Future[(Seq[Id[User]], Seq[Float])] // with scores
   def unamedTopics(limit: Int = 20): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] // with topicWords
+  def getTopicNames(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[String]]]
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
@@ -200,6 +201,11 @@ class CortexServiceClientImpl(
       val words = (js \ "words").as[Seq[Map[String, Float]]]
       (infos, words)
     }
+  }
+
+  def getTopicNames(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[String]]] = {
+    val payload = Json.obj("uris" -> uris)
+    call(Cortex.internal.getTopicNames(), payload).map { r => (r.json).as[Seq[Option[String]]] }
   }
 
 }

@@ -114,4 +114,11 @@ class LDAController @Inject() (
     Ok(Json.obj("infos" -> infos, "words" -> words))
   }
 
+  def getTopicNames() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val uriIds = (js \ "uris").as[Seq[Id[NormalizedURI]]]
+    val res = lda.getTopicNames(uriIds)
+    Ok(Json.toJson(res))
+  }
+
 }
