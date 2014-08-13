@@ -7,6 +7,10 @@ var tile = tile || function() {  // idempotent for Chrome
   'use strict';
   log('[keeper_scout]', location.hostname);
 
+  if (/^Mac/.test(navigator.platform)) {
+    api.require('styles/mac.css', api.noop);
+  }
+
   var whenMeKnown = [], tileParent, tileObserver, tileCard, tileCount;
   while ((tile = document.getElementById('kifi-tile'))) {
     tile.remove();
