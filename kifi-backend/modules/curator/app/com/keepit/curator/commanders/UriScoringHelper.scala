@@ -121,7 +121,7 @@ class UriScoringHelper @Inject() (
             rekeepScore = rekeepScores(i),
             discoveryScore = discoveryScores(i)
           )
-          ScoredSeedItem(items(i).userId, items(i).uriId, scores)
+          ScoredSeedItem(items(i).userId, items(i).uriId, items(i).multiplier, scores)
         }
       }
     }

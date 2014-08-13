@@ -19,8 +19,8 @@ import concurrent.Future
 case class RecommendedUriSummary(reco: UriRecommendation, uri: NormalizedURI, uriSummary: URISummary) {
   val title = uriSummary.title.getOrElse("")
   val description = uriSummary.description.getOrElse("")
-  val imageUrl = uriSummary.imageUrl
-  val url = if (uri.url.startsWith("//")) "https:" + uri.url else uri.url
+  val imageUrl = uriSummary.imageUrl.map { url => if (url.startsWith("//")) "https:" + url else url }
+  val url = uri.url
   val score = reco.masterScore
   val explain = reco.allScores.toString
 }
@@ -58,7 +58,7 @@ class EngagementFeedEmailSenderImpl @Inject() (
 
     log.info(s"sending engagement feed email to ${user.id.get}")
 
-    recommendationGenerationCommander.getTopRecommendations(user.id.get, recommendationCount).flatMap[EngagementFeedSummary] { recos =>
+    recommendationGenerationCommander.getTopRecommendationsNotPushed(user.id.get, recommendationCount).flatMap[EngagementFeedSummary] { recos =>
       shoebox.getUriSummaries(recos.map(_.uriId)).flatMap[EngagementFeedSummary] { summaries =>
         val dataFutures: Future[Seq[RecommendedUriSummary]] = Future.sequence {
           recos.map { reco =>

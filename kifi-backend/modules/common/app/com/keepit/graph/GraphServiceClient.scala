@@ -1,6 +1,6 @@
 package com.keepit.graph
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceType }
 import com.keepit.common.zookeeper.ServiceCluster
@@ -47,7 +47,6 @@ case class GraphCacheProvider @Inject() (
   relatedLinkedInAccountsCache: SociallyRelatedLinkedInAccountsCache,
   relatedEmailAccountsCache: SociallyRelatedEmailAccountsCache)
 
-@Singleton
 class GraphServiceClientImpl @Inject() (
     override val serviceCluster: ServiceCluster,
     override val httpClient: HttpClient,

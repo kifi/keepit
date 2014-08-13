@@ -10,12 +10,13 @@ class UriBoostingHelper @Inject() (
     db: Database) {
 
   val decreaseWeight = Seq(
-    ("(aaa)".r, -100f),
-    ("bbb".r, -2f))
+    ("""^https?://(www.)?twitter.com/(#!/)?([^/]+)(/w+)*$""".r, 0.0001f, "Twitter"),
+    ("""/(ftp|http|https)://?((www|ww).)?linkedin.com(w+:{0,1}w*@)?(S+)(:([0-9])+)?(/|/([w#!:.?+=&%@!-/]))?/""".r, 0.0001f, "LinkedIn"),
+    ("""/^(http://|https://)?(?:www.)?facebook.com/(?:(?:w.)*#!/)?(?:pages/)?(?:[w-.]*/)*([w-.]*)/""".r, 0.0001f, "Facebook")
+  )
 
   val increaseWeight = Seq(
-    ("ccc".r, 100f),
-    ("ddd".r, 5f)
+    ("hackernews".r, 100f, "Hackernews")
   )
 
   def apply(items: Seq[SeedItem]): Seq[MultipliedSeedItem] = {
@@ -25,11 +26,13 @@ class UriBoostingHelper @Inject() (
       decreaseWeight.foreach { reg =>
         weight += ((reg._1.findFirstMatchIn(item.url)) match {
           case Some(data) => reg._2
+          case None => 0.0f
         })
       }
       increaseWeight.foreach { reg =>
         weight += ((reg._1.findFirstMatchIn(item.url)) match {
           case Some(data) => reg._2
+          case None => 0.0f
         })
       }
 
@@ -37,12 +40,10 @@ class UriBoostingHelper @Inject() (
         multiplier = weight,
         userId = item.userId,
         uriId = item.uriId,
-        seq = item.seq,
         priorScore = item.priorScore,
         timesKept = item.timesKept,
         lastSeen = item.lastSeen,
-        keepers = item.keepers,
-        discoverable = item.discoverable)
+        keepers = item.keepers)
     }
   }
 }
