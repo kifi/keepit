@@ -1,18 +1,18 @@
 package com.keepit.curator.commanders
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.model._
-import com.keepit.model.{ Keep, User }
-import com.kifi.macros.json
+import com.keepit.search.SearchServiceClient
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 
 @Singleton
-class SeedAttributionHelper @Inject() (cortex: CortexServiceClient) {
+class SeedAttributionHelper @Inject() (
+    cortex: CortexServiceClient,
+    search: SearchServiceClient) {
 
   def getAttributions(seeds: Seq[ScoredSeedItem]): Future[Seq[ScoredSeedItemWithAttribution]] = {
     val userAttrFut = getUserAttribution(seeds)
@@ -31,7 +31,28 @@ class SeedAttributionHelper @Inject() (cortex: CortexServiceClient) {
   }
 
   private def getUserAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[UserAttribution]]] = {
-    Future.successful(Seq.fill(seeds.size)(None))
+    require(seeds.map(_.userId).toSet.size <= 1, "Batch looking up of sharing users must be all for the same user")
+
+    def needToLookup(seed: ScoredSeedItem) = seed.uriScores.socialScore > 0.5f
+
+    val ret: Array[Option[UserAttribution]] = Array.fill(seeds.size)(None)
+
+    seeds.headOption.map { _.userId } match {
+      case None => Future.successful(ret)
+      case Some(userId) =>
+        val (idxes, uriIds) = (0 until seeds.size).flatMap { i => if (needToLookup(seeds(i))) Some((i, seeds(i).uriId)) else None }.unzip
+        if (uriIds.size == 0) {
+          Future.successful(ret)
+        } else {
+          search.sharingUserInfo(userId, uriIds).map { sharingUsersInfo =>
+            (idxes zip sharingUsersInfo).foreach {
+              case (idx, info) =>
+                if (info.sharingUserIds.size > 0) ret(idx) = Some(UserAttribution(info.sharingUserIds.toSeq, info.keepersEdgeSetSize - info.sharingUserIds.size))
+            }
+            ret
+          }
+        }
+    }
   }
 
   private def getKeepAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[KeepAttribution]]] = {
