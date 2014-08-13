@@ -103,8 +103,21 @@ class AllKeepSeedIngestionHelper @Inject() (
         discoverable = !keep.isPrivate
       ))
 
-      val discoverable = if (keepInfo.discoverable && keep.isPrivate) keepInfoRepo.checkDiscoverableByUriId(keep.uriId)
-      else (keepInfo.discoverable || (!keep.isPrivate && keep.state == KeepStates.ACTIVE))
+      val discoverable = {
+        if (!rawSeedItems(0).discoverable) {
+          !keep.isPrivate && keep.state == KeepStates.ACTIVE
+        } else {
+          if (!keep.isPrivate && keep.state == KeepStates.ACTIVE) {
+            true
+          } else {
+            if (!keep.isPrivate != keepInfo.discoverable || keep.state.value != keepInfo.state.value) {
+              keepInfoRepo.checkDiscoverableByUriId(keep.uriId)
+            } else {
+              true
+            }
+          }
+        }
+      }
 
       rawSeedItems.foreach { rawSeedItem =>
         updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, countChange, discoverable)
@@ -129,10 +142,10 @@ class AllKeepSeedIngestionHelper @Inject() (
           lastSeen = keep.createdAt,
           priorScore = None,
           timesKept = if (keep.state == KeepStates.ACTIVE) 1 else 0,
-          discoverable = !keep.isPrivate
+          discoverable = !keep.isPrivate && keep.state == KeepStates.ACTIVE
         ))
       } else {
-        val discoverable = (rawSeedItems(0).discoverable || (!keep.isPrivate && keep.state == KeepStates.ACTIVE))
+        val discoverable = rawSeedItems(0).discoverable || (!keep.isPrivate && keep.state == KeepStates.ACTIVE)
         rawSeedItems.foreach { rawSeedItem =>
           updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, if (keep.state == KeepStates.ACTIVE) 1 else 0, discoverable)
         }
