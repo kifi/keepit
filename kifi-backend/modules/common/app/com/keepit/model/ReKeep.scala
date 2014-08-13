@@ -55,3 +55,11 @@ case class RichReKeep(id: Option[Id[ReKeep]], createdAt: DateTime, updatedAt: Da
 
 @json case class KeepIdInfo(keepId: Id[Keep], uriId: Id[NormalizedURI], userId: Id[User])
 
+@json case class URIDiscoveryCount(uriId: Id[NormalizedURI], count: Int)
+
+@json case class URIReKeepCount(uriId: Id[NormalizedURI], count: Int)
+
+@json case class KeepDiscoveryCount(keepId: Id[Keep], count: Int)
+
+@json case class KeepReKeptCount(keepId: Id[Keep], count: Int)
+
