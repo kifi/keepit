@@ -4,6 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.curator.commanders.{ RecommendationGenerationCommander }
+import com.keepit.common.healthcheck.FakeHealthcheckModule
 
 import com.keepit.curator.model._
 import com.keepit.graph.FakeGraphServiceModule
@@ -22,7 +23,8 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
     FakeGraphServiceModule(),
     FakeCortexServiceClientModule(),
     FakeHeimdalServiceClientModule(),
-    FakeSearchServiceClientModule())
+    FakeSearchServiceClientModule(),
+    FakeHealthcheckModule())
 
   def setup(): Seq[UriRecommendation] = {
     val rec1 = UriRecommendation(uriId = Id[NormalizedURI](1), userId = Id[User](42), masterScore = 0.15f,
