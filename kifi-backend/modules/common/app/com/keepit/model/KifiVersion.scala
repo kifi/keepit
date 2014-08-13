@@ -26,9 +26,7 @@ trait KifiVersion {
     }
   }
 
-  override def hashCode: Int = {
-    31 * (31 * (31 * major + minor) + (if (patch >= 0) patch else 0)) + (if (build >= 0) build else 0)
-  }
+  override def hashCode: Int = 31 * (31 * (31 * major + minor) + math.max(0, patch)) + math.max(0, build)
 
   override def toString = {
     Seq(major, minor) ++ (if (patch >= 0) Some(patch) ++ (if (build >= 0) Some(build) else Nil) else Nil) mkString "."
