@@ -15,6 +15,7 @@ object Keepers {
 case class SeedItem(
   userId: Id[User],
   uriId: Id[NormalizedURI],
+  url: String,
   seq: SequenceNumber[SeedItem],
   priorScore: Option[Float],
   timesKept: Int,
@@ -34,5 +35,16 @@ case class SeedItem(
 
   override def toString = s"social:$socialScore --- popularity:$popularityScore --- overallInterest:$overallInterestScore --- recentInterest:$recentInterestScore --- recency:$recencyScore --- prior:$priorScore --- rekeep:$rekeepScore --- discovery:$discoveryScore"
 }
+
+case class MultipliedSeedItem(
+  multiplier: Float = 1.0f,
+  userId: Id[User],
+  uriId: Id[NormalizedURI],
+  seq: SequenceNumber[SeedItem],
+  priorScore: Option[Float],
+  timesKept: Int,
+  lastSeen: DateTime,
+  keepers: Keepers,
+  discoverable: Boolean)
 
 case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores)

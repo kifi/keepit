@@ -29,6 +29,7 @@ case class RawSeedItem(
   updatedAt: DateTime = currentDateTime,
   seq: SequenceNumber[RawSeedItem] = SequenceNumber.ZERO,
   uriId: Id[NormalizedURI],
+  url: String,
   userId: Option[Id[User]], //which user is this a seed item for. None means this is for every user.
   firstKept: DateTime, //the first time anyone has kept this uri
   lastKept: DateTime, //the most recent time anyone has kept this uri

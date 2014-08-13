@@ -82,6 +82,7 @@ class SeedIngestionCommander @Inject() (
   private def cook(userId: Id[User], rawItem: RawSeedItem, keepers: Keepers): SeedItem = SeedItem(
     userId = userId,
     uriId = rawItem.uriId,
+    url = rawItem.url,
     seq = SequenceNumber[SeedItem](rawItem.seq.value),
     priorScore = rawItem.priorScore,
     timesKept = rawItem.timesKept,

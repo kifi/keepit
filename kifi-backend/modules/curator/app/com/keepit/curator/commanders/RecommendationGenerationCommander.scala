@@ -28,6 +28,7 @@ class RecommendationGenerationCommander @Inject() (
     seedCommander: SeedIngestionCommander,
     shoebox: ShoeboxServiceClient,
     scoringHelper: UriScoringHelper,
+    boostingHelper: UriBoostingHelper,
     db: Database,
     airbrake: AirbrakeNotifier,
     uriRecRepo: UriRecommendationRepo,
@@ -150,7 +151,8 @@ class RecommendationGenerationCommander @Inject() (
                 case _ => false
               }
             }
-            scoringHelper(cleanedItems).map { scoredItems =>
+            val boostedItems = boostingHelper(cleanedItems)
+            scoringHelper(boostedItems).map { scoredItems =>
               val toBeSavedItems = scoredItems.filter(si => shouldInclude(si.uriScores))
               db.readWrite { implicit session =>
                 toBeSavedItems.map { item =>
