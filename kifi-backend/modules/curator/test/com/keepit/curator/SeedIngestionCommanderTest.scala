@@ -20,9 +20,7 @@ import scala.concurrent.duration.Duration
 import org.joda.time.DateTime
 import com.keepit.common.concurrent.ExecutionContext
 
-class SeedIngestionCommanderTest extends Specification with CuratorTestInjector {
-
-  import TestHelpers.{ makeKeeps, makeUser, makeKeepsWithPrivacy }
+class SeedIngestionCommanderTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
 
   private def modules = {
     Seq(
@@ -34,7 +32,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
   }
 
   private def setup()(implicit injector: Injector) = {
-    val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+    val shoebox = shoeboxClientInstance()
     val (user1, user2) = (makeUser(42, shoebox).id.get, makeUser(43, shoebox).id.get)
 
     (user1, user2, shoebox)
@@ -73,6 +71,15 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           source = KeepSource.keeper,
           isPrivate = true,
           libraryId = None))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(4).discoverable === false
+
+        shoebox.saveBookmarks(user1Keeps(4).copy(
+          isPrivate = false,
+          state = KeepStates.INACTIVE))
+
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
 
@@ -128,7 +135,6 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           keepInfoRepo.getByKeepId(user1Keeps(1).id.get).get.state.value === KeepStates.DUPLICATE.value
           keepInfoRepo.getByKeepId(user1Keeps(7).id.get).get.state.value === KeepStates.ACTIVE.value
           keepInfoRepo.getByKeepId(user1Keeps(0).id.get).get.uriId === Id[NormalizedURI](47)
-
           seedItemRepo.getByUriId(user1Keeps(0).uriId).length === 0
           seedItemRepo.getByUriId(Id[NormalizedURI](47)).length === 1
 
