@@ -570,8 +570,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getDeepUrl(locator: DeepLocator, recipient: Id[User]): Future[String] = ???
 
-  def kifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit] = Future.successful()
-
   def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = Future.successful {
     uriIds.map(HelpRankInfo(_, 0, 0))
   }

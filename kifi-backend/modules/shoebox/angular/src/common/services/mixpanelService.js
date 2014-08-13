@@ -3,13 +3,13 @@
 */
 (function (angular) {
   'use strict';
-  var $window, $log, profileService;
+  var $window, $log, profileService, analyticsState;
 
   /**
    * @name kifi.mixpanel
    * Enables analytics support for Mixpanel (http://mixpanel.com)
    */
-  angular.module('kifi.mixpanel', ['angulartics'])
+  angular.module('kifi.mixpanel', ['kifi', 'angulartics'])
   .config(['$analyticsProvider',
     function ($analyticsProvider) {
 
@@ -59,12 +59,16 @@
           }
           mixpanel.identify(userId);
           $log.log('mixpanelService.pageTrackForUser(' + path + '):' + origin);
-          mixpanel.track('user_viewed_page', {
+
+          var customAttributes = analyticsState.events.user_viewed_page;
+          var attributes = _.extend(customAttributes, {
             type: getLocation(path),
             origin: origin,
             siteVersion: 2,
             userStatus: getUserStatus()
           });
+
+          mixpanel.track('user_viewed_page', attributes);
         } finally {
           if (!oldId) {
             mixpanel.identify(oldId);
@@ -72,13 +76,28 @@
         }
       } else {
         identifiedViewEventQueue.push(path);
-        if (profileService && profileService.me && profileService.me.id) {
-          userId = profileService.me.id;
+
+        var trackMe = function (me) {
+          me = me || profileService.me;
+          if (!me) {
+            // shouldn't happen, just a sanity check
+            return;
+          }
+
+          userId = me;
           var toSend = identifiedViewEventQueue.slice();
           identifiedViewEventQueue.length = 0;
           toSend.forEach(function (path) {
             pageTrackForUser(mixpanel, path, origin);
           });
+        };
+
+        if (profileService) {
+          if (profileService.me && profileService.me.id) {
+            trackMe();
+          } else {
+            profileService.getMe().then(trackMe);
+          }
         }
       }
     }
@@ -117,11 +136,12 @@
     });
   }])
   .run([
-      'profileService', '$window', '$log',
-      function (p, w, l) {
+      'profileService', '$window', '$log', 'analyticsState',
+      function (p, w, l, as) {
         $window = w;
         profileService = p;
         $log = l;
+        analyticsState = as;
       }
     ]);
 

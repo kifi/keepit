@@ -8,12 +8,14 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.time.Clock
 import com.keepit.model.{ UriRecommendationUserInteraction, UriRecommendationFeedback, User, NormalizedURI }
+import org.joda.time.DateTime
 import play.api.libs.json.{ Json }
 
 @ImplementedBy(classOf[UriRecommendationRepoImpl])
 trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getByUriAndUserId(uriId: Id[NormalizedURI], userId: Id[User], uriRecommendationState: Option[State[UriRecommendation]])(implicit session: RSession): Option[UriRecommendation]
   def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
+  def getNotPushedByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RSession): Boolean
   def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI], interaction: UriRecommendationUserInteraction)(implicit session: RSession): Boolean
 }
@@ -32,6 +34,11 @@ class UriRecommendationRepoImpl @Inject() (
     { jstr => Json.parse(jstr).as[UriScores] }
   )
 
+  implicit val attributionMapper = MappedColumnType.base[SeedAttribution, String](
+    { attr => Json.stringify(Json.toJson(attr)) },
+    { jstr => Json.parse(jstr).as[SeedAttribution] }
+  )
+
   type RepoImpl = UriRecommendationTable
 
   class UriRecommendationTable(tag: Tag) extends RepoTable[UriRecommendation](db, tag, "uri_recommendation") {
@@ -43,18 +50,27 @@ class UriRecommendationRepoImpl @Inject() (
     def seen = column[Boolean]("seen", O.NotNull)
     def clicked = column[Boolean]("clicked", O.NotNull)
     def kept = column[Boolean]("kept", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, vote.?, uriId, userId, masterScore, allScores, seen, clicked, kept) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
+    def lastPushedAt = column[DateTime]("last_pushed_at", O.Nullable)
+    def attribution = column[SeedAttribution]("attribution", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, vote.?, uriId, userId, masterScore, allScores, seen, clicked,
+      kept, lastPushedAt.?, attribution) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
   }
 
   def table(tag: Tag) = new UriRecommendationTable(tag)
   initTable()
 
-  def getByUriAndUserId(uriId: Id[NormalizedURI], userId: Id[User], uriRecommendationState: Option[State[UriRecommendation]])(implicit session: RSession): Option[UriRecommendation] = {
-    (for (row <- rows if row.uriId === uriId && row.userId === userId && row.state =!= uriRecommendationState.orNull) yield row).firstOption
+  def getByUriAndUserId(uriId: Id[NormalizedURI], userId: Id[User], excludeUriRecommendationState: Option[State[UriRecommendation]])(implicit session: RSession): Option[UriRecommendation] = {
+    (for (row <- rows if row.uriId === uriId && row.userId === userId && row.state =!= excludeUriRecommendationState.orNull) yield row).firstOption
   }
 
   def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation] = {
-    (for (row <- rows if row.userId === userId) yield row).sortBy(_.masterScore.desc).take(maxBatchSize).list
+    (for (row <- rows if row.userId === userId && row.state === uriRecommendationState) yield row).
+      sortBy(_.masterScore.desc).take(maxBatchSize).list
+  }
+
+  def getNotPushedByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation] = {
+    (for (row <- rows if row.userId === userId && row.state === uriRecommendationState && row.lastPushedAt.isNull) yield row).
+      sortBy(_.masterScore.desc).take(maxBatchSize).list
   }
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RSession): Boolean = {

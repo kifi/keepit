@@ -7,8 +7,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.curator.model._
-import com.keepit.model.User
+import com.keepit.model.{ User, ExperimentType }
 import com.keepit.common.db.slick.Database
+import com.keepit.commanders.RemoteUserExperimentCommander
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.model.User
@@ -27,33 +28,12 @@ class SeedIngestionCommander @Inject() (
     airbrake: AirbrakeNotifier,
     rawSeedsRepo: RawSeedItemRepo,
     keepInfoRepo: CuratorKeepInfoRepo,
+    experimentCommander: RemoteUserExperimentCommander,
     db: Database) extends Logging {
 
   val INGESTION_BATCH_SIZE = 50
 
-  val GRAPH_INGESTION_WHITELIST: Seq[Id[User]] = Seq(
-    1, //Eishay
-    3, //Andrew
-    7, //Yasu
-    9, //Danny
-    48, //Jared
-    61, //Jen
-    100, //Tamila
-    115, //Yingjie
-    134, //Léo
-    243, //Stephen
-    460, //Ray
-    1114, //Martin
-    2538, //Mark
-    3466, //JP
-    6498, //Tan
-    6622, //David
-    7100, //Aaron
-    7456, //Josh
-    7589, //Lydia
-    8465, //Yiping
-    8476 //Tommy
-  ).map(Id[User](_)) //will go away once we release, just saving some computation/time for now
+  def usersToIngestGraphDataFor(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map(users => users.map(_.id.get).toSeq)
 
   val MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER = 100
 
@@ -61,7 +41,9 @@ class SeedIngestionCommander @Inject() (
 
   def ingestAll(): Future[Boolean] = ingestionLock.withLockFuture {
     val fut = ingestAllKeeps().flatMap { _ =>
-      FutureHelpers.sequentialExec(GRAPH_INGESTION_WHITELIST)(ingestTopUris)
+      usersToIngestGraphDataFor().flatMap { userIds =>
+        FutureHelpers.sequentialExec(userIds)(ingestTopUris)
+      }
     }
     fut.onComplete {
       case Failure(ex) => {
@@ -86,7 +68,8 @@ class SeedIngestionCommander @Inject() (
     priorScore = rawItem.priorScore,
     timesKept = rawItem.timesKept,
     lastSeen = rawItem.lastSeen,
-    keepers = keepers
+    keepers = keepers,
+    discoverable = rawItem.discoverable
   )
 
   def getBySeqNumAndUser(start: SequenceNumber[SeedItem], userId: Id[User], maxBatchSize: Int): Future[Seq[SeedItem]] = {

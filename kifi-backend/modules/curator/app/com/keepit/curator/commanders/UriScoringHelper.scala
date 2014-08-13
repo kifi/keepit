@@ -6,7 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.curator.model.{ CuratorKeepInfoRepo, Keepers, SeedItem, ScoredSeedItem, UriScores }
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.model.{ NormalizedURI, HelpRankInfo }
 
 import com.google.inject.{ Inject, Singleton }
@@ -27,7 +27,7 @@ class UriScoringHelper @Inject() (
     graph: GraphServiceClient,
     keepInfoRepo: CuratorKeepInfoRepo,
     cortex: CortexServiceClient,
-    shoebox: ShoeboxServiceClient) extends Logging {
+    heimdal: HeimdalServiceClient) extends Logging {
 
   private def getRawRecencyScores(items: Seq[SeedItem]): Seq[Float] = items.map { item =>
     val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays()
@@ -80,7 +80,7 @@ class UriScoringHelper @Inject() (
 
   val uriHelpRankScores = TrieMap[Id[NormalizedURI], HelpRankInfo]() //This needs to go when we have proper caching on the help rank scores
   def getRawHelpRankScores(items: Seq[SeedItem]): Future[(Seq[Float], Seq[Float])] = {
-    val helpRankInfos = shoebox.getHelpRankInfos(items.map(_.uriId).filterNot(uriHelpRankScores.contains))
+    val helpRankInfos = heimdal.getHelpRankInfos(items.map(_.uriId).filterNot(uriHelpRankScores.contains))
     helpRankInfos.map { infos =>
       infos.foreach { info => uriHelpRankScores += (info.uriId -> info) }
       items.map { item =>

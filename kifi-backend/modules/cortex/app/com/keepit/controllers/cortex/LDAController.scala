@@ -68,7 +68,7 @@ class LDAController @Inject() (
   }
 
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    val scores = lda.gaussianUserUriInterest(userId, uriId)
+    val scores = lda.userUriInterest(userId, uriId)
     Ok(Json.toJson(scores))
   }
 
@@ -112,6 +112,13 @@ class LDAController @Inject() (
   def unamedTopics(limit: Int) = Action { request =>
     val (infos, words) = infoCommander.unamedTopics(limit)
     Ok(Json.obj("infos" -> infos, "words" -> words))
+  }
+
+  def getTopicNames() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val uriIds = (js \ "uris").as[Seq[Id[NormalizedURI]]]
+    val res = lda.getTopicNames(uriIds)
+    Ok(Json.toJson(res))
   }
 
 }

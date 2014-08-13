@@ -273,7 +273,8 @@ POST    /site/libraries/move        @com.keepit.controllers.website.LibraryContr
 
 GET     /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
-POST    /site/recos/updateUriRecommendationFeedback     @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI])
+POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(userId: Id[User], url: String)
+POST    /site/recos/vote            @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationUserInteraction(userId: Id[User], url: String)
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
@@ -486,6 +487,7 @@ GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.Admin
 GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
 GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])
 
+POST    /admin/social_users/smoothLastGraphRefreshTimes     @com.keepit.controllers.admin.AdminSocialUserController.smoothLastGraphRefreshTimes(minutesFromNow: Int)
 GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])
 POST     /admin/social_user/:id/disconnect      @com.keepit.controllers.admin.AdminSocialUserController.disconnectSocialUser(id: Id[SocialUserInfo], revoke: Boolean ?= false)
@@ -613,7 +615,7 @@ POST    /admin/cortex/lda/userUriInterest                  @com.keepit.controlle
 POST    /admin/cortex/lda/userTopicMean                    @com.keepit.controllers.admin.AdminLDAController.userTopicMean
 GET     /admin/cortex/lda/topicDetail                      @com.keepit.controllers.admin.AdminLDAController.topicDetail(topicId: Int)
 GET     /admin/cortex/lda/peopleLikeYou                    @com.keepit.controllers.admin.AdminLDAController.peopleLikeYou(topK: Int ?= 20)
-GET     /admin/cortex/lda/unamedTopics                     @com.keepit.controllers.admin.AdminLDAController.unamedTopics(limit: Int ?= 20)
+GET     /admin/cortex/lda/unamedTopics                     @com.keepit.controllers.admin.AdminLDAController.unamedTopics(limit: Int ?= 5)
 
 GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
@@ -684,7 +686,6 @@ GET     /internal/shoebox/database/getLibrariesAndMembershipsChanged       @com.
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.ext.ExtDeepLinkController.getDeepUrl()
-POST    /internal/shoebox/database/kifiHit   @com.keepit.controllers.internal.ShoeboxController.kifiHit()
 POST    /internal/shoebox/database/getHelpRankInfo    @com.keepit.controllers.internal.ShoeboxController.getHelpRankInfo()
 
 GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.internal.ShoeboxController.getActiveExperiments

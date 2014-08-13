@@ -1,9 +1,10 @@
 package com.keepit.curator.model
 
 import com.keepit.common.db.slick.{ DbRepo, SeqNumberFunction, SeqNumberDbFunction, DataBaseComponent, Database }
+import com.keepit.common.db.slick.{ RepoWithDelete, DbRepoWithDelete }
 import com.keepit.common.db.{ Id, DbSequenceAssigner, SequenceNumber }
 import com.keepit.model.{ User, NormalizedURI }
-import com.keepit.common.time.Clock
+import com.keepit.common.time.{ currentDateTime, Clock }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.actor.ActorInstance
@@ -17,9 +18,9 @@ import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import org.joda.time.DateTime
 
 @ImplementedBy(classOf[RawSeedItemRepoImpl])
-trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeedItem] {
+trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeedItem] with RepoWithDelete[RawSeedItem] {
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[RawSeedItem]
-  def getByUriIdAndUserId(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[RawSeedItem]
+  def getByUriIdAndUserId(uriId: Id[NormalizedURI], userIdOpt: Option[Id[User]])(implicit session: RSession): Option[RawSeedItem]
   def getBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
   def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
   def getRecentGeneric(maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
@@ -31,7 +32,7 @@ trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeed
 class RawSeedItemRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock)
-    extends DbRepo[RawSeedItem] with RawSeedItemRepo with SeqNumberDbFunction[RawSeedItem] {
+    extends DbRepo[RawSeedItem] with RawSeedItemRepo with SeqNumberDbFunction[RawSeedItem] with DbRepoWithDelete[RawSeedItem] {
 
   import db.Driver.simple._
 
@@ -46,7 +47,8 @@ class RawSeedItemRepoImpl @Inject() (
     def lastSeen = column[DateTime]("last_seen", O.NotNull)
     def priorScore = column[Float]("prior_score", O.Nullable)
     def timesKept = column[Int]("times_kept", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, seq, uriId, userId.?, firstKept, lastKept, lastSeen, priorScore.?, timesKept) <> ((RawSeedItem.apply _).tupled, RawSeedItem.unapply _)
+    def discoverable = column[Boolean]("discoverable", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, seq, uriId, userId.?, firstKept, lastKept, lastSeen, priorScore.?, timesKept, discoverable) <> ((RawSeedItem.apply _).tupled, RawSeedItem.unapply _)
   }
 
   def table(tag: Tag) = new RawSeedItemTable(tag)
@@ -68,8 +70,12 @@ class RawSeedItemRepoImpl @Inject() (
     (for (row <- rows if row.uriId === uriId && row.userId.isNull) yield row).firstOption
   }
 
-  def getByUriIdAndUserId(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[RawSeedItem] = {
-    (for (row <- rows if row.uriId === uriId && row.userId === userId) yield row).firstOption
+  def getByUriIdAndUserId(uriId: Id[NormalizedURI], userIdOpt: Option[Id[User]])(implicit session: RSession): Option[RawSeedItem] = {
+    userIdOpt.map { userId =>
+      (for (row <- rows if row.uriId === uriId && row.userId === userId) yield row).firstOption
+    } getOrElse {
+      (for (row <- rows if row.uriId === uriId && row.userId.isNull) yield row).firstOption
+    }
   }
 
   def getBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {

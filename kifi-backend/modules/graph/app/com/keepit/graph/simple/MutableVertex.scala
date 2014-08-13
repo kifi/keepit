@@ -17,7 +17,7 @@ class MutableVertex(var data: VertexDataReader, val outgoingEdges: MutableOutgoi
   }
 
   def removeOutgoingEdge(destinationId: VertexId, edgeKind: EdgeType): Unit = {
-    val component = (data.kind, destinationId.kind, edgeKind)
+    val component = Component(data.kind, destinationId.kind, edgeKind)
     outgoingEdges.edges(component) -= destinationId
     if (outgoingEdges.edges(component).isEmpty) { outgoingEdges.edges -= component }
   }
@@ -29,7 +29,7 @@ class MutableVertex(var data: VertexDataReader, val outgoingEdges: MutableOutgoi
   }
 
   def removeIncomingEdge(sourceId: VertexId, edgeKind: EdgeType): Unit = {
-    val component = (sourceId.kind, data.kind, edgeKind)
+    val component = Component(sourceId.kind, data.kind, edgeKind)
     incomingEdges.edges(component) -= sourceId
     if (incomingEdges.edges(component).isEmpty) { incomingEdges.edges -= component }
   }

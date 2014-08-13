@@ -11,6 +11,7 @@ import com.keepit.model.{ User, Keep, KeepSource, NormalizedURI, URL, KeepStates
 import com.keepit.curator.model._
 import com.keepit.curator.commanders.SeedIngestionCommander
 import com.keepit.common.cache.FakeCacheModule
+import com.keepit.common.healthcheck.FakeHealthcheckModule
 
 import com.google.inject.Injector
 
@@ -20,21 +21,20 @@ import scala.concurrent.duration.Duration
 import org.joda.time.DateTime
 import com.keepit.common.concurrent.ExecutionContext
 
-class SeedIngestionCommanderTest extends Specification with CuratorTestInjector {
-
-  import TestHelpers.{ makeKeeps, makeUser }
+class SeedIngestionCommanderTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
 
   private def modules = {
     Seq(
       FakeShoeboxServiceModule(),
       FakeGraphServiceModule(),
       FakeHttpClientModule(),
-      FakeCacheModule()
+      FakeCacheModule(),
+      FakeHealthcheckModule()
     )
   }
 
   private def setup()(implicit injector: Injector) = {
-    val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+    val shoebox = shoeboxClientInstance()
     val (user1, user2) = (makeUser(42, shoebox).id.get, makeUser(43, shoebox).id.get)
 
     (user1, user2, shoebox)
@@ -42,6 +42,112 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
 
   "SeedIngestionCommander" should {
 
+    "ingest keeps and have discoverability correctly -- test case 1" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, shoebox) = setup()
+        val user1Keeps = makeKeepsWithPrivacy(user1, 5, true, shoebox)
+        val keepInfoRepo = inject[CuratorKeepInfoRepo]
+        val seedItemRepo = inject[RawSeedItemRepo]
+        val commander = inject[SeedIngestionCommander]
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        var seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+        seedItems.foreach(_.discoverable === false)
+
+        shoebox.saveBookmarks(user1Keeps(4).copy(
+          userId = user2,
+          isPrivate = false))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(4).discoverable === true
+
+        shoebox.saveBookmarks(user1Keeps(4).copy(
+          isPrivate = true))
+        shoebox.saveBookmarks(Keep(
+          uriId = Id[NormalizedURI](5),
+          urlId = Id[URL](5),
+          url = "https://kifi.com",
+          userId = user1,
+          state = KeepStates.ACTIVE,
+          source = KeepSource.keeper,
+          isPrivate = true,
+          libraryId = None))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(4).discoverable === false
+
+        shoebox.saveBookmarks(user1Keeps(4).copy(
+          isPrivate = false,
+          state = KeepStates.INACTIVE))
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(4).discoverable === false
+      }
+    }
+
+    "ingest keeps and have discoverability correctly -- test case 2" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, shoebox) = setup()
+        val seedItemRepo = inject[RawSeedItemRepo]
+        val commander = inject[SeedIngestionCommander]
+
+        val keep1 = shoebox.saveBookmarks(Keep(
+          uriId = Id[NormalizedURI](1),
+          urlId = Id[URL](1),
+          url = "https://kifi.com",
+          userId = user1,
+          state = KeepStates.INACTIVE,
+          source = KeepSource.keeper,
+          isPrivate = false,
+          libraryId = None))
+
+        val keep2 = shoebox.saveBookmarks(Keep(
+          uriId = Id[NormalizedURI](1),
+          urlId = Id[URL](1),
+          url = "https://kifi.com",
+          userId = user2,
+          state = KeepStates.ACTIVE,
+          source = KeepSource.keeper,
+          isPrivate = false,
+          libraryId = None))
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        var seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(0).discoverable === true
+
+        shoebox.saveBookmarks(keep2(0).copy(
+          state = KeepStates.INACTIVE))
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(0).discoverable === false
+
+        shoebox.saveBookmarks(keep1(0).copy(
+          state = KeepStates.ACTIVE,
+          isPrivate = true))
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(0).discoverable === false
+
+        shoebox.saveBookmarks(keep1(0).copy(
+          state = KeepStates.ACTIVE,
+          isPrivate = false))
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(0).discoverable === true
+
+      }
+    }
     //this is in one test case instead of a bunch to reduce run time (i.e. avoid repeated db initialization) as we are moving quite a bit of data.
     //Already takes several seconds as it is.
     "ingest multiple batches and update sequence number and raw seed items correctly" in {
@@ -53,6 +159,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         val systemValueRepo = inject[SystemValueRepo]
         val seedItemRepo = inject[RawSeedItemRepo]
         val commander = inject[SeedIngestionCommander]
+
         db.readOnlyMaster { implicit session => keepInfoRepo.all() }.length === 0
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readOnlyMaster { implicit session => keepInfoRepo.all() }.length === 60
@@ -85,11 +192,10 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readOnlyMaster { implicit session =>
           keepInfoRepo.all().length === 60
-          keepInfoRepo.getByKeepId(user1Keeps(0).id.get).get.state.value == KeepStates.INACTIVE.value
-          keepInfoRepo.getByKeepId(user1Keeps(0).id.get).get.state.value == KeepStates.DUPLICATE.value
-          keepInfoRepo.getByKeepId(user1Keeps(7).id.get).get.state.value == KeepStates.ACTIVE.value
+          keepInfoRepo.getByKeepId(user1Keeps(0).id.get).get.state.value === KeepStates.INACTIVE.value
+          keepInfoRepo.getByKeepId(user1Keeps(1).id.get).get.state.value === KeepStates.DUPLICATE.value
+          keepInfoRepo.getByKeepId(user1Keeps(7).id.get).get.state.value === KeepStates.ACTIVE.value
           keepInfoRepo.getByKeepId(user1Keeps(0).id.get).get.uriId === Id[NormalizedURI](47)
-
           seedItemRepo.getByUriId(user1Keeps(0).uriId).length === 0
           seedItemRepo.getByUriId(Id[NormalizedURI](47)).length === 1
 
@@ -190,6 +296,28 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
       }
     }
 
+    "merge items (on uriId merge) correctly" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, shoebox) = setup()
+        val user1Keeps = makeKeeps(user1, 2, shoebox)
+        val commander = inject[SeedIngestionCommander]
+        val seedItemRepo = inject[RawSeedItemRepo]
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        db.readOnlyMaster { implicit session => seedItemRepo.all().length === 2 }
+
+        shoebox.saveBookmarks(user1Keeps(0).copy(uriId = user1Keeps(1).uriId))
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+
+        val allItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        allItems.length === 1
+        allItems(0).uriId === user1Keeps(1).uriId
+        allItems(0).timesKept === 2
+
+      }
+    }
+
     "ingest top score uris into raw seed items" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, shoebox) = setup()
@@ -206,12 +334,12 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         Await.result(result, Duration(10, "seconds"))
 
         db.readOnlyMaster { implicit session =>
-          val seedItem1: Option[RawSeedItem] = seedItemRepo.getByUriIdAndUserId(user1Keeps.head.uriId, user1)
-          seedItem1.get.priorScore === Some(0.795.toFloat)
+          val seedItem1: Option[RawSeedItem] = seedItemRepo.getByUriIdAndUserId(user1Keeps.head.uriId, Some(user1))
+          seedItem1.get.priorScore === Some(0.795f)
           seedItem1.get.userId === Some(Id[User](42))
           seedItem1.get.uriId === Id[NormalizedURI](1)
 
-          val seedItem2: Option[RawSeedItem] = seedItemRepo.getByUriIdAndUserId(user1Keeps.head.uriId, user2)
+          val seedItem2: Option[RawSeedItem] = seedItemRepo.getByUriIdAndUserId(user1Keeps.head.uriId, Some(user2))
           seedItem2 === None
         }
       }

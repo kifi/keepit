@@ -59,13 +59,13 @@ object ExperimentType {
   val MOBILE_REDIRECT = ExperimentType("mobile_redirect")
   val GUIDE = ExperimentType("guide")
   val DELIGHTED_SURVEY_PERMANENT = ExperimentType("permanent_delighted_survey")
-  val NOTIFY_USER_WHEN_CONTACTS_JOIN = ExperimentType("notify_user_when_contacts_join")
   val DIGEST_EMAIl = ExperimentType("digest_email")
+  val RECOS_BETA = ExperimentType("recos_beta")
 
   val _ALL = ADMIN :: AUTO_GEN :: FAKE :: NO_SEARCH_EXPERIMENTS :: NOT_SENSITIVE ::
     CAN_MESSAGE_ALL_USERS :: DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
-    MOBILE_REDIRECT :: GUIDE :: DELIGHTED_SURVEY_PERMANENT :: NOTIFY_USER_WHEN_CONTACTS_JOIN ::
-    DIGEST_EMAIl :: Nil
+    MOBILE_REDIRECT :: GUIDE :: DELIGHTED_SURVEY_PERMANENT ::
+    DIGEST_EMAIl :: RECOS_BETA :: Nil
 
   private val _ALL_MAP: Map[String, ExperimentType] = _ALL map { e => e.value -> e } toMap
 

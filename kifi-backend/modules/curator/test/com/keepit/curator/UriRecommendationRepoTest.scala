@@ -5,9 +5,7 @@ import com.keepit.curator.model.{ UriScores, UriRecommendation, UriRecommendatio
 import com.keepit.model.{ UriRecommendationFeedback, User, NormalizedURI }
 import org.specs2.mutable.Specification
 
-class UriRecommendationRepoTest extends Specification with CuratorTestInjector {
-
-  import TestHelpers.makeUriRecommendation
+class UriRecommendationRepoTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
 
   def setup(): Seq[UriRecommendation] = {
     val rec1 = makeUriRecommendation(1, 42, 0.15f)
@@ -50,7 +48,7 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector {
         }
 
         db.readOnlyMaster { implicit s =>
-          val recs = repo.getByTopMasterScore(Id[User](42), 2, None)
+          val recs = repo.getByTopMasterScore(Id[User](42), 2)
           recs(0).masterScore === 0.99f
           recs(1).masterScore === 0.5f
         }
