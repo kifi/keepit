@@ -34,6 +34,11 @@ class UriRecommendationRepoImpl @Inject() (
     { jstr => Json.parse(jstr).as[UriScores] }
   )
 
+  implicit val attributionMapper = MappedColumnType.base[SeedAttribution, String](
+    { attr => Json.stringify(Json.toJson(attr)) },
+    { jstr => Json.parse(jstr).as[SeedAttribution] }
+  )
+
   type RepoImpl = UriRecommendationTable
 
   class UriRecommendationTable(tag: Tag) extends RepoTable[UriRecommendation](db, tag, "uri_recommendation") {
@@ -46,8 +51,9 @@ class UriRecommendationRepoImpl @Inject() (
     def clicked = column[Boolean]("clicked", O.NotNull)
     def kept = column[Boolean]("kept", O.NotNull)
     def lastPushedAt = column[DateTime]("last_pushed_at", O.Nullable)
+    def attribution = column[SeedAttribution]("attribution", O.NotNull)
     def * = (id.?, createdAt, updatedAt, state, vote.?, uriId, userId, masterScore, allScores, seen, clicked,
-      kept, lastPushedAt.?) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
+      kept, lastPushedAt.?, attribution) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
   }
 
   def table(tag: Tag) = new UriRecommendationTable(tag)

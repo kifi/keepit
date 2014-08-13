@@ -28,6 +28,7 @@ class RecommendationGenerationCommander @Inject() (
     seedCommander: SeedIngestionCommander,
     shoebox: ShoeboxServiceClient,
     scoringHelper: UriScoringHelper,
+    attributionHelper: SeedAttributionHelper,
     db: Database,
     airbrake: AirbrakeNotifier,
     uriRecRepo: UriRecommendationRepo,
@@ -159,15 +160,22 @@ class RecommendationGenerationCommander @Inject() (
                 case _ => false
               }
             }
-            scoringHelper(cleanedItems).map { scoredItems =>
-              val toBeSavedItems = scoredItems.filter(si => shouldInclude(si.uriScores))
-              db.readWrite { implicit session =>
-                toBeSavedItems.map { item =>
+
+            val toBeSaved = scoringHelper(cleanedItems).map { scoredItems =>
+              scoredItems.filter(si => shouldInclude(si.uriScores))
+            }.flatMap { scoredItems =>
+              attributionHelper.getAttributions(scoredItems)
+            }
+
+            toBeSaved.map { items =>
+              db.readWrite { implicit s =>
+                items foreach { item =>
                   val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
                   recoOpt.map { reco =>
                     uriRecRepo.save(reco.copy(
                       masterScore = computeMasterScore(item.uriScores),
-                      allScores = item.uriScores
+                      allScores = item.uriScores,
+                      attribution = item.attribution
                     ))
                   } getOrElse {
                     uriRecRepo.save(UriRecommendation(
@@ -177,16 +185,20 @@ class RecommendationGenerationCommander @Inject() (
                       allScores = item.uriScores,
                       seen = false,
                       clicked = false,
-                      kept = false
+                      kept = false,
+                      attribution = item.attribution
                     ))
                   }
                 }
+
                 genStateRepo.save(newState)
               }
+
               if (!cleanedItems.isEmpty) {
                 precomputeRecommendationsForUser(userId)
                 true
               } else false
+
             }
           }
       }

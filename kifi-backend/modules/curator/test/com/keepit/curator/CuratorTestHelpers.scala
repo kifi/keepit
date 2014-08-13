@@ -5,6 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
+import com.keepit.curator.model.SeedAttribution
 import com.keepit.model._
 import com.keepit.shoebox.{ ShoeboxServiceClient, ShoeboxScraperClient, FakeShoeboxServiceClientImpl }
 import model.{ UriRecommendationRepo, UriRecommendationStates, UriScores, UriRecommendation }
@@ -70,7 +71,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         priorScore = 1.0f,
         rekeepScore = 1.0f,
         discoveryScore = 1.0f),
-      seen = false, clicked = false, kept = false)
+      seen = false, clicked = false, kept = false, attribution = SeedAttribution.EMPTY)
 
   def makeCompleteUriRecommendation(uriId: Int, userId: Int, masterScore: Float, url: String) = {
     val normalizedUri = makeNormalizedUri(uriId, url)

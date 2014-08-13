@@ -3,8 +3,9 @@ package com.keepit.curator
 import com.keepit.common.db.Id
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.commanders.RecommendationGenerationCommander
-import com.keepit.curator.model.{ UriRecommendationRepo, UriScores, UriRecommendation }
+import com.keepit.curator.commanders.{ RecommendationGenerationCommander }
+
+import com.keepit.curator.model._
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ UriRecommendationScores, User, NormalizedURI }
@@ -31,7 +32,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         priorScore = 1.0f,
         rekeepScore = 1.0f,
         discoveryScore = 1.0f),
-      seen = false, clicked = false, kept = false)
+      seen = false, clicked = false, kept = false, attribution = SeedAttribution.EMPTY)
 
     val rec2 = UriRecommendation(uriId = Id[NormalizedURI](2), userId = Id[User](42), masterScore = 0.99f,
       allScores = UriScores(socialScore = 1.0f,
@@ -42,7 +43,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         priorScore = 1.0f,
         rekeepScore = 1.0f,
         discoveryScore = 1.0f),
-      seen = false, clicked = false, kept = false)
+      seen = false, clicked = false, kept = false, attribution = SeedAttribution.EMPTY)
 
     val rec3 = UriRecommendation(uriId = Id[NormalizedURI](3), userId = Id[User](42), masterScore = 0.5f,
       allScores = UriScores(socialScore = 0.0f,
@@ -53,7 +54,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         priorScore = 1.0f,
         rekeepScore = 1.0f,
         discoveryScore = 1.0f),
-      seen = false, clicked = false, kept = false)
+      seen = false, clicked = false, kept = false, attribution = SeedAttribution(topic = Some(TopicAttribution("fun"))))
 
     Seq(rec1, rec2, rec3)
   }
@@ -80,6 +81,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         val result2 = commander.getAdHocRecommendations(Id[User](42), 1, UriRecommendationScores())
         val recs2 = Await.result(result2, Duration(10, "seconds"))
         recs2(0).score === 33.0f
+
       }
     }
 
