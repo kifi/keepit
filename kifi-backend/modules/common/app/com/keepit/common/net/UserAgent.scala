@@ -24,7 +24,6 @@ case class UserAgent(
 object UserAgent extends Logging {
 
   val KifiIphoneAppTypeName = "kifi iphone app"
-  // val KifiAndroidAppTypeName = "kifi android app"
 
   private val MobileOses = Set("Android", "iOS", "Bada", "DangerOS", "Firefox OS", "Mac OS", "Palm OS", "BlackBerry OS", "Symbian OS", "webOS")
   private val TabletIndicators = Set("iPad", "Tablet")
