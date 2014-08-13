@@ -3,6 +3,11 @@
 
 var notifierScout = notifierScout || function (doc) {  // idempotent for Chrome
   'use strict';
+
+  if (/^Mac/.test(navigator.platform)) {
+    api.require('styles/mac.css', api.noop);
+  }
+
   if (doc.documentElement.style) { // not XML viewer
     api.port.on({
       silence: removeAll,
