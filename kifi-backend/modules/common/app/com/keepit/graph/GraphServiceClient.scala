@@ -1,8 +1,8 @@
 package com.keepit.graph
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
-import com.keepit.common.service.{RequestConsolidator, ServiceClient, ServiceType}
+import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceType }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.{ CallTimeouts, ClientResponse, HttpClient }
 import com.keepit.common.healthcheck.AirbrakeNotifier
