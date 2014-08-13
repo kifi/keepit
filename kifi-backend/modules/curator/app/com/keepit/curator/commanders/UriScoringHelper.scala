@@ -7,7 +7,6 @@ import com.keepit.curator.model.{ CuratorKeepInfoRepo, Keepers, SeedItem, Scored
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.heimdal.HeimdalServiceClient
-import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.model.{ NormalizedURI, HelpRankInfo }
 
 import com.google.inject.{ Inject, Singleton }
@@ -28,8 +27,7 @@ class UriScoringHelper @Inject() (
     graph: GraphServiceClient,
     keepInfoRepo: CuratorKeepInfoRepo,
     cortex: CortexServiceClient,
-    heimdal: HeimdalServiceClient,
-    shoebox: ShoeboxServiceClient) extends Logging {
+    heimdal: HeimdalServiceClient) extends Logging {
 
   private def getRawRecencyScores(items: Seq[SeedItem]): Seq[Float] = items.map { item =>
     val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays()
