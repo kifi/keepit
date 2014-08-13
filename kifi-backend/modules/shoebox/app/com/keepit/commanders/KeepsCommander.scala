@@ -137,10 +137,12 @@ class KeepsCommander @Inject() (
     keepRepo: KeepRepo,
     collectionRepo: CollectionRepo,
     userRepo: UserRepo,
+    keepDiscoveriesRepo: KeepDiscoveryRepo,
+    rekeepRepo: ReKeepRepo,
+    kifiHitCache: KifiHitCache,
     keptAnalytics: KeepingAnalytics,
     rawBookmarkFactory: RawBookmarkFactory,
     scheduler: Scheduler,
-    heimdalClient: HeimdalServiceClient,
     eliza: ElizaServiceClient,
     localUserExperimentCommander: LocalUserExperimentCommander,
     airbrake: AirbrakeNotifier,
@@ -155,7 +157,7 @@ class KeepsCommander @Inject() (
     collectionId: Option[ExternalId[Collection]],
     helprankOpt: Option[String],
     count: Int,
-    userId: Id[User]): Future[(Seq[Keep], Option[Collection], Map[Id[Keep], Int], Map[Id[Keep], Int])] = {
+    userId: Id[User]): (Seq[Keep], Option[Collection], Map[Id[Keep], Int], Map[Id[Keep], Int]) = {
 
     @inline def filter(counts: Seq[(Id[NormalizedURI], Int)])(implicit r: RSession): Seq[Id[NormalizedURI]] = {
       val uriIds = counts.map(_._1)
@@ -179,44 +181,31 @@ class KeepsCommander @Inject() (
 
     db.readOnlyReplica { implicit ro =>
       val collectionOpt = (collectionId map { id => collectionRepo.getByUserAndExternalId(userId, id) }).flatten
-      val keepsF = collectionOpt match {
+      val keeps = collectionOpt match {
         case Some(collection) =>
-          Future.successful(keepRepo.getByUserAndCollection(userId, collection.id.get, beforeOpt, afterOpt, count))
+          keepRepo.getByUserAndCollection(userId, collection.id.get, beforeOpt, afterOpt, count)
         case None =>
-          helprankOpt map { selector =>
-            val keepIdsF = selector.trim match {
-              case "rekeep" => heimdalClient.getUriReKeepsWithCountsByKeeper(userId) map { counts => counts.map(c => c.uriId -> c.count) }
-              case _ => heimdalClient.getUriDiscoveriesWithCountsByKeeper(userId) map { counts => counts.map(c => c.uriId -> c.count) }
-            }
-            keepIdsF map { counts =>
-              val keepIds = filter(counts)
+          helprankOpt match {
+            case Some(selector) =>
+              val keepIds = selector.trim match {
+                case "rekeep" => {
+                  filter(rekeepRepo.getUriReKeepsWithCountsByKeeper(userId) map { case (uriId, _, _, count) => uriId -> count })
+                }
+                case _ => {
+                  filter(keepDiscoveriesRepo.getUriDiscoveriesWithCountsByKeeper(userId) map { case (uriId, _, _, count) => uriId -> count })
+                } // click
+              }
               val km = keepRepo.bulkGetByUserAndUriIds(userId, keepIds.toSet)
               log.info(s"[getKeeps($beforeOpt,$afterOpt,${helprankOpt.get},$count,$userId)] keeps=$km")
               km.valuesIterator.toList
-            }
-          } getOrElse Future.successful(keepRepo.getByUser(userId, beforeOpt, afterOpt, count))
+            case _ => keepRepo.getByUser(userId, beforeOpt, afterOpt, count)
+          }
       }
-      keepsF flatMap { keeps =>
-        val countsF = helprankOpt match {
-          case None =>
-            Future.successful((Map.empty[Id[Keep], Int], Map.empty[Id[Keep], Int]))
-          case Some(_) =>
-            val discCountsF = heimdalClient.getDiscoveryCountsByKeepIds(userId, keeps.map(_.id.get).toSet)
-            val rekeepCountsF = heimdalClient.getReKeepCountsByKeepIds(userId, keeps.map(_.id.get).toSet)
-            for {
-              discCounts <- discCountsF
-              rekeepCounts <- rekeepCountsF
-            } yield {
-              val discMap = discCounts.map { c => c.keepId -> c.count }.toMap
-              val rkMap = rekeepCounts.map { c => c.keepId -> c.count }.toMap
-              (discMap, rkMap)
-            }
-        }
-        countsF map {
-          case (disCount, rkCount) =>
-            (keeps, collectionOpt, disCount, rkCount)
-        }
+      val (clkCount, rkCount) = helprankOpt match {
+        case None => (Map.empty[Id[Keep], Int], Map.empty[Id[Keep], Int])
+        case Some(s) => (keepDiscoveriesRepo.getDiscoveryCountsByKeepIds(userId, keeps.map(_.id.get).toSet), rekeepRepo.getReKeepCountsByKeepIds(userId, keeps.map(_.id.get).toSet))
       }
+      (keeps, collectionOpt, clkCount, rkCount)
     }
   }
 
@@ -232,33 +221,31 @@ class KeepsCommander @Inject() (
     count: Int,
     userId: Id[User],
     withPageInfo: Boolean): Future[(Option[BasicCollection], Seq[FullKeepInfo])] = {
-    getKeeps(before, after, collectionId, helprankOpt, count, userId) flatMap {
-      case (keeps, collectionOpt, clkCounts, rkCounts) =>
-        val sharingInfosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
-        val pageInfosFuture = Future.sequence(keeps.map { keep =>
-          if (withPageInfo) getKeepSummary(keep).map(Some(_)) else Future.successful(None)
-        })
+    val (keeps, collectionOpt, clkCounts, rkCounts) = getKeeps(before, after, collectionId, helprankOpt, count, userId)
+    val sharingInfosFuture = searchClient.sharingUserInfo(userId, keeps.map(_.uriId))
+    val pageInfosFuture = Future.sequence(keeps.map { keep =>
+      if (withPageInfo) getKeepSummary(keep).map(Some(_)) else Future.successful(None)
+    })
 
-        val colls = db.readOnlyMaster { implicit s =>
-          keeps.map { keep =>
-            keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
-          }
-        }.map(collectionCommander.getBasicCollections)
+    val colls = db.readOnlyMaster { implicit s =>
+      keeps.map { keep =>
+        keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
+      }
+    }.map(collectionCommander.getBasicCollections)
 
-        for {
-          sharingInfos <- sharingInfosFuture
-          pageInfos <- pageInfosFuture
-        } yield {
-          val idToBasicUser = db.readOnlyMaster { implicit s =>
-            basicUserRepo.loadAll(sharingInfos.flatMap(_.sharingUserIds).toSet)
-          }
-          val keepsInfo = (keeps zip colls, sharingInfos, pageInfos).zipped.map {
-            case ((keep, colls), sharingInfos, pageInfos) =>
-              val others = sharingInfos.keepersEdgeSetSize - sharingInfos.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
-              FullKeepInfo(keep, sharingInfos.sharingUserIds map idToBasicUser, colls.map(_.id.get).toSet, colls.toSet, others, DomainToNameMapper.getNameFromUrl(keep.url), pageInfos, clkCounts.get(keep.id.get), rkCounts.get(keep.id.get))
-          }
-          (collectionOpt.map { c => BasicCollection.fromCollection(c.summary) }, keepsInfo)
-        }
+    for {
+      sharingInfos <- sharingInfosFuture
+      pageInfos <- pageInfosFuture
+    } yield {
+      val idToBasicUser = db.readOnlyMaster { implicit s =>
+        basicUserRepo.loadAll(sharingInfos.flatMap(_.sharingUserIds).toSet)
+      }
+      val keepsInfo = (keeps zip colls, sharingInfos, pageInfos).zipped.map {
+        case ((keep, colls), sharingInfos, pageInfos) =>
+          val others = sharingInfos.keepersEdgeSetSize - sharingInfos.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
+          FullKeepInfo(keep, sharingInfos.sharingUserIds map idToBasicUser, colls.map(_.id.get).toSet, colls.toSet, others, DomainToNameMapper.getNameFromUrl(keep.url), pageInfos, clkCounts.get(keep.id.get), rkCounts.get(keep.id.get))
+      }
+      (collectionOpt.map { c => BasicCollection.fromCollection(c.summary) }, keepsInfo)
     }
   }
 
@@ -612,22 +599,19 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def getHelpRankInfo(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = { // move this to curator -- one fewer call to port
+  def getHelpRankInfo(uriIds: Seq[Id[NormalizedURI]]): Seq[HelpRankInfo] = {
     val uriIdSet = uriIds.toSet
     if (uriIdSet.size != uriIds.length) {
       log.warn(s"[getHelpRankInfo] (duplicates!) uriIds(len=${uriIds.length}):${uriIds.mkString(",")} idSet(sz=${uriIdSet.size}):${uriIdSet.mkString(",")}")
     }
-    val discCountsF = heimdalClient.getDiscoveryCountsByURIs(uriIdSet)
-    val rkCountsF = heimdalClient.getReKeepCountsByURIs(uriIdSet)
-    for {
-      discCounts <- discCountsF
-      rkCounts <- rkCountsF
-    } yield {
-      val discMap = discCounts.map { c => c.uriId -> c.count }.toMap
-      val rkMap = rkCounts.map { c => c.uriId -> c.count }.toMap
-      uriIds.toSeq.map { uriId =>
-        HelpRankInfo(uriId, discMap.getOrElse(uriId, 0), rkMap.getOrElse(uriId, 0))
-      }
+    val (discMap, rkMap) = db.readOnlyMaster { implicit ro =>
+      val discMap = keepDiscoveriesRepo.getDiscoveryCountsByURIs(uriIdSet)
+      val rkMap = rekeepRepo.getReKeepCountsByURIs(uriIdSet)
+      log.info(s"[getHelpRankInfo] discMap=$discMap rkMap=$rkMap")
+      (discMap, rkMap)
+    }
+    uriIds.toSeq.map { uriId =>
+      HelpRankInfo(uriId, discMap.getOrElse(uriId, 0), rkMap.getOrElse(uriId, 0))
     }
   }
 
