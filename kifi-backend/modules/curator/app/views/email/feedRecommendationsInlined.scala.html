@@ -1,14 +1,25 @@
-@(firstName: String, recos: Seq[com.keepit.curator.commanders.email.RecommendedUriSummary])
+@(emailData: com.keepit.curator.commanders.email.RecommendedEmailData)
 
 
-Hello @firstName,<br/><br/>
+Hello @emailData.toUser.firstName,<br/><br/>
 
-Kifi recommends @recos.size items for you:
+Kifi recommends @emailData.recos.size items for you:
 
 <ol>
-    @recos.map { reco =>
+    @emailData.recos.map { reco =>
     <li>
         <h3>@reco.title</h3>
+        <div>
+            How is this recommendation?
+            <form method="post" action="https://www.kifi.com/site/recos/vote?url=@helper.urlEncode(reco.url)">
+                <input type="hidden" name="vote" value="true"/>
+                <input type="submit" value="Good"/>
+            </form>
+            <form method="post" action="https://www.kifi.com/site/recos/vote?url=@helper.urlEncode(reco.url)">
+                <input type="hidden" name="vote" value="false"/>
+                <input type="submit" value="Bad"/>
+            </form>
+        </div>
         <div>URL: @reco.url</div>
         <div>Description: @reco.description</div>
         <div>Score: @reco.score</div>
