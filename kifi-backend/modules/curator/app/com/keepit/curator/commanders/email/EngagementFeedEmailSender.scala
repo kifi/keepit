@@ -58,7 +58,7 @@ class EngagementFeedEmailSenderImpl @Inject() (
 
     log.info(s"sending engagement feed email to ${user.id.get}")
 
-    recommendationGenerationCommander.getTopRecommendations(user.id.get, recommendationCount).flatMap[EngagementFeedSummary] { recos =>
+    recommendationGenerationCommander.getTopRecommendationsNotPushed(user.id.get, recommendationCount).flatMap[EngagementFeedSummary] { recos =>
       shoebox.getUriSummaries(recos.map(_.uriId)).flatMap[EngagementFeedSummary] { summaries =>
         val dataFutures: Future[Seq[RecommendedUriSummary]] = Future.sequence {
           recos.map { reco =>

@@ -79,6 +79,12 @@ class RecommendationGenerationCommander @Inject() (
     }
   }
 
+  def getTopRecommendationsNotPushed(userId: Id[User], howManyMax: Int): Future[Seq[UriRecommendation]] = {
+    db.readOnlyReplicaAsync { implicit session =>
+      uriRecRepo.getNotPushedByTopMasterScore(userId, howManyMax)
+    }
+  }
+
   def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecommendationInfo]] = {
     getTopRecommendations(userId, Math.max(howManyMax, 1000)).map { recos =>
       recos.map { reco =>
