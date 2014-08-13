@@ -57,8 +57,6 @@ angular.module('kifi.friends.rightColFriendsView', [
     restrict: 'A',
     templateUrl: 'friends/rightColConnectView.tpl.html',
     link: function (scope/*, element, attrs*/) {
-      scope.connectSocial = false;
-
       socialService.refresh();
       scope.$watch(function () {
         return (friendService.totalFriends() < 20) && scope.network;
