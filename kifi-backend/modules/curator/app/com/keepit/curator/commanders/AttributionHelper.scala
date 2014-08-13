@@ -40,6 +40,7 @@ class SeedAttributionHelper @Inject() (
     seeds.headOption.map { _.userId } match {
       case None => Future.successful(ret)
       case Some(userId) =>
+        // get uriIds for lookup and the corresponding indexes
         val (idxes, uriIds) = (0 until seeds.size).flatMap { i => if (needToLookup(seeds(i))) Some((i, seeds(i).uriId)) else None }.unzip
         if (uriIds.size == 0) {
           Future.successful(ret)
