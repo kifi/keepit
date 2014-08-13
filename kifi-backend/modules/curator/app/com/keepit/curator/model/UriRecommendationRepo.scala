@@ -7,7 +7,6 @@ import com.keepit.common.db.slick.{ DBSession, DataBaseComponent, DbRepo }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.time.Clock
-import com.keepit.curator.commanders.SeedAttribution
 import com.keepit.model.{ UriRecommendationUserInteraction, UriRecommendationFeedback, User, NormalizedURI }
 import play.api.libs.json.{ Json }
 

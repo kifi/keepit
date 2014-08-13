@@ -1,9 +1,9 @@
 package com.keepit.curator.commanders
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.curator.model.ScoredSeedItem
+import com.keepit.curator.model._
 import com.keepit.model.{ Keep, User }
 import com.kifi.macros.json
 
@@ -11,19 +11,10 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 
-@json case class UserAttribution(friends: Seq[Id[User]], others: Int)
-@json case class KeepAttribution(keeps: Seq[Id[Keep]])
-@json case class TopicAttribution(topicName: String)
-@json case class SeedAttribution(user: Option[UserAttribution] = None, keep: Option[KeepAttribution] = None, topic: Option[TopicAttribution] = None)
-
-object SeedAttribution {
-  val EMPTY = SeedAttribution()
-}
-
 @Singleton
 class SeedAttributionHelper @Inject() (cortex: CortexServiceClient) {
 
-  def getSeedAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[SeedAttribution]] = {
+  def getAttributions(seeds: Seq[ScoredSeedItem]): Future[Seq[ScoredSeedItemWithAttribution]] = {
     val userAttrFut = getUserAttribution(seeds)
     val keepAttrFut = getKeepAttribution(seeds)
     val topicAttrFut = getTopicAttribution(seeds)
@@ -33,7 +24,8 @@ class SeedAttributionHelper @Inject() (cortex: CortexServiceClient) {
       topicAttr <- topicAttrFut
     } yield {
       (0 until seeds.size).map { i =>
-        SeedAttribution(userAttr(i), keepAttr(i), topicAttr(i))
+        val attr = SeedAttribution(userAttr(i), keepAttr(i), topicAttr(i))
+        ScoredSeedItemWithAttribution(seeds(i).userId, seeds(i).uriId, seeds(i).uriScores, attr)
       }
     }
   }

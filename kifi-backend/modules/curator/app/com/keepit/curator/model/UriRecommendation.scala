@@ -3,8 +3,7 @@ package com.keepit.curator.model
 import com.keepit.common.crypto.ModelWithPublicId
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.curator.commanders.SeedAttribution
-import com.keepit.model.{ UriRecommendationUserInteraction, UriRecommendationFeedback, User, NormalizedURI }
+import com.keepit.model.{ User, NormalizedURI }
 import org.joda.time.DateTime
 
 case class UriRecommendation(

@@ -3,7 +3,7 @@ package com.keepit.curator
 import com.google.inject.Injector
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
-import com.keepit.curator.commanders.SeedAttribution
+import com.keepit.curator.model.SeedAttribution
 import com.keepit.model._
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import model.{ UriRecommendationStates, UriScores, UriRecommendation }

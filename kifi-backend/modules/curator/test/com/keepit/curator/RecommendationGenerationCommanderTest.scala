@@ -3,8 +3,9 @@ package com.keepit.curator
 import com.keepit.common.db.Id
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.commanders.{ TopicAttribution, SeedAttribution, RecommendationGenerationCommander }
-import com.keepit.curator.model.{ UriRecommendationRepo, UriScores, UriRecommendation }
+import com.keepit.curator.commanders.{ RecommendationGenerationCommander }
+
+import com.keepit.curator.model._
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.model.{ UriRecommendationScores, User, NormalizedURI }
 import org.specs2.mutable.Specification
