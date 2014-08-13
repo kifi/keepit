@@ -48,7 +48,7 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
         }
 
         db.readOnlyMaster { implicit s =>
-          val recs = repo.getByTopMasterScore(Id[User](42), 2, None)
+          val recs = repo.getByTopMasterScore(Id[User](42), 2)
           recs(0).masterScore === 0.99f
           recs(1).masterScore === 0.5f
         }

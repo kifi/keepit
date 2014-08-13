@@ -3,6 +3,7 @@ package com.keepit.curator
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -24,7 +25,7 @@ class EngagementFeedEmailSenderTest extends Specification with CuratorTestInject
 
   "EngagementFeedEmailSender" should {
 
-    "sends to users in experiment" in {
+    "sends not-already-pushed keeps to users" in {
       withDb(modules: _*) { implicit injector =>
         val shoebox = shoeboxClientInstance()
         val sender = inject[EngagementFeedEmailSender]
@@ -38,7 +39,11 @@ class EngagementFeedEmailSenderTest extends Specification with CuratorTestInject
             makeCompleteUriRecommendation(2, 42, 0.99f, "http://www.google.com"),
             makeCompleteUriRecommendation(3, 43, 0.3f, "http://www.42go.com"),
             makeCompleteUriRecommendation(4, 43, 0.4f, "http://www.yahoo.com"),
-            makeCompleteUriRecommendation(5, 43, 0.5f, "http://www.lycos.com")
+            makeCompleteUriRecommendation(5, 43, 0.5f, "http://www.lycos.com"),
+            {
+              val tuple = makeCompleteUriRecommendation(6, 42, 0.99f, "http://www.excite.com")
+              tuple.copy(_2 = tuple._2.withLastPushedAt(currentDateTime))
+            }
           ).map(tuple => saveUriModels(tuple, shoebox))
         }
 
