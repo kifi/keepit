@@ -19,10 +19,13 @@ case class UriRecommendation(
     seen: Boolean,
     clicked: Boolean,
     kept: Boolean,
+    lastPushedAt: Option[DateTime] = None,
     attribution: SeedAttribution) extends Model[UriRecommendation] with ModelWithPublicId[UriRecommendation] with ModelWithState[UriRecommendation] {
 
   def withId(id: Id[UriRecommendation]): UriRecommendation = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): UriRecommendation = this.copy(updateAt = updateTime)
+  def withLastPushedAt(pushedAt: DateTime): UriRecommendation = this.copy(lastPushedAt = Some(pushedAt))
+  def withNoLastPushedAt(): UriRecommendation = this.copy(lastPushedAt = None)
 }
 
 object UriRecommendationStates extends States[UriRecommendation]

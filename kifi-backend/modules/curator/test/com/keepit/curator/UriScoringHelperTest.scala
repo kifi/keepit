@@ -11,6 +11,7 @@ import com.keepit.graph.{ FakeGraphServiceClientImpl, GraphServiceClient, FakeGr
 import com.keepit.model.{ User, NormalizedURI }
 import org.specs2.mutable.Specification
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -20,7 +21,8 @@ class UriScoringHelperTest extends Specification with CuratorTestInjector {
     FakeGraphServiceModule(),
     FakeHttpClientModule(),
     FakeCortexServiceClientModule(),
-    FakeCacheModule())
+    FakeCacheModule(),
+    FakeHeimdalServiceClientModule())
 
   private def makeSeedItems(): Seq[SeedItem] = {
     val seedItem1 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](1), seq = SequenceNumber[SeedItem](1), priorScore = None, timesKept = 1000, lastSeen = currentDateTime, keepers = Keepers.TooMany, discoverable = true)

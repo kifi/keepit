@@ -2,9 +2,9 @@
 
 # --- !Ups
 
-alter table uri_recommendation
-    add column attribution text NOT NULL DEFAULT '{}';
+ALTER TABLE uri_recommendation
+  ADD COLUMN last_pushed_at datetime NULL;
 
-insert into evolutions (name, description) values('224.sql', 'add attribution column');
+INSERT INTO evolutions (name, description) VALUES('224.sql', 'add last_pushed_at to curator.uri_recommendation table');
 
 # --- !Downs

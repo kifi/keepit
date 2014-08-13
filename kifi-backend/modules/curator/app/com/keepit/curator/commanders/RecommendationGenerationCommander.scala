@@ -36,7 +36,7 @@ class RecommendationGenerationCommander @Inject() (
 
   val defaultScore = 0.0f
 
-  val recommendationGenerationLock = new ReactiveLock(6)
+  val recommendationGenerationLock = new ReactiveLock(10)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
 
   val FEED_PRECOMPUTATION_WHITELIST: Seq[Id[User]] = Seq(
@@ -74,32 +74,42 @@ class RecommendationGenerationCommander @Inject() (
       3 * scores.discoveryScore
   }
 
-  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecommendationInfo]] = {
-    val recosFuture = db.readOnlyReplicaAsync { implicit session =>
-      uriRecRepo.getByTopMasterScore(userId, Math.max(howManyMax, 1000))
+  def getTopRecommendations(userId: Id[User], howManyMax: Int): Future[Seq[UriRecommendation]] = {
+    db.readOnlyReplicaAsync { implicit session =>
+      uriRecRepo.getByTopMasterScore(userId, howManyMax)
     }
+  }
 
-    recosFuture.map { recos =>
+  def getTopRecommendationsNotPushed(userId: Id[User], howManyMax: Int): Future[Seq[UriRecommendation]] = {
+    db.readOnlyReplicaAsync { implicit session =>
+      uriRecRepo.getNotPushedByTopMasterScore(userId, howManyMax)
+    }
+  }
+
+  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecommendationInfo]] = {
+    getTopRecommendations(userId, Math.max(howManyMax, 1000)).map { recos =>
       recos.map { reco =>
         RecommendationInfo(
           userId = reco.userId,
           uriId = reco.uriId,
           {
-            val score = scoreCoefficients.recencyScore.getOrElse(defaultScore) * reco.allScores.recencyScore +
-              scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * reco.allScores.overallInterestScore +
-              scoreCoefficients.priorScore.getOrElse(defaultScore) * reco.allScores.priorScore +
-              scoreCoefficients.socialScore.getOrElse(defaultScore) * reco.allScores.socialScore +
-              scoreCoefficients.popularityScore.getOrElse(defaultScore) * reco.allScores.popularityScore +
-              scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore +
-              scoreCoefficients.rekeepScore.getOrElse(defaultScore) * reco.allScores.rekeepScore +
-              scoreCoefficients.discoveryScore.getOrElse(defaultScore) * reco.allScores.discoveryScore
-            if (score != 0.0f) score else computeMasterScore(reco.allScores)
+            if (scoreCoefficients.isEmpty) {
+              computeMasterScore(reco.allScores)
+            } else {
+              scoreCoefficients.recencyScore.getOrElse(defaultScore) * reco.allScores.recencyScore +
+                scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * reco.allScores.overallInterestScore +
+                scoreCoefficients.priorScore.getOrElse(defaultScore) * reco.allScores.priorScore +
+                scoreCoefficients.socialScore.getOrElse(defaultScore) * reco.allScores.socialScore +
+                scoreCoefficients.popularityScore.getOrElse(defaultScore) * reco.allScores.popularityScore +
+                scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore +
+                scoreCoefficients.rekeepScore.getOrElse(defaultScore) * reco.allScores.rekeepScore +
+                scoreCoefficients.discoveryScore.getOrElse(defaultScore) * reco.allScores.discoveryScore
+            }
           },
           explain = Some(reco.allScores.toString)
         )
       }.sortBy(-1 * _.score).take(howManyMax)
     }
-
   }
 
   private def getPerUserGenerationLock(userId: Id[User]): ReactiveLock = {
