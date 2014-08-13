@@ -54,7 +54,8 @@ class HomeController @Inject() (
   heimdalServiceClient: HeimdalServiceClient,
   userExperimentCommander: LocalUserExperimentCommander,
   curatorServiceClient: CuratorServiceClient,
-  applicationConfig: FortyTwoConfig)
+  applicationConfig: FortyTwoConfig,
+  siteRouter: KifiSiteRouter)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
@@ -193,7 +194,7 @@ class HomeController @Inject() (
 
   def kifeeeed = HtmlAction.authenticated { request =>
     if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.ADMIN)) {
-      homeAuthed(request)
+      siteRouter.routeRequest(request)
     } else {
       Redirect("/")
     }
@@ -230,15 +231,9 @@ class HomeController @Inject() (
   def homeWithParam(id: String) = home
 
   def blog = HtmlAction[AnyContent](allowPending = true)(authenticatedAction = { request =>
-    request.headers.get(USER_AGENT) match {
-      case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
-      case _ => homeAuthed(request)
-    }
+    MovedPermanently("http://blog.kifi.com/")
   }, unauthenticatedAction = { request =>
-    request.headers.get(USER_AGENT) match {
-      case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
-      case _ => homeNotAuthed(request)
-    }
+    MovedPermanently("http://blog.kifi.com/")
   })
 
   def kifiSiteRedirect(path: String) = Action {

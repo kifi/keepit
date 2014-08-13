@@ -40,15 +40,15 @@ class KifiSiteRouter @Inject() (
 
   // Useful to route anything that a) serves the Angular app, b) requires context about if a user is logged in or not
   def app(path: String) = HtmlAction.apply(authenticatedAction = { request =>
-    doApp(request)
+    routeRequest(request)
   }, unauthenticatedAction = { request =>
-    doApp(request)
+    routeRequest(request)
   })
 
   def home = app("home")
 
   // When we refactor the authenticator to stop requiring two functions, this can be simplified.
-  private def doApp[T](request: Request[T]) = {
+  def routeRequest[T](request: Request[T]) = {
     // Short-circuit for landing pages
     if (request.path == "/" && request.userIdOpt.isEmpty) {
       landingPage(request)
