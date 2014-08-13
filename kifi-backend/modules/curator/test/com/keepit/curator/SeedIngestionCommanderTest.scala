@@ -11,6 +11,7 @@ import com.keepit.model.{ User, Keep, KeepSource, NormalizedURI, URL, KeepStates
 import com.keepit.curator.model._
 import com.keepit.curator.commanders.SeedIngestionCommander
 import com.keepit.common.cache.FakeCacheModule
+import com.keepit.common.healthcheck.FakeHealthcheckModule
 
 import com.google.inject.Injector
 
@@ -20,21 +21,20 @@ import scala.concurrent.duration.Duration
 import org.joda.time.DateTime
 import com.keepit.common.concurrent.ExecutionContext
 
-class SeedIngestionCommanderTest extends Specification with CuratorTestInjector {
-
-  import TestHelpers.{ makeKeeps, makeUser, makeKeepsWithPrivacy }
+class SeedIngestionCommanderTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
 
   private def modules = {
     Seq(
       FakeShoeboxServiceModule(),
       FakeGraphServiceModule(),
       FakeHttpClientModule(),
-      FakeCacheModule()
+      FakeCacheModule(),
+      FakeHealthcheckModule()
     )
   }
 
   private def setup()(implicit injector: Injector) = {
-    val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+    val shoebox = shoeboxClientInstance()
     val (user1, user2) = (makeUser(42, shoebox).id.get, makeUser(43, shoebox).id.get)
 
     (user1, user2, shoebox)
@@ -42,7 +42,7 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
 
   "SeedIngestionCommander" should {
 
-    "ingest keeps and have discoverability correctly" in {
+    "ingest keeps and have discoverability correctly -- test case 1" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, shoebox) = setup()
         val user1Keeps = makeKeepsWithPrivacy(user1, 5, true, shoebox)
@@ -77,9 +77,77 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
 
         seedItems(4).discoverable === false
+
+        shoebox.saveBookmarks(user1Keeps(4).copy(
+          isPrivate = false,
+          state = KeepStates.INACTIVE))
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(4).discoverable === false
       }
     }
 
+    "ingest keeps and have discoverability correctly -- test case 2" in {
+      withDb(modules: _*) { implicit injector =>
+        val (user1, user2, shoebox) = setup()
+        val seedItemRepo = inject[RawSeedItemRepo]
+        val commander = inject[SeedIngestionCommander]
+
+        val keep1 = shoebox.saveBookmarks(Keep(
+          uriId = Id[NormalizedURI](1),
+          urlId = Id[URL](1),
+          url = "https://kifi.com",
+          userId = user1,
+          state = KeepStates.INACTIVE,
+          source = KeepSource.keeper,
+          isPrivate = false,
+          libraryId = None))
+
+        val keep2 = shoebox.saveBookmarks(Keep(
+          uriId = Id[NormalizedURI](1),
+          urlId = Id[URL](1),
+          url = "https://kifi.com",
+          userId = user2,
+          state = KeepStates.ACTIVE,
+          source = KeepSource.keeper,
+          isPrivate = false,
+          libraryId = None))
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        var seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(0).discoverable === true
+
+        shoebox.saveBookmarks(keep2(0).copy(
+          state = KeepStates.INACTIVE))
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(0).discoverable === false
+
+        shoebox.saveBookmarks(keep1(0).copy(
+          state = KeepStates.ACTIVE,
+          isPrivate = true))
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(0).discoverable === false
+
+        shoebox.saveBookmarks(keep1(0).copy(
+          state = KeepStates.ACTIVE,
+          isPrivate = false))
+
+        Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
+        seedItems = db.readOnlyMaster { implicit session => seedItemRepo.all() }
+
+        seedItems(0).discoverable === true
+
+      }
+    }
     //this is in one test case instead of a bunch to reduce run time (i.e. avoid repeated db initialization) as we are moving quite a bit of data.
     //Already takes several seconds as it is.
     "ingest multiple batches and update sequence number and raw seed items correctly" in {
@@ -128,7 +196,6 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
           keepInfoRepo.getByKeepId(user1Keeps(1).id.get).get.state.value === KeepStates.DUPLICATE.value
           keepInfoRepo.getByKeepId(user1Keeps(7).id.get).get.state.value === KeepStates.ACTIVE.value
           keepInfoRepo.getByKeepId(user1Keeps(0).id.get).get.uriId === Id[NormalizedURI](47)
-
           seedItemRepo.getByUriId(user1Keeps(0).uriId).length === 0
           seedItemRepo.getByUriId(Id[NormalizedURI](47)).length === 1
 
