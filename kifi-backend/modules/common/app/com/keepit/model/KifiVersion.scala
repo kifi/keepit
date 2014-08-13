@@ -9,50 +9,75 @@ trait KifiVersion {
   def patch: Short
   def build: Int
 
-  assert(major >= 0 && minor >= 0 && patch >= 0 && build >= 0)
+  require(major >= 0 && minor >= 0 && patch >= -1 && build >= -1)
+  if (patch == -1) require(build == -1)
 
   def compareIt(that: KifiVersion): Int = {
     if (this.major != that.major) {
       this.major - that.major
     } else if (this.minor != that.minor) {
       this.minor - that.minor
-    } else if (this.patch != that.patch) {
+    } else if (this.patch != that.patch && (this.patch > 0 || that.patch > 0)) {
       this.patch - that.patch
-    } else {
+    } else if (this.build > 0 || that.build > 0) {
       this.build - that.build
+    } else {
+      0
     }
   }
 
+  override def hashCode: Int = {
+    31 * (31 * (31 * major + minor) + (if (patch >= 0) patch else 0)) + (if (build >= 0) build else 0)
+  }
+
   override def toString = {
-    Seq(major, minor, patch).mkString(".") + (if (build > 0) "." + build else "")
+    Seq(major, minor) ++ (if (patch >= 0) Some(patch) ++ (if (build >= 0) Some(build) else Nil) else Nil) mkString "."
+  }
+
+}
+
+case class KifiExtVersion(major: Short, minor: Short, patch: Short = -1, build: Int = -1) extends KifiVersion with Ordered[KifiExtVersion] {
+  def compare(that: KifiExtVersion): Int = compareIt(that)
+  override def equals(that: Any): Boolean = that match {
+    case v: KifiExtVersion => compareIt(v) == 0
+    case _ => false
   }
 }
 
-case class KifiIPhoneVersion(major: Short, minor: Short, patch: Short, build: Int = 0) extends KifiVersion with Ordered[KifiIPhoneVersion] {
-  def compare(that: KifiIPhoneVersion) = compareIt(that)
+case class KifiIPhoneVersion(major: Short, minor: Short, patch: Short = -1, build: Int = -1) extends KifiVersion with Ordered[KifiIPhoneVersion] {
+  def compare(that: KifiIPhoneVersion): Int = compareIt(that)
+  override def equals(that: Any): Boolean = that match {
+    case v: KifiIPhoneVersion => compareIt(v) == 0
+    case _ => false
+  }
 }
 
-case class KifiAndroidVersion(major: Short, minor: Short, patch: Short, build: Int = 0) extends KifiVersion with Ordered[KifiAndroidVersion] {
-  def compare(that: KifiAndroidVersion) = compareIt(that)
-}
-
-case class KifiExtVersion(major: Short, minor: Short, patch: Short, build: Int = 0) extends KifiVersion with Ordered[KifiExtVersion] {
-  def compare(that: KifiExtVersion) = compareIt(that)
+case class KifiAndroidVersion(major: Short, minor: Short, patch: Short = -1, build: Int = -1) extends KifiVersion with Ordered[KifiAndroidVersion] {
+  def compare(that: KifiAndroidVersion): Int = compareIt(that)
+  override def equals(that: Any): Boolean = that match {
+    case v: KifiAndroidVersion => compareIt(v) == 0
+    case _ => false
+  }
 }
 
 object KifiVersion {
-  val R = """(\d{1,5})\.(\d{1,5})\.(\d{1,5})(?:\.(\d{1,9}))?""".r
+  private val R = """(\d{1,5})\.(\d{1,5})(?:\.(\d{1,5})(?:\.(\d{1,9}))?)?""".r
+
+  def parse(version: String): (Short, Short, Short, Int) = {
+    version match {
+      case R(major, minor, patch, build) =>
+        (major.toShort, minor.toShort, Option(patch).map(_.toShort).getOrElse(-1), Option(build).map(_.toInt).getOrElse(-1))
+      case _ =>
+        throw new IllegalArgumentException("Invalid version: " + version)
+    }
+  }
 }
 
 object KifiExtVersion {
 
   def apply(version: String): KifiExtVersion = {
-    version match {
-      case KifiVersion.R(major, minor, patch, build) =>
-        KifiExtVersion(major.toShort, minor.toShort, patch.toShort, Option(build).map(_.toInt).getOrElse(0))
-      case _ =>
-        throw new IllegalArgumentException("Invalid kifi ext version: " + version)
-    }
+    val (major, minor, patch, build) = KifiVersion.parse(version)
+    KifiExtVersion(major, minor, patch, build)
   }
 
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[KifiExtVersion] {
@@ -75,12 +100,8 @@ object KifiExtVersion {
 object KifiIPhoneVersion {
 
   def apply(version: String): KifiIPhoneVersion = {
-    version match {
-      case KifiVersion.R(major, minor, patch, build) =>
-        KifiIPhoneVersion(major.toShort, minor.toShort, patch.toShort, Option(build).map(_.toInt).getOrElse(0))
-      case _ =>
-        throw new IllegalArgumentException("Invalid kifi iPhone version: " + version)
-    }
+    val (major, minor, patch, build) = KifiVersion.parse(version)
+    KifiIPhoneVersion(major, minor, patch, build)
   }
 
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[KifiIPhoneVersion] {
@@ -103,12 +124,8 @@ object KifiIPhoneVersion {
 object KifiAndroidVersion {
 
   def apply(version: String): KifiAndroidVersion = {
-    version match {
-      case KifiVersion.R(major, minor, patch, build) =>
-        KifiAndroidVersion(major.toShort, minor.toShort, patch.toShort, Option(build).map(_.toInt).getOrElse(0))
-      case _ =>
-        throw new IllegalArgumentException("Invalid kifi Android version: " + version)
-    }
+    val (major, minor, patch, build) = KifiVersion.parse(version)
+    KifiAndroidVersion(major, minor, patch, build)
   }
 
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[KifiAndroidVersion] {
