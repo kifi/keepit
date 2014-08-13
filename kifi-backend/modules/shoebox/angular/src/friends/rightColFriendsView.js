@@ -57,28 +57,14 @@ angular.module('kifi.friends.rightColFriendsView', [
     restrict: 'A',
     templateUrl: 'friends/rightColConnectView.tpl.html',
     link: function (scope/*, element, attrs*/) {
-      function getEligibleNetworksCsv() {
-        if (friendService.totalFriends() < 20) {
-          return _.compact([
-            socialService.facebook && socialService.facebook.profileUrl ? null : 'facebook',
-            socialService.linkedin && socialService.linkedin.profileUrl ? null : 'linkedin',
-            socialService.gmail && socialService.gmail.length ? null : 'gmail'
-          ]).join(',');
-        } else {
-          return '';
-        }
-      }
-
-      function chooseNetwork(csv) {
-        scope.network = csv ? _.sample(csv.split(',')) : null;
-      }
-
-      scope.connectFacebook = socialService.connectFacebook;
-      scope.connectLinkedIn = socialService.connectLinkedIn;
-      scope.importGmail = socialService.importGmail;
+      scope.connectSocial = false;
 
       socialService.refresh();
-      scope.$watch(getEligibleNetworksCsv, chooseNetwork);
+      scope.$watch(function () {
+        return (friendService.totalFriends() < 20) && scope.network;
+      }, function (newVal) {
+        scope.connectSocial = newVal;
+      });
     }
   };
 }])
@@ -202,13 +188,41 @@ angular.module('kifi.friends.rightColFriendsView', [
   };
 }])
 
-.directive('kfNoFriendsOrConnectionsView', ['socialService', function (socialService) {
+.directive('kfNoFriendsOrConnectionsView', [function () {
   return {
     replace: true,
     restrict: 'A',
-    templateUrl: 'friends/noFriendsOrConnectionsView.tpl.html',
-    link: function (scope) {
+    templateUrl: 'friends/noFriendsOrConnectionsView.tpl.html'
+  };
+}])
+
+.directive('kfRotatingConnect', ['socialService', function (socialService) {
+  return {
+    replace: true,
+    restrict: 'A',
+    scope: {
+      network: '='
+    },
+    templateUrl: 'friends/rotatingConnect.tpl.html',
+    link:  function (scope/*, element, attrs*/) {
+      function getEligibleNetworksCsv() {
+        return _.compact([
+          socialService.facebook && socialService.facebook.profileUrl ? null : 'Facebook',
+          socialService.linkedin && socialService.linkedin.profileUrl ? null : 'LinkedIn',
+          socialService.gmail && socialService.gmail.length ? null : 'Gmail'
+        ]).join(',');
+      }
+
+      function chooseNetwork(csv) {
+        scope.network = csv ? _.sample(csv.split(',')) : null;
+      }
+
       scope.connectFacebook = socialService.connectFacebook;
+      scope.connectLinkedIn = socialService.connectLinkedIn;
+      scope.importGmail = socialService.importGmail;
+
+      socialService.refresh();
+      scope.$watch(getEligibleNetworksCsv, chooseNetwork);
     }
   };
 }]);
