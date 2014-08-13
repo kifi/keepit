@@ -106,12 +106,6 @@ angular.module('kifi')
       fileInput.replaceWith(fileInput = fileInput.clone(true));
     }
 
-    function initAddKeep() {
-      $scope.modal = 'add_keeps';
-      $scope.data.initAddKeeps = true;
-      $scope.data.showAddKeeps = true;
-    }
-
     $rootScope.$on('showGlobalModal', function (e, modal) {
       switch (modal) {
         case 'addNetworks':
@@ -123,9 +117,6 @@ angular.module('kifi')
           break;
         case 'importBookmarkFile':
           initBookmarkFileUpload();
-          break;
-        case 'addKeeps':
-          initAddKeep();
           break;
         case 'genericError':
           $scope.modal = 'generic_error';

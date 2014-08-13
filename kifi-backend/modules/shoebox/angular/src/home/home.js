@@ -3,13 +3,13 @@
 angular.module('kifi')
 
 .controller('HomeCtrl', [
-  '$scope', 'tagService', 'keepDecoratorService', 'keepActionService', '$q', '$timeout', '$window', 'installService', '$rootScope',
-  function ($scope, tagService, keepDecoratorService, keepActionService, $q, $timeout, $window, installService, $rootScope) {
+  '$scope', 'tagService', 'keepDecoratorService', 'keepActionService', '$q', '$timeout', '$window', 'installService', '$rootScope', 'modalService',
+  function ($scope, tagService, keepDecoratorService, keepActionService, $q, $timeout, $window, installService, $rootScope, modalService) {
     //
     // Internal data.
     //
     var selectedCount = 0;
-    
+
 
     //
     // Scope data.
@@ -40,7 +40,7 @@ angular.module('kifi')
           keep.makeKept();
 
           $scope.keeps.push(keep);
-        });        
+        });
 
         $scope.hasMore = !!result.mayHaveMore;
         $scope.loading = false;
@@ -107,7 +107,9 @@ angular.module('kifi')
     };
 
     $scope.addKeeps = function () {
-      $rootScope.$emit('showGlobalModal', 'addKeeps');
+      modalService.open({
+        template: 'keeps/addKeepsModal.tpl.html'
+      });
     };
 
 
