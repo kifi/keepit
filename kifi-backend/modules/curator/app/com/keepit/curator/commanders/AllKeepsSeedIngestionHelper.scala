@@ -104,13 +104,18 @@ class AllKeepSeedIngestionHelper @Inject() (
       ))
 
       val discoverable = {
-        {
-          if (keepInfo.discoverable && keep.isPrivate) keepInfoRepo.checkDiscoverableByUriId(keep.uriId)
-          else keepInfo.discoverable || !keep.isPrivate
-        } && {
-          if (keepInfo.state == CuratorKeepInfoStates.ACTIVE && keep.state != KeepStates.ACTIVE)
-            keepInfoRepo.checkActiveByUriId(keep.uriId)
-          else keepInfo.state == CuratorKeepInfoStates.ACTIVE || keep.state == KeepStates.ACTIVE
+        if (!rawSeedItems(0).discoverable) {
+          !keep.isPrivate && keep.state == KeepStates.ACTIVE
+        } else {
+          if (!keep.isPrivate && keep.state == KeepStates.ACTIVE) {
+            true
+          } else {
+            if (!keep.isPrivate != keepInfo.discoverable || keep.state.value != keepInfo.state.value) {
+              keepInfoRepo.checkDiscoverableByUriId(keep.uriId)
+            } else {
+              true
+            }
+          }
         }
       }
 
