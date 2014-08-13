@@ -17,7 +17,6 @@ trait AngularRoute extends Routeable
 private case class AngularLoggedIn(preload: Seq[Request[_] => Future[String]] = Seq.empty) extends AngularRoute
 private case class Angular(preload: Seq[Request[_] => Future[String]] = Seq.empty) extends AngularRoute
 private case class RedirectRoute(url: String) extends Routeable
-private case class StaticResult(result: SimpleResult) extends Routeable
 private case object Error404 extends Routeable
 
 case class Path(requestPath: String) {
@@ -41,7 +40,6 @@ class KifiSiteRouter @Inject() (
 
   // Useful to route anything that a) serves the Angular app, b) requires context about if a user is logged in or not
   def app(path: String) = HtmlAction.apply(authenticatedAction = { request =>
-    println("Routing " + request.path)
     doApp(request)
   }, unauthenticatedAction = { request =>
     doApp(request)
@@ -69,7 +67,7 @@ class KifiSiteRouter @Inject() (
         case (r: Request[T], _) if request.identityOpt.isDefined =>
           // non-authed client, but identity is set. Mid-signup, send them there.
           Redirect(com.keepit.controllers.core.routes.AuthController.signupPage())
-        case (r: Request[T], ng: Angular) =>
+        case (r: Request[T], ng: AngularRoute) =>
           // non-authed client, routing to ng page
           Redirect("/") // todo: serve ng app!
       }

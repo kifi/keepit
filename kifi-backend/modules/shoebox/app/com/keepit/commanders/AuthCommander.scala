@@ -173,11 +173,14 @@ class AuthCommander @Inject() (
       val (emailPassIdentity, userId) = saveUserPasswordIdentity(None, Some(socialIdentity),
         email = sfi.email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
 
-      val user = db.readOnlyMaster { implicit session =>
+      val userPreUsername = db.readOnlyMaster { implicit session =>
         userRepo.get(userId)
       }
 
-      userCommander.autoSetUsername(user, readOnly = false)
+      userCommander.autoSetUsername(userPreUsername, readOnly = false)
+      val user = db.readOnlyMaster { implicit session =>
+        userRepo.get(userId)
+      }
 
       reportUserRegistration(user, inviteExtIdOpt)
 
@@ -203,9 +206,14 @@ class AuthCommander @Inject() (
       val passwordInfo = identity.passwordInfo.get
       val email = EmailAddress.validate(identity.email.get).get
       val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
-      val user = db.readOnlyMaster(userRepo.get(userId)(_))
+      val userPreUsername = db.readOnlyMaster { implicit session =>
+        userRepo.get(userId)
+      }
 
-      userCommander.autoSetUsername(user, readOnly = false)
+      userCommander.autoSetUsername(userPreUsername, readOnly = false)
+      val user = db.readOnlyMaster { implicit session =>
+        userRepo.get(userId)
+      }
 
       reportUserRegistration(user, inviteExtIdOpt)
 
