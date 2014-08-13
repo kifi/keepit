@@ -13,7 +13,7 @@ angular.module('kifi.modal', [])
       },
       templateUrl: 'common/modal/modal.tpl.html',
       transclude: true,
-      controller: ['$scope', function ($scope) {
+      controller: ['$scope', '$rootScope', function ($scope, $rootScope) {
         var defaultHideAction = null;
 
         this.setDefaultHideAction = function (action) {
@@ -57,7 +57,15 @@ angular.module('kifi.modal', [])
 
         $scope.$on('$destroy', function () {
           $document.off('keydown', exitModal);
+          $rootScope.modalOpen = false;
         });
+
+        $scope.$watch(function () {
+          return $('.modal-backdrop:visible').length > 0;
+        }, function (newVal) {
+          $rootScope.modalOpen = newVal;
+        });
+
       }],
       link: function (scope, element, attrs) {
         scope.dialogStyle = {};
