@@ -612,25 +612,6 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def getHelpRankInfo(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = { // move this to curator -- one fewer call to port
-    val uriIdSet = uriIds.toSet
-    if (uriIdSet.size != uriIds.length) {
-      log.warn(s"[getHelpRankInfo] (duplicates!) uriIds(len=${uriIds.length}):${uriIds.mkString(",")} idSet(sz=${uriIdSet.size}):${uriIdSet.mkString(",")}")
-    }
-    val discCountsF = heimdalClient.getDiscoveryCountsByURIs(uriIdSet)
-    val rkCountsF = heimdalClient.getReKeepCountsByURIs(uriIdSet)
-    for {
-      discCounts <- discCountsF
-      rkCounts <- rkCountsF
-    } yield {
-      val discMap = discCounts.map { c => c.uriId -> c.count }.toMap
-      val rkMap = rkCounts.map { c => c.uriId -> c.count }.toMap
-      uriIds.toSeq.map { uriId =>
-        HelpRankInfo(uriId, discMap.getOrElse(uriId, 0), rkMap.getOrElse(uriId, 0))
-      }
-    }
-  }
-
   def assembleKeepExport(keepExports: Seq[KeepExport]): String = {
     // HTML format that follows Delicious exports
     val before = """<!DOCTYPE NETSCAPE-Bookmark-file-1>

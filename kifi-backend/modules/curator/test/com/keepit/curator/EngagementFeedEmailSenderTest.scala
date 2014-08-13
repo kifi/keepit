@@ -6,6 +6,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
+import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import commanders.email.{ EngagementFeedEmailSender, EngagementFeedSummary }
 import model.UriRecommendationRepo
@@ -23,6 +24,7 @@ class EngagementFeedEmailSenderTest extends Specification with CuratorTestInject
     FakeShoeboxServiceModule(),
     FakeCortexServiceClientModule(),
     FakeHeimdalServiceClientModule(),
+    FakeSearchServiceClientModule(),
     FakeCacheModule())
 
   "EngagementFeedEmailSender" should {

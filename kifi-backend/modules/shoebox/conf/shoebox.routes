@@ -686,7 +686,6 @@ GET     /internal/shoebox/database/getLibrariesAndMembershipsChanged       @com.
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.ext.ExtDeepLinkController.getDeepUrl()
-POST    /internal/shoebox/database/getHelpRankInfo    @com.keepit.controllers.internal.ShoeboxController.getHelpRankInfo()
 
 GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.internal.ShoeboxController.getActiveExperiments
 GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.internal.ShoeboxController.getExperiments
