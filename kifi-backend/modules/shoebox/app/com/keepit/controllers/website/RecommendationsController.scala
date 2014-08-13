@@ -18,7 +18,7 @@ class RecommendationsController @Inject() (
     db: Database) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def adHocRecos(n: Int) = JsonAction.authenticatedParseJsonAsync { request =>
-    if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.ADMIN)) {
+    if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.RECOS_BETA)) {
       val scores = request.body.as[UriRecommendationScores]
       commander.adHocRecos(request.userId, n, scores).map(fkis => Ok(Json.toJson(fkis)))
     } else {
