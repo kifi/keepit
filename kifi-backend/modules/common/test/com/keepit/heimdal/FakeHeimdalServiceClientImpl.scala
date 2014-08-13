@@ -1,11 +1,11 @@
 package com.keepit.heimdal
 
-import com.keepit.common.mail.EmailAddress
 import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.service.ServiceType
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.test.{ FakeRepo, FakeServiceClient }
 import org.joda.time.DateTime
 
 import scala.concurrent.{ Future, Promise }
@@ -15,9 +15,12 @@ import play.api.libs.json.{ JsArray, Json, JsObject }
 import com.google.inject.util.Providers
 import com.keepit.common.actor.FakeScheduler
 
-class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends HeimdalServiceClient {
+class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends HeimdalServiceClient with FakeServiceClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
+
+  implicit val keepDiscoveryRepo: FakeRepo[KeepDiscovery] = new FakeRepo[KeepDiscovery]
+  implicit val reKeepRepo = new FakeRepo[ReKeep]
 
   var eventsRecorded: Int = 0
 
@@ -53,17 +56,29 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getPagedKeepDiscoveries(page: Int, size: Int): Future[Seq[KeepDiscovery]] = Future.successful(Seq.empty)
 
-  def getDiscoveryCount(): Future[Int] = Future.successful(0)
+  def getDiscoveryCount(): Future[Int] = Future.successful { keepDiscoveryRepo.count }
 
-  def getDiscoveryCountByKeeper(userId: Id[User]): Future[Int] = Future.successful(0)
+  def getDiscoveryCountByKeeper(userId: Id[User]): Future[Int] = Future.successful {
+    keepDiscoveryRepo.filter(_.keeperId == userId).size
+  }
 
-  def getUriDiscoveriesWithCountsByKeeper(userId: Id[User]): Future[Seq[URIDiscoveryCount]] = Future.successful(Seq.empty)
+  def getUriDiscoveriesWithCountsByKeeper(userId: Id[User]): Future[Seq[URIDiscoveryCount]] = Future.successful[Seq[URIDiscoveryCount]] {
+    val items = keepDiscoveryRepo.filter(_.keeperId == userId).groupBy(_.uriId).map {
+      case (id, rows) =>
+        (id, rows.head.keepId, rows.size)
+    }.toSeq
+    items.sortBy(_._2)(Id.ord[Keep].reverse) map { case (uriId, keepId, count) => URIDiscoveryCount(uriId, count) }
+  }
 
-  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIDiscoveryCount]] = Future.successful(Seq.empty)
+  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIDiscoveryCount]] = Future.successful {
+    keepDiscoveryRepo.filter(d => uriIds.contains(d.uriId)).groupBy(_.uriId).map { case (id, rows) => URIDiscoveryCount(id, rows.size) }.toSeq
+  }
 
-  def getDiscoveryCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepDiscoveryCount]] = Future.successful(Seq.empty)
+  def getDiscoveryCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepDiscoveryCount]] = Future.successful {
+    keepDiscoveryRepo.filter(d => d.keeperId == userId && keepIds.contains(d.keepId)).groupBy(_.keepId).map { case (id, rows) => KeepDiscoveryCount(id, rows.size) }.toSeq
+  }
 
-  def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = Future.successful(UserKeepAttributionInfo(Id[User](1), 0, 0, 0, 0, 0))
+  def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = Future.successful(UserKeepAttributionInfo(userId, 0, 0, 0, 0, 0))
 
   def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = Future.successful {
     uriIds.map(HelpRankInfo(_, 0, 0))
@@ -71,13 +86,23 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getPagedReKeeps(page: Int, size: Int): Future[Seq[ReKeep]] = Future.successful(Seq.empty)
 
-  def getReKeepCount(): Future[Int] = Future.successful(0)
+  def getReKeepCount(): Future[Int] = Future.successful { reKeepRepo.count }
 
-  def getUriReKeepsWithCountsByKeeper(userId: Id[User]): Future[Seq[URIReKeepCount]] = Future.successful(Seq.empty)
+  def getUriReKeepsWithCountsByKeeper(userId: Id[User]): Future[Seq[URIReKeepCount]] = Future.successful {
+    val items = reKeepRepo.filter(_.keeperId == userId).groupBy(_.uriId).map {
+      case (uriId, rows) =>
+        (uriId, rows.head.keepId, rows.size)
+    }.toSeq
+    items.sortBy(_._2)(Id.ord[Keep].reverse) map { case (uriId, keepId, count) => URIReKeepCount(uriId, count) }
+  }
 
-  def getReKeepCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepReKeptCount]] = Future.successful(Seq.empty)
+  def getReKeepCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepReKeptCount]] = Future.successful {
+    reKeepRepo.filter(rk => rk.keeperId == userId && keepIds.contains(rk.keepId)).groupBy(_.keepId).map { case (id, rows) => KeepReKeptCount(id, rows.size) }.toSeq
+  }
 
-  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIReKeepCount]] = Future.successful(Seq.empty)
+  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIReKeepCount]] = Future.successful {
+    reKeepRepo.filter(rk => uriIds.contains(rk.uriId)).groupBy(_.uriId).map { case (id, rows) => URIReKeepCount(id, rows.size) }.toSeq
+  }
 
   def getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI]): Future[(Int, Int)] = Future.successful((0, 0))
 

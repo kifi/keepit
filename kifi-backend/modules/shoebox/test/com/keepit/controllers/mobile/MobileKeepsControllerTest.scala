@@ -2,7 +2,7 @@ package com.keepit.controllers.mobile
 
 import org.specs2.mutable.Specification
 import com.keepit.normalizer._
-import com.keepit.heimdal.{ KifiHitContext, SanitizedKifiHit, HeimdalContext }
+import com.keepit.heimdal._
 import com.keepit.scraper._
 import com.keepit.commanders.KeepInfo._
 import com.keepit.commanders._
@@ -26,7 +26,6 @@ import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.model.KeepToCollection
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -353,58 +352,44 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector {
       keeps2.size === 3
       keeps1(1).uriId === keeps2(0).uriId
 
-      val (kc0, kc1, kc2) = db.readWrite { implicit rw =>
-        val kifiHitCache = inject[KifiHitCache]
-        val origin = "https://www.google.com"
-        val kc0 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId))
-        // u2 -> 42 (u1)
-        kifiHitCache.set(KifiHitKey(u2.id.get, keeps1(0).uriId), SanitizedKifiHit(kc0.hitUUID, origin, raw1(0).url, kc0.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId), Seq.empty, None, 0, 0)))
+      val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
+      implicit val kdRepo = heimdal.keepDiscoveryRepo
+      implicit val rkRepo = heimdal.reKeepRepo
 
-        val ts = currentDateTime
-        val uuid = ExternalId[ArticleSearchResult]()
-        val kc1 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId))
-        val kc2 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId))
-        // u3 -> kifi (u1, u2) [rekeep]
-        kifiHitCache.set(KifiHitKey(u3.id.get, keeps1(1).uriId), SanitizedKifiHit(kc1.hitUUID, origin, raw1(1).url, kc1.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId, u2.externalId), Seq.empty, None, 0, 0)))
+      val origin = "https://www.google.com"
+      val kc0 = KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId)
+      // u2 -> 42 (u1)
 
-        (kc0, kc1, kc2)
-      }
+      val ts = currentDateTime
+      val uuid = ExternalId[ArticleSearchResult]()
+      val kc1 = KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId)
+      val kc2 = KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId)
+      // u3 -> kifi (u1, u2) [rekeep]
+      heimdal.save(kc0, kc1, kc2)
 
       val (keeps3, _) = bookmarkInterner.internRawBookmarks(raw3, u3.id.get, KeepSource.default, true)
+      val kc3 = KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId)
+      // u4 -> kifi (u3) [rekeep]
+      heimdal.save(kc3)
 
-      val kc3 = db.readWrite { implicit rw =>
-        val kifiHitCache = inject[KifiHitCache]
-        val origin = "https://www.google.com"
-        val kc3 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
-        // u4 -> kifi (u3) [rekeep]
-        kifiHitCache.set(KifiHitKey(u4.id.get, keeps3(0).uriId), SanitizedKifiHit(kc3.hitUUID, origin, raw3(0).url, kc3.uriId, KifiHitContext(false, false, 0, Seq(u3.externalId), Seq.empty, None, 0, 0)))
-        kc3
-      }
+      val rk1 = ReKeep(keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId, srcKeepId = keeps3(0).id.get, srcUserId = u3.id.get)
+      val rk2 = ReKeep(keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId, srcKeepId = keeps3(0).id.get, srcUserId = u3.id.get)
+      heimdal.save(rk1, rk2)
 
       val (keeps4, _) = bookmarkInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
+      val rk3 = ReKeep(keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId, srcKeepId = keeps4(0).id.get, srcUserId = u4.id.get)
+      heimdal.save(rk3)
 
-      val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnlyMaster { implicit s =>
-        val keeps = keepRepo.getByUser(u1.id.get, None, None, 100)
-        val clickCount = keepDiscoveryRepo.getDiscoveryCountByKeeper(u1.id.get)
-        val clicks = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u1.id.get)
-        val rekeepCount = rekeepRepo.getReKeepCountByKeeper(u1.id.get)
-        val rekeeps = rekeepRepo.getReKeepCountsByKeeper(u1.id.get)
-        (keeps, clickCount, rekeepCount, clicks, rekeeps)
+      val keeps = db.readOnlyMaster { implicit s =>
+        keepRepo.getByUser(u1.id.get, None, None, 100)
       }
       keeps.size === keeps1.size
-      clickCount === 2
-      rekeepCount === 1
-      clicks.keySet.size === 2
-      rekeeps.keySet.size === 1
 
       val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.allKeeps(before = None, after = None, collection = None, helprank = Some("click")).url
       path === "/m/1/keeps/all?helprank=click"
       inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
       val sharingUserInfo = Seq(SharingUserInfo(Set(u2.id.get), 3), SharingUserInfo(Set(), 0))
       inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
-
-      //import play.api.Play.current
-      //println("global id: " + current.global.asInstanceOf[com.keepit.FortyTwoGlobal].globalId)
 
       Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
 
@@ -496,49 +481,38 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector {
       keeps2.size === 3
       keeps1(1).uriId === keeps2(0).uriId
 
-      val (kc0, kc1, kc2) = db.readWrite { implicit rw =>
-        val kifiHitCache = inject[KifiHitCache]
-        val origin = "https://www.google.com"
-        val kc0 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId))
-        // u2 -> 42 (u1)
-        kifiHitCache.set(KifiHitKey(u2.id.get, keeps1(0).uriId), SanitizedKifiHit(kc0.hitUUID, origin, raw1(0).url, kc0.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId), Seq.empty, None, 0, 0)))
+      val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
+      implicit val kdRepo = heimdal.keepDiscoveryRepo
+      implicit val rkRepo = heimdal.reKeepRepo
 
-        val ts = currentDateTime
-        val uuid = ExternalId[ArticleSearchResult]()
-        val kc1 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId))
-        val kc2 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId))
-        // u3 -> kifi (u1, u2) [rekeep]
-        kifiHitCache.set(KifiHitKey(u3.id.get, keeps1(1).uriId), SanitizedKifiHit(kc1.hitUUID, origin, raw1(1).url, kc1.uriId, KifiHitContext(false, false, 0, Seq(u1.externalId, u2.externalId), Seq.empty, None, 0, 0)))
+      val origin = "https://www.google.com"
+      val kc0 = KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId)
+      // u2 -> 42 (u1)
 
-        (kc0, kc1, kc2)
-      }
+      val ts = currentDateTime
+      val uuid = ExternalId[ArticleSearchResult]()
+      val kc1 = KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId)
+      val kc2 = KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId)
+      // u3 -> kifi (u1, u2) [rekeep]
+      heimdal.save(kc0, kc1, kc2)
 
       val (keeps3, _) = bookmarkInterner.internRawBookmarks(raw3, u3.id.get, KeepSource.default, true)
+      val kc3 = KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId)
+      // u4 -> kifi (u3) [rekeep]
+      heimdal.save(kc3)
 
-      val kc3 = db.readWrite { implicit rw =>
-        val kifiHitCache = inject[KifiHitCache]
-        val origin = "https://www.google.com"
-        val kc3 = keepDiscoveryRepo.save(KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId))
-        // u4 -> kifi (u3) [rekeep]
-        kifiHitCache.set(KifiHitKey(u4.id.get, keeps3(0).uriId), SanitizedKifiHit(kc3.hitUUID, origin, raw3(0).url, kc3.uriId, KifiHitContext(false, false, 0, Seq(u3.externalId), Seq.empty, None, 0, 0)))
-        kc3
-      }
+      val rk1 = ReKeep(keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId, srcKeepId = keeps3(0).id.get, srcUserId = u3.id.get)
+      val rk2 = ReKeep(keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId, srcKeepId = keeps3(0).id.get, srcUserId = u3.id.get)
+      heimdal.save(rk1, rk2)
 
       val (keeps4, _) = bookmarkInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
+      val rk3 = ReKeep(keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId, srcKeepId = keeps4(0).id.get, srcUserId = u4.id.get)
+      heimdal.save(rk3)
 
-      val (keeps, clickCount, rekeepCount, clicks, rekeeps) = db.readOnlyMaster { implicit s =>
-        val keeps = keepRepo.getByUser(u1.id.get, None, None, 100)
-        val clickCount = keepDiscoveryRepo.getDiscoveryCountByKeeper(u1.id.get)
-        val clicks = keepDiscoveryRepo.getDiscoveryCountsByKeeper(u1.id.get)
-        val rekeepCount = rekeepRepo.getReKeepCountByKeeper(u1.id.get)
-        val rekeeps = rekeepRepo.getReKeepCountsByKeeper(u1.id.get)
-        (keeps, clickCount, rekeepCount, clicks, rekeeps)
+      val keeps = db.readOnlyMaster { implicit s =>
+        keepRepo.getByUser(u1.id.get, None, None, 100)
       }
       keeps.size === keeps1.size
-      clickCount === 2
-      rekeepCount === 1
-      clicks.keySet.size === 2
-      rekeeps.keySet.size === 1
 
       val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.allKeeps(before = Some(keeps1(1).externalId.toString), after = None, collection = None, helprank = Some("click")).url
       path === s"/m/1/keeps/all?before=${keeps1(1).externalId.toString}&helprank=click"

@@ -14,6 +14,10 @@ object Id {
   ScalaMessagePack.messagePack.register(classOf[Id[Any]], new MsgPackIdTemplate[Any]())
   ScalaMessagePack.messagePack.register(classOf[Option[Id[Any]]], new MsgPackOptIdTemplate[Any]())
 
+  implicit def ord[T]: Ordering[Id[T]] = new Ordering[Id[T]] {
+    override def compare(x: Id[T], y: Id[T]): Int = x.id compare y.id
+  }
+
   implicit def format[T]: Format[Id[T]] =
     Format(__.read[Long].map(Id(_)), new Writes[Id[T]] { def writes(o: Id[T]) = JsNumber(o.id) })
 
