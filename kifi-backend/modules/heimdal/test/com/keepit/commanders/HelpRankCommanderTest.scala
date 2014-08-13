@@ -1,17 +1,15 @@
 package com.keepit.commanders
 
-import java.util.concurrent.atomic.{ AtomicInteger, AtomicLong }
+import java.util.concurrent.atomic.AtomicInteger
 
 import com.keepit.commander.{ AttributionCommander, HelpRankCommander }
-import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time._
-import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ KifiHitContext, SanitizedKifiHit }
 import com.keepit.model._
 import com.keepit.search.ArticleSearchResult
-import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
+import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test._
 import net.codingwell.scalaguice.ScalaModule
 import org.joda.time.DateTime
@@ -74,7 +72,6 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
           LNKD -> uriLnkd,
           APPL -> uriAppl
         )
-        println(s"uris=${uris.values.toSeq.sortBy(_.id.get.id).mkString("\n")}")
 
         val mkKeep1 = mkKeep(u1.id.get, currentDateTime) _
         val k1 = Map(
@@ -108,7 +105,6 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
         val keeps4 = k4.values.toSeq
 
         val keeps = Map(u1 -> keeps1, u2 -> keeps2, u3 -> keeps3, u4 -> keeps4)
-        println(s"keeps=${keeps.mkString("\n")}")
 
         val commander = inject[HelpRankCommander]
         Await.result(commander.processKeepAttribution(u1.id.get, keeps1), Duration.Inf)
@@ -159,7 +155,7 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
         }
         Await.result(commander.processKeepAttribution(u3.id.get, keeps3), Duration.Inf)
         db.readOnlyMaster { implicit s =>
-          keepDiscoveryRepo.getDiscoveryCountByURI(uri42.id.get)   === 1
+          keepDiscoveryRepo.getDiscoveryCountByURI(uri42.id.get) === 1
           keepDiscoveryRepo.getDiscoveryCountByURI(uriKifi.id.get) === 1
           keepDiscoveryRepo.getDiscoveryCountByURI(uriBing.id.get) === 1
 
@@ -168,7 +164,7 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
 
           val disc = keepDiscoveryRepo.getUriDiscoveriesWithCountsByKeeper(u1.id.get)
           disc.length === 2
-          disc.filter(_._1 == uri42.id.get).head._4   === 1
+          disc.filter(_._1 == uri42.id.get).head._4 === 1
           disc.filter(_._1 == uriKifi.id.get).head._4 === 1
 
           val rk = rekeepRepo.getUriReKeepsWithCountsByKeeper(u1.id.get)
@@ -435,7 +431,6 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
 
         val users = Seq(u1, u2, u3, u4)
         val allStats = Await.result(attrCmdr.updateUsersReKeepStats(users.map(_.id.get)), Duration.Inf)
-        allStats.foreach { s => println(s"(len=${s.length}); ${s.mkString(",")})") }
         allStats(0).length === bc1.length
         allStats(0)(0).rekeepCount === bc1(0).rekeepCount
         allStats(0)(0).rekeepTotalCount === bc1(0).rekeepTotalCount
