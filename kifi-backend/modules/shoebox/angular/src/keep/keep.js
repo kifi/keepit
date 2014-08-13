@@ -466,7 +466,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         .on('dragstart', function (e) {
           scope.$apply(function () {
             $rootScope.DRAGGING_KEEP = true;
-            $rootElement.addClass('kf-dragging-keep');
+            $rootElement.find('html').addClass('kf-dragging-keep');
             element.addClass('kf-dragged');
             scope.dragKeeps({keep: scope.keep, event: e, mouseX: 20, mouseY: 50});
             scope.isDragging = true;
@@ -475,7 +475,7 @@ angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagSe
         .on('dragend', function () {
           scope.$apply(function () {
             $rootScope.DRAGGING_KEEP = false;
-            $rootElement.removeClass('kf-dragging-keep');
+            $rootElement.find('html').removeClass('kf-dragging-keep');
             element.removeClass('kf-dragged');
             scope.stopDraggingKeeps();
             scope.isDragging = false;
