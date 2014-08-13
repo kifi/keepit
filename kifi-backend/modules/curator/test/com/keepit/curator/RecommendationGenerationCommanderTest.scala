@@ -74,7 +74,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         val recs1 = Await.result(result1, Duration(10, "seconds"))
         println(recs1(0).toString)
         recs1(0).userId === Id[User](42)
-        recs1(0).score === 28.0f
+        recs1(0).score === 0.5f
         recs1(1).score === 0.5f
 
         val result2 = commander.getAdHocRecommendations(Id[User](42), 1, UriRecommendationScores())
@@ -83,7 +83,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
       }
     }
 
-    "pre compute Recommendations" in {
+    "pre-compute Recommendations" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[RecommendationGenerationCommander]
         commander.precomputeRecommendations()
