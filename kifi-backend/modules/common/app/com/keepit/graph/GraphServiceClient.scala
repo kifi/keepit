@@ -47,7 +47,6 @@ case class GraphCacheProvider @Inject() (
   relatedLinkedInAccountsCache: SociallyRelatedLinkedInAccountsCache,
   relatedEmailAccountsCache: SociallyRelatedEmailAccountsCache)
 
-@Singleton
 class GraphServiceClientImpl @Inject() (
     override val serviceCluster: ServiceCluster,
     override val httpClient: HttpClient,
