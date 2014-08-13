@@ -145,17 +145,25 @@ class S3ImageStoreImpl @Inject() (
       } yield {
         val px = if (sizeName == "original") "1000" else sizeName
         val originalImageUrl = avatarUrlFromSocialNetwork(sui, px)
-        val usedImage = if (useDefaultImage) S3UserPictureConfig.defaultName else pictureName
-        WS.url(originalImageUrl).withRequestTimeout(120000).get().map { response =>
-          val key = keyByExternalId(sizeName, externalId, usedImage)
-          val putObj = uploadToS3(key, response.getAHCResponse.getResponseBodyAsStream, label = originalImageUrl)
-
-          (usedImage, putObj)
+        WS.url(originalImageUrl).withRequestTimeout(120000).get().flatMap { response =>
+          if (response.status != 200) {
+            WS.url(S3UserPictureConfig.defaultImage).withRequestTimeout(120000).get().map { response1 =>
+              (response1, true)
+            }
+          } else {
+            Future.successful((response, useDefaultImage))
+          }
+        }.map {
+          case (response, usedDefault) =>
+            val usedImage = if (usedDefault) S3UserPictureConfig.defaultName else pictureName
+            val key = keyByExternalId(sizeName, externalId, usedImage)
+            val putObj = uploadToS3(key, response.getAHCResponse.getResponseBodyAsStream, label = originalImageUrl)
+            (usedImage, putObj)
         }
       })
       future onComplete {
-        case Success(_) =>
-          val usedImage = if (useDefaultImage) S3UserPictureConfig.defaultName else pictureName
+        case Success(a) =>
+          val usedImage = if (a.exists(pair => pair._1 == S3UserPictureConfig.defaultName)) S3UserPictureConfig.defaultName else pictureName
           updateUserPictureRecord(sui.userId.get, usedImage, UserPictureSource(sui.networkType.name), setDefault, None)
         case Failure(e) =>
           airbrake.notify(AirbrakeError(
