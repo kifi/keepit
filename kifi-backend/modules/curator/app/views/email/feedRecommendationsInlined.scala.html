@@ -1,6 +1,10 @@
-@(recos: Seq[com.keepit.curator.commanders.email.RecommendedUriSummary])
+@(firstName: String, recos: Seq[com.keepit.curator.commanders.email.RecommendedUriSummary])
 
-<h1>@recos.size recommendations</h1>
+
+Hello @firstName,<br/><br/>
+
+Kifi recommends @recos.size items for you:
+
 <ol>
     @recos.map { reco =>
     <li>
