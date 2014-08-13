@@ -65,19 +65,6 @@ angular.module('kifi')
             inviteService.expireSocialSearch();
           });
         };
-
-        // Force the modal scroll bar back up to the top.
-        // A 100ms delay is inserted to wait for the Main controller
-        // to respond to the 'showGlobalModal' event and display the
-        // modal (we cannot scroll hidden elements).
-        // var mutualFriendsContainer = element.find('.kf-mutual-friends-friends');
-        // $rootScope.$on('showGlobalModal', function (e, modal) {
-        //   if (modal === 'seeMutualFriends') {
-        //     $timeout(function () {
-        //       mutualFriendsContainer.scrollTop(0);
-        //     }, 100);
-        //   }
-        // });
       }
     };
   }

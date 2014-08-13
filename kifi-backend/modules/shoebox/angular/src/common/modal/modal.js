@@ -14,18 +14,11 @@ angular.module('kifi')
       templateUrl: 'common/modal/modal.tpl.html',
       transclude: true,
       controller: ['$scope', function ($scope) {
-        var defaultCloseAction = null;
-        this.setDefaultCloseAction = function (action) {
-          defaultCloseAction = action || null;
-        };
-
         $scope.close = this.close = function (closeAction) {
           if (angular.isFunction(closeAction)) {
             closeAction();
-          } else if (defaultCloseAction) {
-            defaultCloseAction();
           }
-
+          
           $document.off('keydown', escapeModal);
           
           modalService.close();
@@ -57,9 +50,7 @@ angular.module('kifi')
   }
 ])
 
-.directive('kfBasicModalContent', [
-  '$window',
-  function ($window) {
+.directive('kfBasicModalContent', [function () {
     return {
       restrict: 'A',
       replace: true,
@@ -73,42 +64,22 @@ angular.module('kifi')
       require: '^kfModal',
       link: function (scope, element, attrs, kfModalCtrl) {
         scope.title = attrs.title || '';
-        scope.singleAction = attrs.singleAction || true;
         scope.actionText = attrs.actionText;
         scope.withCancel = (attrs.withCancel !== void 0) || false;
         scope.withWarning = (attrs.withWarning !== void 0) || false;
         scope.cancelText = attrs.cancelText;
         scope.centered = attrs.centered;
-        
-        kfModalCtrl.setDefaultCloseAction(scope.cancel);
+
+        // Note: if there is no 'single-action' attribute,
+        // scope.singleAction will be set to true.
+        scope.singleAction = attrs.singleAction || true;
+
         scope.cancelAndClose = function () {
           kfModalCtrl.close(scope.cancel);
         };
         scope.actionAndClose = function () {
           kfModalCtrl.close(scope.action);
         };
-
-        var wrap = element.find('.dialog-body-wrap');
-
-        var resizeWindow = _.debounce(function () {
-          var winHeight = $window.innerHeight;
-          wrap.css({'max-height': winHeight - 160 + 'px', 'overflow-y': 'auto', 'overflow-x': 'hidden'});
-        }, 100);
-
-        // scope.$watch(function () {
-        //   return kfModalCtrl.show;
-        // }, function (show) {
-        //   if (show) {
-        //     resizeWindow();
-        //     $window.addEventListener('resize', resizeWindow);
-        //   } else {
-        //     $window.removeEventListener('resize', resizeWindow);
-        //   }
-        // });
-
-        // scope.$on('$destroy', function () {
-        //   $window.removeEventListener('resize', resizeWindow);
-        // });
 
         scope.close = kfModalCtrl.close;
       }
