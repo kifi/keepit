@@ -59,13 +59,6 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
         val route = com.keepit.controllers.website.routes.RecommendationsController.updateUriRecommendationFeedback().url
         route === "/site/recos/feedback"
 
-        //        val payload = Json.arr(
-        //          "url" -> "url1",
-        //          "feedback" -> {
-        //            "delivered" -> 1,
-        //            "clicked" -> 1
-        //          }
-        //        )
         val input = Json.parse(
           s"""
              |{ "url": "https://www.google.com",
