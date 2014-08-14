@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{ Provider, Inject, Singleton }
 import com.keepit.common.controller.{ AuthenticatedRequest, ActionAuthenticator, ShoeboxServiceController, WebsiteController }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -32,11 +32,11 @@ case class Path(requestPath: String) {
 
 @Singleton // holds state for performance reasons
 class KifiSiteRouter @Inject() (
-  actionAuthenticator: ActionAuthenticator,
-  homeController: HomeController,
+  actionAuthenticator: Provider[ActionAuthenticator],
+  homeController: Provider[HomeController],
   angularRouter: AngularRouter,
   db: Database)
-    extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+    extends WebsiteController(actionAuthenticator.get) with ShoeboxServiceController {
 
   // Useful to route anything that a) serves the Angular app, b) requires context about if a user is logged in or not
   def app(path: String) = HtmlAction.apply(authenticatedAction = { request =>
@@ -83,7 +83,7 @@ class KifiSiteRouter @Inject() (
         val ua = agentOpt.get.userAgent
         val isIphone = ua.contains("iPhone") && !ua.contains("iPad")
         if (isIphone) {
-          homeController.iPhoneAppStoreRedirectWithTracking(request)
+          homeController.get.iPhoneAppStoreRedirectWithTracking(request)
         } else {
           Ok(views.html.marketing.mobileLanding(""))
         }
