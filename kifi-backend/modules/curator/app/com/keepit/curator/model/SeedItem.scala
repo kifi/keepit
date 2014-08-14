@@ -34,7 +34,7 @@ case class SeedItem(
     discoveryScore: Float,
     weight: Float) {
 
-  override def toString = s"social:$socialScore --- popularity:$popularityScore --- overallInterest:$overallInterestScore --- recentInterest:$recentInterestScore --- recency:$recencyScore --- prior:$priorScore --- rekeep:$rekeepScore --- discovery:$discoveryScore"
+  override def toString = s"social:$socialScore --- popularity:$popularityScore --- overallInterest:$overallInterestScore --- recentInterest:$recentInterestScore --- recency:$recencyScore --- prior:$priorScore --- rekeep:$rekeepScore --- discovery:$discoveryScore --- weight:$weight"
 }
 
 case class WeightedSeedItem(
