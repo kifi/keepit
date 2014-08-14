@@ -346,7 +346,7 @@ class UserCommander @Inject() (
   def createDefaultKeeps(userId: Id[User]): Unit = {
     val contextBuilder = new HeimdalContextBuilder()
     contextBuilder += ("source", KeepSource.default.value) // manually set the source so that it appears in tag analytics
-    val (keepsByTag, _) = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, KeepSource.default)(contextBuilder.build)
+    val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, KeepSource.default)(contextBuilder.build)
     val tagsByName = keepsByTag.keySet.map(tag => tag.name -> tag).toMap
     val keepsByUrl = keepsByTag.values.flatten.map(keep => keep.url -> keep).toMap
     db.readWrite { implicit session => collectionCommander.setCollectionOrdering(userId, DefaultKeeps.orderedTags.map(tagsByName(_).externalId)) }

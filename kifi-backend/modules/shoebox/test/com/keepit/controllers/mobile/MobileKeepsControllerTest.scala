@@ -700,12 +700,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector {
           collectionRepo.all.size === 1
           collectionRepo.getUnfortunatelyIncompleteTagsByUser(user.id.get).map(_.externalId)
         }
-        val expected1 = Json.parse(s"""
-          {
-            "keepCount":1,
-            "addedToCollections":${Json.toJson(tags1)}
-          }""")
-        Json.parse(contentAsString(result1)) must equalTo(expected1)
+        val jsonRes1 = Json.parse(contentAsString(result1))
+        val tagSet1 = (jsonRes1 \ "addedToCollections").as[Seq[ExternalId[Collection]]]
+        tagSet1.foldLeft(true)((r, c) => r && tags1.contains(c)) === true
 
         val json2 = Json.obj(
           "keep" -> keep2ToCollections._1,
@@ -723,7 +720,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector {
           collectionRepo.getUnfortunatelyIncompleteTagsByUser(user.id.get).map(_.externalId)
         }
         val jsonRes2 = Json.parse(contentAsString(result2))
-        (jsonRes2 \ "keepCount").as[Int] === 2
         val tagSet2 = (jsonRes2 \ "addedToCollections").as[Seq[ExternalId[Collection]]]
         tagSet2.foldLeft(true)((r, c) => r && tags2.contains(c)) === true
       }

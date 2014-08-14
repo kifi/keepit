@@ -86,10 +86,9 @@ class MobileBookmarksController @Inject() (
     val source = KeepSource.mobile
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
     val listOfKeeps = Seq((targetKeep, collectionNames))
-    val (keepsMapping, keepsCount) = keepsCommander.keepWithMultipleTags(request.userId, listOfKeeps, source)
+    val keepsMapping = keepsCommander.keepWithMultipleTags(request.userId, listOfKeeps, source)
 
     Ok(Json.obj(
-      "keepCount" -> keepsCount,
       "addedToCollections" -> keepsMapping.keySet.map(c => c.externalId).toSeq
     ))
   }
