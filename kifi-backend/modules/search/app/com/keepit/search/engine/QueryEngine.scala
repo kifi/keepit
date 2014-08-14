@@ -60,7 +60,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArra
           i += 1
         }
         val source = createScoreVectorSource(subReader, scorers)
-        source.score(dataBuffer)
+        source.writeScoreVectorsTo(dataBuffer)
       }
     }
   }

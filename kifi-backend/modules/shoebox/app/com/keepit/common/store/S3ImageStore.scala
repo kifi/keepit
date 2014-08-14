@@ -163,7 +163,7 @@ class S3ImageStoreImpl @Inject() (
       })
       future onComplete {
         case Success(a) =>
-          val usedImage = if (a.exists(pair => pair._1 == S3UserPictureConfig.defaultName)) S3UserPictureConfig.defaultName else pictureName
+          val usedImage = if (a.exists(_._1 == S3UserPictureConfig.defaultName)) S3UserPictureConfig.defaultName else pictureName
           updateUserPictureRecord(sui.userId.get, usedImage, UserPictureSource(sui.networkType.name), setDefault, None)
         case Failure(e) =>
           airbrake.notify(AirbrakeError(
