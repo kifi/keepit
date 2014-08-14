@@ -112,7 +112,7 @@ trait Indexable[T, S] extends Logging {
   def buildIdValueField(typedId: Id[T]): Field = buildIdValueField(Indexer.idValueFieldName, typedId)
   def buildIdValueField[V](field: String, typedId: Id[V]): Field = new NumericDocValuesField(field, typedId.id)
 
-  def buildLongValueField[V](field: String, v: Long): Field = new NumericDocValuesField(field, v)
+  def buildLongValueField(field: String, v: Long): Field = new NumericDocValuesField(field, v)
 
   def buildDataPayloadField(term: Term, data: Array[Byte]): Field = {
     new Field(term.field(), new DataPayloadTokenStream(term.text(), data), dataPayloadFieldType)

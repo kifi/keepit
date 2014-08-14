@@ -266,6 +266,13 @@ angular.module('kifi.invite', [
   function (injectedState, routeService, userService, keepWhoService, profileService, $timeout, $analytics) {
 
     function setupShowFriendRequestBanner(scope, externalId) {
+      function closeBanner() {
+        if (injectedState && injectedState.state) {
+          delete injectedState.state.friend;
+        }
+        scope.hidden = true;
+      }
+
       userService.getBasicUserInfo(externalId, true).then(function (res) {
         var user = res.data,
             picUrl = keepWhoService.getPicUrl(user, 200);
@@ -286,9 +293,7 @@ angular.module('kifi.invite', [
             action: 'addFriend'
           });
 
-          $timeout(function () {
-            scope.hidden = true;
-          }, 3000);
+          $timeout(closeBanner, 3000);
         };
       });
 
@@ -299,7 +304,7 @@ angular.module('kifi.invite', [
           action: 'close'
         });
 
-        scope.hidden = true;
+        closeBanner();
       };
     }
 
