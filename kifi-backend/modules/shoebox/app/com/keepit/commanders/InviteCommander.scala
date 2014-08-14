@@ -18,7 +18,7 @@ import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.social.{ SocialNetworkType, SocialNetworks }
-import com.keepit.common.ImmediateMap
+import com.keepit.common.core._
 
 import java.net.URLEncoder
 

@@ -6,7 +6,7 @@ import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.User
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 
 import play.api.Play.current
 import play.api.mvc._

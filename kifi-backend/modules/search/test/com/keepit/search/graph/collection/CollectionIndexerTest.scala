@@ -2,7 +2,7 @@ package com.keepit.search.graph.collection
 
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.common._
+import com.keepit.common.core._
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.strings._

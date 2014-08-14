@@ -10,7 +10,7 @@ import com.keepit.integrity.{ URIMigration, UriIntegrityPlugin }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import com.keepit.common.db.slick.Database
-import com.keepit.common._
+import com.keepit.common.core._
 import com.keepit.common.db.Id
 import scala.util.{ Failure, Success, Try }
 import com.keepit.common.performance._

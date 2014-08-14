@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database

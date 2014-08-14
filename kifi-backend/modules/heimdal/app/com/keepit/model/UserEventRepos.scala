@@ -8,7 +8,7 @@ import reactivemongo.api.collections.default.BSONCollection
 import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.heimdal.{ HeimdalContext, UserEvent }

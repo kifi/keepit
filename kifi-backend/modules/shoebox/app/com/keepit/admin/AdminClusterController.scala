@@ -11,6 +11,7 @@ import play.api.libs.json.{ JsNull, JsValue, Json }
 import views.html
 import java.net.InetAddress
 import scala.collection.mutable.WeakHashMap
+import com.keepit.common.core._
 
 case class ClusterMemberInfo(serviceType: ServiceType, zkid: ServiceInstanceId, isLeader: Boolean, instanceInfo: AmazonInstanceInfo,
   localHostName: String, state: ServiceStatus, version: ServiceVersion, name: String)
