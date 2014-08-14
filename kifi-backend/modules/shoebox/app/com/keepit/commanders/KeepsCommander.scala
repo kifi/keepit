@@ -600,7 +600,7 @@ class KeepsCommander @Inject() (
     searchClient.updateURIGraph()
 
     val keepCount = db.readOnlyMaster { implicit s =>
-      keepRepo.count
+      keepRepo.getCountByUser(userId)
     }
     (keepsByTag, keepCount)
   }
