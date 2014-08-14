@@ -41,7 +41,7 @@ class RawSeedItemRepoImpl @Inject() (
   type RepoImpl = RawSeedItemTable
   class RawSeedItemTable(tag: Tag) extends RepoTable[RawSeedItem](db, tag, "raw_seed_item") with SeqNumberColumn[RawSeedItem] {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
-    def url = column[String]("url", O.NotNull)
+    def url = column[String]("url", O.NotNull) // set default url to empty string in db to avoid exceptions.
     def userId = column[Id[User]]("user_id", O.Nullable)
     def firstKept = column[DateTime]("first_kept", O.NotNull)
     def lastKept = column[DateTime]("last_kept", O.NotNull)
