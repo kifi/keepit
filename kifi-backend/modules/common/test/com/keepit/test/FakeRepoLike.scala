@@ -15,9 +15,6 @@ trait FakeRepoLike[T <: Model[T]] {
   def invalidateCache(model: T): Unit
   def deleteCache(model: T): Unit
 
-  def persist(model: T*): Seq[T] = model map { save(_) }
-  def filter(p: T => Boolean): Iterable[T]
-
 }
 
 class FakeIdCounter[T <: Model[T]] {
@@ -43,5 +40,4 @@ trait FakeRepoBase[T <: Model[T]] extends FakeRepoLike[T] {
   def deleteCache(model: T): Unit = {}
 
   def filter(p: T => Boolean) = data.values.filter(p)
-  def dump() = println(data)
 }

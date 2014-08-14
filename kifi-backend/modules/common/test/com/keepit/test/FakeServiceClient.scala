@@ -11,6 +11,6 @@ trait FakeServiceClient {
     val data = MutableMap[Id[T], T]()
   }
 
-  def save[T <: Model[T]](models: T*)(implicit repo: FakeRepoLike[T]): Seq[T] = repo.persist(models: _*)
+  def save[T <: Model[T]](models: T*)(implicit repo: FakeRepoLike[T]): Seq[T] = models map { repo.save }
 
 }
