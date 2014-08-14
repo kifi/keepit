@@ -114,11 +114,14 @@ GET     /m/1/user/friendsDetails            @com.keepit.controllers.mobile.Mobil
 GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
 POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
 GET     /m/1/user/abooks                    @com.keepit.controllers.mobile.MobileUserController.abookInfo()
+
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
+POST    /m/1/page/extensionQuery            @com.keepit.controllers.mobile.MobilePageController.queryExtension(page: Int ?= 0, pageSize: Int ?= 1000)
 
 ## Deprecated
 POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.keepMultiple()
 POST    /m/2/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.addKeeps()
+POST    /m/1/keeps/addWithTags              @com.keepit.controllers.mobile.MobileBookmarksController.addKeepWithTags()
 
 POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileBookmarksController.unkeepMultiple()
 POST    /m/1/keeps/delete                   @com.keepit.controllers.mobile.MobileBookmarksController.unkeepBatch()
@@ -178,25 +181,11 @@ GET    /m/1/discover/                           @com.keepit.controllers.mobile.M
 # Website
 ##########################################
 
-GET     /                           @com.keepit.controllers.website.HomeController.home
-GET     /collection/:id             @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
-GET     /tag/:id                    @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
-GET     /helprank/:selector         @com.keepit.controllers.website.HomeController.homeWithParam(selector: String)
-GET     /friends                    @com.keepit.controllers.website.HomeController.home
-GET     /friends/invite             @com.keepit.controllers.website.HomeController.home
-GET     /friends/invite/facebook    @com.keepit.controllers.website.HomeController.home
-GET     /friends/invite/linkedin    @com.keepit.controllers.website.HomeController.home
-GET     /friends/invite/email       @com.keepit.controllers.website.HomeController.home
-GET     /friends/find               @com.keepit.controllers.website.HomeController.home
+GET     /                           @com.keepit.controllers.website.KifiSiteRouter.home
 POST    /friends/invite/refresh     @com.keepit.controllers.website.InviteController.refreshAllSocialInfo
-GET     /friends/requests           @com.keepit.controllers.website.HomeController.home
-GET     /profile                    @com.keepit.controllers.website.HomeController.home
-GET     /find                       @com.keepit.controllers.website.HomeController.home
 GET     /blog                       @com.keepit.controllers.website.HomeController.blog
-
 GET     /kifeeeed                   @com.keepit.controllers.website.HomeController.kifeeeed
 GET     /kifeeeed-mail/:code        @com.keepit.controllers.website.HomeController.kifeeeedEmail(code: String)
-
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
@@ -205,15 +194,11 @@ GET     /privacy                    @com.keepit.controllers.website.HomeControll
 GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
 GET     /mobile                     @com.keepit.controllers.website.HomeController.mobileLanding
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
-
-GET     /invite                     @com.keepit.controllers.website.HomeController.home
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
 GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], source: String, error_msg: Option[String], error_code: Option[Int])
-
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
-
 POST    /waitlist                   @com.keepit.controllers.website.FeatureWaitlistController.waitList
 
 # This should match the output format of S3ImageConfig#keyByExternalId
@@ -273,8 +258,8 @@ POST    /site/libraries/move        @com.keepit.controllers.website.LibraryContr
 
 GET     /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
-POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(userId: Id[User], url: String)
-POST    /site/recos/vote            @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationUserInteraction(userId: Id[User], url: String)
+POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(url: String)
+POST    /site/recos/vote            @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationUserInteraction(url: String)
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
@@ -377,9 +362,6 @@ GET     /admin/pageInfo/:id         @com.keepit.controllers.admin.AdminPageInfoC
 GET     /admin/pageInfos            @com.keepit.controllers.admin.AdminPageInfoController.pageInfos(page:Int ?= 0, size:Int ?= 50)
 
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperAdminController.getScraped(uriId: Id[NormalizedURI])
-
-GET     /admin/keepDiscoveriesNew/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesViewNew(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
-GET     /admin/rekeepsNew/page/:page         @com.keepit.controllers.admin.AdminAttributionController.rekeepsViewNew(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 
 GET     /admin/keepDiscoveries/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
@@ -762,3 +744,5 @@ GET     /investors.html            @com.keepit.controllers.website.AboutAssets.a
 GET     /join_us.html              @com.keepit.controllers.website.AboutAssets.at(path="/", file="join_us.html")
 
 ->  / common.Routes
+
+GET     /*wildcard                 @com.keepit.controllers.website.KifiSiteRouter.app(wildcard)

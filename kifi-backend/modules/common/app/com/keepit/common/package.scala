@@ -23,18 +23,13 @@ package object common {
    * }}}
    */
   implicit class KestrelCombinator[A](val a: A) extends AnyVal {
-    def withSideEffect(fun: A => Unit): A = { fun(a); a }
-    def tap(fun: A => Unit): A = withSideEffect(fun)
-
-    def withComputation[B](fun: A => B): (A, B) = { val b = fun(a); (a, b) }
-    def tapWith[B](fun: A => B): (A, B) = withComputation(fun)
+    @inline def tap(fun: A => Unit): A = { fun(a); a }
   }
 
-  implicit class ForkCombinator[A, B](val a: A) extends AnyVal {
-    def fork(t: A => Boolean)(y: A => B, z: A => B) = {
-      if (t(a)) y(a)
-      else z(a)
-    }
+  implicit class AnyExtensionOps[A](val x: A) extends AnyVal {
+    // forward pipe operator, analogous to the Unix pipe.
+    // Uses symbolic method name for order-of-operation reasons (and ubiquity of |)
+    @inline def |>[B](f: A => B): B = f(x)
   }
 
   implicit class Recoverable[A](f: => A) {

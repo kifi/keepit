@@ -791,6 +791,60 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       }
     }
 
+    "add Keep with Multiple Tags" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val user = db.readWrite { implicit session =>
+          keepRepo.count === 0
+          collectionRepo.all.size === 0
+          userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
+        }
+
+        val keep1ToCollections = (KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false), Seq("tagA"))
+        val keep2ToCollections = (KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = false), Seq("tagA", "tagB", "tagC"))
+
+        val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.addKeepWithTags().url
+        path === "/m/1/keeps/addWithTags"
+
+        val json1 = Json.obj(
+          "keep" -> keep1ToCollections._1,
+          "tagNames" -> keep1ToCollections._2
+        )
+        inject[FakeActionAuthenticator].setUser(user)
+        val request1 = FakeRequest("POST", path).withBody(json1)
+        val result1 = inject[MobileBookmarksController].addKeepWithTags()(request1)
+        status(result1) must equalTo(OK);
+        contentType(result1) must beSome("application/json");
+
+        val tags1 = db.readOnlyMaster { implicit session =>
+          keepRepo.count === 1
+          collectionRepo.all.size === 1
+          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user.id.get).map(_.externalId)
+        }
+        val jsonRes1 = Json.parse(contentAsString(result1))
+        val tagSet1 = (jsonRes1 \ "addedToCollections").as[Seq[ExternalId[Collection]]]
+        tagSet1.foldLeft(true)((r, c) => r && tags1.contains(c)) === true
+
+        val json2 = Json.obj(
+          "keep" -> keep2ToCollections._1,
+          "tagNames" -> keep2ToCollections._2
+        )
+        inject[FakeActionAuthenticator].setUser(user)
+        val request2 = FakeRequest("POST", path).withBody(json2)
+        val result2 = inject[MobileBookmarksController].addKeepWithTags()(request2)
+        status(result2) must equalTo(OK);
+        contentType(result2) must beSome("application/json");
+
+        val tags2 = db.readOnlyMaster { implicit session =>
+          keepRepo.count === 2
+          collectionRepo.all.size === 3
+          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user.id.get).map(_.externalId)
+        }
+        val jsonRes2 = Json.parse(contentAsString(result2))
+        val tagSet2 = (jsonRes2 \ "addedToCollections").as[Seq[ExternalId[Collection]]]
+        tagSet2.foldLeft(true)((r, c) => r && tags2.contains(c)) === true
+      }
+    }
+
   }
 
 }

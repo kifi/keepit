@@ -81,7 +81,8 @@ class EngagementFeedEmailSenderImpl @Inject() (
             htmlBody = htmlBody,
             textBody = textBody,
             to = Seq(user.primaryEmail.get),
-            from = SystemEmailAddress.ENG
+            from = SystemEmailAddress.ENG,
+            senderUserId = Some(user.id.get)
           )
 
           log.info(s"sending email to ${user.id.get} with ${feedData.size} keeps")

@@ -108,7 +108,7 @@ class InviteController @Inject() (db: Database,
     } else {
       log.error(s"[confirmInvite] Unexpected error while processing Facebook invitation $id from $source: $inviteStatus $errorMsg }")
       airbrake.notify(new FailedInvitationException(inviteStatus, Some(id), None, None))
-      Redirect(routes.HomeController.home)
+      Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home)
     }
   }
 
@@ -136,7 +136,7 @@ class InviteController @Inject() (db: Database,
     invitation match {
       case Some(invite) if invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE =>
         if (request.identityOpt.isDefined || invite.senderUserId.isEmpty) {
-          resolve(Redirect(com.keepit.controllers.website.routes.HomeController.home).withCookies(Cookie("inv", invite.externalId.id)))
+          resolve(Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home).withCookies(Cookie("inv", invite.externalId.id)))
         } else {
           val senderUserId = invite.senderUserId.get
           val nameOpt = (invite.recipientSocialUserId, invite.recipientEmailAddress) match {
@@ -159,11 +159,11 @@ class InviteController @Inject() (db: Database,
               )).withCookies(Cookie("inv", invite.externalId.id))
             case None =>
               log.warn(s"[acceptInvite] invitation record $invite has neither recipient social id or econtact id")
-              Redirect(com.keepit.controllers.website.routes.HomeController.home)
+              Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home)
           }
         }
       case _ =>
-        resolve(Redirect(com.keepit.controllers.website.routes.HomeController.home))
+        resolve(Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home))
     }
   })
 }

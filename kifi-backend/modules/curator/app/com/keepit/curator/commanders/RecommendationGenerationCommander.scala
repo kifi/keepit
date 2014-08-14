@@ -38,7 +38,7 @@ class RecommendationGenerationCommander @Inject() (
 
   val defaultScore = 0.0f
 
-  val recommendationGenerationLock = new ReactiveLock(10)
+  val recommendationGenerationLock = new ReactiveLock(15)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
 
   private def usersToPrecomputeRecommendationsFor(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map(users => users.map(_.id.get).toSeq)
@@ -97,11 +97,11 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   private def shouldInclude(scores: UriScores): Boolean = {
-    if (scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0) {
+    if (scores.overallInterestScore > 0.45 || scores.recentInterestScore > 0) {
       scores.socialScore > 0.8 ||
         scores.overallInterestScore > 0.65 ||
         scores.priorScore > 0 ||
-        (scores.popularityScore > 0.2 && scores.socialScore > 0.4) ||
+        (scores.popularityScore > 0.2 && scores.socialScore > 0.65) ||
         scores.recentInterestScore > 0.15 ||
         scores.rekeepScore > 0.3 ||
         scores.discoveryScore > 0.3
@@ -132,6 +132,7 @@ class RecommendationGenerationCommander @Inject() (
             db.readWrite { implicit session =>
               genStateRepo.save(newState)
             }
+            if (state.seq < newSeqNum) { precomputeRecommendationsForUser(userId) }
             Future.successful(false)
           } else {
             val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
@@ -174,11 +175,9 @@ class RecommendationGenerationCommander @Inject() (
                 genStateRepo.save(newState)
               }
 
-              if (!cleanedItems.isEmpty) {
-                precomputeRecommendationsForUser(userId)
-                true
-              } else false
+              precomputeRecommendationsForUser(userId)
 
+              !seedItems.isEmpty
             }
           }
       }
