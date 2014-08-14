@@ -120,7 +120,7 @@ class UriScoringHelper @Inject() (
             priorScore = priorScores(i),
             rekeepScore = rekeepScores(i),
             discoveryScore = discoveryScores(i),
-            weight = items(i).weightMultiplier
+            multiplier = items(i).multiplier
           )
           ScoredSeedItem(items(i).userId, items(i).uriId, scores)
         }

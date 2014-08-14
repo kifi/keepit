@@ -32,7 +32,7 @@ class UriWeightingHelper() {
     }
 
     WeightedSeedItem(
-      weightMultiplier = weight,
+      multiplier = weight,
       userId = item.userId,
       uriId = item.uriId,
       priorScore = item.priorScore,

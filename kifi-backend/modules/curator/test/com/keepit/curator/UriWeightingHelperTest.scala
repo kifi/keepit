@@ -53,17 +53,17 @@ class UriWeightingHelperTest extends Specification with CuratorTestInjector {
       withInjector() { implicit injector =>
         val uriBoostingHelper = inject[UriWeightingHelper]
         val multipliedSeedItems = uriBoostingHelper(makeSeedItems)
-        multipliedSeedItems(0).weightMultiplier === 0.01f
-        multipliedSeedItems(1).weightMultiplier === 0.01f
-        multipliedSeedItems(2).weightMultiplier === 0.001f
-        multipliedSeedItems(3).weightMultiplier === 1.0f
-        multipliedSeedItems(4).weightMultiplier === 1.2f
-        multipliedSeedItems(5).weightMultiplier === 0.1f
-        multipliedSeedItems(6).weightMultiplier === 0.001f
-        multipliedSeedItems(7).weightMultiplier === 1.0f
-        multipliedSeedItems(8).weightMultiplier === 1.0f
-        multipliedSeedItems(9).weightMultiplier === 1.0f
-        multipliedSeedItems(10).weightMultiplier === 0.001f
+        multipliedSeedItems(0).multiplier === 0.01f
+        multipliedSeedItems(1).multiplier === 0.01f
+        multipliedSeedItems(2).multiplier === 0.001f
+        multipliedSeedItems(3).multiplier === 1.0f
+        multipliedSeedItems(4).multiplier === 1.2f
+        multipliedSeedItems(5).multiplier === 0.1f
+        multipliedSeedItems(6).multiplier === 0.001f
+        multipliedSeedItems(7).multiplier === 1.0f
+        multipliedSeedItems(8).multiplier === 1.0f
+        multipliedSeedItems(9).multiplier === 1.0f
+        multipliedSeedItems(10).multiplier === 0.001f
       }
     }
   }

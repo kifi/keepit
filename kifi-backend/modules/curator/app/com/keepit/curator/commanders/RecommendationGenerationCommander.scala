@@ -54,7 +54,7 @@ class RecommendationGenerationCommander @Inject() (
       9 * scores.recentInterestScore +
       6 * scores.rekeepScore +
       3 * scores.discoveryScore) *
-      scores.weight
+      scores.multiplier
   }
 
   private def computeAdjustedScoreByTester(scoreCoefficients: UriRecommendationScores, scores: UriScores): Float = {
@@ -66,7 +66,7 @@ class RecommendationGenerationCommander @Inject() (
       scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * scores.recentInterestScore +
       scoreCoefficients.rekeepScore.getOrElse(defaultScore) * scores.rekeepScore +
       scoreCoefficients.discoveryScore.getOrElse(defaultScore) * scores.discoveryScore) *
-      scores.weight
+      scores.multiplier
   }
 
   def getTopRecommendations(userId: Id[User], howManyMax: Int): Future[Seq[UriRecommendation]] = {
