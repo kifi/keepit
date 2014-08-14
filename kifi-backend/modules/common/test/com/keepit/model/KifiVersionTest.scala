@@ -11,15 +11,15 @@ class KifiVersionTest extends Specification {
       v("2.1.0.0") === v(2, 1, 0, 0)
       v("2.1.0") === v(2, 1, 0, -1)
       v("2.1") === v(2, 1, -1, -1)
+      v("2") === v(2, -1)
     }
     "reject invalid version strings" in {
       v("foo") must throwA[Exception]
       v("1.2.3b") must throwA[Exception]
       v("1.2b") must throwA[Exception]
-      v("1") must throwA[Exception]
     }
     "reject invalid version numbers" in {
-      v(0, -1) must throwA[Exception]
+      v(-1, 0) must throwA[Exception]
       v(0, 0, 0, -2) must throwA[Exception]
     }
     "serialize back to a string " in {
@@ -38,6 +38,9 @@ class KifiVersionTest extends Specification {
       v(2, 1, 0) === v(2, 1, 0)
       v(2, 1, 0) === v(2, 1)
       v(2, 1) === v(2, 1, 0, 0)
+      v(2, -1) === v(2, 0, 0, 0)
+      v(2, -1) === v(2, 0, 0)
+      v(2, -1) === v(2, 0)
       v(2, 1, 0) must be_<(v(3, 0, 1))
       v(3, 0, 1) must be_>(v(2, 4, 8))
       v(2, 4, 8) must be_>(v(2, 1, 0))
@@ -61,15 +64,15 @@ class KifiVersionTest extends Specification {
       v("2.1.0.0") === v(2, 1, 0, 0)
       v("2.1.0") === v(2, 1, 0, -1)
       v("2.1") === v(2, 1, -1, -1)
+      v("2") === v(2, -1)
     }
     "reject invalid version strings" in {
       v("foo") must throwA[Exception]
       v("1.2.3b") must throwA[Exception]
       v("1.2b") must throwA[Exception]
-      v("1") must throwA[Exception]
     }
     "reject invalid version numbers" in {
-      v(0, -1) must throwA[Exception]
+      v(-1, 0) must throwA[Exception]
       v(0, 0, 0, -2) must throwA[Exception]
     }
     "serialize back to a string " in {
@@ -88,6 +91,9 @@ class KifiVersionTest extends Specification {
       v(2, 1, 0) === v(2, 1, 0)
       v(2, 1, 0) === v(2, 1)
       v(2, 1) === v(2, 1, 0, 0)
+      v(2, -1) === v(2, 0, 0, 0)
+      v(2, -1) === v(2, 0, 0)
+      v(2, -1) === v(2, 0)
       v(2, 1, 0) must be_<(v(3, 0, 1))
       v(3, 0, 1) must be_>(v(2, 4, 8))
       v(2, 4, 8) must be_>(v(2, 1, 0))
@@ -111,15 +117,15 @@ class KifiVersionTest extends Specification {
       v("2.1.0.0") === v(2, 1, 0, 0)
       v("2.1.0") === v(2, 1, 0, -1)
       v("2.1") === v(2, 1, -1, -1)
+      v("2") === v(2, -1)
     }
     "reject invalid version strings" in {
       v("foo") must throwA[Exception]
       v("1.2.3b") must throwA[Exception]
       v("1.2b") must throwA[Exception]
-      v("1") must throwA[Exception]
     }
     "reject invalid version numbers" in {
-      v(0, -1) must throwA[Exception]
+      v(-1, 0) must throwA[Exception]
       v(0, 0, 0, -2) must throwA[Exception]
     }
     "serialize back to a string " in {
@@ -138,6 +144,9 @@ class KifiVersionTest extends Specification {
       v(2, 1, 0) === v(2, 1, 0)
       v(2, 1, 0) === v(2, 1)
       v(2, 1) === v(2, 1, 0, 0)
+      v(2, -1) === v(2, 0, 0, 0)
+      v(2, -1) === v(2, 0, 0)
+      v(2, -1) === v(2, 0)
       v(2, 1, 0) must be_<(v(3, 0, 1))
       v(3, 0, 1) must be_>(v(2, 4, 8))
       v(2, 4, 8) must be_>(v(2, 1, 0))
