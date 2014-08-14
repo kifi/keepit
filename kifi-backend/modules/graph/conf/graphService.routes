@@ -10,5 +10,6 @@ GET     /internal/graph/getSociallyRelatedUsers  @com.keepit.graph.controllers.i
 GET     /internal/graph/getSociallyRelatedFacebookAccounts  @com.keepit.graph.controllers.internal.GraphController.getSociallyRelatedFacebookAccounts(userId: Id[User])
 GET     /internal/graph/getSociallyRelatedLinkedInAccounts  @com.keepit.graph.controllers.internal.GraphController.getSociallyRelatedLinkedInAccounts(userId: Id[User])
 GET     /internal/graph/getSociallyRelatedEmailAccounts  @com.keepit.graph.controllers.internal.GraphController.getSociallyRelatedEmailAccounts(userId: Id[User])
+POST    /internal/graph/explainFeed                      @com.keepit.graph.controllers.internal.GraphController.explainFeed
 
 ->  / common.Routes

@@ -1,8 +1,10 @@
 package com.keepit.curator.commanders
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.db.slick.Database
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.curator.model._
+import com.keepit.graph.GraphServiceClient
 import com.keepit.search.SearchServiceClient
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -11,8 +13,11 @@ import scala.concurrent.Future
 
 @Singleton
 class SeedAttributionHelper @Inject() (
+    db: Database,
+    keepRepo: CuratorKeepInfoRepo,
     cortex: CortexServiceClient,
-    search: SearchServiceClient) {
+    search: SearchServiceClient,
+    graph: GraphServiceClient) {
 
   def getAttributions(seeds: Seq[ScoredSeedItem]): Future[Seq[ScoredSeedItemWithAttribution]] = {
     val userAttrFut = getUserAttribution(seeds)
@@ -57,6 +62,7 @@ class SeedAttributionHelper @Inject() (
   }
 
   private def getKeepAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[KeepAttribution]]] = {
+
     Future.successful(Seq.fill(seeds.size)(None))
   }
 
