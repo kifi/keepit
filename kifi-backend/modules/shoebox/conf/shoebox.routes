@@ -181,25 +181,11 @@ GET    /m/1/discover/                           @com.keepit.controllers.mobile.M
 # Website
 ##########################################
 
-GET     /                           @com.keepit.controllers.website.HomeController.home
-GET     /collection/:id             @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
-GET     /tag/:id                    @com.keepit.controllers.website.HomeController.homeWithParam(id: String)
-GET     /helprank/:selector         @com.keepit.controllers.website.HomeController.homeWithParam(selector: String)
-GET     /friends                    @com.keepit.controllers.website.HomeController.home
-GET     /friends/invite             @com.keepit.controllers.website.HomeController.home
-GET     /friends/invite/facebook    @com.keepit.controllers.website.HomeController.home
-GET     /friends/invite/linkedin    @com.keepit.controllers.website.HomeController.home
-GET     /friends/invite/email       @com.keepit.controllers.website.HomeController.home
-GET     /friends/find               @com.keepit.controllers.website.HomeController.home
+GET     /                           @com.keepit.controllers.website.KifiSiteRouter.home
 POST    /friends/invite/refresh     @com.keepit.controllers.website.InviteController.refreshAllSocialInfo
-GET     /friends/requests           @com.keepit.controllers.website.HomeController.home
-GET     /profile                    @com.keepit.controllers.website.HomeController.home
-GET     /find                       @com.keepit.controllers.website.HomeController.home
 GET     /blog                       @com.keepit.controllers.website.HomeController.blog
-
 GET     /kifeeeed                   @com.keepit.controllers.website.HomeController.kifeeeed
 GET     /kifeeeed-mail/:code        @com.keepit.controllers.website.HomeController.kifeeeedEmail(code: String)
-
 GET     /about                      @com.keepit.controllers.website.HomeController.about
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
@@ -208,15 +194,11 @@ GET     /privacy                    @com.keepit.controllers.website.HomeControll
 GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
 GET     /mobile                     @com.keepit.controllers.website.HomeController.mobileLanding
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
-
-GET     /invite                     @com.keepit.controllers.website.HomeController.home
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
 GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], source: String, error_msg: Option[String], error_code: Option[Int])
-
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
-
 POST    /waitlist                   @com.keepit.controllers.website.FeatureWaitlistController.waitList
 
 # This should match the output format of S3ImageConfig#keyByExternalId
@@ -765,3 +747,5 @@ GET     /investors.html            @com.keepit.controllers.website.AboutAssets.a
 GET     /join_us.html              @com.keepit.controllers.website.AboutAssets.at(path="/", file="join_us.html")
 
 ->  / common.Routes
+
+GET     /*wildcard                 @com.keepit.controllers.website.KifiSiteRouter.app(wildcard)
