@@ -97,7 +97,9 @@ class SendgridCommander @Inject() (
     eventName.filter(CLICK == _).foreach { _ =>
       emailOpt.foreach { email =>
         verifyEmailAddress(event, email)
-        if (email.category == NotificationCategory.User.DIGEST) recordClickForDigestEmail(event, email)
+        if (NotificationCategory.fromElectronicMailCategory(email.category) == NotificationCategory.User.DIGEST) {
+          recordClickForDigestEmail(event, email)
+        }
       }
     }
 

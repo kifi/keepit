@@ -60,9 +60,21 @@ class EngagementFeedEmailSenderTest extends Specification with CuratorTestInject
         summaries(0).feed.size === 2
         summaries(1).feed.size === 3
         shoebox.sentMail.size === 2
-        shoebox.sentMail(0).senderUserId must not beTheSameAs shoebox.sentMail(1).senderUserId
-        shoebox.sentMail(0).senderUserId.get must beOneOf(Id[User](42), Id[User](43))
-        shoebox.sentMail(1).senderUserId.get must beOneOf(Id[User](42), Id[User](43))
+        val (mail42, mail43) = {
+          val (xs, ys) = shoebox.sentMail.partition(_.senderUserId.get == Id[User](42))
+          (xs.head, ys.head)
+        }
+
+        mail42.senderUserId.get must beEqualTo(Id[User](42))
+        val mail42body = mail42.htmlBody.toString
+        mail42body must contain("www.kifi.com")
+        mail42body must contain("www.google.com")
+
+        mail43.senderUserId.get must beEqualTo(Id[User](43))
+        val mail43body = mail43.htmlBody.toString
+        mail43body must contain("www.42go.com")
+        mail43body must contain("www.yahoo.com")
+        mail43body must contain("www.lycos.com")
 
         val email = shoebox.sentMail(0)
         email.htmlBody.toString must contain("Hello Some")
