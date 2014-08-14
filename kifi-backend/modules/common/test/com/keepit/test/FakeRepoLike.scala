@@ -35,7 +35,7 @@ trait FakeRepoBase[T <: Model[T]] extends FakeRepoLike[T] {
   }
   def get(id: Id[T]) = data.get(id)
   def all() = data.values.toSeq
-  def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[T]]) = data.values.toSeq.sortBy(_.id.get).drop(page * size).take(size).toSeq
+  def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[T]]) = data.values.toSeq.sortBy(_.id.get)(Id.ord.reverse).drop(page * size).take(size).toSeq
   def count: Int = data.keySet.size
   def invalidateCache(model: T): Unit = {}
   def deleteCache(model: T): Unit = {}
