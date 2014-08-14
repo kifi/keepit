@@ -314,16 +314,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
   "allKeeps with helprank" in {
     withDb(controllerTestModules: _*) { implicit injector =>
 
-      val keep42 = Json.obj("url" -> "http://42go.com", "isPrivate" -> false)
-      val keepKifi = Json.obj("url" -> "http://kifi.com", "isPrivate" -> false)
-      val keepGoog = Json.obj("url" -> "http://google.com", "isPrivate" -> false)
-      val keepBing = Json.obj("url" -> "http://bing.com", "isPrivate" -> false)
-      val keepStanford = Json.obj("url" -> "http://stanford.edu", "isPrivate" -> false)
-      val keepApple = Json.obj("url" -> "http://apple.com", "isPrivate" -> false)
-
       implicit val context = HeimdalContext.empty
-      val keeper = KeepSource.keeper
-      val initLoad = KeepSource.bookmarkImport
       val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
       val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
 
@@ -397,16 +388,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
   "allKeeps with helprank & before" in {
     withDb(controllerTestModules: _*) { implicit injector =>
 
-      val keep42 = Json.obj("url" -> "http://42go.com", "isPrivate" -> false)
-      val keepKifi = Json.obj("url" -> "http://kifi.com", "isPrivate" -> false)
-      val keepGoog = Json.obj("url" -> "http://google.com", "isPrivate" -> false)
-      val keepBing = Json.obj("url" -> "http://bing.com", "isPrivate" -> false)
-      val keepStanford = Json.obj("url" -> "http://stanford.edu", "isPrivate" -> false)
-      val keepApple = Json.obj("url" -> "http://apple.com", "isPrivate" -> false)
-
       implicit val context = HeimdalContext.empty
-      val keeper = KeepSource.keeper
-      val initLoad = KeepSource.bookmarkImport
       val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
 
       val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)

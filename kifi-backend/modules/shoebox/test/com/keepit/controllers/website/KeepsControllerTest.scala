@@ -236,14 +236,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
       withDb(controllerTestModules: _*) { implicit injector =>
 
         implicit val context = HeimdalContext.empty
-        val userRepo = inject[UserRepo]
-        val uriRepo = inject[NormalizedURIRepo]
-        val urlRepo = inject[URLRepo]
         val keepRepo = inject[KeepRepo]
         val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
-        val userExpRepo = inject[UserExperimentRepo]
-        val keeper = KeepSource.keeper
-        val initLoad = KeepSource.bookmarkImport
         val db = inject[Database]
 
         val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
@@ -311,22 +305,9 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     "allKeeps with helprank & before" in {
       withDb(controllerTestModules: _*) { implicit injector =>
 
-        val keep42 = Json.obj("url" -> "http://42go.com", "isPrivate" -> false)
-        val keepKifi = Json.obj("url" -> "http://kifi.com", "isPrivate" -> false)
-        val keepGoog = Json.obj("url" -> "http://google.com", "isPrivate" -> false)
-        val keepBing = Json.obj("url" -> "http://bing.com", "isPrivate" -> false)
-        val keepStanford = Json.obj("url" -> "http://stanford.edu", "isPrivate" -> false)
-        val keepApple = Json.obj("url" -> "http://apple.com", "isPrivate" -> false)
-
         implicit val context = HeimdalContext.empty
-        val userRepo = inject[UserRepo]
-        val uriRepo = inject[NormalizedURIRepo]
-        val urlRepo = inject[URLRepo]
         val keepRepo = inject[KeepRepo]
         val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
-        val userExpRepo = inject[UserExperimentRepo]
-        val keeper = KeepSource.keeper
-        val initLoad = KeepSource.bookmarkImport
         val db = inject[Database]
 
         val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
@@ -342,7 +323,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val sharingUserInfo = Seq(SharingUserInfo(Set(u2.id.get), 3), SharingUserInfo(Set(), 0))
         inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
 
-        val controller = inject[KeepsController]
         inject[FakeActionAuthenticator].setUser(u1)
 
         Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
