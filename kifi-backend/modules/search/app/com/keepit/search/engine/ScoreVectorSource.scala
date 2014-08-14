@@ -123,6 +123,7 @@ class ArticleFromKeepsScoreVectorSource(reader: WrappedSubReader, scorers: Array
       if (libraryIds.findIndex(libId) >= 0 && idFilter.findIndex(id) < 0) { // use findIndex to avoid boxing
         // get all scores
         val size = pq.getTaggedScores(taggedScores)
+
         // write to the buffer
         output.alloc(writer, Visibility.MEMBER, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
         writer.putLong(id).putTaggedFloatBits(taggedScores, size)
