@@ -15,6 +15,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.commanders.RemoteUserExperimentCommander
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -32,36 +33,15 @@ class RecommendationGenerationCommander @Inject() (
     db: Database,
     airbrake: AirbrakeNotifier,
     uriRecRepo: UriRecommendationRepo,
-    genStateRepo: UserRecommendationGenerationStateRepo) {
+    genStateRepo: UserRecommendationGenerationStateRepo,
+    experimentCommander: RemoteUserExperimentCommander) {
 
   val defaultScore = 0.0f
 
-  val recommendationGenerationLock = new ReactiveLock(10)
+  val recommendationGenerationLock = new ReactiveLock(15)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
 
-  val FEED_PRECOMPUTATION_WHITELIST: Seq[Id[User]] = Seq(
-    1, //Eishay
-    3, //Andrew
-    7, //Yasu
-    9, //Danny
-    48, //Jared
-    61, //Jen
-    100, //Tamila
-    115, //Yingjie
-    134, //Léo
-    243, //Stephen
-    460, //Ray
-    1114, //Martin
-    2538, //Mark
-    3466, //JP
-    6498, //Tan
-    6622, //David
-    7100, //Aaron
-    7456, //Josh
-    7589, //Lydia
-    8465, //Yiping
-    8476 //Tommy
-  ).map(Id[User](_)) //will go away once we release, just saving some computation/time for now
+  private def usersToPrecomputeRecommendationsFor(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map(users => users.map(_.id.get).toSeq)
 
   private def computeMasterScore(scores: UriScores): Float = {
     5 * scores.socialScore +
@@ -117,11 +97,11 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   private def shouldInclude(scores: UriScores): Boolean = {
-    if (scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0) {
+    if (scores.overallInterestScore > 0.45 || scores.recentInterestScore > 0) {
       scores.socialScore > 0.8 ||
         scores.overallInterestScore > 0.65 ||
         scores.priorScore > 0 ||
-        (scores.popularityScore > 0.2 && scores.socialScore > 0.4) ||
+        (scores.popularityScore > 0.2 && scores.socialScore > 0.65) ||
         scores.recentInterestScore > 0.15 ||
         scores.rekeepScore > 0.3 ||
         scores.discoveryScore > 0.3
@@ -152,6 +132,7 @@ class RecommendationGenerationCommander @Inject() (
             db.readWrite { implicit session =>
               genStateRepo.save(newState)
             }
+            if (state.seq < newSeqNum) { precomputeRecommendationsForUser(userId) }
             Future.successful(false)
           } else {
             val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
@@ -194,11 +175,9 @@ class RecommendationGenerationCommander @Inject() (
                 genStateRepo.save(newState)
               }
 
-              if (!cleanedItems.isEmpty) {
-                precomputeRecommendationsForUser(userId)
-                true
-              } else false
+              precomputeRecommendationsForUser(userId)
 
+              !seedItems.isEmpty
             }
           }
       }
@@ -210,8 +189,10 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   def precomputeRecommendations(): Unit = {
-    if (recommendationGenerationLock.waiting < FEED_PRECOMPUTATION_WHITELIST.length) {
-      FEED_PRECOMPUTATION_WHITELIST.map(precomputeRecommendationsForUser)
+    usersToPrecomputeRecommendationsFor().map { userIds =>
+      if (recommendationGenerationLock.waiting < userIds.length + 1) {
+        userIds.foreach(precomputeRecommendationsForUser)
+      }
     }
   }
 

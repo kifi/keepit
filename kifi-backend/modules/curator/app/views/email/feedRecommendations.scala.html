@@ -1,12 +1,4 @@
-@(recos: Seq[com.keepit.curator.commanders.email.RecommendedUriSummary])
+@(emailData: com.keepit.curator.commanders.email.RecommendedEmailData)
 
-<ol>
-@recos.foreach { reco =>
-    <li>
-        <h3>@reco.title</h3>
-        <div>@reco.url</div>
-        <div>@reco.score</div>
-        <div>@reco.explain</div>
-    </li>
-}
-</ol>
+use feedRecommendationsInlined.scala.html until we have a design to wire up
+

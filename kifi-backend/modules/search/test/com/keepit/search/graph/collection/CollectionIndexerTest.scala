@@ -188,51 +188,6 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
       }
     }
 
-    "detect collection names" in {
-      withInjector(helperModules: _*) { implicit injector =>
-        val (users, uris) = initData
-
-        val collectionIndexer = mkCollectionIndexer()
-
-        val expectedUriToUsers = uris.map { uri => (uri, users.filter { _.id.get.id <= uri.id.get.id }) }
-        saveBookmarksByURI(expectedUriToUsers)
-
-        val user = users.head
-        val bookmarks = getBookmarksByUser(user.id.get)
-        val collNames = Seq("Design", "Flat Design", "Web Design", "Design Web", "Web")
-        val collections = (collNames zip bookmarks).map {
-          case (name, bookmark) =>
-            saveCollection(user, name) tap { saveBookmarksToCollection(_, Seq(bookmark)) }
-        }
-        collectionIndexer.update()
-        collectionIndexer.numDocs === collections.size
-
-        val (collectionIndexSearcher, collectionNameIndexSearcher) = collectionIndexer.getSearchers
-        val searcher = new CollectionSearcherWithUser(collectionIndexSearcher, collectionNameIndexSearcher, user.id.get)
-
-        def getCollectionId(name: String): Long = {
-          collections.find(_.name == name).get.id.get.id
-        }
-        def detect(text: String) = {
-          val it = new TermIterator("", text, DefaultAnalyzer.getAnalyzerWithStemmer(DefaultAnalyzer.defaultLang))
-          val stemmedTermSeq = it.toIndexedSeq
-          it.close()
-          searcher.detectCollectionNames(stemmedTermSeq, false)
-        }
-        detect("design") === Set((0, 1, getCollectionId("Design")))
-
-        detect("designs") === Set((0, 1, getCollectionId("Design")))
-
-        detect("flat") === Set()
-
-        detect("flat design") === Set((1, 1, getCollectionId("Design")), (0, 2, getCollectionId("Flat Design")))
-
-        detect("web design") === Set((0, 1, getCollectionId("Web")), (1, 1, getCollectionId("Design")), (0, 2, getCollectionId("Web Design")))
-
-        detect("boring flat design movement") === Set((2, 1, getCollectionId("Design")), (1, 2, getCollectionId("Flat Design")))
-      }
-    }
-
     "detect collection names (partial match)" in {
       withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
@@ -262,7 +217,7 @@ class CollectionIndexerTest extends Specification with SearchTestInjector with G
           val it = new TermIterator("", text, DefaultAnalyzer.getAnalyzerWithStemmer(DefaultAnalyzer.defaultLang))
           val stemmedTermSeq = it.toIndexedSeq
           it.close()
-          searcher.detectCollectionNames(stemmedTermSeq, true)
+          searcher.detectCollectionNames(stemmedTermSeq)
         }
         detect("design") === Set(
           (0, 1, getCollectionId("Design")),
