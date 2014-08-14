@@ -1,13 +1,12 @@
 package com.keepit.controllers.mobile
 
-import com.keepit.common.controller.{ ShoeboxServiceController, MobileController, ActionAuthenticator, AuthenticatedRequest }
+import com.keepit.common.controller.{ ShoeboxServiceController, MobileController, ActionAuthenticator }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.heimdal.{ DelightedAnswerSources, BasicDelightedAnswer }
 import com.keepit.model._
-import com.keepit.common.time._
 import com.keepit.commanders._
+import com.keepit.social.BasicUser
 
 import play.api.Play.current
 import play.api.libs.json._
@@ -16,12 +15,10 @@ import play.api.libs.json.Json.toJson
 import com.google.inject.Inject
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
-import scala.util.{ Success, Failure }
 import securesocial.core.{ SecureSocial, Authenticator }
 import play.api.libs.json.JsSuccess
 import com.keepit.common.controller.AuthenticatedRequest
 import scala.util.Failure
-import scala.Some
 import com.keepit.commanders.ConnectionInfo
 import scala.util.Success
 import play.api.libs.json.JsObject
@@ -30,7 +27,10 @@ import com.keepit.common.http._
 class MobileUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   userCommander: UserCommander,
-  typeaheadCommander: TypeaheadCommander)
+  typeaheadCommander: TypeaheadCommander,
+  userRepo: UserRepo,
+  userConnectionRepo: UserConnectionRepo,
+  db: Database)
     extends MobileController(actionAuthenticator) with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = JsonAction.authenticated { request =>
@@ -60,11 +60,9 @@ class MobileUserController @Inject() (
 
   def uploadContacts(origin: ABookOriginType) = JsonAction.authenticatedAsync(parse.json(maxLength = 1024 * 50000)) { request =>
     val json: JsValue = request.body
-    userCommander.uploadContactsProxy(request.userId, origin, json) map { abookInfoTr =>
-      abookInfoTr match {
-        case Success(abookInfo) => Ok(Json.toJson(abookInfo))
-        case Failure(ex) => BadRequest(Json.obj("code" -> ex.getMessage)) // can do better
-      }
+    userCommander.uploadContactsProxy(request.userId, origin, json) collect {
+      case Success(abookInfo) => Ok(Json.toJson(abookInfo))
+      case Failure(ex) => BadRequest(Json.obj("code" -> ex.getMessage)) // can do better
     }
   }
 
@@ -82,6 +80,20 @@ class MobileUserController @Inject() (
         Future.successful(BadRequest(Json.obj("error" -> "bad email addresses")))
       case _ =>
         Future.successful(BadRequest(Json.obj("error" -> "could not parse user info from body")))
+    }
+  }
+
+  def basicUserInfo(id: ExternalId[User], friendCount: Boolean) = JsonAction.authenticated { implicit request =>
+    db.readOnlyReplica { implicit session =>
+      userRepo.getOpt(id).map { user =>
+        Ok {
+          val userJson = Json.toJson(BasicUser.fromUser(user)).as[JsObject]
+          if (friendCount) userJson ++ Json.obj("friendCount" -> userConnectionRepo.getConnectionCount(user.id.get))
+          else userJson
+        }
+      } getOrElse {
+        NotFound(Json.obj("error" -> "user not found"))
+      }
     }
   }
 

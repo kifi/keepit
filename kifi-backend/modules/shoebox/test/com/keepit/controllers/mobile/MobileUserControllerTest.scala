@@ -1,10 +1,9 @@
 package com.keepit.controllers.mobile
 
-import org.specs2.mutable.Specification
-
+import com.google.inject.Injector
 import com.keepit.common.controller._
-import com.keepit.common.db.slick._
 import com.keepit.common.db._
+import com.keepit.common.db.slick._
 import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
@@ -15,26 +14,27 @@ import play.api.test.Helpers._
 import com.google.inject.Injector
 import com.keepit.social.{ SocialNetworks, SocialId }
 import SocialNetworks._
-import securesocial.core._
-import play.api.Play
-import securesocial.core.providers.utils.{ PasswordHasher, BCryptPasswordHasher }
+import com.keepit.abook.FakeABookServiceClientModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.analytics.FakeAnalyticsModule
-import com.keepit.common.controller.FakeActionAuthenticatorModule
-import com.keepit.common.net.FakeHttpClientModule
-import play.api.libs.json.JsArray
-import securesocial.core.IdentityId
-import com.keepit.model.UserConnection
-import scala.Some
+import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.model.{ UserConnection, _ }
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
+import org.specs2.mutable.Specification
+import play.api.Play
+import play.api.libs.json._
+import play.api.test.FakeRequest
+import play.api.test.Helpers._
+import securesocial.core.{ IdentityId, _ }
+import securesocial.core.providers.utils.{ BCryptPasswordHasher, PasswordHasher }
 
 class MobileUserControllerTest extends Specification with ShoeboxApplicationInjector {
 
@@ -235,6 +235,27 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
         contentType(result2) must beSome("application/json")
         val expected2 = Json.obj("code" -> "bad_old_password")
         Json.parse(contentAsString(result2)) must equalTo(expected2)
+      }
+    }
+
+    "get basic user info for any user" in {
+      running(new ShoeboxApplication(mobileControllerTestModules: _*)) {
+
+        val user = inject[Database].readWrite { implicit rw =>
+          inject[UserRepo].save(User(firstName = "James", lastName = "Franco"))
+        }
+
+        inject[FakeActionAuthenticator].setUser(user)
+
+        val controller = inject[MobileUserController] // setup
+        val result = controller.basicUserInfo(user.externalId, true)(FakeRequest())
+        var body: String = contentAsString(result)
+
+        contentType(result).get must beEqualTo("application/json")
+        body must contain("id\":\"" + user.externalId)
+        body must contain("firstName\":\"James")
+        body must contain("lastName\":\"Franco")
+        body must contain("friendCount\":0")
       }
     }
   }
