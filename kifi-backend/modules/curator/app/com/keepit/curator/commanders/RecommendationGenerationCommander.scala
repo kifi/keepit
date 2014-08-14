@@ -21,7 +21,7 @@ class RecommendationGenerationCommander @Inject() (
     seedCommander: SeedIngestionCommander,
     shoebox: ShoeboxServiceClient,
     scoringHelper: UriScoringHelper,
-    boostingHelper: UriBoostingHelper,
+    uriWeightingHelper: UriWeightingHelper,
     attributionHelper: SeedAttributionHelper,
     db: Database,
     airbrake: AirbrakeNotifier,
@@ -65,18 +65,20 @@ class RecommendationGenerationCommander @Inject() (
         RecommendationInfo(
           userId = reco.userId,
           uriId = reco.uriId,
-          {
-            if (scoreCoefficients.isEmpty) {
-              computeMasterScore(reco.allScores)
-            } else {
-              scoreCoefficients.recencyScore.getOrElse(defaultScore) * reco.allScores.recencyScore +
-                scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * reco.allScores.overallInterestScore +
-                scoreCoefficients.priorScore.getOrElse(defaultScore) * reco.allScores.priorScore +
-                scoreCoefficients.socialScore.getOrElse(defaultScore) * reco.allScores.socialScore +
-                scoreCoefficients.popularityScore.getOrElse(defaultScore) * reco.allScores.popularityScore +
-                scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore +
-                scoreCoefficients.rekeepScore.getOrElse(defaultScore) * reco.allScores.rekeepScore +
-                scoreCoefficients.discoveryScore.getOrElse(defaultScore) * reco.allScores.discoveryScore
+          score = {
+            {
+              if (scoreCoefficients.isEmpty) {
+                computeMasterScore(reco.allScores)
+              } else {
+                scoreCoefficients.recencyScore.getOrElse(defaultScore) * reco.allScores.recencyScore +
+                  scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * reco.allScores.overallInterestScore +
+                  scoreCoefficients.priorScore.getOrElse(defaultScore) * reco.allScores.priorScore +
+                  scoreCoefficients.socialScore.getOrElse(defaultScore) * reco.allScores.socialScore +
+                  scoreCoefficients.popularityScore.getOrElse(defaultScore) * reco.allScores.popularityScore +
+                  scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore +
+                  scoreCoefficients.rekeepScore.getOrElse(defaultScore) * reco.allScores.rekeepScore +
+                  scoreCoefficients.discoveryScore.getOrElse(defaultScore) * reco.allScores.discoveryScore
+              }
             }
           },
           explain = Some(reco.allScores.toString)
@@ -133,8 +135,8 @@ class RecommendationGenerationCommander @Inject() (
                 case _ => false
               }
             }
-            val boostedItems = boostingHelper(cleanedItems)
-            val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(boostedItems).map { scoredItems =>
+            val weightedItems = uriWeightingHelper(cleanedItems)
+            val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(weightedItems).map { scoredItems =>
               scoredItems.filter(si => shouldInclude(si.uriScores))
             }.flatMap { scoredItems =>
               attributionHelper.getAttributions(scoredItems)
@@ -146,7 +148,7 @@ class RecommendationGenerationCommander @Inject() (
                   val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
                   recoOpt.map { reco =>
                     uriRecRepo.save(reco.copy(
-                      masterScore = computeMasterScore(item.uriScores) * item.multiplier,
+                      masterScore = computeMasterScore(item.uriScores) * item.weightMultiplier,
                       allScores = item.uriScores,
                       attribution = item.attribution
                     ))
@@ -154,7 +156,7 @@ class RecommendationGenerationCommander @Inject() (
                     uriRecRepo.save(UriRecommendation(
                       uriId = item.uriId,
                       userId = userId,
-                      masterScore = computeMasterScore(item.uriScores) * item.multiplier,
+                      masterScore = computeMasterScore(item.uriScores) * item.weightMultiplier,
                       allScores = item.uriScores,
                       seen = false,
                       clicked = false,

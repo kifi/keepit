@@ -1,11 +1,8 @@
 package com.keepit.curator.commanders
 
-import com.google.inject.Inject
-import com.keepit.common.db.slick.Database
-import com.keepit.curator.model.{ MultipliedSeedItem, SeedItem }
-import com.keepit.model.SystemValueRepo
+import com.keepit.curator.model.{ WeightedSeedItem, SeedItem }
 
-class UriBoostingHelper() {
+class UriWeightingHelper() {
 
   val penalizeScore = Seq(
     ("""(?i)\b(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]*twitter.com[-A-Za-z0-9+&@#/%=~_|]""".r, 0.01f, "Twitter"),
@@ -19,7 +16,7 @@ class UriBoostingHelper() {
     ("""(?i)\b(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]*techcrunch.com[-A-Za-z0-9+&@#/%=~_|]""".r, 1.2f, "Techcrunch")
   )
 
-  def apply(items: Seq[SeedItem]): Seq[MultipliedSeedItem] = items.map { item =>
+  def apply(items: Seq[SeedItem]): Seq[WeightedSeedItem] = items.map { item =>
     var weight = 1.0f
     penalizeScore.foreach { reg =>
       weight = reg._1.findFirstIn(item.url) match {
@@ -34,8 +31,8 @@ class UriBoostingHelper() {
       }
     }
 
-    MultipliedSeedItem(
-      multiplier = weight,
+    WeightedSeedItem(
+      weightMultiplier = weight,
       userId = item.userId,
       uriId = item.uriId,
       priorScore = item.priorScore,

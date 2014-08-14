@@ -3,7 +3,7 @@ package com.keepit.curator.commanders
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.curator.model.{ MultipliedSeedItem, CuratorKeepInfoRepo, Keepers, SeedItem, ScoredSeedItem, UriScores }
+import com.keepit.curator.model.{ WeightedSeedItem, CuratorKeepInfoRepo, Keepers, SeedItem, ScoredSeedItem, UriScores }
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.heimdal.HeimdalServiceClient
@@ -29,21 +29,21 @@ class UriScoringHelper @Inject() (
     cortex: CortexServiceClient,
     heimdal: HeimdalServiceClient) extends Logging {
 
-  private def getRawRecencyScores(items: Seq[MultipliedSeedItem]): Seq[Float] = items.map { item =>
+  private def getRawRecencyScores(items: Seq[WeightedSeedItem]): Seq[Float] = items.map { item =>
     val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays()
     (1.0 / (Math.log(daysOld + 1.0) + 1)).toFloat
   }
 
-  private def getRawPopularityScores(items: Seq[MultipliedSeedItem]): Seq[Float] = items.map { item =>
+  private def getRawPopularityScores(items: Seq[WeightedSeedItem]): Seq[Float] = items.map { item =>
     val cappedPopularity = Math.min(item.timesKept, 100)
     (cappedPopularity / 100.0).toFloat
   }
 
-  private def getRawPriorScores(items: Seq[MultipliedSeedItem]): Seq[Float] = items.map { item =>
+  private def getRawPriorScores(items: Seq[WeightedSeedItem]): Seq[Float] = items.map { item =>
     item.priorScore.getOrElse(0.0f)
   }
 
-  private def getRawInterestScores(items: Seq[MultipliedSeedItem]): Future[(Seq[Float], Seq[Float])] = {
+  private def getRawInterestScores(items: Seq[WeightedSeedItem]): Future[(Seq[Float], Seq[Float])] = {
     val interestScores = cortex.batchUserURIsInterests(items.head.userId, items.map(_.uriId))
     interestScores.map { scores =>
       scores.map { score =>
@@ -55,7 +55,7 @@ class UriScoringHelper @Inject() (
   }
 
   // assume all items have same userId
-  def getRawSocialScores(items: Seq[MultipliedSeedItem]): Future[Seq[Float]] = {
+  def getRawSocialScores(items: Seq[WeightedSeedItem]): Future[Seq[Float]] = {
     //convert user scores seq to map, assume there is no duplicate userId from graph service
     graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
       val socialScoreMap = socialScores.map { socialScore =>
@@ -79,7 +79,7 @@ class UriScoringHelper @Inject() (
   }
 
   val uriHelpRankScores = TrieMap[Id[NormalizedURI], HelpRankInfo]() //This needs to go when we have proper caching on the help rank scores
-  def getRawHelpRankScores(items: Seq[MultipliedSeedItem]): Future[(Seq[Float], Seq[Float])] = {
+  def getRawHelpRankScores(items: Seq[WeightedSeedItem]): Future[(Seq[Float], Seq[Float])] = {
     val helpRankInfos = heimdal.getHelpRankInfos(items.map(_.uriId).filterNot(uriHelpRankScores.contains))
     helpRankInfos.map { infos =>
       infos.foreach { info => uriHelpRankScores += (info.uriId -> info) }
@@ -91,7 +91,7 @@ class UriScoringHelper @Inject() (
 
   }
 
-  def apply(items: Seq[MultipliedSeedItem]): Future[Seq[ScoredSeedItem]] = {
+  def apply(items: Seq[WeightedSeedItem]): Future[Seq[ScoredSeedItem]] = {
     require(items.map(_.userId).toSet.size <= 1, "Batch of seed items to score must be all for the same user")
 
     if (items.isEmpty) {
@@ -121,7 +121,7 @@ class UriScoringHelper @Inject() (
             rekeepScore = rekeepScores(i),
             discoveryScore = discoveryScores(i)
           )
-          ScoredSeedItem(items(i).userId, items(i).uriId, items(i).multiplier, scores)
+          ScoredSeedItem(items(i).userId, items(i).uriId, items(i).weightMultiplier, scores)
         }
       }
     }
