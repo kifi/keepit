@@ -255,8 +255,8 @@ POST    /site/libraries/move        @com.keepit.controllers.website.LibraryContr
 
 GET     /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
-POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(userId: Id[User], url: String)
-POST    /site/recos/vote            @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationUserInteraction(userId: Id[User], url: String)
+POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(url: String)
+POST    /site/recos/vote            @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationUserInteraction(url: String)
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
@@ -668,7 +668,6 @@ GET     /internal/shoebox/database/getLibrariesAndMembershipsChanged       @com.
 
 POST    /internal/shoebox/database/createDeepLink     @com.keepit.controllers.ext.ExtDeepLinkController.createDeepLink()
 POST    /internal/shoebox/database/getDeepUrl         @com.keepit.controllers.ext.ExtDeepLinkController.getDeepUrl()
-POST    /internal/shoebox/database/getHelpRankInfo    @com.keepit.controllers.internal.ShoeboxController.getHelpRankInfo()
 
 GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.internal.ShoeboxController.getActiveExperiments
 GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.internal.ShoeboxController.getExperiments

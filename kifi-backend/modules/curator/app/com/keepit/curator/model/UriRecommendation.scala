@@ -19,7 +19,8 @@ case class UriRecommendation(
     seen: Boolean,
     clicked: Boolean,
     kept: Boolean,
-    lastPushedAt: Option[DateTime] = None) extends Model[UriRecommendation] with ModelWithPublicId[UriRecommendation] with ModelWithState[UriRecommendation] {
+    lastPushedAt: Option[DateTime] = None,
+    attribution: SeedAttribution) extends Model[UriRecommendation] with ModelWithPublicId[UriRecommendation] with ModelWithState[UriRecommendation] {
 
   def withId(id: Id[UriRecommendation]): UriRecommendation = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime): UriRecommendation = this.copy(updateAt = updateTime)

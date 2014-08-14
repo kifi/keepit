@@ -193,7 +193,7 @@ class HomeController @Inject() (
   }
 
   def kifeeeed = HtmlAction.authenticated { request =>
-    if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.ADMIN)) {
+    if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.RECOS_BETA)) {
       siteRouter.routeRequest(request)
     } else {
       Redirect("/")
