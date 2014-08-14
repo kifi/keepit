@@ -5,6 +5,7 @@ import com.keepit.common.controller.{ AuthenticatedRequest, ActionAuthenticator,
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.UserAgent
+import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ LibraryRepo, LibrarySlug, UserRepo, Username }
 import play.api.mvc.{ SimpleResult, Request }
 import play.api.libs.concurrent.Execution.Implicits._
@@ -35,6 +36,7 @@ class KifiSiteRouter @Inject() (
   actionAuthenticator: Provider[ActionAuthenticator],
   homeController: Provider[HomeController],
   angularRouter: AngularRouter,
+  applicationConfig: FortyTwoConfig,
   db: Database)
     extends WebsiteController(actionAuthenticator.get) with ShoeboxServiceController {
 
@@ -50,7 +52,9 @@ class KifiSiteRouter @Inject() (
   // When we refactor the authenticator to stop requiring two functions, this can be simplified.
   def routeRequest[T](request: Request[T]) = {
     // Short-circuit for landing pages
-    if (request.path == "/" && request.userIdOpt.isEmpty) {
+    if (request.host.contains("42go")) {
+      MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission.html")
+    } else if (request.path == "/" && request.userIdOpt.isEmpty) {
       landingPage(request)
     } else {
       (request, route(request)) match {
