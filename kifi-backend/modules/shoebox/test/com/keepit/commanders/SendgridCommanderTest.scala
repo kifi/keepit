@@ -146,7 +146,7 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
           val (actualUserId, actualUriId, actualFeedback) = curator.updatedUriRecommendationFeedback.head
           actualUriId === uri.id.get
           actualUserId === user.id.get
-          actualFeedback === UriRecommendationFeedback(seen = None, clicked = Some(true), kept = None)
+          actualFeedback === UriRecommendationFeedback(delivered = Some(1), clicked = Some(1), kept = None)
         }
       }
 

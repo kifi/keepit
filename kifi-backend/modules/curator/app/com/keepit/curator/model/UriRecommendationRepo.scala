@@ -76,10 +76,10 @@ class UriRecommendationRepoImpl @Inject() (
   }
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RSession): Boolean = {
-    (if (feedback.delivered.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.delivered, row.updatedAt)).update((feedback.delivered.get, currentDateTime)) > 0 else true) ||
-      (if (feedback.clicked.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.clicked, row.updatedAt)).update((feedback.clicked.get, currentDateTime)) > 0 else true) ||
-      (if (feedback.kept.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.kept, row.updatedAt)).update((feedback.kept.get, currentDateTime)) > 0 else true) ||
-      (if (feedback.deleted.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.deleted, row.updatedAt)).update((feedback.deleted.get, currentDateTime)) > 0 else true) ||
+    (if (feedback.delivered.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.delivered, row.updatedAt)).update((feedback.delivered.get, currentDateTime)) > 0 else true) &&
+      (if (feedback.clicked.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.clicked, row.updatedAt)).update((feedback.clicked.get, currentDateTime)) > 0 else true) &&
+      (if (feedback.kept.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.kept, row.updatedAt)).update((feedback.kept.get, currentDateTime)) > 0 else true) &&
+      (if (feedback.deleted.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.deleted, row.updatedAt)).update((feedback.deleted.get, currentDateTime)) > 0 else true) &&
       (if (feedback.markedBad.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.markedBad, row.updatedAt)).update((feedback.markedBad.get, currentDateTime)) > 0 else true)
   }
 
