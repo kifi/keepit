@@ -247,22 +247,10 @@ class UserController @Inject() (
         userData.description.foreach { description =>
           userCommander.updateUserDescription(request.userId, description)
         }
-        if (userData.firstName.isDefined || userData.lastName.isDefined) {
+        if (userData.firstName.exists(_.nonEmpty) && userData.lastName.exists(_.nonEmpty)) {
           db.readWrite { implicit session =>
             val user = userRepo.getNoCache(request.userId)
-
-            val updatedUser = user |> { u =>
-              userData.firstName match {
-                case Some(name) if name.length > 0 => u.copy(firstName = name)
-                case _ => u
-              }
-            } |> { u =>
-              userData.lastName match {
-                case Some(name) if name.length > 0 => u.copy(lastName = name)
-                case _ => u
-              }
-            }
-            userRepo.save(updatedUser)
+            userRepo.save(user.copy(firstName = userData.firstName.get, lastName = userData.lastName.get))
           }
         }
 
