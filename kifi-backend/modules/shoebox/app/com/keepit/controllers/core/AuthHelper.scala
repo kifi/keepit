@@ -363,7 +363,7 @@ class AuthHelper @Inject() (
 
         (verifiedEmailOpt.isDefined, isVerifiedForTheFirstTime) match {
           case (true, _) if user.state == UserStates.PENDING =>
-            Redirect(s"/?m=3&email=${address.address}")
+            Redirect(s"/?m=1")
           case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId) =>
             // first time being used, not logged in OR logged in as correct user
             authenticateUser(address.userId,
@@ -373,14 +373,14 @@ class AuthHelper @Inject() (
                   // user has no installations
                   Redirect("/install")
                 } else {
-                  Redirect(s"/?m=3&email=${address.address}")
+                  Redirect(s"/?m=1")
                 }
                 resp.withSession(request.request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
                   .withCookies(authenticator.toCookie)
               }
             )
           case (true, false) if request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId =>
-            Redirect(s"/?m=3&email=${address.address}")
+            Redirect(s"/?m=1")
           case (true, _) =>
             Ok(views.html.website.verifyEmailThanks(address.address.address, user.firstName, secureSocialClientIds))
         }
