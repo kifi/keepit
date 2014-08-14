@@ -2,28 +2,32 @@ package com.keepit.curator.commanders
 
 import com.keepit.curator.model.{ WeightedSeedItem, SeedItem }
 
+import scala.util.matching.Regex
+
+case class UrlPattern(
+  regex: Regex,
+  weight: Float,
+  description: String)
+
 class UriWeightingHelper() {
 
-  val weightScore = Seq(
+  val scoringMultiplier = Seq(
     //----------------------------------Penalize---------------------------------------------------------------------------
-    ("""(?i)\b(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]*twitter.com[-A-Za-z0-9+&@#/%=~_|]""".r, 0.01f, "Twitter"),
-    ("""(?i)\b(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]*linkedin.com[-A-Za-z0-9+&@#/%=~_|]""".r, 0.01f, "LinkedIn"),
-    ("""(?i)\b(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]*mail.google.com[-A-Za-z0-9+&@#/%=~_|]""".r, 0.001f, "Google Mail"),
-    ("""(?i)\b(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]*wikipedia.org[-A-Za-z0-9+&@#/%=~_|]""".r, 0.1f, "Wikipedia"),
-    ("""(?i)\b(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]*facebook.com[-A-Za-z0-9+&@#/%=~_|]""".r, 0.001f, "Facebook"),
+    UrlPattern("""^https?://[-A-Za-z0-9+&@#/%?=~_|.]*twitter.com[-A-Za-z0-9+&@#/%=~_|]""".r, 0.01f, "Twitter"),
+    UrlPattern("""^https?://[-A-Za-z0-9+&@#/%?=~_|.]*linkedin.com[-A-Za-z0-9+&@#/%=~_|]""".r, 0.01f, "LinkedIn"),
+    UrlPattern("""^https?://[-A-Za-z0-9+&@#/%?=~_|.]*mail.google.com[-A-Za-z0-9+&@#/%=~_|]""".r, 0.001f, "Google Mail"),
+    UrlPattern("""^https?://[-A-Za-z0-9+&@#/%?=~_|.]*wikipedia.org[-A-Za-z0-9+&@#/%=~_|]""".r, 0.1f, "Wikipedia"),
+    UrlPattern("""^https?://[-A-Za-z0-9+&@#/%?=~_|.]*facebook.com[-A-Za-z0-9+&@#/%=~_|]""".r, 0.001f, "Facebook"),
 
     //----------------------------------Boost--------------------------------------------------------------------------------
-    ("""(?i)\b(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]*techcrunch.com[-A-Za-z0-9+&@#/%=~_|]""".r, 1.2f, "Techcrunch")
+    UrlPattern("""^https?://[-A-Za-z0-9+&@#/%?=~_|.]*techcrunch.com[-A-Za-z0-9+&@#/%=~_|]""".r, 1.2f, "Techcrunch")
   )
 
   def apply(items: Seq[SeedItem]): Seq[WeightedSeedItem] = items.map { item =>
-    var weight = 1.0f
-    weightScore.foreach(reg =>
-      weight = reg._1.findFirstIn(item.url) match {
-        case Some(data) => reg._2
-        case None => weight
-      }
-    )
+    val weight = scoringMultiplier.find(pattern => pattern.regex.findFirstIn(item.url).isDefined) match {
+      case Some(pattern) => pattern.weight
+      case None => 1.0f
+    }
 
     WeightedSeedItem(
       weightMultiplier = weight,

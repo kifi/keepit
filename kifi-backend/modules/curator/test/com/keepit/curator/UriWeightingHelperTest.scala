@@ -43,7 +43,7 @@ class UriWeightingHelperTest extends Specification with CuratorTestInjector {
   }
 
   "UriBoostingHelperTest" should {
-    "boost to downgrade some urls" in {
+    "boost or penalize some urls" in {
       withInjector() { implicit injector =>
         val uriBoostingHelper = inject[UriWeightingHelper]
         val multipliedSeedItems = uriBoostingHelper(makeSeedItems)

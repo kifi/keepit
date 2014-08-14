@@ -57,6 +57,18 @@ class RecommendationGenerationCommander @Inject() (
       scores.weight
   }
 
+  private def computeAdjustedScoreByTester(scoreCoefficients: UriRecommendationScores, scores: UriScores): Float = {
+    (scoreCoefficients.recencyScore.getOrElse(defaultScore) * scores.recencyScore +
+      scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * scores.overallInterestScore +
+      scoreCoefficients.priorScore.getOrElse(defaultScore) * scores.priorScore +
+      scoreCoefficients.socialScore.getOrElse(defaultScore) * scores.socialScore +
+      scoreCoefficients.popularityScore.getOrElse(defaultScore) * scores.popularityScore +
+      scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * scores.recentInterestScore +
+      scoreCoefficients.rekeepScore.getOrElse(defaultScore) * scores.rekeepScore +
+      scoreCoefficients.discoveryScore.getOrElse(defaultScore) * scores.discoveryScore) *
+      scores.weight
+  }
+
   def getTopRecommendations(userId: Id[User], howManyMax: Int): Future[Seq[UriRecommendation]] = {
     db.readOnlyReplicaAsync { implicit session =>
       uriRecRepo.getByTopMasterScore(userId, howManyMax)
@@ -75,20 +87,9 @@ class RecommendationGenerationCommander @Inject() (
         RecommendationInfo(
           userId = reco.userId,
           uriId = reco.uriId,
-          score = {
-            if (scoreCoefficients.isEmpty) {
-              computeMasterScore(reco.allScores)
-            } else {
-              scoreCoefficients.recencyScore.getOrElse(defaultScore) * reco.allScores.recencyScore +
-                scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * reco.allScores.overallInterestScore +
-                scoreCoefficients.priorScore.getOrElse(defaultScore) * reco.allScores.priorScore +
-                scoreCoefficients.socialScore.getOrElse(defaultScore) * reco.allScores.socialScore +
-                scoreCoefficients.popularityScore.getOrElse(defaultScore) * reco.allScores.popularityScore +
-                scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore +
-                scoreCoefficients.rekeepScore.getOrElse(defaultScore) * reco.allScores.rekeepScore +
-                scoreCoefficients.discoveryScore.getOrElse(defaultScore) * reco.allScores.discoveryScore
-            }
-          } * reco.allScores.weight,
+          score =
+            if (scoreCoefficients.isEmpty) computeMasterScore(reco.allScores)
+            else computeAdjustedScoreByTester(scoreCoefficients, reco.allScores),
           explain = Some(reco.allScores.toString)
         )
       }.sortBy(-1 * _.score).take(howManyMax)
