@@ -248,7 +248,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
         val keepRepo = inject[KeepRepo]
         val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
         implicit val kdRepo = heimdal.keepDiscoveryRepo
-        implicit val rkRepo = heimdal.reKeepRepo
+        implicit val rkRepo = heimdal.rekeepRepo
         val userExpRepo = inject[UserExperimentRepo]
         val keeper = KeepSource.keeper
         val initLoad = KeepSource.bookmarkImport
@@ -409,7 +409,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
         val kc2 = KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId)
         // u3 -> kifi (u1, u2) [rekeep]
         implicit val kdRepo = heimdal.keepDiscoveryRepo
-        implicit val rkRepo = heimdal.reKeepRepo
+        implicit val rkRepo = heimdal.rekeepRepo
         heimdal.save(kc0, kc1, kc2)
 
         val (keeps3, _) = bookmarkInterner.internRawBookmarks(raw3, u3.id.get, KeepSource.default, true)

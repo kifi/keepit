@@ -27,5 +27,7 @@ trait FakeServiceClient {
     def dump() = println(data)
   }
 
+  def makeRepo[T <: Model[T]]: FakeRepo[T] = new FakeRepo[T]
+
   def save[T <: Model[T]](models: T*)(implicit repo: FakeRepo[T]): Seq[T] = repo.save(models: _*)
 }

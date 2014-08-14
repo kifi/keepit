@@ -15,12 +15,20 @@ import play.api.libs.json.{ JsArray, Json, JsObject }
 import com.google.inject.util.Providers
 import com.keepit.common.actor.FakeScheduler
 
-class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends HeimdalServiceClient with FakeServiceClient {
+trait FakeHeimdalRepos { self: FakeServiceClient =>
+  def keepDiscoveryRepo: FakeRepo[KeepDiscovery]
+  def rekeepRepo: FakeRepo[ReKeep]
+}
+
+class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends HeimdalServiceClient with FakeServiceClient with FakeHeimdalRepos {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
-  implicit val keepDiscoveryRepo: FakeRepo[KeepDiscovery] = new FakeRepo[KeepDiscovery]
-  implicit val reKeepRepo = new FakeRepo[ReKeep]
+  implicit lazy val keepDiscoveryRepo = makeRepo[KeepDiscovery]
+  implicit lazy val rekeepRepo = makeRepo[ReKeep]
+
+  def saveKeepDiscoveries(items: KeepDiscovery*): Seq[KeepDiscovery] = save(items: _*)
+  def saveReKeeps(items: ReKeep*): Seq[ReKeep] = save(items: _*)
 
   var eventsRecorded: Int = 0
 
@@ -86,10 +94,10 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getPagedReKeeps(page: Int, size: Int): Future[Seq[ReKeep]] = Future.successful(Seq.empty)
 
-  def getReKeepCount(): Future[Int] = Future.successful { reKeepRepo.count }
+  def getReKeepCount(): Future[Int] = Future.successful { rekeepRepo.count }
 
   def getUriReKeepsWithCountsByKeeper(userId: Id[User]): Future[Seq[URIReKeepCount]] = Future.successful {
-    val items = reKeepRepo.filter(_.keeperId == userId).groupBy(_.uriId).map {
+    val items = rekeepRepo.filter(_.keeperId == userId).groupBy(_.uriId).map {
       case (uriId, rows) =>
         (uriId, rows.head.keepId, rows.size)
     }.toSeq
@@ -97,11 +105,11 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   }
 
   def getReKeepCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepReKeptCount]] = Future.successful {
-    reKeepRepo.filter(rk => rk.keeperId == userId && keepIds.contains(rk.keepId)).groupBy(_.keepId).map { case (id, rows) => KeepReKeptCount(id, rows.size) }.toSeq
+    rekeepRepo.filter(rk => rk.keeperId == userId && keepIds.contains(rk.keepId)).groupBy(_.keepId).map { case (id, rows) => KeepReKeptCount(id, rows.size) }.toSeq
   }
 
   def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIReKeepCount]] = Future.successful {
-    reKeepRepo.filter(rk => uriIds.contains(rk.uriId)).groupBy(_.uriId).map { case (id, rows) => URIReKeepCount(id, rows.size) }.toSeq
+    rekeepRepo.filter(rk => uriIds.contains(rk.uriId)).groupBy(_.uriId).map { case (id, rows) => URIReKeepCount(id, rows.size) }.toSeq
   }
 
   def getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI]): Future[(Int, Int)] = Future.successful((0, 0))

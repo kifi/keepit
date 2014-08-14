@@ -354,7 +354,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector {
 
       val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
       implicit val kdRepo = heimdal.keepDiscoveryRepo
-      implicit val rkRepo = heimdal.reKeepRepo
+      implicit val rkRepo = heimdal.rekeepRepo
 
       val origin = "https://www.google.com"
       val kc0 = KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId)
@@ -483,7 +483,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector {
 
       val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
       implicit val kdRepo = heimdal.keepDiscoveryRepo
-      implicit val rkRepo = heimdal.reKeepRepo
+      implicit val rkRepo = heimdal.rekeepRepo
 
       val origin = "https://www.google.com"
       val kc0 = KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId)
