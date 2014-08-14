@@ -5,7 +5,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.service.ServiceType
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.test.{ FakeRepo, FakeServiceClient }
+import com.keepit.test.FakeServiceClient
 import org.joda.time.DateTime
 
 import scala.concurrent.{ Future, Promise }
