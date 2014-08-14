@@ -164,9 +164,11 @@ class RecommendationGenerationCommander @Inject() (
                       userId = userId,
                       masterScore = computeMasterScore(item.uriScores),
                       allScores = item.uriScores,
-                      seen = false,
-                      clicked = false,
+                      delivered = 0,
+                      clicked = 0,
                       kept = false,
+                      deleted = false,
+                      markedBad = false,
                       attribution = item.attribution
                     ))
                   }
