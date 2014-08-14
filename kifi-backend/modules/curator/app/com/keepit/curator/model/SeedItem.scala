@@ -31,7 +31,8 @@ case class SeedItem(
     recencyScore: Float,
     priorScore: Float,
     rekeepScore: Float,
-    discoveryScore: Float) {
+    discoveryScore: Float,
+    weight: Float) {
 
   override def toString = s"social:$socialScore --- popularity:$popularityScore --- overallInterest:$overallInterestScore --- recentInterest:$recentInterestScore --- recency:$recencyScore --- prior:$priorScore --- rekeep:$rekeepScore --- discovery:$discoveryScore"
 }
@@ -45,7 +46,7 @@ case class WeightedSeedItem(
   lastSeen: DateTime,
   keepers: Keepers)
 
-case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], weightMultiplier: Float, uriScores: UriScores)
+case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores)
 
 @json case class UserAttribution(friends: Seq[Id[User]], others: Int)
 @json case class KeepAttribution(keeps: Seq[Id[Keep]])
@@ -56,4 +57,4 @@ object SeedAttribution {
   val EMPTY = SeedAttribution()
 }
 
-case class ScoredSeedItemWithAttribution(userId: Id[User], uriId: Id[NormalizedURI], weightMultiplier: Float, uriScores: UriScores, attribution: SeedAttribution)
+case class ScoredSeedItemWithAttribution(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores, attribution: SeedAttribution)

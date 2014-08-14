@@ -119,9 +119,10 @@ class UriScoringHelper @Inject() (
             recencyScore = recencyScores(i),
             priorScore = priorScores(i),
             rekeepScore = rekeepScores(i),
-            discoveryScore = discoveryScores(i)
+            discoveryScore = discoveryScores(i),
+            weight = items(i).weightMultiplier
           )
-          ScoredSeedItem(items(i).userId, items(i).uriId, items(i).weightMultiplier, scores)
+          ScoredSeedItem(items(i).userId, items(i).uriId, scores)
         }
       }
     }

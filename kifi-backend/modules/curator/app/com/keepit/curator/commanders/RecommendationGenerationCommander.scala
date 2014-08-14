@@ -1,6 +1,15 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ ScoredSeedItemWithAttribution, RecommendationInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, UriRecommendationRepo, UriRecommendation, UriScores }
+import com.keepit.curator.model.{
+  ScoredSeedItemWithAttribution,
+  RecommendationInfo,
+  UserRecommendationGenerationStateRepo,
+  UserRecommendationGenerationState,
+  Keepers,
+  UriRecommendationRepo,
+  UriRecommendation,
+  UriScores
+}
 import com.keepit.common.db.Id
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -37,14 +46,15 @@ class RecommendationGenerationCommander @Inject() (
   private def usersToPrecomputeRecommendationsFor(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map(users => users.map(_.id.get).toSeq)
 
   private def computeMasterScore(scores: UriScores): Float = {
-    5 * scores.socialScore +
+    (5 * scores.socialScore +
       6 * scores.overallInterestScore +
       2 * scores.priorScore +
       1 * scores.recencyScore +
       1 * scores.popularityScore +
       9 * scores.recentInterestScore +
       6 * scores.rekeepScore +
-      3 * scores.discoveryScore
+      3 * scores.discoveryScore) *
+      scores.weight
   }
 
   def getTopRecommendations(userId: Id[User], howManyMax: Int): Future[Seq[UriRecommendation]] = {
@@ -66,21 +76,19 @@ class RecommendationGenerationCommander @Inject() (
           userId = reco.userId,
           uriId = reco.uriId,
           score = {
-            {
-              if (scoreCoefficients.isEmpty) {
-                computeMasterScore(reco.allScores)
-              } else {
-                scoreCoefficients.recencyScore.getOrElse(defaultScore) * reco.allScores.recencyScore +
-                  scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * reco.allScores.overallInterestScore +
-                  scoreCoefficients.priorScore.getOrElse(defaultScore) * reco.allScores.priorScore +
-                  scoreCoefficients.socialScore.getOrElse(defaultScore) * reco.allScores.socialScore +
-                  scoreCoefficients.popularityScore.getOrElse(defaultScore) * reco.allScores.popularityScore +
-                  scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore +
-                  scoreCoefficients.rekeepScore.getOrElse(defaultScore) * reco.allScores.rekeepScore +
-                  scoreCoefficients.discoveryScore.getOrElse(defaultScore) * reco.allScores.discoveryScore
-              }
+            if (scoreCoefficients.isEmpty) {
+              computeMasterScore(reco.allScores)
+            } else {
+              scoreCoefficients.recencyScore.getOrElse(defaultScore) * reco.allScores.recencyScore +
+                scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * reco.allScores.overallInterestScore +
+                scoreCoefficients.priorScore.getOrElse(defaultScore) * reco.allScores.priorScore +
+                scoreCoefficients.socialScore.getOrElse(defaultScore) * reco.allScores.socialScore +
+                scoreCoefficients.popularityScore.getOrElse(defaultScore) * reco.allScores.popularityScore +
+                scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore +
+                scoreCoefficients.rekeepScore.getOrElse(defaultScore) * reco.allScores.rekeepScore +
+                scoreCoefficients.discoveryScore.getOrElse(defaultScore) * reco.allScores.discoveryScore
             }
-          },
+          } * reco.allScores.weight,
           explain = Some(reco.allScores.toString)
         )
       }.sortBy(-1 * _.score).take(howManyMax)
@@ -148,7 +156,7 @@ class RecommendationGenerationCommander @Inject() (
                   val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
                   recoOpt.map { reco =>
                     uriRecRepo.save(reco.copy(
-                      masterScore = computeMasterScore(item.uriScores) * item.weightMultiplier,
+                      masterScore = computeMasterScore(item.uriScores),
                       allScores = item.uriScores,
                       attribution = item.attribution
                     ))
@@ -156,7 +164,7 @@ class RecommendationGenerationCommander @Inject() (
                     uriRecRepo.save(UriRecommendation(
                       uriId = item.uriId,
                       userId = userId,
-                      masterScore = computeMasterScore(item.uriScores) * item.weightMultiplier,
+                      masterScore = computeMasterScore(item.uriScores),
                       allScores = item.uriScores,
                       seen = false,
                       clicked = false,

@@ -44,13 +44,14 @@ class SeedAttributionHelperTest extends Specification {
     recencyScore = 0f,
     priorScore = 0f,
     rekeepScore = 0f,
-    discoveryScore = 0f)
+    discoveryScore = 0f,
+    weight = 1.0f)
 
-  val scoredItem1 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](1), 1.0f, emptyScore.copy(socialScore = 0.01f))
-  val scoredItem2 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](2), 1.0f, emptyScore.copy(socialScore = 0.9f))
-  val scoredItem3 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](20), 1.0f, emptyScore.copy(socialScore = 0.9f))
-  val scoredItem4 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](3), 1.0f, emptyScore.copy(socialScore = 0.9f))
-  val scoredItem5 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](4), 1.0f, emptyScore.copy(socialScore = 0.02f))
+  val scoredItem1 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](1), emptyScore.copy(socialScore = 0.01f))
+  val scoredItem2 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](2), emptyScore.copy(socialScore = 0.9f))
+  val scoredItem3 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](20), emptyScore.copy(socialScore = 0.9f))
+  val scoredItem4 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](3), emptyScore.copy(socialScore = 0.9f))
+  val scoredItem5 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](4), emptyScore.copy(socialScore = 0.02f))
   val scoredItems = Seq(scoredItem1, scoredItem2, scoredItem3, scoredItem4, scoredItem5)
 
   "Seed Attribution helper" should {
