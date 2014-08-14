@@ -1,11 +1,13 @@
 package com.keepit.curator
 
 import com.keepit.common.cache.FakeCacheModule
+import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
+import com.keepit.model.User
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import commanders.email.{ EngagementFeedEmailSender, EngagementFeedSummary }
@@ -58,6 +60,9 @@ class EngagementFeedEmailSenderTest extends Specification with CuratorTestInject
         summaries(0).feed.size === 2
         summaries(1).feed.size === 3
         shoebox.sentMail.size === 2
+        shoebox.sentMail(0).senderUserId must not beTheSameAs shoebox.sentMail(1).senderUserId
+        shoebox.sentMail(0).senderUserId.get must beOneOf(Id[User](42), Id[User](43))
+        shoebox.sentMail(1).senderUserId.get must beOneOf(Id[User](42), Id[User](43))
 
         val email = shoebox.sentMail(0)
         email.htmlBody.toString must contain("Hello Some")
