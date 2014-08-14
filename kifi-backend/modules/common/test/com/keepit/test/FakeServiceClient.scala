@@ -5,7 +5,7 @@ import collection.mutable.{ Map => MutableMap }
 
 import com.keepit.common.db.{ Model, Id }
 
-class FakeIdCounter[T] {
+class FakeIdCounter[T <: Model[T]] {
   private val counter = new AtomicLong(0)
   def nextId(): Id[T] = { Id[T](counter.incrementAndGet) }
 }
