@@ -171,7 +171,7 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
 
         inject[FakeActionAuthenticator].setUser(user1)
         val request = FakeRequest("POST", path).withBody(Json.obj("url" -> "http://www.google.com"))
-        val result = inject[MobilePageController].queryExtension()(request)
+        val result = inject[MobilePageController].queryExtension(0, 1000)(request)
 
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")

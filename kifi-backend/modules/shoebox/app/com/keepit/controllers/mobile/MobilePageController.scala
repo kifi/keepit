@@ -26,21 +26,21 @@ class MobilePageController @Inject() (
     Ok(Json.toJson(info))
   }
 
-  def queryExtension() = JsonAction.authenticatedParseJsonAsync { request =>
+  def queryExtension(page: Int, pageSize: Int) = JsonAction.authenticatedParseJsonAsync { request =>
 
     val url = (request.body \ "url").as[String]
     val sortOrder = "user"
 
-    // page/details (POST)
+    // page details
     val pageFutures = SafeFuture { pageCommander.getPageDetails(url, request.userId, request.experiments) }
-    // user/me (GET)
+    // user infos
     val basicUserFutures = SafeFuture { userCommander.getUserInfo(request.user) }
     val userAttributeFutures = userCommander.getKeepAttributionInfo(request.userId)
-    // collections/all (GET)
+    // keeps & collections
     val numKeepsFuture = SafeFuture { db.readOnlyMaster { implicit s => keepRepo.getCountByUser(request.userId) } }
     val collectionsFuture = SafeFuture { collectionCommander.allCollections(sortOrder, request.userId) }
-    // user/friendsDetails (GET)
-    val friendsFuture = SafeFuture { userCommander.getConnectionsPage(request.userId, 0, 20) }
+    // friend connections
+    val friendsFuture = SafeFuture { userCommander.getConnectionsPage(request.userId, page, pageSize) }
 
     val tupleFuture = for {
       pageInfo <- pageFutures
