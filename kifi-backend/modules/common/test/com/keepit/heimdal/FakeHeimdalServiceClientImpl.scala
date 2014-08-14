@@ -66,10 +66,6 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getDiscoveryCount(): Future[Int] = Future.successful { keepDiscoveryRepo.count }
 
-  def getDiscoveryCountByKeeper(userId: Id[User]): Future[Int] = Future.successful {
-    keepDiscoveryRepo.filter(_.keeperId == userId).size
-  }
-
   def getUriDiscoveriesWithCountsByKeeper(userId: Id[User]): Future[Seq[URIDiscoveryCount]] = Future.successful[Seq[URIDiscoveryCount]] {
     val items = keepDiscoveryRepo.filter(_.keeperId == userId).groupBy(_.uriId).map {
       case (id, rows) =>
