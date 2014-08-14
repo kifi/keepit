@@ -5,7 +5,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.service.ServiceType
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.test.FakeServiceClient
+import com.keepit.test.{ FakeRepoBase, FakeRepoLike, FakeServiceClient }
 import org.joda.time.DateTime
 
 import scala.concurrent.{ Future, Promise }
@@ -16,8 +16,8 @@ import com.google.inject.util.Providers
 import com.keepit.common.actor.FakeScheduler
 
 trait FakeHeimdalRepos { self: FakeServiceClient =>
-  def keepDiscoveryRepo: FakeRepo[KeepDiscovery]
-  def rekeepRepo: FakeRepo[ReKeep]
+  def keepDiscoveryRepo: FakeRepoLike[KeepDiscovery]
+  def rekeepRepo: FakeRepoLike[ReKeep]
 }
 
 class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends HeimdalServiceClient with FakeServiceClient with FakeHeimdalRepos {
@@ -27,8 +27,8 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   implicit lazy val keepDiscoveryRepo = makeRepo[KeepDiscovery]
   implicit lazy val rekeepRepo = makeRepo[ReKeep]
 
-  def saveKeepDiscoveries(items: KeepDiscovery*): Seq[KeepDiscovery] = save(items: _*)
-  def saveReKeeps(items: ReKeep*): Seq[ReKeep] = save(items: _*)
+  def saveKeepDiscoveries(items: KeepDiscovery*) = save(items: _*)
+  def saveReKeeps(items: ReKeep*) = save(items: _*)
 
   var eventsRecorded: Int = 0
 
