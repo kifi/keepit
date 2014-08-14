@@ -19,10 +19,9 @@ final class AnyExtensionOps[A](val x: A) extends AnyVal {
 }
 
 final class FuncExtensionOpts[A](f: => A) {
-  @inline def recover(g: Throwable => A): A = {
-    try { f }
-    catch {
-      case t: Throwable => g(t)
+  @inline def recover(g: PartialFunction[Throwable, A]): A = {
+    try f catch {
+      case ex: Throwable if g.isDefinedAt(ex) => g(ex)
     }
   }
 }
