@@ -75,10 +75,7 @@ class MobileUserController @Inject() (
   def updateCurrentUser = JsonAction.authenticatedParseJsonAsync(allowPending = true) { implicit request =>
     request.body.validate[UpdatableUserInfo] match {
       case JsSuccess(userData, _) => {
-        userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmail, _))
-        userData.description.foreach { description =>
-          userCommander.updateUserDescription(request.userId, description)
-        }
+        userCommander.updateUserInfo(request.userId, userData)
         getUserInfo(request)
       }
       case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } =>
