@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('InviteCtrl', [
-  '$scope', '$rootScope', '$http', 'profileService', 'routeService', '$window', 'wtiService', 'socialService',
-  function ($scope, $rootScope, $http, profileService, routeService, $window, wtiService, socialService) {
+  '$scope', '$http', '$window', 'modalService', 'profileService', 'routeService', 'socialService', 'wtiService', 
+  function ($scope, $http, $window, modalService, profileService, routeService, socialService, wtiService) {
     $window.document.title = 'Kifi • Invite your friends';
 
     $scope.$watch(socialService.checkIfRefreshingSocialGraph, function (v) {
@@ -31,7 +31,9 @@ angular.module('kifi')
     $scope.wtiScrollNext = wtiService.getMore;
 
     $scope.showAddNetworksModal = function () {
-      $rootScope.$emit('showGlobalModal', 'addNetworks');
+      modalService.open({
+        template: 'social/addNetworksModal.tpl.html'
+      });
     };
   }
 ])
@@ -53,8 +55,8 @@ angular.module('kifi')
 ])
 
 .directive('kfSocialNetworksStatus', [
-  'socialService', '$rootScope',
-  function (socialService, $rootScope) {
+  'modalService', 'socialService',
+  function (modalService, socialService) {
     return {
       scope: {},
       replace: true,
@@ -72,7 +74,9 @@ angular.module('kifi')
         scope.data = scope.data || {};
 
         scope.showAddNetworks = function () {
-          $rootScope.$emit('showGlobalModal', 'addNetworks');
+          modalService.open({
+            template: 'social/addNetworksModal.tpl.html'
+          });
         };
 
         socialService.refresh();
@@ -165,8 +169,8 @@ angular.module('kifi')
 ])
 
 .directive('kfSocialInviteSearch', [
-  'inviteService', '$document', '$log', 'socialService', '$timeout', '$rootScope',
-  function (inviteService, $document, $log, $socialService, $timeout, $rootScope) {
+  '$document', '$log', 'inviteService', 'modalService', 'socialService',
+  function ($document, $log, inviteService, modalService, socialService) {
     return {
       scope: {},
       replace: true,
@@ -220,20 +224,45 @@ angular.module('kifi')
 
         $document.on('click', clickOutside);
 
+        scope.showCantFindFriendModal = function () {
+          modalService.open({
+            template: 'invite/cantFindFriendModal.tpl.html',
+            modalData: { searchFriendName: scope.search.name }
+          });
+        };
+      }
+    };
+  }
+])
+
+.directive('kfCantFindFriend', [
+  'modalService', 'socialService',
+  function (modalService, socialService) {
+    return {
+      replace: true,
+      restrict: 'A',
+      templateUrl: 'invite/cantFindFriend.tpl.html',
+      require: '^kfModal',
+      link: function (scope, element, attrs, kfModalCtrl) {
+        scope.close = kfModalCtrl.close;
+        
+        scope.hasNetworks = function () {
+          return !!socialService.networks.length;
+        };
+
         scope.refreshFriends = function () {
-          scope.data.showCantFindModal = false;
-          $socialService.refreshSocialGraph();
+          scope.close();
+          socialService.refreshSocialGraph();
         };
 
         scope.connectNetworks = function () {
-          scope.data.showCantFindModal = false;
-          $rootScope.$emit('showGlobalModal', 'addNetworks');
+          scope.close();
+          modalService.open({
+            template: 'social/addNetworksModal.tpl.html'
+          });
         };
 
-        scope.hasNetworks = function () {
-          return !!$socialService.networks.length;
-        };
-
+        scope.searchFriendName = scope.modalData.searchFriendName;
       }
     };
   }

@@ -108,10 +108,6 @@ angular.module('kifi')
 
     $rootScope.$on('showGlobalModal', function (e, modal) {
       switch (modal) {
-        case 'addNetworks':
-          $scope.modal = 'add_networks';
-          $scope.data.showAddNetworks = true;
-          break;
         case 'importBookmarks':
           initBookmarkImport.apply(null, Array.prototype.slice(arguments, 2));
           break;

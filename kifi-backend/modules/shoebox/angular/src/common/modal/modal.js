@@ -18,7 +18,7 @@ angular.module('kifi')
           if (angular.isFunction(closeAction)) {
             closeAction();
           }
-          
+
           $document.off('keydown', escapeModal);
           
           modalService.close();
@@ -51,38 +51,37 @@ angular.module('kifi')
 ])
 
 .directive('kfBasicModalContent', [function () {
-    return {
-      restrict: 'A',
-      replace: true,
-      scope: {
-        action: '&',
-        cancel: '&',
-        title: '@'
-      },
-      templateUrl: 'common/modal/basicModalContent.tpl.html',
-      transclude: true,
-      require: '^kfModal',
-      link: function (scope, element, attrs, kfModalCtrl) {
-        scope.title = attrs.title || '';
-        scope.actionText = attrs.actionText;
-        scope.withCancel = (attrs.withCancel !== void 0) || false;
-        scope.withWarning = (attrs.withWarning !== void 0) || false;
-        scope.cancelText = attrs.cancelText;
-        scope.centered = attrs.centered;
+  return {
+    restrict: 'A',
+    replace: true,
+    scope: {
+      action: '&',
+      cancel: '&',
+      title: '@'
+    },
+    templateUrl: 'common/modal/basicModalContent.tpl.html',
+    transclude: true,
+    require: '^kfModal',
+    link: function (scope, element, attrs, kfModalCtrl) {
+      scope.title = attrs.title || '';
+      scope.actionText = attrs.actionText;
+      scope.withCancel = (attrs.withCancel !== void 0) || false;
+      scope.withWarning = (attrs.withWarning !== void 0) || false;
+      scope.cancelText = attrs.cancelText;
+      scope.centered = attrs.centered;
 
-        // Note: if there is no 'single-action' attribute,
-        // scope.singleAction will be set to true.
-        scope.singleAction = attrs.singleAction || true;
+      // Note: if there is no 'single-action' attribute,
+      // scope.singleAction will be set to true.
+      scope.singleAction = attrs.singleAction || true;
 
-        scope.cancelAndClose = function () {
-          kfModalCtrl.close(scope.cancel);
-        };
-        scope.actionAndClose = function () {
-          kfModalCtrl.close(scope.action);
-        };
+      scope.cancelAndClose = function () {
+        kfModalCtrl.close(scope.cancel);
+      };
+      scope.actionAndClose = function () {
+        kfModalCtrl.close(scope.action);
+      };
 
-        scope.close = kfModalCtrl.close;
-      }
-    };
-  }
-]);
+      scope.close = kfModalCtrl.close;
+    }
+  };
+}]);
