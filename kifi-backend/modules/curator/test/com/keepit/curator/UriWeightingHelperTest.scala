@@ -35,8 +35,11 @@ class UriWeightingHelperTest extends Specification with CuratorTestInjector {
     val seedItem8 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](8),
       url = "http://topics.nytimes.com/top/news/business/companies/twitter/index.html?inline=nyt-org",
       seq = SequenceNumber[SeedItem](8), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))), discoverable = true)
+    val seedItem9 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](9),
+      url = "http://www.wired.com/2014/04/perfect-facebook-feed/",
+      seq = SequenceNumber[SeedItem](9), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))), discoverable = true)
 
-    seedItem1 :: seedItem2 :: seedItem3 :: seedItem4 :: seedItem5 :: seedItem6 :: seedItem7 :: seedItem8 :: Nil
+    seedItem1 :: seedItem2 :: seedItem3 :: seedItem4 :: seedItem5 :: seedItem6 :: seedItem7 :: seedItem8 :: seedItem9 :: Nil
   }
 
   "UriBoostingHelperTest" should {
@@ -52,6 +55,7 @@ class UriWeightingHelperTest extends Specification with CuratorTestInjector {
         multipliedSeedItems(5).weightMultiplier === 0.1f
         multipliedSeedItems(6).weightMultiplier === 0.001f
         multipliedSeedItems(7).weightMultiplier === 1.0f
+        multipliedSeedItems(8).weightMultiplier === 1.0f
       }
     }
   }
