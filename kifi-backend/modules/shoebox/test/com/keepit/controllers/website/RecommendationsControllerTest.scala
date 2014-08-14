@@ -55,10 +55,9 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
 
     "update uri recommendation feedback" in {
       withInjector(modules: _*) { implicit injector =>
-        val userId = Id[User](42)
         val url = "id1"
-        val route = com.keepit.controllers.website.routes.RecommendationsController.updateUriRecommendationFeedback(userId, url).url
-        route === "/site/recos/feedback?userId=42&url=id1"
+        val route = com.keepit.controllers.website.routes.RecommendationsController.updateUriRecommendationFeedback(url).url
+        route === "/site/recos/feedback?url=id1"
 
         val payload = Json.obj(
           "seen" -> true,
@@ -68,7 +67,7 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
         val request = FakeRequest("POST", route).withBody(payload)
 
         val controller = inject[RecommendationsController]
-        val result: Future[SimpleResult] = controller.updateUriRecommendationFeedback(userId, url)(request)
+        val result: Future[SimpleResult] = controller.updateUriRecommendationFeedback(url)(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
       }

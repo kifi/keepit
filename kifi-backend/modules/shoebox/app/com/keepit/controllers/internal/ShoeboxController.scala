@@ -329,14 +329,6 @@ class ShoeboxController @Inject() (
     }
   }
 
-  def getHelpRankInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val uriIds = Json.fromJson[Seq[Id[NormalizedURI]]](request.body).get
-    val infos = keepsCommander.getHelpRankInfo(uriIds)
-    if (uriIds.length != infos.length) // debug
-      log.warn(s"[getHelpRankInfo] (mismatch) uriIds(len=${uriIds.length}):${uriIds.mkString(",")} res(len=${infos.length}):${infos.mkString(",")}")
-    Ok(Json.toJson(infos))
-  }
-
   def getFriendRequestsBySender(senderId: Id[User]) = Action { request =>
     val requests = db.readOnlyReplica(2) { implicit s =>
       friendRequestRepo.getBySender(senderId)

@@ -16,6 +16,8 @@ import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 
 import concurrent.Future
 
+case class RecommendedEmailData(toUser: User, recos: Seq[RecommendedUriSummary])
+
 case class RecommendedUriSummary(reco: UriRecommendation, uri: NormalizedURI, uriSummary: URISummary) {
   val title = uriSummary.title.getOrElse("")
   val description = uriSummary.description.getOrElse("")
@@ -69,8 +71,9 @@ class EngagementFeedEmailSenderImpl @Inject() (
         }
 
         val resultsAndData = dataFutures.flatMap[EngagementFeedSummary] { feedData =>
-          val htmlBody: LargeString = views.html.email.feedRecommendationsInlined(user.firstName, feedData).body
-          val textBody: Some[LargeString] = Some(views.html.email.feedRecommendationsText(feedData).body)
+          val emailData = RecommendedEmailData(toUser = user, recos = feedData)
+          val htmlBody: LargeString = views.html.email.feedRecommendationsInlined(emailData).body
+          val textBody: Some[LargeString] = Some(views.html.email.feedRecommendationsText(emailData).body)
 
           val email = ElectronicMail(
             category = NotificationCategory.User.DIGEST,

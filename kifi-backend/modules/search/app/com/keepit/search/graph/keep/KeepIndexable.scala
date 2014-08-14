@@ -6,7 +6,9 @@ import com.keepit.search.LangDetector
 
 object KeepFields {
   val libraryField = "lib"
+  val libraryIdField = "libId"
   val uriField = "uri"
+  val uriIdField = "uriId"
   val userField = "user"
   val discoverabilityField = "d"
   val titleField = "t"
@@ -39,6 +41,9 @@ case class KeepIndexable(keep: Keep) extends Indexable[Keep, Keep] {
     }
 
     buildDomainFields(keep.url, siteField, homePageField).foreach(doc.add)
+
+    keep.libraryId.foreach(libId => buildIdValueField(libraryIdField, libId))
+    buildIdValueField(uriIdField, keep.uriId)
 
     buildBinaryDocValuesField(recordField, KeepRecord(keep))
     doc
