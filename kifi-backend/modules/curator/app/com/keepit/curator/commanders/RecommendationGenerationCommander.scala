@@ -97,11 +97,11 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   private def shouldInclude(scores: UriScores): Boolean = {
-    if (scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0) {
+    if (scores.overallInterestScore > 0.45 || scores.recentInterestScore > 0) {
       scores.socialScore > 0.8 ||
         scores.overallInterestScore > 0.65 ||
         scores.priorScore > 0 ||
-        (scores.popularityScore > 0.2 && scores.socialScore > 0.4) ||
+        (scores.popularityScore > 0.2 && scores.socialScore > 0.65) ||
         scores.recentInterestScore > 0.15 ||
         scores.rekeepScore > 0.3 ||
         scores.discoveryScore > 0.3
