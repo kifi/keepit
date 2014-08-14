@@ -574,7 +574,7 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def keepWithMultipleTags(userId: Id[User], keepsWithTags: Seq[(KeepInfo, Seq[String])], source: KeepSource)(implicit context: HeimdalContext): Map[Collection, Seq[Keep]] = {
+  def keepWithMultipleTags(userId: Id[User], keepsWithTags: Seq[(KeepInfo, Seq[String])], source: KeepSource)(implicit context: HeimdalContext): (Map[Collection, Seq[Keep]], Int) = {
     val (bookmarks, _) = keepInterner.internRawBookmarks(
       rawBookmarkFactory.toRawBookmark(keepsWithTags.map(_._1)),
       userId,
@@ -599,7 +599,10 @@ class KeepsCommander @Inject() (
 
     searchClient.updateURIGraph()
 
-    keepsByTag
+    val keepCount = db.readOnlyMaster { implicit s =>
+      keepRepo.count
+    }
+    (keepsByTag, keepCount)
   }
 
   def setFirstKeeps(userId: Id[User], keeps: Seq[Keep]): Unit = {
