@@ -53,7 +53,7 @@ class KifiSiteRouter @Inject() (
   def routeRequest[T](request: Request[T]) = {
     // Short-circuit for landing pages
     if (request.host.contains("42go")) {
-      MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission.html")
+      MovedPermanently(applicationConfig.applicationBaseUrl + "/about/mission")
     } else if (request.path == "/" && request.userIdOpt.isEmpty) {
       landingPage(request)
     } else {
