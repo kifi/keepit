@@ -1,9 +1,10 @@
 package com.keepit.test
 
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.{ State, Id, Model }
-import collection.mutable.{ Map => MutableMap }
+import collection.JavaConversions._
 
 trait FakeRepoLike[T <: Model[T]] {
 
@@ -24,15 +25,15 @@ class FakeIdCounter[T <: Model[T]] {
 
 trait FakeRepoBase[T <: Model[T]] extends FakeRepoLike[T] {
   def idCounter: FakeIdCounter[T]
-  def data: MutableMap[Id[T], T]
+  def data: ConcurrentHashMap[Id[T], T]
 
   def save(model: T): T = {
     val id = model.id.getOrElse(idCounter.nextId())
     val updated = model.withId(id)
-    data(id) = updated
+    data.put(id, updated)
     updated
   }
-  def get(id: Id[T]) = data(id)
+  def get(id: Id[T]) = data.get(id)
   def all() = data.values.toSeq
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[T]]) = data.values.toSeq.sortBy(_.id.get).drop(page * size).take(size).toSeq
   def count: Int = data.keySet.size
