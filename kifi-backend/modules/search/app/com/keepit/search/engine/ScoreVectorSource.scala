@@ -1,6 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.search.article.ArticleVisibility
+import com.keepit.search.graph.keep.KeepFields
 import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.util.LongArraySet
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
@@ -9,7 +10,7 @@ import org.apache.lucene.search.Scorer
 import org.apache.lucene.util.PriorityQueue
 
 trait ScoreVectorSource {
-  def score(output: DataBuffer)
+  def writeScoreVectorsTo(output: DataBuffer)
 
   protected def createScorerQueue(scorers: Array[Scorer]): TaggedScoreQueue = {
     val pq = new TaggedScoreQueue(scorers.length)
@@ -66,11 +67,11 @@ final class TaggedScoreQueue(size: Int) extends PriorityQueue[TaggedScorer](size
 
 class ArticleScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer], idFilter: LongArraySet) extends ScoreVectorSource {
 
-  private[this] val pq = createScorerQueue(scorers)
-  private[this] val articleVisibility = ArticleVisibility(reader)
-
-  def score(output: DataBuffer): Unit = {
+  def writeScoreVectorsTo(output: DataBuffer): Unit = {
+    val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
+
+    val articleVisibility = ArticleVisibility(reader)
 
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
@@ -102,12 +103,12 @@ class ArticleScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer],
 
 class ArticleFromKeepsScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer], libraryIds: LongArraySet, idFilter: LongArraySet) extends ScoreVectorSource {
 
-  private[this] val uriIdDocValues = reader.getNumericDocValues("uriId")
-  private[this] val libraryIdDocValues = reader.getNumericDocValues("libId")
-  private[this] val pq = createScorerQueue(scorers)
-
-  def score(output: DataBuffer): Unit = {
+  def writeScoreVectorsTo(output: DataBuffer): Unit = {
+    val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
+
+    val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
+    val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
 
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
@@ -140,11 +141,11 @@ class ArticleFromKeepsScoreVectorSource(reader: WrappedSubReader, scorers: Array
 
 class LibraryScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer], libraryIds: LongArraySet, idFilter: LongArraySet) extends ScoreVectorSource {
 
-  private[this] val pq = createScorerQueue(scorers)
-  // TODO: private[this] val libraryVisibility = LibraryVisibility(reader)
-
-  def score(output: DataBuffer): Unit = {
+  def writeScoreVectorsTo(output: DataBuffer): Unit = {
+    val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
+
+    // TODO: val libraryVisibility = LibraryVisibility(reader)
 
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
@@ -179,11 +180,11 @@ class LibraryScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer],
 
 class LibraryFromKeepsScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer], idFilter: LongArraySet) extends ScoreVectorSource {
 
-  private[this] val libraryIdDocValues = reader.getNumericDocValues("libId")
-  private[this] val pq = createScorerQueue(scorers)
-
-  def score(output: DataBuffer): Unit = {
+  def writeScoreVectorsTo(output: DataBuffer): Unit = {
+    val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
+
+    val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
 
     val writer: DataBufferWriter = new DataBufferWriter
 
