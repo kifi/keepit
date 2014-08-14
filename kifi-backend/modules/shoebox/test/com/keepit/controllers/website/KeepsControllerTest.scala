@@ -8,6 +8,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.common.helprank.HelpRankTestHelper
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
@@ -26,7 +27,7 @@ import play.api.test._
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class KeepsControllerTest extends Specification with ShoeboxTestInjector {
+class KeepsControllerTest extends Specification with ShoeboxTestInjector with HelpRankTestHelper {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
@@ -702,62 +703,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector {
         Json.parse(contentAsString(result3)) must equalTo(expected3)
       }
     }
-  }
-
-  def helpRankSetup(heimdal: FakeHeimdalServiceClientImpl, db: Database)(implicit context: HeimdalContext, injector: Injector): (User, User, Seq[Keep]) = {
-    implicit val kdRepo = heimdal.keepDiscoveryRepo
-    implicit val rkRepo = heimdal.rekeepRepo
-
-    val keep42 = Json.obj("url" -> "http://42go.com", "isPrivate" -> false)
-    val keepKifi = Json.obj("url" -> "http://kifi.com", "isPrivate" -> false)
-    val keepGoog = Json.obj("url" -> "http://google.com", "isPrivate" -> false)
-    val keepBing = Json.obj("url" -> "http://bing.com", "isPrivate" -> false)
-    val keepStanford = Json.obj("url" -> "http://stanford.edu", "isPrivate" -> false)
-    val keepApple = Json.obj("url" -> "http://apple.com", "isPrivate" -> false)
-
-    val (u1, u2, u3, u4) = db.readWrite { implicit session =>
-      val u1 = userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
-      val u2 = userRepo.save(User(firstName = "Foo", lastName = "Bar"))
-      val u3 = userRepo.save(User(firstName = "Discoveryer", lastName = "DiscoveryetyDiscoveryyDiscovery"))
-      val u4 = userRepo.save(User(firstName = "Ro", lastName = "Bot"))
-      (u1, u2, u3, u4)
-    }
-    val bookmarkInterner = inject[KeepInterner]
-    val raw1 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keep42, keepKifi))
-    val raw2 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepBing))
-    val raw3 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepStanford))
-    val raw4 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepApple))
-
-    val (keeps1, _) = bookmarkInterner.internRawBookmarks(raw1, u1.id.get, KeepSource.email, true)
-    val (keeps2, _) = bookmarkInterner.internRawBookmarks(raw2, u2.id.get, KeepSource.default, true)
-    keeps1.size === 2
-    keeps2.size === 3
-    keeps1(1).uriId === keeps2(0).uriId
-
-    val origin = "https://www.google.com"
-    val kc0 = KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId)
-    // u2 -> 42 (u1)
-
-    val ts = currentDateTime
-    val uuid = ExternalId[ArticleSearchResult]()
-    val kc1 = KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId)
-    val kc2 = KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId)
-    // u3 -> kifi (u1, u2)
-    heimdal.save(kc0, kc1, kc2)
-
-    val (keeps3, _) = bookmarkInterner.internRawBookmarks(raw3, u3.id.get, KeepSource.default, true)
-    val kc3 = KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId)
-    // u4 -> kifi (u3) [rekeep]
-    heimdal.save(kc3)
-
-    val rk1 = ReKeep(keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId, srcKeepId = keeps3(0).id.get, srcUserId = u3.id.get)
-    val rk2 = ReKeep(keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId, srcKeepId = keeps3(0).id.get, srcUserId = u3.id.get)
-    heimdal.save(rk1, rk2)
-
-    val (keeps4, _) = bookmarkInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
-    val rk3 = ReKeep(keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId, srcKeepId = keeps4(0).id.get, srcUserId = u4.id.get)
-    heimdal.save(rk3)
-    (u1, u2, keeps1)
   }
 
 }
