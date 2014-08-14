@@ -39,7 +39,7 @@ angular.module('kifi.routeService', [])
       },
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
-      logout: 'https://www.kifi.com/logout',
+      logout: '/logout',
       emailInfoUrl: route('/user/email'),
       abooksUrl: route('/user/abooks'),
       resendVerificationUrl: route('/user/resend-verification'),
@@ -54,8 +54,8 @@ angular.module('kifi.routeService', [])
       removeKeeps: route('/keeps/remove'),
       tagOrdering: route('/collections/ordering'),
       reorderTag: route('/collections/reorderTag'),
-      whoToInvite: route('/friends/wti'),
-      blockWtiConnection: route('/friends/wti/block'),
+      whoToInvite: route('/user/invite/recommended'),
+      blockWtiConnection: route('/user/invite/hide'),
       friends: function (page, pageSize) {
         return route('/user/friends') + '?page=' + page + '&pageSize=' + pageSize;
       },
@@ -65,7 +65,7 @@ angular.module('kifi.routeService', [])
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
       peopleYouMayKnow: function (page, pageSize) {
-        return route('/user/friends/find') + '?page=' + page + '&pageSize=' + pageSize;
+        return route('/user/friends/recommended') + '?page=' + page + '&pageSize=' + pageSize;
       },
       hideUserRecommendation: function (id) {
         return route('/user/' + id + '/hide');

@@ -24,12 +24,14 @@ angular.module('kifi', [
   'kifi.friends.friendCard',
   'kifi.friends.friendRequestCard',
   'kifi.friends.rightColFriendsView',
+  'kifi.friends.seeMutualFriends',
   'kifi.social',
   'kifi.social.networksNeedAttention',
   'kifi.socialService',
   'kifi.invite',
   'kifi.invite.connectionCard',
   'kifi.invite.wtiService',
+  'kifi.savePymkService',
   'kifi.focus',
   'kifi.youtube',
   'kifi.templates',
@@ -149,6 +151,29 @@ angular.module('kifi', [
       state: state,
       pushState: pushState
     };
+  }
+])
+
+.factory('analyticsState', [
+  'injectedState',
+  function (injectedState) {
+    // this is a way to add custom event attributes analytics events that may
+    // be fired before the full state of the page is realized (like whether or
+    // not to load a directive that depends on injectedState)
+    var attributes = {
+      events: {
+        user_viewed_page: {}
+      }
+    };
+
+    var state = injectedState.state || {};
+    if (typeof state.friend === 'string' && state.friend.match(/^[a-f0-9-]{36}$/)) {
+      // naively assumes that state.friend is a valid externalId and the user
+      // will see the contact jointed banner
+      attributes.events.user_viewed_page.subtype = 'contactJoined';
+    }
+
+    return attributes;
   }
 ])
 

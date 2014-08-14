@@ -25,7 +25,7 @@ class LDAUserDbUpdatePluginImpl @Inject() (
     actor: ActorInstance[LDAUserDbUpdateActor],
     discovery: ServiceDiscovery,
     val scheduling: SchedulingProperties) extends BaseFeatureUpdatePlugin(actor, discovery) with LDAUserDbUpdatePlugin {
-  override val updateFrequency: FiniteDuration = 5 minutes
+  override val updateFrequency: FiniteDuration = 2 minutes
 }
 
 @ImplementedBy(classOf[LDAUserDbUpdaterImpl])
@@ -91,7 +91,7 @@ class LDAUserDbUpdaterImpl @Inject() (
   }
 
   private def shouldComputeFeature(model: Option[UserLDAInterests]): Boolean = {
-    model.isEmpty || model.get.updatedAt.plusDays(1).getMillis < currentDateTime.getMillis
+    model.isEmpty || model.get.updatedAt.plusMinutes(15).getMillis < currentDateTime.getMillis
   }
 
   private def genFeature(topicCounts: Seq[(LDATopic, Int)]): Option[UserTopicMean] = {

@@ -42,11 +42,13 @@ class ShoeboxController @Inject() (
   keepToCollectionRepo: KeepToCollectionRepo,
   basicUserRepo: BasicUserRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
+  socialConnectionRepo: SocialConnectionRepo,
   sessionRepo: UserSessionRepo,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: UserEmailAddressRepo,
   keepsCommander: KeepsCommander,
   friendRequestRepo: FriendRequestRepo,
+  invitationRepo: InvitationRepo,
   userValueRepo: UserValueRepo,
   userCommander: UserCommander,
   kifiInstallationRepo: KifiInstallationRepo,
@@ -289,6 +291,14 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(result))
   }
 
+  def getUsersByExperiment(experiment: ExperimentType) = Action { request =>
+    val users = db.readOnlyReplica { implicit s =>
+      var userIds = userExperimentRepo.getUserIdsByExperiment(experiment)
+      userRepo.getUsers(userIds).map(_._2)
+    }
+    Ok(Json.toJson(users))
+  }
+
   def getCollectionsByUser(userId: Id[User]) = Action { request =>
     Ok(Json.toJson(db.readOnlyMaster { implicit s => collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId) })) //using cache
   }
@@ -317,22 +327,6 @@ class ShoeboxController @Inject() (
     db.readOnlyReplica { implicit s =>
       Ok(Json.toJson(searchFriendRepo.getUnfriends(userId).map(_.id)))
     }
-  }
-
-  def kifiHit() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val json = request.body
-    val clicker = (json \ "clickerId").as(Id.format[User])
-    val kifiHit = (json \ "kifiHit").as[SanitizedKifiHit]
-    keepsCommander.processKifiHit(clicker, kifiHit)
-    Ok
-  }
-
-  def getHelpRankInfo() = SafeAsyncAction(parse.tolerantJson) { request =>
-    val uriIds = Json.fromJson[Seq[Id[NormalizedURI]]](request.body).get
-    val infos = keepsCommander.getHelpRankInfo(uriIds)
-    if (uriIds.length != infos.length) // debug
-      log.warn(s"[getHelpRankInfo] (mismatch) uriIds(len=${uriIds.length}):${uriIds.mkString(",")} res(len=${infos.length}):${infos.mkString(",")}")
-    Ok(Json.toJson(infos))
   }
 
   def getFriendRequestsBySender(senderId: Id[User]) = Action { request =>
@@ -389,8 +383,8 @@ class ShoeboxController @Inject() (
     Ok
   }
 
-  def getUserImageUrl(id: Long, width: Int) = Action.async { request =>
-    userCommander.getUserImageUrl(Id[User](id), width).map { url =>
+  def getUserImageUrl(id: Id[User], width: Int) = Action.async { request =>
+    userCommander.getUserImageUrl(id, width).map { url =>
       Ok(Json.toJson(url))
     }
   }
@@ -410,5 +404,16 @@ class ShoeboxController @Inject() (
       userExperimentRepo.getByType(ExperimentType.FAKE).map(_.userId).toSet
     }
     Ok(Json.toJson(fakeUsers))
+  }
+
+  def getInvitations(senderId: Id[User]) = Action { request =>
+    val invitations = db.readOnlyMaster { implicit session => invitationRepo.getBySenderId(senderId) }
+    Ok(Json.toJson(invitations))
+  }
+
+  def getSocialConnections(userId: Id[User]) = Action { request =>
+    val connectionsByNetwork = db.readOnlyReplica { implicit session => socialConnectionRepo.getSocialConnectionInfosByUser(userId) }
+    val allConnections = connectionsByNetwork.valuesIterator.flatten.toSeq
+    Ok(Json.toJson(allConnections))
   }
 }

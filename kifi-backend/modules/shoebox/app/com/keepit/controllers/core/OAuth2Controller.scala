@@ -157,7 +157,7 @@ class OAuth2Controller @Inject() (
   def callback(provider: String) = JsonAction.authenticatedAsync { implicit request =>
     implicit val prefix: LogPrefix = LogPrefix(s"oauth2.callback(${request.userId},$provider)")
     log.infoP(s"headers=${request.headers} session=${request.session}")
-    val redirectHome = Redirect(com.keepit.controllers.website.routes.HomeController.home).withSession(session - STATE_TOKEN_KEY)
+    val redirectHome = Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home).withSession(session - STATE_TOKEN_KEY)
     val redirectInvite = Redirect("/invite").withSession(session - STATE_TOKEN_KEY) // todo: make configurable
 
     val providerConfig = OAuth2Providers.SUPPORTED.get(provider).getOrElse(GOOGLE)

@@ -36,7 +36,7 @@ class SendFriendConnectionMadeNotificationHelper @Inject() (
         subject = s"You are now friends with ${respondingUser.firstName} ${respondingUser.lastName} on Kifi!",
         htmlBody = views.html.email.friendConnectionMadeInlined(friend.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage, unsubLink).body,
         textBody = Some(views.html.email.friendConnectionMadeText(friend.firstName, respondingUser.firstName, respondingUser.lastName, targetUserImage, respondingUserImage, unsubLink).body),
-        category = NotificationCategory.User.FRIEND_ACCEPTED)
+        category = NotificationCategory.User.CONNECTION_MADE)
       )
 
       (friend, respondingUser, respondingUserImage)
@@ -50,7 +50,7 @@ class SendFriendConnectionMadeNotificationHelper @Inject() (
       linkUrl = "https://www.kifi.com/friends/invite",
       imageUrl = respondingUserImage,
       sticky = false,
-      category = NotificationCategory.User.FRIEND_ACCEPTED
+      category = NotificationCategory.User.CONNECTION_MADE
     )
   }
 

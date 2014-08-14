@@ -12,6 +12,9 @@
   .kf-friends-content-bigger
     font-size: 14px
 
+  .kf-compact-friends-image-row
+    text-align: left
+
   a.social-connect-button:hover,
   a.social-connect-button:active
     text-decoration: none
@@ -24,7 +27,7 @@
 
   .social-connect-button::before
     position: absolute
-    top: 0;
+    top: 0
     left: 0
     width: 35px
     height: 100%   
@@ -51,6 +54,7 @@
     float: right
     width: 70px
     margin-top: 5px
+    text-align: left
 
   .kf-rightcol-friends-connect
     margin: 15px 15px
@@ -63,50 +67,58 @@
     margin-top: 10px
     text-align: left
 
+  .kf-pymk
+    padding-bottom: 5px
+
   .kf-pymk-info
     position: relative
     float: right
     width: 200px
-    margin-top: 5px
+    margin-top: 2px
     font-size: 12px
+    line-height: 12px
 
-    &.squish
-      margin-top: 2px
-      line-height: 12px
+  .kf-pymk-info-content
+    width: 135px
 
   .kf-pymk-name
     font-weight: bold
 
   .kf-pymk-via
-    &.squish
-      display: block
-
-  .kf-pymk-action-container
-    width: 60px
-
-  .kf-pymk-action
-    display: inline-block
-    font-size: 10px
-    color: #006bb2
-    vertical-align: text-top
+    display: block
+    margin-top: 3px
+    font-size: 11px
 
   .kf-pymk-action-icon
-    display: inline-block
-    width: 8px
-    height: 8px
-    margin: 2px 2px 0 0
-    border: 2px solid #6fa6ef
-    border-radius: 2px
+    position: relative
+    float: right
+    margin: 12px 20px 0 0
+    border-radius: 3px
+    padding: 3px 5px 3px 14px
+    background-color: #6fa6ef
+    color: #fff
+    font-size: 12px
+
+  .kf-pymk-action-icon::before
+    position: absolute
+    top: 4px 
+    left: 3px
+    width: 10px
+    height: 10px
     background-image: url(/img/sprites.png)
     background-size: 184px auto
     background-position: -176px -104px
-    background-color: #6fa6ef
+    content: ''
+
+  a.kf-pymk-action-icon:hover,
+  a.kf-pymk-action-icon:active
+    text-decoration: none
 
   .kf-pymk-close-icon
     display: none
     position: absolute
     top: -2px
-    right: 15px
+    right: 0
     padding: 0 5px 5px 5px
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif
     font-size: 14px
@@ -119,4 +131,4 @@
 
   .kf-pymk-invite-link
     float: right
-
+    margin: 5px 6px 0 0

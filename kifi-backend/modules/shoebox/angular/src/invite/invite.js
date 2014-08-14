@@ -262,10 +262,17 @@ angular.module('kifi.invite', [
 ])
 
 .directive('kfFriendRequestBanner', [
-  'injectedState', 'routeService', 'userService', 'keepWhoService', 'profileService', '$timeout',
-  function (injectedState, routeService, userService, keepWhoService, profileService, $timeout) {
+  'injectedState', 'routeService', 'userService', 'keepWhoService', 'profileService', '$timeout', '$analytics',
+  function (injectedState, routeService, userService, keepWhoService, profileService, $timeout, $analytics) {
 
     function setupShowFriendRequestBanner(scope, externalId) {
+      function closeBanner() {
+        if (injectedState && injectedState.state) {
+          delete injectedState.state.friend;
+        }
+        scope.hidden = true;
+      }
+
       userService.getBasicUserInfo(externalId, true).then(function (res) {
         var user = res.data,
             picUrl = keepWhoService.getPicUrl(user, 200);
@@ -280,14 +287,24 @@ angular.module('kifi.invite', [
         };
 
         scope.onAfterInvite = function () {
-          $timeout(function () {
-            scope.hidden = true;
-          }, 3000);
+          $analytics.eventTrack('user_clicked_page', {
+            type: 'addFriends',
+            subtype: 'contactJoined',
+            action: 'addFriend'
+          });
+
+          $timeout(closeBanner, 3000);
         };
       });
 
       scope.close = function () {
-        scope.hidden = true;
+        $analytics.eventTrack('user_clicked_page', {
+          type: 'addFriends',
+          subtype: 'contactJoined',
+          action: 'close'
+        });
+
+        closeBanner();
       };
     }
 
@@ -298,12 +315,8 @@ angular.module('kifi.invite', [
         return;
       }
 
-      profileService.getMe().then(function (me) {
-        scope.showFriendRequestBanner = me.experiments && me.experiments.indexOf('notify_user_when_contacts_join') > -1;
-        if (scope.showFriendRequestBanner) {
-          setupShowFriendRequestBanner(scope, externalId);
-        }
-      });
+      scope.showFriendRequestBanner = true;
+      setupShowFriendRequestBanner(scope, externalId);
     }
 
     return {

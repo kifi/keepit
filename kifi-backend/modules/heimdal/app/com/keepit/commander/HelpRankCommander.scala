@@ -45,7 +45,8 @@ class HelpRankCommander @Inject() (
             shoeboxClient.getUserIdsByExternalIds(keepers) map { keeperIds =>
               keeperIds foreach { keeperId =>
                 userKeepInfoRepo.increaseCounts(keeperId, kifiHit.uriId, false)
-                shoeboxClient.getBookmarkByUriAndUser(kifiHit.uriId, keeperId) map { keepOpt =>
+                shoeboxClient.getBookmarkByUriAndUser(kifiHit.uriId, keeperId) foreach { keepOpt =>
+                  log.info(s"[kifiHit($discoverer)] getBookmarkByUriAndUser(${kifiHit.uriId},$keeperId)=$keepOpt")
                   keepOpt match {
                     case None =>
                       log.warn(s"[kifiHit($discoverer,${kifiHit.uriId},${keepers.mkString(",")})] keep not found for keeperId=$keeperId") // move on
@@ -75,6 +76,8 @@ class HelpRankCommander @Inject() (
     } flatMap { remainders =>
       FutureHelpers.sequentialExec(remainders) { keep =>
         chatAttribution(userId, keep)
+      } recover {
+        case t: Throwable => airbrake.notify(s"[keepAttribution($userId)] failed with $t", t)
       }
     }
   }
@@ -88,7 +91,7 @@ class HelpRankCommander @Inject() (
           case c if rekeepRepo.getReKeep(c.keeperId, c.uriId, userId).isEmpty =>
             val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
             rekeepRepo.save(rekeep) tap { saved =>
-              log.info(s"[searchAttribution($userId,${keep.uriId})] rekeep=$saved; click=$c")
+              log.info(s"[searchAttribution($userId,${keep.uriId})] saved=$saved; click=$c")
             }
         }
       }
@@ -100,26 +103,58 @@ class HelpRankCommander @Inject() (
     elizaClient.keepAttribution(userId, keep.uriId) map { otherStarters =>
       log.info(s"[chatAttribution($userId,${keep.uriId})] otherStarters=$otherStarters")
       otherStarters.foreach { chatUserId =>
-        db.readWrite { implicit rw =>
-          rekeepRepo.getReKeep(chatUserId, keep.uriId, userId) match {
-            case Some(rekeep) =>
-              log.info(s"[chatAttribution($userId,${keep.uriId},$chatUserId)] rekeep=$rekeep already exists. Skipped.")
-              None
-            case None =>
-              shoeboxClient.getBookmarkByUriAndUser(keep.uriId, chatUserId) map { keepOpt =>
-                keepOpt map {
-                  chatUserKeep =>
+        db.readOnlyMaster { implicit ro =>
+          rekeepRepo.getReKeep(chatUserId, keep.uriId, userId)
+        } match {
+          case Some(rekeep) =>
+            log.info(s"[chatAttribution($userId,${keep.uriId},$chatUserId)] rekeep=$rekeep already exists. Skipped.")
+          case None =>
+            shoeboxClient.getBookmarkByUriAndUser(keep.uriId, chatUserId) map { keepOpt =>
+              log.info(s"[chatAttribution($userId)] getBookmarkByUriAndUser(${keep.uriId},$chatUserId)=$keepOpt. ${if (keepOpt.isEmpty) "Skipped" else "Continue"}")
+              keepOpt foreach { chatUserKeep =>
+                try {
+                  db.readWrite { implicit rw =>
                     val discovery = KeepDiscovery(hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging")) // todo(ray): None for uuid
                     val savedDiscovery = keepDiscoveryRepo.save(discovery)
                     val rekeep = ReKeep(keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = 1)
-                    rekeepRepo.save(rekeep) tap { saved =>
-                      log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; discovery=$savedDiscovery")
-                    }
+                    val saved = rekeepRepo.save(rekeep)
+                    log.info(s"[chatAttribution($userId,${keep.uriId})] saved=$saved; discovery=$savedDiscovery")
+                  }
+                } catch {
+                  case t: Throwable =>
+                    airbrake.notify(s"[chatAttribution($userId)] failed to process $keep; exception: $t", t)
                 }
               }
-          }
+            }
         }
       }
+    }
+  }
+
+  def getKeepAttributionInfo(userId: Id[User]): UserKeepAttributionInfo = {
+    db.readOnlyMaster { implicit session =>
+      val discoveryCount = keepDiscoveryRepo.getDiscoveryCountByKeeper(userId)
+      val (rekeepCount, rekeepTotalCount) = userKeepInfoRepo.getReKeepCounts(userId)
+      val (uniqueKeepsClicked, totalClicks) = userKeepInfoRepo.getClickCounts(userId)
+      UserKeepAttributionInfo(userId, discoveryCount, rekeepCount, rekeepTotalCount, uniqueKeepsClicked, totalClicks) tap { info =>
+        log.info(s"[getKeepAttribution($userId)] info=$info")
+      }
+    }
+  }
+
+  def getHelpRankInfo(uriIds: Seq[Id[NormalizedURI]]): Seq[HelpRankInfo] = {
+    val uriIdSet = uriIds.toSet
+    if (uriIdSet.size != uriIds.length) {
+      log.warn(s"[getHelpRankInfo] (duplicates!) uriIds(len=${uriIds.length}):${uriIds.mkString(",")} idSet(sz=${uriIdSet.size}):${uriIdSet.mkString(",")}")
+    }
+    val (discMap, rkMap) = db.readOnlyMaster { implicit ro =>
+      val discMap = keepDiscoveryRepo.getDiscoveryCountsByURIs(uriIdSet)
+      val rkMap = rekeepRepo.getReKeepCountsByURIs(uriIdSet)
+      log.info(s"[getHelpRankInfo] discMap=$discMap rkMap=$rkMap")
+      (discMap, rkMap)
+    }
+    uriIds.toSeq.map { uriId =>
+      HelpRankInfo(uriId, discMap.getOrElse(uriId, 0), rkMap.getOrElse(uriId, 0))
     }
   }
 

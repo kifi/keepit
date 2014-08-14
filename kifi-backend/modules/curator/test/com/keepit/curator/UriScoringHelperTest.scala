@@ -11,6 +11,7 @@ import com.keepit.graph.{ FakeGraphServiceClientImpl, GraphServiceClient, FakeGr
 import com.keepit.model.{ User, NormalizedURI }
 import org.specs2.mutable.Specification
 import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -20,13 +21,14 @@ class UriScoringHelperTest extends Specification with CuratorTestInjector {
     FakeGraphServiceModule(),
     FakeHttpClientModule(),
     FakeCortexServiceClientModule(),
-    FakeCacheModule())
+    FakeCacheModule(),
+    FakeHeimdalServiceClientModule())
 
   private def makeSeedItems(): Seq[SeedItem] = {
-    val seedItem1 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](1), seq = SequenceNumber[SeedItem](1), priorScore = None, timesKept = 1000, lastSeen = currentDateTime, keepers = Keepers.TooMany)
-    val seedItem2 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](2), seq = SequenceNumber[SeedItem](2), priorScore = None, timesKept = 10, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](3))))
-    val seedItem3 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](3), seq = SequenceNumber[SeedItem](3), priorScore = None, timesKept = 93, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](2))))
-    val seedItem4 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](4), seq = SequenceNumber[SeedItem](4), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))))
+    val seedItem1 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](1), seq = SequenceNumber[SeedItem](1), priorScore = None, timesKept = 1000, lastSeen = currentDateTime, keepers = Keepers.TooMany, discoverable = true)
+    val seedItem2 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](2), seq = SequenceNumber[SeedItem](2), priorScore = None, timesKept = 10, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](3))), discoverable = true)
+    val seedItem3 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](3), seq = SequenceNumber[SeedItem](3), priorScore = None, timesKept = 93, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](2))), discoverable = true)
+    val seedItem4 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](4), seq = SequenceNumber[SeedItem](4), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))), discoverable = true)
     seedItem1 :: seedItem2 :: seedItem3 :: seedItem4 :: Nil
   }
 

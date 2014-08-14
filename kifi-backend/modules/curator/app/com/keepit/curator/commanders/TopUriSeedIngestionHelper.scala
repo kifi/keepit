@@ -33,7 +33,7 @@ class TopUriSeedIngestionHelper @Inject() (
   }
 
   def processUriScores(uriScore: ConnectedUriScore, userId: Id[User])(implicit session: RWSession): Unit = {
-    rawSeedsRepo.getByUriIdAndUserId(uriScore.uriId, userId) match {
+    rawSeedsRepo.getByUriIdAndUserId(uriScore.uriId, Some(userId)) match {
       case Some(seedItem) => {
         rawSeedsRepo.save(seedItem.copy(
           priorScore = Some(uriScore.score.toFloat),
@@ -48,7 +48,9 @@ class TopUriSeedIngestionHelper @Inject() (
             lastKept = anotherRawSeedItem.lastKept,
             lastSeen = currentDateTime,
             priorScore = Some(uriScore.score.toFloat),
-            timesKept = anotherRawSeedItem.timesKept))
+            timesKept = anotherRawSeedItem.timesKept,
+            discoverable = anotherRawSeedItem.discoverable
+          ))
 
           case None => {
             log.info(s"Can't find another Raw Seed Item. Must have been renormalized. UriId: ${uriScore.uriId}")

@@ -37,7 +37,7 @@ class URIGraphCommanderTest extends Specification with SearchTestInjector with S
         val uriGraphCommander1 = uriGraphCommanderFactory(users(1).id.get)
         val u0list = shards.map { shard => (shard -> uriGraphCommander.getUserUriList(users(0).id.get, publicOnly = false, shard = shard)) }.toMap
         val u1list = shards.map { shard => (shard -> uriGraphCommander1.getUserUriList(users(1).id.get, publicOnly = false, shard = shard)) }.toMap
-        shards.size == 2
+        shards.size === 2
         shards(0).contains(Id[NormalizedURI](1)) === false
         shards(0).contains(Id[NormalizedURI](2)) === true
         u0list(shards(0)).publicList === None

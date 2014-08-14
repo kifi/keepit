@@ -34,7 +34,7 @@ angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
           if (!tooltip) {
             // Create tooltip
             tooltip = angular.element($templateCache.get('common/directives/keepWho/friendCard.tpl.html'));
-            $rootElement.append(tooltip);
+            $rootElement.find('html').append(tooltip);
             $compile(tooltip)(scope);
           }
 

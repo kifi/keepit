@@ -123,7 +123,6 @@ class UserCommander @Inject() (
     emailOptOutCommander: EmailOptOutCommander,
     heimdalClient: HeimdalServiceClient,
     fortytwoConfig: FortyTwoConfig,
-    bookmarkClicksRepo: UserBookmarkClicksRepo,
     userImageUrlCache: UserImageUrlCache,
     libraryCommander: LibraryCommander,
     sendEmailToNewUserFriendsHelper: SendEmailToNewUserFriendsHelper,
@@ -221,18 +220,8 @@ class UserCommander @Inject() (
     BasicUserInfo(basicUser, UpdatableUserInfo(description, Some(emailInfos)), notAuthed)
   }
 
-  def getHelpCounts(user: Id[User]): (Int, Int) = {
-    //unique keeps, total clicks
-    db.readOnlyReplica { implicit session => bookmarkClicksRepo.getClickCounts(user) }
-  }
-
-  def getKeepAttributionCounts(userId: Id[User]): Future[(Int, Int, Int)] = { // (discoveryCount, rekeepCount, rekeepTotalCount)
-    heimdalClient.getDiscoveryCountByKeeper(userId) map { discoveryCount =>
-      val (rekeepCount, rekeepTotalCount) = db.readOnlyReplica { implicit ro =>
-        bookmarkClicksRepo.getReKeepCounts(userId)
-      }
-      (discoveryCount, rekeepCount, rekeepTotalCount)
-    }
+  def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
+    heimdalClient.getKeepAttributionInfo(userId)
   }
 
   def getUserSegment(userId: Id[User]): UserSegment = {
@@ -272,16 +261,11 @@ class UserCommander @Inject() (
         // get users who have this user's email in their contacts
         abookServiceClient.getUsersWithContact(email).map {
           case contacts if contacts.size > 0 => {
-
-            val toNotify = db.readOnlyReplica { implicit session =>
-              val alreadyConnectedUsers = userConnectionRepo.getConnectedUsers(newUser.id.get)
-
-              // only notify users who are not already connected to our list of users with the contact email
-              for {
-                userId <- contacts.diff(alreadyConnectedUsers)
-                if userExperimentCommander.userHasExperiment(userId, ExperimentType.NOTIFY_USER_WHEN_CONTACTS_JOIN)
-              } yield userId
+            val alreadyConnectedUsers = db.readOnlyReplica { implicit session =>
+              userConnectionRepo.getConnectedUsers(newUser.id.get)
             }
+            // only notify users who are not already connected to our list of users with the contact email
+            val toNotify = contacts.diff(alreadyConnectedUsers)
 
             log.info("sending new user contact notifications to: " + toNotify)
             sendEmailToNewUserContactsHelper(newUser, toNotify)

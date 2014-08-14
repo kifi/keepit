@@ -23,18 +23,13 @@ package object common {
    * }}}
    */
   implicit class KestrelCombinator[A](val a: A) extends AnyVal {
-    def withSideEffect(fun: A => Unit): A = { fun(a); a }
-    def tap(fun: A => Unit): A = withSideEffect(fun)
-
-    def withComputation[B](fun: A => B): (A, B) = { val b = fun(a); (a, b) }
-    def tapWith[B](fun: A => B): (A, B) = withComputation(fun)
+    @inline def tap(fun: A => Unit): A = { fun(a); a }
   }
 
-  implicit class ForkCombinator[A, B](val a: A) extends AnyVal {
-    def fork(t: A => Boolean)(y: A => B, z: A => B) = {
-      if (t(a)) y(a)
-      else z(a)
-    }
+  implicit class AnyExtensionOps[A](val x: A) extends AnyVal {
+    // forward pipe operator, analogous to the Unix pipe.
+    // Uses symbolic method name for order-of-operation reasons (and ubiquity of |)
+    @inline def |>[B](f: A => B): B = f(x)
   }
 
   implicit class Recoverable[A](f: => A) {
@@ -153,4 +148,21 @@ package object common {
 
   trait Register[V] extends MutableSet[V]
   class HashSetRegister[V] extends HashSet[V] with SynchronizedSet[V] with Register[V]
+
+  object PriorityStreamAggregator {
+    def aggregateBy[R, T](priorityStreams: Stream[R]*)(f: R => T)(implicit ord: Ordering[T]): Stream[R] = {
+      priorityStreams.reduceLeft((aggregatedStream, nextStream) => aggregateBy(aggregatedStream, nextStream)(f))
+    }
+
+    private def aggregateBy[R, T](firstPriorityStream: Stream[R], secondPriorityStream: Stream[R])(f: R => T)(implicit ord: Ordering[T]): Stream[R] = {
+      (firstPriorityStream.headOption, secondPriorityStream.headOption) match {
+        case (_, None) => firstPriorityStream
+        case (None, _) => secondPriorityStream
+        case (Some(firstHead), Some(secondHead)) => {
+          if (ord.lt(f(firstHead), f(secondHead))) secondHead #:: aggregateBy(firstPriorityStream, secondPriorityStream.tail)(f)
+          else firstHead #:: aggregateBy(firstPriorityStream.tail, secondPriorityStream)(f) // stable
+        }
+      }
+    }
+  }
 }

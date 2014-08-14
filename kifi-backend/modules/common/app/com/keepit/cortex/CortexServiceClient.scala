@@ -5,6 +5,7 @@ import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.HttpClient
 import com.keepit.common.routes.Cortex
+import com.keepit.cortex.dbmodel.LDAInfo
 import scala.concurrent.Future
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -12,8 +13,6 @@ import com.keepit.common.db.Id
 import com.keepit.model.{ User, NormalizedURI, Word2VecKeywords }
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.ModelVersion
-import com.keepit.cortex.models.lda.{ UriSparseLDAFeatures, DenseLDA }
-import com.keepit.serializer.TraversableFormat
 import com.keepit.common.net.CallTimeouts
 import com.keepit.cortex.models.lda._
 
@@ -39,9 +38,11 @@ trait CortexServiceClient extends ServiceClient {
   def getLDAFeatures(uris: Seq[Id[NormalizedURI]]): Future[Seq[Array[Float]]]
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[LDAUserURIInterestScores]
   def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[LDAUserURIInterestScores]]
-  def userTopicMean(userId: Id[User]): Future[Option[Array[Float]]]
+  def userTopicMean(userId: Id[User]): Future[(Option[Array[Float]], Option[Array[Float]])]
   def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]]
   def getSimilarUsers(userId: Id[User], topK: Int): Future[(Seq[Id[User]], Seq[Float])] // with scores
+  def unamedTopics(limit: Int = 20): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] // with topicWords
+  def getTopicNames(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[String]]]
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
@@ -169,10 +170,14 @@ class CortexServiceClientImpl(
     call(Cortex.internal.batchUserURIsInterests(), payload).map { r => (r.json).as[Seq[LDAUserURIInterestScores]] }
   }
 
-  def userTopicMean(userId: Id[User]): Future[Option[Array[Float]]] = {
+  def userTopicMean(userId: Id[User]): Future[(Option[Array[Float]], Option[Array[Float]])] = {
     call(Cortex.internal.userTopicMean(userId)).map { r =>
-      val jsArrOpt = (r.json).asOpt[JsArray]
-      jsArrOpt.map { arr => arr.value.map { x => x.as[Float] }.toArray }
+      val js = r.json
+      val globalOpt = (js \ "global").asOpt[JsArray]
+      val global = globalOpt.map { arr => arr.value.map { x => x.as[Float] }.toArray }
+      val recentOpt = (js \ "recent").asOpt[JsArray]
+      val recent = recentOpt.map { arr => arr.value.map { x => x.as[Float] }.toArray }
+      (global, recent)
     }
   }
 
@@ -187,6 +192,20 @@ class CortexServiceClientImpl(
       val scores = (js \ "scores").as[Seq[Float]]
       (users, scores)
     }
+  }
+
+  def unamedTopics(limit: Int = 20): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] = {
+    call(Cortex.internal.unamedTopics(limit)).map { r =>
+      val js = r.json
+      val infos = (js \ "infos").as[Seq[LDAInfo]]
+      val words = (js \ "words").as[Seq[Map[String, Float]]]
+      (infos, words)
+    }
+  }
+
+  def getTopicNames(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[String]]] = {
+    val payload = Json.obj("uris" -> uris)
+    call(Cortex.internal.getTopicNames(), payload).map { r => (r.json).as[Seq[Option[String]]] }
   }
 
 }

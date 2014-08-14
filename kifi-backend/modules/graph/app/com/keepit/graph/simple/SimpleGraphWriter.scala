@@ -16,7 +16,7 @@ class SimpleGraphWriter(
   private val edgeDeltas: Map[(VertexType, VertexType, EdgeType), AtomicLong] = GraphStatistics.newEdgeCounter()
 
   private def getBufferedVertex(vertexId: VertexId): Option[MutableVertex] = bufferedVertices.get(vertexId) map {
-    case alreadyBufferedVertex if bufferedVertices.hasBuffered(vertexId) => alreadyBufferedVertex
+    case alreadyBufferedVertex if bufferedVertices.containsUpdate(vertexId) => alreadyBufferedVertex
     case vertex => {
       val buffered = new MutableVertex(vertex.data, MutableOutgoingEdges(vertex.outgoingEdges), MutableIncomingEdges(vertex.incomingEdges))
       bufferedVertices += (vertexId -> buffered)

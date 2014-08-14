@@ -36,18 +36,21 @@ object NotificationCategory {
 
     val FRIEND_JOINED = NotificationCategory("friend_joined")
     val CONTACT_JOINED = NotificationCategory("contact_joined")
+    val CONNECTION_MADE = NotificationCategory("connection_made")
+
+    val DIGEST = NotificationCategory("digest")
 
     val all = Set(ANNOUNCEMENT, MESSAGE, EMAIL_KEEP, INVITATION, EMAIL_CONFIRMATION, RESET_PASSWORD, FRIEND_REQUEST,
       FRIEND_ACCEPTED, FRIEND_JOINED, WELCOME, APPROVED, WAITLIST, WHO_KEPT_MY_KEEP, CONTACT_JOINED)
 
     // Parent Categories used in analytics
     val fromKifi = Set(ANNOUNCEMENT, WAITLIST, APPROVED, WELCOME, EMAIL_CONFIRMATION, RESET_PASSWORD, EMAIL_KEEP,
-      WHO_KEPT_MY_KEEP, CONTACT_JOINED)
+      WHO_KEPT_MY_KEEP)
     val fromFriends = Set(INVITATION, MESSAGE, FRIEND_REQUEST, FRIEND_ACCEPTED)
-    val aboutFriends = Set(FRIEND_JOINED)
+    val aboutFriends = Set(CONTACT_JOINED, FRIEND_JOINED, CONNECTION_MADE)
 
     // Formatting Categories used in the extension
-    val triggered = Set(FRIEND_ACCEPTED, FRIEND_JOINED, FRIEND_REQUEST, WHO_KEPT_MY_KEEP, CONTACT_JOINED)
+    val triggered = Set(FRIEND_ACCEPTED, FRIEND_JOINED, FRIEND_REQUEST, WHO_KEPT_MY_KEEP, CONTACT_JOINED, CONNECTION_MADE)
     val global = Set(ANNOUNCEMENT)
     val kifiMessageFormattingCategory = Map.empty ++ triggered.map(_ -> "triggered") ++ global.map(_ -> "global")
   }

@@ -25,6 +25,7 @@ case class EmailAccount(
 
 object EmailAccount {
   implicit def toEmailAccountInfoId(id: Id[EmailAccount]): Id[EmailAccountInfo] = id.copy()
+  implicit def fromEmailAccountInfoId(id: Id[EmailAccountInfo]): Id[EmailAccount] = id.copy()
   implicit def toEmailAccountInfoSeq(seq: SequenceNumber[EmailAccount]): SequenceNumber[EmailAccountInfo] = seq.copy()
   def toInfo(emailAccount: EmailAccount): EmailAccountInfo = {
     EmailAccountInfo(emailAccount.id.get, address = emailAccount.address, userId = emailAccount.userId, verified = emailAccount.verified, seq = emailAccount.seq)

@@ -21,12 +21,14 @@ angular.module('kifi.recos', [])
     $scope.keeps = recoService.recos;
 
     $scope.weights = $scope.weights || {
-      socialScore: 7,
-      recencyScore: 0.5,
+      socialScore: 5,
+      recencyScore: 1,
       popularityScore: 1,
-      overallInterestScore: 8,
-      recentInterestScore: 4,
-      priorScore: 1
+      overallInterestScore: 6,
+      recentInterestScore: 9,
+      priorScore: 2,
+      rekeepScore: 6,
+      discoveryScore: 3
     };
 
     $scope.reload = function () {

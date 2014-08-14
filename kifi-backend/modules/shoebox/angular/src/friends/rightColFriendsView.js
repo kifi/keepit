@@ -21,18 +21,23 @@ angular.module('kifi.friends.rightColFriendsView', [
           return !friend.unfriended;
         });
 
-        actualFriends.forEach(function (friend) {
+        // Randomly select 4 friends to display, but always display
+        // friends with pictures before friends without pictures.
+        var pictureGroups = _.groupBy(actualFriends, function (friend) {
+          return friend.pictureName !== '0.jpg';
+        });
+        var friendsToDisplay = _.sample(pictureGroups['true'], 4);
+        if (friendsToDisplay.length < 4) {
+          friendsToDisplay = friendsToDisplay.concat(
+            _.sample(pictureGroups['false'], 4 - friendsToDisplay.length)
+          );
+        }
+
+        friendsToDisplay.forEach(function (friend) {
           friend.pictureUrl = friendService.getPictureUrlForUser(friend);
         });
-
-        var hasPicture = function (friend) {
-          return friend.pictureName !== '0.jpg';
-        };
-        actualFriends.sort(function (friendA, friendB) {
-          return -hasPicture(friendA) + hasPicture(friendB);
-        });
-
-        scope.friends = actualFriends;
+        
+        scope.friends = friendsToDisplay;
       });
 
       scope.friendsLink = function () {
@@ -52,35 +57,19 @@ angular.module('kifi.friends.rightColFriendsView', [
     restrict: 'A',
     templateUrl: 'friends/rightColConnectView.tpl.html',
     link: function (scope/*, element, attrs*/) {
-      function getEligibleNetworksCsv() {
-        if (friendService.totalFriends() < 20) {
-          return _.compact([
-            socialService.facebook && socialService.facebook.profileUrl ? null : 'facebook',
-            socialService.linkedin && socialService.linkedin.profileUrl ? null : 'linkedin',
-            socialService.gmail && socialService.gmail.length ? null : 'gmail'
-          ]).join(',');
-        } else {
-          return '';
-        }
-      }
-
-      function chooseNetwork(csv) {
-        scope.network = csv ? _.sample(csv.split(',')) : null;
-      }
-
-      scope.connectFacebook = socialService.connectFacebook;
-      scope.connectLinkedIn = socialService.connectLinkedIn;
-      scope.importGmail = socialService.importGmail;
-
       socialService.refresh();
-      scope.$watch(getEligibleNetworksCsv, chooseNetwork);
+      scope.$watch(function () {
+        return (friendService.totalFriends() < 20) && scope.network;
+      }, function (newVal) {
+        scope.connectSocial = newVal;
+      });
     }
   };
 }])
 
 .directive('kfPeopleYouMayKnowView', 
-  ['$log', '$q', '$timeout', 'friendService', 'inviteService', 'wtiService', 
-  function ($log, $q, $timeout, friendService, inviteService, wtiService) {
+  ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'savePymkService', 'wtiService', 
+  function ($log, $q, $rootScope, $timeout, friendService, inviteService, savePymkService, wtiService) {
   return {
     replace: true,
     restrict: 'A',
@@ -91,18 +80,21 @@ angular.module('kifi.friends.rightColFriendsView', [
 
         people.forEach(function (person) {
           var name = person.firstName + ' ' + person.lastName;
+          var numMutualFriends = person.mutualFriends.length || 0;
+
           peopleYouMayKnow.push({
             id: person.id,
-            fullName: name + ', ',
+            fullName: name,
             pictureUrl: friendService.getPictureUrlForUser(person),
             actionText: 'Add',
             clickable: true,
             isKifiUser: true,
-            via: 'via Kifi',
-            squish: name.length > 17
+            via: numMutualFriends > 0 ? '' : 'Kifi',
+            numMutualFriends: numMutualFriends,
+            mutualFriends: person.mutualFriends
           });
         });
-        
+
         var networkNamesMap = {
           'facebook': 'Facebook',
           'linkedin': 'LinkedIn',
@@ -114,27 +106,21 @@ angular.module('kifi.friends.rightColFriendsView', [
             var wtiList = wtiService.list;
 
             wtiList.forEach(function (person) {
-              var socialIdValues = person.fullSocialId.split('/');
               var name = '';
               var via = '';
 
-              if (person.name) {
-                name = person.name + ', ';
-                via = 'via ' + networkNamesMap[socialIdValues[0]];
-              } else if (socialIdValues[0] === 'email') {
-                name = socialIdValues[1];
-              }
+              name = person.name;
+              via = (person.network === 'email' && person.identifier) || networkNamesMap[person.network];
 
               peopleYouMayKnow.push({
-                networkType: socialIdValues[0],
-                id: socialIdValues[1],
+                networkType: person.network,
+                id: person.identifier,
                 fullName: name,
                 pictureUrl: person.pictureUrl || 'https://www.kifi.com/assets/img/ghost.100.png',
                 actionText: 'Invite',
                 clickable: true,
                 isKifiUser: false,
-                via: via,
-                squish: person.name && person.name.length > 14
+                via: via
               });
             });
           });
@@ -191,17 +177,50 @@ angular.module('kifi.friends.rightColFriendsView', [
           return elem === person;
         });
       };
+
+      scope.showMutualFriends = function (person) {
+        savePymkService.savePersonYouMayKnow(person);
+        $rootScope.$emit('showGlobalModal', 'seeMutualFriends');
+      };
     }
   };
 }])
 
-.directive('kfNoFriendsOrConnectionsView', ['socialService', function (socialService) {
+.directive('kfNoFriendsOrConnectionsView', [function () {
   return {
     replace: true,
     restrict: 'A',
-    templateUrl: 'friends/noFriendsOrConnectionsView.tpl.html',
-    link: function (scope) {
+    templateUrl: 'friends/noFriendsOrConnectionsView.tpl.html'
+  };
+}])
+
+.directive('kfRotatingConnect', ['socialService', function (socialService) {
+  return {
+    replace: true,
+    restrict: 'A',
+    scope: {
+      network: '='
+    },
+    templateUrl: 'friends/rotatingConnect.tpl.html',
+    link:  function (scope/*, element, attrs*/) {
+      function getEligibleNetworksCsv() {
+        return _.compact([
+          socialService.facebook && socialService.facebook.profileUrl ? null : 'Facebook',
+          socialService.linkedin && socialService.linkedin.profileUrl ? null : 'LinkedIn',
+          socialService.gmail && socialService.gmail.length ? null : 'Gmail'
+        ]).join(',');
+      }
+
+      function chooseNetwork(csv) {
+        scope.network = csv ? _.sample(csv.split(',')) : null;
+      }
+
       scope.connectFacebook = socialService.connectFacebook;
+      scope.connectLinkedIn = socialService.connectLinkedIn;
+      scope.importGmail = socialService.importGmail;
+
+      socialService.refresh();
+      scope.$watch(getEligibleNetworksCsv, chooseNetwork);
     }
   };
 }]);

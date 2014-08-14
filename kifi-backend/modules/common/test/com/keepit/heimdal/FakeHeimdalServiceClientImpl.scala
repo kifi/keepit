@@ -53,9 +53,43 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getPagedKeepDiscoveries(page: Int, size: Int): Future[Seq[KeepDiscovery]] = Future.successful(Seq.empty)
 
+  def getDiscoveryCount(): Future[Int] = Future.successful(0)
+
   def getDiscoveryCountByKeeper(userId: Id[User]): Future[Int] = Future.successful(0)
 
+  def getUriDiscoveriesWithCountsByKeeper(userId: Id[User]): Future[Seq[URIDiscoveryCount]] = Future.successful(Seq.empty)
+
+  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIDiscoveryCount]] = Future.successful(Seq.empty)
+
+  def getDiscoveryCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepDiscoveryCount]] = Future.successful(Seq.empty)
+
+  def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = Future.successful(UserKeepAttributionInfo(Id[User](1), 0, 0, 0, 0, 0))
+
+  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = Future.successful {
+    uriIds.map(HelpRankInfo(_, 0, 0))
+  }
+
   def getPagedReKeeps(page: Int, size: Int): Future[Seq[ReKeep]] = Future.successful(Seq.empty)
+
+  def getReKeepCount(): Future[Int] = Future.successful(0)
+
+  def getUriReKeepsWithCountsByKeeper(userId: Id[User]): Future[Seq[URIReKeepCount]] = Future.successful(Seq.empty)
+
+  def getReKeepCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepReKeptCount]] = Future.successful(Seq.empty)
+
+  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIReKeepCount]] = Future.successful(Seq.empty)
+
+  def getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI]): Future[(Int, Int)] = Future.successful((0, 0))
+
+  def getUserReKeepsByDegree(keepIds: Seq[KeepIdInfo]): Future[Seq[UserReKeepsAcc]] = Future.successful(Seq.empty)
+
+  def getReKeepsByDegree(keeperId: Id[User], keepId: Id[Keep]): Future[Seq[ReKeepsPerDeg]] = Future.successful(Seq.empty)
+
+  def updateUserReKeepStats(userId: Id[User]): Future[Unit] = Future.successful[Unit]()
+
+  def updateUsersReKeepStats(userIds: Seq[Id[User]]): Future[Unit] = Future.successful[Unit]()
+
+  def updateAllReKeepStats(): Future[Unit] = Future.successful[Unit]()
 
   def processKifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit] = Future.successful[Unit]()
 

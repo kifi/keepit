@@ -1,46 +1,43 @@
 package com.keepit.controllers.admin
 
+import com.google.inject.Inject
+import com.keepit.common.concurrent.ExecutionContext.fj
+import com.keepit.common.controller.{ ActionAuthenticator, AdminController }
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
+import com.keepit.common.service.RequestConsolidator
+import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.model._
-import views.html
-import com.keepit.common.controller.{ AdminController, ActionAuthenticator }
-import com.google.inject.Inject
-import com.keepit.common.db.slick.Database
-import play.api.data._
-import views.html
-import com.keepit.common.db.slick.DBSession.{ ROSession, RWSession }
-import scala.collection.mutable
-import com.keepit.commanders.AttributionCommander
-import com.keepit.common.db.slick.Database.{ DBMasterReplica, Replica }
 import org.joda.time.DateTime
-import com.keepit.common.time._
-import scala.concurrent.duration._
-import com.keepit.common.service.RequestConsolidator
-import scala.concurrent.Future
-import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.ExecutionContext.fj
 import play.api.libs.json.Json
+import views.html
+
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class AdminAttributionController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     db: Database,
     heimdalClient: HeimdalServiceClient,
-    attributionCmdr: AttributionCommander,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
     keepDiscoveryRepo: KeepDiscoveryRepo,
     rekeepRepo: ReKeepRepo,
     uriRepo: NormalizedURIRepo,
     pageInfoRepo: PageInfoRepo,
-    imageInfoRepo: ImageInfoRepo,
-    userBookmarkClicksRepo: UserBookmarkClicksRepo) extends AdminController(actionAuthenticator) {
+    imageInfoRepo: ImageInfoRepo) extends AdminController(actionAuthenticator) {
 
   implicit val execCtx = fj
 
   def keepDiscoveriesViewNew(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticatedAsync { request =>
-    heimdalClient.getPagedKeepDiscoveries(page, size) map { paged =>
-      db.readOnlyMaster { implicit session =>
+    val countF = heimdalClient.getDiscoveryCount()
+    val pagedF = heimdalClient.getPagedKeepDiscoveries(page, size)
+    val resF = for {
+      count <- countF
+      paged <- pagedF
+    } yield {
+      val t = db.readOnlyMaster { implicit session =>
         paged map { c =>
           val rc = RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, userRepo.get(c.keeperId), keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
           val pageInfoOpt = pageInfoRepo.getByUri(c.uriId)
@@ -53,8 +50,11 @@ class AdminAttributionController @Inject() (
           (rc, pageInfoOpt, imgOpt)
         }
       }
-    } map { t =>
-      Ok(html.admin.keepDiscoveries(t, false, page, 42, size))
+      (t, count)
+    }
+    resF map {
+      case (t, count) =>
+        Ok(html.admin.keepDiscoveries(t, false, page, count, size))
     }
   }
 
@@ -76,20 +76,30 @@ class AdminAttributionController @Inject() (
   }
 
   def rekeepsViewNew(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticatedAsync { request =>
-    heimdalClient.getPagedReKeeps(page, size) map { paged =>
-      db.readOnlyMaster { implicit session =>
-        val t = paged map { k =>
+    val countF = heimdalClient.getReKeepCount()
+    val pagedF = heimdalClient.getPagedReKeeps(page, size)
+    val resF = for {
+      count <- countF
+      paged <- pagedF
+    } yield {
+      val t = db.readOnlyMaster { implicit session =>
+        paged map { k =>
           val rk = RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, userRepo.get(k.keeperId), keepRepo.get(k.keepId), uriRepo.get(k.uriId), userRepo.get(k.srcUserId), keepRepo.get(k.srcKeepId), k.attributionFactor)
           val pageInfoOpt = pageInfoRepo.getByUri(k.uriId)
-          val imgOpt = if (!showImage) None else
+          val imgOpt = if (!showImage) None
+          else
             for {
               pageInfo <- pageInfoOpt
               imgId <- pageInfo.imageInfoId
             } yield imageInfoRepo.get(imgId)
           (rk, pageInfoOpt, imgOpt)
         }
-        Ok(html.admin.rekeeps(t, showImage, page, 42, size))
       }
+      (t, count)
+    }
+    resF map {
+      case (t, count) =>
+        Ok(html.admin.rekeeps(t, showImage, page, count, size))
     }
   }
 
@@ -132,31 +142,30 @@ class AdminAttributionController @Inject() (
     Ok(html.admin.myKeepInfos(u, clicks, rekeeps, rekepts))
   }
 
-  val userReKeepsReqConsolidator = new RequestConsolidator[(Id[User], Int), (User, Int, Seq[ReKeep], Seq[(Keep, Seq[Set[User]])], Seq[(Int, Int)])](ttl = 5 seconds)
+  val userReKeepsReqConsolidator = new RequestConsolidator[(Id[User], Int), (User, Int, Seq[ReKeep], Seq[(Keep, Seq[Seq[User]])], Seq[(Int, Int)])](ttl = 5 seconds)
   def getReKeepInfos(userId: Id[User], n: Int = 4) = userReKeepsReqConsolidator(userId, n) {
-    case (userId, n) =>
-      SafeFuture {
-        val u = db.readOnlyMaster { implicit ro => userRepo.get(userId) }
-        val rekeeps = db.readOnlyReplica { implicit ro =>
-          rekeepRepo.getAllReKeepsByKeeper(userId)
-        }
-        val grouped = rekeeps.groupBy(_.keepId)
-        val sorted = grouped.toSeq.sortBy(_._2.length)(Ordering[Int].reverse).take(20)
-        val users = sorted.map(_._1).map { keepId =>
-          val userIds: Seq[Set[Id[User]]] = attributionCmdr.getReKeepsByDegree(userId, keepId, 4).map(_._1)
+    case (userId, n) => {
+      val u = db.readOnlyMaster { implicit ro => userRepo.get(userId) }
+      val rekeeps = db.readOnlyReplica { implicit ro => rekeepRepo.getAllReKeepsByKeeper(userId) }
+      val grouped = rekeeps.groupBy(_.keepId)
+      val sorted = grouped.toSeq.sortBy(_._2.length)(Ordering[Int].reverse).take(10)
+      // todo(ray): batch
+      val resF = sorted.map(_._1).map { keepId =>
+        heimdalClient.getReKeepsByDegree(userId, keepId).map { res => res.map(_.userIds) } map { userIds =>
           val users = db.readOnlyReplica { implicit ro => userRepo.getUsers(userIds.foldLeft(Seq.empty[Id[User]]) { (a, c) => a ++ c }) }
           db.readOnlyReplica { implicit ro => keepRepo.get(keepId) } -> userIds.map(_.map(uId => users(uId)))
         }
-        val counts = db.readOnlyReplica { implicit ro =>
-          users.map {
-            case (keep, _) =>
-              userBookmarkClicksRepo.getByUserUri(userId, keep.uriId) map { bc =>
-                (bc.rekeepCount, bc.rekeepTotalCount)
-              } getOrElse (-1, -1)
-          }
-        }
-        (u, n, rekeeps, users, counts)
       }
+      Future.sequence(resF) flatMap { users =>
+        val countsF = Future.sequence(users map {
+          case (keep, _) =>
+            heimdalClient.getReKeepCountsByUserUri(userId, keep.uriId)
+        })
+        countsF map { counts =>
+          (u, n, rekeeps, users, counts)
+        }
+      }
+    }
   }
 
   def reKeepInfos(userId: Id[User]) = AdminHtmlAction.authenticatedAsync { request =>
@@ -178,25 +187,33 @@ class AdminAttributionController @Inject() (
     Ok(html.admin.myKeepInfos(u, clicks, rekeeps, rekepts))
   }
 
-  val topReKeepsReqConsolidator = new RequestConsolidator[Int, Seq[(NormalizedURI, Seq[(Keep, Seq[Set[User]])])]](ttl = 5 seconds)
+  val topReKeepsReqConsolidator = new RequestConsolidator[Int, Seq[(NormalizedURI, Seq[(Keep, Seq[Seq[User]])])]](ttl = 5 seconds)
   def getTopReKeeps(degree: Int) = topReKeepsReqConsolidator(degree) { degree =>
-    SafeFuture {
-      val rkMap = db.readOnlyReplica { implicit ro =>
-        rekeepRepo.getAllDirectReKeepCountsByKeep()
-      }
-      val filtered = rkMap.toSeq.sortBy(_._2)(Ordering[Int].reverse).take(10).toMap
-      val byDeg = attributionCmdr.getUserReKeepsByDegree(filtered.map(_._1).toSet, degree)
-      val sorted = byDeg.toSeq.sortBy { case (keepId, usersByDeg) => usersByDeg.flatten.length }(Ordering[Int].reverse)
-      val userIds = sorted.map(_._2).flatten.foldLeft(Set.empty[Id[User]]) { (a, c) => a ++ c }
+    val rkMap = db.readOnlyReplica { implicit ro =>
+      rekeepRepo.getAllDirectReKeepCountsByKeep()
+    }
+    val filtered = rkMap.toSeq.sortBy(_._2)(Ordering[Int].reverse).take(10).toMap
+
+    val keepIds = filtered.keySet.toSeq.map { keepId =>
+      val k = db.readOnlyMaster { implicit s => keepRepo.get(keepId) }
+      KeepIdInfo(k.id.get, k.uriId, k.userId)
+    }
+    heimdalClient.getUserReKeepsByDegree(keepIds) map { userReKeepsAcc =>
+      val sorted = userReKeepsAcc.sortBy(_.userIds.flatten.length)(Ordering[Int].reverse)
+      val userIds = sorted.map(_.userIds).flatten.foldLeft(Set.empty[Id[User]]) { (a, c) => a ++ c }
       val users = db.readOnlyReplica { implicit ro => userRepo.getUsers(userIds.toSeq) }
       val richByDeg = sorted.map {
-        case (kId, userIdsByDeg) =>
+        case UserReKeepsAcc(kId, userIdsByDeg) =>
           db.readOnlyReplica { implicit ro => keepRepo.get(kId) -> userIdsByDeg.map(_.map(uId => users(uId))) }
       }
       val grouped = richByDeg.groupBy(_._1.uriId).map {
         case (uriId, keepsAndUsers) =>
           db.readOnlyReplica { implicit ro => uriRepo.get(uriId) -> keepsAndUsers }
-      }.toSeq.sortBy { case (uri, keepsAndUsers) => keepsAndUsers.map { _._2.flatten }.length }(Ordering[Int].reverse)
+      }.toSeq.sortBy {
+        case (uri, keepsAndUsers) => keepsAndUsers.map {
+          _._2.flatten
+        }.length
+      }(Ordering[Int].reverse)
       log.info(s"getTopReKeeps($degree)=$grouped")
       grouped
     }
@@ -209,30 +226,30 @@ class AdminAttributionController @Inject() (
   }
 
   def updateReKeepStats() = AdminHtmlAction.authenticatedAsync { request =>
-    attributionCmdr.updateUserReKeepStatus(request.userId) map { saved =>
-      Ok(s"Updated ${saved.length} bookmarkDiscovery entries for ${request.userId}")
+    heimdalClient.updateUserReKeepStats(request.userId) map { _ =>
+      Ok(s"Update request sent for userId=${request.userId}")
     }
   }
 
   def updateUserReKeepStats() = AdminHtmlAction.authenticatedParseJsonAsync { request =>
     Json.fromJson[Id[User]](request.body).asOpt map { userId =>
-      attributionCmdr.updateUserReKeepStatus(userId) map { saved =>
-        Ok(s"Updated ${saved.length} bookmarkDiscovery entries for ${userId}")
+      heimdalClient.updateUserReKeepStats(userId) map { _ =>
+        Ok(s"Update request sent for userId=${userId}")
       }
     } getOrElse Future.successful(BadRequest(s"Illegal argument"))
   }
 
   def updateUsersReKeepStats() = AdminHtmlAction.authenticatedParseJsonAsync { request =>
     Json.fromJson[Seq[Id[User]]](request.body).asOpt map { userIds =>
-      attributionCmdr.updateUsersReKeepStats(userIds) map { saved =>
-        Ok(s"Updated bookmarkDiscovery table for ${saved.length} users")
+      heimdalClient.updateUsersReKeepStats(userIds) map { _ =>
+        Ok(s"Update request sent for ${userIds.length} users (${userIds.take(5).mkString(",")} ... )")
       }
     } getOrElse Future.successful(BadRequest(s"Illegal argument"))
   }
 
   def updateAllReKeepStats() = AdminHtmlAction.authenticatedAsync { request =>
-    attributionCmdr.updateAllReKeepStats() map { saved =>
-      Ok(s"Updated bookmarkDiscoveries table for ${saved.length} users")
+    heimdalClient.updateAllReKeepStats() map { _ =>
+      Ok(s"Update request sent for all users")
     }
   }
 

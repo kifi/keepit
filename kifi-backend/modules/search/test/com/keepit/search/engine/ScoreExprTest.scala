@@ -102,7 +102,7 @@ class ScoreExprTest extends Specification {
       ctx.addScore(idx2(0), 3.0f)
       ctx.flush
       collector.id === 401L
-      collector.score == 3.0f
+      collector.score === 3.0f
     }
 
     "compute scores correctly with ConjunctiveSumExpr" in {

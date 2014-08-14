@@ -45,12 +45,12 @@ import play.api.libs.json.JsObject
 import com.keepit.search.SearchServiceClient
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.http._
+import com.keepit.common.AnyExtensionOps
 
 class UserController @Inject() (
     db: Database,
     userRepo: UserRepo,
     userExperimentCommander: LocalUserExperimentCommander,
-    basicUserRepo: BasicUserRepo,
     userConnectionRepo: UserConnectionRepo,
     emailRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
@@ -88,30 +88,6 @@ class UserController @Inject() (
       "friends" -> friendsJsons,
       "total" -> total
     ))
-  }
-
-  def findFriends(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
-    abookServiceClient.findFriends(request.userId, page, pageSize).map { recommendedUsers =>
-      val (basicUsers, friends) = db.readOnlyReplica { implicit session =>
-        val recommendedUserSet = recommendedUsers.toSet
-        val basicUsers = basicUserRepo.loadAll(recommendedUserSet)
-        val friends = (recommendedUserSet + request.userId).map(id => id -> userConnectionRepo.getConnectedUsers(id)).toMap
-        (basicUsers, friends)
-      }
-      val recommendedUsersArray = JsArray(recommendedUsers.map { recommendedUserId =>
-        val numMutualFriends = (friends(request.userId) intersect friends(recommendedUserId)).size
-        BasicUser.basicUserFormat.writes(basicUsers(recommendedUserId)) + ("numMutualFriends" -> JsNumber(numMutualFriends))
-      })
-      val json = Json.obj("users" -> recommendedUsersArray)
-      Ok(json)
-    }
-  }
-
-  def hideUserRecommendation(id: ExternalId[User]) = JsonAction.authenticatedAsync { request =>
-    val irrelevantUserId = db.readOnlyReplica { implicit session => userRepo.get(id).id.get }
-    abookServiceClient.hideUserRecommendation(request.userId, irrelevantUserId).map { _ =>
-      Ok(Json.obj("hidden" -> true))
-    }
   }
 
   def friendCount() = JsonAction.authenticated { request =>
@@ -271,6 +247,13 @@ class UserController @Inject() (
         userData.description.foreach { description =>
           userCommander.updateUserDescription(request.userId, description)
         }
+        if (userData.firstName.exists(_.nonEmpty) && userData.lastName.exists(_.nonEmpty)) {
+          db.readWrite { implicit session =>
+            val user = userRepo.getNoCache(request.userId)
+            userRepo.save(user.copy(firstName = userData.firstName.get, lastName = userData.lastName.get))
+          }
+        }
+
         getUserInfo(request.userId)
       }
       case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } =>
@@ -288,16 +271,14 @@ class UserController @Inject() (
       toJson(pimpedUser.info).as[JsObject] ++
       Json.obj("notAuthed" -> pimpedUser.notAuthed).as[JsObject] ++
       Json.obj("experiments" -> experiments.map(_.value))
-    val (uniqueKeepsClicked, totalClicks) = userCommander.getHelpCounts(userId)
-    userCommander.getKeepAttributionCounts(userId) map {
-      case (clickCount, rekeepCount, rekeepTotalCount) =>
-        Ok(json ++ Json.obj(
-          "uniqueKeepsClicked" -> uniqueKeepsClicked,
-          "totalKeepsClicked" -> totalClicks,
-          "clickCount" -> clickCount,
-          "rekeepCount" -> rekeepCount,
-          "rekeepTotalCount" -> rekeepTotalCount
-        ))
+    userCommander.getKeepAttributionInfo(userId) map { info =>
+      Ok(json ++ Json.obj(
+        "uniqueKeepsClicked" -> info.uniqueKeepsClicked,
+        "totalKeepsClicked" -> info.totalClicks,
+        "clickCount" -> info.clickCount,
+        "rekeepCount" -> info.rekeepCount,
+        "rekeepTotalCount" -> info.rekeepTotalCount
+      ))
     }
   }
 

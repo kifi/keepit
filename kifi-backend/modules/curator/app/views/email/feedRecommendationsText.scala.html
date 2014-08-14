@@ -1,0 +1,17 @@
+@(emailData: com.keepit.curator.commanders.email.RecommendedEmailData)
+
+Hello @emailData.toUser.firstName,<br/><br/>
+
+Kifi recommends @emailData.recos.size items for you:
+
+@emailData.recos.map { reco =>
+
+    @reco.title
+    @reco.description
+    @reco.url
+    @reco.score
+    @reco.explain
+
+    -----
+}
+
