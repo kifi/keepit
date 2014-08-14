@@ -114,7 +114,9 @@ GET     /m/1/user/friendsDetails            @com.keepit.controllers.mobile.Mobil
 GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
 POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
 GET     /m/1/user/abooks                    @com.keepit.controllers.mobile.MobileUserController.abookInfo()
+
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
+POST    /m/1/page/extensionQuery            @com.keepit.controllers.mobile.MobilePageController.queryExtension()
 
 ## Deprecated
 POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.keepMultiple()
