@@ -21,7 +21,7 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.common.concurrent.ExecutionContext
-import com.keepit.common.ImmediateMap
+import com.keepit.common.core._
 import play.api.libs.json.Json._
 import org.joda.time.DateTime
 import com.keepit.eliza.model.ThreadItem

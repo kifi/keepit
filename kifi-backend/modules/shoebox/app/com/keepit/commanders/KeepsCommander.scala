@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
