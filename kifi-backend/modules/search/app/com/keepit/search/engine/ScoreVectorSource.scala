@@ -11,10 +11,8 @@ import org.apache.lucene.util.PriorityQueue
 trait ScoreVectorSource {
   def score(output: DataBuffer)
 
-  protected def createScorerQueue(scorers: Array[Scorer]) = {
-    val pq = new PriorityQueue[TaggedScorer](scorers.length) {
-      override def lessThan(a: TaggedScorer, b: TaggedScorer): Boolean = (a.doc < b.doc)
-    }
+  protected def createScorerQueue(scorers: Array[Scorer]): TaggedScoreQueue = {
+    val pq = new TaggedScoreQueue(scorers.length)
     var i = 0
     while (i < scorers.length) {
       val sc = scorers(i)
@@ -34,6 +32,33 @@ final class TaggedScorer(tag: Byte, scorer: Scorer) {
   def taggedScore = DataBuffer.taggedFloatBits(tag, scorer.score)
 }
 
+final class TaggedScoreQueue(size: Int) extends PriorityQueue[TaggedScorer](size) {
+  override def lessThan(a: TaggedScorer, b: TaggedScorer): Boolean = (a.doc < b.doc)
+
+  def getTaggedScores(taggedScores: Array[Int]): Int = {
+    var scorer = top()
+    val docId = scorer.doc
+    var size: Int = 0
+    while (scorer.doc == docId) {
+      taggedScores(size) = scorer.taggedScore
+      size += 1
+      scorer.next
+      scorer = updateTop()
+    }
+    size
+  }
+
+  def skipCurrentDoc(): Int = {
+    var scorer = top()
+    val docId = scorer.doc
+    while (scorer.doc <= docId) {
+      scorer.next
+      scorer = updateTop()
+    }
+    scorer.doc
+  }
+}
+
 //
 // Main Search (finding Keeps)
 //  query Article index and Keep index and aggregate the hits by Uri Id
@@ -45,16 +70,14 @@ class ArticleScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer],
   private[this] val articleVisibility = ArticleVisibility(reader)
 
   def score(output: DataBuffer): Unit = {
+    if (pq.size <= 0) return // no scorer
+
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
 
     val taggedScores: Array[Int] = new Array[Int](pq.size) // tagged floats
-    var size: Int = 0
 
-    if (pq.size <= 0) return // no scorer
-
-    var top = pq.top
-    var docId = top.doc
+    var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
       val id = idMapper.getId(docId)
 
@@ -64,29 +87,15 @@ class ArticleScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer],
         val visibility = if (articleVisibility.isVisible(docId)) Visibility.PUBLIC else Visibility.RESTRICTED
 
         // get all scores
-        while (top.doc == docId) {
-          taggedScores(size) = top.taggedScore
-          size += 1
-          top.next
-          top = pq.updateTop()
-        }
+        val size = pq.getTaggedScores(taggedScores)
+
         // write to the buffer
         output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
-        writer.putLong(id)
-        var i = 0
-        while (i < size) { // using while for performance
-          writer.putTaggedFloatBits(taggedScores(i))
-          i += 1
-        }
-        size = 0
+        writer.putLong(id).putTaggedFloatBits(taggedScores, size)
+        docId = pq.top.doc // next doc
       } else {
-        // skip this doc
-        while (top.doc <= docId) {
-          top.next
-          top = pq.updateTop()
-        }
+        docId = pq.skipCurrentDoc() // skip this doc
       }
-      docId = top.doc // next doc
     }
   }
 }
@@ -98,43 +107,28 @@ class ArticleFromKeepsScoreVectorSource(reader: WrappedSubReader, scorers: Array
   private[this] val pq = createScorerQueue(scorers)
 
   def score(output: DataBuffer): Unit = {
+    if (pq.size <= 0) return // no scorer
+
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
 
     val taggedScores: Array[Int] = new Array[Int](pq.size) // tagged floats
-    var size: Int = 0
 
-    var top = pq.top
-    var docId = top.doc
+    var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
       val id = idMapper.getId(docId)
       val libId = libraryIdDocValues.get(docId)
 
       if (libraryIds.findIndex(libId) >= 0 && idFilter.findIndex(id) < 0) { // use findIndex to avoid boxing
         // get all scores
-        while (top.doc == docId) {
-          taggedScores(size) = top.taggedScore
-          size += 1
-          top.next
-          top = pq.updateTop()
-        }
+        val size = pq.getTaggedScores(taggedScores)
         // write to the buffer
         output.alloc(writer, Visibility.MEMBER, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
-        writer.putLong(id)
-        var i = 0
-        while (i < size) { // using while for performance
-          writer.putTaggedFloatBits(taggedScores(i))
-          i += 1
-        }
-        size = 0
+        writer.putLong(id).putTaggedFloatBits(taggedScores, size)
+        docId = pq.top.doc // next doc
       } else {
-        // skip this doc
-        while (top.doc <= docId) {
-          top.next
-          top = pq.updateTop()
-        }
+        docId = pq.skipCurrentDoc() // skip this doc
       }
-      docId = top.doc // next doc
     }
   }
 }
@@ -150,14 +144,14 @@ class LibraryScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer],
   // TODO: private[this] val libraryVisibility = LibraryVisibility(reader)
 
   def score(output: DataBuffer): Unit = {
+    if (pq.size <= 0) return // no scorer
+
     val idMapper = reader.getIdMapper
     val writer: DataBufferWriter = new DataBufferWriter
 
     val taggedScores: Array[Int] = new Array[Int](pq.size) // tagged floats
-    var size: Int = 0
 
-    var top = pq.top
-    var docId = top.doc
+    var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
       val libId = idMapper.getId(docId)
 
@@ -167,36 +161,18 @@ class LibraryScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer],
 
         if (visibility != Visibility.RESTRICTED) {
           // get all scores
-          while (top.doc == docId) {
-            taggedScores(size) = top.taggedScore
-            size += 1
-            top.next
-            top = pq.updateTop()
-          }
+          val size = pq.getTaggedScores(taggedScores)
+
           // write to the buffer
           output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
-          writer.putLong(libId)
-          var i = 0
-          while (i < size) { // using while for performance
-            writer.putTaggedFloatBits(taggedScores(i))
-            i += 1
-          }
-          size = 0
+          writer.putLong(libId).putTaggedFloatBits(taggedScores, size)
+          docId = pq.top.doc // next doc
         } else {
-          // skip this doc
-          while (top.doc <= docId) {
-            top.next
-            top = pq.updateTop()
-          }
+          docId = pq.skipCurrentDoc() // skip this doc
         }
       } else {
-        // skip this doc
-        while (top.doc <= docId) {
-          top.next
-          top = pq.updateTop()
-        }
+        docId = pq.skipCurrentDoc() // skip this doc
       }
-      docId = top.doc // next doc
     }
   }
 }
@@ -207,42 +183,28 @@ class LibraryFromKeepsScoreVectorSource(reader: WrappedSubReader, scorers: Array
   private[this] val pq = createScorerQueue(scorers)
 
   def score(output: DataBuffer): Unit = {
+    if (pq.size <= 0) return // no scorer
+
     val writer: DataBufferWriter = new DataBufferWriter
 
     val taggedScores: Array[Int] = new Array[Int](pq.size) // tagged floats
-    var size: Int = 0
 
-    var top = pq.top
-    var docId = top.doc
+    var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
       val libId = libraryIdDocValues.get(docId)
 
       if (idFilter.findIndex(libId) < 0) { // use findIndex to avoid boxing
         // get all scores
-        while (top.doc == docId) {
-          taggedScores(size) = top.taggedScore
-          size += 1
-          top.next
-          top = pq.updateTop()
-        }
+        val size = pq.getTaggedScores(taggedScores)
+
         // write to the buffer
         // the visibility is restricted since we don't know it for sure
         output.alloc(writer, Visibility.RESTRICTED, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
-        writer.putLong(libId)
-        var i = 0
-        while (i < size) { // using while for performance
-          writer.putTaggedFloatBits(taggedScores(i))
-          i += 1
-        }
-        size = 0
+        writer.putLong(libId).putTaggedFloatBits(taggedScores, size)
+        docId = pq.top.doc // next doc
       } else {
-        // skip this doc
-        while (top.doc <= docId) {
-          top.next
-          top = pq.updateTop()
-        }
+        docId = pq.skipCurrentDoc() // skip this doc
       }
-      docId = top.doc // next doc
     }
   }
 }
