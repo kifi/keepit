@@ -10,7 +10,7 @@ import com.keepit.model._
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 
 import play.api.libs.json._
-import play.api.test.FakeRequest
+import play.api.test.{ FakeHeaders, FakeRequest }
 import play.api.test.Helpers._
 import com.google.inject.Injector
 import com.keepit.social.{ SocialNetworks, SocialId }
@@ -106,6 +106,50 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
 
         Json.parse(contentAsString(result)) must equalTo(expected)
       }
+    }
+
+    "updateCurrentUser updates names" in {
+      running(new ShoeboxApplication(mobileControllerTestModules: _*)) {
+        val user = inject[Database].readWrite { implicit session =>
+          inject[UserRepo].save(User(firstName = "Sam", lastName = "Jackson"))
+        }
+
+        val path = com.keepit.controllers.mobile.routes.MobileUserController.updateCurrentUser().toString()
+        path === "/m/1/user/me"
+
+        val controller = inject[MobileUserController]
+        inject[FakeActionAuthenticator].setUser(user, Set())
+
+        val jsonInput = s"""
+          {
+            "firstName": "Donald",
+            "lastName": "Trump"
+          }
+          """
+
+        val request = FakeRequest("POST", path, FakeHeaders(), jsonInput)
+        val result = route(request).get
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+
+        val expected = Json.parse(s"""
+            {
+              "id":"${user.externalId}",
+              "firstName":"Donald",
+              "lastName":"Trump",
+              "pictureName":"0.jpg",
+              "emails":[],
+              "notAuthed":[],
+              "experiments":[],
+              "clickCount":0,
+              "rekeepCount":0,
+              "rekeepTotalCount":0
+            }
+          """)
+
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+
     }
 
     "return connected users from the database" in {
