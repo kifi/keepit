@@ -42,24 +42,15 @@ class MobilePageController @Inject() (
     // friend connections
     val friendsFuture = SafeFuture { userCommander.getConnectionsPage(request.userId, page, pageSize) }
 
-    val tupleFuture = for {
+    for {
       pageInfo <- pageFutures
       basicUserInfo <- basicUserFutures
-      userAttributeInfo <- userAttributeFutures
+      userAttributionInfo <- userAttributeFutures
       numKeeps <- numKeepsFuture
       collections <- collectionsFuture
       friendConnections <- friendsFuture
     } yield {
-      (pageInfo, basicUserInfo, userAttributeInfo, numKeeps, collections, friendConnections)
-    }
-
-    tupleFuture.map { tuple =>
-      val pageInfo = tuple._1
-      val basicUserInfo = tuple._2
-      val attributionInfo = tuple._3
-      val numKeeps = tuple._4
-      val collections = tuple._5
-      val (connectionsPage, total) = tuple._6
+      val (connectionsPage, total) = friendConnections
       val friendsJsons = connectionsPage.map {
         case ConnectionInfo(friend, _, unfriended, unsearched) =>
           Json.toJson(friend).asInstanceOf[JsObject] ++ Json.obj(
@@ -75,9 +66,9 @@ class MobilePageController @Inject() (
             Json.obj(
               "notAuthed" -> basicUserInfo.notAuthed,
               "experiments" -> request.experiments.map(_.value),
-              "clickCount" -> attributionInfo.clickCount,
-              "rekeepCount" -> attributionInfo.rekeepCount,
-              "rekeepTotalCount" -> attributionInfo.rekeepTotalCount
+              "clickCount" -> userAttributionInfo.clickCount,
+              "rekeepCount" -> userAttributionInfo.rekeepCount,
+              "rekeepTotalCount" -> userAttributionInfo.rekeepTotalCount
             )),
           "numKeeps" -> numKeeps,
           "collections" -> collections,
