@@ -8,8 +8,8 @@ import collection.mutable.{ Map => MutableMap }
 trait FakeRepoLike[T <: Model[T]] {
 
   def save(model: T): T
-  def get(id: Id[T])
-  def all()
+  def get(id: Id[T]): T
+  def all(): Seq[T]
   def page(page: Int = 0, size: Int = 20, excludeStates: Set[State[T]] = Set.empty[State[T]]): Seq[T]
   def count: Int
   def invalidateCache(model: T): Unit
