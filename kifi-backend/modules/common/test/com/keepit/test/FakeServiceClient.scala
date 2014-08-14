@@ -6,7 +6,7 @@ import com.keepit.common.db.{ Model, Id }
 
 trait FakeServiceClient {
 
-  def makeRepo[T <: Model[T]]: FakeRepoLike[T] = new FakeRepoBase[T] {
+  def makeRepoBase[T <: Model[T]]: FakeRepoBase[T] = new FakeRepoBase[T] {
     val idCounter = new FakeIdCounter[T]
     val data = MutableMap[Id[T], T]()
   }
