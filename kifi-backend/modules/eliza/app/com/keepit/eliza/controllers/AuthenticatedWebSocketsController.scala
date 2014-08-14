@@ -165,34 +165,33 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       }
     } else {
       authenticate(request) match {
-        case Some(streamSessionFuture) =>
-          val iterateeAndEnumeratorFuture = streamSessionFuture.map { streamSession =>
-            implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
+        case Some(streamSessionFuture) => streamSessionFuture.map { streamSession =>
+          implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
 
-            val typedVersionOpt: Option[KifiVersion] =
-              UserAgent.fromString(streamSession.userAgent) match {
-                case ua if ua.isKifiIphoneApp => versionOpt.map(KifiIPhoneVersion.apply)
-                case ua if ua.isKifiAndroidApp => versionOpt.map(KifiAndroidVersion.apply)
-                case _ => versionOpt.map(KifiExtVersion.apply)
-              }
-
-            val ipOpt: Option[String] = eipOpt.flatMap { eip =>
-              crypt.decrypt(ipkey, eip).toOption
+          val typedVersionOpt: Option[KifiVersion] = try {
+            UserAgent.fromString(streamSession.userAgent) match {
+              case ua if ua.isKifiIphoneApp => versionOpt.map(KifiIPhoneVersion.apply)
+              case ua if ua.isKifiAndroidApp => versionOpt.map(KifiAndroidVersion.apply)
+              case _ => versionOpt.map(KifiExtVersion.apply)
             }
-            val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, typedVersionOpt, streamSession.userAgent, ipOpt)
-            reportConnect(streamSession, socketInfo, request, connectTimer)
-            var startMessages = Seq[JsArray](Json.arr("hi"))
-            if (updateNeeded(typedVersionOpt, streamSession.userId)) {
-              startMessages = startMessages :+ Json.arr("version", "new")
+          } catch {
+            case t: Throwable => {
+              log.error("Failed obtaining Kifi Version on Websocket connection")
+              None
             }
-            onConnect(socketInfo)
-            (iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator)
           }
-          iterateeAndEnumeratorFuture.onFailure {
-            case t: Throwable =>
-              airbrake.notify("Fatal error when establishing websocket connection", t)
+          val ipOpt: Option[String] = eipOpt.flatMap { eip =>
+            crypt.decrypt(ipkey, eip).toOption
           }
-          iterateeAndEnumeratorFuture
+          val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, typedVersionOpt, streamSession.userAgent, ipOpt)
+          reportConnect(streamSession, socketInfo, request, connectTimer)
+          var startMessages = Seq[JsArray](Json.arr("hi"))
+          if (updateNeeded(typedVersionOpt, streamSession.userId)) {
+            startMessages = startMessages :+ Json.arr("version", "new")
+          }
+          onConnect(socketInfo)
+          (iteratee(streamSession, versionOpt, socketInfo, channel), Enumerator(startMessages: _*) >>> enumerator)
+        }
         case None => Future.successful {
           statsd.incrementOne(s"websocket.anonymous", ONE_IN_TEN)
           accessLog.add(connectTimer.done(method = "DISCONNECT", body = "disconnecting anonymous user"))
