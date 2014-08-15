@@ -53,9 +53,10 @@ class URILDATopicRepoImpl @Inject() (
     def secondTopic = column[LDATopic]("second_topic", O.Nullable)
     def thirdTopic = column[LDATopic]("third_topic", O.Nullable)
     def firstTopicScore = column[Float]("first_topic_score", O.Nullable)
+    def timesFirstTopicChanged = column[Int]("times_first_topic_changed")
     def sparseFeature = column[SparseTopicRepresentation]("sparse_feature", O.Nullable)
     def feature = column[LDATopicFeature]("feature", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, uriId, uriSeq, version, numOfWords, firstTopic.?, secondTopic.?, thirdTopic.?, firstTopicScore.?, sparseFeature.?, feature.?, state) <> ((URILDATopic.apply _).tupled, URILDATopic.unapply _)
+    def * = (id.?, createdAt, updatedAt, uriId, uriSeq, version, numOfWords, firstTopic.?, secondTopic.?, thirdTopic.?, firstTopicScore.?, timesFirstTopicChanged, sparseFeature.?, feature.?, state) <> ((URILDATopic.apply _).tupled, URILDATopic.unapply _)
   }
 
   def table(tag: Tag) = new URILDATopicTable(tag)
