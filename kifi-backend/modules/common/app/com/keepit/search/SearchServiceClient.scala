@@ -81,9 +81,9 @@ trait SearchServiceClient extends ServiceClient {
   //
   // Distributed Search
   //
-  def distPlan(shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]
+  def distPlan(userId: Id[User], shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]
 
-  def distPlanRemoteOnly(maxShardsPerInstance: Int): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]
+  def distPlanRemoteOnly(userId: Id[User], maxShardsPerInstance: Int): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])]
 
   def distSearch(
     plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
@@ -152,7 +152,7 @@ class SearchServiceClientImpl(
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = consolidateSharingUserInfoReq((userId, uriId)) {
     case (userId, uriId) =>
-      distRouter.call(uriId, Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id))) map { r =>
+      distRouter.call(userId, uriId, Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id))) map { r =>
         Json.fromJson[Seq[SharingUserInfo]](r.json).get.head
       }
   }
@@ -162,7 +162,7 @@ class SearchServiceClientImpl(
       Promise.successful(Seq[SharingUserInfo]()).future
     } else {
       val route = Search.internal.sharingUserInfo(userId)
-      val plan = distRouter.planRemoteOnly()
+      val plan = distRouter.planRemoteOnly(userId)
 
       val result = new ListBuffer[Future[Map[Id[NormalizedURI], SharingUserInfo]]]
       plan.foreach {
@@ -243,7 +243,7 @@ class SearchServiceClientImpl(
 
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = {
     log.info("running explain in distributed mode")
-    distRouter.call(uriId, Search.internal.explain(query, userId, uriId, lang)).map(r => Html(r.body))
+    distRouter.call(userId, uriId, Search.internal.explain(query, userId, uriId, lang)).map(r => Html(r.body))
   }
 
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray] = {
@@ -373,12 +373,12 @@ class SearchServiceClientImpl(
   //
   // Distributed Search
   //
-  def distPlan(shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
-    distRouter.plan(shards, maxShardsPerInstance)
+  def distPlan(userId: Id[User], shards: Set[Shard[NormalizedURI]], maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
+    distRouter.plan(userId, shards, maxShardsPerInstance)
   }
 
-  def distPlanRemoteOnly(maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
-    distRouter.planRemoteOnly(maxShardsPerInstance)
+  def distPlanRemoteOnly(userId: Id[User], maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[NormalizedURI]])] = {
+    distRouter.planRemoteOnly(userId, maxShardsPerInstance)
   }
 
   def distSearch(

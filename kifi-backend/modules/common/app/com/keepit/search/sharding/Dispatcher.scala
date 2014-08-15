@@ -3,7 +3,6 @@ package com.keepit.search.sharding
 import com.keepit.common.db.Id
 import com.keepit.common.zookeeper.ServiceInstance
 import scala.collection.mutable.ArrayBuffer
-import scala.util.Random
 
 class ShardedServiceInstance[T](val serviceInstance: ServiceInstance) {
   val shards: Set[Shard[T]] = serviceInstance.remoteService.getShardSpec match {
@@ -19,6 +18,19 @@ object Dispatcher {
 
   def apply[T](instances: Vector[ServiceInstance], forceReloadFromZK: () => Unit): Dispatcher[T] = {
     new Dispatcher[T](instances.map(new ShardedServiceInstance[T](_)), forceReloadFromZK)
+  }
+
+  def defaultRandomizer: Randomizer = new Randomizer(System.currentTimeMillis())
+
+  def randomizer(seed: Long): Randomizer = new Randomizer(seed)
+}
+
+class Randomizer(seed: Long) {
+  private[this] var v: Long = seed
+
+  def nextInt(n: Int): Int = {
+    v = (v * 0x5DEECE66DL + 0x123456789L) & 0x7FFFFFFFFFFFFFFFL // linear congruential generator
+    (v % n.toLong).toInt // not aiming to be precisely random
   }
 }
 
@@ -72,12 +84,10 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
     safeSharding = findSafeSharding()
   }
 
-  private[this] val rnd = new Random()
-
   // call a single service instance that has a shard for the sharding key
-  def call[R](shardingKey: Id[T])(body: (ServiceInstance) => R): R = call[R](shardingKey, body, 1, 3)
+  def call[R](shardingKey: Id[T], randomizer: Randomizer)(body: (ServiceInstance) => R): R = call[R](shardingKey, body, 1, 3, randomizer)
 
-  private def call[R](id: Id[T], body: (ServiceInstance) => R, attempts: Int, maxAttempts: Int): R = {
+  private def call[R](id: Id[T], body: (ServiceInstance) => R, attempts: Int, maxAttempts: Int, randomizer: Randomizer): R = {
 
     val table = routingTable // for safety
 
@@ -91,7 +101,7 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
           if (shard.contains(id)) {
             val size = instances.size
             numEntries += size
-            if (rnd.nextInt(numEntries) < size) candidateShard = shard
+            if (randomizer.nextInt(numEntries) < size) candidateShard = shard
           }
       }
       if (candidateShard == null) {
@@ -99,7 +109,7 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
       } else {
         // now choose an instance
         val instances = table(candidateShard)
-        instances(rnd.nextInt(instances.size))
+        instances(randomizer.nextInt(instances.size))
       }
     }
 
@@ -109,7 +119,7 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
       if (attempts < maxAttempts) {
         // failed to find an instance. there may an unreachable instance. reload routingTable and try again
         reload()
-        call(id, body, attempts + 1, maxAttempts) // retry
+        call(id, body, attempts + 1, maxAttempts, randomizer) // retry
       } else {
         forceReloadFromZK()
         throw new DispatchFailedException(s"no instance found for id=$id")
@@ -118,13 +128,13 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
   }
 
   // find service instances to cover all shards
-  def dispatch[R](maxShardsPerInstance: Int = Int.MaxValue)(body: (ServiceInstance, Set[Shard[T]]) => R): Seq[R] = {
+  def dispatch[R](randomizer: Randomizer, maxShardsPerInstance: Int = Int.MaxValue)(body: (ServiceInstance, Set[Shard[T]]) => R): Seq[R] = {
 
     val sharding = safeSharding // for safety
 
     if (sharding.length > 0) {
       // choose one sharding randomly
-      dispatch(sharding(rnd.nextInt(sharding.length)), maxShardsPerInstance)(body)
+      dispatch(sharding(randomizer.nextInt(sharding.length)), randomizer, maxShardsPerInstance)(body)
     } else {
       forceReloadFromZK()
       throw new DispatchFailedException(s"no instance found")
@@ -132,17 +142,17 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
   }
 
   // find service instances to cover the given set of shards
-  def dispatch[R](allShards: Set[Shard[T]], maxShardsPerInstance: Int = Int.MaxValue)(body: (ServiceInstance, Set[Shard[T]]) => R): Seq[R] = {
-    dispatch(allShards, maxShardsPerInstance, body, new ArrayBuffer[R], 1, 3)
+  def dispatch[R](allShards: Set[Shard[T]], randomizer: Randomizer, maxShardsPerInstance: Int = Int.MaxValue)(body: (ServiceInstance, Set[Shard[T]]) => R): Seq[R] = {
+    dispatch(allShards, maxShardsPerInstance, body, new ArrayBuffer[R], 1, 3, randomizer)
   }
 
-  private def dispatch[R](allShards: Set[Shard[T]], maxShardsPerInstance: Int, body: (ServiceInstance, Set[Shard[T]]) => R, results: ArrayBuffer[R], attempts: Int, maxAttempts: Int): Seq[R] = {
+  private def dispatch[R](allShards: Set[Shard[T]], maxShardsPerInstance: Int, body: (ServiceInstance, Set[Shard[T]]) => R, results: ArrayBuffer[R], attempts: Int, maxAttempts: Int, randomizer: Randomizer): Seq[R] = {
 
     val table = routingTable // for safety
 
     var remaining = allShards
     while (remaining.nonEmpty) {
-      next(table, remaining, maxShardsPerInstance, 2) match {
+      next(table, remaining, maxShardsPerInstance, 2, randomizer) match {
         case (Some(instance), shards) =>
           if (!instance.serviceInstance.reportedSentServiceUnavailable) {
             results += body(instance.serviceInstance, shards)
@@ -151,7 +161,7 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
             if (attempts < maxAttempts) {
               // failed to find an instance. there may an unreachable instance. reload routingTable and try again
               reload()
-              return dispatch(remaining, maxShardsPerInstance, body, results, attempts + 1, maxAttempts) // retry
+              return dispatch(remaining, maxShardsPerInstance, body, results, attempts + 1, maxAttempts, randomizer) // retry
             } else {
               forceReloadFromZK()
               throw new DispatchFailedException(s"no instance found")
@@ -165,7 +175,7 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
     results
   }
 
-  private def next(instMap: Map[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]], shards: Set[Shard[T]], maxShardsPerInstance: Int, numTrials: Int): (Option[ShardedServiceInstance[T]], Set[Shard[T]]) = {
+  private def next(instMap: Map[Shard[T], ArrayBuffer[ShardedServiceInstance[T]]], shards: Set[Shard[T]], maxShardsPerInstance: Int, numTrials: Int, randomizer: Randomizer): (Option[ShardedServiceInstance[T]], Set[Shard[T]]) = {
     var numEntries = 0
     val table = shards.toSeq.map { shard =>
       instMap.get(shard) match {
@@ -181,7 +191,7 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
     var bestCoverage = Set.empty[Shard[T]]
     var trials = numTrials
     while (trials > 0 && bestCoverage.size < maxShardsPerInstance) {
-      getCandidate(table, numEntries) match {
+      getCandidate(table, numEntries, randomizer) match {
         case candidate @ Some(thisInst) =>
           val thisCoverage = (thisInst.shards intersect shards).take(maxShardsPerInstance)
           if (thisCoverage.size > bestCoverage.size || (thisCoverage.size == bestCoverage.size && thisInst.size < bestInstSize)) {
@@ -196,9 +206,9 @@ class Dispatcher[T](instances: Vector[ShardedServiceInstance[T]], forceReloadFro
     (bestInstance, bestCoverage)
   }
 
-  private def getCandidate(table: Seq[(Int, ArrayBuffer[ShardedServiceInstance[T]])], numEntries: Int): Option[ShardedServiceInstance[T]] = {
+  private def getCandidate(table: Seq[(Int, ArrayBuffer[ShardedServiceInstance[T]])], numEntries: Int, randomizer: Randomizer): Option[ShardedServiceInstance[T]] = {
     if (numEntries > 0) {
-      val n = rnd.nextInt(numEntries)
+      val n = randomizer.nextInt(numEntries)
       table.find(_._1 > n).map {
         case (num, instances) =>
           instances(instances.size - (num - n))
