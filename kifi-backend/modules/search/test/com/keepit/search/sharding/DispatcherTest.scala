@@ -56,7 +56,7 @@ class DispatcherTest extends Specification {
         var callCount = 0
 
         val disp = Dispatcher[T](allInstances, () => { forceReloadCalled = true })
-        disp.dispatch(allShards) { (inst, shards) =>
+        disp.dispatch(allShards, Dispatcher.defaultRandomizer) { (inst, shards) =>
           (inst, shards)
         }.map {
           case (inst, shards) =>
@@ -81,7 +81,7 @@ class DispatcherTest extends Specification {
       var instanceUsed = Set.empty[ServiceInstance]
 
       val disp = Dispatcher[T](largeInstances, () => { forceReloadCalled = true })
-      val plan = disp.dispatch(allShards, maxShardsPerInstance = 3) { (inst, shards) =>
+      val plan = disp.dispatch(allShards, Dispatcher.defaultRandomizer, maxShardsPerInstance = 3) { (inst, shards) =>
         (inst, shards)
       }.map {
         case (inst, shards) =>
@@ -102,7 +102,7 @@ class DispatcherTest extends Specification {
 
       val disp = Dispatcher[T](insufficientInstances, () => { forceReloadCalled = true })
 
-      disp.dispatch(allShards, maxShardsPerInstance = 3) { (inst, shards) => 1 } must throwA[DispatchFailedException]
+      disp.dispatch(allShards, Dispatcher.defaultRandomizer, maxShardsPerInstance = 3) { (inst, shards) => 1 } must throwA[DispatchFailedException]
       forceReloadCalled === true
     }
 
@@ -110,7 +110,7 @@ class DispatcherTest extends Specification {
       var forceReloadCalled = false
       (0 until 10).foreach { i =>
         val disp = Dispatcher[T](allInstances, () => { forceReloadCalled = true })
-        disp.call(Id[T](i)) { inst =>
+        disp.call(Id[T](i), Dispatcher.defaultRandomizer) { inst =>
           (new ShardedServiceInstance[T](inst)).shards.exists(shard => shard.contains(Id[T](i))) === true
         }
       }
@@ -120,7 +120,7 @@ class DispatcherTest extends Specification {
     "call forceReload when no instance was found" in {
       var forceReloadCalled = false
       val disp = Dispatcher[T](Vector[ServiceInstance](), () => { forceReloadCalled = true })
-      try { disp.dispatch(allShards) { (inst, shards) => 1 } } catch { case _: Throwable => }
+      try { disp.dispatch(allShards, Dispatcher.defaultRandomizer) { (inst, shards) => 1 } } catch { case _: Throwable => }
 
       forceReloadCalled === true
     }
@@ -131,7 +131,7 @@ class DispatcherTest extends Specification {
       var results = Set.empty[Int]
 
       (0 until 10).foreach { i =>
-        disp.dispatch() { (inst, shards) => results ++= shards.map(_.numShards) }
+        disp.dispatch(Dispatcher.defaultRandomizer) { (inst, shards) => results ++= shards.map(_.numShards) }
       }
 
       results === Set(12)

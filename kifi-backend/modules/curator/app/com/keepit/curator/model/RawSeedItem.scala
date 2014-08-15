@@ -29,7 +29,6 @@ case class RawSeedItem(
   updatedAt: DateTime = currentDateTime,
   seq: SequenceNumber[RawSeedItem] = SequenceNumber.ZERO,
   uriId: Id[NormalizedURI],
-  url: String, //set default url to empty string in db to avoid exceptions.
   userId: Option[Id[User]], //which user is this a seed item for. None means this is for every user.
   firstKept: DateTime, //the first time anyone has kept this uri
   lastKept: DateTime, //the most recent time anyone has kept this uri
@@ -38,7 +37,9 @@ case class RawSeedItem(
   timesKept: Int, //number of times this uri has been kept in total (note that with libraries allowing multiple keep per uri this can exceed the number of users who have kept the uri)
   // attributionInfo: AttributionInfo,
   // libraryInfo: Seq[LibraryInfo]
-  discoverable: Boolean)
+  discoverable: Boolean,
+  url: String //set default url to empty string in db to avoid exceptions.
+  )
     extends Model[RawSeedItem] with ModelWithSeqNumber[RawSeedItem] {
 
   def withId(id: Id[RawSeedItem]): RawSeedItem = this.copy(id = Some(id))
