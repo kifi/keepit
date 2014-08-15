@@ -70,7 +70,7 @@ class MobileUserController @Inject() (
     getUserInfo(request)
   }
 
-  def updateCurrentUser = JsonAction.authenticatedParseJsonAsync(allowPending = true) { implicit request =>
+  def updateCurrentUser() = JsonAction.authenticatedParseJsonAsync(allowPending = true) { implicit request =>
     request.body.validate[UpdatableUserInfo] match {
       case JsSuccess(userData, _) => {
         userCommander.updateUserInfo(request.userId, userData)

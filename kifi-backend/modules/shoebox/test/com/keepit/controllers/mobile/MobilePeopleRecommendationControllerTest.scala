@@ -3,6 +3,7 @@ package com.keepit.controllers.mobile
 import com.keepit.abook.{ FakeABookServiceClientModule, FakeABookServiceClientImpl, ABookServiceClient }
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import org.specs2.mutable.Specification
+import play.api.libs.json.{ JsArray, Json }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
@@ -27,7 +28,7 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
 
           status(resultF) === 200
           contentType(resultF) must beSome("application/json")
-          contentAsString(resultF) === s"""
+          Json.parse(contentAsString(resultF)) === Json.parse(s"""
                |{"users":[
                |{"id":"${users(1).externalId}","firstName":"Bryan","lastName":"Cranston","pictureName":"0.jpg",
                |"mutualFriends":[{"id":"${users(2).externalId}","firstName":"Anna","lastName":"Gunn","pictureName":"0.jpg","numFriends":3}]},
@@ -37,7 +38,7 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
                |"mutualFriends":[{"id":"${users(1).externalId}","firstName":"Bryan","lastName":"Cranston","pictureName":"0.jpg","numFriends":3},
                |{"id":"${users(2).externalId}","firstName":"Anna","lastName":"Gunn","pictureName":"0.jpg","numFriends":3}]}
                |]}
-             """.stripMargin.replaceAll("\n", "").trim
+             """.stripMargin)
 
           val call = com.keepit.controllers.mobile.routes.MobilePeopleRecommendationController.getFriendRecommendations()
           call.toString === "/m/1/user/friends/recommended"
