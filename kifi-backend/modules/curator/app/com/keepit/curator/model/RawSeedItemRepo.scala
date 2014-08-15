@@ -62,14 +62,14 @@ class RawSeedItemRepoImpl @Inject() (
       updatedAt = r.<<[DateTime],
       seq = r.<<[SequenceNumber[RawSeedItem]],
       uriId = r.<<[Id[NormalizedURI]],
-      url = r.<<[String],
       userId = r.<<[Option[Id[User]]],
       firstKept = r.<<[DateTime],
       lastKept = r.<<[DateTime],
       lastSeen = r.<<[DateTime],
       priorScore = r.<<[Option[Float]],
       timesKept = r.<<[Int],
-      discoverable = r.<<[Boolean]
+      discoverable = r.<<[Boolean],
+      url = r.<<[String]
     )
   }
 
