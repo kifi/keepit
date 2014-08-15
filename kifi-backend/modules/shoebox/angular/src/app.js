@@ -1,5 +1,9 @@
 'use strict';
 
+if (this.console) {
+  console.log('\n   █   ●  ▟▛ ●        made with ❤\n   █▟▛ █ ■█■ █    kifi.com/about/team\n   █▜▙ █  █  █         join us!\n');
+}
+
 angular.module('kifi', [
   'ngCookies',
   'ngResource',
