@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{ State, ExternalId, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time.Clock
 
 @ImplementedBy(classOf[LibraryInviteRepoImpl])
@@ -31,7 +32,8 @@ class LibraryInviteRepoImpl @Inject() (
     def ownerId = column[Id[User]]("owner_id", O.Nullable)
     def userId = column[Id[User]]("user_id", O.Nullable)
     def access = column[LibraryAccess]("access", O.NotNull)
-    def * = (id.?, libraryId, ownerId, userId, access, createdAt, updatedAt, state) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
+    def emailAddress = column[EmailAddress]("email_address", O.Nullable)
+    def * = (id.?, libraryId, ownerId, userId.?, emailAddress.?, access, createdAt, updatedAt, state) <> ((LibraryInvite.apply _).tupled, LibraryInvite.unapply)
   }
 
   def table(tag: Tag) = new LibraryInviteTable(tag)

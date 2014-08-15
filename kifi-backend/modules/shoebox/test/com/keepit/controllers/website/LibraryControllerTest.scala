@@ -4,6 +4,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.{ FullLibraryInfo, LibraryInfo }
 import com.keepit.common.controller.{ FakeActionAuthenticator, FakeActionAuthenticatorModule }
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
+import com.keepit.common.db.ExternalId
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
@@ -17,7 +18,7 @@ import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsArray, Json }
 import play.api.mvc.SimpleResult
 import play.api.test.Helpers._
 import play.api.test._
@@ -146,7 +147,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"visibility":"published",
              |"shortDescription":"asdf",
              |"slug":"lib2",
-             |"ownerId":"${user1.externalId}"
+             |"ownerId":"${user1.externalId}",
+             |"numKeeps":0
              |}
            """.stripMargin)
         Json.parse(contentAsString(result2)) must equalTo(expected)
@@ -253,11 +255,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             |{"libraries":
               |[
                 |{"info":{
-                |"id":"${pubId.id}",
-                |"name":"Library1",
-                |"visibility":"secret",
-                |"slug":"lib1",
-                |"ownerId":"${user1.externalId}"},
+                  |"id":"${pubId.id}",
+                  |"name":"Library1",
+                  |"visibility":"secret",
+                  |"slug":"lib1",
+                  |"ownerId":"${user1.externalId}",
+                  |"numKeeps":0},
                 |"access":"owner"}
               |]
             |}
@@ -286,12 +289,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPath = com.keepit.controllers.website.routes.LibraryController.inviteUsersToLibrary(pubId).url
         inject[FakeActionAuthenticator].setUser(user1)
 
-        val inputJson1 =
-          Json.obj("pairs" -> Some(Json.toJson(Seq(
-            (user2.externalId, LibraryAccess.READ_ONLY),
-            (user3.externalId, LibraryAccess.READ_ONLY)))
-          ))
-
+        val inputJson1 = Json.obj(
+          "invites" -> Seq(
+            Json.obj("type" -> "user", "id" -> user2.externalId, "access" -> LibraryAccess.READ_ONLY),
+            Json.obj("type" -> "user", "id" -> user3.externalId, "access" -> LibraryAccess.READ_ONLY),
+            Json.obj("type" -> "email", "id" -> "squirtle@gmail.com", "access" -> LibraryAccess.READ_ONLY))
+        )
         val request1 = FakeRequest("POST", testPath).withBody(inputJson1)
         val result1: Future[SimpleResult] = libraryController.inviteUsersToLibrary(pubId)(request1)
         status(result1) must equalTo(OK)
@@ -301,7 +304,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           s"""
             |[
             | {"user":"${user2.externalId}","access":"${LibraryAccess.READ_ONLY.value}"},
-            | {"user":"${user3.externalId}","access":"${LibraryAccess.READ_ONLY.value}"}
+            | {"user":"${user3.externalId}","access":"${LibraryAccess.READ_ONLY.value}"},
+            | {"user":"squirtle@gmail.com","access":"${LibraryAccess.READ_ONLY.value}"}
             |]
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
@@ -325,8 +329,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.save(LibraryMembership(libraryId = libraryB2.id.get, userId = userB.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
           // user B invites A to both libraries
-          val inv1 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB1.id.get, ownerId = userB.id.get, userId = userA.id.get, access = LibraryAccess.READ_INSERT))
-          val inv2 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB2.id.get, ownerId = userB.id.get, userId = userA.id.get, access = LibraryAccess.READ_INSERT))
+          val inv1 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB1.id.get, ownerId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_INSERT))
+          val inv2 = libraryInviteRepo.save(LibraryInvite(libraryId = libraryB2.id.get, ownerId = userB.id.get, userId = Some(userA.id.get), access = LibraryAccess.READ_INSERT))
           (userA, userB, libraryB1, libraryB2, inv1, inv2)
         }
 
@@ -349,7 +353,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"name":"Library1",
              |"visibility":"discoverable",
              |"slug":"lib1",
-             |"ownerId":"${user2.externalId}"
+             |"ownerId":"${user2.externalId}",
+             |"numKeeps":0
              |}
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)

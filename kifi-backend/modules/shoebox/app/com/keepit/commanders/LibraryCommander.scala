@@ -6,6 +6,7 @@ import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.Clock
 import com.keepit.model._
@@ -16,7 +17,6 @@ import play.api.libs.json._
 import com.keepit.common.logging.{ AccessLog, Logging }
 
 import scala.concurrent.duration.Duration
-import scala.util.{ Failure, Success }
 
 class LibraryCommander @Inject() (
     db: Database,
@@ -95,8 +95,8 @@ class LibraryCommander @Inject() (
               lib
             }
 
-            val bulkInvites1 = for (c <- collaboratorIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = c, access = LibraryAccess.READ_WRITE)
-            val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = c, access = LibraryAccess.READ_ONLY)
+            val bulkInvites1 = for (c <- collaboratorIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = Some(c), access = LibraryAccess.READ_WRITE)
+            val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = Some(c), access = LibraryAccess.READ_ONLY)
 
             inviteBulkUsers(bulkInvites1 ++ bulkInvites2)
             Right(library)
@@ -229,15 +229,19 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Id[User], LibraryAccess)]): Either[LibraryFail, Seq[(ExternalId[User], LibraryAccess)]] = {
+  def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess)]): Either[LibraryFail, Seq[(Either[ExternalId[User], EmailAddress], LibraryAccess)]] = {
     db.readWrite { implicit s =>
       val targetLib = libraryRepo.get(libraryId)
       if (targetLib.ownerId != inviterId) {
         Left(LibraryFail("Not Owner"))
       } else {
         val successInvites = for (i <- inviteList) yield {
-          val inv = LibraryInvite(libraryId = libraryId, ownerId = inviterId, userId = i._1, access = i._2)
-          val extId = userRepo.get(i._1).externalId
+          val (inv, extId) = i._1 match {
+            case Left(id) =>
+              (LibraryInvite(libraryId = libraryId, ownerId = inviterId, userId = Some(id), access = i._2), Left(userRepo.get(id).externalId))
+            case Right(email) =>
+              (LibraryInvite(libraryId = libraryId, ownerId = inviterId, emailAddress = Some(email), access = i._2), Right(email))
+          }
           (inv, (extId, i._2))
         }
         val (inv1, res) = successInvites.unzip
@@ -250,7 +254,7 @@ class LibraryCommander @Inject() (
   def joinLibrary(inviteId: Id[LibraryInvite]): Library = {
     db.readWrite { implicit s =>
       val inv = libraryInviteRepo.get(inviteId)
-      val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(inv.libraryId, inv.userId)
+      val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(inv.libraryId, inv.userId.get)
 
       listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
 
@@ -263,7 +267,7 @@ class LibraryCommander @Inject() (
         LibraryAccess.READ_ONLY
       }
 
-      libraryMembershipRepo.save(LibraryMembership(libraryId = inv.libraryId, userId = inv.userId, access = maxAccess, showInSearch = true))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = inv.libraryId, userId = inv.userId.get, access = maxAccess, showInSearch = true))
       libraryRepo.get(inv.libraryId)
     }
   }
@@ -405,7 +409,8 @@ case class LibraryInfo(
   visibility: LibraryVisibility,
   shortDescription: Option[String],
   slug: LibrarySlug,
-  ownerId: ExternalId[User])
+  ownerId: ExternalId[User],
+  numKeeps: Int)
 object LibraryInfo {
   implicit val libraryExternalIdFormat = ExternalId.format[Library]
 
@@ -415,17 +420,19 @@ object LibraryInfo {
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'shortDescription).formatNullable[String] and
     (__ \ 'slug).format[LibrarySlug] and
-    (__ \ 'ownerId).format[ExternalId[User]]
+    (__ \ 'ownerId).format[ExternalId[User]] and
+    (__ \ 'numKeeps).format[Int]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
-  def fromLibraryAndOwner(lib: Library, owner: User)(implicit config: PublicIdConfiguration): LibraryInfo = {
+  def fromLibraryAndOwner(lib: Library, owner: User, keepCount: Int)(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
       slug = lib.slug,
-      ownerId = owner.externalId
+      ownerId = owner.externalId,
+      numKeeps = keepCount
     )
   }
 

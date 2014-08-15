@@ -6,6 +6,7 @@ import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatis
 import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -17,7 +18,8 @@ case class LibraryInvite(
     id: Option[Id[LibraryInvite]] = None,
     libraryId: Id[Library],
     ownerId: Id[User],
-    userId: Id[User],
+    userId: Option[Id[User]] = None,
+    emailAddress: Option[EmailAddress] = None,
     access: LibraryAccess,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
@@ -27,7 +29,7 @@ case class LibraryInvite(
   def withUpdateTime(now: DateTime): LibraryInvite = this.copy(updatedAt = now)
   def withState(newState: State[LibraryInvite]): LibraryInvite = this.copy(state = newState)
 
-  override def toString: String = s"LibraryInvite[id=$id,libraryId=$libraryId,ownerId=$ownerId,userId=$userId,access=$access,state=$state]"
+  override def toString: String = s"LibraryInvite[id=$id,libraryId=$libraryId,ownerId=$ownerId,userId=$userId,email=$emailAddress,access=$access,state=$state]"
 }
 
 object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
@@ -39,7 +41,8 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
     (__ \ 'id).formatNullable(Id.format[LibraryInvite]) and
     (__ \ 'libraryId).format[Id[Library]] and
     (__ \ 'ownerId).format[Id[User]] and
-    (__ \ 'userId).format[Id[User]] and
+    (__ \ 'userId).format[Option[Id[User]]] and
+    (__ \ 'emailAddress).format[Option[EmailAddress]] and
     (__ \ 'access).format[LibraryAccess] and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
