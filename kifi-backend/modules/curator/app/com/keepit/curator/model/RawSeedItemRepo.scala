@@ -55,6 +55,7 @@ class RawSeedItemRepoImpl @Inject() (
   def table(tag: Tag) = new RawSeedItemTable(tag)
   initTable()
 
+  //update getRawSeedItemResult if you modify table
   private implicit val getRawSeedItemResult: GetResult[RawSeedItem] = GetResult { r =>
     RawSeedItem(
       id = r.<<[Option[Id[RawSeedItem]]],
