@@ -74,8 +74,6 @@ trait SearchServiceClient extends ServiceClient {
   def semanticLoss(query: String): Future[Map[String, Float]]
   def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]]
 
-  def getFeeds(userId: Id[User], limit: Int): Future[Seq[Feed]]
-
   def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[String]]
 
   //
@@ -101,8 +99,6 @@ trait SearchServiceClient extends ServiceClient {
     debug: Option[String]): Seq[Future[JsValue]]
 
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]]
-
-  def distFeeds(shards: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User], limit: Int): Seq[Future[Seq[Feed]]]
 
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
 }
@@ -357,12 +353,6 @@ class SearchServiceClientImpl(
     broadcast(Search.internal.reindexUserGraphs())
   }
 
-  def getFeeds(userId: Id[User], limit: Int): Future[Seq[Feed]] = {
-    call(Search.internal.getFeeds(userId, limit)).map { r =>
-      Json.fromJson[Seq[Feed]](r.json).get
-    }
-  }
-
   //the return values here are external id's of threads, a model that is not available here. Need to rethink this a bit. -Stephen
   def searchMessages(userId: Id[User], query: String, page: Int): Future[Seq[String]] = {
     call(Search.internal.searchMessages(userId, query, page)).map { r =>
@@ -419,16 +409,6 @@ class SearchServiceClientImpl(
     distRouter.dispatch(plan, Search.internal.distLangFreqs, JsNumber(userId.id)).map { f =>
       f.map { r => r.json.as[Map[String, Int]].map { case (k, v) => Lang(k) -> v } }
     }
-  }
-
-  def distFeeds(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User], limit: Int): Seq[Future[Seq[Feed]]] = {
-    var builder = new SearchRequestBuilder(new ListBuffer)
-    // keep the following in sync with SearchController
-    builder += ("userId", userId.id)
-    builder += ("limit", limit)
-    val request = builder.build
-
-    distRouter.dispatch(plan, Search.internal.distFeeds, request).map { f => f.map(_.json.as[Seq[Feed]]) }
   }
 
   // for DistributedSearchRouter
