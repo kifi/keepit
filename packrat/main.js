@@ -2526,7 +2526,7 @@ function deauthenticate() {
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start
 
 api.timers.setTimeout(api.errors.wrap(function() {
-  console.log(LZ.decompress('ਸŝ⁦䡑珄璜楁姄凢㐶恣lՕ¶|z䐤湦ɨ䥪ဢ楄䘸䁕䢠晤πಀྎ䀾䦠ࣰ⁋䒨䥼䴈㗢∡暲ʆ䣻⇓₠ֈᑠ໴੠㎠⅐ဠ '));
+  console.log(LZ.decompress('ਠऀ䚱䔾㩢䟭ሻᩣᑲƌѐӠ匰ༀዠ஠଱»䥠䢨䧤z⏅ö䈣ᨰຠㆠ答Ĕఠ䚜Ž䔧ऀ捭❰ݔ䠳ᩬ椹唴KὢᄂƼĩ䂠 '));
 }));
 
 api.errors.wrap(authenticate.bind(null, function() {

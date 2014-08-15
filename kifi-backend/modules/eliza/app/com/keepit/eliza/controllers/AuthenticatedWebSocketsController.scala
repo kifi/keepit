@@ -170,7 +170,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
             implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
 
             val typedVersionOpt: Option[KifiVersion] = UserAgent.fromString(streamSession.userAgent) match {
-              case ua if ua.isKifiIphoneApp => versionOpt.map { v => KifiIPhoneVersion(v.stripPrefix("m")) }
+              case ua if ua.isKifiIphoneApp || versionOpt.exists(_.startsWith("m")) => versionOpt.map { v => KifiIPhoneVersion(v.stripPrefix("m")) }
               case ua if ua.isKifiAndroidApp => versionOpt.map(KifiAndroidVersion.apply)
               case _ => versionOpt.map(KifiExtVersion.apply)
             }
