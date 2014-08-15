@@ -38,6 +38,7 @@ class FeedExplanationCommander @Inject() (graph: GraphManager, clock: Clock) ext
       case (id, score) if id.kind == KeepReader.kind =>
         val keepId = VertexDataId.toKeepId(id.asId[KeepReader])
         keepScores += keepId -> score
+      case _ =>
     }
 
     val m1 = keepScores.filter { case (_, score) => score >= MIN_SCORE }.toMap
