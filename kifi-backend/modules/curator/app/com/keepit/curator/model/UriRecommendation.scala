@@ -3,7 +3,7 @@ package com.keepit.curator.model
 import com.keepit.common.crypto.ModelWithPublicId
 import com.keepit.common.db._
 import com.keepit.common.time._
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ MarkedAsBad, User, NormalizedURI }
 import org.joda.time.DateTime
 
 case class UriRecommendation(
@@ -20,7 +20,7 @@ case class UriRecommendation(
     clicked: Int = 0,
     kept: Boolean = false,
     trashed: Boolean = false,
-    markedBad: Boolean = false,
+    markedBad: Option[MarkedAsBad] = None,
     lastPushedAt: Option[DateTime] = None,
     attribution: SeedAttribution) extends Model[UriRecommendation] with ModelWithPublicId[UriRecommendation] with ModelWithState[UriRecommendation] {
 

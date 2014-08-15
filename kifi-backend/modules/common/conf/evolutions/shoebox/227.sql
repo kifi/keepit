@@ -12,7 +12,7 @@ ALTER TABLE uri_recommendation
   ADD COLUMN deleted BOOLEAN NOT NULL DEFAULT false;
 
 ALTER TABLE uri_recommendation
-  ADD COLUMN markedbad BOOLEAN NOT NULL DEFAULT false;
+  ADD COLUMN marked_bad text;
 
 INSERT INTO evolutions
             (name,

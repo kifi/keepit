@@ -32,7 +32,7 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
           rec1.clicked === 1
           rec1.kept === false
           rec1.trashed === false
-          rec1.markedBad === false
+          rec1.markedBad === None
 
           val feedback2 = UriRecommendationFeedback(delivered = Some(true), clicked = None, trashed = Some(true))
           val update2 = repo.updateUriRecommendationFeedback(Id[User](42), Id[NormalizedURI](1), feedback2)
@@ -45,7 +45,7 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
           rec1Update.clicked === 1
           rec1Update.kept === false
           rec1Update.trashed === true
-          rec1Update.markedBad === false
+          rec1Update.markedBad === None
 
         }
       }
