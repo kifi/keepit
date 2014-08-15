@@ -92,7 +92,7 @@ class UriRecommendationRepoImpl @Inject() (
       (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.kept, row.updatedAt)).update((feedback.kept.get, currentDateTime)) > 0 else true
     val trashedResult = if (feedback.trashed.isDefined)
       (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.trashed, row.updatedAt)).update((feedback.trashed.get, currentDateTime)) > 0 else true
-    val markedBad = if (feedback.markedBad.isDefined && feedback.markedBad.get.bad)
+    val markedBadResult = if (feedback.markedBad.isDefined && feedback.markedBad.get.bad)
       (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.markedBad, row.updatedAt)).update((feedback.markedBad.get, currentDateTime)) > 0 else true
 
     deliveredResult && clickedResult && keptResult && trashedResult && markedBad
