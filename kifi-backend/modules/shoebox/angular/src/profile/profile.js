@@ -83,10 +83,6 @@ angular.module('kifi.profile', [
     };
 
     $scope.saveEmail = function (email) {
-      if ($scope.me && $scope.me.primaryEmail.address === email) {
-        return profileService.successInputActionResult();
-      }
-
       return getEmailInfo(email).then(function (result) {
         return checkCandidateEmailSuccess(email, result.data);
       }, function (result) {

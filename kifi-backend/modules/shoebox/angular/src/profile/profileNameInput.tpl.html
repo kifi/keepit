@@ -1,7 +1,7 @@
-<div class="profile-input-box">
+<div class="profile-input-box profile-name-input-box">
   <!-- First Name -->
   <div class="profile-input-container" ng-class="{ error: badFirstName }">
-    <input type="text" name="firstName" placeholder="first name" class="profile-input-input" ng-class="{editing: editing}" ng-disabled="!editing" ng-model="name.firstName" kf-focus-if focus-cond="editing" novalidate>
+    <input type="text" name="firstName" placeholder="first name" class="profile-input-input profile-name-input" ng-class="{editing: editing}" ng-disabled="!editing" ng-model="name.firstName" kf-focus-if focus-cond="editing" novalidate>
     
     <div class="input-error" ng-show="badFirstName">
       <div class="error-header" ng-bind-html="errorHeader"></div>
@@ -10,7 +10,7 @@
   </div>
   <!-- Last Name -->
   <div class="profile-input-container" ng-class="{ error: badLastName }">
-    <input type="text" name="lastName" placeholder="last name" class="profile-input-input" ng-class="{editing: editing}" ng-disabled="!editing" ng-model="name.lastName" novalidate>
+    <input type="text" name="lastName" placeholder="last name" class="profile-input-input profile-name-input" ng-class="{editing: editing}" ng-disabled="!editing" ng-model="name.lastName" novalidate>
     
     <div class="input-error" ng-show="badLastName">
       <div class="error-header" ng-bind-html="errorHeader"></div>
