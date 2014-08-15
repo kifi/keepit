@@ -569,10 +569,6 @@ GET     /admin/experiments/overview   @com.keepit.controllers.admin.AdminExperim
 GET     /admin/experiments/users/:exp/page/:page @com.keepit.controllers.admin.AdminUserController.byExperimentUsersView(page: Int, exp: String)
 POST     /admin/experiments/saveGenerator @com.keepit.controllers.admin.AdminExperimentController.saveGenerator
 
-GET     /admin/feed                   @com.keepit.controllers.admin.AdminFeedController.index
-POST    /adimin/feed/query             @com.keepit.controllers.admin.AdminFeedController.queryFeeds
-GET     /admin/feed/getFeeds          @com.keepit.controllers.admin.AdminFeedController.getFeeds(userId: Id[User], limit: Int, smart: Boolean ?= false)
-
 GET     /admin/learning/pornDetect/model    @com.keepit.controllers.admin.ScraperAdminController.getPornDetectorModel
 GET     /admin/learning/pornDetect          @com.keepit.controllers.admin.AdminPornDetectorController.index
 POST    /admin/learning/pornDetect/detect   @com.keepit.controllers.admin.AdminPornDetectorController.detect
