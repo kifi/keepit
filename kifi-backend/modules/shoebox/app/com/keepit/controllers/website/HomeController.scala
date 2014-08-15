@@ -121,7 +121,8 @@ class HomeController @Inject() (
     context.addRequestInfo(request)
     context += ("type", "landing")
     heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("visitor_viewed_page")))
-    Redirect("https://itunes.apple.com/app/id740232575")
+    val uriNoProto = request.uri.replaceFirst("^https?://", "")
+    Ok(views.html.mobile.iPhoneRedirect(uriNoProto))
   }
 
   def mobileLanding = HtmlAction(authenticatedAction = mobileLandingHandler(_), unauthenticatedAction = mobileLandingHandler(_))
