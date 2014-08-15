@@ -242,7 +242,7 @@ class CachedTermsEnum(terms: SortedMap[BytesRef, InvertedList]) extends TermsEnu
   override def seekCeil(text: BytesRef): SeekStatus = {
     currentCollection = terms.from(text)
     currentEntry = currentCollection.headOption
-    currentEntry.headOption match {
+    currentEntry match {
       case None => SeekStatus.END
       case Some((foundText, _)) => if (foundText.equals(text)) SeekStatus.FOUND else SeekStatus.NOT_FOUND
       case _ => SeekStatus.NOT_FOUND
