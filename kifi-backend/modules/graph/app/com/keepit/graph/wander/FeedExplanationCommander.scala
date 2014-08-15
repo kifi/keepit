@@ -99,7 +99,7 @@ object FeedExplanationWanderLust {
       startingVertexDataId = userId.id,
       preferredCollisions = Set(),
       avoidTrivialCollisions = true,
-      steps = 2000,
+      steps = 5000,
       restartProbability = 0.15,
       recency = Some(120 days),
       halfLife = Some(7 days)
