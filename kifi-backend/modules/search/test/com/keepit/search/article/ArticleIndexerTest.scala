@@ -1,7 +1,6 @@
 package com.keepit.search.article
 
 import com.google.inject.Injector
-import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -10,24 +9,31 @@ import com.keepit.model._
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
 import com.keepit.search.Lang
-import com.keepit.search.query.parser.MainQueryParserFactory
-import com.keepit.search.phrasedetector._
+import com.keepit.search.query.parser._
 import com.keepit.test._
-import com.keepit.inject._
 import org.specs2.mutable._
 import org.specs2.specification.Scope
-import play.api.test.Helpers._
 import scala.collection.JavaConversions._
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient }
-import com.keepit.search.SearchConfig
 import com.keepit.search.SearcherHit
-import com.keepit.search.index.VolatileIndexDirectory
-import com.keepit.search.phrasedetector.FakePhraseIndexer
+import com.keepit.search.index.{ Analyzer, DefaultAnalyzer, VolatileIndexDirectory }
 import com.keepit.common.util.PlayAppConfigurationModule
 
 class ArticleIndexerTest extends Specification with SearchTestInjector {
 
   val helperModules = Seq(PlayAppConfigurationModule())
+
+  private[this] val en = Lang("en")
+  private[this] val analyzer = DefaultAnalyzer.getAnalyzer(en)
+  private[this] val stemmingAnalyzer = DefaultAnalyzer.getAnalyzerWithStemmer(en)
+
+  private class TstQueryParser extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with QueryExpansion {
+    val lang: Lang = en
+    val altAnalyzer: Option[Analyzer] = None
+    val altStemmingAnalyzer: Option[Analyzer] = None
+    val siteBoost: Float = 1.0f
+    val concatBoost: Float = 0.0f
+  }
 
   private class IndexerScope(injector: Injector) extends Scope {
     implicit val inj = injector
@@ -35,7 +41,6 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
     val ramDir = new VolatileIndexDirectory()
     val store = new FakeArticleStore()
     val uriIdArray = new Array[Long](3)
-    val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer(inject[AirbrakeNotifier])), inject[MonitoredAwait])
     var indexer = new StandaloneArticleIndexer(ramDir, store, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
 
     val Seq(user1, user2) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Joe", lastName = "Smith"), User(firstName = "Moo", lastName = "Brown"))
@@ -70,18 +75,14 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
         httpOriginalContentCharset = Option("UTF-8"),
         state = SCRAPED,
         message = None,
-        titleLang = Some(Lang("en")),
-        contentLang = Some(Lang("en")))
+        titleLang = Some(en),
+        contentLang = Some(en))
     }
 
-    val searchConfig = SearchConfig.defaultConfig.overrideWith("siteBoost" -> "1.0")
-
     class Searchable(indexer: ArticleIndexer) {
-      def search(queryString: String, percentMatch: Float = 0.0f): Seq[SearcherHit] = {
-        val parser = parserFactory(Lang("en"), None, searchConfig)
-        parser.setPercentMatch(percentMatch)
+      def search(queryString: String): Seq[SearcherHit] = {
         val searcher = indexer.getSearcher.withSemanticContext
-        parser.parse(queryString) match {
+        (new TstQueryParser).parse(queryString) match {
           case Some(query) => searcher.searchAll(query)
           case None => Seq.empty[SearcherHit]
         }
@@ -200,29 +201,6 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
           indexer.search("soul").size === 3
           indexer.search("+bodies +souls").size === 3
           indexer.search("+body +soul").size === 3
-        }
-      }
-    }
-
-    "limit the result by percentMatch" in {
-      withInjector(helperModules: _*) { injector =>
-        new IndexerScope(injector) {
-          indexer.update()
-
-          var res = indexer.search("title1 alldocs", percentMatch = 0.0f)
-          res.size === 3
-
-          res = indexer.search("title1 alldocs", percentMatch = 40.0f)
-          res.size === 3
-
-          res = indexer.search("title1 alldocs", percentMatch = 60.0f)
-          res.size === 1
-
-          res = indexer.search("title1 title2 alldocs", percentMatch = 60.0f)
-          res.size === 2
-
-          res = indexer.search("title1 title2 alldocs", percentMatch = 75.0f)
-          res.size === 0
         }
       }
     }

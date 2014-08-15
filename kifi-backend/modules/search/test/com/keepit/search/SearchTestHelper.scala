@@ -6,7 +6,6 @@ import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
-import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIStates._
@@ -19,10 +18,8 @@ import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.phrasedetector._
 import com.keepit.search.spellcheck.SpellCorrector
 import com.keepit.search.user.UserIndexer
-import com.keepit.search.query.parser.MainQueryParserFactory
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
 import com.keepit.test._
-import akka.actor.ActorSystem
 import scala.concurrent.duration._
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
@@ -88,7 +85,7 @@ trait SearchTestHelper { self: SearchTestInjector =>
       userGraphsSearcherFactory,
       shardedUriGraphIndexer,
       shardedCollectionIndexer,
-      new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer(inject[AirbrakeNotifier])), inject[MonitoredAwait]),
+      new PhraseDetector(new FakePhraseIndexer(inject[AirbrakeNotifier])),
       resultClickTracker,
       inject[ClickHistoryTracker],
       inject[SearchConfigManager],

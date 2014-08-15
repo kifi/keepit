@@ -2,26 +2,8 @@
 
 # --- !Ups
 
-ALTER TABLE uri_recommendation
-  DROP COLUMN seen;
+create index curator_keep_info_i_user_id on curator_keep_info (user_id);
 
-ALTER TABLE uri_recommendation
-  ADD COLUMN delivered BIGINT(20) NOT NULL DEFAULT 0;
-
-ALTER TABLE uri_recommendation
-  MODIFY clicked BIGINT(20);
-
-ALTER TABLE uri_recommendation
-  ADD COLUMN deleted BOOLEAN NOT NULL DEFAULT false;
-
-ALTER TABLE uri_recommendation
-  ADD COLUMN marked_bad text;
-
-INSERT INTO evolutions
-            (name,
-             description)
-VALUES     ('227.sql',
-'change uri_recommendation column names: seen->delivered, modify clicked column type: boolean -> bigint, adding new columns: deleted, markedBad'
-);
+insert into evolutions (name, description) values('227.sql', 'add index on user on curator_keep_info');
 
 # --- !Downs

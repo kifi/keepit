@@ -373,6 +373,7 @@ object Graph extends Service {
     def getSociallyRelatedFacebookAccounts(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedFacebookAccounts", Param("userId", userId))
     def getSociallyRelatedLinkedInAccounts(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedLinkedInAccounts", Param("userId", userId))
     def getSociallyRelatedEmailAccounts(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedEmailAccounts", Param("userId", userId))
+    def explainFeed() = ServiceRoute(POST, "/internal/graph/explainFeed")
   }
 }
 
