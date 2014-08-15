@@ -40,7 +40,7 @@ object OAuth2Providers { // TODO: wire-in (securesocial) config
     accessTokenUrl = "https://accounts.google.com/o/oauth2/token",
     clientId = "572465886361.apps.googleusercontent.com", // "991651710157.apps.googleusercontent.com",
     clientSecret = "heYhp5R2Q0lH26VkrJ1NAMZr", // "vt9BrxsxM6iIG4EQNkm18L-m",
-    scope = "https://www.googleapis.com/auth/email https://www.google.com/m8/feeds" // "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/plus.me"
+    scope = "email https://www.google.com/m8/feeds" // "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/plus.me"
   )
   val FACEBOOK = OAuth2Config(
     provider = "facebook",
