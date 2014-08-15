@@ -926,3 +926,22 @@ td.profile-email-separator
   margin-left: auto
   margin-right: auto
   width: 280px
+
+.profile-name-input
+  .profile-input-container
+    position: relative
+    display: inline-block
+    width: 258px
+
+    &:first-child
+      margin-right: 20px
+      width: 220px
+
+    // Force focus-like styles on both the first name and last name
+    // input fields when in editing mode, even though only one name field
+    // can be in focus at any time.
+    input.editing
+      padding-left: 7px
+      border: 1px solid #6fa6ef
+      border-radius: 2px
+
