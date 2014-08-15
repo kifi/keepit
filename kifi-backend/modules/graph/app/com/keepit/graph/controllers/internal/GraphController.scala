@@ -26,6 +26,7 @@ class GraphController @Inject() (
     graphManager: GraphManager,
     wanderingCommander: WanderingCommander,
     socialWanderingCommander: SocialWanderingCommander,
+    feedExplanationCommander: FeedExplanationCommander,
     graphCommander: GraphCommander) extends GraphServiceController with Logging {
 
   def wander() = Action.async(parse.json) { request =>
@@ -132,4 +133,12 @@ class GraphController @Inject() (
     forbiddenCollisions
   }
 
+  def explainFeed() = Action.async(parse.json) { request =>
+    val js = request.body
+    val userId = (js \ "user").as[Id[User]]
+    val uriIds = (js \ "uris").as[Seq[Id[NormalizedURI]]]
+    feedExplanationCommander.explain(userId, uriIds).map { explain =>
+      Ok(Json.toJson(explain))
+    }
+  }
 }
