@@ -21,13 +21,11 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
         db.readWrite { implicit s =>
           val recs = setup()
           repo.save(recs(0))
-          val feedback = UriRecommendationFeedback(delivered = Some(1), clicked = Some(1))
-          val update = repo.updateUriRecommendationFeedback(Id[User](42), Id[NormalizedURI](1), feedback)
+          val feedback1 = UriRecommendationFeedback(delivered = Some(true), clicked = Some(true))
+          val update1 = repo.updateUriRecommendationFeedback(Id[User](42), Id[NormalizedURI](1), feedback1)
 
-          update should beTrue
-        }
+          update1 should beTrue
 
-        db.readOnlyMaster { implicit s =>
           val rec1 = repo.getByUriAndUserId(Id[NormalizedURI](1), Id[User](42), None).get
 
           rec1.delivered === 1
@@ -35,6 +33,20 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
           rec1.kept === false
           rec1.trashed === false
           rec1.markedBad === false
+
+          val feedback2 = UriRecommendationFeedback(delivered = Some(true), clicked = None, trashed = Some(true))
+          val update2 = repo.updateUriRecommendationFeedback(Id[User](42), Id[NormalizedURI](1), feedback2)
+
+          update2 should beTrue
+
+          val rec1Update = repo.getByUriAndUserId(Id[NormalizedURI](1), Id[User](42), None).get
+
+          rec1Update.delivered === 2
+          rec1Update.clicked === 1
+          rec1Update.kept === false
+          rec1Update.trashed === true
+          rec1Update.markedBad === false
+
         }
       }
     }

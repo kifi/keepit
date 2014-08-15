@@ -9,7 +9,7 @@ import org.joda.time.DateTime
 case class UriRecommendation(
     id: Option[Id[UriRecommendation]] = None,
     createdAt: DateTime = currentDateTime,
-    updateAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
     state: State[UriRecommendation] = UriRecommendationStates.ACTIVE,
     vote: Option[Boolean] = None,
     uriId: Id[NormalizedURI],
@@ -25,7 +25,7 @@ case class UriRecommendation(
     attribution: SeedAttribution) extends Model[UriRecommendation] with ModelWithPublicId[UriRecommendation] with ModelWithState[UriRecommendation] {
 
   def withId(id: Id[UriRecommendation]): UriRecommendation = this.copy(id = Some(id))
-  def withUpdateTime(updateTime: DateTime): UriRecommendation = this.copy(updateAt = updateTime)
+  def withUpdateTime(updateTime: DateTime): UriRecommendation = this.copy(updatedAt = updateTime)
   def withLastPushedAt(pushedAt: DateTime): UriRecommendation = this.copy(lastPushedAt = Some(pushedAt))
   def withNoLastPushedAt(): UriRecommendation = this.copy(lastPushedAt = None)
 }

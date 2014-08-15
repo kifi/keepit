@@ -11,6 +11,8 @@ import com.keepit.model.{ UriRecommendationUserInteraction, UriRecommendationFee
 import org.joda.time.DateTime
 import play.api.libs.json.{ Json }
 
+import scala.slick.jdbc.{ StaticQuery, GetResult }
+
 @ImplementedBy(classOf[UriRecommendationRepoImpl])
 trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getByUriAndUserId(uriId: Id[NormalizedURI], userId: Id[User], uriRecommendationState: Option[State[UriRecommendation]])(implicit session: RSession): Option[UriRecommendation]
@@ -31,13 +33,11 @@ class UriRecommendationRepoImpl @Inject() (
 
   implicit val uriScoresMapper = MappedColumnType.base[UriScores, String](
     { scores => Json.stringify(Json.toJson(scores)) },
-    { jstr => Json.parse(jstr).as[UriScores] }
-  )
+    { jstr => Json.parse(jstr).as[UriScores] })
 
   implicit val attributionMapper = MappedColumnType.base[SeedAttribution, String](
     { attr => Json.stringify(Json.toJson(attr)) },
-    { jstr => Json.parse(jstr).as[SeedAttribution] }
-  )
+    { jstr => Json.parse(jstr).as[SeedAttribution] })
 
   type RepoImpl = UriRecommendationTable
 
@@ -76,13 +76,17 @@ class UriRecommendationRepoImpl @Inject() (
   }
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RSession): Boolean = {
-//    (if (feedback.delivered.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.delivered, row.updatedAt)).update((feedback.delivered.get, currentDateTime)) > 0 else true) &&
-//      (if (feedback.clicked.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.clicked, row.updatedAt)).update((feedback.clicked.get, currentDateTime)) > 0 else true) &&
-//      (if (feedback.kept.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.kept, row.updatedAt)).update((feedback.kept.get, currentDateTime)) > 0 else true) &&
-//      (if (feedback.trashed.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.trashed, row.updatedAt)).update((feedback.trashed.get, currentDateTime)) > 0 else true) &&
-//      (if (feedback.markedBad.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.markedBad, row.updatedAt)).update((feedback.markedBad.get, currentDateTime)) > 0 else true)
+    import StaticQuery.interpolation
 
-    val x = (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.delivered)).first
+    (if (feedback.delivered.isDefined && feedback.delivered.get == true)
+      sql"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE user_id=$userId AND uri_id=${uriId}".asUpdate.first > 0
+    else true) &&
+      (if (feedback.clicked.isDefined && feedback.clicked.get == true)
+        sql"UPDATE uri_recommendation SET clicked=clicked+1, updated_at=$currentDateTime WHERE user_id=$userId AND uri_id=$uriId".asUpdate.first > 0
+      else true) &&
+      (if (feedback.kept.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.kept, row.updatedAt)).update((feedback.kept.get, currentDateTime)) > 0 else true) &&
+      (if (feedback.trashed.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.trashed, row.updatedAt)).update((feedback.trashed.get, currentDateTime)) > 0 else true) &&
+      (if (feedback.markedBad.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.markedBad, row.updatedAt)).update((feedback.markedBad.get, currentDateTime)) > 0 else true)
   }
 
   def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI], interaction: UriRecommendationUserInteraction)(implicit session: RSession): Boolean = {
