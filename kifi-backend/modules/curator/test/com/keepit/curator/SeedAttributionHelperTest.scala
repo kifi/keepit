@@ -89,14 +89,14 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
         itemsWithAttr(0).attribution.user === None
         itemsWithAttr(0).attribution.keep === None
 
-        itemsWithAttr(1).attribution.user.get.friends.map {_.id} === List(1, 2)
+        itemsWithAttr(1).attribution.user.get.friends.map { _.id } === List(1, 2)
         itemsWithAttr(1).attribution.user.get.others === 2
 
         itemsWithAttr(2).attribution.user === None
 
-        itemsWithAttr(3).attribution.user.get.friends.map {_.id} === List(1, 2, 3)
+        itemsWithAttr(3).attribution.user.get.friends.map { _.id } === List(1, 2, 3)
         itemsWithAttr(3).attribution.user.get.others === 3
-        
+
         itemsWithAttr(4).attribution.user === None
         itemsWithAttr(4).attribution.topic.get.topicName === "topic_4"
         itemsWithAttr(4).attribution.keep.get.keeps.map { _.id }.toList === List(4)
