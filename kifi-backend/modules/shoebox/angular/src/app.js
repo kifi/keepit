@@ -180,7 +180,7 @@ angular.module('kifi', [
 .controller('AppCtrl', [
   'profileService', '$window', '$rootScope', 'friendService', '$timeout', '$log',
   function (profileService, $window, $rootScope, friendService, $timeout, $log) {
-    $log.log('\n   █   ●  ▟▛ ●        made with ❤\n   █▟▛ █ ■█■ █    kifi.com/about/team\n   █▜▙ █  █  █         join us!\n');
+    $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
     $timeout(function () {
       profileService.fetchPrefs();
       friendService.getRequests();
