@@ -95,7 +95,7 @@ class AuthHelper @Inject() (
     val hasher = Registry.hashers.currentHasher
     val tupleOpt: Option[(Boolean, SocialUserInfo)] = checkForExistingUser(emailAddress)
     val session = request.session
-    val home = com.keepit.controllers.website.routes.HomeController.home()
+    val home = com.keepit.controllers.website.routes.KifiSiteRouter.home()
     val res: SimpleResult = tupleOpt collect {
       case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
         // Social user exists with these credentials
@@ -319,7 +319,7 @@ class AuthHelper @Inject() (
               authenticateUser(sui.userId.get, onError = { error =>
                 throw error
               }, onSuccess = { authenticator =>
-                Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.HomeController.home.url))
+                Ok(Json.obj("uri" -> com.keepit.controllers.website.routes.KifiSiteRouter.home.url))
                   .withSession(request.request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
                   .withCookies(authenticator.toCookie)
               })
@@ -363,7 +363,7 @@ class AuthHelper @Inject() (
 
         (verifiedEmailOpt.isDefined, isVerifiedForTheFirstTime) match {
           case (true, _) if user.state == UserStates.PENDING =>
-            Redirect(s"/?m=3&email=${address.address}")
+            Redirect(s"/?m=1")
           case (true, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId) =>
             // first time being used, not logged in OR logged in as correct user
             authenticateUser(address.userId,
@@ -373,14 +373,14 @@ class AuthHelper @Inject() (
                   // user has no installations
                   Redirect("/install")
                 } else {
-                  Redirect(s"/?m=3&email=${address.address}")
+                  Redirect(s"/?m=1")
                 }
                 resp.withSession(request.request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
                   .withCookies(authenticator.toCookie)
               }
             )
           case (true, false) if request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId =>
-            Redirect(s"/?m=3&email=${address.address}")
+            Redirect(s"/?m=1")
           case (true, _) =>
             Ok(views.html.website.verifyEmailThanks(address.address.address, user.firstName, secureSocialClientIds))
         }

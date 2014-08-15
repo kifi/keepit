@@ -45,6 +45,7 @@ import play.api.libs.json.JsObject
 import com.keepit.search.SearchServiceClient
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.http._
+import com.keepit.common.AnyExtensionOps
 
 class UserController @Inject() (
     db: Database,
@@ -242,10 +243,7 @@ class UserController @Inject() (
   def updateCurrentUser() = JsonAction.authenticatedParseJsonAsync(allowPending = true) { implicit request =>
     request.body.validate[UpdatableUserInfo] match {
       case JsSuccess(userData, _) => {
-        userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmail, _))
-        userData.description.foreach { description =>
-          userCommander.updateUserDescription(request.userId, description)
-        }
+        userCommander.updateUserInfo(request.userId, userData)
         getUserInfo(request.userId)
       }
       case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } =>

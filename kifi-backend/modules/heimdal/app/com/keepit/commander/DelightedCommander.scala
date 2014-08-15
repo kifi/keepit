@@ -19,7 +19,7 @@ import play.api.libs.ws.WS
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 import play.api.http.Status
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 
 case class DelightedConfig(url: String, apiKey: String)
 

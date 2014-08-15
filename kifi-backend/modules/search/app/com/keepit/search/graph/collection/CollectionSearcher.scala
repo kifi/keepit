@@ -81,7 +81,7 @@ class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, collectionNa
     })
   }
 
-  def detectCollectionNames(stems: IndexedSeq[Term], partialMatch: Boolean): Set[(Int, Int, Long)] = {
+  def detectCollectionNames(stems: IndexedSeq[Term]): Set[(Int, Int, Long)] = {
     collectionNameIndexSearcher.findDocIdAndAtomicReaderContext(userId.id) match {
       case Some((doc, context)) =>
         val reader = context.reader
@@ -96,7 +96,7 @@ class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, collectionNa
           }
         }
         if (collectionIdList != null && collectionIdList.size > 0) {
-          detectCollectionNames(stems, partialMatch, CollectionNameFields.stemmedNameField, doc, collectionIdList.ids, reader)
+          detectCollectionNames(stems, CollectionNameFields.stemmedNameField, doc, collectionIdList.ids, reader)
         } else {
           Set.empty[(Int, Int, Long)]
         }
@@ -105,11 +105,11 @@ class CollectionSearcherWithUser(collectionIndexSearcher: Searcher, collectionNa
     }
   }
 
-  private[this] def detectCollectionNames(stems: IndexedSeq[Term], partialMatch: Boolean, field: String, doc: Int, collectionIdList: Array[Long], reader: AtomicReader): Set[(Int, Int, Long)] = {
+  private[this] def detectCollectionNames(stems: IndexedSeq[Term], field: String, doc: Int, collectionIdList: Array[Long], reader: AtomicReader): Set[(Int, Int, Long)] = {
     val terms = stems.map { t => new Term(field, t.text()) }
     val r = LineIndexReader(reader, doc, terms.toSet, collectionIdList.length, None)
     val detector = new CollectionNameDetector(r, collectionIdList)
-    detector.detectAll(terms, partialMatch)
+    detector.detectAll(terms)
   }
 }
 

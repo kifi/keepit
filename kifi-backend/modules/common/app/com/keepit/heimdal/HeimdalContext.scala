@@ -133,7 +133,7 @@ class HeimdalContextBuilder {
   def addUserAgent(userAgent: String): Unit = {
     this += ("userAgent", userAgent)
     userAgent match {
-      case UserAgent.iPhonePattern(appName, appVersion, buildSuffix, device, os, osVersion) =>
+      case UserAgent.iosAppRe(appName, appVersion, buildSuffix, device, os, osVersion) =>
         this += ("device", device)
         this += ("os", os)
         this += ("osVersion", osVersion)

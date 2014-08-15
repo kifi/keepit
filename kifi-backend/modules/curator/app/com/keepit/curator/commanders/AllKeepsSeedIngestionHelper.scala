@@ -136,6 +136,7 @@ class AllKeepSeedIngestionHelper @Inject() (
       if (rawSeedItems.isEmpty) {
         rawSeedsRepo.save(RawSeedItem(
           uriId = keep.uriId,
+          url = keep.url,
           userId = None,
           firstKept = keep.createdAt,
           lastKept = keep.createdAt,

@@ -34,7 +34,7 @@ import play.api.libs.json.JsArray
 import com.keepit.eliza.model.NonUserEmailParticipant
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import com.keepit.heimdal.HeimdalContext
 import scala.util.{ Failure, Success, Try }
 import play.api.libs.json.JsArray
