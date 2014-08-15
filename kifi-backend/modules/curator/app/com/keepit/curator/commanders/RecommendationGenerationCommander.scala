@@ -1,6 +1,7 @@
 package com.keepit.curator.commanders
 
 import com.keepit.curator.model.{
+  ScoredSeedItemWithAttribution,
   RecommendationInfo,
   UserRecommendationGenerationStateRepo,
   UserRecommendationGenerationState,
@@ -29,6 +30,7 @@ class RecommendationGenerationCommander @Inject() (
     seedCommander: SeedIngestionCommander,
     shoebox: ShoeboxServiceClient,
     scoringHelper: UriScoringHelper,
+    uriWeightingHelper: UriWeightingHelper,
     attributionHelper: SeedAttributionHelper,
     db: Database,
     airbrake: AirbrakeNotifier,
@@ -44,14 +46,27 @@ class RecommendationGenerationCommander @Inject() (
   private def usersToPrecomputeRecommendationsFor(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map(users => users.map(_.id.get).toSeq)
 
   private def computeMasterScore(scores: UriScores): Float = {
-    5 * scores.socialScore +
+    (5 * scores.socialScore +
       6 * scores.overallInterestScore +
       2 * scores.priorScore +
       1 * scores.recencyScore +
       1 * scores.popularityScore +
       9 * scores.recentInterestScore +
       6 * scores.rekeepScore +
-      3 * scores.discoveryScore
+      3 * scores.discoveryScore) *
+      scores.multiplier
+  }
+
+  private def computeAdjustedScoreByTester(scoreCoefficients: UriRecommendationScores, scores: UriScores): Float = {
+    (scoreCoefficients.recencyScore.getOrElse(defaultScore) * scores.recencyScore +
+      scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * scores.overallInterestScore +
+      scoreCoefficients.priorScore.getOrElse(defaultScore) * scores.priorScore +
+      scoreCoefficients.socialScore.getOrElse(defaultScore) * scores.socialScore +
+      scoreCoefficients.popularityScore.getOrElse(defaultScore) * scores.popularityScore +
+      scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * scores.recentInterestScore +
+      scoreCoefficients.rekeepScore.getOrElse(defaultScore) * scores.rekeepScore +
+      scoreCoefficients.discoveryScore.getOrElse(defaultScore) * scores.discoveryScore) *
+      scores.multiplier
   }
 
   def getTopRecommendations(userId: Id[User], howManyMax: Int): Future[Seq[UriRecommendation]] = {
@@ -72,20 +87,9 @@ class RecommendationGenerationCommander @Inject() (
         RecommendationInfo(
           userId = reco.userId,
           uriId = reco.uriId,
-          {
-            if (scoreCoefficients.isEmpty) {
-              computeMasterScore(reco.allScores)
-            } else {
-              scoreCoefficients.recencyScore.getOrElse(defaultScore) * reco.allScores.recencyScore +
-                scoreCoefficients.overallInterestScore.getOrElse(defaultScore) * reco.allScores.overallInterestScore +
-                scoreCoefficients.priorScore.getOrElse(defaultScore) * reco.allScores.priorScore +
-                scoreCoefficients.socialScore.getOrElse(defaultScore) * reco.allScores.socialScore +
-                scoreCoefficients.popularityScore.getOrElse(defaultScore) * reco.allScores.popularityScore +
-                scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * reco.allScores.recentInterestScore +
-                scoreCoefficients.rekeepScore.getOrElse(defaultScore) * reco.allScores.rekeepScore +
-                scoreCoefficients.discoveryScore.getOrElse(defaultScore) * reco.allScores.discoveryScore
-            }
-          },
+          score =
+            if (scoreCoefficients.isEmpty) computeMasterScore(reco.allScores)
+            else computeAdjustedScoreByTester(scoreCoefficients, reco.allScores),
           explain = Some(reco.allScores.toString)
         )
       }.sortBy(-1 * _.score).take(howManyMax)
@@ -141,8 +145,8 @@ class RecommendationGenerationCommander @Inject() (
                 case _ => false
               }
             }
-
-            val toBeSaved = scoringHelper(cleanedItems).map { scoredItems =>
+            val weightedItems = uriWeightingHelper(cleanedItems)
+            val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(weightedItems).map { scoredItems =>
               scoredItems.filter(si => shouldInclude(si.uriScores))
             }.flatMap { scoredItems =>
               attributionHelper.getAttributions(scoredItems)

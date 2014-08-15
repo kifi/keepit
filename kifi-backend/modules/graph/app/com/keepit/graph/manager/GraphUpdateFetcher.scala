@@ -10,7 +10,7 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.common.logging.Logging
 import com.keepit.model.NormalizedURI
-import com.keepit.common.ImmediateMap
+import com.keepit.common.core._
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.models.lda.DenseLDA
 
