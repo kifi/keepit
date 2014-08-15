@@ -107,7 +107,7 @@ class MainSearcher(
     PersonalizedSearcher(indexReader, socialGraphInfo.mySearchUris, collectionSearcher, nonPersonalizedContextVector, useNonPersonalizedContextVector)
   }
 
-  def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue, Option[PersonalizedSearcher]) = {
+  def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue) = {
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
@@ -117,7 +117,7 @@ class MainSearcher(
 
     timeLogs.queryParsing = parser.totalParseTime
 
-    val personalizedSearcher = parsedQuery.map { articleQuery =>
+    parsedQuery.map { articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       val tPersonalSearcher = currentDateTime.getMillis()
@@ -158,14 +158,13 @@ class MainSearcher(
         }
       }
       timeLogs.search = currentDateTime.getMillis() - tLucene
-      personalizedSearcher
     }
-    (myHits, friendsHits, othersHits, personalizedSearcher)
+    (myHits, friendsHits, othersHits)
   }
 
   def search(): PartialSearchResult = {
     val now = currentDateTime
-    val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
+    val (myHits, friendsHits, othersHits) = searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
 
     val tProcessHits = currentDateTime.getMillis()
 
@@ -318,7 +317,7 @@ class MainSearcher(
     var hitList = hits.toSortedList
     hitList.foreach { h => if (h.hit.bookmarkCount == 0) h.hit.bookmarkCount = getPublicBookmarkCount(h.hit.id) }
 
-    val (show, svVar) = if (filter.isDefault && isInitialSearch && noFriendlyHits && forbidEmptyFriendlyHits) (false, -1f) else classify(hitList, parser, personalizedSearcher)
+    val (show, svVar) = if (filter.isDefault && isInitialSearch && noFriendlyHits && forbidEmptyFriendlyHits) (false, -1f) else classify(hitList, parser)
 
     val shardHits = toDetailedSearchHits(hitList)
 
@@ -374,13 +373,13 @@ class MainSearcher(
     }
   }
 
-  private[this] def classify(hitList: List[Hit[MutableArticleHit]], parser: MainQueryParser, personalizedSearcher: Option[PersonalizedSearcher]) = {
+  private[this] def classify(hitList: List[Hit[MutableArticleHit]], parser: MainQueryParser) = {
     def classify(scoring: Scoring, hit: MutableArticleHit, minScore: Float): Boolean = {
       hit.clickBoost > 1.1f ||
         (if (hit.isMyBookmark) scoring.recencyScore / 5.0f else 0.0f) + scoring.textScore > minScore
     }
 
-    if (filter.isDefault && isInitialSearch && personalizedSearcher.isDefined) {
+    if (filter.isDefault && isInitialSearch) {
       // simple classifier
       val show = hitList.take(5).exists { h => classify(h.scoring, h.hit, 0.6f) }
       (show, -1f)
