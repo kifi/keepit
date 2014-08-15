@@ -82,18 +82,20 @@ class UriRecommendationRepoImpl @Inject() (
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RSession): Boolean = {
     import StaticQuery.interpolation
 
-    (if (feedback.delivered.isDefined && feedback.delivered.get)
+    val deliveredResult = if (feedback.delivered.isDefined && feedback.delivered.get)
       sql"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE user_id=$userId AND uri_id=${uriId}".asUpdate.first > 0
-    else true) &&
-      (if (feedback.clicked.isDefined && feedback.clicked.get)
-        sql"UPDATE uri_recommendation SET clicked=clicked+1, updated_at=$currentDateTime WHERE user_id=$userId AND uri_id=$uriId".asUpdate.first > 0
-      else true) &&
-      (if (feedback.kept.isDefined)
-        (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.kept, row.updatedAt)).update((feedback.kept.get, currentDateTime)) > 0 else true) &&
-      (if (feedback.trashed.isDefined)
-        (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.trashed, row.updatedAt)).update((feedback.trashed.get, currentDateTime)) > 0 else true) &&
-      (if (feedback.markedBad.isDefined && feedback.markedBad.get.bad)
-        (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.markedBad, row.updatedAt)).update((feedback.markedBad.get, currentDateTime)) > 0 else true)
+    else true
+    val clickedResult = if (feedback.clicked.isDefined && feedback.clicked.get)
+      sql"UPDATE uri_recommendation SET clicked=clicked+1, updated_at=$currentDateTime WHERE user_id=$userId AND uri_id=$uriId".asUpdate.first > 0
+    else true
+    val keptResult = if (feedback.kept.isDefined)
+      (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.kept, row.updatedAt)).update((feedback.kept.get, currentDateTime)) > 0 else true
+    val trashedResult = if (feedback.trashed.isDefined)
+      (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.trashed, row.updatedAt)).update((feedback.trashed.get, currentDateTime)) > 0 else true
+    val markedBad = if (feedback.markedBad.isDefined && feedback.markedBad.get.bad)
+      (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.markedBad, row.updatedAt)).update((feedback.markedBad.get, currentDateTime)) > 0 else true
+
+    deliveredResult && clickedResult && keptResult && trashedResult && markedBad
   }
 
   def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI], interaction: UriRecommendationUserInteraction)(implicit session: RSession): Boolean = {
