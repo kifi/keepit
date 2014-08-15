@@ -22,7 +22,6 @@ class AdminAttributionController @Inject() (
     heimdalClient: HeimdalServiceClient,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
-    keepDiscoveryRepo: KeepDiscoveryRepo,
     rekeepRepo: ReKeepRepo,
     uriRepo: NormalizedURIRepo,
     pageInfoRepo: PageInfoRepo,
@@ -87,9 +86,11 @@ class AdminAttributionController @Inject() (
   private def getKeepInfos(userId: Id[User]): (User, Seq[RichKeepDiscovery], Seq[RichReKeep], Seq[RichReKeep]) = {
     db.readOnlyMaster { implicit ro =>
       val u = userRepo.get(userId)
-      val rc = keepDiscoveryRepo.getDiscoveriesByKeeper(userId).take(10) map { c =>
-        RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, u, keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
-      }
+      val rc = Seq.empty[RichKeepDiscovery]
+      // todo(ray): add (last) endpoint to heimdal!
+      //        keepDiscoveryRepo.getDiscoveriesByKeeper(userId).take(10) map { c =>
+      //          RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, u, keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
+      //        }
       val rekeeps = rekeepRepo.getAllReKeepsByKeeper(userId).sortBy(_.createdAt)(Ordering[DateTime].reverse).take(10)
       val rk = rekeeps map { k =>
         RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, u, keepRepo.get(k.keepId), uriRepo.get(k.uriId), userRepo.get(k.srcUserId), keepRepo.get(k.srcKeepId), k.attributionFactor)
