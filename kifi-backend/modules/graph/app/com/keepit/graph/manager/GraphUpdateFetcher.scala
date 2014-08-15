@@ -10,7 +10,7 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.common.logging.Logging
 import com.keepit.model.NormalizedURI
-import com.keepit.common.ImmediateMap
+import com.keepit.common.core._
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.models.lda.DenseLDA
 
@@ -40,13 +40,13 @@ class GraphUpdateFetcherImpl @Inject() (
 
       case KeepGraphUpdate => shoebox.getBookmarksChanged(seq.copy(), fetchSize).imap(_.map(KeepGraphUpdate.apply))
 
-      case SparseLDAGraphUpdate => {
+      case SparseLDAGraphUpdate => Future.successful(Seq()) /*{
         val cortexSeq = CortexSequenceNumber.fromLong[DenseLDA, NormalizedURI](seq.value)
         cortex.getSparseLDAFeaturesChanged(cortexSeq.modelVersion, cortexSeq.seq, fetchSize).imap {
           case (modelVersion, uriFeaturesBatch) =>
             uriFeaturesBatch.map { uriFeatures => SparseLDAGraphUpdate(modelVersion, uriFeatures) }
         }
-      }
+      }*/
 
       case NormalizedUriGraphUpdate => shoebox.getIndexableUris(seq.copy(), fetchSize).imap(_.map(NormalizedUriGraphUpdate.apply))
 

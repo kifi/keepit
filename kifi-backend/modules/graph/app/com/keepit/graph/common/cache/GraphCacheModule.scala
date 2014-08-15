@@ -3,7 +3,7 @@ package com.keepit.graph.common.cache
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.common.logging.AccessLog
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
-import com.keepit.graph.model.{ ConnectedUriScoreCache, ConnectedUserScoreCache }
+import com.keepit.graph.model._
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
@@ -72,11 +72,6 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def userIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 24 hours))
-
-  @Singleton
-  @Provides
-  def userImageUrlCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserImageUrlCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 10 minute))
 
   @Singleton
   @Provides
@@ -167,4 +162,24 @@ case class GraphCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def userScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new ConnectedUserScoreCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 5 hours))
+
+  @Provides @Singleton
+  def allFakeUsersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def sociallyRelatedUsersCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedUsersCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedFacebookAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedFacebookAccountsCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedLinkedInAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedLinkedInAccountsCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedEmailAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedEmailAccountsCache(stats, accessLog, (outerRepo, 1 day))
 }

@@ -14,11 +14,9 @@ import scala.concurrent.duration._
 
 @ImplementedBy(classOf[SocialConnectionRepoImpl])
 trait SocialConnectionRepo extends Repo[SocialConnection] with SeqNumberFunction[SocialConnection] {
-  def getFortyTwoUserConnections(id: Id[User])(implicit session: RSession): Set[Id[User]]
+  def getSociallyConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]]
   def getConnectionOpt(u1: Id[SocialUserInfo], u2: Id[SocialUserInfo])(implicit session: RSession): Option[SocialConnection]
-  def getUserConnections(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
-  def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo]
-  def getSocialConnectionInfo(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserBasicInfo]
+  def getSocialConnectionInfos(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserBasicInfo]
   def getSocialConnectionInfosByUser(id: Id[User])(implicit session: RSession): Map[SocialNetworkType, Seq[SocialUserBasicInfo]]
   def deactivateAllConnections(id: Id[SocialUserInfo])(implicit session: RWSession): Int
   def getUserConnectionCount(id: Id[User])(implicit session: RSession): Int
@@ -74,7 +72,7 @@ class SocialConnectionRepoImpl @Inject() (
     socialUserConnectionsCache.remove(SocialUserConnectionsKey(conn.socialUser2))
   }
 
-  def getFortyTwoUserConnections(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
+  def getSociallyConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
     val suidSQL = """
         select
              id
@@ -116,21 +114,6 @@ class SocialConnectionRepoImpl @Inject() (
       if ((s.socialUser1 === u1 && s.socialUser2 === u2) || (s.socialUser1 === u2 && s.socialUser2 === u1))
     } yield s).firstOption
 
-  def getUserConnections(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo] = {
-    socialRepo.getByUser(id).map(_.id.get) match {
-      case ids if !ids.isEmpty =>
-        val connections = (for {
-          t <- rows if ((t.socialUser1 inSet ids) || (t.socialUser2 inSet ids)) && t.state === SocialConnectionStates.ACTIVE
-        } yield t).list
-        connections map (s => if (ids.contains(s.socialUser1)) s.socialUser2 else s.socialUser1) match {
-          case users if !users.isEmpty =>
-            (for (t <- socialRepo.rows if t.id inSet users) yield t).list
-          case _ => Nil
-        }
-      case _ => Nil
-    }
-  }
-
   def getUserConnectionCount(id: Id[User])(implicit session: RSession): Int = {
     socialRepo.getByUser(id).map(_.id.get) match {
       case ids if ids.nonEmpty => {
@@ -145,9 +128,10 @@ class SocialConnectionRepoImpl @Inject() (
     }
   }
 
-  def getSocialConnectionInfo(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserBasicInfo] = {
+  def getSocialConnectionInfos(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserBasicInfo] = {
     socialUserConnectionsCache.getOrElse(SocialUserConnectionsKey(id)) {
-      getSocialUserConnections(id) map SocialUserBasicInfo.fromSocialUser
+      val socialUserInfoIds = getSocialUserConnections(id)
+      socialRepo.getSocialUserBasicInfos(socialUserInfoIds).values.toSeq
     }
   }
 
@@ -158,21 +142,17 @@ class SocialConnectionRepoImpl @Inject() (
       Future.successful(
         socialRepo.getByUser(userId)
           .filter { sui => sui.networkType != SocialNetworks.FORTYTWO }
-          .map { sui => (sui.networkType -> getSocialConnectionInfo(sui.id.get)) }.toMap
+          .map { sui => (sui.networkType -> getSocialConnectionInfos(sui.id.get)) }.toMap
       )
     }
     Await.result(future, Duration.Inf)
   }
 
-  def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo] = {
+  private def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[Id[SocialUserInfo]] = {
     val connections = (for {
       t <- rows if (t.socialUser1 === id || t.socialUser2 === id) && t.state === SocialConnectionStates.ACTIVE
     } yield t).list
-    connections map (s => if (id == s.socialUser1) s.socialUser2 else s.socialUser1) match {
-      case users if !users.isEmpty =>
-        (for (t <- socialRepo.rows if t.id inSet users) yield t).list
-      case _ => Nil
-    }
+    connections map (s => if (id == s.socialUser1) s.socialUser2 else s.socialUser1)
   }
 
   def deactivateAllConnections(id: Id[SocialUserInfo])(implicit session: RWSession): Int = {

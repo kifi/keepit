@@ -3,81 +3,90 @@ package com.keepit.graph.wander
 import com.keepit.graph.model._
 import scala.collection.mutable
 import com.keepit.common.math.ProbabilityDensity
-import scala.Some
 import com.keepit.graph.model.EdgeKind.EdgeType
-import com.keepit.graph.model.VertexKind.VertexType
-import play.api.Logger
+import com.keepit.graph.model.Component.Component
+import com.keepit.common.logging.Logging
 
 trait Wanderer {
   def wander(steps: Int, teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal): Unit
 }
 
-class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) {
-
-  lazy val log = Logger("com.keepit.wanderer")
+class ScoutingWanderer(wanderer: GlobalVertexReader, scout: GlobalVertexReader) extends Logging {
+  type TransitionProbabilityCache = mutable.Map[VertexId, mutable.Map[Component, ProbabilityDensity[VertexId]]]
 
   def wander(steps: Int, teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal): Unit = {
-    log.info(s"Wandering for $steps steps")
-    val probabilityCache = mutable.Map[(VertexId, VertexType, EdgeType), ProbabilityDensity[VertexId]]()
+    val probabilityCache: TransitionProbabilityCache = mutable.Map()
     teleportTo(teleporter.surely, journal, isStart = true)
     var step = 0
     while (step < steps) {
-      teleporter.maybe(wanderer) match {
-        case Some(newStart) => teleportTo(newStart, journal)
-        case None => {
-          sampleOutgoingComponent(resolver).flatMap(sampleDestination(_, resolver, probabilityCache)) match {
-            case Some((nextDestination, edgeKind)) => traverseTo(nextDestination, edgeKind, journal)
-            case None => teleportTo(teleporter.surely, journal, isDeadend = true)
-          }
-        }
-      }
+      tryAndMove(teleporter, resolver, journal, probabilityCache, 1)
       step += 1
     }
-    log.info(s"[Complete] ${wanderer.id}")
     journal.onComplete(wanderer)
   }
 
-  private def teleportTo(destination: VertexId, journal: TravelJournal, isDeadend: Boolean = false, isStart: Boolean = false): Unit = {
-    scout.moveTo(destination)
-    if (isStart) {
-      log.info(s"[Start] $destination")
-      journal.onStart(scout)
-    } else if (isDeadend) {
-      log.info(s"[Deadend] ${wanderer.id} --> ${scout.id}")
-      journal.onDeadend(wanderer, scout)
-    } else {
-      log.info(s"[Teleportation] ${wanderer.id} --> ${scout.id}")
-      journal.onTeleportation(wanderer, scout)
+  private def tryAndMove(teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal, cache: TransitionProbabilityCache, retries: Int): Unit = {
+    try { move(teleporter, resolver, journal, cache) }
+    catch {
+      case VertexNotFoundException(id) if retries > 0 =>
+        log.warn(s"Clearing probability cache and retrying (remaining attempts: $retries) after VertexNotFoundException: $id")
+        cache.remove(wanderer.id)
+        tryAndMove(teleporter, resolver, journal, cache, retries - 1)
     }
-    wanderer.moveTo(destination)
+  }
+
+  private def move(teleporter: Teleporter, resolver: EdgeResolver, journal: TravelJournal, cache: TransitionProbabilityCache): Unit = {
+    teleporter.maybe(wanderer) match {
+      case Some(newStart) => teleportTo(newStart, journal)
+      case None => {
+        sampleOutgoingComponent(resolver).flatMap(sampleDestination(_, resolver, cache)) match {
+          case Some((nextDestination, edgeKind)) => traverseTo(nextDestination, edgeKind, journal)
+          case None => teleportTo(teleporter.surely, journal, isDeadend = true)
+        }
+      }
+    }
+  }
+
+  private def teleportTo(destination: VertexId, journal: TravelJournal, isDeadend: Boolean = false, isStart: Boolean = false): Unit = {
+    if (isStart) {
+      wanderer.moveTo(destination)
+      journal.onStart(wanderer)
+    } else {
+      scout.moveTo(wanderer.id)
+      wanderer.moveTo(destination)
+      if (isDeadend) {
+        journal.onDeadend(scout, wanderer)
+      } else {
+        journal.onTeleportation(scout, wanderer)
+      }
+    }
   }
 
   private def traverseTo(destination: VertexId, edgeKind: EdgeType, journal: TravelJournal): Unit = {
-    scout.moveTo(destination)
-    log.info(s"[Traverse] ${wanderer.id} --> ${scout.id} | ${edgeKind.code}")
-    journal.onEdgeTraversal(wanderer, scout, edgeKind)
+    scout.moveTo(wanderer.id)
     wanderer.moveTo(destination)
+    journal.onEdgeTraversal(scout, wanderer, edgeKind)
   }
 
-  private def sampleOutgoingComponent(resolver: EdgeResolver): Option[(VertexType, VertexType, EdgeType)] = {
-    val componentWeights = mutable.MutableList[((VertexType, VertexType, EdgeType), Double)]()
+  private def sampleOutgoingComponent(resolver: EdgeResolver): Option[Component] = {
+    val componentWeights = mutable.MutableList[(Component, Double)]()
     while (wanderer.outgoingEdgeReader.moveToNextComponent()) {
-      val component @ (_, destinationKind, edgeKind) = wanderer.outgoingEdgeReader.component
-      val weight = resolver.weightComponent(wanderer, destinationKind, edgeKind)
+      val component = wanderer.outgoingEdgeReader.component
+      val weight = resolver.weightComponent(component)
       componentWeights += component -> weight
     }
     val probability = ProbabilityDensity.normalized(componentWeights)
     probability.sample(Math.random())
   }
 
-  private def sampleDestination(component: (VertexType, VertexType, EdgeType), resolver: EdgeResolver, cache: mutable.Map[(VertexId, VertexType, EdgeType), ProbabilityDensity[VertexId]]): Option[(VertexId, EdgeType)] = {
-    val (_, destinationKind, edgeKind) = component
-    val key = (wanderer.id, destinationKind, edgeKind)
-    val probability = cache.getOrElseUpdate(key, computeDestinationProbability(component, resolver))
-    probability.sample(Math.random()).map { destination => (destination, edgeKind) }
+  private def sampleDestination(component: Component, resolver: EdgeResolver, cache: TransitionProbabilityCache): Option[(VertexId, EdgeType)] = {
+    val source = wanderer.id
+    val localCache = cache.getOrElseUpdate(source, mutable.Map())
+    val probability = localCache.getOrElseUpdate(component, computeDestinationProbability(component, resolver))
+    probability.sample(Math.random()).map { destination => (destination, component._3) }
   }
 
-  private def computeDestinationProbability(component: (VertexType, VertexType, EdgeType), resolver: EdgeResolver): ProbabilityDensity[VertexId] = {
+  private def computeDestinationProbability(component: Component, resolver: EdgeResolver): ProbabilityDensity[VertexId] = {
     val edgeWeights = mutable.MutableList[(VertexId, Double)]()
     wanderer.outgoingEdgeReader.reset()
     while (wanderer.outgoingEdgeReader.moveToNextComponent()) {

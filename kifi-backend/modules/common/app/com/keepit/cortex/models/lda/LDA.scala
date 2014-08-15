@@ -6,6 +6,7 @@ import com.keepit.model.NormalizedURI
 import com.keepit.common.db.{ SequenceNumber, Id }
 import play.api.libs.functional.syntax._
 import com.keepit.cortex.core.Versionable
+import com.kifi.macros.json
 
 trait LDA extends StatModel
 
@@ -44,11 +45,11 @@ object UriSparseLDAFeatures {
 }
 
 // editable from admin
-case class LDATopicConfiguration(topicName: String, isActive: Boolean)
+case class LDATopicConfiguration(topicName: String, isActive: Boolean, isNameable: Boolean)
 
 object LDATopicConfiguration {
   implicit val format = Json.format[LDATopicConfiguration]
-  def default = LDATopicConfiguration("n/a", true)
+  def default = LDATopicConfiguration("n/a", true, true)
 }
 
 case class LDATopicConfigurations(configs: Map[String, LDATopicConfiguration]) extends Versionable[DenseLDA]
@@ -69,3 +70,10 @@ object LDATopicInfo {
     (__ \ 'config).format[LDATopicConfiguration]
   )(LDATopicInfo.apply, unlift(LDATopicInfo.unapply))
 }
+
+case class LDATopicDetail(
+  topicId: Int,
+  sampleURIs: Seq[NormalizedURI])
+
+@json case class LDAUserURIInterestScore(score: Float, confidence: Float) // confidence: [0,1]. higher better
+@json case class LDAUserURIInterestScores(global: Option[LDAUserURIInterestScore], recency: Option[LDAUserURIInterestScore])

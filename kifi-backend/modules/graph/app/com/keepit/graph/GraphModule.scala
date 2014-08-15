@@ -9,6 +9,13 @@ import com.keepit.graph.common.store.GraphStoreModule
 import com.keepit.graph.common.cache.GraphCacheModule
 import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.cortex.ProdCortexServiceClientModule
+import com.keepit.common.zookeeper.ServiceTypeModule
+import com.keepit.common.service.ServiceType
+
+case class GraphServiceTypeModule() extends ServiceTypeModule {
+  val serviceType = ServiceType.GRAPH
+  val servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.ELIZA :: ServiceType.ABOOK :: ServiceType.CORTEX :: Nil
+}
 
 trait GraphModule extends ConfigurationModule with CommonServiceModule {
 
@@ -21,6 +28,7 @@ trait GraphModule extends ConfigurationModule with CommonServiceModule {
   val graphManagerPluginModule: GraphManagerPluginModule = GraphManagerPluginModule()
 
   // Service clients
+  val serviceTypeModule = GraphServiceTypeModule()
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val abookServiceClientModule = ProdABookServiceClientModule()

@@ -10,6 +10,13 @@ import com.keepit.search.spellcheck.SpellCorrectorModule
 import com.keepit.search.tracker.TrackingModule
 import com.keepit.shoebox.ShoeboxServiceClientModule
 import com.keepit.social.RemoteSecureSocialModule
+import com.keepit.common.zookeeper.ServiceTypeModule
+import com.keepit.common.service.ServiceType
+
+case class SearchServiceTypeModule() extends ServiceTypeModule {
+  val serviceType = ServiceType.SEARCH
+  val servicesToListenOn = ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: ServiceType.ELIZA :: Nil
+}
 
 abstract class SearchModule(
 
@@ -22,6 +29,7 @@ abstract class SearchModule(
     val trackingModule: TrackingModule,
     val spellModule: SpellCorrectorModule) extends ConfigurationModule with CommonServiceModule {
   // Service clients
+  val serviceTypeModule = SearchServiceTypeModule()
   val searchServiceClientModule: SearchServiceClientModule
   val shoeboxServiceClientModule: ShoeboxServiceClientModule
   val elizaServiceClientModule: ElizaServiceClientModule

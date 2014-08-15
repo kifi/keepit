@@ -2,19 +2,14 @@ package com.keepit.graph.controllers.internal
 
 import com.google.inject.Inject
 import com.keepit.common.controller.GraphServiceController
-import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.graph.commanders.GraphCommander
-import com.keepit.graph.manager.{ NormalizedUriGraphUpdate, GraphUpdaterState, GraphStatistics, GraphManager }
-import com.keepit.model.{ SocialUserInfo, NormalizedURI, User }
-import play.api.mvc.{ BodyParsers, Action }
 import com.keepit.graph.manager.{ GraphUpdaterState, GraphStatistics, GraphManager }
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.graph.wander._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.graph.model._
-import play.api.mvc.BodyParsers.parse
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 
 import com.keepit.graph.model.{ EdgeKind, VertexKind, GraphKinds }
@@ -23,18 +18,23 @@ import scala.collection.mutable
 import com.keepit.common.db.Id
 import com.keepit.model.{ NormalizedURI, SocialUserInfo, User }
 import com.keepit.common.time._
+import com.keepit.graph.utils.GraphPrimitives
+import scala.concurrent.Future
+import com.keepit.abook.model.EmailAccountInfo
 
 class GraphController @Inject() (
     graphManager: GraphManager,
     wanderingCommander: WanderingCommander,
+    socialWanderingCommander: SocialWanderingCommander,
     graphCommander: GraphCommander) extends GraphServiceController with Logging {
 
-  def wander() = SafeAsyncAction(parse.json) { request =>
+  def wander() = Action.async(parse.json) { request =>
     val wanderlust = request.body.as[Wanderlust]
-    val journal = wanderingCommander.wander(wanderlust)
-    val collisions = getCollisions(journal, wanderlust.avoidTrivialCollisions, wanderlust.preferredCollisions.map(VertexKind(_)))
-    val json = Json.toJson(collisions)
-    Ok(json)
+    wanderingCommander.wander(wanderlust).map { journal =>
+      val collisions = getCollisions(journal, wanderlust.avoidTrivialCollisions, wanderlust.preferredCollisions.map(VertexKind(_)))
+      val json = Json.toJson(collisions)
+      Ok(json)
+    }
   }
 
   def getGraphStatistics() = Action { request =>
@@ -55,16 +55,40 @@ class GraphController @Inject() (
     Ok(json)
   }
 
-  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean) = Action { request =>
-    val urisSeq = graphCommander.getListOfUriAndScorePairs(userId, avoidFirstDegreeConnections)
-    val json = Json.toJson(urisSeq)
-    Ok(json)
+  def getListOfUriAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean) = Action.async { request =>
+    graphCommander.getConnectedUriScores(userId, avoidFirstDegreeConnections).map { uriScores =>
+      val json = Json.toJson(uriScores)
+      Ok(json)
+    }
   }
 
-  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean) = Action { request =>
-    val usersSeq = graphCommander.getListOfUserAndScorePairs(userId, avoidFirstDegreeConnections)
-    val json = Json.toJson(usersSeq)
-    Ok(json)
+  def getListOfUserAndScorePairs(userId: Id[User], avoidFirstDegreeConnections: Boolean) = Action.async { request =>
+    graphCommander.getConnectedUserScores(userId, avoidFirstDegreeConnections).map { userScores =>
+      val json = Json.toJson(userScores)
+      Ok(json)
+    }
+  }
+
+  def refreshSociallyRelatedEntities(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map(_ => Ok).recover {
+      case VertexNotFoundException(vertexId) if vertexId == VertexId(userId) => Accepted("This user has not been ingested yet.")
+    }
+  }
+
+  def getSociallyRelatedUsers(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.users)) }
+  }
+
+  def getSociallyRelatedFacebookAccounts(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.facebookAccounts)) }
+  }
+
+  def getSociallyRelatedLinkedInAccounts(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.linkedInAccounts)) }
+  }
+
+  def getSociallyRelatedEmailAccounts(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.emailAccounts)) }
   }
 
   // todo(Léo): Remove this code once CollisionCommander is operational
@@ -90,26 +114,15 @@ class GraphController @Inject() (
     Collisions(users.toMap, socialUsers.toMap, uris.toMap, extra.toMap)
   }
 
-  private def collectNeighbors(vertexReader: GlobalVertexReader)(vertexId: VertexId, neighborKinds: Set[VertexType]): Set[VertexId] = {
-    vertexReader.moveTo(vertexId)
-    val neighbors = mutable.Set[VertexId]()
-    while (vertexReader.outgoingEdgeReader.moveToNextComponent()) {
-      val (_, destinationKind, _) = vertexReader.outgoingEdgeReader.component
-      if (neighborKinds.contains(destinationKind)) {
-        while (vertexReader.outgoingEdgeReader.moveToNextEdge()) { neighbors += vertexReader.outgoingEdgeReader.destination }
-      }
-    }
-    neighbors.toSet
-  }
-
   private def getForbiddenCollisions(startingVertexId: VertexId, avoidTrivialCollisions: Boolean): Set[VertexId] = {
     val start = currentDateTime
     val forbiddenCollisions = if (!avoidTrivialCollisions) { Set(startingVertexId) }
     else graphManager.readOnly { reader =>
       val vertexReader = reader.getNewVertexReader()
-      val firstDegree = collectNeighbors(vertexReader)(startingVertexId, VertexKind.all)
+      val collectNeighbors = GraphPrimitives.collectOutgoingNeighbors(vertexReader) _
+      val firstDegree = collectNeighbors(startingVertexId, VertexKind.all)
       val forbiddenUris = if (startingVertexId.kind != UserReader) Set.empty else {
-        firstDegree.collect { case keep if keep.kind == KeepReader => collectNeighbors(vertexReader)(keep, Set(UriReader)) }.flatten
+        firstDegree.collect { case keep if keep.kind == KeepReader => collectNeighbors(keep, Set(UriReader)) }.flatten
       }
       firstDegree ++ forbiddenUris + startingVertexId
     }

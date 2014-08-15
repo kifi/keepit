@@ -26,7 +26,7 @@ case class UserThread(
   unread: Boolean = false,
   muted: Boolean = false,
   lastMsgFromOther: Option[Id[Message]],
-  lastNotification: JsValue,
+  lastNotification: JsValue, // Option[JsObject] would have been a better choice (using database null instead of 'null')
   notificationUpdatedAt: DateTime = currentDateTime,
   notificationLastSeen: Option[DateTime] = None,
   notificationEmailed: Boolean = false,

@@ -36,7 +36,7 @@ class PornDetectorTest extends Specification {
       blocks === bad
       detector.isPorn(pornText) === true
       detector.isPorn(cleanText) === false
-      detector.detectBlocks(cleanText)._2 == 0
+      detector.detectBlocks(cleanText)._2 === 0
       detector.isPorn("") === false
       detector.isPorn("*&^%$#@#$ *&^%$$#") === false
     }

@@ -4,9 +4,9 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
 
 .controller('RightColCtrl', [
   '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout',
-  'installService', '$rootScope', '$analytics', 'friendService', '$location', 'keepService', 'tagService',
+  'installService', '$rootScope', '$analytics', 'friendService', 'socialService', '$location', 'keepService', 'tagService',
   function ($scope, $element, $window, profileService, $q, $http, env, $timeout,
-    installService, $rootScope, $analytics, friendService, $location, keepService, tagService) {
+    installService, $rootScope, $analytics, friendService, socialService, $location, keepService, tagService) {
     $scope.data = $scope.data || {};
     $scope.me = profileService.me;
     var friendsReady = false;
@@ -21,6 +21,12 @@ angular.module('kifi.layout.rightCol', ['kifi.modal'])
     $scope.readyToDraw = function () {
       return profileService.me.seqNum > 0 && friendsReady;
     };
+
+    socialService.refresh().then(function () {
+      $scope.hasNoFriendsOrConnections = function () {
+        return (friendService.totalFriends() === 0) && (socialService.networks.length === 0);
+      };
+    });
 
     $scope.openHelpRankHelp = function () {
       $scope.data.showHelpRankHelp = true;

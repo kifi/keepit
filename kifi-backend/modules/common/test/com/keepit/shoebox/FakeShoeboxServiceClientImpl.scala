@@ -5,6 +5,7 @@ import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.common.db._
+import collection.mutable
 import scala.concurrent.Future
 import com.keepit.search._
 import java.util.concurrent.atomic.AtomicInteger
@@ -26,6 +27,70 @@ import play.api.libs.json.JsObject
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model.serialize.UriIdAndSeq
 
+class FakeShoeboxScraperClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxScraperClient {
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
+
+  protected def httpClient: com.keepit.common.net.HttpClient = ???
+
+  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
+    Future.successful(Seq.empty[ScrapeRequest])
+  }
+
+  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
+
+  def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = ???
+
+  def saveScrapeInfo(info: ScrapeInfo): Future[Unit] = ???
+
+  def savePageInfo(pageInfo: PageInfo): Future[Unit] = ???
+
+  def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo] = ???
+
+  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit] = Future.successful(())
+
+  def saveImageInfo(imageInfo: ImageInfo): Future[ImageInfo] = ???
+
+  def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
+
+  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = ???
+
+  def updateNormalizedURI(uriId: => Id[NormalizedURI],
+    createdAt: => DateTime,
+    updatedAt: => DateTime,
+    externalId: => ExternalId[NormalizedURI],
+    title: => Option[String],
+    url: => String,
+    urlHash: => UrlHash,
+    state: => State[NormalizedURI],
+    seq: => SequenceNumber[NormalizedURI],
+    screenshotUpdatedAt: => Option[DateTime],
+    restriction: => Option[Restriction],
+    normalization: => Option[Normalization],
+    redirect: => Option[Id[NormalizedURI]],
+    redirectTime: => Option[DateTime]): Future[Unit] = Future.successful(Unit)
+
+  def scraped(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
+
+  def scrapeFailed(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
+
+  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = ???
+
+  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = ???
+
+  def getProxy(url: String): Future[Option[HttpProxy]] = ???
+
+  def getProxyP(url: String): Future[Option[HttpProxy]] = ???
+
+  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
+
+  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = Future.successful(false)
+
+  def getLatestKeep(url: String): Future[Option[Keep]] = ???
+
+  def saveBookmark(bookmark: Keep): Future[Keep] = ???
+
+  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]] = ???
+}
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) extends ShoeboxServiceClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
@@ -100,9 +165,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allCollectionBookmarks = MutableMap[Id[Collection], Set[Id[Keep]]]()
   val allSearchExperiments = MutableMap[Id[SearchConfigExperiment], SearchConfigExperiment]()
   val allUserEmails = MutableMap[Id[User], Set[EmailAddress]]()
-  val allUserValues = MutableMap[(Id[User], String), String]()
+  val allUserValues = MutableMap[(Id[User], UserValueName), String]()
   val allFriendRequests = MutableMap[Id[FriendRequest], FriendRequest]()
   val allUserFriendRequests = MutableMap[Id[User], Seq[FriendRequest]]()
+  val sentMail = mutable.MutableList[ElectronicMail]()
+  val uriSummaries = MutableMap[Id[NormalizedURI], URISummary]()
 
   // Fake data initialization methods
 
@@ -117,7 +184,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     }
   }
 
-  def saveURIs(uris: NormalizedURI*): Seq[NormalizedURI] = {
+  def saveURIs(uris: NormalizedURI*): Seq[NormalizedURI] = synchronized {
     uris.map { uri =>
       val id = uri.id.getOrElse(nextUriId())
       val updatedUri = uri.withId(id).copy(seq = nextUriSeqNum())
@@ -126,6 +193,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
       uriToUrl(id) = updatedUrl
       updatedUri
     }
+  }
+
+  def saveURISummary(uriId: Id[NormalizedURI], uriSummary: URISummary): Unit = synchronized {
+    uriSummaries(uriId) = uriSummary
   }
 
   def saveConnections(connections: Map[Id[User], Set[Id[User]]]) {
@@ -231,12 +302,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     val edges = for ((user, uris) <- edgesByUser; uri <- uris) yield (uri, user, uniqueTitle)
     saveBookmarksByEdges(edges, isPrivate, source)
   }
-
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]] = ???
-
-  def getLatestKeep(url: String): Future[Option[Keep]] = ???
-
-  def saveBookmark(bookmark: Keep): Future[Keep] = ???
 
   def getCollection(collectionId: Id[Collection]): Collection = {
     allCollections(collectionId)
@@ -365,7 +430,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(m)
   }
 
-  def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
+  def sendMail(email: ElectronicMail): Future[Boolean] = synchronized {
+    sentMail += email
+    Future.successful(true)
+  }
+
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]] = Future.successful(Seq())
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = ???
@@ -478,6 +547,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(allProbabilisticExperimentGenerators.values.filter(_.isActive).toSeq)
   }
 
+  def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]] = {
+    Future.successful(allUsers.map(_._2).toSet)
+  }
+
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = {
     Future.successful(allUserConnections.getOrElse(userId, Set.empty))
   }
@@ -497,64 +570,17 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getDeepUrl(locator: DeepLocator, recipient: Id[User]): Future[String] = ???
 
-  def kifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit] = Future.successful()
-
-  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
-    Future.successful(Seq.empty[ScrapeRequest])
+  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = Future.successful {
+    uriIds.map(HelpRankInfo(_, 0, 0))
   }
-
-  def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo] = ???
-
-  def saveScrapeInfo(info: ScrapeInfo): Future[ScrapeInfo] = ???
-
-  def savePageInfo(pageInfo: PageInfo): Future[Unit] = ???
-
-  def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo] = ???
-
-  def saveImageInfo(imageInfo: ImageInfo): Future[ImageInfo] = ???
-
-  def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = ???
-
-  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = ???
-
-  def updateNormalizedURI(uriId: => Id[NormalizedURI],
-    createdAt: => DateTime,
-    updatedAt: => DateTime,
-    externalId: => ExternalId[NormalizedURI],
-    title: => Option[String],
-    url: => String,
-    urlHash: => UrlHash,
-    state: => State[NormalizedURI],
-    seq: => SequenceNumber[NormalizedURI],
-    screenshotUpdatedAt: => Option[DateTime],
-    restriction: => Option[Restriction],
-    normalization: => Option[Normalization],
-    redirect: => Option[Id[NormalizedURI]],
-    redirectTime: => Option[DateTime]): Future[Unit] = Future.successful(Unit)
-
-  def scraped(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
-
-  def scrapeFailed(uri: NormalizedURI, info: ScrapeInfo): Future[Option[NormalizedURI]] = ???
-
-  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = ???
-
-  def recordScrapedNormalization(uriId: Id[NormalizedURI], signature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = ???
-
-  def getProxy(url: String): Future[Option[HttpProxy]] = ???
-
-  def getProxyP(url: String): Future[Option[HttpProxy]] = ???
-
-  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
-
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = ???
 
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]] = {
     Future.successful(allUserFriendRequests.getOrElse(senderId, Seq()))
   }
 
-  def getUserValue(userId: Id[User], key: String): Future[Option[String]] = Future.successful(allUserValues.get((userId, key)))
+  def getUserValue(userId: Id[User], key: UserValueName): Future[Option[String]] = Future.successful(allUserValues.get((userId, key)))
 
-  def setUserValue(userId: Id[User], key: String, value: String): Unit = allUserValues((userId, key)) = value
+  def setUserValue(userId: Id[User], key: UserValueName, value: String): Unit = allUserValues((userId, key)) = value
 
   def getUserSegment(userId: Id[User]): Future[UserSegment] = Future.successful(UserSegment(Int.MaxValue))
 
@@ -585,15 +611,14 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], userId: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit] = Future.successful(Unit)
 
-  def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = ???
-
-  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit] = Future.successful(())
-
-  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = Future.successful(Some("http://www.adummyurl.com"))
-
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = Future.successful(URISummary())
 
-  def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = Future.successful(Map.empty)
+  def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = Future.successful {
+    val uriSet = uriIds.toSet
+    uriSummaries.toMap.filter { pair => uriSet.contains(pair._1) }
+  }
+
+  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = Future.successful(Seq.fill(uris.size)(false))
 
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = Future.successful("https://www.kifi.com/assets/img/ghost.200.png")
 
@@ -604,4 +629,14 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]] = Future.successful(Seq.empty)
 
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]] = Future.successful(Seq.empty)
+
+  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = Future.successful(Seq.empty)
+
+  def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]] = Future.successful(Seq.empty)
+
+  def getAllFakeUsers(): Future[Set[Id[User]]] = Future.successful(Set.empty)
+
+  def getInvitations(senderId: Id[User]): Future[Seq[Invitation]] = Future.successful(Seq.empty)
+
+  def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]] = Future.successful(Seq.empty)
 }

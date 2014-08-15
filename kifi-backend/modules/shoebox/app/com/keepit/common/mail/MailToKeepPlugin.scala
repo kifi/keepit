@@ -162,7 +162,7 @@ class MailToKeepMessageParser @Inject() (
   }
 
   def getUser(senderAddress: EmailAddress): Option[User] = {
-    db.readOnlyReplica { implicit s =>
+    db.readOnlyMaster { implicit s =>
       emailAddressRepo.getVerifiedOwner(senderAddress).map { userId =>
         userRepo.get(userId)
       }
@@ -170,7 +170,6 @@ class MailToKeepMessageParser @Inject() (
   }
 }
 
-@ImplementedBy(classOf[MailToKeepPluginImpl])
 trait MailToKeepPlugin extends Plugin {
   def fetchNewKeeps()
 }

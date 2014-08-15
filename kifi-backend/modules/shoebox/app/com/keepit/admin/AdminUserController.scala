@@ -88,6 +88,7 @@ class AdminUserController @Inject() (
     userValueRepo: UserValueRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
+    libraryRepo: LibraryRepo,
     invitationRepo: InvitationRepo,
     userSessionRepo: UserSessionRepo,
     imageStore: S3ImageStore,
@@ -139,14 +140,14 @@ class AdminUserController @Inject() (
   def moreUserInfoView(userId: Id[User], showPrivates: Boolean = false) = AdminHtmlAction.authenticatedAsync { implicit request =>
     val abookInfoF = abookClient.getABookInfos(userId)
     val contactsF = if (showPrivates) abookClient.getContactsByUser(userId) else Future.successful(Seq.empty[RichContact])
-    val (user, socialUserInfos, socialConnections) = db.readOnlyReplica { implicit s =>
+    val (user, socialUserInfos, socialConnections) = db.readOnlyMaster { implicit s =>
       val user = userRepo.get(userId)
-      val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a, b) => a.fullName < b.fullName)
-      val socialUserInfos = socialUserInfoRepo.getByUser(user.id.get)
+      val socialConnections = socialConnectionRepo.getSocialConnectionInfosByUser(userId).valuesIterator.flatten.toSeq.sortWith((a, b) => a.fullName < b.fullName)
+      val socialUserInfos = socialUserInfoRepo.getSocialUserBasicInfosByUser(user.id.get)
       (user, socialUserInfos, socialConnections)
     }
     val rawInfos = socialUserInfos map { info =>
-      socialUserRawInfoStore.get(info.id.get)
+      socialUserRawInfoStore.get(info.id)
     }
     for {
       abookInfos <- abookInfoF
@@ -221,14 +222,14 @@ class AdminUserController @Inject() (
 
     val (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers) = db.readOnlyReplica { implicit s =>
       val bookmarkCount = keepRepo.getCountByUser(userId)
-      val socialUsers = socialUserInfoRepo.getByUser(userId)
+      val socialUsers = socialUserInfoRepo.getSocialUserBasicInfosByUser(userId)
       val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
         userRepo.get(userId)
       }.toSeq.sortBy(u => s"${u.firstName} ${u.lastName}")
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a, b) => a.updatedAt.isBefore(b.updatedAt))
       val allowedInvites = userValueRepo.getValue(userId, UserValues.availableInvites)
       val emails = emailRepo.getAllByUser(userId)
-      val invitedByUsers = invitedBy(socialUsers, emails)
+      val invitedByUsers = invitedBy(socialUsers.map(_.id), emails)
       (bookmarkCount, socialUsers, fortyTwoConnections, kifiInstallations, allowedInvites, emails, invitedByUsers)
     }
 
@@ -287,9 +288,9 @@ class AdminUserController @Inject() (
   def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
 
-  private def invitedBy(socialUserInfos: Seq[SocialUserInfo], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
-    val bySocial: Seq[Id[User]] = socialUserInfos map { info =>
-      invitationRepo.getByRecipientSocialUserId(info.id.get).map(_.senderUserId).flatten
+  private def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
+    val bySocial: Seq[Id[User]] = socialUserIds map { socialUserId =>
+      invitationRepo.getByRecipientSocialUserId(socialUserId).map(_.senderUserId).flatten
     } flatten
     val byEmail: Seq[Id[User]] = emails map { email =>
       invitationRepo.getByRecipientEmailAddress(email.address).map(_.senderUserId).flatten
@@ -309,7 +310,7 @@ class AdminUserController @Inject() (
     UserStatistics(user,
       userConnectionRepo.getConnectionCount(user.id.get),
       invitationRepo.countByUser(user.id.get),
-      invitedBy(socialUserInfos, emails),
+      invitedBy(socialUserInfos.map(_.id.get), emails),
       socialUserInfos,
       privateKeeps,
       publicKeeps,
@@ -492,7 +493,7 @@ class AdminUserController @Inject() (
 
   def userValue(userId: Id[User]) = AdminJsonAction.authenticated { implicit request =>
     val req = request.body.asJson.map { json =>
-      ((json \ "name").asOpt[String], (json \ "value").asOpt[String], (json \ "clear").asOpt[Boolean]) match {
+      ((json \ "name").asOpt[UserValueName], (json \ "value").asOpt[String], (json \ "clear").asOpt[Boolean]) match {
         case (Some(name), Some(value), None) =>
           Some(db.readWrite { implicit session => // set it
             userValueRepo.setValue(userId, name, value)
@@ -502,7 +503,7 @@ class AdminUserController @Inject() (
             userValueRepo.clearValue(userId, name).toString
           })
         case (Some(name), _, _) => // get it
-          db.readOnlyReplica { implicit session =>
+          db.readOnlyMaster { implicit session =>
             userValueRepo.getValueStringOpt(userId, name)
           }
         case _ =>
@@ -544,7 +545,7 @@ class AdminUserController @Inject() (
   }
 
   def refreshAllSocialInfo(userId: Id[User]) = AdminHtmlAction.authenticated { implicit request =>
-    val socialUserInfos = db.readOnlyReplica { implicit s =>
+    val socialUserInfos = db.readOnlyMaster { implicit s =>
       val user = userRepo.get(userId)
       socialUserInfoRepo.getByUser(user.id.get)
     }
@@ -634,7 +635,7 @@ class AdminUserController @Inject() (
       heimdal.deleteUser(userId)
     else {
       val properties = new HeimdalContextBuilder
-      db.readOnlyReplica { implicit session =>
+      db.readOnlyMaster { implicit session =>
         properties += ("$first_name", user.firstName)
         properties += ("$last_name", user.lastName)
         properties += ("$created", user.createdAt)
@@ -655,7 +656,7 @@ class AdminUserController @Inject() (
 
         val allInstallations = kifiInstallationRepo.all(userId)
         if (allInstallations.nonEmpty) { properties += ("installedExtension", allInstallations.maxBy(_.updatedAt).version.toString) }
-        userValueRepo.getValueStringOpt(userId, Gender.key).foreach { gender => properties += (Gender.key, Gender(gender).toString) }
+        userValueRepo.getValueStringOpt(userId, Gender.key).foreach { gender => properties += (Gender.key.name, Gender(gender).toString) }
       }
       heimdal.setUserProperties(userId, properties.data.toSeq: _*)
     }
@@ -819,4 +820,66 @@ class AdminUserController @Inject() (
     log.info(s"Deactivated UserEmailAddress $inactiveEmail")
     Ok(JsString(inactiveEmail.toString))
   }
+
+  def setUsername(userId: Id[User], username: String, overrideRestrictions: Boolean = false) = AdminHtmlAction.authenticated { request =>
+    val res = userCommander.setUsername(userId, Username(username), overrideRestrictions)
+
+    Ok(res.toString)
+  }
+
+  private def autoSetUsername(userId: Id[User], readOnly: Boolean): Option[Username] = {
+    val userOpt = db.readOnlyMaster { implicit session =>
+      Try(userRepo.get(userId)).toOption // Opt because we're enumerating userIds, and it may be invalid
+    }
+    userOpt match {
+      case Some(user) =>
+        if (user.state != UserStates.ACTIVE
+          || user.fullName.length > 30
+          || user.fullName.contains("@")
+          || user.firstName.isEmpty
+          || user.lastName.isEmpty
+          || user.fullName.toLowerCase.contains("test")
+          || user.primaryEmail.exists(_.address.contains("test"))) {
+          if (!readOnly && user.username.nonEmpty) {
+            userCommander.removeUsername(userId)
+          }
+          None
+        } else if (user.username.isEmpty) {
+          userCommander.autoSetUsername(user, readOnly = readOnly)
+        } else {
+          user.username
+        }
+      case None =>
+        None
+    }
+
+  }
+
+  def autoSetUsernames(startingUserId: Id[User], endingUserId: Id[User], readOnly: Boolean = true) = AdminHtmlAction.authenticated { request =>
+    val ids = (startingUserId.id to endingUserId.id).map(Id[User])
+
+    val result = ids.map { userId =>
+      userId.id + " -> " + autoSetUsername(userId, readOnly = readOnly)
+    }
+
+    Ok(s"readOnly: $readOnly<br>\ncount: ${result.size}<br>\n<br>\n" + result.mkString("<br>\n"))
+  }
+
+  def removeUsername(userId: Id[User]) = AdminHtmlAction.authenticated { request =>
+    userCommander.removeUsername(userId)
+    Ok
+  }
+
+  def userLibrariesView(ownerId: Id[User], showSecrets: Boolean = false) = AdminHtmlAction.authenticated { implicit request =>
+    if (showSecrets) {
+      log.warn(s"${request.user.firstName} ${request.user.firstName} (${request.userId}) is viewing secret libraries of $ownerId")
+    }
+    val (owner, accessToLibs) = db.readOnlyReplica { implicit session =>
+      val owner = userRepo.get(ownerId)
+      val libs = libraryRepo.getByUser(ownerId).filter(pair => showSecrets || !(pair._2.visibility == LibraryVisibility.SECRET))
+      (owner, libs)
+    }
+    Ok(html.admin.userLibraries(owner, accessToLibs))
+  }
+
 }

@@ -4,18 +4,18 @@ import com.google.inject.Inject
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.common.controller.CortexServiceController
-import com.keepit.common.commanders.LDACommander
+import com.keepit.common.commanders.{ LDAInfoCommander, LDACommander }
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.utils.TextUtils
-import com.keepit.cortex.models.lda.LDATopicConfiguration
-import com.keepit.cortex.models.lda.LDATopicInfo
+import com.keepit.cortex.models.lda.{ LDAUserURIInterestScores, LDATopicConfigurations, LDATopicConfiguration, LDATopicInfo }
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import com.keepit.model.{ User, NormalizedURI }
 import com.keepit.common.db.Id
 
 class LDAController @Inject() (
-  lda: LDACommander)
+  lda: LDACommander,
+  infoCommander: LDAInfoCommander)
     extends CortexServiceController {
 
   def numOfTopics() = Action { request =>
@@ -23,8 +23,8 @@ class LDAController @Inject() (
   }
 
   def showTopics(fromId: Int, toId: Int, topN: Int) = Action { request =>
-    val topicWords = lda.topicWords(fromId, toId, topN).map { case (id, words) => (id.toString, words.toMap) }
-    val topicConfigs = lda.topicConfigs(fromId, toId)
+    val topicWords = infoCommander.topicWords(fromId, toId, topN).map { case (id, words) => (id.toString, words.toMap) }
+    val topicConfigs = infoCommander.topicConfigs(fromId, toId)
     val infos = topicWords.map {
       case (tid, words) =>
         val config = topicConfigs(tid)
@@ -49,8 +49,12 @@ class LDAController @Inject() (
   def saveEdits() = Action(parse.tolerantJson) { request =>
     val js = request.body
     val configs = js.as[Map[String, LDATopicConfiguration]]
-    lda.saveConfigEdits(configs)
+    infoCommander.saveConfigEdits(configs)
     Ok
+  }
+
+  def ldaConfigurations = Action { request =>
+    Ok(Json.toJson(infoCommander.ldaConfigurations))
   }
 
   def getLDAFeatures() = Action.async(parse.tolerantJson) { request =>
@@ -64,11 +68,57 @@ class LDAController @Inject() (
   }
 
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    Ok(Json.toJson(0.5f)) // fake for now
+    val scores = lda.userUriInterest(userId, uriId)
+    Ok(Json.toJson(scores))
+  }
+
+  def batchUserURIsInterests() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val userId = (js \ "userId").as[Id[User]]
+    val uriIds = (js \ "uriIds").as[Seq[Id[NormalizedURI]]]
+    val scores1 = lda.batchUserURIsInterests(userId, uriIds)
+    val scores2 = lda.batchGaussianUserURIsInterests(userId, uriIds)
+    val scores = (scores1 zip scores2).map { case (s1, s2) => LDAUserURIInterestScores(s2.global, s1.recency) }
+    Ok(Json.toJson(scores))
   }
 
   def userTopicMean(userId: Id[User]) = Action { request =>
-    val meanOpt = lda.userTopicMean(userId)
-    Ok(Json.toJson(meanOpt.map { _.mean }))
+    val feat = lda.userTopicMean(userId)
+    val meanOpt = feat.flatMap { _.userTopicMean }
+    val recentOpt = feat.flatMap { _.userRecentTopicMean }
+    Ok(Json.obj("global" -> meanOpt.map { _.mean }, "recent" -> recentOpt.map { _.mean }))
   }
+
+  def sampleURIs(topicId: Int) = Action { request =>
+    val uris = lda.sampleURIs(topicId)
+    Ok(Json.toJson(uris))
+  }
+
+  def getSimilarUsers(userId: Id[User], topK: Int) = Action { request =>
+    val (ids, scores) = lda.getSimilarUsers(userId, topK)
+    Ok(Json.obj("userIds" -> ids, "scores" -> scores))
+  }
+
+  def dumpScaledUserInterest(userId: Id[User]) = Action { request =>
+    val vec = lda.dumpScaledUserInterest(userId)
+    Ok(Json.toJson(vec))
+  }
+
+  def userSimilarity(userId1: Id[User], userId2: Id[User]) = Action { request =>
+    val score = lda.userSimilairty(userId1, userId2)
+    Ok(Json.toJson(score))
+  }
+
+  def unamedTopics(limit: Int) = Action { request =>
+    val (infos, words) = infoCommander.unamedTopics(limit)
+    Ok(Json.obj("infos" -> infos, "words" -> words))
+  }
+
+  def getTopicNames() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val uriIds = (js \ "uris").as[Seq[Id[NormalizedURI]]]
+    val res = lda.getTopicNames(uriIds)
+    Ok(Json.toJson(res))
+  }
+
 }

@@ -39,7 +39,7 @@ angular.module('kifi.routeService', [])
       },
       networks: route('/user/networks'),
       profileUrl: route('/user/me'),
-      logout: 'https://www.kifi.com/logout',
+      logout: '/logout',
       emailInfoUrl: route('/user/email'),
       abooksUrl: route('/user/abooks'),
       resendVerificationUrl: route('/user/resend-verification'),
@@ -54,8 +54,8 @@ angular.module('kifi.routeService', [])
       removeKeeps: route('/keeps/remove'),
       tagOrdering: route('/collections/ordering'),
       reorderTag: route('/collections/reorderTag'),
-      whoToInvite: route('/friends/wti'),
-      blockWtiConnection: route('/friends/wti/block'),
+      whoToInvite: route('/user/invite/recommended'),
+      blockWtiConnection: route('/user/invite/hide'),
       friends: function (page, pageSize) {
         return route('/user/friends') + '?page=' + page + '&pageSize=' + pageSize;
       },
@@ -64,6 +64,12 @@ angular.module('kifi.routeService', [])
       },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
+      peopleYouMayKnow: function (page, pageSize) {
+        return route('/user/friends/recommended') + '?page=' + page + '&pageSize=' + pageSize;
+      },
+      hideUserRecommendation: function (id) {
+        return route('/user/' + id + '/hide');
+      },
       search: searchRoute('/site/search'),
       searchResultClicked: searchRoute('/site/search/events/resultClicked'),
       searchedAnalytics: searchRoute('/site/search/events/searched'),
@@ -74,7 +80,15 @@ angular.module('kifi.routeService', [])
       },
       exportKeeps: route('/keeps/export'),
       postDelightedAnswer: route('/user/delighted/answer'),
-      cancelDelightedSurvey: route('/user/delighted/cancel')
+      cancelDelightedSurvey: route('/user/delighted/cancel'),
+      userCloseAccount: route('/user/close'),
+      adHocRecos: function (howMany) {
+        return route('/recos/adHoc?n=' + howMany);
+      },
+      basicUserInfo: function (id, friendCount) {
+        friendCount = friendCount ? 1 : 0;
+        return route('/user/' + id + '?friendCount=' + friendCount);
+      }
     };
   }
 ]);

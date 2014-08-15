@@ -3,7 +3,7 @@ package com.keepit.common.strings
 import com.keepit.test._
 import org.specs2.mutable.Specification
 
-class StringUtilsTest extends Specification with TestInjector {
+class StringUtilsTest extends Specification with CommonTestInjector {
 
   "Strings" should {
 

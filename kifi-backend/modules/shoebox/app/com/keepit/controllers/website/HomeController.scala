@@ -2,8 +2,8 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 
-import com.keepit.commanders.{ InviteCommander, UserCommander }
-import com.keepit.common.KestrelCombinator
+import com.keepit.commanders.{ InviteCommander, UserCommander, LocalUserExperimentCommander }
+import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController }
 import com.keepit.common.db.ExternalId
@@ -12,15 +12,18 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.controllers.core.AuthController
+import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.social.{ SocialNetworks, SocialNetworkType, SocialGraphPlugin }
 
 import ActionAuthenticator.MaybeAuthenticatedRequest
+import play.api
+import play.api.libs.json.{ JsValue, JsObject, JsString, Json }
+import play.api.Play
 
 import play.api.Play.current
-import play.api._
 import play.api.http.HeaderNames.USER_AGENT
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
@@ -49,7 +52,10 @@ class HomeController @Inject() (
   userCommander: UserCommander,
   inviteCommander: InviteCommander,
   heimdalServiceClient: HeimdalServiceClient,
-  applicationConfig: FortyTwoConfig)
+  userExperimentCommander: LocalUserExperimentCommander,
+  curatorServiceClient: CuratorServiceClient,
+  applicationConfig: FortyTwoConfig,
+  siteRouter: KifiSiteRouter)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
 
   private def hasSeenInstall(implicit request: AuthenticatedRequest[_]): Boolean = {
@@ -110,7 +116,7 @@ class HomeController @Inject() (
   }
 
   def iPhoneAppStoreRedirect = HtmlAction(authenticatedAction = iPhoneAppStoreRedirectWithTracking(_), unauthenticatedAction = iPhoneAppStoreRedirectWithTracking(_))
-  private def iPhoneAppStoreRedirectWithTracking(implicit request: RequestHeader): SimpleResult = {
+  def iPhoneAppStoreRedirectWithTracking(implicit request: RequestHeader): SimpleResult = {
     val context = new HeimdalContextBuilder()
     context.addRequestInfo(request)
     context += ("type", "landing")
@@ -153,7 +159,7 @@ class HomeController @Inject() (
     } else if (request.kifiInstallationId.isEmpty && !hasSeenInstall) {
       Redirect(routes.HomeController.install())
     } else if (agentOpt.exists(_.screenCanFitWebApp)) {
-      Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("angular/index.html").get)) as HTML
+      AngularDistAssets.angularApp()
     } else {
       Redirect(routes.HomeController.unsupported())
     }
@@ -186,6 +192,28 @@ class HomeController @Inject() (
     }
   }
 
+  def kifeeeed = HtmlAction.authenticated { request =>
+    if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.RECOS_BETA)) {
+      siteRouter.routeRequest(request)
+    } else {
+      Redirect("/")
+    }
+  }
+
+  // this is for testing and will eventually be thrown away
+  def kifeeeedEmail(code: String) = HtmlAction.authenticatedAsync { request =>
+    if (userExperimentCommander.userHasExperiment(request.userId, ExperimentType.DIGEST_EMAIl)) {
+      log.info(s"kifeeeedEmail($code)requested by " + request.userId)
+      if (code.endsWith("-all"))
+        curatorServiceClient.triggerEmail(code.substring(0, code.length - 4)).map { res => Ok(JsString(res)) }
+      else
+        curatorServiceClient.triggerEmailToUser(code, request.userId).map { res => Ok(JsString(res)) }
+    } else {
+      log.info(s"kifeeeedEmail($code) rejected for " + request.userId)
+      Future.successful(Redirect("/"))
+    }
+  }
+
   private def temporaryReportLandingLoad()(implicit request: RequestHeader): Unit = SafeFuture {
     val context = new HeimdalContextBuilder()
     context.addRequestInfo(request)
@@ -203,15 +231,9 @@ class HomeController @Inject() (
   def homeWithParam(id: String) = home
 
   def blog = HtmlAction[AnyContent](allowPending = true)(authenticatedAction = { request =>
-    request.headers.get(USER_AGENT) match {
-      case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
-      case _ => homeAuthed(request)
-    }
+    MovedPermanently("http://blog.kifi.com/")
   }, unauthenticatedAction = { request =>
-    request.headers.get(USER_AGENT) match {
-      case Some(ua) if ua.contains("Mobi") => Redirect("http://kifiupdates.tumblr.com")
-      case _ => homeNotAuthed(request)
-    }
+    MovedPermanently("http://blog.kifi.com/")
   })
 
   def kifiSiteRedirect(path: String) = Action {
@@ -239,18 +261,9 @@ class HomeController @Inject() (
   }
 
   def install = HtmlAction.authenticated { implicit request =>
-    val toBeNotified = db.readWrite(attempts = 3) { implicit session =>
-      for {
-        su <- socialUserRepo.getByUser(request.user.id.get)
-        invite <- invitationRepo.getByRecipientSocialUserId(su.id.get) if (invite.state != InvitationStates.JOINED)
-        senderUserId <- {
-          invitationRepo.save(invite.withState(InvitationStates.JOINED))
-          invite.senderUserId
-        }
-      } yield senderUserId
-    }
     SafeFuture {
-      userCommander.tellAllFriendsAboutNewUser(request.user.id.get, toBeNotified.toSet.toSeq)
+      userCommander.tellUsersWithContactOfNewUserImmediate(request.user)
+
       // Temporary event for debugging purpose
       val context = new HeimdalContextBuilder()
       context.addRequestInfo(request)

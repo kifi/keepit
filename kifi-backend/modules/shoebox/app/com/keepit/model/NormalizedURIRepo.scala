@@ -34,6 +34,8 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction])(implicit session: RWSession): Unit
   def updateScreenshotUpdatedAt(id: Id[NormalizedURI], time: DateTime)(implicit session: RWSession): Unit
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI]
+  def checkUnrestrictedURIs(uriId: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
+  def checkScrapedURIs(uriId: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
 }
 
 @Singleton
@@ -168,11 +170,9 @@ class NormalizedURIRepoImpl @Inject() (
   }
 
   def getByNormalizedUrl(normalizedUrl: String)(implicit session: RSession): Option[NormalizedURI] = {
-    statsd.time(key = "normalizedURIRepo.getByNormalizedUrl", ONE_IN_HUNDRED) { timer =>
-      val hash = NormalizedURI.hashUrl(normalizedUrl)
-      urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
-        (for (t <- rows if t.urlHash === hash) yield t).firstOption
-      }
+    val hash = NormalizedURI.hashUrl(normalizedUrl)
+    urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
+      (for (t <- rows if t.urlHash === hash) yield t).firstOption
     }
   }
 
@@ -198,6 +198,14 @@ class NormalizedURIRepoImpl @Inject() (
 
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI] = {
     { for (r <- rows if r.restriction === targetRestriction) yield r }.list
+  }
+
+  def checkUnrestrictedURIs(uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
+    { for (r <- rows if r.id.inSet(uriIds)) yield r.restriction.isNull }.list
+  }
+
+  def checkScrapedURIs(uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
+    (for (r <- rows if r.id.inSet(uriIds)) yield r.state).list.map(_.equals(NormalizedURIStates.SCRAPED))
   }
 
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {

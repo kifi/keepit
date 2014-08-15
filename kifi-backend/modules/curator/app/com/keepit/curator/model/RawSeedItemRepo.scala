@@ -1,29 +1,38 @@
 package com.keepit.curator.model
 
 import com.keepit.common.db.slick.{ DbRepo, SeqNumberFunction, SeqNumberDbFunction, DataBaseComponent, Database }
-import com.keepit.common.db.{ Id, DbSequenceAssigner }
+import com.keepit.common.db.slick.{ RepoWithDelete, DbRepoWithDelete }
+import com.keepit.common.db.{ Id, DbSequenceAssigner, SequenceNumber, H2DatabaseDialect }
 import com.keepit.model.{ User, NormalizedURI }
-import com.keepit.common.time.Clock
+import com.keepit.common.time.{ currentDateTime, Clock }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import scala.concurrent.duration._
+import scala.slick.jdbc.{ StaticQuery, GetResult }
 
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 
 import org.joda.time.DateTime
 
 @ImplementedBy(classOf[RawSeedItemRepoImpl])
-trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeedItem] {
+trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeedItem] with RepoWithDelete[RawSeedItem] {
+  def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[RawSeedItem]
+  def getByUriIdAndUserId(uriId: Id[NormalizedURI], userIdOpt: Option[Id[User]])(implicit session: RSession): Option[RawSeedItem]
+  def getBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
+  def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
+  def getRecentGeneric(maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
+  def getFirstByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[RawSeedItem]
+  def getByTopPriorScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
 }
 
 @Singleton
 class RawSeedItemRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock)
-    extends DbRepo[RawSeedItem] with RawSeedItemRepo with SeqNumberDbFunction[RawSeedItem] {
+    extends DbRepo[RawSeedItem] with RawSeedItemRepo with SeqNumberDbFunction[RawSeedItem] with DbRepoWithDelete[RawSeedItem] {
 
   import db.Driver.simple._
 
@@ -38,11 +47,29 @@ class RawSeedItemRepoImpl @Inject() (
     def lastSeen = column[DateTime]("last_seen", O.NotNull)
     def priorScore = column[Float]("prior_score", O.Nullable)
     def timesKept = column[Int]("times_kept", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, seq, uriId, userId.?, firstKept, lastKept, lastSeen, priorScore.?, timesKept) <> ((RawSeedItem.apply _).tupled, RawSeedItem.unapply _)
+    def discoverable = column[Boolean]("discoverable", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, seq, uriId, userId.?, firstKept, lastKept, lastSeen, priorScore.?, timesKept, discoverable) <> ((RawSeedItem.apply _).tupled, RawSeedItem.unapply _)
   }
 
   def table(tag: Tag) = new RawSeedItemTable(tag)
   initTable()
+
+  private implicit val getRawSeedItemResult: GetResult[RawSeedItem] = GetResult { r =>
+    RawSeedItem(
+      id = r.<<[Option[Id[RawSeedItem]]],
+      createdAt = r.<<[DateTime],
+      updatedAt = r.<<[DateTime],
+      seq = r.<<[SequenceNumber[RawSeedItem]],
+      uriId = r.<<[Id[NormalizedURI]],
+      userId = r.<<[Option[Id[User]]],
+      firstKept = r.<<[DateTime],
+      lastKept = r.<<[DateTime],
+      lastSeen = r.<<[DateTime],
+      priorScore = r.<<[Option[Float]],
+      timesKept = r.<<[Int],
+      discoverable = r.<<[Boolean]
+    )
+  }
 
   def deleteCache(model: RawSeedItem)(implicit session: RSession): Unit = {}
   def invalidateCache(model: RawSeedItem)(implicit session: RSession): Unit = {}
@@ -50,6 +77,53 @@ class RawSeedItemRepoImpl @Inject() (
   override def save(RawSeedItem: RawSeedItem)(implicit session: RWSession): RawSeedItem = {
     val toSave = RawSeedItem.copy(seq = deferredSeqNum())
     super.save(toSave)
+  }
+
+  def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[RawSeedItem] = {
+    (for (row <- rows if row.uriId === uriId) yield row).list
+  }
+
+  def getFirstByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[RawSeedItem] = {
+    (for (row <- rows if row.uriId === uriId && row.userId.isNull) yield row).firstOption
+  }
+
+  def getByUriIdAndUserId(uriId: Id[NormalizedURI], userIdOpt: Option[Id[User]])(implicit session: RSession): Option[RawSeedItem] = {
+    userIdOpt.map { userId =>
+      (for (row <- rows if row.uriId === uriId && row.userId === userId) yield row).firstOption
+    } getOrElse {
+      (for (row <- rows if row.uriId === uriId && row.userId.isNull) yield row).firstOption
+    }
+  }
+
+  def getBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
+    import StaticQuery.interpolation
+    val q = if (db.dialect == H2DatabaseDialect) {
+      sql"SELECT * FROM raw_seed_item WHERE seq > ${start.value} AND (user_id=$userId OR user_id IS NULL) ORDER BY seq LIMIT $maxBatchSize;"
+    } else {
+      sql"SELECT * FROM raw_seed_item USE INDEX (raw_seed_item_u_seq_user_id) WHERE seq > ${start.value} AND (user_id=$userId OR user_id IS NULL) ORDER BY seq LIMIT $maxBatchSize;"
+    }
+    q.as[RawSeedItem].list
+  }
+
+  def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
+    (for (row <- rows if row.userId === userId || row.userId.isNull) yield row).sortBy(_.seq.desc).take(maxBatchSize).list
+  }
+
+  def getRecentGeneric(maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
+    (for (row <- rows if row.userId.isNull) yield row).sortBy(_.seq.desc).take(maxBatchSize).list
+  }
+
+  def getByTopPriorScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
+    (for (row <- rows if row.userId === userId) yield row).sortBy(_.priorScore.desc).take(maxBatchSize).list
+  }
+
+  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
+    assignSequenceNumbers(sequence, "raw_seed_item", limit)
+  }
+
+  override def minDeferredSequenceNumber()(implicit session: RSession): Option[Long] = {
+    import StaticQuery.interpolation
+    sql"""select min(seq) from raw_seed_item where seq < 0""".as[Option[Long]].first
   }
 
 }

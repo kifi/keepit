@@ -7,18 +7,19 @@ angular.module('kifi.layout.header', ['kifi.profileService'])
   function ($scope, $window, $rootElement, $rootScope, $document, profileService, friendService, $location, util, keyIndices) {
 
     $scope.toggleMenu = function () {
-      $rootElement.toggleClass('kf-sidebar-active');
+      $rootElement.find('html').toggleClass('kf-sidebar-active');
     };
 
     $window.addEventListener('message', function (event) {
       if (event.data === 'show_left_column') {  // for guide
         $scope.$apply(function () {
-          $rootElement.addClass('kf-sidebar-active');
+          $rootElement.find('html').addClass('kf-sidebar-active');
         });
       }
     });
 
     $scope.me = profileService.me;
+    $scope.me.picUrl = '//www.kifi.com/assets/img/ghost.200.png';
     profileService.getMe();
 
     $scope.isActive = function (path) {

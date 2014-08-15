@@ -76,18 +76,22 @@ class LDAUserDbUpdaterImpl @Inject() (
     if (shouldComputeFeature(model)) {
       val topicCounts = db.readOnlyReplica { implicit s => uriTopicRepo.getUserTopicHistograms(user, representer.version) }
       val numOfEvidence = topicCounts.map { _._2 }.sum
+      val time = currentDateTime
+      val recentTopicCounts = db.readOnlyReplica { implicit s => uriTopicRepo.getUserTopicHistograms(user, representer.version, after = Some(time.minusWeeks(1))) }
+      val numOfRecentEvidence = recentTopicCounts.map { _._2 }.sum
       val topicMean = genFeature(topicCounts)
+      val recentTopicMean = genFeature(recentTopicCounts)
       val state = if (topicMean.isDefined) UserLDAInterestsStates.ACTIVE else UserLDAInterestsStates.NOT_APPLICABLE
       val tosave = model match {
-        case Some(m) => m.copy(userTopicMean = topicMean).withUpdateTime(currentDateTime).withState(state)
-        case None => UserLDAInterests(userId = user, version = representer.version, numOfEvidence = numOfEvidence, userTopicMean = topicMean, state = state)
+        case Some(m) => m.copy(numOfEvidence = numOfEvidence, userTopicMean = topicMean, numOfRecentEvidence = numOfRecentEvidence, userRecentTopicMean = recentTopicMean).withUpdateTime(currentDateTime).withState(state)
+        case None => UserLDAInterests(userId = user, version = representer.version, numOfEvidence = numOfEvidence, userTopicMean = topicMean, numOfRecentEvidence = numOfRecentEvidence, userRecentTopicMean = recentTopicMean, state = state)
       }
       db.readWrite { implicit s => userTopicRepo.save(tosave) }
     }
   }
 
   private def shouldComputeFeature(model: Option[UserLDAInterests]): Boolean = {
-    model.isEmpty || model.get.updatedAt.plusDays(1).getMillis < currentDateTime.getMillis
+    model.isEmpty || model.get.updatedAt.plusMinutes(15).getMillis < currentDateTime.getMillis
   }
 
   private def genFeature(topicCounts: Seq[(LDATopic, Int)]): Option[UserTopicMean] = {

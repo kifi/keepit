@@ -1,4 +1,4 @@
-@(socialUserInfo: SocialUserInfo, socialOnly: Boolean = false)
+@(socialUserInfo: SocialUserBasicInfo, socialOnly: Boolean = false)
 
 @networkLogo = {
   <img src="/assets/securesocial/images/providers/@{socialUserInfo.networkType}.png"
@@ -19,7 +19,7 @@
   </a>
 } else {
   <a data-hover="tooltip" title="@socialUserInfo.fullName"
-     class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfo.id.get)">
+     class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfo.id)">
     @avatar @socialUserInfo.fullName @networkLogo
   </a>
 }

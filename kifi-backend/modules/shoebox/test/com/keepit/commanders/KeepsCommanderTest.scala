@@ -14,7 +14,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeKeepImportsModule }
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import play.api.libs.json.{ JsArray, JsString, Json }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -22,7 +22,7 @@ import play.api.test.Helpers._
 class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
 
   def modules = FakeKeepImportsModule() ::
-    ShoeboxFakeStoreModule() ::
+    FakeShoeboxStoreModule() ::
     FakeExternalServiceModule() ::
     FakeSearchServiceClientModule() ::
     FakeCortexServiceClientModule() ::
@@ -53,7 +53,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
-          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
           val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(lib1.id.get)))

@@ -22,9 +22,16 @@ import com.google.inject.util.Providers
 import com.keepit.common.routes.ABook
 import scala.util.{ Success, Failure, Try }
 import play.api.http.Status
-import com.keepit.abook.model.{ IngestableContact, IngestableEmailAccount, RichContact, RichSocialConnection }
+import com.keepit.abook.model._
 import com.keepit.common.mail.{ EmailAddress, BasicContact }
 import com.keepit.typeahead.TypeaheadHit
+import com.keepit.social.SocialNetworkType
+import play.api.libs.json.JsArray
+import scala.util.Failure
+import scala.Some
+import play.api.libs.json.JsNumber
+import scala.util.Success
+import com.keepit.serializer.EitherFormat
 
 trait ABookServiceClient extends ServiceClient {
 
@@ -56,8 +63,13 @@ trait ABookServiceClient extends ServiceClient {
   def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact]
   def prefixQuery(userId: Id[User], query: String, maxHits: Option[Int] = None): Future[Seq[TypeaheadHit[RichContact]]]
   def getContactsByUser(userId: Id[User], page: Int = 0, pageSize: Option[Int] = None): Future[Seq[RichContact]]
-  def getEmailAccountsChanged(seqNum: SequenceNumber[IngestableEmailAccount], fetchSize: Int): Future[Seq[IngestableEmailAccount]]
+  def getEmailAccountsChanged(seqNum: SequenceNumber[EmailAccountInfo], fetchSize: Int): Future[Seq[EmailAccountInfo]]
   def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]]
+  def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]]
+  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]]
+  def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit]
+  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]]
+  def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]): Future[Unit]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -226,18 +238,41 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.hideEmailFromUser(userId, email)).map(_.json.as[Boolean])
   }
 
-  def getEmailAccountsChanged(seqNum: SequenceNumber[IngestableEmailAccount], fetchSize: Int): Future[Seq[IngestableEmailAccount]] = {
-    call(ABook.internal.getEmailAccountsChanged(seqNum, fetchSize)).map(_.json.as[Seq[IngestableEmailAccount]])
+  def getEmailAccountsChanged(seqNum: SequenceNumber[EmailAccountInfo], fetchSize: Int): Future[Seq[EmailAccountInfo]] = {
+    call(ABook.internal.getEmailAccountsChanged(seqNum, fetchSize)).map(_.json.as[Seq[EmailAccountInfo]])
   }
   def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]] = {
     call(ABook.internal.getContactsChanged(seqNum, fetchSize)).map(_.json.as[Seq[IngestableContact]])
   }
 
+  def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] =
+    call(ABook.internal.getUsersWithContact(email)).map(_.json.as[Set[Id[User]]])
+
+  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = {
+    call(ABook.internal.getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int)).map(_.json.as[Seq[Id[User]]])
+  }
+
+  def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit] = {
+    call(ABook.internal.hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User])).map(_ => ())
+  }
+
+  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = {
+    call(ABook.internal.getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, networks)).map(_.json.as[Seq[InviteRecommendation]])
+  }
+
+  def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]) = {
+    implicit val irrelevantFriendIdFormat = EitherFormat[EmailAddress, Id[SocialUserInfo]]
+    val payload = Json.obj("network" -> network, "irrelevantFriendId" -> irrelevantFriendId)
+    call(ABook.internal.hideInviteRecommendation(userId: Id[User]), payload).map(_ => ())
+  }
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
 
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, () => {})
+
+  // allow test clients to set expectations
+  var contactsConnectedToEmailAddress: Set[Id[User]] = Set.empty
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
@@ -291,8 +326,17 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getContactsByUser(userId: Id[User], page: Int, pageSize: Option[Int]): Future[Seq[RichContact]] = Future.successful(Seq.empty)
 
-  def getEmailAccountsChanged(seqNum: SequenceNumber[IngestableEmailAccount], fetchSize: Int): Future[Seq[IngestableEmailAccount]] = Future.successful(Seq.empty)
+  def getEmailAccountsChanged(seqNum: SequenceNumber[EmailAccountInfo], fetchSize: Int): Future[Seq[EmailAccountInfo]] = Future.successful(Seq.empty)
 
   def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]] = Future.successful(Seq.empty)
 
+  def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] = Future.successful(contactsConnectedToEmailAddress)
+
+  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = Future.successful(Seq.empty)
+
+  def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit] = Future.successful(())
+
+  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, relevantNetworks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = Future.successful(Seq.empty)
+
+  def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]) = Future.successful(())
 }

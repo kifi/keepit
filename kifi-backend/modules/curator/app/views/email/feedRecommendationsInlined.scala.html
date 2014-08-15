@@ -1,0 +1,37 @@
+@(emailData: com.keepit.curator.commanders.email.RecommendedEmailData)
+
+<div style="margin:0 auto;max-width:700px;">
+Hello @emailData.toUser.firstName,<br/><br/>
+Kifi recommends @emailData.recos.size items for you:
+<ol style="list-style-type:none;float:left;width:100%;clear:both;margin:0;padding:0 2em;">
+    @emailData.recos.map { reco =>
+    <li style="float:left;clear:both;border-bottom:1px solid #EEE;">
+        <div style="float:left;">
+            <h3 style="float:left;">
+                <a href="@reco.url" target="_blank">@reco.title</a>
+            </h3>
+            <div style="float:left;clear:both;">
+                <div style="float:right;">
+                    <form method="post" action="https://www.kifi.com/site/recos/vote?url=@helper.urlEncode(reco.url)" style="float:left;">
+                        <input type="hidden" name="vote" value="true"/>
+                        <input type="submit" value="Good"/>
+                    </form>
+                    <form method="post" action="https://www.kifi.com/site/recos/vote?url=@helper.urlEncode(reco.url)" style="float:left;">
+                        <input type="hidden" name="vote" value="false"/>
+                        <input type="submit" value="Bad"/>
+                    </form>
+                </div>
+                @reco.description
+            </div>
+            <div style="float:left;clear:both;margin:1em 0;font-size:0.9em;color:#777;">Score: @reco.score (@reco.explain)</div>
+        </div>
+        @reco.imageUrl.map { imageUrl =>
+        <div style="float:left;margin:1em;"><img src="@imageUrl" style="width:90%;"/></div>
+        }
+    </li>
+    }
+</ol>
+<div style="clear:both;"></div>
+
+<a href="https://www.kifi.com/kifeeeed" target="_blank">See More</a>
+</div>

@@ -202,7 +202,7 @@ class AuthController @Inject() (
       (request.userOpt, request.identityOpt) match {
         case (Some(user), _) if user.state != UserStates.INCOMPLETE_SIGNUP =>
           // Complete user, they don't need to be here!
-          Redirect(s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0")
+          Redirect(s"${com.keepit.controllers.website.routes.KifiSiteRouter.home.url}?m=0")
         case (Some(user), Some(identity)) =>
           // User exists, is incomplete
           val (firstName, lastName) = if (identity.firstName.contains("@")) ("", "") else (User.sanitizeName(identity.firstName), User.sanitizeName(identity.lastName))

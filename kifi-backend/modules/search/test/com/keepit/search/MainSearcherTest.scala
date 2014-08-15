@@ -17,14 +17,14 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.User
 import scala.concurrent._
 
-class MainSearcherTest extends Specification with SearchApplicationInjector with SearchTestHelper {
+class MainSearcherTest extends Specification with SearchTestInjector with SearchTestHelper {
 
   private val singleShard = Shard[NormalizedURI](0, 1)
   implicit private val activeShards = ActiveShards(Set(singleShard))
 
   "MainSearcher" should {
     "search and categorize using social graph" in {
-      running(application) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
@@ -78,7 +78,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
     }
 
     "return a single list of hits" in {
-      running(application) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
@@ -130,7 +130,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
     }
 
     "search personal bookmark titles" in {
-      running(application) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
@@ -192,7 +192,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
     }
 
     "score using matches in a bookmark title and an article" in {
-      running(application) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
@@ -222,7 +222,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
     }
 
     "paginate" in {
-      running(application) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
@@ -265,7 +265,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
     }
 
     "boost recent bookmarks" in {
-      running(application) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 1, numUris = 5)
         val Seq(user) = users
         val userId = user.id.get
@@ -296,7 +296,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
     }
 
     "be able to cut the long tail" in {
-      running(application) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 1, numUris = 10)
         val Seq(user) = users
         val userId = user.id.get
@@ -336,7 +336,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
     }
 
     "show own private bookmarks" in {
-      running(application) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -362,7 +362,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
     }
 
     "not show friends private bookmarks" in {
-      running(application) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -394,7 +394,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
     }
 
     "search hits using a stemmed word" in {
-      running(application) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("my books"))
@@ -422,7 +422,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
     }
 
     "search within collections" in {
-      running(application) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -442,7 +442,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
 
         uriGraph.update()
         indexer.update() === uris.size
-        collectionGraph.update() == 2
+        collectionGraph.update() === 2
 
         setConnections(Map(user1.id.get -> Set(user2.id.get)))
         userGraphIndexer.update()
@@ -454,7 +454,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val mainSearcher1 = mainSearcherFactory(singleShard, user1.id.get, "alldocs", english, None, uris.size, searchFilter1, noBoostConfig)
         val res1 = mainSearcher1.search()
 
-        res1.hits.size == coll1set.size
+        res1.hits.size === coll1set.size
         res1.hits.foreach { _.uriId.id % 3 === 0 }
 
         val coll2Future = Promise.successful(Seq(coll2.id.get)).future
@@ -462,7 +462,7 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val mainSearcher2 = mainSearcherFactory(singleShard, user1.id.get, "alldocs", english, None, uris.size, searchFilter2, noBoostConfig)
         val res2 = mainSearcher2.search()
 
-        res2.hits.size == coll2set.size
+        res2.hits.size === coll2set.size
         res2.hits.foreach { _.uriId.id % 3 === 1 }
 
         val coll3Future = Promise.successful(Seq(coll1.id.get, coll2.id.get)).future
@@ -470,12 +470,12 @@ class MainSearcherTest extends Specification with SearchApplicationInjector with
         val mainSearcher3 = mainSearcherFactory(singleShard, user1.id.get, "alldocs", english, None, uris.size, searchFilter3, noBoostConfig)
         val res3 = mainSearcher3.search()
 
-        res3.hits.size == (coll1set.size + coll2set.size)
+        res3.hits.size === (coll1set.size + coll2set.size)
       }
     }
 
     "search thru collection names" in {
-      running(application) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 1, numUris = 20)
         val user1 = users(0)
         val bookmarks = saveBookmarksByUser(Seq((user1, uris)))

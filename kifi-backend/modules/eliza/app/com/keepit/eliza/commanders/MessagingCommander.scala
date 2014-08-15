@@ -56,7 +56,6 @@ class MessagingCommander @Inject() (
     airbrake: AirbrakeNotifier,
     basicMessageCommander: MessageFetchingCommander,
     notificationCommander: NotificationCommander,
-    notificationUpdater: NotificationUpdater,
     messageSearchHistoryRepo: MessageSearchHistoryRepo) extends Logging {
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]): Seq[ElizaThreadInfo] = {
@@ -167,13 +166,14 @@ class MessagingCommander @Inject() (
     "6d8e337d-4199-49e1-a95c-e4aab582eeca", // yinjgie
     "b80511f6-8248-4799-a17d-f86c1508c90d", // léo
     "597e6c13-5093-4cba-8acc-93318987d8ee", // stephen
-    "147c5562-98b1-4fc1-946b-3873ac4a45b4", // eduardo
     "70927814-6a71-4eb4-85d4-a60164bae96c", // ray
-    "1714ac86-4ce5-4083-b4c7-bb1e8292c373", // martin
     "fd187ca1-2921-4c60-a8c0-955065d454ab", // jared (of the petker variety)
     "07170014-badc-4198-a462-6ba35d2ebb78", // david
     "228cdb45-e492-47f9-a0aa-1149ae963ce3", // aaron
-    "3e6f381a-044a-4adb-af5e-36642bdaaec8" // tan
+    "3e6f381a-044a-4adb-af5e-36642bdaaec8", // tan
+    "32384833-8803-4a16-946f-fd3c59b62b1b", // josh
+    "ed43b41c-5404-4f32-8118-bd6eaab4cd03", // yiping
+    "0f8db561-978d-4470-bcb6-19e5be4221c0" // tommy
   )
   val product = Seq(
     "3ad31932-f3f9-4fe3-855c-3359051212e5", // danny

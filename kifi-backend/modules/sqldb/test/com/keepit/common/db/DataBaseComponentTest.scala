@@ -8,18 +8,18 @@ import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationExceptio
 import java.sql.SQLException
 import com.google.inject.Injector
 
-class DataBaseComponentTest extends Specification with DbTestInjector {
+class DataBaseComponentTest extends Specification with SqlDbTestInjector {
 
   "Session" should {
 
     "not create real sessions if not used" in {
       withDb() { implicit injector: Injector =>
-        inject[TestSlickSessionProvider].doWithoutCreatingSessions {
+        inject[FakeSlickSessionProvider].doWithoutCreatingSessions {
           db.readOnlyMaster { implicit s =>
             1 === 1
           }
         }
-        inject[TestSlickSessionProvider].doWithoutCreatingSessions {
+        inject[FakeSlickSessionProvider].doWithoutCreatingSessions {
           db.readWrite { implicit s =>
             1 === 1
           }

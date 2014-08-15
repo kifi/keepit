@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model._
 import scala.concurrent._
@@ -23,7 +24,7 @@ import com.keepit.scraper.FakeScraperServiceClientImpl
 import com.keepit.scraper.ScraperServiceClient
 import com.google.inject.{ Singleton, Provides }
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.search.{ ArticleStore, InMemoryArticleStoreImpl }
 
 object URISummaryCommanderTestDummyValues {

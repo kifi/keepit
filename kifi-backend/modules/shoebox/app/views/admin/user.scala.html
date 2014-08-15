@@ -1,7 +1,7 @@
 @(user: User,
   totalBookmarks: Int,
   experiments: Set[ExperimentType],
-  socialUsers: Seq[SocialUserInfo],
+  socialUsers: Seq[SocialUserBasicInfo],
   fortyTwoConnections: Seq[User],
   kifiInstallations: Seq[KifiInstallation],
   allowedInvites: Int,
@@ -119,6 +119,9 @@
     </p>
     <p>
       <a href="@com.keepit.controllers.admin.routes.AdminUserController.userKeepsView(user.id.get)">User Keeps</a>
+    </p>
+    <p>
+      <a href="@com.keepit.controllers.admin.routes.AdminUserController.userLibrariesView(user.id.get)">User Libraries</a>
     </p>
 
       <h2>@fortyTwoConnections.size FortyTwo Users</h2>

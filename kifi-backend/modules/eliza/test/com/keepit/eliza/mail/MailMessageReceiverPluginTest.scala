@@ -2,14 +2,14 @@ package com.keepit.eliza.mail
 
 import com.keepit.test.ElizaTestInjector
 import org.specs2.mutable.Specification
-import com.keepit.common.crypto.TestCryptoModule
-import com.keepit.eliza.TestElizaExternalEmailModule
+import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.eliza.FakeElizaExternalEmailModule
 
 class MailMessageReceiverPluginTest extends Specification with ElizaTestInjector {
 
   "MailDiscussionMessageParser" should {
     "be successfully instantiated" in {
-      withDb(TestCryptoModule(), TestElizaExternalEmailModule()) { implicit injector =>
+      withDb(FakeCryptoModule(), FakeElizaExternalEmailModule()) { implicit injector =>
         inject[MailDiscussionMessageParser]
         1 === 1
       }

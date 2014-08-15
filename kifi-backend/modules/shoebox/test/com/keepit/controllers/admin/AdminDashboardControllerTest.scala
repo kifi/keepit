@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxSecureSocialModule }
+import com.keepit.common.social.{ FakeSocialGraphModule, FakeShoeboxAppSecureSocialModule }
 import com.keepit.social.{ ProdShoeboxSecureSocialModule, SocialId, SocialNetworks }
 import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
@@ -12,35 +12,35 @@ import com.keepit.model.SocialUserInfo
 import com.keepit.model.User
 import com.keepit.model.UserExperiment
 import com.keepit.test._
-import com.keepit.heimdal.TestHeimdalServiceClientModule
-import com.keepit.common.mail.TestMailModule
+import com.keepit.heimdal.FakeHeimdalServiceClientModule
+import com.keepit.common.mail.FakeMailModule
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.search.TestSearchServiceClientModule
-import com.keepit.scraper.{ TestScraperServiceClientModule, FakeScrapeSchedulerModule }
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
 
 class AdminDashboardControllerTest extends Specification with ShoeboxApplicationInjector {
 
   def requiredModules = Seq(
-    TestSearchServiceClientModule(),
+    FakeSearchServiceClientModule(),
     FakeScrapeSchedulerModule(),
     ProdShoeboxSecureSocialModule(),
     FakeHttpClientModule(),
-    ShoeboxFakeStoreModule(),
+    FakeShoeboxStoreModule(),
     FakeSocialGraphModule(),
     FakeAirbrakeModule(),
-    TestHeimdalServiceClientModule(),
-    TestMailModule(),
+    FakeHeimdalServiceClientModule(),
+    FakeMailModule(),
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule()
+    FakeScraperServiceClientModule()
   )
 
   "AdminDashboardController" should {

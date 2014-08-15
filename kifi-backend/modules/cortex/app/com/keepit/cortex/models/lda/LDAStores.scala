@@ -54,15 +54,14 @@ class S3LDATopicWordsStore(val bucketName: S3Bucket, val amazonS3Client: AmazonS
 
 class InMemoryLDATopicWordsStore extends VersionedInMemoryStore[String, DenseLDA, DenseLDATopicWords] with LDATopicWordsStore
 
-trait LDAConfigStore extends VersionedStore[String, DenseLDA, LDATopicConfigurations]
+trait UserLDAStatisticsStore extends VersionedStore[String, DenseLDA, UserLDAStatistics]
 
-class S3LDAConfigStore(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val formatter: Format[LDATopicConfigurations] = LDATopicConfigurations.format)
-    extends S3JsonStore[VersionedStoreKey[String, DenseLDA], LDATopicConfigurations]
-    with VersionedS3Store[String, DenseLDA, LDATopicConfigurations] with LDAConfigStore {
-  val prefix: String = MiscPrefix.LDA.topicConfigsFolder
+class S3UserLDAStatisticsStore(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog, val formatter: Format[UserLDAStatistics] = UserLDAStatistics.format)
+    extends S3JsonStore[VersionedStoreKey[String, DenseLDA], UserLDAStatistics]
+    with VersionedS3Store[String, DenseLDA, UserLDAStatistics] with UserLDAStatisticsStore {
+  val prefix: String = MiscPrefix.LDA.userLDAStatsFolder
   override def keyPrefix() = prefix
   override def idToKey(id: VersionedStoreKey[String, DenseLDA]) = "%s%s.json".format(prefix, id.toKey)
 }
 
-class InMemoryLDAConfigStore extends VersionedInMemoryStore[String, DenseLDA, LDATopicConfigurations] with LDAConfigStore
-
+class InMemoryUserLDAStatisticsStore extends VersionedInMemoryStore[String, DenseLDA, UserLDAStatistics] with UserLDAStatisticsStore

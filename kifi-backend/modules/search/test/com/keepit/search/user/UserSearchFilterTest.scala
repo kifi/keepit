@@ -1,16 +1,14 @@
 package com.keepit.search.user
 
 import org.specs2.mutable.Specification
-import com.keepit.inject.ApplicationInjector
 import com.keepit.model.User
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.test.TestApplication
-import play.api.test.Helpers.running
+import com.keepit.test.CommonTestInjector
 import com.keepit.search.util.IdFilterCompressor
 
-class UserSearchFilterTest extends Specification with ApplicationInjector {
+class UserSearchFilterTest extends Specification with CommonTestInjector {
 
   private def setup(implicit client: FakeShoeboxServiceClientImpl) = {
 
@@ -26,12 +24,11 @@ class UserSearchFilterTest extends Specification with ApplicationInjector {
     users
   }
 
-  def factory = inject[UserSearchFilterFactory]
-
   "default search filter" should {
     "work" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      withInjector(FakeShoeboxServiceModule()) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        val factory = inject[UserSearchFilterFactory]
         val users = setup(client)
         var filter = factory.default(None)
         filter.accept(1) === true
@@ -49,8 +46,9 @@ class UserSearchFilterTest extends Specification with ApplicationInjector {
 
   "friend-only filter" should {
     "work" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      withInjector(FakeShoeboxServiceModule()) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        val factory = inject[UserSearchFilterFactory]
         val users = setup(client)
         var filter = factory.friendsOnly(users(0).id.get, None)
         filter.accept(users(1).id.get.id) === true
@@ -69,8 +67,9 @@ class UserSearchFilterTest extends Specification with ApplicationInjector {
 
   "Nonfriends-only filter" should {
     "work" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
+      withInjector(FakeShoeboxServiceModule()) { implicit injector =>
         val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+        val factory = inject[UserSearchFilterFactory]
         val users = setup(client)
         var filter = factory.nonFriendsOnly(users(0).id.get, context = None)
         filter.accept(users(0).id.get.id) === false

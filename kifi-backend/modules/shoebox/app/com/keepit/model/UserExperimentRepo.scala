@@ -10,6 +10,7 @@ import com.keepit.common.time.Clock
 trait UserExperimentRepo extends Repo[UserExperiment] with RepoWithDelete[UserExperiment] {
   def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[ExperimentType]
   def getAllUserExperiments(userId: Id[User])(implicit session: RSession): Seq[UserExperiment]
+  def getUserIdsByExperiment(experimentType: ExperimentType)(implicit session: RSession): Seq[Id[User]]
   def get(userId: Id[User], experiment: ExperimentType,
     excludeState: Option[State[UserExperiment]] = Some(UserExperimentStates.INACTIVE))(implicit session: RSession): Option[UserExperiment]
   def getByType(experiment: ExperimentType)(implicit session: RSession): Seq[UserExperiment]
@@ -22,7 +23,8 @@ class UserExperimentRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val userRepo: UserRepo,
-  userExperimentCache: UserExperimentCache)
+  userExperimentCache: UserExperimentCache,
+  allFakeUsersCache: AllFakeUsersCache)
     extends DbRepo[UserExperiment] with DbRepoWithDelete[UserExperiment] with UserExperimentRepo {
 
   import db.Driver.simple._
@@ -53,6 +55,9 @@ class UserExperimentRepoImpl @Inject() (
     (for (f <- rows if f.userId === userId) yield f).list
   }
 
+  def getUserIdsByExperiment(experimentType: ExperimentType)(implicit session: RSession) =
+    (for (f <- rows if f.experimentType === experimentType && f.state === UserExperimentStates.ACTIVE) yield f.userId).list
+
   def get(userId: Id[User], experimentType: ExperimentType,
     excludeState: Option[State[UserExperiment]] = Some(UserExperimentStates.INACTIVE))(implicit session: RSession): Option[UserExperiment] = {
     (for {
@@ -66,10 +71,12 @@ class UserExperimentRepoImpl @Inject() (
 
   override def invalidateCache(model: UserExperiment)(implicit session: RSession): Unit = {
     userExperimentCache.remove(UserExperimentUserIdKey(model.userId))
+    if (model.experimentType == ExperimentType.FAKE) { allFakeUsersCache.remove(AllFakeUsersKey) }
   }
 
   override def deleteCache(model: UserExperiment)(implicit session: RSession): Unit = {
     userExperimentCache.remove(UserExperimentUserIdKey(model.userId))
+    if (model.experimentType == ExperimentType.FAKE) { allFakeUsersCache.remove(AllFakeUsersKey) }
   }
 
   def getByType(experiment: ExperimentType)(implicit session: RSession): Seq[UserExperiment] = {
@@ -87,5 +94,4 @@ class UserExperimentRepoImpl @Inject() (
         (ExperimentType(name), count)
     }
   }
-
 }

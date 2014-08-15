@@ -2,7 +2,6 @@ package com.keepit.graph.simple
 
 import org.specs2.mutable.Specification
 import com.keepit.graph.model._
-import java.io.File
 import org.apache.commons.io.FileUtils
 
 class SimpleGraphTest() extends Specification {
@@ -36,17 +35,27 @@ class SimpleGraphTest() extends Specification {
       vertexReader.data.id === vertigo
     }
 
-    "save, retrieve and remove edges" in {
+    "save and retrieve edges" in {
       vertexReader.moveTo(alfred)
       vertexReader.outgoingEdgeReader.degree must throwA[UninitializedReaderException]
       vertexReader.outgoingEdgeReader.moveToNextComponent() === false
+      vertexReader.incomingEdgeReader.degree must throwA[UninitializedReaderException]
+      vertexReader.incomingEdgeReader.moveToNextComponent() === false
+
       vertexReader.moveTo(vertigo)
+      vertexReader.outgoingEdgeReader.degree must throwA[UninitializedReaderException]
       vertexReader.outgoingEdgeReader.moveToNextComponent() === false
+      vertexReader.incomingEdgeReader.degree must throwA[UninitializedReaderException]
+      vertexReader.incomingEdgeReader.moveToNextComponent() === false
+
       edgeReader.moveTo(alfred, vertigo, EmptyEdgeReader) must throwA[EdgeNotFoundException]
 
       graph.readWrite { writer =>
         writer.saveEdge(alfred, vertigo, EmptyEdgeData)
       }
+
+      edgeReader.moveTo(alfred, vertigo, EmptyEdgeReader)
+      edgeReader.kind === EmptyEdgeReader
 
       vertexReader.moveTo(alfred)
       vertexReader.outgoingEdgeReader.moveToNextEdge() must throwA[UninitializedReaderException]
@@ -54,18 +63,27 @@ class SimpleGraphTest() extends Specification {
       vertexReader.outgoingEdgeReader.degree === 1
       vertexReader.outgoingEdgeReader.moveToNextEdge()
       vertexReader.outgoingEdgeReader.kind === EmptyEdgeReader
-      edgeReader.moveTo(alfred, vertigo, EmptyEdgeReader)
-      edgeReader.kind === EmptyEdgeReader
-      vertexReader.moveTo(vertigo)
-      vertexReader.outgoingEdgeReader.moveToNextComponent() === false
 
+      vertexReader.moveTo(vertigo)
+      vertexReader.incomingEdgeReader.moveToNextEdge() must throwA[UninitializedReaderException]
+      vertexReader.incomingEdgeReader.moveToNextComponent()
+      vertexReader.incomingEdgeReader.degree === 1
+      vertexReader.incomingEdgeReader.moveToNextEdge()
+      vertexReader.incomingEdgeReader.kind === EmptyEdgeReader
+    }
+
+    "remove edges" in {
       graph.readWrite { writer =>
         writer.removeEdge(alfred, vertigo, EmptyEdgeReader)
       }
 
+      edgeReader.moveTo(alfred, vertigo, EmptyEdgeReader) must throwA[EdgeNotFoundException]
+
       vertexReader.moveTo(alfred)
       vertexReader.outgoingEdgeReader.moveToNextComponent() === false
-      edgeReader.moveTo(alfred, vertigo, EmptyEdgeReader) must throwA[EdgeNotFoundException]
+
+      vertexReader.moveTo(vertigo)
+      vertexReader.incomingEdgeReader.moveToNextComponent() === false
     }
 
     "not be modified until a writer commits new data" in {
@@ -139,6 +157,8 @@ class SimpleGraphTest() extends Specification {
       }
 
       vertexReader.moveTo(leo)
+      vertexReader.outgoingEdgeReader.moveToNextComponent() === false
+      vertexReader.incomingEdgeReader.moveToNextComponent() === false
       edgeReader.moveTo(leo, alfred, EmptyEdgeReader) must throwA[EdgeNotFoundException]
       edgeReader.moveTo(alfred, leo, EmptyEdgeReader) must throwA[EdgeNotFoundException]
     }
@@ -149,20 +169,32 @@ class SimpleGraphTest() extends Specification {
       SimpleGraph.write(graph, tempFile)
       val newGraph = SimpleGraph.read(tempFile)
       val newGraphReader = newGraph.getNewReader()
-      val newGraphVertexReader = newGraphReader.getNewVertexReader()
-      newGraphVertexReader.moveTo(rearWindow)
-      newGraphVertexReader.kind === UriReader
-      newGraphVertexReader.data.id === rearWindow
-      newGraphVertexReader.moveTo(alfred)
-      newGraphVertexReader.outgoingEdgeReader.moveToNextComponent()
-      newGraphVertexReader.outgoingEdgeReader.degree === 2
-      newGraphVertexReader.moveTo(leo)
-      newGraphVertexReader.outgoingEdgeReader.moveToNextComponent() === false
 
       val newGraphEdgeReader = newGraphReader.getNewEdgeReader()
 
       newGraphEdgeReader.moveTo(alfred, rearWindow, EmptyEdgeReader)
       newGraphEdgeReader.moveTo(alfred, vertigo, EmptyEdgeReader)
+
+      val newGraphVertexReader = newGraphReader.getNewVertexReader()
+
+      newGraphVertexReader.moveTo(leo)
+      newGraphVertexReader.outgoingEdgeReader.moveToNextComponent() === false
+
+      newGraphVertexReader.moveTo(alfred)
+      newGraphVertexReader.outgoingEdgeReader.moveToNextComponent() === true
+      newGraphVertexReader.outgoingEdgeReader.degree === 2
+
+      newGraphVertexReader.moveTo(rearWindow)
+      newGraphVertexReader.kind === UriReader
+      newGraphVertexReader.data.id === rearWindow
+      newGraphVertexReader.incomingEdgeReader.moveToNextComponent() === true
+      newGraphVertexReader.incomingEdgeReader.degree === 1
+
+      newGraphVertexReader.moveTo(vertigo)
+      newGraphVertexReader.kind === UriReader
+      newGraphVertexReader.data.id === vertigo
+      newGraphVertexReader.incomingEdgeReader.moveToNextComponent() === true
+      newGraphVertexReader.incomingEdgeReader.degree === 1
 
       "All good" === "All good"
     }

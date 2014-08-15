@@ -16,7 +16,7 @@
     document.addEventListener('kifi:installed', redirect);
   }
   function redirect() {
-    window.location.href = '@com.keepit.controllers.website.routes.HomeController.home';
+    window.location.href = '@com.keepit.controllers.website.routes.KifiSiteRouter.home';
   }
 }(document.documentElement);
 !function (el) {
@@ -36,9 +36,19 @@
     <div class="install">
       <p class="install-title">Install the browser extension to start using kifi</p>
       <a class="install-button" href="javascript:" data-track-action="install">Install <span class="browser-name"></span> Extension</a>
+      <p class="install-error" style="display:none">There seems to be a problem.<br>We’ll look into it.<br>Feel free to try again later.</p>
       <a class="chrome-webstore-badge" target="_blank" href="https://chrome.google.com/webstore/detail/kifi/fpjooibalklfinmkiodaamcckfbcjhin" data-track-action="webstore">
-        <img height="58" src="/assets/images/chrome-webstore.png"/>
+        <img width="206" height="58" src="/assets/images/chrome-webstore.png"/>
       </a>
+      <p class="install-ff-help" style="display:none">
+        If you’re having trouble, please check your Add-ons<br>
+        (<b>Tools > Add-ons</b>) to make sure Kifi isn’t disabled.
+      </p>
+      <p class="install-ff-help" style="display:none">
+        Firefox’s website has
+        <a href="https://support.mozilla.org/en-US/kb/unable-install-add-ons-or-extensions" target="_blank">more
+        troubleshooting tips</a>.
+      </p>
     <div class="install-old" data-track-source="old">
       <p class="install-title">You’re running an old version of <span class="browser-name"></span></p>
       <p class="browser-newer">Please update your browser and then come back to install the kifi browser extension</p>
@@ -51,7 +61,6 @@
       <a class="browser-button chrome" href="https://www.google.com/chrome" data-track-action="getChrome">Get Chrome</a>
       <a class="browser-button firefox" href="https://www.mozilla.org/firefox" data-track-action="getFirefox">Get Firefox</a>
     </div>
-
   </section>
 </main>
 }

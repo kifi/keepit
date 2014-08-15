@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
@@ -102,6 +102,7 @@ class AuthCommander @Inject() (
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
     userExperimentCommander: LocalUserExperimentCommander,
+    userCommander: UserCommander,
     heimdalServiceClient: HeimdalServiceClient) extends Logging {
 
   def saveUserPasswordIdentity(userIdOpt: Option[Id[User]], identityOpt: Option[Identity],
@@ -172,6 +173,11 @@ class AuthCommander @Inject() (
       val (emailPassIdentity, userId) = saveUserPasswordIdentity(None, Some(socialIdentity),
         email = sfi.email, passwordInfo = pInfo, firstName = sfi.firstName, lastName = sfi.lastName, isComplete = true)
 
+      val userPreUsername = db.readOnlyMaster { implicit session =>
+        userRepo.get(userId)
+      }
+
+      userCommander.autoSetUsername(userPreUsername, readOnly = false)
       val user = db.readOnlyMaster { implicit session =>
         userRepo.get(userId)
       }
@@ -200,7 +206,14 @@ class AuthCommander @Inject() (
       val passwordInfo = identity.passwordInfo.get
       val email = EmailAddress.validate(identity.email.get).get
       val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfo = passwordInfo, firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
-      val user = db.readOnlyMaster(userRepo.get(userId)(_))
+      val userPreUsername = db.readOnlyMaster { implicit session =>
+        userRepo.get(userId)
+      }
+
+      userCommander.autoSetUsername(userPreUsername, readOnly = false)
+      val user = db.readOnlyMaster { implicit session =>
+        userRepo.get(userId)
+      }
 
       reportUserRegistration(user, inviteExtIdOpt)
 

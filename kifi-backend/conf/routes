@@ -1,8 +1,6 @@
 
 ->  / common.Routes
 
-->  / shoebox.Routes
-
 ->  / eliza.Routes
 
 -> /  search.Routes
@@ -15,4 +13,9 @@
 
 -> /  cortex.Routes
 
+-> /  curator.Routes
+
 -> /  graphService.Routes
+
+# This must be last, since it serves the site and has a wildcard.
+->  / shoebox.Routes

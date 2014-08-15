@@ -12,7 +12,7 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.inject.AppScoped
 import com.keepit.model._
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 
 import play.api.Play.current
 import play.api.{ Application, Play }
@@ -51,7 +51,7 @@ class SecureSocialUserPluginImpl @Inject() (
       throw ex
   }
 
-  def find(id: IdentityId): Option[SocialUser] = reportExceptions {
+  def find(id: IdentityId): Option[UserIdentity] = reportExceptions {
     db.readOnlyMaster { implicit s =>
       socialUserInfoRepo.getOpt(SocialId(id.userId), SocialNetworkType(id.providerId))
     } match {
@@ -64,7 +64,9 @@ class SecureSocialUserPluginImpl @Inject() (
           emailRepo.getByAddressOpt(email).flatMap { emailAddr =>
             // todo(andrew): Don't let unverified people log in. For now, we are, but come up with something better.
             socialUserInfoRepo.getByUser(emailAddr.userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap { sui =>
-              sui.credentials
+              sui.credentials map { creds =>
+                UserIdentity(Some(emailAddr.userId), creds)
+              }
             }
           }
         } tap { res =>
@@ -74,8 +76,8 @@ class SecureSocialUserPluginImpl @Inject() (
         log.info(s"No SocialUserInfo found for $id")
         None
       case Some(user) =>
-        log.debug(s"User found: $user for $id")
-        user.credentials
+        log.info(s"User found: $user for $id")
+        user.credentials map { UserIdentity(user.userId, _) }
     }
   }
 

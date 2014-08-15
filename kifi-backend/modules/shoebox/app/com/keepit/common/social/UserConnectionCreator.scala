@@ -1,5 +1,7 @@
 package com.keepit.common.social
 
+import com.keepit.commanders.SendFriendConnectionMadeNotificationHelper
+import com.keepit.common.akka.SafeFuture
 import org.joda.time.DateTime
 
 import com.google.inject.Inject
@@ -18,10 +20,6 @@ import play.api.libs.json.Json
 import com.keepit.heimdal.{ ContextDoubleData, HeimdalServiceClient }
 import com.keepit.common.performance.timing
 
-object UserConnectionCreator {
-  private val UpdatedUserConnectionsKey = "updated_user_connections"
-}
-
 class UserConnectionCreator @Inject() (
   db: Database,
   socialRepo: SocialUserInfoRepo,
@@ -32,36 +30,38 @@ class UserConnectionCreator @Inject() (
   airbrake: AirbrakeNotifier,
   basicUserRepo: BasicUserRepo,
   eliza: ElizaServiceClient,
-  heimdal: HeimdalServiceClient)
+  heimdal: HeimdalServiceClient,
+  sendFriendConnectionMadeHelper: SendFriendConnectionMadeNotificationHelper)
     extends Logging {
 
-  def createConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
-    network: SocialNetworkType): Seq[SocialConnection] = timing(s"createConnections($socialUserInfo, $network) socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
+  def createConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId]): Seq[SocialConnection] = timing(s"createConnections($socialUserInfo) socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     if (socialIds.isEmpty) {
       Seq.empty
     } else {
-      disableOldConnections(socialUserInfo, socialIds, network)
-      val socialConnections = createNewConnections(socialUserInfo, socialIds, network)
+      disableOldConnections(socialUserInfo, socialIds)
+      val socialConnections = createNewConnections(socialUserInfo, socialIds)
       socialUserInfo.userId.map(updateUserConnections)
       socialConnections
     }
   }
 
   def getConnectionsLastUpdated(userId: Id[User]): Option[DateTime] = db.readOnlyMaster { implicit s =>
-    userValueRepo.getValueStringOpt(userId, UserConnectionCreator.UpdatedUserConnectionsKey) map parseStandardTime
+    userValueRepo.getValueStringOpt(userId, UserValueName.UPDATED_USER_CONNECTIONS) map parseStandardTime
   }
 
   def updateUserConnections(userId: Id[User]) = timing(s"updateUserConnections($userId)") {
     db.readWrite { implicit s =>
       val existingConnections = userConnectionRepo.getConnectedUsers(userId)
-      val socialConnections = socialConnectionRepo.getFortyTwoUserConnections(userId)
+      val socialConnections = socialConnectionRepo.getSociallyConnectedUsers(userId)
+      val unfriendedConnections = userConnectionRepo.getUnfriendedUsers(userId)
 
-      val newConnections = socialConnections -- existingConnections
+      val newConnections = socialConnections -- existingConnections -- unfriendedConnections
       userConnectionRepo.addConnections(userId, newConnections)
-      userValueRepo.setValue(userId, UserConnectionCreator.UpdatedUserConnectionsKey, clock.now.toStandardTimeString)
+      userValueRepo.setValue(userId, UserValueName.UPDATED_USER_CONNECTIONS, clock.now.toStandardTimeString)
 
       newConnections.foreach { connId =>
         log.info(s"Sending new connection to user $connId (to $userId)")
+        sendFriendConnectionMadeHelper(userId, connId)
         eliza.sendToUser(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
       }
 
@@ -75,23 +75,21 @@ class UserConnectionCreator @Inject() (
     }
   }
 
-  private def extractFriendsWithConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
-    network: SocialNetworkType)(implicit s: RSession): Seq[(SocialUserInfo, Option[SocialConnection])] = timing(s"extractFriendsWithConnections($socialUserInfo, $network): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
+  private def extractFriendsWithConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId])(implicit s: RSession): Seq[(SocialUserInfo, Option[SocialConnection])] = timing(s"extractFriendsWithConnections($socialUserInfo): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     for {
       socialId <- socialIds
-      sui <- socialRepo.getOpt(socialId, network)
+      sui <- socialRepo.getOpt(socialId, socialUserInfo.networkType)
     } yield {
       sui -> socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, sui.id.get)
     }
   }
 
-  private def createNewConnections(socialUserInfo: SocialUserInfo, allSocialIds: Seq[SocialId],
-    network: SocialNetworkType): Seq[SocialConnection] = timing(s"createNewConnections($socialUserInfo, $network): allSocialIds(${allSocialIds.length}):${allSocialIds.mkString(",")}") {
+  private def createNewConnections(socialUserInfo: SocialUserInfo, allSocialIds: Seq[SocialId]): Seq[SocialConnection] = timing(s"createNewConnections($socialUserInfo): allSocialIds(${allSocialIds.length}):${allSocialIds.mkString(",")}") {
     log.debug(s"looking for new (or reactive) connections for user ${socialUserInfo.fullName}")
     allSocialIds.grouped(100).flatMap { socialIds =>
       db.readWrite { implicit s =>
         log.info(s"[createNewConnections] Processing group of ${socialIds.length}")
-        extractFriendsWithConnections(socialUserInfo, socialIds, network) map {
+        extractFriendsWithConnections(socialUserInfo, socialIds) map {
           case (_, Some(c)) if c.state == SocialConnectionStates.ACTIVE => Some(c)
           case (friend, Some(c)) =>
             log.info(s"activate connection between ${c.socialUser1} and ${c.socialUser2}")
@@ -116,23 +114,24 @@ class UserConnectionCreator @Inject() (
             }
         }
       }
-    }.toList.flatten
+    }.flatten.toSeq
   }
 
-  private def disableOldConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
-    network: SocialNetworkType): Seq[SocialConnection] = timing(s"disableOldConnections($socialUserInfo, $network): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
+  private def disableOldConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId]): Seq[SocialConnection] = timing(s"disableOldConnections($socialUserInfo): socialIds(${socialIds.length}):${socialIds.mkString(",")}") {
     log.debug(s"looking for connections to disable for ${socialUserInfo.fullName}")
     db.readWrite { implicit s =>
-      val existingSocialUserInfoIds = socialConnectionRepo.getUserConnections(socialUserInfo.userId.get) collect {
-        case sui if sui.networkType == network => sui.socialId
+      val existingSocialUserInfos = {
+        val socialUserInfos = socialConnectionRepo.getSocialConnectionInfos(socialUserInfo.id.get)
+        socialUserInfos.map { socialUserInfo => socialUserInfo.socialId -> socialUserInfo }.toMap
       }
-      val diff = existingSocialUserInfoIds diff socialIds
+
+      val diff = existingSocialUserInfos.keys.toSeq diff socialIds
       log.debug(s"socialUserInfoForAllFriendsIds = $socialIds")
-      log.debug(s"existingSocialUserInfoIds = $existingSocialUserInfoIds")
+      log.debug(s"existingSocialUserInfoIds = ${existingSocialUserInfos.keys}")
       log.debug(s"size of diff = ${diff.length}")
       diff map { socialId =>
         try {
-          val friendSocialUserInfoId = socialRepo.get(socialId, network).id.get
+          val friendSocialUserInfoId = existingSocialUserInfos(socialId).id
           log.debug(s"about to disable connection to ${socialUserInfo.id.get} for $friendSocialUserInfoId")
           socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
             case Some(c) if c.state != SocialConnectionStates.INACTIVE =>

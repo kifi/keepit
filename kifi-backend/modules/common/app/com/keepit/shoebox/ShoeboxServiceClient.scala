@@ -21,7 +21,7 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.usersegment.UserSegmentFactory
 import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.common.concurrent.ExecutionContext
-import com.keepit.common.ImmediateMap
+import com.keepit.common.core._
 import play.api.libs.json.Json._
 import org.joda.time.DateTime
 import com.keepit.eliza.model.ThreadItem
@@ -33,11 +33,9 @@ import com.keepit.common.usersegment.UserSegmentKey
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model.serialize.{ UriIdAndSeqBatch, UriIdAndSeq }
-import org.msgpack.ScalaMessagePack
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
-  private val ? = null
 
   def getUserOpt(id: ExternalId[User]): Future[Option[User]]
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]]
@@ -66,7 +64,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getHighestUriSeq(): Future[SequenceNumber[NormalizedURI]]
   def getUserIndexable(seqNum: SequenceNumber[User], fetchSize: Int): Future[Seq[User]]
   def getBookmarks(userId: Id[User]): Future[Seq[Keep]]
-  def getBookmarksChanged(seqNum: SequenceNumber[Keep], fertchSize: Int): Future[Seq[Keep]]
+  def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[Keep]]
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Keep]]
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiments: Future[Seq[SearchConfigExperiment]]
@@ -75,6 +73,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserExperiments(userId: Id[User]): Future[Seq[ExperimentType]]
   def getExperimentsByUserIds(userIds: Seq[Id[User]]): Future[Map[Id[User], Set[ExperimentType]]]
   def getExperimentGenerators(): Future[Seq[ProbabilisticExperimentGenerator]]
+  def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]]
   def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
   def getUnfriends(userId: Id[User]): Future[Set[Id[User]]]
@@ -84,28 +83,10 @@ trait ShoeboxServiceClient extends ServiceClient {
   def createDeepLink(initiator: Option[Id[User]], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator): Unit
   def getDeepUrl(locator: DeepLocator, recipient: Id[User]): Future[String]
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]]
-  def kifiHit(clicker: Id[User], hit: SanitizedKifiHit): Future[Unit]
-  def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo]
-  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]]
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean]
-  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean]
-  def getLatestKeep(url: String): Future[Option[Keep]]
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]]
-  def saveBookmark(bookmark: Keep): Future[Keep]
-  def saveScrapeInfo(info: ScrapeInfo): Future[ScrapeInfo]
-  def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI]
-  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit]
-  def savePageInfo(pageInfo: PageInfo): Future[Unit]
-  def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo]
-  def saveImageInfo(imgInfo: ImageInfo): Future[ImageInfo]
-  def updateNormalizedURI(uriId: => Id[NormalizedURI], createdAt: => DateTime = ?, updatedAt: => DateTime = ?, externalId: => ExternalId[NormalizedURI] = ?, title: => Option[String] = ?, url: => String = ?, urlHash: => UrlHash = UrlHash(?), state: => State[NormalizedURI] = ?, seq: => SequenceNumber[NormalizedURI] = SequenceNumber(-1), screenshotUpdatedAt: => Option[DateTime] = ?, restriction: => Option[Restriction] = ?, normalization: => Option[Normalization] = ?, redirect: => Option[Id[NormalizedURI]] = ?, redirectTime: => Option[DateTime] = ?): Future[Unit]
-  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI]
-  def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
-  def getProxy(url: String): Future[Option[HttpProxy]]
-  def getProxyP(url: String): Future[Option[HttpProxy]]
+  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]]
   def getFriendRequestsBySender(senderId: Id[User]): Future[Seq[FriendRequest]]
-  def getUserValue(userId: Id[User], key: String): Future[Option[String]]
-  def setUserValue(userId: Id[User], key: String, value: String): Unit
+  def getUserValue(userId: Id[User], key: UserValueName): Future[Option[String]]
+  def setUserValue(userId: Id[User], key: UserValueName, value: String): Unit
   def getUserSegment(userId: Id[User]): Future[UserSegment]
   def getExtensionVersion(installationId: ExternalId[KifiInstallation]): Future[String]
   def triggerRawKeepImport(): Unit
@@ -115,16 +96,19 @@ trait ShoeboxServiceClient extends ServiceClient {
   def isSensitiveURI(uri: String): Future[Boolean]
   def updateURIRestriction(id: Id[NormalizedURI], r: Option[Restriction]): Future[Unit]
   def sendUnreadMessages(threadItems: Seq[ThreadItem], otherParticipants: Set[Id[User]], user: Id[User], title: String, deepLocator: DeepLocator, notificationUpdatedAt: DateTime): Future[Unit]
-  def getAllURLPatterns(): Future[Seq[UrlPatternRule]]
-  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit]
-  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]]
   def getUriSummary(request: URISummaryRequest): Future[URISummary]
-  def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]]
+  def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]]
+  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
   def getUserImageUrl(userId: Id[User], width: Int): Future[String]
   def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String]
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
   def getIndexableSocialUserInfos(seqNum: SequenceNumber[SocialUserInfo], fetchSize: Int): Future[Seq[SocialUserInfo]]
   def getEmailAccountUpdates(seqNum: SequenceNumber[EmailAccountUpdate], fetchSize: Int): Future[Seq[EmailAccountUpdate]]
+  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]]
+  def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]]
+  def getAllFakeUsers(): Future[Set[Id[User]]]
+  def getInvitations(senderId: Id[User]): Future[Seq[Invitation]]
+  def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -147,8 +131,7 @@ case class ShoeboxCacheProvider @Inject() (
   userBookmarkCountCache: KeepCountCache,
   userSegmentCache: UserSegmentCache,
   extensionVersionCache: ExtensionVersionInstallationIdCache,
-  urlPatternRuleAllCache: UrlPatternRuleAllCache,
-  userImageUrlCache: UserImageUrlCache)
+  allFakeUsersCache: AllFakeUsersCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -220,24 +203,6 @@ class ShoeboxServiceClientImpl @Inject() (
       call(Shoebox.internal.getBookmarkByUriAndUser(uriId, userId)).map { r =>
         Json.fromJson[Option[Keep]](r.json).get
       }
-    }
-  }
-
-  def getBookmarksByUriWithoutTitle(uriId: Id[NormalizedURI]): Future[Seq[Keep]] = {
-    call(Shoebox.internal.getBookmarksByUriWithoutTitle(uriId), callTimeouts = longTimeout).map { r =>
-      r.json.as[JsArray].value.map(js => Json.fromJson[Keep](js).get)
-    }
-  }
-
-  def getLatestKeep(url: String): Future[Option[Keep]] = {
-    call(Shoebox.internal.getLatestKeep(), callTimeouts = longTimeout, body = JsString(url)).map { r =>
-      Json.fromJson[Option[Keep]](r.json).get
-    }
-  }
-
-  def saveBookmark(bookmark: Keep): Future[Keep] = {
-    call(Shoebox.internal.saveBookmark(), Json.toJson(bookmark), callTimeouts = longTimeout).map { r =>
-      Json.fromJson[Keep](r.json).get
     }
   }
 
@@ -450,6 +415,10 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getUsersByExperiment(experimentType: ExperimentType): Future[Set[User]] = {
+    call(Shoebox.internal.getUsersByExperiment(experimentType)).map(_.json.as[Set[User]])
+  }
+
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
     call(Shoebox.internal.getCollectionsByUser(userId)).map { r =>
       Json.fromJson[Seq[Collection]](r.json).get
@@ -552,148 +521,10 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def kifiHit(clickerId: Id[User], hit: SanitizedKifiHit): Future[Unit] = {
-    implicit val userIdFormat = Id.format[User]
-    val payload = Json.obj(
-      "clickerId" -> clickerId,
-      "kifiHit" -> hit
-    )
-    call(Shoebox.internal.kifiHit, payload) map { r => Unit }
-  }
-
-  def assignScrapeTasks(zkId: Long, max: Int): Future[Seq[ScrapeRequest]] = {
-    call(Shoebox.internal.assignScrapeTasks(zkId, max), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
-      r.json.as[Seq[ScrapeRequest]]
-    }
-  }
-
-  def getScrapeInfo(uri: NormalizedURI): Future[ScrapeInfo] = {
-    call(Shoebox.internal.getScrapeInfo(), Json.toJson(uri)).map { r =>
-      r.json.as[ScrapeInfo]
-    }
-  }
-
-  def saveScrapeInfo(info: ScrapeInfo): Future[ScrapeInfo] = {
-    call(Shoebox.internal.saveScrapeInfo(), Json.toJson(info), callTimeouts = longTimeout).map { r =>
-      r.json.as[ScrapeInfo]
-    }
-  }
-
-  def savePageInfo(pageInfo: PageInfo): Future[Unit] = {
-    call(Shoebox.internal.savePageInfo(), Json.toJson(pageInfo), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r => Unit }
-  }
-
-  def getImageInfo(id: Id[ImageInfo]): Future[ImageInfo] = {
-    call(Shoebox.internal.getImageInfo(id)).map { r =>
-      r.json.as[ImageInfo]
-    }
-  }
-
-  def saveImageInfo(imgInfo: ImageInfo): Future[ImageInfo] = {
-    call(Shoebox.internal.saveImageInfo(), Json.toJson(imgInfo), callTimeouts = longTimeout, routingStrategy = leaderPriority).map { r =>
-      r.json.as[ImageInfo]
-    }
-  }
-
-  @deprecated("Dangerous call. Use updateNormalizedURI instead.", "2014-01-30")
-  def saveNormalizedURI(uri: NormalizedURI): Future[NormalizedURI] = {
-    call(Shoebox.internal.saveNormalizedURI(), Json.toJson(uri), callTimeouts = longTimeout).map { r =>
-      r.json.as[NormalizedURI]
-    }
-  }
-
-  def updateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Future[Unit] = {
-    val json = Json.obj("state" -> state)
-    call(Shoebox.internal.updateNormalizedURI(uriId), json, callTimeouts = longTimeout).imap(_ => {})
-  }
-
-  def updateNormalizedURI(uriId: => Id[NormalizedURI],
-    createdAt: => DateTime,
-    updatedAt: => DateTime,
-    externalId: => ExternalId[NormalizedURI],
-    title: => Option[String],
-    url: => String,
-    urlHash: => UrlHash,
-    state: => State[NormalizedURI],
-    seq: => SequenceNumber[NormalizedURI],
-    screenshotUpdatedAt: => Option[DateTime],
-    restriction: => Option[Restriction],
-    normalization: => Option[Normalization],
-    redirect: => Option[Id[NormalizedURI]],
-    redirectTime: => Option[DateTime]): Future[Unit] = {
-    import com.keepit.common.strings.OptionWrappedJsObject
-    val safeUrlHash = Option(urlHash).map(p => Option(p.hash)).flatten
-    val safeSeq = Option(seq).map(v => if (v.value == -1L) None else Some(v)).flatten
-
-    val safeJsonParams: Seq[(String, JsValueWrapper)] = Seq(
-      "createdAt" -> Option(createdAt),
-      "updatedAt" -> Option(updatedAt),
-      "externalId" -> Option(externalId),
-      "title" -> Option(title),
-      "url" -> Option(url),
-      "urlHash" -> safeUrlHash,
-      "state" -> Option(state),
-      "seq" -> safeSeq,
-      "screenshotUpdatedAt" -> Option(screenshotUpdatedAt),
-      "restriction" -> Option(restriction),
-      "normalization" -> Option(normalization),
-      "redirect" -> Option(redirect),
-      "redirectTime" -> Option(redirectTime)
-    )
-    val payload = Json.obj(safeJsonParams: _*)
-    val stripped = payload.stripJsNulls()
-    call(Shoebox.internal.updateNormalizedURI(uriId), stripped, callTimeouts = longTimeout, routingStrategy = leaderPriority).imap(_ => {})
-  }
-
-  def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = {
-    call(Shoebox.internal.recordPermanentRedirect(), JsArray(Seq(Json.toJson[NormalizedURI](uri), Json.toJson[HttpRedirect](redirect))), callTimeouts = longTimeout).map { r =>
-      r.json.as[NormalizedURI]
-    }
-  }
-
-  def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = {
-    val payload = Json.obj(
-      "id" -> uriId.id,
-      "signature" -> uriSignature.toBase64(),
-      "url" -> candidateUrl,
-      "normalization" -> candidateNormalization,
-      "alternateUrls" -> alternateUrls
-    )
-    call(Shoebox.internal.recordScrapedNormalization(), payload, callTimeouts = longTimeout).imap(_ => {})
-  }
-
-  def getProxy(url: String): Future[Option[HttpProxy]] = {
-    call(Shoebox.internal.getProxy(url)).map { r =>
-      if (r.json == null) None else r.json.asOpt[HttpProxy]
-    }
-  }
-
-  def getProxyP(url: String): Future[Option[HttpProxy]] = {
-    call(Shoebox.internal.getProxyP, Json.toJson(url), callTimeouts = longTimeout).map { r =>
-      if (r.json == null) None else r.json.asOpt[HttpProxy]
-    }
-  }
-
-  def isUnscrapable(url: String, destinationUrl: Option[String]): Future[Boolean] = {
-    call(Shoebox.internal.isUnscrapable(url.take(MaxUrlLength), destinationUrl.map(_.take(MaxUrlLength)))).map { r =>
-      r.json.as[Boolean]
-    }
-  }
-
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean] = {
-    val destUrl = if (destinationUrl.isDefined && url == destinationUrl.get) {
-      log.debug(s"[isUnscrapableP] url==destUrl ${url}; ignored") // todo: fix calling code
-      None
-    } else destinationUrl map { dUrl =>
-      log.debug(s"[isUnscrapableP] url($url) != destUrl($dUrl)")
-      dUrl
-    }
-    val payload = JsArray(destUrl match {
-      case Some(dUrl) => Seq(Json.toJson(url.take(MaxUrlLength)), Json.toJson(dUrl.take(MaxUrlLength)))
-      case None => Seq(Json.toJson(url.take(MaxUrlLength)))
-    })
-    call(Shoebox.internal.isUnscrapableP, payload, callTimeouts = longTimeout).map { r =>
-      r.json.as[Boolean]
+  def getHelpRankInfos(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[HelpRankInfo]] = {
+    val payload = Json.toJson(uriIds)
+    call(Shoebox.internal.getHelpRankInfo, payload, callTimeouts = longTimeout) map { r =>
+      r.json.as[Seq[HelpRankInfo]]
     }
   }
 
@@ -703,13 +534,13 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getUserValue(userId: Id[User], key: String): Future[Option[String]] = {
+  def getUserValue(userId: Id[User], key: UserValueName): Future[Option[String]] = {
     cacheProvider.userValueCache.getOrElseFutureOpt(UserValueKey(userId, key)) {
       call(Shoebox.internal.getUserValue(userId, key)).map(_.json.asOpt[String])
     }
   }
 
-  def setUserValue(userId: Id[User], key: String, value: String): Unit = { call(Shoebox.internal.setUserValue(userId, key), JsString(value)) }
+  def setUserValue(userId: Id[User], key: UserValueName, value: String): Unit = { call(Shoebox.internal.setUserValue(userId, key), JsString(value)) }
 
   def getUserSegment(userId: Id[User]): Future[UserSegment] = {
     cacheProvider.userSegmentCache.getOrElseFuture(UserSegmentKey(userId)) {
@@ -781,31 +612,13 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.sendUnreadMessages(), payload).imap(_ => {})
   }
 
-  def getAllURLPatterns(): Future[Seq[UrlPatternRule]] = {
-    cacheProvider.urlPatternRuleAllCache.getOrElseFuture(UrlPatternRuleAllKey()) {
-      call(Shoebox.internal.allURLPatternRules()).map { r =>
-        Json.fromJson[Seq[UrlPatternRule]](r.json).get
-      }
-    }
-  }
-
-  def updateScreenshots(nUriId: Id[NormalizedURI]): Future[Unit] = {
-    call(Shoebox.internal.updateScreenshots(nUriId)).map { r => assert(r.status == 202); () }
-  }
-
-  def getUriImage(nUriId: Id[NormalizedURI]): Future[Option[String]] = {
-    call(Shoebox.internal.getUriImage(nUriId)).map { r =>
-      Json.fromJson[Option[String]](r.json).get
-    }
-  }
-
   def getUriSummary(request: URISummaryRequest): Future[URISummary] = {
     call(Shoebox.internal.getUriSummary, Json.toJson(request), callTimeouts = longTimeout).map { r =>
       r.json.as[URISummary]
     }
   }
 
-  def getURISummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = {
+  def getUriSummaries(uriIds: Seq[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], URISummary]] = {
     redundantDBConnectionCheck(uriIds)
     val keys = uriIds.map(URISummaryKey)
     cacheProvider.uriSummaryCache.bulkGetOrElseFuture(keys.toSet) { missing =>
@@ -819,11 +632,15 @@ class ShoeboxServiceClientImpl @Inject() (
     }.map(_ map { case (k, v) => (k.id, v) })
   }
 
+  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
+    call(Shoebox.internal.getCandidateURIs(), body = Json.toJson(uris)).map { r =>
+      r.json.as[Seq[Boolean]]
+    }
+  }
+
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
-    cacheProvider.userImageUrlCache.getOrElseFuture(UserImageUrlCacheKey(userId, width)) {
-      call(Shoebox.internal.getUserImageUrl(userId.id, width)).map { r =>
-        r.json.as[String]
-      }
+    call(Shoebox.internal.getUserImageUrl(userId, width)).map { r =>
+      r.json.as[String]
     }
   }
 
@@ -848,5 +665,29 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getEmailAccountUpdates(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
       r.json.as[Seq[EmailAccountUpdate]]
     }
+  }
+
+  def getLibrariesAndMembershipsChanged(seqNum: SequenceNumber[Library], fetchSize: Int): Future[Seq[LibraryAndMemberships]] = {
+    call(Shoebox.internal.getLibrariesAndMembershipsChanged(seqNum, fetchSize), callTimeouts = longTimeout).map { r =>
+      r.json.as[Seq[LibraryAndMemberships]]
+    }
+  }
+
+  def getLapsedUsersForDelighted(maxCount: Int, skipCount: Int, after: DateTime, before: Option[DateTime]): Future[Seq[DelightedUserRegistrationInfo]] = {
+    call(Shoebox.internal.getLapsedUsersForDelighted(maxCount, skipCount, after, before), callTimeouts = longTimeout).map { r =>
+      r.json.as[Seq[DelightedUserRegistrationInfo]]
+    }
+  }
+
+  def getAllFakeUsers(): Future[Set[Id[User]]] = cacheProvider.allFakeUsersCache.getOrElseFuture(AllFakeUsersKey) {
+    call(Shoebox.internal.getAllFakeUsers()).map(_.json.as[Set[Id[User]]])
+  }
+
+  def getInvitations(senderId: Id[User]): Future[Seq[Invitation]] = {
+    call(Shoebox.internal.getInvitations(senderId)).map(_.json.as[Seq[Invitation]])
+  }
+
+  def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]] = {
+    call(Shoebox.internal.getSocialConnections(userId)).map(_.json.as[Seq[SocialUserBasicInfo]])
   }
 }

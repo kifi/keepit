@@ -42,6 +42,12 @@ trait SchedulerPlugin extends Plugin with Logging {
       NamedCancellable(system.scheduler.schedule(initialDelay, frequency) { f }, taskName)
   }
 
+  /**
+   * @param quartz you can inject an `quartz: ActorInstance[QuartzActor]` for that. this is the actor that manages the quartz schedualing
+   * @param receiver this is the actor that will get the message
+   * @param cron a string describing the cron schedule. see http://www.quartz-scheduler.org/documentation/quartz-1.x/tutorials/crontrigger for more info
+   * @param message this is the message that would be sent to the reciever
+   */
   def cronTaskOnLeader(quartz: ActorInstance[QuartzActor], receiver: ActorRef, cron: String, message: Any): Unit = {
     val taskName = s"cron message $message to actor $receiver on leader only"
     if (scheduling.enabled) {
@@ -53,6 +59,9 @@ trait SchedulerPlugin extends Plugin with Logging {
     } else log.info(s"permanently disable cron for task: $taskName")
   }
 
+  /**
+   * @see #cronTaskOnLeader
+   */
   def cronTaskOnAllMachines(quartz: ActorInstance[QuartzActor], receiver: ActorRef, cron: String, message: Any): Unit = {
     val taskName = s"cron message $message to actor $receiver on all machines"
     if (scheduling.enabled) {
@@ -87,6 +96,36 @@ trait SchedulerPlugin extends Plugin with Logging {
       scheduleTask(system, initialDelay, frequency, taskName) {
         timing(s"executing scheduled task: $taskName") {
           receiver ! message
+        }
+      }
+    } else {
+      log.debug(s"permanently disable scheduling for task: $taskName")
+    }
+  }
+
+  def scheduleTaskOnLeader(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration)(f: => Unit): Unit = {
+    val taskName = s"call function $f on leader only"
+    if (scheduling.enabled) {
+      log.info(s"Scheduling $taskName")
+      scheduleTask(system, initialDelay, frequency, taskName) {
+        if (scheduling.enabledOnlyForLeader) {
+          timing(s"executing scheduled task: $taskName") {
+            f
+          }
+        }
+      }
+    } else {
+      log.debug(s"permanently disable scheduling for task: $taskName")
+    }
+  }
+
+  def scheduleTaskOnAllMachines(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration)(f: => Unit): Unit = {
+    val taskName = s"call function $f on all machines"
+    if (scheduling.enabled) {
+      log.info(s"Scheduling $taskName")
+      scheduleTask(system, initialDelay, frequency, taskName) {
+        timing(s"executing scheduled task: $taskName") {
+          f
         }
       }
     } else {

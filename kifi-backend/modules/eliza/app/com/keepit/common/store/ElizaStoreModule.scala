@@ -40,7 +40,7 @@ case class ElizaDevStoreModule() extends StoreModule {
 
   }
   protected def whenConfigured[T](parameter: String)(expression: => T): Option[T] =
-    current.configuration.getString(parameter).map(_ => expression)
+    play.api.Play.maybeApplication.map(_.configuration.getString(parameter).map(_ => expression)).flatten
 
   @Singleton
   @Provides

@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import javax.crypto.spec.IvParameterSpec
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId }
 import com.keepit.common.db._
@@ -22,21 +23,18 @@ case class Library(
     slug: LibrarySlug,
     state: State[Library] = LibraryStates.ACTIVE,
     seq: SequenceNumber[Library] = SequenceNumber.ZERO,
-    kind: LibraryKind = LibraryKind.USER_CREATED) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
-
-  val prefix = Library.prefix
+    kind: LibraryKind = LibraryKind.USER_CREATED,
+    memberCount: Int) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def withId(id: Id[Library]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(myState: State[Library]) = this.copy(state = myState)
-
-  override def toString(): String = s"Library[id=$id,name=$name,privacy=$visibility]"
-
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {
 
-  val prefix: String = "lib"
+  protected[this] val publicIdPrefix = "l"
+  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
 
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[Library]) and
@@ -49,17 +47,18 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'state).format(State.format[Library]) and
     (__ \ 'seq).format(SequenceNumber.format[Library]) and
-    (__ \ 'kind).format[LibraryKind]
+    (__ \ 'kind).format[LibraryKind] and
+    (__ \ 'memberCount).format[Int]
   )(Library.apply, unlift(Library.unapply))
 
   val maxNameLength = 50
   def isValidName(name: String): Boolean = {
-    !(name.length > maxNameLength) || (name.contains("\""))
+    (name != "") && !(name.length > maxNameLength) && !(name.contains("\"")) && !(name.contains("/"))
   }
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
-  override val version = 0
+  override val version = 2
   val namespace = "library_by_id"
   def toKey(): String = id.id.toString
 }
@@ -75,24 +74,24 @@ object LibrarySlug {
 
   val maxSlugLength = 50
   def isValidSlug(slug: String): Boolean = {
-    (!slug.contains(' ') && slug.length < maxSlugLength)
+    slug != "" && !slug.contains(' ') && slug.length < maxSlugLength
   }
 }
 
 sealed abstract class LibraryVisibility(val value: String)
 
 object LibraryVisibility {
-  case object ANYONE extends LibraryVisibility("anyone")
-  case object LIMITED extends LibraryVisibility("limited")
-  case object SECRET extends LibraryVisibility("secret")
+  case object PUBLISHED extends LibraryVisibility("published") // published library, is discoverable
+  case object DISCOVERABLE extends LibraryVisibility("discoverable") // "help my friends", is discoverable
+  case object SECRET extends LibraryVisibility("secret") // secret, not discoverable
 
   implicit def format[T]: Format[LibraryVisibility] =
     Format(__.read[String].map(LibraryVisibility(_)), new Writes[LibraryVisibility] { def writes(o: LibraryVisibility) = JsString(o.value) })
 
   def apply(str: String) = {
     str match {
-      case ANYONE.value => ANYONE
-      case LIMITED.value => LIMITED
+      case PUBLISHED.value => PUBLISHED
+      case DISCOVERABLE.value => DISCOVERABLE
       case SECRET.value => SECRET
     }
   }
@@ -117,4 +116,10 @@ object LibraryKind {
       case USER_CREATED.value => USER_CREATED
     }
   }
+}
+
+case class LibraryAndMemberships(library: Library, memberships: Seq[LibraryMembership])
+
+object LibraryAndMemberships {
+  implicit val format = Json.format[LibraryAndMemberships]
 }

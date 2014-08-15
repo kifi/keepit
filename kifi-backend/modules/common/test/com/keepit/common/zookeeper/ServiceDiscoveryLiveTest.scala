@@ -1,7 +1,7 @@
 package com.keepit.common.zookeeper
 
 import com.keepit.test._
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.amazon._
 import com.keepit.common.healthcheck.FakeAirbrakeNotifier
 import com.keepit.common.service._
@@ -17,7 +17,7 @@ import com.google.inject.util._
 import com.google.inject.Injector
 import akka.actor.Scheduler
 
-class ServiceDiscoveryLiveTest extends Specification with ApplicationInjector {
+class ServiceDiscoveryLiveTest extends Specification with CommonTestInjector {
 
   args(skipAll = true)
 
@@ -43,13 +43,13 @@ class ServiceDiscoveryLiveTest extends Specification with ApplicationInjector {
   "discovery" should {
 
     "register" in {
-      running(new TestApplication(TestActorSystemModule())) {
+      withInjector(FakeActorSystemModule()) { implicit injector =>
         val services = new FortyTwoServices(inject[Clock], Mode.Test, None, None, inject[FortyTwoConfig]) {
           override lazy val currentService: ServiceType = ServiceType.SHOEBOX
         }
         val zkClient = new ZooKeeperClientImpl("localhost", 3000,
           Some({ zk1 => println(s"in callback, got $zk1") }))
-        val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zkClient, services, amazonInstanceInfo(1), inject[Scheduler], Providers.of(new FakeAirbrakeNotifier()), false, Nil)
+        val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zkClient, services, amazonInstanceInfo(1), inject[Scheduler], Providers.of(new FakeAirbrakeNotifier()), false, Set.empty)
         zkClient.session { zk =>
           try {
             discovery.myClusterSize === 0

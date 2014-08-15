@@ -62,7 +62,7 @@ a.profile-logout
       transform: rotateY(180deg)
     .profile-image-change
       transform: rotateY(0deg)
-    
+
 .profile-image
 .profile-image-change
   position: absolute
@@ -327,6 +327,8 @@ a.profile-email-pending-cancel
 
 .profile-email-addresses-title
 .profile-change-password-title
+
+.profile-manage-account-title
   display: inline-block
   margin-left: 6px
 
@@ -335,12 +337,17 @@ a.profile-email-pending-cancel
     transition: all 0.3s
 
 a.profile-email-addresses-title-wrapper
+a.profile-uninstall-title-wrapper
+a.profile-manage-account-title-wrapper
   display: block
   color: textBlackColor
   font-size: 15px
   padding: 5px 0
   margin-top: 10px
   letter-spacing: 0.8px
+
+a.profile-manage-account-title-wrapper
+  text-align: left
 
 .profile-email-address-manage
 .profile-change-password-change
@@ -366,6 +373,25 @@ a.profile-email-addresses-title-wrapper
   padding: 20px
   margin-top: 10px
   line-height: 1.8em
+
+
+.profile-manage-account-section-wrapper
+  max-width: 440px
+  margin: 0 auto
+
+.profile-uninstall-change
+  li
+    text-align: left
+    margin-left: 10%
+    padding: 0
+    line-height: 1.5em
+
+.profile-manage-account-close-account-change
+  textarea
+    width: 80%
+    height: 4em
+    margin: 1em 0
+    padding: 3px 10px
 
 .profile-email-address-manage-footer
   height: 5px
@@ -564,11 +590,11 @@ a.profile-change-password-save
     margin-bottom: 20px
 
   & h5
-    color: #C6C6C6
-    font-weight: 200
-    letter-spacing: .5px
-    margin-bottom: 28px
+    color: #9fb1c3
+    font-weight: 400
+    margin: 0 auto 28px
     font-size: 13px
+    max-width: 350px
 
 .profile .networks
   position: relative
@@ -601,7 +627,7 @@ a.profile-change-password-save
     position: absolute
     display: block
     content: "."
-    background: url(../img/kifi-k.png) no-repeat
+    background: url(/img/kifi-k.png) no-repeat
     background-size: 100%
     top: -6px
     left: -6px
@@ -670,7 +696,7 @@ a.profile-nw
   top: 0
   left: 0
   content: ' '
-  background-image: url(../img/networks2.png)
+  background-image: url(/img/networks2.png)
   background-size: auto 32px
   width: 32px
   height: 32px
@@ -746,7 +772,7 @@ a.profile-nw
   line-height: 15px
   font-weight: 200
   letter-spacing: .8px
-  background-image: url(../img/check-green.png)
+  background-image: url(/img/check-green.png)
   background-repeat: no-repeat
   background-size: auto 15px
   background-position: 0
@@ -796,8 +822,9 @@ a.profile-export
   font-size: 13px
   letter-spacing: .5px
   border-radius: 2px
-  transition: background 0.2s ease  
+  transition: background 0.2s ease
 
+.profile-close-account-status
 .profile-export-status
   position: relative
   margin-top: 8px
@@ -806,11 +833,16 @@ a.profile-export
   line-height: 15px
   font-weight: 200
   letter-spacing: .8px
-  background-image: url(../img/check-green.png)
+  background-image: url(/img/check-green.png)
   background-repeat: no-repeat
   background-size: auto 15px
   background-position: 0
   overflow: hidden
+
+.profile-close-account-status
+  display: inline-block
+  &.error
+    background-image: none
 
 .profile-email-accounts
   margin-top: 6px
@@ -835,7 +867,7 @@ a.profile-export
 
 td.profile-email-status
   width: 15px
-  background-image: url(../img/check-green.png)
+  background-image: url(/img/check-green.png)
   background-repeat: no-repeat
   background-size: auto 15px
   background-position: 0

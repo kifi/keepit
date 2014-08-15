@@ -8,13 +8,14 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model.User
 import org.joda.time.DateTime
 import com.keepit.common.net.URI
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import com.keepit.common.logging.Logging
 import com.keepit.search.tracker.ClickedURI
 import play.api.libs.concurrent.Execution.Implicits._
 
 class SearchEventCommander @Inject() (
     shoeboxClient: ShoeboxServiceClient,
+    heimdalClient: HeimdalServiceClient,
     clickHistoryTracker: ClickHistoryTracker,
     resultClickedTracker: ResultClickTracker,
     searchAnalytics: SearchAnalytics) extends Logging {
@@ -30,7 +31,7 @@ class SearchEventCommander @Inject() (
         resultClickedTracker.add(userId, query, uriId, resultPosition, kifiHitContext.isOwnKeep, isDemo)
         clickHistoryTracker.add(userId, ClickedURI(uriId))
         val hit = SanitizedKifiHit(searchContext.uuid, searchContext.origin, searchResultUrl, uriId, kifiHitContext)
-        shoeboxClient.kifiHit(userId, hit)
+        heimdalClient.processKifiHit(userId, hit)
     }
     searchAnalytics.clickedSearchResult(userId, clickedAt, searchContext, SearchEngine.Kifi, resultPosition, Some(kifiHitContext), context)
   }

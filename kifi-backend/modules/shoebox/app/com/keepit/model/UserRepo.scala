@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ Provider, Inject, Singleton, ImplementedBy }
+import com.keepit.commanders.UsernameOps
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ ExternalId, Id, State, SequenceNumber, NotFoundException }
@@ -34,6 +35,8 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getAllActiveIds()(implicit session: RSession): Seq[Id[User]]
   def getUsersSince(seq: SequenceNumber[User], fetchSize: Int)(implicit session: RSession): Seq[User]
   def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
+  def getUsername(username: Username)(implicit session: RSession): Option[User]
+  def getNormalizedUsername(username: String)(implicit session: RSession): Option[User]
 }
 
 @Singleton
@@ -63,7 +66,8 @@ class UserRepoImpl @Inject() (
     def userPictureId = column[Id[UserPicture]]("user_picture_id", O.Nullable)
     def primaryEmail = column[EmailAddress]("primary_email", O.Nullable)
     def username = column[Username]("username", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmail.?, username.?) <> ((User.apply _).tupled, User.unapply)
+    def normalizedUsername = column[String]("normalized_username", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, externalId, firstName, lastName, state, pictureName.?, userPictureId.?, seq, primaryEmail.?, username.?, normalizedUsername.?) <> ((User.apply _).tupled, User.unapply)
   }
 
   def table(tag: Tag) = new UserTable(tag)
@@ -205,5 +209,19 @@ class UserRepoImpl @Inject() (
       }
       valueMap.map { case (k, v) => (k.id -> v) }
     }
+  }
+
+  private val getUsernameCompiled = Compiled { username: Column[Username] =>
+    for (f <- rows if f.username is username) yield f
+  }
+  def getUsername(username: Username)(implicit session: RSession): Option[User] = {
+    getUsernameCompiled(username).firstOption
+  }
+
+  private val getNormalizedUsernameCompiled = Compiled { username: Column[String] =>
+    for (f <- rows if f.normalizedUsername is username) yield f
+  }
+  def getNormalizedUsername(username: String)(implicit session: RSession): Option[User] = {
+    getNormalizedUsernameCompiled(username).firstOption
   }
 }

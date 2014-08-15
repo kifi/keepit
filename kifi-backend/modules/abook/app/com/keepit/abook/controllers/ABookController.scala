@@ -178,7 +178,7 @@ class ABookController @Inject() (
 
   def getEContactCount(userId: Id[User]) = Action { request =>
     val count = db.readOnlyReplica { implicit s =>
-      econtactRepo.getEContactCount(userId)
+      econtactRepo.countEmailContacts(userId, distinctEmailAccounts = false)
     }
     Ok(JsNumber(count))
   }
@@ -252,5 +252,10 @@ class ABookController @Inject() (
     val relevantContacts = abookCommander.getContactsByUser(userId, page, pageSize)
     val richContacts = relevantContacts.map(EContact.toRichContact)
     Ok(Json.toJson(richContacts))
+  }
+
+  def getUsersWithContact(email: EmailAddress) = Action { request =>
+    val userIds = abookCommander.getUsersWithContact(email)
+    Ok(Json.toJson(userIds))
   }
 }

@@ -4,7 +4,7 @@ import com.keepit.inject._
 import com.keepit.common.db.slick.SlickSessionProvider
 import com.keepit.model._
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.db.TestSlickSessionProvider
+import com.keepit.common.db.FakeSlickSessionProvider
 import com.keepit.common.mail.ElectronicMailRepo
 import com.google.inject.Injector
 import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationService }
@@ -13,6 +13,7 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
 
   def userSessionRepo(implicit injector: Injector) = inject[UserSessionRepo]
   def userRepo(implicit injector: Injector) = inject[UserRepo]
+  def userCredRepo(implicit injector: Injector) = inject[UserCredRepo]
   def rawKeepRepo(implicit injector: Injector) = inject[RawKeepRepo]
   def userPictureRepo(implicit injector: Injector) = inject[UserPictureRepo]
   def basicUserRepo(implicit injector: Injector) = inject[BasicUserRepo]
@@ -37,13 +38,12 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
   def collectionRepo(implicit injector: Injector) = inject[CollectionRepo]
   def keepToCollectionRepo(implicit injector: Injector) = inject[KeepToCollectionRepo]
   def electronicMailRepo(implicit injector: Injector) = inject[ElectronicMailRepo]
-  def userBookmarkClicksRepo(implicit injector: Injector) = inject[UserBookmarkClicksRepo]
   def failedContentCheckRepo(implicit injector: Injector) = inject[FailedContentCheckRepo]
   def changedURIRepo(implicit injector: Injector) = inject[ChangedURIRepo]
   def imageInfo(implicit injector: Injector) = inject[ImageInfoRepo]
   def keepDiscoveryRepo(implicit injector: Injector) = inject[KeepDiscoveryRepo]
   def rekeepRepo(implicit injector: Injector) = inject[ReKeepRepo]
-  def sessionProvider(implicit injector: Injector) = inject[SlickSessionProvider].asInstanceOf[TestSlickSessionProvider]
+  def sessionProvider(implicit injector: Injector) = inject[SlickSessionProvider].asInstanceOf[FakeSlickSessionProvider]
   def libraryRepo(implicit injector: Injector) = inject[LibraryRepo]
   def libraryMembershipRepo(implicit injector: Injector) = inject[LibraryMembershipRepo]
   def libraryInviteRepo(implicit injector: Injector) = inject[LibraryInviteRepo]

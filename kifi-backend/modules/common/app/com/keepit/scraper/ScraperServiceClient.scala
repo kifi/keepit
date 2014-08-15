@@ -3,25 +3,25 @@ package com.keepit.scraper
 //import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import java.io.IOException
-import com.keepit.model._
-import com.keepit.common.db.Id
-import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceType }
-import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.{ CallTimeouts, HttpClient }
-import com.keepit.common.zookeeper.ServiceCluster
+
 import com.google.inject.Inject
-import com.google.inject.util.Providers
-import com.keepit.common.routes.{ Common, Scraper }
+import com.keepit.common.amazon.AmazonInstanceInfo
+import com.keepit.common.db.Id
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
+import com.keepit.common.net.{ CallTimeouts, HttpClient }
+import com.keepit.common.routes.Scraper
+import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceType }
+import com.keepit.common.store.ImageSize
+import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.model._
+import com.keepit.scraper.embedly.EmbedlyInfo
+import com.keepit.scraper.extractor.ExtractorProviderType
 import com.keepit.search.Article
+import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.scraper.extractor.ExtractorProviderType
-import com.keepit.common.amazon.AmazonInstanceInfo
-import org.joda.time.DateTime
-import akka.actor.Scheduler
-import com.keepit.scraper.embedly.EmbedlyInfo
-import com.keepit.common.store.ImageSize
+
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -34,7 +34,7 @@ object ScrapeTuple {
 }
 
 case class ScrapeRequest(uri: NormalizedURI, scrapeInfo: ScrapeInfo, pageInfoOpt: Option[PageInfo], proxyOpt: Option[HttpProxy]) {
-  override def toString = s"(${uri.toShortString},${scrapeInfo.toShortString},${pageInfoOpt},$proxyOpt)"
+  override def toString = s"(${uri.toShortString},${scrapeInfo.toShortString},$pageInfoOpt,$proxyOpt)"
   def toShortString = s"(${uri.id},${scrapeInfo.id},${pageInfoOpt.flatMap(_.id)},${uri.url.take(50)}"
 }
 
@@ -64,7 +64,7 @@ case class ScraperTaskDetails(
   name: String,
   url: String,
   submitDateTime: DateTime,
-  callDateTime: DateTime,
+  callDateTime: Option[DateTime],
   taskType: ScraperTaskType,
   uriId: Option[Id[NormalizedURI]],
   scrapeId: Option[Id[ScrapeInfo]],
@@ -75,7 +75,7 @@ object ScraperTaskDetails {
     (__ \ 'name).format[String] and
     (__ \ 'url).format[String] and
     (__ \ 'submitDateTime).format[DateTime] and
-    (__ \ 'callDateTime).format[DateTime] and
+    (__ \ 'callDateTime).formatNullable[DateTime] and
     (__ \ 'taskType).format[ScraperTaskType] and
     (__ \ 'uriId).formatNullable(Id.format[NormalizedURI]) and
     (__ \ 'scrapeId).formatNullable(Id.format[ScrapeInfo]) and
@@ -84,7 +84,7 @@ object ScraperTaskDetails {
   )(ScraperTaskDetails.apply _, unlift(ScraperTaskDetails.unapply))
 }
 
-case class ScraperThreadDetails(state: Option[String], share: Option[String], description: Either[ScraperTaskDetails, String])
+case class ScraperThreadDetails(state: Option[String], share: Option[String], description: Either[ScraperTaskDetails, String]) // todo(ray): removeme
 object ScraperThreadDetails {
   def buildFromString(details: String): Option[ScraperThreadDetails] = {
     val re = """^(.*?)\s+(\w+)\s+([0-9]*\.?[0-9]*%)\s+share""".r
@@ -98,9 +98,12 @@ object ScraperThreadDetails {
   }
 }
 
-case class ScraperThreadInstanceInfo(info: AmazonInstanceInfo, details: String) {
-  lazy val forkJoinThreadDetails: Seq[ScraperThreadDetails] = {
-    (details.lines filter { !_.isEmpty } toList) map { ScraperThreadDetails.buildFromString(_) } collect { case Some(x) => x }
+case class ScraperThreadInstanceInfo(info: AmazonInstanceInfo, jobInfo: Either[Seq[ScraperThreadDetails], String]) {
+
+  lazy val forkJoinThreadDetails: Seq[ScraperThreadDetails] = jobInfo match {
+    case Left(threadDetails) => threadDetails
+    case Right(details) =>
+      (details.lines.toSeq.filterNot(_.isEmpty) map ScraperThreadDetails.buildFromString).flatten
   }
   lazy val scrapeThreadDetails: Seq[ScraperThreadDetails] = threadDetailsForTaskType(ScraperTaskType.SCRAPE)
   lazy val fetchBasicThreadDetails: Seq[ScraperThreadDetails] = threadDetailsForTaskType(ScraperTaskType.FETCH_BASIC)
@@ -120,6 +123,7 @@ trait ScraperServiceClient extends ServiceClient {
   implicit val fj = com.keepit.common.concurrent.ExecutionContext.fj
   final val serviceType = ServiceType.SCRAPER
 
+  def status(): Seq[Future[(AmazonInstanceInfo, Seq[ScrapeJobStatus])]]
   def getBasicArticle(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]]
   def getSignature(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[Signature]]
   def getThreadDetails(filterState: Option[String] = None): Seq[Future[ScraperThreadInstanceInfo]]
@@ -159,8 +163,25 @@ class ScraperServiceClientImpl @Inject() (
     }
   }
 
+  def status(): Seq[Future[(AmazonInstanceInfo, Seq[ScrapeJobStatus])]] = {
+    broadcastWithUrls(Scraper.internal.status()).map { f =>
+      f map { serviceResponse =>
+        (serviceResponse.uri.serviceInstance.instanceInfo, Json.fromJson[Seq[ScrapeJobStatus]](serviceResponse.response.json).get)
+      }
+    }
+  }
+
   def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadInstanceInfo]] = {
-    broadcastWithUrls(Common.internal.threadDetails(Some("ForkJoinPool"), filterState)) map { _ map { response => ScraperThreadInstanceInfo(response.uri.serviceInstance.instanceInfo, response.response.body) } }
+    broadcastWithUrls(Scraper.internal.status()).map { f =>
+      f map { serviceResponse =>
+        val jobStatus = Json.fromJson[Seq[ScrapeJobStatus]](serviceResponse.response.json).get
+        val taskDetails = jobStatus.map { status =>
+          ScraperTaskDetails(name = status.worker, url = status.uri.url, submitDateTime = status.submit, callDateTime = None, taskType = ScraperTaskType.SCRAPE, uriId = status.uri.id, scrapeId = status.info.id, None, None)
+        }
+        val threadDetails = taskDetails.map(task => ScraperThreadDetails(None, None, Left(task)))
+        ScraperThreadInstanceInfo(serviceResponse.uri.serviceInstance.instanceInfo, Left(threadDetails))
+      }
+    }
   }
 
   def getPornDetectorModel(): Future[Map[String, Float]] = {
@@ -233,33 +254,4 @@ class ScraperServiceClientImpl @Inject() (
       }
     }
   }
-}
-
-class FakeScraperServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ScraperServiceClient {
-
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, () => {})
-
-  protected def httpClient: com.keepit.common.net.HttpClient = ???
-
-  def getBasicArticle(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[BasicArticle]] = ???
-
-  def getSignature(url: String, proxy: Option[HttpProxy], extractor: Option[ExtractorProviderType]): Future[Option[Signature]] = ???
-
-  def getThreadDetails(filterState: Option[String]): Seq[Future[ScraperThreadInstanceInfo]] = ???
-
-  def getPornDetectorModel(): Future[Map[String, Float]] = ???
-
-  def detectPorn(query: String): Future[Map[String, Float]] = ???
-
-  def whitelist(words: String): Future[String] = ???
-
-  def getEmbedlyImageInfos(uriId: Id[NormalizedURI], url: String): Future[Seq[ImageInfo]] = ???
-
-  def getEmbedlyInfo(url: String): Future[Option[EmbedlyInfo]] = ???
-
-  def getURISummaryFromEmbedly(uri: NormalizedURI, minSize: ImageSize, descriptionOnly: Boolean): Future[Option[URISummary]] = ???
-
-  def getURIWordCount(uriId: Id[NormalizedURI], url: Option[String]): Future[Int] = ???
-
-  def getURIWordCountOpt(uriId: Id[NormalizedURI], url: Option[String]): Option[Int] = ???
 }

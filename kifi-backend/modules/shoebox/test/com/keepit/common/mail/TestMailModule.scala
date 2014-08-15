@@ -10,29 +10,6 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, LocalSystemAdminMailSen
 import com.amazonaws.auth.BasicAWSCredentials
 import com.keepit.common.logging.Logging
 
-case class TestMailModule() extends MailModule {
-  def configure() {}
-
-  @Singleton
-  @Provides
-  override def optoutSecret: OptoutSecret = OptoutSecret("""&some1sec\re#t2str;in''g3that4we5use6for7te%sting""")
-
-  @Provides
-  @Singleton
-  def mailSenderPlugin: MailSenderPlugin = new MailSenderPlugin {
-    def processMail(mailId: ElectronicMail) = throw new Exception("Should not attempt to use mail plugin in test")
-    def processOutbox() = throw new Exception("Should not attempt to use mail plugin in test")
-  }
-
-  @Provides
-  @Singleton
-  def localPostOffice(shoeboxPostOfficeImpl: ShoeboxPostOfficeImpl): LocalPostOffice = shoeboxPostOfficeImpl
-
-  @Provides
-  @Singleton
-  def fakeSystemAdminMailSender(): SystemAdminMailSender = new FakeSystemAdminMailSender()
-}
-
 class FakeSystemAdminMailSender extends SystemAdminMailSender {
   def sendMail(email: ElectronicMail): Unit = println(email.toString)
 }
@@ -67,6 +44,14 @@ case class FakeMailModule() extends MailModule {
     }
   }
 
+  @Singleton
+  @Provides
+  override def optoutSecret: OptoutSecret = OptoutSecret("""&some1sec\re#t2str;in''g3that4we5use6for7te%sting""")
+
   @Provides
   def fakeMailProvider(emails: FakeOutbox): MailProvider = new FakeMailProvider(emails)
+
+  @Provides
+  @Singleton
+  def fakeSystemAdminMailSender(): SystemAdminMailSender = new FakeSystemAdminMailSender()
 }

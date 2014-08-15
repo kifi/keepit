@@ -11,6 +11,7 @@ import com.keepit.search.index.ProdIndexModule
 import com.keepit.common.service.ServiceType
 import com.keepit.common.zookeeper.ProdDiscoveryModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
+import com.keepit.common.util.PlayAppConfigurationModule
 
 case class SearchProdModule() extends SearchModule(
   // Common Functional Modules
@@ -27,7 +28,6 @@ case class SearchProdModule() extends SearchModule(
   val shoeboxServiceClientModule = ProdShoeboxServiceClientModule()
   val elizaServiceClientModule = ProdElizaServiceClientModule()
   val heimdalServiceClientModule = ProdHeimdalServiceClientModule()
-
-  val discoveryModule = new ProdDiscoveryModule(ServiceType.SEARCH, ServiceType.SHOEBOX :: ServiceType.HEIMDAL :: ServiceType.ELIZA :: Nil)
+  val configurationModule = PlayAppConfigurationModule()
 }
 

@@ -1,5 +1,6 @@
 package com.keepit.common.service
 
+import scala.collection.mutable.{ SynchronizedSet, HashSet, Set }
 import scala.concurrent.Future
 import scala.util.Random
 
@@ -9,7 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ CallTimeouts, ClientResponse, HttpClient, HttpUri }
 import com.keepit.common.routes._
 import com.keepit.common.zookeeper.{ ServiceCluster, ServiceInstance }
-import com.keepit.common._
+import com.keepit.common.core._
 import com.keepit.common.strings._
 
 import java.net.ConnectException
@@ -17,12 +18,15 @@ import java.net.ConnectException
 import play.api.libs.json.{ JsNull, JsValue }
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.routes.ServiceRoute
+import scala.collection.mutable.{ SynchronizedSet, HashSet, Set => MutableSet, ListBuffer }
 
 class ServiceNotAvailableException(serviceType: ServiceType)
   extends Exception(s"Service of type ${serviceType.name} is not available")
 
 object ServiceClient {
   val MaxUrlLength = 1000
+  sealed trait Register[V] extends MutableSet[V]
+  final class HashSetRegister[V] extends HashSet[V] with SynchronizedSet[V] with Register[V]
   val register = new HashSetRegister[ServiceClient]
 }
 
@@ -85,15 +89,17 @@ trait ServiceClient extends CommonServiceUtilities with Logging {
     }
     respFuture.onFailure {
       case ex: Throwable =>
-        val stringBody = body.toString
+        val stringBody = body.toString()
         airbrakeNotifier.notify(AirbrakeError(
           exception = ex,
           message = Some(
             s"can't call [${call.path}] " +
               s"with body: ${stringBody.abbreviate(30)} (${stringBody.size} chars), " +
-              s"params: ${call.params.map(_.toString).mkString(",")}"),
+              s"params: ${call.params.map(_.toString()).mkString(",")}"),
           method = Some(call.method.toString),
           url = Some(call.path)))
+        //also dumping the full thing to the log in case we want to dig into the error details
+        log.error(s"can't call [${call.path}] with body: $stringBody , params: ${call.params.map(_.toString()).mkString(",")} because of ${ex.getMessage}", ex)
     }
     respFuture
   }

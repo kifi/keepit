@@ -146,7 +146,9 @@ trait LDADbTestHelper extends URIFeatureTestHelper {
   val lda = DenseLDA(dim, mapper)
   val version = ModelVersion[DenseLDA](1)
   val wordRep = LDAWordRepresenter(version, lda)
-  val docRep = new LDADocRepresenter(wordRep, Stopwords(Set()))
+  val docRep = new LDADocRepresenter(wordRep, Stopwords(Set())) {
+    override val minValidTerms = 1
+  }
   val articleStore = new InMemoryArticleStoreImpl()
   val uriRep = LDAURIRepresenter(docRep, articleStore)
 

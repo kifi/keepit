@@ -5,7 +5,7 @@ import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheS
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.duration.Duration
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.api.collections.default.BSONCollection
 import reactivemongo.bson.BSONDocument
@@ -36,8 +36,8 @@ trait NonUserEventDescriptorRepo extends EventDescriptorRepo[NonUserEvent]
 object NonUserIdentifierAugmentor extends EventAugmentor[NonUserEvent] {
   def isDefinedAt(nonUserEvent: NonUserEvent) = true
   def apply(nonUserEvent: NonUserEvent): Future[Seq[(String, ContextData)]] = Future.successful(Seq(
-    "nonUserIdentifier" -> ContextStringData(nonUserEvent.identifier),
-    "nonUserKind" -> ContextStringData(nonUserEvent.kind.name)
+    UserValueName.NON_USER_IDENTIFIER.name -> ContextStringData(nonUserEvent.identifier),
+    UserValueName.NON_USER_KIND.name -> ContextStringData(nonUserEvent.kind.name)
   ))
 }
 

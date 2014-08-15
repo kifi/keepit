@@ -1,7 +1,6 @@
 package com.keepit.abook
 
 import org.specs2.mutable._
-import com.keepit.test.DbTestInjector
 import com.keepit.model._
 import com.keepit.common.db.{ TestDbInfo, Id }
 import play.api.libs.json._
@@ -10,24 +9,23 @@ import com.keepit.common.time.FakeClockModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.common.cache.ABookCacheModule
 import play.api.libs.json.JsString
-import scala.Some
-import com.keepit.common.db.TestSlickModule
+import com.keepit.common.db.FakeSlickModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.mail.{ EmailAddress, BasicContact }
-import com.keepit.abook.model.{ EContactStates, EContactRepo }
+import com.keepit.abook.model.{ EmailAccount, EContactStates, EContactRepo, EContact }
 import com.keepit.abook.commanders.ABookCommander
 
-class ABookCommanderTest extends Specification with DbTestInjector with ABookTestHelper {
+class ABookCommanderTest extends Specification with ABookTestInjector with ABookTestHelper {
 
   implicit def strSeqToJsArray(s: Seq[String]): JsArray = JsArray(s.map(JsString(_)))
 
   val modules = Seq(
     FakeABookStoreModule(),
-    TestABookImporterPluginModule(),
-    TestABookServiceClientModule(),
+    FakeABookImporterPluginModule(),
+    FakeABookServiceClientModule(),
     FakeShoeboxServiceModule(),
-    TestSlickModule(TestDbInfo.dbInfo),
+    FakeSlickModule(TestDbInfo.dbInfo),
     FakeClockModule(),
     FakeAirbrakeModule(),
     ABookCacheModule(HashMapMemoryCacheModule()),
@@ -167,6 +165,21 @@ class ABookCommanderTest extends Specification with DbTestInjector with ABookTes
       }
     }
 
+    "getUsersWithContact" should {
+      "return contacts for the given email" in {
+        withDb(modules: _*) { implicit injector =>
+          val commander = inject[ABookCommander]
+          val factory = inject[ABookTestContactFactory]
+          val (c1, c2, c3) = factory.createMany
+
+          def toUserId = (e: EContact) => e.userId
+
+          commander.getUsersWithContact(AbookTestEmails.BAR_EMAIL) === Set(c1, c3).map(toUserId)
+          commander.getUsersWithContact(AbookTestEmails.BAZ_EMAIL) === Set(c2).map(toUserId)
+          commander.getUsersWithContact(AbookTestEmails.FOO_EMAIL) === Set.empty
+        }
+      }
+    }
   }
 }
 

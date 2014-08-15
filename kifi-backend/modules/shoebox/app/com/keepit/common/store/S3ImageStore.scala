@@ -29,15 +29,6 @@ import javax.imageio.ImageIO
 
 import scala.concurrent.{ Future, Promise }
 import scala.util.{ Failure, Success, Try }
-import com.keepit.model.UserPictureSource
-
-object S3UserPictureConfig {
-  val ImageSizes = Seq(100, 200)
-  val sizes = ImageSizes.map(s => ImageSize(s, s))
-  val OriginalImageSize = "original"
-  val defaultImage = "https://www.kifi.com/assets/img/ghost.200.png"
-  val defaultName = "0.jpg"
-}
 
 @ImplementedBy(classOf[S3ImageStoreImpl])
 trait S3ImageStore {
@@ -61,6 +52,9 @@ trait S3ImageStore {
     val uri = URI.parse(s"${config.cdnBase}/${keyByExternalId(size, userId, picName)}").get
     URI(uri.scheme orElse protocolDefault, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment).toString
   }
+
+  def avatarUrlByUser(user: User): String =
+    avatarUrlByExternalId(Some(200), user.externalId, user.pictureName.getOrElse("0"), Some("https"))
 
   def keyByExternalId(size: String, userId: ExternalId[User], picName: String): String =
     s"users/$userId/pics/$size/$picName.jpg"
@@ -151,17 +145,25 @@ class S3ImageStoreImpl @Inject() (
       } yield {
         val px = if (sizeName == "original") "1000" else sizeName
         val originalImageUrl = avatarUrlFromSocialNetwork(sui, px)
-        val usedImage = if (useDefaultImage) S3UserPictureConfig.defaultName else pictureName
-        WS.url(originalImageUrl).withRequestTimeout(120000).get().map { response =>
-          val key = keyByExternalId(sizeName, externalId, usedImage)
-          val putObj = uploadToS3(key, response.getAHCResponse.getResponseBodyAsStream, label = originalImageUrl)
-
-          (usedImage, putObj)
+        WS.url(originalImageUrl).withRequestTimeout(120000).get().flatMap { response =>
+          if (response.status != 200) {
+            WS.url(S3UserPictureConfig.defaultImage).withRequestTimeout(120000).get().map { response1 =>
+              (response1, true)
+            }
+          } else {
+            Future.successful((response, useDefaultImage))
+          }
+        }.map {
+          case (response, usedDefault) =>
+            val usedImage = if (usedDefault) S3UserPictureConfig.defaultName else pictureName
+            val key = keyByExternalId(sizeName, externalId, usedImage)
+            val putObj = uploadToS3(key, response.getAHCResponse.getResponseBodyAsStream, label = originalImageUrl)
+            (usedImage, putObj)
         }
       })
       future onComplete {
-        case Success(_) =>
-          val usedImage = if (useDefaultImage) S3UserPictureConfig.defaultName else pictureName
+        case Success(a) =>
+          val usedImage = if (a.exists(_._1 == S3UserPictureConfig.defaultName)) S3UserPictureConfig.defaultName else pictureName
           updateUserPictureRecord(sui.userId.get, usedImage, UserPictureSource(sui.networkType.name), setDefault, None)
         case Failure(e) =>
           airbrake.notify(AirbrakeError(
@@ -174,7 +176,7 @@ class S3ImageStoreImpl @Inject() (
   }
 
   def forceUpdateSocialPictures(userId: Id[User]): Unit = {
-    val (sui, user, picName) = db.readOnlyReplica { implicit s =>
+    val (sui, user, picName) = db.readOnlyMaster { implicit s =>
       val user = userRepo.get(userId)
       val suis = suiRepo.getByUser(user.id.get)
       // If user has no picture, this is the preference order for social networks:

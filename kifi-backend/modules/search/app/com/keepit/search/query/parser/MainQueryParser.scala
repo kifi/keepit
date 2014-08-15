@@ -17,10 +17,7 @@ import com.keepit.search.Lang
 import com.keepit.search.index.Analyzer
 import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.phrasedetector.PhraseDetector
-import com.keepit.search.query.ExistenceBoostQuery
-import com.keepit.search.query.MultiplicativeBoostQuery
-import com.keepit.search.query.ProximityQuery
-import com.keepit.search.query.TextQuery
+import com.keepit.search.query._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -65,7 +62,7 @@ class MainQueryParser(
         // detect collection names and augment TextQueries
         val indexToTextQuery: IndexedSeq[TextQuery] = textQueries.flatMap { t => t.stems.map { s => t } }
         collectionSearchers.foreach { cs =>
-          cs.detectCollectionNames(phStemmedTerms, true).foreach {
+          cs.detectCollectionNames(phStemmedTerms).foreach {
             case (index, length, collectionId) =>
               collectionIds += collectionId
               var i = index
@@ -93,13 +90,13 @@ class MainQueryParser(
           new MultiplicativeBoostQuery(query, proxQ, proximityBoost)
         } else if (numTextQueries == 1 && phTerms.nonEmpty && homePageBoost > 0.0f) {
           val homePageQuery = if (phTerms.size == 1) {
-            new TermQuery(new Term("home_page", phTerms(0).text))
+            new FixedScoreQuery(new TermQuery(new Term("home_page", phTerms(0).text)))
           } else {
             val hpQ = new PhraseQuery()
             phTerms.foreach { t => hpQ.add(new Term("home_page", t.text)) }
-            hpQ
+            new FixedScoreQuery(hpQ)
           }
-          new ExistenceBoostQuery(query, homePageQuery, homePageBoost)
+          new MultiplicativeBoostQuery(query, homePageQuery, homePageBoost)
         } else {
           query
         }

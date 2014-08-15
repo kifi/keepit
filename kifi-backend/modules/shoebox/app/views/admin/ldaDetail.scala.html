@@ -1,0 +1,21 @@
+@(data: com.keepit.cortex.models.lda.LDATopicDetail)
+
+@admin("LDA Topic Detail"){
+  <div>Sampled URIs for topic @data.topicId</div>
+
+  <table class = "table table-bordered">
+  <tr>
+    <th>uriId</th>
+    <th>Title</th>
+  </tr>
+
+  @data.sampleURIs.map{ uri =>
+    <tr>
+      <td>@uri.id.get</td>
+      <td><a href = "@{com.keepit.controllers.admin.routes.ScraperAdminController.getScraped(uri.id.get)}">@uri.title.getOrElse("No Title")</a></td>
+    </tr>
+  }
+
+  </table>
+
+}

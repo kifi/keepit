@@ -34,12 +34,21 @@ CREATE TABLE curator_keep_info (
     uri_id bigint(20) NOT NULL,
     user_id bigint(20) NOT NULL,
     keep_id bigint(20) NOT NULL,
-    is_private boolean NOT NULL,
     state varchar(128) NOT NULL,
 
     PRIMARY KEY (id),
     UNIQUE INDEX curator_keep_info_u_keep_id (keep_id),
     INDEX curator_keep_info_i_uri_id_state (uri_id, state)
+);
+
+CREATE TABLE IF NOT EXISTS evolutions (
+    id bigint(20) NOT NULL AUTO_INCREMENT,
+    created_at timestamp NOT NULL,
+    name varchar(64) NOT NULL,
+    description varchar(512) DEFAULT '',
+
+    PRIMARY KEY (id),
+    CONSTRAINT evolutions_u_name UNIQUE (name)
 );
 
 

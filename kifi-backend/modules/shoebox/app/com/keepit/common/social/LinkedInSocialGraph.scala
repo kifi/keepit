@@ -17,7 +17,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ CallTimeouts, NonOKResponseException, HttpClient, DirectUrl }
 import com.keepit.model.SocialUserInfoStates._
-import com.keepit.model.{ SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo }
+import com.keepit.model.{ UserValueName, SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo }
 import com.keepit.social.{ SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph }
 
 import play.api.http.Status._
@@ -127,7 +127,7 @@ class LinkedInSocialGraph @Inject() (
     s"https://api.linkedin.com/v1/people/$id:$ProfileFieldSelector?format=json&oauth2_access_token=$accessToken"
   }
 
-  def extractUserValues(json: JsValue): Map[String, String] = Map.empty
+  def extractUserValues(json: JsValue): Map[UserValueName, String] = Map.empty
 
   def updateSocialUserInfo(sui: SocialUserInfo, json: JsValue): SocialUserInfo = {
     (json \ "id").asOpt[String] map { id =>

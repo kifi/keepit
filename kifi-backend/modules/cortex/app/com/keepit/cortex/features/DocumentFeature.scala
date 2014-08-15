@@ -9,14 +9,20 @@ import scala.collection.mutable
 
 case class Document(tokens: Seq[String])
 
-trait DocRepresenter[M <: StatModel, +FT <: FeatureRepresentation[Document, M]] extends FeatureRepresenter[Document, M, FT]
+trait DocRepresenter[M <: StatModel, +FT <: FeatureRepresentation[Document, M]] extends FeatureRepresenter[Document, M, FT] {
+  def apply(doc: Document): Option[FT] = {
+    val (featOpt, _) = genFeatureAndWordCount(doc)
+    featOpt
+  }
+  def genFeatureAndWordCount(doc: Document): (Option[FT], Int)
+}
 
 abstract class NaiveSumDocRepresenter[M <: StatModel](
     wordRep: WordRepresenter[M, FeatureRepresentation[String, M]], stopwords: Option[Stopwords] = None) extends DocRepresenter[M, FeatureRepresentation[Document, M]] {
 
   override val version = wordRep.version
   override val dimension = wordRep.dimension
-  protected val minValidTerms = 5
+  protected val minValidTerms = 20 // unique valid terms
 
   protected def normalize(vec: Array[Float]): Array[Float]
 
@@ -30,7 +36,7 @@ abstract class NaiveSumDocRepresenter[M <: StatModel](
     cnts.toMap
   }
 
-  override def apply(doc: Document): Option[FeatureRepresentation[Document, M]] = {
+  override def genFeatureAndWordCount(doc: Document): (Option[FeatureRepresentation[Document, M]], Int) = {
     val wordCount = wordCounts(doc)
     val rep = new Array[Float](dimension)
     var validCount = 0
@@ -45,7 +51,8 @@ abstract class NaiveSumDocRepresenter[M <: StatModel](
         }
       }
     }
-    if (validCount < minValidTerms) None
-    else Some(FloatVecFeature[Document, M](normalize(rep)))
+
+    if (validCount < minValidTerms) (None, validCount)
+    else (Some(FloatVecFeature[Document, M](normalize(rep))), validCount)
   }
 }

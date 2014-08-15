@@ -16,12 +16,10 @@ class MyTestActorB extends Actor {
   }
 }
 
-class ActorInstanceTest extends Specification with TestInjector {
-  implicit val system = ActorSystem("test")
-
+class ActorInstanceTest extends Specification with CommonTestInjector {
   "ActorInstance" should {
     "provide singletons" in {
-      withInjector(StandaloneTestActorSystemModule()) { implicit injector =>
+      withInjector(FakeActorSystemModule()) { implicit injector =>
         val actorA = inject[ActorInstance[MyTestActorA]].ref
         val actorB = inject[ActorInstance[MyTestActorB]].ref
         //checking we're not getting the same reference fo rdiferant actor types

@@ -13,22 +13,23 @@ import com.keepit.test._
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 
-class SearchFriendIndexerTest extends Specification with ApplicationInjector {
+class SearchFriendIndexerTest extends Specification with CommonTestInjector {
 
-  def mkSearchFriendIndexer(dir: IndexDirectory = new VolatileIndexDirectory) = {
-    new SearchFriendIndexer(dir, inject[AirbrakeNotifier], inject[ShoeboxServiceClient])
+  def mkSearchFriendIndexer(dir: IndexDirectory = new VolatileIndexDirectory, airbrake: AirbrakeNotifier, shoebox: ShoeboxServiceClient) = {
+    new SearchFriendIndexer(dir, airbrake, shoebox)
   }
 
   "searchFriend indexer" should {
     "work" in {
-      running(new TestApplication(FakeShoeboxServiceModule())) {
-        val client = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+      withInjector(FakeShoeboxServiceModule()) { implicit injector =>
+        val airbrake = inject[AirbrakeNotifier]
+        val client = new FakeShoeboxServiceClientImpl(airbrake)
         val uids = (1 to 4).map { Id[User](_) }
         client.excludeFriend(uids(0), uids(1))
         client.excludeFriend(uids(0), uids(2))
         client.excludeFriend(uids(1), uids(3))
 
-        val indexer = mkSearchFriendIndexer()
+        val indexer = mkSearchFriendIndexer(airbrake = airbrake, shoebox = client)
         indexer.update()
         indexer.numDocs === 2
 

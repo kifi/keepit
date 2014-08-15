@@ -59,10 +59,11 @@ class TypeaheadCommander @Inject() (
   private def socialId(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
 
   private def queryContacts(userId: Id[User], search: Option[String], limit: Int): Future[Seq[RichContact]] = {
-    search match {
+    val futureContacts = search match {
       case Some(query) => abookServiceClient.prefixQuery(userId, query, Some(limit)).map { hits => hits.map(_.info) }
       case None => abookServiceClient.getContactsByUser(userId, pageSize = Some(limit))
     }
+    futureContacts.map(RichContact.deduplicateByEmailAddress)
   }
 
   def queryNonUserContacts(userId: Id[User], query: String, limit: Int): Future[Seq[RichContact]] = {
@@ -376,10 +377,7 @@ class TypeaheadCommander @Inject() (
           Some(ConnectionWithInviteStatus(sci.fullName, hit.score, sci.networkType.name, if (pictureUrl) sci.getPictureUrl(75, 75) else None, socialId(sci), status, None, lastSentAt))
 
         case u: User =>
-          val picUrl = if (pictureUrl) {
-            u.pictureName.map { pn => s"$pn.jpg" } // old bug
-          } else None
-          Some(ConnectionWithInviteStatus(u.fullName, hit.score, SocialNetworks.FORTYTWO.name, picUrl, s"fortytwo/${u.externalId}", "joined"))
+          Some(ConnectionWithInviteStatus(u.fullName, hit.score, SocialNetworks.FORTYTWO.name, if (pictureUrl) u.pictureName.map(_ + ".jpg") else None, s"fortytwo/${u.externalId}", "joined"))
 
         case bu: TypeaheadUserHit => // todo(Ray): uptake User API from search
           val name = s"${bu.firstName} ${bu.lastName}".trim // if not good enough, lookup User

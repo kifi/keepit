@@ -4,6 +4,7 @@ import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{ FortyTwoCachePlugin, InMemoryCachePlugin }
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.curator.model.RawSeedItemSequencingPlugin
+import com.keepit.curator.commanders.CuratorTasksPlugin
 
 import play.api.Application
 import play.api.Mode.Prod
@@ -25,5 +26,6 @@ trait CuratorServices { self: FortyTwoGlobal =>
     require(injector.instance[FortyTwoCachePlugin] != null)
     require(injector.instance[InMemoryCachePlugin] != null)
     require(injector.instance[RawSeedItemSequencingPlugin] != null)
+    require(injector.instance[CuratorTasksPlugin] != null)
   }
 }

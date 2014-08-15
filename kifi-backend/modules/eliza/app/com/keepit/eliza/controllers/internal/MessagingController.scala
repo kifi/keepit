@@ -34,13 +34,13 @@ import play.api.libs.json.JsArray
 import com.keepit.eliza.model.NonUserEmailParticipant
 import play.api.libs.json.JsObject
 import com.keepit.realtime.PushNotification
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import com.keepit.heimdal.HeimdalContext
 import scala.util.{ Failure, Success, Try }
 import play.api.libs.json.JsArray
 import com.keepit.eliza.model.UserThread
 import play.api.libs.json.JsObject
-import com.keepit.common.json.JsonFormatters._
+import com.keepit.common.json._
 
 //For migration only
 import play.api.mvc.Action

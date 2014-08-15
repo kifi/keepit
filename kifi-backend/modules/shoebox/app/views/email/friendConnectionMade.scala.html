@@ -1,0 +1,116 @@
+@(yourFirstName: String, otherFirstName: String, otherLastName: String, yourImageUrl: String, otherImageUrl: String, unsubLink: String)
+
+
+
+@helper.kifiTemplate(title = "Kifi - Congratulations!", unsubLink=unsubLink) {
+  @helper.oneColumnRow{
+    Hi @yourFirstName, <br><br>
+    You are now friends with @otherFirstName @otherLastName on Kifi.  Enjoy @otherFirstName’s keeps in your search
+    results and message @otherFirstName directly on any page! <br><br>
+  }
+  <table class="row">
+    <tr>
+      <td class="wrapper last">
+        <table class="twelve columns">
+          <tr>
+            <td class="center">
+              <center>
+                <font color="#A3C879">You and @otherFirstName are now Kifi friends</font>
+              </center>
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+      </td>
+  </tr>
+  </table>
+
+
+  <table class="row">
+    <tr>
+
+      <td class="wrapper">
+        <table class="four columns">
+          <tr>
+            <td>
+              <!-- Empty on Purpose. Padding for Manual Centering. -->
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+      </td>
+
+      <td class="wrapper" style="padding: 10px 5px 0 0;">
+        <table class="two columns">
+          <tr>
+            <td class="center">
+              <center>
+                <img class="center rounded-left" height="80" width="80" src="@yourImageUrl">
+              </center>
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+      </td>
+
+      <td class="wrapper" style="padding: 10px 5px 0 0;">
+        <table class="two columns">
+          <tr>
+            <td class="center">
+              <center>
+                <img class="center rounded-right" height="80" width="80" src="@otherImageUrl">
+              </center>
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+      </td>
+
+
+      <td class="wrapper last">
+        <table class="four columns">
+          <tr>
+            <td>
+              <!-- Empty on Purpose. Padding for Manual Centering. -->
+            </td>
+            <td class="expander"></td>
+          </tr>
+        </table>
+      </td>
+
+  </tr>
+  </table>
+
+<table class="row">
+    <tr>
+        <td class="wrapper last center">
+            <center>
+                <table class="six columns">
+                    <tr>
+                        <td>
+                            <!-- Button -->
+                            <table class="button radius green">
+                                <tbody><tr>
+                                    <td class="cta-button">
+                                        <a href="https://www.kifi.com/invite" style="display:block;">Find friends</a>
+                                    </td>
+                                </tr></tbody>
+                            </table>
+                        </td>
+                        <td class="expander"></td>
+                    </tr>
+                </table>
+            </center>
+        </td>
+    </tr>
+</table>
+
+
+
+  @helper.oneColumnRow{
+    <br>
+    Have a great day, <br>
+    The Kifi team
+  }
+
+}

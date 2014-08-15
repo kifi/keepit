@@ -102,7 +102,7 @@ private[social] class SocialGraphActor @Inject() (
           friends.map(_.socialId)
         }.toList.flatten
 
-        val connections = socialUserCreateConnections.createConnections(socialUserInfo, friendsSocialId, graph.networkType)
+        val connections = socialUserCreateConnections.createConnections(socialUserInfo, friendsSocialId)
 
         val updatedSui = rawInfo.jsons.foldLeft(socialUserInfo)(graph.updateSocialUserInfo)
         val latestUserValues = rawInfo.jsons.map(graph.extractUserValues).reduce(_ ++ _)
@@ -110,7 +110,7 @@ private[social] class SocialGraphActor @Inject() (
           latestUserValues.collect {
             case (key, value) if userValueRepo.getValueStringOpt(userId, key) != Some(value) =>
               userValueRepo.setValue(userId, key, value)
-              heimdal.setUserProperties(userId, key -> ContextStringData(value))
+              heimdal.setUserProperties(userId, key.name -> ContextStringData(value))
           }
           socialRepo.save(updatedSui.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
         }
@@ -126,7 +126,7 @@ private[social] class SocialGraphActor @Inject() (
     } finally {
       socialUserInfo.userId.foreach { userId =>
         db.readWrite(attempts = 3) { implicit session =>
-          userValueRepo.clearValue(userId, s"import_in_progress_${socialUserInfo.networkType.name}")
+          userValueRepo.clearValue(userId, UserValueName.importInProgress(socialUserInfo.networkType.name))
         }
       }
     }
@@ -134,13 +134,13 @@ private[social] class SocialGraphActor @Inject() (
 
   private def markGraphImportUserValue(userId: Id[User], networkType: SocialNetworkType, state: String) = {
     db.readWrite(attempts = 3) { implicit session =>
-      userValueRepo.setValue(userId, s"import_in_progress_${networkType.name}", state)
+      userValueRepo.setValue(userId, UserValueName.importInProgress(networkType.name), state)
     }
   }
 
   private def isImportAlreadyInProcess(userId: Id[User], networkType: SocialNetworkType): Boolean = {
     val stateOpt = db.readOnlyMaster { implicit session =>
-      userValueRepo.getUserValue(userId, s"import_in_progress_${networkType.name}")
+      userValueRepo.getUserValue(userId, UserValueName.importInProgress(networkType.name))
     }
     stateOpt match {
       case None => false

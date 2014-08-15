@@ -7,17 +7,18 @@ import com.keepit.search.message.MessageSearchCommander
 import play.api.libs.json.JsArray
 
 import com.google.inject.Inject
+import scala.concurrent.Future
+import com.keepit.common.core._
 
 class MobileMessageSearchController @Inject() (
     commander: MessageSearchCommander,
     actionAuthenticator: ActionAuthenticator) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
-  def search(query: String, page: Int) = JsonAction.authenticated { request =>
+  def search(query: String, page: Int) = JsonAction.authenticatedAsync { request =>
     if (page < 0) {
-      BadRequest("Negative Page Number!")
+      Future.successful(BadRequest("Negative Page Number!"))
     } else {
-      Ok(JsArray(commander.search(request.userId, query, page)))
+      commander.search(request.userId, query, page, request.experiments).imap { hits => Ok(JsArray(hits)) }
     }
   }
-
 }

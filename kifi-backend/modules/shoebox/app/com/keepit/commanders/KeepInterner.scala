@@ -18,7 +18,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationCandidate }
 import java.util.UUID
-import com.keepit.heimdal.HeimdalContext
+import com.keepit.heimdal.{ HeimdalServiceClient, HeimdalContext }
 import com.keepit.search.ArticleSearchResult
 import play.api.libs.json.Json
 import scala.concurrent.Future
@@ -37,9 +37,6 @@ class KeepInterner @Inject() (
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   airbrake: AirbrakeNotifier,
-  kifiHitCache: KifiHitCache,
-  keepDiscoveryRepo: KeepDiscoveryRepo,
-  rekeepRepo: ReKeepRepo,
   keptAnalytics: KeepingAnalytics,
   keepsAbuseMonitor: KeepsAbuseMonitor,
   rawBookmarkFactory: RawBookmarkFactory,
@@ -47,6 +44,7 @@ class KeepInterner @Inject() (
   rawKeepRepo: RawKeepRepo,
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   elizaClient: ElizaServiceClient,
+  heimdalClient: HeimdalServiceClient,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
@@ -76,10 +74,10 @@ class KeepInterner @Inject() (
       db.readWrite(attempts = 3) { implicit session =>
         // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.
         // If it happens, the user will experience the % complete jumping around a bit until it's finished.
-        userValueRepo.setValue(userId, "bookmark_import_last_start", clock.now)
-        userValueRepo.setValue(userId, "bookmark_import_done", 0)
-        userValueRepo.setValue(userId, "bookmark_import_total", total)
-        userValueRepo.setValue(userId, s"bookmark_import_${newImportId}_context", Json.toJson(context))
+        userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_LAST_START, clock.now)
+        userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_DONE, 0)
+        userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_TOTAL, total)
+        userValueRepo.setValue(userId, UserValueName.bookmarkImportContextName(newImportId), Json.toJson(context))
       }
 
       deduped.grouped(500).toList.map { rawKeepGroup =>
@@ -107,63 +105,6 @@ class KeepInterner @Inject() (
     }
   }
 
-  def keepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit] = {
-    SafeFuture {
-      val builder = collection.mutable.ArrayBuilder.make[Keep]
-      newKeeps.foreach { keep =>
-        val rekeeps = searchAttribution(userId, keep)
-        if (rekeeps.isEmpty) {
-          builder += keep
-        }
-      }
-      builder.result
-    } flatMap { remainders =>
-      FutureHelpers.sequentialExec(remainders) { keep =>
-        chatAttribution(userId, keep)
-      }
-    }
-  }
-
-  def searchAttribution(userId: Id[User], keep: Keep): Seq[ReKeep] = {
-    implicit val dca = TransactionalCaching.Implicits.directCacheAccess
-    kifiHitCache.get(KifiHitKey(userId, keep.uriId)) map { hit =>
-      val res = db.readWrite { implicit rw =>
-        keepDiscoveryRepo.getDiscoveriesByUUID(hit.uuid) collect {
-          case c if rekeepRepo.getReKeep(c.keeperId, c.uriId, userId).isEmpty =>
-            val rekeep = ReKeep(keeperId = c.keeperId, keepId = c.keepId, uriId = c.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = c.numKeepers)
-            val saved = rekeepRepo.save(rekeep)
-            log.info(s"[searchAttribution($userId,${keep.uriId})] rekeep=$saved; click=$c")
-            saved
-        }
-      }
-      res
-    } getOrElse Seq.empty
-  }
-
-  def chatAttribution(userId: Id[User], keep: Keep): Future[Unit] = {
-    elizaClient.keepAttribution(userId, keep.uriId) map { otherStarters =>
-      log.info(s"chatAttribution($userId,${keep.uriId})] otherStarters=$otherStarters")
-      otherStarters.foreach { chatUserId =>
-        db.readWrite { implicit rw =>
-          rekeepRepo.getReKeep(chatUserId, keep.uriId, userId) match {
-            case Some(rekeep) =>
-              log.info(s"[chatAttribution($userId,${keep.uriId},$chatUserId)] rekeep=$rekeep already exists. Skipped.")
-              None
-            case None =>
-              keepRepo.getByUriAndUser(keep.uriId, chatUserId) map { chatUserKeep =>
-                val discovery = KeepDiscovery(hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, origin = Some("messaging")) // todo(ray): None for uuid
-                val savedDiscovery = keepDiscoveryRepo.save(discovery)
-                val rekeep = ReKeep(keeperId = chatUserId, keepId = chatUserKeep.id.get, uriId = keep.uriId, srcUserId = userId, srcKeepId = keep.id.get, attributionFactor = 1)
-                val saved = rekeepRepo.save(rekeep)
-                log.info(s"[chatAttribution($userId,${keep.uriId})] rekeep=$saved; discovery=$savedDiscovery")
-                saved
-              }
-          }
-        }
-      }
-    }
-  }
-
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
     val (newKeeps, existingKeeps, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, source, mutatePrivacy, installationId)
     (newKeeps ++ existingKeeps, failures)
@@ -179,7 +120,7 @@ class KeepInterner @Inject() (
     }
 
     keptAnalytics.keptPages(userId, createdKeeps, context)
-    keepAttribution(userId, createdKeeps)
+    heimdalClient.processKeepAttribution(userId, createdKeeps)
     (newKeeps, existingKeeps, failures)
   }
 
@@ -190,7 +131,7 @@ class KeepInterner @Inject() (
       val bookmark = persistedBookmarksWithUri.bookmark
       if (persistedBookmarksWithUri.isNewKeep) {
         keptAnalytics.keptPages(userId, Seq(bookmark), context)
-        keepAttribution(userId, Seq(bookmark))
+        heimdalClient.processKeepAttribution(userId, Seq(bookmark))
       }
       bookmark
     }

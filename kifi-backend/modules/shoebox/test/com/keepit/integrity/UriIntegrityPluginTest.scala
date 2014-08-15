@@ -1,24 +1,21 @@
 package com.keepit.integrity
 
-import org.specs2.mutable.Specification
-import com.keepit.test.ShoeboxApplication
-import com.keepit.test.ShoeboxApplicationInjector
-import play.api.test.Helpers.running
-import com.keepit.common.actor.TestActorSystemModule
+import org.specs2.mutable.SpecificationLike
+import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 import com.keepit.test.ShoeboxTestInjector
-import com.google.inject.Injector
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.common.db.SequenceNumber
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.common.zookeeper.CentralConfig
-import com.keepit.common.healthcheck.FakeAirbrakeModule
 
-class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInjector {
+class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
+
+  val modules = Seq(FakeActorSystemModule(), FakeScrapeSchedulerModule())
 
   "uri integrity plugin" should {
     "work" in {
-      running(new ShoeboxApplication(TestActorSystemModule(), FakeScrapeSchedulerModule(), FakeAirbrakeModule())) {
+      withDb(modules: _*) { implicit injector =>
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
@@ -40,7 +37,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val user = userRepo.save(User(firstName = "foo", lastName = "bar"))
             val user2 = userRepo.save(User(firstName = "abc", lastName = "xyz"))
 
-            val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+            val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
             val hover = KeepSource.keeper
             val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = nuri0.id.get, source = hover, libraryId = Some(lib1.id.get)))
@@ -107,7 +104,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
 
     "handle collections correctly when migrating bookmarks" in {
 
-      running(new ShoeboxApplication(TestActorSystemModule(), FakeScrapeSchedulerModule(), FakeAirbrakeModule())) {
+      withDb(modules: _*) { implicit injector =>
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
         val uriRepo = inject[NormalizedURIRepo]
@@ -150,7 +147,7 @@ class UriIntegrityPluginTest extends Specification with ShoeboxApplicationInject
             val url1 = urlRepo.save(URLFactory("http://www.google.com/drive", uri1.id.get))
             val url2 = urlRepo.save(URLFactory("http://www.google.com/mail", uri2.id.get))
 
-            val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf")))
+            val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
             val hover = KeepSource.keeper
             val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0.id.get, source = hover, libraryId = Some(lib1.id.get)))

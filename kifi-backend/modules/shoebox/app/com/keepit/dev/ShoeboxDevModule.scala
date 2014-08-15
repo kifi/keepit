@@ -21,7 +21,7 @@ import com.keepit.common.queue.{ ProdSimpleQueueModule, DevSimpleQueueModule }
 import com.keepit.queue.DevNormalizationUpdateJobQueueModule
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
 import com.keepit.common.external.DevExternalServiceModule
-import com.keepit.signal.DevReKeepStatsUpdaterModule
+import com.keepit.curator.ProdCuratorServiceClientModule
 
 case class ShoeboxDevModule() extends ShoeboxModule(
   secureSocialModule = ProdShoeboxSecureSocialModule(),
@@ -39,8 +39,7 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   scraperHealthMonitorModule = DevScraperHealthMonitorModule(),
   fjMonitorModule = ProdForkJoinContextMonitorModule(),
   cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule()),
-  externalServiceModule = DevExternalServiceModule(),
-  rekeepStatsUpdaterModule = DevReKeepStatsUpdaterModule()
+  externalServiceModule = DevExternalServiceModule()
 ) with CommonDevModule {
   // Service clients
   val searchServiceClientModule = ProdSearchServiceClientModule()
@@ -51,4 +50,5 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   val scraperServiceClientModule = ProdScraperServiceClientModule()
   val cortexServiceClientModule = ProdCortexServiceClientModule()
   val graphServiceClientModule = ProdGraphServiceClientModule()
+  val curatorServiceClientModule = ProdCuratorServiceClientModule()
 }

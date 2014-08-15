@@ -22,7 +22,7 @@
                     <td>@cmi.instanceInfo.localIp / @cmi.instanceInfo.publicIp </td>
                     <td>@cmi.state.name</td>
                     <td>@{cmi.version.date}-@{cmi.version.time}</td>
-                    <td><a href="https://github.com/FortyTwoEng/keepit/commit/@{cmi.version.hash}">@{randomColor(cmi.version.hash)}</a></td>
+                    <td><a href="https://github.com/kifi/keepit/commit/@{cmi.version.hash}">@{randomColor(cmi.version.hash)}</a></td>
                     <td><a href="http://www.ec2instances.info/">@{cmi.instanceInfo.instanceType}</a></td>
                     <td>
                       @adminHelper.instanceInfoModal(cmi.instanceInfo.instanceId.toString, cmi.instanceInfo)

@@ -1,18 +1,15 @@
 package com.keepit.search.graph.collection
 
-import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.common._
-import com.keepit.common.cache.TestCacheModule
+import com.keepit.common.core._
+import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.strings._
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.parser.TermIterator
-import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test._
 import org.specs2.mutable._
-import play.api.test.Helpers._
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.TermQuery
@@ -20,13 +17,15 @@ import scala.collection.JavaConversions._
 import com.keepit.search.index.VolatileIndexDirectory
 import com.keepit.search.graph.BaseGraphSearcher
 import com.keepit.search.graph.GraphTestHelper
-import com.keepit.search.sharding.Shard
+import com.keepit.common.util.PlayAppConfigurationModule
 
-class CollectionIndexerTest extends Specification with ApplicationInjector with GraphTestHelper {
+class CollectionIndexerTest extends Specification with SearchTestInjector with GraphTestHelper {
+
+  val helperModules = Seq(PlayAppConfigurationModule())
 
   "CollectionIndexer" should {
     "maintain a sequence number on collections " in {
-      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
         val numURIs = uris.size
 
@@ -58,7 +57,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
     }
 
     "find collections by user" in {
-      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -80,7 +79,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
         val positiveUsers = usersWithCollection.map(_.id.get).toSet
         users.forall { user =>
           var hits = Set.empty[Long]
-          searcher.doSearch(new TermQuery(new Term(CollectionFields.userField, user.id.get.toString))) { (scorer, reader) =>
+          searcher.search(new TermQuery(new Term(CollectionFields.userField, user.id.get.toString))) { (scorer, reader) =>
             val mapper = reader.getIdMapper
             var doc = scorer.nextDoc()
             while (doc != NO_MORE_DOCS) {
@@ -95,7 +94,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
     }
 
     "find collections by uri" in {
-      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -116,7 +115,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
         expectedUriToUsers.forall {
           case (uri, expectedUsers) =>
             var hits = Set.empty[Long]
-            searcher.doSearch(new TermQuery(new Term(CollectionFields.uriField, uri.id.get.toString))) { (scorer, reader) =>
+            searcher.search(new TermQuery(new Term(CollectionFields.uriField, uri.id.get.toString))) { (scorer, reader) =>
               val mapper = reader.getIdMapper
               var doc = scorer.nextDoc()
               while (doc != NO_MORE_DOCS) {
@@ -133,7 +132,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
     }
 
     "store collection to uri associations in URIList" in {
-      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -161,7 +160,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
     }
 
     "store colleciton external ids" in {
-      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -189,53 +188,8 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
       }
     }
 
-    "detect collection names" in {
-      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
-        val (users, uris) = initData
-
-        val collectionIndexer = mkCollectionIndexer()
-
-        val expectedUriToUsers = uris.map { uri => (uri, users.filter { _.id.get.id <= uri.id.get.id }) }
-        saveBookmarksByURI(expectedUriToUsers)
-
-        val user = users.head
-        val bookmarks = getBookmarksByUser(user.id.get)
-        val collNames = Seq("Design", "Flat Design", "Web Design", "Design Web", "Web")
-        val collections = (collNames zip bookmarks).map {
-          case (name, bookmark) =>
-            saveCollection(user, name) tap { saveBookmarksToCollection(_, Seq(bookmark)) }
-        }
-        collectionIndexer.update()
-        collectionIndexer.numDocs === collections.size
-
-        val (collectionIndexSearcher, collectionNameIndexSearcher) = collectionIndexer.getSearchers
-        val searcher = new CollectionSearcherWithUser(collectionIndexSearcher, collectionNameIndexSearcher, user.id.get)
-
-        def getCollectionId(name: String): Long = {
-          collections.find(_.name == name).get.id.get.id
-        }
-        def detect(text: String) = {
-          val it = new TermIterator("", text, DefaultAnalyzer.getAnalyzerWithStemmer(DefaultAnalyzer.defaultLang))
-          val stemmedTermSeq = it.toIndexedSeq
-          it.close()
-          searcher.detectCollectionNames(stemmedTermSeq, false)
-        }
-        detect("design") === Set((0, 1, getCollectionId("Design")))
-
-        detect("designs") === Set((0, 1, getCollectionId("Design")))
-
-        detect("flat") === Set()
-
-        detect("flat design") === Set((1, 1, getCollectionId("Design")), (0, 2, getCollectionId("Flat Design")))
-
-        detect("web design") === Set((0, 1, getCollectionId("Web")), (1, 1, getCollectionId("Design")), (0, 2, getCollectionId("Web Design")))
-
-        detect("boring flat design movement") === Set((2, 1, getCollectionId("Design")), (1, 2, getCollectionId("Flat Design")))
-      }
-    }
-
     "detect collection names (partial match)" in {
-      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -263,7 +217,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
           val it = new TermIterator("", text, DefaultAnalyzer.getAnalyzerWithStemmer(DefaultAnalyzer.defaultLang))
           val stemmedTermSeq = it.toIndexedSeq
           it.close()
-          searcher.detectCollectionNames(stemmedTermSeq, true)
+          searcher.detectCollectionNames(stemmedTermSeq)
         }
         detect("design") === Set(
           (0, 1, getCollectionId("Design")),
@@ -286,7 +240,7 @@ class CollectionIndexerTest extends Specification with ApplicationInjector with 
     }
 
     "dump Lucene Document" in {
-      running(new TestApplication(FakeHttpClientModule(), TestCacheModule(), FakeShoeboxServiceModule())) {
+      withInjector(helperModules: _*) { implicit injector =>
         val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = ""))
         val uris = saveURIs(
           NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),

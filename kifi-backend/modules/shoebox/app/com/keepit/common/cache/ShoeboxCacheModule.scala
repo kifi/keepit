@@ -11,7 +11,7 @@ import com.keepit.common.usersegment.UserSegmentCache
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
 import com.keepit.typeahead.socialusers.{ KifiUserTypeaheadCache, SocialUserTypeaheadCache }
 import com.keepit.commanders.{ LibraryInfoIdCache, BasicCollectionByIdCache }
-import com.keepit.graph.model.{ ConnectedUriScoreCache, ConnectedUserScoreCache }
+import com.keepit.graph.model._
 
 case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules: _*) {
 
@@ -77,11 +77,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
-  def kifiHitCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new KifiHitCache(stats, accessLog, (outerRepo, 1 hour))
-
-  @Singleton
-  @Provides
   def normalizedURICache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new NormalizedURICache(stats, accessLog, (outerRepo, 7 days))
 
@@ -138,7 +133,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def userImageUrlCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserImageUrlCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 10 minutes))
+    new UserImageUrlCache(stats, accessLog, (innerRepo, 10 minute), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -265,7 +260,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Provides @Singleton
   def uriWordCountCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new NormalizedURIWordCountCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 60 days))
+    new NormalizedURIWordCountCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -297,4 +292,23 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   def userScoreCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new ConnectedUserScoreCache(stats, accessLog, (innerRepo, 1 minute), (outerRepo, 5 hours))
 
+  @Provides @Singleton
+  def allFakeUsersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def sociallyRelatedUsersCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedUsersCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedFacebookAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedFacebookAccountsCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedLinkedInAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedLinkedInAccountsCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def sociallyRelatedEmailAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedEmailAccountsCache(stats, accessLog, (outerRepo, 1 day))
 }
