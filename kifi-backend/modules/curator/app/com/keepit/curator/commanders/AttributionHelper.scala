@@ -24,7 +24,7 @@ class SeedAttributionHelper @Inject() (
     graph: GraphServiceClient) {
 
   val MIN_KEEP_ATTR_SCORE = 2
-  val MIN_USER_KEEP_SIZE = 20 // too few keeps means graph random walk may not return relevant results
+  protected val MIN_USER_KEEP_SIZE = 20 // too few keeps means graph random walk may not return relevant results
 
   def getAttributions(seeds: Seq[ScoredSeedItem]): Future[Seq[ScoredSeedItemWithAttribution]] = {
     val userAttrFut = getUserAttribution(seeds)
@@ -88,7 +88,6 @@ class SeedAttributionHelper @Inject() (
         }
     }
 
-    Future.successful(Seq.fill(seeds.size)(None))
   }
 
   private def decodeGraphExplanation(graphExplain: GraphFeedExplanation, uriKeepMap: Map[Id[NormalizedURI], Id[Keep]], userKeeps: Set[Id[Keep]]): Option[KeepAttribution] = {
@@ -97,6 +96,7 @@ class SeedAttributionHelper @Inject() (
       case (keep, score) =>
         if (userKeeps.contains(keep)) finalScores(keep) += score
     }
+
     graphExplain.uriScores.foreach {
       case (uri, score) =>
         uriKeepMap.get(uri).foreach { keep => finalScores(keep) += score }

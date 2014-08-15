@@ -43,7 +43,6 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
     override def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]] = {
       val explains = uriIds.map { uriId =>
         val m = Map(Id[Keep](uriId.id) -> uriId.id.toInt)
-        //val m = Map(uriId -> uriId.id.toInt % 2)
         GraphFeedExplanation(m, Map())
       }
       Future.successful(explains)
@@ -81,11 +80,13 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
           }
         }
 
-        val attrHelper = new SeedAttributionHelper(db, repo, fakeCortex, fakeSearch, fakeGraph)
+        val attrHelper = new SeedAttributionHelper(db, repo, fakeCortex, fakeSearch, fakeGraph) {
+          override val MIN_USER_KEEP_SIZE = 0
+        }
         val itemsWithAttr = Await.result(attrHelper.getAttributions(scoredItems), Duration(5, "seconds"))
         itemsWithAttr(0).attribution.topic.get.topicName === "topic_1"
         itemsWithAttr(0).attribution.user === None
-        itemsWithAttr(0).attribution.keep.get.keeps.map { _.id } === List(1)
+        itemsWithAttr(0).attribution.keep === None
 
         itemsWithAttr(1).attribution.user.get.friends.map {
           _.id
@@ -98,6 +99,7 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
         itemsWithAttr(3).attribution.user.get.others === 3
         itemsWithAttr(4).attribution.user === None
         itemsWithAttr(4).attribution.topic.get.topicName === "topic_4"
+        itemsWithAttr(4).attribution.keep.get.keeps.map { _.id }.toList === List(4)
       }
     }
   }
