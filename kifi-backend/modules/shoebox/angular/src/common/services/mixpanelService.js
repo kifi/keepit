@@ -51,18 +51,11 @@
     }
 
     function getExperiments() {
-      var experiments = [];
-      if (profileService && profileService.me && profileService.me.experiments) {
-        experiments = profileService.me.experiments || [];
-      }
+      var experiments = profileService && profileService.me && profileService.me.experiments || [];
 
       // Remove any user status from the list of experiments. Currently user status
       // is a kind of experiment. TODO: move user status out of experiments.
-      var realExperiments = _.reject(experiments, function (experiment) {
-        return (experiment === 'fake') || (experiment === 'admin') || (experiment === 'standard');
-      });
-
-      return realExperiments;
+      return _.without(experiments, 'fake', 'admin', 'standard');
     }
 
     function pageTrackForUser(mixpanel, path, origin) {
