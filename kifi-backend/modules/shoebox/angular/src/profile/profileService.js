@@ -57,6 +57,13 @@ angular.module('kifi.profileService', [
       });
     }
 
+    function setNewName(name) {
+      return postMe({
+        firstName: name.firstName,
+        lastName: name.lastName
+      });
+    }
+
     function getPrimaryEmail(emails) {
       var actualPrimary = _.find(emails, 'isPrimary');
       if (actualPrimary) {
@@ -158,6 +165,14 @@ angular.module('kifi.profileService', [
       return successInputActionResult();
     }
 
+    function validateNameFormat(name) {
+      if (!name) {
+        return failureInputActionResult('This field is required');
+      }
+
+      return successInputActionResult();
+    }
+
     function failureInputActionResult(errorHeader, errorBody) {
       return {
         isSuccess: false,
@@ -238,6 +253,7 @@ angular.module('kifi.profileService', [
       logout: logout,
       fetchPrefs: fetchPrefs,
       prefs: prefs,
+      setNewName: setNewName,
       setNewPrimaryEmail: setNewPrimaryEmail,
       makePrimary: makePrimary,
       resendVerificationEmail: resendVerificationEmail,
@@ -245,6 +261,7 @@ angular.module('kifi.profileService', [
       addEmailAccount: addEmailAccount,
       deleteEmailAccount: deleteEmailAccount,
       validateEmailFormat: validateEmailFormat,
+      validateNameFormat: validateNameFormat,
       failureInputActionResult: failureInputActionResult,
       successInputActionResult: successInputActionResult,
       getEmailValidationError: getEmailValidationError,

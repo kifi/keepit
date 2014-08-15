@@ -70,6 +70,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         recencyScore = 1.0f,
         priorScore = 1.0f,
         rekeepScore = 1.0f,
+        multiplier = 1.0f,
         discoveryScore = 1.0f),
       delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY)
 

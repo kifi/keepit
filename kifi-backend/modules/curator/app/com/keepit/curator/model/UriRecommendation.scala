@@ -19,7 +19,7 @@ case class UriRecommendation(
     delivered: Int = 0,
     clicked: Int = 0,
     kept: Boolean = false,
-    deleted: Boolean = false,
+    trashed: Boolean = false,
     markedBad: Boolean = false,
     lastPushedAt: Option[DateTime] = None,
     attribution: SeedAttribution) extends Model[UriRecommendation] with ModelWithPublicId[UriRecommendation] with ModelWithState[UriRecommendation] {

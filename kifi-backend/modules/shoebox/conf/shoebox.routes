@@ -121,6 +121,7 @@ POST    /m/1/page/extensionQuery            @com.keepit.controllers.mobile.Mobil
 ## Deprecated
 POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.keepMultiple()
 POST    /m/2/keeps/add                      @com.keepit.controllers.mobile.MobileBookmarksController.addKeeps()
+POST    /m/1/keeps/addWithTags              @com.keepit.controllers.mobile.MobileBookmarksController.addKeepWithTags()
 
 POST    /m/1/keeps/remove                   @com.keepit.controllers.mobile.MobileBookmarksController.unkeepMultiple()
 POST    /m/1/keeps/delete                   @com.keepit.controllers.mobile.MobileBookmarksController.unkeepBatch()
@@ -171,6 +172,7 @@ GET     /m/1/user/outgoingFriendRequests        @com.keepit.controllers.mobile.M
 GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.incomingFriendRequests
 POST    /m/1/user/delighted/answer              @com.keepit.controllers.mobile.MobileUserController.postDelightedAnswer()
 POST    /m/1/user/delighted/cancel              @com.keepit.controllers.mobile.MobileUserController.cancelDelightedSurvey()
+GET     /m/1/user/$id<[0-9a-f-]{36}> 			@com.keepit.controllers.mobile.MobileUserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
@@ -361,9 +363,6 @@ GET     /admin/pageInfo/:id         @com.keepit.controllers.admin.AdminPageInfoC
 GET     /admin/pageInfos            @com.keepit.controllers.admin.AdminPageInfoController.pageInfos(page:Int ?= 0, size:Int ?= 50)
 
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperAdminController.getScraped(uriId: Id[NormalizedURI])
-
-GET     /admin/keepDiscoveriesNew/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesViewNew(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
-GET     /admin/rekeepsNew/page/:page         @com.keepit.controllers.admin.AdminAttributionController.rekeepsViewNew(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 
 GET     /admin/keepDiscoveries/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)

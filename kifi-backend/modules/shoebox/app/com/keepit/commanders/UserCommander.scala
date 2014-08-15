@@ -141,6 +141,25 @@ class UserCommander @Inject() (
     }
   }
 
+  def updateUserInfo(userId: Id[User], userData: UpdatableUserInfo): Unit = {
+    db.readOnlyMaster { implicit session =>
+      val user = userRepo.getNoCache(userId)
+
+      userData.emails.foreach(updateEmailAddresses(userId, user.firstName, user.primaryEmail, _))
+      userData.description.foreach(updateUserDescription(userId, _))
+
+      if (userData.firstName.exists(_.nonEmpty) && userData.lastName.exists(_.nonEmpty)) {
+        updateUserNames(user, userData.firstName.get, userData.lastName.get)
+      }
+    }
+  }
+
+  def updateUserNames(user: User, newFirstName: String, newLastName: String): User = {
+    db.readWrite { implicit session =>
+      userRepo.save(user.copy(firstName = newFirstName, lastName = newLastName))
+    }
+  }
+
   def getConnectionsPage(userId: Id[User], page: Int, pageSize: Int): (Seq[ConnectionInfo], Int) = {
     val infos = db.readOnlyReplica { implicit s =>
       val searchFriends = searchFriendRepo.getSearchFriends(userId)

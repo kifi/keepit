@@ -33,7 +33,7 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
           rec1.delivered === 1
           rec1.clicked === 1
           rec1.kept === false
-          rec1.deleted === false
+          rec1.trashed === false
           rec1.markedBad === false
         }
       }
