@@ -44,8 +44,21 @@ class UriWeightingHelperTest extends Specification with CuratorTestInjector {
     val seedItem11 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](11),
       url = "http://facebook.com/???",
       seq = SequenceNumber[SeedItem](11), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))), discoverable = true)
+    val seedItem12 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](12),
+      url = "http://facebook.com/kifi42",
+      seq = SequenceNumber[SeedItem](12), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))), discoverable = true)
+    val seedItem13 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](13),
+      url = "https://engineering.linkedin.com/mobile/linkedin-connected-engineering-pre-meeting-intelligence",
+      seq = SequenceNumber[SeedItem](13), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))), discoverable = true)
+    val seedItem14 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](14),
+      url = "https://blog.twitter.com/2014/scalingtwitter-in-dublin-and-the-uk",
+      seq = SequenceNumber[SeedItem](14), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))), discoverable = true)
+    val seedItem15 = SeedItem(userId = Id[User](42), uriId = Id[NormalizedURI](15),
+      url = "https://code.facebook.com/posts/313033472212144/debugging-file-corruption-on-ios/",
+      seq = SequenceNumber[SeedItem](15), priorScore = None, timesKept = 20, lastSeen = currentDateTime, keepers = Keepers.ReasonableNumber(Seq(Id[User](1), Id[User](2))), discoverable = true)
 
-    seedItem1 :: seedItem2 :: seedItem3 :: seedItem4 :: seedItem5 :: seedItem6 :: seedItem7 :: seedItem8 :: seedItem9 :: seedItem10 :: seedItem11 :: Nil
+    seedItem1 :: seedItem2 :: seedItem3 :: seedItem4 :: seedItem5 :: seedItem6 :: seedItem7 :: seedItem8 :: seedItem9 :: seedItem10 :: seedItem11 :: seedItem12 ::
+      seedItem13 :: seedItem14 :: seedItem15 :: Nil
   }
 
   "UriBoostingHelperTest" should {
@@ -64,6 +77,10 @@ class UriWeightingHelperTest extends Specification with CuratorTestInjector {
         multipliedSeedItems(8).multiplier === 1.0f
         multipliedSeedItems(9).multiplier === 1.0f
         multipliedSeedItems(10).multiplier === 0.001f
+        multipliedSeedItems(11).multiplier === 0.05f
+        multipliedSeedItems(12).multiplier === 1.0f
+        multipliedSeedItems(13).multiplier === 1.0f
+        multipliedSeedItems(14).multiplier === 0.1f
       }
     }
   }

@@ -1,6 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ WeightedSeedItem, SeedItem }
+import com.keepit.curator.model.{ SeedItemWithMultiplier, SeedItem }
 import com.google.inject.{ Singleton }
 
 import scala.util.matching.Regex
@@ -22,17 +22,19 @@ class UriWeightingHelper() {
     UrlPattern("""^https?://[-A-Za-z0-9.]*facebook.com[./?\#]""".r, 0.001f, "Facebook"),
 
     //----------------------------------Boost------------------------------------------------------------------------------
-    UrlPattern("""^https?://[-A-Za-z0-9.]*techcrunch.com[./?\#]""".r, 1.2f, "Techcrunch")
+    UrlPattern("""^https?://[-A-Za-z0-9.]*techcrunch.com[./?\#]""".r, 1.2f, "Techcrunch"),
+    UrlPattern("""^https?://[-A-Za-z0-9.]*.[-A-Za-z0-9.]*.[./?\#]kifi[-A-Za-z0-9.]*""".r, 50.00f, "Public page relate to Kifi"),
+    UrlPattern("""^https?://(code|blog|engineering).[-A-Za-z0-9.]*.[./?\#][-A-Za-z0-9.]*""".r, 100.00f, "Tech")
   )
 
-  def apply(items: Seq[SeedItem]): Seq[WeightedSeedItem] = items.map { item =>
-    val weight = scoringMultiplier.find(pattern => pattern.regex.findFirstIn(item.url).isDefined) match {
-      case Some(pattern) => pattern.weight
-      case None => 1.0f
+  def apply(items: Seq[SeedItem]): Seq[SeedItemWithMultiplier] = items.map { item =>
+    var masterWeight = 1.0f
+    scoringMultiplier.map { pattern =>
+      if (pattern.regex.findFirstIn(item.url).isDefined) masterWeight *= pattern.weight
     }
 
-    WeightedSeedItem(
-      multiplier = weight,
+    SeedItemWithMultiplier(
+      multiplier = masterWeight,
       userId = item.userId,
       uriId = item.uriId,
       priorScore = item.priorScore,
