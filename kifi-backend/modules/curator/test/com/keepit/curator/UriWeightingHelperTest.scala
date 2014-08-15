@@ -77,10 +77,10 @@ class UriWeightingHelperTest extends Specification with CuratorTestInjector {
         multipliedSeedItems(8).multiplier === 1.0f
         multipliedSeedItems(9).multiplier === 1.0f
         multipliedSeedItems(10).multiplier === 0.001f
-        multipliedSeedItems(11).multiplier === 0.05f
-        multipliedSeedItems(12).multiplier === 1.0f
-        multipliedSeedItems(13).multiplier === 1.0f
-        multipliedSeedItems(14).multiplier === 0.1f
+        multipliedSeedItems(11).multiplier === 0.0012f
+        multipliedSeedItems(12).multiplier === 0.011f
+        multipliedSeedItems(13).multiplier === 0.011f
+        multipliedSeedItems(14).multiplier === 0.0011000001f
       }
     }
   }

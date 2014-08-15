@@ -23,8 +23,8 @@ class UriWeightingHelper() {
 
     //----------------------------------Boost------------------------------------------------------------------------------
     UrlPattern("""^https?://[-A-Za-z0-9.]*techcrunch.com[./?\#]""".r, 1.2f, "Techcrunch"),
-    UrlPattern("""^https?://[-A-Za-z0-9.]*.[-A-Za-z0-9.]*.[./?\#]kifi[-A-Za-z0-9.]*""".r, 50.00f, "Public page relate to Kifi"),
-    UrlPattern("""^https?://(code|blog|engineering).[-A-Za-z0-9.]*.[./?\#][-A-Za-z0-9.]*""".r, 100.00f, "Tech")
+    UrlPattern("""^https?://[-A-Za-z0-9.]*.[-A-Za-z0-9.]*.[./?\#]kifi[-A-Za-z0-9.]*""".r, 1.2f, "Public page relate to Kifi"),
+    UrlPattern("""^https?://(code|blog|engineering).[-A-Za-z0-9.]*.[./?\#][-A-Za-z0-9.]*""".r, 1.1f, "Tech")
   )
 
   def apply(items: Seq[SeedItem]): Seq[SeedItemWithMultiplier] = items.map { item =>
