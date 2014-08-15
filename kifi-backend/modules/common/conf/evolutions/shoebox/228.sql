@@ -20,7 +20,7 @@ ALTER TABLE uri_recommendation
 INSERT INTO evolutions
             (name,
              description)
-VALUES     ('227.sql',
+VALUES     ('228.sql',
 'change uri_recommendation column names: seen->delivered, modify clicked column type: boolean -> bigint, adding new columns: deleted, markedBad'
 );
 
