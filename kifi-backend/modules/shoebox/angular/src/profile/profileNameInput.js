@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.profileNameInput', ['keyIndices', 'util'])
+angular.module('kifi.profileNameInput', ['util'])
 
 .directive('kfProfileNameInput', ['keyIndices', 'util',
   function (keyIndices, util) {
