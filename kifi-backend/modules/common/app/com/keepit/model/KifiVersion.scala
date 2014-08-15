@@ -9,13 +9,14 @@ trait KifiVersion {
   def patch: Short
   def build: Int
 
-  require(major >= 0 && minor >= 0 && patch >= -1 && build >= -1)
+  require(major >= 0 && minor >= -1 && patch >= -1 && build >= -1)
+  if (minor == -1) require(patch == -1)
   if (patch == -1) require(build == -1)
 
   def compareIt(that: KifiVersion): Int = {
     if (this.major != that.major) {
       this.major - that.major
-    } else if (this.minor != that.minor) {
+    } else if (this.minor != that.minor && (this.minor > 0 || that.minor > 0)) {
       this.minor - that.minor
     } else if (this.patch != that.patch && (this.patch > 0 || that.patch > 0)) {
       this.patch - that.patch
@@ -26,10 +27,10 @@ trait KifiVersion {
     }
   }
 
-  override def hashCode: Int = 31 * (31 * (31 * major + minor) + math.max(0, patch)) + math.max(0, build)
+  override def hashCode: Int = 31 * (31 * (31 * major + math.max(0, minor)) + math.max(0, patch)) + math.max(0, build)
 
   override def toString = {
-    Seq(major, minor) ++ (if (patch >= 0) Some(patch) ++ (if (build >= 0) Some(build) else Nil) else Nil) mkString "."
+    Seq(major) ++ (if (minor >= 0) Some(minor) ++ (if (patch >= 0) Some(patch) ++ (if (build >= 0) Some(build) else Nil) else Nil) else Nil) mkString "."
   }
 
 }
@@ -59,12 +60,15 @@ case class KifiAndroidVersion(major: Short, minor: Short, patch: Short = -1, bui
 }
 
 object KifiVersion {
-  private val R = """(\d{1,5})\.(\d{1,5})(?:\.(\d{1,5})(?:\.(\d{1,9}))?)?""".r
+  private val R = """(\d{1,5})(?:\.(\d{1,5})(?:\.(\d{1,5})(?:\.(\d{1,9}))?)?)?""".r
 
   def parse(version: String): (Short, Short, Short, Int) = {
     version match {
       case R(major, minor, patch, build) =>
-        (major.toShort, minor.toShort, Option(patch).map(_.toShort).getOrElse(-1), Option(build).map(_.toInt).getOrElse(-1))
+        (major.toShort,
+          Option(minor).map(_.toShort).getOrElse(-1),
+          Option(patch).map(_.toShort).getOrElse(-1),
+          Option(build).map(_.toInt).getOrElse(-1))
       case _ =>
         throw new IllegalArgumentException("Invalid version: " + version)
     }
