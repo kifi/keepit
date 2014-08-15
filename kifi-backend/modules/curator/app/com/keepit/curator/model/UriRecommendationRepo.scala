@@ -95,7 +95,7 @@ class UriRecommendationRepoImpl @Inject() (
     val markedBadResult = if (feedback.markedBad.isDefined && feedback.markedBad.get.bad)
       (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.markedBad, row.updatedAt)).update((feedback.markedBad.get, currentDateTime)) > 0 else true
 
-    deliveredResult && clickedResult && keptResult && trashedResult && markedBad
+    deliveredResult && clickedResult && keptResult && trashedResult && markedBadResult
   }
 
   def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI], interaction: UriRecommendationUserInteraction)(implicit session: RSession): Boolean = {
