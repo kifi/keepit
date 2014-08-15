@@ -50,6 +50,14 @@
       return userStatus;
     }
 
+    function getExperiments() {
+      var experiments = profileService && profileService.me && profileService.me.experiments || [];
+
+      // Remove any user status from the list of experiments. Currently user status
+      // is a kind of experiment. TODO: move user status out of experiments.
+      return _.without(experiments, 'fake', 'admin', 'standard');
+    }
+
     function pageTrackForUser(mixpanel, path, origin) {
       if (userId) {
         var oldId = mixpanel.get_distinct_id && mixpanel.get_distinct_id();
@@ -65,7 +73,8 @@
             type: getLocation(path),
             origin: origin,
             siteVersion: 2,
-            userStatus: getUserStatus()
+            userStatus: getUserStatus(),
+            experiments: getExperiments()
           });
 
           mixpanel.track('user_viewed_page', attributes);
@@ -129,6 +138,10 @@
             props.type = getLocation(props.path);
             delete props.path;
           }
+          _.extend(props, {
+            userStatus: getUserStatus(),
+            experiments: getExperiments()
+          });
           $log.log('mixpanelService.eventTrack(' + action + ')', props);
           $window.mixpanel.track(action, props);
         }

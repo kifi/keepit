@@ -49,7 +49,7 @@ class RawSeedItemRepoImpl @Inject() (
     def priorScore = column[Float]("prior_score", O.Nullable)
     def timesKept = column[Int]("times_kept", O.NotNull)
     def discoverable = column[Boolean]("discoverable", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, seq, uriId, url, userId.?, firstKept, lastKept, lastSeen, priorScore.?, timesKept, discoverable) <> ((RawSeedItem.apply _).tupled, RawSeedItem.unapply _)
+    def * = (id.?, createdAt, updatedAt, seq, uriId, userId.?, firstKept, lastKept, lastSeen, priorScore.?, timesKept, discoverable, url) <> ((RawSeedItem.apply _).tupled, RawSeedItem.unapply _)
   }
 
   def table(tag: Tag) = new RawSeedItemTable(tag)
@@ -63,14 +63,14 @@ class RawSeedItemRepoImpl @Inject() (
       updatedAt = r.<<[DateTime],
       seq = r.<<[SequenceNumber[RawSeedItem]],
       uriId = r.<<[Id[NormalizedURI]],
-      url = r.<<[String],
       userId = r.<<[Option[Id[User]]],
       firstKept = r.<<[DateTime],
       lastKept = r.<<[DateTime],
       lastSeen = r.<<[DateTime],
       priorScore = r.<<[Option[Float]],
       timesKept = r.<<[Int],
-      discoverable = r.<<[Boolean]
+      discoverable = r.<<[Boolean],
+      url = r.<<[String]
     )
   }
 

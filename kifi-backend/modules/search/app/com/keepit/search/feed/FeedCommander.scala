@@ -52,7 +52,7 @@ class FeedCommanderImpl @Inject() (
 
   def getFeeds(userId: Id[User], limit: Int): Seq[Feed] = {
 
-    val (localShards, dispatchPlan) = distributionPlan(shards)
+    val (localShards, dispatchPlan) = distributionPlan(userId, shards)
 
     var resultFutures = new ListBuffer[Future[Seq[Feed]]]()
 

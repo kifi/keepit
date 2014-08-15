@@ -22,6 +22,7 @@ final class FuncExtensionOpts[A](f: => A) {
   @inline def recover(g: PartialFunction[Throwable, A]): A = {
     try f catch {
       case ex: Throwable if g.isDefinedAt(ex) => g(ex)
+      case ex: Throwable => throw ex
     }
   }
 }

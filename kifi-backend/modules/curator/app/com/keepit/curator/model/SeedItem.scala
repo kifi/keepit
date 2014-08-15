@@ -32,7 +32,7 @@ case class SeedItem(
     priorScore: Float,
     rekeepScore: Float,
     discoveryScore: Float,
-    multiplier: Float) {
+    multiplier: Option[Float]) {
 
   override def toString = s"social:$socialScore --- popularity:$popularityScore --- overallInterest:$overallInterestScore --- recentInterest:$recentInterestScore --- recency:$recencyScore --- prior:$priorScore --- rekeep:$rekeepScore --- discovery:$discoveryScore --- multiplier:$multiplier"
 }
