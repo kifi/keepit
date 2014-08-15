@@ -88,9 +88,12 @@ class UriRecommendationRepoImpl @Inject() (
       (if (feedback.clicked.isDefined && feedback.clicked.get)
         sql"UPDATE uri_recommendation SET clicked=clicked+1, updated_at=$currentDateTime WHERE user_id=$userId AND uri_id=$uriId".asUpdate.first > 0
       else true) &&
-      (if (feedback.kept.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.kept, row.updatedAt)).update((feedback.kept.get, currentDateTime)) > 0 else true) &&
-      (if (feedback.trashed.isDefined) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.trashed, row.updatedAt)).update((feedback.trashed.get, currentDateTime)) > 0 else true) &&
-      (if (feedback.markedBad.isDefined && feedback.markedBad.get.bad) (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.markedBad, row.updatedAt)).update((feedback.markedBad.get, currentDateTime)) > 0 else true)
+      (if (feedback.kept.isDefined)
+        (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.kept, row.updatedAt)).update((feedback.kept.get, currentDateTime)) > 0 else true) &&
+      (if (feedback.trashed.isDefined)
+        (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.trashed, row.updatedAt)).update((feedback.trashed.get, currentDateTime)) > 0 else true) &&
+      (if (feedback.markedBad.isDefined && feedback.markedBad.get.bad)
+        (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.markedBad, row.updatedAt)).update((feedback.markedBad.get, currentDateTime)) > 0 else true)
   }
 
   def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI], interaction: UriRecommendationUserInteraction)(implicit session: RSession): Boolean = {

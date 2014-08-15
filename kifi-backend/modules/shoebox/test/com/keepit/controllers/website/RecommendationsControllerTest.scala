@@ -62,8 +62,8 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
         val input = Json.parse(
           s"""
              |{ "url": "https://www.google.com",
-             |"feedback": {"delivered": 1,
-             |             "clicked": 1} }
+             |"feedback": {"delivered": true,
+             |             "clicked": true} }
              |""".stripMargin)
 
         val request = FakeRequest("POST", route).withBody(input)
