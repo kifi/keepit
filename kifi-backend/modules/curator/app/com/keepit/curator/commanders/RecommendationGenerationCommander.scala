@@ -90,7 +90,8 @@ class RecommendationGenerationCommander @Inject() (
           score =
             if (scoreCoefficients.isEmpty) computeMasterScore(reco.allScores)
             else computeAdjustedScoreByTester(scoreCoefficients, reco.allScores),
-          explain = Some(reco.allScores.toString)
+          explain = Some(reco.allScores.toString),
+          attribution = reco.attribution
         )
       }.sortBy(-1 * _.score).take(howManyMax)
     }
