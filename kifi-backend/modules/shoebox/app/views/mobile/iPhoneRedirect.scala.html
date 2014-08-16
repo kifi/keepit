@@ -1,0 +1,43 @@
+@(url: String)
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Kifi</title>
+</head>
+<body>
+<p style="margin:3em auto;max-width:400px;">
+Loading Kifi app...
+<br/><br/>
+Kifi is the easiest way to organize and share the pages that matter to you online. Find something online that you love?
+Just keep the page, and it's instantly stored and organized in your kifi library where it's accessible from your
+favorite search engine, along with great finds from your friends' libraries, too.
+</p>
+<!-- source: http://aawaara.com/post/74543339755/smallest-piece-of-code-thats-going-to-change-the-world -->
+<script type="text/javascript">
+var timer, heartbeat, lastInterval;
+
+function clearTimers() {
+    clearTimeout(timer);
+    clearTimeout(heartbeat);
+}
+
+window.addEventListener('pageshow', clearTimers, false);
+window.addEventListener('pagehide', clearTimers, false);
+
+function getTime() { return (new Date()).getTime(); }
+
+// for browsers except Safari (which do not support pageshow and pagehide properly)
+function intervalHeartbeat() {
+    var now = getTime(), diff = now - lastInterval - 200;
+    lastInterval = now;
+    if (diff > 1000) clearTimers();
+}
+
+lastInterval = getTime();
+heartbeat = setInterval(intervalHeartbeat, 200);
+document.location = 'kifi://@url';
+timer = setTimeout(function () { document.location = 'https://itunes.apple.com/app/id740232575'; }, 2000);
+</script>
+</body>
+</html>
