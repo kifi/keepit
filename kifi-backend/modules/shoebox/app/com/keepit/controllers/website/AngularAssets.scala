@@ -20,10 +20,7 @@ object AngularDistAssets extends AssetsBuilder with Controller with Logging {
     val writer = new StringWriter()
     IOUtils.copy(fileStream, writer, "UTF-8")
     val fileStr = writer.toString
-    val closingBody = fileStr.lastIndexOf("</body>")
-    val beginning = fileStr.substring(0, closingBody)
-    val end = fileStr.substring(closingBody)
-    (Enumerator(beginning), Enumerator(end))
+    Enumerator(fileStr)
   }
   private lazy val cachedIndex = index()
   private def maybeCachedIndex = {
@@ -45,7 +42,7 @@ object AngularDistAssets extends AssetsBuilder with Controller with Logging {
   @inline
   private def augmentPage(splice: => Seq[Future[String]]) = {
     val idx = maybeCachedIndex
-    idx._1.andThen(reactiveEnumerator(splice)).andThen(idx._2).andThen(Enumerator.eof)
+    idx.andThen(reactiveEnumerator(splice)).andThen(Enumerator.eof)
   }
 
   def angularApp(splice: => Seq[Future[String]] = Seq()) = {

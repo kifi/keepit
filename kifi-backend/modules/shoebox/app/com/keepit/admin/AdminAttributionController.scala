@@ -1,7 +1,6 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.common.concurrent.ExecutionContext.fj
 import com.keepit.common.controller.{ ActionAuthenticator, AdminController }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -11,6 +10,7 @@ import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.model._
 import org.joda.time.DateTime
 import play.api.libs.json.Json
+import play.api.libs.concurrent.Execution.Implicits._
 import views.html
 
 import scala.concurrent.Future
@@ -22,15 +22,12 @@ class AdminAttributionController @Inject() (
     heimdalClient: HeimdalServiceClient,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
-    keepDiscoveryRepo: KeepDiscoveryRepo,
     rekeepRepo: ReKeepRepo,
     uriRepo: NormalizedURIRepo,
     pageInfoRepo: PageInfoRepo,
     imageInfoRepo: ImageInfoRepo) extends AdminController(actionAuthenticator) {
 
-  implicit val execCtx = fj
-
-  def keepDiscoveriesViewNew(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticatedAsync { request =>
+  def keepDiscoveriesView(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticatedAsync { request =>
     val countF = heimdalClient.getDiscoveryCount()
     val pagedF = heimdalClient.getPagedKeepDiscoveries(page, size)
     val resF = for {
@@ -58,24 +55,7 @@ class AdminAttributionController @Inject() (
     }
   }
 
-  def keepDiscoveriesView(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticated { request =>
-    val (t, count) = db.readOnlyMaster { implicit ro =>
-      val t = keepDiscoveryRepo.page(page, size, Set(KeepDiscoveryStates.INACTIVE)).map { c =>
-        val rc = RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, userRepo.get(c.keeperId), keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
-        val pageInfoOpt = pageInfoRepo.getByUri(c.uriId)
-        val imgOpt = if (!showImage) None else
-          for {
-            pageInfo <- pageInfoOpt
-            imgId <- pageInfo.imageInfoId
-          } yield imageInfoRepo.get(imgId)
-        (rc, pageInfoOpt, imgOpt)
-      }
-      (t, keepDiscoveryRepo.count)
-    }
-    Ok(html.admin.keepDiscoveries(t, showImage, page, count, size))
-  }
-
-  def rekeepsViewNew(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticatedAsync { request =>
+  def rekeepsView(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticatedAsync { request =>
     val countF = heimdalClient.getReKeepCount()
     val pagedF = heimdalClient.getPagedReKeeps(page, size)
     val resF = for {
@@ -103,29 +83,14 @@ class AdminAttributionController @Inject() (
     }
   }
 
-  def rekeepsView(page: Int, size: Int, showImage: Boolean) = AdminHtmlAction.authenticated { request =>
-    val (t, count) = db.readOnlyReplica { implicit ro =>
-      val t = rekeepRepo.page(page, size, Set(ReKeepStates.INACTIVE)).map { k =>
-        val rk = RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, userRepo.get(k.keeperId), keepRepo.get(k.keepId), uriRepo.get(k.uriId), userRepo.get(k.srcUserId), keepRepo.get(k.srcKeepId), k.attributionFactor)
-        val pageInfoOpt = pageInfoRepo.getByUri(k.uriId)
-        val imgOpt = if (!showImage) None else
-          for {
-            pageInfo <- pageInfoOpt
-            imgId <- pageInfo.imageInfoId
-          } yield imageInfoRepo.get(imgId)
-        (rk, pageInfoOpt, imgOpt)
-      }
-      (t, rekeepRepo.count)
-    }
-    Ok(html.admin.rekeeps(t, showImage, page, count, size))
-  }
-
   private def getKeepInfos(userId: Id[User]): (User, Seq[RichKeepDiscovery], Seq[RichReKeep], Seq[RichReKeep]) = {
     db.readOnlyMaster { implicit ro =>
       val u = userRepo.get(userId)
-      val rc = keepDiscoveryRepo.getDiscoveriesByKeeper(userId).take(10) map { c =>
-        RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, u, keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
-      }
+      val rc = Seq.empty[RichKeepDiscovery]
+      // todo(ray): add (last) endpoint to heimdal!
+      //        keepDiscoveryRepo.getDiscoveriesByKeeper(userId).take(10) map { c =>
+      //          RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, u, keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
+      //        }
       val rekeeps = rekeepRepo.getAllReKeepsByKeeper(userId).sortBy(_.createdAt)(Ordering[DateTime].reverse).take(10)
       val rk = rekeeps map { k =>
         RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, u, keepRepo.get(k.keepId), uriRepo.get(k.uriId), userRepo.get(k.srcUserId), keepRepo.get(k.srcKeepId), k.attributionFactor)

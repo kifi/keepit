@@ -1,17 +1,24 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Injector, Inject }
+import com.google.inject.{ Injector }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
+import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail, ElectronicMailRepo, EmailAddress }
+import com.keepit.common.store.{ FakeShoeboxStoreModule, FakeS3ImageStore }
+import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.{ FakeCuratorServiceClientImpl, CuratorServiceClient, FakeCuratorServiceClientModule }
 import com.keepit.model._
+import com.keepit.scraper.FakeScraperServiceClientModule
+import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
+import views.html.admin.user
 
 class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
-  def setup(db: Database)(implicit injector: Injector) = {
+  def setup(db: Database)(implicit injector: Injector): (User, UserEmailAddress, ElectronicMail) = {
     val emailAddrRepo = inject[UserEmailAddressRepo]
     val userRepo = inject[UserRepo]
     val emailRepo = inject[ElectronicMailRepo]
@@ -46,7 +53,13 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
     )
 
   var modules = Seq(
-    FakeShoeboxServiceModule()
+    FakeShoeboxServiceModule(),
+    FakeCuratorServiceClientModule(),
+    FakeSearchServiceClientModule(),
+    FakeCortexServiceClientModule(),
+    FakeScraperServiceClientModule(),
+    FakeExternalServiceModule(),
+    FakeShoeboxStoreModule()
   )
 
   "SendgridCommander" should {
@@ -104,6 +117,36 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
             verifiedEmail.seq === fetchedEmailAddr.seq
             verifiedEmail.updatedAt === fetchedEmailAddr.updatedAt
           }
+        }
+      }
+
+      "click events for digest emails" in {
+        withDb(modules: _*) { implicit injector =>
+          val commander = inject[SendgridCommander]
+          val emailAddrRepo = inject[UserEmailAddressRepo]
+          val emailRepo = inject[ElectronicMailRepo]
+          val curator = inject[CuratorServiceClient].asInstanceOf[FakeCuratorServiceClientImpl]
+
+          val (user: User, emailAddr: UserEmailAddress, email: ElectronicMail) = {
+            val tuple = setup(db)
+            val updatedEmail = db.readWrite { implicit rw =>
+              emailRepo.save(tuple._3.copy(category = NotificationCategory.User.DIGEST, senderUserId = tuple._1.id))
+            }
+            tuple.copy(_3 = updatedEmail)
+          }
+
+          val uriRepo = inject[NormalizedURIRepo]
+          val uri = db.readWrite { implicit rw =>
+            uriRepo.save(NormalizedURI(url = "https://www.kifi.com", urlHash = UrlHash("https://www.kifi.com")))
+          }
+          val sgEvent = mockSendgridEvent(email.externalId).copy(url = Some("https://www.kifi.com"))
+
+          commander.processNewEvents(Seq(sgEvent))
+
+          val (actualUserId, actualUriId, actualFeedback) = curator.updatedUriRecommendationFeedback.head
+          actualUriId === uri.id.get
+          actualUserId === user.id.get
+          actualFeedback === UriRecommendationFeedback(delivered = Some(true), clicked = Some(true), kept = None)
         }
       }
 

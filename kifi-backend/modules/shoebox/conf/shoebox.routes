@@ -114,6 +114,7 @@ GET     /m/1/user/friendsDetails            @com.keepit.controllers.mobile.Mobil
 GET     /m/1/user/networks                  @com.keepit.controllers.mobile.MobileUserController.socialNetworkInfo()
 POST    /m/1/user/:origin/uploadContacts    @com.keepit.controllers.mobile.MobileUserController.uploadContacts(origin:ABookOriginType)
 GET     /m/1/user/abooks                    @com.keepit.controllers.mobile.MobileUserController.abookInfo()
+GET     /m/1/user/friends/recommended       @com.keepit.controllers.mobile.MobilePeopleRecommendationController.getFriendRecommendations(page: Int ?= 0, pageSize: Int ?= 5)
 
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 POST    /m/1/page/extensionQuery            @com.keepit.controllers.mobile.MobilePageController.queryExtension(page: Int ?= 0, pageSize: Int ?= 1000)
@@ -172,6 +173,7 @@ GET     /m/1/user/outgoingFriendRequests        @com.keepit.controllers.mobile.M
 GET     /m/1/user/incomingFriendRequests        @com.keepit.controllers.mobile.MobileUserController.incomingFriendRequests
 POST    /m/1/user/delighted/answer              @com.keepit.controllers.mobile.MobileUserController.postDelightedAnswer()
 POST    /m/1/user/delighted/cancel              @com.keepit.controllers.mobile.MobileUserController.cancelDelightedSurvey()
+GET     /m/1/user/$id<[0-9a-f-]{36}> 			@com.keepit.controllers.mobile.MobileUserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
 
 POST    /m/1/disconnect/:provider               @com.keepit.controllers.mobile.MobileUserController.disconnect(provider)
 
@@ -258,7 +260,7 @@ POST    /site/libraries/move        @com.keepit.controllers.website.LibraryContr
 
 GET     /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
-POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(url: String)
+POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback()
 POST    /site/recos/vote            @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationUserInteraction(url: String)
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
@@ -362,9 +364,6 @@ GET     /admin/pageInfo/:id         @com.keepit.controllers.admin.AdminPageInfoC
 GET     /admin/pageInfos            @com.keepit.controllers.admin.AdminPageInfoController.pageInfos(page:Int ?= 0, size:Int ?= 50)
 
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperAdminController.getScraped(uriId: Id[NormalizedURI])
-
-GET     /admin/keepDiscoveriesNew/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesViewNew(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
-GET     /admin/rekeepsNew/page/:page         @com.keepit.controllers.admin.AdminAttributionController.rekeepsViewNew(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 
 GET     /admin/keepDiscoveries/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
@@ -569,10 +568,6 @@ GET     /admin/clusters/zooKeeperInspector        @com.keepit.controllers.admin.
 GET     /admin/experiments/overview   @com.keepit.controllers.admin.AdminExperimentController.overview
 GET     /admin/experiments/users/:exp/page/:page @com.keepit.controllers.admin.AdminUserController.byExperimentUsersView(page: Int, exp: String)
 POST     /admin/experiments/saveGenerator @com.keepit.controllers.admin.AdminExperimentController.saveGenerator
-
-GET     /admin/feed                   @com.keepit.controllers.admin.AdminFeedController.index
-POST    /adimin/feed/query             @com.keepit.controllers.admin.AdminFeedController.queryFeeds
-GET     /admin/feed/getFeeds          @com.keepit.controllers.admin.AdminFeedController.getFeeds(userId: Id[User], limit: Int, smart: Boolean ?= false)
 
 GET     /admin/learning/pornDetect/model    @com.keepit.controllers.admin.ScraperAdminController.getPornDetectorModel
 GET     /admin/learning/pornDetect          @com.keepit.controllers.admin.AdminPornDetectorController.index

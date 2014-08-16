@@ -1,7 +1,7 @@
 package com.keepit.commander
 
 import com.google.inject.Inject
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }

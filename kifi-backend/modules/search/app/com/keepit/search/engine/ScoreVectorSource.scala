@@ -1,16 +1,49 @@
 package com.keepit.search.engine
 
-import com.keepit.search.article.ArticleVisibility
-import com.keepit.search.graph.keep.KeepFields
+import com.keepit.search.Searcher
+import com.keepit.search.article.{ ArticleIndexer, ArticleVisibility }
+import com.keepit.search.engine.query.KWeight
+import com.keepit.search.graph.keep.{ KeepIndexer, KeepFields }
+import com.keepit.search.graph.library.LibraryIndexer
 import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.util.LongArraySet
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
+import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.search.Scorer
+import org.apache.lucene.search.{ Query, Weight, Scorer }
 import org.apache.lucene.util.PriorityQueue
+import scala.collection.JavaConversions._
+import scala.collection.mutable.ArrayBuffer
 
 trait ScoreVectorSource {
-  def writeScoreVectorsTo(output: DataBuffer)
+
+  def createWeights(query: Query): IndexedSeq[(Weight, Float)] = {
+    val weights = new ArrayBuffer[(Weight, Float)]
+    val weight = searcher.createWeight(query)
+    if (weight != null) {
+      weight.asInstanceOf[KWeight].getWeights(weights)
+    }
+    weights
+  }
+
+  def execute(weights: IndexedSeq[(Weight, Float)], dataBuffer: DataBuffer): Unit = {
+    val scorers = new Array[Scorer](weights.size)
+    indexReaderContexts.foreach { subReaderContext =>
+      val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
+      var i = 0
+      while (i < scorers.length) {
+        scorers(i) = weights(i)._1.scorer(subReaderContext, true, false, subReader.getLiveDocs)
+        i += 1
+      }
+      writeScoreVectors(subReader, scorers, dataBuffer)
+    }
+  }
+
+  protected def searcher: Searcher
+
+  protected def indexReaderContexts: Seq[AtomicReaderContext] = { searcher.indexReader.getContext.leaves }
+
+  protected def writeScoreVectors(reader: WrappedSubReader, scorers: Array[Scorer], output: DataBuffer)
 
   protected def createScorerQueue(scorers: Array[Scorer]): TaggedScoreQueue = {
     val pq = new TaggedScoreQueue(scorers.length)
@@ -62,12 +95,14 @@ final class TaggedScoreQueue(size: Int) extends PriorityQueue[TaggedScorer](size
 
 //
 // Main Search (finding Keeps)
-//  query Article index and Keep index and aggregate the hits by Uri Id
+//  query Article index, Keep index, and Collection index and aggregate the hits by Uri Id
 //
 
-class ArticleScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer], idFilter: LongArraySet) extends ScoreVectorSource {
+class UriFromArticlesScoreVectorSource(articleIndexer: ArticleIndexer, idFilter: LongArraySet) extends ScoreVectorSource {
 
-  def writeScoreVectorsTo(output: DataBuffer): Unit = {
+  protected val searcher: Searcher = articleIndexer.getSearcher
+
+  protected def writeScoreVectors(reader: WrappedSubReader, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
 
@@ -101,9 +136,11 @@ class ArticleScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer],
   }
 }
 
-class ArticleFromKeepsScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer], libraryIds: LongArraySet, idFilter: LongArraySet) extends ScoreVectorSource {
+class UriFromKeepsScoreVectorSource(keepIndexer: KeepIndexer, libraryIds: LongArraySet, idFilter: LongArraySet) extends ScoreVectorSource {
 
-  def writeScoreVectorsTo(output: DataBuffer): Unit = {
+  protected val searcher: Searcher = keepIndexer.getSearcher
+
+  protected def writeScoreVectors(reader: WrappedSubReader, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
 
@@ -123,6 +160,7 @@ class ArticleFromKeepsScoreVectorSource(reader: WrappedSubReader, scorers: Array
       if (libraryIds.findIndex(libId) >= 0 && idFilter.findIndex(id) < 0) { // use findIndex to avoid boxing
         // get all scores
         val size = pq.getTaggedScores(taggedScores)
+
         // write to the buffer
         output.alloc(writer, Visibility.MEMBER, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
         writer.putLong(id).putTaggedFloatBits(taggedScores, size)
@@ -139,9 +177,11 @@ class ArticleFromKeepsScoreVectorSource(reader: WrappedSubReader, scorers: Array
 //  query Library index and Keep index and aggregate the hits by Library Id
 //
 
-class LibraryScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer], libraryIds: LongArraySet, idFilter: LongArraySet) extends ScoreVectorSource {
+class LibraryScoreVectorSource(libraryIndexer: LibraryIndexer, libraryIds: LongArraySet, idFilter: LongArraySet) extends ScoreVectorSource {
 
-  def writeScoreVectorsTo(output: DataBuffer): Unit = {
+  val searcher = libraryIndexer.getSearcher
+
+  protected def writeScoreVectors(reader: WrappedSubReader, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
 
@@ -178,9 +218,11 @@ class LibraryScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer],
   }
 }
 
-class LibraryFromKeepsScoreVectorSource(reader: WrappedSubReader, scorers: Array[Scorer], idFilter: LongArraySet) extends ScoreVectorSource {
+class LibraryFromKeepsScoreVectorSource(keepIndexer: KeepIndexer, idFilter: LongArraySet) extends ScoreVectorSource {
 
-  def writeScoreVectorsTo(output: DataBuffer): Unit = {
+  val searcher = keepIndexer.getSearcher
+
+  protected def writeScoreVectors(reader: WrappedSubReader, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
 

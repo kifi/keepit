@@ -1,10 +1,9 @@
-# SHOEBOX
+# CURATOR
 
 # --- !Ups
 
-ALTER TABLE library_invite
-  ADD COLUMN email_address varchar(30) NULL;
+alter table raw_seed_item
+    add column url text NOT NULL DEFAULT '';
 
-INSERT INTO evolutions (name, description) VALUES('226.sql', 'add email address field to library invites');
-
+insert into evolutions (name, description) values('226.sql', 'add url column');
 # --- !Downs

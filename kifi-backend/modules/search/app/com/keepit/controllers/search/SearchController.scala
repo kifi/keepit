@@ -22,13 +22,11 @@ import com.keepit.search.user.UserSearchRequest
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.typeahead.PrefixFilter
-import com.keepit.search.feed.FeedCommander
 
 class SearchController @Inject() (
     searcherFactory: MainSearcherFactory,
     userSearchFilterFactory: UserSearchFilterFactory,
     searchCommander: SearchCommander,
-    feedCommander: FeedCommander,
     userExperimentCommander: RemoteUserExperimentCommander) extends SearchServiceController {
 
   def distSearch() = Action(parse.tolerantJson) { request =>
@@ -79,19 +77,6 @@ class SearchController @Inject() (
     val userId = Id[User]((json \ "request").as[Long])
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
     Ok(Json.toJson(searchCommander.distLangFreqs(shards, userId).map { case (lang, freq) => lang.lang -> freq }))
-  }
-
-  def distFeeds() = Action(parse.tolerantJson) { request =>
-    val json = request.body
-    val shardSpec = (json \ "shards").as[String]
-    val searchRequest = (json \ "request")
-
-    // keep the following in sync with SearchServiceClientImpl
-    val userId = (searchRequest \ "userId").as[Long]
-    val limit = (searchRequest \ "limit").as[Int]
-
-    val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
-    Ok(Json.toJson(feedCommander.distFeeds(shards, Id[User](userId), limit)))
   }
 
   //internal (from eliza/shoebox)

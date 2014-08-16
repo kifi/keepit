@@ -37,6 +37,7 @@ trait GraphServiceClient extends ServiceClient {
   def getSociallyRelatedFacebookAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]]
   def getSociallyRelatedLinkedInAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]]
   def getSociallyRelatedEmailAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, EmailAccountInfo]]]
+  def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]]
 }
 
 case class GraphCacheProvider @Inject() (
@@ -156,5 +157,10 @@ class GraphServiceClientImpl @Inject() (
         }
       }
     }
+  }
+
+  def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]] = {
+    val payload = Json.obj("user" -> userId, "uris" -> uriIds)
+    call(Graph.internal.explainFeed(), payload).map { r => (r.json).as[Seq[GraphFeedExplanation]] }
   }
 }

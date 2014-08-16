@@ -9,9 +9,11 @@ import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.phrasedetector.PhraseDetector
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserSearcher
-import com.keepit.search.query.parser.MainQueryParserFactory
+import com.keepit.search.query.parser.MainQueryParser
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -34,7 +36,7 @@ class MainSearcherFactory @Inject() (
     userGraphsSearcherFactory: UserGraphsSearcherFactory,
     shardedUriGraphIndexer: ShardedURIGraphIndexer,
     shardedCollectionIndexer: ShardedCollectionIndexer,
-    parserFactory: MainQueryParserFactory,
+    phraseDetector: PhraseDetector,
     resultClickTracker: ResultClickTracker,
     clickHistoryTracker: ClickHistoryTracker,
     searchConfigManager: SearchConfigManager,
@@ -48,8 +50,42 @@ class MainSearcherFactory @Inject() (
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](10 seconds)
   private[this] val consolidateLangFreqsReq = new RequestConsolidator[Id[User], Map[Lang, Int]](180 seconds)
   private[this] val consolidateConfigReq = new RequestConsolidator[(Id[User]), (SearchConfig, Option[Id[SearchConfigExperiment]])](10 seconds)
+  private[this] val phraseDetectionConsolidator = new RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]](10 minutes)
 
   lazy val searchServiceStartedAt: Long = fortyTwoServices.started.getMillis()
+
+  private def mkQueryParser(lang1: Lang, lang2: Option[Lang], config: SearchConfig): MainQueryParser = {
+    val proximityBoost = config.asFloat("proximityBoost")
+    val semanticBoost = config.asFloat("semanticBoost")
+    val phraseBoost = config.asFloat("phraseBoost")
+    val siteBoost = config.asFloat("siteBoost")
+    val concatBoost = config.asFloat("concatBoost")
+    val homePageBoost = config.asFloat("homePageBoost")
+    val useSemanticMatch = config.asBoolean("useSemanticMatch")
+    val proximityGapPenalty = config.asFloat("proximityGapPenalty")
+    val proximityThreshold = config.asFloat("proximityThreshold")
+    val proximityPowerFactor = config.asFloat("proximityPowerFactor")
+
+    new MainQueryParser(
+      DefaultAnalyzer.getAnalyzer(lang1),
+      DefaultAnalyzer.getAnalyzerWithStemmer(lang1),
+      lang2.map(DefaultAnalyzer.getAnalyzer),
+      lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
+      proximityBoost,
+      semanticBoost,
+      phraseBoost,
+      siteBoost,
+      concatBoost,
+      homePageBoost,
+      useSemanticMatch,
+      proximityGapPenalty,
+      proximityThreshold,
+      proximityPowerFactor,
+      phraseDetector,
+      phraseDetectionConsolidator,
+      monitoredAwait
+    )
+  }
 
   def apply(
     shards: Set[Shard[NormalizedURI]],
@@ -63,7 +99,7 @@ class MainSearcherFactory @Inject() (
     val clickHistoryFuture = getClickHistoryFuture(userId)
     val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
 
-    val parser = parserFactory(lang1, lang2, config)
+    val parser = mkQueryParser(lang1, lang2, config)
 
     val searchers = shards.toSeq.map { shard =>
       val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)

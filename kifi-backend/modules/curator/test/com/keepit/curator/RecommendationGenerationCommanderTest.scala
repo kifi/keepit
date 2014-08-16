@@ -35,8 +35,9 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         recencyScore = 1.0f,
         priorScore = 1.0f,
         rekeepScore = 1.0f,
-        discoveryScore = 1.0f),
-      seen = false, clicked = false, kept = false, attribution = SeedAttribution.EMPTY)
+        discoveryScore = 1.0f,
+        multiplier = Some(0.01f)),
+      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY)
 
     val rec2 = UriRecommendation(uriId = Id[NormalizedURI](2), userId = Id[User](42), masterScore = 0.99f,
       allScores = UriScores(socialScore = 1.0f,
@@ -46,8 +47,9 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         recencyScore = 1.0f,
         priorScore = 1.0f,
         rekeepScore = 1.0f,
-        discoveryScore = 1.0f),
-      seen = false, clicked = false, kept = false, attribution = SeedAttribution.EMPTY)
+        discoveryScore = 1.0f,
+        multiplier = Some(1.5f)),
+      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY)
 
     val rec3 = UriRecommendation(uriId = Id[NormalizedURI](3), userId = Id[User](42), masterScore = 0.5f,
       allScores = UriScores(socialScore = 0.0f,
@@ -57,8 +59,9 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         recencyScore = 1.0f,
         priorScore = 1.0f,
         rekeepScore = 1.0f,
-        discoveryScore = 1.0f),
-      seen = false, clicked = false, kept = false, attribution = SeedAttribution(topic = Some(TopicAttribution("fun"))))
+        discoveryScore = 1.0f,
+        multiplier = Some(1.0f)),
+      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution(topic = Some(TopicAttribution("fun"))))
 
     Seq(rec1, rec2, rec3)
   }
@@ -79,12 +82,12 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         val recs1 = Await.result(result1, Duration(10, "seconds"))
         println(recs1(0).toString)
         recs1(0).userId === Id[User](42)
-        recs1(0).score === 0.5f
-        recs1(1).score === 0.5f
+        recs1(0).score === 0.75f
+        recs1(1).score === 0.005f
 
         val result2 = commander.getAdHocRecommendations(Id[User](42), 1, UriRecommendationScores())
         val recs2 = Await.result(result2, Duration(10, "seconds"))
-        recs2(0).score === 33.0f
+        recs2(0).score === 49.5f
 
       }
     }

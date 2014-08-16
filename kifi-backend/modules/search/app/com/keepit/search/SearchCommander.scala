@@ -112,9 +112,9 @@ class SearchCommanderImpl @Inject() (
     val (localShards, dispatchPlan) = {
       // do distributed search using a remote-only plan when the debug flag has "dist" for now. still experimental
       if (debug.isDefined && debug.get.indexOf("dist") >= 0) {
-        distributionPlanRemoteOnly(maxShardsPerInstance = 2)
+        distributionPlanRemoteOnly(userId, maxShardsPerInstance = 2)
       } else {
-        distributionPlan(shards)
+        distributionPlan(userId, shards)
       }
     }
 

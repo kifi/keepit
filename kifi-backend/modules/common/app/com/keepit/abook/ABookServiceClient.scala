@@ -6,21 +6,20 @@ import com.keepit.common.db.{ SequenceNumber, ExternalId, Id }
 import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.{ CallTimeouts, HttpClientImpl, HttpClient }
+import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.queue.RichConnectionUpdateMessage
-import scala.concurrent._
 
 import akka.actor.Scheduler
 
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.Future
 
 import play.api.libs.json._
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
 import com.keepit.common.routes.ABook
-import scala.util.{ Success, Failure, Try }
+import scala.util.Try
 import play.api.http.Status
 import com.keepit.abook.model._
 import com.keepit.common.mail.{ EmailAddress, BasicContact }
@@ -28,7 +27,6 @@ import com.keepit.typeahead.TypeaheadHit
 import com.keepit.social.SocialNetworkType
 import play.api.libs.json.JsArray
 import scala.util.Failure
-import scala.Some
 import play.api.libs.json.JsNumber
 import scala.util.Success
 import com.keepit.serializer.EitherFormat
@@ -273,6 +271,11 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   // allow test clients to set expectations
   var contactsConnectedToEmailAddress: Set[Id[User]] = Set.empty
+  private val friendRecommendationsExpectations = collection.mutable.HashMap[Id[User], Seq[Id[User]]]()
+
+  def addFriendRecommendationsExpectations(userId: Id[User], recoUserIds: Seq[Id[User]]) = synchronized {
+    friendRecommendationsExpectations(userId) = recoUserIds
+  }
 
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
@@ -332,7 +335,9 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] = Future.successful(contactsConnectedToEmailAddress)
 
-  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = Future.successful(Seq.empty)
+  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = synchronized {
+    Future.successful(friendRecommendationsExpectations(userId))
+  }
 
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit] = Future.successful(())
 

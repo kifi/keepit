@@ -243,17 +243,7 @@ class UserController @Inject() (
   def updateCurrentUser() = JsonAction.authenticatedParseJsonAsync(allowPending = true) { implicit request =>
     request.body.validate[UpdatableUserInfo] match {
       case JsSuccess(userData, _) => {
-        userData.emails.foreach(userCommander.updateEmailAddresses(request.userId, request.user.firstName, request.user.primaryEmail, _))
-        userData.description.foreach { description =>
-          userCommander.updateUserDescription(request.userId, description)
-        }
-        if (userData.firstName.exists(_.nonEmpty) && userData.lastName.exists(_.nonEmpty)) {
-          db.readWrite { implicit session =>
-            val user = userRepo.getNoCache(request.userId)
-            userRepo.save(user.copy(firstName = userData.firstName.get, lastName = userData.lastName.get))
-          }
-        }
-
+        userCommander.updateUserInfo(request.userId, userData)
         getUserInfo(request.userId)
       }
       case JsError(errors) if errors.exists { case (path, _) => path == __ \ "emails" } =>

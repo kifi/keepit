@@ -3,7 +3,7 @@ package com.keepit.controllers.website
 import com.google.inject.Inject
 
 import com.keepit.commanders.{ InviteCommander, UserCommander, LocalUserExperimentCommander }
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, AuthenticatedRequest, WebsiteController }
 import com.keepit.common.db.ExternalId
@@ -121,7 +121,8 @@ class HomeController @Inject() (
     context.addRequestInfo(request)
     context += ("type", "landing")
     heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("visitor_viewed_page")))
-    Redirect("https://itunes.apple.com/app/id740232575")
+    val uriNoProto = request.uri.replaceFirst("^https?://", "")
+    Ok(views.html.mobile.iPhoneRedirect(uriNoProto))
   }
 
   def mobileLanding = HtmlAction(authenticatedAction = mobileLandingHandler(_), unauthenticatedAction = mobileLandingHandler(_))

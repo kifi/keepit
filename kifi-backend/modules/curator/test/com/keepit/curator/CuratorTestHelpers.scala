@@ -70,16 +70,21 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         recencyScore = 1.0f,
         priorScore = 1.0f,
         rekeepScore = 1.0f,
+        multiplier = Some(1.0f),
         discoveryScore = 1.0f),
-      seen = false, clicked = false, kept = false, attribution = SeedAttribution.EMPTY)
+      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY)
 
   def makeCompleteUriRecommendation(uriId: Int, userId: Int, masterScore: Float, url: String) = {
     val normalizedUri = makeNormalizedUri(uriId, url)
     val uriRecommendation = makeUriRecommendation(uriId, userId, masterScore)
     val uriSummary = URISummary(
-      title = Some("Test"),
-      description = Some("Description "),
-      imageUrl = Some(s"image.jpg")
+      title = Some("The Personalized Web is Transforming our Relationship with Tech"),
+      description = Some("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc nec augue a erat interdum varius." +
+        "Nam faucibus euismod lorem in interdum. Donec ut enim vitae nibh mattis ultrices. Sed fermentum tellus eget odio " +
+        "dapibus volutpat. Sed elementum sollicitudin metus, fringilla lacinia tortor fringilla vel. Mauris hendrerit " +
+        "interdum neque eu vulputate. Nulla fermentum metus felis. In id velit dictum ligula iaculis pulvinar id sit " +
+        "amet dolor. Proin eu augue id lectus viverra consectetur at sed orci. Suspendisse potenti."),
+      imageUrl = Some("https://djty7jcqog9qu.cloudfront.net/screenshot/f5d6aedb-fea9-485f-aead-f2a8d1f31ac5/1000x560.jpg")
     )
 
     (normalizedUri, uriRecommendation, uriSummary)
