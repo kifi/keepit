@@ -8,6 +8,7 @@ import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
+import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -23,7 +24,8 @@ case class LibraryInvite(
     access: LibraryAccess,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
-    state: State[LibraryInvite] = LibraryInviteStates.ACTIVE) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
+    state: State[LibraryInvite] = LibraryInviteStates.ACTIVE,
+    authToken: String = RandomStringUtils.randomAlphanumeric(32)) extends ModelWithPublicId[LibraryInvite] with ModelWithState[LibraryInvite] {
 
   def withId(id: Id[LibraryInvite]): LibraryInvite = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): LibraryInvite = this.copy(updatedAt = now)
@@ -46,7 +48,8 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
     (__ \ 'access).format[LibraryAccess] and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
-    (__ \ 'state).format(State.format[LibraryInvite])
+    (__ \ 'state).format(State.format[LibraryInvite]) and
+    (__ \ 'authToken).format[String]
   )(LibraryInvite.apply, unlift(LibraryInvite.unapply))
 }
 
