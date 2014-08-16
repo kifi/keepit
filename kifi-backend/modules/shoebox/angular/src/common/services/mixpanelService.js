@@ -40,22 +40,27 @@
 
   function trackPage(path) {
     var mixpanel = $window.mixpanel;
-    var origin = $window.location.origin;
-    pageTrackForVisitor(mixpanel, path, origin);
-    pageTrackForUser(mixpanel, path, origin);
+    if (mixpanel) { // TODO: fake implementation for tests
+      var origin = $window.location.origin;
+      pageTrackForVisitor(mixpanel, path, origin);
+      pageTrackForUser(mixpanel, path, origin);
+    }
   }
 
   function trackEvent(action, props) {
-    if ('path' in props && !props.type) {
-      props.type = getLocation(props.path);
-      delete props.path;
+    var mixpanel = $window.mixpanel;
+    if (mixpanel) { // TODO: fake implementation for tests
+      if ('path' in props && !props.type) {
+        props.type = getLocation(props.path);
+        delete props.path;
+      }
+      _.extend(props, {
+        userStatus: getUserStatus(),
+        experiments: getExperiments()
+      });
+      $log.log('mixpanelService.eventTrack(' + action + ')', props);
+      mixpanel.track(action, props);
     }
-    _.extend(props, {
-      userStatus: getUserStatus(),
-      experiments: getExperiments()
-    });
-    $log.log('mixpanelService.eventTrack(' + action + ')', props);
-    $window.mixpanel.track(action, props);
   }
 
   function getLocation(path) {
