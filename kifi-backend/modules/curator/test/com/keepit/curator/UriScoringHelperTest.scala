@@ -41,7 +41,7 @@ class UriScoringHelperTest extends Specification with CuratorTestInjector {
 
         val uriScoringHelper = inject[UriScoringHelper]
         val uriBoostingHelper = inject[UriWeightingHelper]
-        val res = uriScoringHelper(uriBoostingHelper(makeSeedItems))
+        val res = uriScoringHelper(uriBoostingHelper(makeSeedItems), Set.empty)
 
         val scores = Await.result(res, Duration(10, "seconds"))
 
