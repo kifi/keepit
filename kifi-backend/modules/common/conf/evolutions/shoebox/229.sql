@@ -1,10 +1,13 @@
-# SHOEBOX
+# CORTEX
 
 # --- !Ups
 
-ALTER TABLE library_invite
-  ADD COLUMN email_address NULL;
+alter table uri_lda_topic
+    add column first_topic_score real DEFAULT NULL;
 
-INSERT INTO evolutions (name, description) VALUES('229.sql', 'add email address field to library invites');
+alter table uri_lda_topic
+    add column times_first_topic_changed smallint unsigned DEFAULT 0;
+
+insert into evolutions (name, description) values('229.sql', 'add first_topic_score to uri_lda_topic');
 
 # --- !Downs

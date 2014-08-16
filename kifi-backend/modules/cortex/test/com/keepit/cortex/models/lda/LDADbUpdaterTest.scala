@@ -40,6 +40,7 @@ class LDADbUpdaterTest extends Specification with CortexTestInjector with LDADbT
             feat.firstTopic.get.index === i
             feat.secondTopic.get.index === i + 1
             feat.thirdTopic.get.index === i + 2
+            feat.firstTopicScore.get === 5f / 15f
             feat.state === URILDATopicStates.ACTIVE
             feat.feature.get.value(i) === 5f / 15f
             feat.feature.get.value(i + 1) === 4f / 15f
@@ -156,6 +157,7 @@ trait LDADbTestHelper extends URIFeatureTestHelper {
     NormalizedURI(id = Some(Id[NormalizedURI](idx)), url = s"http://page${idx}.com", urlHash = UrlHash(s"page${idx}"), seq = seq.getOrElse(SequenceNumber[NormalizedURI](idx)), state = state)
   }
 
+  // 5 * word_i + 4* word_(i+1) + ... + 1 * word_(i+5)
   def makeContent(idx: Int): String = {
     var s = ""
     ((idx until idx + 5).map { _ % dim } zip Range(5, 0, -1)).map {

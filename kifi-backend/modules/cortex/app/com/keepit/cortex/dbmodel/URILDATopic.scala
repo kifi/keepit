@@ -21,6 +21,8 @@ case class URILDATopic(
     firstTopic: Option[LDATopic] = None,
     secondTopic: Option[LDATopic] = None,
     thirdTopic: Option[LDATopic] = None,
+    firstTopicScore: Option[Float] = None,
+    timesFirstTopicChanged: Int = 0,
     sparseFeature: Option[SparseTopicRepresentation] = None,
     feature: Option[LDATopicFeature] = None,
     state: State[URILDATopic]) extends ModelWithState[URILDATopic] {
