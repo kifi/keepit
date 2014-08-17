@@ -15,12 +15,11 @@ import play.api.libs.json.{ JsArray, Json, JsObject }
 import com.google.inject.util.Providers
 import com.keepit.common.actor.FakeScheduler
 
-class FakeKeepDiscoveryRepoAccess(implicit base: FakeRepoBase[KeepDiscovery]) extends FakeRepoBase[KeepDiscovery] with KeepDiscoveryRepoAccess {
+class FakeKeepDiscoveryRepoAccess(implicit base: FakeRepoBase[Id[KeepDiscovery], KeepDiscovery]) extends FakeRepoBase[Id[KeepDiscovery], KeepDiscovery] with KeepDiscoveryRepoAccess {
 
-  val idCounter = base.idCounter
   val data = base.data
 
-  def getPagedKeepDiscoveries(page: Int, size: Int): Future[Seq[KeepDiscovery]] = Future.successful { base.page(page, size) }
+  def getPagedKeepDiscoveries(page: Int, size: Int): Future[Seq[KeepDiscovery]] = Future.successful { Seq.empty }
 
   def getDiscoveryCount(): Future[Int] = Future.successful { base.count }
 
@@ -42,12 +41,11 @@ class FakeKeepDiscoveryRepoAccess(implicit base: FakeRepoBase[KeepDiscovery]) ex
 
 }
 
-class FakeReKeepRepoAccess(implicit base: FakeRepoBase[ReKeep]) extends FakeRepoBase[ReKeep] with ReKeepRepoAccess {
+class FakeReKeepRepoAccess(implicit base: FakeRepoBase[Id[ReKeep], ReKeep]) extends FakeRepoBase[Id[ReKeep], ReKeep] with ReKeepRepoAccess {
 
-  val idCounter = base.idCounter
   val data = base.data
 
-  def getPagedReKeeps(page: Int, size: Int): Future[Seq[ReKeep]] = Future.successful { base.page(page, size) }
+  def getPagedReKeeps(page: Int, size: Int): Future[Seq[ReKeep]] = Future.successful { Seq.empty }
 
   def getReKeepCount(): Future[Int] = Future.successful { base.count }
 
@@ -75,14 +73,11 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
-  implicit lazy val keepDiscoveryRepo = makeRepoBase[KeepDiscovery]
-  implicit lazy val rekeepRepo = makeRepoBase[ReKeep]
+  implicit lazy val keepDiscoveryRepo = makeRepoBase[Id[KeepDiscovery], KeepDiscovery]
+  implicit lazy val rekeepRepo = makeRepoBase[Id[ReKeep], ReKeep]
 
   val keepDiscoveryRepoAccess = new FakeKeepDiscoveryRepoAccess()
   val rekeepRepoAccess = new FakeReKeepRepoAccess()
-
-  def saveKeepDiscoveries(items: KeepDiscovery*) = save(items: _*)
-  def saveReKeeps(items: ReKeep*) = save(items: _*)
 
   var eventsRecorded: Int = 0
 

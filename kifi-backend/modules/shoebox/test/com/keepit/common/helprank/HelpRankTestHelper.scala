@@ -8,7 +8,7 @@ import com.keepit.common.time._
 import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientImpl }
 import com.keepit.model._
 import com.keepit.search.ArticleSearchResult
-import com.keepit.test.TestInjector
+import com.keepit.test.{ FakeIdCounter, TestInjector }
 import play.api.libs.json.Json
 
 trait HelpRankTestHelper { self: TestInjector =>
@@ -43,29 +43,36 @@ trait HelpRankTestHelper { self: TestInjector =>
     val (keeps1, _) = keepInterner.internRawBookmarks(raw1, u1.id.get, KeepSource.email, true)
     val (keeps2, _) = keepInterner.internRawBookmarks(raw2, u2.id.get, KeepSource.default, true)
 
-    val origin = "https://www.google.com"
-    val kc0 = KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId)
+    val kdCounter = new FakeIdCounter[KeepDiscovery]
+    val kc0 = KeepDiscovery(id = Some(kdCounter.nextId()), createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u1.id.get, keepId = keeps1(0).id.get, uriId = keeps1(0).uriId)
     // u2 -> 42 (u1)
 
     val ts = currentDateTime
     val uuid = ExternalId[ArticleSearchResult]()
-    val kc1 = KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId)
-    val kc2 = KeepDiscovery(createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId)
+    val kc1 = KeepDiscovery(id = Some(kdCounter.nextId()), createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId)
+    val kc2 = KeepDiscovery(id = Some(kdCounter.nextId()), createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId)
     // u3 -> kifi (u1, u2)
-    heimdal.save(kc0, kc1, kc2)
-
+    try {
+      heimdal.save(kc0.id.get, kc0)
+      heimdal.save(kc1.id.get, kc1)
+      heimdal.save(kc2.id.get, kc2)
+    } catch {
+      case t: Throwable => println(s"Caught exception: $t; cause: ${t.getCause}; ${t.getStackTraceString}")
+    }
     val (keeps3, _) = keepInterner.internRawBookmarks(raw3, u3.id.get, KeepSource.default, true)
-    val kc3 = KeepDiscovery(createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId)
+    val kc3 = KeepDiscovery(id = Some(kdCounter.nextId()), createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId)
     // u4 -> kifi (u3) [rekeep]
-    heimdal.save(kc3)
+    heimdal.save(kc3.id.get, kc3)
 
-    val rk1 = ReKeep(keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId, srcKeepId = keeps3(0).id.get, srcUserId = u3.id.get)
-    val rk2 = ReKeep(keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId, srcKeepId = keeps3(0).id.get, srcUserId = u3.id.get)
-    heimdal.save(rk1, rk2)
+    val rkCounter = new FakeIdCounter[ReKeep]
+    val rk1 = ReKeep(id = Some(rkCounter.nextId()), keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId, srcKeepId = keeps3(0).id.get, srcUserId = u3.id.get)
+    val rk2 = ReKeep(id = Some(rkCounter.nextId()), keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId, srcKeepId = keeps3(0).id.get, srcUserId = u3.id.get)
+    heimdal.save(rk1.id.get, rk1)
+    heimdal.save(rk2.id.get, rk2)
 
     val (keeps4, _) = keepInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
-    val rk3 = ReKeep(keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId, srcKeepId = keeps4(0).id.get, srcUserId = u4.id.get)
-    heimdal.save(rk3)
+    val rk3 = ReKeep(id = Some(rkCounter.nextId()), keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId, srcKeepId = keeps4(0).id.get, srcUserId = u4.id.get)
+    heimdal.save(rk3.id.get, rk3)
     (u1, u2, keeps1)
   }
 

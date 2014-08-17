@@ -6,11 +6,17 @@ import com.keepit.common.db.{ Model, Id }
 
 trait FakeServiceClient {
 
-  def makeRepoBase[T <: Model[T]]: FakeRepoBase[T] = new FakeRepoBase[T] {
-    val idCounter = new FakeIdCounter[T]
-    val data = new ConcurrentHashMap[Id[T], T]()
+  def makeRepoBase[K, V]: FakeRepoBase[K, V] = new FakeRepoBase[K, V] {
+    val data = new ConcurrentHashMap[K, V]()
   }
 
-  def save[T <: Model[T]](models: T*)(implicit repo: FakeRepoLike[T]): Seq[T] = models map { repo.save }
+  def save[K, V](key: K, value: V)(implicit repo: FakeRepoLike[K, V]): Unit = repo.put(key, value)
 
+}
+
+trait ServiceHelper {
+  def save[T: Datum](data: T)(repo: FakeRepoBase[Id[T], T]): T = {
+    val datumHelper = implicitly[Datum[T]]
+    repo.put(datumHelper.id(data).get, data)
+  }
 }
