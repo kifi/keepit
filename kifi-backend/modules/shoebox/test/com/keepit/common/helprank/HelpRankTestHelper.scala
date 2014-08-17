@@ -52,27 +52,21 @@ trait HelpRankTestHelper { self: TestInjector =>
     val kc1 = KeepDiscovery(id = Some(kdCounter.nextId()), createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId)
     val kc2 = KeepDiscovery(id = Some(kdCounter.nextId()), createdAt = ts, hitUUID = uuid, numKeepers = 2, keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId)
     // u3 -> kifi (u1, u2)
-    try {
-      heimdal.save(kc0.id.get, kc0)
-      heimdal.save(kc1.id.get, kc1)
-      heimdal.save(kc2.id.get, kc2)
-    } catch {
-      case t: Throwable => println(s"Caught exception: $t; cause: ${t.getCause}; ${t.getStackTraceString}")
-    }
+    heimdal.save(kc0, kc1, kc2)
+
     val (keeps3, _) = keepInterner.internRawBookmarks(raw3, u3.id.get, KeepSource.default, true)
     val kc3 = KeepDiscovery(id = Some(kdCounter.nextId()), createdAt = currentDateTime, hitUUID = ExternalId[ArticleSearchResult](), numKeepers = 1, keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId)
     // u4 -> kifi (u3) [rekeep]
-    heimdal.save(kc3.id.get, kc3)
+    heimdal.save(kc3)
 
     val rkCounter = new FakeIdCounter[ReKeep]
     val rk1 = ReKeep(id = Some(rkCounter.nextId()), keeperId = u1.id.get, keepId = keeps1(1).id.get, uriId = keeps1(1).uriId, srcKeepId = keeps3(0).id.get, srcUserId = u3.id.get)
     val rk2 = ReKeep(id = Some(rkCounter.nextId()), keeperId = u2.id.get, keepId = keeps2(0).id.get, uriId = keeps2(0).uriId, srcKeepId = keeps3(0).id.get, srcUserId = u3.id.get)
-    heimdal.save(rk1.id.get, rk1)
-    heimdal.save(rk2.id.get, rk2)
+    heimdal.save(rk1, rk2)
 
     val (keeps4, _) = keepInterner.internRawBookmarks(raw4, u4.id.get, KeepSource.default, true)
     val rk3 = ReKeep(id = Some(rkCounter.nextId()), keeperId = u3.id.get, keepId = keeps3(0).id.get, uriId = keeps3(0).uriId, srcKeepId = keeps4(0).id.get, srcUserId = u4.id.get)
-    heimdal.save(rk3.id.get, rk3)
+    heimdal.save(rk3)
     (u1, u2, keeps1)
   }
 

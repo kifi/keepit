@@ -2,7 +2,7 @@ package com.keepit.test
 
 import java.util.concurrent.ConcurrentHashMap
 
-import com.keepit.common.db.{ Model, Id }
+import com.keepit.common.db.Id
 
 trait FakeServiceClient {
 
@@ -10,13 +10,10 @@ trait FakeServiceClient {
     val data = new ConcurrentHashMap[K, V]()
   }
 
-  def save[K, V](key: K, value: V)(implicit repo: FakeRepoLike[K, V]): Unit = repo.put(key, value)
+  def put[K, V](key: K, value: V)(implicit repo: FakeRepoLike[K, V]): Unit = repo.put(key, value)
 
-}
+  def makeRepoWithId[T <: { def id: Option[Id[T]]; def withId(id: Id[T]): T }]: FakeRepoWithId[T] = new FakeRepoWithId[T]
 
-trait ServiceHelper {
-  def save[T: Datum](data: T)(repo: FakeRepoBase[Id[T], T]): T = {
-    val datumHelper = implicitly[Datum[T]]
-    repo.put(datumHelper.id(data).get, data)
-  }
+  // quack!
+  def save[T <: { def id: Option[Id[T]]; def withId(id: Id[T]): T }](datums: T*)(implicit repo: FakeRepoWithId[T]): Seq[T] = datums map { repo.save }
 }

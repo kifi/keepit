@@ -73,8 +73,8 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
-  implicit lazy val keepDiscoveryRepo = makeRepoBase[Id[KeepDiscovery], KeepDiscovery]
-  implicit lazy val rekeepRepo = makeRepoBase[Id[ReKeep], ReKeep]
+  implicit lazy val keepDiscoveryRepo = makeRepoWithId[KeepDiscovery]
+  implicit lazy val rekeepRepo = makeRepoWithId[ReKeep]
 
   val keepDiscoveryRepoAccess = new FakeKeepDiscoveryRepoAccess()
   val rekeepRepoAccess = new FakeReKeepRepoAccess()

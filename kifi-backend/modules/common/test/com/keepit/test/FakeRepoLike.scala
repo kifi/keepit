@@ -3,7 +3,7 @@ package com.keepit.test
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ Id }
 import com.keepit.model.{ KeepDiscovery, ReKeep }
 
 import collection.JavaConversions._
@@ -36,18 +36,13 @@ trait FakeRepoBase[K, V] extends FakeRepoLike[K, V] {
   def filter(p: V => Boolean) = data.values.filter(p)
 }
 
-trait Datum[T] {
-  def id(datum: T): Option[Id[T]]
-  def withId(datum: T, id: Id[T]): T
-}
+// referencing Model in common is forbidden (quacking is expensive -- revisit)
+class FakeRepoWithId[T <: { def id: Option[Id[T]]; def withId(id: Id[T]): T }] extends FakeRepoBase[Id[T], T] {
+  val idCounter = new FakeIdCounter[T]
+  val data = new ConcurrentHashMap[Id[T], T]()
 
-object Datum {
-  implicit val keepDiscoveryDatum = new Datum[KeepDiscovery] {
-    override def id(datum: KeepDiscovery): Option[Id[KeepDiscovery]] = datum.id
-    override def withId(datum: KeepDiscovery, id: Id[KeepDiscovery]): KeepDiscovery = datum.withId(id)
-  }
-  implicit val rekeepDatum = new Datum[ReKeep] {
-    override def id(datum: ReKeep): Option[Id[ReKeep]] = datum.id
-    override def withId(datum: ReKeep, id: Id[ReKeep]): ReKeep = datum.withId(id)
+  def save(t: T): T = {
+    val id = t.id getOrElse idCounter.nextId
+    data.put(id, t)
   }
 }
