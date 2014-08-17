@@ -28,15 +28,15 @@ class SeedAttributionHelper @Inject() (
 
   def getAttributions(seeds: Seq[ScoredSeedItem]): Future[Seq[ScoredSeedItemWithAttribution]] = {
     val userAttrFut = getUserAttribution(seeds)
-    val keepAttrFut = getKeepAttribution(seeds)
+    //val keepAttrFut = getKeepAttribution(seeds)
     val topicAttrFut = getTopicAttribution(seeds)
     for {
       userAttr <- userAttrFut
-      keepAttr <- keepAttrFut
+      //keepAttr <- keepAttrFut
       topicAttr <- topicAttrFut
     } yield {
       (0 until seeds.size).map { i =>
-        val attr = SeedAttribution(userAttr(i), keepAttr(i), topicAttr(i))
+        val attr = SeedAttribution(userAttr(i), None /* keepAttr(i) */ , topicAttr(i))
         ScoredSeedItemWithAttribution(seeds(i).userId, seeds(i).uriId, seeds(i).uriScores, attr)
       }
     }
