@@ -15,5 +15,5 @@ trait FakeServiceClient {
   def makeRepoWithId[T <: { def id: Option[Id[T]]; def withId(id: Id[T]): T }]: FakeRepoWithId[T] = new FakeRepoWithId[T]
 
   // quack!
-  def save[T <: { def id: Option[Id[T]]; def withId(id: Id[T]): T }](datums: T*)(implicit repo: FakeRepoWithId[T]): Seq[T] = datums map { repo.save }
+  def save[T <: { def id: Option[Id[T]] }](datums: T*)(implicit repo: FakeRepoWithId[T]): Seq[T] = datums map { repo.save }
 }

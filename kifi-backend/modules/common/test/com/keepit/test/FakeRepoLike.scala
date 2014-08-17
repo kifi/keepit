@@ -34,7 +34,7 @@ trait FakeRepoBase[K, V] extends FakeRepoLike[K, V] {
 }
 
 // referencing Model in common is forbidden (quacking is expensive -- revisit)
-class FakeRepoWithId[T <: { def id: Option[Id[T]]; def withId(id: Id[T]): T }] extends FakeRepoBase[Id[T], T] {
+class FakeRepoWithId[T <: { def id: Option[Id[T]] }] extends FakeRepoBase[Id[T], T] {
   val idCounter = new FakeIdCounter[T]
   val data = new ConcurrentHashMap[Id[T], T]()
 
