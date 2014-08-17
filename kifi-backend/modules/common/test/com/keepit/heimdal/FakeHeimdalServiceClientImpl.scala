@@ -5,7 +5,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.service.ServiceType
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.test.{ FakeRepoBase, FakeRepoLike, FakeServiceClient }
+import com.keepit.test.{ FakeRepoWithId, FakeServiceClient }
 import org.joda.time.DateTime
 
 import scala.concurrent.{ Future, Promise }
@@ -15,9 +15,7 @@ import play.api.libs.json.{ JsArray, Json, JsObject }
 import com.google.inject.util.Providers
 import com.keepit.common.actor.FakeScheduler
 
-class FakeKeepDiscoveryRepoAccess(implicit base: FakeRepoBase[Id[KeepDiscovery], KeepDiscovery]) extends FakeRepoBase[Id[KeepDiscovery], KeepDiscovery] with KeepDiscoveryRepoAccess {
-
-  val data = base.data
+class FakeKeepDiscoveryRepoAccess(implicit base: FakeRepoWithId[KeepDiscovery]) extends FakeRepoWithId[KeepDiscovery] with KeepDiscoveryRepoAccess {
 
   def getPagedKeepDiscoveries(page: Int, size: Int): Future[Seq[KeepDiscovery]] = Future.successful { Seq.empty }
 
@@ -41,9 +39,7 @@ class FakeKeepDiscoveryRepoAccess(implicit base: FakeRepoBase[Id[KeepDiscovery],
 
 }
 
-class FakeReKeepRepoAccess(implicit base: FakeRepoBase[Id[ReKeep], ReKeep]) extends FakeRepoBase[Id[ReKeep], ReKeep] with ReKeepRepoAccess {
-
-  val data = base.data
+class FakeReKeepRepoAccess(implicit base: FakeRepoWithId[ReKeep]) extends FakeRepoWithId[ReKeep] with ReKeepRepoAccess {
 
   def getPagedReKeeps(page: Int, size: Int): Future[Seq[ReKeep]] = Future.successful { Seq.empty }
 
@@ -145,3 +141,4 @@ class FakeHeimdalServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI]): Future[(Int, Int)] = rekeepRepoAccess.getReKeepCountsByUserUri(userId, uriId)
 
 }
+

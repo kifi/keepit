@@ -4,7 +4,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.{ Id }
-import com.keepit.model.{ KeepDiscovery, ReKeep }
 
 import collection.JavaConversions._
 
@@ -30,8 +29,6 @@ trait FakeRepoBase[K, V] extends FakeRepoLike[K, V] {
   def get(key: K) = data.get(key)
   def all() = data.values.toSeq // add shuffle if not random enough
   def count: Int = data.keySet.size
-  def invalidateCache(model: K): Unit = {}
-  def deleteCache(model: K): Unit = {}
 
   def filter(p: V => Boolean) = data.values.filter(p)
 }
