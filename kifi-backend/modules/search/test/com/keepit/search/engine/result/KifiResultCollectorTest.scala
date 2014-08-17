@@ -5,7 +5,7 @@ import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search.util.LongArraySet
 import org.specs2.mutable.Specification
 
-class MainResultCollectorTest extends Specification {
+class KifiResultCollectorTest extends Specification {
   private class TstResultClickBoosts(clickedIds: Set[Long] = Set.empty[Long], boost: Float = 1.0f) extends ResultClickBoosts {
     override def apply(id: Long): Float = if (clickedIds.contains(id)) boost else 1.0f
   }
@@ -15,7 +15,7 @@ class MainResultCollectorTest extends Specification {
 
   "MainResultCollector" should {
     "collect hits above MIN_PERCENT_MATCH" in {
-      val collector = new MainResultCollector(
+      val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(),
         friendsUris = LongArraySet.empty,
         maxHitsPerCategory = 10,
@@ -44,7 +44,7 @@ class MainResultCollectorTest extends Specification {
     }
 
     "collect hits above percentMatchThreshold" in {
-      val collector = new MainResultCollector(
+      val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(),
         friendsUris = LongArraySet.empty,
         maxHitsPerCategory = 10,
@@ -81,7 +81,7 @@ class MainResultCollectorTest extends Specification {
     }
 
     "collect a hit below percentMatchThreshold if clicked" in {
-      val collector = new MainResultCollector(
+      val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
         friendsUris = LongArraySet.empty,
         maxHitsPerCategory = 10,
@@ -114,7 +114,7 @@ class MainResultCollectorTest extends Specification {
     }
 
     "collect hits by category" in {
-      val collector = new MainResultCollector(
+      val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
         friendsUris = LongArraySet.from(Array(20L)),
         maxHitsPerCategory = 10,
@@ -148,7 +148,7 @@ class MainResultCollectorTest extends Specification {
     }
 
     "not collect restricted hits" in {
-      val collector = new MainResultCollector(
+      val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
         friendsUris = LongArraySet.from(Array(20L)),
         maxHitsPerCategory = 10,

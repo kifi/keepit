@@ -1,7 +1,7 @@
 package com.keepit.curator.model
 
 import com.keepit.common.db.{ SequenceNumber, Id }
-import com.keepit.model.{ Keep, NormalizedURI, User }
+import com.keepit.model.{ NormalizedURI, User }
 import com.kifi.macros.json
 
 import org.joda.time.DateTime
@@ -15,6 +15,7 @@ object Keepers {
 case class SeedItem(
   userId: Id[User],
   uriId: Id[NormalizedURI],
+  url: String,
   seq: SequenceNumber[SeedItem],
   priorScore: Option[Float],
   timesKept: Int,
@@ -30,20 +31,31 @@ case class SeedItem(
     recencyScore: Float,
     priorScore: Float,
     rekeepScore: Float,
-    discoveryScore: Float) {
+    discoveryScore: Float,
+    multiplier: Option[Float]) {
 
-  override def toString = s"social:$socialScore --- popularity:$popularityScore --- overallInterest:$overallInterestScore --- recentInterest:$recentInterestScore --- recency:$recencyScore --- prior:$priorScore --- rekeep:$rekeepScore --- discovery:$discoveryScore"
+  override def toString = f"""
+    s:$socialScore%1.2f-
+    p:$popularityScore%1.2f-
+    oI:$overallInterestScore%1.2f-
+    rI:$recentInterestScore%1.2f-
+    r:$recencyScore%1.2f-
+    g:$priorScore%1.2f-
+    rk:$rekeepScore%1.2f-
+    d:$discoveryScore%1.2f-
+    m:${multiplier.getOrElse(1.0f)}%1.2f
+  """.replace("\n", "").trim
 }
+
+case class SeedItemWithMultiplier(
+  multiplier: Float = 1.0f,
+  userId: Id[User],
+  uriId: Id[NormalizedURI],
+  priorScore: Option[Float],
+  timesKept: Int,
+  lastSeen: DateTime,
+  keepers: Keepers)
 
 case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores)
-
-@json case class UserAttribution(friends: Seq[Id[User]], others: Int)
-@json case class KeepAttribution(keeps: Seq[Id[Keep]])
-@json case class TopicAttribution(topicName: String)
-@json case class SeedAttribution(user: Option[UserAttribution] = None, keep: Option[KeepAttribution] = None, topic: Option[TopicAttribution] = None)
-
-object SeedAttribution {
-  val EMPTY = SeedAttribution()
-}
 
 case class ScoredSeedItemWithAttribution(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores, attribution: SeedAttribution)

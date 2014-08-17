@@ -24,8 +24,9 @@ class RecommendationsController @Inject() (
     }
   }
 
-  def updateUriRecommendationFeedback(url: String) = JsonAction.authenticatedParseJsonAsync { request =>
-    val feedback = request.body.as[UriRecommendationFeedback]
+  def updateUriRecommendationFeedback() = JsonAction.authenticatedParseJsonAsync { request =>
+    val url = (request.body \ "url").as[String]
+    val feedback = (request.body \ "feedback").as[UriRecommendationFeedback]
     commander.updateUriRecommendationFeedback(request.userId, url, feedback).map(fkis => Ok(Json.toJson(fkis)))
   }
 

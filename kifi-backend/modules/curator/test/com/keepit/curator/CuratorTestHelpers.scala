@@ -70,8 +70,9 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         recencyScore = 1.0f,
         priorScore = 1.0f,
         rekeepScore = 1.0f,
+        multiplier = Some(1.0f),
         discoveryScore = 1.0f),
-      seen = false, clicked = false, kept = false, attribution = SeedAttribution.EMPTY)
+      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY)
 
   def makeCompleteUriRecommendation(uriId: Int, userId: Int, masterScore: Float, url: String) = {
     val normalizedUri = makeNormalizedUri(uriId, url)
