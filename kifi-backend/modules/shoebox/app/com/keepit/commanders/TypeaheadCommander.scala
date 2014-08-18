@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import com.keepit.common.core._
 import com.google.inject.Inject
 import com.keepit.common.healthcheck.{ SystemAdminMailSender, AirbrakeNotifier }
 import com.keepit.common.db.slick.Database
@@ -7,7 +8,7 @@ import com.keepit.common.logging.{ LogPrefix, Logging }
 import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
 import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.social.{ TypeaheadUserHit, SocialNetworkType, SocialNetworks }
 import scala.concurrent.Future
 import play.api.libs.json._
