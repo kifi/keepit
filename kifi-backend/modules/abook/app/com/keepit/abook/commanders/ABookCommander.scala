@@ -21,7 +21,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.xml.Elem
 import com.keepit.abook.typeahead.EContactTypeahead
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
-import com.keepit.abook.model.{ EContactRepo, EContact }
+import com.keepit.abook.model.{ RichContact, EContactRepo, EContact }
 import com.keepit.abook.controllers.{ ABookOwnerInfo, GmailABookOwnerInfo }
 import com.keepit.abook.{ ABookImporterPlugin, ABookInfoRepo }
 
@@ -217,10 +217,14 @@ class ABookCommander @Inject() (
     contactInterner.internContact(userId, kifiAbook.id.get, contact)
   }
 
-  def getContactNameByEmail(userId: Id[User], email: EmailAddress): Option[String] = {
+  def getContactsByUserAndEmail(userId: Id[User], email: EmailAddress): Seq[EContact] = {
     db.readOnlyReplica { implicit session =>
-      econtactRepo.getByUserIdAndEmail(userId, email).collectFirst { case contact if contact.name.isDefined => contact.name.get }
+      econtactRepo.getByUserIdAndEmail(userId, email)
     }
+  }
+
+  def getContactNameByEmail(userId: Id[User], email: EmailAddress): Option[String] = {
+    getContactsByUserAndEmail(userId, email).collectFirst { case contact if contact.name.isDefined => contact.name.get }
   }
 
   def getContactsByUser(userId: Id[User], page: Int = 0, pageSize: Option[Int] = None): Seq[EContact] = {

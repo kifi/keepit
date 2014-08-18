@@ -31,6 +31,7 @@ trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def countUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Int
   def getUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Seq[LDATopicFeature]
   def getTopicCounts(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Int, Int)] // (topic_id, counts)
+  def getFirstTopicAndScore(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(LDATopic, Float)]
 }
 
 @Singleton
@@ -158,5 +159,9 @@ class URILDATopicRepoImpl @Inject() (
     import StaticQuery.interpolation
     val q = sql"""select tp.first_topic, count(tp.uri_id) from uri_lda_topic as tp where tp.version = ${version.version} and tp.state = 'active' group by tp.first_topic"""
     q.as[(Int, Int)].list
+  }
+
+  def getFirstTopicAndScore(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(LDATopic, Float)] = {
+    (for { r <- rows if r.version === version && r.uriId === uriId && r.state === URILDATopicStates.ACTIVE } yield (r.firstTopic, r.firstTopicScore)).firstOption
   }
 }
