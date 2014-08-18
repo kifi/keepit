@@ -94,16 +94,16 @@ class ABookRecommendationCommander @Inject() (
 
   private def generateFutureInviteRecommendations(userId: Id[User], relevantNetworks: Set[SocialNetworkType]): Future[Stream[(InviteRecommendation, Double)]] = {
     val futureExistingInvites = if (relevantNetworks.isEmpty) Future.successful(Seq.empty) else shoebox.getInvitations(userId)
-    val futureLowerCaseFriendNames = for {
+    val futureLowerCaseUserNames = for {
       friendIds <- shoebox.getFriends(userId)
-      basicFriends <- shoebox.getBasicUsers(friendIds.toSeq)
+      basicUsers <- shoebox.getBasicUsers(Seq(userId) ++ friendIds)
     } yield {
-      basicFriends.values.flatMap(friend => Set(friend.firstName + " " + friend.lastName, friend.lastName + " " + friend.firstName)).map(_.trim.toLowerCase).toSet
+      basicUsers.values.flatMap(user => Set(user.firstName + " " + user.lastName, user.lastName + " " + user.firstName)).map(_.trim.toLowerCase).toSet
     }
 
     val futureEmailInviteRecommendations = {
       if (!relevantNetworks.contains(EMAIL)) Future.successful(Stream.empty)
-      else generateFutureEmailInvitesRecommendations(userId, futureExistingInvites, futureLowerCaseFriendNames)
+      else generateFutureEmailInvitesRecommendations(userId, futureExistingInvites, futureLowerCaseUserNames)
     }
 
     val (futureRelevantSocialFriends, futureExistingSocialInvites) = {
@@ -113,9 +113,9 @@ class ABookRecommendationCommander @Inject() (
           val futureSocialFriends = shoebox.getSocialConnections(userId)
           for {
             socialFriends <- futureSocialFriends
-            lowerCaseFriendNames <- futureLowerCaseFriendNames
+            lowerCaseUserNames <- futureLowerCaseUserNames
           } yield {
-            @inline def mayAlreadyBeOnKifi(socialFriend: SocialUserBasicInfo) = socialFriend.userId.isDefined || lowerCaseFriendNames.contains(socialFriend.fullName.toLowerCase)
+            @inline def mayAlreadyBeOnKifi(socialFriend: SocialUserBasicInfo) = socialFriend.userId.isDefined || lowerCaseUserNames.contains(socialFriend.fullName.toLowerCase)
             socialFriends.collect { case socialFriend if relevantNetworks.contains(socialFriend.networkType) && !mayAlreadyBeOnKifi(socialFriend) => socialFriend.id -> socialFriend }.toMap
           }
         }
@@ -178,7 +178,7 @@ class ABookRecommendationCommander @Inject() (
     }
   }
 
-  private def generateFutureEmailInvitesRecommendations(userId: Id[User], futureExistingInvites: Future[Seq[Invitation]], futureLowerCaseFriendNames: Future[Set[String]]): Future[Stream[(InviteRecommendation, Double)]] = {
+  private def generateFutureEmailInvitesRecommendations(userId: Id[User], futureExistingInvites: Future[Seq[Invitation]], futureLowerCaseUserNames: Future[Set[String]]): Future[Stream[(InviteRecommendation, Double)]] = {
     graph.getSociallyRelatedEmailAccounts(userId, bePatient = false).flatMap { relatedEmailAccountsOption =>
       val relatedEmailAccounts = relatedEmailAccountsOption.map(_.related) getOrElse Seq.empty
       if (relatedEmailAccounts.isEmpty) Future.successful(Stream.empty)
@@ -186,13 +186,13 @@ class ABookRecommendationCommander @Inject() (
         val rejectedEmailInviteRecommendations = db.readOnlyReplica { implicit session => emailInviteRecommendationRepo.getIrrelevantRecommendations(userId) }
         for {
           existingInvites <- futureExistingInvites
-          lowerCaseFriendNames <- futureLowerCaseFriendNames
+          lowerCaseUserNames <- futureLowerCaseUserNames
         } yield {
           val emailInvitesByLowerCaseAddress = existingInvites.collect {
             case emailInvite if emailInvite.recipientEmailAddress.isDefined =>
               emailInvite.recipientEmailAddress.get.address.toLowerCase -> emailInvite
           }.toMap
-          generateEmailInviteRecommendations(userId, relatedEmailAccounts.toStream, lowerCaseFriendNames, rejectedEmailInviteRecommendations, emailInvitesByLowerCaseAddress)
+          generateEmailInviteRecommendations(userId, relatedEmailAccounts.toStream, lowerCaseUserNames, rejectedEmailInviteRecommendations, emailInvitesByLowerCaseAddress)
         }
       }
     }
@@ -223,7 +223,7 @@ class ABookRecommendationCommander @Inject() (
   private def generateEmailInviteRecommendations(
     userId: Id[User],
     relatedEmailAccounts: Stream[(Id[EmailAccountInfo], Double)],
-    lowerCaseFriendNames: Set[String],
+    lowerCaseUserNames: Set[String],
     rejectedRecommendations: Set[Id[EmailAccount]],
     existingEmailInvitesByLowerCaseAddress: Map[String, Invitation]): Stream[(InviteRecommendation, Double)] = {
 
@@ -236,7 +236,7 @@ class ABookRecommendationCommander @Inject() (
         val relevantContactName = if (canBeInvited && EmailAddress.isLikelyHuman(emailAddress)) {
           val contacts = abookCommander.getContactsByUserAndEmail(userId, emailAddress)
           val mayAlreadyBeOnKifi = contacts.exists { contact =>
-            contact.contactUserId.isDefined || contact.name.exists { name => lowerCaseFriendNames.contains(name.toLowerCase) }
+            contact.contactUserId.isDefined || contact.name.exists { name => lowerCaseUserNames.contains(name.toLowerCase) }
           }
           if (mayAlreadyBeOnKifi) None else contacts.collectFirst { case contact if contact.name.isDefined => contact.name.get }
         } else None
