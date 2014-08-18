@@ -121,9 +121,4 @@ class LDAController @Inject() (
     Ok(Json.toJson(res))
   }
 
-  def fixNullFirstTopicScore() = Action { request =>
-    lda.fixNullFirstTopicScore()
-    Ok
-  }
-
 }
