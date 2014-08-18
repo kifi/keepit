@@ -151,5 +151,3 @@ var log = log || function () {
   log.buffer = [];
   return log;
 }();
-
-/^Mac/.test(navigator.platform) && api.require('styles/mac.css', api.noop);
