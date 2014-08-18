@@ -199,11 +199,11 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
         topicRepo.getUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1), after = Some(new DateTime(2014, 7, 10, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE))).toList === List((LDATopic(2), 1))
         topicRepo.countUserURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0) === 2
         topicRepo.getUserURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0).map { _.value }.flatten === List(1f, 0f, 0.5f, 0.5f)
-        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0, limit = 1).map { case (keepId, uriId, feat) => feat.value }.flatten === List(0.5f, 0.5f)
-        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0, limit = 1).map { case (keepId, uriId, feat) => List(keepId.id, uriId.id) }.flatten === List(2, 2)
-        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0, limit = 2).map { case (keepId, uriId, feat) => feat.value }.flatten === List(0.5f, 0.5f, 1f, 0f)
-        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0, limit = 2).map { case (keepId, uriId, feat) => List(keepId.id, uriId.id) }.flatten === List(2, 2, 1, 1)
-        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 500, limit = 2).map { case (keepId, uriId, feat) => feat.value }.flatten === List()
+        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0, limit = 1).map { case (keepId, feat) => feat.value }.flatten === List(0.5f, 0.5f)
+        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0, limit = 1).map { case (keepId, feat) => keepId.id } === List(2)
+        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0, limit = 2).map { case (keepId, feat) => feat.value }.flatten === List(0.5f, 0.5f, 1f, 0f)
+        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0, limit = 2).map { case (keepId, feat) => keepId.id } === List(2, 1)
+        topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 500, limit = 2).map { case (keepId, feat) => feat.value }.flatten === List()
 
       }
     }
