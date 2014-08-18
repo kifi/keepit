@@ -31,7 +31,6 @@ trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def countUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Int
   def getUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Seq[LDATopicFeature]
   def getTopicCounts(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Int, Int)] // (topic_id, counts)
-  def nextBatchNullFirstTopicScore(version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[URILDATopic]
   def getFirstTopicAndScore(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(LDATopic, Float)]
 }
 
@@ -160,10 +159,6 @@ class URILDATopicRepoImpl @Inject() (
     import StaticQuery.interpolation
     val q = sql"""select tp.first_topic, count(tp.uri_id) from uri_lda_topic as tp where tp.version = ${version.version} and tp.state = 'active' group by tp.first_topic"""
     q.as[(Int, Int)].list
-  }
-
-  def nextBatchNullFirstTopicScore(version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[URILDATopic] = {
-    (for { r <- rows if r.version === version && r.state === URILDATopicStates.ACTIVE && r.firstTopicScore.isNull } yield r).take(limit).list
   }
 
   def getFirstTopicAndScore(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(LDATopic, Float)] = {
