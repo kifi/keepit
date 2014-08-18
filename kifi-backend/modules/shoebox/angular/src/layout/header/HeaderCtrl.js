@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.layout.header', ['kifi.profileService'])
+angular.module('kifi')
 
 .controller('HeaderCtrl', [
   '$scope', '$window', '$rootElement', '$rootScope', '$document', 'profileService', 'friendService', '$location', 'util', 'keyIndices',

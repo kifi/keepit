@@ -22,7 +22,7 @@ describe('kifi.invite', function () {
     return $injector.get('$q').defer().promise;
   }
 
-  beforeEach(module('kifi.invite'));
+  beforeEach(module('kifi'));
   beforeEach(inject(function (_$injector_) {
     $injector = _$injector_;
     $rootScope = $injector.get('$rootScope');

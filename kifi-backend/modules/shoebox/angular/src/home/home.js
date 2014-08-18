@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
+angular.module('kifi')
 
 .config([
   '$routeProvider',

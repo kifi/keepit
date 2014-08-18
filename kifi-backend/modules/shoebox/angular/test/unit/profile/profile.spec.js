@@ -3,7 +3,7 @@
 describe('kifi.profile', function () {
   var $injector;
 
-  beforeEach(module('kifi.profile'));
+  beforeEach(module('kifi'));
   beforeEach(inject(function (_$injector_) {
     $injector = _$injector_;
   }));

@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.minVersion', ['kifi.installService'])
+angular.module('kifi')
 
 .directive('kfMinVersion', [
   'installService',

@@ -3,7 +3,7 @@
 describe('kifi.userService', function () {
   var $injector, $httpBackend, routeService, userService;
 
-  beforeEach(module('kifi.userService'));
+  beforeEach(module('kifi'));
 
   beforeEach(inject(function (_$injector_) {
     $injector = _$injector_;

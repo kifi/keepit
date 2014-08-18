@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.invite.connectionCard', ['angularMoment'])
+angular.module('kifi')
 
 
 .directive('kfConnectionCard', ['$window', '$http', 'routeService', 'inviteService', function ($window, $http, routeService, inviteService) {
@@ -77,7 +77,7 @@ angular.module('kifi.invite.connectionCard', ['angularMoment'])
         }
       } else {
         scope.invited = false;
-        scope.byline = network === 'email' ? inNetworkId : 
+        scope.byline = network === 'email' ? inNetworkId :
           (network === 'linkedin' ? 'LinkedIn' : network.charAt(0).toUpperCase() + network.slice(1));
         scope.actionText = 'Invite';
       }
