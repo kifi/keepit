@@ -12,7 +12,7 @@ angular.module('kifi.modalService', [])
         return;
       }
 
-      var scope = $rootScope.$new();
+      var scope = opts.scope || $rootScope.$new();
       var $modal = angular.element($templateCache.get(template));
 
       if (opts.modalData) {

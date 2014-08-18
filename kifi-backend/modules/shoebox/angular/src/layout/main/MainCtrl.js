@@ -118,14 +118,6 @@ angular.module('kifi')
           $scope.modal = 'generic_error';
           $scope.data.showGenericErrorModal = true;
           break;
-        case 'installExtension':
-          $scope.modal = 'install_extension';
-          $scope.data.showInstallExtension = true;
-          break;
-        case 'installExtensionError':
-          $scope.modal = 'install_extension_error';
-          $scope.data.showInstallErrorModal = true;
-          break;
         case 'manageLibrary':
           $scope.modal = 'manage_library';
           $scope.data.showManageLibraryModal = true;
@@ -300,12 +292,6 @@ angular.module('kifi')
     if (/^Mac/.test($window.navigator.platform)) {
       $rootElement.find('body').addClass('mac');
     }
-
-    $scope.triggerInstall = function () {
-      installService.triggerInstall(function () {
-        $rootScope.$emit('showGlobalModal','installExtensionError');
-      });
-    };
 
     $scope.showDelightedSurvey = function () {
       return profileService.prefs && profileService.prefs.show_delighted_question;

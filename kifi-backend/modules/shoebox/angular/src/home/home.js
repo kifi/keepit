@@ -87,7 +87,9 @@ angular.module('kifi')
 
     $scope.triggerInstall = function () {
       installService.triggerInstall(function () {
-        $rootScope.$emit('showGlobalModal', 'installExtensionError');
+        modalService.open({
+          template: 'common/modal/installExtensionErrorModal.tpl.html'
+        });
       });
     };
 
@@ -95,7 +97,10 @@ angular.module('kifi')
       var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
       if (!kifiVersion) {
-        $rootScope.$emit('showGlobalModal','installExtension');
+        modalService.open({
+          template: 'common/modal/installExtensionModal.tpl.html',
+          scope: $scope
+        });
         return;
       }
 
