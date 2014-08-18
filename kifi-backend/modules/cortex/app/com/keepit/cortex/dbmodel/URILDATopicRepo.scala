@@ -5,7 +5,7 @@ import com.google.inject.{ ImplementedBy, Provider, Inject, Singleton }
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.Id
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ Keep, User, NormalizedURI }
 import com.keepit.common.db.State
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.ModelVersion
@@ -30,6 +30,7 @@ trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getFeaturesSince(seq: SequenceNumber[NormalizedURI], version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[URILDATopic]
   def countUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Int
   def getUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Seq[LDATopicFeature]
+  def getUserRecentURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int, limit: Int)(implicit session: RSession): Seq[(Id[Keep], Id[NormalizedURI], LDATopicFeature)]
   def getTopicCounts(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Int, Int)] // (topic_id, counts)
   def getFirstTopicAndScore(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(LDATopic, Float)]
 }
@@ -153,6 +154,14 @@ class URILDATopicRepoImpl @Inject() (
     implicit val getFeature = GetResult(r => ldaTopicFeatureMapper.nextValue(r))
     val q = sql"""select tp.feature from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id and ck.user_id = ${userId.id} and ck.state = 'active' and tp.version = ${version.version} and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words}"""
     q.as[LDATopicFeature].list
+  }
+
+  def getUserRecentURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int, limit: Int)(implicit session: RSession): Seq[(Id[Keep], Id[NormalizedURI], LDATopicFeature)] = {
+    import StaticQuery.interpolation
+    import scala.slick.jdbc.GetResult
+    implicit val getFeature = GetResult(r => (r.nextLong(), r.nextLong(), ldaTopicFeatureMapper.nextValue(r)))
+    val q = sql"""select ck.id, ck.uri_id, tp.feature from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id and ck.user_id = ${userId.id} and ck.state = 'active' and tp.version = ${version.version} and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words} order by ck.kept_at desc limit ${limit}"""
+    q.as[(Long, Long, LDATopicFeature)].list.map { case (keepId, uriId, feature) => (Id[Keep](keepId), Id[NormalizedURI](uriId), feature) }
   }
 
   def getTopicCounts(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Int, Int)] = {
