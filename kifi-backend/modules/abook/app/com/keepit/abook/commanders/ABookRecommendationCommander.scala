@@ -62,7 +62,7 @@ class ABookRecommendationCommander @Inject() (
 
   def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, relevantNetworks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = {
     val start = clock.now()
-    val futureRecommendations = generateFutureInviteRecommendations(userId, relevantNetworks).map(_.drop(page * pageSize).take(pageSize).map(_._1).toSeq)
+    val futureRecommendations = generateFutureInviteRecommendations(userId, relevantNetworks).map(_.drop(page * pageSize).take(pageSize).toSeq)
     futureRecommendations.onSuccess {
       case recommendations =>
         log.info(s"Computed ${recommendations.length}/${pageSize} invite recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
@@ -92,7 +92,7 @@ class ABookRecommendationCommander @Inject() (
     }
   }
 
-  private def generateFutureInviteRecommendations(userId: Id[User], relevantNetworks: Set[SocialNetworkType]): Future[Stream[(InviteRecommendation, Double)]] = {
+  private def generateFutureInviteRecommendations(userId: Id[User], relevantNetworks: Set[SocialNetworkType]): Future[Stream[InviteRecommendation]] = {
     val futureExistingInvites = if (relevantNetworks.isEmpty) Future.successful(Seq.empty) else shoebox.getInvitations(userId)
     val futureLowerCaseUserNames = for {
       friendIds <- shoebox.getFriends(userId)
@@ -142,11 +142,11 @@ class ABookRecommendationCommander @Inject() (
       emailInviteRecommendations <- futureEmailInviteRecommendations
     } yield {
       // Relying on aggregateBy stability, breaks ties by picking Facebook over LinkedIn, and LinkedIn over Email
-      PriorityStreamAggregator.aggregateBy(facebookInviteRecommendations, linkedInInviteRecommendations, emailInviteRecommendations) { case (_, score) => score }
+      PriorityStreamAggregator.aggregateBy(facebookInviteRecommendations, linkedInInviteRecommendations, emailInviteRecommendations)(_.score)
     }
   }
 
-  private def generateFutureFacebookInviteRecommendations(userId: Id[User], futureExistingSocialInvites: Future[Map[Id[SocialUserInfo], Invitation]], futureRelevantSocialFriends: Future[Map[Id[SocialUserInfo], SocialUserBasicInfo]]): Future[Stream[(InviteRecommendation, Double)]] = {
+  private def generateFutureFacebookInviteRecommendations(userId: Id[User], futureExistingSocialInvites: Future[Map[Id[SocialUserInfo], Invitation]], futureRelevantSocialFriends: Future[Map[Id[SocialUserInfo], SocialUserBasicInfo]]): Future[Stream[InviteRecommendation]] = {
     graph.getSociallyRelatedFacebookAccounts(userId, bePatient = false).flatMap { relatedFacebookAccountsOption =>
       val relatedFacebookAccounts = relatedFacebookAccountsOption.map(_.related) getOrElse Seq.empty
       if (relatedFacebookAccounts.isEmpty) Future.successful(Stream.empty)
@@ -162,7 +162,7 @@ class ABookRecommendationCommander @Inject() (
     }
   }
 
-  private def generateFutureLinkedInInviteRecommendations(userId: Id[User], futureExistingSocialInvites: Future[Map[Id[SocialUserInfo], Invitation]], futureRelevantSocialFriends: Future[Map[Id[SocialUserInfo], SocialUserBasicInfo]]): Future[Stream[(InviteRecommendation, Double)]] = {
+  private def generateFutureLinkedInInviteRecommendations(userId: Id[User], futureExistingSocialInvites: Future[Map[Id[SocialUserInfo], Invitation]], futureRelevantSocialFriends: Future[Map[Id[SocialUserInfo], SocialUserBasicInfo]]): Future[Stream[InviteRecommendation]] = {
     graph.getSociallyRelatedLinkedInAccounts(userId, bePatient = false).flatMap { relatedLinkedInAccountsOption =>
       val relatedLinkedInAccounts = relatedLinkedInAccountsOption.map(_.related) getOrElse Seq.empty
       if (relatedLinkedInAccounts.isEmpty) Future.successful(Stream.empty)
@@ -178,7 +178,7 @@ class ABookRecommendationCommander @Inject() (
     }
   }
 
-  private def generateFutureEmailInvitesRecommendations(userId: Id[User], futureExistingInvites: Future[Seq[Invitation]], futureLowerCaseUserNames: Future[Set[String]]): Future[Stream[(InviteRecommendation, Double)]] = {
+  private def generateFutureEmailInvitesRecommendations(userId: Id[User], futureExistingInvites: Future[Seq[Invitation]], futureLowerCaseUserNames: Future[Set[String]]): Future[Stream[InviteRecommendation]] = {
     graph.getSociallyRelatedEmailAccounts(userId, bePatient = false).flatMap { relatedEmailAccountsOption =>
       val relatedEmailAccounts = relatedEmailAccountsOption.map(_.related) getOrElse Seq.empty
       if (relatedEmailAccounts.isEmpty) Future.successful(Stream.empty)
@@ -202,7 +202,7 @@ class ABookRecommendationCommander @Inject() (
     relatedSocialUsers: Stream[(Id[SocialUserInfo], Double)],
     rejectedRecommendations: Set[Id[SocialUserInfo]],
     relevantSocialFriends: Map[Id[SocialUserInfo], SocialUserBasicInfo],
-    existingSocialInvites: Map[Id[SocialUserInfo], Invitation]): Stream[(InviteRecommendation, Double)] = {
+    existingSocialInvites: Map[Id[SocialUserInfo], Invitation]): Stream[InviteRecommendation] = {
 
     @inline def isRelevant(socialUserId: Id[SocialUserInfo]): Boolean = {
       relevantSocialFriends.contains(socialUserId) &&
@@ -214,8 +214,7 @@ class ABookRecommendationCommander @Inject() (
       case (socialUserId, score) if isRelevant(socialUserId) =>
         val friend = relevantSocialFriends(socialUserId)
         val lastInvitedAt = existingSocialInvites.get(socialUserId).flatMap(_.lastSentAt)
-        val recommendation = InviteRecommendation(friend.networkType, Right(friend.socialId), friend.fullName, friend.getPictureUrl(80, 80), lastInvitedAt)
-        (recommendation, score)
+        InviteRecommendation(friend.networkType, Right(friend.socialId), friend.fullName, friend.getPictureUrl(80, 80), lastInvitedAt, score)
     }
     recommendations.take(relevantSocialFriends.size)
   }
@@ -225,7 +224,7 @@ class ABookRecommendationCommander @Inject() (
     relatedEmailAccounts: Stream[(Id[EmailAccountInfo], Double)],
     lowerCaseUserNames: Set[String],
     rejectedRecommendations: Set[Id[EmailAccount]],
-    existingEmailInvitesByLowerCaseAddress: Map[String, Invitation]): Stream[(InviteRecommendation, Double)] = {
+    existingEmailInvitesByLowerCaseAddress: Map[String, Invitation]): Stream[InviteRecommendation] = {
 
     val recommendations = relatedEmailAccounts.flatMap {
       case (emailAccountId, score) =>
@@ -241,8 +240,7 @@ class ABookRecommendationCommander @Inject() (
           if (mayAlreadyBeOnKifi) None else contacts.collectFirst { case contact if contact.name.isDefined => contact.name.get }
         } else None
         relevantContactName.map { name =>
-          val inviteRecommendation = InviteRecommendation(SocialNetworks.EMAIL, Left(emailAddress), name, None, existingInvite.flatMap(_.lastSentAt))
-          (inviteRecommendation, score)
+          InviteRecommendation(SocialNetworks.EMAIL, Left(emailAddress), name, None, existingInvite.flatMap(_.lastSentAt), score)
         }.toStream
     }
     val distinctEmailContactsCount = db.readOnlyReplica { implicit session => contactRepo.countEmailContacts(userId, distinctEmailAccounts = true) }
