@@ -25,6 +25,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           firstTopic = Some(LDATopic(2)),
           secondTopic = Some(LDATopic(1)),
           thirdTopic = None,
+          firstTopicScore = Some(0.5f),
           sparseFeature = Some(SparseTopicRepresentation(dimension = 4, topics = Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f))),
           feature = Some(LDATopicFeature(Array(0.3f, 0.5f, 0.1f, 0.1f))),
           version = ModelVersion[DenseLDA](1),
@@ -60,6 +61,8 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
 
           uriTopicRepo.getFeature(Id[NormalizedURI](1), ModelVersion[DenseLDA](2)) === None
           uriTopicRepo.getFeature(Id[NormalizedURI](3), ModelVersion[DenseLDA](1)) === None
+
+          uriTopicRepo.getFirstTopicAndScore(Id[NormalizedURI](1), ModelVersion[DenseLDA](1)) === Some((LDATopic(2), 0.5f))
 
         }
       }
