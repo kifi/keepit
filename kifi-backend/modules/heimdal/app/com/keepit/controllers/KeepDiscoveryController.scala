@@ -29,13 +29,6 @@ class KeepDiscoveryController @Inject() (
     Ok(Json.toJson(res))
   }
 
-  def getDiscoveryCountByKeeper(userId: Id[User]) = Action { request =>
-    val res = db.readOnlyMaster { implicit session =>
-      keepDiscoveryRepo.getDiscoveryCountByKeeper(userId)
-    }
-    Ok(Json.toJson(res))
-  }
-
   def getDiscoveryCountsByURIs() = Action(parse.tolerantJson) { request =>
     val uriIds = Json.fromJson[Seq[Id[NormalizedURI]]](request.body).get
     val res = db.readOnlyMaster { implicit session =>
