@@ -216,7 +216,10 @@ class ABookRecommendationCommander @Inject() (
         val emailAddress = emailAccount.address
         val existingInvite = existingEmailInvitesByLowerCaseAddress.get(emailAddress.address.toLowerCase)
         val canBeInvited = emailAccount.userId.isEmpty && (existingInvite.map(canBeRecommendedAgain) getOrElse true)
-        val relevantContactName = if (canBeInvited && EmailAddress.isLikelyHuman(emailAddress)) abookCommander.getContactNameByEmail(userId, emailAddress) else None
+        val relevantContactName = if (canBeInvited && EmailAddress.isLikelyHuman(emailAddress)) {
+          val contacts = abookCommander.getContactsByUserAndEmail(userId, emailAddress)
+          contacts.collectFirst { case contact if contact.contactUserId.isEmpty && contact.name.isDefined => contact.name.get }
+        } else None
         relevantContactName.map { name =>
           val inviteRecommendation = InviteRecommendation(SocialNetworks.EMAIL, Left(emailAddress), name, None, existingInvite.flatMap(_.lastSentAt))
           (inviteRecommendation, score)
