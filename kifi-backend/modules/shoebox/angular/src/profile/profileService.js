@@ -1,10 +1,6 @@
 'use strict';
 
-angular.module('kifi.profileService', [
-  'kifi.routeService',
-  'angulartics',
-  'kifi.clutch'
-])
+angular.module('kifi')
 
 .factory('profileService', [
   '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics', '$location', '$window', '$rootScope', 'Clutch',

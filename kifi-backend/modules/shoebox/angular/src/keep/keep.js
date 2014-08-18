@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.keep', ['kifi.keepWhoPics', 'kifi.keepWhoText', 'kifi.tagService'])
+angular.module('kifi')
 
 .controller('KeepCtrl', [
   '$scope',

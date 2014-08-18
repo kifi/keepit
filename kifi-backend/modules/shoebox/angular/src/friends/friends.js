@@ -1,12 +1,6 @@
 'use strict';
 
-angular.module('kifi.friends', [
-  'util',
-  'kifi.social',
-  'kifi.profileService',
-  'kifi.routeService',
-  'kifi.invite'
-])
+angular.module('kifi')
 
 .config([
   '$routeProvider',

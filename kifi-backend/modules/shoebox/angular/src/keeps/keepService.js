@@ -1,12 +1,6 @@
 'use strict';
 
-angular.module('kifi.keepService', [
-  'kifi.undo',
-  'kifi.clutch',
-  'kifi.tagService',
-  'angulartics',
-  'util'
-])
+angular.module('kifi')
 
 .factory('keepService', [
   '$http', 'env', '$q', '$timeout', '$document', '$rootScope', 'undoService', '$log', 'Clutch', '$analytics', 'routeService', '$location', 'tagService', 'util',

@@ -1,10 +1,6 @@
 'use strict';
 
-angular.module('kifi.userService', [
-  'ngRoute',
-  'kifi',
-  'kifi.routeService'
-])
+angular.module('kifi')
 
 .factory('userService', [
   '$http', '$q', 'routeService',
