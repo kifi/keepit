@@ -30,7 +30,7 @@ margin: 0 auto;
 </head>
 <body style="display:none;text-align:center;padding:3em 0;">
 
-<div><a id="app-btn" href="https://www.kifi.com" onclick="return open();">Loading Kifi App...</a></div>
+<div><a id="app-btn" href="https://www.kifi.com" onclick="return openApp();">Load Kifi App</a></div>
 
 <!-- source: http://aawaara.com/post/74543339755/smallest-piece-of-code-thats-going-to-change-the-world -->
 <script type="text/javascript">
@@ -40,15 +40,14 @@ var timer,
 	isRunning = false,
 	btn = document.getElementById('app-btn');
 
-function clearTimers() {
+function abortNavigation() {
     clearTimeout(timer);
     clearTimeout(heartbeat);
     isRunning = false;
-    btn.innerText = 'Load Kifi App';
 }
 
-window.addEventListener('pageshow', clearTimers, false);
-window.addEventListener('pagehide', clearTimers, false);
+window.addEventListener('pageshow', abortNavigation, false);
+window.addEventListener('pagehide', abortNavigation, false);
 
 function getTime() { return (new Date()).getTime(); }
 
@@ -56,11 +55,12 @@ function getTime() { return (new Date()).getTime(); }
 function intervalHeartbeat() {
     var now = getTime(), diff = now - lastInterval - 200;
     lastInterval = now;
-    if (diff > 1000) clearTimers();
+    if (diff > 1000) abortNavigation();
 }
 
-function open() {
+function openApp() {
 	if (!isRunning) {
+	    isRunning = true;
 		lastInterval = getTime();
 		heartbeat = setInterval(intervalHeartbeat, 200);
 		document.location = 'kifi:@url';
@@ -71,7 +71,7 @@ function open() {
 	return false;
 }
 
-openKifiApp();
+openApp();
 </script>
 </body>
 </html>
