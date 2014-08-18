@@ -83,13 +83,20 @@ class LibraryController @Inject() (
 
   def getLibrariesByUser = JsonAction.authenticated { request =>
     val (accesses, invites) = libraryCommander.getLibrariesByUser(request.userId)
+    // rule out invites that are not duplicate invites to same library (only show library invite with highest access)
+    val invitesToShow = invites.groupBy(x => x._2).map { lib =>
+      val invites = lib._2.unzip._1
+      val highestInvite = libraryCommander.sortInvites(invites).last
+      (highestInvite, lib._1)
+    }.toSeq
+
     val libsFollowing = for (access <- accesses) yield {
       val lib = access._2
       val (owner, numKeeps) = db.readOnlyMaster { implicit s => (userRepo.get(lib.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
       val info = LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)
       Json.obj("info" -> info, "access" -> access._1)
     }
-    val libsInvitedTo = for (invite <- invites) yield {
+    val libsInvitedTo = for (invite <- invitesToShow) yield {
       val lib = invite._2
       val (owner, numKeeps) = db.readOnlyMaster { implicit s => (userRepo.get(lib.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
       val info = LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)

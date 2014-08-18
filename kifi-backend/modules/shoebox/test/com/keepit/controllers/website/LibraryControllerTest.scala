@@ -241,7 +241,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
+          // send invites to same library with different access levels (only want highest access level)
           libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, ownerId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_ONLY))
+          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, ownerId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_INSERT))
+          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, ownerId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_WRITE))
           (user1, user2, library1, library2)
         }
 
@@ -276,7 +279,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                     |"url":"/bhsu/lib2",
                     |"ownerId":"${user2.externalId}",
                     |"numKeeps":0},
-                  |"access":"read_only"}
+                  |"access":"read_write"}
               | ]
             |}
            """.stripMargin)

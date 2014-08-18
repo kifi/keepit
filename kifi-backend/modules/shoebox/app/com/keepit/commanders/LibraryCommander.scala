@@ -169,7 +169,6 @@ class LibraryCommander @Inject() (
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryAccess, Library)], Seq[(LibraryInvite, Library)]) = {
     db.readOnlyMaster { implicit s =>
       val myLibraries = libraryRepo.getByUser(userId)
-      // rule out invites that are deactivated and already accepted
       val myInvites = libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.ACCEPTED, LibraryInviteStates.INACTIVE))
       (myLibraries, myInvites)
     }
@@ -181,7 +180,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  private def sortInvites(invites: Seq[LibraryInvite]): Seq[LibraryInvite] = {
+  def sortInvites(invites: Seq[LibraryInvite]): Seq[LibraryInvite] = {
     def ord: Ordering[LibraryInvite] = new Ordering[LibraryInvite] {
       def compare(x: LibraryInvite, y: LibraryInvite): Int = x.access.priority compare y.access.priority
     }
@@ -274,7 +273,7 @@ class LibraryCommander @Inject() (
       if (lib.visibility != LibraryVisibility.PUBLISHED && listInvites.isEmpty) {
         Left(LibraryFail("cannot join - not published library"))
       } else {
-        val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else sortInvites(listInvites).head.access
+        val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else sortInvites(listInvites).last.access
         libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, showInSearch = true))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
         Right(lib)
