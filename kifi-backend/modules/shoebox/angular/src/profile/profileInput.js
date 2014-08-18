@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
+angular.module('kifi')
 
 .directive('kfProfileInput', [
   '$timeout', '$q', 'keyIndices', 'util',

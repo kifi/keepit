@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
+angular.module('kifi')
 
 .directive('kfTagItem', [
   '$timeout', '$document', '$rootScope', 'tagService', 'keepService', 'keyIndices', 'dragService',
@@ -38,7 +38,7 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
           window.jQuery.event.props.push('dataTransfer');
         }
 
-        /* We shouldn't need custom logic for this - it looks like the ="true" on the attribute gets 
+        /* We shouldn't need custom logic for this - it looks like the ="true" on the attribute gets
          * stripped off at some point (angular bug?)
          */
         scope.$watch('watchTagReorder()', function (res) {
@@ -244,7 +244,7 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
             }
           });
         });
-        
+
       }
     };
   }

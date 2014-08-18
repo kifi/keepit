@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.keepWhoPics', ['kifi.keepWhoService'])
+angular.module('kifi')
 
 .directive('kfKeepWhoPic', [
   '$window', '$timeout', '$rootElement', '$compile', '$templateCache', 'keepWhoService',

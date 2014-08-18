@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.modal', [])
+angular.module('kifi')
 
 .directive('kfModal', [
   '$document',

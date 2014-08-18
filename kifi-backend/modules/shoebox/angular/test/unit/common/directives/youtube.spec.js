@@ -9,7 +9,7 @@ describe('kifi.youtube', function () {
     iScope,
     $body;
 
-  beforeEach(module('kifi.youtube'));
+  beforeEach(module('kifi'));
 
   beforeEach(inject(function (_$compile_, _$rootScope_, _$timeout_, _$document_) {
     $compile = _$compile_;
