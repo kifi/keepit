@@ -226,4 +226,23 @@ class LDACommander @Inject() (
       }
     }
   }
+
+  def fixNullFirstTopicScore(): Unit = {
+    var done = false
+    var n = 0
+    while (!done) {
+      n += 1
+      log.info(s"fixing null first topic score, round $n")
+      val models = db.readOnlyReplica(implicit s => uriTopicRepo.nextBatchNullFirstTopicScore(wordRep.version, 5000))
+      val modelFixed = models.map { model =>
+        assume(model.state == URILDATopicStates.ACTIVE)
+        val topicId = model.firstTopic.get.index
+        val score = model.feature.get.value(topicId)
+        model.copy(firstTopicScore = Some(score))
+      }
+      db.readWrite { implicit s => modelFixed.foreach { uriTopicRepo.save(_) } }
+      log.info(s"fixed ${models.size} models")
+      if (models.isEmpty) done = true
+    }
+  }
 }

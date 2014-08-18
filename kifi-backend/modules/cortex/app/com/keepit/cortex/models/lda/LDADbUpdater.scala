@@ -34,7 +34,7 @@ class LDADbUpdatePluginImpl @Inject() (
     actor: ActorInstance[LDADbUpdaterActor],
     discovery: ServiceDiscovery,
     val scheduling: SchedulingProperties) extends BaseFeatureUpdatePlugin(actor, discovery) with LDADbUpdatePlugin {
-  override val updateFrequency: FiniteDuration = 1 minutes
+  override val updateFrequency: FiniteDuration = 100 hours
 }
 
 @ImplementedBy(classOf[LDADbUpdaterImpl])
