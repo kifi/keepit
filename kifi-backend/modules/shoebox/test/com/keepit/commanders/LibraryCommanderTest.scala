@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Injector
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
@@ -65,12 +66,13 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     val t1 = new DateTime(2014, 8, 1, 2, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
     db.readWrite { implicit s =>
       // Everybody loves Murica! Follow Captain America's library
-      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, ownerId = userCaptain.id.get, userId = userIron.id.get, access = LibraryAccess.READ_ONLY, createdAt = t1))
-      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, ownerId = userCaptain.id.get, userId = userAgent.id.get, access = LibraryAccess.READ_ONLY, createdAt = t1))
-      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, ownerId = userCaptain.id.get, userId = userHulk.id.get, access = LibraryAccess.READ_ONLY, createdAt = t1))
+      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, ownerId = userCaptain.id.get, userId = Some(userIron.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
+      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, ownerId = userCaptain.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
+      libraryInviteRepo.save(LibraryInvite(libraryId = libMurica.id.get, ownerId = userCaptain.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
 
       // Ironman invites the Hulk to contribute to 'Science & Stuff'
-      libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = userHulk.id.get, access = LibraryAccess.READ_INSERT, createdAt = t1))
+      libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_INSERT, createdAt = t1))
+
       (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience)
     }
     db.readOnlyMaster { implicit s =>
@@ -93,9 +95,9 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       val inv3 = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId = libMurica.id.get, userId = userAgent.id.get).head
       libraryInviteRepo.save(inv3.withState(LibraryInviteStates.ACCEPTED))
 
-      libraryMembershipRepo.save(LibraryMembership(libraryId = inv1.libraryId, userId = inv1.userId, access = inv1.access, showInSearch = true, createdAt = t1))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = inv2.libraryId, userId = inv2.userId, access = inv2.access, showInSearch = true, createdAt = t1))
-      libraryMembershipRepo.save(LibraryMembership(libraryId = inv3.libraryId, userId = inv3.userId, access = inv3.access, showInSearch = true, createdAt = t1))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = inv1.libraryId, userId = inv1.userId.get, access = inv1.access, showInSearch = true, createdAt = t1))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = inv2.libraryId, userId = inv2.userId.get, access = inv2.access, showInSearch = true, createdAt = t1))
+      libraryMembershipRepo.save(LibraryMembership(libraryId = inv3.libraryId, userId = inv3.userId.get, access = inv3.access, showInSearch = true, createdAt = t1))
     }
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.count === 6
@@ -195,7 +197,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
           val allInvites = libraryInviteRepo.all
           allInvites.length === 4
-          val invitePairs = for (i <- allInvites) yield (i.ownerId, i.userId)
+          val invitePairs = for (i <- allInvites) yield (i.ownerId, i.userId.get)
 
           invitePairs === (userCaptain.id.get, userIron.id.get) ::
             (userCaptain.id.get, userAgent.id.get) ::
@@ -308,21 +310,24 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val targetLib3 = libraryCommander.getLibrariesByUser(userAgent.id.get)
           val targetLib4 = libraryCommander.getLibrariesByUser(userHulk.id.get)
 
-          val (ironAccesses, ironLibs) = targetLib1.unzip
+          val (ironAccesses, ironLibs) = targetLib1._1.unzip
           ironLibs.map(_.slug.value) === Seq("science", "murica")
           ironAccesses === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)
 
-          val (captainAccesses, captainLibs) = targetLib2.unzip
+          val (captainAccesses, captainLibs) = targetLib2._1.unzip
           captainLibs.map(_.slug.value) === Seq("murica")
           captainAccesses === Seq(LibraryAccess.OWNER)
 
-          val (agentAccesses, agentLibs) = targetLib3.unzip
+          val (agentAccesses, agentLibs) = targetLib3._1.unzip
           agentLibs.map(_.slug.value) === Seq("avengers", "murica")
           agentAccesses === Seq(LibraryAccess.OWNER, LibraryAccess.READ_ONLY)
 
-          val (hulkAccesses, hulkLibs) = targetLib4.unzip
+          val (hulkAccesses, hulkLibs) = targetLib4._1.unzip
           hulkLibs.map(_.slug.value) === Seq("science")
           hulkAccesses === Seq(LibraryAccess.READ_INSERT)
+          val (hulkInvites, hulkInvitedLibs) = targetLib4._2.unzip
+          hulkInvitedLibs.map(_.slug.value) === Seq("murica")
+          hulkInvites.map(_.access) === Seq(LibraryAccess.READ_ONLY)
         }
       }
     }
@@ -413,31 +418,35 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryInviteRepo.count === 0
         }
 
+        val thorEmail = EmailAddress("thorishere@gmail.com")
         val inviteList1 = Seq(
-          (userIron.id.get, LibraryAccess.READ_ONLY),
-          (userAgent.id.get, LibraryAccess.READ_ONLY),
-          (userHulk.id.get, LibraryAccess.READ_ONLY))
+          (Left(userIron.id.get), LibraryAccess.READ_ONLY),
+          (Left(userAgent.id.get), LibraryAccess.READ_ONLY),
+          (Left(userHulk.id.get), LibraryAccess.READ_ONLY),
+          (Right(thorEmail), LibraryAccess.READ_ONLY))
         val res1 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userCaptain.id.get, inviteList1)
         res1.isRight === true
-        res1.right.get === Seq((userIron.externalId, LibraryAccess.READ_ONLY),
-          (userAgent.externalId, LibraryAccess.READ_ONLY),
-          (userHulk.externalId, LibraryAccess.READ_ONLY))
+        res1.right.get === Seq((Left(userIron.externalId), LibraryAccess.READ_ONLY),
+          (Left(userAgent.externalId), LibraryAccess.READ_ONLY),
+          (Left(userHulk.externalId), LibraryAccess.READ_ONLY),
+          (Right(thorEmail), LibraryAccess.READ_ONLY))
 
         db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.count === 3
+          libraryInviteRepo.count === 4
           libraryInviteRepo.all.map(x => (x.userId, x.access)) ===
-            Seq((userIron.id.get, LibraryAccess.READ_ONLY),
-              (userAgent.id.get, LibraryAccess.READ_ONLY),
-              (userHulk.id.get, LibraryAccess.READ_ONLY))
+            Seq((Some(userIron.id.get), LibraryAccess.READ_ONLY),
+              (Some(userAgent.id.get), LibraryAccess.READ_ONLY),
+              (Some(userHulk.id.get), LibraryAccess.READ_ONLY),
+              (None, LibraryAccess.READ_ONLY))
         }
 
         // Scumbag Ironman tries to invite himself for READ_WRITE access
-        val inviteList2 = Seq((userIron.id.get, LibraryAccess.READ_WRITE))
+        val inviteList2 = Seq((Left(userIron.id.get), LibraryAccess.READ_WRITE))
         val res2 = libraryCommander.inviteUsersToLibrary(libMurica.id.get, userIron.id.get, inviteList2)
         res2.isRight === false
 
         db.readOnlyMaster { implicit s =>
-          libraryInviteRepo.count === 3
+          libraryInviteRepo.count === 4
         }
       }
     }
@@ -450,8 +459,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         val t1 = new DateTime(2014, 8, 1, 3, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
         db.readWrite { implicit s =>
-          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = userHulk.id.get, access = LibraryAccess.READ_WRITE, createdAt = t1))
-          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = userHulk.id.get, access = LibraryAccess.READ_ONLY, createdAt = t1))
+          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_WRITE, createdAt = t1))
+          libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
         }
 
         val inviteIds = db.readOnlyMaster { implicit s =>
@@ -466,7 +475,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 6
           val res = for (inv <- libraryInviteRepo.all) yield {
-            (inv.libraryId, inv.userId, inv.access, inv.state)
+            (inv.libraryId, inv.userId.get, inv.access, inv.state)
           }
           res === Seq(
             (libMurica.id.get, userIron.id.get, LibraryAccess.READ_ONLY, LibraryInviteStates.ACCEPTED),

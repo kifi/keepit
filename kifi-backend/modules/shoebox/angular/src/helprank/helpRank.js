@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.helprank', ['util', 'kifi.keepService'])
+angular.module('kifi')
 
 .config([
   '$routeProvider',

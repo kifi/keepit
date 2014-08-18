@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.layout.rightCol', ['kifi.modal'])
+angular.module('kifi')
 
 .controller('RightColCtrl', [
   '$scope', '$element', '$window', 'profileService', '$q', '$http', 'env', '$timeout',

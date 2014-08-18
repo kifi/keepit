@@ -1,6 +1,5 @@
 package com.keepit.heimdal
 
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.service.{ ServiceClient, ServiceType }
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Heimdal
@@ -28,7 +27,25 @@ import com.keepit.common.db.{ ExternalId, Id }
 import org.joda.time.DateTime
 import com.kifi.franz.SQSQueue
 
-trait HeimdalServiceClient extends ServiceClient {
+trait KeepDiscoveryRepoAccess {
+  def getPagedKeepDiscoveries(page: Int = 0, size: Int = 50): Future[Seq[KeepDiscovery]]
+  def getDiscoveryCount(): Future[Int]
+  def getUriDiscoveriesWithCountsByKeeper(userId: Id[User]): Future[Seq[URIDiscoveryCount]]
+  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIDiscoveryCount]]
+  def getDiscoveryCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepDiscoveryCount]]
+}
+
+trait ReKeepRepoAccess {
+  def getPagedReKeeps(page: Int = 0, size: Int = 50): Future[Seq[ReKeep]]
+  def getReKeepCount(): Future[Int]
+  def getUriReKeepsWithCountsByKeeper(userId: Id[User]): Future[Seq[URIReKeepCount]]
+  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIReKeepCount]]
+  def getReKeepCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepReKeptCount]]
+  def getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI]): Future[(Int, Int)]
+}
+
+trait HeimdalServiceClient extends ServiceClient with KeepDiscoveryRepoAccess with ReKeepRepoAccess {
+
   final val serviceType = ServiceType.HEIMDAL
 
   def trackEvent(event: HeimdalEvent): Unit
@@ -57,31 +74,7 @@ trait HeimdalServiceClient extends ServiceClient {
 
   def cancelDelightedSurvey(userRegistrationInfo: DelightedUserRegistrationInfo): Future[Boolean]
 
-  def getPagedKeepDiscoveries(page: Int = 0, size: Int = 50): Future[Seq[KeepDiscovery]]
-
-  def getDiscoveryCount(): Future[Int]
-
-  def getDiscoveryCountByKeeper(userId: Id[User]): Future[Int] // deprecated -- see getKeepAttributionInfo
-
-  def getUriDiscoveriesWithCountsByKeeper(userId: Id[User]): Future[Seq[URIDiscoveryCount]]
-
-  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIDiscoveryCount]]
-
-  def getDiscoveryCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepDiscoveryCount]]
-
   def getKeepAttributionInfo(userId: Id[User]): Future[UserKeepAttributionInfo]
-
-  def getPagedReKeeps(page: Int = 0, size: Int = 50): Future[Seq[ReKeep]]
-
-  def getReKeepCount(): Future[Int]
-
-  def getUriReKeepsWithCountsByKeeper(userId: Id[User]): Future[Seq[URIReKeepCount]]
-
-  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]]): Future[Seq[URIReKeepCount]]
-
-  def getReKeepCountsByKeepIds(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Seq[KeepReKeptCount]]
-
-  def getReKeepCountsByUserUri(userId: Id[User], uriId: Id[NormalizedURI]): Future[(Int, Int)]
 
   def getUserReKeepsByDegree(keepIds: Seq[KeepIdInfo]): Future[Seq[UserReKeepsAcc]]
 
@@ -234,12 +227,6 @@ class HeimdalServiceClientImpl @Inject() (
 
   def getDiscoveryCount(): Future[Int] = {
     call(Heimdal.internal.getDiscoveryCount) map { r => Json.parse(r.body).as[Int] }
-  }
-
-  def getDiscoveryCountByKeeper(userId: Id[User]): Future[Int] = {
-    call(Heimdal.internal.getDiscoveryCountByKeeper(userId)) map { r =>
-      Json.parse(r.body).as[Int]
-    }
   }
 
   def getUriDiscoveriesWithCountsByKeeper(userId: Id[User]): Future[Seq[URIDiscoveryCount]] = {

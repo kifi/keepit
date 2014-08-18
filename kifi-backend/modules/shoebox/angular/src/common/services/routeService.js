@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.routeService', [])
+angular.module('kifi')
 
 .factory('routeService', [
   '$location', 'env',

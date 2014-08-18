@@ -3,27 +3,51 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta name="viewport" content="width=device-width, user-scalable=no">
 <title>Kifi</title>
+<style type="text/css">
+#app-btn {
+font-family: 'Helvetica Neue', 'Open Sans', Arial, sans-serif;
+background: #93c059;
+text-align: center;
+color: #fff;
+display: inline-block;
+vertical-align: middle;
+padding: 0 1em;
+border: 1px solid #ccc;
+border-radius: 4px;
+font-weight: 400;
+height: 1.9em;
+line-height: 1.9em;
+font-size: 1.5em;
+text-decoration: none;
+outline: none;
+cursor: pointer;
+zoom: 1;
+margin: 0 auto;
+}
+</style>
 </head>
-<body>
-<p style="margin:3em auto;max-width:400px;">
-Loading Kifi app...
-<br/><br/>
-Kifi is the easiest way to organize and share the pages that matter to you online. Find something online that you love?
-Just keep the page, and it's instantly stored and organized in your kifi library where it's accessible from your
-favorite search engine, along with great finds from your friends' libraries, too.
-</p>
+<body style="display:none;text-align:center;padding:3em 0;">
+
+<div><a id="app-btn" href="https://www.kifi.com" onclick="return openApp();">Load Kifi App</a></div>
+
 <!-- source: http://aawaara.com/post/74543339755/smallest-piece-of-code-thats-going-to-change-the-world -->
 <script type="text/javascript">
-var timer, heartbeat, lastInterval;
+var timer,
+	heartbeat,
+	lastInterval,
+	isRunning = false,
+	btn = document.getElementById('app-btn');
 
-function clearTimers() {
+function abortNavigation() {
     clearTimeout(timer);
     clearTimeout(heartbeat);
+    isRunning = false;
 }
 
-window.addEventListener('pageshow', clearTimers, false);
-window.addEventListener('pagehide', clearTimers, false);
+window.addEventListener('pageshow', abortNavigation, false);
+window.addEventListener('pagehide', abortNavigation, false);
 
 function getTime() { return (new Date()).getTime(); }
 
@@ -31,13 +55,23 @@ function getTime() { return (new Date()).getTime(); }
 function intervalHeartbeat() {
     var now = getTime(), diff = now - lastInterval - 200;
     lastInterval = now;
-    if (diff > 1000) clearTimers();
+    if (diff > 1000) abortNavigation();
 }
 
-lastInterval = getTime();
-heartbeat = setInterval(intervalHeartbeat, 200);
-document.location = 'kifi://@url';
-timer = setTimeout(function () { document.location = 'https://itunes.apple.com/app/id740232575'; }, 2000);
+function openApp() {
+	if (!isRunning) {
+	    isRunning = true;
+		lastInterval = getTime();
+		heartbeat = setInterval(intervalHeartbeat, 200);
+		document.location = 'kifi:@url';
+		// try to prevent a "flicker" of the body immediately before the redirect
+		setTimeout(function () { document.body.style.display = ''; }, 200);
+		timer = setTimeout(function () { document.location = 'https://itunes.apple.com/app/id740232575'; }, 2000);
+	}
+	return false;
+}
+
+openApp();
 </script>
 </body>
 </html>

@@ -1,9 +1,6 @@
 'use strict';
 
-angular.module('kifi.friendService', [
-  'angulartics',
-  'util'
-])
+angular.module('kifi')
 
 .factory('friendService', [
   '$http', 'env', '$q', 'routeService', '$analytics', '$location', 'Clutch', 'util',

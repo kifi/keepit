@@ -1,9 +1,6 @@
 'use strict';
 
-angular.module('kifi.layout.main', [
-  'kifi.undo',
-  'angulartics'
-])
+angular.module('kifi')
 
 .controller('MainCtrl', [
   '$scope', '$element', '$window', '$location', '$timeout', '$rootElement', 'undoService', 'keyIndices',

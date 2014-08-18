@@ -1,4 +1,4 @@
-# SHOEBOX
+# HEIMDAL
 
 # --- !Ups
 
@@ -20,10 +20,6 @@ CREATE TABLE keep_click(
 
     PRIMARY KEY (id),
 
-    CONSTRAINT keep_click_keeper_id  FOREIGN KEY (keeper_id)  REFERENCES user(id),
-    CONSTRAINT keep_click_clicker_id FOREIGN KEY (clicker_id) REFERENCES user(id),
-    CONSTRAINT keep_click_keep_id    FOREIGN KEY (keep_id) REFERENCES bookmark(id),
-    CONSTRAINT keep_click_uri_id     FOREIGN KEY (uri_id) REFERENCES normalized_uri(id),
     INDEX keep_click_uuid(search_uuid)
 );
 

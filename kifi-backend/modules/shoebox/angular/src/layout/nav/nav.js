@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.layout.nav', ['util'])
+angular.module('kifi')
 
 .directive('kfNav', [
   '$location', 'util', 'keepService', 'friendService', 'tagService',
