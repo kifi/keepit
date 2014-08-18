@@ -1778,7 +1778,7 @@ function searchOnServer(request, respond) {
     w: request.whence};
 
   ajax('search', 'GET', '/search', params, function (resp) {
-    log('[searchOnServer] response:', resp);
+    log('[searchOnServer] %i hits', resp.hits.length);
     respond(pimpSearchResponse(resp, request.filter, resp.hits.length < params.maxHits && (params.context || params.f)));
   });
   return true;
@@ -1911,7 +1911,7 @@ function kififyWithPageData(tab, d) {
 function gotPageDetailsFor(url, tab, resp) {
   var tabIsOld = api.tabs.get(tab.id) !== tab || url.split('#', 1)[0] !== tab.url.split('#', 1)[0];
 
-  log('[gotPageDetailsFor]', tab.id, tabIsOld ? 'OLD' : '', url, resp);
+  log('[gotPageDetailsFor]', tab.id, tabIsOld ? 'OLD' : '', url);
 
   var nUri = resp.normalized;
   var d = pageData[nUri];
