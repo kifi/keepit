@@ -233,7 +233,7 @@ class LDACommander @Inject() (
     while (!done) {
       n += 1
       log.info(s"fixing null first topic score, round $n")
-      val models = db.readOnlyReplica(implicit s => uriTopicRepo.nextBatchNullFirstTopicScore(wordRep.version, 5000))
+      val models = db.readOnlyReplica(implicit s => uriTopicRepo.nextBatchNullFirstTopicScore(wordRep.version, 1000))
       val modelFixed = models.map { model =>
         assume(model.state == URILDATopicStates.ACTIVE)
         val topicId = model.firstTopic.get.index
