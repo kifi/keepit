@@ -2,8 +2,8 @@
 
 angular.module('kifi.profileNameInput', ['util'])
 
-.directive('kfProfileNameInput', ['$document', 'keyIndices', 'util',
-  function ($document, keyIndices, util) {
+.directive('kfProfileNameInput', ['$document', '$window', 'keyIndices', 'util',
+  function ($document, $window, keyIndices, util) {
     return {
       restrict: 'A',
       scope: {
@@ -37,19 +37,14 @@ angular.module('kifi.profileNameInput', ['util'])
             }
           });
 
-        element.find('.profile-input-save')
-          .on('blur', function () {
-            scope.$apply(cancel);
-          });
-
         // Internal methods.
-        function cancel () {
+        function cancel() {
           clearInputError();
           revertToOldName();
           scope.editing = false;
         }
 
-        function onClickOutsideInput (event) {
+        function onClickOutsideInput(event) {
           // When user clicks outside the inputs and save button, cancel edits.
           if (!event.target.classList.contains('profile-name-input') &&
             !event.target.classList.contains('profile-input-save')) {
@@ -58,7 +53,16 @@ angular.module('kifi.profileNameInput', ['util'])
           }
         }
 
-        function showInputError (errorType, error) {
+        function onFocusOutsideInput(event) {
+          // When user focuses outside the inputs and save button, cancel edits.
+          if (!event.target.classList.contains('profile-name-input') &&
+            !event.target.classList.contains('profile-input-save')) {
+            $window.removeEventListener('focus', onFocusOutsideInput, true);
+            scope.$apply(cancel);
+          }
+        }
+
+        function showInputError(errorType, error) {
           if (errorType === 'badFirstName') {
             scope.badFirstName = true;
           } else if (errorType === 'badLastName') {
@@ -68,26 +72,26 @@ angular.module('kifi.profileNameInput', ['util'])
           scope.errorBody = error.body || '';
         }
 
-        function clearInputError () {
+        function clearInputError() {
           scope.badFirstName = false;
           scope.badLastName = false;
         }
 
-        function saveOldName () {
+        function saveOldName() {
           oldName = {
             firstName: scope.name.firstName,
             lastName: scope.name.lastName
           };
         }
 
-        function revertToOldName () {
+        function revertToOldName() {
           scope.name = {
             firstName: oldName.firstName,
             lastName: oldName.lastName
           };
         }
 
-        function sameName (nameA, nameB) {
+        function sameName(nameA, nameB) {
           return (nameA.firstName === nameB.firstName) && (nameA.lastName === nameB.lastName);
         }
 
@@ -97,6 +101,7 @@ angular.module('kifi.profileNameInput', ['util'])
           saveOldName();
           scope.editing = true;
           $document.on('mousedown', onClickOutsideInput);
+          $window.addEventListener('focus', onFocusOutsideInput, true);
         };
 
         scope.save = function () {

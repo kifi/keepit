@@ -3,8 +3,8 @@
 angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
 
 .directive('kfProfileInput', [
-  '$document', '$timeout', '$q', 'keyIndices', 'util',
-  function ($document, $timeout, $q, keyIndices, util) {
+  '$document', '$q','$timeout', '$window', 'keyIndices', 'util',
+  function ($document, $q, $timeout, $window, keyIndices, util) {
     return {
       restrict: 'A',
       scope: {
@@ -42,7 +42,7 @@ angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
           });
 
         // Internal methods.
-        function cancel () {
+        function cancel() {
           scope.state.value = scope.state.currentValue;
           scope.state.editing = false;
         }
@@ -56,20 +56,30 @@ angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
           }
         }
 
-        function updateValue (value) {
+        function onFocusOutsideInput(event) {
+          // When user focuses outside the inputs and save button, cancel edits.
+          if (!event.target.classList.contains('profile-name-input') &&
+            !event.target.classList.contains('profile-input-save')) {
+            $window.removeEventListener('focus', onFocusOutsideInput, true);
+            scope.$apply(cancel);
+          }
+        }
+
+        function updateValue(value) {
           scope.state.value = scope.state.currentValue = value;
         }
 
-        function setInvalid (error) {
+        function setInvalid(error) {
           scope.state.invalid = true;
           scope.errorHeader = error.header || '';
           scope.errorBody = error.body || '';
         }
 
-        function setEditState () {
+        function setEditState() {
           scope.state.editing = true;
           scope.state.invalid = false;
           $document.on('mousedown', onClickOutsideInput);
+          $window.addEventListener('focus', onFocusOutsideInput, true);
         }
 
         // Scope methods.
