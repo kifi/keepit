@@ -37,7 +37,9 @@ case class RawSeedItem(
   timesKept: Int, //number of times this uri has been kept in total (note that with libraries allowing multiple keep per uri this can exceed the number of users who have kept the uri)
   // attributionInfo: AttributionInfo,
   // libraryInfo: Seq[LibraryInfo]
-  discoverable: Boolean)
+  discoverable: Boolean,
+  url: String //set default url to empty string in db to avoid exceptions.
+  )
     extends Model[RawSeedItem] with ModelWithSeqNumber[RawSeedItem] {
 
   def withId(id: Id[RawSeedItem]): RawSeedItem = this.copy(id = Some(id))

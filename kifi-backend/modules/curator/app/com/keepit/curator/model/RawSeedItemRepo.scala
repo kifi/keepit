@@ -41,6 +41,7 @@ class RawSeedItemRepoImpl @Inject() (
   type RepoImpl = RawSeedItemTable
   class RawSeedItemTable(tag: Tag) extends RepoTable[RawSeedItem](db, tag, "raw_seed_item") with SeqNumberColumn[RawSeedItem] {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
+    def url = column[String]("url", O.NotNull) // set default url to empty string in db to avoid exceptions.
     def userId = column[Id[User]]("user_id", O.Nullable)
     def firstKept = column[DateTime]("first_kept", O.NotNull)
     def lastKept = column[DateTime]("last_kept", O.NotNull)
@@ -48,12 +49,13 @@ class RawSeedItemRepoImpl @Inject() (
     def priorScore = column[Float]("prior_score", O.Nullable)
     def timesKept = column[Int]("times_kept", O.NotNull)
     def discoverable = column[Boolean]("discoverable", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, seq, uriId, userId.?, firstKept, lastKept, lastSeen, priorScore.?, timesKept, discoverable) <> ((RawSeedItem.apply _).tupled, RawSeedItem.unapply _)
+    def * = (id.?, createdAt, updatedAt, seq, uriId, userId.?, firstKept, lastKept, lastSeen, priorScore.?, timesKept, discoverable, url) <> ((RawSeedItem.apply _).tupled, RawSeedItem.unapply _)
   }
 
   def table(tag: Tag) = new RawSeedItemTable(tag)
   initTable()
 
+  //update getRawSeedItemResult if you modify table
   private implicit val getRawSeedItemResult: GetResult[RawSeedItem] = GetResult { r =>
     RawSeedItem(
       id = r.<<[Option[Id[RawSeedItem]]],
@@ -67,7 +69,8 @@ class RawSeedItemRepoImpl @Inject() (
       lastSeen = r.<<[DateTime],
       priorScore = r.<<[Option[Float]],
       timesKept = r.<<[Int],
-      discoverable = r.<<[Boolean]
+      discoverable = r.<<[Boolean],
+      url = r.<<[String]
     )
   }
 

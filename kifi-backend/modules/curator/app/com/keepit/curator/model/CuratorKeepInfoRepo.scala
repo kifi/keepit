@@ -12,6 +12,7 @@ trait CuratorKeepInfoRepo extends DbRepo[CuratorKeepInfo] {
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[CuratorKeepInfo]
   def getKeepersByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[User]]
   def checkDiscoverableByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
+  def getUserURIsAndKeeps(userId: Id[User])(implicit session: RSession): Seq[(Id[NormalizedURI], Id[Keep])]
 }
 
 @Singleton
@@ -47,6 +48,10 @@ class CuratorKeepInfoRepoImpl @Inject() (
 
   def checkDiscoverableByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
     (for (row <- rows if row.uriId === uriId && row.state === CuratorKeepInfoStates.ACTIVE && row.discoverable) yield row.id).firstOption.isDefined
+  }
+
+  def getUserURIsAndKeeps(userId: Id[User])(implicit session: RSession): Seq[(Id[NormalizedURI], Id[Keep])] = {
+    (for (r <- rows if r.userId === userId && r.state === CuratorKeepInfoStates.ACTIVE) yield (r.uriId, r.keepId)).list
   }
 
 }

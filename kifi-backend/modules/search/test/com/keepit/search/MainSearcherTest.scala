@@ -44,7 +44,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
             mainSearcherFactory.clear
             val mainSearcher = mainSearcherFactory(singleShard, userId, "alldocs", english, None, numHitsPerCategory, SearchFilter.default(), allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
-            val (myHits, friendsHits, othersHits, _) = mainSearcher.searchText(numHitsPerCategory)
+            val (myHits, friendsHits, othersHits) = mainSearcher.searchText(numHitsPerCategory)
 
             //println("----")
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet.map(_.id)

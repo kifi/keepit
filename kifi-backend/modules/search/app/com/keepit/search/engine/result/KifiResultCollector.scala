@@ -6,11 +6,11 @@ import com.keepit.search.engine.Visibility
 import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search.util.LongArraySet
 
-object MainResultCollector {
+object KifiResultCollector {
   val MIN_PERCENT_MATCH = 0.5f
 }
 
-class MainResultCollector(clickBoosts: ResultClickBoosts, friendsUris: LongArraySet, maxHitsPerCategory: Int, percentMatchThreshold: Float) extends ResultCollector[ScoreContext] {
+class KifiResultCollector(clickBoosts: ResultClickBoosts, friendsUris: LongArraySet, maxHitsPerCategory: Int, percentMatchThreshold: Float) extends ResultCollector[ScoreContext] {
 
   private[this] val myHits = createQueue(maxHitsPerCategory)
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
@@ -20,7 +20,8 @@ class MainResultCollector(clickBoosts: ResultClickBoosts, friendsUris: LongArray
     val id = ctx.id
     val visibility = ctx.visibility
     if (visibility != Visibility.RESTRICTED) {
-      val percentMatch = ctx.percentMatch(MainResultCollector.MIN_PERCENT_MATCH)
+      // compute he percent match value. set to 0.0f if less than the MIN_PERCENT_MATCH
+      val percentMatch = ctx.computePercentMatch(KifiResultCollector.MIN_PERCENT_MATCH)
 
       if (percentMatch > 0.0f) {
         // compute clickBoost and score
@@ -31,7 +32,7 @@ class MainResultCollector(clickBoosts: ResultClickBoosts, friendsUris: LongArray
           score = ctx.score() * percentMatch
           clickBoost = clickBoosts(id)
         } else {
-          // below the threshold, but we save this if this is a clicked hit (clickBoost > 0.0f)
+          // below the threshold (and above MIN_PERCENT_MATCH), we save this hit if this is a clicked hit (clickBoost > 1.0f)
           clickBoost = clickBoosts(id)
           if (clickBoost > 1.0f) score = ctx.score() * percentMatch // else score remains 0.0f
         }

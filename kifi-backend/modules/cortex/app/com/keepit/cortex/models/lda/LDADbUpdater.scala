@@ -99,6 +99,7 @@ class LDADbUpdaterImpl @Inject() (
       case UpdateExistingFeature => {
         val curr = db.readOnlyReplica { implicit s => topicRepo.getByURI(uri.uriId, representer.version) }.get
         val newFeat = computeFeature(uri)
+        val delta = if (curr.firstTopic == newFeat.firstTopic) 0 else 1
         val updated = URILDATopic(
           id = curr.id,
           createdAt = curr.createdAt,
@@ -110,6 +111,8 @@ class LDADbUpdaterImpl @Inject() (
           firstTopic = newFeat.firstTopic,
           secondTopic = newFeat.secondTopic,
           thirdTopic = newFeat.thirdTopic,
+          firstTopicScore = newFeat.firstTopicScore,
+          timesFirstTopicChanged = (curr.timesFirstTopicChanged + delta) min 65535,
           sparseFeature = newFeat.sparseFeature,
           feature = newFeat.feature,
           state = newFeat.state)
@@ -158,6 +161,7 @@ class LDADbUpdaterImpl @Inject() (
           firstTopic = Some(first),
           secondTopic = Some(second),
           thirdTopic = Some(third),
+          firstTopicScore = Some(sparse.head._2),
           sparseFeature = Some(SparseTopicRepresentation(dimension = representer.dimension, topics = sparse.toMap)),
           feature = Some(LDATopicFeature(arr)),
           state = URILDATopicStates.ACTIVE)

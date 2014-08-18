@@ -2,14 +2,43 @@ package com.keepit.search.engine
 
 import com.keepit.common.db.Id
 import com.keepit.search.engine.parser.KQueryExpansion
-import com.keepit.search.engine.result.{ ResultCollector }
+import com.keepit.search.engine.result.ResultCollector
 import com.keepit.search.query.parser.{ DefaultSyntax, QueryParser }
-import com.keepit.search.util.LongArraySet
-import com.keepit.search.{ Lang, Tst, TstIndexer }
-import com.keepit.search.index.{ DefaultAnalyzer, VolatileIndexDirectory }
+import com.keepit.search.util.join.{ DataBufferWriter, DataBuffer }
+import com.keepit.search.{ Searcher, Lang, Tst, TstIndexer }
+import com.keepit.search.index.{ WrappedSubReader, DefaultAnalyzer, VolatileIndexDirectory }
+import org.apache.lucene.search.{ DocIdSetIterator, Scorer }
 import org.specs2.mutable.Specification
 
 class QueryEngineTest extends Specification {
+
+  class TstScoreVectorSource(indexer: TstIndexer) extends ScoreVectorSource {
+
+    protected val searcher: Searcher = indexer.getSearcher
+
+    protected def writeScoreVectors(reader: WrappedSubReader, scorers: Array[Scorer], output: DataBuffer): Unit = {
+      val pq = createScorerQueue(scorers)
+      if (pq.size <= 0) return // no scorer
+
+      val idMapper = reader.getIdMapper
+      val writer: DataBufferWriter = new DataBufferWriter
+
+      val taggedScores: Array[Int] = new Array[Int](pq.size) // tagged floats
+
+      var docId = pq.top.doc
+      while (docId < DocIdSetIterator.NO_MORE_DOCS) {
+        val id = idMapper.getId(docId)
+
+        // get all scores
+        val size = pq.getTaggedScores(taggedScores)
+
+        // write to the buffer
+        output.alloc(writer, Visibility.PUBLIC, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
+        writer.putLong(id).putTaggedFloatBits(taggedScores, size)
+        docId = pq.top.doc // next doc
+      }
+    }
+  }
 
   private def getParser(): QueryParser = {
     val english = Lang("en")
@@ -36,13 +65,11 @@ class QueryEngineTest extends Specification {
   Array("abc", "", "abc", "", "abc", "", "abc", "", "abc", "").zipWithIndex.foreach {
     case (text, id) => indexer1.index(Id[Tst](id), text, "")
   }
-  private val searcher1 = indexer1.getSearcher
 
   private val indexer2 = new TstIndexer(new VolatileIndexDirectory)
   Array("def", "", "", "def", "", "", "def", "", "", "def").zipWithIndex.foreach {
     case (text, id) => indexer2.index(Id[Tst](id), text, "")
   }
-  private val searcher2 = indexer2.getSearcher
 
   "QueryEngine" should {
     "find matches with index1" in {
@@ -50,7 +77,7 @@ class QueryEngineTest extends Specification {
       val collector = new TstResultCollector
       val engine = new QueryEngineBuilder(query).build
 
-      engine.execute(searcher1) { (reader, scorers) => new ArticleScoreVectorSource(reader, scorers, LongArraySet.empty) }
+      engine.execute(new TstScoreVectorSource(indexer1))
       engine.join(collector)
 
       collector.hits === Set(0, 2, 4, 6, 8)
@@ -62,7 +89,7 @@ class QueryEngineTest extends Specification {
       val collector = new TstResultCollector
       val engine = new QueryEngineBuilder(query).build
 
-      engine.execute(searcher2) { (reader, scorers) => new ArticleScoreVectorSource(reader, scorers, LongArraySet.empty) }
+      engine.execute(new TstScoreVectorSource(indexer2))
       engine.join(collector)
 
       collector.hits === Set(0, 3, 6, 9)
@@ -73,8 +100,8 @@ class QueryEngineTest extends Specification {
       val collector = new TstResultCollector
       val engine = new QueryEngineBuilder(query).build
 
-      engine.execute(searcher1) { (reader, scorers) => new ArticleScoreVectorSource(reader, scorers, LongArraySet.empty) }
-      engine.execute(searcher2) { (reader, scorers) => new ArticleScoreVectorSource(reader, scorers, LongArraySet.empty) }
+      engine.execute(new TstScoreVectorSource(indexer1))
+      engine.execute(new TstScoreVectorSource(indexer2))
       engine.join(collector)
 
       collector.hits === Set(0, 2, 3, 4, 6, 8, 9)
@@ -85,8 +112,8 @@ class QueryEngineTest extends Specification {
       val collector = new TstResultCollector
       val engine = new QueryEngineBuilder(query).build
 
-      engine.execute(searcher1) { (reader, scorers) => new ArticleScoreVectorSource(reader, scorers, LongArraySet.empty) }
-      engine.execute(searcher2) { (reader, scorers) => new ArticleScoreVectorSource(reader, scorers, LongArraySet.empty) }
+      engine.execute(new TstScoreVectorSource(indexer1))
+      engine.execute(new TstScoreVectorSource(indexer2))
       engine.join(collector)
 
       collector.hits === Set(0, 6)

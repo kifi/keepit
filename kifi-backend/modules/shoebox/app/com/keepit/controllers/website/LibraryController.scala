@@ -6,11 +6,10 @@ import com.keepit.common.controller.{ ShoeboxServiceController, WebsiteControlle
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time.Clock
 import com.keepit.model._
-import com.keepit.common.json._
-import play.api.libs.functional.syntax._
-import play.api.libs.json.{ JsString, Json }
+import play.api.libs.json.{ JsArray, JsString, Json }
 
 import scala.util.{ Success, Failure }
 
@@ -50,8 +49,8 @@ class LibraryController @Inject() (
         res match {
           case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
           case Right(lib) => {
-            val owner = db.readOnlyMaster { implicit s => userRepo.get(lib.ownerId) }
-            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner)))
+            val (owner, numKeeps) = db.readOnlyMaster { implicit s => (userRepo.get(lib.ownerId), keepRepo.getCountByLibrary(id)) }
+            Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)))
           }
         }
       }
@@ -85,8 +84,8 @@ class LibraryController @Inject() (
   def getLibrariesByUser = JsonAction.authenticated { request =>
     val res = for (tuple <- libraryCommander.getLibrariesByUser(request.userId)) yield {
       val lib = tuple._2
-      val owner = db.readOnlyMaster { implicit s => userRepo.get(lib.ownerId) }
-      val info = LibraryInfo.fromLibraryAndOwner(lib, owner)
+      val (owner, numKeeps) = db.readOnlyMaster { implicit s => (userRepo.get(lib.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
+      val info = LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)
       Json.obj("info" -> info, "access" -> tuple._1)
     }
     Ok(Json.obj("libraries" -> res))
@@ -97,17 +96,31 @@ class LibraryController @Inject() (
     idTry match {
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) => {
-        val inviteList = (request.body \ "pairs").asOpt[Seq[(ExternalId[User], LibraryAccess)]].getOrElse(Seq.empty)
-        val validInviteList = db.readOnlyReplica { implicit s =>
-          for (i <- inviteList; user = userRepo.getOpt(i._1) if !user.isEmpty) yield {
-            (user.get.id.get, i._2)
+        val invites = (request.body \ "invites").as[JsArray].value
+
+        val validInviteList = db.readOnlyMaster { implicit s =>
+          invites.map { i =>
+            val access = (i \ "access").as[LibraryAccess]
+            val id = (i \ "type").as[String] match {
+              case "user" if !userRepo.getOpt((i \ "id").as[ExternalId[User]]).isEmpty => {
+                Left(userRepo.getOpt((i \ "id").as[ExternalId[User]]).get.id.get)
+              }
+              case "email" => Right((i \ "id").as[EmailAddress])
+            }
+            (id, access)
           }
         }
+
         val res = libraryCommander.inviteUsersToLibrary(id, request.userId, validInviteList)
         res match {
           case Left(fail) => BadRequest(Json.obj("error" -> fail.message))
           case Right(info) => {
-            val res = info.map { i => Json.obj("user" -> i._1, "access" -> i._2) }
+            val res = info.map { i =>
+              i match {
+                case (Left(id), access) => Json.obj("user" -> id, "access" -> access)
+                case (Right(email), access) => Json.obj("user" -> email, "access" -> access)
+              }
+            }
             Ok(Json.toJson(res))
           }
         }
@@ -121,8 +134,8 @@ class LibraryController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) => {
         val lib = libraryCommander.joinLibrary(id)
-        val owner = db.readOnlyMaster { implicit s => userRepo.get(lib.ownerId) }
-        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner)))
+        val (owner, numKeeps) = db.readOnlyMaster { implicit s => (userRepo.get(lib.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
+        Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)))
       }
     }
   }
