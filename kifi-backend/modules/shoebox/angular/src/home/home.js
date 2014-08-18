@@ -96,7 +96,7 @@ angular.module('kifi')
     };
 
     $scope.importBookmarks = function () {
-      var kifiVersion = $window.document.documentElement.dataset.kifiExt;
+      var kifiVersion = angular.element($window.document.documentElement).data('kifiExt');
 
       if (!kifiVersion) {
         $rootScope.$emit('showGlobalModal','installExtension');
