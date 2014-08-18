@@ -32,6 +32,7 @@ trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Seq[LDATopicFeature]
   def getTopicCounts(version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[(Int, Int)] // (topic_id, counts)
   def nextBatchNullFirstTopicScore(version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[URILDATopic]
+  def getFirstTopicAndScore(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(LDATopic, Float)]
 }
 
 @Singleton
@@ -163,5 +164,9 @@ class URILDATopicRepoImpl @Inject() (
 
   def nextBatchNullFirstTopicScore(version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[URILDATopic] = {
     (for { r <- rows if r.version === version && r.state === URILDATopicStates.ACTIVE && r.firstTopicScore.isNull } yield r).take(limit).list
+  }
+
+  def getFirstTopicAndScore(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(LDATopic, Float)] = {
+    (for { r <- rows if r.version === version && r.uriId === uriId && r.state === URILDATopicStates.ACTIVE } yield (r.firstTopic, r.firstTopicScore)).firstOption
   }
 }

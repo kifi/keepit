@@ -207,14 +207,13 @@ class LDACommander @Inject() (
   }
 
   def getTopicNames(uris: Seq[Id[NormalizedURI]]): Seq[Option[String]] = {
+    val cutoff = (1.0f / numOfTopics) * 50
     val topicIdOpts = db.readOnlyReplica { implicit s =>
       uris.map { uri =>
-        uriTopicRepo.getActiveByURI(uri, wordRep.version) match {
+        uriTopicRepo.getFirstTopicAndScore(uri, wordRep.version) match {
+          case Some((topic, score)) =>
+            if (score > cutoff) Some(topic.index) else None
           case None => None
-          case Some(feat) =>
-            val sparse = feat.sparseFeature.get
-            val (LDATopic(topicId), probability) = sparse.topics.toArray.sortBy(-1f * _._2).head
-            if (probability > (1.0f / sparse.dimension) * 50) Some(topicId) else None
         }
       }
     }
