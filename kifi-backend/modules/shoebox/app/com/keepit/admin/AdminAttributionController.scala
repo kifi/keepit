@@ -22,7 +22,6 @@ class AdminAttributionController @Inject() (
     heimdalClient: HeimdalServiceClient,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
-    rekeepRepo: ReKeepRepo,
     uriRepo: NormalizedURIRepo,
     pageInfoRepo: PageInfoRepo,
     imageInfoRepo: ImageInfoRepo) extends AdminController(actionAuthenticator) {
@@ -86,18 +85,10 @@ class AdminAttributionController @Inject() (
   private def getKeepInfos(userId: Id[User]): (User, Seq[RichKeepDiscovery], Seq[RichReKeep], Seq[RichReKeep]) = {
     db.readOnlyMaster { implicit ro =>
       val u = userRepo.get(userId)
-      val rc = Seq.empty[RichKeepDiscovery]
-      // todo(ray): add (last) endpoint to heimdal!
-      //        keepDiscoveryRepo.getDiscoveriesByKeeper(userId).take(10) map { c =>
-      //          RichKeepDiscovery(c.id, c.createdAt, c.updatedAt, c.state, c.hitUUID, c.numKeepers, u, keepRepo.get(c.keepId), uriRepo.get(c.uriId), c.origin)
-      //        }
-      val rekeeps = rekeepRepo.getAllReKeepsByKeeper(userId).sortBy(_.createdAt)(Ordering[DateTime].reverse).take(10)
-      val rk = rekeeps map { k =>
-        RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, u, keepRepo.get(k.keepId), uriRepo.get(k.uriId), userRepo.get(k.srcUserId), keepRepo.get(k.srcKeepId), k.attributionFactor)
-      }
-      val rkr = rekeepRepo.getAllReKeepsByReKeeper(userId).take(10) map { k =>
-        RichReKeep(k.id, k.createdAt, k.updatedAt, k.state, userRepo.get(k.keeperId), keepRepo.get(k.keepId), uriRepo.get(k.uriId), u, keepRepo.get(k.srcKeepId), k.attributionFactor)
-      }
+      // todo(ray): re-work admin api
+      val rc = Seq.empty[RichKeepDiscovery] // keepDiscoveryRepo.getDiscoveriesByKeeper
+      val rk = Seq.empty[RichReKeep] // rekeepRepo.getAllReKeepsByKeeper
+      val rkr = Seq.empty[RichReKeep] // rekeepRepo.getAllReKeepsByReKeeper
       (u, rc, rk, rkr)
     }
   }
@@ -111,7 +102,7 @@ class AdminAttributionController @Inject() (
   def getReKeepInfos(userId: Id[User], n: Int = 4) = userReKeepsReqConsolidator(userId, n) {
     case (userId, n) => {
       val u = db.readOnlyMaster { implicit ro => userRepo.get(userId) }
-      val rekeeps = db.readOnlyReplica { implicit ro => rekeepRepo.getAllReKeepsByKeeper(userId) }
+      val rekeeps = Seq.empty[ReKeep] // rekeepRepo.getAllReKeepsByKeeper(userId)
       val grouped = rekeeps.groupBy(_.keepId)
       val sorted = grouped.toSeq.sortBy(_._2.length)(Ordering[Int].reverse).take(10)
       // todo(ray): batch
@@ -154,9 +145,7 @@ class AdminAttributionController @Inject() (
 
   val topReKeepsReqConsolidator = new RequestConsolidator[Int, Seq[(NormalizedURI, Seq[(Keep, Seq[Seq[User]])])]](ttl = 5 seconds)
   def getTopReKeeps(degree: Int) = topReKeepsReqConsolidator(degree) { degree =>
-    val rkMap = db.readOnlyReplica { implicit ro =>
-      rekeepRepo.getAllDirectReKeepCountsByKeep()
-    }
+    val rkMap = Map.empty[Id[Keep], Int] // rekeepRepo.getAllDirectReKeepCountsByKeep()
     val filtered = rkMap.toSeq.sortBy(_._2)(Ordering[Int].reverse).take(10).toMap
 
     val keepIds = filtered.keySet.toSeq.map { keepId =>
