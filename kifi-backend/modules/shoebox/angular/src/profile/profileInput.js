@@ -36,11 +36,6 @@ angular.module('kifi.profileInput', ['util', 'kifi.profileService'])
             $timeout(function () { setEditState(); });
           });
 
-        element.find('.profile-input-save')
-          .on('blur', function () {
-            scope.$apply(cancel);
-          });
-
         // Internal methods.
         function cancel() {
           scope.state.value = scope.state.currentValue;
