@@ -31,7 +31,7 @@ class LibraryCommander @Inject() (
     clock: Clock) extends Logging {
 
   def createFullLibraryInfo(library: Library): FullLibraryInfo = {
-    val (lib, owner, collabs, follows, numKeeps) = db.readOnlyReplica { implicit s =>
+    val (lib, owner, collabs, follows, keeps) = db.readOnlyReplica { implicit s =>
       val owner = basicUserRepo.load(library.ownerId)
       val memberships = libraryMembershipRepo.getWithLibraryId(library.id.get)
       val (collabs, follows) = memberships.foldLeft(List.empty[BasicUser], List.empty[BasicUser]) {
@@ -42,11 +42,12 @@ class LibraryCommander @Inject() (
           case _ => (c1, f1)
         }
       }
-      val numKeeps = keepRepo.getCountByLibrary(library.id.get)
-      (library, owner, collabs, follows, numKeeps)
+      val keeps = keepRepo.getByLibrary(library.id.get).map(KeepInfo.fromBookmark)
+      (library, owner, collabs, follows, keeps)
     }
     val collabGroup = GroupHolder(count = collabs.length, users = collabs, isMore = false)
     val followerGroup = GroupHolder(count = follows.length, users = follows, isMore = false)
+    val keepsGroup = KeepsHolder(count = keeps.length, keeps = keeps, isMore = false)
     FullLibraryInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -56,7 +57,7 @@ class LibraryCommander @Inject() (
       visibility = lib.visibility,
       collaborators = collabGroup,
       followers = followerGroup,
-      keepCount = numKeeps)
+      keeps = keepsGroup)
   }
 
   def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, Library] = {
@@ -163,9 +164,11 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibrariesByUser(userId: Id[User]): Seq[(LibraryAccess, Library)] = {
+  def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryAccess, Library)], Seq[(LibraryInvite, Library)]) = {
     db.readOnlyMaster { implicit s =>
-      libraryRepo.getByUser(userId)
+      val myLibraries = libraryRepo.getByUser(userId)
+      val myInvites = libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.ACCEPTED, LibraryInviteStates.INACTIVE))
+      (myLibraries, myInvites)
     }
   }
 
@@ -452,6 +455,15 @@ object GroupHolder {
   )(GroupHolder.apply, unlift(GroupHolder.unapply))
 }
 
+case class KeepsHolder(count: Int, keeps: Seq[KeepInfo], isMore: Boolean)
+object KeepsHolder {
+  implicit val format = (
+    (__ \ 'count).format[Int] and
+    (__ \ 'keeps).format[Seq[KeepInfo]] and
+    (__ \ 'isMore).format[Boolean]
+  )(KeepsHolder.apply, unlift(KeepsHolder.unapply))
+}
+
 case class FullLibraryInfo(
   id: PublicId[Library],
   name: String,
@@ -461,7 +473,7 @@ case class FullLibraryInfo(
   ownerId: ExternalId[User],
   collaborators: GroupHolder,
   followers: GroupHolder,
-  keepCount: Int)
+  keeps: KeepsHolder)
 
 object FullLibraryInfo {
   implicit val format = (
@@ -473,7 +485,7 @@ object FullLibraryInfo {
     (__ \ 'ownerId).format[ExternalId[User]] and
     (__ \ 'collaborators).format[GroupHolder] and
     (__ \ 'followers).format[GroupHolder] and
-    (__ \ 'keepCount).format[Int]
+    (__ \ 'keeps).format[KeepsHolder]
   )(FullLibraryInfo.apply, unlift(FullLibraryInfo.unapply))
 }
 

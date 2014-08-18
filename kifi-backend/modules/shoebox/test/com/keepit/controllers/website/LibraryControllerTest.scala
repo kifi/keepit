@@ -71,7 +71,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         parse1.name === "Library1"
         parse1.slug.value === "lib1"
         parse1.visibility.value === "secret"
-        parse1.keepCount === 0
+        parse1.keeps.count === 0
         parse1.ownerId === user.externalId
 
         val inputJson2 = Json.obj(
@@ -211,7 +211,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val expected = Json.parse(
           s"""
-             |{
+             |{"library":{
              |"id":"${pubId1.id}",
              |"name":"Library1",
              |"visibility":"secret",
@@ -219,8 +219,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"ownerId":"${user1.externalId}",
              |"collaborators":{"count":0,"users":[],"isMore":false},
              |"followers":{"count":0,"users":[],"isMore":false},
-             |"keepCount":0
-             |}
+             |"keeps":{"count":0,"keeps":[],"isMore":false}
+             |}}
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
       }
@@ -236,13 +236,16 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val user1 = userRepo.save(User(firstName = "Aaron", lastName = "A", createdAt = t1))
           val user2 = userRepo.save(User(firstName = "Baron", lastName = "B", createdAt = t1))
           val library1 = libraryRepo.save(Library(name = "Library1", ownerId = user1.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
-          val library2 = libraryRepo.save(Library(name = "Library2", ownerId = user2.id.get, slug = LibrarySlug("lib2"), memberCount = 1, visibility = LibraryVisibility.SECRET))
+          val library2 = libraryRepo.save(Library(name = "Library2", ownerId = user2.id.get, slug = LibrarySlug("lib2"), memberCount = 1, visibility = LibraryVisibility.PUBLISHED))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER, showInSearch = true))
           libraryMembershipRepo.save(LibraryMembership(libraryId = library2.id.get, userId = user2.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+          libraryInviteRepo.save(LibraryInvite(libraryId = library2.id.get, ownerId = user2.id.get, userId = user1.id, access = LibraryAccess.READ_ONLY))
           (user1, user2, library1, library2)
         }
 
         val pubId = Library.publicId(lib1.id.get)
+        val pubId2 = Library.publicId(lib2.id.get)
         val testPath = com.keepit.controllers.website.routes.LibraryController.getLibrariesByUser.url
         inject[FakeActionAuthenticator].setUser(user1)
         val request1 = FakeRequest("GET", testPath)
@@ -262,7 +265,18 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                   |"ownerId":"${user1.externalId}",
                   |"numKeeps":0},
                 |"access":"owner"}
-              |]
+              |],
+              |"invited":
+              | [
+                | {"info":{
+                    |"id":"${pubId2.id}",
+                    |"name":"Library2",
+                    |"visibility":"published",
+                    |"slug":"lib2",
+                    |"ownerId":"${user2.externalId}",
+                    |"numKeeps":0},
+                  |"access":"read_only"}
+              | ]
             |}
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)

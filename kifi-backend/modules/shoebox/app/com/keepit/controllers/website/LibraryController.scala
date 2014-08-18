@@ -76,19 +76,26 @@ class LibraryController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) => {
         val lib = libraryCommander.getLibraryById(id)
-        Ok(Json.toJson(libraryCommander.createFullLibraryInfo(lib)))
+        Ok(Json.obj("library" -> Json.toJson(libraryCommander.createFullLibraryInfo(lib))))
       }
     }
   }
 
   def getLibrariesByUser = JsonAction.authenticated { request =>
-    val res = for (tuple <- libraryCommander.getLibrariesByUser(request.userId)) yield {
-      val lib = tuple._2
+    val (accesses, invites) = libraryCommander.getLibrariesByUser(request.userId)
+    val libsFollowing = for (access <- accesses) yield {
+      val lib = access._2
       val (owner, numKeeps) = db.readOnlyMaster { implicit s => (userRepo.get(lib.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
       val info = LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)
-      Json.obj("info" -> info, "access" -> tuple._1)
+      Json.obj("info" -> info, "access" -> access._1)
     }
-    Ok(Json.obj("libraries" -> res))
+    val libsInvitedTo = for (invite <- invites) yield {
+      val lib = invite._2
+      val (owner, numKeeps) = db.readOnlyMaster { implicit s => (userRepo.get(lib.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
+      val info = LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)
+      Json.obj("info" -> info, "access" -> invite._1.access)
+    }
+    Ok(Json.obj("libraries" -> libsFollowing, "invited" -> libsInvitedTo))
   }
 
   def inviteUsersToLibrary(pubId: PublicId[Library]) = JsonAction.authenticatedParseJson { request =>
