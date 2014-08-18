@@ -55,7 +55,7 @@ class UriScoringHelper @Inject() (
   }
 
   // assume all items have same userId
-  def getRawSocialScores(items: Seq[SeedItemWithMultiplier]): Future[Seq[Float]] = {
+  def getRawSocialScores(items: Seq[SeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Future[Seq[Float]] = {
     //convert user scores seq to map, assume there is no duplicate userId from graph service
     graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
       val socialScoreMap = socialScores.map { socialScore =>
@@ -68,7 +68,7 @@ class UriScoringHelper @Inject() (
           case Keepers.ReasonableNumber(users) => {
             var itemScore = 0.0f
             users.map(userId => itemScore += socialScoreMap.getOrElse(userId, 0.0f))
-            Math.tanh(0.5 * itemScore).toFloat
+            if ((boostedKeepers & users.toSet).isEmpty) Math.tanh(0.5 * itemScore).toFloat else Math.tanh(0.5 * itemScore).toFloat + 0.81f
           }
         })
     }.recover { //This needs to go once the graph is fixed
@@ -91,7 +91,7 @@ class UriScoringHelper @Inject() (
 
   }
 
-  def apply(items: Seq[SeedItemWithMultiplier]): Future[Seq[ScoredSeedItem]] = {
+  def apply(items: Seq[SeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Future[Seq[ScoredSeedItem]] = {
     require(items.map(_.userId).toSet.size <= 1, "Batch of seed items to score must be all for the same user")
 
     if (items.isEmpty) {
@@ -101,7 +101,7 @@ class UriScoringHelper @Inject() (
       val popularityScores = getRawPopularityScores(items)
       val priorScores = getRawPriorScores(items)
 
-      val socialScoresFuture = getRawSocialScores(items)
+      val socialScoresFuture = getRawSocialScores(items, boostedKeepers)
       val interestScoresFuture = getRawInterestScores(items)
       val helpRankScoresFuture = getRawHelpRankScores(items)
 

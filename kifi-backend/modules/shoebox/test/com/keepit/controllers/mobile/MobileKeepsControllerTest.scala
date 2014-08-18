@@ -1,40 +1,32 @@
 package com.keepit.controllers.mobile
 
-import org.specs2.mutable.Specification
-import com.keepit.normalizer._
-import com.keepit.heimdal.{ KifiHitContext, SanitizedKifiHit, HeimdalContext }
-import com.keepit.scraper._
-import com.keepit.commanders.KeepInfo._
+import com.google.inject.Injector
 import com.keepit.commanders._
-import com.keepit.common.db._
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
-import com.keepit.search._
-import com.keepit.model._
+import com.keepit.common.db._
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.common.helprank.HelpRankTestHelper
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.time._
+import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.heimdal._
+import com.keepit.model.{ KeepToCollection, _ }
+import com.keepit.scraper._
+import com.keepit.search.{ FakeSearchServiceClientModule, _ }
+import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
-import play.api.libs.json.Json
+import org.joda.time.DateTime
+import org.specs2.mutable.Specification
+import play.api.libs.json.{ JsArray, JsObject, JsString, Json }
 import play.api.test.Helpers._
 import play.api.test._
-import com.keepit.common.time._
-import org.joda.time.DateTime
-import com.google.inject.Injector
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsString
-import com.keepit.model.KeepDiscovery
-import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.model.KeepToCollection
-import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.common.external.FakeExternalServiceModule
-import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.search.FakeSearchServiceClientModule
-import play.api.libs.json.JsObject
-import com.keepit.model.KifiHitKey
-import com.keepit.common.store.FakeShoeboxStoreModule
 
-class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector {
+class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector with HelpRankTestHelper {
 
   val controllerTestModules = Seq(
     FakeShoeboxServiceModule(),
@@ -315,6 +307,134 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector {
             "siteName":"Google"}
         ]}
       """)
+      Json.parse(contentAsString(result)) must equalTo(expected)
+    }
+  }
+
+  "allKeeps with helprank" in {
+    withDb(controllerTestModules: _*) { implicit injector =>
+
+      implicit val context = HeimdalContext.empty
+      val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
+      val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
+
+      val keeps = db.readOnlyMaster { implicit s =>
+        keepRepo.getByUser(u1.id.get, None, None, 100)
+      }
+      keeps.size === keeps1.size
+
+      val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.allKeeps(before = None, after = None, collection = None, helprank = Some("click")).url
+      path === "/m/1/keeps/all?helprank=click"
+      inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
+      val sharingUserInfo = Seq(SharingUserInfo(Set(u2.id.get), 3), SharingUserInfo(Set(), 0))
+      inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
+
+      Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
+
+      inject[FakeActionAuthenticator].setUser(u1)
+      val request = FakeRequest("GET", path)
+      val result = inject[MobileBookmarksController].allKeeps(
+        before = None,
+        after = None,
+        collectionOpt = None,
+        helprankOpt = Some("click"),
+        count = Integer.MAX_VALUE,
+        withPageInfo = false
+      )(request)
+
+      status(result) must equalTo(OK)
+      contentType(result) must beSome("application/json")
+
+      val expected = Json.parse(s"""
+                  {"collection":null,
+                   "before":null,
+                   "after":null,
+                   "keeps":[
+                    {
+                      "id":"${keeps1(1).externalId.toString}",
+                      "url":"${keeps1(1).url}",
+                      "isPrivate":${keeps1(1).isPrivate},
+                      "createdAt":"${keeps1(1).createdAt.toStandardTimeString}",
+                      "others":1,
+                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg"}],
+                      "clickCount":1,
+                      "collections":[],
+                      "tags":[],
+                      "siteName":"kifi.com",
+                      "clickCount":1,
+                      "rekeepCount":1
+                    },
+                    {
+                      "id":"${keeps1(0).externalId.toString}",
+                      "url":"${keeps1(0).url}",
+                      "isPrivate":${keeps1(0).isPrivate},
+                      "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
+                      "others":-1,
+                      "keepers":[],
+                      "collections":[],
+                      "tags":[],
+                      "siteName":"FortyTwo",
+                      "clickCount":1
+                    }
+                  ],
+                  "helprank":"click"
+                  }
+                """)
+
+      Json.parse(contentAsString(result)) must equalTo(expected)
+    }
+  }
+
+  "allKeeps with helprank & before" in {
+    withDb(controllerTestModules: _*) { implicit injector =>
+
+      implicit val context = HeimdalContext.empty
+      val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
+
+      val (u1: User, u2: User, keeps1: Seq[Keep]) = helpRankSetup(heimdal, db)
+
+      val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.allKeeps(before = Some(keeps1(1).externalId.toString), after = None, collection = None, helprank = Some("click")).url
+      path === s"/m/1/keeps/all?before=${keeps1(1).externalId.toString}&helprank=click"
+      inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
+      val sharingUserInfo = Seq(SharingUserInfo(Set(u2.id.get), 3), SharingUserInfo(Set(), 0))
+      inject[FakeSearchServiceClient].sharingUserInfoData(sharingUserInfo)
+
+      Await.result(inject[FakeSearchServiceClient].sharingUserInfo(null, Seq()), Duration(1, SECONDS)) === sharingUserInfo
+      inject[FakeActionAuthenticator].setUser(u1)
+      val request = FakeRequest("GET", path)
+      val result = inject[MobileBookmarksController].allKeeps(
+        before = Some(keeps1(1).externalId.toString),
+        after = None,
+        collectionOpt = None,
+        helprankOpt = Some("click"),
+        count = Integer.MAX_VALUE,
+        withPageInfo = false
+      )(request)
+      status(result) must equalTo(OK)
+      contentType(result) must beSome("application/json")
+
+      val expected = Json.parse(s"""
+                  {"collection":null,
+                   "before":"${keeps1(1).externalId.toString}",
+                   "after":null,
+                   "keeps":[
+                    {
+                      "id":"${keeps1(0).externalId.toString}",
+                      "url":"${keeps1(0).url}",
+                      "isPrivate":${keeps1(0).isPrivate},
+                      "createdAt":"${keeps1(0).createdAt.toStandardTimeString}",
+                      "others":1,
+                      "keepers":[{"id":"${u2.externalId.toString}","firstName":"${u2.firstName}","lastName":"${u2.lastName}","pictureName":"0.jpg"}],
+                      "collections":[],
+                      "tags":[],
+                      "siteName":"FortyTwo",
+                      "clickCount":1
+                    }
+                  ],
+                  "helprank":"click"
+                  }
+                """)
+
       Json.parse(contentAsString(result)) must equalTo(expected)
     }
   }
@@ -726,4 +846,5 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector {
     }
 
   }
+
 }
