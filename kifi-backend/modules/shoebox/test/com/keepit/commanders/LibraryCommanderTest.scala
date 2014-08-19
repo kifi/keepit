@@ -476,14 +476,13 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           libraryInviteRepo.save(LibraryInvite(libraryId = libScience.id.get, ownerId = userIron.id.get, userId = Some(userHulk.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
         }
 
-        val inviteIds = db.readOnlyMaster { implicit s =>
+        db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 6
-          libraryInviteRepo.all.map(_.id.get)
         }
-        libraryCommander.joinLibrary(inviteIds(0)).name === libMurica.name // Ironman accepts invite to 'Murica'
-        libraryCommander.joinLibrary(inviteIds(1)).name === libMurica.name // Agent accepts invite to 'Murica'
-        libraryCommander.declineLibrary(inviteIds(2)) // Hulk declines invite to 'Murica'
-        libraryCommander.joinLibrary(inviteIds(3)).name === libScience.name // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access
+        libraryCommander.joinLibrary(userIron.id.get, libMurica.id.get).right.get.name === libMurica.name // Ironman accepts invite to 'Murica'
+        libraryCommander.joinLibrary(userAgent.id.get, libMurica.id.get).right.get.name === libMurica.name // Agent accepts invite to 'Murica'
+        libraryCommander.declineLibrary(userHulk.id.get, libMurica.id.get) // Hulk declines invite to 'Murica'
+        libraryCommander.joinLibrary(userHulk.id.get, libScience.id.get).right.get.name === libScience.name // Hulk accepts invite to 'Science' (READ_INSERT) but gets READ_WRITE access
 
         db.readOnlyMaster { implicit s =>
           libraryInviteRepo.count === 6
