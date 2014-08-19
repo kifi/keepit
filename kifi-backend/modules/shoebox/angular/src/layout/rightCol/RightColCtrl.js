@@ -140,12 +140,12 @@ angular.module('kifi')
       }
       $window.document.documentElement.removeAttribute('data-guide');
     };
-    if (angular.element($window.document.documentElement).data('guide')) {
+    if ($window.document.documentElement.getAttribute('data-guide')) {
       $scope.triggerGuide();
     }
 
     $scope.importBookmarks = function () {
-      var kifiVersion = angular.element($window.document.documentElement).data('kifiExt');
+      var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
       if (!kifiVersion) {
         $rootScope.$emit('showGlobalModal','installExtension');
