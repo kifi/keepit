@@ -164,6 +164,12 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def getLibraryByPath(owner: User, slug: LibrarySlug): Option[Library] = {
+    db.readOnlyMaster { implicit s =>
+      libraryRepo.getBySlugAndUserId(userId = owner.id.get, slug = slug)
+    }
+  }
+
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryAccess, Library)], Seq[(LibraryInvite, Library)]) = {
     db.readOnlyMaster { implicit s =>
       val myLibraries = libraryRepo.getByUser(userId)
