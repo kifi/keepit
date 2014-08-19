@@ -16,6 +16,7 @@ import com.keepit.common.time._
 import scala.inline
 import com.keepit.common.PriorityStreamAggregator
 import com.keepit.common.logging.Logging
+import java.text.Normalizer
 
 @Singleton
 class ABookRecommendationCommander @Inject() (
@@ -70,6 +71,16 @@ class ABookRecommendationCommander @Inject() (
     futureRecommendations
   }
 
+  def getIrrelevantRecommendations(userId: Id[User]): IrrelevantPeopleRecommendations = {
+    db.readOnlyMaster { implicit session =>
+      val irrelevantUsers = friendRecommendationRepo.getIrrelevantRecommendations(userId)
+      val irrelevantFacebookAccounts = facebookInviteRecommendationRepo.getIrrelevantRecommendations(userId)
+      val irrelevantLinkedInAccounts = linkedInInviteRecommendationRepo.getIrrelevantRecommendations(userId)
+      val irrelevantEmailAccounts = emailInviteRecommendationRepo.getIrrelevantRecommendations(userId).map(EmailAccount.toEmailAccountInfoId)
+      IrrelevantPeopleRecommendations(userId, irrelevantUsers, irrelevantFacebookAccounts, irrelevantLinkedInAccounts, irrelevantEmailAccounts)
+    }
+  }
+
   private def generateFutureFriendRecommendations(userId: Id[User]): Future[Stream[(Id[User], Double)]] = {
     val futureRelatedUsers = graph.getSociallyRelatedUsers(userId, bePatient = false)
     val futureFriends = shoebox.getFriends(userId)
@@ -112,7 +123,7 @@ class ABookRecommendationCommander @Inject() (
             socialFriends <- futureSocialFriends
             normalizedUserNames <- futureNormalizedUserNames
           } yield {
-            @inline def mayAlreadyBeOnKifi(socialFriend: SocialUserBasicInfo) = socialFriend.userId.isDefined || normalizedUserNames.contains(socialFriend.fullName.toLowerCase)
+            @inline def mayAlreadyBeOnKifi(socialFriend: SocialUserBasicInfo) = socialFriend.userId.isDefined || normalizedUserNames.contains(normalize(socialFriend.fullName))
             socialFriends.collect { case socialFriend if relevantNetworks.contains(socialFriend.networkType) && !mayAlreadyBeOnKifi(socialFriend) => socialFriend.id -> socialFriend }.toMap
           }
         }
@@ -232,7 +243,7 @@ class ABookRecommendationCommander @Inject() (
         val relevantContactName = if (canBeInvited && EmailAddress.isLikelyHuman(emailAddress)) {
           val contacts = abookCommander.getContactsByUserAndEmail(userId, emailAddress)
           val mayAlreadyBeOnKifi = contacts.exists { contact =>
-            contact.contactUserId.isDefined || contact.name.exists { name => normalizedUserNames.contains(name.toLowerCase) }
+            contact.contactUserId.isDefined || contact.name.exists { name => normalizedUserNames.contains(normalize(name)) }
           }
           if (mayAlreadyBeOnKifi) None else contacts.collectFirst { case contact if contact.name.isDefined => contact.name.get }
         } else None
@@ -258,10 +269,11 @@ class ABookRecommendationCommander @Inject() (
       friendIds <- shoebox.getFriends(userId)
       basicUsers <- shoebox.getBasicUsers(Seq(userId) ++ friendIds)
     } yield {
-      import java.text.Normalizer
-      basicUsers.values.flatMap(user => Set(user.firstName + " " + user.lastName, user.lastName + " " + user.firstName)).map {
-        fullName => Normalizer.normalize(fullName, Normalizer.Form.NFKD).trim.toLowerCase
-      }.toSet
+      val fullNames = basicUsers.values.flatMap(user => Set(user.firstName + " " + user.lastName, user.lastName + " " + user.firstName))
+      fullNames.toSet.map(normalize)
     }
   }
+
+  private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
+  @inline private def normalize(fullName: String): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(fullName.trim, Normalizer.Form.NFD), "").toLowerCase
 }

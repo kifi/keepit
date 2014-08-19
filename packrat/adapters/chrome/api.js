@@ -36,7 +36,7 @@ var api = (function createApi() {
     for (var id in pages) {
       if (!(id in normalTab)) {
         var page = pages[id];
-        if (now - page.created > 300000) {
+        if (now - page._created > 300000) {
           log('#666', '[gcPages]', page);
           delete pages[id];
         }
@@ -44,12 +44,11 @@ var api = (function createApi() {
     }
   }
 
-  function createPage(id, url, skipOnLoading) {
+  function createPage(id, url) {
     var now = Date.now();
-    var page = pages[id] = {id: id, url: url, created: now};
-    if (!skipOnLoading && httpRe.test(url)) {
-      dispatch.call(api.tabs.on.loading, page);
-    }
+    var page = pages[id] = {url: url};
+    Object.defineProperty(page, 'id', {value: id, enumerable: true});
+    Object.defineProperty(page, '_created', {value: now});
     if (now - gcPagesLastRun > 300000) {
       gcPagesLastRun = now;
       gcPages(now);
@@ -57,13 +56,12 @@ var api = (function createApi() {
     return page;
   }
 
-  function createPageAndInjectContentScripts(tab, skipOnLoading) {
-    var page = createPage(tab.id, tab.url, skipOnLoading);
-    if (httpRe.test(tab.url)) {
-      if (tab.status === 'complete') {
+  function injectContentScriptsWhenDomReady(page, status) {
+    if (httpRe.test(page.url)) {
+      if (status === 'complete') {
         injectContentScripts(page);
-      } else if (tab.status === 'loading') {
-        chrome.tabs.executeScript(tab.id, {code: 'document.readyState', runAt: 'document_start'}, injectContentScriptsIfDomReady.bind(null, page));
+      } else if (status === 'loading') {
+        chrome.tabs.executeScript(page.id, {code: 'document.readyState', runAt: 'document_start'}, injectContentScriptsIfDomReady.bind(null, page));
       }
     }
   }
@@ -101,7 +99,7 @@ var api = (function createApi() {
 
   chrome.tabs.onCreated.addListener(errors.wrap(function (tab) {
     log("#666", "[tabs.onCreated]", tab.id, tab.url);
-    normalTab[tab.id] = !!selectedTabIds[tab.windowId];
+    normalTab[tab.id] = tab.windowId in selectedTabIds;
   }));
 
   chrome.tabs.onActivated.addListener(errors.wrap(function (info) {
@@ -139,11 +137,26 @@ var api = (function createApi() {
     }
   }));
 
+  chrome.webNavigation.onErrorOccurred.addListener(errors.wrap(function (e) {
+    if (e.frameId === 0 && e.error === 'net::ERR_ABORTED' && !(e.tabId in normalTab)) {  // invisible preloading tab discarded
+      log('#666', '[onErrorOccurred] %i aborted', e.tabId);
+      onRemoved(e.tabId);
+    }
+  }));
+
   chrome.webNavigation.onCommitted.addListener(errors.wrap(function (e) {
-    if (e.frameId || normalTab[e.tabId] === false) return;
-    log('#666', '[onCommitted]', e.tabId, normalTab[e.tabId], e);
-    onRemoved(e.tabId, {temp: true});
-    createPage(e.tabId, e.url);
+    if (e.frameId === 0) {
+      var tabId = e.tabId;
+      var normal = normalTab[tabId];
+      log('#666', '[onCommitted]', tabId, normal ? 'normal' : normal == null ? 'invisible' : 'peculiar', e.url);
+      if (tabId in pages) {
+        onRemoved(tabId, {temp: true});
+      }
+      var page = createPage(tabId, e.url);
+      if (normal && httpRe.test(page.url)) {
+        dispatch.call(api.tabs.on.loading, page);
+      }
+    }
   }));
 
   chrome.webNavigation.onDOMContentLoaded.addListener(errors.wrap(function (details) {
@@ -188,34 +201,37 @@ var api = (function createApi() {
 
   chrome.tabs.onUpdated.addListener(errors.wrap(function (tabId, change) {
     if ((change.status || change.url) && normalTab[tabId]) {
-      log('#666', '[tabs.onUpdated] %i change: %o', tabId, change);
+      log('#666', '[onUpdated] %i change: %o', tabId, change);
     }
   }));
 
-  chrome.tabs.onReplaced.addListener(errors.wrap(function (newTabId, oldTabId) {
-    log('#666', '[tabs.onReplaced]', oldTabId, '->', newTabId);
-    var normal = normalTab[newTabId] = normalTab[oldTabId];
-    onRemoved(oldTabId);
+  chrome.tabs.onReplaced.addListener(errors.wrap(function (addedTabId, removedTabId) {
+    log('#666', '[tabs.onReplaced]', removedTabId, '<-', addedTabId);
+    var normal = normalTab[addedTabId] = normalTab[removedTabId];
+    onRemoved(removedTabId);
     if (normal) {
-      var page = pages[newTabId];
-      if (page.icon) {
-        setPageAction(newTabId, page.icon);
+      var page = pages[addedTabId];
+      if (page && page.icon) {
+        setPageAction(addedTabId, page.icon);
       }
-      if (httpRe.test(page.url)) {
-        injectContentScripts(page);
+      if (page && httpRe.test(page.url)) {
+        dispatch.call(api.tabs.on.loading, page);
+        injectContentScripts(page); // TODO: verify DOM ready first
       }
     }
   }));
 
   chrome.tabs.onRemoved.addListener(errors.wrap(onRemoved));
   function onRemoved(tabId, info) {
-    if (!info || !info.temp) {
+    log('#666', '[onRemoved]', tabId, info || '');
+    var normal = normalTab[tabId];
+    if (normal != null && (!info || !info.temp)) {
       delete normalTab[tabId];
     }
     var page = pages[tabId];
     if (page) {
       delete pages[tabId];
-      if (httpRe.test(page.url)) {
+      if (normal && httpRe.test(page.url)) {
         dispatch.call(api.tabs.on.unload, page);
       }
     }
@@ -280,7 +296,8 @@ var api = (function createApi() {
     tabs.forEach(function (tab) {
       normalTab[tab.id] = true;
       if (!pages[tab.id]) {
-        createPageAndInjectContentScripts(tab, true);
+        var page = createPage(tab.id, tab.url);
+        injectContentScriptsWhenDomReady(page, tab.status);
       }
       if (tab.active) {
         selectedTabIds[tab.windowId] = tab.id;
@@ -352,7 +369,7 @@ var api = (function createApi() {
     var kind = msg[0], data = msg[1], callbackId = msg[2];
     var handler = portHandlers[kind];
     if (page && handler) {
-      log('#0a0', '[onMessage] %i %s', tabId, kind, data != null ? data : '');
+      log('#0a0', '[onMessage] %i %s', tabId, kind, data != null ? (data.join ? data.join(' ') : data) : '');
       handler(data, respondToTab.bind(null, port, callbackId), page, port);
     } else {
       log('#a00', '[onMessage] %i %s %s %O %s', tabId, kind, 'ignored, page:', page, 'handler:', !!handler);
@@ -376,10 +393,6 @@ var api = (function createApi() {
   var doLogging = !isPackaged;
   function injectContentScripts(page) {
     if (page.injecting || page.injected) return;
-    if (/^https:\/\/chrome.google.com\/webstore/.test(page.url)) {
-      log('[injectContentScripts] forbidden', page.url);
-      return;
-    }
     page.injecting = true;
 
     var scripts = meta.contentScripts.filter(function(cs) { return cs[1].test(page.url) });
@@ -389,8 +402,21 @@ var api = (function createApi() {
       code: 'this.api&&api.injected',
       runAt: 'document_start'
     }, function (arr) {
-      injected = arr && arr[0] || {};
-      done(0);
+      var err = chrome.runtime.lastError;
+      if (err) {
+        log('#a80', '[inject] %i fail', page.id, err.message);
+        if (err.message === 'The extensions gallery cannot be scripted.' ||
+            err.message === 'Cannot access a chrome:// URL') {
+          injected = {};
+          done();
+        } else {  // tab closed?
+          errors.push({error: Error('chrome.tabs.executeScript failed'), params: {message: err.message, page: page}});
+          delete page.injecting;
+        }
+      } else {
+        injected = arr[0] || {};
+        done(0);
+      }
     });
 
     function done(n) {
@@ -440,7 +466,7 @@ var api = (function createApi() {
         }
       });
       paths.forEach(function (path) {
-        log("#bbb", "[injectWithDeps] %i %s", tabId, path);
+        log('#bbb', '[inject] %i %s', tabId, path);
         inject(tabId, {file: path, runAt: 'document_end'}, afterInject);
       });
     } else {

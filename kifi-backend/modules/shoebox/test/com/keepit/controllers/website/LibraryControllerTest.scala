@@ -202,10 +202,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val pubId1 = Library.publicId(lib1.id.get)
 
-        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getLibrary(pubId1).url
+        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getLibraryById(pubId1).url
         inject[FakeActionAuthenticator].setUser(user1)
         val request1 = FakeRequest("GET", testPath1)
-        val result1: Future[SimpleResult] = libraryController.getLibrary(pubId1)(request1)
+        val result1: Future[SimpleResult] = libraryController.getLibraryById(pubId1)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
@@ -226,8 +226,61 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         Json.parse(contentAsString(result1)) must equalTo(expected)
       }
     }
+    "get library by path" in {
+      withDb(modules: _*) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val libraryController = inject[LibraryController]
 
-    "get library by user id" in {
+        val (user1, lib1) = db.readWrite { implicit s =>
+          val user = userRepo.save(User(firstName = "Aaron", lastName = "Hsu", createdAt = t1, username = Some(Username("ahsu"))))
+          val library = libraryRepo.save(Library(name = "Library1", ownerId = user.id.get, slug = LibrarySlug("lib1"), memberCount = 1, visibility = LibraryVisibility.SECRET))
+          (user, library)
+        }
+
+        val unInput = "ahsu"
+        val badUserInput = "ahsuifhwoifhweof"
+        val extInput = user1.externalId.id
+        val slugInput = "lib1"
+        inject[FakeActionAuthenticator].setUser(user1)
+
+        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(unInput, slugInput).url
+        val request1 = FakeRequest("GET", testPath1)
+        val result1: Future[SimpleResult] = libraryController.getLibraryByPath(unInput, slugInput)(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+
+        val testPath1_bad = com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(badUserInput, slugInput).url
+        val request1_bad = FakeRequest("GET", testPath1_bad)
+        val result1_bad: Future[SimpleResult] = libraryController.getLibraryByPath(badUserInput, slugInput)(request1_bad)
+        status(result1_bad) must equalTo(BAD_REQUEST)
+
+        val testPath2 = com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput).url
+        val request2 = FakeRequest("GET", testPath2)
+        val result2: Future[SimpleResult] = libraryController.getLibraryByPath(extInput, slugInput)(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+
+        val expected = Json.parse(
+          s"""
+             |{"library":{
+             |"id":"${Library.publicId(lib1.id.get).id}",
+             |"name":"Library1",
+             |"visibility":"secret",
+             |"slug":"lib1",
+             |"url":"/ahsu/lib1",
+             |"ownerId":"${user1.externalId}",
+             |"collaborators":{"count":0,"users":[],"isMore":false},
+             |"followers":{"count":0,"users":[],"isMore":false},
+             |"keeps":{"count":0,"keeps":[],"isMore":false}
+             |}}
+           """.stripMargin)
+        Json.parse(contentAsString(result1)) must equalTo(expected)
+        Json.parse(contentAsString(result2)) must equalTo(expected)
+      }
+    }
+
+    "get libraries of user" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)

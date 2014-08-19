@@ -76,3 +76,15 @@ object InviteRecommendation {
     (__ \ 'score).format[Double]
   )(InviteRecommendation.apply, unlift(InviteRecommendation.unapply))
 }
+
+case class IrrelevantPeopleRecommendations(
+  userId: Id[User],
+  irrelevantUsers: Set[Id[User]],
+  irrelevantFacebookAccounts: Set[Id[SocialUserInfo]],
+  irrelevantLinkedInAccounts: Set[Id[SocialUserInfo]],
+  irrelevantEmailAccounts: Set[Id[EmailAccountInfo]])
+
+object IrrelevantPeopleRecommendations {
+  implicit val format = Json.format[IrrelevantPeopleRecommendations]
+  def empty(userId: Id[User]) = IrrelevantPeopleRecommendations(userId, Set.empty, Set.empty, Set.empty, Set.empty)
+}
