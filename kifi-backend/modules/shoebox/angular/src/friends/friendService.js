@@ -146,7 +146,7 @@ angular.module('kifi')
         var pymkWaitTimes = [0, 1000, 3 * 1000, 10 * 1000];
         function getPymkWithRetries(numRetries) {
           numRetries = numRetries || 0;
-          kifiPeopleYouMayKnowService.get(offset || 0, limit || 0).then(function (people) {
+          kifiPeopleYouMayKnowService.get(offset || 0, limit || 10).then(function (people) {
             if (people.length > 0) {
               pymkDeferred.resolve(people);
             } else {
