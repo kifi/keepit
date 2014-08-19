@@ -129,4 +129,8 @@ class LDAController @Inject() (
     Ok(Json.toJson(explain))
   }
 
+  def uriKLDivergence(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]) = Action { request =>
+    Ok(Json.toJson(lda.uriKLDivergence(uri1, uri2)))
+  }
+
 }
