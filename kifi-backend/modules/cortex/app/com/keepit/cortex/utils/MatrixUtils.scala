@@ -130,4 +130,20 @@ object MatrixUtils {
     }
     s
   }
+
+  @inline
+  def log2(x: Double): Double = log(x) / log(2.0)
+
+  // KL(qs || ps), we don't check input.
+  def KL_divergence(qs: Array[Double], ps: Array[Double]): Double = {
+    assume(qs.size == ps.size)
+    val n = qs.size
+    val log_q_over_p = new Array[Double](n)
+    var i = 0
+    while (i < n) {
+      log_q_over_p(i) = if (ps(i) > 0.0) log2(qs(i) / ps(i)) else 0.0
+      i += 1
+    }
+    dot(qs, log_q_over_p)
+  }
 }
