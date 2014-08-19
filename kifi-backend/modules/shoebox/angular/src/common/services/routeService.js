@@ -88,7 +88,12 @@ angular.module('kifi')
       basicUserInfo: function (id, friendCount) {
         friendCount = friendCount ? 1 : 0;
         return route('/user/' + id + '?friendCount=' + friendCount);
-      }
+      },
+
+      ////////////////////////////
+      // Libraries              //
+      ////////////////////////////
+      getLibrarySummaries: route('/libraries')
     };
   }
 ]);
