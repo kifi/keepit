@@ -71,6 +71,16 @@ class ABookRecommendationCommander @Inject() (
     futureRecommendations
   }
 
+  def getIrrelevantRecommendations(userId: Id[User]): IrrelevantPeopleRecommendations = {
+    db.readOnlyMaster { implicit session =>
+      val irrelevantUsers = friendRecommendationRepo.getIrrelevantRecommendations(userId)
+      val irrelevantFacebookAccounts = facebookInviteRecommendationRepo.getIrrelevantRecommendations(userId)
+      val irrelevantLinkedInAccounts = linkedInInviteRecommendationRepo.getIrrelevantRecommendations(userId)
+      val irrelevantEmailAccounts = emailInviteRecommendationRepo.getIrrelevantRecommendations(userId).map(EmailAccount.toEmailAccountInfoId)
+      IrrelevantPeopleRecommendations(userId, irrelevantUsers, irrelevantFacebookAccounts, irrelevantLinkedInAccounts, irrelevantEmailAccounts)
+    }
+  }
+
   private def generateFutureFriendRecommendations(userId: Id[User]): Future[Stream[(Id[User], Double)]] = {
     val futureRelatedUsers = graph.getSociallyRelatedUsers(userId, bePatient = false)
     val futureFriends = shoebox.getFriends(userId)

@@ -41,4 +41,9 @@ class ABookRecommendationController @Inject() (
     friendRecommendationCommander.hideInviteRecommendation(userId, network, irrelevantFriendId)
     Ok
   }
+
+  def getIrrelevantRecommendations(userId: Id[User]) = Action { request =>
+    val irrelevantRecommendations = friendRecommendationCommander.getIrrelevantRecommendations(userId)
+    Ok(Json.toJson(irrelevantRecommendations))
+  }
 }
