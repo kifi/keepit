@@ -144,7 +144,7 @@ class URILDATopicRepoImpl @Inject() (
 
   def countUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Int = {
     import StaticQuery.interpolation
-    val q = sql"""select count(ck.uri_id) from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id and ck.user_id = ${userId.id} and tp.version = ${version.version} and ck.state = 'active' and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words}"""
+    val q = sql"""select count(ck.uri_id) from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id where ck.user_id = ${userId.id} and tp.version = ${version.version} and ck.state = 'active' and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words}"""
     q.as[Int].list.head
   }
 
@@ -152,7 +152,7 @@ class URILDATopicRepoImpl @Inject() (
     import StaticQuery.interpolation
     import scala.slick.jdbc.GetResult
     implicit val getFeature = GetResult(r => ldaTopicFeatureMapper.nextValue(r))
-    val q = sql"""select tp.feature from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id and ck.user_id = ${userId.id} and ck.state = 'active' and tp.version = ${version.version} and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words}"""
+    val q = sql"""select tp.feature from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id where ck.user_id = ${userId.id} and ck.state = 'active' and tp.version = ${version.version} and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words}"""
     q.as[LDATopicFeature].list
   }
 
@@ -160,7 +160,12 @@ class URILDATopicRepoImpl @Inject() (
     import StaticQuery.interpolation
     import scala.slick.jdbc.GetResult
     implicit val getFeature = GetResult(r => (r.nextLong(), ldaTopicFeatureMapper.nextValue(r)))
-    val q = sql"""select ck.id, tp.feature from cortex_keep as ck inner join uri_lda_topic as tp on ck.uri_id = tp.uri_id and ck.user_id = ${userId.id} and ck.state = 'active' and tp.version = ${version.version} and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words} order by ck.kept_at desc limit ${limit}"""
+    val q =
+      sql"""select ck.id, tp.feature from cortex_keep as ck inner join uri_lda_topic as tp
+           on ck.uri_id = tp.uri_id
+           where ck.user_id = ${userId.id} and ck.state = 'active' and tp.version = ${version.version}
+           and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words}
+           order by ck.kept_at desc limit ${limit}"""
     q.as[(Long, LDATopicFeature)].list.map { case (keepId, feature) => (Id[Keep](keepId), feature) }
   }
 
