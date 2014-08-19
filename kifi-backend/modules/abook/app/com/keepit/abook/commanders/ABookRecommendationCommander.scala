@@ -219,7 +219,7 @@ class ABookRecommendationCommander @Inject() (
       case (socialUserId, score) if isRelevant(socialUserId) =>
         val friend = relevantSocialFriends(socialUserId)
         val lastInvitedAt = existingSocialInvites.get(socialUserId).flatMap(_.lastSentAt)
-        InviteRecommendation(friend.networkType, Right(friend.socialId), friend.fullName, friend.getPictureUrl(80, 80), lastInvitedAt, score)
+        InviteRecommendation(friend.networkType, Right(friend.socialId), Some(friend.fullName), friend.getPictureUrl(80, 80), lastInvitedAt, score)
     }
     recommendations.take(relevantSocialFriends.size)
   }
@@ -258,15 +258,8 @@ class ABookRecommendationCommander @Inject() (
     val recommendations = relatedEmailAccounts.collect {
       case (emailAccountId, score) if isRelevant(emailAccountId) =>
         val lastInvitedAt = relevantEmailInvites.get(emailAccountId).flatMap(_.lastSentAt)
-        val contacts = relevantEmailAccounts(emailAccountId)
-        val (emailAddress, name) = contacts.find(_.name.isDefined) match {
-          case Some(preferredContact) => (preferredContact.email, preferredContact.name.get)
-          case _ => {
-            val emailAddress = contacts.head.email
-            (emailAddress, emailAddress.address)
-          }
-        }
-        InviteRecommendation(SocialNetworks.EMAIL, Left(emailAddress), name, None, lastInvitedAt, score)
+        val preferredContact = relevantEmailAccounts(emailAccountId).maxBy(_.name.map(_.length) getOrElse 0)
+        InviteRecommendation(SocialNetworks.EMAIL, Left(preferredContact.email), preferredContact.name, None, lastInvitedAt, score)
     }
     recommendations.take(relevantEmailAccounts.size)
   }
