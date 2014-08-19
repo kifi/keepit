@@ -43,7 +43,7 @@ class ABookRecommendationCommander @Inject() (
     val futureRecommendations = generateFutureFriendRecommendations(userId).map(_.drop(offset).take(limit).map(_._1).toSeq)
     futureRecommendations.onSuccess {
       case recommendations =>
-        log.info(s"Computed ${recommendations.length}/${limit} friend recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
+        log.info(s"Computed ${recommendations.length}/${limit} (skipped $offset) friend recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
     }
     futureRecommendations
   }
@@ -66,7 +66,7 @@ class ABookRecommendationCommander @Inject() (
     val futureRecommendations = generateFutureInviteRecommendations(userId, relevantNetworks).map(_.drop(offset).take(limit).toSeq)
     futureRecommendations.onSuccess {
       case recommendations =>
-        log.info(s"Computed ${recommendations.length}/${limit} invite recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
+        log.info(s"Computed ${recommendations.length}/${limit} (skipped $offset) invite recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
     }
     futureRecommendations
   }
