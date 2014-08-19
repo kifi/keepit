@@ -67,6 +67,10 @@ var jeditor = (function () {
   }
 })();
 
+function removeMostJsComments(code) {
+  return code.toString().replace(/^([^'"\/]*)\s*\/\/.*$/mg, '$1');
+}
+
 var chromeInjectionFooter = lazypipe()
   .pipe(function () {
     return gulpif(['scripts/**/*.js', '!**/iframes/**'], map(function (code, filename) {
@@ -92,15 +96,18 @@ gulp.task('copy', function () {
       }
       path.dirname = path.dirname.replace(/^adapters\/chrome\/?/, '');
     }))
+    .pipe(map(removeMostJsComments))
     .pipe(chromeInjectionFooter())
     .pipe(gulp.dest(outDir + '/chrome'));
 
   var firefoxAdapters = gulp.src(firefoxAdapterFiles, {base: './adapters'})
     .pipe(cache('firefox-adapters'))
+    .pipe(map(removeMostJsComments))
     .pipe(gulp.dest(outDir));
 
   var sharedAdapters = gulp.src(sharedAdapterFiles)
     .pipe(cache('shared-adapters'))
+    .pipe(map(removeMostJsComments))
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
@@ -124,6 +131,7 @@ gulp.task('copy', function () {
 
   var background = gulp.src(scripts)
     .pipe(cache('background'))
+    .pipe(map(removeMostJsComments))
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
