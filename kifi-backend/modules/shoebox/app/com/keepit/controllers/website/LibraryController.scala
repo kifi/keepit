@@ -86,7 +86,7 @@ class LibraryController @Inject() (
     // rule out invites that are not duplicate invites to same library (only show library invite with highest access)
     val invitesToShow = invites.groupBy(x => x._2).map { lib =>
       val invites = lib._2.unzip._1
-      val highestInvite = libraryCommander.sortInvites(invites).last
+      val highestInvite = invites.sorted.last
       (highestInvite, lib._1)
     }.toSeq
 

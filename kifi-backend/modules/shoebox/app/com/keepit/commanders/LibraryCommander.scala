@@ -180,15 +180,6 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def sortInvites(invites: Seq[LibraryInvite]): Seq[LibraryInvite] = {
-    def ord: Ordering[LibraryInvite] = new Ordering[LibraryInvite] {
-      def compare(x: LibraryInvite, y: LibraryInvite): Int = x.access.priority compare y.access.priority
-    }
-    val array = invites.toArray
-    Sorting.quickSort(array)(ord)
-    array.toSeq
-  }
-
   def internSystemGeneratedLibraries(userId: Id[User]): (Library, Library) = { // returns true if created, false if already existed
     db.readWrite { implicit session =>
       val libMem = libraryMembershipRepo.getWithUserId(userId, None)
@@ -273,7 +264,7 @@ class LibraryCommander @Inject() (
       if (lib.visibility != LibraryVisibility.PUBLISHED && listInvites.isEmpty) {
         Left(LibraryFail("cannot join - not published library"))
       } else {
-        val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else sortInvites(listInvites).last.access
+        val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
         libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, showInSearch = true))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
         Right(lib)

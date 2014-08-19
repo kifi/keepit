@@ -71,8 +71,4 @@ object LibraryAccess {
       case OWNER.value => OWNER
     }
   }
-
-  implicit def ord: Ordering[LibraryAccess] = new Ordering[LibraryAccess] {
-    def compare(x: LibraryAccess, y: LibraryAccess): Int = x.priority compare y.priority
-  }
 }

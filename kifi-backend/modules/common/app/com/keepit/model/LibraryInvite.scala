@@ -51,6 +51,10 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
     (__ \ 'state).format(State.format[LibraryInvite]) and
     (__ \ 'authToken).format[String]
   )(LibraryInvite.apply, unlift(LibraryInvite.unapply))
+
+  implicit def ord: Ordering[LibraryInvite] = new Ordering[LibraryInvite] {
+    def compare(x: LibraryInvite, y: LibraryInvite): Int = x.access.priority compare y.access.priority
+  }
 }
 
 // Not sure we need this cache?
