@@ -70,7 +70,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def getLibrary(pubId: PublicId[Library]) = JsonAction.authenticated { request =>
+  def getLibraryById(pubId: PublicId[Library]) = JsonAction.authenticated { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
@@ -78,6 +78,24 @@ class LibraryController @Inject() (
       case Success(id) =>
         val lib = libraryCommander.getLibraryById(id)
         Ok(Json.obj("library" -> Json.toJson(libraryCommander.createFullLibraryInfo(lib))))
+    }
+  }
+
+  def getLibraryByPath(userStr: String, slugStr: String) = JsonAction.authenticated { request =>
+    // check if str is either a username or externalId
+    val owner = db.readOnlyMaster { implicit s =>
+      ExternalId.asOpt[User](userStr) match {
+        case Some(eid) => userRepo.getOpt(eid)
+        case None => userRepo.getUsername(Username(userStr))
+      }
+    }
+    owner match {
+      case None => BadRequest(Json.obj("error" -> "invalid username"))
+      case Some(owner) =>
+        libraryCommander.getLibraryByUserAndSlug(owner.id.get, LibrarySlug(slugStr)) match {
+          case None => BadRequest(Json.obj("error" -> "no library found"))
+          case Some(lib) => Ok(Json.obj("library" -> Json.toJson(libraryCommander.createFullLibraryInfo(lib))))
+        }
     }
   }
 
