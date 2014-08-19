@@ -10,7 +10,7 @@ object KifiResultCollector {
   val MIN_PERCENT_MATCH = 0.5f
 }
 
-class KifiResultCollector(clickBoosts: ResultClickBoosts, friendsUris: LongArraySet, maxHitsPerCategory: Int, percentMatchThreshold: Float) extends ResultCollector[ScoreContext] {
+class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: Int, percentMatchThreshold: Float) extends ResultCollector[ScoreContext] {
 
   private[this] val myHits = createQueue(maxHitsPerCategory)
   private[this] val friendsHits = createQueue(maxHitsPerCategory)
@@ -40,7 +40,7 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, friendsUris: LongArray
         if (score > 0.0f) {
           if ((visibility & Visibility.MEMBER) != 0) {
             myHits.insert(id, score, clickBoost, true)
-          } else if (friendsUris.findIndex(id) >= 0) {
+          } else if ((visibility & Visibility.NETWORK) != 0) {
             friendsHits.insert(id, score, clickBoost, false)
           } else {
             othersHits.insert(id, score, clickBoost, false)

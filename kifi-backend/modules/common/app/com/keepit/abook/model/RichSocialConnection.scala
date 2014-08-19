@@ -60,7 +60,7 @@ object RichSocialConnection {
 case class InviteRecommendation(
   network: SocialNetworkType,
   identifier: Either[EmailAddress, SocialId],
-  name: String,
+  name: Option[String],
   pictureUrl: Option[String],
   lastInvitedAt: Option[DateTime],
   score: Double)
@@ -70,7 +70,7 @@ object InviteRecommendation {
   implicit val format = (
     (__ \ 'network).format[SocialNetworkType] and
     (__ \ 'identifier).format(identifierFormat) and
-    (__ \ 'name).format[String] and
+    (__ \ 'name).formatNullable[String] and
     (__ \ 'pictureUrl).formatNullable[String] and
     (__ \ 'lastInvitedAt).formatNullable(DateTimeJsonFormat) and
     (__ \ 'score).format[Double]
