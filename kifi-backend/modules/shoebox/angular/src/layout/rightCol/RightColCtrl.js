@@ -138,14 +138,14 @@ angular.module('kifi')
           'path': $location.path()
         });
       }
-      delete $window.document.documentElement.dataset.guide;
+      $window.document.documentElement.removeAttribute('data-guide');
     };
-    if ('guide' in $window.document.documentElement.dataset) {
+    if ($window.document.documentElement.getAttribute('data-guide')) {
       $scope.triggerGuide();
     }
 
     $scope.importBookmarks = function () {
-      var kifiVersion = $window.document.documentElement.dataset.kifiExt;
+      var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
       if (!kifiVersion) {
         $rootScope.$emit('showGlobalModal','installExtension');
