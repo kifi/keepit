@@ -250,4 +250,13 @@ class LDACommander @Inject() (
     }
   }
 
+  def uriKLDivergence(uriId1: Id[NormalizedURI], uriId2: Id[NormalizedURI]): Option[Float] = {
+    val feat1 = db.readOnlyReplica { implicit s => uriTopicRepo.getActiveByURI(uriId1, wordRep.version) }
+    val feat2 = db.readOnlyReplica { implicit s => uriTopicRepo.getActiveByURI(uriId2, wordRep.version) }
+    (feat1, feat2) match {
+      case (Some(f1), Some(f2)) if (f1.numOfWords > 50 && f2.numOfWords > 50) => Some(KL_divergence(f1.feature.get.value, f2.feature.get.value))
+      case _ => None
+    }
+  }
+
 }
