@@ -92,7 +92,7 @@ class LibraryController @Inject() (
     owner match {
       case None => BadRequest(Json.obj("error" -> "invalid username"))
       case Some(owner) =>
-        libraryCommander.getLibraryByPath(owner, LibrarySlug(slugStr)) match {
+        libraryCommander.getLibraryByUserAndSlug(owner.id.get, LibrarySlug(slugStr)) match {
           case None => BadRequest(Json.obj("error" -> "no library found"))
           case Some(lib) => Ok(Json.obj("library" -> Json.toJson(libraryCommander.createFullLibraryInfo(lib))))
         }

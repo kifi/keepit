@@ -166,9 +166,9 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibraryByPath(owner: User, slug: LibrarySlug): Option[Library] = {
+  def getLibraryByUserAndSlug(ownerId: Id[User], slug: LibrarySlug): Option[Library] = {
     db.readOnlyMaster { implicit s =>
-      libraryRepo.getBySlugAndUserId(userId = owner.id.get, slug = slug)
+      libraryRepo.getBySlugAndUserId(userId = ownerId, slug = slug)
     }
   }
 

@@ -257,7 +257,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val testPath2 = com.keepit.controllers.website.routes.LibraryController.getLibraryByPath(extInput, slugInput).url
         val request2 = FakeRequest("GET", testPath2)
-        val result2: Future[SimpleResult] = libraryController.getLibraryByPath(unInput, slugInput)(request2)
+        val result2: Future[SimpleResult] = libraryController.getLibraryByPath(extInput, slugInput)(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
@@ -268,6 +268,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"name":"Library1",
              |"visibility":"secret",
              |"slug":"lib1",
+             |"url":"/ahsu/lib1",
              |"ownerId":"${user1.externalId}",
              |"collaborators":{"count":0,"users":[],"isMore":false},
              |"followers":{"count":0,"users":[],"isMore":false},

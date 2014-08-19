@@ -304,9 +304,9 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         val libraryCommander = inject[LibraryCommander]
 
-        val lib1 = libraryCommander.getLibraryByPath(userCaptain, LibrarySlug("murica"))
+        val lib1 = libraryCommander.getLibraryByUserAndSlug(userCaptain.id.get, LibrarySlug("murica"))
         lib1.get.id === libMurica.id
-        val lib2 = libraryCommander.getLibraryByPath(userCaptain, LibrarySlug("turica"))
+        val lib2 = libraryCommander.getLibraryByUserAndSlug(userCaptain.id.get, LibrarySlug("turica"))
         lib2.isEmpty === true
       }
     }
