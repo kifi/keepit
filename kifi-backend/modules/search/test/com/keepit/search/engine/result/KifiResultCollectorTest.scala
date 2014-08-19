@@ -17,7 +17,6 @@ class KifiResultCollectorTest extends Specification {
     "collect hits above MIN_PERCENT_MATCH" in {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(),
-        friendsUris = LongArraySet.empty,
         maxHitsPerCategory = 10,
         percentMatchThreshold = 0.0f)
       val ctx = new ScoreContext(expr, exprSize, 1.0f, Array(0.3f, 0.3f, 0.4f), collector)
@@ -46,7 +45,6 @@ class KifiResultCollectorTest extends Specification {
     "collect hits above percentMatchThreshold" in {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(),
-        friendsUris = LongArraySet.empty,
         maxHitsPerCategory = 10,
         percentMatchThreshold = 0.7f)
       val ctx = new ScoreContext(expr, exprSize, 1.0f, Array(0.3f, 0.3f, 0.4f), collector)
@@ -83,7 +81,6 @@ class KifiResultCollectorTest extends Specification {
     "collect a hit below percentMatchThreshold if clicked" in {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
-        friendsUris = LongArraySet.empty,
         maxHitsPerCategory = 10,
         percentMatchThreshold = 0.9f)
       val ctx = new ScoreContext(expr, exprSize, 1.0f, Array(0.3f, 0.3f, 0.4f), collector)
@@ -116,7 +113,6 @@ class KifiResultCollectorTest extends Specification {
     "collect hits by category" in {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
-        friendsUris = LongArraySet.from(Array(20L)),
         maxHitsPerCategory = 10,
         percentMatchThreshold = 0.0f)
       val ctx = new ScoreContext(expr, exprSize, 1.0f, Array(0.3f, 0.3f, 0.4f), collector)
@@ -124,12 +120,12 @@ class KifiResultCollectorTest extends Specification {
       ctx.set(10)
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
-      ctx.visibility = Visibility.PUBLIC
+      ctx.visibility = Visibility.OTHERS
       ctx.flush()
       ctx.set(20)
       ctx.addScore(0, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.PUBLIC
+      ctx.visibility = Visibility.NETWORK
       ctx.flush()
       ctx.set(30)
       ctx.addScore(1, 1.0f)
@@ -150,7 +146,6 @@ class KifiResultCollectorTest extends Specification {
     "not collect restricted hits" in {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
-        friendsUris = LongArraySet.from(Array(20L)),
         maxHitsPerCategory = 10,
         percentMatchThreshold = 0.0f)
       val ctx = new ScoreContext(expr, exprSize, 1.0f, Array(0.3f, 0.3f, 0.4f), collector)
