@@ -13,8 +13,8 @@ class MobilePeopleRecommendationController @Inject() (
     peopleRecoCommander: PeopleRecommendationCommander,
     socialUserRepo: SocialUserInfoRepo) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
-  def getFriendRecommendations(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
-    peopleRecoCommander.getFriendRecommendations(request.userId, page, pageSize).map { recoData =>
+  def getFriendRecommendations(page: Int, pageSize: Int, offset: Option[Int], limit: Option[Int]) = JsonAction.authenticatedAsync { request =>
+    peopleRecoCommander.getFriendRecommendations(request.userId, offset.getOrElse(page * pageSize), limit.getOrElse(pageSize)).map { recoData =>
       val recommendedUsers = recoData.recommendedUsers
       val basicUsers = recoData.basicUsers
       val mutualFriends = recoData.mutualFriends

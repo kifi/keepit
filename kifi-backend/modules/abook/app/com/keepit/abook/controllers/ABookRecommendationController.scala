@@ -15,8 +15,8 @@ import com.keepit.common.mail.EmailAddress
 class ABookRecommendationController @Inject() (
     friendRecommendationCommander: ABookRecommendationCommander) extends ABookServiceController {
 
-  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int) = Action.async { request =>
-    friendRecommendationCommander.getFriendRecommendations(userId, page, pageSize).map { recommendedUsers =>
+  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int) = Action.async { request =>
+    friendRecommendationCommander.getFriendRecommendations(userId, offset, limit).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }
@@ -27,9 +27,9 @@ class ABookRecommendationController @Inject() (
     Ok
   }
 
-  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, networks: String) = Action.async { request =>
+  def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: String) = Action.async { request =>
     val relevantNetworks = networks.split(",").map(SocialNetworkType(_)).toSet
-    friendRecommendationCommander.getInviteRecommendations(userId, page, pageSize, relevantNetworks).map { recommendedUsers =>
+    friendRecommendationCommander.getInviteRecommendations(userId, offset, limit, relevantNetworks).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }

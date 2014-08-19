@@ -22,8 +22,8 @@ class PeopleRecommendationCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     db: Database) {
 
-  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[FriendRecommendationData] = {
-    abookServiceClient.getFriendRecommendations(userId, page, pageSize).map { recommendedUsers =>
+  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[FriendRecommendationData] = {
+    abookServiceClient.getFriendRecommendations(userId, offset, limit).map { recommendedUsers =>
       val friends = db.readOnlyReplica { implicit session =>
         (recommendedUsers.toSet + userId).map(id => id -> userConnectionRepo.getConnectedUsers(id)).toMap
       }
