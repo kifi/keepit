@@ -726,7 +726,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         }
         val res2 = libraryCommander.createLibraryFromCollection(userCaptain.id.get, tag2) // try to create library Murica
         res2._2.length === 2 // two bad keeps already in Murica
-        res2._2.map(_._1.title.get).toSeq === Seq("Reddit", "Freedom")
+        res2._2.map(_._1.title.get).contains("Reddit") === true
+        res2._2.map(_._1.title.get).contains("Freedom") === true
         db.readOnlyMaster { implicit s =>
           keepRepo.getByLibrary(libMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
           keepRepo.count === 7
