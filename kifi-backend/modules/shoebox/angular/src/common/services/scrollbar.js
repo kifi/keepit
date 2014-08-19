@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.scrollbar', [])
+angular.module('kifi')
 
 .factory('scrollbar', [
   '$document',
@@ -50,7 +50,7 @@ angular.module('kifi.scrollbar', [])
        * Overriding for now - seems like it doesn't work in Firefox anymore
        * - the parent of 'antiscroll-inner' should have 'overflow: hidden'
        * - children of 'antiscroll-inner' should have 'width: calc(100% - 30px)'
-       * 
+       *
        * Known issue:
        * - the scrollbar may remain in the 'thin' state all the time
        */

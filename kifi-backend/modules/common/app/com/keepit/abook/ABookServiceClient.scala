@@ -64,10 +64,11 @@ trait ABookServiceClient extends ServiceClient {
   def getEmailAccountsChanged(seqNum: SequenceNumber[EmailAccountInfo], fetchSize: Int): Future[Seq[EmailAccountInfo]]
   def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]]
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]]
-  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]]
+  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Seq[Id[User]]]
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit]
-  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]]
+  def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]]
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]): Future[Unit]
+  def getIrrelevantRecommendations(userId: Id[User]): Future[IrrelevantPeopleRecommendations]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -246,23 +247,28 @@ class ABookServiceClientImpl @Inject() (
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] =
     call(ABook.internal.getUsersWithContact(email)).map(_.json.as[Set[Id[User]]])
 
-  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = {
-    call(ABook.internal.getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int)).map(_.json.as[Seq[Id[User]]])
+  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Seq[Id[User]]] = {
+    call(ABook.internal.getFriendRecommendations(userId, offset, limit)).map(_.json.as[Seq[Id[User]]])
   }
 
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit] = {
-    call(ABook.internal.hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User])).map(_ => ())
+    call(ABook.internal.hideFriendRecommendation(userId, irrelevantUserId)).map(_ => ())
   }
 
-  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = {
-    call(ABook.internal.getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, networks)).map(_.json.as[Seq[InviteRecommendation]])
+  def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = {
+    call(ABook.internal.getInviteRecommendations(userId, offset, limit, networks)).map(_.json.as[Seq[InviteRecommendation]])
   }
 
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]) = {
     implicit val irrelevantFriendIdFormat = EitherFormat[EmailAddress, Id[SocialUserInfo]]
     val payload = Json.obj("network" -> network, "irrelevantFriendId" -> irrelevantFriendId)
-    call(ABook.internal.hideInviteRecommendation(userId: Id[User]), payload).map(_ => ())
+    call(ABook.internal.hideInviteRecommendation(userId), payload).map(_ => ())
   }
+
+  def getIrrelevantRecommendations(userId: Id[User]): Future[IrrelevantPeopleRecommendations] = {
+    call(ABook.internal.getIrrelevantRecommendations(userId)).map(_.json.as[IrrelevantPeopleRecommendations])
+  }
+
 }
 
 class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
@@ -335,13 +341,15 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] = Future.successful(contactsConnectedToEmailAddress)
 
-  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = synchronized {
+  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Seq[Id[User]]] = synchronized {
     Future.successful(friendRecommendationsExpectations(userId))
   }
 
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit] = Future.successful(())
 
-  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, relevantNetworks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = Future.successful(Seq.empty)
+  def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, relevantNetworks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = Future.successful(Seq.empty)
 
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]) = Future.successful(())
+
+  def getIrrelevantRecommendations(userId: Id[User]) = Future.successful(IrrelevantPeopleRecommendations.empty(userId))
 }

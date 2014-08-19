@@ -1,19 +1,6 @@
 'use strict';
 
-angular.module('kifi.profile', [
-  'kifi',
-  'ngRoute',
-  'util',
-  'kifi.profileService',
-  'kifi.profileInput',
-  'kifi.profileNameInput',
-  'kifi.routeService',
-  'kifi.profileEmailAddresses',
-  'kifi.profileChangePassword',
-  'kifi.profileImage',
-  'jun.facebook',
-  'angulartics'
-])
+angular.module('kifi')
 
 .config([
   '$routeProvider',
@@ -83,10 +70,6 @@ angular.module('kifi.profile', [
     };
 
     $scope.saveEmail = function (email) {
-      if ($scope.me && $scope.me.primaryEmail.address === email) {
-        return profileService.successInputActionResult();
-      }
-
       return getEmailInfo(email).then(function (result) {
         return checkCandidateEmailSuccess(email, result.data);
       }, function (result) {

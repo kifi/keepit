@@ -121,4 +121,16 @@ class LDAController @Inject() (
     Ok(Json.toJson(res))
   }
 
+  def explainFeed() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val userId = (js \ "user").as[Id[User]]
+    val uris = (js \ "uris").as[Seq[Id[NormalizedURI]]]
+    val explain = lda.explainFeed(userId, uris)
+    Ok(Json.toJson(explain))
+  }
+
+  def uriKLDivergence(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]) = Action { request =>
+    Ok(Json.toJson(lda.uriKLDivergence(uri1, uri2)))
+  }
+
 }

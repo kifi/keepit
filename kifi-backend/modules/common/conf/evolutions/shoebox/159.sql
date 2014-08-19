@@ -1,4 +1,4 @@
-# SHOEBOX
+# HEIMDAL
 
 # --- !Ups
 
@@ -18,13 +18,7 @@ CREATE TABLE rekeep(
 
     attr_factor int NOT NULL DEFAULT 1,
 
-    PRIMARY KEY (id),
-
-    CONSTRAINT rekeep_keeper_id     FOREIGN KEY (keeper_id)     REFERENCES user(id),
-    CONSTRAINT rekeep_src_user_id   FOREIGN KEY (src_user_id)   REFERENCES user(id),
-    CONSTRAINT rekeep_uri_id        FOREIGN KEY (uri_id)        REFERENCES normalized_uri(id),
-    CONSTRAINT rekeep_keep_id       FOREIGN KEY (keep_id)       REFERENCES bookmark(id),
-    CONSTRAINT rekeep_src_keep_id   FOREIGN KEY (src_keep_id)   REFERENCES bookmark(id)
+    PRIMARY KEY (id)
 );
 
 insert into evolutions (name, description) values('159.sql', 'adding rekeep table');

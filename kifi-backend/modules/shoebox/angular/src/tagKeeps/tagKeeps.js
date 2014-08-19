@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.tagKeeps', ['util', 'kifi.keepService'])
+angular.module('kifi')
 
 .config([
   '$routeProvider',

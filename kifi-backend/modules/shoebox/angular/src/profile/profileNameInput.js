@@ -1,9 +1,9 @@
 'use strict';
 
-angular.module('kifi.profileNameInput', ['util'])
+angular.module('kifi')
 
-.directive('kfProfileNameInput', ['keyIndices', 'util',
-  function (keyIndices, util) {
+.directive('kfProfileNameInput', ['$document', '$window', 'keyIndices', 'util',
+  function ($document, $window, keyIndices, util) {
     return {
       restrict: 'A',
       scope: {
@@ -24,14 +24,12 @@ angular.module('kifi.profileNameInput', ['util'])
         // Internal data.
         var oldName = {};
 
-        // Key press event listeners.
+        // DOM event listeners.
         element.find('input')
           .on('keydown', function (event) {
             switch (event.which) {
               case keyIndices.KEY_ESC:
-                clearInputError();
-                revertToOldName();
-                scope.editing = false;
+                cancel();
                 break;
               case keyIndices.KEY_ENTER:
                 scope.save();
@@ -40,7 +38,31 @@ angular.module('kifi.profileNameInput', ['util'])
           });
 
         // Internal methods.
-        var showInputError = function (errorType, error) {
+        function cancel() {
+          clearInputError();
+          revertToOldName();
+          scope.editing = false;
+        }
+
+        function onClickOutsideInput(event) {
+          // When user clicks outside the inputs and save button, cancel edits.
+          if (!event.target.classList.contains('profile-name-input') &&
+            !event.target.classList.contains('profile-input-save')) {
+            $document.off('mousedown', onClickOutsideInput);
+            scope.$apply(cancel);
+          }
+        }
+
+        function onFocusOutsideInput(event) {
+          // When user focuses outside the inputs and save button, cancel edits.
+          if (!event.target.classList.contains('profile-name-input') &&
+            !event.target.classList.contains('profile-input-save')) {
+            $window.removeEventListener('focus', onFocusOutsideInput, true);
+            scope.$apply(cancel);
+          }
+        }
+
+        function showInputError(errorType, error) {
           if (errorType === 'badFirstName') {
             scope.badFirstName = true;
           } else if (errorType === 'badLastName') {
@@ -48,36 +70,38 @@ angular.module('kifi.profileNameInput', ['util'])
           }
           scope.errorHeader = error.header || '';
           scope.errorBody = error.body || '';
-        };
+        }
 
-        var clearInputError = function () {
+        function clearInputError() {
           scope.badFirstName = false;
           scope.badLastName = false;
-        };
+        }
 
-        var saveOldName = function () {
+        function saveOldName() {
           oldName = {
             firstName: scope.name.firstName,
             lastName: scope.name.lastName
           };
-        };
+        }
 
-        var revertToOldName = function () {
+        function revertToOldName() {
           scope.name = {
             firstName: oldName.firstName,
             lastName: oldName.lastName
           };
-        };
+        }
 
-        var sameName = function (nameA, nameB) {
+        function sameName(nameA, nameB) {
           return (nameA.firstName === nameB.firstName) && (nameA.lastName === nameB.lastName);
-        };
+        }
 
         // Scope methods.
         scope.edit = function () {
           clearInputError();
           saveOldName();
           scope.editing = true;
+          $document.on('mousedown', onClickOutsideInput);
+          $window.addEventListener('focus', onFocusOutsideInput, true);
         };
 
         scope.save = function () {

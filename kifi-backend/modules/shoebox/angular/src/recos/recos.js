@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.recos', [])
+angular.module('kifi')
 
 .config([
   '$routeProvider',

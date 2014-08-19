@@ -12,14 +12,12 @@ Kifi recommends @emailData.recos.size items for you:
             </h3>
             <div style="float:left;clear:both;">
                 <div style="float:right;">
-                    <form method="post" action="https://www.kifi.com/site/recos/vote" style="float:left;">
+                    <form method="post" action="https://www.kifi.com/site/recos/vote?url=@helper.urlEncode(reco.url)" style="float:left;">
                         <input type="hidden" name="vote" value="true"/>
-                        <input type="hidden" name="url" value="@helper.urlEncode(reco.url)"/>
                         <input type="submit" value="Good"/>
                     </form>
-                    <form method="post" action="https://www.kifi.com/site/recos/vote" style="float:left;">
+                    <form method="post" action="https://www.kifi.com/site/recos/vote?url=@helper.urlEncode(reco.url)" style="float:left;">
                         <input type="hidden" name="vote" value="false"/>
-                        <input type="hidden" name="url" value="@helper.urlEncode(reco.url)"/>
                         <input type="submit" value="Bad"/>
                     </form>
                 </div>

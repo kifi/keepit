@@ -62,7 +62,8 @@ case class InviteRecommendation(
   identifier: Either[EmailAddress, SocialId],
   name: String,
   pictureUrl: Option[String],
-  lastInvitedAt: Option[DateTime])
+  lastInvitedAt: Option[DateTime],
+  score: Double)
 
 object InviteRecommendation {
   val identifierFormat = EitherFormat[EmailAddress, SocialId]
@@ -71,6 +72,19 @@ object InviteRecommendation {
     (__ \ 'identifier).format(identifierFormat) and
     (__ \ 'name).format[String] and
     (__ \ 'pictureUrl).formatNullable[String] and
-    (__ \ 'lastInvitedAt).formatNullable(DateTimeJsonFormat)
+    (__ \ 'lastInvitedAt).formatNullable(DateTimeJsonFormat) and
+    (__ \ 'score).format[Double]
   )(InviteRecommendation.apply, unlift(InviteRecommendation.unapply))
+}
+
+case class IrrelevantPeopleRecommendations(
+  userId: Id[User],
+  irrelevantUsers: Set[Id[User]],
+  irrelevantFacebookAccounts: Set[Id[SocialUserInfo]],
+  irrelevantLinkedInAccounts: Set[Id[SocialUserInfo]],
+  irrelevantEmailAccounts: Set[Id[EmailAccountInfo]])
+
+object IrrelevantPeopleRecommendations {
+  implicit val format = Json.format[IrrelevantPeopleRecommendations]
+  def empty(userId: Id[User]) = IrrelevantPeopleRecommendations(userId, Set.empty, Set.empty, Set.empty, Set.empty)
 }

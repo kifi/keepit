@@ -169,10 +169,16 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           val iterateeAndEnumeratorFuture = streamSessionFuture.map { streamSession =>
             implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
 
-            val typedVersionOpt: Option[KifiVersion] = UserAgent.fromString(streamSession.userAgent) match {
-              case ua if ua.isKifiIphoneApp || versionOpt.exists(_.startsWith("m")) => versionOpt.map { v => KifiIPhoneVersion(v.stripPrefix("m")) }
-              case ua if ua.isKifiAndroidApp => versionOpt.map(KifiAndroidVersion.apply)
-              case _ => versionOpt.map(KifiExtVersion.apply)
+            val typedVersionOpt: Option[KifiVersion] = try {
+              UserAgent.fromString(streamSession.userAgent) match {
+                case ua if ua.isKifiIphoneApp || versionOpt.exists(_.startsWith("m")) => versionOpt.map { v => KifiIPhoneVersion(v.stripPrefix("m")) }
+                case ua if ua.isKifiAndroidApp => versionOpt.map(KifiAndroidVersion.apply)
+                case _ => versionOpt.map(KifiExtVersion.apply)
+              }
+            } catch {
+              case t: Throwable =>
+                airbrake.notify(s"Failed getting ws client version for user ${streamSession.userId} on ${streamSession.userAgent}", t)
+                None
             }
 
             val ipOpt: Option[String] = eipOpt.flatMap { eip =>
