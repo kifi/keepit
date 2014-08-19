@@ -156,8 +156,10 @@ class KeepInterner @Inject() (
   }
 
   val MAX_RANDOM_SCHEDULE_DELAY: Int = 600000
+  private val httpPrefix = "https?://".r
+
   private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Try[InternedUriAndKeep] = try {
-    if (!rawBookmark.url.toLowerCase.startsWith("javascript:")) {
+    if (httpPrefix.findPrefixOf(rawBookmark.url.toLowerCase).isDefined) {
       import NormalizedURIStates._
       val uri = try {
         normalizedURIInterner.internByUri(rawBookmark.url, NormalizationCandidate(rawBookmark): _*)
@@ -176,7 +178,7 @@ class KeepInterner @Inject() (
       val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, userId, rawBookmark.isPrivate, mutatePrivacy, installationId, source, rawBookmark.title, rawBookmark.url)
       Success(InternedUriAndKeep(bookmark, uri, isNewKeep, wasInactiveKeep))
     } else {
-      Failure(new Exception(s"bookmark url is a javascript command: ${rawBookmark.url}"))
+      Failure(new Exception(s"bookmark url is not an http protocol: ${rawBookmark.url}"))
     }
   } catch {
     case e: Throwable =>
