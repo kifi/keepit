@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('friendService', [
-  '$http', 'env', '$q', 'routeService', '$analytics', '$location', 'Clutch', 'util',
-  function ($http, env, $q, routeService, $analytics, $location, Clutch, util) {
+  '$analytics', '$http', '$location', '$q', '$timeout', 'env', 'Clutch', 'routeService', 'util',
+  function ($analytics, $http, $location, $q, $timeout, env, Clutch, routeService, util) {
     /* Naming convention:
      *  - Kifi Friend is an existing connection on Kifi
      *  - Kifi User is a user of Kifi, may not be a friend.
@@ -139,7 +139,32 @@ angular.module('kifi')
       },
 
       getPeopleYouMayKnow: function (offset, limit) {
-        return kifiPeopleYouMayKnowService.get(offset || 0, limit || 10);
+        var pymkDeferred = $q.defer();
+
+        // If the people-you-may-know endpoint does not return a good result,
+        // retry up to 3 times.
+        var pymkWaitTimes = [0, 1000, 3 * 1000, 10 * 1000];
+        function getPymkWithRetries(numRetries) {
+          numRetries = numRetries || 0;
+          kifiPeopleYouMayKnowService.get(offset || 0, limit || 0).then(function (people) {
+            if (people.length > 0) {
+              pymkDeferred.resolve(people);
+            } else {
+              if (numRetries === 3) {
+                pymkDeferred.resolve([]);
+              } else {
+                numRetries++;
+                $timeout(function () {
+                  getPymkWithRetries(numRetries);
+                }, pymkWaitTimes[numRetries]);
+              }
+            }
+          });
+        }
+
+        getPymkWithRetries();
+
+        return pymkDeferred.promise;
       },
 
       hidePeopleYouMayKnow: function (id) {
