@@ -205,24 +205,25 @@ var api = (function createApi() {
     }
   }));
 
-  chrome.tabs.onReplaced.addListener(errors.wrap(function (newTabId, oldTabId) {
-    log('#666', '[tabs.onReplaced]', oldTabId, '<-', newTabId);
-    var normal = normalTab[newTabId] = normalTab[oldTabId];
-    onRemoved(oldTabId);
+  chrome.tabs.onReplaced.addListener(errors.wrap(function (addedTabId, removedTabId) {
+    log('#666', '[tabs.onReplaced]', removedTabId, '<-', addedTabId);
+    var normal = normalTab[addedTabId] = normalTab[removedTabId];
+    onRemoved(removedTabId);
     if (normal) {
-      var page = pages[newTabId];
-      if (page.icon) {
-        setPageAction(newTabId, page.icon);
+      var page = pages[addedTabId];
+      if (page && page.icon) {
+        setPageAction(addedTabId, page.icon);
       }
-      if (httpRe.test(page.url)) {
+      if (page && httpRe.test(page.url)) {
         dispatch.call(api.tabs.on.loading, page);
-        injectContentScripts(page);
+        injectContentScripts(page); // TODO: verify DOM ready first
       }
     }
   }));
 
   chrome.tabs.onRemoved.addListener(errors.wrap(onRemoved));
   function onRemoved(tabId, info) {
+    log('#666', '[onRemoved]', tabId, info || '');
     var normal = normalTab[tabId];
     if (normal != null && (!info || !info.temp)) {
       delete normalTab[tabId];
