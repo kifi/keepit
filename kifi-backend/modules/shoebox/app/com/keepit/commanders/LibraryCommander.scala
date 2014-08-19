@@ -161,52 +161,37 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def createLibraryFromCollection(userId: Id[User], tag: Collection): (Library, Seq[(Keep, LibraryError)]) = db.readWrite { implicit s =>
-    def saveKeep(lib: Library, keep: Keep) {
-      val newKeep = keepRepo.save(Keep(
-        userId = userId,
-        libraryId = lib.id,
-        title = keep.title,
-        uriId = keep.uriId,
-        urlId = keep.urlId,
-        url = keep.url,
-        isPrivate = keep.isPrivate,
-        bookmarkPath = keep.bookmarkPath,
-        source = KeepSource.site))
-      keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
-    }
-    val allKeeps2Tag = keepToCollectionRepo.getByCollection(tag.id.get)
-    libraryRepo.getByNameAndUserId(userId, tag.name) match {
-      case None =>
-        val lib = libraryRepo.save(Library(name = tag.name,
-          ownerId = userId,
-          visibility = LibraryVisibility.SECRET,
-          slug = LibrarySlug(tag.name),
-          kind = LibraryKind.USER_CREATED,
-          memberCount = 1))
-        libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
-        allKeeps2Tag.map { k2c =>
-          val keep = keepRepo.get(k2c.keepId)
-          saveKeep(lib, keep)
-        }
-        (lib, Seq.empty)
-      case Some(lib) =>
-        val existingURIs = keepRepo.getByLibrary(lib.id.get).map(_.uriId).toSet
-        val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
-        allKeeps2Tag.map { k2c =>
-          val keep = keepRepo.get(k2c.keepId)
-          if (!existingURIs.contains(keep.uriId)) {
-            saveKeep(lib, keep)
-          } else {
-            badKeeps += keep -> LibraryError.AlreadyExistsInDest
+  def copyKeepsFromCollectionToLibrary(libraryId: Id[Library], tagName: String): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
+    db.readWrite { implicit s =>
+      val lib = libraryRepo.get(libraryId)
+      val ownerId = lib.ownerId
+      collectionRepo.getByUserAndName(ownerId, tagName) match {
+        case None =>
+          Left(LibraryFail("tag not found"))
+        case Some(tag) =>
+          val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
+          val existingURIs = keepRepo.getByLibrary(libraryId).map(_.uriId).toSet
+          val keeps = keepToCollectionRepo.getByCollection(tag.id.get).map(k2c => keepRepo.get(k2c.keepId))
+          keeps.map { k =>
+            if (!existingURIs.contains(k.uriId)) {
+              val newKeep = keepRepo.save(Keep(
+                userId = ownerId,
+                libraryId = Some(libraryId),
+                title = k.title,
+                uriId = k.uriId,
+                urlId = k.urlId,
+                url = k.url,
+                isPrivate = k.isPrivate,
+                bookmarkPath = k.bookmarkPath,
+                source = KeepSource.site))
+              keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
+            } else {
+              badKeeps += k -> LibraryError.AlreadyExistsInDest
+            }
           }
-        }
-        (lib, badKeeps.toSeq)
+          Right(badKeeps.toSeq)
+      }
     }
-  }
-
-  def getLibraryById(id: Id[Library]): Library = db.readOnlyMaster { implicit s =>
-    libraryRepo.get(id)
   }
 
   def getLibraryByUserAndSlug(ownerId: Id[User], slug: LibrarySlug): Option[Library] = db.readOnlyMaster { implicit s =>
@@ -221,15 +206,18 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def userHasVisibility(userId: Id[User], libraryId: Id[Library]): Boolean = {
+  def userAccess(userId: Id[User], libraryId: Id[Library]): Option[LibraryAccess] = {
     db.readOnlyMaster { implicit s =>
-      libraryRepo.get(libraryId).visibility match {
-        case LibraryVisibility.PUBLISHED =>
-          true
-        case LibraryVisibility.DISCOVERABLE =>
-          libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).nonEmpty
-        case LibraryVisibility.SECRET =>
-          false
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
+        case Some(mem) =>
+          Some(mem.access)
+        case None =>
+          if (libraryRepo.get(libraryId).visibility == LibraryVisibility.PUBLISHED)
+            Some(LibraryAccess.READ_ONLY)
+          else if (libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId).nonEmpty)
+            Some(LibraryAccess.READ_ONLY)
+          else
+            None
       }
     }
   }

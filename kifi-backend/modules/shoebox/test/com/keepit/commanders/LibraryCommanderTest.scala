@@ -283,21 +283,6 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get library by publicId" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
-        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
-        val libraryCommander = inject[LibraryCommander]
-
-        val lib1 = libraryCommander.getLibraryById(libShield.id.get)
-        lib1.id === libShield.id
-        val lib2 = libraryCommander.getLibraryById(libMurica.id.get)
-        lib2.id === libMurica.id
-        val lib3 = libraryCommander.getLibraryById(libScience.id.get)
-        lib3.id === libScience.id
-      }
-    }
-
     "get library by path" in {
       withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
@@ -351,10 +336,15 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         val libraryCommander = inject[LibraryCommander]
 
-        libraryCommander.userHasVisibility(userIron.id.get, libScience.id.get) === true
-        libraryCommander.userHasVisibility(userIron.id.get, libMurica.id.get) === true
-        libraryCommander.userHasVisibility(userIron.id.get, libShield.id.get) === false
-        libraryCommander.userHasVisibility(userCaptain.id.get, libScience.id.get) === false
+        db.readWrite { implicit s =>
+          libraryRepo.save(libScience.copy(visibility = LibraryVisibility.PUBLISHED))
+        }
+
+        libraryCommander.userAccess(userIron.id.get, libScience.id.get) === Some(LibraryAccess.OWNER) // test owner access
+        libraryCommander.userAccess(userHulk.id.get, libScience.id.get) === Some(LibraryAccess.READ_INSERT) // test membership accesss
+        libraryCommander.userAccess(userIron.id.get, libShield.id.get) === None // test no membership (secret library)
+        libraryCommander.userAccess(userCaptain.id.get, libScience.id.get) === Some(LibraryAccess.READ_ONLY) // test published library (no membership)
+        libraryCommander.userAccess(userHulk.id.get, libMurica.id.get) === Some(LibraryAccess.READ_ONLY) // test invited (but not accepted) access
       }
     }
 
@@ -682,7 +672,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val site2 = "http://www.freedom.org/"
         val site3 = "http://www.mcdonalds.com/"
 
-        val (tag1, tag2) = db.readWrite { implicit s =>
+        val (tag1, tag2, libUSA) = db.readWrite { implicit s =>
           val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Reddit")))
           val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))
           val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds")))
@@ -708,31 +698,31 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
 
+          val libUSA = libraryRepo.save(Library(name = "USA", slug = LibrarySlug("usa"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
           keepRepo.count === 3
           collectionRepo.count(userCaptain.id.get) === 2
           keepToCollectionRepo.count === 6
-          (tag1, tag2)
+          (tag1, tag2, libUSA)
         }
 
         val libraryCommander = inject[LibraryCommander]
-        val res1 = libraryCommander.createLibraryFromCollection(userCaptain.id.get, tag1) // create library USA
-        res1._2.length === 0 // three keeps added in library USA
+        libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, "Canada").isLeft === true
+        val res1 = libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, "USA") //move keeps with "USA" to library "USA"
+        res1.isRight === true
+        res1.right.get.length === 0
         db.readOnlyMaster { implicit s =>
-          val libUSA = libraryRepo.getByNameAndUserId(userCaptain.id.get, "USA").get
-          keepRepo.getByLibrary(libUSA.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
           keepRepo.count === 6
           keepToCollectionRepo.count === 9
-          keepRepo.getByLibrary(libMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom")
         }
-        val res2 = libraryCommander.createLibraryFromCollection(userCaptain.id.get, tag2) // try to create library Murica
-        res2._2.length === 2 // two bad keeps already in Murica
-        res2._2.map(_._1.title.get).contains("Reddit") === true
-        res2._2.map(_._1.title.get).contains("Freedom") === true
+
+        val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, "Murica") //move keeps with "Murica" to library "Murica"
+        res2.isRight === true
+        res2.right.get.unzip._1.map(_.title.get).sorted === Seq("Freedom", "Reddit")
         db.readOnlyMaster { implicit s =>
-          keepRepo.getByLibrary(libMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
           keepRepo.count === 7
           keepToCollectionRepo.count === 10
-          collectionRepo.count(userCaptain.id.get) === 2
         }
       }
     }

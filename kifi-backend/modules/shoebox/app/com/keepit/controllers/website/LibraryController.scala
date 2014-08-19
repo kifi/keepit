@@ -76,7 +76,7 @@ class LibraryController @Inject() (
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) =>
-        val lib = libraryCommander.getLibraryById(id)
+        val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
         Ok(Json.obj("library" -> Json.toJson(libraryCommander.createFullLibraryInfo(lib))))
     }
   }
