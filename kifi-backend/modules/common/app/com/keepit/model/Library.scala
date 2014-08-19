@@ -57,8 +57,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (name != "") && !(name.length > maxNameLength) && !(name.contains("\"")) && !(name.contains("/"))
   }
 
-  def formatLibraryUrl(owner: BasicUser, slug: LibrarySlug): String = {
-    val usernameString = if (owner.username.isEmpty) owner.externalId.id else owner.username.get.value
+  def formatLibraryUrl(ownerUsername: Option[Username], ownerExternalId: ExternalId[User], slug: LibrarySlug): String = {
+    val usernameString = if (ownerUsername.isEmpty) ownerExternalId.id else ownerUsername.get.value
     s"/$usernameString/${slug.value}"
   }
 }
