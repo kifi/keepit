@@ -345,6 +345,19 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "does user have visibility" in {
+      withDb(FakeCryptoModule()) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
+        val libraryCommander = inject[LibraryCommander]
+
+        libraryCommander.userHasVisibility(userIron.id.get, libScience.id.get) === true
+        libraryCommander.userHasVisibility(userIron.id.get, libMurica.id.get) === true
+        libraryCommander.userHasVisibility(userIron.id.get, libShield.id.get) === false
+        libraryCommander.userHasVisibility(userCaptain.id.get, libScience.id.get) === false
+      }
+    }
+
     "intern user system libraries" in {
       withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
@@ -655,6 +668,70 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           keepRepo.count === 8
           keepRepo.getByLibrary(libIronMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom") // for now, URIs that exist in toLibrary also stay in fromLibrary
           keepRepo.getByLibrary(libFreedom.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+        }
+      }
+    }
+
+    "create library from tag" in {
+      withDb(FakeCryptoModule()) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
+
+        val t1 = new DateTime(2014, 8, 1, 4, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val site1 = "http://www.reddit.com/r/murica"
+        val site2 = "http://www.freedom.org/"
+        val site3 = "http://www.mcdonalds.com/"
+
+        val (tag1, tag2) = db.readWrite { implicit s =>
+          val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Reddit")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))
+          val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds")))
+
+          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+          val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
+
+          val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+          val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+          val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
+            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = None))
+
+          val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "USA"))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag1.id.get))
+
+          val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "Murica"))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag2.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
+
+          keepRepo.count === 3
+          collectionRepo.count(userCaptain.id.get) === 2
+          keepToCollectionRepo.count === 6
+          (tag1, tag2)
+        }
+
+        val libraryCommander = inject[LibraryCommander]
+        val res1 = libraryCommander.createLibraryFromCollection(userCaptain.id.get, tag1) // create library USA
+        res1._2.length === 0 // three keeps added in library USA
+        db.readOnlyMaster { implicit s =>
+          val libUSA = libraryRepo.getByNameAndUserId(userCaptain.id.get, "USA").get
+          keepRepo.getByLibrary(libUSA.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.count === 6
+          keepToCollectionRepo.count === 9
+          keepRepo.getByLibrary(libMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom")
+        }
+        val res2 = libraryCommander.createLibraryFromCollection(userCaptain.id.get, tag2) // try to create library Murica
+        res2._2.length === 2 // two bad keeps already in Murica
+        res2._2.map(_._1.title.get).toSeq === Seq("Reddit", "Freedom")
+        db.readOnlyMaster { implicit s =>
+          keepRepo.getByLibrary(libMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.count === 7
+          keepToCollectionRepo.count === 10
+          collectionRepo.count(userCaptain.id.get) === 2
         }
       }
     }

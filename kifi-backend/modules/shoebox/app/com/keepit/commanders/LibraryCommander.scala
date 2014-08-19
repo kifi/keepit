@@ -28,6 +28,7 @@ class LibraryCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
+    collectionRepo: CollectionRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -160,16 +161,56 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibraryById(id: Id[Library]): Library = {
-    db.readOnlyMaster { implicit s =>
-      libraryRepo.get(id)
+  def createLibraryFromCollection(userId: Id[User], tag: Collection): (Library, Seq[(Keep, LibraryError)]) = db.readWrite { implicit s =>
+    def saveKeep(lib: Library, keep: Keep) {
+      val newKeep = keepRepo.save(Keep(
+        userId = userId,
+        libraryId = lib.id,
+        title = keep.title,
+        uriId = keep.uriId,
+        urlId = keep.urlId,
+        url = keep.url,
+        isPrivate = keep.isPrivate,
+        bookmarkPath = keep.bookmarkPath,
+        source = KeepSource.site))
+      keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
+    }
+    val allKeeps2Tag = keepToCollectionRepo.getByCollection(tag.id.get)
+    libraryRepo.getByNameAndUserId(userId, tag.name) match {
+      case None =>
+        val lib = libraryRepo.save(Library(name = tag.name,
+          ownerId = userId,
+          visibility = LibraryVisibility.SECRET,
+          slug = LibrarySlug(tag.name),
+          kind = LibraryKind.USER_CREATED,
+          memberCount = 1))
+        libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = userId, access = LibraryAccess.OWNER, showInSearch = true))
+        allKeeps2Tag.map { k2c =>
+          val keep = keepRepo.get(k2c.keepId)
+          saveKeep(lib, keep)
+        }
+        (lib, Seq.empty)
+      case Some(lib) =>
+        val existingURIs = keepRepo.getByLibrary(lib.id.get).map(_.uriId).toSet
+        val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
+        allKeeps2Tag.map { k2c =>
+          val keep = keepRepo.get(k2c.keepId)
+          if (!existingURIs.contains(keep.uriId)) {
+            saveKeep(lib, keep)
+          } else {
+            badKeeps += keep -> LibraryError.AlreadyExistsInDest
+          }
+        }
+        (lib, badKeeps.toSeq)
     }
   }
 
-  def getLibraryByUserAndSlug(ownerId: Id[User], slug: LibrarySlug): Option[Library] = {
-    db.readOnlyMaster { implicit s =>
-      libraryRepo.getBySlugAndUserId(userId = ownerId, slug = slug)
-    }
+  def getLibraryById(id: Id[Library]): Library = db.readOnlyMaster { implicit s =>
+    libraryRepo.get(id)
+  }
+
+  def getLibraryByUserAndSlug(ownerId: Id[User], slug: LibrarySlug): Option[Library] = db.readOnlyMaster { implicit s =>
+    libraryRepo.getBySlugAndUserId(userId = ownerId, slug = slug)
   }
 
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryAccess, Library)], Seq[(LibraryInvite, Library)]) = {
@@ -177,6 +218,19 @@ class LibraryCommander @Inject() (
       val myLibraries = libraryRepo.getByUser(userId)
       val myInvites = libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.ACCEPTED, LibraryInviteStates.INACTIVE))
       (myLibraries, myInvites)
+    }
+  }
+
+  def userHasVisibility(userId: Id[User], libraryId: Id[Library]): Boolean = {
+    db.readOnlyMaster { implicit s =>
+      libraryRepo.get(libraryId).visibility match {
+        case LibraryVisibility.PUBLISHED =>
+          true
+        case LibraryVisibility.DISCOVERABLE =>
+          libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).nonEmpty
+        case LibraryVisibility.SECRET =>
+          false
+      }
     }
   }
 
