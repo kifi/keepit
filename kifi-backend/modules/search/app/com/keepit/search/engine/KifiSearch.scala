@@ -1,4 +1,4 @@
-package com.keepit.search
+package com.keepit.search.engine
 
 import com.keepit.common.akka.{ SafeFuture, MonitoredAwait }
 import com.keepit.common.db.Id
@@ -6,13 +6,11 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.search._
+import com.keepit.search.engine.result.KifiResultCollector
 import com.keepit.search.graph.bookmark.BookmarkRecord
 import com.keepit.search.graph.bookmark.UserToUserEdgeSet
 import com.keepit.search.article.ArticleRecord
-import com.keepit.search.article.ArticleVisibility
-import com.keepit.search.query.parser.MainQueryParser
-import com.keepit.search.semantic.SemanticVector
-import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -20,7 +18,6 @@ import scala.math._
 import scala.concurrent.{ Future, Promise }
 import scala.concurrent.duration._
 import com.keepit.search.util.Hit
-import com.keepit.search.util.HitQueue
 import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ResultClickBoosts
 import com.keepit.search.result.PartialSearchResult
@@ -28,25 +25,25 @@ import com.keepit.search.result.DetailedSearchHit
 import com.keepit.search.result.BasicSearchHit
 import com.keepit.search.result.FriendStats
 
-class MainSearcher(
+class KifiSearch(
     userId: Id[User],
     lang1: Lang,
     lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,
-    parser: MainQueryParser,
+    engine: QueryEngine,
     articleSearcher: Searcher,
+    keepSearcher: Searcher,
     socialGraphInfo: SocialGraphInfo,
+    libraryIdsFuture: Future[(Seq[Long], Seq[Long])],
     clickBoostsFuture: Future[ResultClickBoosts],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
-    monitoredAwait: MonitoredAwait)(implicit private val clock: Clock,
+    monitoredAwait: MonitoredAwait,
+    timeLogs: SearchTimeLogs)(implicit private val clock: Clock,
         private val fortyTwoServices: FortyTwoServices) extends Logging {
 
-  private[this] var parsedQuery: Option[Query] = None
-
   private[this] val currentTime = currentDateTime.getMillis()
-  private[this] val timeLogs = new SearchTimeLogs()
   private[this] val idFilter = filter.idFilter
   private[this] val isInitialSearch = idFilter.isEmpty
 
@@ -64,6 +61,7 @@ class MainSearcher(
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
   private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
+  private[this] val percentMatch = config.asFloat("percentMatch")
 
   // debug flags
   private[this] var noBookmarkCheck = false
@@ -93,71 +91,27 @@ class MainSearcher(
     users.foldLeft(sharingUsers.size.toFloat) { (score, id) => score + normalizedFriendStats.score(id) } / 2.0f
   }
 
-  private def getNonPersonalizedQueryContextVector(parser: MainQueryParser): SemanticVector = {
-    val newSearcher = articleSearcher.withSemanticContext
-    parser.svTerms.foreach { t => newSearcher.addContextTerm(t) }
-    newSearcher.getContextVector
-  }
-
-  def getPersonalizedSearcher(query: Query) = {
-    val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
-    val indexReader = articleSearcher.indexReader.outerjoin(personalReader, personalIdMapper)
-
-    PersonalizedSearcher(indexReader, socialGraphInfo.mySearchUris, collectionSearcher)
-  }
-
   def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue) = {
-    val myHits = createQueue(maxTextHitsPerCategory)
-    val friendsHits = createQueue(maxTextHitsPerCategory)
-    val othersHits = createQueue(maxTextHitsPerCategory)
 
-    parsedQuery = parser.parsedQuery
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, libraryIdsFuture, filter.idFilter, monitoredAwait)
+    engine.execute(keepScoreSource)
 
-    timeLogs.queryParsing = parser.totalParseTime
+    val tPersonalSearcher = currentDateTime.getMillis()
+    val personalizedSearcher = PersonalizedSearcher(articleSearcher.indexReader, socialGraphInfo.mySearchUris)
+    personalizedSearcher.setSimilarity(similarity)
+    timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
 
-    parsedQuery.map { articleQuery =>
-      log.debug("articleQuery: %s".format(articleQuery.toString))
+    val articleScoreSource = new UriFromArticlesScoreVectorSource(personalizedSearcher, filter.idFilter)
+    engine.execute(articleScoreSource)
 
-      val tPersonalSearcher = currentDateTime.getMillis()
-      val personalizedSearcher = getPersonalizedSearcher(articleQuery)
-      personalizedSearcher.setSimilarity(similarity)
-      timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
+    val tClickBoosts = currentDateTime.getMillis()
+    val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
+    timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
 
-      val weight = personalizedSearcher.createWeight(articleQuery)
+    val collector = new KifiResultCollector(clickBoosts, maxTextHitsPerCategory, percentMatch)
+    engine.join(collector)
 
-      val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
-      val mySearchUris = socialGraphInfo.mySearchUris
-      val friendSearchUris = socialGraphInfo.friendSearchUris
-
-      val tClickBoosts = currentDateTime.getMillis()
-      val clickBoosts = monitoredAwait.result(clickBoostsFuture, 5 seconds, s"getting clickBoosts for user Id $userId")
-      timeLogs.getClickBoost = currentDateTime.getMillis() - tClickBoosts
-
-      val tLucene = currentDateTime.getMillis()
-
-      personalizedSearcher.search(weight) { (scorer, reader) =>
-        val visibility = ArticleVisibility(reader)
-        val mapper = reader.getIdMapper
-        var doc = scorer.nextDoc()
-        while (doc != NO_MORE_DOCS) {
-          val id = mapper.getId(doc)
-          if (idFilter.findIndex(id) < 0) { // use findIndex to avoid boxing
-            val clickBoost = clickBoosts(id)
-            val luceneScore = scorer.score()
-            if (myUriEdgeAccessor.seek(id) && mySearchUris.findIndex(id) >= 0) { // use findIndex to avoid boxing
-              myHits.insert(id, luceneScore, clickBoost, true)
-            } else if (friendSearchUris.findIndex(id) >= 0) {
-              if (visibility.isVisible(doc)) friendsHits.insert(id, luceneScore, clickBoost, false)
-            } else {
-              if (visibility.isVisible(doc)) othersHits.insert(id, luceneScore, clickBoost, false)
-            }
-          }
-          doc = scorer.nextDoc()
-        }
-      }
-      timeLogs.search = currentDateTime.getMillis() - tLucene
-    }
-    (myHits, friendsHits, othersHits)
+    collector.getResults()
   }
 
   def search(): PartialSearchResult = {
@@ -315,7 +269,7 @@ class MainSearcher(
     var hitList = hits.toSortedList
     hitList.foreach { h => if (h.hit.bookmarkCount == 0) h.hit.bookmarkCount = getPublicBookmarkCount(h.hit.id) }
 
-    val (show, svVar) = if (filter.isDefault && isInitialSearch && noFriendlyHits && forbidEmptyFriendlyHits) (false, -1f) else classify(hitList, parser)
+    val (show, svVar) = if (filter.isDefault && isInitialSearch && noFriendlyHits && forbidEmptyFriendlyHits) (false, -1f) else classify(hitList)
 
     val shardHits = toDetailedSearchHits(hitList)
 
@@ -371,7 +325,7 @@ class MainSearcher(
     }
   }
 
-  private[this] def classify(hitList: List[Hit[MutableArticleHit]], parser: MainQueryParser) = {
+  private[this] def classify(hitList: List[Hit[MutableArticleHit]]) = {
     def classify(scoring: Scoring, hit: MutableArticleHit, minScore: Float): Boolean = {
       hit.clickBoost > 1.1f ||
         (if (hit.isMyBookmark) scoring.recencyScore / 5.0f else 0.0f) + scoring.textScore > minScore
@@ -402,12 +356,7 @@ class MainSearcher(
   }
 
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
-    parser.parsedQuery.map { query =>
-      var personalizedSearcher = getPersonalizedSearcher(query)
-      personalizedSearcher.setSimilarity(similarity)
-
-      (query, personalizedSearcher.explain(query, uriId.id))
-    }
+    throw new UnsupportedOperationException("explanation is not supported yet")
   }
 
   def getArticleRecord(uriId: Id[NormalizedURI]): Option[ArticleRecord] = {
@@ -422,69 +371,5 @@ class MainSearcher(
     SafeFuture {
       timeLogs.send()
     }
-  }
-}
-
-class ArticleHitQueue(sz: Int) extends HitQueue[MutableArticleHit](sz) {
-
-  private[this] val NO_FRIEND_IDS = Set.empty[Id[User]]
-
-  override def lessThan(a: Hit[MutableArticleHit], b: Hit[MutableArticleHit]) = (a.score < b.score || (a.score == b.score && a.hit.id < b.hit.id))
-
-  def insert(id: Long, textScore: Float, clickBoost: Float, isMyBookmark: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS) {
-    if (overflow == null) {
-      insert(textScore * clickBoost, null, new MutableArticleHit(id, textScore, clickBoost, isMyBookmark, friends, 0))
-    } else {
-      insert(textScore * clickBoost, null, overflow.hit(id, textScore, clickBoost, isMyBookmark, friends, 0))
-    }
-  }
-}
-
-// mutable hit object for efficiency
-class MutableArticleHit(
-    var id: Long,
-    var luceneScore: Float,
-    var clickBoost: Float,
-    var isMyBookmark: Boolean,
-    var users: Set[Id[User]],
-    var bookmarkCount: Int) {
-  def apply(
-    newId: Long,
-    newLuceneScore: Float,
-    newClickBoost: Float,
-    newIsMyBookmark: Boolean,
-    newUsers: Set[Id[User]],
-    newBookmarkCount: Int): MutableArticleHit = {
-    id = newId
-    luceneScore = newLuceneScore
-    clickBoost = newClickBoost
-    isMyBookmark = newIsMyBookmark
-    users = newUsers
-    bookmarkCount = newBookmarkCount
-    this
-  }
-}
-
-class SearchTimeLogs(
-    var socialGraphInfo: Long = 0,
-    var getClickBoost: Long = 0,
-    var queryParsing: Long = 0,
-    var personalizedSearcher: Long = 0,
-    var search: Long = 0,
-    var processHits: Long = 0,
-    var total: Long = 0) extends Logging {
-  def send(): Unit = {
-    statsd.timing("mainSearch.socialGraphInfo", socialGraphInfo, ALWAYS)
-    statsd.timing("mainSearch.queryParsing", queryParsing, ALWAYS)
-    statsd.timing("mainSearch.getClickboost", getClickBoost, ALWAYS)
-    statsd.timing("mainSearch.personalizedSearcher", personalizedSearcher, ALWAYS)
-    statsd.timing("mainSearch.LuceneSearch", search, ALWAYS)
-    statsd.timing("mainSearch.processHits", processHits, ALWAYS)
-    statsd.timing("mainSearch.total", total, ALWAYS)
-  }
-
-  override def toString() = {
-    s"search time summary: total = $total, approx sum of: socialGraphInfo = $socialGraphInfo, getClickBoost = $getClickBoost, queryParsing = $queryParsing, " +
-      s"personalizedSearcher = $personalizedSearcher, search = $search, processHits = $processHits"
   }
 }
