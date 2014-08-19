@@ -89,7 +89,7 @@ class SocialWanderingCommander @Inject() (
     val teleporter = UniformTeleporter(Set(userVertexId)) { Function.const(SocialWanderlust.restartProbability) }
     val resolver = {
       val mayTraverse: (VertexReader, VertexReader, EdgeReader) => Boolean = {
-        case (source, destination, edge) => !(irrelevantVertices.contains(destination.id) || journal.getLastVisited().exists(_ == destination.id))
+        case (source, destination, edge) => !(irrelevantVertices.contains(destination.id))
       }
       RestrictedDestinationResolver(Some(SocialWanderlust.subgraph), mayTraverse, Function.const(1))
     }

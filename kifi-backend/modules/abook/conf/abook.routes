@@ -35,6 +35,7 @@ GET      /internal/abook/:userId/getFriendRecommendations       @com.keepit.aboo
 POST     /internal/abook/:userId/hideFriendRecommendation       @com.keepit.abook.controllers.ABookRecommendationController.hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User])
 GET      /internal/abook/:userId/getInviteRecommendations       @com.keepit.abook.controllers.ABookRecommendationController.getInviteRecommendations(userId: Id[User], offset: Int ?= 0, limit: Int ?= 5, networks: String)
 POST     /internal/abook/:userId/hideInviteRecommendation       @com.keepit.abook.controllers.ABookRecommendationController.hideInviteRecommendation(userId: Id[User])
+GET      /internal/abook/userId/getIrrelevantRecommendations    @com.keepit.abook.controllers.ABookRecommendationController.getIrrelevantRecommendations(userId: Id[User])
 
 POST     /internal/abook/:userId/hideEmailFromUser              @com.keepit.abook.controllers.ABookController.hideEmailFromUser(userId:Id[User], email: EmailAddress)
 
