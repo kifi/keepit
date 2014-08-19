@@ -5,12 +5,15 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
-import com.keepit.curator.model.SeedAttribution
+import com.keepit.curator.model._
 import com.keepit.model._
 import com.keepit.shoebox.{ ShoeboxServiceClient, ShoeboxScraperClient, FakeShoeboxServiceClientImpl }
-import model.{ UriRecommendationRepo, UriRecommendationStates, UriScores, UriRecommendation }
+
+import scala.collection.mutable.ListBuffer
 
 trait CuratorTestHelpers { this: CuratorTestInjector =>
+
+  val userKeepAttributions = collection.mutable.Map[Id[User], (Seq[User], Int)]()
 
   def shoeboxClientInstance()(implicit injector: Injector) = {
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
@@ -57,10 +60,11 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
       url = url
     )
 
-  def makeUriRecommendation(uriId: Int, userId: Int, masterScore: Float) =
+  def makeUriRecommendation(uriId: Int, userIdInt: Int, masterScore: Float) = {
+    val userId = Id[User](userIdInt)
     UriRecommendation(
       uriId = Id[NormalizedURI](uriId),
-      userId = Id[User](userId),
+      userId = userId,
       masterScore = masterScore,
       state = UriRecommendationStates.ACTIVE,
       allScores = UriScores(socialScore = 1.0f,
@@ -72,9 +76,30 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         rekeepScore = 1.0f,
         multiplier = Some(1.0f),
         discoveryScore = 1.0f),
-      delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY)
+      delivered = 0, clicked = 0, kept = false,
+      attribution = makeSeedAttribution(userId))
+  }
 
-  def makeCompleteUriRecommendation(uriId: Int, userId: Int, masterScore: Float, url: String) = {
+  def makeSeedAttribution(userId: Id[User]) = {
+    SeedAttribution(
+      user = Some(makeUserAttribution(userId)),
+      topic = Some(makeTopicAttribution()),
+      keep = Some(makeKeepAttribution())
+    )
+  }
+
+  def makeUserAttribution(userId: Id[User]) = {
+    UserAttribution(
+      friends = Seq.empty,
+      others = 5
+    )
+  }
+
+  def makeTopicAttribution() = TopicAttribution(topicName = "Testing")
+
+  def makeKeepAttribution() = KeepAttribution(keeps = Seq.empty)
+
+  def makeCompleteUriRecommendation(uriId: Int, userId: Int, masterScore: Float, url: String, wc: Int = 250) = {
     val normalizedUri = makeNormalizedUri(uriId, url)
     val uriRecommendation = makeUriRecommendation(uriId, userId, masterScore)
     val uriSummary = URISummary(
@@ -84,6 +109,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         "dapibus volutpat. Sed elementum sollicitudin metus, fringilla lacinia tortor fringilla vel. Mauris hendrerit " +
         "interdum neque eu vulputate. Nulla fermentum metus felis. In id velit dictum ligula iaculis pulvinar id sit " +
         "amet dolor. Proin eu augue id lectus viverra consectetur at sed orci. Suspendisse potenti."),
+      wordCount = Some(wc),
       imageUrl = Some("https://djty7jcqog9qu.cloudfront.net/screenshot/f5d6aedb-fea9-485f-aead-f2a8d1f31ac5/1000x560.jpg")
     )
 
