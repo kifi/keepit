@@ -139,24 +139,22 @@ angular.module('kifi')
       },
 
       getPeopleYouMayKnow: function (offset, limit) {
-        var pymkDeferred = $q.defer();
+        var deferred = $q.defer();
 
         // If the people-you-may-know endpoint does not return a good result,
         // retry up to 2 times.
-        var pymkWaitTimes = [0, 5 * 1000, 10 * 1000];
-        function getPymkWithRetries(numRetries) {
-          numRetries = numRetries || 0;
+        var waitTimes = [5 * 1000, 10 * 1000];
+        function getPymkWithRetries() {
           kifiPeopleYouMayKnowService.get(offset || 0, limit || 10).then(function (people) {
             if (people.length > 0) {
-              pymkDeferred.resolve(people);
+              deferred.resolve(people);
             } else {
-              if (numRetries === 2) {
-                pymkDeferred.resolve([]);
+              if (waitTimes.length === 0) {
+                deferred.resolve([]);
               } else {
-                numRetries++;
                 $timeout(function () {
-                  getPymkWithRetries(numRetries);
-                }, pymkWaitTimes[numRetries]);
+                  getPymkWithRetries();
+                }, waitTimes.shift());
               }
             }
           });
@@ -164,7 +162,7 @@ angular.module('kifi')
 
         getPymkWithRetries();
 
-        return pymkDeferred.promise;
+        return deferred.promise;
       },
 
       hidePeopleYouMayKnow: function (id) {
