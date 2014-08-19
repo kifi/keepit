@@ -435,7 +435,8 @@ var api = (function createApi() {
       var err = chrome.runtime.lastError;
       if (err) {
         log('#a80', '[inject] %i fail', page.id, err.message);
-        if (err.message === 'The extensions gallery cannot be scripted.' ||
+        if (err.message === 'The tab was closed.' ||
+            err.message === 'The extensions gallery cannot be scripted.' ||
             err.message === 'Cannot access a chrome:// URL') {
           injected = {};
           done();
