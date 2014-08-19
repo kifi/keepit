@@ -369,7 +369,7 @@ var api = (function createApi() {
     var kind = msg[0], data = msg[1], callbackId = msg[2];
     var handler = portHandlers[kind];
     if (page && handler) {
-      log('#0a0', '[onMessage] %i %s', tabId, kind, data != null ? data : '');
+      log('#0a0', '[onMessage] %i %s', tabId, kind, data != null ? (data.join ? data.join(' ') : data) : '');
       handler(data, respondToTab.bind(null, port, callbackId), page, port);
     } else {
       log('#a00', '[onMessage] %i %s %s %O %s', tabId, kind, 'ignored, page:', page, 'handler:', !!handler);
@@ -410,7 +410,7 @@ var api = (function createApi() {
           injected = {};
           done();
         } else {  // tab closed?
-          errors.push({error: Error('chrome.tabs.executeScript failed', params: {message: err.message, page: page}});
+          errors.push({error: Error('chrome.tabs.executeScript failed'), params: {message: err.message, page: page}});
           delete page.injecting;
         }
       } else {
