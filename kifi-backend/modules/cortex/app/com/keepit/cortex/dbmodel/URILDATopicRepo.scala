@@ -161,7 +161,7 @@ class URILDATopicRepoImpl @Inject() (
     import scala.slick.jdbc.GetResult
     implicit val getFeature = GetResult(r => (r.nextLong(), ldaTopicFeatureMapper.nextValue(r)))
     val q =
-      sql"""select ck.id, tp.feature from cortex_keep as ck inner join uri_lda_topic as tp
+      sql"""select ck.keep_id, tp.feature from cortex_keep as ck inner join uri_lda_topic as tp
            on ck.uri_id = tp.uri_id
            where ck.user_id = ${userId.id} and ck.state = 'active' and tp.version = ${version.version}
            and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words}
