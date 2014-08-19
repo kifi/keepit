@@ -192,15 +192,12 @@ class ABookRecommendationCommander @Inject() (
       if (relatedEmailAccounts.isEmpty) Future.successful(Stream.empty)
       else {
         val rejectedEmailInviteRecommendations = db.readOnlyReplica { implicit session => emailInviteRecommendationRepo.getIrrelevantRecommendations(userId) }
+        val allContacts = db.readOnlyMaster { implicit session => contactRepo.getByUserId(userId) }
         for {
           existingInvites <- futureExistingInvites
           normalizedUserNames <- futureNormalizedUserNames
         } yield {
-          val emailInvitesByLowerCaseAddress = existingInvites.collect {
-            case emailInvite if emailInvite.recipientEmailAddress.isDefined =>
-              emailInvite.recipientEmailAddress.get.address.toLowerCase -> emailInvite
-          }.toMap
-          generateEmailInviteRecommendations(userId, relatedEmailAccounts.toStream, normalizedUserNames, rejectedEmailInviteRecommendations, emailInvitesByLowerCaseAddress)
+          generateEmailInviteRecommendations(userId, relatedEmailAccounts.toStream, rejectedEmailInviteRecommendations, allContacts, normalizedUserNames, existingInvites)
         }
       }
     }
@@ -230,29 +227,48 @@ class ABookRecommendationCommander @Inject() (
   private def generateEmailInviteRecommendations(
     userId: Id[User],
     relatedEmailAccounts: Stream[(Id[EmailAccountInfo], Double)],
-    normalizedUserNames: Set[String],
     rejectedRecommendations: Set[Id[EmailAccount]],
-    existingEmailInvitesByLowerCaseAddress: Map[String, Invitation]): Stream[InviteRecommendation] = {
+    allContacts: Seq[EContact],
+    normalizedUserNames: Set[String],
+    existingInvites: Seq[Invitation]): Stream[InviteRecommendation] = {
 
-    val recommendations = relatedEmailAccounts.flatMap {
-      case (emailAccountId, score) =>
-        val emailAccount = db.readOnlyReplica { implicit session => emailAccountRepo.get(emailAccountId) }
-        val emailAddress = emailAccount.address
-        val existingInvite = existingEmailInvitesByLowerCaseAddress.get(emailAddress.address.toLowerCase)
-        val canBeInvited = emailAccount.userId.isEmpty && (existingInvite.map(canBeRecommendedAgain) getOrElse true)
-        val relevantContactName = if (canBeInvited && EmailAddress.isLikelyHuman(emailAddress)) {
-          val contacts = abookCommander.getContactsByUserAndEmail(userId, emailAddress)
-          val mayAlreadyBeOnKifi = contacts.exists { contact =>
-            contact.contactUserId.isDefined || contact.name.exists { name => normalizedUserNames.contains(normalize(name)) }
-          }
-          if (mayAlreadyBeOnKifi) None else contacts.collectFirst { case contact if contact.name.isDefined => contact.name.get }
-        } else None
-        relevantContactName.map { name =>
-          InviteRecommendation(SocialNetworks.EMAIL, Left(emailAddress), name, None, existingInvite.flatMap(_.lastSentAt), score)
-        }.toStream
+    val relevantEmailAccounts = allContacts.groupBy(_.emailAccountId).filter {
+      case (emailAccountId, contacts) =>
+        val mayAlreadyBeOnKifi = contacts.head.contactUserId.isDefined || contacts.exists { contact =>
+          contact.name.exists { name => normalizedUserNames.contains(normalize(name)) }
+        }
+        !mayAlreadyBeOnKifi && EmailAddress.isLikelyHuman(contacts.head.email)
     }
-    val distinctEmailContactsCount = db.readOnlyReplica { implicit session => contactRepo.countEmailContacts(userId, distinctEmailAccounts = true) }
-    recommendations.take(distinctEmailContactsCount)
+
+    val existingEmailInvitesByLowerCaseAddress = existingInvites.collect {
+      case emailInvite if emailInvite.recipientEmailAddress.isDefined =>
+        emailInvite.recipientEmailAddress.get.address.toLowerCase -> emailInvite
+    }.toMap
+
+    val relevantEmailInvites = relevantEmailAccounts.mapValues { contacts =>
+      existingEmailInvitesByLowerCaseAddress.get(contacts.head.email.address.toLowerCase)
+    }.collect { case (emailAccountId, Some(existingInvite)) => emailAccountId -> existingInvite }
+
+    @inline def isRelevant(emailAccountId: Id[EmailAccountInfo]): Boolean = {
+      relevantEmailAccounts.contains(emailAccountId) &&
+        !rejectedRecommendations.contains(emailAccountId) &&
+        (relevantEmailInvites.get(emailAccountId).map(canBeRecommendedAgain) getOrElse true)
+    }
+
+    val recommendations = relatedEmailAccounts.collect {
+      case (emailAccountId, score) if isRelevant(emailAccountId) =>
+        val lastInvitedAt = relevantEmailInvites.get(emailAccountId).flatMap(_.lastSentAt)
+        val contacts = relevantEmailAccounts(emailAccountId)
+        val (emailAddress, name) = contacts.find(_.name.isDefined) match {
+          case Some(preferredContact) => (preferredContact.email, preferredContact.name.get)
+          case _ => {
+            val emailAddress = contacts.head.email
+            (emailAddress, emailAddress.address)
+          }
+        }
+        InviteRecommendation(SocialNetworks.EMAIL, Left(emailAddress), name, None, lastInvitedAt, score)
+    }
+    recommendations.take(relevantEmailAccounts.size)
   }
 
   @inline
