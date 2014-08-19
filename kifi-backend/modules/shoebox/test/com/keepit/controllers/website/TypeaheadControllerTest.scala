@@ -1,22 +1,13 @@
 package com.keepit.controllers.website
 
-import com.keepit.abook.TestABookServiceClientModule
-import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.external.FakeExternalServiceModule
-import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.common.mail.TestMailModule
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.social.{ FakeShoeboxSecureSocialModule, FakeSocialGraphModule }
-import com.keepit.common.store.ShoeboxFakeStoreModule
-import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.heimdal.TestHeimdalServiceClientModule
+import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
-import com.keepit.scraper.{ FakeScrapeSchedulerModule, TestScraperServiceClientModule }
-import com.keepit.search.{ FakeSearchServiceClientModule, TestSearchServiceClientModule }
-import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.{ SocialId, SocialNetworks }
 import com.keepit.test.ShoeboxApplication
 import org.specs2.mutable.Specification
@@ -30,28 +21,17 @@ import scala.concurrent.Future
 
 class TypeaheadControllerTest extends Specification with ApplicationInjector {
 
-  val controllerTestModules = Seq(
-    FakeShoeboxServiceModule(),
-    TestSearchServiceClientModule(),
-    FakeScrapeSchedulerModule(),
-    ShoeboxFakeStoreModule(),
-    TestActorSystemModule(),
-    FakeAirbrakeModule(),
-    TestABookServiceClientModule(),
-    TestMailModule(),
-    FakeHttpClientModule(),
-    FakeSocialGraphModule(),
-    TestHeimdalServiceClientModule(),
-    FakeShoeboxSecureSocialModule(),
-    FakeExternalServiceModule(),
-    FakeCortexServiceClientModule(),
-    TestScraperServiceClientModule()
+  val modules = Seq(
+    FakeMailModule(),
+    FakeActorSystemModule(),
+    FakeShoeboxStoreModule(),
+    FakeSearchServiceClientModule()
   )
 
   "TypeaheadController" should {
 
     "query connections" in {
-      running(new ShoeboxApplication(controllerTestModules: _*)) {
+      running(new ShoeboxApplication(modules: _*)) {
         val user = inject[Database].readWrite { implicit session =>
 
           val userRepo = inject[UserRepo]
@@ -92,27 +72,27 @@ class TypeaheadControllerTest extends Specification with ApplicationInjector {
         inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.ADMIN))
 
         {
-          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some("leo"), Some(10), false, false).toString
-          path === "/site/user/connections/all/search?query=leo&limit=10&pictureUrl=false&dedupEmail=false"
+          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some("leo"), Some(10), false, true).toString
+          path === "/site/user/connections/all/search?query=leo&limit=10&pictureUrl=false"
           val res = route(FakeRequest("GET", path)).get
           getNames(res) must_== Seq("Léo Grimaldi")
         }
         {
-          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some("ray"), Some(10), false, false).toString
-          path === "/site/user/connections/all/search?query=ray&limit=10&pictureUrl=false&dedupEmail=false"
+          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some("ray"), Some(10), false, true).toString
+          path === "/site/user/connections/all/search?query=ray&limit=10&pictureUrl=false"
           val res = route(FakeRequest("GET", path)).get
           println(s"content=${contentAsString(res)}")
           getNames(res) must_== Seq("Raymond Ng")
         }
         {
-          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(None, None, false, false).toString
-          path === "/site/user/connections/all/search?pictureUrl=false&dedupEmail=false"
+          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(None, None, false, true).toString
+          path === "/site/user/connections/all/search?pictureUrl=false"
           val res = route(FakeRequest("GET", path)).get
           getNames(res) must_== Seq()
         }
         {
-          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some("leo"), Some(2), false, false).toString
-          path === "/site/user/connections/all/search?query=leo&limit=2&pictureUrl=false&dedupEmail=false"
+          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some("leo"), Some(2), false, true).toString
+          path === "/site/user/connections/all/search?query=leo&limit=2&pictureUrl=false"
           val res = route(FakeRequest("GET", path)).get
           getNames(res) must_== Seq("Léo Grimaldi")
         }

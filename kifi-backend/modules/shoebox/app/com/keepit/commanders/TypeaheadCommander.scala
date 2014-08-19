@@ -235,19 +235,16 @@ class TypeaheadCommander @Inject() (
     limitOpt match {
       case None => fetchAll(socialF, kifiF, abookF, nfUsersF)
       case Some(limit) =>
-        if (dedupEmail) fetchTop(dedupEmail, socialF, kifiF, abookF, nfUsersF, limit)
-        else {
-          val social: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = socialF.map { hits =>
-            val (fb, lnkd) = hits.map(hit => (hit.info.networkType, hit)).partition(_._1 == SocialNetworks.FACEBOOK)
-            log.infoP(s"fb=${fb.mkString(",")} lnkd=${lnkd.mkString(",")}")
-            fb ++ lnkd
-          }
-          val kifi = kifiF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO, hit)) }
-          val abook = abookF.map { hits => hits.filter(_.info.userId.isEmpty).map(hit => (SocialNetworks.EMAIL, hit)) }
-          val nf = nfUsersF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO_NF, hit)) }
-          val futures = Seq(social, kifi, abook, nf)
-          fetchFirst(limit, futures)
+        val social: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = socialF.map { hits =>
+          val (fb, lnkd) = hits.map(hit => (hit.info.networkType, hit)).partition(_._1 == SocialNetworks.FACEBOOK)
+          log.infoP(s"fb=${fb.mkString(",")} lnkd=${lnkd.mkString(",")}")
+          fb ++ lnkd
         }
+        val kifi: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = kifiF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO, hit)) }
+        val abook: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = abookF.map { hits => hits.filter(_.info.userId.isEmpty).map(hit => (SocialNetworks.EMAIL, hit)) }
+        val nf: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = nfUsersF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO_NF, hit)) }
+        val futures: Seq[Future[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = Seq(social, kifi, abook, nf)
+        fetchFirst(limit, futures)
     }
   }
 
@@ -263,58 +260,6 @@ class TypeaheadCommander @Inject() (
       if (zHits.length >= limit) zHits.take(limit) else {
         allHits.sorted(hitOrd)
       }
-    }
-  }
-
-  def fetchTop(
-    dedupEmail: Boolean,
-    socialF: Future[Seq[TypeaheadHit[SocialUserBasicInfo]]],
-    kifiF: Future[Seq[TypeaheadHit[User]]],
-    abookF: Future[Seq[TypeaheadHit[RichContact]]],
-    nfUsersF: Future[Seq[TypeaheadHit[TypeaheadUserHit]]],
-    limit: Int): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {
-    val zHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])] // can use minHeap
-    socialF flatMap { socialRes =>
-      val socialHits = socialRes.map(h => (h.info.networkType, h)).sorted(hitOrd)
-      zHits ++= socialHits.takeWhile(t => t._2.score == 0)
-      val topF = if (zHits.length >= limit) {
-        val res = zHits.take(limit)
-        log.infoP(s"short-circuit (social) res=${res.mkString(",")}")
-        Future.successful(res)
-      } else {
-        kifiF flatMap { kifiRes =>
-          val kifiHits = kifiRes.map(h => (SocialNetworks.FORTYTWO, h)).sorted(hitOrd)
-          zHits ++= kifiHits.takeWhile(t => t._2.score == 0)
-          if (zHits.length >= limit) {
-            val res = zHits.take(limit)
-            log.infoP(s"short-circuit (social+kifi) res=${res.mkString(",")}")
-            Future.successful(res)
-          } else {
-            abookF flatMap { abookRes =>
-              val filteredABookHits = if (!dedupEmail) abookRes else dedup(abookRes, kifiRes.map(h => h.info.id.get -> h).toMap)
-              val abookHits = filteredABookHits.map(h => (SocialNetworks.EMAIL, h)).sorted(hitOrd)
-              zHits ++= abookHits.takeWhile(t => t._2.score == 0)
-              if (zHits.length >= limit) {
-                val res = zHits.take(limit)
-                log.infoP(s"short-circuit (social+kifi+abook) res=${res.mkString(",")}")
-                Future.successful(res)
-              } else {
-                nfUsersF map { nfUserRes =>
-                  val nfUserHits = nfUserRes.map(h => (SocialNetworks.FORTYTWO_NF, h)).sorted(hitOrd)
-                  zHits ++= nfUserHits.takeWhile(t => t._2.score == 0)
-                  if (zHits.length >= limit) {
-                    zHits.take(limit)
-                  } else {
-                    // combine all & sort
-                    (socialHits ++ kifiHits ++ abookHits ++ nfUserHits).sorted(hitOrd).take(limit)
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-      topF
     }
   }
 

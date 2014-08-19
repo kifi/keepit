@@ -73,13 +73,21 @@ object FutureHelpers {
     }
   }
 
-  def foldLeft[I, T](items: Iterable[I], promisedResult: Promise[T] = Promise[T]())(accumulator: T)(fMap: (T, I) => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {
+  def foldLeftWhile[I, T](items: Iterable[I], promisedResult: Promise[T] = Promise[T]())(accumulator: T)(predicate: I => Boolean, fMap: (T, I) => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {
     if (items.isEmpty) { promisedResult.success(accumulator) }
-    else fMap(accumulator, items.head).onComplete {
-      case Success(updatedAccumulator) => foldLeft(items.tail, promisedResult)(updatedAccumulator)(fMap)
-      case Failure(ex) => promisedResult.failure(ex)
+    else {
+      val item = items.head
+      if (!predicate(item)) promisedResult.success(accumulator)
+      else fMap(accumulator, item).onComplete {
+        case Success(updatedAccumulator) => foldLeftWhile(items.tail, promisedResult)(updatedAccumulator)(predicate, fMap)
+        case Failure(ex) => promisedResult.failure(ex)
+      }
     }
     promisedResult.future
+  }
+
+  def foldLeft[I, T](items: Iterable[I], promisedResult: Promise[T] = Promise[T]())(accumulator: T)(fMap: (T, I) => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {
+    foldLeftWhile(items, promisedResult)(accumulator)(_ => true, fMap)
   }
 
   def whilef(f: => Future[Boolean], p: Promise[Unit] = Promise[Unit]())(body: => Unit)(implicit ec: ScalaExecutionContext): Future[Unit] = {
