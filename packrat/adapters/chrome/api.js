@@ -36,7 +36,7 @@ var api = (function createApi() {
     for (var id in pages) {
       if (!(id in normalTab)) {
         var page = pages[id];
-        if (now - page.created > 300000) {
+        if (now - page._created > 300000) {
           log('#666', '[gcPages]', page);
           delete pages[id];
         }
@@ -46,7 +46,9 @@ var api = (function createApi() {
 
   function createPage(id, url) {
     var now = Date.now();
-    var page = pages[id] = {id: id, url: url, created: now};
+    var page = pages[id] = {url: url};
+    Object.defineProperty(page, 'id', {value: id, enumerable: true});
+    Object.defineProperty(page, '_created', {value: now});
     if (now - gcPagesLastRun > 300000) {
       gcPagesLastRun = now;
       gcPages(now);
@@ -132,6 +134,13 @@ var api = (function createApi() {
       if (query) {
         dispatch.call(api.on.search, query, ~details.url.indexOf('sourceid=chrome') ? 'o' : 'n');
       }
+    }
+  }));
+
+  chrome.webNavigation.onErrorOccurred.addListener(errors.wrap(function (e) {
+    if (e.frameId === 0 && e.error === 'net::ERR_ABORTED' && !(e.tabId in normalTab)) {  // invisible preloading tab discarded
+      log('#666', '[onErrorOccurred] %i aborted', e.tabId);
+      onRemoved(e.tabId);
     }
   }));
 
