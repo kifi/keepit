@@ -16,7 +16,6 @@ angular.module('kifi')
     var friendsPageSize = 20;
     var currentPage = 0;
     var totalFriends = 0;
-    var peopleYouMayKnowPageSize = 10;
 
     var clutchParams = {
       cacheDuration: 20000
@@ -45,8 +44,8 @@ angular.module('kifi')
       });
     }, clutchParams);
 
-    var kifiPeopleYouMayKnowService = new Clutch(function (page) {
-      return $http.get(routeService.peopleYouMayKnow(page, peopleYouMayKnowPageSize)).then(function (res) {
+    var kifiPeopleYouMayKnowService = new Clutch(function (offset, limit) {
+      return $http.get(routeService.peopleYouMayKnow(offset, limit)).then(function (res) {
         return (res && res.data && res.data.users) ? res.data.users : [];
       });
     }, clutchParams);
@@ -139,8 +138,8 @@ angular.module('kifi')
         return '//djty7jcqog9qu.cloudfront.net/users/' + user.id + '/pics/200/' + user.pictureName;
       },
 
-      getPeopleYouMayKnow: function (page) {
-        return kifiPeopleYouMayKnowService.get(page || 0);
+      getPeopleYouMayKnow: function (offset, limit) {
+        return kifiPeopleYouMayKnowService.get(offset || 0, limit || 10);
       },
 
       hidePeopleYouMayKnow: function (id) {
