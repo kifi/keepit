@@ -7,17 +7,11 @@
         <div kf-profile-image pic-url="me.picUrl"></div>
         <div class="profile-input-wrapper">
           <div class="profile-input-title">Name</div>
-          <div class="profile-input-box profile-input-box-name">
-            <span class="profile-input-placeholder">
-              <span class="profile-placeholder-first-name">{{me.firstName}}</span> <span class="profile-placeholder-last-name">{{me.lastName}}</span>
-            </span>
-            <input class="profile-input-input profile-first-name" disabled type="text" name="firstName" placeholder="First name" value="{{me.firstName}}" novalidate>
-            <input class="profile-input-input profile-last-name" disabled type="text" name="lastName" placeholder="Last name" value="{{me.lastName}}" novalidate>
-          </div>
-        </div>
+          <div kf-profile-name-input name="name" validate-name="validateName(name)" save-name="saveName(name)" explicit-enabling="true"></div>
+        <div>
         <div class="profile-input-wrapper profile-email">
           <div class="profile-input-title">Contact email</div>
-          <div kf-profile-input input-state="emailInput" input-validate-action="validateEmail(value)"  input-save-action="saveEmail(value)" explicit-enabling="true">
+          <div kf-profile-input input-state="emailInput" input-validate-action="validateEmail(value)" input-save-action="saveEmail(value)" explicit-enabling="true">
             <input class="profile-input-input profile-email-input"
               ng-disabled="!emailInput.editing"
               kf-focus-if focus-cond="emailInput.editing"
@@ -26,7 +20,7 @@
           </div>
           <div kf-modal show="showEmailChangeDialog.value">
             <div kf-basic-modal-content with-cancel action-text="Continue" action="confirmSaveEmail()" cancel="cancelSaveEmail()">
-              <p>You are about to change your primary email to <span class="email-address">{{me.primaryEmail.address}}</span>.</p>
+              <p>You are about to change your primary email to <span class="email-address">{{emailInput.value}}</span>.</p>
               <p>We will send a verification email to this email address to prove that you own it. To verify, please click on a verification link on the email.</p>
             </div>
           </div>

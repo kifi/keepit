@@ -8,7 +8,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model.User
 import org.joda.time.DateTime
 import com.keepit.common.net.URI
-import com.keepit.common.KestrelCombinator
+import com.keepit.common.core._
 import com.keepit.common.logging.Logging
 import com.keepit.search.tracker.ClickedURI
 import play.api.libs.concurrent.Execution.Implicits._

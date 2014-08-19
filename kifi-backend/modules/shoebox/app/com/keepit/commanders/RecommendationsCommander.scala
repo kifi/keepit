@@ -5,6 +5,7 @@ import com.keepit.model._
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model.RecommendationInfo
 import com.keepit.common.db.slick.Database
+import com.keepit.common.social.BasicUserRepo
 
 import com.google.inject.Inject
 import com.keepit.normalizer.NormalizedURIInterner
@@ -19,7 +20,8 @@ class RecommendationsCommander @Inject() (
     db: Database,
     nUriRepo: NormalizedURIRepo,
     uriSummaryCommander: URISummaryCommander,
-    normalizedURIInterner: NormalizedURIInterner) {
+    normalizedURIInterner: NormalizedURIInterner,
+    basicUserRepo: BasicUserRepo) {
 
   def adHocRecos(userId: Id[User], howManyMax: Int, scoreCoefficientsUpdate: UriRecommendationScores): Future[Seq[KeepInfo]] = {
     curator.adHocRecos(userId, howManyMax, scoreCoefficientsUpdate).flatMap { recos =>
@@ -30,11 +32,23 @@ class RecommendationsCommander @Inject() (
       Future.sequence(recosWithUris.map {
         case (reco, nUri) =>
           uriSummaryCommander.getDefaultURISummary(nUri, waiting = false).map { uriSummary =>
+            val extraInfo = reco.attribution.topic.map(_.topicName).map { topicName =>
+              s"[$topicName;${reco.explain.getOrElse("")}]"
+            } getOrElse {
+              s"[${reco.explain.getOrElse("")}]"
+            }
+            val augmentedDescription = uriSummary.description.map { desc =>
+              extraInfo + desc
+            } getOrElse {
+              extraInfo
+            }
             KeepInfo(
               title = nUri.title,
               url = nUri.url,
               isPrivate = false,
-              uriSummary = Some(uriSummary.copy(description = reco.explain))
+              uriSummary = Some(uriSummary.copy(description = Some(augmentedDescription))),
+              others = reco.attribution.user.map(_.others),
+              keepers = db.readOnlyReplica { implicit session => reco.attribution.user.map(_.friends.map(basicUserRepo.load).toSet) }
             )
           }
       })

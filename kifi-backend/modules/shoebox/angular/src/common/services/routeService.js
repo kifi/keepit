@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.routeService', [])
+angular.module('kifi')
 
 .factory('routeService', [
   '$location', 'env',
@@ -88,7 +88,12 @@ angular.module('kifi.routeService', [])
       basicUserInfo: function (id, friendCount) {
         friendCount = friendCount ? 1 : 0;
         return route('/user/' + id + '?friendCount=' + friendCount);
-      }
+      },
+
+      ////////////////////////////
+      // Libraries              //
+      ////////////////////////////
+      getLibrarySummaries: route('/libraries')
     };
   }
 ]);

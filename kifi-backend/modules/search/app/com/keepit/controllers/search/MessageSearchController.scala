@@ -12,7 +12,7 @@ import com.google.inject.Inject
 import scala.concurrent.Future
 import com.keepit.commanders.RemoteUserExperimentCommander
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.common.ImmediateMap
+import com.keepit.common.core._
 
 class MessageSearchController @Inject() (
     commander: MessageSearchCommander,

@@ -13,7 +13,7 @@ import org.apache.lucene.search.TermQuery
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.search.Lang
+import com.keepit.search.{ SearchConfig, Lang }
 import com.keepit.search.index.Analyzer
 import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.phrasedetector.PhraseDetector
@@ -26,21 +26,23 @@ class MainQueryParser(
     stemmingAnalyzer: Analyzer,
     override val altAnalyzer: Option[Analyzer],
     override val altStemmingAnalyzer: Option[Analyzer],
-    proximityBoost: Float,
-    semanticBoost: Float,
-    phraseBoost: Float,
-    override val siteBoost: Float,
-    override val concatBoost: Float,
-    homePageBoost: Float,
-    override val useSemanticMatch: Boolean,
-    proximityGapPanelty: Float,
-    proximityThreshold: Float,
-    proximityPowerFactor: Float,
+    config: SearchConfig,
     phraseDetector: PhraseDetector,
     phraseDetectionConsolidator: RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]],
     monitoredAwait: MonitoredAwait) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch with QueryExpansion {
 
   override val lang: Lang = analyzer.lang
+
+  private[this] val proximityBoost = config.asFloat("proximityBoost")
+  private[this] val semanticBoost = config.asFloat("semanticBoost")
+  private[this] val phraseBoost = config.asFloat("phraseBoost")
+  override val siteBoost = config.asFloat("siteBoost")
+  override val concatBoost = config.asFloat("concatBoost")
+  private[this] val homePageBoost = config.asFloat("homePageBoost")
+  override val useSemanticMatch = config.asBoolean("useSemanticMatch")
+  private[this] val proximityGapPenalty = config.asFloat("proximityGapPenalty")
+  private[this] val proximityThreshold = config.asFloat("proximityThreshold")
+  private[this] val proximityPowerFactor = config.asFloat("proximityPowerFactor")
 
   var collectionIds = Set.empty[Long]
   var parsedQuery: Option[Query] = None
@@ -84,9 +86,9 @@ class MainQueryParser(
         if (proximityBoost > 0.0f && numTextQueries > 1) {
           val phrases = if (phrasesFuture != null) monitoredAwait.result(phrasesFuture, 3 seconds, "phrase detection") else Set.empty[(Int, Int)]
           val proxQ = new DisjunctionMaxQuery(0.0f)
-          proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPanelty, proximityThreshold, proximityPowerFactor))
-          proxQ.add(ProximityQuery(proxTermsFor("ts"), Set(), 0f, proximityGapPanelty, proximityThreshold, 1f)) // disable phrase scoring for title. penalty could be too big
-          proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), Set(), 0f, proximityGapPanelty, proximityThreshold, 1f))
+          proxQ.add(ProximityQuery(proxTermsFor("cs"), phrases, phraseBoost, proximityGapPenalty, proximityThreshold, proximityPowerFactor))
+          proxQ.add(ProximityQuery(proxTermsFor("ts"), Set(), 0f, proximityGapPenalty, proximityThreshold, 1f)) // disable phrase scoring for title. penalty could be too big
+          proxQ.add(ProximityQuery(proxTermsFor("title_stemmed"), Set(), 0f, proximityGapPenalty, proximityThreshold, 1f))
           new MultiplicativeBoostQuery(query, proxQ, proximityBoost)
         } else if (numTextQueries == 1 && phTerms.nonEmpty && homePageBoost > 0.0f) {
           val homePageQuery = if (phTerms.size == 1) {

@@ -13,52 +13,10 @@ angular.module('kifi', [
   'nodraginput',
   'jun.smartScroll',
   'angularMoment',
-  'kifi.home',
-  'kifi.search',
-  'kifi.tagKeeps',
-  'kifi.keepView',
-  'kifi.helprank',
-  'kifi.profile',
-  'kifi.friends',
-  'kifi.friendService',
-  'kifi.friends.friendCard',
-  'kifi.friends.friendRequestCard',
-  'kifi.friends.rightColFriendsView',
-  'kifi.friends.seeMutualFriends',
-  'kifi.social',
-  'kifi.social.networksNeedAttention',
-  'kifi.socialService',
-  'kifi.invite',
-  'kifi.invite.connectionCard',
-  'kifi.invite.wtiService',
-  'kifi.savePymkService',
-  'kifi.focus',
-  'kifi.youtube',
-  'kifi.templates',
-  'kifi.profileService',
-  'kifi.tags',
-  'kifi.keeps',
-  'kifi.keep',
-  'kifi.addKeep',
-  'kifi.recos',
-  'kifi.recoService',
-  'kifi.tagList',
-  'kifi.layout.header',
-  'kifi.layout.main',
-  'kifi.layout.nav',
-  'kifi.layout.rightCol',
-  'kifi.undo',
-  'kifi.installService',
-  'kifi.dragService',
   'jun.facebook',
   'ui.slider',
   'angulartics',
-  'kifi.mixpanel',
-  'kifi.alertBanner',
-  'kifi.minVersion',
-  'kifi.sticky',
-  'kifi.delighted',
-  'kifi.userService'
+  'kifi.templates'
 ])
 
 // fix for when ng-view is inside of ng-include:
@@ -178,8 +136,9 @@ angular.module('kifi', [
 ])
 
 .controller('AppCtrl', [
-  'profileService', '$window', '$rootScope', 'friendService', '$timeout',
-  function (profileService, $window, $rootScope, friendService, $timeout) {
+  'profileService', '$window', '$rootScope', 'friendService', '$timeout', '$log',
+  function (profileService, $window, $rootScope, friendService, $timeout, $log) {
+    $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
     $timeout(function () {
       profileService.fetchPrefs();
       friendService.getRequests();

@@ -1,10 +1,6 @@
 'use strict';
 
-angular.module('kifi.tagService', [
-  'kifi.undo',
-  'kifi.routeService',
-  'angulartics'
-])
+angular.module('kifi')
 
 .factory('tagService', [
   '$http', 'env', '$q', '$rootScope', 'undoService', 'routeService', '$analytics', '$location', 'util',

@@ -9,7 +9,7 @@ import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.features.Document
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils._
-import com.keepit.model.{ NormalizedURI, User }
+import com.keepit.model.{ Keep, NormalizedURI, User }
 import com.keepit.common.time._
 import scala.math.exp
 
@@ -207,14 +207,13 @@ class LDACommander @Inject() (
   }
 
   def getTopicNames(uris: Seq[Id[NormalizedURI]]): Seq[Option[String]] = {
+    val cutoff = (1.0f / numOfTopics) * 50
     val topicIdOpts = db.readOnlyReplica { implicit s =>
       uris.map { uri =>
-        uriTopicRepo.getActiveByURI(uri, wordRep.version) match {
+        uriTopicRepo.getFirstTopicAndScore(uri, wordRep.version) match {
+          case Some((topic, score)) =>
+            if (score > cutoff) Some(topic.index) else None
           case None => None
-          case Some(feat) =>
-            val sparse = feat.sparseFeature.get
-            val (LDATopic(topicId), probability) = sparse.topics.toArray.sortBy(-1f * _._2).head
-            if (probability > (1.0f / sparse.dimension) * 50) Some(topicId) else None
         }
       }
     }
@@ -226,4 +225,38 @@ class LDACommander @Inject() (
       }
     }
   }
+
+  def explainFeed(userId: Id[User], uris: Seq[Id[NormalizedURI]]): Seq[Seq[Id[Keep]]] = {
+
+    val MAX_KL_DIST = 0.8f // empirically this should be < 1.0
+    val topK = 3
+
+    def bestMatch(userFeats: Seq[(Id[Keep], LDATopicFeature)], uriFeat: URILDATopic): Seq[Id[Keep]] = {
+      val scored = userFeats.map {
+        case (kid, ufeat) =>
+          val score = KL_divergence(ufeat.value, uriFeat.feature.get.value)
+          (kid, score)
+      }
+      scored.filter { _._2 < MAX_KL_DIST }.sortBy(_._2).take(topK).map { _._1 }
+    }
+
+    val userFeats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserRecentURIFeatures(userId, wordRep.version, min_num_words = 50, limit = 50) }
+    val uriFeats = db.readOnlyReplica { implicit s => uris.map { uri => uriTopicRepo.getActiveByURI(uri, wordRep.version) } }
+    uriFeats.map { uriFeatOpt =>
+      uriFeatOpt match {
+        case Some(uriFeat) if uriFeat.numOfWords > 50 => bestMatch(userFeats, uriFeat)
+        case _ => Seq()
+      }
+    }
+  }
+
+  def uriKLDivergence(uriId1: Id[NormalizedURI], uriId2: Id[NormalizedURI]): Option[Float] = {
+    val feat1 = db.readOnlyReplica { implicit s => uriTopicRepo.getActiveByURI(uriId1, wordRep.version) }
+    val feat2 = db.readOnlyReplica { implicit s => uriTopicRepo.getActiveByURI(uriId2, wordRep.version) }
+    (feat1, feat2) match {
+      case (Some(f1), Some(f2)) if (f1.numOfWords > 50 && f2.numOfWords > 50) => Some(KL_divergence(f1.feature.get.value, f2.feature.get.value))
+      case _ => None
+    }
+  }
+
 }

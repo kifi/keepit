@@ -36,7 +36,6 @@ POST        /site/search/events/searched        @com.keepit.controllers.website.
 
 POST        /internal/search/dist/search          @com.keepit.controllers.search.SearchController.distSearch()
 POST        /internal/search/dist/langFreqs       @com.keepit.controllers.search.SearchController.distLangFreqs()
-POST        /internal/search/dist/feeds           @com.keepit.controllers.search.SearchController.distFeeds()
 
 GET         /internal/search/warmUp/:userId        @com.keepit.controllers.search.SearchController.warmUpUser(userId: Id[User])
 
@@ -85,8 +84,6 @@ POST        /internal/search/semanticVector/visualize        @com.keepit.control
 GET         /internal/search/cache/warmResultClick        @com.keepit.controllers.search.SearchCacheController.warmResultClick()
 
 GET         /internal/search/spell/suggest        @com.keepit.controllers.search.SpellCorrectorController.correct(input: String, enableBoost: Boolean)
-
-GET         /internal/search/feed        @com.keepit.controllers.search.FeedController.getFeeds(userId: Id[User], limit: Int)
 
 GET         /internal/search/searchMessages @com.keepit.controllers.search.MessageSearchController.search(userId: Id[User], query: String, page: Int ?= 0)
 

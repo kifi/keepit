@@ -9,9 +9,11 @@ import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.phrasedetector.PhraseDetector
 import com.keepit.search.user.UserIndexer
 import com.keepit.search.user.UserSearcher
-import com.keepit.search.query.parser.MainQueryParserFactory
+import com.keepit.search.query.parser.MainQueryParser
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -34,7 +36,7 @@ class MainSearcherFactory @Inject() (
     userGraphsSearcherFactory: UserGraphsSearcherFactory,
     shardedUriGraphIndexer: ShardedURIGraphIndexer,
     shardedCollectionIndexer: ShardedCollectionIndexer,
-    parserFactory: MainQueryParserFactory,
+    phraseDetector: PhraseDetector,
     resultClickTracker: ResultClickTracker,
     clickHistoryTracker: ClickHistoryTracker,
     searchConfigManager: SearchConfigManager,
@@ -48,8 +50,22 @@ class MainSearcherFactory @Inject() (
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[Id[User], MultiHashFilter[ClickedURI]](10 seconds)
   private[this] val consolidateLangFreqsReq = new RequestConsolidator[Id[User], Map[Lang, Int]](180 seconds)
   private[this] val consolidateConfigReq = new RequestConsolidator[(Id[User]), (SearchConfig, Option[Id[SearchConfigExperiment]])](10 seconds)
+  private[this] val phraseDetectionConsolidator = new RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]](10 minutes)
 
   lazy val searchServiceStartedAt: Long = fortyTwoServices.started.getMillis()
+
+  private def mkQueryParser(lang1: Lang, lang2: Option[Lang], config: SearchConfig): MainQueryParser = {
+    new MainQueryParser(
+      DefaultAnalyzer.getAnalyzer(lang1),
+      DefaultAnalyzer.getAnalyzerWithStemmer(lang1),
+      lang2.map(DefaultAnalyzer.getAnalyzer),
+      lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
+      config,
+      phraseDetector,
+      phraseDetectionConsolidator,
+      monitoredAwait
+    )
+  }
 
   def apply(
     shards: Set[Shard[NormalizedURI]],
@@ -63,7 +79,7 @@ class MainSearcherFactory @Inject() (
     val clickHistoryFuture = getClickHistoryFuture(userId)
     val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
 
-    val parser = parserFactory(lang1, lang2, config)
+    val parser = mkQueryParser(lang1, lang2, config)
 
     val searchers = shards.toSeq.map { shard =>
       val socialGraphInfo = getSocialGraphInfo(shard, userId, filter)
@@ -144,11 +160,11 @@ class MainSearcherFactory @Inject() (
     Await.result(getCollectionSearcherFuture(shard, userId), 5 seconds)
   }
 
-  private[this] def getClickHistoryFuture(userId: Id[User]) = consolidateClickHistoryReq(userId) { userId =>
+  def getClickHistoryFuture(userId: Id[User]) = consolidateClickHistoryReq(userId) { userId =>
     SafeFuture(clickHistoryTracker.getMultiHashFilter(userId))
   }
 
-  private[this] def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float) = {
+  def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float) = {
     resultClickTracker.getBoostsFuture(userId, queryString, maxResultClickBoost)
   }
 

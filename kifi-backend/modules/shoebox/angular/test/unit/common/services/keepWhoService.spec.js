@@ -4,7 +4,7 @@ describe('kifi.keepWhoService', function () {
 
   var keepWhoService;
 
-  beforeEach(module('kifi.keepWhoService'));
+  beforeEach(module('kifi'));
 
   beforeEach(inject(function (_keepWhoService_) {
     keepWhoService = _keepWhoService_;

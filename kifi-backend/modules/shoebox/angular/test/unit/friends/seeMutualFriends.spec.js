@@ -2,7 +2,7 @@
 
 describe('kifi.friends.seeMutualFriends', function () {
 
-  beforeEach(module('kifi.friends.seeMutualFriends'));
+  beforeEach(module('kifi'));
 
   var $q,
       $compile,

@@ -11,6 +11,7 @@ object LibraryFields {
   val descriptionField = "d"
   val descriptionStemmedField = "ds"
   val visibilityField = "v"
+  val discoverableOwnerField = "do"
   val usersField = "u"
   val hiddenUsersField = "h"
   val recordField = "rec"
@@ -49,6 +50,10 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) ex
     }
 
     doc.add(buildKeywordField(visibilityField, library.visibility.value))
+    library.visibility match {
+      case LibraryVisibility.SECRET => // not discoverable
+      case _ => doc.add(buildKeywordField(discoverableOwnerField, library.ownerId.id.toString))
+    }
     doc.add(buildIteratorField(usersField, users.iterator) { id => id.id.toString })
     doc.add(buildIteratorField(hiddenUsersField, hiddenUsers.iterator) { id => id.id.toString })
 
