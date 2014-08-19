@@ -224,7 +224,6 @@ class TypeaheadCommander @Inject() (
   private def aggregate(userId: Id[User], q: String, limitOpt: Option[Int], dedupEmail: Boolean): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {
     implicit val prefix = LogPrefix(s"aggregate($userId,$q,$limitOpt)")
     val socialF = socialUserTypeahead.topN(userId, q, limitOpt map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { res =>
-      println(s"socialRes=$res")
       res.collect {
         case hit if includeHit(hit) => hit
       }
@@ -237,7 +236,6 @@ class TypeaheadCommander @Inject() (
       case None => fetchAll(socialF, kifiF, abookF, nfUsersF)
       case Some(limit) =>
         val social: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = socialF.map { hits =>
-          println(s"socialHits=$hits")
           val (fb, lnkd) = hits.map(hit => (hit.info.networkType, hit)).partition(_._1 == SocialNetworks.FACEBOOK)
           log.infoP(s"fb=${fb.mkString(",")} lnkd=${lnkd.mkString(",")}")
           fb ++ lnkd
