@@ -142,15 +142,15 @@ angular.module('kifi')
         var pymkDeferred = $q.defer();
 
         // If the people-you-may-know endpoint does not return a good result,
-        // retry up to 3 times.
-        var pymkWaitTimes = [0, 1000, 3 * 1000, 10 * 1000];
+        // retry up to 2 times.
+        var pymkWaitTimes = [0, 5 * 1000, 10 * 1000];
         function getPymkWithRetries(numRetries) {
           numRetries = numRetries || 0;
           kifiPeopleYouMayKnowService.get(offset || 0, limit || 10).then(function (people) {
             if (people.length > 0) {
               pymkDeferred.resolve(people);
             } else {
-              if (numRetries === 3) {
+              if (numRetries === 2) {
                 pymkDeferred.resolve([]);
               } else {
                 numRetries++;
