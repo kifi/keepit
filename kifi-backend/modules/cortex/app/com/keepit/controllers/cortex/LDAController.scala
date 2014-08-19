@@ -126,7 +126,7 @@ class LDAController @Inject() (
     val userId = (js \ "user").as[Id[User]]
     val uris = (js \ "uris").as[Seq[Id[NormalizedURI]]]
     val explain = lda.explainFeed(userId, uris)
-    Ok(Json.toJson(uris))
+    Ok(Json.toJson(explain))
   }
 
 }
