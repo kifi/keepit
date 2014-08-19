@@ -7,6 +7,7 @@ import com.keepit.search.index.IndexDirectory
 import com.keepit.search.index.Indexer
 import com.keepit.search.index.Indexable
 import com.keepit.search.semantic.SemanticVectorBuilder
+import com.keepit.search.util.LongArraySet
 import org.apache.lucene.analysis.Analyzer
 import java.io.StringReader
 
@@ -20,7 +21,7 @@ class TstIndexer(indexDirectory: IndexDirectory) extends Indexer[Tst, Tst, TstIn
     indexDocuments(Some(buildIndexable(new Tst(id, text, personalText))).iterator, 100)
   }
 
-  def getPersonalizedSearcher(ids: Set[Long]) = PersonalizedSearcher(searcher.indexReader, ids, null)
+  def getPersonalizedSearcher(ids: Set[Long]) = PersonalizedSearcher(searcher.indexReader, LongArraySet.fromSet(ids), null)
 
   override val airbrake: AirbrakeNotifier = null
   def update(): Int = ???
