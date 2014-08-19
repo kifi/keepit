@@ -123,7 +123,7 @@ class ABookRecommendationCommander @Inject() (
             socialFriends <- futureSocialFriends
             normalizedUserNames <- futureNormalizedUserNames
           } yield {
-            @inline def mayAlreadyBeOnKifi(socialFriend: SocialUserBasicInfo) = socialFriend.userId.isDefined || normalizedUserNames.contains(normalizeName(socialFriend.fullName))
+            @inline def mayAlreadyBeOnKifi(socialFriend: SocialUserBasicInfo) = socialFriend.userId.isDefined || normalizedUserNames.contains(normalize(socialFriend.fullName))
             socialFriends.collect { case socialFriend if relevantNetworks.contains(socialFriend.networkType) && !mayAlreadyBeOnKifi(socialFriend) => socialFriend.id -> socialFriend }.toMap
           }
         }
@@ -243,7 +243,7 @@ class ABookRecommendationCommander @Inject() (
         val relevantContactName = if (canBeInvited && EmailAddress.isLikelyHuman(emailAddress)) {
           val contacts = abookCommander.getContactsByUserAndEmail(userId, emailAddress)
           val mayAlreadyBeOnKifi = contacts.exists { contact =>
-            contact.contactUserId.isDefined || contact.name.exists { name => normalizedUserNames.contains(normalizeName(name)) }
+            contact.contactUserId.isDefined || contact.name.exists { name => normalizedUserNames.contains(normalize(name)) }
           }
           if (mayAlreadyBeOnKifi) None else contacts.collectFirst { case contact if contact.name.isDefined => contact.name.get }
         } else None
@@ -270,9 +270,10 @@ class ABookRecommendationCommander @Inject() (
       basicUsers <- shoebox.getBasicUsers(Seq(userId) ++ friendIds)
     } yield {
       val fullNames = basicUsers.values.flatMap(user => Set(user.firstName + " " + user.lastName, user.lastName + " " + user.firstName))
-      fullNames.toSet.map(normalizeName)
+      fullNames.toSet.map(normalize)
     }
   }
 
-  private def normalizeName(fullName: String): String = Normalizer.normalize(fullName, Normalizer.Form.NFKD).trim.toLowerCase
+  private val diacriticalMarksRegex = "\\p{InCombiningDiacriticalMarks}+".r
+  @inline private def normalize(fullName: String): String = diacriticalMarksRegex.replaceAllIn(Normalizer.normalize(fullName.trim, Normalizer.Form.NFD), "").toLowerCase
 }
