@@ -169,26 +169,14 @@ class LibraryCommander @Inject() (
         case None =>
           Left(LibraryFail("tag not found"))
         case Some(tag) =>
-          val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
-          val existingURIs = keepRepo.getByLibrary(libraryId).map(_.uriId).toSet
           val keeps = keepToCollectionRepo.getByCollection(tag.id.get).map(k2c => keepRepo.get(k2c.keepId))
-          keeps.map { k =>
-            if (!existingURIs.contains(k.uriId)) {
-              val newKeep = keepRepo.save(Keep(
-                userId = ownerId,
-                libraryId = Some(libraryId),
-                title = k.title,
-                uriId = k.uriId,
-                urlId = k.urlId,
-                url = k.url,
-                isPrivate = k.isPrivate,
-                bookmarkPath = k.bookmarkPath,
-                source = KeepSource.site))
-              keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
-            } else {
-              badKeeps += k -> LibraryError.AlreadyExistsInDest
-            }
+          def saveKeep(k: Keep, s: RWSession): Unit = {
+            implicit val session = s
+            val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, isPrivate = k.isPrivate,
+              userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId)))
+            keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
           }
+          val badKeeps = applyToKeeps(ownerId, lib, keeps, Set(), saveKeep)
           Right(badKeeps.toSeq)
       }
     }
@@ -391,7 +379,7 @@ class LibraryCommander @Inject() (
       case Some(_) =>
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId,
+          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, isPrivate = k.isPrivate,
             userId = k.userId, source = k.source, libraryId = Some(toLibraryId)))
           keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
             keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = k2c.collectionId))
