@@ -201,7 +201,7 @@ var api = (function createApi() {
 
   chrome.tabs.onUpdated.addListener(errors.wrap(function (tabId, change) {
     if ((change.status || change.url) && normalTab[tabId]) {
-      log('#666', '[tabs.onUpdated] %i change: %o', tabId, change);
+      log('#666', '[onUpdated] %i change: %o', tabId, change);
     }
   }));
 
@@ -393,10 +393,6 @@ var api = (function createApi() {
   var doLogging = !isPackaged;
   function injectContentScripts(page) {
     if (page.injecting || page.injected) return;
-    if (/^https:\/\/chrome.google.com\/webstore/.test(page.url)) {
-      log('[injectContentScripts] forbidden', page.url);
-      return;
-    }
     page.injecting = true;
 
     var scripts = meta.contentScripts.filter(function(cs) { return cs[1].test(page.url) });
@@ -406,8 +402,21 @@ var api = (function createApi() {
       code: 'this.api&&api.injected',
       runAt: 'document_start'
     }, function (arr) {
-      injected = arr && arr[0] || {};
-      done(0);
+      var err = chrome.runtime.lastError;
+      if (err) {
+        log('#a80', '[inject] %i fail', page.id, err.message);
+        if (err.message === 'The extensions gallery cannot be scripted' ||
+            err.message === 'Cannot access a chrome:// URL') {
+          injected = {};
+          done();
+        } else {  // tab closed?
+          errors.push({error: Error('chrome.tabs.executeScript failed', params: {message: err.message, page: page}});
+          delete page.injecting;
+        }
+      } else {
+        injected = arr[0] || {};
+        done(0);
+      }
     });
 
     function done(n) {
@@ -457,7 +466,7 @@ var api = (function createApi() {
         }
       });
       paths.forEach(function (path) {
-        log("#bbb", "[injectWithDeps] %i %s", tabId, path);
+        log('#bbb', '[inject] %i %s', tabId, path);
         inject(tabId, {file: path, runAt: 'document_end'}, afterInject);
       });
     } else {
