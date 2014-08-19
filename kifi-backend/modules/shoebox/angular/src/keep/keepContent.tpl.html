@@ -1,30 +1,22 @@
-<li class="kf-keep" ng-click="clickAction({keep: keep, event: $event})" ng-hide="keep.unkept && !keep.isProtected"
-  ng-class="{ 'kf-dragged': isDragging, 'kf-drag-target': isDragTarget , 'editing': editMode.enabled }">
-  <div class="kf-keep-edit-tools">
-    <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!isSelected()" ng-click="toggleSelect({keep: keep})"></div>
-    <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="isSelected()" ng-click="toggleSelect({keep: keep})"></div>
-    <div class="kf-keep-handle sprite sprite-grabbericon">
-      <div class="kf-keep-checkbox" ng-click="onCheck($event)"></div>
-    </div>
-  </div>
-  
+<div class="kf-keep-content">
   <div class="kf-keep-body">
     <div class="kf-keep-contents">
       <div class="kf-keep-title">
-        <div class="kf-keep-loader" ng-show="keep.isLoading"></div>
-        <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{getTitle()}}" ng-bind-html="keep.titleHtml">
-        </a>
+        <div class="kf-keep-loader" ng-show="false"></div><!-- ng-show="keep.isLoading" -->
+        <a class="kf-keep-title-link" ng-href="{{keep.url}}" target="_blank" ng-attr-title="{{keep.titleAttr}}" ng-bind-html="keep.titleHtml" ng-click="clickKeep(keep)"></a>
       </div>
+
       <div class="kf-keep-content-line">
-        <div class="kf-keep-small-image" ng-if="hasSmallImage()">
+        <div class="kf-keep-small-image" ng-if="showSmallImage()">
           <a ng-href="{{keep.url}}" target="_blank"><img class="kf-keep-image" ng-src="{{keep.summary.imageUrl}}"></a>
         </div>
+
         <div class="kf-keep-info-wrap">
           <div class="kf-keep-info">
             <div class="kf-keep-subtitle">
               <div class="kf-keep-subtitle-element kf-keep-url" ng-attr-title="{{keep.url}}" ng-bind-html="keep.descHtml"></div>
               <span class="kf-keep-time" ng-show="keep.createdAt">kept&nbsp;<time class="kf-keep-subtitle-element" ng-attr-datetime="{{keep.createdAt}}" am-time-ago="keep.createdAt"></time></span>
-              <div class="kf-keep-subtitle-element kf-keep-read-time" ng-show="keep.summary.wordCount"><span class="sprite sprite-small-clock"></span>{{getKeepReadTime()}} read</div>
+              <div class="kf-keep-subtitle-element kf-keep-read-time" ng-show="keep.summary.wordCount"><span class="sprite sprite-small-clock"></span>{{keep.readTime}} read</div>
             </div>
             <div class="kf-keep-description">
               {{keep.summary.description}}
@@ -32,12 +24,15 @@
           </div>
         </div>
       </div>
-      <a ng-href="{{keep.url}}" target="_blank"><img class="kf-keep-big-image" ng-if="hasBigImage()" ng-src="{{keep.summary.imageUrl}}"></a>
+
+      <a ng-href="{{keep.url}}" target="_blank"><img class="kf-keep-big-image" ng-if="showBigImage()" ng-src="{{keep.summary.imageUrl}}"></a>
     </div>
-    <div class="kf-keep-who" ng-if="showSocial()">
-      <span kf-keep-who-pics me="me" keepers="keep.keepers" keep="keep"></span>
+
+    <div class="kf-keep-who" ng-if="keep.showSocial">
+      <span kf-keep-who-pics keep="keep"></span>
       <span kf-keep-who-text keep="keep"></span>
     </div>
+
     <div kf-tag-list class="kf-keep-tag-list" get-selected-keeps="getSingleSelectedKeep()" adding-tag="addingTag" is-shown="showTags()" ng-show="showTags()"></div>
   </div>
 
@@ -50,10 +45,8 @@
     <span class="kf-keep-footer-link" ng-if="isMine() && !isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Private</a></span>
     <span class="kf-keep-footer-link" ng-if="isMine() && isPrivate()"><a ng-click="togglePrivate()" href='javascript:'>Make Public</a></span>
     <span class="kf-keep-footer-link" ng-if="isMine()"><a ng-click="unkeep()" href='javascript:'>Unkeep</a></span>
-    <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPublic()" href='javascript:'>Keep</a></span>
+    <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPublic(keep)" href='javascript:'>Keep</a></span>
     <span class="kf-keep-footer-link" ng-if="!isMine()"><a ng-click="keepPrivate()" href='javascript:'>Keep Privately</a></span>
     <div class="kf-keep-private" ng-if="isMine() && isPrivate()"><span class="kf-keep-private-label">Private</span><span class="sprite sprite-lock-private-icon"></span></div>
   </div>
-  
-  <div class="kf-keep-drag-mask"></div>
-</li>
+</div>

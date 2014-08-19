@@ -272,10 +272,6 @@ angular.module('kifi')
           return keep && !!(keep.keepers && keep.keepers.length);
         };
 
-        scope.showOthers = function () {
-          return !scope.hasKeepers() && !! (scope.keep && scope.keep.others);
-        };
-
         scope.showSocial = function () {
           return scope.keep && (scope.keep.others || (scope.keep.keepers && scope.keep.keepers.length > 0));
         };
@@ -491,5 +487,305 @@ angular.module('kifi')
       }
     };
   }
-]);
+])
 
+// Splitting out into smaller directives here...
+.directive('kfKeepContent', ['$document', '$rootScope', 'keepService', 'recoService',
+  function ($document, $rootScope, keepService, recoService) {
+    return {
+      restrict: 'A',
+      scope: {
+        keep: '='
+      },
+      replace: true,
+      templateUrl: 'keep/keepContent.tpl.html',
+      link: function (scope, element/*, attrs*/) {
+        if (!scope.keep) {
+          return;  // Now we can remove the checks in the rest of this file.
+        }
+
+        //
+        // Internal data.
+        //
+        var useBigLayout = false;
+        var strippedSchemeRe = /^https?:\/\//;
+        var domainTrailingSlashRe = /^([^\/]*)\/$/;
+
+
+        //
+        // Internal functions.
+        //
+        function bolded(text, start, len) {
+          return text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
+        }
+
+        function boldSearchTerms(text, matches) {
+          for (var i = matches && matches.length; i--;) {
+            var match = matches[i];
+            var start = match[0];
+            if (start >= 0) {
+              text = bolded(text, start, match[1]);
+            }
+          }
+          return text;
+        }
+
+        function formatDesc(url, matches) {
+          if (url) {
+            var strippedSchemeLen = (url.match(strippedSchemeRe) || [''])[0].length;
+            url = url.substr(strippedSchemeLen).replace(domainTrailingSlashRe, '$1');
+            for (var i = matches && matches.length; i--;) {
+              matches[i][0] -= strippedSchemeLen;
+            }
+            return boldSearchTerms(url, matches);
+          }
+        }
+
+        function getSite() {
+          var keep = scope.keep;
+          if (keep) {
+            return keep.siteName || keep.url;
+          }
+        }
+
+        function updateSiteDescHtml() {
+          if (scope.keep) {
+            scope.keep.descHtml = formatDesc(getSite());
+          }
+        }
+
+
+        //
+        // Scope methods.
+        //
+        scope.showSmallImage = function () {
+          return scope.keep.hasSmallImage && !useBigLayout;
+        };
+
+        scope.showBigImage = function () {
+          return scope.keep.hasBigImage || (scope.keep.summary && useBigLayout);
+        };
+
+        scope.hasKeepers = function () {
+          var keep = scope.keep;
+          return keep && !!(keep.keepers && keep.keepers.length);
+        };
+
+        // Does this need to be a scope method?
+        scope.isMyBookmark = function (keep) {
+          return (keep && keep.isMyBookmark) || false;
+        };
+
+        scope.addingTag = {enabled: false};
+
+        scope.getTags = function () {
+          return scope.keep && scope.keep.tagList;
+        };
+
+        scope.hasTag = function () {
+          var tags = scope.getTags();
+          if (tags) {
+            return !!tags.length;
+          } else {
+            return false;
+          }
+        };
+
+        scope.showTags = function () {
+          return scope.isMyBookmark(scope.keep) && (scope.hasTag() || scope.addingTag.enabled);
+        };
+
+        scope.showAddTag = function () {
+          scope.addingTag.enabled = true;
+        };
+
+        scope.isMine = function () {
+          return scope.isMyBookmark(scope.keep);
+        };
+
+        scope.togglePrivate = function () {
+          keepService.togglePrivate([scope.keep]);
+        };
+
+        scope.isPrivate = function () {
+          return (scope.keep && scope.keep.isPrivate) || false;
+        };
+
+        scope.triggerInstall = function () {
+          $rootScope.$emit('showGlobalModal','installExtension');
+        };
+
+        scope.unkeep = function () {
+          keepService.unkeep([scope.keep]);
+        };
+
+        scope.keepPublic = function (keep) {
+          if (keep.keepType === 'reco') {
+            recoService.keep(keep);
+          }
+
+          keepService.keep([scope.keep], false);
+        };
+
+        scope.keepPrivate = function () {
+          keepService.keep([scope.keep], true);
+        };
+
+        scope.getSingleSelectedKeep = function () {
+          if (scope.keep) {
+            return [scope.keep];
+          } else {
+            return [];
+          }
+        };
+
+        scope.clickKeep = function (keep) {
+          if (keep.keepType === 'reco') {
+            recoService.click(keep);
+          }
+        };
+
+
+        //
+        // Watches.
+        //
+
+        scope.$watch('keep.url', function () {
+          updateSiteDescHtml();
+        });
+
+
+        // Size image stuff.
+        function sizeImage() {
+          if (!scope.keep || !scope.keep.summary || !scope.keep.summary.description) {
+            return;
+          }
+
+          var $sizer = angular.element('.kf-keep-description-sizer');
+          var img = { w: scope.keep.summary.imageWidth, h: scope.keep.summary.imageHeight };
+          var cardWidth = element.find('.kf-keep-contents')[0].offsetWidth;
+          var optimalWidth = Math.floor(cardWidth * 0.50); // ideal image size is 45% of card
+
+          $sizer[0].style.width = '';
+
+          function trimDesc(desc) {
+            $sizer.text(desc);
+            var singleLineWidthPx = $sizer[0].offsetWidth * ($sizer[0].offsetHeight / 23);
+
+            if (desc.length > 150) {
+              // If description is quite long, trim it. We're drawing it, because for non-latin
+              // languages, character length is very misleading regarding how long the text
+              // will be.
+              if (singleLineWidthPx > 5000) { // Roughly 8 lines at max text width
+                var showRatio = 5000 / singleLineWidthPx;
+                return desc.substr(0, Math.floor(showRatio * desc.length));
+              }
+            } else {
+              if (singleLineWidthPx < cardWidth && img.w > 0.75 * cardWidth) {
+                // If the text draws as one line, we may be interested in using the big image layout.
+                return false;
+              }
+            }
+            return desc;
+          }
+
+          if (!scope.keep.summary.trimmedDesc) {
+            var trimmed = trimDesc(scope.keep.summary.description);
+            if (trimmed === false) {
+              useBigLayout = true;
+              return;
+            }
+            scope.keep.summary.trimmedDesc = trimmed;
+          }
+
+          $sizer.text(scope.keep.summary.trimmedDesc);
+
+          function calcHeightDelta(guessWidth) {
+            function tryWidth(width) {
+              $sizer[0].style.width = width + 'px';
+              //$sizer.width(width);
+              var height = $sizer[0].offsetHeight + 25; // subtitle is 25px
+              return height;
+            }
+            var imageWidth = cardWidth - guessWidth;
+            var imageHeight = imageWidth / (img.w / img.h);
+            var textHeight = tryWidth(guessWidth);
+            var delta = textHeight - imageHeight;
+            var score = Math.abs(delta) + 0.5 * Math.abs(optimalWidth - imageWidth); // 30% penalty for distance away from optimal width
+
+            if (imageHeight > img.h) {
+              score += (imageHeight - img.h);
+            }
+            if (imageWidth > img.w) {
+              score += (imageWidth - img.w);
+            }
+
+            return { guess: guessWidth, delta: delta, score: score, ht: Math.ceil(textHeight), hi: imageHeight};
+          }
+
+          var i = 0;
+          var low = 200, high = cardWidth - 80; // text must be minimum 200px wide, max total-80
+          var guess = (high - low) / 2 + low;
+          var res = calcHeightDelta(guess);
+          var bestRes = res;
+
+          while(low + i < high && bestRes.score > 20) {
+            res = calcHeightDelta(low + i);
+            if (bestRes.score > res.score) {
+              bestRes = res;
+            }
+            i += 40;
+          }
+
+          var asideWidthPercent = Math.floor(((cardWidth - bestRes.guess) / cardWidth) * 100);
+          //var calcTextWidth = 100 - asideWidthPercent;
+          var linesToShow = Math.floor((bestRes.hi / 23)); // line height
+          var calcTextHeight = linesToShow * 23 + 22; // 22px subtitle
+
+          scope.keep.sizeCard = function () {
+            var $content = element.find('.kf-keep-content-line');
+            //$content.height(Math.floor(bestRes.hi) + 4); // 4px padding on image
+            $content.find('.kf-keep-small-image').width(asideWidthPercent + '%');
+            element.find('.kf-keep-info').css({
+              'height': calcTextHeight + 'px'
+            }).addClass('kf-dyn-positioned');
+
+            $content.find('.kf-keep-image').on('error', function () {
+              $content.find('.kf-keep-small-image').hide();
+            });
+          };
+        }
+
+        function maybeSizeImage() {
+          if (scope.keep && scope.keep.summary) {
+            var hasImage = scope.keep.summary.imageWidth > 50 && scope.keep.summary.imageHeight > 50;
+            if (hasImage && scope.keep.summary.description && scope.keep.hasSmallImage) {
+              scope.keep.sizeCard = null;
+              scope.keep.calcSizeCard = sizeImage;
+            }
+          }
+        }
+
+        scope.$on('resizeImage', maybeSizeImage);
+
+        scope.$watch('keep', function () {
+          if (scope.keep && scope.keep.summary) {
+            maybeSizeImage();
+            if (scope.keep.calcSizeCard) {
+              scope.keep.calcSizeCard();
+              scope.keep.calcSizeCard = null; // only want it called once.
+              if (scope.keep.sizeCard) {
+                scope.keep.sizeCard();
+              }
+            }
+          }
+        });
+
+        //
+        // During link.
+        //
+        updateSiteDescHtml();
+      }
+    };
+  }
+]);
