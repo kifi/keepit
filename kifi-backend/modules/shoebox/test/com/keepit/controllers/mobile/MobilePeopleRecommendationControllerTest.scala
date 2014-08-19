@@ -24,7 +24,7 @@ class MobilePeopleRecommendationControllerTest extends Specification with Shoebo
           abook.addFriendRecommendationsExpectations(users(0).id.get, Seq(users(1).id.get, users(2).id.get, users(3).id.get))
 
           val controller = inject[MobilePeopleRecommendationController]
-          val resultF = controller.getFriendRecommendations(1, 25)(FakeRequest())
+          val resultF = controller.getFriendRecommendations(1, 25, None, None)(FakeRequest())
 
           status(resultF) === 200
           contentType(resultF) must beSome("application/json")
