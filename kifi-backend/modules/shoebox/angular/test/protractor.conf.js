@@ -11,5 +11,5 @@ module.exports.config = {
   // Increase protractor timeout for page synchronization to 15 seconds.
   // (default is 11 seconds)
   // See: https://github.com/angular/protractor/blob/master/docs/timeouts.md
-  allScriptsTimeout: 15000
+  allScriptsTimeout: 20000
 };
