@@ -1,42 +1,27 @@
 package com.keepit.commanders
 
-import com.keepit.common.core._
 import com.google.inject.Inject
-import com.keepit.common.healthcheck.{ SystemAdminMailSender, AirbrakeNotifier }
-import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.{ LogPrefix, Logging }
-import com.keepit.model._
 import com.keepit.abook.ABookServiceClient
-import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
-import com.keepit.common.db.Id
-import com.keepit.social.{ TypeaheadUserHit, SocialNetworkType, SocialNetworks }
-import scala.concurrent.Future
-import play.api.libs.json._
-import com.keepit.typeahead.TypeaheadHit
-import play.api.libs.functional.syntax._
-import com.keepit.model.SocialUserConnectionsKey
-import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
-import com.keepit.search.SearchServiceClient
-import com.keepit.common.mail.EmailAddress
-import Logging.LoggerWithPrefix
-import scala.collection.mutable.ArrayBuffer
-import org.joda.time.DateTime
 import com.keepit.abook.model.RichContact
+import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.core._
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
+import com.keepit.common.logging.Logging.LoggerWithPrefix
+import com.keepit.common.logging.{ LogPrefix, Logging }
+import com.keepit.common.mail.EmailAddress
+import com.keepit.model.{ SocialUserConnectionsKey, _ }
+import com.keepit.search.SearchServiceClient
+import com.keepit.social.{ SocialNetworkType, SocialNetworks, TypeaheadUserHit }
+import com.keepit.typeahead.TypeaheadHit
+import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
+import com.kifi.macros.json
+import org.joda.time.DateTime
+import play.api.libs.concurrent.Execution.Implicits._
 
-case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
-
-object ConnectionWithInviteStatus {
-  implicit val format = (
-    (__ \ 'label).format[String] and
-    (__ \ 'score).format[Int] and
-    (__ \ 'networkType).format[String] and
-    (__ \ 'image).formatNullable[String] and
-    (__ \ 'value).format[String] and
-    (__ \ 'status).format[String] and
-    (__ \ 'email).formatNullable[String] and
-    (__ \ 'inviteLastSentAt).formatNullable[DateTime]
-  )(ConnectionWithInviteStatus.apply _, unlift(ConnectionWithInviteStatus.unapply))
-}
+import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.Future
 
 class TypeaheadCommander @Inject() (
     db: Database,
@@ -53,8 +38,6 @@ class TypeaheadCommander @Inject() (
     kifiUserTypeahead: KifiUserTypeahead,
     searchClient: SearchServiceClient,
     systemAdminMailSender: SystemAdminMailSender) extends Logging {
-
-  implicit val fj = ExecutionContext.fj
 
   private def emailId(email: EmailAddress) = s"email/${email.address}"
   private def socialId(sci: SocialUserBasicInfo) = s"${sci.networkType}/${sci.socialId.id}"
@@ -246,7 +229,7 @@ class TypeaheadCommander @Inject() (
       }
     }
     val kifiF = kifiUserTypeahead.topN(userId, q, limitOpt)(TypeaheadHit.defaultOrdering[User])
-    val abookF = if (q.length < 2) Future.successful(Seq.empty) else abookServiceClient.prefixQuery(userId, q, limitOpt)
+    val abookF = if (q.length < 2) Future.successful(Seq.empty) else abookServiceClient.prefixQuery(userId, q, limitOpt.map(_ * 2))
     val nfUsersF = if (q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeaheadWithUserId(userId, q, limitOpt.getOrElse(100), filter = "nf")
 
     limitOpt match {
@@ -260,7 +243,7 @@ class TypeaheadCommander @Inject() (
             fb ++ lnkd
           }
           val kifi = kifiF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO, hit)) }
-          val abook = abookF.map { hits => hits.map(hit => (SocialNetworks.EMAIL, hit)) }
+          val abook = abookF.map { hits => hits.filter(_.info.userId.isEmpty).map(hit => (SocialNetworks.EMAIL, hit)) }
           val nf = nfUsersF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO_NF, hit)) }
           val futures = Seq(social, kifi, abook, nf)
           fetchFirst(limit, futures)
@@ -268,7 +251,6 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  import com.keepit.common._
   def fetchFirst(limit: Int, futures: Iterable[Future[(Seq[(SocialNetworkType, TypeaheadHit[_])])]]): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {
     val zHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])]
     val allHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])]
@@ -276,7 +258,6 @@ class TypeaheadCommander @Inject() (
       val ordered = hits.sorted(hitOrd)
       log.info(s"fetchFirst ordered=${ordered.mkString(",")}")
       zHits ++= ordered.takeWhile { case (_, hit) => hit.score == 0 }
-      // todo(ray): dedup
       (zHits.length < limit) tap { res => if (res) allHits ++= ordered }
     }) map { _ =>
       if (zHits.length >= limit) zHits.take(limit) else {
@@ -340,15 +321,7 @@ class TypeaheadCommander @Inject() (
   private def dedup(abookRes: Seq[TypeaheadHit[RichContact]], kifiUsers: Map[Id[User], TypeaheadHit[User]]): Seq[TypeaheadHit[RichContact]] = {
     abookRes.filterNot { contactHit =>
       contactHit.info.userId.exists { uId =>
-        kifiUsers.get(uId).exists { userHit =>
-          if (userHit.score <= contactHit.score) {
-            log.infoP(s"DUP econtact (${contactHit.info.email}) discarded; userHit=${userHit.info} contactHit=${contactHit.info}")
-            true // todo: transform to User
-          } else {
-            log.warnP(s"DUP contact ${contactHit.info} has better score than user ${userHit}")
-            false
-          }
-        }
+        kifiUsers.get(uId).nonEmpty // exclude
       }
     }
   }
@@ -429,3 +402,5 @@ class TypeaheadCommander @Inject() (
   }
 
 }
+
+@json case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
