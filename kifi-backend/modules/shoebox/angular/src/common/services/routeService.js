@@ -64,8 +64,8 @@ angular.module('kifi')
       },
       incomingFriendRequests: route('/user/incomingFriendRequests'),
       invite: route('/user/invite'),
-      peopleYouMayKnow: function (page, pageSize) {
-        return route('/user/friends/recommended') + '?page=' + page + '&pageSize=' + pageSize;
+      peopleYouMayKnow: function (offset, limit) {
+        return route('/user/friends/recommended') + '?offset=' + offset + '&limit=' + limit;
       },
       hideUserRecommendation: function (id) {
         return route('/user/' + id + '/hide');
