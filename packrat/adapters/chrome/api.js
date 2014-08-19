@@ -44,12 +44,9 @@ var api = (function createApi() {
     }
   }
 
-  function createPage(id, url, skipOnLoading) {
+  function createPage(id, url) {
     var now = Date.now();
     var page = pages[id] = {id: id, url: url, created: now};
-    if (!skipOnLoading && httpRe.test(url)) {
-      dispatch.call(api.tabs.on.loading, page);
-    }
     if (now - gcPagesLastRun > 300000) {
       gcPagesLastRun = now;
       gcPages(now);
@@ -57,13 +54,12 @@ var api = (function createApi() {
     return page;
   }
 
-  function createPageAndInjectContentScripts(tab, skipOnLoading) {
-    var page = createPage(tab.id, tab.url, skipOnLoading);
-    if (httpRe.test(tab.url)) {
-      if (tab.status === 'complete') {
+  function injectContentScriptsWhenDomReady(page, status) {
+    if (httpRe.test(page.url)) {
+      if (status === 'complete') {
         injectContentScripts(page);
-      } else if (tab.status === 'loading') {
-        chrome.tabs.executeScript(tab.id, {code: 'document.readyState', runAt: 'document_start'}, injectContentScriptsIfDomReady.bind(null, page));
+      } else if (status === 'loading') {
+        chrome.tabs.executeScript(page.id, {code: 'document.readyState', runAt: 'document_start'}, injectContentScriptsIfDomReady.bind(null, page));
       }
     }
   }
@@ -101,7 +97,7 @@ var api = (function createApi() {
 
   chrome.tabs.onCreated.addListener(errors.wrap(function (tab) {
     log("#666", "[tabs.onCreated]", tab.id, tab.url);
-    normalTab[tab.id] = !!selectedTabIds[tab.windowId];
+    normalTab[tab.id] = tab.windowId in selectedTabIds;
   }));
 
   chrome.tabs.onActivated.addListener(errors.wrap(function (info) {
@@ -140,10 +136,18 @@ var api = (function createApi() {
   }));
 
   chrome.webNavigation.onCommitted.addListener(errors.wrap(function (e) {
-    if (e.frameId || normalTab[e.tabId] === false) return;
-    log('#666', '[onCommitted]', e.tabId, normalTab[e.tabId], e);
-    onRemoved(e.tabId, {temp: true});
-    createPage(e.tabId, e.url);
+    if (e.frameId === 0) {
+      var tabId = e.tabId;
+      var normal = normalTab[tabId];
+      log('#666', '[onCommitted]', tabId, normal ? 'normal' : normal == null ? 'invisible' : 'peculiar', e.url);
+      if (tabId in pages) {
+        onRemoved(tabId, {temp: true});
+      }
+      var page = createPage(tabId, e.url);
+      if (normal && httpRe.test(page.url)) {
+        dispatch.call(api.tabs.on.loading, page);
+      }
+    }
   }));
 
   chrome.webNavigation.onDOMContentLoaded.addListener(errors.wrap(function (details) {
@@ -193,7 +197,7 @@ var api = (function createApi() {
   }));
 
   chrome.tabs.onReplaced.addListener(errors.wrap(function (newTabId, oldTabId) {
-    log('#666', '[tabs.onReplaced]', oldTabId, '->', newTabId);
+    log('#666', '[tabs.onReplaced]', oldTabId, '<-', newTabId);
     var normal = normalTab[newTabId] = normalTab[oldTabId];
     onRemoved(oldTabId);
     if (normal) {
@@ -202,6 +206,7 @@ var api = (function createApi() {
         setPageAction(newTabId, page.icon);
       }
       if (httpRe.test(page.url)) {
+        dispatch.call(api.tabs.on.loading, page);
         injectContentScripts(page);
       }
     }
@@ -209,13 +214,14 @@ var api = (function createApi() {
 
   chrome.tabs.onRemoved.addListener(errors.wrap(onRemoved));
   function onRemoved(tabId, info) {
-    if (!info || !info.temp) {
+    var normal = normalTab[tabId];
+    if (normal != null && (!info || !info.temp)) {
       delete normalTab[tabId];
     }
     var page = pages[tabId];
     if (page) {
       delete pages[tabId];
-      if (httpRe.test(page.url)) {
+      if (normal && httpRe.test(page.url)) {
         dispatch.call(api.tabs.on.unload, page);
       }
     }
@@ -280,7 +286,8 @@ var api = (function createApi() {
     tabs.forEach(function (tab) {
       normalTab[tab.id] = true;
       if (!pages[tab.id]) {
-        createPageAndInjectContentScripts(tab, true);
+        var page = createPage(tab.id, tab.url);
+        injectContentScriptsWhenDomReady(page, tab.status);
       }
       if (tab.active) {
         selectedTabIds[tab.windowId] = tab.id;
