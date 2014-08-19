@@ -17,6 +17,7 @@ import play.api.libs.json._
 import com.keepit.common.logging.{ AccessLog, Logging }
 
 import scala.concurrent.duration.Duration
+import scala.util.Sorting
 
 class LibraryCommander @Inject() (
     db: Database,
@@ -54,6 +55,7 @@ class LibraryCommander @Inject() (
       ownerId = owner.externalId,
       description = lib.description,
       slug = lib.slug,
+      url = Library.formatLibraryUrl(owner, lib.slug),
       visibility = lib.visibility,
       collaborators = collabGroup,
       followers = followerGroup,
@@ -254,31 +256,26 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def joinLibrary(inviteId: Id[LibraryInvite]): Library = {
+  def joinLibrary(userId: Id[User], libraryId: Id[Library]): Either[LibraryFail, Library] = {
     db.readWrite { implicit s =>
-      val inv = libraryInviteRepo.get(inviteId)
-      val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(inv.libraryId, inv.userId.get)
+      val lib = libraryRepo.get(libraryId)
+      val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
 
-      listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
-
-      val listAccesses = listInvites.map(_.access)
-      val maxAccess = if (listAccesses.contains(LibraryAccess.READ_WRITE)) {
-        LibraryAccess.READ_WRITE
-      } else if (listAccesses.contains(LibraryAccess.READ_INSERT)) {
-        LibraryAccess.READ_INSERT
+      if (lib.visibility != LibraryVisibility.PUBLISHED && listInvites.isEmpty) {
+        Left(LibraryFail("cannot join - not published library"))
       } else {
-        LibraryAccess.READ_ONLY
+        val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
+        libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, showInSearch = true))
+        listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
+        Right(lib)
       }
-
-      libraryMembershipRepo.save(LibraryMembership(libraryId = inv.libraryId, userId = inv.userId.get, access = maxAccess, showInSearch = true))
-      libraryRepo.get(inv.libraryId)
     }
   }
 
-  def declineLibrary(inviteId: Id[LibraryInvite]) = {
+  def declineLibrary(userId: Id[User], libraryId: Id[Library]) = {
     db.readWrite { implicit s =>
-      val inv = libraryInviteRepo.get(inviteId)
-      libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.DECLINED))
+      val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId = libraryId, userId = userId)
+      listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.DECLINED)))
     }
   }
 
@@ -411,7 +408,7 @@ case class LibraryInfo(
   name: String,
   visibility: LibraryVisibility,
   shortDescription: Option[String],
-  slug: LibrarySlug,
+  url: String,
   ownerId: ExternalId[User],
   numKeeps: Int)
 object LibraryInfo {
@@ -422,7 +419,7 @@ object LibraryInfo {
     (__ \ 'name).format[String] and
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'shortDescription).formatNullable[String] and
-    (__ \ 'slug).format[LibrarySlug] and
+    (__ \ 'url).format[String] and
     (__ \ 'ownerId).format[ExternalId[User]] and
     (__ \ 'numKeeps).format[Int]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
@@ -433,7 +430,7 @@ object LibraryInfo {
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
-      slug = lib.slug,
+      url = Library.formatLibraryUrl(BasicUser.fromUser(owner), lib.slug),
       ownerId = owner.externalId,
       numKeeps = keepCount
     )
@@ -470,6 +467,7 @@ case class FullLibraryInfo(
   visibility: LibraryVisibility,
   description: Option[String],
   slug: LibrarySlug,
+  url: String,
   ownerId: ExternalId[User],
   collaborators: GroupHolder,
   followers: GroupHolder,
@@ -482,6 +480,7 @@ object FullLibraryInfo {
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'description).formatNullable[String] and
     (__ \ 'slug).format[LibrarySlug] and
+    (__ \ 'url).format[String] and
     (__ \ 'ownerId).format[ExternalId[User]] and
     (__ \ 'collaborators).format[GroupHolder] and
     (__ \ 'followers).format[GroupHolder] and
