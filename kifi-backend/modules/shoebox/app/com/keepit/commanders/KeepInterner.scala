@@ -156,7 +156,7 @@ class KeepInterner @Inject() (
   }
 
   val MAX_RANDOM_SCHEDULE_DELAY: Int = 600000
-  private val httpPrefix = "https?://.*".r
+  private val httpPrefix = "https?://".r
 
   private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], source: KeepSource, mutatePrivacy: Boolean, installationId: Option[ExternalId[KifiInstallation]] = None)(implicit session: RWSession): Try[InternedUriAndKeep] = try {
     if (httpPrefix.findPrefixOf(rawBookmark.url.toLowerCase).isDefined) {
