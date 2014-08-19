@@ -55,7 +55,7 @@ class LibraryCommander @Inject() (
       ownerId = owner.externalId,
       description = lib.description,
       slug = lib.slug,
-      url = Library.formatLibraryUrl(owner, lib.slug),
+      url = Library.formatLibraryUrl(owner.username, owner.externalId, lib.slug),
       visibility = lib.visibility,
       collaborators = collabGroup,
       followers = followerGroup,
@@ -430,7 +430,7 @@ object LibraryInfo {
       name = lib.name,
       visibility = lib.visibility,
       shortDescription = lib.description,
-      url = Library.formatLibraryUrl(BasicUser.fromUser(owner), lib.slug),
+      url = Library.formatLibraryUrl(owner.username, owner.externalId, lib.slug),
       ownerId = owner.externalId,
       numKeeps = keepCount
     )
