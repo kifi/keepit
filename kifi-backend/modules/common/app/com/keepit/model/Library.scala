@@ -6,6 +6,7 @@ import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId 
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
+import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -54,6 +55,11 @@ object Library extends ModelWithPublicIdCompanion[Library] {
   val maxNameLength = 50
   def isValidName(name: String): Boolean = {
     (name != "") && !(name.length > maxNameLength) && !(name.contains("\"")) && !(name.contains("/"))
+  }
+
+  def formatLibraryUrl(owner: BasicUser, slug: LibrarySlug): String = {
+    val usernameString = if (owner.username.isEmpty) owner.externalId.id else owner.username.get.value
+    s"/$usernameString/${slug.value}"
   }
 }
 
