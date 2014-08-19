@@ -14,6 +14,7 @@ import scala.concurrent.Future
 import scala.collection.mutable.ListBuffer
 import com.keepit.abook.model.EmailAccountInfo
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.abook.ABookServiceClient
 
 case class SociallyRelatedPeople(
   users: RelatedEntities[User, User],
@@ -27,6 +28,7 @@ class SocialWanderingCommander @Inject() (
     relatedFacebookAccountsCache: SociallyRelatedFacebookAccountsCache,
     relatedLinkedInAccountsCache: SociallyRelatedLinkedInAccountsCache,
     relatedEmailAccountsCache: SociallyRelatedEmailAccountsCache,
+    abook: ABookServiceClient,
     clock: Clock) extends Logging {
 
   private val consolidate = new RequestConsolidator[Id[User], SociallyRelatedPeople](1 minute)
@@ -103,7 +105,14 @@ class SocialWanderingCommander @Inject() (
     journal
   }
 
-  private def getIrrelevantVertices(userId: Id[User]): Future[Set[VertexId]] = Future.successful(Set.empty)
+  private def getIrrelevantVertices(userId: Id[User]): Future[Set[VertexId]] = {
+    abook.getIrrelevantRecommendations(userId).map { irrelevantRecommendations =>
+      irrelevantRecommendations.irrelevantUsers.map(VertexId(_)) ++
+        irrelevantRecommendations.irrelevantFacebookAccounts.map(id => VertexId(VertexDataId.fromSocialUserIdToFacebookAccountId(id))) ++
+        irrelevantRecommendations.irrelevantLinkedInAccounts.map(id => VertexId(VertexDataId.fromSocialUserIdToLinkedInAccountId(id))) ++
+        irrelevantRecommendations.irrelevantEmailAccounts.map(VertexId(_))
+    }
+  }
 }
 
 object SocialWanderlust {
