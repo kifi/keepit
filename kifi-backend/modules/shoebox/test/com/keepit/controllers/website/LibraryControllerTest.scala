@@ -376,7 +376,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             |[
             | {"user":"${user2.externalId}","access":"${LibraryAccess.READ_ONLY.value}"},
             | {"user":"${user3.externalId}","access":"${LibraryAccess.READ_ONLY.value}"},
-            | {"user":"squirtle@gmail.com","access":"${LibraryAccess.READ_ONLY.value}"}
+            | {"email":"squirtle@gmail.com","access":"${LibraryAccess.READ_ONLY.value}"}
             |]
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
