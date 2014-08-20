@@ -75,17 +75,28 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         abookClient.addTypeaheadHits(u1.id.get, Seq(TypeaheadHit[RichContact](0, "陳家洛", 0, RichContact(EmailAddress("chan@jing.com"), Some("陳家洛 電郵")))))
         inject[FakeActionAuthenticator].setUser(u1)
 
-        val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some("陳家"), Some(10), false, true).url
-        val res = inject[TypeaheadController].searchWithInviteStatus(Some("陳家"), Some(10), false, true)(FakeRequest("GET", path))
-        val s = contentAsString(res)
-        val parsed = Json.parse(s).as[Seq[ConnectionWithInviteStatus]]
-        parsed.length === 3
-        parsed(0).networkType === SocialNetworks.FACEBOOK.name
-        parsed(0).label === "陳家洛"
-        parsed(1).networkType === SocialNetworks.LINKEDIN.name
-        parsed(1).label === "陳家洛 先生"
-        parsed(2).networkType === SocialNetworks.EMAIL.name
-        parsed(2).label === "陳家洛 電郵"
+        @inline def search(query: String, limit: Int = 10): Seq[ConnectionWithInviteStatus] = {
+          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false, true).url
+          val res = inject[TypeaheadController].searchWithInviteStatus(Some(query), Some(limit), false, true)(FakeRequest("GET", path))
+          val s = contentAsString(res)
+          Json.parse(s).as[Seq[ConnectionWithInviteStatus]]
+        }
+
+        val res1 = search("陳")
+        res1.length === 2 // FB, LNKD; one "letter" -- abook skipped
+        res1(0).networkType === SocialNetworks.FACEBOOK.name
+        res1(0).label === "陳家洛"
+        res1(1).networkType === SocialNetworks.LINKEDIN.name
+        res1(1).label === "陳家洛 先生"
+
+        val res2 = search("陳家")
+        res2.length === 3 // FB, LNKD, EMAIL
+        res2(0).networkType === SocialNetworks.FACEBOOK.name
+        res2(0).label === "陳家洛"
+        res2(1).networkType === SocialNetworks.LINKEDIN.name
+        res2(1).label === "陳家洛 先生"
+        res2(2).networkType === SocialNetworks.EMAIL.name
+        res2(2).label === "陳家洛 電郵"
       }
     }
 
