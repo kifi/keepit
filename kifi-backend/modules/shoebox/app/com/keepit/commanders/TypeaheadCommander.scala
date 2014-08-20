@@ -248,6 +248,7 @@ class TypeaheadCommander @Inject() (
     }
   }
 
+  // somewhat specialized; pure side-effects
   private def processWhile[T](futures: Iterable[Future[T]], predicate: T => Boolean, promised: Promise[Unit] = Promise()): Future[Unit] = {
     futures.headOption match {
       case None => promised.success()
