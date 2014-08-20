@@ -84,12 +84,10 @@ class MainSearcher(
     uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
   }
 
-  @inline private[this] def sharingScore(sharingUsers: UserToUserEdgeSet): Float = {
-    if (filter.isCustom) filter.filterFriends(sharingUsers.destIdSet).size.toFloat else sharingUsers.size.toFloat
-  }
+  @inline private[this] def sharingScore(sharingUsers: UserToUserEdgeSet): Float = sharingUsers.size.toFloat
 
   @inline private[this] def sharingScore(sharingUsers: UserToUserEdgeSet, normalizedFriendStats: FriendStats): Float = {
-    val users = if (filter.isCustom) filter.filterFriends(sharingUsers.destIdSet) else sharingUsers.destIdSet
+    val users = sharingUsers.destIdSet
     users.foldLeft(sharingUsers.size.toFloat) { (score, id) => score + normalizedFriendStats.score(id) } / 2.0f
   }
 
@@ -168,7 +166,7 @@ class MainSearcher(
 
     val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
     val friendsUriEdgeAccessors = socialGraphInfo.friendsUriEdgeAccessors
-    val relevantFriendEdgeSet = socialGraphInfo.relevantFriendEdgeSet
+    val friendEdgeSet = socialGraphInfo.friendEdgeSet
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
@@ -186,7 +184,7 @@ class MainSearcher(
     }
 
     val threshold = highScore * tailCutting
-    val friendStats = FriendStats(relevantFriendEdgeSet.destIdLongSet)
+    val friendStats = FriendStats(friendEdgeSet.destIdLongSet)
     var numCollectStats = 20
 
     val usefulPages = monitoredAwait.result(clickHistoryFuture, 40 millisecond, s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI])
@@ -196,7 +194,7 @@ class MainSearcher(
         case (hit, rank) =>
 
           val h = hit.hit
-          val sharingUsers = findSharingUsers(h.id, relevantFriendEdgeSet)
+          val sharingUsers = findSharingUsers(h.id, friendEdgeSet)
           val sharingUserSize = sharingUsers.size.toFloat
 
           if (numCollectStats > 0 && sharingUserSize > 0.0f) {
@@ -235,7 +233,7 @@ class MainSearcher(
       friendsHits.toRankedIterator.forall {
         case (hit, rank) =>
           val h = hit.hit
-          val sharingUsers = findSharingUsers(h.id, relevantFriendEdgeSet)
+          val sharingUsers = findSharingUsers(h.id, friendEdgeSet)
           val sharingUserSize = sharingUsers.size.toFloat
 
           var recencyScoreVal = 0.0f

@@ -32,6 +32,8 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     Future.successful(true)
   }
 
+  def resetUserRecoGenState(userId: Id[User]): Future[Unit] = { Future.successful() }
+
   // test helpers
   val updatedUriRecommendationUserInteractions = ListBuffer[(Id[User], Id[NormalizedURI], UriRecommendationUserInteraction)]()
   val updatedUriRecommendationFeedback = ListBuffer[(Id[User], Id[NormalizedURI], UriRecommendationFeedback)]()

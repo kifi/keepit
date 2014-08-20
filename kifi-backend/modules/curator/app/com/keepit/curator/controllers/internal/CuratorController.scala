@@ -62,4 +62,8 @@ class CuratorController @Inject() (
       case _ => Future.successful(Ok(JsString(s"error: code $code not found")))
     }
   }
+
+  def resetUserRecoGenState(userId: Id[User]) = Action.async { request =>
+    recoGenCommander.resetUser(userId).map { u => Ok }
+  }
 }
