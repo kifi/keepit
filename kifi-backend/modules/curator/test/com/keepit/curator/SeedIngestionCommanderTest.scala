@@ -256,8 +256,8 @@ class SeedIngestionCommanderTest extends Specification with CuratorTestInjector 
         Await.result(commander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
 
-        val user1SeedItems = Await.result(commander.getBySeqNumAndUser(SequenceNumber.ZERO, user1, 20), Duration(10, "seconds"))
-        val user2SeedItems = Await.result(commander.getBySeqNumAndUser(SequenceNumber.ZERO, user2, 20), Duration(10, "seconds"))
+        val user1SeedItems = Await.result(commander.getDiscoverableBySeqNumAndUser(SequenceNumber.ZERO, user1, 20), Duration(10, "seconds"))
+        val user2SeedItems = Await.result(commander.getDiscoverableBySeqNumAndUser(SequenceNumber.ZERO, user2, 20), Duration(10, "seconds"))
 
         user1SeedItems.length === 6
         user2SeedItems.length === 6
