@@ -31,7 +31,7 @@ class MobilePageController @Inject() (
         Ok(Json.toJson(info))
       case Failure(e) =>
         log.error(s"Error parsing url: $url", e)
-        BadRequest(s"Error parsing url: $url")
+        BadRequest(Json.obj("error" -> s"Error parsing url: $url"))
     }
   }
 
