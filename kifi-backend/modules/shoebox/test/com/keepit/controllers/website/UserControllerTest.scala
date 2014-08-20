@@ -104,10 +104,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val result: Future[SimpleResult] = inject[UserController].updateUsername()(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
-        val expected = Json.parse(
-          s"""
-            | {"username":"GDubs"}
-           """.stripMargin)
+        val expected = Json.parse(s"""{"username":"GDubs"}""")
         Json.parse(contentAsString(result)) must equalTo(expected)
       }
     }
