@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, LargeString }
+import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
@@ -13,6 +14,7 @@ import com.keepit.model.{ URISummary, NormalizedURI, User, UriRecommendationScor
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.Play.maybeApplication
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 
 import concurrent.Future
@@ -27,16 +29,19 @@ sealed case class AllDigestRecos(toUser: User, recos: Seq[DigestReco])
 
 sealed case class DigestReco(reco: UriRecommendation, uri: NormalizedURI, uriSummary: URISummary,
     keepers: DigestRecoKeepers) {
-  val title = uriSummary.title.getOrElse("")
+  val title = uriSummary.title.getOrElse(uri.title.getOrElse(""))
   val description = uriSummary.description.getOrElse("")
   val imageUrl = uriSummary.imageUrl.map { url => if (url.startsWith("//")) "https:" + url else url }
   val url = uri.url
+  val domain = DomainToNameMapper.getNameFromUrl(url)
   val score = reco.masterScore
   val explain = reco.allScores.toString
+  val topic = reco.attribution.topic.map(_.topicName)
   val readTime = uriSummary.wordCount.filter(_ >= 0).map { wc =>
     val minutesEstimate = wc / 250
     DigestEmail.READ_TIMES.find(minutesEstimate < _).map(_ + " min").getOrElse("> 1 h")
   }
+  val urls = DigestRecoUrls(recoUrl = url)
 }
 
 sealed case class KeeperUser(userId: Id[User], userAvatarUrl: String, basicUser: BasicUser) {
@@ -66,6 +71,12 @@ sealed case class DigestRecoKeepers(friends: Seq[Id[User]] = Seq.empty, others: 
 }
 
 sealed case class DigestRecoMail(userId: Id[User], mailSent: Boolean, feed: Seq[DigestReco])
+
+sealed case class DigestRecoUrls(recoUrl: String) {
+  val viewPage = recoUrl
+  val sendPage = recoUrl
+  val keepAndSeeMore = recoUrl
+}
 
 @ImplementedBy(classOf[FeedDigestEmailSenderImpl])
 trait FeedDigestEmailSender {
@@ -100,15 +111,23 @@ class FeedDigestEmailSenderImpl @Inject() (
     val userId = user.id.get
     log.info(s"sending engagement feed email to $userId")
 
-    getDigestRecommendationsForUser(userId).flatMap { recos =>
-      composeAndSendEmail(user, recos)
-    }
+    {
+      for {
+        recos <- getDigestRecommendationsForUser(userId)
+        unsubscribeUrl <- shoebox.getUnsubscribeUrlForEmail(user.primaryEmail.get)
+      } yield {
+        composeAndSendEmail(user, recos, unsubscribeUrl)
+      }
+    } flatMap (x => x)
   }
 
-  private def composeAndSendEmail(user: User, digestRecos: Seq[DigestReco]): Future[DigestRecoMail] = {
+  private def composeAndSendEmail(user: User, digestRecos: Seq[DigestReco], unsubscribeUrl: String): Future[DigestRecoMail] = {
     val userId = user.id.get
     val emailData = AllDigestRecos(toUser = user, recos = digestRecos)
-    val htmlBody: LargeString = views.html.email.feedDigestInlined(emailData).body
+    val htmlBody: LargeString = views.html.email.feedDigest(emailData, unsubscribeUrl).body
+
+    // TODO(josh) use the inlined template as soon as the base one is done/approved
+    //val htmlBody: LargeString = views.html.email.feedDigestInlined(emailData).body
     val textBody: Some[LargeString] = Some(views.html.email.feedDigestText(emailData).body)
 
     val email = ElectronicMail(
@@ -146,8 +165,11 @@ class FeedDigestEmailSenderImpl @Inject() (
         val summary = summaries(reco.uriId)
         val uri = uriMap(reco.uriId)
         val recoKeepers = recosKeepers(reco.uriId)
-        DigestReco(reco, uri, summary, recoKeepers)
-      }
+
+        // ensure a title exists
+        if (summary.title.exists(_.size > 0) || uri.title.exists(_.size > 0)) Some(DigestReco(reco, uri, summary, recoKeepers))
+        else None
+      }.flatten
     }
   }
 
