@@ -60,16 +60,25 @@ object FutureHelpers {
   }
 
   def sequentialExec[I, T](items: Iterable[I])(f: I => Future[T])(implicit ec: ScalaExecutionContext): Future[Unit] = {
-    foldLeft(items)(()) { case ((), nextItem) => f(nextItem).map { _ => () } }
+    foldLeftWhile(items)(()) { case ((), nextItem) => f(nextItem).map { _ => () } }
   }
 
   def foldLeft[I, T](items: Iterable[I], promisedResult: Promise[T] = Promise[T]())(accumulator: T)(fMap: (T, I) => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {
-    if (items.isEmpty) { promisedResult.success(accumulator) }
-    else fMap(accumulator, items.head).onComplete {
-      case Success(updatedAccumulator) => foldLeft(items.tail, promisedResult)(updatedAccumulator)(fMap)
-      case Failure(ex) => promisedResult.failure(ex)
+    foldLeftWhile(items)(accumulator)(fMap)
+  }
+
+  private def foldLeftWhile[I, T](items: Iterable[I], promised: Promise[T] = Promise[T]())(acc: T)(fMap: (T, I) => Future[T], pred: Option[(I) => Boolean] = None)(implicit ec: ScalaExecutionContext): Future[T] = {
+    if (items.isEmpty) { promised.success(acc) }
+    else {
+      val item = items.head
+      fMap(acc, item).onComplete {
+        case Success(updatedAcc) =>
+          if (pred.forall(_.apply(item))) foldLeftWhile(items.tail, promised)(updatedAcc)(fMap, pred)
+          else promised.success(updatedAcc) // short-circuit
+        case Failure(ex) => promised.failure(ex)
+      }
     }
-    promisedResult.future
+    promised.future
   }
 
   def whilef(f: => Future[Boolean], p: Promise[Unit] = Promise[Unit]())(body: => Unit)(implicit ec: ScalaExecutionContext): Future[Unit] = {
