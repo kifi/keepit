@@ -266,6 +266,7 @@ POST    /site/recos/vote            @com.keepit.controllers.website.Recommendati
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
+POST    /site/user/username         @com.keepit.controllers.website.UserController.updateUsername()
 GET     /site/user/email            @com.keepit.controllers.website.UserController.getEmailInfo(email: EmailAddress)
 POST    /site/user/password         @com.keepit.controllers.website.UserController.changePassword()
 GET     /site/user/inviteCounts     @com.keepit.controllers.website.UserController.getInviteCounts()

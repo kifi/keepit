@@ -10,6 +10,7 @@ import com.keepit.model._
 import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication }
 
 import play.api.libs.json.{ Json }
+import play.api.mvc.SimpleResult
 import play.api.test.Helpers._
 import play.api.test._
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
@@ -25,6 +26,8 @@ import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerM
 
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.cortex.FakeCortexServiceClientModule
+
+import scala.concurrent.Future
 
 class UserControllerTest extends Specification with ShoeboxTestInjector {
 
@@ -78,6 +81,33 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
             }
           """)
 
+        Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
+    "update username" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val user = inject[Database].readWrite { implicit session =>
+          val user = inject[UserRepo].save(User(firstName = "George", lastName = "Washington", username = Some(Username("GeorgeWash"))))
+          inject[UserExperimentRepo].save(UserExperiment(userId = user.id.get, experimentType = ExperimentType.ADMIN))
+          user
+        }
+        val path = com.keepit.controllers.website.routes.UserController.updateUsername().url
+        path === "/site/user/username"
+
+        inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.ADMIN))
+
+        val inputJson1 = Json.obj(
+          "username" -> "GDubs"
+        )
+        val request = FakeRequest("POST", path).withBody(inputJson1)
+        val result: Future[SimpleResult] = inject[UserController].updateUsername()(request)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+        val expected = Json.parse(
+          s"""
+            | {"username":"GDubs"}
+           """.stripMargin)
         Json.parse(contentAsString(result)) must equalTo(expected)
       }
     }
