@@ -71,13 +71,37 @@ class ABookRecommendationCommander @Inject() (
     futureRecommendations
   }
 
-  def getIrrelevantRecommendations(userId: Id[User]): IrrelevantPeopleRecommendations = {
-    db.readOnlyMaster { implicit session =>
-      val irrelevantUsers = friendRecommendationRepo.getIrrelevantRecommendations(userId)
-      val irrelevantFacebookAccounts = facebookInviteRecommendationRepo.getIrrelevantRecommendations(userId)
-      val irrelevantLinkedInAccounts = linkedInInviteRecommendationRepo.getIrrelevantRecommendations(userId)
-      val irrelevantEmailAccounts = emailInviteRecommendationRepo.getIrrelevantRecommendations(userId).map(EmailAccount.toEmailAccountInfoId)
-      IrrelevantPeopleRecommendations(userId, irrelevantUsers, irrelevantFacebookAccounts, irrelevantLinkedInAccounts, irrelevantEmailAccounts)
+  def getIrrelevantPeople(userId: Id[User]): Future[IrrelevantPeople] = {
+    val futureSocialAccounts = shoebox.getSocialUserInfosByUserId(userId)
+    val futureFriends = shoebox.getFriends(userId)
+    val futureFriendRequests = shoebox.getFriendRequestsBySender(userId)
+    val futureInvitations = shoebox.getInvitations(userId)
+    val (irrelevantUsers, irrelevantFacebookAccounts, irrelevantLinkedInAccounts, irrelevantEmailAccounts) = db.readOnlyMaster { implicit session =>
+      (
+        friendRecommendationRepo.getIrrelevantRecommendations(userId),
+        facebookInviteRecommendationRepo.getIrrelevantRecommendations(userId),
+        linkedInInviteRecommendationRepo.getIrrelevantRecommendations(userId),
+        emailInviteRecommendationRepo.getIrrelevantRecommendations(userId)
+      )
+    }
+
+    for {
+      socialAccounts <- futureSocialAccounts
+      friends <- futureFriends
+      friendRequests <- futureFriendRequests
+      invitations <- futureInvitations
+    } yield {
+      val userSocialAccounts = socialAccounts.map(_.id.get)
+      val invitedSocialAccounts = invitations.flatMap(_.recipientSocialUserId)
+      val invitedEmailAddresses = invitations.flatMap(_.recipientEmailAddress)
+      val invitedEmailAccounts = db.readOnlyMaster { implicit session => emailAccountRepo.getByAddresses(invitedEmailAddresses: _*).values.map(_.id.get) }
+      IrrelevantPeople(
+        userId,
+        irrelevantUsers -- friends -- friendRequests.map(_.recipientId),
+        irrelevantFacebookAccounts -- userSocialAccounts -- invitedSocialAccounts,
+        irrelevantLinkedInAccounts -- userSocialAccounts -- invitedSocialAccounts,
+        (irrelevantEmailAccounts -- invitedEmailAccounts).map(EmailAccount.toEmailAccountInfoId)
+      )
     }
   }
 
