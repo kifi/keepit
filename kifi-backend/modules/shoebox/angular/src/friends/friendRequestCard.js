@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.friends.friendRequestCard', [])
+angular.module('kifi')
 
 
 .directive('kfFriendRequestCard', ['$log', 'friendService', function ($log, friendService) {

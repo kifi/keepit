@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.recoService', ['util'])
+angular.module('kifi')
 
 .factory('recoService', [
   '$http', 'env', '$q', 'routeService', 'Clutch', 'util',

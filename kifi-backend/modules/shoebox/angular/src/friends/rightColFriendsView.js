@@ -1,12 +1,6 @@
 'use strict';
 
-angular.module('kifi.friends.rightColFriendsView', [
-  'kifi',
-  'kifi.friendService',
-  'kifi.inviteService',
-  'kifi.invite.wtiService',
-  'kifi.socialService'
-])
+angular.module('kifi')
 
 .directive('kfCompactFriendsView', ['friendService', function (friendService) {
   return {
@@ -36,7 +30,7 @@ angular.module('kifi.friends.rightColFriendsView', [
         friendsToDisplay.forEach(function (friend) {
           friend.pictureUrl = friendService.getPictureUrlForUser(friend);
         });
-        
+
         scope.friends = friendsToDisplay;
       });
 
@@ -67,8 +61,8 @@ angular.module('kifi.friends.rightColFriendsView', [
   };
 }])
 
-.directive('kfPeopleYouMayKnowView', 
-  ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'savePymkService', 'wtiService', 
+.directive('kfPeopleYouMayKnowView',
+  ['$log', '$q', '$rootScope', '$timeout', 'friendService', 'inviteService', 'savePymkService', 'wtiService',
   function ($log, $q, $rootScope, $timeout, friendService, inviteService, savePymkService, wtiService) {
   return {
     replace: true,
@@ -124,6 +118,10 @@ angular.module('kifi.friends.rightColFriendsView', [
               });
             });
           });
+          
+          scope.header = 'Find People to Invite';
+        } else {
+          scope.header = 'People You May Know';
         }
 
         scope.peopleYouMayKnow = peopleYouMayKnow;
@@ -149,7 +147,7 @@ angular.module('kifi.friends.rightColFriendsView', [
             person.clickable = true;
             inviteService.expireSocialSearch();
           });
-        } 
+        }
 
         // Invite contact to become Kifi user.
         else {

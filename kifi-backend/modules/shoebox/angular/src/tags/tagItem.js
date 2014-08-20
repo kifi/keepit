@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
+angular.module('kifi')
 
 .directive('kfTagItem', [
   '$timeout', '$document', '$rootScope', 'tagService', 'keepService', 'keyIndices', 'dragService',
@@ -26,11 +26,8 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
 
         scope.isFake = attrs.fake !== undefined;
         scope.isHovering = false;
-        scope.isRenaming = false;
         scope.isWaiting = false;
         scope.isDropdownOpen = false;
-        scope.renameTag = {};
-        var input = element.find('input');
         var clone, cloneMask;
         var tagList = element.parent();
 
@@ -38,7 +35,7 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
           window.jQuery.event.props.push('dataTransfer');
         }
 
-        /* We shouldn't need custom logic for this - it looks like the ="true" on the attribute gets 
+        /* We shouldn't need custom logic for this - it looks like the ="true" on the attribute gets
          * stripped off at some point (angular bug?)
          */
         scope.$watch('watchTagReorder()', function (res) {
@@ -50,46 +47,11 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
         });
 
         scope.navigateToTag = function (event) {
-          if (scope.isRenaming || !scope.tag) {
+          if (!scope.tag) {
             event.stopPropagation();
           } else {
             scope.viewTag({tagId: scope.tag.id});
           }
-        };
-
-        scope.setRenaming = function () {
-          scope.isRenaming = true;
-          scope.renameTag.value = scope.tag.name;
-          $timeout(function () {
-            input.focus();
-            input.select();
-          });
-        };
-
-        scope.onRenameKeydown = function (e) {
-          switch (e.keyCode) {
-            case keyIndices.KEY_ENTER:
-              scope.submitRename();
-              break;
-            case keyIndices.KEY_ESC:
-              scope.cancelRename();
-              break;
-          }
-        };
-
-        scope.submitRename = function () {
-          var newName = scope.renameTag.value;
-          if (newName && scope.tag && newName !== scope.tag.name) {
-            animate();
-            return tagService.rename(scope.tag.id, newName).then(function () {
-              scope.cancelRename();
-            });
-          }
-          scope.cancelRename();
-        };
-
-        scope.cancelRename = function () {
-          scope.isRenaming = false;
         };
 
         function removeCloseDropdownHandler() {
@@ -118,10 +80,6 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
 
         scope.$on('$destroy', function () {
           removeCloseDropdownHandler();
-        });
-
-        input.on('blur', function () {
-          scope.$apply(function () { scope.cancelRename(); });
         });
 
         var keepDragMask = element.find('.kf-keep-drag-mask');
@@ -244,7 +202,7 @@ angular.module('kifi.tagItem', ['kifi.tagService', 'kifi.dragService'])
             }
           });
         });
-        
+
       }
     };
   }

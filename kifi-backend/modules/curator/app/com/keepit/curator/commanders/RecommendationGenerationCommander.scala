@@ -42,6 +42,8 @@ class RecommendationGenerationCommander @Inject() (
 
   private def usersToPrecomputeRecommendationsFor(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.RECOS_BETA).map(users => users.map(_.id.get).toSeq)
 
+  private def specialCurators(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.SPECIAL_CURATOR).map(users => users.map(_.id.get).toSeq)
+
   private def computeMasterScore(scores: UriScores): Float = {
     (5 * scores.socialScore +
       6 * scores.overallInterestScore +
@@ -95,7 +97,9 @@ class RecommendationGenerationCommander @Inject() (
           score =
             if (scoreCoefficients.isEmpty) computeMasterScore(reco.allScores)
             else computeAdjustedScoreByTester(scoreCoefficients, reco.allScores),
-          explain = Some(reco.allScores.toString))
+          explain = Some(reco.allScores.toString),
+          attribution = reco.attribution
+        )
       }.sortBy(-1 * _.score).take(howManyMax)
     }
   }
@@ -111,7 +115,7 @@ class RecommendationGenerationCommander @Inject() (
   }
 
   private def shouldInclude(scores: UriScores): Boolean = {
-    if (scores.overallInterestScore > 0.45 || scores.recentInterestScore > 0) {
+    if ((scores.overallInterestScore > 0.45 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 4.5) {
       scores.socialScore > 0.8 ||
         scores.overallInterestScore > 0.65 ||
         scores.priorScore > 0 ||
@@ -133,7 +137,7 @@ class RecommendationGenerationCommander @Inject() (
 
   private def getCandidateSeedsForUser(userId: Id[User], state: UserRecommendationGenerationState) =
     for {
-      seeds <- seedCommander.getBySeqNumAndUser(state.seq, userId, 200)
+      seeds <- seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, 200)
       discoverableSeeds = seeds.filter(_.discoverable)
       candidateURIs <- shoebox.getCandidateURIs(discoverableSeeds.map { _.uriId })
     } yield {
@@ -149,7 +153,7 @@ class RecommendationGenerationCommander @Inject() (
       ((discoverableSeeds zip candidateURIs) filter (_._2) map (_._1), if (seeds.isEmpty) seq else seeds.map(_.seq).max)
     }
 
-  private def precomputeRecommendationsForUser(userId: Id[User]): Unit = recommendationGenerationLock.withLockFuture {
+  private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]]): Unit = recommendationGenerationLock.withLockFuture {
     getPerUserGenerationLock(userId).withLockFuture {
       val state = getStateOfUser(userId)
       val seedsAndSeqFuture = getCandidateSeedsForUser(userId, state)
@@ -160,7 +164,7 @@ class RecommendationGenerationCommander @Inject() (
             db.readWrite { implicit session =>
               genStateRepo.save(newState)
             }
-            if (state.seq < newSeqNum) { precomputeRecommendationsForUser(userId) }
+            if (state.seq < newSeqNum) { precomputeRecommendationsForUser(userId, boostedKeepers) }
             Future.successful(false)
           } else {
             val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
@@ -170,7 +174,7 @@ class RecommendationGenerationCommander @Inject() (
               }
             }
             val weightedItems = uriWeightingHelper(cleanedItems)
-            val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(weightedItems).map { scoredItems =>
+            val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(weightedItems, boostedKeepers).map { scoredItems =>
               scoredItems.filter(si => shouldInclude(si.uriScores))
             }.flatMap { scoredItems =>
               attributionHelper.getAttributions(scoredItems)
@@ -203,7 +207,7 @@ class RecommendationGenerationCommander @Inject() (
                 genStateRepo.save(newState)
               }
 
-              precomputeRecommendationsForUser(userId)
+              precomputeRecommendationsForUser(userId, boostedKeepers)
 
               !seedItems.isEmpty
             }
@@ -275,8 +279,11 @@ class RecommendationGenerationCommander @Inject() (
 
   def precomputeRecommendations(): Unit = {
     usersToPrecomputeRecommendationsFor().map { userIds =>
-      if (recommendationGenerationLock.waiting < userIds.length + 1) {
-        userIds.foreach(precomputeRecommendationsForUser)
+      specialCurators().map { boostedKeepersSeq =>
+        if (recommendationGenerationLock.waiting < userIds.length + 1) {
+          val boostedKeepers = boostedKeepersSeq.toSet
+          userIds.foreach(userId => precomputeRecommendationsForUser(userId, boostedKeepers))
+        }
       }
     }
   }

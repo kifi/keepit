@@ -1,4 +1,4 @@
-@(emailData: com.keepit.curator.commanders.email.RecommendedEmailData)
+@(emailData: com.keepit.curator.commanders.email.AllDigestRecos)
 
 <div style="margin:0 auto;max-width:700px;">
 Hello @emailData.toUser.firstName,<br/><br/>
@@ -12,18 +12,26 @@ Kifi recommends @emailData.recos.size items for you:
             </h3>
             <div style="float:left;clear:both;">
                 <div style="float:right;">
-                    <form method="post" action="https://www.kifi.com/site/recos/vote" style="float:left;">
+                    <form method="post" action="https://www.kifi.com/site/recos/vote?url=@helper.urlEncode(reco.url)" style="float:left;">
                         <input type="hidden" name="vote" value="true"/>
-                        <input type="hidden" name="url" value="@helper.urlEncode(reco.url)"/>
                         <input type="submit" value="Good"/>
                     </form>
-                    <form method="post" action="https://www.kifi.com/site/recos/vote" style="float:left;">
+                    <form method="post" action="https://www.kifi.com/site/recos/vote?url=@helper.urlEncode(reco.url)" style="float:left;">
                         <input type="hidden" name="vote" value="false"/>
-                        <input type="hidden" name="url" value="@helper.urlEncode(reco.url)"/>
                         <input type="submit" value="Bad"/>
                     </form>
                 </div>
                 @reco.description
+                <br/>
+                @reco.readTime.map { readTime =>
+                <span>@readTime read</span>
+                }
+            </div>
+            <div style="float:left;clear:both;">
+                @reco.keepers.friendsToShow.map { user =>
+                    <img src="@user.avatarUrl" title="@user.firstName" width="28"/>
+                }
+                @reco.keepers.message
             </div>
             <div style="float:left;clear:both;margin:1em 0;font-size:0.9em;color:#777;">Score: @reco.score (@reco.explain)</div>
         </div>

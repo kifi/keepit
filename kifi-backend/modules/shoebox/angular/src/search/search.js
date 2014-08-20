@@ -1,9 +1,6 @@
 'use strict';
 
-angular.module('kifi.search', [
-  'util',
-  'kifi.keepService'
-])
+angular.module('kifi')
 
 .config([
   '$routeProvider',

@@ -161,6 +161,6 @@ class GraphServiceClientImpl @Inject() (
 
   def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[GraphFeedExplanation]] = {
     val payload = Json.obj("user" -> userId, "uris" -> uriIds)
-    call(Graph.internal.explainFeed(), payload).map { r => (r.json).as[Seq[GraphFeedExplanation]] }
+    call(Graph.internal.explainFeed(), payload, callTimeouts = longTimeout).map { r => (r.json).as[Seq[GraphFeedExplanation]] }
   }
 }

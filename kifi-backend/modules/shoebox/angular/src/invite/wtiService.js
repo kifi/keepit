@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.invite.wtiService', ['kifi.clutch'])
+angular.module('kifi')
 
 .factory('wtiService', [
   '$http', 'routeService', 'Clutch', '$q',

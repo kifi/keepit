@@ -64,7 +64,6 @@ class MainSearcher(
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
   private[this] val forbidEmptyFriendlyHits = config.asBoolean("forbidEmptyFriendlyHits")
-  private[this] val useNonPersonalizedContextVector = config.asBoolean("useNonPersonalizedContextVector")
 
   // debug flags
   private[this] var noBookmarkCheck = false
@@ -100,11 +99,11 @@ class MainSearcher(
     newSearcher.getContextVector
   }
 
-  def getPersonalizedSearcher(query: Query, nonPersonalizedContextVector: Option[Future[SemanticVector]]) = {
+  def getPersonalizedSearcher(query: Query) = {
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.outerjoin(personalReader, personalIdMapper)
 
-    PersonalizedSearcher(indexReader, socialGraphInfo.mySearchUris, collectionSearcher, nonPersonalizedContextVector, useNonPersonalizedContextVector)
+    PersonalizedSearcher(indexReader, socialGraphInfo.mySearchUris, collectionSearcher)
   }
 
   def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue) = {
@@ -113,7 +112,6 @@ class MainSearcher(
     val othersHits = createQueue(maxTextHitsPerCategory)
 
     parsedQuery = parser.parsedQuery
-    val nonPersonalizedContextVector = if (useNonPersonalizedContextVector) Some(Future { getNonPersonalizedQueryContextVector(parser) }) else None
 
     timeLogs.queryParsing = parser.totalParseTime
 
@@ -121,7 +119,7 @@ class MainSearcher(
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       val tPersonalSearcher = currentDateTime.getMillis()
-      val personalizedSearcher = getPersonalizedSearcher(articleQuery, nonPersonalizedContextVector)
+      val personalizedSearcher = getPersonalizedSearcher(articleQuery)
       personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
 
@@ -404,10 +402,8 @@ class MainSearcher(
   }
 
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
-    val nonPersonalizedContextVector = if (useNonPersonalizedContextVector) Some(Future { getNonPersonalizedQueryContextVector(parser) }) else None
-
     parser.parsedQuery.map { query =>
-      var personalizedSearcher = getPersonalizedSearcher(query, nonPersonalizedContextVector)
+      var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
 
       (query, personalizedSearcher.explain(query, uriId.id))
