@@ -18,7 +18,11 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 trait ScoreVectorSource {
+  def createWeights(query: Query): IndexedSeq[(Weight, Float)]
+  def execute(weights: IndexedSeq[(Weight, Float)], dataBuffer: DataBuffer): Unit
+}
 
+trait ScoreVectorSourceLike extends ScoreVectorSource {
   def createWeights(query: Query): IndexedSeq[(Weight, Float)] = {
     val weights = new ArrayBuffer[(Weight, Float)]
     val weight = searcher.createWeight(query)
@@ -100,7 +104,7 @@ final class TaggedScoreQueue(size: Int) extends PriorityQueue[TaggedScorer](size
 //  query Article index, Keep index, and Collection index and aggregate the hits by Uri Id
 //
 
-class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, idFilter: LongArraySet) extends ScoreVectorSource {
+class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, idFilter: LongArraySet) extends ScoreVectorSourceLike {
 
   protected def writeScoreVectors(reader: WrappedSubReader, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val pq = createScorerQueue(scorers)
@@ -136,9 +140,9 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, idFilte
   }
 }
 
-class UriFromKeepsScoreVectorSource(protected val searcher: Searcher, libraryIdsFuture: Future[(Seq[Long], Seq[Long])], idFilter: LongArraySet, monitoredAwait: MonitoredAwait) extends ScoreVectorSource {
+class UriFromKeepsScoreVectorSource(protected val searcher: Searcher, libraryIdsFuture: Future[(Seq[Long], Seq[Long], Seq[Long])], idFilter: LongArraySet, monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike {
 
-  private[this] lazy val (myLibIds, friendsLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting libraryIds")
+  private[this] lazy val (mySecretLibIds, myLibIds, friendsLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting libraryIds")
 
   protected def writeScoreVectors(reader: WrappedSubReader, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val pq = createScorerQueue(scorers)
@@ -149,6 +153,7 @@ class UriFromKeepsScoreVectorSource(protected val searcher: Searcher, libraryIds
 
     val writer: DataBufferWriter = new DataBufferWriter
 
+    getUrisWithVisibilities(Visibility.SECRET, mySecretLibIds, idFilter, reader, uriIdDocValues, writer, output)
     getUrisWithVisibilities(Visibility.MEMBER, myLibIds, idFilter, reader, uriIdDocValues, writer, output)
     getUrisWithVisibilities(Visibility.NETWORK, friendsLibIds, idFilter, reader, uriIdDocValues, writer, output)
 
@@ -195,7 +200,7 @@ class UriFromKeepsScoreVectorSource(protected val searcher: Searcher, libraryIds
 //  query Library index and Keep index and aggregate the hits by Library Id
 //
 
-class LibraryScoreVectorSource(protected val searcher: Searcher, libraryIds: LongArraySet, idFilter: LongArraySet) extends ScoreVectorSource {
+class LibraryScoreVectorSource(protected val searcher: Searcher, libraryIds: LongArraySet, idFilter: LongArraySet) extends ScoreVectorSourceLike {
 
   protected def writeScoreVectors(reader: WrappedSubReader, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val pq = createScorerQueue(scorers)
@@ -234,7 +239,7 @@ class LibraryScoreVectorSource(protected val searcher: Searcher, libraryIds: Lon
   }
 }
 
-class LibraryFromKeepsScoreVectorSource(protected val searcher: Searcher, idFilter: LongArraySet) extends ScoreVectorSource {
+class LibraryFromKeepsScoreVectorSource(protected val searcher: Searcher, idFilter: LongArraySet) extends ScoreVectorSourceLike {
 
   protected def writeScoreVectors(reader: WrappedSubReader, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val pq = createScorerQueue(scorers)

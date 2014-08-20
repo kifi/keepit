@@ -12,7 +12,7 @@ import org.specs2.mutable.Specification
 
 class QueryEngineTest extends Specification {
 
-  class TstScoreVectorSource(indexer: TstIndexer) extends ScoreVectorSource {
+  class TstScoreVectorSource(indexer: TstIndexer) extends ScoreVectorSourceLike {
 
     protected val searcher: Searcher = indexer.getSearcher
 

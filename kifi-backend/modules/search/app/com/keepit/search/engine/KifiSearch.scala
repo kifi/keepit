@@ -7,10 +7,12 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.engine.result.KifiResultCollector
+import com.keepit.search.engine.result.{ MutableKifiHit, KifiHitQueue, KifiResultCollector }
 import com.keepit.search.graph.bookmark.BookmarkRecord
 import com.keepit.search.graph.bookmark.UserToUserEdgeSet
 import com.keepit.search.article.ArticleRecord
+import com.keepit.search.graph.keep.KeepFields
+import org.apache.lucene.index.Term
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -36,7 +38,7 @@ class KifiSearch(
     articleSearcher: Searcher,
     keepSearcher: Searcher,
     socialGraphInfo: SocialGraphInfo,
-    libraryIdsFuture: Future[(Seq[Long], Seq[Long])],
+    libraryIdsFuture: Future[(Seq[Long], Seq[Long], Seq[Long])],
     clickBoostsFuture: Future[ResultClickBoosts],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     monitoredAwait: MonitoredAwait,
@@ -91,7 +93,7 @@ class KifiSearch(
     users.foldLeft(sharingUsers.size.toFloat) { (score, id) => score + normalizedFriendStats.score(id) } / 2.0f
   }
 
-  def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue) = {
+  def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (KifiHitQueue, KifiHitQueue, KifiHitQueue) = {
 
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, libraryIdsFuture, filter.idFilter, monitoredAwait)
     engine.execute(keepScoreSource)
@@ -141,7 +143,6 @@ class KifiSearch(
 
     val threshold = highScore * tailCutting
     val friendStats = FriendStats(relevantFriendEdgeSet.destIdLongSet)
-    var numCollectStats = 20
 
     val usefulPages = monitoredAwait.result(clickHistoryFuture, 40 millisecond, s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickedURI])
 
@@ -150,33 +151,16 @@ class KifiSearch(
         case (hit, rank) =>
 
           val h = hit.hit
-          val sharingUsers = findSharingUsers(h.id, relevantFriendEdgeSet)
-          val sharingUserSize = sharingUsers.size.toFloat
-
-          if (numCollectStats > 0 && sharingUserSize > 0.0f) {
-            val createdAt = myUriEdgeAccessor.getCreatedAt(h.id)
-            sharingUsers.destIdLongSet.foreach { f =>
-              val keptTime = friendsUriEdgeAccessors(f).getCreatedAt(h.id)
-              if (keptTime < createdAt) {
-                friendStats.add(f, hit.score * 1.5f / sharingUserSize) // an early keeper gets more credit
-              } else {
-                friendStats.add(f, hit.score / sharingUserSize)
-              }
-            }
-            numCollectStats -= 1
-          }
-
           val score = hit.score * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
           val recencyScoreVal = if (recencyBoost > 0.0f) recencyScore(myUriEdgeAccessor.getCreatedAt(h.id)) else 0.0f
 
           if (score > (threshold * (1.0f - recencyScoreVal))) {
-            h.users = sharingUsers.destIdSet
-            val scoring = new Scoring(hit.score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScoreVal, usefulPages.mayContain(h.id, 2))
+            val scoring = new Scoring(hit.score, score / highScore, bookmarkScore(h.visibleCount.toFloat + 1.0f), recencyScoreVal, usefulPages.mayContain(h.id, 2))
             val newScore = scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost, usefulPageBoost)
             hits.insert(newScore, scoring, h)
             true
           } else {
-            numCollectStats > 0
+            false
           }
       }
     }
@@ -185,7 +169,6 @@ class KifiSearch(
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.discharge(hits.size - minMyBookmarks).foreach { h => queue.insert(h) }
 
-      val normalizedFriendStats = friendStats.normalize
       friendsHits.toRankedIterator.forall {
         case (hit, rank) =>
           val h = hit.hit
@@ -193,25 +176,22 @@ class KifiSearch(
           val sharingUserSize = sharingUsers.size.toFloat
 
           var recencyScoreVal = 0.0f
-          if (numCollectStats > 0 && sharingUserSize > 0.0f) {
+          if (sharingUserSize > 0.0f) {
             val introducedAt = sharingUsers.destIdLongSet.foldLeft(Long.MaxValue) { (t, f) =>
-              friendStats.add(f, hit.score / sharingUserSize)
               val keptTime = friendsUriEdgeAccessors(f).getCreatedAt(h.id)
               min(t, keptTime)
             }
             recencyScoreVal = if (newContentBoost > 0.0f) recencyScore(introducedAt) else 0.0f
-            numCollectStats -= 1
           }
 
           val score = hit.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
           if (score > threshold) {
-            h.users = sharingUsers.destIdSet
-            val scoring = new Scoring(hit.score, score / highScore, bookmarkScore(sharingScore(sharingUsers, normalizedFriendStats)), recencyScoreVal, usefulPages.mayContain(h.id, 2))
+            val scoring = new Scoring(hit.score, score / highScore, bookmarkScore(h.visibleCount.toFloat + 1.0f), recencyScoreVal, usefulPages.mayContain(h.id, 2))
             val newScore = scoring.score(1.0f, sharingBoostInNetwork, newContentBoost, usefulPageBoost)
             queue.insert(newScore, scoring, h)
             true
           } else {
-            numCollectStats > 0
+            false
           }
       }
       queue.foreach { h => hits.insert(h) }
@@ -234,9 +214,9 @@ class KifiSearch(
         val h = hit.hit
         val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
         if (score > othersThreshold) {
-          h.bookmarkCount = getPublicBookmarkCount(h.id)
-          if (h.bookmarkCount > 0 || noBookmarkCheck) {
-            val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.bookmarkCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
+          h.visibleCount = getPublicBookmarkCount(h.id)
+          if (h.visibleCount > 0 || noBookmarkCheck) {
+            val scoring = new Scoring(hit.score, score / othersNorm, bookmarkScore(h.visibleCount.toFloat), 0.0f, usefulPages.mayContain(h.id, 2))
             val newScore = scoring.score(1.0f, sharingBoostOutOfNetwork, 0.0f, usefulPageBoost)
             queue.insert(newScore, scoring, h)
             rank += 1
@@ -253,23 +233,12 @@ class KifiSearch(
         }
       }
       queue.foreach { h => hits.insert(h) }
-    } else if (myTotal + friendsTotal == hits.size) {
-      // make sure there is at least one public keep in others
-      othersHits.toSortedList.exists { hit =>
-        val h = hit.hit
-        if (hasPublicBookmarks(h.id)) {
-          true
-        } else {
-          othersTotal -= 1
-          false
-        }
-      }
     }
 
     var hitList = hits.toSortedList
-    hitList.foreach { h => if (h.hit.bookmarkCount == 0) h.hit.bookmarkCount = getPublicBookmarkCount(h.hit.id) }
+    hitList.foreach { h => if (h.hit.visibleCount == 0) h.hit.visibleCount = getPublicBookmarkCount(h.hit.id) }
 
-    val (show, svVar) = if (filter.isDefault && isInitialSearch && noFriendlyHits && forbidEmptyFriendlyHits) (false, -1f) else classify(hitList)
+    val show = if (filter.isDefault && isInitialSearch && noFriendlyHits && forbidEmptyFriendlyHits) false else classify(hitList)
 
     val shardHits = toDetailedSearchHits(hitList)
 
@@ -278,10 +247,10 @@ class KifiSearch(
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
 
-    PartialSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, svVar, show)
+    PartialSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, -1, show)
   }
 
-  private[this] def toDetailedSearchHits(hitList: List[Hit[MutableArticleHit]]): List[DetailedSearchHit] = {
+  private[this] def toDetailedSearchHits(hitList: List[Hit[MutableKifiHit]]): List[DetailedSearchHit] = {
     val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
 
     hitList.map { hit =>
@@ -294,25 +263,25 @@ class KifiSearch(
         hit.score = -1.0f
       }
 
-      val isPrivate = (h.isMyBookmark && myUriEdgeAccessor.seek(h.id) && !myUriEdgeAccessor.isPublic)
+      val isPrivate = (h.visibility == Visibility.SECRET)
 
       DetailedSearchHit(
         h.id,
-        h.bookmarkCount,
+        h.visibleCount,
         toBasicSearchHit(h),
-        h.isMyBookmark,
-        h.users.nonEmpty, // isFriendsBookmark
-        isPrivate,
-        h.users.toSeq,
+        h.visibility == Visibility.MEMBER,
+        h.visibility == Visibility.NETWORK, // isFriendsBookmark
+        h.visibility == Visibility.SECRET, // isPrivate
+        Seq(), // TODO: sharing users
         hit.score,
         hit.scoring
       )
     }
   }
 
-  private[this] def toBasicSearchHit(h: MutableArticleHit): BasicSearchHit = {
+  private[this] def toBasicSearchHit(h: MutableKifiHit): BasicSearchHit = {
     val uriId = Id[NormalizedURI](h.id)
-    if (h.isMyBookmark) {
+    if (h.visibility == Visibility.MEMBER) {
       val collections = {
         val collIds = collectionSearcher.intersect(collectionSearcher.myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(uriId)).destIdLongSet
         if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map { id => collectionSearcher.getExternalId(id) }.collect { case Some(extId) => extId })
@@ -325,25 +294,24 @@ class KifiSearch(
     }
   }
 
-  private[this] def classify(hitList: List[Hit[MutableArticleHit]]) = {
-    def classify(scoring: Scoring, hit: MutableArticleHit, minScore: Float): Boolean = {
+  private[this] def classify(hitList: List[Hit[MutableKifiHit]]) = {
+    def classify(scoring: Scoring, hit: MutableKifiHit, minScore: Float): Boolean = {
       hit.clickBoost > 1.1f ||
-        (if (hit.isMyBookmark) scoring.recencyScore / 5.0f else 0.0f) + scoring.textScore > minScore
+        (if (hit.visibility == Visibility.MEMBER) scoring.recencyScore / 5.0f else 0.0f) + scoring.textScore > minScore
     }
 
     if (filter.isDefault && isInitialSearch) {
       // simple classifier
       val show = hitList.take(5).exists { h => classify(h.scoring, h.hit, 0.6f) }
-      (show, -1f)
+      show
     } else {
-      (true, -1f)
+      true
     }
   }
 
-  @inline private[this] def getPublicBookmarkCount(id: Long) = uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
-  @inline private[this] def hasPublicBookmarks(id: Long) = !(uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).isEmpty)
+  @inline private[this] def getPublicBookmarkCount(id: Long) = keepSearcher.count(new Term(KeepFields.discoverableUriField, id.toString))
 
-  @inline private[this] def createQueue(sz: Int) = new ArticleHitQueue(sz)
+  @inline private[this] def createQueue(sz: Int) = new KifiHitQueue(sz)
 
   @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
 

@@ -5,4 +5,5 @@ object Visibility { // use value class?
   val OTHERS = 0x1
   val NETWORK = 0x2
   val MEMBER = 0x4
+  val SECRET = 0x8
 }
