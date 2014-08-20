@@ -67,6 +67,10 @@ var jeditor = (function () {
   }
 })();
 
+function removeMostJsComments(code) {
+  return code.toString().replace(/^([^'"\/]*)\s*\/\/.*$/mg, '$1');
+}
+
 var chromeInjectionFooter = lazypipe()
   .pipe(function () {
     return gulpif(['scripts/**/*.js', '!**/iframes/**'], map(function (code, filename) {
@@ -92,15 +96,18 @@ gulp.task('copy', function () {
       }
       path.dirname = path.dirname.replace(/^adapters\/chrome\/?/, '');
     }))
+    .pipe(map(removeMostJsComments))
     .pipe(chromeInjectionFooter())
     .pipe(gulp.dest(outDir + '/chrome'));
 
   var firefoxAdapters = gulp.src(firefoxAdapterFiles, {base: './adapters'})
     .pipe(cache('firefox-adapters'))
+    .pipe(map(removeMostJsComments))
     .pipe(gulp.dest(outDir));
 
   var sharedAdapters = gulp.src(sharedAdapterFiles)
     .pipe(cache('shared-adapters'))
+    .pipe(map(removeMostJsComments))
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
@@ -124,6 +131,7 @@ gulp.task('copy', function () {
 
   var background = gulp.src(scripts)
     .pipe(cache('background'))
+    .pipe(map(removeMostJsComments))
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
@@ -276,9 +284,8 @@ gulp.task('meta', function () {
         }
       }
     }
-    var contentScriptsString = ' [\n  ' + contentScriptItems.join(',\n  ') + ']';
     return JSON.stringify([
-      contentScriptsString,
+      ' [\n  ' + contentScriptItems.join(',\n  ') + ']',
       JSON.stringify(styleDeps, undefined, 2),
       JSON.stringify(scriptDeps, undefined, 2)
     ]);
@@ -297,7 +304,7 @@ gulp.task('meta', function () {
       return 'meta = {\n  contentScripts:' + data[0] +
         ',\n  styleDeps: ' + data[1] +
         ',\n  scriptDeps: ' + data[2] +
-        '};';
+        "};\nif (/^Mac/.test(navigator.platform)) {\n  meta.styleDeps['scripts/keeper_scout.js'] = ['styles/mac.css'];\n}\n";
     }))
     .pipe(gulp.dest(outDir + '/chrome'));
 
@@ -307,7 +314,7 @@ gulp.task('meta', function () {
       return 'exports.contentScripts =' + data[0] +
         ';\nexports.styleDeps = ' + data[1] +
         ';\nexports.scriptDeps = ' + data[2] +
-        ';';
+        ";\nconst {Ci, Cc} = require('chrome');\nif (/^Mac/.test(Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler).platform)) {\n  exports.styleDeps['scripts/keeper_scout.js'] = ['styles/mac.css'];\n}\n";
     }))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 

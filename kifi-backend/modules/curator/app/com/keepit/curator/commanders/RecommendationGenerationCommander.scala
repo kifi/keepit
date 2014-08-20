@@ -125,7 +125,7 @@ class RecommendationGenerationCommander @Inject() (
         UserRecommendationGenerationState(userId = userId)
       }
       val seedsAndSeqFuture = for {
-        seeds <- seedCommander.getBySeqNumAndUser(state.seq, userId, 200)
+        seeds <- seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, 200)
         discoverableSeeds = seeds.filter(_.discoverable)
         candidateURIs <- shoebox.getCandidateURIs(discoverableSeeds.map { _.uriId })
       } yield {

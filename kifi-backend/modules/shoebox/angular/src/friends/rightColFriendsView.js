@@ -118,6 +118,10 @@ angular.module('kifi')
               });
             });
           });
+          
+          scope.header = 'Find People to Invite';
+        } else {
+          scope.header = 'People You May Know';
         }
 
         scope.peopleYouMayKnow = peopleYouMayKnow;

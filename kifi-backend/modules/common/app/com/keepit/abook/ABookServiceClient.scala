@@ -54,10 +54,11 @@ trait ABookServiceClient extends ServiceClient {
   def getEmailAccountsChanged(seqNum: SequenceNumber[EmailAccountInfo], fetchSize: Int): Future[Seq[EmailAccountInfo]]
   def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]]
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]]
-  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]]
+  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[Seq[Id[User]]]]
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit]
-  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]]
+  def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]]
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]): Future[Unit]
+  def getIrrelevantRecommendations(userId: Id[User]): Future[IrrelevantPeopleRecommendations]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -78,7 +79,7 @@ class ABookServiceClientImpl @Inject() (
   }
 
   def formUpload(userId: Id[User], json: JsValue): Future[JsValue] = {
-    call(ABook.internal.formUpload(userId), json).map { r => r.json }
+    call(ABook.internal.formUpload(userId), json).map { r => r.json}
   }
 
   def getABookInfo(userId: Id[User], id: Id[ABookInfo]): Future[Option[ABookInfo]] = {
@@ -197,7 +198,7 @@ class ABookServiceClientImpl @Inject() (
   }
 
   def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit] = {
-    callLeader(ABook.internal.richConnectionUpdate, Json.toJson(message)).map { r => () }
+    callLeader(ABook.internal.richConnectionUpdate, Json.toJson(message)).map { r => ()}
   }
 
   def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Unit] = {
@@ -229,6 +230,7 @@ class ABookServiceClientImpl @Inject() (
   def getEmailAccountsChanged(seqNum: SequenceNumber[EmailAccountInfo], fetchSize: Int): Future[Seq[EmailAccountInfo]] = {
     call(ABook.internal.getEmailAccountsChanged(seqNum, fetchSize)).map(_.json.as[Seq[EmailAccountInfo]])
   }
+
   def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]] = {
     call(ABook.internal.getContactsChanged(seqNum, fetchSize)).map(_.json.as[Seq[IngestableContact]])
   }
@@ -236,21 +238,26 @@ class ABookServiceClientImpl @Inject() (
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] =
     call(ABook.internal.getUsersWithContact(email)).map(_.json.as[Set[Id[User]]])
 
-  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = {
-    call(ABook.internal.getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int)).map(_.json.as[Seq[Id[User]]])
+  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[Seq[Id[User]]]] = {
+    call(ABook.internal.getFriendRecommendations(userId, offset, limit)).map(_.json.as[Option[Seq[Id[User]]]])
   }
 
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit] = {
-    call(ABook.internal.hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User])).map(_ => ())
+    call(ABook.internal.hideFriendRecommendation(userId, irrelevantUserId)).map(_ => ())
   }
 
-  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = {
-    call(ABook.internal.getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, networks)).map(_.json.as[Seq[InviteRecommendation]])
+  def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = {
+    call(ABook.internal.getInviteRecommendations(userId, offset, limit, networks)).map(_.json.as[Seq[InviteRecommendation]])
   }
 
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]) = {
     implicit val irrelevantFriendIdFormat = EitherFormat[EmailAddress, Id[SocialUserInfo]]
     val payload = Json.obj("network" -> network, "irrelevantFriendId" -> irrelevantFriendId)
-    call(ABook.internal.hideInviteRecommendation(userId: Id[User]), payload).map(_ => ())
+    call(ABook.internal.hideInviteRecommendation(userId), payload).map(_ => ())
   }
+
+  def getIrrelevantRecommendations(userId: Id[User]): Future[IrrelevantPeopleRecommendations] = {
+    call(ABook.internal.getIrrelevantRecommendations(userId)).map(_.json.as[IrrelevantPeopleRecommendations])
+  }
+
 }

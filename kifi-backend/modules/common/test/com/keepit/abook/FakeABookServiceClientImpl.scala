@@ -118,4 +118,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, relevantNetworks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = Future.successful(Seq.empty)
 
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]) = Future.successful(())
+
+  def getIrrelevantRecommendations(userId: Id[User]) = Future.successful(IrrelevantPeopleRecommendations.empty(userId))
+
 }

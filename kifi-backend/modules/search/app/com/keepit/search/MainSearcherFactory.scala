@@ -55,32 +55,12 @@ class MainSearcherFactory @Inject() (
   lazy val searchServiceStartedAt: Long = fortyTwoServices.started.getMillis()
 
   private def mkQueryParser(lang1: Lang, lang2: Option[Lang], config: SearchConfig): MainQueryParser = {
-    val proximityBoost = config.asFloat("proximityBoost")
-    val semanticBoost = config.asFloat("semanticBoost")
-    val phraseBoost = config.asFloat("phraseBoost")
-    val siteBoost = config.asFloat("siteBoost")
-    val concatBoost = config.asFloat("concatBoost")
-    val homePageBoost = config.asFloat("homePageBoost")
-    val useSemanticMatch = config.asBoolean("useSemanticMatch")
-    val proximityGapPenalty = config.asFloat("proximityGapPenalty")
-    val proximityThreshold = config.asFloat("proximityThreshold")
-    val proximityPowerFactor = config.asFloat("proximityPowerFactor")
-
     new MainQueryParser(
       DefaultAnalyzer.getAnalyzer(lang1),
       DefaultAnalyzer.getAnalyzerWithStemmer(lang1),
       lang2.map(DefaultAnalyzer.getAnalyzer),
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
-      proximityBoost,
-      semanticBoost,
-      phraseBoost,
-      siteBoost,
-      concatBoost,
-      homePageBoost,
-      useSemanticMatch,
-      proximityGapPenalty,
-      proximityThreshold,
-      proximityPowerFactor,
+      config,
       phraseDetector,
       phraseDetectionConsolidator,
       monitoredAwait
@@ -180,11 +160,11 @@ class MainSearcherFactory @Inject() (
     Await.result(getCollectionSearcherFuture(shard, userId), 5 seconds)
   }
 
-  private[this] def getClickHistoryFuture(userId: Id[User]) = consolidateClickHistoryReq(userId) { userId =>
+  def getClickHistoryFuture(userId: Id[User]) = consolidateClickHistoryReq(userId) { userId =>
     SafeFuture(clickHistoryTracker.getMultiHashFilter(userId))
   }
 
-  private[this] def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float) = {
+  def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float) = {
     resultClickTracker.getBoostsFuture(userId, queryString, maxResultClickBoost)
   }
 
