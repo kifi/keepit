@@ -347,7 +347,7 @@ class KeepsCommander @Inject() (
     }
     SafeFuture {
       searchClient.updateURIGraph()
-      keeps.foreach{ keep => curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))}
+      keeps.foreach { keep => curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true))) }
     }
     val (returnedKeeps, existingKeepsOpt) = if (separateExisting) {
       (newKeeps, Some(existingKeeps))
