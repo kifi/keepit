@@ -9,6 +9,7 @@ object KeepFields {
   val libraryIdField = "libId"
   val uriField = "uri"
   val uriIdField = "uriId"
+  val discoverableUriField = "dUri"
   val userField = "user"
   val discoverabilityField = "d"
   val titleField = "t"
@@ -31,6 +32,7 @@ case class KeepIndexable(keep: Keep) extends Indexable[Keep, Keep] {
 
     doc.add(buildKeywordField(libraryField, keep.libraryId.get.toString))
     doc.add(buildKeywordField(uriField, keep.uriId.toString))
+    if (keep.isDiscoverable) doc.add(buildKeywordField(discoverableUriField, keep.uriId.toString))
     doc.add(buildKeywordField(userField, keep.userId.toString))
     doc.add(buildKeywordField(discoverabilityField, keep.isDiscoverable.toString))
 

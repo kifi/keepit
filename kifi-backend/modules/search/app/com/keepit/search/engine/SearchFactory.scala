@@ -106,10 +106,11 @@ class SearchFactory @Inject() (
     }
   }
 
-  def getLibraryIdsFuture(userId: Id[User]): Future[(Seq[Long], Seq[Long])] = {
+  def getLibraryIdsFuture(userId: Id[User]): Future[(Seq[Long], Seq[Long], Seq[Long])] = {
     SafeFuture {
       val searcher = libraryIndexer.getSearcher
-      val myLibIds = searcher.findAllIds(new Term(LibraryFields.usersField, userId.id.toString))
+      val myLibIds = searcher.findAllIds(new Term(LibraryFields.discoverableOwnerField, userId.id.toString))
+      val mySecretLibIds = searcher.findAllIds(new Term(LibraryFields.secretOwnerField, userId.id.toString))
 
       val userGraphsSearcher = userGraphsSearcherFactory(userId)
       val friendIds = userGraphsSearcher.getSearchFriends()
@@ -118,7 +119,7 @@ class SearchFactory @Inject() (
         searcher.findAllIds(new Term(LibraryFields.discoverableOwnerField, friendId.toString), friendLibIds)
       }
 
-      (myLibIds, friendLibIds)
+      (mySecretLibIds, myLibIds, friendLibIds)
     }
   }
 }
