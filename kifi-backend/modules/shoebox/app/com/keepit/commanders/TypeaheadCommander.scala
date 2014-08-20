@@ -20,7 +20,8 @@ import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ Promise, ExecutionContext, Future }
+import scala.util.{ Success, Failure }
 
 class TypeaheadCommander @Inject() (
     db: Database,
@@ -247,14 +248,17 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  private def processWhile[T](futures: Iterable[Future[T]], predicate: T => Boolean): Future[Unit] = {
+  private def processWhile[T](futures: Iterable[Future[T]], predicate: T => Boolean, promised: Promise[Unit] = Promise()): Future[Unit] = {
     futures.headOption match {
-      case None => Future.successful[Unit]()
-      case Some(f) => f.flatMap { t =>
-        if (predicate(t)) processWhile(futures.tail, predicate)
-        else Future.successful[Unit]()
+      case None => promised.success()
+      case Some(f) => f.onComplete {
+        case Success(res) =>
+          if (predicate(res)) processWhile(futures.tail, predicate, promised)
+          else promised.success()
+        case Failure(t) => promised.failure(t)
       }
     }
+    promised.future
   }
 
   private def fetchFirst(limit: Int, futures: Iterable[Future[(Seq[(SocialNetworkType, TypeaheadHit[_])])]]): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {

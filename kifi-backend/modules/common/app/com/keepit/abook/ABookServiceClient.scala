@@ -79,7 +79,7 @@ class ABookServiceClientImpl @Inject() (
   }
 
   def formUpload(userId: Id[User], json: JsValue): Future[JsValue] = {
-    call(ABook.internal.formUpload(userId), json).map { r => r.json}
+    call(ABook.internal.formUpload(userId), json).map { r => r.json }
   }
 
   def getABookInfo(userId: Id[User], id: Id[ABookInfo]): Future[Option[ABookInfo]] = {
@@ -198,7 +198,7 @@ class ABookServiceClientImpl @Inject() (
   }
 
   def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit] = {
-    callLeader(ABook.internal.richConnectionUpdate, Json.toJson(message)).map { r => ()}
+    callLeader(ABook.internal.richConnectionUpdate, Json.toJson(message)).map { r => () }
   }
 
   def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Unit] = {
