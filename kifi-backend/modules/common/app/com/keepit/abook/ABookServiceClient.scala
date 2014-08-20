@@ -1,39 +1,29 @@
 package com.keepit.abook
 
-// import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.model._
-import com.keepit.common.db.{ SequenceNumber, ExternalId, Id }
-import com.keepit.common.service.{ ServiceClient, ServiceType }
-import com.keepit.common.logging.Logging
+import com.google.inject.Inject
+import com.keepit.abook.model._
+import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
+import com.keepit.common.mail.{ BasicContact, EmailAddress }
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
-import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.queue.RichConnectionUpdateMessage
-
-import akka.actor.Scheduler
+import com.keepit.common.routes.ABook
+import com.keepit.common.service.{ ServiceClient, ServiceType }
+import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.model._
+import com.keepit.serializer.EitherFormat
+import com.keepit.social.SocialNetworkType
+import com.keepit.typeahead.TypeaheadHit
+import play.api.http.Status
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{ JsArray, JsNumber, _ }
 
 import scala.concurrent.Future
-
-import play.api.libs.json._
-
-import com.google.inject.Inject
-import com.google.inject.util.Providers
-import com.keepit.common.routes.ABook
-import scala.util.Try
-import play.api.http.Status
-import com.keepit.abook.model._
-import com.keepit.common.mail.{ EmailAddress, BasicContact }
-import com.keepit.typeahead.TypeaheadHit
-import com.keepit.social.SocialNetworkType
-import play.api.libs.json.JsArray
-import scala.util.Failure
-import play.api.libs.json.JsNumber
-import scala.util.Success
-import com.keepit.serializer.EitherFormat
+import scala.util.{ Failure, Success, Try }
 
 trait ABookServiceClient extends ServiceClient {
 
-  implicit val fj = com.keepit.common.concurrent.ExecutionContext.fj
   final val serviceType = ServiceType.ABOOK
 
   def importContacts(userId: Id[User], oauth2Token: OAuth2Token): Future[Try[ABookInfo]] // gmail
@@ -263,85 +253,4 @@ class ABookServiceClientImpl @Inject() (
     val payload = Json.obj("network" -> network, "irrelevantFriendId" -> irrelevantFriendId)
     call(ABook.internal.hideInviteRecommendation(userId: Id[User]), payload).map(_ => ())
   }
-}
-
-class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler) extends ABookServiceClient {
-
-  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, () => {})
-
-  // allow test clients to set expectations
-  var contactsConnectedToEmailAddress: Set[Id[User]] = Set.empty
-  private val friendRecommendationsExpectations = collection.mutable.HashMap[Id[User], Seq[Id[User]]]()
-
-  def addFriendRecommendationsExpectations(userId: Id[User], recoUserIds: Seq[Id[User]]) = synchronized {
-    friendRecommendationsExpectations(userId) = recoUserIds
-  }
-
-  protected def httpClient: com.keepit.common.net.HttpClient = ???
-
-  def importContacts(userId: Id[User], oauth2Token: OAuth2Token): Future[Try[ABookInfo]] = ???
-
-  def formUpload(userId: Id[User], json: JsValue): Future[JsValue] = ???
-
-  def getABookInfo(userId: Id[User], id: Id[ABookInfo]): Future[Option[ABookInfo]] = ???
-
-  def getABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = ???
-
-  def getAllABookInfos(): Future[Seq[ABookInfo]] = ???
-
-  def getPagedABookInfos(page: Int, size: Int): Future[Seq[ABookInfo]] = ???
-
-  def getABookInfoByExternalId(id: ExternalId[ABookInfo]): Future[Option[ABookInfo]] = ???
-
-  def getABooksCount(): Future[Int] = ???
-
-  def getEContactCount(userId: Id[User]): Future[Int] = ???
-
-  def getABookRawInfos(userId: Id[User]): Future[Seq[ABookRawInfo]] = ???
-
-  def uploadContacts(userId: Id[User], origin: ABookOriginType, data: JsValue): Future[Try[ABookInfo]] = ???
-
-  def getOAuth2Token(userId: Id[User], abookId: Id[ABookInfo]): Future[Option[OAuth2Token]] = ???
-
-  def refreshPrefixFilter(userId: Id[User]): Future[Unit] = ???
-
-  def refreshPrefixFiltersByIds(userIds: Seq[Id[User]]): Future[Unit] = ???
-
-  def refreshAllFilters(): Future[Unit] = ???
-
-  def richConnectionUpdate(message: RichConnectionUpdateMessage): Future[Unit] = ???
-
-  def blockRichConnection(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Unit] = ???
-
-  def ripestFruit(userId: Id[User], howMany: Int): Future[Seq[Id[SocialUserInfo]]] = ???
-
-  def countInvitationsSent(userId: Id[User], friend: Either[Id[SocialUserInfo], EmailAddress]): Future[Int] = ???
-
-  def getRipestFruits(userId: Id[User], page: Int, pageSize: Int): Future[Seq[RichSocialConnection]] = ???
-
-  def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = ???
-
-  def getContactNameByEmail(userId: Id[User], email: EmailAddress): Future[Option[String]] = Future.successful(None)
-
-  def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact] = ???
-
-  def prefixQuery(userId: Id[User], query: String, maxHits: Option[Int]): Future[Seq[TypeaheadHit[RichContact]]] = Future.successful(Seq.empty)
-
-  def getContactsByUser(userId: Id[User], page: Int, pageSize: Option[Int]): Future[Seq[RichContact]] = Future.successful(Seq.empty)
-
-  def getEmailAccountsChanged(seqNum: SequenceNumber[EmailAccountInfo], fetchSize: Int): Future[Seq[EmailAccountInfo]] = Future.successful(Seq.empty)
-
-  def getContactsChanged(seqNum: SequenceNumber[IngestableContact], fetchSize: Int): Future[Seq[IngestableContact]] = Future.successful(Seq.empty)
-
-  def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] = Future.successful(contactsConnectedToEmailAddress)
-
-  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[Seq[Id[User]]] = synchronized {
-    Future.successful(friendRecommendationsExpectations(userId))
-  }
-
-  def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit] = Future.successful(())
-
-  def getInviteRecommendations(userId: Id[User], page: Int, pageSize: Int, relevantNetworks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]] = Future.successful(Seq.empty)
-
-  def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]) = Future.successful(())
 }

@@ -58,36 +58,17 @@ object FutureHelpers {
     }
     Future.sequence(seq).map(_.toMap)
   }
-
   def sequentialExec[I, T](items: Iterable[I])(f: I => Future[T])(implicit ec: ScalaExecutionContext): Future[Unit] = {
     foldLeft(items)(()) { case ((), nextItem) => f(nextItem).map { _ => () } }
   }
 
-  def sequentialExecWhile[T](futures: Iterable[Future[T]], predicate: T => Boolean)(implicit ec: ScalaExecutionContext): Future[Unit] = {
-    futures.headOption match {
-      case None => Future.successful[Unit]()
-      case Some(f) => f.flatMap { t =>
-        if (predicate(t)) sequentialExecWhile(futures.tail, predicate)
-        else Future.successful[Unit]()
-      }
-    }
-  }
-
-  def foldLeftWhile[I, T](items: Iterable[I], promisedResult: Promise[T] = Promise[T]())(accumulator: T)(predicate: I => Boolean, fMap: (T, I) => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {
+  def foldLeft[I, T](items: Iterable[I], promisedResult: Promise[T] = Promise[T]())(accumulator: T)(fMap: (T, I) => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {
     if (items.isEmpty) { promisedResult.success(accumulator) }
-    else {
-      val item = items.head
-      if (!predicate(item)) promisedResult.success(accumulator)
-      else fMap(accumulator, item).onComplete {
-        case Success(updatedAccumulator) => foldLeftWhile(items.tail, promisedResult)(updatedAccumulator)(predicate, fMap)
-        case Failure(ex) => promisedResult.failure(ex)
-      }
+    else fMap(accumulator, items.head).onComplete {
+      case Success(updatedAccumulator) => foldLeft(items.tail, promisedResult)(updatedAccumulator)(fMap)
+      case Failure(ex) => promisedResult.failure(ex)
     }
     promisedResult.future
-  }
-
-  def foldLeft[I, T](items: Iterable[I], promisedResult: Promise[T] = Promise[T]())(accumulator: T)(fMap: (T, I) => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {
-    foldLeftWhile(items, promisedResult)(accumulator)(_ => true, fMap)
   }
 
   def whilef(f: => Future[Boolean], p: Promise[Unit] = Promise[Unit]())(body: => Unit)(implicit ec: ScalaExecutionContext): Future[Unit] = {

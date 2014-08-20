@@ -3,7 +3,6 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
-import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -21,7 +20,7 @@ import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 class TypeaheadCommander @Inject() (
     db: Database,
@@ -44,7 +43,7 @@ class TypeaheadCommander @Inject() (
 
   private def queryContacts(userId: Id[User], search: Option[String], limit: Int): Future[Seq[RichContact]] = {
     val futureContacts = search match {
-      case Some(query) => abookServiceClient.prefixQuery(userId, query, Some(limit)).map { hits => hits.map(_.info) }
+      case Some(query) => abookServiceClient.prefixQuery(userId, query, Some(limit)).map { hits => println(s"[queryContacts($userId,$search)] = $hits"); hits.map(_.info) }
       case None => abookServiceClient.getContactsByUser(userId, pageSize = Some(limit))
     }
     futureContacts.map(RichContact.deduplicateByEmailAddress)
@@ -241,19 +240,29 @@ class TypeaheadCommander @Inject() (
           fb ++ lnkd
         }
         val kifi: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = kifiF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO, hit)) }
-        val abook: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = abookF.map { hits => hits.filter(_.info.userId.isEmpty).map(hit => (SocialNetworks.EMAIL, hit)) }
+        val abook: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = abookF.map { hits => println(s"abookHits=$hits"); hits.filter(_.info.userId.isEmpty).map(hit => (SocialNetworks.EMAIL, hit)) }
         val nf: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = nfUsersF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO_NF, hit)) }
         val futures: Seq[Future[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = Seq(social, kifi, abook, nf)
         fetchFirst(limit, futures)
     }
   }
 
-  def fetchFirst(limit: Int, futures: Iterable[Future[(Seq[(SocialNetworkType, TypeaheadHit[_])])]]): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {
+  private def processWhile[T](futures: Iterable[Future[T]], predicate: T => Boolean): Future[Unit] = {
+    futures.headOption match {
+      case None => Future.successful[Unit]()
+      case Some(f) => f.flatMap { t =>
+        if (predicate(t)) processWhile(futures.tail, predicate)
+        else Future.successful[Unit]()
+      }
+    }
+  }
+
+  private def fetchFirst(limit: Int, futures: Iterable[Future[(Seq[(SocialNetworkType, TypeaheadHit[_])])]]): Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = {
     val zHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])]
     val allHits = new ArrayBuffer[(SocialNetworkType, TypeaheadHit[_])]
-    FutureHelpers.sequentialExecWhile[Seq[(SocialNetworkType, TypeaheadHit[_])]](futures, { hits =>
+    processWhile[Seq[(SocialNetworkType, TypeaheadHit[_])]](futures, { hits =>
       val ordered = hits.sorted(hitOrd)
-      log.info(s"fetchFirst ordered=${ordered.mkString(",")}")
+      log.info(s"[fetchFirst($limit)] ordered=${ordered.mkString(",")} zHits.size=${zHits.size}")
       zHits ++= ordered.takeWhile { case (_, hit) => hit.score == 0 }
       (zHits.length < limit) tap { res => if (res) allHits ++= ordered }
     }) map { _ =>
