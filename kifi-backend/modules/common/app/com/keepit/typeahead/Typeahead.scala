@@ -111,8 +111,6 @@ trait Typeahead[E, I] extends Logging {
 
 }
 
-case class TypeaheadHit[I](score: Int, name: String, ordinal: Int, info: I)
-
 object TypeaheadHit {
   def defaultOrdering[I] = new Ordering[TypeaheadHit[I]] {
     def compare(x: TypeaheadHit[I], y: TypeaheadHit[I]): Int = {
@@ -134,3 +132,6 @@ object TypeaheadHit {
     (__ \ 'info).format(infoFormat)
   )(TypeaheadHit.apply, unlift(TypeaheadHit.unapply))
 }
+
+case class TypeaheadHit[I](score: Int, name: String, ordinal: Int, info: I)
+
