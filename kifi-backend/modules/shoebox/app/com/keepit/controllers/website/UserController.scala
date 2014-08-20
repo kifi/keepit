@@ -248,10 +248,22 @@ class UserController @Inject() (
   }
 
   def updateName() = JsonAction.authenticatedParseJson { implicit request =>
-    val newFirstName = (request.body \ "firstName").as[String]
-    val newLastName = (request.body \ "lastName").as[String]
-    val userData = UpdatableUserInfo(firstName = Some(newFirstName), lastName = Some(newLastName), description = None, emails = None)
-    userCommander.updateUserInfo(request.userId, userData)
+    val newFirstName = (request.body \ "firstName").asOpt[String]
+    val newLastName = (request.body \ "lastName").asOpt[String]
+    userCommander.updateName(request.userId, newFirstName, newLastName)
+    Ok(JsString("success"))
+  }
+
+  def updateDescription() = JsonAction.authenticatedParseJson { implicit request =>
+    val newDescription = (request.body \ "description").as[String]
+    userCommander.updateUserDescription(request.userId, newDescription)
+    Ok(JsString("success"))
+  }
+
+  def updateEmails() = JsonAction.authenticatedParseJson { implicit request =>
+    val newEmails = (request.body \ "emails").as[Seq[EmailInfo]]
+    val user = db.readOnlyMaster { implicit s => userRepo.get(request.userId) }
+    userCommander.updateEmailAddresses(request.userId, user.firstName, user.primaryEmail, newEmails)
     Ok(JsString("success"))
   }
 

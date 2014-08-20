@@ -9,7 +9,7 @@ import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
 import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication }
 
-import play.api.libs.json.{ Json }
+import play.api.libs.json.{ JsArray, Json }
 import play.api.mvc.SimpleResult
 import play.api.test.Helpers._
 import play.api.test._
@@ -93,7 +93,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           user
         }
         val path = com.keepit.controllers.website.routes.UserController.updateUsername().url
-        path === "/site/user/username"
+        path === "/site/user/me/username"
 
         inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.ADMIN))
 
@@ -106,6 +106,62 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result) must beSome("application/json")
         val expected = Json.parse(s"""{"username":"GDubs"}""")
         Json.parse(contentAsString(result)) must equalTo(expected)
+      }
+    }
+
+    "update user info" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val user = db.readWrite { implicit session =>
+          userRepo.save(User(firstName = "George", lastName = "Washington", username = Some(Username("GeorgeWash"))))
+        }
+        val userController = inject[UserController]
+        val pathName = com.keepit.controllers.website.routes.UserController.updateName().url
+        val pathDescription = com.keepit.controllers.website.routes.UserController.updateDescription().url
+        val pathEmails = com.keepit.controllers.website.routes.UserController.updateEmails().url
+        pathName === "/site/user/me/name"
+        pathDescription === "/site/user/me/description"
+        pathEmails === "/site/user/me/emails"
+
+        inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.ADMIN))
+
+        val inputJson1 = Json.obj(
+          "firstName" -> "Abe",
+          "lastName" -> "Lincoln"
+        )
+        val request1 = FakeRequest("POST", pathName).withBody(inputJson1)
+        val result1: Future[SimpleResult] = userController.updateName()(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+        db.readOnlyMaster { implicit s =>
+          val userCheck = userRepo.get(user.id.get)
+          userCheck.firstName === "Abe"
+          userCheck.lastName === "Lincoln"
+        }
+
+        val inputJson2 = Json.obj(
+          "description" -> "USA #1"
+        )
+        val request2 = FakeRequest("POST", pathDescription).withBody(inputJson2)
+        val result2: Future[SimpleResult] = userController.updateDescription()(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+        db.readOnlyMaster { implicit s =>
+          val userCheck = inject[UserValueRepo].getUserValue(user.id.get, UserValueName.USER_DESCRIPTION)
+          userCheck.get.value === "USA #1"
+        }
+
+        val inputJson3 = Json.obj(
+          "emails" -> Seq(Json.obj("address" -> "vampireXslayer@gmail.com", "isPrimary" -> true, "isVerified" -> false, "isPendingPrimary" -> true))
+        )
+        val request3 = FakeRequest("POST", pathEmails).withBody(inputJson3)
+        val result3: Future[SimpleResult] = userController.updateEmails()(request3)
+        status(result3) must equalTo(OK)
+        contentType(result3) must beSome("application/json")
+        db.readOnlyMaster { implicit s =>
+          val userEmails = emailAddressRepo.getAllByUser(user.id.get)
+          userEmails.length === 1
+          userEmails.map(_.address.address) === Seq("vampireXslayer@gmail.com")
+        }
       }
     }
 

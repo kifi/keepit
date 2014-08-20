@@ -160,6 +160,15 @@ class UserCommander @Inject() (
     }
   }
 
+  def updateName(userId: Id[User], newFirstName: Option[String], newLastName: Option[String]): User = {
+    db.readWrite { implicit session =>
+      val user = userRepo.get(userId)
+      var newUser = if (newFirstName.nonEmpty) user.copy(firstName = newFirstName.get) else user
+      newUser = if (newLastName.nonEmpty) newUser.copy(lastName = newLastName.get) else newUser
+      userRepo.save(newUser)
+    }
+  }
+
   def getConnectionsPage(userId: Id[User], page: Int, pageSize: Int): (Seq[ConnectionInfo], Int) = {
     val infos = db.readOnlyReplica { implicit s =>
       val searchFriends = searchFriendRepo.getSearchFriends(userId)
