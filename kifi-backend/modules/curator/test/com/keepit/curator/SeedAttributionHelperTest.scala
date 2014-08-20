@@ -58,6 +58,7 @@ class SeedAttributionHelperTest extends Specification with CuratorTestInjector {
     priorScore = 0f,
     rekeepScore = 0f,
     discoveryScore = 0f,
+    curationScore = None,
     multiplier = Some(1.0f))
 
   val scoredItem1 = ScoredSeedItem(Id[User](1), Id[NormalizedURI](1), emptyScore.copy(socialScore = 0.01f))
