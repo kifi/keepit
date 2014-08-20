@@ -46,7 +46,7 @@ class CuratorKeepInfoRepoImpl @Inject() (
     (for (row <- rows if row.keepId === keepId) yield row).firstOption
   }
 
-  private val keeperByUriIdCache: Cache[Id[NormalizedURI], Seq[Id[User]]] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(200).maximumSize(600).expireAfterWrite(60, TimeUnit.SECONDS).build()
+  private val keeperByUriIdCache: Cache[Id[NormalizedURI], Seq[Id[User]]] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(1000).maximumSize(10000).expireAfterWrite(60, TimeUnit.SECONDS).build()
 
   def getKeepersByUriIdCompiled(uriId: Column[Id[NormalizedURI]]) =
     Compiled { (for (row <- rows if row.uriId === uriId && row.state === CuratorKeepInfoStates.ACTIVE) yield row.userId) }

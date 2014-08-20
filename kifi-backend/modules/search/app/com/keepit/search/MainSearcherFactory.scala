@@ -137,7 +137,7 @@ class MainSearcherFactory @Inject() (
   def getUserSearcher = new UserSearcher(userIndexer.getSearcher)
 
   def getSocialGraphInfo(shard: Shard[NormalizedURI], userId: Id[User], filter: SearchFilter): SocialGraphInfo = {
-    new SocialGraphInfo(userId, getURIGraphSearcher(shard, userId), getCollectionSearcher(shard, userId), filter: SearchFilter, monitoredAwait)
+    new SocialGraphInfo(userId, getURIGraphSearcher(shard, userId), getCollectionSearcher(shard, userId), filter, monitoredAwait)
   }
 
   private[this] def getURIGraphSearcherFuture(shard: Shard[NormalizedURI], userId: Id[User]) = consolidateURIGraphSearcherReq((shard, userId)) {
