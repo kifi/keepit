@@ -68,7 +68,7 @@ trait ABookServiceClient extends ServiceClient {
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]): Future[Unit]
   def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]): Future[Seq[InviteRecommendation]]
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]): Future[Unit]
-  def getIrrelevantRecommendations(userId: Id[User]): Future[IrrelevantPeopleRecommendations]
+  def getIrrelevantPeople(userId: Id[User]): Future[IrrelevantPeople]
 }
 
 class ABookServiceClientImpl @Inject() (
@@ -265,8 +265,8 @@ class ABookServiceClientImpl @Inject() (
     call(ABook.internal.hideInviteRecommendation(userId), payload).map(_ => ())
   }
 
-  def getIrrelevantRecommendations(userId: Id[User]): Future[IrrelevantPeopleRecommendations] = {
-    call(ABook.internal.getIrrelevantRecommendations(userId)).map(_.json.as[IrrelevantPeopleRecommendations])
+  def getIrrelevantPeople(userId: Id[User]): Future[IrrelevantPeople] = {
+    call(ABook.internal.getIrrelevantPeople(userId)).map(_.json.as[IrrelevantPeople])
   }
 
 }
@@ -351,5 +351,5 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def hideInviteRecommendation(userId: Id[User], network: SocialNetworkType, irrelevantFriendId: Either[EmailAddress, Id[SocialUserInfo]]) = Future.successful(())
 
-  def getIrrelevantRecommendations(userId: Id[User]) = Future.successful(IrrelevantPeopleRecommendations.empty(userId))
+  def getIrrelevantPeople(userId: Id[User]) = Future.successful(IrrelevantPeople.empty(userId))
 }
