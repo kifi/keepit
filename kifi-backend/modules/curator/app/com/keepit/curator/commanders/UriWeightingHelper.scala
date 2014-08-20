@@ -1,6 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ SeedItemWithMultiplier, SeedItem }
+import com.keepit.curator.model.{ PublicSeedItem, SeedItemWithMultiplier, SeedItem }
 import com.google.inject.{ Singleton }
 
 import scala.util.matching.Regex
@@ -10,9 +10,7 @@ case class UrlPattern(
   weight: Float,
   description: String)
 
-@Singleton
-class UriWeightingHelper() {
-
+object UrlPatterns {
   val scoringMultiplier = Seq(
     //----------------------------------Penalize---------------------------------------------------------------------------
     UrlPattern("""^https?://[-A-Za-z0-9.]*twitter.com[./?\#]""".r, 0.01f, "Twitter"),
@@ -26,16 +24,20 @@ class UriWeightingHelper() {
     UrlPattern("""^https?://[-A-Za-z0-9.]*.[-A-Za-z0-9.]*.[./?\#]kifi[-A-Za-z0-9.]*""".r, 1.2f, "Public page relate to Kifi"),
     UrlPattern("""^https?://(code|blog|engineering).[-A-Za-z0-9.]*.[./?\#][-A-Za-z0-9.]*""".r, 1.1f, "Tech")
   )
+}
+
+@Singleton
+class UriWeightingHelper() {
 
   def apply(items: Seq[SeedItem]): Seq[SeedItemWithMultiplier] = items.map { item =>
     var masterWeight = 1.0f
-    scoringMultiplier.map { pattern =>
+    UrlPatterns.scoringMultiplier.map { pattern =>
       if (pattern.regex.findFirstIn(item.url).isDefined) masterWeight *= pattern.weight
     }
 
     SeedItemWithMultiplier(
       multiplier = masterWeight,
-      userId = item.userId,
+      userId = Some(item.userId),
       uriId = item.uriId,
       priorScore = item.priorScore,
       timesKept = item.timesKept,
@@ -43,3 +45,22 @@ class UriWeightingHelper() {
       keepers = item.keepers)
   }
 }
+
+@Singleton
+class PublicUriWeightingHelper() {
+
+  def apply(items: Seq[PublicSeedItem]): Seq[SeedItemWithMultiplier] = items.map { item =>
+    var masterWeight = 1.0f
+    UrlPatterns.scoringMultiplier.map { pattern =>
+      if (pattern.regex.findFirstIn(item.url).isDefined) masterWeight *= pattern.weight
+    }
+
+    SeedItemWithMultiplier(
+      multiplier = masterWeight,
+      uriId = item.uriId,
+      timesKept = item.timesKept,
+      lastSeen = item.lastSeen,
+      keepers = item.keepers)
+  }
+}
+

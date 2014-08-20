@@ -22,6 +22,7 @@ trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeed
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[RawSeedItem]
   def getByUriIdAndUserId(uriId: Id[NormalizedURI], userIdOpt: Option[Id[User]])(implicit session: RSession): Option[RawSeedItem]
   def getBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
+  def getBySeqNum(start: SequenceNumber[RawSeedItem], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
   def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
   def getRecentGeneric(maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
   def getFirstByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[RawSeedItem]
@@ -104,6 +105,16 @@ class RawSeedItemRepoImpl @Inject() (
       sql"SELECT * FROM raw_seed_item WHERE seq > ${start.value} AND (user_id=$userId OR user_id IS NULL) ORDER BY seq LIMIT $maxBatchSize;"
     } else {
       sql"SELECT * FROM raw_seed_item USE INDEX (raw_seed_item_u_seq_user_id) WHERE seq > ${start.value} AND (user_id=$userId OR user_id IS NULL) ORDER BY seq LIMIT $maxBatchSize;"
+    }
+    q.as[RawSeedItem].list
+  }
+
+  def getBySeqNum(start: SequenceNumber[RawSeedItem], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
+    import StaticQuery.interpolation
+    val q = if (db.dialect == H2DatabaseDialect) {
+      sql"SELECT * FROM raw_seed_item WHERE seq > ${start.value} AND (user_id IS NULL) ORDER BY seq LIMIT $maxBatchSize;"
+    } else {
+      sql"SELECT * FROM raw_seed_item USE INDEX (raw_seed_item_u_seq_user_id) WHERE seq > ${start.value} AND (user_id IS NULL) ORDER BY seq LIMIT $maxBatchSize;"
     }
     q.as[RawSeedItem].list
   }

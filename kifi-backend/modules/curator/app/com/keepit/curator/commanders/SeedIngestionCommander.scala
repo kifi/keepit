@@ -61,12 +61,22 @@ class SeedIngestionCommander @Inject() (
 
   def ingestTopUris(userId: Id[User]): Future[Unit] = topUrisIngestor(userId, INGESTION_BATCH_SIZE).map(_ => ())
 
-  private def cook(userId: Id[User], rawItem: RawSeedItem, keepers: Keepers): SeedItem = SeedItem(
+  private def cookSeedItem(userId: Id[User], rawItem: RawSeedItem, keepers: Keepers): SeedItem = SeedItem(
     userId = userId,
     uriId = rawItem.uriId,
     url = rawItem.url,
     seq = SequenceNumber[SeedItem](rawItem.seq.value),
     priorScore = rawItem.priorScore,
+    timesKept = rawItem.timesKept,
+    lastSeen = rawItem.lastSeen,
+    keepers = keepers,
+    discoverable = rawItem.discoverable
+  )
+
+  private def cookPublicSeedItem(rawItem: RawSeedItem, keepers: Keepers): PublicSeedItem = PublicSeedItem(
+    uriId = rawItem.uriId,
+    url = rawItem.url,
+    seq = SequenceNumber[PublicSeedItem](rawItem.seq.value),
     timesKept = rawItem.timesKept,
     lastSeen = rawItem.lastSeen,
     keepers = keepers,
@@ -81,7 +91,20 @@ class SeedIngestionCommander @Inject() (
         } else {
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
         }
-        cook(userId, rawItem, keepers)
+        cookSeedItem(userId, rawItem, keepers)
+      }
+    }
+  }
+
+  def getBySeqNum(start: SequenceNumber[PublicSeedItem], maxBatchSize: Int): Future[Seq[PublicSeedItem]] = {
+    db.readOnlyReplicaAsync { implicit session =>
+      rawSeedsRepo.getBySeqNum(SequenceNumber[RawSeedItem](start.value), maxBatchSize).map { rawItem =>
+        val keepers = if (rawItem.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
+          Keepers.TooMany
+        } else {
+          Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
+        }
+        cookPublicSeedItem(rawItem, keepers)
       }
     }
   }
@@ -95,7 +118,7 @@ class SeedIngestionCommander @Inject() (
         } else {
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
         }
-        cook(userId, rawItem, keepers)
+        cookSeedItem(userId, rawItem, keepers)
       }
     }
   }
@@ -111,7 +134,7 @@ class SeedIngestionCommander @Inject() (
         } else {
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
         }
-        cook(userId, rawItem, keepers)
+        cookSeedItem(userId, rawItem, keepers)
       }.filter { seedItem =>
         seedItem.keepers match {
           case Keepers.ReasonableNumber(users) => !users.contains(userId)

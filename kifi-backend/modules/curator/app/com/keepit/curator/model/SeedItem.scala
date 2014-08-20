@@ -12,6 +12,8 @@ object Keepers {
   case class ReasonableNumber(who: Seq[Id[User]]) extends Keepers
 }
 
+abstract class SuperSeed
+
 case class SeedItem(
   userId: Id[User],
   uriId: Id[NormalizedURI],
@@ -21,7 +23,23 @@ case class SeedItem(
   timesKept: Int,
   lastSeen: DateTime,
   keepers: Keepers,
-  discoverable: Boolean)
+  discoverable: Boolean) extends SuperSeed
+
+case class PublicSeedItem(
+  uriId: Id[NormalizedURI],
+  url: String,
+  seq: SequenceNumber[PublicSeedItem],
+  timesKept: Int,
+  lastSeen: DateTime,
+  keepers: Keepers,
+  discoverable: Boolean) extends SuperSeed
+
+@json case class PublicUriScores(
+  popularityScore: Float,
+  recencyScore: Float,
+  rekeepScore: Float,
+  discoveryScore: Float,
+  multiplier: Option[Float])
 
 @json case class UriScores(
     socialScore: Float,
@@ -39,12 +57,14 @@ case class SeedItem(
 
 case class SeedItemWithMultiplier(
   multiplier: Float = 1.0f,
-  userId: Id[User],
+  userId: Option[Id[User]] = None,
   uriId: Id[NormalizedURI],
-  priorScore: Option[Float],
+  priorScore: Option[Float] = None,
   timesKept: Int,
   lastSeen: DateTime,
   keepers: Keepers)
+
+case class PublicScoredSeedItem(uriId: Id[NormalizedURI], publicUriScores: PublicUriScores)
 
 case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores)
 

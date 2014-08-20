@@ -1,50 +1,33 @@
 package com.keepit.curator.commanders
 
-import com.keepit.common.db.Id
-import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.curator.model.{ SeedItemWithMultiplier, CuratorKeepInfoRepo, Keepers, SeedItem, ScoredSeedItem, UriScores }
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.heimdal.HeimdalServiceClient
-import com.keepit.model.{ NormalizedURI, HelpRankInfo }
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.graph.GraphServiceClient
-import com.keepit.model.User
-
-import scala.concurrent.Future
-import scala.collection.concurrent.TrieMap
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
-
-import org.joda.time.Days
 
 @Singleton
 class UriScoringHelper @Inject() (
     graph: GraphServiceClient,
     keepInfoRepo: CuratorKeepInfoRepo,
     cortex: CortexServiceClient,
-    heimdal: HeimdalServiceClient) extends Logging {
-
-  private def getRawRecencyScores(items: Seq[SeedItemWithMultiplier]): Seq[Float] = items.map { item =>
-    val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays()
-    (1.0 / (Math.log(daysOld + 1.0) + 1)).toFloat
-  }
-
-  private def getRawPopularityScores(items: Seq[SeedItemWithMultiplier]): Seq[Float] = items.map { item =>
-    val cappedPopularity = Math.min(item.timesKept, 100)
-    (cappedPopularity / 100.0).toFloat
-  }
+    heimdal: HeimdalServiceClient,
+    //TODO: change
+    publicScoring: PublicUriScoringHelper) extends Logging {
 
   private def getRawPriorScores(items: Seq[SeedItemWithMultiplier]): Seq[Float] = items.map { item =>
     item.priorScore.getOrElse(0.0f)
   }
 
   private def getRawInterestScores(items: Seq[SeedItemWithMultiplier]): Future[(Seq[Float], Seq[Float])] = {
-    val interestScores = cortex.batchUserURIsInterests(items.head.userId, items.map(_.uriId))
+    val interestScores = cortex.batchUserURIsInterests(items.head.userId.get, items.map(_.uriId))
     interestScores.map { scores =>
       scores.map { score =>
         val (overallOpt, recentOpt) = (score.global, score.recency)
@@ -57,7 +40,7 @@ class UriScoringHelper @Inject() (
   // assume all items have same userId
   def getRawSocialScores(items: Seq[SeedItemWithMultiplier]): Future[Seq[Float]] = {
     //convert user scores seq to map, assume there is no duplicate userId from graph service
-    graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
+    graph.getConnectedUserScores(items.head.userId.get, avoidFirstDegreeConnections = false).map { socialScores =>
       val socialScoreMap = socialScores.map { socialScore =>
         (socialScore.userId, socialScore.score.toFloat)
       }.toMap
@@ -78,54 +61,40 @@ class UriScoringHelper @Inject() (
     }
   }
 
-  val uriHelpRankScores = TrieMap[Id[NormalizedURI], HelpRankInfo]() //This needs to go when we have proper caching on the help rank scores
-  def getRawHelpRankScores(items: Seq[SeedItemWithMultiplier]): Future[(Seq[Float], Seq[Float])] = {
-    val helpRankInfos = heimdal.getHelpRankInfos(items.map(_.uriId).filterNot(uriHelpRankScores.contains))
-    helpRankInfos.map { infos =>
-      infos.foreach { info => uriHelpRankScores += (info.uriId -> info) }
-      items.map { item =>
-        val info = uriHelpRankScores(item.uriId)
-        (Math.tanh(info.rekeepCount / 10).toFloat, Math.tanh(info.keepDiscoveryCount / 20).toFloat)
-      }.unzip
-    }
-
-  }
-
-  def apply(items: Seq[SeedItemWithMultiplier]): Future[Seq[ScoredSeedItem]] = {
+  def getScoredUris(items: Seq[SeedItemWithMultiplier]): Future[Seq[ScoredSeedItem]] = {
     require(items.map(_.userId).toSet.size <= 1, "Batch of seed items to score must be all for the same user")
-
     if (items.isEmpty) {
       Future.successful(Seq.empty)
     } else {
-      val recencyScores = getRawRecencyScores(items)
-      val popularityScores = getRawPopularityScores(items)
+      val publicScoresFut = publicScoring(items)
       val priorScores = getRawPriorScores(items)
-
       val socialScoresFuture = getRawSocialScores(items)
       val interestScoresFuture = getRawInterestScores(items)
-      val helpRankScoresFuture = getRawHelpRankScores(items)
-
-      for (
-        socialScores <- socialScoresFuture;
-        (overallInterestScores, recentInterestScores) <- interestScoresFuture;
-        (rekeepScores, discoveryScores) <- helpRankScoresFuture
-      ) yield {
+      for {
+        socialScores <- socialScoresFuture
+        (overallInterestScores, recentInterestScores) <- interestScoresFuture
+        publicScores <- publicScoresFut
+      } yield {
         for (i <- 0 until items.length) yield {
           val scores = UriScores(
             socialScore = socialScores(i),
-            popularityScore = popularityScores(i),
+            popularityScore = publicScores(i).publicUriScores.popularityScore,
             overallInterestScore = overallInterestScores(i),
             recentInterestScore = recentInterestScores(i),
-            recencyScore = recencyScores(i),
+            recencyScore = publicScores(i).publicUriScores.recencyScore,
             priorScore = priorScores(i),
-            rekeepScore = rekeepScores(i),
-            discoveryScore = discoveryScores(i),
+            rekeepScore = publicScores(i).publicUriScores.rekeepScore,
+            discoveryScore = publicScores(i).publicUriScores.discoveryScore,
             multiplier = Some(items(i).multiplier)
           )
-          ScoredSeedItem(items(i).userId, items(i).uriId, scores)
+          ScoredSeedItem(items(i).userId.get, items(i).uriId, scores)
         }
       }
     }
+  }
+
+  def apply(items: Seq[SeedItemWithMultiplier]): Future[Seq[ScoredSeedItem]] = {
+    getScoredUris(items)
   }
 
 }

@@ -26,6 +26,9 @@ class CuratorTasksPlugin @Inject() (
     scheduleTaskOnLeader(system, 1 minutes, 2 minutes) {
       generationCommander.precomputeRecommendations()
     }
+    scheduleTaskOnLeader(system, 1 minutes, 2 minutes) {
+      generationCommander.precomputePublicFeeds()
+    }
 
     scheduleRecommendationEmail()
   }
