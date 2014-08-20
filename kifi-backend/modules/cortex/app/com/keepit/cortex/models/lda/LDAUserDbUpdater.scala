@@ -12,6 +12,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.cortex.core.{ StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater }
+import com.keepit.curator.CuratorServiceClient
 import com.keepit.model.User
 import com.keepit.cortex.utils.MatrixUtils.{ toDoubleArray, cosineDistance }
 
@@ -39,7 +40,8 @@ class LDAUserDbUpdaterImpl @Inject() (
     keepRepo: CortexKeepRepo,
     uriTopicRepo: URILDATopicRepo,
     userTopicRepo: UserLDAInterestsRepo,
-    commitRepo: FeatureCommitInfoRepo) extends LDAUserDbUpdater with Logging {
+    commitRepo: FeatureCommitInfoRepo,
+    curator: CuratorServiceClient) extends LDAUserDbUpdater with Logging {
 
   private val fetchSize = 5000
   private val modelName = StatModelName.LDA_USER
@@ -87,8 +89,8 @@ class LDAUserDbUpdaterImpl @Inject() (
         case Some(m) => m.copy(numOfEvidence = numOfEvidence, userTopicMean = topicMean, numOfRecentEvidence = numOfRecentEvidence, userRecentTopicMean = recentTopicMean).withUpdateTime(currentDateTime).withState(state)
         case None => UserLDAInterests(userId = user, version = representer.version, numOfEvidence = numOfEvidence, userTopicMean = topicMean, numOfRecentEvidence = numOfRecentEvidence, userRecentTopicMean = recentTopicMean, state = state)
       }
-      if (changedMuch(model, Some(tosave))) { /* notify curator*/ }
       db.readWrite { implicit s => userTopicRepo.save(tosave) }
+      if (changedMuch(model, Some(tosave))) { curator.resetUserRecomGenState(user) }
     }
   }
 
