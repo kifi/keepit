@@ -6,10 +6,13 @@ import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller._
 import com.keepit.common.db.slick._
+import com.keepit.common.net.URI
 import com.keepit.model._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.util.{ Failure, Success }
 
 class MobilePageController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -22,8 +25,14 @@ class MobilePageController @Inject() (
 
   def getPageDetails() = JsonAction.authenticatedParseJson { request =>
     val url = (request.body \ "url").as[String]
-    val info = pageCommander.getPageDetails(url, request.userId, request.experiments)
-    Ok(Json.toJson(info))
+    URI.parse(url) match {
+      case Success(_) =>
+        val info = pageCommander.getPageDetails(url, request.userId, request.experiments)
+        Ok(Json.toJson(info))
+      case Failure(e) =>
+        log.error(s"Error parsing url: $url", e)
+        BadRequest(s"Error parsing url: $url")
+    }
   }
 
   def queryExtension(page: Int, pageSize: Int) = JsonAction.authenticatedParseJsonAsync { request =>
