@@ -12,7 +12,7 @@ import org.specs2.mutable.Specification
 
 class QueryEngineTest extends Specification {
 
-  class TstScoreVectorSource(indexer: TstIndexer) extends ScoreVectorSource {
+  class TstScoreVectorSource(indexer: TstIndexer) extends ScoreVectorSourceLike {
 
     protected val searcher: Searcher = indexer.getSearcher
 
@@ -33,7 +33,7 @@ class QueryEngineTest extends Specification {
         val size = pq.getTaggedScores(taggedScores)
 
         // write to the buffer
-        output.alloc(writer, Visibility.PUBLIC, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
+        output.alloc(writer, Visibility.OTHERS, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
         writer.putLong(id).putTaggedFloatBits(taggedScores, size)
         docId = pq.top.doc // next doc
       }

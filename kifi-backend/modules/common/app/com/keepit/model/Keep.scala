@@ -165,6 +165,7 @@ object KeepSource {
   val kippt = KeepSource("Kippt")
   val pocket = KeepSource("Pocket")
   val instapaper = KeepSource("Instapaper")
+  val tagImport = KeepSource("tagImport")
 
   val valid = Set(keeper, bookmarkImport, site, mobile, email, default, bookmarkFileImport, kippt, pocket, instapaper)
 

@@ -239,6 +239,22 @@ class UserController @Inject() (
     }
   }
 
+  def updateUsername() = JsonAction.authenticatedParseJson { implicit request =>
+    val newUsername = (request.body \ "username").as[Username]
+    userCommander.setUsername(request.userId, newUsername) match {
+      case Left(error) => BadRequest(Json.obj("error" -> error))
+      case Right(username) => Ok(Json.obj("username" -> username))
+    }
+  }
+
+  def updateName() = JsonAction.authenticatedParseJson { implicit request =>
+    val newFirstName = (request.body \ "firstName").as[String]
+    val newLastName = (request.body \ "lastName").as[String]
+    val userData = UpdatableUserInfo(firstName = Some(newFirstName), lastName = Some(newLastName), description = None, emails = None)
+    userCommander.updateUserInfo(request.userId, userData)
+    Ok(JsString("success"))
+  }
+
   //private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
   def updateCurrentUser() = JsonAction.authenticatedParseJsonAsync(allowPending = true) { implicit request =>
     request.body.validate[UpdatableUserInfo] match {

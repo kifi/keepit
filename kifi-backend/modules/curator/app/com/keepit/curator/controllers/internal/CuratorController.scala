@@ -3,7 +3,7 @@ package com.keepit.curator.controllers.internal
 import com.google.inject.Inject
 import com.keepit.common.controller.CuratorServiceController
 import com.keepit.common.db.Id
-import com.keepit.curator.commanders.email.EngagementFeedEmailSender
+import com.keepit.curator.commanders.email.FeedDigestEmailSender
 import com.keepit.curator.commanders.{ RecommendationFeedbackCommander, RecommendationGenerationCommander }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -17,7 +17,7 @@ class CuratorController @Inject() (
     shoebox: ShoeboxServiceClient,
     recoGenCommander: RecommendationGenerationCommander,
     recoFeedbackCommander: RecommendationFeedbackCommander,
-    engagaementFeedEmailSender: EngagementFeedEmailSender) extends CuratorServiceController {
+    engagaementFeedEmailSender: FeedDigestEmailSender) extends CuratorServiceController {
 
   def adHocRecos(userId: Id[User], n: Int) = Action.async { request =>
     recoGenCommander.getAdHocRecommendations(userId, n, request.body.asJson match {

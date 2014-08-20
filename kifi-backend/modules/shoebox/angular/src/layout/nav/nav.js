@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', 'util', 'keepService', 'friendService', 'tagService',
-  function ($location, util, keepService, friendService, tagService) {
+  '$location', 'util', 'keepService', 'friendService', 'tagService', 'profileService' /* only needed for libraries experiment */, 'libraryService',
+  function ($location, util, keepService, friendService, tagService, profileService, libraryService) {
     return {
       //replace: true,
       restrict: 'A',
@@ -14,6 +14,22 @@ angular.module('kifi')
           friendsCount: friendService.totalFriends(),
           friendsNotifCount: friendService.requests.length
         };
+
+        scope.librariesEnabled = false;
+        scope.libraries = [];
+        scope.invited = [];
+
+        scope.$watch(function () {
+          return libraryService.isAllowed();
+        }, function (n) {
+          scope.librariesEnabled = n || false;
+          if (scope.librariesEnabled) {
+            libraryService.fetchLibrarySummaries().then(function () {
+              scope.libraries = libraryService.libraries;
+              scope.invited = libraryService.invited;
+            });
+          }
+        });
 
         scope.$watch(function () {
           return friendService.requests.length;
