@@ -283,21 +283,6 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get library by publicId" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
-        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
-        val libraryCommander = inject[LibraryCommander]
-
-        val lib1 = libraryCommander.getLibraryById(libShield.id.get)
-        lib1.id === libShield.id
-        val lib2 = libraryCommander.getLibraryById(libMurica.id.get)
-        lib2.id === libMurica.id
-        val lib3 = libraryCommander.getLibraryById(libScience.id.get)
-        lib3.id === libScience.id
-      }
-    }
-
     "get library by path" in {
       withDb(FakeCryptoModule()) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
@@ -342,6 +327,24 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           hulkInvitedLibs.map(_.slug.value) === Seq("murica")
           hulkInvites.map(_.access) === Seq(LibraryAccess.READ_ONLY)
         }
+      }
+    }
+
+    "does user have visibility" in {
+      withDb(FakeCryptoModule()) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
+        val libraryCommander = inject[LibraryCommander]
+
+        db.readWrite { implicit s =>
+          libraryRepo.save(libScience.copy(visibility = LibraryVisibility.PUBLISHED))
+        }
+
+        libraryCommander.userAccess(userIron.id.get, libScience.id.get) === Some(LibraryAccess.OWNER) // test owner access
+        libraryCommander.userAccess(userHulk.id.get, libScience.id.get) === Some(LibraryAccess.READ_INSERT) // test membership accesss
+        libraryCommander.userAccess(userIron.id.get, libShield.id.get) === None // test no membership (secret library)
+        libraryCommander.userAccess(userCaptain.id.get, libScience.id.get) === Some(LibraryAccess.READ_ONLY) // test published library (no membership)
+        libraryCommander.userAccess(userHulk.id.get, libMurica.id.get) === Some(LibraryAccess.READ_ONLY) // test invited (but not accepted) access
       }
     }
 
@@ -655,6 +658,71 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           keepRepo.count === 8
           keepRepo.getByLibrary(libIronMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom") // for now, URIs that exist in toLibrary also stay in fromLibrary
           keepRepo.getByLibrary(libFreedom.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+        }
+      }
+    }
+
+    "create library from tag" in {
+      withDb(FakeCryptoModule()) { implicit injector =>
+        implicit val config = inject[PublicIdConfiguration]
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
+
+        val t1 = new DateTime(2014, 8, 1, 4, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        val site1 = "http://www.reddit.com/r/murica"
+        val site2 = "http://www.freedom.org/"
+        val site3 = "http://www.mcdonalds.com/"
+
+        val (tag1, tag2, libUSA) = db.readWrite { implicit s =>
+          val uri1 = uriRepo.save(NormalizedURI.withHash(site1, Some("Reddit")))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(site2, Some("Freedom")))
+          val uri3 = uriRepo.save(NormalizedURI.withHash(site3, Some("McDonalds")))
+
+          val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
+          val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
+          val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
+
+          val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+          val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+          val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
+            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = None))
+
+          val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "USA"))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag1.id.get))
+
+          val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "Murica"))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag2.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tag2.id.get))
+          keepToCollectionRepo.save(KeepToCollection(keepId = keep3.id.get, collectionId = tag2.id.get))
+
+          val libUSA = libraryRepo.save(Library(name = "USA", slug = LibrarySlug("usa"), ownerId = userCaptain.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.USER_CREATED, memberCount = 1))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libUSA.id.get, userId = userCaptain.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+
+          keepRepo.count === 3
+          collectionRepo.count(userCaptain.id.get) === 2
+          keepToCollectionRepo.count === 6
+          (tag1, tag2, libUSA)
+        }
+
+        val libraryCommander = inject[LibraryCommander]
+        libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, "Canada").isLeft === true
+        val res1 = libraryCommander.copyKeepsFromCollectionToLibrary(libUSA.id.get, "USA") //move keeps with "USA" to library "USA"
+        res1.isRight === true
+        res1.right.get.length === 0
+        db.readOnlyMaster { implicit s =>
+          keepRepo.count === 6
+          keepToCollectionRepo.count === 9
+        }
+
+        val res2 = libraryCommander.copyKeepsFromCollectionToLibrary(libMurica.id.get, "Murica") //move keeps with "Murica" to library "Murica"
+        res2.isRight === true
+        res2.right.get.unzip._1.map(_.title.get).sorted === Seq("Freedom", "Reddit")
+        db.readOnlyMaster { implicit s =>
+          keepRepo.count === 7
+          keepToCollectionRepo.count === 10
         }
       }
     }

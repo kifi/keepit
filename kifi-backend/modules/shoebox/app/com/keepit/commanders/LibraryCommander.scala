@@ -28,6 +28,7 @@ class LibraryCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
+    collectionRepo: CollectionRepo,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -160,16 +161,29 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibraryById(id: Id[Library]): Library = {
-    db.readOnlyMaster { implicit s =>
-      libraryRepo.get(id)
+  def copyKeepsFromCollectionToLibrary(libraryId: Id[Library], tagName: String): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
+    db.readWrite { implicit s =>
+      val lib = libraryRepo.get(libraryId)
+      val ownerId = lib.ownerId
+      collectionRepo.getByUserAndName(ownerId, tagName) match {
+        case None =>
+          Left(LibraryFail("tag not found"))
+        case Some(tag) =>
+          val keeps = keepToCollectionRepo.getByCollection(tag.id.get).map(k2c => keepRepo.get(k2c.keepId))
+          def saveKeep(k: Keep, s: RWSession): Unit = {
+            implicit val session = s
+            val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, isPrivate = k.isPrivate,
+              userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId)))
+            keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
+          }
+          val badKeeps = applyToKeeps(ownerId, lib, keeps, Set(), saveKeep)
+          Right(badKeeps.toSeq)
+      }
     }
   }
 
-  def getLibraryByUserAndSlug(ownerId: Id[User], slug: LibrarySlug): Option[Library] = {
-    db.readOnlyMaster { implicit s =>
-      libraryRepo.getBySlugAndUserId(userId = ownerId, slug = slug)
-    }
+  def getLibraryByUserAndSlug(ownerId: Id[User], slug: LibrarySlug): Option[Library] = db.readOnlyMaster { implicit s =>
+    libraryRepo.getBySlugAndUserId(userId = ownerId, slug = slug)
   }
 
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryAccess, Library)], Seq[(LibraryInvite, Library)]) = {
@@ -177,6 +191,22 @@ class LibraryCommander @Inject() (
       val myLibraries = libraryRepo.getByUser(userId)
       val myInvites = libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.ACCEPTED, LibraryInviteStates.INACTIVE))
       (myLibraries, myInvites)
+    }
+  }
+
+  def userAccess(userId: Id[User], libraryId: Id[Library]): Option[LibraryAccess] = {
+    db.readOnlyMaster { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
+        case Some(mem) =>
+          Some(mem.access)
+        case None =>
+          if (libraryRepo.get(libraryId).visibility == LibraryVisibility.PUBLISHED)
+            Some(LibraryAccess.READ_ONLY)
+          else if (libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId).nonEmpty)
+            Some(LibraryAccess.READ_ONLY)
+          else
+            None
+      }
     }
   }
 
@@ -349,7 +379,7 @@ class LibraryCommander @Inject() (
       case Some(_) =>
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId,
+          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, isPrivate = k.isPrivate,
             userId = k.userId, source = k.source, libraryId = Some(toLibraryId)))
           keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
             keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = k2c.collectionId))

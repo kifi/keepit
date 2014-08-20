@@ -10,7 +10,6 @@ import com.keepit.cortex.features.Document
 import com.keepit.cortex.models.lda._
 import com.keepit.cortex.utils.MatrixUtils._
 import com.keepit.model.{ Keep, NormalizedURI, User }
-import com.keepit.common.time._
 import scala.math.exp
 
 @Singleton
@@ -57,6 +56,7 @@ class LDACommander @Inject() (
     }
   }
 
+  // for admin
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): LDAUserURIInterestScores = {
     db.readOnlyReplica { implicit s =>
       val uriTopicOpt = uriTopicRepo.getActiveByURI(uriId, wordRep.version)
@@ -65,6 +65,7 @@ class LDACommander @Inject() (
     }
   }
 
+  // for admin
   def gaussianUserUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): LDAUserURIInterestScores = {
     db.readOnlyReplica { implicit s =>
       val uriTopicOpt = uriTopicRepo.getActiveByURI(uriId, wordRep.version)
@@ -96,21 +97,22 @@ class LDACommander @Inject() (
   private def computeGaussianInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAStats]): LDAUserURIInterestScores = {
     (uriTopicOpt, userInterestOpt) match {
       case (Some(uriFeat), Some(userFeat)) =>
-        val globalScore = computeGaussianInterestScore(uriFeat.numOfWords, userFeat.numOfEvidence, Some(userFeat), uriFeat.feature, isRecent = false)
+        val globalScore = computeGaussianInterestScore(userFeat.numOfEvidence, Some(userFeat), uriFeat, isRecent = false)
         LDAUserURIInterestScores(globalScore, None)
       case _ => LDAUserURIInterestScores(None, None)
     }
   }
 
-  private def computeGaussianInterestScore(numOfWords: Int, numOfEvidenceForUser: Int, userFeatOpt: Option[UserLDAStats], uriFeatOpt: Option[LDATopicFeature], isRecent: Boolean): Option[LDAUserURIInterestScore] = {
-    (userFeatOpt, uriFeatOpt) match {
-      case (Some(userFeat), Some(uriFeat)) =>
+  private def computeGaussianInterestScore(numOfEvidenceForUser: Int, userFeatOpt: Option[UserLDAStats], uriFeat: URILDATopic, isRecent: Boolean): Option[LDAUserURIInterestScore] = {
+    (userFeatOpt, uriFeat.feature) match {
+      case (Some(userFeat), Some(uriFeatVec)) =>
         val userMean = userFeat.userTopicMean.get.mean
         val userVar = userFeat.userTopicVar.get.value
         val s = userMean.sum
         assume(s > 0)
-        val dist = weightedMDistanceDiagGaussian(uriFeat.value, userMean, userVar, userMean.map { _ / s })
-        Some(LDAUserURIInterestScore(exp(-1 * dist), computeConfidence(numOfWords, numOfEvidenceForUser, isRecent)))
+        val dist = weightedMDistanceDiagGaussian(uriFeatVec.value, userMean, userVar, userMean.map { _ / s })
+        val confidence = topicChangePenalty(uriFeat.timesFirstTopicChanged) * computeConfidence(uriFeat.numOfWords, numOfEvidenceForUser, isRecent)
+        Some(LDAUserURIInterestScore(exp(-1 * dist), confidence))
       case _ => None
     }
   }
@@ -118,24 +120,30 @@ class LDACommander @Inject() (
   private def computeInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAInterests]): LDAUserURIInterestScores = {
     (uriTopicOpt, userInterestOpt) match {
       case (Some(uriFeat), Some(userFeat)) =>
-        val globalScore = computeInterestScore(uriFeat.numOfWords, userFeat.numOfEvidence, userFeat.userTopicMean, uriFeat.feature, isRecent = false)
-        val recencyScore = computeInterestScore(uriFeat.numOfWords, userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, uriFeat.feature, isRecent = true)
+        val globalScore = computeInterestScore(userFeat.numOfEvidence, userFeat.userTopicMean, uriFeat, isRecent = false)
+        val recencyScore = computeInterestScore(userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, uriFeat, isRecent = true)
         LDAUserURIInterestScores(globalScore, recencyScore)
       case _ => LDAUserURIInterestScores(None, None)
     }
   }
 
-  private def computeInterestScore(numOfWords: Int, numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeatOpt: Option[LDATopicFeature], isRecent: Boolean): Option[LDAUserURIInterestScore] = {
-    (userFeatOpt, uriFeatOpt) match {
-      case (Some(userFeat), Some(uriFeat)) =>
+  private def computeInterestScore(numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeat: URILDATopic, isRecent: Boolean): Option[LDAUserURIInterestScore] = {
+    (userFeatOpt, uriFeat.feature) match {
+      case (Some(userFeat), Some(uriFeatVec)) =>
         val userVec = getUserLDAStats(wordRep.version) match {
           case None => userFeat.mean
           case Some(stat) => scale(userFeat.mean, stat.mean, stat.std)
         }
-        val (u, v) = (projectToActive(userVec), projectToActive(uriFeat.value))
-        Some(LDAUserURIInterestScore(cosineDistance(u, v), computeConfidence(numOfWords, numOfEvidenceForUser, isRecent)))
+        val (u, v) = (projectToActive(userVec), projectToActive(uriFeatVec.value))
+        val confidence = topicChangePenalty(uriFeat.timesFirstTopicChanged) * computeConfidence(uriFeat.numOfWords, numOfEvidenceForUser, isRecent)
+        Some(LDAUserURIInterestScore(cosineDistance(u, v), confidence))
       case _ => None
     }
+  }
+
+  private def topicChangePenalty(n: Int): Float = {
+    val alpha = n / 10f
+    exp(-alpha * alpha)
   }
 
   private def computeConfidence(numOfWords: Int, numOfEvidenceForUser: Int, isRecent: Boolean) = {

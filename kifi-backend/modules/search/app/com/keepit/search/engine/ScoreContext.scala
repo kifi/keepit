@@ -12,7 +12,8 @@ class ScoreContext(
     val matchWeight: Array[Float],
     collector: ResultCollector[ScoreContext]) extends Joiner {
 
-  private[engine] var visibility: Int = 0 // 0: restricted, 1: public, 2: member (see Visibility)
+  private[engine] var visibility: Int = 0 // 0: restricted, 1: others, 2: network, 3: member, 4: secret (see Visibility)
+  private[engine] var visibleCount: Int = 0
   private[engine] val scoreMax = new Array[Float](scoreArraySize)
   private[engine] val scoreSum = new Array[Float](scoreArraySize)
 
@@ -34,13 +35,18 @@ class ScoreContext(
 
   def clear(): Unit = {
     visibility = 0
+    visibleCount = 0
     Arrays.fill(scoreMax, 0.0f)
     Arrays.fill(scoreSum, 0.0f)
   }
 
   def join(reader: DataBufferReader): Unit = {
     // compute the visibility
-    visibility = visibility | reader.recordType
+    val thisVisibility = reader.recordType
+    visibility = visibility | thisVisibility
+
+    // count libraries
+    if ((thisVisibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) visibleCount += 1
 
     while (reader.hasMore) {
       val bits = reader.nextTaggedFloatBits()

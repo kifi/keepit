@@ -63,6 +63,22 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     buf
   }
 
+  def count(term: Term): Int = {
+    var count = 0
+    foreachReader { reader =>
+      var cnt = 0
+      val idMapper = reader.getIdMapper
+      val td = reader.termDocsEnum(term)
+      var doc = td.nextDoc()
+      while (doc != NO_MORE_DOCS) {
+        cnt += 1
+        doc = td.nextDoc()
+      }
+      count += cnt
+    }
+    count
+  }
+
   def createWeight(query: Query): Weight = {
     val rewrittenQuery = rewrite(query)
     if (rewrittenQuery != null) createNormalizedWeight(rewrittenQuery) else null
