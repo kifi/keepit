@@ -11,6 +11,7 @@ import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -147,6 +148,7 @@ class KeepsCommander @Inject() (
     uriSummaryCommander: URISummaryCommander,
     collectionCommander: CollectionCommander,
     normalizedURIInterner: NormalizedURIInterner,
+    curator: CuratorServiceClient,
     clock: Clock) extends Logging {
 
   private def getKeeps(
