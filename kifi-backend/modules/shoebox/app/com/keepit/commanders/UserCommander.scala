@@ -140,7 +140,7 @@ class UserCommander @Inject() (
       userRepo.save(userRepo.getNoCache(userId)) // update user index sequence number
     }
   }
-  
+
   def updateUserInfo(userId: Id[User], userData: UpdatableUserInfo): Unit = {
     db.readOnlyMaster { implicit session =>
       val user = userRepo.getNoCache(userId)
@@ -166,6 +166,72 @@ class UserCommander @Inject() (
       var newUser = if (newFirstName.nonEmpty) user.copy(firstName = newFirstName.get) else user
       newUser = if (newLastName.nonEmpty) newUser.copy(lastName = newLastName.get) else newUser
       userRepo.save(newUser)
+    }
+  }
+
+  def addEmail(userId: Id[User], address: EmailAddress, isPrimary: Boolean): Either[String, Unit] = {
+    db.readWrite { implicit session =>
+      if (emailRepo.getByAddressOpt(address).isEmpty) {
+        val emailAddr = emailRepo.save(UserEmailAddress(userId = userId, address = address).withVerificationCode(clock.now))
+        val siteUrl = fortytwoConfig.applicationBaseUrl
+        val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+        val user = userRepo.get(userId)
+
+        postOffice.sendMail(ElectronicMail(
+          from = SystemEmailAddress.NOTIFICATIONS,
+          to = Seq(address),
+          subject = "Kifi.com | Please confirm your email address",
+          htmlBody = views.html.email.verifyEmail(user.firstName, verifyUrl).body,
+          category = NotificationCategory.User.EMAIL_CONFIRMATION
+        ))
+        if (user.primaryEmail.isEmpty && isPrimary)
+          userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, address)
+        Right()
+      } else {
+        Left("email already added")
+      }
+    }
+  }
+  def modifyEmail(userId: Id[User], address: EmailAddress, isPrimary: Boolean): Either[String, Unit] = {
+    db.readWrite { implicit session =>
+      emailRepo.getByAddressOpt(address) match {
+        case None => Left("email not found")
+        case Some(emailRecord) if emailRecord.userId == userId =>
+          val user = userRepo.get(userId)
+          if (emailRecord.verified && (user.primaryEmail.isEmpty || user.primaryEmail.get != emailRecord)) {
+            updateUserPrimaryEmail(emailRecord)
+          } else {
+            userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, address)
+          }
+          Right()
+      }
+    }
+  }
+  def removeEmail(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
+    db.readWrite { implicit session =>
+      emailRepo.getByAddressOpt(address) match {
+        case None => Left("email not found")
+        case Some(email) =>
+          val user = userRepo.get(userId)
+          val allEmails = emailRepo.getAllByUser(userId)
+          val isPrimary = user.primaryEmail.nonEmpty && (user.primaryEmail.get == address)
+          val isLast = allEmails.isEmpty
+          val isLastVerified = !allEmails.exists(em => em.address != address && em.verified)
+          val pendingPrimary = userValueRepo.getValueStringOpt(userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
+          if (!isPrimary && !isLast && !isLastVerified) {
+            if (pendingPrimary.isDefined && address == pendingPrimary.get) {
+              userValueRepo.clearValue(userId, UserValueName.PENDING_PRIMARY_EMAIL)
+            }
+            emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE))
+            Right()
+          } else if (isLast) {
+            Left("last email")
+          } else if (isLastVerified) {
+            Left("last verified email")
+          } else {
+            Left("trying to remove primary email")
+          }
+      }
     }
   }
 

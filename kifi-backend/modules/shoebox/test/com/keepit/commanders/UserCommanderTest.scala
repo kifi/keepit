@@ -5,7 +5,7 @@ import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.common.db.Id
 import org.specs2.mutable.Specification
 
-import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication }
+import com.keepit.test.{ ShoeboxTestInjector}
 import com.keepit.model._
 import com.keepit.common.mail._
 import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
@@ -195,6 +195,46 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         userCommander.setUsername(user3.id.get, Username("yes"), false) === Left("invalid_username")
         userCommander.setUsername(user3.id.get, Username("aes.corp"), false) === Left("invalid_username")
 
+      }
+    }
+
+    "handle emails" in {
+      withDb(modules: _*) { implicit injector =>
+        val userCommander = inject[UserCommander]
+        val userValueRepo = inject[UserValueRepo]
+        val user = db.readWrite { implicit session =>
+          userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Some(Username("AbeLincoln"))))
+        }
+
+        val email1 = EmailAddress("vampireXslayer@gmail.com")
+        val email2 = EmailAddress("uncleabe@gmail.com")
+
+        userCommander.addEmail(user.id.get, email1, false).isRight === true
+        userCommander.addEmail(user.id.get, email2, true).isRight === true
+        db.readOnlyMaster { implicit session =>
+          emailAddressRepo.getAllByUser(user.id.get).map(_.address) === Seq(email1, email2)
+          userValueRepo.getUserValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).get.value === email2.address
+        }
+
+        // verify all emails
+        db.readWrite { implicit session =>
+          emailAddressRepo.getAllByUser(user.id.get).map { em =>
+            emailAddressRepo.save(em.copy(state = UserEmailAddressStates.VERIFIED))
+          }
+          userRepo.save(user.copy(primaryEmail = Some(email2))) // because email2 is pending primary
+          userValueRepo.clearValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
+        }
+        userCommander.modifyEmail(user.id.get, email1, true).isRight === true
+        db.readOnlyMaster { implicit session =>
+          userRepo.get(user.id.get).primaryEmail.get === email1
+          userValueRepo.getUserValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL) === None
+        }
+        userCommander.removeEmail(user.id.get, email1).isRight === false // removing primary email
+        userCommander.removeEmail(user.id.get, email2).isRight === true
+        db.readOnlyMaster { implicit session =>
+          emailAddressRepo.getAllByUser(user.id.get).map(_.address) === Seq(email1)
+        }
+        userCommander.removeEmail(user.id.get, email1).isRight === false // removing last email
       }
     }
 

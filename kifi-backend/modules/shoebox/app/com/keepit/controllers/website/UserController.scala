@@ -260,11 +260,43 @@ class UserController @Inject() (
     Ok(JsString("success"))
   }
 
-  def updateEmails() = JsonAction.authenticatedParseJson { implicit request =>
-    val newEmails = (request.body \ "emails").as[Seq[EmailInfo]]
-    val user = db.readOnlyMaster { implicit s => userRepo.get(request.userId) }
-    userCommander.updateEmailAddresses(request.userId, user.firstName, user.primaryEmail, newEmails)
-    Ok(JsString("success"))
+  def addEmail() = JsonAction.authenticatedParseJson { implicit request =>
+    val newAddress = (request.body \ "email").as[String]
+    val isPrimary = (request.body \ "isPrimary").as[Boolean]
+    EmailAddress.validate(newAddress) match {
+      case Failure(e) =>
+        BadRequest(e.getMessage)
+      case Success(newEmail) =>
+        userCommander.addEmail(request.userId, newEmail, isPrimary) match {
+          case Left(s) => BadRequest(s)
+          case Right(_) => Ok(JsString("success"))
+        }
+    }
+  }
+  def modifyEmail() = JsonAction.authenticatedParseJson { implicit request =>
+    val targetAddress = (request.body \ "email").as[String]
+    val isPrimary = (request.body \ "isPrimary").as[Boolean]
+    EmailAddress.validate(targetAddress) match {
+      case Failure(e) =>
+        BadRequest(e.getMessage)
+      case Success(targetEmail) =>
+        userCommander.modifyEmail(request.userId, targetEmail, isPrimary) match {
+          case Left(s) => BadRequest(s)
+          case Right(_) => Ok(JsString("success"))
+        }
+    }
+  }
+  def removeEmail() = JsonAction.authenticatedParseJson { implicit request =>
+    val targetAddress = (request.body \ "email").as[String]
+    EmailAddress.validate(targetAddress) match {
+      case Failure(e) =>
+        BadRequest(e.getMessage)
+      case Success(targetEmail) =>
+        userCommander.removeEmail(request.userId, targetEmail) match {
+          case Left(s) => BadRequest(s)
+          case Right(_) => Ok(JsString("success"))
+        }
+    }
   }
 
   //private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r

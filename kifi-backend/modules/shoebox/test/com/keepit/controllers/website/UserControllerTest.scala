@@ -18,7 +18,7 @@ import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.mail.{EmailAddress, FakeMailModule}
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule, FakeSocialGraphModule }
 import com.keepit.search.FakeSearchServiceClientModule
@@ -117,10 +117,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val userController = inject[UserController]
         val pathName = com.keepit.controllers.website.routes.UserController.updateName().url
         val pathDescription = com.keepit.controllers.website.routes.UserController.updateDescription().url
-        val pathEmails = com.keepit.controllers.website.routes.UserController.updateEmails().url
         pathName === "/site/user/me/name"
         pathDescription === "/site/user/me/description"
-        pathEmails === "/site/user/me/emails"
 
         inject[FakeActionAuthenticator].setUser(user, Set(ExperimentType.ADMIN))
 
@@ -149,19 +147,67 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
           val userCheck = inject[UserValueRepo].getUserValue(user.id.get, UserValueName.USER_DESCRIPTION)
           userCheck.get.value === "USA #1"
         }
+      }
+    }
 
-        val inputJson3 = Json.obj(
-          "emails" -> Seq(Json.obj("address" -> "vampireXslayer@gmail.com", "isPrimary" -> true, "isVerified" -> false, "isPendingPrimary" -> true))
-        )
-        val request3 = FakeRequest("POST", pathEmails).withBody(inputJson3)
-        val result3: Future[SimpleResult] = userController.updateEmails()(request3)
-        status(result3) must equalTo(OK)
-        contentType(result3) must beSome("application/json")
-        db.readOnlyMaster { implicit s =>
-          val userEmails = emailAddressRepo.getAllByUser(user.id.get)
-          userEmails.length === 1
-          userEmails.map(_.address.address) === Seq("vampireXslayer@gmail.com")
+    "handling emails" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val user = db.readWrite { implicit session =>
+          userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Some(Username("AbeLincoln"))))
         }
+        val userController = inject[UserController]
+        val userValueRepo = inject[UserValueRepo]
+        val path = com.keepit.controllers.website.routes.UserController.addEmail().url
+        path === "/site/user/me/email"
+
+        val address1 = "vampireXslayer@gmail.com"
+        val address2 = "uncleabe@gmail.com"
+
+        val inputJson1 = Json.obj(
+          "email" -> address1,
+          "isPrimary" -> false
+        )
+        val inputJson2 = Json.obj(
+          "email" -> address2,
+          "isPrimary" -> true
+        )
+
+        val request1 = FakeRequest("POST", path).withBody(inputJson1)
+        val result1: Future[SimpleResult] = userController.addEmail()(request1)
+        status(result1) must equalTo(OK)
+        contentType(result1) must beSome("application/json")
+
+        val request2 = FakeRequest("POST", path).withBody(inputJson2)
+        val result2: Future[SimpleResult] = userController.addEmail()(request2)
+        status(result2) must equalTo(OK)
+        contentType(result2) must beSome("application/json")
+
+        val request3 = FakeRequest("POST", path).withBody(inputJson2)
+        val result3: Future[SimpleResult] = userController.addEmail()(request3)
+        status(result3) must equalTo(BAD_REQUEST) // already added email
+
+        // verify emails
+        db.readWrite { implicit session =>
+          emailAddressRepo.getAllByUser(user.id.get).map { em =>
+            emailAddressRepo.save(em.copy(state = UserEmailAddressStates.VERIFIED))
+          }
+          userRepo.save(user.copy(primaryEmail = Some(EmailAddress(address2)))) // because email2 is pending primary
+          userValueRepo.clearValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
+        }
+
+        val request4 = FakeRequest("PUT", path).withBody(inputJson2)
+        val result4: Future[SimpleResult] = userController.modifyEmail()(request4)
+        status(result4) must equalTo(OK)
+        contentType(result4) must beSome("application/json")
+
+        val request5 = FakeRequest("DELETE", path).withBody(Json.obj("email" -> address1))
+        val result5: Future[SimpleResult] = userController.removeEmail()(request5)
+        status(result5) must equalTo(OK)
+        contentType(result5) must beSome("application/json")
+        
+        val request6 = FakeRequest("DELETE", path).withBody(Json.obj("email" -> address2))
+        val result6: Future[SimpleResult] = userController.removeEmail()(request6)
+        status(result6) must equalTo(BAD_REQUEST) // cannot delete primary email
       }
     }
 
