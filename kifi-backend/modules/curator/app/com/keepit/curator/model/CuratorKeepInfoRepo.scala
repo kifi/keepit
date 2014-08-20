@@ -5,7 +5,11 @@ import com.keepit.common.db.Id
 import com.keepit.model.{ KeepStates, User, NormalizedURI, Keep }
 import com.keepit.common.time.Clock
 import com.keepit.common.db.slick.DBSession.{ RSession }
+
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
+import com.google.common.cache.{ CacheBuilder, Cache }
+
+import java.util.concurrent.{ TimeUnit, Callable }
 
 @ImplementedBy(classOf[CuratorKeepInfoRepoImpl])
 trait CuratorKeepInfoRepo extends DbRepo[CuratorKeepInfo] {
@@ -42,11 +46,15 @@ class CuratorKeepInfoRepoImpl @Inject() (
     (for (row <- rows if row.keepId === keepId) yield row).firstOption
   }
 
+  private val keeperByUriIdCache: Cache[Id[NormalizedURI], Seq[Id[User]]] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(200).maximumSize(600).expireAfterWrite(60, TimeUnit.SECONDS).build()
+
   def getKeepersByUriIdCompiled(uriId: Column[Id[NormalizedURI]]) =
     Compiled { (for (row <- rows if row.uriId === uriId && row.state === CuratorKeepInfoStates.ACTIVE) yield row.userId) }
 
   def getKeepersByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[User]] = {
-    getKeepersByUriIdCompiled(uriId).list
+    keeperByUriIdCache.get(uriId, new Callable[Seq[Id[User]]] {
+      def call() = getKeepersByUriIdCompiled(uriId).list
+    })
   }
 
   def checkDiscoverableByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
