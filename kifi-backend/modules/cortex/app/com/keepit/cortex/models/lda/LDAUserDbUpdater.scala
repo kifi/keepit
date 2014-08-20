@@ -100,7 +100,7 @@ class LDAUserDbUpdaterImpl @Inject() (
 
     def recentlyKeptMany(userId: Id[User]): Boolean = {
       val since = currentDateTime.minusMinutes(window)
-      val cnt = db.readOnlyReplica{implicit s => keepRepo.countRecentUserKeeps(userId, since)}
+      val cnt = db.readOnlyReplica { implicit s => keepRepo.countRecentUserKeeps(userId, since) }
       cnt > 10
     }
 
