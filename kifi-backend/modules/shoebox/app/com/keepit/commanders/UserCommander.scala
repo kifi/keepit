@@ -163,9 +163,7 @@ class UserCommander @Inject() (
   def updateName(userId: Id[User], newFirstName: Option[String], newLastName: Option[String]): User = {
     db.readWrite { implicit session =>
       val user = userRepo.get(userId)
-      var newUser = if (newFirstName.nonEmpty) user.copy(firstName = newFirstName.get) else user
-      newUser = if (newLastName.nonEmpty) newUser.copy(lastName = newLastName.get) else newUser
-      userRepo.save(newUser)
+      userRepo.save(user.copy(firstName = newFirstName.getOrElse(user.firstName), lastName = newLastName.getOrElse(user.lastName)))
     }
   }
 

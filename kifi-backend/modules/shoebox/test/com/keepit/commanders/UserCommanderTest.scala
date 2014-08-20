@@ -5,7 +5,7 @@ import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.common.db.Id
 import org.specs2.mutable.Specification
 
-import com.keepit.test.{ ShoeboxTestInjector}
+import com.keepit.test.{ ShoeboxTestInjector }
 import com.keepit.model._
 import com.keepit.common.mail._
 import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }

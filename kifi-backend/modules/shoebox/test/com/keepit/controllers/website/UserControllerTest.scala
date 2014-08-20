@@ -18,7 +18,7 @@ import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.mail.{EmailAddress, FakeMailModule}
+import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule, FakeSocialGraphModule }
 import com.keepit.search.FakeSearchServiceClientModule
@@ -204,7 +204,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         val result5: Future[SimpleResult] = userController.removeEmail()(request5)
         status(result5) must equalTo(OK)
         contentType(result5) must beSome("application/json")
-        
+
         val request6 = FakeRequest("DELETE", path).withBody(Json.obj("email" -> address2))
         val result6: Future[SimpleResult] = userController.removeEmail()(request6)
         status(result6) must equalTo(BAD_REQUEST) // cannot delete primary email
