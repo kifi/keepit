@@ -42,8 +42,11 @@ class CuratorKeepInfoRepoImpl @Inject() (
     (for (row <- rows if row.keepId === keepId) yield row).firstOption
   }
 
+  def getKeepersByUriIdCompiled(uriId: Column[Id[NormalizedURI]]) =
+    Compiled { (for (row <- rows if row.uriId === uriId && row.state === CuratorKeepInfoStates.ACTIVE) yield row.userId) }
+
   def getKeepersByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[User]] = {
-    (for (row <- rows if row.uriId === uriId && row.state === CuratorKeepInfoStates.ACTIVE) yield row.userId).list
+    getKeepersByUriIdCompiled(uriId).list
   }
 
   def checkDiscoverableByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
