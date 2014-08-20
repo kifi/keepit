@@ -12,8 +12,6 @@ object Keepers {
   case class ReasonableNumber(who: Seq[Id[User]]) extends Keepers
 }
 
-abstract class SuperSeed
-
 case class SeedItem(
   userId: Id[User],
   uriId: Id[NormalizedURI],
@@ -23,7 +21,7 @@ case class SeedItem(
   timesKept: Int,
   lastSeen: DateTime,
   keepers: Keepers,
-  discoverable: Boolean) extends SuperSeed
+  discoverable: Boolean)
 
 case class PublicSeedItem(
   uriId: Id[NormalizedURI],
@@ -32,7 +30,7 @@ case class PublicSeedItem(
   timesKept: Int,
   lastSeen: DateTime,
   keepers: Keepers,
-  discoverable: Boolean) extends SuperSeed
+  discoverable: Boolean)
 
 @json case class PublicUriScores(
   popularityScore: Float,

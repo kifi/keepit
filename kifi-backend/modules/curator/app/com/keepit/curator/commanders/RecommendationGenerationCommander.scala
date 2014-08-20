@@ -138,19 +138,17 @@ class RecommendationGenerationCommander @Inject() (
   private def getCandidateSeedsForUser(userId: Id[User], state: UserRecommendationGenerationState) =
     for {
       seeds <- seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, 200)
-      discoverableSeeds = seeds.filter(_.discoverable)
-      candidateURIs <- shoebox.getCandidateURIs(discoverableSeeds.map { _.uriId })
+      candidateURIs <- shoebox.getCandidateURIs(seeds.map { _.uriId })
     } yield {
-      ((discoverableSeeds zip candidateURIs) filter (_._2) map (_._1), if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
+      ((seeds zip candidateURIs) filter (_._2) map (_._1), if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
     }
 
   private def getPublicFeedCandidateSeeds(seq: SequenceNumber[PublicSeedItem]) =
     for {
       seeds <- seedCommander.getBySeqNum(seq, 200)
-      discoverableSeeds = seeds.filter(_.discoverable)
-      candidateURIs <- shoebox.getCandidateURIs(discoverableSeeds.map { _.uriId })
+      candidateURIs <- shoebox.getCandidateURIs(seeds.map { _.uriId })
     } yield {
-      ((discoverableSeeds zip candidateURIs) filter (_._2) map (_._1), if (seeds.isEmpty) seq else seeds.map(_.seq).max)
+      ((seeds zip candidateURIs) filter (_._2) map (_._1), if (seeds.isEmpty) seq else seeds.map(_.seq).max)
     }
 
   private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]]): Unit = recommendationGenerationLock.withLockFuture {
@@ -161,12 +159,14 @@ class RecommendationGenerationCommander @Inject() (
         case (seedItems, newSeqNum) =>
           val newState = state.copy(seq = newSeqNum)
           if (seedItems.isEmpty) {
+            println("computing1 rec??????????????? state seq: " + state.seq.value + " new seq: " + newSeqNum.value)
             db.readWrite { implicit session =>
               genStateRepo.save(newState)
             }
             if (state.seq < newSeqNum) { precomputeRecommendationsForUser(userId, boostedKeepers) }
             Future.successful(false)
           } else {
+            println("computing2 rec??????????????? state seq: " + state.seq.value + " new seq: " + newSeqNum.value)
             val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
               seedItem.keepers match {
                 case Keepers.ReasonableNumber(users) => !users.contains(userId)
@@ -181,6 +181,7 @@ class RecommendationGenerationCommander @Inject() (
             }
 
             toBeSaved.map { items =>
+              println("computing3 rec???????????????")
               db.readWrite { implicit s =>
                 items foreach { item =>
                   val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
@@ -230,14 +231,15 @@ class RecommendationGenerationCommander @Inject() (
 
       val res: Future[Boolean] = publicSeedsAndSeqFuture.flatMap {
         case (publicSeedItems, newSeqNum) =>
-
           if (publicSeedItems.isEmpty) {
+            println("computing1 public feeds???????????????? last seq: " + lastSeqNum.value + " new seq: " + newSeqNum.value)
             db.readWriteAsync { implicit session =>
               systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, newSeqNum)
             }
             if (lastSeqNum < newSeqNum) precomputePublicFeeds()
             Future.successful(false)
           } else {
+            println("computing2 public feeds???????????????? last seq: " + lastSeqNum.value + " new seq: " + newSeqNum.value)
             val cleanedItems = publicSeedItems.filter { publicSeedItem => //discard super popular items and the users own keeps
               publicSeedItem.keepers match {
                 case Keepers.ReasonableNumber(users) => true

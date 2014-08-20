@@ -21,7 +21,6 @@ class UriScoringHelper @Inject() (
     keepInfoRepo: CuratorKeepInfoRepo,
     cortex: CortexServiceClient,
     heimdal: HeimdalServiceClient,
-    //TODO: change
     publicScoring: PublicUriScoringHelper) extends Logging {
 
   private def getRawPriorScores(items: Seq[SeedItemWithMultiplier]): Seq[Float] = items.map { item =>

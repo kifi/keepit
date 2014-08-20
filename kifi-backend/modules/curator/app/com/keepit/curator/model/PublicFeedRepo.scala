@@ -3,14 +3,14 @@ package com.keepit.curator.model
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{ State, Id }
-import com.keepit.common.db.slick.{ SeqNumberDbFunction, DBSession, DbRepo, DataBaseComponent }
+import com.keepit.common.db.slick.{ SeqNumberFunction, SeqNumberDbFunction, DBSession, DbRepo, DataBaseComponent }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.model.{ NormalizedURI }
 import play.api.libs.json.Json
 
 @ImplementedBy(classOf[PublicFeedRepoImpl])
-trait PublicFeedRepo extends DbRepo[PublicFeed] {
+trait PublicFeedRepo extends DbRepo[PublicFeed] with SeqNumberFunction[PublicFeed] {
   def getByUri(uriId: Id[NormalizedURI], publicFeedState: Option[State[PublicFeed]])(implicit session: RSession): Option[PublicFeed]
   def getByTopMasterScore(maxBatchSize: Int, publicFeedState: Option[State[PublicFeed]] = Some(PublicFeedStates.ACTIVE))(implicit session: RSession): Seq[PublicFeed]
 }
@@ -53,5 +53,9 @@ class PublicFeedRepoImpl @Inject() (
   def getByTopMasterScore(maxBatchSize: Int, publicFeedState: Option[State[PublicFeed]])(implicit session: RSession): Seq[PublicFeed] = {
     (for (row <- rows if row.state === publicFeedState) yield row).
       sortBy(_.publicMasterScore.desc).take(maxBatchSize).list
+  }
+
+  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
+    assignSequenceNumbers(sequence, "public_feed_sequence", limit)
   }
 }

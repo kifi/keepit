@@ -80,6 +80,19 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
       attribution = makeSeedAttribution(userId))
   }
 
+  def makePublicFeed(uriId: Int, publicMasterScore: Float) = {
+    PublicFeed(
+      uriId = Id[NormalizedURI](uriId),
+      publicMasterScore = publicMasterScore,
+      state = PublicFeedStates.ACTIVE,
+      publicAllScores = PublicUriScores(
+        popularityScore = 1.0f,
+        recencyScore = 1.0f,
+        rekeepScore = 1.0f,
+        multiplier = Some(1.0f),
+        discoveryScore = 1.0f))
+  }
+
   def makeSeedAttribution(userId: Id[User]) = {
     SeedAttribution(
       user = Some(makeUserAttribution(userId)),
