@@ -90,7 +90,7 @@ class LDAUserDbUpdaterImpl @Inject() (
         case None => UserLDAInterests(userId = user, version = representer.version, numOfEvidence = numOfEvidence, userTopicMean = topicMean, numOfRecentEvidence = numOfRecentEvidence, userRecentTopicMean = recentTopicMean, state = state)
       }
       db.readWrite { implicit s => userTopicRepo.save(tosave) }
-      if (changedMuch(model, Some(tosave))) { curator.resetUserRecomGenState(user) }
+      if (changedMuch(model, Some(tosave))) { curator.resetUserRecoGenState(user) }
     }
   }
 

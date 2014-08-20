@@ -63,7 +63,7 @@ class CuratorController @Inject() (
     }
   }
 
-  def resetUserRecomGenState(userId: Id[User]) = Action.async { request =>
+  def resetUserRecoGenState(userId: Id[User]) = Action.async { request =>
     recoGenCommander.resetUser(userId).map { u => Ok }
   }
 }
