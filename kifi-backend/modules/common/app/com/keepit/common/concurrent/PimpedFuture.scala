@@ -58,6 +58,7 @@ object FutureHelpers {
     }
     Future.sequence(seq).map(_.toMap)
   }
+
   def sequentialExec[I, T](items: Iterable[I])(f: I => Future[T])(implicit ec: ScalaExecutionContext): Future[Unit] = {
     foldLeft(items)(()) { case ((), nextItem) => f(nextItem).map { _ => () } }
   }
