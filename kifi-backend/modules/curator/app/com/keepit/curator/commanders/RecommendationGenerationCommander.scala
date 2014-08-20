@@ -55,7 +55,8 @@ class RecommendationGenerationCommander @Inject() (
       1 * scores.popularityScore +
       9 * scores.recentInterestScore +
       6 * scores.rekeepScore +
-      3 * scores.discoveryScore) *
+      3 * scores.discoveryScore +
+      4 * scores.curationScore.getOrElse(0.0f)) *
       scores.multiplier.getOrElse(1.0f)
   }
 
@@ -67,7 +68,8 @@ class RecommendationGenerationCommander @Inject() (
       scoreCoefficients.popularityScore.getOrElse(defaultScore) * scores.popularityScore +
       scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * scores.recentInterestScore +
       scoreCoefficients.rekeepScore.getOrElse(defaultScore) * scores.rekeepScore +
-      scoreCoefficients.discoveryScore.getOrElse(defaultScore) * scores.discoveryScore) *
+      scoreCoefficients.discoveryScore.getOrElse(defaultScore) * scores.discoveryScore +
+      scoreCoefficients.curationScore.getOrElse(defaultScore) * scores.curationScore.getOrElse(0.0f)) *
       scores.multiplier.getOrElse(1.0f)
   }
 
@@ -103,15 +105,16 @@ class RecommendationGenerationCommander @Inject() (
     perUserRecommendationGenerationLocks.getOrElseUpdate(userId, new ReactiveLock())
   }
 
-  private def shouldInclude(scores: UriScores): Boolean = {
-    if ((scores.overallInterestScore > 0.45 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 4.5) {
+  private def shouldInclude(scores: UriScores): Boolean = { //ZZZ curations score here
+    if ((scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 4.5) {
       scores.socialScore > 0.8 ||
         scores.overallInterestScore > 0.65 ||
         scores.priorScore > 0 ||
         (scores.popularityScore > 0.2 && scores.socialScore > 0.65) ||
         scores.recentInterestScore > 0.15 ||
         scores.rekeepScore > 0.3 ||
-        scores.discoveryScore > 0.3
+        scores.discoveryScore > 0.3 ||
+        (scores.curationScore.isDefined && (scores.overallInterestScore > 0.5 || scores.recentInterestScore > 0.2))
     } else { //Yes, this could be expressed purly with a logic expression, but I think this is clearer -Stephen
       false
     }
