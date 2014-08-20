@@ -54,8 +54,16 @@ class UriScoringHelper @Inject() (
     }
   }
 
+  private def getRawCurationScore(items: Seq[SeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Seq[Option[Float]] = {
+    items.map(item =>
+      item.keepers match {
+        case Keepers.ReasonableNumber(users) if (!(boostedKeepers & users.toSet).isEmpty) => Some(0.75f)
+        case _ => None
+      })
+  }
+
   // assume all items have same userId
-  def getRawSocialScores(items: Seq[SeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Future[Seq[Float]] = {
+  private def getRawSocialScores(items: Seq[SeedItemWithMultiplier]): Future[Seq[Float]] = {
     //convert user scores seq to map, assume there is no duplicate userId from graph service
     graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
       val socialScoreMap = socialScores.map { socialScore =>
@@ -68,7 +76,7 @@ class UriScoringHelper @Inject() (
           case Keepers.ReasonableNumber(users) => {
             var itemScore = 0.0f
             users.map(userId => itemScore += socialScoreMap.getOrElse(userId, 0.0f))
-            if ((boostedKeepers & users.toSet).isEmpty) Math.tanh(0.5 * itemScore).toFloat else Math.tanh(0.5 * itemScore).toFloat + 0.81f
+            Math.tanh(0.5 * itemScore).toFloat
           }
         })
     }.recover { //This needs to go once the graph is fixed
@@ -78,8 +86,8 @@ class UriScoringHelper @Inject() (
     }
   }
 
-  val uriHelpRankScores = TrieMap[Id[NormalizedURI], HelpRankInfo]() //This needs to go when we have proper caching on the help rank scores
-  def getRawHelpRankScores(items: Seq[SeedItemWithMultiplier]): Future[(Seq[Float], Seq[Float])] = {
+  private val uriHelpRankScores = TrieMap[Id[NormalizedURI], HelpRankInfo]() //This needs to go when we have proper caching on the help rank scores
+  private def getRawHelpRankScores(items: Seq[SeedItemWithMultiplier]): Future[(Seq[Float], Seq[Float])] = {
     val helpRankInfos = heimdal.getHelpRankInfos(items.map(_.uriId).filterNot(uriHelpRankScores.contains))
     helpRankInfos.map { infos =>
       infos.foreach { info => uriHelpRankScores += (info.uriId -> info) }
@@ -100,8 +108,9 @@ class UriScoringHelper @Inject() (
       val recencyScores = getRawRecencyScores(items)
       val popularityScores = getRawPopularityScores(items)
       val priorScores = getRawPriorScores(items)
+      val curationScores = getRawCurationScore(items, boostedKeepers)
 
-      val socialScoresFuture = getRawSocialScores(items, boostedKeepers)
+      val socialScoresFuture = getRawSocialScores(items)
       val interestScoresFuture = getRawInterestScores(items)
       val helpRankScoresFuture = getRawHelpRankScores(items)
 
@@ -120,6 +129,7 @@ class UriScoringHelper @Inject() (
             priorScore = priorScores(i),
             rekeepScore = rekeepScores(i),
             discoveryScore = discoveryScores(i),
+            curationScore = curationScores(i),
             multiplier = Some(items(i).multiplier)
           )
           ScoredSeedItem(items(i).userId, items(i).uriId, scores)

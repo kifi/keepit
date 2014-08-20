@@ -115,7 +115,7 @@ class URILDATopicRepoImpl @Inject() (
         sql"""select tp.first_topic, count(ck.uri_Id) from cortex_keep as ck inner join uri_lda_topic as tp
            on ck.uri_id = tp.uri_id
            where ck.user_id = ${userId.id} and tp.version = ${version.version}
-           and ck.state = 'active' and tp.state = 'active' and tp.first_topic is not null and ck.kept_at > ${after.get.toLocalDate.toString}
+           and ck.state = 'active' and tp.state = 'active' and tp.first_topic is not null and ck.kept_at > ${after.get}
            group by tp.first_topic"""
       q.as[(Int, Int)].list map { case (topic, count) => (LDATopic(topic), count) }
     } else {

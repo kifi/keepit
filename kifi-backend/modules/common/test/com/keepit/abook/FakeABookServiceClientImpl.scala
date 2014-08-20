@@ -121,4 +121,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getIrrelevantRecommendations(userId: Id[User]) = Future.successful(IrrelevantPeopleRecommendations.empty(userId))
 
+  def getIrrelevantPeople(userId: Id[User]) = Future.successful(IrrelevantPeople.empty(userId))
+
 }
