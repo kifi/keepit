@@ -3,9 +3,8 @@
 angular.module('kifi')
 
 .directive('kfAddKeep', [
-  '$document', '$rootScope', '$location', 'keyIndices', 'keepDecoratorService', 'keepActionService', 'libraryService', 'tagService', 'util',
-  function ($document, $rootScope, $location, keyIndices, keepDecoratorService, keepActionService, libraryService, tagService, util) {
-
+  '$document', '$rootScope', '$location', 'keyIndices', 'keepDecoratorService', 'keepActionService', 'libraryService', 'modalService', 'tagService', 'util',
+  function ($document, $rootScope, $location, keyIndices, keepDecoratorService, keepActionService, libraryService, modalService, tagService, util) {
     return {
       restrict: 'A',
       scope: {
@@ -86,7 +85,9 @@ angular.module('kifi')
 
             return keepActionService.keepUrl([url], scope.state.checkedPrivate).then(function (result) {
               if (result.failures && result.failures.length) {
-                $rootScope.$emit('showGlobalModal', 'genericError');
+                modalService.open({
+                  template: 'common/modal/genericErrorModal.tpl.html'
+                });
               } else if (result.alreadyKept && result.alreadyKept.length) {
                 scope.resetAndHide();
                 $location.path('/keep/' + result.alreadyKept[0].id);
@@ -101,7 +102,7 @@ angular.module('kifi')
                   scope.resetAndHide();
                 });
               }
-            }); 
+            });
           } else {
             scope.state.invalidUrl = true;
           }
@@ -145,7 +146,7 @@ angular.module('kifi')
           scope.data = scope.data || {};
           scope.data.selectedLibraryId = _.find(scope.libraries, function(lib) {
             return lib.name === 'Main Library';
-          }).id;          
+          }).id;
         }
 
         scope.$watch('shown', function (shown) {

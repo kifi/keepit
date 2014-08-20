@@ -114,10 +114,6 @@ angular.module('kifi')
         case 'importBookmarkFile':
           initBookmarkFileUpload();
           break;
-        case 'genericError':
-          $scope.modal = 'generic_error';
-          $scope.data.showGenericErrorModal = true;
-          break;
         case 'manageLibrary':
           $scope.modal = 'manage_library';
           $scope.data.showManageLibraryModal = true;
