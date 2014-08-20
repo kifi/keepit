@@ -92,7 +92,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     typeaheadHitMap.get(userId) match {
       case None => Seq.empty
       case Some(hits) =>
-        val filtered = hits.filter(_.name.startsWith(query))
+        val filtered = hits.filter(h => h.info.name.exists(_.toLowerCase.startsWith(query)) || h.info.email.address.toLowerCase.startsWith(query)) // fake
         log.info(s"prefixQuery($userId,$query,$maxHits)=$filtered")
         maxHits match {
           case Some(max) => filtered.take(max)
