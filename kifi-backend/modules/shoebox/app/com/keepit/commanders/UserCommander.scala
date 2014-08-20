@@ -140,7 +140,7 @@ class UserCommander @Inject() (
       userRepo.save(userRepo.getNoCache(userId)) // update user index sequence number
     }
   }
-
+  
   def updateUserInfo(userId: Id[User], userData: UpdatableUserInfo): Unit = {
     db.readOnlyMaster { implicit session =>
       val user = userRepo.getNoCache(userId)

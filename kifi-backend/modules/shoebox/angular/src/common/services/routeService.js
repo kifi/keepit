@@ -93,7 +93,14 @@ angular.module('kifi')
       ////////////////////////////
       // Libraries              //
       ////////////////////////////
-      getLibrarySummaries: route('/libraries')
+      getLibrarySummaries: route('/libraries'),
+      getLibraryByUserSlug: function (username, slug) {
+        return route('/users/' + username + '/libraries/' + slug);
+      },
+      getLibraryById: function (libraryId) {
+        return route('/libraries/' + libraryId);
+      },
+      createLibrary: route('/libraries/add')
     };
   }
 ]);
