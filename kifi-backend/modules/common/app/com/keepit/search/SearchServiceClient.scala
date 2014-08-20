@@ -92,10 +92,6 @@ trait SearchServiceClient extends ServiceClient {
     filter: Option[String],
     maxHits: Int,
     context: Option[String],
-    start: Option[String],
-    end: Option[String],
-    tz: Option[String],
-    coll: Option[String],
     debug: Option[String]): Seq[Future[JsValue]]
 
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]]
@@ -380,10 +376,6 @@ class SearchServiceClientImpl(
     filter: Option[String],
     maxHits: Int,
     context: Option[String],
-    start: Option[String],
-    end: Option[String],
-    tz: Option[String],
-    coll: Option[String],
     debug: Option[String]): Seq[Future[JsValue]] = {
 
     var builder = new SearchRequestBuilder(new ListBuffer)
@@ -395,10 +387,6 @@ class SearchServiceClientImpl(
     if (secondLang.isDefined) builder += ("lang2", secondLang.get.lang)
     if (filter.isDefined) builder += ("filter", filter.get)
     if (context.isDefined) builder += ("context", context.get)
-    if (start.isDefined) builder += ("start", start.get)
-    if (end.isDefined) builder += ("end", end.get)
-    if (tz.isDefined) builder += ("tz", tz.get)
-    if (coll.isDefined) builder += ("coll", coll.get)
     if (debug.isDefined) builder += ("debug", debug.get)
     val request = builder.build
 
