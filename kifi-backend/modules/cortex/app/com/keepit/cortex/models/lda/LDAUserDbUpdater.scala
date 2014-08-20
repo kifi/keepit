@@ -13,6 +13,7 @@ import com.keepit.cortex.core.{ StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater }
 import com.keepit.model.User
+import com.keepit.cortex.utils.MatrixUtils.{ toDoubleArray, cosineDistance }
 
 import scala.concurrent.duration._
 
@@ -86,6 +87,7 @@ class LDAUserDbUpdaterImpl @Inject() (
         case Some(m) => m.copy(numOfEvidence = numOfEvidence, userTopicMean = topicMean, numOfRecentEvidence = numOfRecentEvidence, userRecentTopicMean = recentTopicMean).withUpdateTime(currentDateTime).withState(state)
         case None => UserLDAInterests(userId = user, version = representer.version, numOfEvidence = numOfEvidence, userTopicMean = topicMean, numOfRecentEvidence = numOfRecentEvidence, userRecentTopicMean = recentTopicMean, state = state)
       }
+      if (changedMuch(model, Some(tosave))) { /* notify curator*/ }
       db.readWrite { implicit s => userTopicRepo.save(tosave) }
     }
   }
@@ -100,6 +102,27 @@ class LDAUserDbUpdaterImpl @Inject() (
     topicCounts.foreach { case (topic, cnt) => arr(topic.index) += cnt }
     val s = arr.sum
     Some(UserTopicMean(arr.map { x => x / s }))
+  }
+
+  private def changedMuch(oldModel: Option[UserLDAInterests], newModel: Option[UserLDAInterests]): Boolean = {
+    val m1Opt = oldModel.flatMap { m => m.userTopicMean }
+    val m2Opt = newModel.flatMap { m => m.userTopicMean }
+    val overallChanged = (m1Opt, m2Opt) match {
+      case (Some(m1), Some(m2)) => if (cosineDistance(m1.mean, m2.mean) < 0.5f) true else false
+      case (None, None) => false
+      case _ => true
+    }
+
+    val recent1Opt = oldModel.flatMap { m => m.userRecentTopicMean }
+    val recent2Opt = newModel.flatMap { m => m.userRecentTopicMean }
+
+    val recentChanged = (recent1Opt, recent2Opt) match {
+      case (Some(m1), Some(m2)) => if (cosineDistance(m1.mean, m2.mean) < 0.2f) true else false // recent profile is more volatile
+      case (None, None) => false
+      case _ => true
+    }
+
+    overallChanged || recentChanged
   }
 
 }

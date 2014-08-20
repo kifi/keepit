@@ -10,3 +10,4 @@ POST   /internal/curator/updateUriRecommendationFeedback @com.keepit.curator.con
 POST   /internal/curator/updateUriRecommendationUserInteraction @com.keepit.curator.controllers.internal.CuratorController.updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI])
 POST   /internal/curator/triggerEmailToUser 	@com.keepit.curator.controllers.internal.CuratorController.triggerEmailToUser(code: String, userId: Id[User])
 POST   /internal/curator/triggerEmail 	        @com.keepit.curator.controllers.internal.CuratorController.triggerEmail(code: String)
+POST   /internal/curator/resetUserRecomGenState @com.keepit.curator.controllers.internal.CuratorController.resetUserRecomGenState(userId: Id[User])

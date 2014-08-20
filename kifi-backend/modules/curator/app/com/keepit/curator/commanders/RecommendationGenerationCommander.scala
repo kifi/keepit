@@ -10,7 +10,7 @@ import com.keepit.curator.model.{
   UriRecommendation,
   UriScores
 }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ReactiveLock
@@ -208,4 +208,12 @@ class RecommendationGenerationCommander @Inject() (
     }
   }
 
+  def resetUser(userId: Id[User]): Future[Unit] = {
+    getPerUserGenerationLock(userId).withLock {
+      db.readWriteAsync { implicit s =>
+        val stateOpt = genStateRepo.getByUserId(userId)
+        stateOpt.foreach { state => genStateRepo.save(state.copy(seq = SequenceNumber.ZERO)) }
+      }
+    }
+  }
 }

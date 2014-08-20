@@ -385,6 +385,7 @@ object Curator extends Service {
     def triggerEmail(code: String) = ServiceRoute(POST, "/internal/curator/triggerEmail", Param("code", code))
     def triggerEmailToUser(code: String, userId: Id[User]) = ServiceRoute(POST, "/internal/curator/triggerEmail", Param("code", code), Param("userId", userId))
     def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/curator/updateUriRecommendationUserInteraction", Param("userId", userId), Param("uriId", uriId))
+    def resetUserRecomGenState(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/resetUserRecomGenState", Param("userId", userId))
   }
 }
 
