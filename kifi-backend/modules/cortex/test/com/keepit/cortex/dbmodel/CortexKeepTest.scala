@@ -47,5 +47,45 @@ class CortexKeepTest extends Specification with CortexTestInjector {
       }
     }
 
+    "count recent keeps" in {
+      withDb() { implicit injector =>
+        val keepRepo = inject[CortexKeepRepo]
+
+        val time = new DateTime(2013, 2, 14, 10, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+
+        db.readWrite { implicit s =>
+          (1 to 10).map { i =>
+            val keep = CortexKeep(
+              id = None,
+              keptAt = time.plusDays(i),
+              keepId = Id[Keep](i),
+              uriId = Id[NormalizedURI](i),
+              userId = Id[User](1),
+              isPrivate = false,
+              state = State[CortexKeep]("active"),
+              source = KeepSource.keeper,
+              seq = SequenceNumber[CortexKeep](i)
+            )
+            keepRepo.save(keep)
+          }
+        }
+
+        db.readOnlyReplica { implicit s =>
+          keepRepo.countRecentUserKeeps(Id[User](1), time) === 10
+        }
+
+        var since = time.plusDays(5)
+        db.readOnlyReplica { implicit s =>
+          keepRepo.countRecentUserKeeps(Id[User](1), since) === 5
+        }
+
+        since = time.plusDays(10)
+        db.readOnlyReplica { implicit s =>
+          keepRepo.countRecentUserKeeps(Id[User](1), since) === 0
+        }
+
+      }
+    }
+
   }
 }
