@@ -162,28 +162,31 @@ class LibraryCommander @Inject() (
   }
 
   def copyKeepsFromCollectionToLibrary(libraryId: Id[Library], tagName: String): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
-    db.readWrite { implicit s =>
-      val lib = libraryRepo.get(libraryId)
-      val ownerId = lib.ownerId
-      collectionRepo.getByUserAndName(ownerId, tagName) match {
-        case None =>
-          Left(LibraryFail("tag not found"))
-        case Some(tag) =>
-          val keeps = keepToCollectionRepo.getByCollection(tag.id.get).map(k2c => keepRepo.get(k2c.keepId))
-          def saveKeep(k: Keep, s: RWSession): Unit = {
-            implicit val session = s
-            val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, isPrivate = k.isPrivate,
-              userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId)))
-            keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
-          }
-          val badKeeps = applyToKeeps(ownerId, lib, keeps, Set(), saveKeep)
-          Right(badKeeps.toSeq)
+    val (library, ownerId, memTo, tagOpt, keeps) = db.readOnlyMaster { implicit s =>
+      val library = libraryRepo.get(libraryId)
+      val ownerId = library.ownerId
+      val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, ownerId)
+      val tagOpt = collectionRepo.getByUserAndName(ownerId, tagName)
+      val keeps = tagOpt match {
+        case None => Seq.empty
+        case Some(tag) => keepToCollectionRepo.getByCollection(tag.id.get).map(k2c => keepRepo.get(k2c.keepId))
       }
+      (library, ownerId, memTo, tagOpt, keeps)
     }
-  }
-
-  def getLibraryByUserAndSlug(ownerId: Id[User], slug: LibrarySlug): Option[Library] = db.readOnlyMaster { implicit s =>
-    libraryRepo.getBySlugAndUserId(userId = ownerId, slug = slug)
+    (memTo, tagOpt) match {
+      case (_, None) => Left(LibraryFail("tag not found"))
+      case (v, _) if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
+        Right(keeps.map(_ -> LibraryError.DestPermissionDenied).toSeq)
+      case (_, Some(tag)) =>
+        def saveKeep(k: Keep, s: RWSession): Unit = {
+          implicit val session = s
+          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, isPrivate = k.isPrivate,
+            userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId)))
+          keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
+        }
+        val badKeeps = applyToKeeps(ownerId, library, keeps, Set(), saveKeep)
+        Right(badKeeps.toSeq)
+    }
   }
 
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryAccess, Library)], Seq[(LibraryInvite, Library)]) = {
