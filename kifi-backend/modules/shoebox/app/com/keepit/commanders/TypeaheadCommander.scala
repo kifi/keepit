@@ -43,7 +43,7 @@ class TypeaheadCommander @Inject() (
 
   private def queryContacts(userId: Id[User], search: Option[String], limit: Int): Future[Seq[RichContact]] = {
     val futureContacts = search match {
-      case Some(query) => abookServiceClient.prefixQuery(userId, query, Some(limit)).map { hits => println(s"[queryContacts($userId,$search)] = $hits"); hits.map(_.info) }
+      case Some(query) => abookServiceClient.prefixQuery(userId, query, Some(limit)).map { hits => hits.map(_.info) }
       case None => abookServiceClient.getContactsByUser(userId, pageSize = Some(limit))
     }
     futureContacts.map(RichContact.deduplicateByEmailAddress)
@@ -240,7 +240,7 @@ class TypeaheadCommander @Inject() (
           fb ++ lnkd
         }
         val kifi: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = kifiF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO, hit)) }
-        val abook: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = abookF.map { hits => println(s"abookHits=$hits"); hits.filter(_.info.userId.isEmpty).map(hit => (SocialNetworks.EMAIL, hit)) }
+        val abook: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = abookF.map { hits => hits.filter(_.info.userId.isEmpty).map(hit => (SocialNetworks.EMAIL, hit)) }
         val nf: Future[Seq[(SocialNetworkType, TypeaheadHit[_])]] = nfUsersF.map { hits => hits.map(hit => (SocialNetworks.FORTYTWO_NF, hit)) }
         val futures: Seq[Future[Seq[(SocialNetworkType, TypeaheadHit[_])]]] = Seq(social, kifi, abook, nf)
         fetchFirst(limit, futures)

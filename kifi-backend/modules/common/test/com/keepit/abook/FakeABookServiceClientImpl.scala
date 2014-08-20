@@ -23,13 +23,13 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, () => {})
 
   val typeaheadHitMap = new collection.mutable.HashMap[Id[User], Seq[TypeaheadHit[RichContact]]]
-  def addTypeaheadHits(userId: Id[User], hits: Seq[TypeaheadHit[RichContact]]) = {
+  def addTypeaheadHits(userId: Id[User], hits: Seq[TypeaheadHit[RichContact]]): Unit = {
     val updated = typeaheadHitMap.get(userId) match {
       case Some(h) => h ++ hits
       case None => hits
     }
     typeaheadHitMap.put(userId, updated)
-    println(s"[addTypeaheadHits($userId)] map=$typeaheadHitMap")
+    log.info(s"[addTypeaheadHits($userId)] map=$typeaheadHitMap")
   }
 
   // allow test clients to set expectations
@@ -89,7 +89,6 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def internKifiContact(userId: Id[User], contact: BasicContact): Future[RichContact] = ???
 
   def prefixQuery(userId: Id[User], query: String, maxHits: Option[Int]): Future[Seq[TypeaheadHit[RichContact]]] = Future.successful {
-    println(s"[fakeAbookClient] prefixQuery($userId, $query)") // lol sometimes this is not called !
     typeaheadHitMap.get(userId) match {
       case None => Seq.empty
       case Some(hits) =>

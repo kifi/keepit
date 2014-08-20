@@ -79,7 +79,6 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         val res = inject[TypeaheadController].searchWithInviteStatus(Some("陳家"), Some(10), false, true)(FakeRequest("GET", path))
         val s = contentAsString(res)
         val parsed = Json.parse(s).as[Seq[ConnectionWithInviteStatus]]
-        println(s"content=$s parsed=$parsed")
         parsed.length === 3
         parsed(0).networkType === SocialNetworks.FACEBOOK.name
         parsed(0).label === "陳家洛"
