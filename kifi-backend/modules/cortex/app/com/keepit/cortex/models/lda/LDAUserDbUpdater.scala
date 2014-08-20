@@ -15,6 +15,7 @@ import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin,
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.model.User
 import com.keepit.cortex.utils.MatrixUtils.{ toDoubleArray, cosineDistance }
+import org.joda.time.DateTime
 
 import scala.concurrent.duration._
 
@@ -76,7 +77,7 @@ class LDAUserDbUpdaterImpl @Inject() (
 
   private def processUser(user: Id[User]): Unit = {
     val model = db.readOnlyReplica { implicit s => userTopicRepo.getByUser(user, representer.version) }
-    if (shouldComputeFeature(model)) {
+    if (shouldComputeFeature(model, user)) {
       val topicCounts = db.readOnlyReplica { implicit s => uriTopicRepo.getUserTopicHistograms(user, representer.version) }
       val numOfEvidence = topicCounts.map { _._2 }.sum
       val time = currentDateTime
@@ -94,8 +95,18 @@ class LDAUserDbUpdaterImpl @Inject() (
     }
   }
 
-  private def shouldComputeFeature(model: Option[UserLDAInterests]): Boolean = {
-    model.isEmpty || model.get.updatedAt.plusMinutes(15).getMillis < currentDateTime.getMillis
+  private def shouldComputeFeature(model: Option[UserLDAInterests], userId: Id[User]): Boolean = {
+    val window = 15
+
+    def recentlyKeptMany(userId: Id[User]): Boolean = {
+      val since = currentDateTime.minusMinutes(window)
+      val cnt = db.readOnlyReplica{implicit s => keepRepo.countRecentUserKeeps(userId, since)}
+      cnt > 10
+    }
+
+    def isOld(updatedAt: DateTime) = updatedAt.plusMinutes(window).getMillis < currentDateTime.getMillis
+
+    model.isEmpty || isOld(model.get.updatedAt) || recentlyKeptMany(userId)
   }
 
   private def genFeature(topicCounts: Seq[(LDATopic, Int)]): Option[UserTopicMean] = {
