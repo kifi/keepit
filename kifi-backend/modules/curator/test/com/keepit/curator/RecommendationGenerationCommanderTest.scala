@@ -44,6 +44,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         priorScore = 1.0f,
         rekeepScore = 1.0f,
         discoveryScore = 1.0f,
+        curationScore = None,
         multiplier = Some(0.01f)),
       delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY)
 
@@ -56,6 +57,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         priorScore = 1.0f,
         rekeepScore = 1.0f,
         discoveryScore = 1.0f,
+        curationScore = None,
         multiplier = Some(1.5f)),
       delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY)
 
@@ -68,6 +70,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         priorScore = 1.0f,
         rekeepScore = 1.0f,
         discoveryScore = 1.0f,
+        curationScore = None,
         multiplier = Some(1.0f)),
       delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution(topic = Some(TopicAttribution("fun"))))
 
@@ -139,7 +142,8 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         Await.result(seedCommander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
         commander.precomputeRecommendations()
-        Thread.sleep(5000)
+        val futUnit = commander.precomputeRecommendations()
+        Await.result(futUnit, Duration(10, "seconds"))
         val result = commander.getTopRecommendations(Id[User](42), 1)
         val recs = Await.result(result, Duration(10, "seconds"))
         recs.size === 0
@@ -156,8 +160,8 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         val commander = inject[RecommendationGenerationCommander]
         Await.result(seedCommander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
-        commander.precomputePublicFeeds()
-        Thread.sleep(5000)
+        val futUnit = commander.precomputePublicFeeds()
+        Await.result(futUnit, Duration(10, "seconds"))
         val result = commander.getPublicFeeds(5)
         val feeds = Await.result(result, Duration(10, "seconds"))
         feeds.size === 5

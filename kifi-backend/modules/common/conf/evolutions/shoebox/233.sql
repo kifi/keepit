@@ -10,12 +10,12 @@ CREATE TABLE if not exists public_feed (
     state varchar(20) NOT NULL,
 
     uri_id bigint(20) NOT NULL,
-    public_master_score float(10) NOT NULL,
-    public_all_scores text NOT NULL,
+    master_score float(10) NOT NULL,
+    all_scores text NOT NULL,
     PRIMARY KEY (id),
 
     UNIQUE INDEX public_feed_u_uri_id (uri_id),
-    INDEX public_feed_id_master_score (public_master_score)
+    INDEX public_feed_id_master_score (master_score)
 );
 
 insert into evolutions (name, description) values('233.sql', 'create public feed table');

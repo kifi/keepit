@@ -24,7 +24,7 @@ class PublicUriScoringHelper @Inject() (
 
   private def getRawPopularityScores(items: Seq[PublicSeedItemWithMultiplier]): Seq[Float] = items.map { item =>
     val cappedPopularity = Math.min(item.timesKept, 100)
-    (cappedPopularity / 100.0).toFloat
+    cappedPopularity / 100f
   }
 
   private def getRawRecencyScores(items: Seq[PublicSeedItemWithMultiplier]): Seq[Float] = items.map { item =>

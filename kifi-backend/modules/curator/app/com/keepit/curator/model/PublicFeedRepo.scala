@@ -10,7 +10,7 @@ import com.keepit.model.{ NormalizedURI }
 import play.api.libs.json.Json
 
 @ImplementedBy(classOf[PublicFeedRepoImpl])
-trait PublicFeedRepo extends DbRepo[PublicFeed] with SeqNumberFunction[PublicFeed] {
+trait PublicFeedRepo extends DbRepo[PublicFeed] {
   def getByUri(uriId: Id[NormalizedURI], publicFeedState: Option[State[PublicFeed]])(implicit session: RSession): Option[PublicFeed]
   def getByTopMasterScore(maxBatchSize: Int, publicFeedState: Option[State[PublicFeed]] = Some(PublicFeedStates.ACTIVE))(implicit session: RSession): Seq[PublicFeed]
 }
@@ -19,9 +19,7 @@ trait PublicFeedRepo extends DbRepo[PublicFeed] with SeqNumberFunction[PublicFee
 class PublicFeedRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock)
-    extends DbRepo[PublicFeed] with PublicFeedRepo with SeqNumberDbFunction[PublicFeed] with Logging {
-
-  private val sequence = db.getSequence[PublicFeed]("public_feed_sequence")
+    extends DbRepo[PublicFeed] with PublicFeedRepo with Logging {
 
   import DBSession._
   import db.Driver.simple._
@@ -34,8 +32,8 @@ class PublicFeedRepoImpl @Inject() (
 
   class PublicFeedTable(tag: Tag) extends RepoTable[PublicFeed](db, tag, "public_feed") with SeqNumberColumn[PublicFeed] {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
-    def publicMasterScore = column[Float]("public_master_score", O.NotNull)
-    def publicAllScores = column[PublicUriScores]("public_all_scores", O.NotNull)
+    def publicMasterScore = column[Float]("master_score", O.NotNull)
+    def publicAllScores = column[PublicUriScores]("all_scores", O.NotNull)
     def * = (id.?, createdAt, updatedAt, state, seq, uriId, publicMasterScore, publicAllScores) <> ((PublicFeed.apply _).tupled, PublicFeed.unapply _)
   }
 

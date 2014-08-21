@@ -1,19 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{
-  PublicFeed,
-  PublicUriScores,
-  PublicSeedItem,
-  PublicFeedRepo,
-  ScoredSeedItemWithAttribution,
-  RecommendationInfo,
-  UserRecommendationGenerationStateRepo,
-  UserRecommendationGenerationState,
-  Keepers,
-  UriRecommendationRepo,
-  UriRecommendation,
-  UriScores
-}
+import com.keepit.curator.model.{ SeedItem, ScoredSeedItem, PublicScoredSeedItem, PublicSeedItemWithMultiplier, PublicFeed, PublicUriScores, PublicSeedItem, PublicFeedRepo, ScoredSeedItemWithAttribution, RecommendationInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, UriRecommendationRepo, UriRecommendation, UriScores }
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -65,7 +52,8 @@ class RecommendationGenerationCommander @Inject() (
       1 * scores.popularityScore +
       9 * scores.recentInterestScore +
       6 * scores.rekeepScore +
-      3 * scores.discoveryScore) *
+      3 * scores.discoveryScore +
+      4 * scores.curationScore.getOrElse(0.0f)) *
       scores.multiplier.getOrElse(1.0f)
   }
 
@@ -85,7 +73,8 @@ class RecommendationGenerationCommander @Inject() (
       scoreCoefficients.popularityScore.getOrElse(defaultScore) * scores.popularityScore +
       scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * scores.recentInterestScore +
       scoreCoefficients.rekeepScore.getOrElse(defaultScore) * scores.rekeepScore +
-      scoreCoefficients.discoveryScore.getOrElse(defaultScore) * scores.discoveryScore) *
+      scoreCoefficients.discoveryScore.getOrElse(defaultScore) * scores.discoveryScore +
+      scoreCoefficients.curationScore.getOrElse(defaultScore) * scores.curationScore.getOrElse(0.0f)) *
       scores.multiplier.getOrElse(1.0f)
   }
 
@@ -127,15 +116,16 @@ class RecommendationGenerationCommander @Inject() (
     perUserRecommendationGenerationLocks.getOrElseUpdate(userId, new ReactiveLock())
   }
 
-  private def shouldInclude(scores: UriScores): Boolean = {
-    if ((scores.overallInterestScore > 0.45 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 4.5) {
+  private def shouldInclude(scores: UriScores): Boolean = { //ZZZ curations score here
+    if ((scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 4.5) {
       scores.socialScore > 0.8 ||
         scores.overallInterestScore > 0.65 ||
         scores.priorScore > 0 ||
         (scores.popularityScore > 0.2 && scores.socialScore > 0.65) ||
         scores.recentInterestScore > 0.15 ||
         scores.rekeepScore > 0.3 ||
-        scores.discoveryScore > 0.3
+        scores.discoveryScore > 0.3 ||
+        (scores.curationScore.isDefined && (scores.overallInterestScore > 0.5 || scores.recentInterestScore > 0.2))
     } else { //Yes, this could be expressed purly with a logic expression, but I think this is clearer -Stephen
       false
     }
@@ -164,136 +154,144 @@ class RecommendationGenerationCommander @Inject() (
       ((seeds zip candidateURIs) filter (_._2) map (_._1), if (seeds.isEmpty) seq else seeds.map(_.seq).max)
     }
 
-  private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]]): Unit = recommendationGenerationLock.withLockFuture {
+  private def saveScoredSeedItems(items: Seq[ScoredSeedItemWithAttribution], userId: Id[User], newState: UserRecommendationGenerationState) =
+    db.readWrite { implicit s =>
+      items foreach { item =>
+        val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
+        recoOpt.map { reco =>
+          uriRecRepo.save(reco.copy(
+            masterScore = computeMasterScore(item.uriScores),
+            allScores = item.uriScores,
+            attribution = item.attribution))
+        } getOrElse {
+          uriRecRepo.save(UriRecommendation(
+            uriId = item.uriId,
+            userId = userId,
+            masterScore = computeMasterScore(item.uriScores),
+            allScores = item.uriScores,
+            delivered = 0,
+            clicked = 0,
+            kept = false,
+            trashed = false,
+            markedBad = None,
+            attribution = item.attribution))
+        }
+      }
+
+      genStateRepo.save(newState)
+    }
+
+  private def getPrecomputationRecosResult(
+    seedsAndSeqFuture: Future[(Seq[SeedItem], SequenceNumber[SeedItem])],
+    state: UserRecommendationGenerationState, userId: Id[User], boostedKeepers: Set[Id[User]]) =
+    seedsAndSeqFuture.flatMap {
+      case (seedItems, newSeqNum) =>
+        val newState = state.copy(seq = newSeqNum)
+        if (seedItems.isEmpty) {
+          db.readWrite { implicit session =>
+            genStateRepo.save(newState)
+          }
+          if (state.seq < newSeqNum) { precomputeRecommendationsForUser(userId, boostedKeepers) }
+          Future.successful(false)
+        } else {
+          val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
+            seedItem.keepers match {
+              case Keepers.ReasonableNumber(users) => !users.contains(userId)
+              case _ => false
+            }
+          }
+
+          val weightedItems = uriWeightingHelper(cleanedItems)
+          val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(weightedItems, boostedKeepers).map { scoredItems =>
+            scoredItems.filter(si => shouldInclude(si.uriScores))
+          }.flatMap { scoredItems =>
+            attributionHelper.getAttributions(scoredItems)
+          }
+
+          toBeSaved.map { items =>
+            saveScoredSeedItems(items, userId, newState)
+            precomputeRecommendationsForUser(userId, boostedKeepers)
+            !seedItems.isEmpty
+          }
+        }
+    }
+
+  private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]]): Future[Unit] = recommendationGenerationLock.withLockFuture {
     getPerUserGenerationLock(userId).withLockFuture {
       val state = getStateOfUser(userId)
       val seedsAndSeqFuture = getCandidateSeedsForUser(userId, state)
-      val res: Future[Boolean] = seedsAndSeqFuture.flatMap {
-        case (seedItems, newSeqNum) =>
-          val newState = state.copy(seq = newSeqNum)
-          if (seedItems.isEmpty) {
-            db.readWrite { implicit session =>
-              genStateRepo.save(newState)
-            }
-            if (state.seq < newSeqNum) { precomputeRecommendationsForUser(userId, boostedKeepers) }
-            Future.successful(false)
-          } else {
-            val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
-              seedItem.keepers match {
-                case Keepers.ReasonableNumber(users) => !users.contains(userId)
-                case _ => false
-              }
-            }
-
-            val weightedItems = uriWeightingHelper(cleanedItems)
-            val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(weightedItems, boostedKeepers).map { scoredItems =>
-              scoredItems.filter(si => shouldInclude(si.uriScores))
-            }.flatMap { scoredItems =>
-              attributionHelper.getAttributions(scoredItems)
-            }
-
-            toBeSaved.map { items =>
-              db.readWrite { implicit s =>
-                items foreach { item =>
-                  val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
-                  recoOpt.map { reco =>
-                    uriRecRepo.save(reco.copy(
-                      masterScore = computeMasterScore(item.uriScores),
-                      allScores = item.uriScores,
-                      attribution = item.attribution))
-                  } getOrElse {
-                    uriRecRepo.save(UriRecommendation(
-                      uriId = item.uriId,
-                      userId = userId,
-                      masterScore = computeMasterScore(item.uriScores),
-                      allScores = item.uriScores,
-                      delivered = 0,
-                      clicked = 0,
-                      kept = false,
-                      trashed = false,
-                      markedBad = None,
-                      attribution = item.attribution))
-                  }
-                }
-
-                genStateRepo.save(newState)
-              }
-
-              precomputeRecommendationsForUser(userId, boostedKeepers)
-
-              !seedItems.isEmpty
-            }
-          }
-      }
+      val res: Future[Boolean] = getPrecomputationRecosResult(seedsAndSeqFuture, state, userId, boostedKeepers)
       res.onFailure {
         case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
       }
-      res
+      res.map(_ => ())
     }
   }
 
-  def precomputePublicFeeds(): Unit = pubicFeedsGenerationLock.withLockFuture {
+  private def savePublicScoredSeedItems(items: Seq[PublicScoredSeedItem], newSeqNum: SequenceNumber[PublicSeedItem]) =
+    db.readWrite { implicit s =>
+      items foreach { item =>
+        val feedOpt = publicFeedRepo.getByUri(item.uriId, None)
+        feedOpt.map { feed =>
+          publicFeedRepo.save(feed.copy(
+            publicMasterScore = computePublicMasterScore(item.publicUriScores),
+            publicAllScores = item.publicUriScores))
+        } getOrElse {
+          publicFeedRepo.save(PublicFeed(
+            uriId = item.uriId,
+            publicMasterScore = computePublicMasterScore(item.publicUriScores),
+            publicAllScores = item.publicUriScores))
+        }
+      }
+      systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, newSeqNum)
+    }
+
+  private def getPrecomputationFeedsResult(publicSeedsAndSeqFuture: Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])], lastSeqNum: SequenceNumber[PublicSeedItem]) =
+    publicSeedsAndSeqFuture.flatMap {
+      case (publicSeedItems, newSeqNum) =>
+        if (publicSeedItems.isEmpty) {
+          db.readWriteAsync { implicit session =>
+            systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, newSeqNum)
+          }
+          if (lastSeqNum < newSeqNum) precomputePublicFeeds()
+          Future.successful(false)
+        } else {
+          val cleanedItems = publicSeedItems.filter { publicSeedItem => //discard super popular items and the users own keeps
+            publicSeedItem.keepers match {
+              case Keepers.ReasonableNumber(users) => true
+              case _ => false
+            }
+          }
+          val weightedItems = publicUriWeightingHelper(cleanedItems)
+
+          publicScoringHelper(weightedItems).map { items =>
+            savePublicScoredSeedItems(items, newSeqNum)
+            precomputePublicFeeds()
+            !publicSeedItems.isEmpty
+          }
+        }
+    }
+
+  def precomputePublicFeeds(): Future[Unit] = pubicFeedsGenerationLock.withLockFuture {
     val lastSeqNumFut: Future[SequenceNumber[PublicSeedItem]] = db.readOnlyMasterAsync { implicit session =>
       systemValueRepo.getSequenceNumber(SEQ_NUM_NAME) getOrElse { SequenceNumber[PublicSeedItem](0) }
     }
 
     lastSeqNumFut.flatMap { lastSeqNum =>
-      val publicSeedsAndSeqFuture = getPublicFeedCandidateSeeds(lastSeqNum)
-
-      val res: Future[Boolean] = publicSeedsAndSeqFuture.flatMap {
-        case (publicSeedItems, newSeqNum) =>
-          if (publicSeedItems.isEmpty) {
-            db.readWriteAsync { implicit session =>
-              systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, newSeqNum)
-            }
-            if (lastSeqNum < newSeqNum) precomputePublicFeeds()
-            Future.successful(false)
-          } else {
-            val cleanedItems = publicSeedItems.filter { publicSeedItem => //discard super popular items and the users own keeps
-              publicSeedItem.keepers match {
-                case Keepers.ReasonableNumber(users) => true
-                case _ => false
-              }
-            }
-            val weightedItems = publicUriWeightingHelper(cleanedItems)
-
-            publicScoringHelper(weightedItems).map { items =>
-              db.readWrite { implicit s =>
-                items foreach { item =>
-                  val feedOpt = publicFeedRepo.getByUri(item.uriId, None)
-                  feedOpt.map { feed =>
-                    publicFeedRepo.save(feed.copy(
-                      publicMasterScore = computePublicMasterScore(item.publicUriScores),
-                      publicAllScores = item.publicUriScores))
-                  } getOrElse {
-                    publicFeedRepo.save(PublicFeed(
-                      uriId = item.uriId,
-                      publicMasterScore = computePublicMasterScore(item.publicUriScores),
-                      publicAllScores = item.publicUriScores))
-                  }
-                }
-
-                systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, newSeqNum)
-              }
-
-              precomputePublicFeeds()
-
-              !publicSeedItems.isEmpty
-
-            }
-          }
-      }
-      res
+      val publicSeedsAndSeqFuture: Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])] = getPublicFeedCandidateSeeds(lastSeqNum)
+      val res: Future[Boolean] = getPrecomputationFeedsResult(publicSeedsAndSeqFuture, lastSeqNum)
+      res.map(_ => ())
     }
-
   }
 
-  def precomputeRecommendations(): Unit = {
-    usersToPrecomputeRecommendationsFor().map { userIds =>
-      specialCurators().map { boostedKeepersSeq =>
+  def precomputeRecommendations(): Future[Unit] = {
+    usersToPrecomputeRecommendationsFor().flatMap { userIds =>
+      specialCurators().flatMap { boostedKeepersSeq =>
         if (recommendationGenerationLock.waiting < userIds.length + 1) {
           val boostedKeepers = boostedKeepersSeq.toSet
-          userIds.foreach(userId => precomputeRecommendationsForUser(userId, boostedKeepers))
+          Future.sequence(userIds.map(userId => precomputeRecommendationsForUser(userId, boostedKeepers))).map(_ => ())
+        } else {
+          Future.successful()
         }
       }
     }

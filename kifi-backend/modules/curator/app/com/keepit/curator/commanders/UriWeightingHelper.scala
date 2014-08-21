@@ -12,6 +12,9 @@ case class UrlPattern(
 
 object UrlPatterns {
   val scoringMultiplier = Seq(
+    //----------------------------------Default---------------------------------------------------------------------------
+    UrlPattern("""default""".r, 1.0f, "Default"),
+
     //----------------------------------Penalize---------------------------------------------------------------------------
     UrlPattern("""^https?://[-A-Za-z0-9.]*twitter.com[./?\#]""".r, 0.01f, "Twitter"),
     UrlPattern("""^https?://[-A-Za-z0-9.]*linkedin.com[./?\#]""".r, 0.01f, "LinkedIn"),
@@ -26,15 +29,12 @@ object UrlPatterns {
   )
 }
 
-@Singleton
 class UriWeightingHelper() {
 
   def apply(items: Seq[SeedItem]): Seq[SeedItemWithMultiplier] = items.map { item =>
-    var masterWeight = 1.0f
-    UrlPatterns.scoringMultiplier.map { pattern =>
-      if (pattern.regex.findFirstIn(item.url).isDefined) masterWeight *= pattern.weight
+    val masterWeight = UrlPatterns.scoringMultiplier.foldLeft(1.0f) { (weight, pattern) =>
+      if (pattern.regex.findFirstIn(item.url).isDefined) weight * pattern.weight else weight
     }
-
     SeedItemWithMultiplier(
       multiplier = masterWeight,
       userId = item.userId,
@@ -46,13 +46,11 @@ class UriWeightingHelper() {
   }
 }
 
-@Singleton
 class PublicUriWeightingHelper() {
 
   def apply(items: Seq[PublicSeedItem]): Seq[PublicSeedItemWithMultiplier] = items.map { item =>
-    var masterWeight = 1.0f
-    UrlPatterns.scoringMultiplier.map { pattern =>
-      if (pattern.regex.findFirstIn(item.url).isDefined) masterWeight *= pattern.weight
+    val masterWeight = UrlPatterns.scoringMultiplier.foldLeft(1.0f) { (weight, pattern) =>
+      if (pattern.regex.findFirstIn(item.url).isDefined) weight * pattern.weight else weight
     }
 
     PublicSeedItemWithMultiplier(

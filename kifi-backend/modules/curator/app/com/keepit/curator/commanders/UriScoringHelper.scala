@@ -38,8 +38,16 @@ class UriScoringHelper @Inject() (
     }
   }
 
+  private def getRawCurationScore(items: Seq[SeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Seq[Option[Float]] = {
+    items.map(item =>
+      item.keepers match {
+        case Keepers.ReasonableNumber(users) if (!(boostedKeepers & users.toSet).isEmpty) => Some(0.75f)
+        case _ => None
+      })
+  }
+
   // assume all items have same userId
-  def getRawSocialScores(items: Seq[SeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Future[Seq[Float]] = {
+  private def getRawSocialScores(items: Seq[SeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Future[Seq[Float]] = {
     //convert user scores seq to map, assume there is no duplicate userId from graph service
     graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
       val socialScoreMap = socialScores.map { socialScore =>
@@ -52,7 +60,7 @@ class UriScoringHelper @Inject() (
           case Keepers.ReasonableNumber(users) => {
             var itemScore = 0.0f
             users.map(userId => itemScore += socialScoreMap.getOrElse(userId, 0.0f))
-            if ((boostedKeepers & users.toSet).isEmpty) Math.tanh(0.5 * itemScore).toFloat else Math.tanh(0.5 * itemScore).toFloat + 0.81f
+            Math.tanh(0.5 * itemScore).toFloat
           }
         })
     }.recover { //This needs to go once the graph is fixed
@@ -70,6 +78,7 @@ class UriScoringHelper @Inject() (
       val publicScoresFut = publicScoring(items.map(item => item.makePublicSeedItemWithMultiplier))
       val priorScores = getRawPriorScores(items)
       val socialScoresFuture = getRawSocialScores(items, boostedKeepers)
+      val curationScores = getRawCurationScore(items, boostedKeepers)
       val interestScoresFuture = getRawInterestScores(items)
       for {
         socialScores <- socialScoresFuture
@@ -86,6 +95,7 @@ class UriScoringHelper @Inject() (
             priorScore = priorScores(i),
             rekeepScore = publicScores(i).publicUriScores.rekeepScore,
             discoveryScore = publicScores(i).publicUriScores.discoveryScore,
+            curationScore = curationScores(i),
             multiplier = Some(items(i).multiplier)
           )
           ScoredSeedItem(items(i).userId, items(i).uriId, scores)
