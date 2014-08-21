@@ -20,14 +20,10 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
-import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
-import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.user.UserGraphsSearcherFactory
 import com.keepit.search.sharding._
-import com.keepit.search.spellcheck.SpellCorrector
 
 @Singleton
 class SearchFactory @Inject() (
@@ -76,7 +72,6 @@ class SearchFactory @Inject() (
     parser.parse(queryString) match {
       case Some(engBuilder) =>
         shards.toSeq.map { shard =>
-          val socialGraphInfo = mainSearcherFactory.getSocialGraphInfo(shard, userId, filter)
           val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
           val eng = engBuilder.build()
@@ -94,7 +89,6 @@ class SearchFactory @Inject() (
             eng,
             articleSearcher,
             keepSearcher,
-            socialGraphInfo,
             libraryIdsFuture,
             clickBoostsFuture,
             clickHistoryFuture,

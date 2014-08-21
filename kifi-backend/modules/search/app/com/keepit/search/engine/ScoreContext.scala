@@ -8,12 +8,10 @@ import com.keepit.search.util.join.{ DataBuffer, DataBufferReader, Joiner }
 class ScoreContext(
     scoreExpr: ScoreExpr,
     scoreArraySize: Int,
-    val norm: Float,
     val matchWeight: Array[Float],
     collector: ResultCollector[ScoreContext]) extends Joiner {
 
   private[engine] var visibility: Int = 0 // 0: restricted, 1: others, 2: network, 3: member, 4: secret (see Visibility)
-  private[engine] var visibleCount: Int = 0
   private[engine] val scoreMax = new Array[Float](scoreArraySize)
   private[engine] val scoreSum = new Array[Float](scoreArraySize)
 
@@ -35,18 +33,13 @@ class ScoreContext(
 
   def clear(): Unit = {
     visibility = 0
-    visibleCount = 0
     Arrays.fill(scoreMax, 0.0f)
     Arrays.fill(scoreSum, 0.0f)
   }
 
   def join(reader: DataBufferReader): Unit = {
     // compute the visibility
-    val thisVisibility = reader.recordType
-    visibility = visibility | thisVisibility
-
-    // count libraries
-    if ((thisVisibility & (Visibility.MEMBER | Visibility.NETWORK)) != 0) visibleCount += 1
+    visibility = visibility | reader.recordType
 
     while (reader.hasMore) {
       val bits = reader.nextTaggedFloatBits()

@@ -1,5 +1,6 @@
 package com.keepit.controllers.ext
 
+import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.Specification
 
 import com.keepit.normalizer._
@@ -39,7 +40,8 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
     FakeActionAuthenticatorModule(),
-    FakeKeepImportsModule()
+    FakeKeepImportsModule(),
+    FakeCuratorServiceClientModule()
   )
 
   def prenormalize(url: String)(implicit injector: Injector): String = inject[NormalizationService].prenormalize(url).get

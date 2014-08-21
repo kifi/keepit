@@ -144,6 +144,15 @@ class UriFromKeepsScoreVectorSource(protected val searcher: Searcher, libraryIds
 
   private[this] lazy val (mySecretLibIds, myLibIds, friendsLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting libraryIds")
 
+  private def getDiscoverableLibraries() = {
+    val arr = new Array[Long](mySecretLibIds.size + myLibIds.size + friendsLibIds.size)
+    var i = 0
+    mySecretLibIds.foreach { id => arr(i) = id; i += 1 }
+    myLibIds.foreach { id => arr(i) = id; i += 1 }
+    friendsLibIds.foreach { id => arr(i) = id; i += 1 }
+    LongArraySet.from(arr)
+  }
+
   protected def writeScoreVectors(reader: WrappedSubReader, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
@@ -157,13 +166,16 @@ class UriFromKeepsScoreVectorSource(protected val searcher: Searcher, libraryIds
     getUrisWithVisibilities(Visibility.MEMBER, myLibIds, idFilter, reader, uriIdDocValues, writer, output)
     getUrisWithVisibilities(Visibility.NETWORK, friendsLibIds, idFilter, reader, uriIdDocValues, writer, output)
 
+    val discoverableLibraries = getDiscoverableLibraries()
+
     val taggedScores: Array[Int] = new Array[Int](pq.size) // tagged floats
 
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
       val uriId = uriIdDocValues.get(docId)
+      val libId = libraryIdDocValues.get(docId)
 
-      if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
+      if (idFilter.findIndex(uriId) < 0 && discoverableLibraries.findIndex(libId) >= 0) { // use findIndex to avoid boxing
         // get all scores
         val size = pq.getTaggedScores(taggedScores)
 
