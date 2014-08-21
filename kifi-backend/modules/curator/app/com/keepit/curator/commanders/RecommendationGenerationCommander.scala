@@ -178,7 +178,6 @@ class RecommendationGenerationCommander @Inject() (
                       clicked = 0,
                       kept = false,
                       trashed = false,
-                      markedBad = None,
                       attribution = item.attribution
                     ))
                   }

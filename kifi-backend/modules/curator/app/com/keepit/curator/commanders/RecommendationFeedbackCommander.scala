@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.curator.model.UriRecommendationRepo
-import com.keepit.model.{ UriRecommendationUserInteraction, UriRecommendationFeedback, NormalizedURI, User }
+import com.keepit.model.{ UriRecommendationFeedback, NormalizedURI, User }
 
 import scala.concurrent.Future
 
@@ -18,9 +18,4 @@ class RecommendationFeedbackCommander @Inject() (
     }
   }
 
-  def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI], interaction: UriRecommendationUserInteraction): Future[Boolean] = {
-    db.readWriteAsync { implicit session =>
-      uriRecRepo.updateUriRecommendationUserInteraction(userId, uriId, interaction)
-    }
-  }
 }
