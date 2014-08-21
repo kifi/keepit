@@ -7,11 +7,9 @@ import org.apache.lucene.search.{ Query, Weight }
 class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArraySize: Int) {
 
   private[this] val dataBuffer: DataBuffer = new DataBuffer()
-  private[this] var execCount: Int = 0
   private[this] val matchWeight: Array[Float] = new Array[Float](scoreArraySize)
 
   private[this] def accumulateWeightInfo(weights: IndexedSeq[(Weight, Float)]): Unit = {
-    execCount += 1
     var i = 0
     while (i < scoreArraySize) {
       matchWeight(i) += weights(i)._2
@@ -48,7 +46,7 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArra
   }
 
   def createScoreContext(collector: ResultCollector[ScoreContext]): ScoreContext = {
-    new ScoreContext(scoreExpr, scoreArraySize, execCount.toFloat, matchWeight, collector)
+    new ScoreContext(scoreExpr, scoreArraySize, matchWeight, collector)
   }
 
   def join(collector: ResultCollector[ScoreContext]): Unit = {
