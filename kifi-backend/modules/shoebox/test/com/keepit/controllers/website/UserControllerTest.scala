@@ -1,5 +1,6 @@
 package com.keepit.controllers.website
 
+import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.Specification
 
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -41,7 +42,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
     FakeHttpClientModule(),
     FakeSocialGraphModule(),
     FakeExternalServiceModule(),
-    FakeCortexServiceClientModule()
+    FakeCortexServiceClientModule(),
+    FakeCuratorServiceClientModule()
   )
 
   "UserController" should {
