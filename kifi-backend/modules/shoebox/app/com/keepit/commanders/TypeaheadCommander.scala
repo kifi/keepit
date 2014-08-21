@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -250,24 +251,10 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  // somewhat specialized (short-circuitry); pure side-effects
-  private def processWhile[T](futures: Iterable[Future[T]], predicate: T => Boolean, promised: Promise[Unit] = Promise()): Future[Unit] = {
-    futures.headOption match {
-      case None => promised.success()
-      case Some(f) => f.onComplete {
-        case Success(res) =>
-          if (predicate(res)) processWhile(futures.tail, predicate, promised)
-          else promised.success()
-        case Failure(t) => promised.failure(t)
-      }
-    }
-    promised.future
-  }
-
   private def fetchFirst(limit: Int, futures: Iterable[Future[(Seq[NetworkTypeAndHit])]]): Future[Seq[NetworkTypeAndHit]] = {
     val zHits = new ArrayBuffer[NetworkTypeAndHit] // hits with score == 0
     val allHits = new ArrayBuffer[NetworkTypeAndHit]
-    processWhile[Seq[NetworkTypeAndHit]](futures, { hits =>
+    FutureHelpers.processWhile[Seq[NetworkTypeAndHit]](futures, { hits =>
       val ordered = hits.sorted(hitOrd)
       log.info(s"[fetchFirst($limit)] ordered=${ordered.mkString(",")} zHits.size=${zHits.size}")
       zHits ++= ordered.takeWhile { case (_, hit) => hit.score == 0 }

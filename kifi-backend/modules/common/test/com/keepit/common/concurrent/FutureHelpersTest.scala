@@ -7,6 +7,7 @@ import scala.concurrent.duration.Duration
 import com.keepit.common.logging.Logging
 import scala.collection.mutable
 import java.util.concurrent.locks.ReentrantLock
+import com.keepit.common.core._
 
 class FutureHelpersTest extends Specification with Logging {
 
@@ -29,6 +30,21 @@ class FutureHelpersTest extends Specification with Logging {
       Await.result(resF, Duration.Inf)
       builder.result().toSeq === input
     }
+
+    "partial process (i.e. short-circuitry)" in {
+      val counter = new AtomicInteger(0)
+      def generate: Future[Int] = Future.successful {
+        counter.incrementAndGet()
+      }
+      val futures = Seq.fill(10) { generate }
+      var curr = 0
+      val resF = FutureHelpers.processWhile(futures, { (i: Int) =>
+        (i < 5) tap { _ => curr = i }
+      })
+      Await.result(resF, Duration.Inf)
+      curr === 5
+    }
+
   }
 
 }

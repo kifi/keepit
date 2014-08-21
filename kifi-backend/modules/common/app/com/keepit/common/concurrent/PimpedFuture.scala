@@ -88,5 +88,19 @@ object FutureHelpers {
     p.future
   }
 
+  // somewhat specialized (short-circuitry); pure side-effects
+  def processWhile[T](futures: Iterable[Future[T]], predicate: T => Boolean, promised: Promise[Unit] = Promise())(implicit ec: ScalaExecutionContext): Future[Unit] = {
+    futures.headOption match {
+      case None => promised.success()
+      case Some(f) => f.onComplete {
+        case Success(res) =>
+          if (predicate(res)) processWhile(futures.tail, predicate, promised)
+          else promised.success()
+        case Failure(t) => promised.failure(t)
+      }
+    }
+    promised.future
+  }
+
 }
 
