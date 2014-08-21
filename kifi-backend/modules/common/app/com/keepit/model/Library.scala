@@ -7,6 +7,7 @@ import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import com.keepit.social.BasicUser
+import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -25,6 +26,7 @@ case class Library(
     state: State[Library] = LibraryStates.ACTIVE,
     seq: SequenceNumber[Library] = SequenceNumber.ZERO,
     kind: LibraryKind = LibraryKind.USER_CREATED,
+    universalLink: String = RandomStringUtils.randomAlphanumeric(40),
     memberCount: Int) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def withId(id: Id[Library]) = this.copy(id = Some(id))
@@ -49,6 +51,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'state).format(State.format[Library]) and
     (__ \ 'seq).format(SequenceNumber.format[Library]) and
     (__ \ 'kind).format[LibraryKind] and
+    (__ \ 'universalLink).format[String] and
     (__ \ 'memberCount).format[Int]
   )(Library.apply, unlift(Library.unapply))
 

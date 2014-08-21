@@ -15,7 +15,7 @@ object URIParserUtil {
   val pathReservedChars: Set[Char] = Set.empty ++ controls ++ space ++ genDelims ++ others - '@' - ':'
   val paramNameReservedChars: Set[Char] = Set.empty ++ controls ++ genDelims ++ others - '@' - ':' - '/' - '?'
   val paramValueReservedChars: Set[Char] = Set.empty ++ controls ++ genDelims ++ others - '@' - ':' - '/' - '?'
-  val fragmentReservedChars: Set[Char] = Set.empty ++ controls ++ space ++ genDelims ++ others - '@' - ':' - '/' - '?' - '#'
+  val fragmentReservedChars: Set[Char] = Set.empty ++ controls ++ space ++ genDelims ++ others - '@' - ':' - '/' - '?'
   val encodingMap: Map[Char, String] = allSymbols.map(c => (c -> encodeChar(c))).toMap
 
   private[this] val _percentEncodeRe = """(\%\p{XDigit}\p{XDigit})+""".r

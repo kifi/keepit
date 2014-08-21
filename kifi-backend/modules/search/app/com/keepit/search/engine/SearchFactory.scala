@@ -42,7 +42,8 @@ class SearchFactory @Inject() (
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices) extends Logging {
 
-  private[this] val phraseDetectionConsolidator = new RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]](10 minutes)
+  private[this] val phraseDetectionReqConsolidator = new RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]](10 minutes)
+  private[this] val libraryIdsReqConsolidator = new RequestConsolidator[Id[User], (Seq[Long], Seq[Long], Seq[Long])](10 minutes)
 
   def getKifiSearch(
     shards: Set[Shard[NormalizedURI]],
@@ -65,7 +66,7 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       config,
       phraseDetector,
-      phraseDetectionConsolidator,
+      phraseDetectionReqConsolidator,
       monitoredAwait
     )
 
@@ -100,14 +101,12 @@ class SearchFactory @Inject() (
     }
   }
 
-  def getLibraryIdsFuture(userId: Id[User]): Future[(Seq[Long], Seq[Long], Seq[Long])] = {
-    SafeFuture {
+  def getLibraryIdsFuture(userId: Id[User]): Future[(Seq[Long], Seq[Long], Seq[Long])] = libraryIdsReqConsolidator(userId) { userId =>
+    userGraphsSearcherFactory(userId).getSearchFriendsFuture().map { friendIds =>
       val searcher = libraryIndexer.getSearcher
       val myLibIds = searcher.findAllIds(new Term(LibraryFields.discoverableOwnerField, userId.id.toString))
       val mySecretLibIds = searcher.findAllIds(new Term(LibraryFields.secretOwnerField, userId.id.toString))
 
-      val userGraphsSearcher = userGraphsSearcherFactory(userId)
-      val friendIds = userGraphsSearcher.getSearchFriends()
       val friendLibIds = new ArrayBuffer[Long]
       friendIds.foreach { friendId =>
         searcher.findAllIds(new Term(LibraryFields.discoverableOwnerField, friendId.toString), friendLibIds)
