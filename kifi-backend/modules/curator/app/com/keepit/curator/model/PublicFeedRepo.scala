@@ -55,7 +55,4 @@ class PublicFeedRepoImpl @Inject() (
       sortBy(_.publicMasterScore.desc).take(maxBatchSize).list
   }
 
-  override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {
-    assignSequenceNumbers(sequence, "public_feed_sequence", limit)
-  }
 }
