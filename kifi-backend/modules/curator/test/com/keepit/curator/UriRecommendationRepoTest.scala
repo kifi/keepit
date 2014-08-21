@@ -2,7 +2,7 @@ package com.keepit.curator
 
 import com.keepit.common.db.Id
 import com.keepit.curator.model.{ UriScores, UriRecommendation, UriRecommendationRepo }
-import com.keepit.model.{ MarkedAsBad, UriRecommendationFeedback, User, NormalizedURI }
+import com.keepit.model.{ UriRecommendationFeedback, User, NormalizedURI }
 import org.specs2.mutable.Specification
 
 class UriRecommendationRepoTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
@@ -32,7 +32,6 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
           rec1.clicked === 1
           rec1.kept === false
           rec1.trashed === false
-          rec1.markedBad === None
 
           val feedback2 = UriRecommendationFeedback(delivered = Some(true), clicked = None, trashed = Some(true))
           val update2 = repo.updateUriRecommendationFeedback(Id[User](42), Id[NormalizedURI](1), feedback2)
@@ -45,10 +44,8 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
           rec1Update.clicked === 1
           rec1Update.kept === false
           rec1Update.trashed === true
-          rec1Update.markedBad === None
 
-          val feedback3 = UriRecommendationFeedback(delivered = Some(true), clicked = Some(false), kept = Some(true), trashed = Some(true),
-            markedBad = Some(MarkedAsBad(bad = true, reason = Some("cause kifeeeeeed is too good"))))
+          val feedback3 = UriRecommendationFeedback(delivered = Some(true), clicked = Some(false), kept = Some(true), trashed = Some(true))
           val update3 = repo.updateUriRecommendationFeedback(Id[User](42), Id[NormalizedURI](1), feedback3)
 
           update3 should beTrue
@@ -59,10 +56,8 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
           rec1Update2.clicked === 1
           rec1Update2.kept === true
           rec1Update2.trashed === true
-          rec1Update2.markedBad === Some(MarkedAsBad(bad = true, reason = Some("cause kifeeeeeed is too good")))
 
-          val feedback4 = UriRecommendationFeedback(delivered = None, clicked = None, trashed = Some(false),
-            markedBad = Some(MarkedAsBad(bad = false, reason = Some("cause kifeeeeeed is too bad"))))
+          val feedback4 = UriRecommendationFeedback(delivered = None, clicked = None, trashed = Some(false))
           val update4 = repo.updateUriRecommendationFeedback(Id[User](42), Id[NormalizedURI](1), feedback4)
 
           update4 should beTrue
@@ -73,7 +68,6 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
           rec1Update3.clicked === 1
           rec1Update3.kept === true
           rec1Update3.trashed === false
-          rec1Update3.markedBad === Some(MarkedAsBad(bad = true, reason = Some("cause kifeeeeeed is too good")))
 
         }
       }
