@@ -710,6 +710,7 @@ class UserCommander @Inject() (
     }
   }
 
+  @deprecated(message = "use addEmail/modifyEmail/removeEmail", since = "2014-08-20")
   def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmail: Option[EmailAddress], emails: Seq[EmailInfo]): Unit = {
     db.readWrite { implicit session =>
       val pendingPrimary = userValueRepo.getValueStringOpt(userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
