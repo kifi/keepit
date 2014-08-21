@@ -1,12 +1,13 @@
 package com.keepit.curator.commanders
 
-import com.google.inject.Inject
+import com.google.inject.{Singleton, Inject}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.curator.model.{ RecommendationClientType, UriRecommendationRepo, UriRecommendation }
 import com.keepit.heimdal.{ UserEventTypes, HeimdalContextBuilderFactory, UserEvent, HeimdalServiceClient }
 import com.keepit.model.{ NormalizedURI, User, UriRecommendationFeedback }
 
+@Singleton
 class CuratorAnalytics @Inject() (
     db: Database,
     uriRecoRepo: UriRecommendationRepo,
@@ -63,7 +64,7 @@ class CuratorAnalytics @Inject() (
     contextBuilder += ("uriId", context.uriId.id)
     contextBuilder += ("master_score", context.truncatedMasterScore)
     contextBuilder += ("client_type", context.clientType.value)
-    contextBuilder += ("user_action", context.userAction.value)
+    contextBuilder += ("action", context.userAction.value)
     context.suggestion.foreach { suggest => contextBuilder += ("user_suggestion", suggest) }
     UserEvent(context.userId, contextBuilder.build, UserEventTypes.RECOMMENDATION_USER_ACTION)
   }
