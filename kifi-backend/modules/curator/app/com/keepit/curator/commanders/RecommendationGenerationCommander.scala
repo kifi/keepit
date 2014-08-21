@@ -159,20 +159,19 @@ class RecommendationGenerationCommander @Inject() (
         case (seedItems, newSeqNum) =>
           val newState = state.copy(seq = newSeqNum)
           if (seedItems.isEmpty) {
-            println("computing1 rec??????????????? state seq: " + state.seq.value + " new seq: " + newSeqNum.value)
             db.readWrite { implicit session =>
               genStateRepo.save(newState)
             }
             if (state.seq < newSeqNum) { precomputeRecommendationsForUser(userId, boostedKeepers) }
             Future.successful(false)
           } else {
-            println("computing2 rec??????????????? state seq: " + state.seq.value + " new seq: " + newSeqNum.value)
             val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
               seedItem.keepers match {
                 case Keepers.ReasonableNumber(users) => !users.contains(userId)
                 case _ => false
               }
             }
+
             val weightedItems = uriWeightingHelper(cleanedItems)
             val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(weightedItems, boostedKeepers).map { scoredItems =>
               scoredItems.filter(si => shouldInclude(si.uriScores))
@@ -181,7 +180,6 @@ class RecommendationGenerationCommander @Inject() (
             }
 
             toBeSaved.map { items =>
-              println("computing3 rec???????????????")
               db.readWrite { implicit s =>
                 items foreach { item =>
                   val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
@@ -232,14 +230,12 @@ class RecommendationGenerationCommander @Inject() (
       val res: Future[Boolean] = publicSeedsAndSeqFuture.flatMap {
         case (publicSeedItems, newSeqNum) =>
           if (publicSeedItems.isEmpty) {
-            println("computing1 public feeds???????????????? last seq: " + lastSeqNum.value + " new seq: " + newSeqNum.value)
             db.readWriteAsync { implicit session =>
               systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, newSeqNum)
             }
             if (lastSeqNum < newSeqNum) precomputePublicFeeds()
             Future.successful(false)
           } else {
-            println("computing2 public feeds???????????????? last seq: " + lastSeqNum.value + " new seq: " + newSeqNum.value)
             val cleanedItems = publicSeedItems.filter { publicSeedItem => //discard super popular items and the users own keeps
               publicSeedItem.keepers match {
                 case Keepers.ReasonableNumber(users) => true

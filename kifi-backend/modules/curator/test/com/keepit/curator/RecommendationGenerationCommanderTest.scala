@@ -117,7 +117,6 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         val commander = inject[RecommendationGenerationCommander]
         val result1 = commander.getAdHocRecommendations(Id[User](42), 2, UriRecommendationScores(socialScore = Some(0.5f)))
         val recs1 = Await.result(result1, Duration(10, "seconds"))
-        println(recs1(0).toString)
         recs1(0).userId === Id[User](42)
         recs1(0).score === 0.75f
         recs1(1).score === 0.005f
@@ -133,49 +132,35 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, shoebox) = setup()
         val user1Keeps = makeKeeps(user1, 5, shoebox)
-        val user2Keeps = makeKeeps(user2, 6, shoebox)
+        val user2Keeps = makeKeeps(user2, 5, shoebox)
         val seedCommander = inject[SeedIngestionCommander]
         val seedItemRepo = inject[RawSeedItemRepo]
-        //val systemRepo = inject[SystemValueRepo]
-        val genRepo = inject[UserRecommendationGenerationStateRepo]
         val commander = inject[RecommendationGenerationCommander]
         Await.result(seedCommander.ingestAllKeeps(), Duration(10, "seconds"))
         db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
-        //db.readWrite { implicit session => genRepo.assignSequenceNumbers(1000) }
-
         commander.precomputeRecommendations()
         Thread.sleep(5000)
-        val result = commander.getTopRecommendations(Id[User](42), 5)
+        val result = commander.getTopRecommendations(Id[User](42), 1)
         val recs = Await.result(result, Duration(10, "seconds"))
-        //recs.size === 5
-        1 === 1
+        recs.size === 0
       }
     }
 
     "pre-compute public feeds" in {
       withDb(modules: _*) { implicit injector =>
-
         val (user1, user2, shoebox) = setup()
         val user1Keeps = makeKeeps(user1, 5, shoebox)
-        val user2Keeps = makeKeeps(user2, 6, shoebox)
+        val user2Keeps = makeKeeps(user2, 5, shoebox)
         val seedCommander = inject[SeedIngestionCommander]
         val seedItemRepo = inject[RawSeedItemRepo]
-        val publicFeedRepo = inject[PublicFeedRepo]
-        val systemRepo = inject[SystemValueRepo]
-        val SEQ_NUM_NAME: Name[SequenceNumber[PublicSeedItem]] = Name("public_feeds_seq_num")
-
         val commander = inject[RecommendationGenerationCommander]
-
         Await.result(seedCommander.ingestAllKeeps(), Duration(10, "seconds"))
-        db.readWrite { implicit session => systemRepo.setSequenceNumber(SEQ_NUM_NAME, SequenceNumber[PublicSeedItem](1000)) }
-
+        db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
         commander.precomputePublicFeeds()
-
-        val result = commander.getPublicFeeds(5)
         Thread.sleep(5000)
+        val result = commander.getPublicFeeds(5)
         val feeds = Await.result(result, Duration(10, "seconds"))
         feeds.size === 5
-        //1 === 1
       }
     }
   }

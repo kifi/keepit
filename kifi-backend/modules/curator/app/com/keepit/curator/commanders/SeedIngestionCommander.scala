@@ -98,7 +98,7 @@ class SeedIngestionCommander @Inject() (
 
   def getBySeqNum(start: SequenceNumber[PublicSeedItem], maxBatchSize: Int): Future[Seq[PublicSeedItem]] = {
     db.readOnlyReplicaAsync { implicit session =>
-      rawSeedsRepo.getBySeqNum(SequenceNumber[RawSeedItem](start.value), maxBatchSize).map { rawItem =>
+      rawSeedsRepo.getDiscoverableBySeqNum(SequenceNumber[RawSeedItem](start.value), maxBatchSize).map { rawItem =>
         val keepers = if (rawItem.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
           Keepers.TooMany
         } else {
