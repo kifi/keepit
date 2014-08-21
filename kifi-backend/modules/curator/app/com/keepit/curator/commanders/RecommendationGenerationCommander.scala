@@ -111,7 +111,7 @@ class RecommendationGenerationCommander @Inject() (
     }
   }
 
-  private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]]): Unit = recommendationGenerationLock.withLockFuture {
+  private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]]): Future[Unit] = recommendationGenerationLock.withLockFuture {
     getPerUserGenerationLock(userId).withLockFuture {
       val state = db.readOnlyMaster { implicit session =>
         genStateRepo.getByUserId(userId)
@@ -188,16 +188,18 @@ class RecommendationGenerationCommander @Inject() (
       res.onFailure {
         case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
       }
-      res
+      res.map(_ => ())
     }
   }
 
-  def precomputeRecommendations(): Unit = {
-    usersToPrecomputeRecommendationsFor().map { userIds =>
-      specialCurators().map { boostedKeepersSeq =>
+  def precomputeRecommendations(): Future[Unit] = {
+    usersToPrecomputeRecommendationsFor().flatMap { userIds =>
+      specialCurators().flatMap { boostedKeepersSeq =>
         if (recommendationGenerationLock.waiting < userIds.length + 1) {
           val boostedKeepers = boostedKeepersSeq.toSet
-          userIds.foreach(userId => precomputeRecommendationsForUser(userId, boostedKeepers))
+          Future.sequence(userIds.map(userId => precomputeRecommendationsForUser(userId, boostedKeepers))).map(_ => ())
+        } else {
+          Future.successful()
         }
       }
     }
