@@ -6,6 +6,7 @@ import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress, SystemEmailAddress }
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
+import com.keepit.curator.model.RecommendationClientType
 import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalServiceClient, NonUserEvent, NonUserEventTypes, UserEvent, UserEventTypes }
 import com.keepit.model.{ UriRecommendationFeedback, EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates }
 import com.keepit.social.NonUserKinds
@@ -148,7 +149,7 @@ class SendgridCommander @Inject() (
 
     val userId = email.senderUserId.get
     val keepUrl = event.url.get
-    val uriRecoFeedback = UriRecommendationFeedback(clicked = Some(true), delivered = Some(true), kept = None)
+    val uriRecoFeedback = UriRecommendationFeedback(clicked = Some(true), kept = None, fromClient = RecommendationClientType.Email)
 
     recoCommander.updateUriRecommendationFeedback(userId, keepUrl, uriRecoFeedback).map { ok =>
       if (!ok) log.warn(s"updateUriRecommendationFeedback($userId, $keepUrl, $uriRecoFeedback) returned false")

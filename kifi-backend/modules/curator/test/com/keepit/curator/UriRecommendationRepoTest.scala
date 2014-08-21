@@ -1,8 +1,8 @@
 package com.keepit.curator
 
 import com.keepit.common.db.Id
-import com.keepit.curator.model.{ UriScores, UriRecommendation, UriRecommendationRepo }
-import com.keepit.model.{ MarkedAsBad, UriRecommendationFeedback, User, NormalizedURI }
+import com.keepit.curator.model.{ RecommendationClientType, UriScores, UriRecommendation, UriRecommendationRepo }
+import com.keepit.model.{ UriRecommendationFeedback, User, NormalizedURI }
 import org.specs2.mutable.Specification
 
 class UriRecommendationRepoTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
@@ -21,59 +21,51 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
         db.readWrite { implicit s =>
           val recs = setup()
           repo.save(recs(0))
-          val feedback1 = UriRecommendationFeedback(delivered = Some(true), clicked = Some(true))
+          val feedback1 = UriRecommendationFeedback(fromClient = RecommendationClientType.Unknown)
           val update1 = repo.updateUriRecommendationFeedback(Id[User](42), Id[NormalizedURI](1), feedback1)
 
           update1 should beTrue
 
           val rec1 = repo.getByUriAndUserId(Id[NormalizedURI](1), Id[User](42), None).get
 
-          rec1.delivered === 1
-          rec1.clicked === 1
+          rec1.clicked === 0
           rec1.kept === false
           rec1.trashed === false
-          rec1.markedBad === None
 
-          val feedback2 = UriRecommendationFeedback(delivered = Some(true), clicked = None, trashed = Some(true))
+          val feedback2 = UriRecommendationFeedback(clicked = Some(true), trashed = Some(true), fromClient = RecommendationClientType.Unknown)
           val update2 = repo.updateUriRecommendationFeedback(Id[User](42), Id[NormalizedURI](1), feedback2)
 
           update2 should beTrue
 
           val rec1Update = repo.getByUriAndUserId(Id[NormalizedURI](1), Id[User](42), None).get
 
-          rec1Update.delivered === 2
           rec1Update.clicked === 1
           rec1Update.kept === false
           rec1Update.trashed === true
-          rec1Update.markedBad === None
 
-          val feedback3 = UriRecommendationFeedback(delivered = Some(true), clicked = Some(false), kept = Some(true), trashed = Some(true),
-            markedBad = Some(MarkedAsBad(bad = true, reason = Some("cause kifeeeeeed is too good"))))
+          val feedback3 = UriRecommendationFeedback(clicked = Some(false), kept = Some(true), trashed = Some(true), fromClient = RecommendationClientType.Android)
           val update3 = repo.updateUriRecommendationFeedback(Id[User](42), Id[NormalizedURI](1), feedback3)
 
           update3 should beTrue
 
           val rec1Update2 = repo.getByUriAndUserId(Id[NormalizedURI](1), Id[User](42), None).get
 
-          rec1Update2.delivered === 3
           rec1Update2.clicked === 1
           rec1Update2.kept === true
           rec1Update2.trashed === true
-          rec1Update2.markedBad === Some(MarkedAsBad(bad = true, reason = Some("cause kifeeeeeed is too good")))
+          rec1Update2.fromClient === RecommendationClientType.Android
 
-          val feedback4 = UriRecommendationFeedback(delivered = None, clicked = None, trashed = Some(false),
-            markedBad = Some(MarkedAsBad(bad = false, reason = Some("cause kifeeeeeed is too bad"))))
+          val feedback4 = UriRecommendationFeedback(clicked = None, trashed = Some(false), fromClient = RecommendationClientType.Extension)
           val update4 = repo.updateUriRecommendationFeedback(Id[User](42), Id[NormalizedURI](1), feedback4)
 
           update4 should beTrue
 
           val rec1Update3 = repo.getByUriAndUserId(Id[NormalizedURI](1), Id[User](42), None).get
 
-          rec1Update3.delivered === 3
           rec1Update3.clicked === 1
           rec1Update3.kept === true
           rec1Update3.trashed === false
-          rec1Update3.markedBad === Some(MarkedAsBad(bad = true, reason = Some("cause kifeeeeeed is too good")))
+          rec1Update3.fromClient === RecommendationClientType.Extension
 
         }
       }

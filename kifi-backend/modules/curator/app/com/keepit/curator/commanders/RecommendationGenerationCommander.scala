@@ -1,15 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{
-  ScoredSeedItemWithAttribution,
-  RecommendationInfo,
-  UserRecommendationGenerationStateRepo,
-  UserRecommendationGenerationState,
-  Keepers,
-  UriRecommendationRepo,
-  UriRecommendation,
-  UriScores
-}
+import com.keepit.curator.model.{ RecommendationClientType, ScoredSeedItemWithAttribution, RecommendationInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, UriRecommendationRepo, UriRecommendation, UriScores }
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -174,11 +165,12 @@ class RecommendationGenerationCommander @Inject() (
                       userId = userId,
                       masterScore = computeMasterScore(item.uriScores),
                       allScores = item.uriScores,
-                      delivered = 0,
                       clicked = 0,
                       kept = false,
                       trashed = false,
-                      markedBad = None,
+                      vote = None,
+                      improvement = None,
+                      fromClient = RecommendationClientType.Unknown,
                       attribution = item.attribution
                     ))
                   }
