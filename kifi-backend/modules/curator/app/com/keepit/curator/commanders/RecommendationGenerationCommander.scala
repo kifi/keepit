@@ -1,6 +1,19 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model._
+import com.keepit.curator.model.{
+  PublicFeed,
+  PublicUriScores,
+  PublicSeedItem,
+  PublicFeedRepo,
+  ScoredSeedItemWithAttribution,
+  RecommendationInfo,
+  UserRecommendationGenerationStateRepo,
+  UserRecommendationGenerationState,
+  Keepers,
+  UriRecommendationRepo,
+  UriRecommendation,
+  UriScores
+}
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
