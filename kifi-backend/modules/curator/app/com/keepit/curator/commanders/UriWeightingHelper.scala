@@ -12,9 +12,6 @@ case class UrlPattern(
 
 object UrlPatterns {
   val scoringMultiplier = Seq(
-    //----------------------------------Default---------------------------------------------------------------------------
-    UrlPattern("""default""".r, 1.0f, "Default"),
-
     //----------------------------------Penalize---------------------------------------------------------------------------
     UrlPattern("""^https?://[-A-Za-z0-9.]*twitter.com[./?\#]""".r, 0.01f, "Twitter"),
     UrlPattern("""^https?://[-A-Za-z0-9.]*linkedin.com[./?\#]""".r, 0.01f, "LinkedIn"),
