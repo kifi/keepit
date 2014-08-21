@@ -64,10 +64,19 @@ case class PublicSeedItem(
 }
 
 case class SeedItemWithMultiplier(
+    multiplier: Float = 1.0f,
+    userId: Id[User],
+    uriId: Id[NormalizedURI],
+    priorScore: Option[Float] = None,
+    timesKept: Int,
+    lastSeen: DateTime,
+    keepers: Keepers) {
+  def makePublicSeedItemWithMultiplier = PublicSeedItemWithMultiplier(multiplier, uriId, timesKept, lastSeen, keepers)
+}
+
+case class PublicSeedItemWithMultiplier(
   multiplier: Float = 1.0f,
-  userId: Option[Id[User]] = None,
   uriId: Id[NormalizedURI],
-  priorScore: Option[Float] = None,
   timesKept: Int,
   lastSeen: DateTime,
   keepers: Keepers)

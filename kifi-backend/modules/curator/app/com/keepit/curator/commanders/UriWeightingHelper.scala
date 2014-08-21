@@ -1,6 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ PublicSeedItem, SeedItemWithMultiplier, SeedItem }
+import com.keepit.curator.model.{ PublicSeedItemWithMultiplier, PublicSeedItem, SeedItemWithMultiplier, SeedItem }
 import com.google.inject.{ Singleton }
 
 import scala.util.matching.Regex
@@ -37,7 +37,7 @@ class UriWeightingHelper() {
 
     SeedItemWithMultiplier(
       multiplier = masterWeight,
-      userId = Some(item.userId),
+      userId = item.userId,
       uriId = item.uriId,
       priorScore = item.priorScore,
       timesKept = item.timesKept,
@@ -49,13 +49,13 @@ class UriWeightingHelper() {
 @Singleton
 class PublicUriWeightingHelper() {
 
-  def apply(items: Seq[PublicSeedItem]): Seq[SeedItemWithMultiplier] = items.map { item =>
+  def apply(items: Seq[PublicSeedItem]): Seq[PublicSeedItemWithMultiplier] = items.map { item =>
     var masterWeight = 1.0f
     UrlPatterns.scoringMultiplier.map { pattern =>
       if (pattern.regex.findFirstIn(item.url).isDefined) masterWeight *= pattern.weight
     }
 
-    SeedItemWithMultiplier(
+    PublicSeedItemWithMultiplier(
       multiplier = masterWeight,
       uriId = item.uriId,
       timesKept = item.timesKept,

@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.currentDateTime
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.curator.model.{ CuratorKeepInfoRepo, PublicUriScores, PublicScoredSeedItem, SeedItemWithMultiplier, SeedItem, ScoredSeedItem }
+import com.keepit.curator.model.{ PublicSeedItemWithMultiplier, CuratorKeepInfoRepo, PublicUriScores, PublicScoredSeedItem, SeedItemWithMultiplier, SeedItem, ScoredSeedItem }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.model.{ HelpRankInfo, NormalizedURI }
@@ -22,18 +22,18 @@ class PublicUriScoringHelper @Inject() (
     cortex: CortexServiceClient,
     heimdal: HeimdalServiceClient) extends Logging {
 
-  private def getRawPopularityScores(items: Seq[SeedItemWithMultiplier]): Seq[Float] = items.map { item =>
+  private def getRawPopularityScores(items: Seq[PublicSeedItemWithMultiplier]): Seq[Float] = items.map { item =>
     val cappedPopularity = Math.min(item.timesKept, 100)
     (cappedPopularity / 100.0).toFloat
   }
 
-  private def getRawRecencyScores(items: Seq[SeedItemWithMultiplier]): Seq[Float] = items.map { item =>
+  private def getRawRecencyScores(items: Seq[PublicSeedItemWithMultiplier]): Seq[Float] = items.map { item =>
     val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays()
     (1.0 / (Math.log(daysOld + 1.0) + 1)).toFloat
   }
 
   val uriHelpRankScores = TrieMap[Id[NormalizedURI], HelpRankInfo]() //This needs to go when we have proper caching on the help rank scores
-  def getRawHelpRankScores(items: Seq[SeedItemWithMultiplier]): Future[(Seq[Float], Seq[Float])] = {
+  def getRawHelpRankScores(items: Seq[PublicSeedItemWithMultiplier]): Future[(Seq[Float], Seq[Float])] = {
     val helpRankInfos = heimdal.getHelpRankInfos(items.map(_.uriId).filterNot(uriHelpRankScores.contains))
     helpRankInfos.map { infos =>
       infos.foreach { info => uriHelpRankScores += (info.uriId -> info) }
@@ -45,7 +45,7 @@ class PublicUriScoringHelper @Inject() (
 
   }
 
-  def getPublicScoredUris(items: Seq[SeedItemWithMultiplier]): Future[Seq[PublicScoredSeedItem]] = {
+  def getPublicScoredUris(items: Seq[PublicSeedItemWithMultiplier]): Future[Seq[PublicScoredSeedItem]] = {
     if (items.isEmpty) {
       Future.successful(Seq.empty)
     } else {
@@ -69,7 +69,7 @@ class PublicUriScoringHelper @Inject() (
     }
   }
 
-  def apply(items: Seq[SeedItemWithMultiplier]): Future[Seq[PublicScoredSeedItem]] = {
+  def apply(items: Seq[PublicSeedItemWithMultiplier]): Future[Seq[PublicScoredSeedItem]] = {
     getPublicScoredUris(items)
   }
 }

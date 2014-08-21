@@ -28,7 +28,7 @@ class UriScoringHelper @Inject() (
   }
 
   private def getRawInterestScores(items: Seq[SeedItemWithMultiplier]): Future[(Seq[Float], Seq[Float])] = {
-    val interestScores = cortex.batchUserURIsInterests(items.head.userId.get, items.map(_.uriId))
+    val interestScores = cortex.batchUserURIsInterests(items.head.userId, items.map(_.uriId))
     interestScores.map { scores =>
       scores.map { score =>
         val (overallOpt, recentOpt) = (score.global, score.recency)
@@ -41,7 +41,7 @@ class UriScoringHelper @Inject() (
   // assume all items have same userId
   def getRawSocialScores(items: Seq[SeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Future[Seq[Float]] = {
     //convert user scores seq to map, assume there is no duplicate userId from graph service
-    graph.getConnectedUserScores(items.head.userId.get, avoidFirstDegreeConnections = false).map { socialScores =>
+    graph.getConnectedUserScores(items.head.userId, avoidFirstDegreeConnections = false).map { socialScores =>
       val socialScoreMap = socialScores.map { socialScore =>
         (socialScore.userId, socialScore.score.toFloat)
       }.toMap
@@ -67,7 +67,7 @@ class UriScoringHelper @Inject() (
     if (items.isEmpty) {
       Future.successful(Seq.empty)
     } else {
-      val publicScoresFut = publicScoring(items)
+      val publicScoresFut = publicScoring(items.map(item => item.makePublicSeedItemWithMultiplier))
       val priorScores = getRawPriorScores(items)
       val socialScoresFuture = getRawSocialScores(items, boostedKeepers)
       val interestScoresFuture = getRawInterestScores(items)
@@ -88,7 +88,7 @@ class UriScoringHelper @Inject() (
             discoveryScore = publicScores(i).publicUriScores.discoveryScore,
             multiplier = Some(items(i).multiplier)
           )
-          ScoredSeedItem(items(i).userId.get, items(i).uriId, scores)
+          ScoredSeedItem(items(i).userId, items(i).uriId, scores)
         }
       }
     }
