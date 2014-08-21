@@ -209,6 +209,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val email1 = EmailAddress("vampireXslayer@gmail.com")
         val email2 = EmailAddress("uncleabe@gmail.com")
 
+        // add email 1 & 2
         userCommander.addEmail(user.id.get, email1, false).isRight === true
         userCommander.addEmail(user.id.get, email2, true).isRight === true
         db.readOnlyMaster { implicit session =>
@@ -224,11 +225,14 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
           userRepo.save(user.copy(primaryEmail = Some(email2))) // because email2 is pending primary
           userValueRepo.clearValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
         }
-        userCommander.modifyEmail(user.id.get, email1, true).isRight === true
+
+        // make email1 primary
+        userCommander.makeEmailPrimary(user.id.get, email1).isRight === true
         db.readOnlyMaster { implicit session =>
           userRepo.get(user.id.get).primaryEmail.get === email1
           userValueRepo.getUserValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL) === None
         }
+        // remove email1 then email2
         userCommander.removeEmail(user.id.get, email1).isRight === false // removing primary email
         userCommander.removeEmail(user.id.get, email2).isRight === true
         db.readOnlyMaster { implicit session =>

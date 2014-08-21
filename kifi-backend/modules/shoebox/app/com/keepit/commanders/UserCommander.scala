@@ -190,7 +190,7 @@ class UserCommander @Inject() (
       }
     }
   }
-  def modifyEmail(userId: Id[User], address: EmailAddress, isPrimary: Boolean): Either[String, Unit] = {
+  def makeEmailPrimary(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
     db.readWrite { implicit session =>
       emailRepo.getByAddressOpt(address) match {
         case None => Left("email not found")

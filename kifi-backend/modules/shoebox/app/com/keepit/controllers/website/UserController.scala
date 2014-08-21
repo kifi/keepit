@@ -273,14 +273,13 @@ class UserController @Inject() (
         }
     }
   }
-  def modifyEmail() = JsonAction.authenticatedParseJson { implicit request =>
+  def changePrimaryEmail() = JsonAction.authenticatedParseJson { implicit request =>
     val targetAddress = (request.body \ "email").as[String]
-    val isPrimary = (request.body \ "isPrimary").as[Boolean]
     EmailAddress.validate(targetAddress) match {
       case Failure(e) =>
         BadRequest(e.getMessage)
       case Success(targetEmail) =>
-        userCommander.modifyEmail(request.userId, targetEmail, isPrimary) match {
+        userCommander.makeEmailPrimary(request.userId, targetEmail) match {
           case Left(s) => BadRequest(s)
           case Right(_) => Ok(JsString("success"))
         }
