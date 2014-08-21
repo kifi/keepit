@@ -3,7 +3,7 @@ package com.keepit.curator.commanders
 import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.curator.model.{ UriRecommendationRepo, UriRecommendation }
+import com.keepit.curator.model.{ RecommendationClientType, UriRecommendationRepo, UriRecommendation }
 import com.keepit.heimdal.{ UserEventTypes, HeimdalContextBuilderFactory, UserEvent, HeimdalServiceClient }
 import com.keepit.model.{ NormalizedURI, User, UriRecommendationFeedback }
 
@@ -13,9 +13,10 @@ class CuratorAnalytics @Inject() (
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     heimdal: HeimdalServiceClient) {
 
-  def trackDeliveredItems(items: Seq[UriRecommendation]): Unit = {
+  def trackDeliveredItems(items: Seq[UriRecommendation], client: Option[RecommendationClientType]): Unit = {
+    val clientType = client.getOrElse(RecommendationClientType.Unknown)
     items.foreach { item =>
-      val context = toRecoUserActionContext(item)
+      val context = toRecoUserActionContext(item, clientType)
       val event = toHeimdalEvent(context)
       heimdal.trackEvent(event)
     }
@@ -28,8 +29,8 @@ class CuratorAnalytics @Inject() (
     }
   }
 
-  private def toRecoUserActionContext(item: UriRecommendation): RecommendationUserActionContext = {
-    RecommendationUserActionContext(item.userId, item.uriId, item.masterScore.toInt, RecommendationUserAction.Delivered, None)
+  private def toRecoUserActionContext(item: UriRecommendation, clientType: RecommendationClientType): RecommendationUserActionContext = {
+    RecommendationUserActionContext(item.userId, item.uriId, item.masterScore.toInt, clientType, RecommendationUserAction.Delivered, None)
   }
 
   private def toRecoUserActionContexts(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Seq[RecommendationUserActionContext] = {
@@ -38,10 +39,20 @@ class CuratorAnalytics @Inject() (
       model.get.masterScore.toInt
     }
 
+    val client = feedback.fromClient.getOrElse(RecommendationClientType.Unknown)
+
     var contexts = List.empty[RecommendationUserActionContext]
-    feedback.clicked.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, RecommendationUserAction.Clicked) :: contexts }
-    feedback.kept.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, RecommendationUserAction.Kept) :: contexts }
-    feedback.trashed.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, RecommendationUserAction.Trashed) :: contexts }
+
+    feedback.clicked.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Clicked) :: contexts }
+    feedback.kept.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Kept) :: contexts }
+
+    feedback.vote.foreach { isThumbUp =>
+      val action = if (isThumbUp) RecommendationUserAction.MarkedGood else RecommendationUserAction.MarkedBad
+      contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, action) :: contexts
+    }
+
+    feedback.trashed.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Trashed) :: contexts }
+    feedback.improvement.foreach { text => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.ImprovementSuggested, Some(text)) :: contexts }
 
     contexts
   }
@@ -51,8 +62,9 @@ class CuratorAnalytics @Inject() (
     contextBuilder += ("userId", context.userId.id)
     contextBuilder += ("uriId", context.uriId.id)
     contextBuilder += ("master_score", context.truncatedMasterScore)
+    contextBuilder += ("client_type", context.clientType.value)
     contextBuilder += ("user_action", context.userAction.value)
-    context.suggestion.foreach { suggest => contextBuilder += ("user_suggestion", suggest.value) }
+    context.suggestion.foreach { suggest => contextBuilder += ("user_suggestion", suggest) }
     UserEvent(context.userId, contextBuilder.build, UserEventTypes.RECOMMENDATION_USER_ACTION)
   }
 
@@ -70,8 +82,6 @@ object RecommendationUserAction {
   object ImprovementSuggested extends RecommendationUserAction("improvement_suggested")
 }
 
-case class RecommendationImprovmentSuggestion(value: String)
-
-case class RecommendationUserActionContext(userId: Id[User], uriId: Id[NormalizedURI], truncatedMasterScore: Int, userAction: RecommendationUserAction, suggestion: Option[RecommendationImprovmentSuggestion] = None) {
+case class RecommendationUserActionContext(userId: Id[User], uriId: Id[NormalizedURI], truncatedMasterScore: Int, clientType: RecommendationClientType, userAction: RecommendationUserAction, suggestion: Option[String] = None) {
   require((userAction == RecommendationUserAction.ImprovementSuggested) == suggestion.isDefined, s"invalid arguments: userAction = $userAction, suggestion = ${suggestion}")
 }
