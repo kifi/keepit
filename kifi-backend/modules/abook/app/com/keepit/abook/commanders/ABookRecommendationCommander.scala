@@ -278,11 +278,16 @@ class ABookRecommendationCommander @Inject() (
         (relevantEmailInvites.get(emailAccountId).map(canBeRecommendedAgain) getOrElse true)
     }
 
+    @inline def isValidName(name: String, address: EmailAddress) = name.nonEmpty && !name.equalsIgnoreCase(address.address)
+
     val recommendations = relatedEmailAccounts.collect {
       case (emailAccountId, score) if isRelevant(emailAccountId) =>
         val lastInvitedAt = relevantEmailInvites.get(emailAccountId).flatMap(_.lastSentAt)
-        val preferredContact = relevantEmailAccounts(emailAccountId).maxBy(_.name.map(_.length) getOrElse 0)
-        InviteRecommendation(SocialNetworks.EMAIL, Left(preferredContact.email), preferredContact.name, None, lastInvitedAt, score)
+        val preferredContact = relevantEmailAccounts(emailAccountId).maxBy { emailAccount =>
+          emailAccount.name.collect { case name if isValidName(name, emailAccount.email) => name.length } getOrElse 0 // pick by longest name different from the email address
+        }
+        val validName = preferredContact.name.filter(isValidName(_, preferredContact.email))
+        InviteRecommendation(SocialNetworks.EMAIL, Left(preferredContact.email), validName, None, lastInvitedAt, score)
     }
     recommendations.take(relevantEmailAccounts.size)
   }
