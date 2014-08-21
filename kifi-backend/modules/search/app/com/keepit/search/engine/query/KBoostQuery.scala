@@ -78,6 +78,7 @@ class KBoostWeight(override val query: KBoostQuery, override val searcher: Index
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
     throw new UnsupportedOperationException()
   }
+
   def getWeights(out: ArrayBuffer[(Weight, Float)]): Unit = {
     textWeight.asInstanceOf[KWeight].getWeights(out)
     out += ((boosterWeight, 0.0f)) // weight = 0 since booster query should not be counted in percent match
