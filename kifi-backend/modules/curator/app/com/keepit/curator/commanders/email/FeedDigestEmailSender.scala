@@ -14,7 +14,6 @@ import com.keepit.model.{ URISummary, NormalizedURI, User, UriRecommendationScor
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.Play.maybeApplication
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 
 import concurrent.Future
