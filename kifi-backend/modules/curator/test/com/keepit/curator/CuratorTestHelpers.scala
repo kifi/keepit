@@ -77,7 +77,9 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         curationScore = None,
         multiplier = Some(1.0f),
         discoveryScore = 1.0f),
-      delivered = 0, clicked = 0, kept = false,
+      clicked = 0,
+      kept = false,
+      fromClient = RecommendationClientType.Unknown,
       attribution = makeSeedAttribution(userId))
   }
 

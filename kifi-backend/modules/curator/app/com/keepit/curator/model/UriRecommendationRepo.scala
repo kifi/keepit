@@ -31,6 +31,10 @@ class UriRecommendationRepoImpl @Inject() (
   import DBSession._
   import db.Driver.simple._
 
+  implicit val recommendationClientTypeMapper = MappedColumnType.base[RecommendationClientType, String](
+    { scores => Json.stringify(Json.toJson(scores)) },
+    { jstr => Json.parse(jstr).as[RecommendationClientType] })
+
   implicit val uriScoresMapper = MappedColumnType.base[UriScores, String](
     { scores => Json.stringify(Json.toJson(scores)) },
     { jstr => Json.parse(jstr).as[UriScores] })
@@ -42,21 +46,21 @@ class UriRecommendationRepoImpl @Inject() (
   type RepoImpl = UriRecommendationTable
 
   class UriRecommendationTable(tag: Tag) extends RepoTable[UriRecommendation](db, tag, "uri_recommendation") {
-    def emailVote = column[Boolean]("emailVote", O.Nullable)
+    def emailVote = column[Boolean]("email_vote", O.Nullable)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
     def masterScore = column[Float]("master_score", O.NotNull)
     def allScores = column[UriScores]("all_scores", O.NotNull)
-    def delivered = column[Int]("delivered", O.NotNull)
     def clicked = column[Int]("clicked", O.NotNull)
     def kept = column[Boolean]("kept", O.NotNull)
     def trashed = column[Boolean]("trashed", O.NotNull)
     def vote = column[Boolean]("vote", O.Nullable)
     def improvement = column[String]("improvement", O.Nullable)
+    def fromClient = column[RecommendationClientType]("from_client", O.NotNull)
     def lastPushedAt = column[DateTime]("last_pushed_at", O.Nullable)
     def attribution = column[SeedAttribution]("attribution", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, emailVote.?, uriId, userId, masterScore, allScores, delivered, clicked,
-      kept, trashed, vote.?, improvement.?, lastPushedAt.?, attribution) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, emailVote.?, uriId, userId, masterScore, allScores, clicked,
+      kept, trashed, vote.?, improvement.?, fromClient, lastPushedAt.?, attribution) <> ((UriRecommendation.apply _).tupled, UriRecommendation.unapply _)
   }
 
   def table(tag: Tag) = new UriRecommendationTable(tag)
@@ -79,9 +83,6 @@ class UriRecommendationRepoImpl @Inject() (
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RSession): Boolean = {
     import StaticQuery.interpolation
 
-    val deliveredResult = if (feedback.delivered.isDefined && feedback.delivered.get)
-      sql"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE user_id=$userId AND uri_id=${uriId}".asUpdate.first > 0
-    else true
     val clickedResult = if (feedback.clicked.isDefined && feedback.clicked.get)
       sql"UPDATE uri_recommendation SET clicked=clicked+1, updated_at=$currentDateTime WHERE user_id=$userId AND uri_id=$uriId".asUpdate.first > 0
     else true
@@ -93,12 +94,13 @@ class UriRecommendationRepoImpl @Inject() (
       (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.vote, row.updatedAt)).update((feedback.vote.get, currentDateTime)) > 0 else true
     val improvementResult = if (feedback.improvement.isDefined)
       (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.improvement, row.updatedAt)).update((feedback.improvement.get, currentDateTime)) > 0 else true
-
-    deliveredResult && clickedResult && keptResult && trashedResult && voteResult && improvementResult
+    val fromClient =
+      (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.fromClient, row.updatedAt)).update((feedback.fromClient, currentDateTime)) > 0
+    clickedResult && keptResult && trashedResult && voteResult && improvementResult && fromClient
   }
 
   def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI], interaction: UriRecommendationUserInteraction)(implicit session: RSession): Boolean = {
-    (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.vote.?, row.updatedAt)).update((interaction.vote, currentDateTime)) > 0
+    (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.emailVote.?, row.updatedAt)).update((interaction.emailVote, currentDateTime)) > 0
   }
 
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}
