@@ -30,9 +30,4 @@ class RecommendationsController @Inject() (
     commander.updateUriRecommendationFeedback(request.userId, url, feedback).map(fkis => Ok(Json.toJson(fkis)))
   }
 
-  def updateUriRecommendationUserInteraction(url: String) = HtmlAction.authenticatedAsync { request =>
-    val form = request.body.asFormUrlEncoded.get
-    val vote = UriRecommendationUserInteraction(form.get("vote").flatMap(_.headOption).map(_.toBoolean))
-    commander.updateUriRecommendationUserInteraction(request.userId, url, vote).map(fkis => Ok(Json.toJson(fkis)))
-  }
 }

@@ -14,6 +14,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social._
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model.{ UserConnection, _ }
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
 import com.keepit.search.FakeSearchServiceClientModule
@@ -46,7 +47,8 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
-    FakeShoeboxAppSecureSocialModule()
+    FakeShoeboxAppSecureSocialModule(),
+    FakeCuratorServiceClientModule()
   )
 
   "mobileController" should {
@@ -106,8 +108,8 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
     FakeExternalServiceModule(),
     FakeCortexServiceClientModule(),
     FakeScraperServiceClientModule(),
-    FakeSocialGraphModule()
-
+    FakeSocialGraphModule(),
+    FakeCuratorServiceClientModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {

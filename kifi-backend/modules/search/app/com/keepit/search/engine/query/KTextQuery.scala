@@ -16,7 +16,7 @@ import scala.math._
 import collection.JavaConversions._
 
 object KTextQuery {
-  val tieBreakerMultiplier = 0.5f
+  val tieBreakerMultiplier = 1.0f
 }
 
 class KTextQuery extends Query with Logging {

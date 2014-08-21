@@ -67,7 +67,6 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     var count = 0
     foreachReader { reader =>
       var cnt = 0
-      val idMapper = reader.getIdMapper
       val td = reader.termDocsEnum(term)
       var doc = td.nextDoc()
       while (doc != NO_MORE_DOCS) {
@@ -77,6 +76,15 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
       count += cnt
     }
     count
+  }
+
+  def has(term: Term): Boolean = {
+    foreachReader { reader =>
+      val td = reader.termDocsEnum(term)
+      var doc = td.nextDoc()
+      if (doc != NO_MORE_DOCS) return true
+    }
+    false
   }
 
   def createWeight(query: Query): Weight = {
