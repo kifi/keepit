@@ -15,7 +15,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 class LinkProcessingExtractor(
-  url: String,
+  url: URI,
   maxContentChars: Int,
   htmlMapper: Option[HtmlMapper],
   processLink: Link => Option[String],
@@ -37,7 +37,7 @@ class LinkProcessingExtractor(
       case linkUrl =>
         val ts = System.currentTimeMillis
         log.info(s"Scraping additional content from link ${linkUrl} for url ${url}")
-        val extractor = new DefaultExtractor(linkUrl, maxContentChars, htmlMapper)
+        val extractor = new DefaultExtractor(URI.parse(linkUrl).get, maxContentChars, htmlMapper)
         val proxy = syncGetProxyP(url)
         httpFetcher.fetch(URI.parse(linkUrl).get, proxy = proxy)(extractor.process)
         val content = extractor.getContent
@@ -54,14 +54,14 @@ class LinkProcessingExtractor(
     if (keywords.isEmpty) None else Some(keywords)
   }
 
-  private[extractor] def getProxyP(url: String): Future[Option[HttpProxy]] = shoeboxScraperClient.getProxyP(url)
-  private[extractor] def syncGetProxyP(url: String): Option[HttpProxy] = Await.result(getProxyP(url), 10 seconds)
+  private[extractor] def getProxyP(url: URI): Future[Option[HttpProxy]] = shoeboxScraperClient.getProxyP(url.toString())
+  private[extractor] def syncGetProxyP(url: URI): Option[HttpProxy] = Await.result(getProxyP(url), 10 seconds)
 }
 
 @Singleton
 class LinkProcessingExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeboxScraperClient: ShoeboxScraperClient) extends ExtractorProvider {
   def isDefinedAt(uri: URI) = true
-  def apply(uri: URI) = new LinkProcessingExtractor(uri.toString, ScraperConfig.maxContentChars, DefaultExtractorProvider.htmlMapper, processLink(uri), httpFetcher, shoeboxScraperClient) // TODO
+  def apply(uri: URI) = new LinkProcessingExtractor(uri, ScraperConfig.maxContentChars, DefaultExtractorProvider.htmlMapper, processLink(uri), httpFetcher, shoeboxScraperClient) // TODO
 
   private def processLink(uri: URI)(link: Link): Option[String] = {
     val url = uri.toString()

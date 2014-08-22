@@ -87,7 +87,7 @@ class ShoeboxDbCallbackHelper @Inject() (
   def getLatestKeep(url: String): Future[Option[Keep]] = shoeboxScraperClient.getLatestKeep(url)
   def saveBookmark(bookmark: Keep): Future[Keep] = shoeboxScraperClient.saveBookmark(bookmark)
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = shoeboxScraperClient.recordPermanentRedirect(uri, redirect)
-  def isUnscrapableP(url: String, destinationUrl: Option[String]) = shoeboxScraperClient.isUnscrapableP(url, destinationUrl)
+  def isUnscrapableP(url: URI, destinationUrl: Option[String]) = shoeboxScraperClient.isUnscrapableP(url.toString(), destinationUrl)
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = {
     shoeboxScraperClient.recordScrapedNormalization(uriId, uriSignature, candidateUrl, candidateNormalization, alternateUrls)
   }
@@ -98,7 +98,7 @@ class ShoeboxDbCallbackHelper @Inject() (
 
 trait SyncShoeboxDbCallbacks {
   def syncAssignTasks(zkId: Long, max: Int): Seq[ScrapeRequest]
-  def syncIsUnscrapableP(url: String, destinationUrl: Option[String]): Boolean
+  def syncIsUnscrapableP(url: URI, destinationUrl: Option[String]): Boolean
   def syncGetNormalizedUri(uri: NormalizedURI): Option[NormalizedURI]
   def syncSaveNormalizedUri(uri: NormalizedURI): NormalizedURI
   def syncUpdateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Unit
