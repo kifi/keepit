@@ -2,8 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
-import com.keepit.model.{ UserConnectionRepo, User }
-import com.keepit.social.BasicUser
+import com.keepit.model.{ FriendRecommendations, UserConnectionRepo, User }
 import com.keepit.common.db.Id
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.slick.Database
@@ -11,18 +10,13 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import concurrent.Future
 
-case class FriendRecommendationData(basicUsers: Map[Id[User], BasicUser],
-  mutualFriendConnectionCounts: Map[Id[User], Int],
-  recommendedUsers: Seq[Id[User]],
-  mutualFriends: Map[Id[User], Set[Id[User]]])
-
 class PeopleRecommendationCommander @Inject() (
     abookServiceClient: ABookServiceClient,
     userConnectionRepo: UserConnectionRepo,
     basicUserRepo: BasicUserRepo,
     db: Database) {
 
-  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[FriendRecommendationData] = {
+  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[FriendRecommendations] = {
     abookServiceClient.getFriendRecommendations(userId, page, pageSize).map { recommendedUsers =>
       val friends = db.readOnlyReplica { implicit session =>
         (recommendedUsers.toSet + userId).map(id => id -> userConnectionRepo.getConnectedUsers(id)).toMap
@@ -39,7 +33,7 @@ class PeopleRecommendationCommander @Inject() (
         (basicUsers, mutualFriendConnectionCounts)
       }
 
-      FriendRecommendationData(basicUsers, mutualFriendConnectionCounts, recommendedUsers, mutualFriends)
+      FriendRecommendations(basicUsers, mutualFriendConnectionCounts, recommendedUsers, mutualFriends)
     }
   }
 

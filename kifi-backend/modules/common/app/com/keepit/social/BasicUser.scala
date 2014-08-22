@@ -1,7 +1,8 @@
 package com.keepit.social
 
 import com.keepit.common.cache._
-import com.keepit.common.db._
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.Id.mapOfIdToObjectFormat
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.model._
@@ -55,6 +56,10 @@ object BasicUser {
     (__ \ 'pictureName).format[String] and
     (__ \ 'username).formatNullable[Username]
   )(BasicUser.apply, unlift(BasicUser.unapply))
+
+  implicit val mapUserIdToInt = mapOfIdToObjectFormat[User, Int]
+  implicit val mapUserIdToBasicUser = mapOfIdToObjectFormat[User, BasicUser]
+  implicit val mapUserIdToUserIdSet = mapOfIdToObjectFormat[User, Set[Id[User]]]
 
   def fromUser(user: User): BasicUser = {
     BasicUser(
