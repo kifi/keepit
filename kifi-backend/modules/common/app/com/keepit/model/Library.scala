@@ -26,7 +26,7 @@ case class Library(
     state: State[Library] = LibraryStates.ACTIVE,
     seq: SequenceNumber[Library] = SequenceNumber.ZERO,
     kind: LibraryKind = LibraryKind.USER_CREATED,
-    universalLink: Option[String] = None,
+    universalLink: Option[String] = Some(RandomStringUtils.randomAlphanumeric(40)),
     memberCount: Int) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def withId(id: Id[Library]) = this.copy(id = Some(id))
