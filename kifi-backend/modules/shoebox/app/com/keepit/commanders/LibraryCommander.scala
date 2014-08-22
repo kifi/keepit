@@ -61,12 +61,12 @@ class LibraryCommander @Inject() (
       slug = lib.slug,
       url = Library.formatLibraryUrl(owner.username, owner.externalId, lib.slug),
       visibility = lib.visibility,
-      collaborators = collabs,
-      followers = follows,
-      keeps = keeps,
-      numKeeps = keeps.length,
-      numCollaborators = collabs.length,
-      numFollowers = follows.length)
+      collaborators = collabs, // todo(andrew): should only be first `x` collaborators
+      followers = follows, // todo(andrew): should only be first `x` followers
+      keeps = keeps, // todo(andrew): should only be first `x` keeps
+      numKeeps = keeps.length, // todo(andrew): should be the total number of keeps in the library
+      numCollaborators = collabs.length, // todo(andrew): should be the total number of collaborators in the library
+      numFollowers = follows.length) // todo(andrew): should be the total number of followers in the library
   }
 
   def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, Library] = {
