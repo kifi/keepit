@@ -173,25 +173,31 @@ class FeedDigestEmailSenderImpl @Inject() (
   private def getDigestRecommendationsForUser(userId: Id[User]) = {
     getRecommendationsForUser(userId).flatMap { recos =>
       FutureHelpers.findMatching(recos, RECOMMENDATIONS_TO_DELIVER, isEmailWorthy, getDigestReco)
+    }.map { seq => seq.flatten }
+  }
+
+  private def isEmailWorthy(recoOpt: Option[DigestReco]) = {
+    recoOpt match {
+      case Some(reco) =>
+        val summary = reco.uriSummary
+        val uri = reco.uri
+        summary.imageWidth.isDefined && summary.imageUrl.isDefined && summary.imageWidth.get >= MIN_IMAGE_WIDTH_PX &&
+          summary.title.exists(_.size > 0) || uri.title.exists(_.size > 0)
+      case None => false
     }
   }
 
-  private def isEmailWorthy(reco: DigestReco) = {
-    val summary = reco.uriSummary
-    val uri = reco.uri
-
-    summary.imageWidth.isDefined && summary.imageUrl.isDefined && summary.imageWidth.get >= MIN_IMAGE_WIDTH_PX &&
-      summary.title.exists(_.size > 0) || uri.title.exists(_.size > 0)
-  }
-
-  private def getDigestReco(reco: UriRecommendation) = {
+  private def getDigestReco(reco: UriRecommendation): Future[Option[DigestReco]] = {
     val uriId = reco.uriId
     for {
       uri <- shoebox.getNormalizedURI(uriId)
       summaries <- getRecommendationSummaries(uriId)
       recoKeepers <- getRecoKeepers(reco)
       if summaries.isDefinedAt(uriId)
-    } yield DigestReco(reco, uri, summaries(uriId), recoKeepers)
+    } yield Some(DigestReco(reco, uri, summaries(uriId), recoKeepers))
+  } recover { case throwable =>
+    airbrake.notify(s"failed to load data for ${reco}", throwable)
+    None
   }
 
   private def getRecommendationsForUser(userId: Id[User]) = {
