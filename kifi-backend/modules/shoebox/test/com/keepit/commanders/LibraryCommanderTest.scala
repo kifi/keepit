@@ -1,9 +1,11 @@
 package com.keepit.commanders
 
 import com.google.inject.Injector
+import com.keepit.common.crypto
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ FakeOutbox, FakeMailModule, EmailAddress }
+import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
@@ -14,15 +16,33 @@ import org.specs2.mutable.Specification
 
 class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
-  def modules = FakeScrapeSchedulerModule() :: FakeSearchServiceClientModule() :: Nil
+  def modules = Seq(
+    FakeScrapeSchedulerModule(),
+    FakeSearchServiceClientModule(),
+    FakeMailModule(),
+    FakeShoeboxStoreModule(),
+    FakeCryptoModule()
+  )
 
   def setupUsers()(implicit injector: Injector) = {
     val t1 = new DateTime(2014, 7, 4, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
+    val emailRepo = inject[UserEmailAddressRepo]
+    val emailIron = EmailAddress("tony@stark.com")
+    val emailCaptain = EmailAddress("steve.rogers@hotmail.com")
+    val emailAgent = EmailAddress("samuelljackson@shield.com")
+    val emailHulk = EmailAddress("incrediblehulk@gmail.com")
+
     val (userIron, userCaptain, userAgent, userHulk) = db.readWrite { implicit s =>
-      val userIron = userRepo.save(User(firstName = "Tony", lastName = "Stark", createdAt = t1))
-      val userCaptain = userRepo.save(User(firstName = "Steve", lastName = "Rogers", createdAt = t1))
-      val userAgent = userRepo.save(User(firstName = "Nick", lastName = "Fury", createdAt = t1))
-      val userHulk = userRepo.save(User(firstName = "Bruce", lastName = "Banner", createdAt = t1))
+      val userIron = userRepo.save(User(firstName = "Tony", lastName = "Stark", createdAt = t1, primaryEmail = Some(emailIron), username = Some(Username("ironman"))))
+      val userCaptain = userRepo.save(User(firstName = "Steve", lastName = "Rogers", createdAt = t1, primaryEmail = Some(emailCaptain), username = Some(Username("captainamerica"))))
+      val userAgent = userRepo.save(User(firstName = "Nick", lastName = "Fury", createdAt = t1, primaryEmail = Some(emailAgent), username = Some(Username("agentfury"))))
+      val userHulk = userRepo.save(User(firstName = "Bruce", lastName = "Banner", createdAt = t1, primaryEmail = Some(emailHulk), username = Some(Username("incrediblehulk"))))
+
+      emailRepo.save(UserEmailAddress(userId = userIron.id.get, address = emailIron))
+      emailRepo.save(UserEmailAddress(userId = userCaptain.id.get, address = emailCaptain))
+      emailRepo.save(UserEmailAddress(userId = userAgent.id.get, address = emailAgent))
+      emailRepo.save(UserEmailAddress(userId = userHulk.id.get, address = emailHulk))
+
       (userIron, userCaptain, userAgent, userHulk)
     }
     db.readOnlyMaster { implicit s =>
@@ -146,7 +166,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
   "LibraryCommander" should {
     "create libraries, memberships & invites" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val (userIron, userCaptain, userAgent, userHulk) = setupUsers()
 
         db.readOnlyMaster { implicit s =>
@@ -210,7 +230,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "modify library" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
 
         val libraryCommander = inject[LibraryCommander]
@@ -249,7 +269,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "remove library, memberships & invites" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         db.readOnlyMaster { implicit s =>
@@ -284,7 +304,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "get libraries by user (which libs am I following / contributing to?)" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
 
@@ -318,25 +338,30 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "does user have visibility" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         val libraryCommander = inject[LibraryCommander]
 
-        db.readWrite { implicit s =>
-          libraryRepo.save(libScience.copy(visibility = LibraryVisibility.PUBLISHED))
+        val libShwarmas = db.readWrite { implicit s =>
+          val libShwarmas = libraryRepo.save(Library(name = "NY Shwarmas", ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1, slug = LibrarySlug("shwarma")))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libShwarmas.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          libShwarmas
         }
 
-        libraryCommander.userAccess(userIron.id.get, libScience.id.get) === Some(LibraryAccess.OWNER) // test owner access
-        libraryCommander.userAccess(userHulk.id.get, libScience.id.get) === Some(LibraryAccess.READ_INSERT) // test membership accesss
-        libraryCommander.userAccess(userIron.id.get, libShield.id.get) === None // test no membership (secret library)
-        libraryCommander.userAccess(userCaptain.id.get, libScience.id.get) === Some(LibraryAccess.READ_ONLY) // test published library (no membership)
-        libraryCommander.userAccess(userHulk.id.get, libMurica.id.get) === Some(LibraryAccess.READ_ONLY) // test invited (but not accepted) access
+        libraryCommander.userAccess(userIron.id.get, libScience.id.get, None) === Some(LibraryAccess.OWNER) // test owner access
+        libraryCommander.userAccess(userHulk.id.get, libScience.id.get, None) === Some(LibraryAccess.READ_INSERT) // test membership accesss
+        libraryCommander.userAccess(userIron.id.get, libShield.id.get, None) === None // test no membership (secret library)
+        libraryCommander.userAccess(userHulk.id.get, libMurica.id.get, None) === Some(LibraryAccess.READ_ONLY) // test invited (but not accepted) access
+        libraryCommander.userAccess(userCaptain.id.get, libShwarmas.id.get, None) === Some(LibraryAccess.READ_ONLY) // test no membership (public library)
+
+        libraryCommander.userAccess(userCaptain.id.get, libScience.id.get, None) === None // test  library (no membership)
+        libraryCommander.userAccess(userCaptain.id.get, libScience.id.get, Some(libScience.universalLink)) === Some(LibraryAccess.READ_ONLY) // test  library (no membership) but with universalLink
       }
     }
 
     "intern user system libraries" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val libraryCommander = inject[LibraryCommander]
 
@@ -412,7 +437,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "invite users" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
         val libraryCommander = inject[LibraryCommander]
@@ -455,7 +480,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "let users join or decline library invites" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupInvites
         val libraryCommander = inject[LibraryCommander]
@@ -492,7 +517,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "let users leave library" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         val libraryCommander = inject[LibraryCommander]
@@ -512,7 +537,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "get keeps" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
         val libraryCommander = inject[LibraryCommander]
@@ -526,7 +551,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "copy keeps to another library" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
         val libraryCommander = inject[LibraryCommander]
@@ -583,7 +608,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "move keeps to another library" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
         val libraryCommander = inject[LibraryCommander]
@@ -650,7 +675,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     }
 
     "create library from tag" in {
-      withDb(FakeCryptoModule()) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries
 
@@ -711,6 +736,29 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           keepRepo.count === 7
           keepToCollectionRepo.count === 10
         }
+      }
+    }
+
+    "send library invitation notification" in {
+      withDb(modules: _*) { implicit injector =>
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupLibraries()
+        val libraryCommander = inject[LibraryCommander]
+        val outbox = inject[FakeOutbox]
+        outbox.size === 0
+
+        libraryCommander.inviteNotification(userIron.id.get, userHulk.id.get, libScience.id.get)
+        outbox.size === 1
+
+        //content check
+        outbox(0).htmlBody.toString.containsSlice("Hey Bruce,") === true
+        outbox(0).to.length === 1
+        outbox(0).to(0).address === "incrediblehulk@gmail.com"
+        outbox(0).subject === "Kifi.com | You've been invited to a library!"
+
+        val emailBody = outbox(0).htmlBody.toString
+        emailBody.containsSlice(s"""<a href="www.kifi.com/${userIron.username.get}/${libScience.slug}?auth=${libScience.universalLink}"><u>Science &amp; Stuff</u></a>""") === true
+        emailBody.containsSlice("Tony Stark would like to share Science &amp; Stuff with you") === true
+        emailBody.containsSlice("www.kifi.com/unsubscribe/") === true
       }
     }
   }

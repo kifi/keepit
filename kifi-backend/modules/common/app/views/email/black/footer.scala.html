@@ -1,5 +1,5 @@
-@(unsubscribeUrl: String)
-@assetUrlBase = @{ "https://djty7jcqog9qu.cloudfront.net/assets/digest" }
+@(ctx: email.helpers.Context)
+@import email.helpers.{ black, iTunesAppStoreUrl }
 
 <table width="100%" border="0" cellspacing="0" cellpadding="0">
     <tr>
@@ -13,9 +13,13 @@
                                 <td class="aside">
                                     <table width="100%" border="0" cellspacing="0" cellpadding="0">
                                         <tr>
-                                            @{ /* TODO (josh) update link params */ }
-                                            <td align="left" class="center1" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:22px;"><a href="https://www.kifi.com/?utm_source=headerLogo&amp;utm_medium=email&amp;utm_campaign=emailDigest" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Kifi.com</a> Your recomendations network<br />
-                                                Follow us on <a href="https://twitter.com/kifi?utm_source=footerTwitter&amp;utm_medium=email&amp;utm_campaign=emailDigest" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Twitter</a> &nbsp; <a href="https://www.facebook.com/kifi42?utm_source=footerFacebook&amp;utm_medium=email&amp;utm_campaign=emailDigest" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Facebook</a></td>
+                                            <td align="left" class="center1" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:22px;">
+                                                <a href="@ctx.kifiLogoUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Kifi.com</a>
+                                                Your recommendations network<br/>Follow us on
+                                                <a href="@ctx.kifiTwitterUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Twitter</a>
+                                                &nbsp;
+                                                <a href="@ctx.kifiFacebookUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Facebook</a>
+                                            </td>
                                         </tr>
                                     </table>
                                 </td>
@@ -26,7 +30,7 @@
                                 <td class="top_space">
                                     <table width="105" border="0" cellspacing="0" cellpadding="0" align="center">
                                         <tr>
-                                            <td><a href="https://itunes.apple.com/us/app/kifi/id740232575" target="_blank"><img src="@assetUrlBase/app_store.png" alt="Available on the App Store" width="105" height="35" style="display:block;" border="0" /></a></td>
+                                            <td><a href="@iTunesAppStoreUrl" target="_blank"><img src="@black.assetUrl("app_store.png")" alt="Available on the App Store" width="105" height="35" style="display:block;" border="0" /></a></td>
                                         </tr>
                                     </table>
                                 </td>
@@ -42,15 +46,15 @@
                         <table width="100%" border="0" cellspacing="0" cellpadding="0">
                             <tr>
                                 <td align="left" class="center" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#333333;line-height:22px;">
-                                    Sent by kifi 883 N Shoreline Blvd, Mountain View, CA 94043, USA<br  />
+                                    Sent by Kifi 883 N Shoreline Blvd, Mountain View, CA 94043, USA<br/>
                                 </td>
                             </tr>
                             <tr>
                                 <td align="left" class="center1" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#333333;line-height:22px;">
-                                    <a href="https://www.kifi.com/privacy?utm_source=footerPrivacy&amp;utm_medium=email&amp;utm_campaign=emailDigest" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">privacy policy</a>.
-                                    Click here <a href="@unsubscribeUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">unsubscribe</a>
-                                    from update like this.<br class="br" />
-                                    &copy; 2014 FortyTwo, Inc, All rights reserved.
+                                    <a href="@ctx.privacyUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">privacy policy</a>.
+                                    Click <a href="@ctx.unsubscribeUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">here to unsubscribe</a>
+                                    from updates like this.<br class="br"/>
+                                    &copy; 2014 FortyTwo, Inc. All rights reserved.
                                 </td>
                             </tr>
                         </table>

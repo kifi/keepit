@@ -17,7 +17,7 @@ object LibraryFields {
   val hiddenUsersField = "h"
   val recordField = "rec"
 
-  import LibraryVisibility.{SECRET, DISCOVERABLE, PUBLISHED}
+  import LibraryVisibility.{ SECRET, DISCOVERABLE, PUBLISHED }
   @inline def toNumericCode(visibility: LibraryVisibility) = visibility match {
     case SECRET => 0
     case DISCOVERABLE => 1

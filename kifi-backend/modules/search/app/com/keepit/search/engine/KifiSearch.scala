@@ -53,7 +53,7 @@ class KifiSearch(
   def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (HitQueue, HitQueue, HitQueue) = {
 
     keepSearcher.setSimilarity(similarity)
-    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, libraryIdsFuture, filter.idFilter, monitoredAwait)
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, libraryIdsFuture, filter.idFilter, config, monitoredAwait)
     engine.execute(keepScoreSource)
 
     articleSearcher.setSimilarity(similarity)

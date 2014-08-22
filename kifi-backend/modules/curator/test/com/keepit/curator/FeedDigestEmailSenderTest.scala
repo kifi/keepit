@@ -64,7 +64,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
             },
             makeCompleteUriRecommendation(3, 43, 0.3f, "http://www.42go.com"),
             makeCompleteUriRecommendation(4, 43, 0.4f, "http://www.yahoo.com"),
-            makeCompleteUriRecommendation(5, 43, 0.5f, "http://www.lycos.com"),
+            makeCompleteUriRecommendation(5, 43, 0.5f, "http://www.lycos.com", 250, Some(200)),
             {
               val tuple = makeCompleteUriRecommendation(6, 42, 0.99f, "http://www.excite.com")
               tuple.copy(_2 = tuple._2.withLastPushedAt(currentDateTime))
@@ -80,8 +80,13 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         val sumU43 = summaries.find(_.userId.id == 43).get
 
         sumU42.feed.size === 2
-        sumU43.feed.size === 3
+
+        // lycos and excite should not be included because:
+        // - lycos does not pass the image width requirement
+        // - excite has been sent already
+        sumU43.feed.size === 2
         shoebox.sentMail.size === 2
+
         val (mail42, mail43) = {
           val (xs, ys) = shoebox.sentMail.partition(_.senderUserId.get == Id[User](42))
           (xs.head, ys.head)
@@ -111,17 +116,21 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
 
         mail43.senderUserId.get must beEqualTo(Id[User](43))
         val mail43body = mail43.htmlBody.toString
-        mail43body must contain("www.42go.com")
-        mail43body must contain("www.yahoo.com")
-        mail43body must contain("www.lycos.com")
+        mail43body must contain("42go.com")
+        mail43body must contain("yahoo.com")
+        mail43body must not contain "lycos.com"
+        mail43body must not contain "excite.com"
         mail43body must contain("5 others kept this")
+        println(mail43body)
 
         val email = shoebox.sentMail(0)
 
+        val notSentIds = Set(5L)
         savedRecoModels.forall { models =>
           val (uri, reco, uriSumm) = models
           db.readOnlyMaster { implicit s =>
-            uriRecoRepo.get(reco.id.get).lastPushedAt must beSome
+            if (notSentIds.contains(uri.id.get.id)) uriRecoRepo.get(reco.id.get).lastPushedAt must beNone
+            else uriRecoRepo.get(reco.id.get).lastPushedAt must beSome
           }
         }
       }

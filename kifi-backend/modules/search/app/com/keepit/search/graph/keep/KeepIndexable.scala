@@ -17,6 +17,7 @@ object KeepFields {
   val titleStemmedField = "ts"
   val siteField = "site"
   val homePageField = "home_page"
+  val createdAtField = "createdAt"
   val recordField = "rec"
 
   val decoders: Map[String, FieldDecoder] = Map.empty
@@ -51,6 +52,7 @@ case class KeepIndexable(keep: Keep) extends Indexable[Keep, Keep] {
     doc.add(buildLongValueField(visibilityField, ???)) // todo(Andrew, Léo): denormalize library visibility onto keeps
 
     doc.add(buildBinaryDocValuesField(recordField, KeepRecord(keep)))
+    buildLongValueField(createdAtField, keep.createdAt.getMillis)
     doc
   }
 }
