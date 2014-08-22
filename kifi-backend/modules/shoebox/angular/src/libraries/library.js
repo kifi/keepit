@@ -68,7 +68,6 @@ angular.module('kifi')
 
       $scope.loading = true;
       return libraryService.getLibraryByUserSlug(username, librarySlug).then(function (list) {
-        console.log('fetched more', list);
         $scope.loading = false;
 
         if (false) { // todo
@@ -79,14 +78,10 @@ angular.module('kifi')
       });
     };
 
-    function initKeepList() {
-      $scope.scrollDisabled = false;
-      $scope.getNextKeeps();
-    }
-
-    $scope.$watch('keepService.seqReset()', function () {
-      initKeepList();
-    });
+    // function initKeepList() {
+    //   $scope.scrollDisabled = false;
+    //   $scope.getNextKeeps();
+    // }
 
   }
 ]);
