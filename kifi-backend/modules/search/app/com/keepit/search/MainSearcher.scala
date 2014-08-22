@@ -273,7 +273,7 @@ class MainSearcher(
         if (rank == 0) {
           // this may be the first hit from others. (re)compute the threshold and the norm.
           othersThreshold = hit.score * tailCutting
-          othersNorm = max(highScore, othersHighScore)
+          othersNorm = max(highScore, hit.score)
         }
         val h = hit.hit
         val score = hit.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank

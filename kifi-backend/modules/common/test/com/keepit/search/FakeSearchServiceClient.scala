@@ -1,6 +1,6 @@
 package com.keepit.search
 
-import com.keepit.common.healthcheck.{ AirbrakeNotifier, BenchmarkResults }
+import com.keepit.common.healthcheck.BenchmarkResults
 import com.keepit.common.db.Id
 import com.keepit.model.Collection
 import play.api.templates.Html
@@ -10,7 +10,7 @@ import com.keepit.model.NormalizedURI
 import com.keepit.model.User
 import com.keepit.search.user.UserSearchResult
 import com.keepit.typeahead.TypeaheadHit
-import com.keepit.social.BasicUser
+import com.keepit.social.{ TypeaheadUserHit, BasicUser }
 
 class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null) {
 
@@ -42,7 +42,9 @@ class FakeSearchServiceClient() extends SearchServiceClientImpl(null, null, null
 
   override def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[UserSearchResult] = ???
 
-  override def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]] = ???
+  override def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]] = Future.successful(Seq.empty)
+
+  override def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]] = Future.successful(Seq.empty)
 
   override def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = ???
 

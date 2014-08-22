@@ -23,8 +23,8 @@ class PeopleRecommendationController @Inject() (
     peopleRecoCommander: PeopleRecommendationCommander,
     socialUserRepo: SocialUserInfoRepo) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
-  def getFriendRecommendations(page: Int, pageSize: Int, offset: Option[Int], limit: Option[Int]) = JsonAction.authenticatedAsync { request =>
-    peopleRecoCommander.getFriendRecommendations(request.userId, offset.getOrElse(page * pageSize), limit.getOrElse(pageSize)).map {
+  def getFriendRecommendations(offset: Int, limit: Int) = JsonAction.authenticatedAsync { request =>
+    peopleRecoCommander.getFriendRecommendations(request.userId, offset, limit).map {
       case None => Ok(Json.obj("users" -> JsArray()))
       case Some(recoData) => {
         val recommendedUsers = recoData.recommendedUsers
@@ -51,11 +51,11 @@ class PeopleRecommendationController @Inject() (
     }
   }
 
-  def getInviteRecommendations(page: Int, pageSize: Int, offset: Option[Int], limit: Option[Int]) = JsonAction.authenticatedAsync { request =>
+  def getInviteRecommendations(offset: Int, limit: Int) = JsonAction.authenticatedAsync { request =>
     val relevantNetworks = db.readOnlyReplica { implicit session =>
       socialUserRepo.getByUser(request.userId).map(_.networkType).toSet - SocialNetworks.FORTYTWO + SocialNetworks.EMAIL
     }
-    abookServiceClient.getInviteRecommendations(request.userId, offset.getOrElse(page * pageSize), limit.getOrElse(pageSize), relevantNetworks).map { inviteRecommendations =>
+    abookServiceClient.getInviteRecommendations(request.userId, offset, limit, relevantNetworks).map { inviteRecommendations =>
       Ok(Json.toJson(inviteRecommendations))
     }
   }

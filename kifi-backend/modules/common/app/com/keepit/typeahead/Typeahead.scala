@@ -1,18 +1,18 @@
 package com.keepit.typeahead
 
-import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.{ ExecutionContext, FutureHelpers }
 import com.keepit.common.db.Id
-import com.keepit.common.service.RequestConsolidator
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging.LoggerWithPrefix
+import com.keepit.common.logging.{ LogPrefix, Logging }
 import com.keepit.common.performance._
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.model.User
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+
 import scala.concurrent._
 import scala.concurrent.duration._
-import com.keepit.common.logging.{ LogPrefix, Logging }
-import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import Logging.LoggerWithPrefix
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
 
 trait Typeahead[E, I] extends Logging {
 
@@ -134,3 +134,4 @@ object TypeaheadHit {
 }
 
 case class TypeaheadHit[I](score: Int, name: String, ordinal: Int, info: I)
+
