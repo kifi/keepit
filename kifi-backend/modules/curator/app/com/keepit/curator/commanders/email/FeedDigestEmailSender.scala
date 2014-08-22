@@ -182,7 +182,7 @@ class FeedDigestEmailSenderImpl @Inject() (
         val summary = reco.uriSummary
         val uri = reco.uri
         summary.imageWidth.isDefined && summary.imageUrl.isDefined && summary.imageWidth.get >= MIN_IMAGE_WIDTH_PX &&
-          summary.title.exists(_.size > 0) || uri.title.exists(_.size > 0)
+          (summary.title.exists(_.size > 0) || uri.title.exists(_.size > 0))
       case None => false
     }
   }
@@ -195,9 +195,10 @@ class FeedDigestEmailSenderImpl @Inject() (
       recoKeepers <- getRecoKeepers(reco)
       if summaries.isDefinedAt(uriId)
     } yield Some(DigestReco(reco, uri, summaries(uriId), recoKeepers))
-  } recover { case throwable =>
-    airbrake.notify(s"failed to load data for ${reco}", throwable)
-    None
+  } recover {
+    case throwable =>
+      airbrake.notify(s"failed to load data for ${reco}", throwable)
+      None
   }
 
   private def getRecommendationsForUser(userId: Id[User]) = {
