@@ -40,7 +40,7 @@ class LibraryRepoImpl @Inject() (
     def description = column[Option[String]]("description", O.Nullable)
     def slug = column[LibrarySlug]("slug", O.NotNull)
     def kind = column[LibraryKind]("kind", O.NotNull)
-    def universalLink = column[String]("universal_link", O.Nullable)
+    def universalLink = column[Option[String]]("universal_link", O.Nullable)
     def memberCount = column[Int]("member_count", O.NotNull)
 
     def * = (id.?, createdAt, updatedAt, name, ownerId, visibility, description, slug, state, seq, kind, universalLink, memberCount) <> ((Library.apply _).tupled, Library.unapply)
