@@ -23,11 +23,15 @@ angular.module('kifi')
     });
 
     var libraryByIdService = new Clutch(function (libraryId) {
-      return $http.get(routeService.getLibraryById(libraryId));
+      return $http.get(routeService.getLibraryById(libraryId)).then(function (res) {
+        return res.data;
+      });
     });
 
     var libraryByUserSlugService = new Clutch(function (username, slug) {
-      return $http.get(routeService.getLibraryByUserSlug(username, slug));
+      return $http.get(routeService.getLibraryByUserSlug(username, slug)).then(function (res) {
+        return res.data && res.data.library;
+      });
     });
 
     var api = {
@@ -49,6 +53,9 @@ angular.module('kifi')
         if (!username || !slug) {
           return $q.reject({'error': 'invalid_path'});
         }
+        return libraryByUserSlugService.get(username, slug);
+      },
+      getLibraryByUserSlug: function (username, slug) {
         return libraryByUserSlugService.get(username, slug);
       },
       createLibrary: function (opts) {
