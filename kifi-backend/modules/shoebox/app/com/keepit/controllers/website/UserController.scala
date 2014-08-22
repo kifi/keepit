@@ -239,7 +239,67 @@ class UserController @Inject() (
     }
   }
 
+  def updateUsername() = JsonAction.authenticatedParseJson { implicit request =>
+    val newUsername = (request.body \ "username").as[Username]
+    userCommander.setUsername(request.userId, newUsername) match {
+      case Left(error) => BadRequest(Json.obj("error" -> error))
+      case Right(username) => Ok(Json.obj("username" -> username))
+    }
+  }
+
+  def updateName() = JsonAction.authenticatedParseJson { implicit request =>
+    val newFirstName = (request.body \ "firstName").asOpt[String]
+    val newLastName = (request.body \ "lastName").asOpt[String]
+    userCommander.updateName(request.userId, newFirstName, newLastName)
+    Ok(JsString("success"))
+  }
+
+  def updateDescription() = JsonAction.authenticatedParseJson { implicit request =>
+    val newDescription = (request.body \ "description").as[String]
+    userCommander.updateUserDescription(request.userId, newDescription)
+    Ok(JsString("success"))
+  }
+
+  def addEmail() = JsonAction.authenticatedParseJson { implicit request =>
+    val newAddress = (request.body \ "email").as[String]
+    val isPrimary = (request.body \ "isPrimary").as[Boolean]
+    EmailAddress.validate(newAddress) match {
+      case Failure(e) =>
+        BadRequest(e.getMessage)
+      case Success(newEmail) =>
+        userCommander.addEmail(request.userId, newEmail, isPrimary) match {
+          case Left(s) => BadRequest(s)
+          case Right(_) => Ok(JsString("success"))
+        }
+    }
+  }
+  def changePrimaryEmail() = JsonAction.authenticatedParseJson { implicit request =>
+    val targetAddress = (request.body \ "email").as[String]
+    EmailAddress.validate(targetAddress) match {
+      case Failure(e) =>
+        BadRequest(e.getMessage)
+      case Success(targetEmail) =>
+        userCommander.makeEmailPrimary(request.userId, targetEmail) match {
+          case Left(s) => BadRequest(s)
+          case Right(_) => Ok(JsString("success"))
+        }
+    }
+  }
+  def removeEmail() = JsonAction.authenticatedParseJson { implicit request =>
+    val targetAddress = (request.body \ "email").as[String]
+    EmailAddress.validate(targetAddress) match {
+      case Failure(e) =>
+        BadRequest(e.getMessage)
+      case Success(targetEmail) =>
+        userCommander.removeEmail(request.userId, targetEmail) match {
+          case Left(s) => BadRequest(s)
+          case Right(_) => Ok(JsString("success"))
+        }
+    }
+  }
+
   //private val emailRegex = """^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$""".r
+  @deprecated(message = "use addEmail/modifyEmail/removeEmail", since = "2014-08-20")
   def updateCurrentUser() = JsonAction.authenticatedParseJsonAsync(allowPending = true) { implicit request =>
     request.body.validate[UpdatableUserInfo] match {
       case JsSuccess(userData, _) => {

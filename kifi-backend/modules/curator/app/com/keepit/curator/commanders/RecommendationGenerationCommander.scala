@@ -10,7 +10,7 @@ import com.keepit.curator.model.{
   UriRecommendation,
   UriScores
 }
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ReactiveLock
@@ -55,7 +55,8 @@ class RecommendationGenerationCommander @Inject() (
       1 * scores.popularityScore +
       9 * scores.recentInterestScore +
       6 * scores.rekeepScore +
-      3 * scores.discoveryScore) *
+      3 * scores.discoveryScore +
+      4 * scores.curationScore.getOrElse(0.0f)) *
       scores.multiplier.getOrElse(1.0f)
   }
 
@@ -67,7 +68,8 @@ class RecommendationGenerationCommander @Inject() (
       scoreCoefficients.popularityScore.getOrElse(defaultScore) * scores.popularityScore +
       scoreCoefficients.recentInterestScore.getOrElse(defaultScore) * scores.recentInterestScore +
       scoreCoefficients.rekeepScore.getOrElse(defaultScore) * scores.rekeepScore +
-      scoreCoefficients.discoveryScore.getOrElse(defaultScore) * scores.discoveryScore) *
+      scoreCoefficients.discoveryScore.getOrElse(defaultScore) * scores.discoveryScore +
+      scoreCoefficients.curationScore.getOrElse(defaultScore) * scores.curationScore.getOrElse(0.0f)) *
       scores.multiplier.getOrElse(1.0f)
   }
 
@@ -103,21 +105,22 @@ class RecommendationGenerationCommander @Inject() (
     perUserRecommendationGenerationLocks.getOrElseUpdate(userId, new ReactiveLock())
   }
 
-  private def shouldInclude(scores: UriScores): Boolean = {
-    if ((scores.overallInterestScore > 0.45 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 4.5) {
+  private def shouldInclude(scores: UriScores): Boolean = { //ZZZ curations score here
+    if ((scores.overallInterestScore > 0.4 || scores.recentInterestScore > 0) && computeMasterScore(scores) > 4.5) {
       scores.socialScore > 0.8 ||
         scores.overallInterestScore > 0.65 ||
         scores.priorScore > 0 ||
         (scores.popularityScore > 0.2 && scores.socialScore > 0.65) ||
         scores.recentInterestScore > 0.15 ||
         scores.rekeepScore > 0.3 ||
-        scores.discoveryScore > 0.3
+        scores.discoveryScore > 0.3 ||
+        (scores.curationScore.isDefined && (scores.overallInterestScore > 0.5 || scores.recentInterestScore > 0.2))
     } else { //Yes, this could be expressed purly with a logic expression, but I think this is clearer -Stephen
       false
     }
   }
 
-  private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]]): Unit = recommendationGenerationLock.withLockFuture {
+  private def precomputeRecommendationsForUser(userId: Id[User], boostedKeepers: Set[Id[User]]): Future[Unit] = recommendationGenerationLock.withLockFuture {
     getPerUserGenerationLock(userId).withLockFuture {
       val state = db.readOnlyMaster { implicit session =>
         genStateRepo.getByUserId(userId)
@@ -125,7 +128,7 @@ class RecommendationGenerationCommander @Inject() (
         UserRecommendationGenerationState(userId = userId)
       }
       val seedsAndSeqFuture = for {
-        seeds <- seedCommander.getBySeqNumAndUser(state.seq, userId, 200)
+        seeds <- seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, 200)
         discoverableSeeds = seeds.filter(_.discoverable)
         candidateURIs <- shoebox.getCandidateURIs(discoverableSeeds.map { _.uriId })
       } yield {
@@ -175,7 +178,6 @@ class RecommendationGenerationCommander @Inject() (
                       clicked = 0,
                       kept = false,
                       trashed = false,
-                      markedBad = None,
                       attribution = item.attribution
                     ))
                   }
@@ -193,19 +195,29 @@ class RecommendationGenerationCommander @Inject() (
       res.onFailure {
         case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
       }
-      res
+      res.map(_ => ())
     }
   }
 
-  def precomputeRecommendations(): Unit = {
-    usersToPrecomputeRecommendationsFor().map { userIds =>
-      specialCurators().map { boostedKeepersSeq =>
+  def precomputeRecommendations(): Future[Unit] = {
+    usersToPrecomputeRecommendationsFor().flatMap { userIds =>
+      specialCurators().flatMap { boostedKeepersSeq =>
         if (recommendationGenerationLock.waiting < userIds.length + 1) {
           val boostedKeepers = boostedKeepersSeq.toSet
-          userIds.foreach(userId => precomputeRecommendationsForUser(userId, boostedKeepers))
+          Future.sequence(userIds.map(userId => precomputeRecommendationsForUser(userId, boostedKeepers))).map(_ => ())
+        } else {
+          Future.successful()
         }
       }
     }
   }
 
+  def resetUser(userId: Id[User]): Future[Unit] = {
+    getPerUserGenerationLock(userId).withLock {
+      db.readWriteAsync { implicit s =>
+        val stateOpt = genStateRepo.getByUserId(userId)
+        stateOpt.foreach { state => genStateRepo.save(state.copy(seq = SequenceNumber.ZERO)) }
+      }
+    }
+  }
 }

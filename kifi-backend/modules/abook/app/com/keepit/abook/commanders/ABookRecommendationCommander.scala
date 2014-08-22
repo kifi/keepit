@@ -38,12 +38,12 @@ class ABookRecommendationCommander @Inject() (
     }
   }
 
-  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Seq[Id[User]]] = {
+  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[Seq[Id[User]]]] = {
     val start = clock.now()
-    val futureRecommendations = generateFutureFriendRecommendations(userId).map(_.drop(offset).take(limit).map(_._1).toSeq)
+    val futureRecommendations = generateFutureFriendRecommendations(userId).map(_.map(_.drop(offset).take(limit).map(_._1).toSeq))
     futureRecommendations.onSuccess {
-      case recommendations =>
-        log.info(s"Computed ${recommendations.length}/${limit} (skipped $offset) friend recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
+      case Some(recommendations) => log.info(s"Computed ${recommendations.length}/${limit} (skipped $offset) friend recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
+      case None => log.info(s"Friend recommendations are not available. Returning in ${clock.now().getMillis - start.getMillis}ms.")
     }
     futureRecommendations
   }
@@ -71,17 +71,41 @@ class ABookRecommendationCommander @Inject() (
     futureRecommendations
   }
 
-  def getIrrelevantRecommendations(userId: Id[User]): IrrelevantPeopleRecommendations = {
-    db.readOnlyMaster { implicit session =>
-      val irrelevantUsers = friendRecommendationRepo.getIrrelevantRecommendations(userId)
-      val irrelevantFacebookAccounts = facebookInviteRecommendationRepo.getIrrelevantRecommendations(userId)
-      val irrelevantLinkedInAccounts = linkedInInviteRecommendationRepo.getIrrelevantRecommendations(userId)
-      val irrelevantEmailAccounts = emailInviteRecommendationRepo.getIrrelevantRecommendations(userId).map(EmailAccount.toEmailAccountInfoId)
-      IrrelevantPeopleRecommendations(userId, irrelevantUsers, irrelevantFacebookAccounts, irrelevantLinkedInAccounts, irrelevantEmailAccounts)
+  def getIrrelevantPeople(userId: Id[User]): Future[IrrelevantPeople] = {
+    val futureSocialAccounts = shoebox.getSocialUserInfosByUserId(userId)
+    val futureFriends = shoebox.getFriends(userId)
+    val futureFriendRequests = shoebox.getFriendRequestsBySender(userId)
+    val futureInvitations = shoebox.getInvitations(userId)
+    val (irrelevantUsers, irrelevantFacebookAccounts, irrelevantLinkedInAccounts, irrelevantEmailAccounts) = db.readOnlyMaster { implicit session =>
+      (
+        friendRecommendationRepo.getIrrelevantRecommendations(userId),
+        facebookInviteRecommendationRepo.getIrrelevantRecommendations(userId),
+        linkedInInviteRecommendationRepo.getIrrelevantRecommendations(userId),
+        emailInviteRecommendationRepo.getIrrelevantRecommendations(userId)
+      )
+    }
+
+    for {
+      socialAccounts <- futureSocialAccounts
+      friends <- futureFriends
+      friendRequests <- futureFriendRequests
+      invitations <- futureInvitations
+    } yield {
+      val userSocialAccounts = socialAccounts.map(_.id.get)
+      val invitedSocialAccounts = invitations.flatMap(_.recipientSocialUserId)
+      val invitedEmailAddresses = invitations.flatMap(_.recipientEmailAddress)
+      val invitedEmailAccounts = db.readOnlyMaster { implicit session => emailAccountRepo.getByAddresses(invitedEmailAddresses: _*).values.map(_.id.get) }
+      IrrelevantPeople(
+        userId,
+        irrelevantUsers -- friends -- friendRequests.map(_.recipientId),
+        irrelevantFacebookAccounts -- userSocialAccounts -- invitedSocialAccounts,
+        irrelevantLinkedInAccounts -- userSocialAccounts -- invitedSocialAccounts,
+        (irrelevantEmailAccounts -- invitedEmailAccounts).map(EmailAccount.toEmailAccountInfoId)
+      )
     }
   }
 
-  private def generateFutureFriendRecommendations(userId: Id[User]): Future[Stream[(Id[User], Double)]] = {
+  private def generateFutureFriendRecommendations(userId: Id[User]): Future[Option[Stream[(Id[User], Double)]]] = {
     val futureRelatedUsers = graph.getSociallyRelatedUsers(userId, bePatient = false)
     val futureFriends = shoebox.getFriends(userId)
     val futureFriendRequests = shoebox.getFriendRequestsBySender(userId)
@@ -89,16 +113,15 @@ class ABookRecommendationCommander @Inject() (
     val rejectedRecommendations = db.readOnlyMaster { implicit session =>
       friendRecommendationRepo.getIrrelevantRecommendations(userId)
     }
-    futureRelatedUsers.flatMap { relatedUsersOption =>
-      val relatedUsers = relatedUsersOption.map(_.related) getOrElse Seq.empty
-      if (relatedUsers.isEmpty) Future.successful(Stream.empty)
-      else for {
+    futureRelatedUsers.flatMap {
+      case None => Future.successful(None)
+      case Some(relatedUsers) => for {
         friends <- futureFriends
         friendRequests <- futureFriendRequests
         fakeUsers <- futureFakeUsers
       } yield {
         val irrelevantRecommendations = rejectedRecommendations ++ friends ++ friendRequests.map(_.recipientId) ++ fakeUsers + userId
-        relatedUsers.toStream.filter { case (friendId, _) => !irrelevantRecommendations.contains(friendId) }
+        Some(relatedUsers.related.toStream.filter { case (friendId, _) => !irrelevantRecommendations.contains(friendId) })
       }
     }
   }
@@ -255,11 +278,16 @@ class ABookRecommendationCommander @Inject() (
         (relevantEmailInvites.get(emailAccountId).map(canBeRecommendedAgain) getOrElse true)
     }
 
+    @inline def isValidName(name: String, address: EmailAddress) = name.nonEmpty && !name.equalsIgnoreCase(address.address)
+
     val recommendations = relatedEmailAccounts.collect {
       case (emailAccountId, score) if isRelevant(emailAccountId) =>
         val lastInvitedAt = relevantEmailInvites.get(emailAccountId).flatMap(_.lastSentAt)
-        val preferredContact = relevantEmailAccounts(emailAccountId).maxBy(_.name.map(_.length) getOrElse 0)
-        InviteRecommendation(SocialNetworks.EMAIL, Left(preferredContact.email), preferredContact.name, None, lastInvitedAt, score)
+        val preferredContact = relevantEmailAccounts(emailAccountId).maxBy { emailAccount =>
+          emailAccount.name.collect { case name if isValidName(name, emailAccount.email) => name.length } getOrElse 0 // pick by longest name different from the email address
+        }
+        val validName = preferredContact.name.filter(isValidName(_, preferredContact.email))
+        InviteRecommendation(SocialNetworks.EMAIL, Left(preferredContact.email), validName, None, lastInvitedAt, score)
     }
     recommendations.take(relevantEmailAccounts.size)
   }

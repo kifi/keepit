@@ -16,6 +16,7 @@ object KeepFields {
   val titleStemmedField = "ts"
   val siteField = "site"
   val homePageField = "home_page"
+  val createdAtField = "createdAt"
   val recordField = "rec"
 
   val decoders: Map[String, FieldDecoder] = Map.empty
@@ -46,6 +47,8 @@ case class KeepIndexable(keep: Keep) extends Indexable[Keep, Keep] {
 
     keep.libraryId.foreach(libId => buildIdValueField(libraryIdField, libId))
     buildIdValueField(uriIdField, keep.uriId)
+
+    buildLongValueField(createdAtField, keep.createdAt.getMillis)
 
     buildBinaryDocValuesField(recordField, KeepRecord(keep))
     doc

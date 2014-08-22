@@ -13,23 +13,23 @@ import com.keepit.serializer.EitherFormat
 import com.keepit.common.mail.EmailAddress
 
 class ABookRecommendationController @Inject() (
-    friendRecommendationCommander: ABookRecommendationCommander) extends ABookServiceController {
+    abookRecommendationCommander: ABookRecommendationCommander) extends ABookServiceController {
 
   def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int) = Action.async { request =>
-    friendRecommendationCommander.getFriendRecommendations(userId, offset, limit).map { recommendedUsers =>
+    abookRecommendationCommander.getFriendRecommendations(userId, offset, limit).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }
   }
 
   def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = Action { request =>
-    friendRecommendationCommander.hideFriendRecommendation(userId, irrelevantUserId)
+    abookRecommendationCommander.hideFriendRecommendation(userId, irrelevantUserId)
     Ok
   }
 
   def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: String) = Action.async { request =>
     val relevantNetworks = networks.split(",").map(SocialNetworkType(_)).toSet
-    friendRecommendationCommander.getInviteRecommendations(userId, offset, limit, relevantNetworks).map { recommendedUsers =>
+    abookRecommendationCommander.getInviteRecommendations(userId, offset, limit, relevantNetworks).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }
@@ -38,12 +38,13 @@ class ABookRecommendationController @Inject() (
   def hideInviteRecommendation(userId: Id[User]) = Action(parse.json) { request =>
     val network = (request.body \ "network").as[SocialNetworkType]
     val irrelevantFriendId = (request.body \ "irrelevantFriendId").as(EitherFormat[EmailAddress, Id[SocialUserInfo]])
-    friendRecommendationCommander.hideInviteRecommendation(userId, network, irrelevantFriendId)
+    abookRecommendationCommander.hideInviteRecommendation(userId, network, irrelevantFriendId)
     Ok
   }
 
-  def getIrrelevantRecommendations(userId: Id[User]) = Action { request =>
-    val irrelevantRecommendations = friendRecommendationCommander.getIrrelevantRecommendations(userId)
-    Ok(Json.toJson(irrelevantRecommendations))
+  def getIrrelevantPeople(userId: Id[User]) = Action.async { request =>
+    abookRecommendationCommander.getIrrelevantPeople(userId).map { irrelevantPeople =>
+      Ok(Json.toJson(irrelevantPeople))
+    }
   }
 }

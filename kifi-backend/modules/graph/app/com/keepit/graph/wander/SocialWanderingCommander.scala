@@ -106,11 +106,11 @@ class SocialWanderingCommander @Inject() (
   }
 
   private def getIrrelevantVertices(userId: Id[User]): Future[Set[VertexId]] = {
-    abook.getIrrelevantRecommendations(userId).map { irrelevantRecommendations =>
-      irrelevantRecommendations.irrelevantUsers.map(VertexId(_)) ++
-        irrelevantRecommendations.irrelevantFacebookAccounts.map(id => VertexId(VertexDataId.fromSocialUserIdToFacebookAccountId(id))) ++
-        irrelevantRecommendations.irrelevantLinkedInAccounts.map(id => VertexId(VertexDataId.fromSocialUserIdToLinkedInAccountId(id))) ++
-        irrelevantRecommendations.irrelevantEmailAccounts.map(VertexId(_))
+    abook.getIrrelevantPeople(userId).map { irrelevantPeople =>
+      irrelevantPeople.irrelevantUsers.map(VertexId(_)) ++
+        irrelevantPeople.irrelevantFacebookAccounts.map(id => VertexId(VertexDataId.fromSocialUserIdToFacebookAccountId(id))) ++
+        irrelevantPeople.irrelevantLinkedInAccounts.map(id => VertexId(VertexDataId.fromSocialUserIdToLinkedInAccountId(id))) ++
+        irrelevantPeople.irrelevantEmailAccounts.map(VertexId(_))
     }
   }
 }
