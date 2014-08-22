@@ -153,11 +153,12 @@ class AdminLDAController @Inject() (
   }
 
   def topicDetail(topicId: Int) = AdminHtmlAction.authenticatedAsync { implicit request =>
-    cortex.sampleURIsForTopic(topicId).map { uriIds =>
-      val uris = db.readOnlyReplica { implicit s =>
-        uriIds.map { id => uriRepo.get(id) }
-      }
-      Ok(html.admin.ldaDetail(LDATopicDetail(topicId, uris)))
+    cortex.sampleURIsForTopic(topicId).map {
+      case (uriIds, scores) =>
+        val uris = db.readOnlyReplica { implicit s =>
+          uriIds.map { id => uriRepo.get(id) }
+        }
+        Ok(html.admin.ldaDetail(LDATopicDetail(topicId, uris, scores)))
     }
   }
 

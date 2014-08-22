@@ -35,7 +35,7 @@ class ScoreContext(
   }
 
   def clear(): Unit = {
-    visibility = 0
+    visibility = Visibility.RESTRICTED
     secondaryId = -1L
     secondaryId2Score = -1.0f
     Arrays.fill(scoreMax, 0.0f)
@@ -48,7 +48,7 @@ class ScoreContext(
     visibility = visibility | thisVisibility
 
     if ((thisVisibility & Visibility.SEARCHABLE_KEEP) != 0) {
-      // a searchable keep has the secondary id
+      // a searchable keep has a library id as a secondary id
       val id2 = reader.nextLong()
       var scr2 = 0.0f // use a simple sum of scores to compare secondary ids
 

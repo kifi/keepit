@@ -33,26 +33,29 @@ item = u'''
 SubredditSpec = namedtuple('SubredditSpec', ['name', 'limit', 'cutoff'])
 
 rs = [
-  SubredditSpec('design', 100, 20),
-  SubredditSpec('music', 100, 200),
-  SubredditSpec('worldnews', 100, 1500),
-  SubredditSpec('coffee', 100, 25),
+  SubredditSpec('design', 100, 25),
+  SubredditSpec('music', 100, 300),
+  SubredditSpec('worldnews', 100, 1800),
+  SubredditSpec('coffee', 100, 35),
   SubredditSpec('truereddit', 100, 50),
-  SubredditSpec('economics', 100, 25),
-  SubredditSpec('programming', 100, 30),
-  SubredditSpec('technology', 100, 100),
-  SubredditSpec('travel', 100, 30),
-  SubredditSpec('vignettes', 100, 2),
-  SubredditSpec('foodforthought', 100, 20),
-  SubredditSpec('dataisbeautiful', 100, 20),
-  SubredditSpec('politics', 100, 1000),
-  SubredditSpec('literature', 100, 10),
-  SubredditSpec('history', 100, 20),
-  SubredditSpec('psychology', 100, 20),
+  SubredditSpec('economics', 100, 35),
+  SubredditSpec('programming', 100, 40),
+  SubredditSpec('technology', 100, 150),
+  SubredditSpec('travel', 100, 40),
+  SubredditSpec('vignettes', 100, 3),
+  SubredditSpec('foodforthought', 100, 25),
+  SubredditSpec('dataisbeautiful', 100, 25),
+  SubredditSpec('politics', 100, 1500),
+  SubredditSpec('literature', 100, 15),
+  SubredditSpec('history', 100, 25),
+  SubredditSpec('psychology', 100, 25),
   SubredditSpec('documentaries', 100, 50),
-  SubredditSpec('science', 100, 50),
-  SubredditSpec('everythingscience', 100, 20),
-  SubredditSpec('frugal', 100, 40)
+  SubredditSpec('science', 100, 75),
+  SubredditSpec('everythingscience', 100, 40),
+  SubredditSpec('frugal', 100, 60),
+  SubredditSpec('businesshub', 100, 8),
+  SubredditSpec('advertising', 100, 20),
+  SubredditSpec('business', 100, 100)
 ]
 
 
@@ -78,7 +81,7 @@ f.write(output)
 f.close()
 
 print '########################## Importing bookmarks to robot user ##########################'
-cookies = dict(KIFI_SECURESOCIAL='078672cc-e89f-49e3-83a5-7cc534394ea4', KIFI_SESSION='55af5d45efe547fc51e9f74939ed769b4e8232d7-fortytwo_user_id=9017')
+cookies = dict(KIFI_SECURESOCIAL='05a918d9-51dc-42da-9392-a0278260fb69', KIFI_SESSION='8d9d90c008588e194105c0d40ec8631acfd584ad-fortytwo_user_id=9002')
 
 f = open('bookmarks.html', 'r')
 bookmarks = f.read()

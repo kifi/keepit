@@ -182,7 +182,7 @@ class UriFromKeepsScoreVectorSource(
     val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
     val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
     val userIdDocValues = reader.getNumericDocValues(KeepFields.userField) // TODO: use the correct field
-    val visibilityDocValues = reader.getNumericDocValues(KeepFields.discoverabilityField) // TODO: use the correct field
+    val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField) // TODO: use the correct field
 
     val recencyScorer = getRecencyScorer(readerContext)
 

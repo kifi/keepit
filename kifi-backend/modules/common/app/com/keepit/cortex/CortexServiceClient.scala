@@ -39,7 +39,7 @@ trait CortexServiceClient extends ServiceClient {
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[LDAUserURIInterestScores]
   def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[LDAUserURIInterestScores]]
   def userTopicMean(userId: Id[User]): Future[(Option[Array[Float]], Option[Array[Float]])]
-  def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]]
+  def sampleURIsForTopic(topic: Int): Future[(Seq[Id[NormalizedURI]], Seq[Float])]
   def getSimilarUsers(userId: Id[User], topK: Int): Future[(Seq[Id[User]], Seq[Float])] // with scores
   def unamedTopics(limit: Int = 20): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] // with topicWords
   def getTopicNames(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[String]]]
@@ -182,8 +182,13 @@ class CortexServiceClientImpl(
     }
   }
 
-  def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]] = {
-    call(Cortex.internal.sampleURIsForTopic(topic)).map { r => (r.json).as[Seq[Id[NormalizedURI]]] }
+  def sampleURIsForTopic(topic: Int): Future[(Seq[Id[NormalizedURI]], Seq[Float])] = {
+    call(Cortex.internal.sampleURIsForTopic(topic)).map { r =>
+      val js = r.json
+      val uris = (js \ "uris").as[Seq[Id[NormalizedURI]]]
+      val scores = (js \ "scores").as[Seq[Float]]
+      (uris, scores)
+    }
   }
 
   def getSimilarUsers(userId: Id[User], topK: Int): Future[(Seq[Id[User]], Seq[Float])] = {

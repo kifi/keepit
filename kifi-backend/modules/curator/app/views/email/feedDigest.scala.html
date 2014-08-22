@@ -1,336 +1,11 @@
-@(allRecos: com.keepit.curator.commanders.email.AllDigestRecos, unsubscribeUrl: String)
-@assetUrlBase = @{ "https://djty7jcqog9qu.cloudfront.net/assets/digest" }
+@(allRecos: com.keepit.curator.commanders.email.AllDigestRecos, ctx: email.helpers.Context)
+@import email.helpers.black.assetUrl
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>kifi</title>
-    <style type="text/css">
-        body
-        {
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
-            width: 100% !important;
-            -webkit-text-size-adjust: 100% !important;
-            -ms-text-size-adjust: 100% !important;
-            -webkit-font-smoothing: antialiased !important;
-        }
+@email.black.layout(ctx) {
 
-        img
-        {
-            border: 0 !important;
-            outline: none !important;
-            display: block !important;
-        }
-
-        table
-        {
-            border-collapse: collapse;
-            mso-table-lspace: 0px;
-            mso-table-rspace: 0px;
-        }
-
-        td
-        {
-            border-collapse: collapse;
-            mso-line-height-rule: exactly;
-        }
-
-        a, span
-        {
-            mso-line-height-rule: exactly;
-        }
-
-        .ExternalClass *
-        {
-            line-height: 100%;
-        }
-
-        .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass a, .ExternalClass div
-        {
-            line-height: 100%;
-        }
-
-        .num a
-        {
-            color: #9a9a9a;
-            text-decoration: none;
-        }
-
-        .num1 a
-        {
-            color: #000000;
-            text-decoration: none;
-        }
-
-        .num2 a
-        {
-            color: #43a0f8;
-            text-decoration: none;
-        }
-
-        .br2
-        {
-            display: none;
-        }
-
-        .center a
-        {
-            text-decoration: none;
-            color: #333333;
-        }
-
-        .center1 a
-        {
-            text-decoration: underline;
-            color: #85a4ea;
-        }
-
-        .white a
-        {
-            text-decoration: none;
-            color: #fffff;
-        }
-
-        @@media only screen and (max-width:480px)
-        {
-            table[class=wrapper]
-            {
-                width: 100% !important;
-            }
-
-            table[class=main_table]
-            {
-                width: 320px !important;
-            }
-
-            td[class=center]
-            {
-                text-align: center !important;
-            }
-
-            img[class=banner]
-            {
-                width: 100% !important;
-                height: auto !important;
-            }
-
-            td[class=banner]
-            {
-                width: 100% !important;
-                height: auto !important;
-            }
-
-            td[class=center1]
-            {
-                text-align: center !important;
-            }
-
-            td[class=hide]
-            {
-                display: none !important;
-            }
-
-            img[class=hide]
-            {
-                display: none !important;
-            }
-
-            table[class=hide]
-            {
-                display: none !important;
-            }
-
-            td[class=text]
-            {
-                text-align: center !important;
-            }
-
-            td[class=top_space]
-            {
-                padding-top: 20px !important;
-            }
-
-            td[class=pad_top]
-            {
-                padding-top: 20px !important;
-            }
-
-            td[class=pad_bottom]
-            {
-                padding-bottom: 20px !important;
-            }
-
-            br[class=break]
-            {
-                display: none !important;
-            }
-
-            td[class=cen]
-            {
-                padding-left: 10px !important;
-                padding-right: 10px !important;
-            }
-
-            br[class=br1]
-            {
-                display: none !important;
-            }
-
-            span[class=br2]
-            {
-                display: block !important;
-            }
-
-            span[class=hide]
-            {
-                display: none !important;
-            }
-
-            td[class=side1]
-            {
-                width: 15px !important;
-            };
-        }
-
-        @@media only screen and (min-width:480px) and (max-width:599px)
-        {
-            table[class=wrapper]
-            {
-                width: 100% !important;
-            }
-
-            table[class=main_table]
-            {
-                width: 480px !important;
-            }
-
-            img[class=hide]
-            {
-                display: none !important;
-            }
-
-            img[class=banner]
-            {
-                width: 100% !important;
-                height: auto !important;
-            }
-
-            td[class=banner]
-            {
-                width: 100% !important;
-                height: auto !important;
-            }
-
-            td[class=center]
-            {
-                text-align: center !important;
-            }
-
-            td[class=center1]
-            {
-                text-align: center !important;
-            }
-
-            td[class=top_space]
-            {
-                padding-top: 20px !important;
-            }
-
-            td[class=side1]
-            {
-                width: 15px !important;
-            }
-
-            span[class=hide]
-            {
-                display: none !important;
-            }
-
-            td[class=hide]
-            {
-                display: none !important;
-            }
-
-            span[class=br2]
-            {
-                display: block !important;
-            }
-
-            table[class=hide]
-            {
-                display: none !important;
-            }
-
-            td[class=text]
-            {
-                text-align: center !important;
-            }
-
-            td[class=cen]
-            {
-                padding-left: 10px !important;
-                padding-right: 10px !important;
-            }
-
-            br[class=br1]
-            {
-                display: none !important;
-            }
-
-            td[class=pad_bottom]
-            {
-                padding-bottom: 20px !important;
-            };
-        }
-    </style>
-
-</head>
-
-<body marginwidth="0" marginheight="0"  style="margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; -webkit-font-smoothing: antialiased;" offset="0" topmargin="0" leftmargin="0" bgcolor="#f3f3f3">
-<table width="100%" border="0" cellspacing="0" cellpadding="0" align="center" bgcolor="#f3f3f3">
+<table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
 <tr>
-<td valign="top">
-<table width="625" border="0" cellspacing="0" cellpadding="0" align="center" class="main_table" bgcolor="#f3f3f3">
-<tr>
-    <td class="hide" bgcolor="#ffffff" height="1" style="line-height:0px;font-size:0px;"><img src="@assetUrlBase/spacer.gif" height="1"  width="625" style="display:block; width:625px; min-width:625px;" border="0" /></td>
-</tr>
-<tr>
-    <td height="30">&nbsp;</td>
-</tr>
-<tr>
-    <td bgcolor="#333333">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-            <tr>
-                <td height="14" style="font-size:1px;line-height:1px;">&nbsp;</td>
-            </tr>
-            <tr>
-                <td>
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-                        <tr>
-                            <td width="20">&nbsp;</td>
-                            <td  align="left">
-                                <table width="33" border="0" cellspacing="0" cellpadding="0" align="left">
-                                    <tr>
-                                        <td align="left" width="33" height="19"><a href="https://www.kifi.com" target="_blank"><img src="@assetUrlBase/kifi-logo.png" width="33" height="19"  style="display:block;" border="0"/></a></td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <tr>
-                <td height="14" style="font-size:1px;line-height:1px;">&nbsp;</td>
-            </tr>
-        </table>
-    </td>
-</tr>
-<tr>
-    <td bgcolor="#ffffff">
+    <td>
         <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
             <tr>
                 <td align="center">
@@ -349,7 +24,13 @@
                                 <table width="625" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
                                     <tr>
                                         <td width="72" class="side1">&nbsp;</td>
-                                        <td align="left" valign="top"  style="font-family:Arial, sans-serif; font-size:16px;  text-align:left; color:#000000; line-height:21px; ">This daily digest is a recommended <span style="font-family:Arial, sans-serif; font-size:16px;  text-align:left; color:#000000; line-height:21px;   text-decoration:underline;">list</span> based on your interests and recent Kifi activity. You can also connect your Kifi account to Facebook to get recommendations from your friends' best keeps.<br /></td>
+                                        <td align="left" valign="top"  style="font-family:Arial, sans-serif; font-size:16px;  text-align:left; color:#000000; line-height:21px; ">
+                                            This daily digest is a recommended
+                                            <a href="https://www.kifi.com/kifeeed" target="_blank" style="font-family:Arial, sans-serif; font-size:16px; color:#000000; line-height:21px; text-decoration:underline;">list</a>
+                                            based on your interests and recent Kifi activity.
+                                            @{ /* TODO(josh) remove below line if user connected FB already */ }
+                                            You can also connect your Kifi account to Facebook to get recommendations from your friends' best keeps.<br />
+                                        </td>
                                         <td width="67" class="side1">&nbsp;</td>
                                     </tr>
                                 </table>
@@ -358,12 +39,8 @@
                         <tr>
                             <td height="35">&nbsp;</td>
                         </tr>
-
                     </table>
                 </td>
-            </tr>
-            <tr>
-                <td bgcolor="#f3f3f3" style="font-size:1px;line-height:1px;">&nbsp;</td>
             </tr>
         </table>
     </td>
@@ -373,8 +50,6 @@
 <tr>
     <td bgcolor="#ffffff">
         <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-
-
             <tr>
                 <td valign="top">
                     <table width="625" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
@@ -400,15 +75,14 @@
                             <td height="17" style="font-size:1px; line-height:1px;">&nbsp;</td>
                         </tr>
 
-                        @reco.imageUrl.map { imageUrl =>
                         <tr>
                             <td>
                                 <table width="625" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
                                     <tr>
                                         <td width="72" class="side1">&nbsp;</td>
-                                        <td align="center" valign="top" >
+                                        <td align="center" valign="top" width="488">
                                             <a href="@reco.urls.viewPage" target="_blank">
-                                                <img src="@imageUrl" alt="@reco.title" width="488" height="324"  style="display:block;" border="0" class="banner" />
+                                                <img src="@reco.imageUrl" alt="@reco.title" style="display:block;max-width:488px;" border="0" class="banner" />
                                             </a>
                                         </td>
                                         <td width="65" class="side1">&nbsp;</td>
@@ -416,7 +90,6 @@
                                 </table>
                             </td>
                         </tr>
-                        }
 
                         <tr>
                             <td height="14" style="font-size:1px;line-height:1px;">&nbsp;</td>
@@ -456,8 +129,10 @@
                                                     <td align="left" class="num2" valign="middle" style="line-height:16px; font-size:14px; color:#43a0f8; font-family:Arial, sans-serif;">
                                                         <a href="@reco.urls.viewPage" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">View Page</a>
                                                         <span style="line-height:18px; font-size:14px; color:#9a9b99;">•</span>
-                                                        <a href="@reco.urls.sendPage" style="line-height:16px; font-size:12px; color:#43a0f8; text-decoration:none;">Send</a>
+                                                        @{ /* TODO(josh) fix url */ }
+                                                        <a href="@reco.urls.sendPage" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;">Send</a>
                                                         <span style="line-height:18px; font-size:14px; color:#9a9b99;">•</span>
+                                                        @{ /* TODO(josh) fix url */ }
                                                         <a href="@reco.urls.keepAndSeeMore" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">Keep & See More</a>
                                                     </td>
                                                 </tr>
@@ -472,11 +147,11 @@
                                                                     <table border="0" cellspacing="0" cellpadding="0" align="left">
                                                                         <tr>
                                                                             @reco.keepers.friendsToShow.map { user =>
-                                                                            <td width="28"><img src="@user.avatarUrl" width="28" height="27" alt="@user.firstName" style="display:block;" border="0"/></td>
+                                                                            <td width="28" style="padding-right:1px;"><img src="@user.avatarUrl" width="28" height="27" alt="@user.firstName" style="display:block;" border="0"/></td>
                                                                             }
                                                                         </tr>
                                                                     </table>
-                                                                    <table width="289" border="0" cellspacing="0" cellpadding="0" align="left" class="wrapper">
+                                                                    <table border="0" cellspacing="0" cellpadding="0" align="left" class="wrapper" style="padding-left:6px;">
                                                                         <tr>
                                                                             <td align="left" class="top_space">
                                                                                 <table border="0" cellspacing="0" cellpadding="0" align="left">
@@ -504,7 +179,6 @@
                                 </table>
                             </td>
                         </tr>
-
                     </table>
                 </td>
             </tr>
@@ -528,7 +202,7 @@
                 <td align="center">
                     <table width="193" border="0" cellspacing="0" cellpadding="0" align="center">
                         <tr>
-                            <td><a href="https://www.kifi.com/kifeeeed" target="_blank"><img src="@assetUrlBase/viewfulllist_193x47.jpg" alt="View Full list" width="193" height="47"  style="display:block;" border="0" /></a></td>
+                            <td><a href="https://www.kifi.com/kifeeeed" target="_blank"><img src="@assetUrl("digest/viewfulllist.jpg")" alt="View Full list" width="193" height="47"  style="display:block;" border="0" /></a></td>
                         </tr>
                     </table>
                 </td>
@@ -539,79 +213,6 @@
         </table>
     </td>
 </tr>
-<tr>
-    <td height="40">&nbsp;</td>
-</tr>
-<tr>
-    <td valign="top">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0">
-            <tr>
-                <td width="8" class="side1">&nbsp;</td>
-                <td>
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                        <tr>
-                            <td>
-                                <table width="350" border="0" cellspacing="0" cellpadding="0" align="left" class="wrapper">
-                                    <tr>
-                                        <td class="aside">
-                                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                                <tr>
-                                                    @{ /* TODO (josh) update link params */ }
-                                                    <td align="left" class="center1" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#333333;line-height:22px;"><a href="https://www.kifi.com/?utm_source=headerLogo&amp;utm_medium=email&amp;utm_campaign=verifyEmail" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Kifi.com</a> Your recomendations network<br />
-                                                        Follow us on <a href="https://twitter.com/kifi?utm_source=footerTwitter&amp;utm_medium=email&amp;utm_campaign=verifyEmail" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Twitter</a> &nbsp; <a href="https://www.facebook.com/kifi42?utm_source=footerFacebook&amp;utm_medium=email&amp;utm_campaign=verifyEmail" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#85a4ea;line-height:18px;text-decoration:underline;">Facebook</a></td>
-                                                </tr>
-                                            </table>
-                                        </td>
-                                    </tr>
-                                </table>
-                                <table width="105" border="0" cellspacing="0" cellpadding="0" align="right" class="wrapper">
-                                    <tr>
-                                        <td class="top_space">
-                                            <table width="105" border="0" cellspacing="0" cellpadding="0" align="center">
-                                                <tr>
-                                                    <td><a href="https://itunes.apple.com/us/app/kifi/id740232575" target="_blank"><img src="@assetUrlBase/app_store.png" alt="Available on the App Store" width="105" height="35" style="display:block;" border="0" /></a></td>
-                                                </tr>
-                                            </table>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td height="24"></td>
-                        </tr>
-                        <tr>
-                            <td class="aside">
-                                <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                                    <tr>
-                                        <td align="left" class="center" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#333333;line-height:22px;">
-                                            Sent by kifi 883 N Shoreline Blvd, Mountain View, CA 94043, USA<br  />
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td align="left" class="center1" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#333333;line-height:22px;">
-                                            <a href="https://www.kifi.com/privacy?utm_source=footerPrivacy&amp;utm_medium=email&amp;utm_campaign=verifyEmail" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">privacy policy</a>.
-                                            Click here <a href="@unsubscribeUrl" target="_blank" style="font-family:Arial, Helvetica, sans-serif;font-size:13px;color:#85a4ea;line-height:22px;text-decoration:underline;">unsubscribe</a>
-                                            from update like this.<br class="br" />
-                                            &copy; 2014 FortyTwo, Inc, All rights reserved.
-                                        </td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td height="30"></td>
-                        </tr>
-                    </table>
-                </td>
-                <td width="8" class="side1">&nbsp;</td>
-            </tr>
-        </table>
-    </td>
-</tr>
 </table>
-</td>
-</tr>
-</table>
-</body>
-</html>
+
+}
