@@ -153,7 +153,7 @@ class KifiSearch(
     KifiShardResult(hits.toSortedList.map(h => KifiShardHit(h.id, h.score, h.visibility, -1L)), myTotal, friendsTotal, show) // TODO: library id
   }
 
-  @inline private[this] def isDiscoverable(id: Long) = keepSearcher.has(new Term(KeepFields.discoverableUriField, id.toString))
+  @inline private[this] def isDiscoverable(id: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, id.toString))
 
   @inline private[this] def createQueue(sz: Int) = new HitQueue(sz)
 

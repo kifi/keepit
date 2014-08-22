@@ -7,6 +7,6 @@ object Visibility { // use value class?
 
   val OTHERS = 0x01
   val NETWORK = 0x02
-  val MEMBER = 0x04 | SEARCHABLE_KEEP
-  val OWNER = 0x08 | SEARCHABLE_KEEP
+  val MEMBER = 0x04
+  val OWNER = 0x08
 }

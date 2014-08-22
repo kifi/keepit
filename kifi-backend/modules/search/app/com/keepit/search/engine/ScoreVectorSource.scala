@@ -21,6 +21,12 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
+object ScoreVectorSource {
+  val PUBLISHED = LibraryFields.toNumericCode(LibraryVisibility.PUBLISHED)
+  val DISCOVERABLE = LibraryFields.toNumericCode(LibraryVisibility.DISCOVERABLE)
+  val SECRET = LibraryFields.toNumericCode(LibraryVisibility.SECRET)
+}
+
 trait ScoreVectorSource {
   def createWeights(query: Query): IndexedSeq[(Weight, Float)]
   def execute(weights: IndexedSeq[(Weight, Float)], dataBuffer: DataBuffer): Unit
@@ -103,8 +109,8 @@ final class TaggedScoreQueue(size: Int) extends PriorityQueue[TaggedScorer](size
 }
 
 //
-// Main Search (finding Keeps)
-//  query Article index, Keep index, and Collection index and aggregate the hits by Uri Id
+// Kifi Search (finding URIs through Keeps)
+//  query Article index and Keep index, and aggregate the hits by Uri Id
 //
 
 class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, idFilter: LongArraySet) extends ScoreVectorSourceLike {
@@ -128,6 +134,7 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, idFilte
 
       if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
         // An article hit may or may not be visible according to the restriction
+        // OTHERS may be promoted to NETWORK, MEMBER, or OWNER at the join stage according to the result from KeepIndex
         val visibility = if (articleVisibility.isVisible(docId)) Visibility.OTHERS else Visibility.RESTRICTED
 
         // get all scores
@@ -179,21 +186,19 @@ class UriFromKeepsScoreVectorSource(
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
 
+    val published = ScoreVectorSource.PUBLISHED
     val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
     val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
-    val userIdDocValues = reader.getNumericDocValues(KeepFields.userField) // TODO: use the correct field
-    val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField) // TODO: use the correct field
+    val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
+    val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
 
     val recencyScorer = getRecencyScorer(readerContext)
 
     val writer: DataBufferWriter = new DataBufferWriter
 
-    // load all my URIs with no score (this supersedes the old URIGraphSearcher things)
+    // load all URIs in the network with no score (this supersedes the old URIGraphSearcher things)
     // this is necessary to categorize URIs correctly for boosting even when a query matches only in scraped data but not in personal meta data.
-    val loader = uriLoader(idFilter, reader, uriIdDocValues, writer, output)_
-    loadMyOwnURIs(loader)
-    loadMemberURIs(loader)
-    loadFriendURIs(idFilter, reader, uriIdDocValues, writer, output)
+    loadURIsInNetwork(idFilter, reader, uriIdDocValues, writer, output)
 
     val taggedScores: Array[Int] = new Array[Int](pq.size) // tagged floats
 
@@ -203,7 +208,7 @@ class UriFromKeepsScoreVectorSource(
       val libId = libraryIdDocValues.get(docId)
 
       if (idFilter.findIndex(uriId) < 0) {
-        var visibility =
+        val visibility =
           if (memberLibraryIds.findIndex(libId) >= 0) {
             if (myOwnLibraryIds.findIndex(libId) >= 0) {
               Visibility.OWNER // the keep is in my library (I may or may not have kept it)
@@ -215,14 +220,14 @@ class UriFromKeepsScoreVectorSource(
               }
             }
           } else {
-            if (visibilityDocValues.get(docId) == LibraryVisibility.PUBLISHED && myFriendIds.findIndex(userIdDocValues.get(docId)) >= 0) { // TODO: use the correct value
-              Visibility.NETWORK | Visibility.SEARCHABLE_KEEP // the keep is in a public library, and my friend kept it
+            if (visibilityDocValues.get(docId) == published && myFriendIds.findIndex(userIdDocValues.get(docId)) >= 0) {
+              Visibility.NETWORK // the keep is in a published library, and my friend kept it
             } else {
               Visibility.RESTRICTED
             }
           }
 
-        if ((visibility & Visibility.SEARCHABLE_KEEP) != 0) {
+        if (visibility != Visibility.RESTRICTED) {
           // recency boost
           val boost = if (recencyScorer == null) 0.1f else {
             if (recencyScorer.docID() < docId) {
@@ -238,7 +243,7 @@ class UriFromKeepsScoreVectorSource(
 
           // write to the buffer
           // write the libId. libId is expected for searchable keeps.
-          output.alloc(writer, visibility, 8 + 8 + size * 4) // id (8 bytes), libId (8 bytes) and taggedFloats (size * 4 bytes)
+          output.alloc(writer, visibility | Visibility.SEARCHABLE_KEEP, 8 + 8 + size * 4) // id (8 bytes), libId (8 bytes) and taggedFloats (size * 4 bytes)
           writer.putLong(uriId).putLong(libId).putTaggedFloatBits(taggedScores, size)
         } else {
           docId = pq.skipCurrentDoc() // this keep is not searchable, skipping...
@@ -249,32 +254,28 @@ class UriFromKeepsScoreVectorSource(
     }
   }
 
-  private def loadMyOwnURIs(loader: (Long, Int) => Unit): Unit = {
-    myOwnLibraryIds.foreach { libId => loader(libId, Visibility.OWNER) }
-  }
+  private def loadURIsInNetwork(idFilter: LongArraySet, reader: WrappedSubReader, uriIdDocValues: NumericDocValues, writer: DataBufferWriter, output: DataBuffer): Unit = {
+    def load(libId: Long, visibility: Int): Unit = {
+      val td = reader.termDocsEnum(new Term(KeepFields.libraryField, libId.toString))
+      var docId = td.nextDoc()
+      while (docId < NO_MORE_DOCS) {
+        val uriId = uriIdDocValues.get(docId)
 
-  private def loadMemberURIs(loader: (Long, Int) => Unit): Unit = {
-    // memberLibraryIds includes myOwnLibraryIds
-    memberLibraryIds.foreach { libId => if (myOwnLibraryIds.findIndex(libId) < 0) loader(libId, Visibility.MEMBER) }
-  }
-
-  private def uriLoader(idFilter: LongArraySet, reader: WrappedSubReader, uriIdDocValues: NumericDocValues, writer: DataBufferWriter, output: DataBuffer)(libId: Long, visibility: Int): Unit = {
-    val td = reader.termDocsEnum(new Term(KeepFields.libraryField, libId.toString))
-    var docId = td.nextDoc()
-    while (docId < NO_MORE_DOCS) {
-      val uriId = uriIdDocValues.get(docId)
-
-      if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
-        // write to the buffer
-        output.alloc(writer, visibility, 8) // id (8 bytes)
-        writer.putLong(uriId)
+        if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
+          // write to the buffer
+          output.alloc(writer, visibility, 8) // id (8 bytes)
+          writer.putLong(uriId)
+        }
       }
     }
-  }
 
-  private def loadFriendURIs(idFilter: LongArraySet, reader: WrappedSubReader, uriIdDocValues: NumericDocValues, writer: DataBufferWriter, output: DataBuffer): Unit = {
+    myOwnLibraryIds.foreach { libId => load(libId, Visibility.OWNER) }
+
+    // memberLibraryIds includes myOwnLibraryIds
+    memberLibraryIds.foreach { libId => if (myOwnLibraryIds.findIndex(libId) < 0) load(libId, Visibility.MEMBER) }
+
     myFriendIds.foreach { friendId =>
-      val td = reader.termDocsEnum(new Term(KeepFields.userField, friendId.toString)) // TODO: restirct to discoverable uris
+      val td = reader.termDocsEnum(new Term(KeepFields.userDiscoverableField, friendId.toString))
       var docId = td.nextDoc()
       while (docId < NO_MORE_DOCS) {
         val uriId = uriIdDocValues.get(docId)
@@ -302,6 +303,7 @@ class LibraryScoreVectorSource(protected val searcher: Searcher, libraryIds: Lon
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
 
+    val published = ScoreVectorSource.PUBLISHED
     val visibilityDocValues = reader.getNumericDocValues(LibraryFields.visibilityField)
 
     val idMapper = reader.getIdMapper
@@ -316,7 +318,7 @@ class LibraryScoreVectorSource(protected val searcher: Searcher, libraryIds: Lon
       if (idFilter.findIndex(libId) < 0) { // use findIndex to avoid boxing
         val visibility =
           if (libraryIds.findIndex(libId) >= 0) Visibility.MEMBER else {
-            if (visibilityDocValues.get(docId) == LibraryVisibility.PUBLISHED) Visibility.OTHERS else Visibility.RESTRICTED // TODO: use the correct value
+            if (visibilityDocValues.get(docId) == published) Visibility.OTHERS else Visibility.RESTRICTED
           }
 
         if (visibility != Visibility.RESTRICTED) {
