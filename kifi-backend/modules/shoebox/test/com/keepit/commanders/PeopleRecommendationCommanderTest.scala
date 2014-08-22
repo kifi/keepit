@@ -22,7 +22,7 @@ class PeopleRecommendationCommanderTest extends Specification with ShoeboxTestIn
           abook.addFriendRecommendationsExpectations(users(0).id.get, Seq(users(1).id.get, users(2).id.get, users(3).id.get))
 
           val friendRecoDataF = inject[PeopleRecommendationCommander].getFriendRecommendations(users(0).id.get, 2, 25)
-          val friendRecoData = Await.result(friendRecoDataF, Duration(5, "seconds"))
+          val friendRecoData = Await.result(friendRecoDataF, Duration(5, "seconds")).get
 
           friendRecoData.basicUsers === Map(
             users(1).id.get -> com.keepit.social.BasicUser.fromUser(users(1)),

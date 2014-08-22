@@ -1,6 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ SeedItem, ScoredSeedItem, PublicScoredSeedItem, PublicSeedItemWithMultiplier, PublicFeed, PublicUriScores, PublicSeedItem, PublicFeedRepo, ScoredSeedItemWithAttribution, RecommendationInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, UriRecommendationRepo, UriRecommendation, UriScores }
+import com.keepit.curator.model.{ SeedItem, PublicScoredSeedItem, PublicFeed, PublicUriScores, PublicSeedItem, PublicFeedRepo, ScoredSeedItemWithAttribution, RecommendationInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, UriRecommendationRepo, UriRecommendation, UriScores }
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -36,7 +36,7 @@ class RecommendationGenerationCommander @Inject() (
   val defaultScore = 0.0f
 
   val recommendationGenerationLock = new ReactiveLock(15)
-  val pubicFeedsGenerationLock = new ReactiveLock(10)
+  val pubicFeedsGenerationLock = new ReactiveLock(1)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
   private val SEQ_NUM_NAME: Name[SequenceNumber[PublicSeedItem]] = Name("public_feeds_seq_num")
 
@@ -173,7 +173,6 @@ class RecommendationGenerationCommander @Inject() (
             clicked = 0,
             kept = false,
             trashed = false,
-            markedBad = None,
             attribution = item.attribution))
         }
       }
@@ -297,4 +296,12 @@ class RecommendationGenerationCommander @Inject() (
     }
   }
 
+  def resetUser(userId: Id[User]): Future[Unit] = {
+    getPerUserGenerationLock(userId).withLock {
+      db.readWriteAsync { implicit s =>
+        val stateOpt = genStateRepo.getByUserId(userId)
+        stateOpt.foreach { state => genStateRepo.save(state.copy(seq = SequenceNumber.ZERO)) }
+      }
+    }
+  }
 }

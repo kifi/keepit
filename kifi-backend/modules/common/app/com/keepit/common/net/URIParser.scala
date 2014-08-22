@@ -13,9 +13,6 @@ trait URIParserGrammar extends RegexParsers {
 
   def hierarchicalUri: Parser[URI] = ((scheme <~ ":").? <~ "//") ~ authority ~ (path?) ~ ("?" ~> query).? ~ ("#" ~> fragment).? ^^ {
     case scheme ~ authority ~ path ~ query ~ fragment =>
-      //The # sign is an illegal character in fragment, java.net.URI.create with throw an exception
-      //Didn't find an explicit reference to it in the RFC http://tools.ietf.org/html/rfc3986#section-3.5 but it makes the url unusable
-      if (fragment.exists(_.contains('#'))) throw new IllegalArgumentException(s"Illegal # character in fragment: $fragment")
       val (userInfo, host, port) = authority
       URI(scheme, userInfo, host, URIParserUtil.normalizePort(scheme, port), path, query, fragment)
   }

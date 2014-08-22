@@ -35,7 +35,7 @@ class ScoreExprTest extends Specification {
   private def mkCtx(expr: ScoreExpr, idx: Int*): ScoreContext = {
     val weights = new Array[Float](size)
     idx.foreach { i => weights(i) = 1.0f / idx.length.toFloat }
-    new ScoreContext(expr, size, 2.0f, weights, collector)
+    new ScoreContext(expr, size, weights, collector)
   }
 
   "ScoreExpr" should {
@@ -79,7 +79,17 @@ class ScoreExprTest extends Specification {
       ctx.addScore(idx, 3.0f)
       ctx.flush
       collector.id === 300L
-      collector.score === 3.2f
+      (collector.score > 3.0f) === true
+
+      val referenceScore = collector.score
+
+      ctx.set(301L)
+      ctx.addScore(idx, 1.0f)
+      ctx.addScore(idx, 2.0f)
+      ctx.addScore(idx, 3.0f)
+      ctx.flush
+      collector.id === 301L
+      (collector.score > referenceScore) === true
     }
 
     "compute scores correctly with DisjunctiveSumExpr" in {

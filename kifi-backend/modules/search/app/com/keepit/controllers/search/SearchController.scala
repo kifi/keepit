@@ -42,10 +42,6 @@ class SearchController @Inject() (
     val filter = (searchRequest \ "filter").asOpt[String]
     val maxHits = (searchRequest \ "maxHits").as[Int]
     val context = (searchRequest \ "context").asOpt[String]
-    val start = (searchRequest \ "start").asOpt[String]
-    val end = (searchRequest \ "end").asOpt[String]
-    val tz = (searchRequest \ "tz").asOpt[String]
-    val coll = (searchRequest \ "coll").asOpt[String]
     val debug = (searchRequest \ "debug").asOpt[String]
 
     val id = Id[User](userId)
@@ -62,10 +58,6 @@ class SearchController @Inject() (
       maxHits,
       context,
       None,
-      start,
-      end,
-      tz,
-      coll,
       debug)
 
     Ok(result.json)
@@ -91,7 +83,7 @@ class SearchController @Inject() (
     val query = (js \ "query").as[String]
     val maxHits = (js \ "maxHits").as[Int]
     val predefinedConfig = (js \ "config").as[Map[String, String]]
-    val res = searchCommander.search(userId, acceptLangs = Seq(), experiments = Set.empty, query = query, filter = None, maxHits = maxHits, lastUUIDStr = None, context = None, predefinedConfig = Some(SearchConfig(predefinedConfig)), start = None, end = None, tz = None, coll = None)
+    val res = searchCommander.search(userId, acceptLangs = Seq(), experiments = Set.empty, query = query, filter = None, maxHits = maxHits, lastUUIDStr = None, context = None, predefinedConfig = Some(SearchConfig(predefinedConfig)))
     Ok(JsArray(res.hits.map { x =>
       val id = x.uriId.id
       val title = x.bookmark.title.getOrElse("")

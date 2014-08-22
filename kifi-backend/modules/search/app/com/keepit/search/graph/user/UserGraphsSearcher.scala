@@ -51,10 +51,10 @@ class UserGraphsSearcher(
     Await.result(getUnfriendedFuture(), 5 seconds)
   }
 
-  def getSearchFriends(): Set[Long] = {
-    val friends = getConnectedUsers()
-    val unfriends = getUnfriended()
-
-    if (unfriends.isEmpty) friends else (friends -- unfriends)
+  def getSearchFriendsFuture(): Future[Set[Long]] = {
+    (getUnfriendedFuture() zip getConnectedUsersFuture()).map {
+      case (unfriends, friends) =>
+        if (unfriends.isEmpty) friends else (friends -- unfriends)
+    }
   }
 }
