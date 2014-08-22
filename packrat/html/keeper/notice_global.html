@@ -1,7 +1,8 @@
 <div class="kifi-notice kifi-notice-global{{#isVisited}} kifi-notice-visited{{/isVisited}}" data-id="{{id}}" data-uri="{{url}}" data-thread="{{thread}}" data-created-at="{{time}}" data-category="global">
+  <div class="kifi-notice-state"></div>
   <time class="kifi-notice-time" datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
   <img class="kifi-notice-global-img" src="{{image}}"/>
-  <div class="kifi-notice-state"></div>
-  <span class="kifi-notice-title">{{title}}</span>
+  <div class="kifi-notice-kicker">Announcement</div>
+  <div class="kifi-notice-title">{{title}}</div>
   <div class="kifi-notice-announcement">{{{bodyHtml}}}</div>
 </div>
