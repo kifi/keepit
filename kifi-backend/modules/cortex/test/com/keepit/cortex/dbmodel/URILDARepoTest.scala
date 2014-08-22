@@ -222,6 +222,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
             firstTopic = Some(LDATopic(2)),
             secondTopic = Some(LDATopic(1)),
             thirdTopic = None,
+            firstTopicScore = Some(0.5f),
             sparseFeature = Some(SparseTopicRepresentation(dimension = 4, topics = Map(LDATopic(2) -> 0.5f, LDATopic(1) -> 0.3f))),
             feature = Some(LDATopicFeature(Array(0.3f, 0.5f, 0.1f, 0.1f))),
             version = ModelVersion[DenseLDA](1),
@@ -229,10 +230,10 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
             state = URILDATopicStates.ACTIVE))
         }
 
-        uriTopicRepo.getLatestURIsInTopic(LDATopic(2), ModelVersion[DenseLDA](1), 2).map { _.id } === List(5, 4)
-        uriTopicRepo.getLatestURIsInTopic(LDATopic(2), ModelVersion[DenseLDA](1), 5).map { _.id } === List(5, 4, 3, 2, 1)
-        uriTopicRepo.getLatestURIsInTopic(LDATopic(100), ModelVersion[DenseLDA](1), 2).map { _.id } === List()
-        uriTopicRepo.getLatestURIsInTopic(LDATopic(2), ModelVersion[DenseLDA](100), 2).map { _.id } === List()
+        uriTopicRepo.getLatestURIsInTopic(LDATopic(2), ModelVersion[DenseLDA](1), 2).map { case (id, score) => (id.id, score) } === List((5, 0.5f), (4, 0.5f))
+        uriTopicRepo.getLatestURIsInTopic(LDATopic(2), ModelVersion[DenseLDA](1), 5).map { case (id, _) => id.id } === List(5, 4, 3, 2, 1)
+        uriTopicRepo.getLatestURIsInTopic(LDATopic(100), ModelVersion[DenseLDA](1), 2).map { case (id, _) => id.id } === List()
+        uriTopicRepo.getLatestURIsInTopic(LDATopic(2), ModelVersion[DenseLDA](100), 2).map { case (id, _) => id.id } === List()
       }
 
     }
