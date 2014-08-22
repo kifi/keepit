@@ -113,7 +113,7 @@ class ExtBookmarksController @Inject() (
       }
     } map { bookmark =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-      bookmarksCommander.unkeepMultiple(Seq(KeepInfo.fromBookmark(bookmark)), request.userId).headOption match {
+      bookmarksCommander.unkeepMultiple(Seq(KeepInfo.fromKeep(bookmark)), request.userId).headOption match {
         case Some(deactivatedKeepInfo) =>
           Ok(Json.obj("removedKeep" -> deactivatedKeepInfo))
         case None =>

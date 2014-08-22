@@ -86,7 +86,7 @@ object KeepInfo {
     )
   }
 
-  def fromBookmark(bookmark: Keep): KeepInfo = {
+  def fromKeep(bookmark: Keep): KeepInfo = {
     KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate, libraryId = None) // todo(andrew): Add library external id
   }
 }
@@ -330,7 +330,7 @@ class KeepsCommander @Inject() (
           searchClient.updateURIGraph()
           curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
         }
-        KeepInfo.fromBookmark(keep)
+        KeepInfo.fromKeep(keep)
     }
   }
 
@@ -354,7 +354,7 @@ class KeepsCommander @Inject() (
     } else {
       (newKeeps ++ existingKeeps, None)
     }
-    (returnedKeeps.map(KeepInfo.fromBookmark), addedToCollection, failures map (_.url), existingKeepsOpt map (_.map(KeepInfo.fromBookmark)))
+    (returnedKeeps.map(KeepInfo.fromKeep), addedToCollection, failures map (_.url), existingKeepsOpt map (_.map(KeepInfo.fromKeep)))
   }
 
   def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
@@ -376,7 +376,7 @@ class KeepsCommander @Inject() (
     }
     log.info(s"[unkeepMulti] deactivatedKeeps:(len=${deactivatedBookmarks.length}):${deactivatedBookmarks.mkString(",")}")
 
-    val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromBookmark
+    val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromKeep
     keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
     searchClient.updateURIGraph()
     deactivatedKeepInfos
@@ -414,7 +414,7 @@ class KeepsCommander @Inject() (
     // TODO: broadcast over any open user channels
     keptAnalytics.unkeptPages(userId, keeps, context)
     searchClient.updateURIGraph()
-    keeps map KeepInfo.fromBookmark
+    keeps map KeepInfo.fromKeep
   }
 
   def rekeepBulk(selection: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Int = {
@@ -601,7 +601,7 @@ class KeepsCommander @Inject() (
             }
             keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
           }
-          Right((KeepInfo.fromBookmark(keep), tags))
+          Right((KeepInfo.fromKeep(keep), tags))
       }
   }
 
