@@ -306,7 +306,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPath = com.keepit.controllers.website.routes.LibraryController.getLibrariesByUser.url
         inject[FakeActionAuthenticator].setUser(user1)
         val request1 = FakeRequest("GET", testPath)
-        val result1: Future[SimpleResult] = libraryController.getLibrariesByUser()(request1)
+        val result1: Future[SimpleResult] = libraryController.getLibrarySummariesByUser()(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 

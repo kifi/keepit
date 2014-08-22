@@ -969,12 +969,12 @@ object UsernameOps {
     val normalized = Normalizer.normalize(username, Normalizer.Form.NFKD)
     normalized.replaceAll("[\\p{InCombiningDiacriticalMarks}]", "")
   }
-  private val letterDigitRegex = """\p{L}?\d?""".r
+  private val letterDigitRegex = """\p{L}\p{M}*?\d?""".r
   private def removePunctuation(username: String): String = {
     (letterDigitRegex findAllIn username).mkString("")
   }
 
-  private val letterRegex = """\p{L}""".r
+  private val letterRegex = """\p{L}\p{M}*""".r
   def lettersOnly(username: String) = {
     (letterRegex findAllIn username).mkString("")
   }

@@ -27,7 +27,7 @@ angular.module('kifi')
 
     libraryP.then(function (library) {
       $scope.library = library;
-      $scope.keeps = library.keeps.keeps || [];
+      $scope.keeps = [];//library.keeps.keeps || [];
     });
 
     $scope.hasMore = function () {
