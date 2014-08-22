@@ -1,10 +1,11 @@
 package com.keepit.curator.controllers.internal
 
 import com.google.inject.Inject
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.CuratorServiceController
 import com.keepit.common.db.Id
 import com.keepit.curator.commanders.email.FeedDigestEmailSender
-import com.keepit.curator.commanders.{ RecommendationFeedbackCommander, RecommendationGenerationCommander }
+import com.keepit.curator.commanders.{ CuratorAnalytics, RecommendationFeedbackCommander, RecommendationGenerationCommander }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -15,6 +16,7 @@ import concurrent.Future
 
 class CuratorController @Inject() (
     shoebox: ShoeboxServiceClient,
+    curatorAnalytics: CuratorAnalytics,
     recoGenCommander: RecommendationGenerationCommander,
     recoFeedbackCommander: RecommendationFeedbackCommander,
     engagaementFeedEmailSender: FeedDigestEmailSender) extends CuratorServiceController {
@@ -28,7 +30,9 @@ class CuratorController @Inject() (
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = Action.async { request =>
     val json = request.body.asJson.get
-    recoFeedbackCommander.updateUriRecommendationFeedback(userId, uriId, json.as[UriRecommendationFeedback]).map(update => Ok(Json.toJson(update)))
+    val feedback = json.as[UriRecommendationFeedback]
+    SafeFuture { curatorAnalytics.trackUserFeedback(userId, uriId, feedback) }
+    recoFeedbackCommander.updateUriRecommendationFeedback(userId, uriId, feedback).map(update => Ok(Json.toJson(update)))
   }
 
   def triggerEmailToUser(code: String, userId: Id[User]) = Action.async { request =>

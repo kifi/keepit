@@ -9,8 +9,9 @@ import com.keepit.model.{ UriRecommendationFeedback, NormalizedURI, User }
 import scala.concurrent.Future
 
 class RecommendationFeedbackCommander @Inject() (
+    db: Database,
     uriRecRepo: UriRecommendationRepo,
-    db: Database) {
+    curatorAnalytics: CuratorAnalytics) {
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
     db.readWriteAsync { implicit session =>
