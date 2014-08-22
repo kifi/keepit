@@ -45,7 +45,6 @@ object Global {
 
   val settings = scalariformSettings ++ macroParadiseSettings ++ Seq(
     //updateOptions := updateOptions.value.withConsolidatedResolution(true),
-    retrieveManaged := true,
     scalacOptions ++= _scalacOptions,
     resolvers ++= _commonResolvers,
     javaOptions in Test ++= _javaTestOptions,
