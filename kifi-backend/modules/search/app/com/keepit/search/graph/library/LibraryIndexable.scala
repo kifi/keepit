@@ -11,8 +11,7 @@ object LibraryFields {
   val descriptionField = "d"
   val descriptionStemmedField = "ds"
   val visibilityField = "v"
-  val discoverableOwnerField = "do"
-  val secretOwnerField = "so"
+  val ownerField = "o"
   val usersField = "u"
   val hiddenUsersField = "h"
   val recordField = "rec"
@@ -57,6 +56,7 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) ex
       doc.add(buildTextField(descriptionStemmedField, description, DefaultAnalyzer.getAnalyzerWithStemmer(descriptionLang)))
     }
 
+    doc.add(buildKeywordField(ownerField, library.ownerId.id.toString))
     doc.add(buildIteratorField(usersField, users.iterator) { id => id.id.toString })
     doc.add(buildIteratorField(hiddenUsersField, hiddenUsers.iterator) { id => id.id.toString })
 

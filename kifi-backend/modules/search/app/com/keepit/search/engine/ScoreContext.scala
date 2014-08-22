@@ -11,7 +11,10 @@ class ScoreContext(
     val matchWeight: Array[Float],
     collector: ResultCollector[ScoreContext]) extends Joiner {
 
-  private[engine] var visibility: Int = 0 // 0: restricted, 1: others, 2: network, 3: member, 4: secret (see Visibility)
+  private[engine] var visibility: Int = 0
+  private[engine] var secondaryId: Long = -1 // secondary id (library id for kifi search)
+  private[this] var secondaryId2Score: Float = -1.0f
+
   private[engine] val scoreMax = new Array[Float](scoreArraySize)
   private[engine] val scoreSum = new Array[Float](scoreArraySize)
 
@@ -32,21 +35,44 @@ class ScoreContext(
   }
 
   def clear(): Unit = {
-    visibility = 0
+    visibility = Visibility.RESTRICTED
+    secondaryId = -1L
+    secondaryId2Score = -1.0f
     Arrays.fill(scoreMax, 0.0f)
     Arrays.fill(scoreSum, 0.0f)
   }
 
   def join(reader: DataBufferReader): Unit = {
     // compute the visibility
-    visibility = visibility | reader.recordType
+    val thisVisibility = reader.recordType
+    visibility = visibility | thisVisibility
 
-    while (reader.hasMore) {
-      val bits = reader.nextTaggedFloatBits()
-      val idx = DataBuffer.getTaggedFloatTag(bits)
-      val scr = DataBuffer.getTaggedFloatValue(bits)
-      if (scoreMax(idx) < scr) scoreMax(idx) = scr
-      scoreSum(idx) += scr
+    if ((thisVisibility & Visibility.SEARCHABLE_KEEP) != 0) {
+      // a searchable keep has a library id as a secondary id
+      val id2 = reader.nextLong()
+      var scr2 = 0.0f // use a simple sum of scores to compare secondary ids
+
+      while (reader.hasMore) {
+        val bits = reader.nextTaggedFloatBits()
+        val idx = DataBuffer.getTaggedFloatTag(bits)
+        val scr = DataBuffer.getTaggedFloatValue(bits)
+        scr2 += scr
+        if (scoreMax(idx) < scr) scoreMax(idx) = scr
+        scoreSum(idx) += scr
+      }
+
+      if (scr2 > secondaryId2Score) {
+        secondaryId = id2
+        secondaryId2Score = scr2
+      }
+    } else {
+      while (reader.hasMore) {
+        val bits = reader.nextTaggedFloatBits()
+        val idx = DataBuffer.getTaggedFloatTag(bits)
+        val scr = DataBuffer.getTaggedFloatValue(bits)
+        if (scoreMax(idx) < scr) scoreMax(idx) = scr
+        scoreSum(idx) += scr
+      }
     }
   }
 
