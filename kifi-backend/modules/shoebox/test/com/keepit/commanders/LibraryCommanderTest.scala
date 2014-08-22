@@ -33,10 +33,10 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
     val emailHulk = EmailAddress("incrediblehulk@gmail.com")
 
     val (userIron, userCaptain, userAgent, userHulk) = db.readWrite { implicit s =>
-      val userIron = userRepo.save(User(firstName = "Tony", lastName = "Stark", createdAt = t1, primaryEmail = Some(emailIron)))
-      val userCaptain = userRepo.save(User(firstName = "Steve", lastName = "Rogers", createdAt = t1, primaryEmail = Some(emailCaptain)))
-      val userAgent = userRepo.save(User(firstName = "Nick", lastName = "Fury", createdAt = t1, primaryEmail = Some(emailAgent)))
-      val userHulk = userRepo.save(User(firstName = "Bruce", lastName = "Banner", createdAt = t1, primaryEmail = Some(emailHulk)))
+      val userIron = userRepo.save(User(firstName = "Tony", lastName = "Stark", createdAt = t1, primaryEmail = Some(emailIron), username = Some(Username("ironman"))))
+      val userCaptain = userRepo.save(User(firstName = "Steve", lastName = "Rogers", createdAt = t1, primaryEmail = Some(emailCaptain), username = Some(Username("captainamerica"))))
+      val userAgent = userRepo.save(User(firstName = "Nick", lastName = "Fury", createdAt = t1, primaryEmail = Some(emailAgent), username = Some(Username("agentfury"))))
+      val userHulk = userRepo.save(User(firstName = "Bruce", lastName = "Banner", createdAt = t1, primaryEmail = Some(emailHulk), username = Some(Username("incrediblehulk"))))
 
       emailRepo.save(UserEmailAddress(userId = userIron.id.get, address = emailIron))
       emailRepo.save(UserEmailAddress(userId = userCaptain.id.get, address = emailCaptain))
@@ -343,15 +343,20 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
         val libraryCommander = inject[LibraryCommander]
 
-        db.readWrite { implicit s =>
-          libraryRepo.save(libScience.copy(visibility = LibraryVisibility.PUBLISHED))
+        val libShwarmas = db.readWrite { implicit s =>
+          val libShwarmas = libraryRepo.save(Library(name = "NY Shwarmas", ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1, slug = LibrarySlug("shwarma")))
+          libraryMembershipRepo.save(LibraryMembership(libraryId = libShwarmas.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
+          libShwarmas
         }
 
-        libraryCommander.userAccess(userIron.id.get, libScience.id.get) === Some(LibraryAccess.OWNER) // test owner access
-        libraryCommander.userAccess(userHulk.id.get, libScience.id.get) === Some(LibraryAccess.READ_INSERT) // test membership accesss
-        libraryCommander.userAccess(userIron.id.get, libShield.id.get) === None // test no membership (secret library)
-        libraryCommander.userAccess(userCaptain.id.get, libScience.id.get) === Some(LibraryAccess.READ_ONLY) // test published library (no membership)
-        libraryCommander.userAccess(userHulk.id.get, libMurica.id.get) === Some(LibraryAccess.READ_ONLY) // test invited (but not accepted) access
+        libraryCommander.userAccess(userIron.id.get, libScience.id.get, None) === Some(LibraryAccess.OWNER) // test owner access
+        libraryCommander.userAccess(userHulk.id.get, libScience.id.get, None) === Some(LibraryAccess.READ_INSERT) // test membership accesss
+        libraryCommander.userAccess(userIron.id.get, libShield.id.get, None) === None // test no membership (secret library)
+        libraryCommander.userAccess(userHulk.id.get, libMurica.id.get, None) === Some(LibraryAccess.READ_ONLY) // test invited (but not accepted) access
+        libraryCommander.userAccess(userCaptain.id.get, libShwarmas.id.get, None) === Some(LibraryAccess.READ_ONLY) // test no membership (public library)
+
+        libraryCommander.userAccess(userCaptain.id.get, libScience.id.get, None) === None // test  library (no membership)
+        libraryCommander.userAccess(userCaptain.id.get, libScience.id.get, Some(libScience.universalLink)) === Some(LibraryAccess.READ_ONLY) // test  library (no membership) but with universalLink
       }
     }
 
@@ -751,7 +756,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         outbox(0).subject === "Kifi.com | You've been invited to a library!"
 
         val emailBody = outbox(0).htmlBody.toString
-        emailBody.containsSlice(s"""<a href=www.kifi.com/users/${userIron.externalId}/libraries?auth=${libScience.universalLink}><u>Science &amp; Stuff</u></a>""") === true
+        emailBody.containsSlice(s"""<a href="www.kifi.com/${userIron.username.get}/${libScience.slug}?auth=${libScience.universalLink}"><u>Science &amp; Stuff</u></a>""") === true
         emailBody.containsSlice("Tony Stark would like to share Science &amp; Stuff with you") === true
         emailBody.containsSlice("www.kifi.com/unsubscribe/") === true
       }

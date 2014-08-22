@@ -202,15 +202,18 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def userAccess(userId: Id[User], libraryId: Id[Library]): Option[LibraryAccess] = {
+  def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess] = {
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
         case Some(mem) =>
           Some(mem.access)
         case None =>
-          if (libraryRepo.get(libraryId).visibility == LibraryVisibility.PUBLISHED)
+          val lib = libraryRepo.get(libraryId)
+          if (lib.visibility == LibraryVisibility.PUBLISHED)
             Some(LibraryAccess.READ_ONLY)
           else if (libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId).nonEmpty)
+            Some(LibraryAccess.READ_ONLY)
+          else if (universalLinkOpt.nonEmpty && lib.universalLink == universalLinkOpt.get)
             Some(LibraryAccess.READ_ONLY)
           else
             None
@@ -421,17 +424,17 @@ class LibraryCommander @Inject() (
   }
 
   def inviteNotification(inviterId: Id[User], inviteeId: Id[User], libraryId: Id[Library]): Unit = {
-    val (inviter, invitee, library) = db.readOnlyMaster { implicit s =>
+    val (inviter, invitee, library, owner) = db.readOnlyMaster { implicit s =>
       val inviter = userRepo.get(inviterId)
       val invitee = userRepo.get(inviteeId)
       val library = libraryRepo.get(libraryId)
-      (inviter, invitee, library)
+      val owner = userRepo.get(library.ownerId)
+      (inviter, invitee, library, owner)
     }
     invitee.primaryEmail match {
       case None => {}
       case Some(email) =>
-        //val libraryLink = s"www.kifi.com/users/${inviter.username.getOrElse(inviter.externalId)}/libraries/${library.slug}"
-        val libraryLink = s"www.kifi.com/users/${inviter.username.getOrElse(inviter.externalId)}/libraries?auth=${library.universalLink}"
+        val libraryLink = s"""www.kifi.com/${owner.username.getOrElse(owner.externalId)}/${library.slug}?auth=${library.universalLink}"""
 
         val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName.getOrElse("0"), Some("https"))
         val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(email))}"
