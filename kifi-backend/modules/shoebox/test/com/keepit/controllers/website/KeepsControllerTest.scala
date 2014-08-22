@@ -12,6 +12,7 @@ import com.keepit.common.helprank.HelpRankTestHelper
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
@@ -39,7 +40,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     FakeHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
     FakeScraperServiceClientModule(),
-    FakeCortexServiceClientModule()
+    FakeCortexServiceClientModule(),
+    FakeCuratorServiceClientModule()
   )
 
   def externalIdForTitle(title: String)(implicit injector: Injector): String = forTitle(title).externalId.id

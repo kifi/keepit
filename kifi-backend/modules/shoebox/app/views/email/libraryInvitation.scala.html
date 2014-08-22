@@ -1,0 +1,49 @@
+@(myFirstName: String,
+  inviter: User,
+  imageUrl: String,
+  libraryName: String,
+  libraryDescription: Option[String],
+  libraryLink: String,
+  unsubLink: String)
+
+
+@helper.kifiTemplate(title = "Kifi - @{inviter.firstName} invited you to join @libraryName", unsubLink=unsubLink) {
+<table class="row">
+    <tr>
+        <td class="wrapper">
+            <table class="two columns">
+                <tr>
+                    <td>
+                        <img height="80" width="80" src=@imageUrl>
+                    </td>
+                    <td class="expander"></td>
+                </tr>
+            </table>
+        </td>
+
+        <td class="wrapper last">
+            <table class="ten columns">
+                <tr>
+                    <td>
+                        Hey @myFirstName, <br><br>
+                        @{inviter.firstName} @{inviter.lastName} would like to share @libraryName with you <br><br>
+
+                        <!-- message to invitee here? -->
+                        <!-- libraryDescription here? -->
+
+                        <font color="#A3C879">Come check it out here!</font><br>
+                        <a href="@libraryLink"><u>@libraryName</u></a>
+                        <br><br>
+
+                        Cheers! <br>
+                        The Kifi Team
+                    </td>
+                    <td class="expander"></td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+
+}

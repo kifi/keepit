@@ -47,5 +47,21 @@ class FutureHelpersTest extends Specification with Logging {
 
   }
 
+  "findMatching" should {
+    "return the first N futures that made an async predicate" in {
+      val in = Stream.from(0)
+
+      val predicate = (x: Float) => x % 2 == 0
+      val transform = (x: Int) => Future.successful {
+        if (x > 8) throw new RuntimeException
+        x + 0f
+      }
+
+      val retF = FutureHelpers.findMatching(in, 5, predicate, transform)
+      val ret = Await.result(retF, Duration(5, "seconds"))
+      ret === Seq(0f, 2f, 4f, 6f, 8f)
+    }
+  }
+
 }
 

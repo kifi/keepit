@@ -1,5 +1,6 @@
 package com.keepit.controllers.internal
 
+import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.slick._
@@ -48,7 +49,8 @@ class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
     FakeScrapeSchedulerConfigModule(),
     FakeKeepImportsModule(),
     FakeCryptoModule(),
-    UrlPatternRuleModule()
+    UrlPatternRuleModule(),
+    FakeCuratorServiceClientModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {

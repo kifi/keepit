@@ -7,6 +7,7 @@ import com.keepit.search.query.parser.{ DefaultSyntax, QueryParser }
 import com.keepit.search.util.join.{ DataBufferWriter, DataBuffer }
 import com.keepit.search.{ Searcher, Lang, Tst, TstIndexer }
 import com.keepit.search.index.{ WrappedSubReader, DefaultAnalyzer, VolatileIndexDirectory }
+import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.{ DocIdSetIterator, Scorer }
 import org.specs2.mutable.Specification
 
@@ -16,7 +17,9 @@ class QueryEngineTest extends Specification {
 
     protected val searcher: Searcher = indexer.getSearcher
 
-    protected def writeScoreVectors(reader: WrappedSubReader, scorers: Array[Scorer], output: DataBuffer): Unit = {
+    protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], output: DataBuffer): Unit = {
+      val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
+
       val pq = createScorerQueue(scorers)
       if (pq.size <= 0) return // no scorer
 

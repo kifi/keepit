@@ -20,14 +20,10 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.search.tracker.ClickedURI
 import com.keepit.search.tracker.ClickHistoryTracker
 import com.keepit.search.tracker.ResultClickTracker
-import com.keepit.search.graph.bookmark.URIGraphSearcherWithUser
-import com.keepit.search.graph.collection.CollectionSearcherWithUser
 import com.keepit.search.graph.user.UserGraphsSearcherFactory
 import com.keepit.search.sharding._
-import com.keepit.search.spellcheck.SpellCorrector
 
 @Singleton
 class SearchFactory @Inject() (
@@ -46,7 +42,8 @@ class SearchFactory @Inject() (
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices) extends Logging {
 
-  private[this] val phraseDetectionConsolidator = new RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]](10 minutes)
+  private[this] val phraseDetectionReqConsolidator = new RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]](10 minutes)
+  private[this] val libraryIdsReqConsolidator = new RequestConsolidator[Id[User], (Seq[Long], Seq[Long], Seq[Long])](10 minutes)
 
   def getKifiSearch(
     shards: Set[Shard[NormalizedURI]],
@@ -69,14 +66,13 @@ class SearchFactory @Inject() (
       lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
       config,
       phraseDetector,
-      phraseDetectionConsolidator,
+      phraseDetectionReqConsolidator,
       monitoredAwait
     )
 
     parser.parse(queryString) match {
       case Some(engBuilder) =>
         shards.toSeq.map { shard =>
-          val socialGraphInfo = mainSearcherFactory.getSocialGraphInfo(shard, userId, filter)
           val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
           val eng = engBuilder.build()
@@ -94,7 +90,6 @@ class SearchFactory @Inject() (
             eng,
             articleSearcher,
             keepSearcher,
-            socialGraphInfo,
             libraryIdsFuture,
             clickBoostsFuture,
             clickHistoryFuture,
@@ -106,14 +101,12 @@ class SearchFactory @Inject() (
     }
   }
 
-  def getLibraryIdsFuture(userId: Id[User]): Future[(Seq[Long], Seq[Long], Seq[Long])] = {
-    SafeFuture {
+  def getLibraryIdsFuture(userId: Id[User]): Future[(Seq[Long], Seq[Long], Seq[Long])] = libraryIdsReqConsolidator(userId) { userId =>
+    userGraphsSearcherFactory(userId).getSearchFriendsFuture().map { friendIds =>
       val searcher = libraryIndexer.getSearcher
       val myLibIds = searcher.findAllIds(new Term(LibraryFields.discoverableOwnerField, userId.id.toString))
       val mySecretLibIds = searcher.findAllIds(new Term(LibraryFields.secretOwnerField, userId.id.toString))
 
-      val userGraphsSearcher = userGraphsSearcherFactory(userId)
-      val friendIds = userGraphsSearcher.getSearchFriends()
       val friendLibIds = new ArrayBuffer[Long]
       friendIds.foreach { friendId =>
         searcher.findAllIds(new Term(LibraryFields.discoverableOwnerField, friendId.toString), friendLibIds)
