@@ -8,11 +8,10 @@ import com.keepit.search.util.join.{ DataBuffer, DataBufferReader, Joiner }
 class ScoreContext(
     scoreExpr: ScoreExpr,
     scoreArraySize: Int,
-    val norm: Float,
     val matchWeight: Array[Float],
     collector: ResultCollector[ScoreContext]) extends Joiner {
 
-  private[engine] var visibility: Int = 0 // 0: restricted, 1: public, 2: member (see Visibility)
+  private[engine] var visibility: Int = 0 // 0: restricted, 1: others, 2: network, 3: member, 4: secret (see Visibility)
   private[engine] val scoreMax = new Array[Float](scoreArraySize)
   private[engine] val scoreSum = new Array[Float](scoreArraySize)
 

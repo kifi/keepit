@@ -219,8 +219,9 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
       HttpFetchHandlerResult(responseOpt, fetchInfo, httpGet, httpContext)
   }
 
-  private def fetchHandler(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None, disableGzip: Boolean = false): HttpFetchHandlerResult = {
-    if (URI.parse(url).get.host.isEmpty) throw new IllegalArgumentException(s"url $url has no host!")
+  private def fetchHandler(uri: URI, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None, disableGzip: Boolean = false): HttpFetchHandlerResult = {
+    if (uri.host.isEmpty) throw new IllegalArgumentException(s"url $uri has no host!")
+    val url = uri.toString()
     implicit val httpGet = new HttpGet(url)
     implicit val httpContext = new BasicHttpContext()
 
@@ -253,7 +254,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
       Some(response)
     } catch {
       case e: ZipException => if (disableGzip) logAndSet(fetchInfo, None)(e, "fetch", url, true)
-      else fetchHandler(url, ifModifiedSince, proxy, true) // Retry with gzip compression disabled
+      else fetchHandler(uri, ifModifiedSince, proxy, true) // Retry with gzip compression disabled
       case e: ConnectException => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e: ValidatorException => logAndSet(fetchInfo, None)(e, "fetch", url)
       case e: CertPathBuilderException => logAndSet(fetchInfo, None)(e, "fetch", url)
@@ -271,7 +272,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
       case t: Throwable => logAndSet(fetchInfo, None)(t, "fetch", url, true)
     }
   }
-  def fetch(url: String, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch($url) ${proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
+  def fetch(url: URI, ifModifiedSince: Option[DateTime] = None, proxy: Option[HttpProxy] = None)(f: HttpInputStream => Unit): HttpFetchStatus = timing(s"HttpFetcher.fetch($url) ${proxy.map { p => s" via ${p.alias}" }.getOrElse("")}") {
     val HttpFetchHandlerResult(responseOpt, fetchInfo, httpGet, httpContext) = fetchHandler(url, ifModifiedSince, proxy)
     responseOpt match {
       case None =>
@@ -331,7 +332,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     }
   }
 
-  def get(url: String, ifModifiedSince: Option[DateTime], proxy: Option[HttpProxy])(f: (HttpInputStream) => Unit): Future[HttpFetchStatus] = SafeFuture {
+  def get(url: URI, ifModifiedSince: Option[DateTime], proxy: Option[HttpProxy])(f: (HttpInputStream) => Unit): Future[HttpFetchStatus] = SafeFuture {
     fetch(url, ifModifiedSince, proxy)(f)
   }(ExecutionContext.fj)
 }

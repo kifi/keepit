@@ -8,10 +8,10 @@ import com.keepit.common.net.URI
 
 object LinkedInExtractorProvider extends ExtractorProvider {
   def isDefinedAt(uri: URI) = false //LinkedInNormalizer.linkedInCanonicalPublicProfile.findFirstIn(uri.toString).isDefined // TODO
-  def apply(uri: URI) = new LinkedInExtractor(uri.toString, ScraperConfig.maxContentChars)
+  def apply(uri: URI) = new LinkedInExtractor(uri, ScraperConfig.maxContentChars)
 }
 
-class LinkedInExtractor(publicProfileUrl: String, maxContentChars: Int) extends JsoupBasedExtractor(publicProfileUrl, maxContentChars) with Logging {
+class LinkedInExtractor(publicProfileUrl: URI, maxContentChars: Int) extends JsoupBasedExtractor(publicProfileUrl, maxContentChars) with Logging {
   val idExtractor = new LinkedInIdExtractor(publicProfileUrl, maxContentChars)
 
   def parse(doc: Document) = {
@@ -24,7 +24,7 @@ class LinkedInExtractor(publicProfileUrl: String, maxContentChars: Int) extends 
   }
 }
 
-class LinkedInIdExtractor(publicProfileUrl: String, maxContentChars: Int) extends JsoupBasedExtractor(publicProfileUrl, maxContentChars) with Logging {
+class LinkedInIdExtractor(publicProfileUrl: URI, maxContentChars: Int) extends JsoupBasedExtractor(publicProfileUrl, maxContentChars) with Logging {
 
   def parse(doc: Document): String = {
     val idPattern = """newTrkInfo = '([0-9]{1,20}),' \+ document.referrer.substr\(0\,128\)""".r

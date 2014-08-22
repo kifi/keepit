@@ -57,6 +57,6 @@ trait Extractor {
     )
 }
 
-trait ExtractorFactory extends Function[String, Extractor]
+trait ExtractorFactory extends Function[URI, Extractor]
 
 abstract class ExtractorProvider extends PartialFunction[URI, Extractor]

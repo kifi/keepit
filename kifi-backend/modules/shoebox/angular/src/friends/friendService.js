@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('friendService', [
-  '$http', 'env', '$q', 'routeService', '$analytics', '$location', 'Clutch', 'util',
-  function ($http, env, $q, routeService, $analytics, $location, Clutch, util) {
+  '$analytics', '$http', '$location', '$q', '$timeout', 'env', 'Clutch', 'routeService', 'util',
+  function ($analytics, $http, $location, $q, $timeout, env, Clutch, routeService, util) {
     /* Naming convention:
      *  - Kifi Friend is an existing connection on Kifi
      *  - Kifi User is a user of Kifi, may not be a friend.
@@ -16,7 +16,6 @@ angular.module('kifi')
     var friendsPageSize = 20;
     var currentPage = 0;
     var totalFriends = 0;
-    var peopleYouMayKnowPageSize = 10;
 
     var clutchParams = {
       cacheDuration: 20000
@@ -45,8 +44,8 @@ angular.module('kifi')
       });
     }, clutchParams);
 
-    var kifiPeopleYouMayKnowService = new Clutch(function (page) {
-      return $http.get(routeService.peopleYouMayKnow(page, peopleYouMayKnowPageSize)).then(function (res) {
+    var kifiPeopleYouMayKnowService = new Clutch(function (offset, limit) {
+      return $http.get(routeService.peopleYouMayKnow(offset, limit)).then(function (res) {
         return (res && res.data && res.data.users) ? res.data.users : [];
       });
     }, clutchParams);
@@ -139,8 +138,31 @@ angular.module('kifi')
         return '//djty7jcqog9qu.cloudfront.net/users/' + user.id + '/pics/200/' + user.pictureName;
       },
 
-      getPeopleYouMayKnow: function (page) {
-        return kifiPeopleYouMayKnowService.get(page || 0);
+      getPeopleYouMayKnow: function (offset, limit) {
+        var deferred = $q.defer();
+
+        // If the people-you-may-know endpoint does not return a good result,
+        // retry up to 2 times.
+        var waitTimes = [5 * 1000, 10 * 1000];
+        function getPymkWithRetries() {
+          kifiPeopleYouMayKnowService.get(offset || 0, limit || 10).then(function (people) {
+            if (people.length > 0) {
+              deferred.resolve(people);
+            } else {
+              if (waitTimes.length === 0) {
+                deferred.resolve([]);
+              } else {
+                $timeout(function () {
+                  getPymkWithRetries();
+                }, waitTimes.shift());
+              }
+            }
+          });
+        }
+
+        getPymkWithRetries();
+
+        return deferred.promise;
       },
 
       hidePeopleYouMayKnow: function (id) {

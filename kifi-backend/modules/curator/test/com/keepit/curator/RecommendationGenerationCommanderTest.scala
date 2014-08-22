@@ -36,6 +36,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         priorScore = 1.0f,
         rekeepScore = 1.0f,
         discoveryScore = 1.0f,
+        curationScore = None,
         multiplier = Some(0.01f)),
       delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY)
 
@@ -48,6 +49,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         priorScore = 1.0f,
         rekeepScore = 1.0f,
         discoveryScore = 1.0f,
+        curationScore = None,
         multiplier = Some(1.5f)),
       delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution.EMPTY)
 
@@ -60,6 +62,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         priorScore = 1.0f,
         rekeepScore = 1.0f,
         discoveryScore = 1.0f,
+        curationScore = None,
         multiplier = Some(1.0f)),
       delivered = 0, clicked = 0, kept = false, attribution = SeedAttribution(topic = Some(TopicAttribution("fun"))))
 

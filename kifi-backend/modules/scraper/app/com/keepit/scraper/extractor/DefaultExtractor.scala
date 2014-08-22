@@ -16,9 +16,8 @@ import scala.collection.mutable
 
 object DefaultExtractorProvider extends ExtractorProvider {
   def isDefinedAt(uri: URI) = true
-  def apply(uri: URI) = apply(uri.toString)
-  def apply(url: String) = new DefaultExtractor(url, ScraperConfig.maxContentChars, htmlMapper)
-  def apply(uri: URI, maxContentChars: Int) = new DefaultExtractor(uri.toString, maxContentChars, htmlMapper)
+  def apply(uri: URI) = new DefaultExtractor(uri, ScraperConfig.maxContentChars, htmlMapper)
+  def apply(uri: URI, maxContentChars: Int) = new DefaultExtractor(uri, maxContentChars, htmlMapper)
 
   val htmlMapper = Some(new DefaultHtmlMapper {
     override def mapSafeElement(name: String) = {
@@ -35,7 +34,7 @@ object DefaultExtractor {
   val spaceRegex = """\s+""".r
 }
 
-class DefaultExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
+class DefaultExtractor(url: URI, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
   private[this] val handler: DefaultContentHandler = new DefaultContentHandler(maxContentChars, output, metadata, url)
 
   protected def getContentHandler: ContentHandler = handler
@@ -79,7 +78,7 @@ class DefaultExtractor(url: String, maxContentChars: Int, htmlMapper: Option[Htm
   }
 }
 
-class DefaultContentHandler(maxContentChars: Int, handler: ContentHandler, metadata: Metadata, uri: String) extends ContentHandlerDecorator(handler) with Logging {
+class DefaultContentHandler(maxContentChars: Int, handler: ContentHandler, metadata: Metadata, uri: URI) extends ContentHandlerDecorator(handler) with Logging {
 
   var charsCount = 0
   var maxContentCharsLimitReached = false

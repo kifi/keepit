@@ -9,12 +9,15 @@ object KeepFields {
   val libraryIdField = "libId"
   val uriField = "uri"
   val uriIdField = "uriId"
+  val discoverableUriField = "dUri"
   val userField = "user"
-  val discoverabilityField = "d"
+  val userIdField = "userId"
+  val visibilityField = "v"
   val titleField = "t"
   val titleStemmedField = "ts"
   val siteField = "site"
   val homePageField = "home_page"
+  val createdAtField = "createdAt"
   val recordField = "rec"
 
   val decoders: Map[String, FieldDecoder] = Map.empty
@@ -31,8 +34,8 @@ case class KeepIndexable(keep: Keep) extends Indexable[Keep, Keep] {
 
     doc.add(buildKeywordField(libraryField, keep.libraryId.get.toString))
     doc.add(buildKeywordField(uriField, keep.uriId.toString))
+    if (keep.isDiscoverable) doc.add(buildKeywordField(discoverableUriField, keep.uriId.toString))
     doc.add(buildKeywordField(userField, keep.userId.toString))
-    doc.add(buildKeywordField(discoverabilityField, keep.isDiscoverable.toString))
 
     keep.title.foreach { title =>
       val titleLang = LangDetector.detect(title)
@@ -42,10 +45,14 @@ case class KeepIndexable(keep: Keep) extends Indexable[Keep, Keep] {
 
     buildDomainFields(keep.url, siteField, homePageField).foreach(doc.add)
 
-    keep.libraryId.foreach(libId => buildIdValueField(libraryIdField, libId))
-    buildIdValueField(uriIdField, keep.uriId)
+    doc.add(buildIdValueField(uriIdField, keep.uriId))
+    doc.add(buildIdValueField(userIdField, keep.userId))
+    keep.libraryId.foreach(libId => doc.add(buildIdValueField(libraryIdField, libId)))
 
-    buildBinaryDocValuesField(recordField, KeepRecord(keep))
+    doc.add(buildLongValueField(visibilityField, ???)) // todo(Andrew, Léo): denormalize library visibility onto keeps
+
+    doc.add(buildBinaryDocValuesField(recordField, KeepRecord(keep)))
+    buildLongValueField(createdAtField, keep.createdAt.getMillis)
     doc
   }
 }

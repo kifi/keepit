@@ -132,7 +132,7 @@ panes.thread = function () {
       var atBottom = scrolledToBottom($holder[0]);
       insertChronologically(renderMessage(message), message.createdAt);
       if (atBottom) {
-        $holder.scrollToBottom();
+        scrollToBottomResiliently();
       }
       emitRendered(threadId, message);
     }
@@ -148,7 +148,7 @@ panes.thread = function () {
           insertChronologically(renderMessage(m), m.createdAt);
         });
         if (atBottom) {
-          $holder.scrollToBottom();
+          scrollToBottomResiliently();
         }
       }
     } else {
@@ -200,7 +200,8 @@ panes.thread = function () {
       displayedSource: browserName
     }))
     .data('text', text);
-    $holder.append($m).scrollToBottom();
+    $holder.append($m);
+    scrollToBottomResiliently();
 
     transmitReply($m, text, threadId);
 
@@ -284,5 +285,15 @@ panes.thread = function () {
 
   function emitRendered(threadId, m) {
     api.port.emit('message_rendered', {threadId: threadId, messageId: m.id, time: m.createdAt});
+  }
+
+  function scrollToBottomResiliently() {
+    var scrollToBottom = $.fn.scrollToBottom.bind($holder);
+    var $img = $holder.find('img').on('load', scrollToBottom);
+    $holder.find('.kifi-messages-sent-inner').on('scroll', function onScroll() {
+      $(this).off('scroll', onScroll);
+      $img.off('load', scrollToBottom);
+    });
+    scrollToBottom();
   }
 }();

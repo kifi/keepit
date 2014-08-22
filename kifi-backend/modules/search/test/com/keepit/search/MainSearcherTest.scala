@@ -421,59 +421,6 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
       }
     }
 
-    "search within collections" in {
-      withInjector(helperModules: _*) { implicit injector =>
-        val (users, uris) = initData(numUsers = 2, numUris = 20)
-        val user1 = users(0)
-        val user2 = users(1)
-        val bookmarks = saveBookmarksByUser(Seq((user1, uris), (user2, uris)))
-
-        val (coll1set, _) = bookmarks.partition { b => b.userId == user1.id.get && b.uriId.id % 3 == 0 }
-        val (coll2set, _) = bookmarks.partition { b => b.userId == user2.id.get && b.uriId.id % 3 == 1 }
-        val Seq(coll1, coll2) = saveCollections(
-          Collection(userId = user1.id.get, name = "coll1"),
-          Collection(userId = user2.id.get, name = "coll2")
-        )
-        saveBookmarksToCollection(coll1.id.get, coll1set: _*)
-        saveBookmarksToCollection(coll2.id.get, coll2set: _*)
-
-        val store = mkStore(uris)
-        val (uriGraph, collectionGraph, indexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory) = initIndexes(store)
-
-        uriGraph.update()
-        indexer.update() === uris.size
-        collectionGraph.update() === 2
-
-        setConnections(Map(user1.id.get -> Set(user2.id.get)))
-        userGraphIndexer.update()
-
-        mainSearcherFactory.clear()
-
-        val coll1Future = Promise.successful(Seq(coll1.id.get)).future
-        val searchFilter1 = SearchFilter.mine(collectionsFuture = Some(coll1Future), monitoredAwait = inject[MonitoredAwait])
-        val mainSearcher1 = mainSearcherFactory(singleShard, user1.id.get, "alldocs", english, None, uris.size, searchFilter1, noBoostConfig)
-        val res1 = mainSearcher1.search()
-
-        res1.hits.size === coll1set.size
-        res1.hits.foreach { _.uriId.id % 3 === 0 }
-
-        val coll2Future = Promise.successful(Seq(coll2.id.get)).future
-        val searchFilter2 = SearchFilter.mine(collectionsFuture = Some(coll2Future), monitoredAwait = inject[MonitoredAwait])
-        val mainSearcher2 = mainSearcherFactory(singleShard, user1.id.get, "alldocs", english, None, uris.size, searchFilter2, noBoostConfig)
-        val res2 = mainSearcher2.search()
-
-        res2.hits.size === coll2set.size
-        res2.hits.foreach { _.uriId.id % 3 === 1 }
-
-        val coll3Future = Promise.successful(Seq(coll1.id.get, coll2.id.get)).future
-        val searchFilter3 = SearchFilter.mine(collectionsFuture = Some(coll3Future), monitoredAwait = inject[MonitoredAwait])
-        val mainSearcher3 = mainSearcherFactory(singleShard, user1.id.get, "alldocs", english, None, uris.size, searchFilter3, noBoostConfig)
-        val res3 = mainSearcher3.search()
-
-        res3.hits.size === (coll1set.size + coll2set.size)
-      }
-    }
-
     "search thru collection names" in {
       withInjector(helperModules: _*) { implicit injector =>
         val (users, uris) = initData(numUsers = 1, numUris = 20)
@@ -497,7 +444,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
         indexer.update() === uris.size
         mainSearcherFactory.clear()
 
-        val searchFilter = SearchFilter.mine(monitoredAwait = inject[MonitoredAwait])
+        val searchFilter = SearchFilter.mine()
         val mainSearcher1 = mainSearcherFactory(singleShard, user1.id.get, "mycoll", english, None, uris.size, searchFilter, noBoostConfig)
         val res1 = mainSearcher1.search()
         val expected1 = (coll1set ++ coll2set).toSet

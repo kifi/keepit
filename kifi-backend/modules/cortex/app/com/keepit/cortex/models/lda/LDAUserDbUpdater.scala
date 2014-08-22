@@ -12,7 +12,10 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.cortex.core.{ StatModelName, FeatureRepresentation }
 import com.keepit.cortex.dbmodel._
 import com.keepit.cortex.plugins.{ BaseFeatureUpdatePlugin, FeatureUpdatePlugin, FeatureUpdateActor, BaseFeatureUpdater }
+import com.keepit.curator.CuratorServiceClient
 import com.keepit.model.User
+import com.keepit.cortex.utils.MatrixUtils.{ toDoubleArray, cosineDistance }
+import org.joda.time.DateTime
 
 import scala.concurrent.duration._
 
@@ -38,7 +41,8 @@ class LDAUserDbUpdaterImpl @Inject() (
     keepRepo: CortexKeepRepo,
     uriTopicRepo: URILDATopicRepo,
     userTopicRepo: UserLDAInterestsRepo,
-    commitRepo: FeatureCommitInfoRepo) extends LDAUserDbUpdater with Logging {
+    commitRepo: FeatureCommitInfoRepo,
+    curator: CuratorServiceClient) extends LDAUserDbUpdater with Logging {
 
   private val fetchSize = 5000
   private val modelName = StatModelName.LDA_USER
@@ -73,7 +77,7 @@ class LDAUserDbUpdaterImpl @Inject() (
 
   private def processUser(user: Id[User]): Unit = {
     val model = db.readOnlyReplica { implicit s => userTopicRepo.getByUser(user, representer.version) }
-    if (shouldComputeFeature(model)) {
+    if (shouldComputeFeature(model, user)) {
       val topicCounts = db.readOnlyReplica { implicit s => uriTopicRepo.getUserTopicHistograms(user, representer.version) }
       val numOfEvidence = topicCounts.map { _._2 }.sum
       val time = currentDateTime
@@ -87,11 +91,22 @@ class LDAUserDbUpdaterImpl @Inject() (
         case None => UserLDAInterests(userId = user, version = representer.version, numOfEvidence = numOfEvidence, userTopicMean = topicMean, numOfRecentEvidence = numOfRecentEvidence, userRecentTopicMean = recentTopicMean, state = state)
       }
       db.readWrite { implicit s => userTopicRepo.save(tosave) }
+      if (changedMuch(model, Some(tosave))) { curator.resetUserRecoGenState(user) }
     }
   }
 
-  private def shouldComputeFeature(model: Option[UserLDAInterests]): Boolean = {
-    model.isEmpty || model.get.updatedAt.plusMinutes(15).getMillis < currentDateTime.getMillis
+  private def shouldComputeFeature(model: Option[UserLDAInterests], userId: Id[User]): Boolean = {
+    val window = 15
+
+    def recentlyKeptMany(userId: Id[User]): Boolean = {
+      val since = currentDateTime.minusMinutes(window)
+      val cnt = db.readOnlyReplica { implicit s => keepRepo.countRecentUserKeeps(userId, since) }
+      cnt > 10
+    }
+
+    def isOld(updatedAt: DateTime) = updatedAt.plusMinutes(window).getMillis < currentDateTime.getMillis
+
+    model.isEmpty || isOld(model.get.updatedAt) || recentlyKeptMany(userId)
   }
 
   private def genFeature(topicCounts: Seq[(LDATopic, Int)]): Option[UserTopicMean] = {
@@ -100,6 +115,27 @@ class LDAUserDbUpdaterImpl @Inject() (
     topicCounts.foreach { case (topic, cnt) => arr(topic.index) += cnt }
     val s = arr.sum
     Some(UserTopicMean(arr.map { x => x / s }))
+  }
+
+  private def changedMuch(oldModel: Option[UserLDAInterests], newModel: Option[UserLDAInterests]): Boolean = {
+    val m1Opt = oldModel.flatMap { m => m.userTopicMean }
+    val m2Opt = newModel.flatMap { m => m.userTopicMean }
+    val overallChanged = (m1Opt, m2Opt) match {
+      case (Some(m1), Some(m2)) => if (cosineDistance(m1.mean, m2.mean) < 0.5f) true else false
+      case (None, None) => false
+      case _ => true
+    }
+
+    val recent1Opt = oldModel.flatMap { m => m.userRecentTopicMean }
+    val recent2Opt = newModel.flatMap { m => m.userRecentTopicMean }
+
+    val recentChanged = (recent1Opt, recent2Opt) match {
+      case (Some(m1), Some(m2)) => if (cosineDistance(m1.mean, m2.mean) < 0.2f) true else false // recent profile is more volatile
+      case (None, None) => false
+      case _ => true
+    }
+
+    overallChanged || recentChanged
   }
 
 }

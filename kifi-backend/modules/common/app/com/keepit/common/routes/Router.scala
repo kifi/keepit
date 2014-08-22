@@ -311,7 +311,7 @@ object ABook extends Service {
     def hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId}/hideFriendRecommendation", Param("irrelevantUserId", irrelevantUserId))
     def getInviteRecommendations(userId: Id[User], offset: Int, limit: Int, networks: Set[SocialNetworkType]) = ServiceRoute(GET, s"/internal/abook/${userId}/getInviteRecommendations", Param("offset", offset), Param("limit", limit), Param("networks", networks.mkString(",")))
     def hideInviteRecommendation(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/${userId}/hideInviteRecommendation")
-    def getIrrelevantRecommendations(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId}/getIrrelevantRecommendations")
+    def getIrrelevantPeople(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/${userId}/getIrrelevantPeople")
   }
 }
 
@@ -384,8 +384,8 @@ object Curator extends Service {
     def adHocRecos(userId: Id[User], n: Int) = ServiceRoute(POST, "/internal/curator/adHocRecos", Param("userId", userId), Param("n", n))
     def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/curator/updateUriRecommendationFeedback", Param("userId", userId), Param("uriId", uriId))
     def triggerEmail(code: String) = ServiceRoute(POST, "/internal/curator/triggerEmail", Param("code", code))
-    def triggerEmailToUser(code: String, userId: Id[User]) = ServiceRoute(POST, "/internal/curator/triggerEmail", Param("code", code), Param("userId", userId))
-    def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/curator/updateUriRecommendationUserInteraction", Param("userId", userId), Param("uriId", uriId))
+    def triggerEmailToUser(code: String, userId: Id[User]) = ServiceRoute(POST, "/internal/curator/triggerEmailToUser", Param("code", code), Param("userId", userId))
+    def resetUserRecoGenState(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/resetUserRecoGenState", Param("userId", userId))
   }
 }
 

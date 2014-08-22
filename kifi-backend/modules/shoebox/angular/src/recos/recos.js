@@ -28,7 +28,8 @@ angular.module('kifi')
       recentInterestScore: 9,
       priorScore: 2,
       rekeepScore: 6,
-      discoveryScore: 3
+      discoveryScore: 3,
+      curationScore: 4
     };
 
     $scope.reload = function () {

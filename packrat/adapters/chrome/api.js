@@ -26,11 +26,6 @@ var api = (function createApi() {
     };
   }
 
-  function dispatch() {
-    var args = arguments;
-    this.forEach(function(f) {f.apply(null, args)});
-  }
-
   // Here's how tabs/pages work in this adapter. This is coming from someone with a strong distaste
   // for comments. It's a good idea to verify these statements to ensure they're still accurate.
   // - A page object is normally created when a page load is committed (all redirects resolved).
@@ -93,7 +88,7 @@ var api = (function createApi() {
 
   chrome.pageAction.onClicked.addListener(errors.wrap(function (tab) {
     log("[pageAction.onClicked]", tab);
-    dispatch.call(api.icon.on.click, pages[tab.id]);
+    api.icon.on.click.dispatch(pages[tab.id]);
   }));
 
   chrome.runtime.onStartup.addListener(errors.wrap(function () {
@@ -128,11 +123,11 @@ var api = (function createApi() {
       selectedTabIds[info.windowId] = info.tabId;
       var prevPage = pages[prevPageId];
       if (prevPage && httpRe.test(prevPage.url)) {
-        dispatch.call(api.tabs.on.blur, prevPage);
+        api.tabs.on.blur.dispatch(prevPage);
       }
       var page = pages[info.tabId];
       if (page && httpRe.test(page.url)) {
-        dispatch.call(api.tabs.on.focus, page);
+        api.tabs.on.focus.dispatch(page);
       }
     }
   }));
@@ -151,7 +146,7 @@ var api = (function createApi() {
         log('[onBeforeNavigate] non-UTF-8 search query:', match[1], e);  // e.g. www.google.co.il/search?hl=iw&q=%EE%E9%E4
       }
       if (query) {
-        dispatch.call(api.on.search, query, ~details.url.indexOf('sourceid=chrome') ? 'o' : 'n');
+        api.on.search.dispatch(query, ~details.url.indexOf('sourceid=chrome') ? 'o' : 'n');
       }
     }
   }));
@@ -173,7 +168,7 @@ var api = (function createApi() {
       }
       var page = createPage(tabId, e.url);
       if (normal && httpRe.test(page.url)) {
-        dispatch.call(api.tabs.on.loading, page);
+        api.tabs.on.loading.dispatch(page);
       }
     }
   }));
@@ -200,9 +195,9 @@ var api = (function createApi() {
     var page = pages[e.tabId];
     if (page && page.url !== e.url) {
       if (httpRe.test(page.url) && page.url.match(stripHashRe)[0] != e.url.match(stripHashRe)[0]) {
-        dispatch.call(api.tabs.on.unload, page, true);
+        api.tabs.on.unload.dispatch(page, true);
         page.url = e.url;
-        dispatch.call(api.tabs.on.loading, page);
+        api.tabs.on.loading.dispatch(page);
       } else {
         page.url = e.url;
       }
@@ -234,7 +229,7 @@ var api = (function createApi() {
         setPageAction(addedTabId, page.icon);
       }
       if (page && httpRe.test(page.url)) {
-        dispatch.call(api.tabs.on.loading, page);
+        api.tabs.on.loading.dispatch(page);
         injectContentScripts(page); // TODO: verify DOM ready first
       }
     }
@@ -253,7 +248,7 @@ var api = (function createApi() {
         delete pages[tabId];
       }
       if (normal && httpRe.test(page.url)) {
-        dispatch.call(api.tabs.on.unload, page);
+        api.tabs.on.unload.dispatch(page);
       }
       if (page._port) {
         log('#0a0', '[onRemoved] %i disconnecting', tabId);
@@ -282,7 +277,7 @@ var api = (function createApi() {
     if (focusedWinId > 0) {
       var page = pages[selectedTabIds[focusedWinId]];
       if (page && httpRe.test(page.url)) {
-        dispatch.call(api.tabs.on.blur, page);
+        api.tabs.on.blur.dispatch(page);
       }
     }
     focusedWinId = winId;
@@ -292,13 +287,13 @@ var api = (function createApi() {
       }
       var page = pages[selectedTabIds[winId]];
       if (page && httpRe.test(page.url)) {
-        dispatch.call(api.tabs.on.focus, page);
+        api.tabs.on.focus.dispatch(page);
       }
     }
   }));
 
   chrome.webRequest.onBeforeRequest.addListener(errors.wrap(function () {
-    dispatch.call(api.on.beforeSearch, 'o');
+    api.on.beforeSearch.dispatch('o');
   }), {
     tabId: -1,
     types: ['main_frame', 'other'],
@@ -435,7 +430,8 @@ var api = (function createApi() {
       var err = chrome.runtime.lastError;
       if (err) {
         log('#a80', '[inject] %i fail', page.id, err.message);
-        if (err.message === 'The extensions gallery cannot be scripted.' ||
+        if (err.message === 'The tab was closed.' ||
+            err.message === 'The extensions gallery cannot be scripted.' ||
             err.message === 'Cannot access a chrome:// URL') {
           injected = {};
           done();

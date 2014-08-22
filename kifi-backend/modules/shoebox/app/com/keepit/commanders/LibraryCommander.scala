@@ -1,13 +1,15 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.commanders.emails.EmailOptOutCommander
 import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -28,6 +30,10 @@ class LibraryCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
+    collectionRepo: CollectionRepo,
+    postOffice: LocalPostOffice,
+    s3ImageStore: S3ImageStore,
+    emailOptOutCommander: EmailOptOutCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -160,15 +166,31 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getLibraryById(id: Id[Library]): Library = {
-    db.readOnlyMaster { implicit s =>
-      libraryRepo.get(id)
+  def copyKeepsFromCollectionToLibrary(libraryId: Id[Library], tagName: String): Either[LibraryFail, Seq[(Keep, LibraryError)]] = {
+    val (library, ownerId, memTo, tagOpt, keeps) = db.readOnlyMaster { implicit s =>
+      val library = libraryRepo.get(libraryId)
+      val ownerId = library.ownerId
+      val memTo = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, ownerId)
+      val tagOpt = collectionRepo.getByUserAndName(ownerId, tagName)
+      val keeps = tagOpt match {
+        case None => Seq.empty
+        case Some(tag) => keepToCollectionRepo.getByCollection(tag.id.get).map(k2c => keepRepo.get(k2c.keepId))
+      }
+      (library, ownerId, memTo, tagOpt, keeps)
     }
-  }
-
-  def getLibraryByUserAndSlug(ownerId: Id[User], slug: LibrarySlug): Option[Library] = {
-    db.readOnlyMaster { implicit s =>
-      libraryRepo.getBySlugAndUserId(userId = ownerId, slug = slug)
+    (memTo, tagOpt) match {
+      case (_, None) => Left(LibraryFail("tag not found"))
+      case (v, _) if v.isEmpty || v.get.access == LibraryAccess.READ_ONLY =>
+        Right(keeps.map(_ -> LibraryError.DestPermissionDenied).toSeq)
+      case (_, Some(tag)) =>
+        def saveKeep(k: Keep, s: RWSession): Unit = {
+          implicit val session = s
+          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, isPrivate = k.isPrivate,
+            userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId)))
+          keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
+        }
+        val badKeeps = applyToKeeps(ownerId, library, keeps, Set(), saveKeep)
+        Right(badKeeps.toSeq)
     }
   }
 
@@ -177,6 +199,25 @@ class LibraryCommander @Inject() (
       val myLibraries = libraryRepo.getByUser(userId)
       val myInvites = libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.ACCEPTED, LibraryInviteStates.INACTIVE))
       (myLibraries, myInvites)
+    }
+  }
+
+  def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess] = {
+    db.readOnlyMaster { implicit s =>
+      libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
+        case Some(mem) =>
+          Some(mem.access)
+        case None =>
+          val lib = libraryRepo.get(libraryId)
+          if (lib.visibility == LibraryVisibility.PUBLISHED)
+            Some(LibraryAccess.READ_ONLY)
+          else if (libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId).nonEmpty)
+            Some(LibraryAccess.READ_ONLY)
+          else if (universalLinkOpt.nonEmpty && lib.universalLink == universalLinkOpt)
+            Some(LibraryAccess.READ_ONLY)
+          else
+            None
+      }
     }
   }
 
@@ -349,7 +390,7 @@ class LibraryCommander @Inject() (
       case Some(_) =>
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId,
+          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, isPrivate = k.isPrivate,
             userId = k.userId, source = k.source, libraryId = Some(toLibraryId)))
           keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
             keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = k2c.collectionId))
@@ -382,6 +423,32 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def inviteNotification(inviterId: Id[User], inviteeId: Id[User], libraryId: Id[Library]): Unit = {
+    val (inviter, invitee, library, owner) = db.readOnlyMaster { implicit s =>
+      val inviter = userRepo.get(inviterId)
+      val invitee = userRepo.get(inviteeId)
+      val library = libraryRepo.get(libraryId)
+      val owner = userRepo.get(library.ownerId)
+      (inviter, invitee, library, owner)
+    }
+    invitee.primaryEmail match {
+      case None => {}
+      case Some(email) =>
+        val libraryLink = s"""www.kifi.com/${owner.username.getOrElse(owner.externalId)}/${library.slug}?auth=${library.universalLink}"""
+
+        val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName.getOrElse("0"), Some("https"))
+        val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(email))}"
+        db.readWrite { implicit session =>
+          postOffice.sendMail(ElectronicMail(
+            from = SystemEmailAddress.NOTIFICATIONS,
+            to = Seq(email),
+            subject = "Kifi.com | You've been invited to a library!",
+            htmlBody = views.html.email.libraryInvitation(invitee.firstName, inviter, imageUrl, library.name, library.description, libraryLink, unsubLink).body,
+            category = NotificationCategory.User.LIBRARY_INVITATION
+          ))
+        }
+    }
+  }
 }
 
 sealed abstract class LibraryError(val message: String)
