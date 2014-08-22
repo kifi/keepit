@@ -1,6 +1,7 @@
-@(allRecos: com.keepit.curator.commanders.email.AllDigestRecos, unsubscribeUrl: String)
-@assetUrlBase = @{ "https://djty7jcqog9qu.cloudfront.net/assets/digest" }
-@views.html.email.black.layout("Kifi", unsubscribeUrl) {
+@(allRecos: com.keepit.curator.commanders.email.AllDigestRecos, ctx: email.helpers.Context)
+@import email.helpers.black.assetUrl
+
+@email.black.layout(ctx) {
 
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
 <tr>
@@ -68,7 +69,6 @@
                             <td height="17" style="font-size:1px; line-height:1px;">&nbsp;</td>
                         </tr>
 
-                        @reco.imageUrl.map { imageUrl =>
                         <tr>
                             <td>
                                 <table width="625" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
@@ -76,7 +76,7 @@
                                         <td width="72" class="side1">&nbsp;</td>
                                         <td align="center" valign="top" width="488">
                                             <a href="@reco.urls.viewPage" target="_blank">
-                                                <img src="@imageUrl" alt="@reco.title" style="display:block;max-width:488px;" border="0" class="banner" />
+                                                <img src="@reco.imageUrl" alt="@reco.title" style="display:block;max-width:488px;" border="0" class="banner" />
                                             </a>
                                         </td>
                                         <td width="65" class="side1">&nbsp;</td>
@@ -84,7 +84,6 @@
                                 </table>
                             </td>
                         </tr>
-                        }
 
                         <tr>
                             <td height="14" style="font-size:1px;line-height:1px;">&nbsp;</td>
@@ -197,7 +196,7 @@
                 <td align="center">
                     <table width="193" border="0" cellspacing="0" cellpadding="0" align="center">
                         <tr>
-                            <td><a href="https://www.kifi.com/kifeeeed" target="_blank"><img src="@assetUrlBase/viewfulllist_193x47.jpg" alt="View Full list" width="193" height="47"  style="display:block;" border="0" /></a></td>
+                            <td><a href="https://www.kifi.com/kifeeeed" target="_blank"><img src="@assetUrl("digest/viewfulllist.jpg")" alt="View Full list" width="193" height="47"  style="display:block;" border="0" /></a></td>
                         </tr>
                     </table>
                 </td>

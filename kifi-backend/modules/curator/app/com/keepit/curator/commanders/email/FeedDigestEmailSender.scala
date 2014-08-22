@@ -2,6 +2,7 @@ package com.keepit.curator.commanders.email
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.RemoteUserExperimentCommander
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, LargeString }
 import com.keepit.common.domain.DomainToNameMapper
@@ -15,12 +16,25 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
+import views.html.email.helpers
+import helpers.Context
+import com.keepit.common.concurrent.PimpMyFuture._
 
 import concurrent.Future
 
 object DigestEmail {
   val READ_TIMES = (1 to 10) ++ Seq(15, 20, 30, 45, 60)
-  val RECOMMENDATION_COUNT = 5
+
+  // recommendations to actual email to the user
+  val RECOMMENDATIONS_TO_DELIVER = 3
+
+  // fetch additional recommendations in case some are filtered out
+  val RECOMMENDATIONS_TO_QUERY = 100
+
+  // exclude recommendations with an image less than this
+  val MIN_IMAGE_WIDTH_PX = 488
+
+  // max # of friend thumbnails to show for each recommendation
   val MAX_FRIENDS_TO_SHOW = 10
 }
 
@@ -103,27 +117,32 @@ class FeedDigestEmailSenderImpl @Inject() (
 
   def sendToUser(user: User): Future[DigestRecoMail] = {
     if (user.primaryEmail.isEmpty) {
-      log.info(s"NOT sending engagement feed email to ${user.id.get}; primaryEmail missing")
+      log.info(s"NOT sending digest email to ${user.id.get}; primaryEmail missing")
       return Future.successful(DigestRecoMail(userId = user.id.get, mailSent = false, Seq.empty))
     }
 
     val userId = user.id.get
     log.info(s"sending engagement feed email to $userId")
 
-    {
-      for {
-        recos <- getDigestRecommendationsForUser(userId)
-        unsubscribeUrl <- shoebox.getUnsubscribeUrlForEmail(user.primaryEmail.get)
-      } yield {
-        composeAndSendEmail(user, recos, unsubscribeUrl)
+    val digestRecoMailF = for {
+      recos <- getDigestRecommendationsForUser(userId)
+      unsubscribeUrl <- shoebox.getUnsubscribeUrlForEmail(user.primaryEmail.get)
+    } yield {
+      if (recos.size > 0) composeAndSendEmail(user, recos, unsubscribeUrl)
+      else {
+        log.info(s"NOT sending digest email to ${user.id.get}; 0 worthy recos")
+        Future.successful(DigestRecoMail(userId, false, Seq.empty))
       }
-    } flatMap (x => x)
+    }
+    digestRecoMailF.flatten
   }
 
-  private def composeAndSendEmail(user: User, digestRecos: Seq[DigestReco], unsubscribeUrl: String): Future[DigestRecoMail] = {
+  private def composeAndSendEmail(user: User, digestRecos: Seq[DigestReco], _unsubscribeUrl: String): Future[DigestRecoMail] = {
     val userId = user.id.get
     val emailData = AllDigestRecos(toUser = user, recos = digestRecos)
-    val htmlBody: LargeString = views.html.email.feedDigest(emailData, unsubscribeUrl).body
+    val ctx = Context(campaign = "emailDigest", unsubscribeUrl = _unsubscribeUrl)
+
+    val htmlBody: LargeString = views.html.email.feedDigest(emailData, ctx).body
 
     // TODO(josh) use the inlined template as soon as the base one is done/approved
     //val htmlBody: LargeString = views.html.email.feedDigestInlined(emailData).body
@@ -131,7 +150,7 @@ class FeedDigestEmailSenderImpl @Inject() (
 
     val email = ElectronicMail(
       category = NotificationCategory.User.DIGEST,
-      subject = "Your Recommended Links from friends on Kifi",
+      subject = s"Kifi Daily Digest: ${digestRecos.head.title}",
       htmlBody = htmlBody,
       textBody = textBody,
       to = Seq(user.primaryEmail.get),
@@ -152,51 +171,54 @@ class FeedDigestEmailSenderImpl @Inject() (
   }
 
   private def getDigestRecommendationsForUser(userId: Id[User]) = {
-    for {
-      recos <- getRecommendationsForUser(userId) if recos.size > 0
-      uriIds = recos.map(_.uriId)
-      summaries <- getRecommendationSummaries(uriIds)
-      uris <- shoebox.getNormalizedURIs(uriIds)
-      recosKeepers <- getRecoKeepers(recos)
-    } yield {
-      val uriMap = uris.map(uri => uri.id.get -> uri).toMap
-      recos.map { reco =>
-        val summary = summaries(reco.uriId)
-        val uri = uriMap(reco.uriId)
-        val recoKeepers = recosKeepers(reco.uriId)
+    getRecommendationsForUser(userId).flatMap { recos =>
+      FutureHelpers.findMatching(recos, RECOMMENDATIONS_TO_DELIVER, isEmailWorthy, getDigestReco)
+    }.map { seq => seq.flatten }
+  }
 
-        // ensure a title exists
-        if (summary.title.exists(_.size > 0) || uri.title.exists(_.size > 0)) Some(DigestReco(reco, uri, summary, recoKeepers))
-        else None
-      }.flatten
+  private def isEmailWorthy(recoOpt: Option[DigestReco]) = {
+    recoOpt match {
+      case Some(reco) =>
+        val summary = reco.uriSummary
+        val uri = reco.uri
+        summary.imageWidth.isDefined && summary.imageUrl.isDefined && summary.imageWidth.get >= MIN_IMAGE_WIDTH_PX &&
+          summary.title.exists(_.size > 0) || uri.title.exists(_.size > 0)
+      case None => false
     }
   }
 
-  private def getRecommendationsForUser(userId: Id[User]) = {
-    recommendationGenerationCommander.getTopRecommendationsNotPushed(userId, RECOMMENDATION_COUNT)
+  private def getDigestReco(reco: UriRecommendation): Future[Option[DigestReco]] = {
+    val uriId = reco.uriId
+    for {
+      uri <- shoebox.getNormalizedURI(uriId)
+      summaries <- getRecommendationSummaries(uriId)
+      recoKeepers <- getRecoKeepers(reco)
+      if summaries.isDefinedAt(uriId)
+    } yield Some(DigestReco(reco, uri, summaries(uriId), recoKeepers))
+  } recover { case throwable =>
+    airbrake.notify(s"failed to load data for ${reco}", throwable)
+    None
   }
 
-  private def getRecommendationSummaries(uriIds: Seq[Id[NormalizedURI]]) = {
+  private def getRecommendationsForUser(userId: Id[User]) = {
+    recommendationGenerationCommander.getTopRecommendationsNotPushed(userId, RECOMMENDATIONS_TO_QUERY)
+  }
+
+  private def getRecommendationSummaries(uriIds: Id[NormalizedURI]*) = {
     shoebox.getUriSummaries(uriIds)
   }
 
-  private def getRecoKeepers(recos: Seq[UriRecommendation]) = {
-    Future.sequence[(Id[NormalizedURI], DigestRecoKeepers), Seq] {
-      recos.map { reco =>
-        reco.attribution.user.collect {
-          case userAttribution if userAttribution.friends.size > 0 =>
-            for {
-              users <- shoebox.getBasicUsers(userAttribution.friends.take(MAX_FRIENDS_TO_SHOW))
-              avatarUrls <- getManyUserImageUrls(users.keys.toSeq: _*)
-            } yield {
-              reco.uriId -> DigestRecoKeepers(friends = userAttribution.friends,
-                others = userAttribution.others, keepers = users, userAvatarUrls = avatarUrls)
-            }
-          case userAttribution =>
-            Future.successful(reco.uriId -> DigestRecoKeepers(others = userAttribution.others))
-        } getOrElse Future.successful(reco.uriId -> DigestRecoKeepers())
-      }
-    }.map(_.toMap)
+  private def getRecoKeepers(reco: UriRecommendation) = {
+    reco.attribution.user match {
+      case Some(userAttribution) if userAttribution.friends.size > 0 =>
+        for {
+          users <- shoebox.getBasicUsers(userAttribution.friends.take(MAX_FRIENDS_TO_SHOW))
+          avatarUrls <- getManyUserImageUrls(users.keys.toSeq: _*)
+        } yield DigestRecoKeepers(friends = userAttribution.friends, others = userAttribution.others,
+          keepers = users, userAvatarUrls = avatarUrls)
+      case Some(userAttribution) => Future.successful(DigestRecoKeepers(others = userAttribution.others))
+      case _ => Future.successful(DigestRecoKeepers())
+    }
   }
 
   private def getManyUserImageUrls(userIds: Id[User]*): Future[Map[Id[User], String]] = {
