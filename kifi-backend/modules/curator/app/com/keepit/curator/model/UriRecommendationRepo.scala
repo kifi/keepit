@@ -87,6 +87,17 @@ class UriRecommendationRepoImpl @Inject() (
     clickedResult && keptResult && trashedResult
   }
 
+  def deactivateRecommendations()(implicit session: RSession): Boolean = {
+    //(for (row <- rows if row.state === UriRecommendationStates.ACTIVE) yield (row.id, row.masterScore, row.updatedAt)).update()
+    import StaticQuery.interpolation
+
+//    sql"UPDATE uri_recommendation SET state=${UriRecommendationStates.INACTIVE} WHERE id=" +
+//    sql"SELECT id  FROM uri_recommendation WHERE state=${UriRecommendationStates.ACTIVE} ORDER BY master_score DESC"
+
+
+
+  }
+
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}
 
   def invalidateCache(model: UriRecommendation)(implicit session: RSession): Unit = {}
