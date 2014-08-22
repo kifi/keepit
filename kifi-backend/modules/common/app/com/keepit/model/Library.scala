@@ -26,7 +26,7 @@ case class Library(
     state: State[Library] = LibraryStates.ACTIVE,
     seq: SequenceNumber[Library] = SequenceNumber.ZERO,
     kind: LibraryKind = LibraryKind.USER_CREATED,
-    universalLink: String = RandomStringUtils.randomAlphanumeric(40),
+    universalLink: Option[String] = Some(RandomStringUtils.randomAlphanumeric(40)),
     memberCount: Int) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def withId(id: Id[Library]) = this.copy(id = Some(id))
@@ -51,7 +51,7 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'state).format(State.format[Library]) and
     (__ \ 'seq).format(SequenceNumber.format[Library]) and
     (__ \ 'kind).format[LibraryKind] and
-    (__ \ 'universalLink).format[String] and
+    (__ \ 'universalLink).formatNullable[String] and
     (__ \ 'memberCount).format[Int]
   )(Library.apply, unlift(Library.unapply))
 

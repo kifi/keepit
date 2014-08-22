@@ -214,7 +214,7 @@ class LibraryCommander @Inject() (
             Some(LibraryAccess.READ_ONLY)
           else if (libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId).nonEmpty)
             Some(LibraryAccess.READ_ONLY)
-          else if (universalLinkOpt.nonEmpty && lib.universalLink == universalLinkOpt.get)
+          else if (universalLinkOpt.nonEmpty && lib.universalLink == universalLinkOpt)
             Some(LibraryAccess.READ_ONLY)
           else
             None

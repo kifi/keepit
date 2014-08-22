@@ -578,32 +578,31 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def keepWithMultipleTags(userId: Id[User], keepsWithTags: Seq[(KeepInfo, Seq[String])], source: KeepSource)(implicit context: HeimdalContext): Map[Collection, Seq[Keep]] = {
-    val (bookmarks, _) = keepInterner.internRawBookmarks(
-      rawBookmarkFactory.toRawBookmark(keepsWithTags.map(_._1)),
+  def keepWithSelectedTags(userId: Id[User], keepJson: JsObject, source: KeepSource, selectedTagNames: Seq[String])(implicit context: HeimdalContext): Either[String, (KeepInfo, Seq[Collection])] = {
+
+    keepInterner.internRawBookmark(rawBookmarkFactory.toRawBookmark(keepJson),
       userId,
+      source,
       mutatePrivacy = true,
-      installationId = None,
-      source = KeepSource.default
-    )
+      installationId = None) match {
+        case Failure(e) => Left(e.getMessage)
+        case Success(keep) =>
+          val tags = db.readWrite { implicit s =>
+            val selectedTagIds = selectedTagNames.map { getOrCreateTag(userId, _).id.get }
+            val existingTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
+            val tagsToAdd = selectedTagIds.filterNot(existingTagIds.contains(_))
+            val tagsToRemove = existingTagIds.filterNot(selectedTagIds.contains(_))
 
-    val keepsByUrl = bookmarks.map(keep => keep.url -> keep).toMap
-
-    val keepsByTagName = keepsWithTags.flatMap {
-      case (keepInfo, tags) =>
-        tags.map(tagName => (tagName, keepsByUrl(keepInfo.url)))
-    }.groupBy(_._1).mapValues(_.map(_._2))
-
-    val keepsByTag = keepsByTagName.map {
-      case (tagName, keeps) =>
-        val tag = getOrCreateTag(userId, tagName)
-        addToCollection(tag.id.get, keeps, updateUriGraph = false)
-        tag -> keeps
-    }.toMap
-
-    searchClient.updateURIGraph()
-
-    keepsByTag
+            keepToCollectionRepo.insertAll(tagsToAdd.map { tagId =>
+              KeepToCollection(keepId = keep.id.get, collectionId = tagId)
+            })
+            tagsToRemove.map { tagId =>
+              keepToCollectionRepo.remove(keep.id.get, tagId)
+            }
+            keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
+          }
+          Right((KeepInfo.fromBookmark(keep), tags))
+      }
   }
 
   def setFirstKeeps(userId: Id[User], keeps: Seq[Keep]): Unit = {

@@ -35,27 +35,30 @@ class CuratorAnalytics @Inject() (
   }
 
   private def toRecoUserActionContexts(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Seq[RecommendationUserActionContext] = {
-    val masterScore = db.readOnlyReplica { implicit s =>
-      val model = uriRecoRepo.getByUriAndUserId(uriId, userId, None)
-      model.get.masterScore.toInt
+    val modelOpt = db.readOnlyReplica { implicit s => uriRecoRepo.getByUriAndUserId(uriId, userId, None) }
+
+    if (modelOpt.isDefined && modelOpt.get.delivered > 0) {
+      val masterScore = modelOpt.get.masterScore.toInt
+      val client = feedback.fromClient.getOrElse(RecommendationClientType.Unknown)
+
+      var contexts = List.empty[RecommendationUserActionContext]
+
+      feedback.clicked.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Clicked) :: contexts }
+      feedback.kept.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Kept) :: contexts }
+
+      feedback.vote.foreach { isThumbUp =>
+        val action = if (isThumbUp) RecommendationUserAction.MarkedGood else RecommendationUserAction.MarkedBad
+        contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, action) :: contexts
+      }
+
+      feedback.trashed.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Trashed) :: contexts }
+      feedback.improvement.foreach { text => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.ImprovementSuggested, Some(text)) :: contexts }
+
+      contexts
+    } else {
+      // purely a keep action (not caused by recommendation)
+      Seq()
     }
-
-    val client = feedback.fromClient.getOrElse(RecommendationClientType.Unknown)
-
-    var contexts = List.empty[RecommendationUserActionContext]
-
-    feedback.clicked.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Clicked) :: contexts }
-    feedback.kept.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Kept) :: contexts }
-
-    feedback.vote.foreach { isThumbUp =>
-      val action = if (isThumbUp) RecommendationUserAction.MarkedGood else RecommendationUserAction.MarkedBad
-      contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, action) :: contexts
-    }
-
-    feedback.trashed.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Trashed) :: contexts }
-    feedback.improvement.foreach { text => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.ImprovementSuggested, Some(text)) :: contexts }
-
-    contexts
   }
 
   private def toHeimdalEvent(context: RecommendationUserActionContext): UserEvent = {

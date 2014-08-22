@@ -25,10 +25,10 @@ class YoutubeExtractorProvider @Inject() (httpFetcher: HttpFetcher, shoeboxScrap
       case _ => false
     }
   }
-  def apply(uri: URI) = new YoutubeExtractor(uri.toString, ScraperConfig.maxContentChars, httpFetcher, shoeboxScraperClient)
+  def apply(uri: URI) = new YoutubeExtractor(uri, ScraperConfig.maxContentChars, httpFetcher, shoeboxScraperClient)
 }
 
-class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetcher, shoeboxScraperClient: ShoeboxScraperClient) extends JsoupBasedExtractor(url, maxContentChars) {
+class YoutubeExtractor(url: URI, maxContentChars: Int, httpFetcher: HttpFetcher, shoeboxScraperClient: ShoeboxScraperClient) extends JsoupBasedExtractor(url, maxContentChars) {
 
   def parse(doc: Document): String = {
     val headline = Option(doc.getElementById("watch-headline-title")).map(_.text).getOrElse("")
@@ -55,7 +55,7 @@ class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetch
   }
 
   private def findTrack(ttsParameters: String): Option[YoutubeTrack] = {
-    val trackListUrl = "https://www.youtube.com/api/timedtext?asrs=1&type=list&tlangs=1&" + ttsParameters
+    val trackListUrl = URI.parse("https://www.youtube.com/api/timedtext?asrs=1&type=list&tlangs=1&" + ttsParameters).get
     val trackListExtractor = new YoutubeTrackListExtractor(trackListUrl)
     httpFetcher.fetch(trackListUrl, proxy = getProxy(url))(trackListExtractor.process)
     val tracks = trackListExtractor.getTracks()
@@ -75,21 +75,22 @@ class YoutubeExtractor(url: String, maxContentChars: Int, httpFetcher: HttpFetch
       parameter("&lang", track.langCode.lang),
       track.kind.map(parameter("&kind", _)).getOrElse("")
     ).mkString
-    val trackExtractor = new JsoupBasedExtractor(trackUrl, maxContentChars) {
+    val trackUri = URI.parse(trackUrl).get
+    val trackExtractor = new JsoupBasedExtractor(trackUri, maxContentChars) {
       def parse(doc: Document): String = StringEscapeUtils.unescapeXml(doc.getElementsByTag("text").map(_.text).mkString(" "))
     }
-    httpFetcher.fetch(trackUrl, proxy = getProxy(url))(trackExtractor.process)
+    httpFetcher.fetch(URI.parse(trackUrl).get, proxy = getProxy(url))(trackExtractor.process)
     log.info(s"[getTrack] fetched ${(if (track.isDefault) "default " else "") + (if (track.isAutomatic) "automatic " else "") + track.langTranslated} closed captions for ${url}")
     trackExtractor.getContent()
   }
 
-  private def getProxy(url: String) = syncGetProxyP(url)
+  private def getProxy(url: URI) = syncGetProxyP(url)
 
-  private[extractor] def getProxyP(url: String): Future[Option[HttpProxy]] = shoeboxScraperClient.getProxyP(url)
-  private[extractor] def syncGetProxyP(url: String): Option[HttpProxy] = Await.result(getProxyP(url), 10 seconds)
+  private[extractor] def getProxyP(url: URI): Future[Option[HttpProxy]] = shoeboxScraperClient.getProxyP(url.toString())
+  private[extractor] def syncGetProxyP(url: URI): Option[HttpProxy] = Await.result(getProxyP(url), 10 seconds)
 }
 
-class YoutubeTrackListExtractor(trackListUrl: String) extends JsoupBasedExtractor(trackListUrl, Int.MaxValue) {
+class YoutubeTrackListExtractor(trackListUrl: URI) extends JsoupBasedExtractor(trackListUrl, Int.MaxValue) {
   def parse(doc: Document): String = doc.getElementsByTag("track").toString
   def getTracks(): Seq[YoutubeTrack] = doc.getElementsByTag("track").map(YoutubeTrack.parse)
 }

@@ -19,21 +19,15 @@ class ExtractorFactoryImpl @Inject() (
     linkProcessingExtractorProvider
   )
 
-  def apply(url: String): Extractor = {
+  def apply(uri: URI): Extractor = {
     try {
-      URI.parse(url) match {
-        case Success(uri) =>
-          all.find(_.isDefinedAt(uri)).map { f =>
-            f.apply(uri)
-          }.getOrElse(throw new Exception("failed to find an extractor factory"))
-        case Failure(_) =>
-          log.warn(s"uri parsing failed: [$url]")
-          DefaultExtractorProvider(url)
-      }
+      all.find(_.isDefinedAt(uri)).map { f =>
+        f.apply(uri)
+      }.getOrElse(throw new Exception("failed to find an extractor factory"))
     } catch {
       case e: Throwable =>
-        log.warn(s"uri parsing failed: [$url][$e]")
-        DefaultExtractorProvider(url)
+        log.warn(s"uri parsing failed: [$uri][$e]")
+        DefaultExtractorProvider(uri)
     }
   }
 }

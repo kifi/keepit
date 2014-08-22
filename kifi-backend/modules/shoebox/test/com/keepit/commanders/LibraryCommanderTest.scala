@@ -356,7 +356,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         libraryCommander.userAccess(userCaptain.id.get, libShwarmas.id.get, None) === Some(LibraryAccess.READ_ONLY) // test no membership (public library)
 
         libraryCommander.userAccess(userCaptain.id.get, libScience.id.get, None) === None // test  library (no membership)
-        libraryCommander.userAccess(userCaptain.id.get, libScience.id.get, Some(libScience.universalLink)) === Some(LibraryAccess.READ_ONLY) // test  library (no membership) but with universalLink
+        libraryCommander.userAccess(userCaptain.id.get, libScience.id.get, Some(libScience.universalLink.get)) === Some(LibraryAccess.READ_ONLY) // test  library (no membership) but with universalLink
       }
     }
 
