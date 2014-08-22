@@ -24,9 +24,9 @@ angular.module('kifi')
         }, function (n) {
           scope.librariesEnabled = n || false;
           if (scope.librariesEnabled) {
-            libraryService.fetchLibrarySummaries().then(function () {
-              scope.libraries = libraryService.libraries;
-              scope.invited = libraryService.invited;
+            libraryService.fetchLibrarySummaries().then(function (summaries) {
+              scope.libraries = summaries.libraries;
+              scope.invited = summaries.invited;
             });
           }
         });
