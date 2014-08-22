@@ -1,5 +1,7 @@
 package com.keepit.common.concurrent
 
+import com.keepit.common.logging.Logging
+
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Future, Await, Promise }
 
 import java.util.concurrent.{ Executor }
@@ -61,6 +63,25 @@ object FutureHelpers {
 
   def sequentialExec[I, T](items: Iterable[I])(f: I => Future[T])(implicit ec: ScalaExecutionContext): Future[Unit] = {
     foldLeftWhile(items)(()) { case ((), nextItem) => f(nextItem).map { _ => () } }
+  }
+
+  def sequentialExecChunks[I, T](items: Iterable[I], chunkSize: Int = 10)(f: I => Future[T])(implicit ec: ScalaExecutionContext): Future[Unit] = {
+    def seqExecChunk[I, T](iter: Iterator[Iterable[I]], promised: Promise[Unit] = Promise[Unit]())(f: I => Future[T]): Future[Unit] = {
+      if (iter.isEmpty) promised.success(())
+      else {
+        val items = iter.next
+        sequentialExec(items)(f) onComplete {
+          case Success(_) => seqExecChunk(iter, promised)(f)
+          case Failure(t) => promised.failure(t)
+        }
+      }
+      promised.future
+    }
+    seqExecChunk(items.grouped(chunkSize))(f)
+  }
+
+  def sequentialExecWhile[I, T](items: Iterable[I])(f: I => Future[T], pred: I => Boolean)(implicit ec: ScalaExecutionContext): Future[Unit] = {
+    foldLeftWhile(items)(())({ case ((), nextItem) => f(nextItem).map { _ => () } }, Some(pred))
   }
 
   def foldLeft[I, T](items: Iterable[I], promisedResult: Promise[T] = Promise[T]())(accumulator: T)(fMap: (T, I) => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {

@@ -98,7 +98,7 @@ trait Typeahead[E, I] extends Logging {
     implicit val fj = ExecutionContext.fj
 
     log.infoP(s"begin re-indexing users ...")
-    FutureHelpers.sequentialExec(userIds) { userId =>
+    FutureHelpers.sequentialExecChunks(userIds) { userId =>
       refresh(userId) map { filter =>
         log.infoP(s"done with re-indexing ${userId}; filter=${filter}")
       }

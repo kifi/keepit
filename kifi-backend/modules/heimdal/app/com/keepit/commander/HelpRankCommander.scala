@@ -74,7 +74,7 @@ class HelpRankCommander @Inject() (
       }
       builder.result
     } flatMap { remainders =>
-      FutureHelpers.sequentialExec(remainders) { keep =>
+      FutureHelpers.sequentialExecChunks(remainders) { keep =>
         chatAttribution(userId, keep)
       } recover {
         case t: Throwable => airbrake.notify(s"[keepAttribution($userId)] failed with $t", t)
