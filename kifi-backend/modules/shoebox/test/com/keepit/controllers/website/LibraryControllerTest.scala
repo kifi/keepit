@@ -71,7 +71,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         parse1.name === "Library1"
         parse1.slug.value === "lib1"
         parse1.visibility.value === "secret"
-        parse1.keeps.count === 0
+        parse1.keeps.size === 0
         parse1.ownerId === user.externalId
 
         val inputJson2 = Json.obj(
@@ -218,9 +218,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"slug":"lib1",
              |"url":"/ahsu/lib1",
              |"ownerId":"${user1.externalId}",
-             |"collaborators":{"count":0,"users":[],"isMore":false},
-             |"followers":{"count":0,"users":[],"isMore":false},
-             |"keeps":{"count":0,"keeps":[],"isMore":false}
+             |"collaborators":[],
+             |"followers":[],
+             |"keeps":[],
+             |"numKeeps":0,
+             |"numCollaborators":0,
+             |"numFollowers":0
              |}}
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
@@ -270,9 +273,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"slug":"lib1",
              |"url":"/ahsu/lib1",
              |"ownerId":"${user1.externalId}",
-             |"collaborators":{"count":0,"users":[],"isMore":false},
-             |"followers":{"count":0,"users":[],"isMore":false},
-             |"keeps":{"count":0,"keeps":[],"isMore":false}
+             |"collaborators":[],
+             |"followers":[],
+             |"keeps":[],
+             |"numKeeps":0,
+             |"numCollaborators":0,
+             |"numFollowers":0
              |}}
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected)
@@ -303,7 +309,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val pubId = Library.publicId(lib1.id.get)
         val pubId2 = Library.publicId(lib2.id.get)
-        val testPath = com.keepit.controllers.website.routes.LibraryController.getLibrariesByUser.url
+        val testPath = com.keepit.controllers.website.routes.LibraryController.getLibrarySummariesByUser.url
         inject[FakeActionAuthenticator].setUser(user1)
         val request1 = FakeRequest("GET", testPath)
         val result1: Future[SimpleResult] = libraryController.getLibrarySummariesByUser()(request1)
@@ -314,25 +320,27 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           s"""
             |{"libraries":
               |[
-                |{"info":{
+                |{
                   |"id":"${pubId.id}",
                   |"name":"Library1",
                   |"visibility":"secret",
                   |"url":"/ahsu/lib1",
                   |"ownerId":"${user1.externalId}",
-                  |"numKeeps":0},
-                |"access":"owner"}
+                  |"numKeeps":0,
+                  |"access":"owner"
+                |}
               |],
               |"invited":
               | [
-                | {"info":{
+                | {
                     |"id":"${pubId2.id}",
                     |"name":"Library2",
                     |"visibility":"published",
                     |"url":"/bhsu/lib2",
                     |"ownerId":"${user2.externalId}",
-                    |"numKeeps":0},
-                  |"access":"read_write"}
+                    |"numKeeps":0,
+                    |"access":"read_write"
+                  |}
               | ]
             |}
            """.stripMargin)

@@ -601,7 +601,7 @@ class KeepsCommander @Inject() (
             }
             keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
           }
-          Right((KeepInfo.fromBookmark(keep), tags))
+          Right((KeepInfo.fromKeep(keep), tags))
       }
   }
 

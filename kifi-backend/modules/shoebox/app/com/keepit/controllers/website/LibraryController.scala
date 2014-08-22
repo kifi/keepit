@@ -9,7 +9,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time.Clock
 import com.keepit.model._
-import play.api.libs.json.{JsObject, JsArray, JsString, Json}
+import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
 
 import scala.util.{ Success, Failure }
 
