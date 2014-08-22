@@ -90,8 +90,8 @@ class LDAController @Inject() (
   }
 
   def sampleURIs(topicId: Int) = Action { request =>
-    val uris = lda.sampleURIs(topicId)
-    Ok(Json.toJson(uris))
+    val (uris, scores) = lda.sampleURIs(topicId).unzip
+    Ok(Json.obj("uris" -> uris, "scores" -> scores))
   }
 
   def getSimilarUsers(userId: Id[User], topK: Int) = Action { request =>

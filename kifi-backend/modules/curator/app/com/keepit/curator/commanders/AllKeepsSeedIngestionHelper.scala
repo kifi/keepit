@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
+import com.keepit.common.healthcheck.AirbrakeNotifier
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -23,6 +24,7 @@ class AllKeepSeedIngestionHelper @Inject() (
     keepInfoRepo: CuratorKeepInfoRepo,
     rawSeedsRepo: RawSeedItemRepo,
     db: Database,
+    airbrake: AirbrakeNotifier,
     shoebox: ShoeboxServiceClient) extends GlobalSeedIngestionHelper with Logging {
 
   private val SEQ_NUM_NAME: Name[SequenceNumber[Keep]] = Name("all_keeps_seq_num")
@@ -85,13 +87,42 @@ class AllKeepSeedIngestionHelper @Inject() (
     }
   }
 
-  private def processKeep(keep: Keep)(implicit session: RWSession): Unit = {
-    keepInfoRepo.getByKeepId(keep.id.get).map { keepInfo =>
-      val rawSeedItemsByOldUriId = rawSeedsRepo.getByUriId(keepInfo.uriId)
-      //deal correctly with the case where the item was renormalized by a previously ingested keep
-      val rawSeedItems = if (rawSeedItemsByOldUriId.isEmpty) rawSeedsRepo.getByUriId(keep.uriId) else rawSeedItemsByOldUriId
-      log.info(s"Got seed items: ${rawSeedItems} for keepInfo ${keepInfo} and keep ${keep}")
-      require(rawSeedItems.length > 0, s"Missing RSI: keepId ${keepInfo.keepId}, uriId ${keepInfo.uriId}")
+  private def processNewKeep(keep: Keep)(implicit session: RWSession): Unit = {
+    keepInfoRepo.save(CuratorKeepInfo(
+      uriId = keep.uriId,
+      userId = keep.userId,
+      keepId = keep.id.get,
+      state = State[CuratorKeepInfo](keep.state.value),
+      discoverable = !keep.isPrivate
+    ))
+
+    val rawSeedItems = rawSeedsRepo.getByUriId(keep.uriId)
+    if (rawSeedItems.isEmpty) {
+      rawSeedsRepo.save(RawSeedItem(
+        uriId = keep.uriId,
+        url = keep.url,
+        userId = None,
+        firstKept = keep.createdAt,
+        lastKept = keep.createdAt,
+        lastSeen = keep.createdAt,
+        priorScore = None,
+        timesKept = if (keep.state == KeepStates.ACTIVE) 1 else 0,
+        discoverable = !keep.isPrivate && keep.state == KeepStates.ACTIVE
+      ))
+    } else {
+      val discoverable = rawSeedItems(0).discoverable || (!keep.isPrivate && keep.state == KeepStates.ACTIVE)
+      rawSeedItems.foreach { rawSeedItem =>
+        updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, if (keep.state == KeepStates.ACTIVE) 1 else 0, discoverable)
+      }
+    }
+  }
+
+  private def processUpdatedKeep(keep: Keep, keepInfo: CuratorKeepInfo)(implicit session: RWSession): Unit = {
+    val rawSeedItemsByOldUriId = rawSeedsRepo.getByUriId(keepInfo.uriId)
+    //deal correctly with the case where the item was renormalized by a previously ingested keep
+    val rawSeedItems = if (rawSeedItemsByOldUriId.isEmpty) rawSeedsRepo.getByUriId(keep.uriId) else rawSeedItemsByOldUriId
+    log.info(s"Got seed items: ${rawSeedItems} for keepInfo ${keepInfo} and keep ${keep}")
+    if (rawSeedItems.length > 0) {
       val countChange = if (keep.state.value != keepInfo.state.value) {
         if (keepInfo.state == CuratorKeepInfoStates.ACTIVE) -1 else if (keep.state == KeepStates.ACTIVE) 1 else 0
       } else 0
@@ -122,38 +153,17 @@ class AllKeepSeedIngestionHelper @Inject() (
       rawSeedItems.foreach { rawSeedItem =>
         updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, countChange, discoverable)
       }
-
-    } getOrElse {
-      keepInfoRepo.save(CuratorKeepInfo(
-        uriId = keep.uriId,
-        userId = keep.userId,
-        keepId = keep.id.get,
-        state = State[CuratorKeepInfo](keep.state.value),
-        discoverable = !keep.isPrivate
-      ))
-
-      val rawSeedItems = rawSeedsRepo.getByUriId(keep.uriId)
-      if (rawSeedItems.isEmpty) {
-        rawSeedsRepo.save(RawSeedItem(
-          uriId = keep.uriId,
-          url = keep.url,
-          userId = None,
-          firstKept = keep.createdAt,
-          lastKept = keep.createdAt,
-          lastSeen = keep.createdAt,
-          priorScore = None,
-          timesKept = if (keep.state == KeepStates.ACTIVE) 1 else 0,
-          discoverable = !keep.isPrivate && keep.state == KeepStates.ACTIVE
-        ))
-      } else {
-        val discoverable = rawSeedItems(0).discoverable || (!keep.isPrivate && keep.state == KeepStates.ACTIVE)
-        rawSeedItems.foreach { rawSeedItem =>
-          updateRawSeedItem(rawSeedItem, keep.uriId, keep.createdAt, if (keep.state == KeepStates.ACTIVE) 1 else 0, discoverable)
-        }
-      }
-
+    } else {
+      airbrake.notify(s"Missing RSI: keepId ${keepInfo.keepId}, oldUriId ${keepInfo.uriId}, newUriId ${keep.uriId}. Skipping this keep update.")
     }
+  }
 
+  private def processKeep(keep: Keep)(implicit session: RWSession): Unit = {
+    keepInfoRepo.getByKeepId(keep.id.get).map { keepInfo =>
+      processUpdatedKeep(keep, keepInfo)
+    } getOrElse {
+      processNewKeep(keep)
+    }
   }
 
   def apply(maxItems: Int): Future[Boolean] = {
