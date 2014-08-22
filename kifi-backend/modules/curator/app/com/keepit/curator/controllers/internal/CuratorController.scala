@@ -31,7 +31,7 @@ class CuratorController @Inject() (
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = Action.async { request =>
     val json = request.body.asJson.get
     val feedback = json.as[UriRecommendationFeedback]
-    //SafeFuture { curatorAnalytics.trackUserFeedback(userId, uriId, feedback) }
+    SafeFuture { curatorAnalytics.trackUserFeedback(userId, uriId, feedback) }
     recoFeedbackCommander.updateUriRecommendationFeedback(userId, uriId, feedback).map(update => Ok(Json.toJson(update)))
   }
 

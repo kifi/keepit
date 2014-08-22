@@ -7,13 +7,9 @@ object URITokenizer {
 
   private[this] val specialCharRegex = """[/\.:#&+~_-]+""".r
 
-  def getTokens(uriString: String): Seq[String] = {
-    URI.parse(uriString) match {
-      case Success(uri) =>
-        uri.path match {
-          case Some(path) => specialCharRegex.split(path).filter { _.length > 0 }
-          case _ => Seq()
-        }
+  def getTokens(uri: URI): Seq[String] = {
+    uri.path match {
+      case Some(path) => specialCharRegex.split(path).filter { _.length > 0 }
       case _ => Seq()
     }
   }
