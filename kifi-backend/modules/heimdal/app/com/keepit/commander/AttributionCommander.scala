@@ -8,12 +8,13 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import com.keepit.common.db.Id
 import com.keepit.model.helprank.{ ReKeepRepo, KeepDiscoveryRepo, UserBookmarkClicksRepo }
-import com.keepit.shoebox.ShoeboxServiceClient
 import scala.collection.mutable
-import scala.concurrent.Future
+import scala.concurrent.{ Promise, Future }
 import com.keepit.model.UserBookmarkClicks
 import com.keepit.common.concurrent.FutureHelpers
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.util.{ Success, Failure }
 
 class AttributionCommander @Inject() (
     db: Database,
@@ -108,14 +109,19 @@ class AttributionCommander @Inject() (
   }
 
   def updateUsersReKeepStats(keepers: Seq[Id[User]], n: Int = 3): Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only
+    val promise = Promise[Seq[Seq[UserBookmarkClicks]]]
     val builder = mutable.ArrayBuilder.make[Seq[UserBookmarkClicks]]
-    FutureHelpers.sequentialExecChunks(keepers) { keeperId =>
+    val chunkCB: Int => Unit = { idx => log.info(s"[updateUsersReKeepStats] done with batch#$idx") }
+    val execF = FutureHelpers.chunkySequentialExec(keepers, 50, chunkCB) { keeperId: Id[User] =>
       updateUserReKeepStats(keeperId, n) map { res =>
         builder += res
       }
-    } map { _ =>
-      builder.result()
     }
+    execF onComplete {
+      case Success(_) => promise.success(builder.result())
+      case Failure(t) => promise.failure(t)
+    }
+    promise.future
   }
 
   def updateAllReKeepStats(n: Int = 3): Future[Seq[Seq[UserBookmarkClicks]]] = { // expensive -- admin only

@@ -31,6 +31,28 @@ class FutureHelpersTest extends Specification with Logging {
       builder.result().toSeq === input
     }
 
+    "sequentially execute in chunks" in {
+      val lock = new ReentrantLock()
+      val builder = mutable.ArrayBuilder.make[Int]
+      var chunkDone = 0
+      val input = Seq.fill(50) { util.Random.nextInt(Int.MaxValue) }
+      val chunkCB = { chunkIdx: Int =>
+        println(s"[chunkySequentialExec] done with chunk#$chunkIdx")
+        chunkDone += 1
+      }
+      val resF = FutureHelpers.chunkySequentialExec(input, 10, chunkCB) { id =>
+        Future {
+          val held = lock.tryLock()
+          if (!held) throw new IllegalStateException(s"There should be no concurrent access! lock=${lock}")
+          builder += id
+          lock.unlock()
+        }
+      }
+      Await.result(resF, Duration.Inf)
+      builder.result().toSeq === input
+      chunkDone === 5
+    }
+
     "partial process (i.e. short-circuitry)" in {
       val counter = new AtomicInteger(0)
       def generate: Future[Int] = Future.successful {

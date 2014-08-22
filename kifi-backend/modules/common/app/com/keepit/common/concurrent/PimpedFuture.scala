@@ -46,7 +46,7 @@ object PimpMyFuture {
 
 }
 
-object FutureHelpers {
+object FutureHelpers extends Logging {
 
   def map[A, B](in: Map[A, Future[B]])(implicit ec: ScalaExecutionContext): Future[Map[A, B]] = {
     val seq = in.map {
@@ -65,23 +65,27 @@ object FutureHelpers {
     foldLeftWhile(items)(()) { case ((), nextItem) => f(nextItem).map { _ => () } }
   }
 
-  def sequentialExecChunks[I, T](items: Iterable[I], chunkSize: Int = 10)(f: I => Future[T])(implicit ec: ScalaExecutionContext): Future[Unit] = {
-    def seqExecChunk[I, T](iter: Iterator[Iterable[I]], promised: Promise[Unit] = Promise[Unit]())(f: I => Future[T]): Future[Unit] = {
-      if (iter.isEmpty) promised.success(())
-      else {
-        val items = iter.next
-        sequentialExec(items)(f) onComplete {
-          case Success(_) => seqExecChunk(iter, promised)(f)
-          case Failure(t) => promised.failure(t)
-        }
-      }
-      promised.future
-    }
-    seqExecChunk(items.grouped(chunkSize))(f)
+  private val noopChunkCB: Int => Unit = _ => Unit
+
+  // sequential execute in chunks + callback (optional)
+  def chunkySequentialExec[I, T](items: Iterable[I], chunkSize: Int = 10, chunkCB: Int => Unit = noopChunkCB)(f: I => Future[T])(implicit ec: ScalaExecutionContext) = {
+    chunkyExec(items.grouped(chunkSize).zipWithIndex, chunkSize)(f, if (chunkCB == noopChunkCB) None else Some(chunkCB))
   }
 
-  def sequentialExecWhile[I, T](items: Iterable[I])(f: I => Future[T], pred: I => Boolean)(implicit ec: ScalaExecutionContext): Future[Unit] = {
-    foldLeftWhile(items)(())({ case ((), nextItem) => f(nextItem).map { _ => () } }, Some(pred))
+  private def chunkyExec[I, T](iter: Iterator[(Iterable[I], Int)], chunkSize: Int, promised: Promise[Unit] = Promise[Unit]())(f: I => Future[T], chunkCB: Option[Int => Unit] = None)(implicit ec: ScalaExecutionContext): Future[Unit] = {
+    if (iter.isEmpty) promised.success(())
+    else {
+      val items = iter.next
+      sequentialExec(items._1)(f) onComplete {
+        case Success(_) =>
+          chunkCB.foreach { _.apply(items._2) }
+          chunkyExec(iter, chunkSize, promised)(f, chunkCB)
+        case Failure(t) =>
+          log.error(s"[chunkyExec] Caught exception $t while processing chunk#${items._2} items=${items._1.take(5)}", t)
+          promised.failure(t)
+      }
+    }
+    promised.future
   }
 
   def foldLeft[I, T](items: Iterable[I], promisedResult: Promise[T] = Promise[T]())(accumulator: T)(fMap: (T, I) => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {

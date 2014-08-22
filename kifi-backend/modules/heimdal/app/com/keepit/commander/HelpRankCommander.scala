@@ -74,10 +74,10 @@ class HelpRankCommander @Inject() (
       }
       builder.result
     } flatMap { remainders =>
-      FutureHelpers.sequentialExecChunks(remainders) { keep =>
+      log.info(s"[keepAttribution($userId)] remainders(sz=${remainders.size}):${remainders.take(5).mkString(",")}")
+      val chunkCB = { idx: Int => log.info(s"[keepAttribution($userId)] done with (chat) batch#$idx") }
+      FutureHelpers.chunkySequentialExec(remainders, 50, chunkCB) { keep: Keep =>
         chatAttribution(userId, keep)
-      } recover {
-        case t: Throwable => airbrake.notify(s"[keepAttribution($userId)] failed with $t", t)
       }
     }
   }
