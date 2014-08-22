@@ -1,6 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.curator.model.{ RecommendationClientType, UriRecommendationRepo, UriRecommendation }
