@@ -29,7 +29,8 @@ class KifiSearch(
     engine: QueryEngine,
     articleSearcher: Searcher,
     keepSearcher: Searcher,
-    libraryIdsFuture: Future[(Seq[Long], Seq[Long], Seq[Long])],
+    friendIdsFuture: Future[Set[Long]],
+    libraryIdsFuture: Future[(Set[Long], Set[Long])],
     clickBoostsFuture: Future[ResultClickBoosts],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     monitoredAwait: MonitoredAwait,
@@ -53,7 +54,7 @@ class KifiSearch(
   def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (HitQueue, HitQueue, HitQueue) = {
 
     keepSearcher.setSimilarity(similarity)
-    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, libraryIdsFuture, filter.idFilter, config, monitoredAwait)
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter.idFilter, config, monitoredAwait)
     engine.execute(keepScoreSource)
 
     articleSearcher.setSimilarity(similarity)
