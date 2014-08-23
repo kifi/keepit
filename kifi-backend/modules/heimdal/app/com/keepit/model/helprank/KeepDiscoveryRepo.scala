@@ -1,5 +1,7 @@
 package com.keepit.model.helprank
 
+import java.sql.Timestamp
+
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
@@ -9,6 +11,7 @@ import com.keepit.model._
 import com.keepit.search.ArticleSearchResult
 import org.joda.time.DateTime
 
+import scala.slick.jdbc.SetParameter
 import scala.slick.jdbc.StaticQuery.interpolation
 
 @ImplementedBy(classOf[KeepDiscoveryRepoImpl])
@@ -28,7 +31,8 @@ trait KeepDiscoveryRepo extends Repo[KeepDiscovery] {
 @Singleton
 class KeepDiscoveryRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock) extends DbRepo[KeepDiscovery] with KeepDiscoveryRepo {
+    val clock: Clock,
+    uriDiscoveryCountCache: UriDiscoveryCountCache) extends DbRepo[KeepDiscovery] with KeepDiscoveryRepo {
 
   import db.Driver.simple._
 
@@ -46,8 +50,10 @@ class KeepDiscoveryRepoImpl @Inject() (
   def table(tag: Tag) = new KeepDiscoveriesTable(tag)
   initTable()
 
-  override def deleteCache(model: KeepDiscovery)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: KeepDiscovery)(implicit session: RSession): Unit = {}
+  override def deleteCache(model: KeepDiscovery)(implicit session: RSession): Unit = {
+    uriDiscoveryCountCache.remove(UriDiscoveryCountKey(model.uriId))
+  }
+  override def invalidateCache(model: KeepDiscovery)(implicit session: RSession): Unit = deleteCache(model)
 
   def getDiscoveriesByUUID(uuid: ExternalId[ArticleSearchResult])(implicit r: RSession): Seq[KeepDiscovery] = {
     (for (r <- rows if (r.hitUUID === uuid && r.state === KeepDiscoveryStates.ACTIVE)) yield r).list()
@@ -66,14 +72,20 @@ class KeepDiscoveryRepoImpl @Inject() (
   }
 
   def getDiscoveryCountByURI(uriId: Id[NormalizedURI], since: DateTime)(implicit r: RSession): Int = {
-    val q = (for (r <- rows if (r.uriId === uriId && r.state === KeepDiscoveryStates.ACTIVE && r.createdAt >= since)) yield r)
-      .groupBy(_.hitUUID)
-      .map { case (uuid, kc) => (uuid, kc.length) }
-    q.length.run
+    sql"select count(distinct (hit_uuid)) from keep_click where uri_id=$uriId and created_at >= $since".as[Int].first
   }
 
-  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime)(implicit r: RSession): Map[Id[NormalizedURI], Int] = { // todo(ray): optimize
-    uriIds.map { uriId => uriId -> getDiscoveryCountByURI(uriId, since) }.toMap
+  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime)(implicit r: RSession): Map[Id[NormalizedURI], Int] = {
+    if (uriIds.isEmpty) Map.empty
+    else {
+      val valueMap = uriDiscoveryCountCache.bulkGetOrElse(uriIds.map(UriDiscoveryCountKey(_)).toSet) { keys =>
+        val missing = keys.map(_.uriId)
+        missing.map { uriId =>
+          UriDiscoveryCountKey(uriId) -> getDiscoveryCountByURI(uriId, since)
+        }.toMap
+      }
+      valueMap.map { case (k, v) => (k.uriId -> v) }
+    }
   }
 
   def getDiscoveryCountsByKeeper(userId: Id[User], since: DateTime)(implicit r: RSession): Map[Id[Keep], Int] = {
