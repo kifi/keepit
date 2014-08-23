@@ -183,7 +183,8 @@ class FeedDigestEmailSenderImpl @Inject() (
   private def getFriendRecommendationsForUser(userId: Id[User]): Future[Seq[FriendReco]] = {
     val friendRecosF = for {
       userIds <- abook.getFriendRecommendations(userId, 0, FRIEND_RECOMMENDATIONS_TO_QUERY)
-      friends <- shoebox.getBasicUsers(userIds)
+      if userIds.isDefined
+      friends <- shoebox.getBasicUsers(userIds.get)
       userIds = friends.keySet.toSeq
     } yield {
       // todo(josh) only send friend recommendations who haven't been previous emailed (or at least not emailed in a certain timespan)
@@ -196,6 +197,10 @@ class FeedDigestEmailSenderImpl @Inject() (
     }
 
     friendRecosF.flatten
+  } recover {
+    case throwable =>
+      airbrake.notify(s"getFriendRecommendationsForUser($userId) failed", throwable)
+      Seq.empty
   }
 
   private def getDigestRecommendationsForUser(userId: Id[User]) = {
