@@ -61,3 +61,18 @@ object KMediaQuery {
 class KMediaQuery(term: Term) extends TermQuery(term) with KFilterQuery {
   override def toString(s: String) = "media(%s:%s)%s".format(term.field(), term.text(), ToStringUtils.boost(getBoost()))
 }
+
+object KTagQuery {
+  def apply(tag: String) = {
+    val normalizedTag = tag.trim().toLowerCase()
+    if (normalizedTag.length > 0) {
+      new KTagQuery(new Term("tag", normalizedTag))
+    } else {
+      null
+    }
+  }
+}
+
+class KTagQuery(term: Term) extends TermQuery(term) with KFilterQuery {
+  override def toString(s: String) = "tag(%s:%s)%s".format(term.field(), term.text(), ToStringUtils.boost(getBoost()))
+}
