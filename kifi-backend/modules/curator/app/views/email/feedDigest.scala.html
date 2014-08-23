@@ -47,149 +47,7 @@
 </tr>
 
 @allRecos.recos.map { reco =>
-<tr>
-    <td bgcolor="#ffffff">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-            <tr>
-                <td valign="top">
-                    <table width="625" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
-                        <tr>
-                            <td height="8" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <table width="625" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
-                                    <tr>
-                                        <td width="82" class="side1">&nbsp;</td>
-                                        <td align="left" style="font-family:Arial, sans-serif; font-size:14px; color:#92938d; text-align:left; line-height:18px;  font-weight:bold;">
-                                            @reco.topic.map { topic =>
-                                            Recommended because it’s trending in a topic you’re interested in: @topic
-                                            }
-                                        </td>
-                                        <td width="142" class="side1">&nbsp;</td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td height="17" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                        </tr>
-
-                        <tr>
-                            <td>
-                                <table width="625" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
-                                    <tr>
-                                        <td width="72" class="side1">&nbsp;</td>
-                                        <td align="center" valign="top" width="488">
-                                            <a href="@reco.urls.viewPage" target="_blank">
-                                                <img src="@reco.imageUrl" alt="@reco.title" style="display:block;max-width:488px;" border="0" class="banner" />
-                                            </a>
-                                        </td>
-                                        <td width="65" class="side1">&nbsp;</td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td height="14" style="font-size:1px;line-height:1px;">&nbsp;</td>
-                        </tr>
-                        <tr>
-                            <td valign="top">
-                                <table width="625" border="0" cellspacing="0" cellpadding="0" class="wrapper">
-                                    <tr>
-                                        <td width="82" class="side1">&nbsp;</td>
-                                        <td valign="top" >
-                                            <table width="466" border="0" cellspacing="0" cellpadding="0" class="wrapper">
-                                                <tr>
-                                                    <td align="left">
-                                                        <a style="font-family:Georgia, 'Times New Roman', Times, serif;text-align:left; color:#000000; font-size:22px; line-height:26px;" href="@reco.urls.viewPage">@reco.title</a>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td align="left" class="num1" style="line-height:22px; font-size:17px; font-family:Arial, sans-serif;color:#000000; ">
-                                                        <a href="@reco.urls.viewPage" target="_blank" style="line-height:22px; font-size:17px; font-family:Arial, sans-serif;color:#000000; text-decoration:none; ">@reco.domain</a>
-                                                        <span style="line-height:22px; font-size:14px; color:#9a9b99;">&bull;</span>
-                                                        @reco.readTime.map { readTime =>
-                                                        <span>@readTime read</span>
-                                                        }
-                                                    </td>
-                                                </tr>
-                                                <tr><td height="20">&nbsp;</td></tr>
-                                                <tr>
-                                                    <td align="left" style="line-height:21px; font-size:16px; text-align:justify; font-family:Arial,sans-serif;color:#000000; ">
-                                                        @reco.description
-                                                    </td>
-                                                </tr>
-
-                                                <tr>
-                                                    <td height="18" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                                </tr>
-                                                <tr>
-                                                    <td align="left" class="num2" valign="middle" style="line-height:16px; font-size:14px; color:#43a0f8; font-family:Arial, sans-serif;">
-                                                        <a href="@reco.urls.viewPage" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">View Page</a>
-                                                        <span style="line-height:18px; font-size:14px; color:#9a9b99;">•</span>
-                                                        @{ /* TODO(josh) fix url */ }
-                                                        <a href="@reco.urls.sendPage" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;">Send</a>
-                                                        <span style="line-height:18px; font-size:14px; color:#9a9b99;">•</span>
-                                                        @{ /* TODO(josh) fix url */ }
-                                                        <a href="@reco.urls.keepAndSeeMore" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">Keep & See More</a>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td height="15" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                                </tr>
-                                                <tr>
-                                                    <td>
-                                                        <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
-                                                            <tr>
-                                                                <td>
-                                                                    <table border="0" cellspacing="0" cellpadding="0" align="left">
-                                                                        <tr>
-                                                                            @reco.keepers.friendsToShow.map { user =>
-                                                                            <td width="28" style="padding-right:1px;"><img src="@user.avatarUrl" width="28" height="27" alt="@user.firstName" style="display:block;" border="0"/></td>
-                                                                            }
-                                                                        </tr>
-                                                                    </table>
-                                                                    <table border="0" cellspacing="0" cellpadding="0" align="left" class="wrapper" style="padding-left:6px;">
-                                                                        <tr>
-                                                                            <td align="left" class="top_space">
-                                                                                <table border="0" cellspacing="0" cellpadding="0" align="left">
-                                                                                    <tr>
-                                                                                        <td height="27" align="left" valign="middle" style="line-height:18px; font-size:14px; color:#a4a2af; text-align:left; font-family:Arial,  sans-serif;">
-                                                                                            @reco.keepers.message
-                                                                                        </td>
-                                                                                    </tr>
-                                                                                </table>
-                                                                            </td>
-                                                                        </tr>
-                                                                    </table>
-                                                                </td>
-                                                            </tr>
-                                                        </table>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td height="18" style="font-size:1px; line-height:1px;">&nbsp;</td>
-                                                </tr>
-                                            </table>
-                                        </td>
-                                        <td width="77" class="side1">&nbsp;</td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-            <!-- divider -->
-            <tr>
-                <td bgcolor="#f3f3f3" style="font-size:1px;line-height:1px;">&nbsp;</td>
-            </tr>
-            <!-- /divider -->
-        </table>
-    </td>
-</tr>
+<tr><td bgcolor="#ffffff">@partials.feedRecommendation(reco, ctx)</td></tr>
 }
 
 <tr>
@@ -212,6 +70,14 @@
             </tr>
         </table>
     </td>
+</tr>
+
+<tr>
+    <td bgcolor="#f3f3f3" style="font-size:1px;line-height:1px;">&nbsp;</td>
+</tr>
+<tr><td>@partials.friendRecommendations(allRecos.friendRecos, ctx)</td></tr>
+<tr>
+    <td bgcolor="#f3f3f3" style="font-size:1px;line-height:1px;">&nbsp;</td>
 </tr>
 </table>
 

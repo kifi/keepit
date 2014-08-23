@@ -1,0 +1,64 @@
+@(friendRecos: Seq[com.keepit.curator.commanders.email.FriendReco], ctx: email.helpers.Context)
+@import email.helpers.appendUrlUtmCodes
+<table width="100%" border="0" align="center" cellpadding="0" cellspacing="0">
+    <tr>
+        <td height="25" >&nbsp;</td>
+    </tr>
+    <tr>
+        <td align="center" style="font-family:Arial,sans-serif; font-size:16px;color:#333333; line-height:22px;font-weight:bold;">What are the rest of your friends recommending?</td>
+    </tr>
+    <tr>
+        <td height="25" >&nbsp;</td>
+    </tr>
+    <tr>
+        <td>
+            <table width="100%" border="0" align="center" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td width="79" class="hide">&nbsp;</td>
+                    <td>
+                        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                            <tr>
+                                <td valign="top">
+                                    <table border="0" align="center" cellpadding="0" cellspacing="0">
+                                        <tr>
+                                            @for(i <- 1 to friendRecos.size) {
+                                                @defining(friendRecos(i - 1)) { friend =>
+                                                <td width="60" valign="top">
+                                                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                                        <tr>
+                                                            <td>
+                                                                <a href="@ctx.inviteFriendUrl(friend.basicUser, i)" target="_blank">
+                                                                    <img src="@friend.avatarUrl" alt="@friend.basicUser.firstName" width="60" height="60" style="display:block;" border="0"/>
+                                                                </a>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td height="10" style="line-height:1px;font-size:1px;">&nbsp;</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="name" align="center" valign="top" style="font-family:Arial,sans-serif; font-size:12px;color:#333333; line-height:16px;">
+                                                                <a href="@ctx.inviteFriendUrl(friend.basicUser, i)" target="_blank" style="text-decoration:none;color:#333333;">@friend.basicUser.firstName</a>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                                @if(i < friendRecos.size) {
+                                                <td width="8">&nbsp;</td>
+                                                }
+                                                }
+                                            }
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td width="78" class="hide">&nbsp;</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+    <tr>
+        <td height="25" >&nbsp;</td>
+    </tr>
+</table>
