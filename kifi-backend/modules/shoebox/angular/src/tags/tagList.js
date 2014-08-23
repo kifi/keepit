@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.tagList', ['kifi.keepService', 'kifi.tagService'])
+angular.module('kifi')
 
 .directive('kfTagList', [
   'keepService', 'tagService', '$filter', '$sce', '$document',

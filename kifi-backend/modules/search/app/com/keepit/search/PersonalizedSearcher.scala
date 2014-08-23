@@ -13,32 +13,20 @@ import com.keepit.search.semantic._
 object PersonalizedSearcher {
   def apply(indexReader: WrappedIndexReader,
     myUris: Set[Long],
-    collectionSearcher: CollectionSearcherWithUser = null,
-    nonPersonalizedContextVectorFuture: Option[Future[SemanticVector]] = None,
-    useNonPersonalizedContextVector: Boolean = false) = {
+    collectionSearcher: CollectionSearcherWithUser = null) = {
 
     new PersonalizedSearcher(
       indexReader,
       myUris,
-      collectionSearcher,
-      nonPersonalizedContextVectorFuture,
-      useNonPersonalizedContextVector)
+      collectionSearcher)
   }
 }
 
 class PersonalizedSearcher(
   override val indexReader: WrappedIndexReader,
   myUris: Set[Long],
-  val collectionSearcher: CollectionSearcherWithUser,
-  nonPersonalizedContextVectorFuture: Option[Future[SemanticVector]] = None,
-  useNonPersonalizedContextVector: Boolean = false)
+  val collectionSearcher: CollectionSearcherWithUser)
     extends Searcher(indexReader) with SearchSemanticContext with Logging {
-
-  override def getContextVector: SemanticVector = {
-    if (useNonPersonalizedContextVector) {
-      Await.result(nonPersonalizedContextVectorFuture.get, 1 second)
-    } else super.getContextVector
-  }
 
   override protected def getSemanticVectorComposer(term: Term) = {
     val subReaders = indexReader.wrappedSubReaders

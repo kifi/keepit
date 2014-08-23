@@ -28,15 +28,15 @@ class SeedAttributionHelper @Inject() (
 
   def getAttributions(seeds: Seq[ScoredSeedItem]): Future[Seq[ScoredSeedItemWithAttribution]] = {
     val userAttrFut = getUserAttribution(seeds)
-    //val keepAttrFut = getKeepAttribution(seeds)
+    val keepAttrFut = keepAttributionFromCortex(seeds)
     val topicAttrFut = getTopicAttribution(seeds)
     for {
       userAttr <- userAttrFut
-      //keepAttr <- keepAttrFut
+      keepAttr <- keepAttrFut
       topicAttr <- topicAttrFut
     } yield {
       (0 until seeds.size).map { i =>
-        val attr = SeedAttribution(userAttr(i), None /* keepAttr(i) */ , topicAttr(i))
+        val attr = SeedAttribution(userAttr(i), keepAttr(i), topicAttr(i))
         ScoredSeedItemWithAttribution(seeds(i).userId, seeds(i).uriId, seeds(i).uriScores, attr)
       }
     }
@@ -104,6 +104,20 @@ class SeedAttributionHelper @Inject() (
     val filtered = finalScores.filter { case (_, score) => score >= MIN_KEEP_ATTR_SCORE }.toArray
     val relevantKeeps = filtered.sortBy(-1 * _._2).take(3).map { _._1 }
     if (relevantKeeps.size == 0) None else Some(KeepAttribution(relevantKeeps))
+  }
+
+  private def keepAttributionFromCortex(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[KeepAttribution]]] = {
+    require(seeds.map(_.userId).toSet.size <= 1, "Batch keep attribution must be all for the same user")
+
+    val empty = Seq.fill(seeds.size)(None)
+    seeds.headOption.map { _.userId } match {
+      case None => Future.successful(empty)
+      case Some(userId) =>
+        val uriIds = seeds.map { _.uriId }
+        cortex.explainFeed(userId, uriIds).map { res =>
+          res.map { keepIds => if (!keepIds.isEmpty) Some(KeepAttribution(keepIds)) else None }
+        }
+    }
   }
 
   private def getTopicAttribution(seeds: Seq[ScoredSeedItem]): Future[Seq[Option[TopicAttribution]]] = {

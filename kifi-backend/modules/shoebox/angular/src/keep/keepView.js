@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.keepView', [])
+angular.module('kifi')
 
 .config([
   '$routeProvider',

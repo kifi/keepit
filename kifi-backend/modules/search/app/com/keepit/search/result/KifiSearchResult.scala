@@ -133,12 +133,10 @@ object PartialSearchResult extends Logging {
   lazy val empty = {
     new PartialSearchResult(JsObject(List(
       "hits" -> JsArray(),
-      "mayHaveMore" -> JsBoolean(false),
       "myTotal" -> JsNumber(0),
       "friendsTotal" -> JsNumber(0),
       "othersTotal" -> JsNumber(0),
-      "firendsStats" -> Json.toJson(FriendStats.empty),
-      "tags" -> JsArray(),
+      "friendsStats" -> Json.toJson(FriendStats.empty),
       "svVariance" -> JsNumber(-1.0f), // TODO: remove
       "show" -> JsBoolean(false) // TODO: remove
     )))

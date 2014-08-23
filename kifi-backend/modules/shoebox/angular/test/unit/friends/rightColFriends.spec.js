@@ -2,7 +2,7 @@
 
 describe('kifi.friends.rightColFriendsView', function () {
 
-  beforeEach(module('kifi.friends.rightColFriendsView'));
+  beforeEach(module('kifi'));
 
   var $q,
       $compile,

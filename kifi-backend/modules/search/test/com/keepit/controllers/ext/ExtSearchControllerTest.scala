@@ -173,10 +173,6 @@ class FixedResultSearchCommander extends SearchCommander {
     lastUUIDStr: Option[String],
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None,
     debug: Option[String] = None,
     withUriSummary: Boolean = false): DecoratedResult = {
     results(query)
@@ -193,10 +189,6 @@ class FixedResultSearchCommander extends SearchCommander {
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
-    start: Option[String],
-    end: Option[String],
-    tz: Option[String],
-    coll: Option[String],
     debug: Option[String]): PartialSearchResult = ???
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]) = ???

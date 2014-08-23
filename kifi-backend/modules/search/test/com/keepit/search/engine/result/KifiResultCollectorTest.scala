@@ -17,10 +17,9 @@ class KifiResultCollectorTest extends Specification {
     "collect hits above MIN_PERCENT_MATCH" in {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(),
-        friendsUris = LongArraySet.empty,
         maxHitsPerCategory = 10,
         percentMatchThreshold = 0.0f)
-      val ctx = new ScoreContext(expr, exprSize, 1.0f, Array(0.3f, 0.3f, 0.4f), collector)
+      val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
       ctx.addScore(1, 1.0f)
@@ -39,17 +38,16 @@ class KifiResultCollectorTest extends Specification {
       oHits.size === 0
 
       val hit = mHits.pop()
-      hit.hit.id === 20
+      hit.id === 20
       hit.score === 2.0f * 0.7f
     }
 
     "collect hits above percentMatchThreshold" in {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(),
-        friendsUris = LongArraySet.empty,
         maxHitsPerCategory = 10,
         percentMatchThreshold = 0.7f)
-      val ctx = new ScoreContext(expr, exprSize, 1.0f, Array(0.3f, 0.3f, 0.4f), collector)
+      val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
       ctx.addScore(1, 1.0f)
@@ -77,16 +75,15 @@ class KifiResultCollectorTest extends Specification {
       fHits.size === 0
       oHits.size === 0
 
-      Set(mHits.pop().hit.id, mHits.pop().hit.id) === Set(30L, 40L)
+      Set(mHits.pop().id, mHits.pop().id) === Set(30L, 40L)
     }
 
     "collect a hit below percentMatchThreshold if clicked" in {
       val collector = new KifiResultCollector(
-        clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
-        friendsUris = LongArraySet.empty,
+        clickBoosts = new TstResultClickBoosts(Set(20L), 3.0f),
         maxHitsPerCategory = 10,
         percentMatchThreshold = 0.9f)
-      val ctx = new ScoreContext(expr, exprSize, 1.0f, Array(0.3f, 0.3f, 0.4f), collector)
+      val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
       ctx.addScore(1, 1.0f)
@@ -109,27 +106,26 @@ class KifiResultCollectorTest extends Specification {
       oHits.size === 0
 
       val hit = mHits.pop()
-      hit.hit.id === 20L
-      hit.score === 2.0f * 0.7f * 2.0f
+      hit.id === 20L
+      hit.score === 2.0f * 0.7f * 3.0f // sum * pctMatch * click boost
     }
 
     "collect hits by category" in {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
-        friendsUris = LongArraySet.from(Array(20L)),
         maxHitsPerCategory = 10,
         percentMatchThreshold = 0.0f)
-      val ctx = new ScoreContext(expr, exprSize, 1.0f, Array(0.3f, 0.3f, 0.4f), collector)
+      val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
       ctx.addScore(0, 1.0f)
       ctx.addScore(1, 1.0f)
-      ctx.visibility = Visibility.PUBLIC
+      ctx.visibility = Visibility.OTHERS
       ctx.flush()
       ctx.set(20)
       ctx.addScore(0, 1.0f)
       ctx.addScore(2, 1.0f)
-      ctx.visibility = Visibility.PUBLIC
+      ctx.visibility = Visibility.NETWORK
       ctx.flush()
       ctx.set(30)
       ctx.addScore(1, 1.0f)
@@ -142,18 +138,17 @@ class KifiResultCollectorTest extends Specification {
       fHits.size === 1
       oHits.size === 1
 
-      mHits.pop().hit.id === 30L
-      fHits.pop().hit.id === 20L
-      oHits.pop().hit.id === 10L
+      mHits.pop().id === 30L
+      fHits.pop().id === 20L
+      oHits.pop().id === 10L
     }
 
     "not collect restricted hits" in {
       val collector = new KifiResultCollector(
         clickBoosts = new TstResultClickBoosts(Set(20L), 2.0f),
-        friendsUris = LongArraySet.from(Array(20L)),
         maxHitsPerCategory = 10,
         percentMatchThreshold = 0.0f)
-      val ctx = new ScoreContext(expr, exprSize, 1.0f, Array(0.3f, 0.3f, 0.4f), collector)
+      val ctx = new ScoreContext(expr, exprSize, Array(0.3f, 0.3f, 0.4f), collector)
 
       ctx.set(10)
       ctx.addScore(0, 1.0f)

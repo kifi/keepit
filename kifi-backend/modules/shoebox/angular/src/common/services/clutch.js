@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.clutch', [])
+angular.module('kifi')
 
 .factory('Clutch', ['$q', '$timeout', 'util',
   function ($q, $timeout, util) {

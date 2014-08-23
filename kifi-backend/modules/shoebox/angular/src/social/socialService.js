@@ -1,8 +1,6 @@
 'use strict';
 
-angular.module('kifi.socialService', [
-  'angulartics'
-])
+angular.module('kifi')
 
 .factory('socialService', [
   'routeService', '$http', 'util', '$rootScope', 'Clutch', '$window', '$q', '$analytics', '$location', '$timeout',

@@ -296,7 +296,7 @@ class ScrapeWorkerImpl @Inject() (
   }
 
   private def fetch(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo, proxyOpt: Option[HttpProxy]): Future[ScraperResult] = {
-    val url = normalizedUri.url
+    val url = URI.parse(normalizedUri.url).get
     val extractor = extractorFactory(url)
     log.debug(s"[fetchArticle] url=${normalizedUri.url} ${extractor.getClass}")
     val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
@@ -386,7 +386,7 @@ class ScrapeWorkerImpl @Inject() (
     lazy val isFishy = syncHelper.syncGetLatestKeep(movedUri.url).filter(_.createdAt.isAfter(currentDateTime.minusHours(1))) match {
       case Some(recentKeep) if recentKeep.source != KeepSource.bookmarkImport => true
       case Some(importedBookmark) =>
-        val parsedBookmarkUrl = URI.parse(importedBookmark.url).get.toString()
+        val parsedBookmarkUrl = URI.parse(importedBookmark.url).get
         (parsedBookmarkUrl != movedUri.url) && (httpFetcher.fetch(parsedBookmarkUrl)(httpFetcher.NO_OP).statusCode != HttpStatus.SC_MOVED_PERMANENTLY)
       case None => false
     }

@@ -103,5 +103,3 @@ function log() {
   args.unshift("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'");
   console.log.apply(console, args);
 }
-
-/^Mac/.test(navigator.platform) && api.require('styles/mac.css', api.noop);

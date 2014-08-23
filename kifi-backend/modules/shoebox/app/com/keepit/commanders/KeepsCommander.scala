@@ -11,6 +11,7 @@ import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.curator.CuratorServiceClient
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
@@ -85,7 +86,7 @@ object KeepInfo {
     )
   }
 
-  def fromBookmark(bookmark: Keep): KeepInfo = {
+  def fromKeep(bookmark: Keep): KeepInfo = {
     KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate, libraryId = None) // todo(andrew): Add library external id
   }
 }
@@ -147,6 +148,7 @@ class KeepsCommander @Inject() (
     uriSummaryCommander: URISummaryCommander,
     collectionCommander: CollectionCommander,
     normalizedURIInterner: NormalizedURIInterner,
+    curator: CuratorServiceClient,
     clock: Clock) extends Logging {
 
   private def getKeeps(
@@ -326,8 +328,9 @@ class KeepsCommander @Inject() (
       case Success(keep) =>
         SafeFuture {
           searchClient.updateURIGraph()
+          curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true)))
         }
-        KeepInfo.fromBookmark(keep)
+        KeepInfo.fromKeep(keep)
     }
   }
 
@@ -344,13 +347,14 @@ class KeepsCommander @Inject() (
     }
     SafeFuture {
       searchClient.updateURIGraph()
+      keeps.foreach { keep => curator.updateUriRecommendationFeedback(userId, keep.uriId, UriRecommendationFeedback(kept = Some(true))) }
     }
     val (returnedKeeps, existingKeepsOpt) = if (separateExisting) {
       (newKeeps, Some(existingKeeps))
     } else {
       (newKeeps ++ existingKeeps, None)
     }
-    (returnedKeeps.map(KeepInfo.fromBookmark), addedToCollection, failures map (_.url), existingKeepsOpt map (_.map(KeepInfo.fromBookmark)))
+    (returnedKeeps.map(KeepInfo.fromKeep), addedToCollection, failures map (_.url), existingKeepsOpt map (_.map(KeepInfo.fromKeep)))
   }
 
   def unkeepMultiple(keepInfos: Seq[KeepInfo], userId: Id[User])(implicit context: HeimdalContext): Seq[KeepInfo] = {
@@ -372,7 +376,7 @@ class KeepsCommander @Inject() (
     }
     log.info(s"[unkeepMulti] deactivatedKeeps:(len=${deactivatedBookmarks.length}):${deactivatedBookmarks.mkString(",")}")
 
-    val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromBookmark
+    val deactivatedKeepInfos = deactivatedBookmarks map KeepInfo.fromKeep
     keptAnalytics.unkeptPages(userId, deactivatedBookmarks, context)
     searchClient.updateURIGraph()
     deactivatedKeepInfos
@@ -410,7 +414,7 @@ class KeepsCommander @Inject() (
     // TODO: broadcast over any open user channels
     keptAnalytics.unkeptPages(userId, keeps, context)
     searchClient.updateURIGraph()
-    keeps map KeepInfo.fromBookmark
+    keeps map KeepInfo.fromKeep
   }
 
   def rekeepBulk(selection: BulkKeepSelection, userId: Id[User])(implicit context: HeimdalContext): Int = {
@@ -574,32 +578,31 @@ class KeepsCommander @Inject() (
     }
   }
 
-  def keepWithMultipleTags(userId: Id[User], keepsWithTags: Seq[(KeepInfo, Seq[String])], source: KeepSource)(implicit context: HeimdalContext): Map[Collection, Seq[Keep]] = {
-    val (bookmarks, _) = keepInterner.internRawBookmarks(
-      rawBookmarkFactory.toRawBookmark(keepsWithTags.map(_._1)),
+  def keepWithSelectedTags(userId: Id[User], keepJson: JsObject, source: KeepSource, selectedTagNames: Seq[String])(implicit context: HeimdalContext): Either[String, (KeepInfo, Seq[Collection])] = {
+
+    keepInterner.internRawBookmark(rawBookmarkFactory.toRawBookmark(keepJson),
       userId,
+      source,
       mutatePrivacy = true,
-      installationId = None,
-      source = KeepSource.default
-    )
+      installationId = None) match {
+        case Failure(e) => Left(e.getMessage)
+        case Success(keep) =>
+          val tags = db.readWrite { implicit s =>
+            val selectedTagIds = selectedTagNames.map { getOrCreateTag(userId, _).id.get }
+            val existingTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
+            val tagsToAdd = selectedTagIds.filterNot(existingTagIds.contains(_))
+            val tagsToRemove = existingTagIds.filterNot(selectedTagIds.contains(_))
 
-    val keepsByUrl = bookmarks.map(keep => keep.url -> keep).toMap
-
-    val keepsByTagName = keepsWithTags.flatMap {
-      case (keepInfo, tags) =>
-        tags.map(tagName => (tagName, keepsByUrl(keepInfo.url)))
-    }.groupBy(_._1).mapValues(_.map(_._2))
-
-    val keepsByTag = keepsByTagName.map {
-      case (tagName, keeps) =>
-        val tag = getOrCreateTag(userId, tagName)
-        addToCollection(tag.id.get, keeps, updateUriGraph = false)
-        tag -> keeps
-    }.toMap
-
-    searchClient.updateURIGraph()
-
-    keepsByTag
+            keepToCollectionRepo.insertAll(tagsToAdd.map { tagId =>
+              KeepToCollection(keepId = keep.id.get, collectionId = tagId)
+            })
+            tagsToRemove.map { tagId =>
+              keepToCollectionRepo.remove(keep.id.get, tagId)
+            }
+            keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map { id => collectionRepo.get(id) }
+          }
+          Right((KeepInfo.fromKeep(keep), tags))
+      }
   }
 
   def setFirstKeeps(userId: Id[User], keeps: Seq[Keep]): Unit = {

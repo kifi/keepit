@@ -90,8 +90,8 @@ class LDAController @Inject() (
   }
 
   def sampleURIs(topicId: Int) = Action { request =>
-    val uris = lda.sampleURIs(topicId)
-    Ok(Json.toJson(uris))
+    val (uris, scores) = lda.sampleURIs(topicId).unzip
+    Ok(Json.obj("uris" -> uris, "scores" -> scores))
   }
 
   def getSimilarUsers(userId: Id[User], topK: Int) = Action { request =>
@@ -121,9 +121,16 @@ class LDAController @Inject() (
     Ok(Json.toJson(res))
   }
 
-  def fixNullFirstTopicScore() = Action { request =>
-    lda.fixNullFirstTopicScore()
-    Ok
+  def explainFeed() = Action(parse.tolerantJson) { request =>
+    val js = request.body
+    val userId = (js \ "user").as[Id[User]]
+    val uris = (js \ "uris").as[Seq[Id[NormalizedURI]]]
+    val explain = lda.explainFeed(userId, uris)
+    Ok(Json.toJson(explain))
+  }
+
+  def uriKLDivergence(uri1: Id[NormalizedURI], uri2: Id[NormalizedURI]) = Action { request =>
+    Ok(Json.toJson(lda.uriKLDivergence(uri1, uri2)))
   }
 
 }

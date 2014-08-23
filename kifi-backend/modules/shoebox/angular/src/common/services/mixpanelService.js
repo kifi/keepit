@@ -6,7 +6,7 @@
    * @name kifi.mixpanel
    * Enables analytics support for Mixpanel (http://mixpanel.com)
    */
-  angular.module('kifi.mixpanel', ['kifi', 'angulartics'])
+  angular.module('kifi')
   .config(['$analyticsProvider',
     function ($analyticsProvider) {
       $analyticsProvider.firstPageview(false);

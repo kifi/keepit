@@ -17,7 +17,8 @@ import scala.slick.jdbc.StaticQuery
 trait EmailAccountRepo extends Repo[EmailAccount] with SeqNumberFunction[EmailAccount] {
   def getByAddress(address: EmailAddress)(implicit session: RSession): Option[EmailAccount]
   def internByAddress(address: EmailAddress)(implicit session: RWSession): EmailAccount
-  def internByAddresses(addresses: EmailAddress*)(implicit session: RWSession): Seq[EmailAccount]
+  def getByAddresses(addresses: EmailAddress*)(implicit session: RSession): Map[EmailAddress, EmailAccount]
+  def internByAddresses(addresses: EmailAddress*)(implicit session: RWSession): Map[EmailAddress, EmailAccount]
   def getVerifiedOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
 }
 
@@ -60,15 +61,19 @@ class EmailAccountRepoImpl @Inject() (
     }
   }
 
-  def internByAddresses(addresses: EmailAddress*)(implicit session: RWSession): Seq[EmailAccount] = {
-    val existingAccounts = (for (row <- rows if row.address inSet (addresses)) yield row).list
-    val lowerCasedExistingAddresses = existingAccounts.map(_.address.address.toLowerCase)
+  def getByAddresses(addresses: EmailAddress*)(implicit session: RSession): Map[EmailAddress, EmailAccount] = {
+    (for (row <- rows if row.address inSet (addresses)) yield (row.address, row)).list.toMap
+  }
+
+  def internByAddresses(addresses: EmailAddress*)(implicit session: RWSession): Map[EmailAddress, EmailAccount] = {
+    val existingAccounts = getByAddresses(addresses: _*)
+    val lowerCasedExistingAddresses = existingAccounts.keySet.map(_.address.toLowerCase)
     val allByLowerCasedAddress = addresses.map { address => address.address.toLowerCase -> address }.toMap
     val toBeInserted = (allByLowerCasedAddress -- lowerCasedExistingAddresses).values.map(address => EmailAccount(address = address)).toSeq
     if (toBeInserted.isEmpty) { existingAccounts }
     else {
       insertAll(toBeInserted)
-      (for (row <- rows if row.address inSet (addresses)) yield row).list
+      getByAddresses(addresses: _*)
     }
   }
 

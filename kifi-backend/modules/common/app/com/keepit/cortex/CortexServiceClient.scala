@@ -10,7 +10,7 @@ import scala.concurrent.Future
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.Id
-import com.keepit.model.{ User, NormalizedURI, Word2VecKeywords }
+import com.keepit.model.{ Keep, User, NormalizedURI, Word2VecKeywords }
 import com.keepit.common.db.SequenceNumber
 import com.keepit.cortex.core.ModelVersion
 import com.keepit.common.net.CallTimeouts
@@ -39,10 +39,11 @@ trait CortexServiceClient extends ServiceClient {
   def userUriInterest(userId: Id[User], uriId: Id[NormalizedURI]): Future[LDAUserURIInterestScores]
   def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[LDAUserURIInterestScores]]
   def userTopicMean(userId: Id[User]): Future[(Option[Array[Float]], Option[Array[Float]])]
-  def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]]
+  def sampleURIsForTopic(topic: Int): Future[(Seq[Id[NormalizedURI]], Seq[Float])]
   def getSimilarUsers(userId: Id[User], topK: Int): Future[(Seq[Id[User]], Seq[Float])] // with scores
   def unamedTopics(limit: Int = 20): Future[(Seq[LDAInfo], Seq[Map[String, Float]])] // with topicWords
   def getTopicNames(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[String]]]
+  def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Seq[Id[Keep]]]]
 
   def getSparseLDAFeaturesChanged(modelVersion: ModelVersion[DenseLDA], seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[(ModelVersion[DenseLDA], Seq[UriSparseLDAFeatures])]
 }
@@ -181,8 +182,13 @@ class CortexServiceClientImpl(
     }
   }
 
-  def sampleURIsForTopic(topic: Int): Future[Seq[Id[NormalizedURI]]] = {
-    call(Cortex.internal.sampleURIsForTopic(topic)).map { r => (r.json).as[Seq[Id[NormalizedURI]]] }
+  def sampleURIsForTopic(topic: Int): Future[(Seq[Id[NormalizedURI]], Seq[Float])] = {
+    call(Cortex.internal.sampleURIsForTopic(topic)).map { r =>
+      val js = r.json
+      val uris = (js \ "uris").as[Seq[Id[NormalizedURI]]]
+      val scores = (js \ "scores").as[Seq[Float]]
+      (uris, scores)
+    }
   }
 
   def getSimilarUsers(userId: Id[User], topK: Int): Future[(Seq[Id[User]], Seq[Float])] = {
@@ -206,6 +212,11 @@ class CortexServiceClientImpl(
   def getTopicNames(uris: Seq[Id[NormalizedURI]]): Future[Seq[Option[String]]] = {
     val payload = Json.obj("uris" -> uris)
     call(Cortex.internal.getTopicNames(), payload).map { r => (r.json).as[Seq[Option[String]]] }
+  }
+
+  def explainFeed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Seq[Id[Keep]]]] = {
+    val payload = Json.obj("user" -> userId, "uris" -> uriIds)
+    call(Cortex.internal.explainFeed(), payload).map { r => (r.json).as[Seq[Seq[Id[Keep]]]] }
   }
 
 }

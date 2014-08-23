@@ -60,17 +60,31 @@ object RichSocialConnection {
 case class InviteRecommendation(
   network: SocialNetworkType,
   identifier: Either[EmailAddress, SocialId],
-  name: String,
+  name: Option[String],
   pictureUrl: Option[String],
-  lastInvitedAt: Option[DateTime])
+  lastInvitedAt: Option[DateTime],
+  score: Double)
 
 object InviteRecommendation {
   val identifierFormat = EitherFormat[EmailAddress, SocialId]
   implicit val format = (
     (__ \ 'network).format[SocialNetworkType] and
     (__ \ 'identifier).format(identifierFormat) and
-    (__ \ 'name).format[String] and
+    (__ \ 'name).formatNullable[String] and
     (__ \ 'pictureUrl).formatNullable[String] and
-    (__ \ 'lastInvitedAt).formatNullable(DateTimeJsonFormat)
+    (__ \ 'lastInvitedAt).formatNullable(DateTimeJsonFormat) and
+    (__ \ 'score).format[Double]
   )(InviteRecommendation.apply, unlift(InviteRecommendation.unapply))
+}
+
+case class IrrelevantPeople(
+  userId: Id[User],
+  irrelevantUsers: Set[Id[User]],
+  irrelevantFacebookAccounts: Set[Id[SocialUserInfo]],
+  irrelevantLinkedInAccounts: Set[Id[SocialUserInfo]],
+  irrelevantEmailAccounts: Set[Id[EmailAccountInfo]])
+
+object IrrelevantPeople {
+  implicit val format = Json.format[IrrelevantPeople]
+  def empty(userId: Id[User]) = IrrelevantPeople(userId, Set.empty, Set.empty, Set.empty, Set.empty)
 }

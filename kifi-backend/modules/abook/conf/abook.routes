@@ -31,10 +31,11 @@ POST     /internal/abook/blockRichConnection                    @com.keepit.aboo
 GET      /internal/abook/ripestFruit                            @com.keepit.abook.controllers.ABookWTIController.ripestFruit(userId: Long, howMany: Int)
 GET      /internal/abook/:userId/countInvitationsSent           @com.keepit.abook.controllers.ABookWTIController.countInvitationsSent(userId: Id[User], friendSocialId: Option[Long] ?= None, friendEmailAddress: Option[EmailAddress] ?= None)
 GET      /internal/abook/:userId/ripestFruits                   @com.keepit.abook.controllers.ABookWTIController.getRipestFruits(userId: Id[User], page: Int, pageSize: Int)
-GET      /internal/abook/:userId/getFriendRecommendations       @com.keepit.abook.controllers.ABookRecommendationController.getFriendRecommendations(userId: Id[User], page: Int ?= 0, pageSize: Int ?= 5)
+GET      /internal/abook/:userId/getFriendRecommendations       @com.keepit.abook.controllers.ABookRecommendationController.getFriendRecommendations(userId: Id[User], offset: Int ?= 0, limit: Int ?= 5)
 POST     /internal/abook/:userId/hideFriendRecommendation       @com.keepit.abook.controllers.ABookRecommendationController.hideFriendRecommendation(userId: Id[User], irrelevantUserId: Id[User])
-GET      /internal/abook/:userId/getInviteRecommendations       @com.keepit.abook.controllers.ABookRecommendationController.getInviteRecommendations(userId: Id[User], page: Int ?= 0, pageSize: Int ?= 5, networks: String)
+GET      /internal/abook/:userId/getInviteRecommendations       @com.keepit.abook.controllers.ABookRecommendationController.getInviteRecommendations(userId: Id[User], offset: Int ?= 0, limit: Int ?= 5, networks: String)
 POST     /internal/abook/:userId/hideInviteRecommendation       @com.keepit.abook.controllers.ABookRecommendationController.hideInviteRecommendation(userId: Id[User])
+GET      /internal/abook/:userId/getIrrelevantPeople    @com.keepit.abook.controllers.ABookRecommendationController.getIrrelevantPeople(userId: Id[User])
 
 POST     /internal/abook/:userId/hideEmailFromUser              @com.keepit.abook.controllers.ABookController.hideEmailFromUser(userId:Id[User], email: EmailAddress)
 

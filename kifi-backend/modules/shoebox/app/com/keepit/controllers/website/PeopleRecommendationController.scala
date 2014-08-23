@@ -23,21 +23,24 @@ class PeopleRecommendationController @Inject() (
     peopleRecoCommander: PeopleRecommendationCommander,
     socialUserRepo: SocialUserInfoRepo) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
-  def getFriendRecommendations(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
-    peopleRecoCommander.getFriendRecommendations(request.userId, page, pageSize).map { recoData =>
-      val recommendedUsers = recoData.recommendedUsers
-      val basicUsers = recoData.basicUsers
-      val mutualFriends = recoData.mutualFriends
-      val mutualFriendConnectionCounts = recoData.mutualFriendConnectionCounts
+  def getFriendRecommendations(offset: Int, limit: Int) = JsonAction.authenticatedAsync { request =>
+    peopleRecoCommander.getFriendRecommendations(request.userId, offset, limit).map {
+      case None => Ok(Json.obj("users" -> JsArray()))
+      case Some(recoData) => {
+        val recommendedUsers = recoData.recommendedUsers
+        val basicUsers = recoData.basicUsers
+        val mutualFriends = recoData.mutualFriends
+        val mutualFriendConnectionCounts = recoData.mutualFriendConnectionCounts
 
-      val recommendedUsersArray = JsArray(recommendedUsers.map { recommendedUserId =>
-        val mutualFriendsArray = JsArray(mutualFriends(recommendedUserId).toSeq.map { mutualFriendId =>
-          BasicUser.basicUserFormat.writes(basicUsers(mutualFriendId)) + ("numFriends" -> JsNumber(mutualFriendConnectionCounts(mutualFriendId)))
+        val recommendedUsersArray = JsArray(recommendedUsers.map { recommendedUserId =>
+          val mutualFriendsArray = JsArray(mutualFriends(recommendedUserId).toSeq.map { mutualFriendId =>
+            BasicUser.basicUserFormat.writes(basicUsers(mutualFriendId)) + ("numFriends" -> JsNumber(mutualFriendConnectionCounts(mutualFriendId)))
+          })
+          BasicUser.basicUserFormat.writes(basicUsers(recommendedUserId)) + ("mutualFriends" -> mutualFriendsArray)
         })
-        BasicUser.basicUserFormat.writes(basicUsers(recommendedUserId)) + ("mutualFriends" -> mutualFriendsArray)
-      })
-      val json = Json.obj("users" -> recommendedUsersArray)
-      Ok(json)
+        val json = Json.obj("users" -> recommendedUsersArray)
+        Ok(json)
+      }
     }
   }
 
@@ -48,11 +51,11 @@ class PeopleRecommendationController @Inject() (
     }
   }
 
-  def getInviteRecommendations(page: Int, pageSize: Int) = JsonAction.authenticatedAsync { request =>
+  def getInviteRecommendations(offset: Int, limit: Int) = JsonAction.authenticatedAsync { request =>
     val relevantNetworks = db.readOnlyReplica { implicit session =>
       socialUserRepo.getByUser(request.userId).map(_.networkType).toSet - SocialNetworks.FORTYTWO + SocialNetworks.EMAIL
     }
-    abookServiceClient.getInviteRecommendations(request.userId, page, pageSize, relevantNetworks).map { inviteRecommendations =>
+    abookServiceClient.getInviteRecommendations(request.userId, offset, limit, relevantNetworks).map { inviteRecommendations =>
       Ok(Json.toJson(inviteRecommendations))
     }
   }

@@ -160,6 +160,79 @@ class UserCommander @Inject() (
     }
   }
 
+  def updateName(userId: Id[User], newFirstName: Option[String], newLastName: Option[String]): User = {
+    db.readWrite { implicit session =>
+      val user = userRepo.get(userId)
+      userRepo.save(user.copy(firstName = newFirstName.getOrElse(user.firstName), lastName = newLastName.getOrElse(user.lastName)))
+    }
+  }
+
+  def addEmail(userId: Id[User], address: EmailAddress, isPrimary: Boolean): Either[String, Unit] = {
+    db.readWrite { implicit session =>
+      if (emailRepo.getByAddressOpt(address).isEmpty) {
+        val emailAddr = emailRepo.save(UserEmailAddress(userId = userId, address = address).withVerificationCode(clock.now))
+        val siteUrl = fortytwoConfig.applicationBaseUrl
+        val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(emailAddr.verificationCode.get)}"
+        val user = userRepo.get(userId)
+
+        postOffice.sendMail(ElectronicMail(
+          from = SystemEmailAddress.NOTIFICATIONS,
+          to = Seq(address),
+          subject = "Kifi.com | Please confirm your email address",
+          htmlBody = views.html.email.verifyEmail(user.firstName, verifyUrl).body,
+          category = NotificationCategory.User.EMAIL_CONFIRMATION
+        ))
+        if (user.primaryEmail.isEmpty && isPrimary)
+          userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, address)
+        Right()
+      } else {
+        Left("email already added")
+      }
+    }
+  }
+  def makeEmailPrimary(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
+    db.readWrite { implicit session =>
+      emailRepo.getByAddressOpt(address) match {
+        case None => Left("email not found")
+        case Some(emailRecord) if emailRecord.userId == userId =>
+          val user = userRepo.get(userId)
+          if (emailRecord.verified && (user.primaryEmail.isEmpty || user.primaryEmail.get != emailRecord)) {
+            updateUserPrimaryEmail(emailRecord)
+          } else {
+            userValueRepo.setValue(userId, UserValueName.PENDING_PRIMARY_EMAIL, address)
+          }
+          Right()
+      }
+    }
+  }
+  def removeEmail(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
+    db.readWrite { implicit session =>
+      emailRepo.getByAddressOpt(address) match {
+        case None => Left("email not found")
+        case Some(email) =>
+          val user = userRepo.get(userId)
+          val allEmails = emailRepo.getAllByUser(userId)
+          val isPrimary = user.primaryEmail.nonEmpty && (user.primaryEmail.get == address)
+          val isLast = allEmails.isEmpty
+          val isLastVerified = !allEmails.exists(em => em.address != address && em.verified)
+          val pendingPrimary = userValueRepo.getValueStringOpt(userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
+          if (!isPrimary && !isLast && !isLastVerified) {
+            if (pendingPrimary.isDefined && address == pendingPrimary.get) {
+              userValueRepo.clearValue(userId, UserValueName.PENDING_PRIMARY_EMAIL)
+            }
+            emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE))
+            Right()
+          } else if (isLast) {
+            Left("last email")
+          } else if (isLastVerified) {
+            Left("last verified email")
+          } else {
+            Left("trying to remove primary email")
+          }
+      }
+    }
+  }
+
   def getConnectionsPage(userId: Id[User], page: Int, pageSize: Int): (Seq[ConnectionInfo], Int) = {
     val infos = db.readOnlyReplica { implicit s =>
       val searchFriends = searchFriendRepo.getSearchFriends(userId)
@@ -360,16 +433,6 @@ class UserCommander @Inject() (
         }
       }
     }
-  }
-
-  def createDefaultKeeps(userId: Id[User]): Unit = {
-    val contextBuilder = new HeimdalContextBuilder()
-    contextBuilder += ("source", KeepSource.default.value) // manually set the source so that it appears in tag analytics
-    val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, KeepSource.default)(contextBuilder.build)
-    val tagsByName = keepsByTag.keySet.map(tag => tag.name -> tag).toMap
-    val keepsByUrl = keepsByTag.values.flatten.map(keep => keep.url -> keep).toMap
-    db.readWrite { implicit session => collectionCommander.setCollectionOrdering(userId, DefaultKeeps.orderedTags.map(tagsByName(_).externalId)) }
-    bookmarkCommander.setFirstKeeps(userId, DefaultKeeps.orderedKeepsWithTags.map { case (keepInfo, _) => keepsByUrl(keepInfo.url) })
   }
 
   def doChangePassword(userId: Id[User], oldPassword: String, newPassword: String): Try[Identity] = Try {
@@ -637,6 +700,7 @@ class UserCommander @Inject() (
     }
   }
 
+  @deprecated(message = "use addEmail/modifyEmail/removeEmail", since = "2014-08-20")
   def updateEmailAddresses(userId: Id[User], firstName: String, primaryEmail: Option[EmailAddress], emails: Seq[EmailInfo]): Unit = {
     db.readWrite { implicit session =>
       val pendingPrimary = userValueRepo.getValueStringOpt(userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
@@ -895,12 +959,12 @@ object UsernameOps {
     val normalized = Normalizer.normalize(username, Normalizer.Form.NFKD)
     normalized.replaceAll("[\\p{InCombiningDiacriticalMarks}]", "")
   }
-  private val letterDigitRegex = """\p{L}?\d?""".r
+  private val letterDigitRegex = """\p{L}\p{M}*?\d?""".r
   private def removePunctuation(username: String): String = {
     (letterDigitRegex findAllIn username).mkString("")
   }
 
-  private val letterRegex = """\p{L}""".r
+  private val letterRegex = """\p{L}\p{M}*""".r
   def lettersOnly(username: String) = {
     (letterRegex findAllIn username).mkString("")
   }

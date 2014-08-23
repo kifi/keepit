@@ -1,9 +1,18 @@
-<ul class="kf-nav-group">
+<ul class="kf-nav-group" ng-if="!librariesEnabled">
   <li class="kf-nav-item kf-nav-keeps" ng-class="{ active: isActive('/') }">
     <a class="kf-nav-link" href="/">
       <span class="sprite sprite-my-keeps-library"></span>
       <span class="kf-nav-name">Keeps Library</span>
       <span class="kf-nav-count" ng-class="{ empty: !counts.keepCount }">{{counts.keepCount}}</span>
+    </a>
+  </li>
+</ul>
+<ul class="kf-nav-group" ng-if="librariesEnabled">
+  <li ng-repeat="library in libraries" class="kf-nav-item kf-nav-keeps" ng-class="{ active: isActive(library.url) }">
+    <a class="kf-nav-link" ng-href="{{library.url}}">
+      <span class="sprite sprite-my-keeps-library"></span>
+      <span class="kf-nav-name">{{library.name}}</span>
+      <span class="kf-nav-count" ng-class="{ empty: !library.numKeeps }">{{library.numKeeps}}</span>
     </a>
   </li>
 </ul>

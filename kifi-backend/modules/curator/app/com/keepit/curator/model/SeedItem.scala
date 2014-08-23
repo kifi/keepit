@@ -32,6 +32,7 @@ case class SeedItem(
     priorScore: Float,
     rekeepScore: Float,
     discoveryScore: Float,
+    curationScore: Option[Float],
     multiplier: Option[Float]) {
 
   override def toString = f"""
@@ -43,6 +44,7 @@ case class SeedItem(
     g:$priorScore%1.2f-
     rk:$rekeepScore%1.2f-
     d:$discoveryScore%1.2f-
+    c:${curationScore.getOrElse(0.0f)}%1.2f-
     m:${multiplier.getOrElse(1.0f)}%1.2f
   """.replace("\n", "").trim
 }

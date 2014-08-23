@@ -53,10 +53,6 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
           lastUUIDStr = None,
           context = None,
           predefinedConfig = Some(searchConfig),
-          start = None,
-          end = None,
-          tz = None,
-          coll = None,
           withUriSummary = false)
 
         res.myTotal === 1

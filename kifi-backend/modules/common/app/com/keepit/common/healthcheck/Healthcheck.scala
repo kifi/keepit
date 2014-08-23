@@ -1,33 +1,27 @@
 package com.keepit.common.healthcheck
 
-import org.joda.time.{ Days, LocalDate, DateTime }
-
-import scala.collection.mutable.{ HashMap => MMap }
-import scala.concurrent.Await
-import scala.concurrent.duration._
-
-import com.google.inject.Inject
-import com.google.inject.ImplementedBy
-import com.keepit.common.strings._
-
-import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{ AlertingActor, UnsupportedActorMessage }
-import com.keepit.common.logging.Logging
-import com.keepit.common.mail._
-import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.common.plugin.SchedulerPlugin
-import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.time._
+import java.io.File
 
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
-
-import play.api.Mode._
-import play.api.templates.Html
+import com.google.inject.Inject
+import com.keepit.common.actor.ActorInstance
+import com.keepit.common.akka.{ AlertingActor, UnsupportedActorMessage }
+import com.keepit.common.cache.{ MemcachedCache, GlobalCacheStatistics }
+import com.keepit.common.logging.Logging
+import com.keepit.common.mail._
+import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.strings._
+import com.keepit.common.time._
 import com.keepit.model.NotificationCategory
-import java.io.File
-import com.keepit.common.cache.GlobalCacheStatistics
+import org.joda.time.{ DateTime, Days }
+import play.api.Mode._
+
+import scala.collection.mutable.{ HashMap => MMap }
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 object Healthcheck {
 
@@ -130,11 +124,13 @@ class HealthcheckActor @Inject() (
     case email: ElectronicMail =>
       emailSender.sendMail(email)
     case CheckCacheMissRatio =>
-      val misses = globalCacheStatistics.missRatios(minSample = 1000, minRatio = 5) // I rather have minRatio set to 2% but one step at a time...
-      if (!misses.isEmpty) {
+      val cacheName = MemcachedCache.name
+      val misses = globalCacheStatistics.missRatios(minSample = 1000, minRatio = 5, cacheName) // I rather have minRatio set to 2% but one step at a time...
+      if (misses.nonEmpty) {
         val message = misses.map {
           case (key, ratio) =>
-            s"$key:$ratio%(h${globalCacheStatistics.hitCount(key)},m${globalCacheStatistics.missCount(key)},s${globalCacheStatistics.setCount(key)}})"
+            val keyName = key.substring(cacheName.length + 1)
+            s"$keyName:$ratio%(h${globalCacheStatistics.hitCount(key)},m${globalCacheStatistics.missCount(key)},s${globalCacheStatistics.setCount(key)}})"
         } mkString ", "
         self ! AirbrakeError(message = Some(s"there are too many cache misses: $message"))
       }

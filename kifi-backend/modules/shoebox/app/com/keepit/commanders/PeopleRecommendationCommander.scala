@@ -16,25 +16,26 @@ class PeopleRecommendationCommander @Inject() (
     basicUserRepo: BasicUserRepo,
     db: Database) {
 
-  def getFriendRecommendations(userId: Id[User], page: Int, pageSize: Int): Future[FriendRecommendations] = {
-    abookServiceClient.getFriendRecommendations(userId, page, pageSize).map { recommendedUsers =>
-      val friends = db.readOnlyReplica { implicit session =>
-        (recommendedUsers.toSet + userId).map(id => id -> userConnectionRepo.getConnectedUsers(id)).toMap
+  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[FriendRecommendations]] = {
+    abookServiceClient.getFriendRecommendations(userId, offset, limit).map {
+      _.map { recommendedUsers =>
+        val friends = db.readOnlyReplica { implicit session =>
+          (recommendedUsers.toSet + userId).map(id => id -> userConnectionRepo.getConnectedUsers(id)).toMap
+        }
+
+        val mutualFriends = recommendedUsers.map { recommendedUserId =>
+          recommendedUserId -> (friends(userId) intersect friends(recommendedUserId))
+        }.toMap
+
+        val (basicUsers, mutualFriendConnectionCounts) = db.readOnlyReplica { implicit session =>
+          val uniqueMutualFriends = mutualFriends.values.flatten.toSet
+          val basicUsers = basicUserRepo.loadAll(uniqueMutualFriends ++ recommendedUsers)
+          val mutualFriendConnectionCounts = uniqueMutualFriends.map { mutualFriendId => mutualFriendId -> userConnectionRepo.getConnectionCount(mutualFriendId) }.toMap
+          (basicUsers, mutualFriendConnectionCounts)
+        }
+
+        FriendRecommendations(basicUsers, mutualFriendConnectionCounts, recommendedUsers, mutualFriends)
       }
-
-      val mutualFriends = recommendedUsers.map { recommendedUserId =>
-        recommendedUserId -> (friends(userId) intersect friends(recommendedUserId))
-      }.toMap
-
-      val (basicUsers, mutualFriendConnectionCounts) = db.readOnlyReplica { implicit session =>
-        val uniqueMutualFriends = mutualFriends.values.flatten.toSet
-        val basicUsers = basicUserRepo.loadAll(uniqueMutualFriends ++ recommendedUsers)
-        val mutualFriendConnectionCounts = uniqueMutualFriends.map { mutualFriendId => mutualFriendId -> userConnectionRepo.getConnectionCount(mutualFriendId) }.toMap
-        (basicUsers, mutualFriendConnectionCounts)
-      }
-
-      FriendRecommendations(basicUsers, mutualFriendConnectionCounts, recommendedUsers, mutualFriends)
     }
   }
-
 }

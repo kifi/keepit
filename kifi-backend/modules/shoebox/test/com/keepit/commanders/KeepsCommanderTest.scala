@@ -7,6 +7,7 @@ import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.time._
 import com.keepit.controllers.website.KeepsController
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model._
 import com.keepit.scraper.FakeScrapeSchedulerModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -29,6 +30,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
     FakeScrapeSchedulerModule() ::
     FakeShoeboxServiceModule() ::
     FakeActionAuthenticatorModule() ::
+    FakeCuratorServiceClientModule() ::
     Nil
 
   "KeepsCommander" should {

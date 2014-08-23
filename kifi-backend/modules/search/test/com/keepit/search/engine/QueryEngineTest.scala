@@ -7,16 +7,19 @@ import com.keepit.search.query.parser.{ DefaultSyntax, QueryParser }
 import com.keepit.search.util.join.{ DataBufferWriter, DataBuffer }
 import com.keepit.search.{ Searcher, Lang, Tst, TstIndexer }
 import com.keepit.search.index.{ WrappedSubReader, DefaultAnalyzer, VolatileIndexDirectory }
+import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.search.{ DocIdSetIterator, Scorer }
 import org.specs2.mutable.Specification
 
 class QueryEngineTest extends Specification {
 
-  class TstScoreVectorSource(indexer: TstIndexer) extends ScoreVectorSource {
+  class TstScoreVectorSource(indexer: TstIndexer) extends ScoreVectorSourceLike {
 
     protected val searcher: Searcher = indexer.getSearcher
 
-    protected def writeScoreVectors(reader: WrappedSubReader, scorers: Array[Scorer], output: DataBuffer): Unit = {
+    protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], output: DataBuffer): Unit = {
+      val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
+
       val pq = createScorerQueue(scorers)
       if (pq.size <= 0) return // no scorer
 
@@ -33,7 +36,7 @@ class QueryEngineTest extends Specification {
         val size = pq.getTaggedScores(taggedScores)
 
         // write to the buffer
-        output.alloc(writer, Visibility.PUBLIC, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
+        output.alloc(writer, Visibility.OTHERS, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
         writer.putLong(id).putTaggedFloatBits(taggedScores, size)
         docId = pq.top.doc // next doc
       }

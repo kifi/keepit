@@ -21,6 +21,7 @@ trait CortexKeepRepo extends DbRepo[CortexKeep] with SeqNumberFunction[CortexKee
   def getSince(seq: SequenceNumber[CortexKeep], limit: Int)(implicit session: RSession): Seq[CortexKeep]
   def getMaxSeq()(implicit session: RSession): SequenceNumber[CortexKeep]
   def getByKeepId(id: Id[Keep])(implicit session: RSession): Option[CortexKeep]
+  def countRecentUserKeeps(userId: Id[User], since: DateTime)(implicit session: RSession): Int
 }
 
 @Singleton
@@ -65,5 +66,11 @@ class CortexKeepRepoImpl @Inject() (
     } yield r
 
     q.firstOption
+  }
+
+  def countRecentUserKeeps(userId: Id[User], since: DateTime)(implicit session: RSession): Int = {
+    import StaticQuery.interpolation
+    val q = sql"""select count(*) from cortex_keep where user_id = ${userId.id} and kept_at > ${since}"""
+    q.as[Int].first
   }
 }

@@ -1,10 +1,6 @@
 'use strict';
 
-angular.module('kifi.tagService', [
-  'kifi.undo',
-  'kifi.routeService',
-  'angulartics'
-])
+angular.module('kifi')
 
 .factory('tagService', [
   '$http', 'env', '$q', '$rootScope', 'undoService', 'routeService', '$analytics', '$location', 'util',
@@ -245,31 +241,6 @@ angular.module('kifi.tagService', [
         if (totalKeepCount < 0) {
           totalKeepCount = 0;
         }
-      },
-
-      rename: function (tagId, name) {
-        function renameTag(id, name) {
-          var allIndex = indexById(allTags, id);
-          if (allIndex !== -1) {
-            var tag = allTags[allIndex];
-            tag.name = name;
-            return tag;
-          }
-          return null;
-        }
-
-        var url = env.xhrBase + '/collections/' + tagId + '/update';
-        var post = $http.post(url, {
-          name: name
-        }).then(function (res) {
-          var tag = res.data;
-          return renameTag(tag.id, tag.name);
-        });
-        $analytics.eventTrack('user_clicked_page', {
-          'action': 'renameTag',
-          'path': $location.path()
-        });
-        return post;
       },
 
       removeKeepsFromTag: function (tagId, keeps) {

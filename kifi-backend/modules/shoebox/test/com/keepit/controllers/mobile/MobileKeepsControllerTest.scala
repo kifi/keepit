@@ -11,6 +11,7 @@ import com.keepit.common.helprank.HelpRankTestHelper
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal._
 import com.keepit.model.{ KeepToCollection, _ }
 import com.keepit.scraper._
@@ -38,7 +39,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
     FakeHeimdalServiceClientModule(),
     FakeExternalServiceModule(),
     FakeScraperServiceClientModule(),
-    FakeCortexServiceClientModule()
+    FakeCortexServiceClientModule(),
+    FakeCuratorServiceClientModule()
   )
 
   def prenormalize(url: String)(implicit injector: Injector): String = normalizationService.prenormalize(url).get
@@ -791,7 +793,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       }
     }
 
-    "add Keep with Multiple Tags" in {
+    "add Keep with Selected Tags" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val user = db.readWrite { implicit session =>
           keepRepo.count === 0
@@ -799,49 +801,53 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
         }
 
-        val keep1ToCollections = (KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false), Seq("tagA"))
-        val keep2ToCollections = (KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = false), Seq("tagA", "tagB", "tagC"))
+        val keep1ToCollections = (Json.obj("title" -> "title 11", "url" -> "http://www.hi.com11", "isPrivate" -> false), Seq("tagA", "tagB", "tagC"))
+        val keep2ToCollections = (Json.obj("title" -> "title 11", "url" -> "http://www.hi.com11", "isPrivate" -> false), Seq("tagA", "tagD", "tagE"))
+        val keep3ToCollections = (Json.obj("title" -> "title 11", "url" -> "http://www.hi.com11", "isPrivate" -> false), Seq("tagB", "tagD"))
 
         val path = com.keepit.controllers.mobile.routes.MobileBookmarksController.addKeepWithTags().url
         path === "/m/1/keeps/addWithTags"
 
-        val json1 = Json.obj(
-          "keep" -> keep1ToCollections._1,
-          "tagNames" -> keep1ToCollections._2
-        )
         inject[FakeActionAuthenticator].setUser(user)
-        val request1 = FakeRequest("POST", path).withBody(json1)
+        val request1 = FakeRequest("POST", path).withBody(Json.obj("keep" -> keep1ToCollections._1, "tagNames" -> keep1ToCollections._2))
         val result1 = inject[MobileBookmarksController].addKeepWithTags()(request1)
         status(result1) must equalTo(OK);
         contentType(result1) must beSome("application/json");
 
-        val tags1 = db.readOnlyMaster { implicit session =>
+        val keep = db.readOnlyMaster { implicit session =>
           keepRepo.count === 1
-          collectionRepo.all.size === 1
-          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user.id.get).map(_.externalId)
+          val keep = keepRepo.getByUser(user.id.get).head
+          collectionRepo.count(user.id.get) === 3
+          keepToCollectionRepo.getByKeep(keep.id.get).size === 3
+          keep
         }
-        val jsonRes1 = Json.parse(contentAsString(result1))
-        val tagSet1 = (jsonRes1 \ "addedToCollections").as[Seq[ExternalId[Collection]]]
-        tagSet1.foldLeft(true)((r, c) => r && tags1.contains(c)) === true
+        val jsonRes1 = Json.parse(contentAsString(result1)).toString
+        jsonRes1.contains("tagA") && jsonRes1.contains("tagB") && jsonRes1.contains("tagC") && !jsonRes1.contains("tagD") === true
 
-        val json2 = Json.obj(
-          "keep" -> keep2ToCollections._1,
-          "tagNames" -> keep2ToCollections._2
-        )
-        inject[FakeActionAuthenticator].setUser(user)
-        val request2 = FakeRequest("POST", path).withBody(json2)
+        val request2 = FakeRequest("POST", path).withBody(Json.obj("keep" -> keep2ToCollections._1, "tagNames" -> keep2ToCollections._2))
         val result2 = inject[MobileBookmarksController].addKeepWithTags()(request2)
         status(result2) must equalTo(OK);
         contentType(result2) must beSome("application/json");
 
-        val tags2 = db.readOnlyMaster { implicit session =>
-          keepRepo.count === 2
-          collectionRepo.all.size === 3
-          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user.id.get).map(_.externalId)
+        db.readOnlyMaster { implicit session =>
+          collectionRepo.count(user.id.get) === 5
+          keepToCollectionRepo.getByKeep(keep.id.get).size === 3
         }
-        val jsonRes2 = Json.parse(contentAsString(result2))
-        val tagSet2 = (jsonRes2 \ "addedToCollections").as[Seq[ExternalId[Collection]]]
-        tagSet2.foldLeft(true)((r, c) => r && tags2.contains(c)) === true
+        val jsonRes2 = Json.parse(contentAsString(result2)).toString
+        jsonRes2.contains("tagA") && jsonRes2.contains("tagD") && jsonRes2.contains("tagE") && !jsonRes2.contains("tagB") && !jsonRes2.contains("tagC") === true
+
+        val request3 = FakeRequest("POST", path).withBody(Json.obj("keep" -> keep3ToCollections._1, "tagNames" -> keep3ToCollections._2))
+        val result3 = inject[MobileBookmarksController].addKeepWithTags()(request3)
+        status(result3) must equalTo(OK);
+        contentType(result3) must beSome("application/json");
+
+        db.readOnlyMaster { implicit session =>
+          keepRepo.count === 1
+          collectionRepo.count(user.id.get) === 5
+          keepToCollectionRepo.getByKeep(keep.id.get).size === 2
+        }
+        val jsonRes3 = Json.parse(contentAsString(result3)).toString
+        jsonRes3.contains("tagB") && jsonRes3.contains("tagD") && !jsonRes3.contains("tagA") && !jsonRes3.contains("tagC") && !jsonRes3.contains("tagE") === true
       }
     }
 

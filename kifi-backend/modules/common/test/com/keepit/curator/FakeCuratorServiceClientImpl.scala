@@ -1,6 +1,6 @@
 package com.keepit.curator
 
-import com.keepit.model.{ UriRecommendationUserInteraction, UriRecommendationFeedback, NormalizedURI, UriRecommendationScores, User }
+import com.keepit.model.{ UriRecommendationFeedback, NormalizedURI, UriRecommendationScores, User }
 
 import scala.concurrent.Future
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -27,13 +27,9 @@ class FakeCuratorServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def triggerEmailToUser(code: String, userId: Id[User]): Future[String] = Future.successful("done")
 
-  def updateUriRecommendationUserInteraction(userId: Id[User], uriId: Id[NormalizedURI], interaction: UriRecommendationUserInteraction): Future[Boolean] = synchronized {
-    updatedUriRecommendationUserInteractions.append((userId, uriId, interaction))
-    Future.successful(true)
-  }
+  def resetUserRecoGenState(userId: Id[User]): Future[Unit] = { Future.successful() }
 
   // test helpers
-  val updatedUriRecommendationUserInteractions = ListBuffer[(Id[User], Id[NormalizedURI], UriRecommendationUserInteraction)]()
   val updatedUriRecommendationFeedback = ListBuffer[(Id[User], Id[NormalizedURI], UriRecommendationFeedback)]()
 
 }

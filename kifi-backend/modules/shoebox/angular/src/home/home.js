@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
+angular.module('kifi')
 
 .config([
   '$routeProvider',
@@ -96,7 +96,7 @@ angular.module('kifi.home', ['util', 'kifi.keepService', 'kifi.modal'])
     };
 
     $scope.importBookmarks = function () {
-      var kifiVersion = $window.document.documentElement.dataset.kifiExt;
+      var kifiVersion = $window.document.documentElement.getAttribute('data-kifi-ext');
 
       if (!kifiVersion) {
         $rootScope.$emit('showGlobalModal','installExtension');

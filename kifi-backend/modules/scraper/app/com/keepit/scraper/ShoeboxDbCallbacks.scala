@@ -1,6 +1,7 @@
 package com.keepit.scraper
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.net.URI
 import com.keepit.shoebox.{ ShoeboxScraperClient, ShoeboxServiceClient }
 import scala.concurrent.{ Future, Await, Awaitable }
 import com.keepit.model._
@@ -26,7 +27,7 @@ class ShoeboxDbCallbackHelper @Inject() (
   private def await[T](awaitable: Awaitable[T]) = Await.result(awaitable, config.syncAwaitTimeout seconds)
 
   def syncAssignTasks(zkId: Long, max: Int): Seq[ScrapeRequest] = await(assignTasks(zkId, max))
-  def syncIsUnscrapableP(url: String, destinationUrl: Option[String]) = await(isUnscrapableP(url, destinationUrl))
+  def syncIsUnscrapableP(url: URI, destinationUrl: Option[String]) = await(isUnscrapableP(url, destinationUrl))
   def syncGetNormalizedUri(uri: NormalizedURI): Option[NormalizedURI] = await(getNormalizedUri(uri))
   def syncSaveNormalizedUri(uri: NormalizedURI): NormalizedURI = {
     try {
@@ -86,7 +87,7 @@ class ShoeboxDbCallbackHelper @Inject() (
   def getLatestKeep(url: String): Future[Option[Keep]] = shoeboxScraperClient.getLatestKeep(url)
   def saveBookmark(bookmark: Keep): Future[Keep] = shoeboxScraperClient.saveBookmark(bookmark)
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI] = shoeboxScraperClient.recordPermanentRedirect(uri, redirect)
-  def isUnscrapableP(url: String, destinationUrl: Option[String]) = shoeboxScraperClient.isUnscrapableP(url, destinationUrl)
+  def isUnscrapableP(url: URI, destinationUrl: Option[String]) = shoeboxScraperClient.isUnscrapableP(url.toString(), destinationUrl)
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit] = {
     shoeboxScraperClient.recordScrapedNormalization(uriId, uriSignature, candidateUrl, candidateNormalization, alternateUrls)
   }
@@ -97,7 +98,7 @@ class ShoeboxDbCallbackHelper @Inject() (
 
 trait SyncShoeboxDbCallbacks {
   def syncAssignTasks(zkId: Long, max: Int): Seq[ScrapeRequest]
-  def syncIsUnscrapableP(url: String, destinationUrl: Option[String]): Boolean
+  def syncIsUnscrapableP(url: URI, destinationUrl: Option[String]): Boolean
   def syncGetNormalizedUri(uri: NormalizedURI): Option[NormalizedURI]
   def syncSaveNormalizedUri(uri: NormalizedURI): NormalizedURI
   def syncUpdateNormalizedURIState(uriId: Id[NormalizedURI], state: State[NormalizedURI]): Unit
@@ -124,6 +125,6 @@ trait ShoeboxDbCallbacks {
   def getLatestKeep(url: String): Future[Option[Keep]]
   def saveBookmark(bookmark: Keep): Future[Keep]
   def recordPermanentRedirect(uri: NormalizedURI, redirect: HttpRedirect): Future[NormalizedURI]
-  def isUnscrapableP(url: String, destinationUrl: Option[String]): Future[Boolean]
+  def isUnscrapableP(url: URI, destinationUrl: Option[String]): Future[Boolean]
   def recordScrapedNormalization(uriId: Id[NormalizedURI], uriSignature: Signature, candidateUrl: String, candidateNormalization: Normalization, alternateUrls: Set[String]): Future[Unit]
 }

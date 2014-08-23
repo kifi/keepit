@@ -32,10 +32,6 @@ trait SearchCommander {
     lastUUIDStr: Option[String],
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None,
     debug: Option[String] = None,
     withUriSummary: Boolean = false): DecoratedResult
 
@@ -50,10 +46,6 @@ trait SearchCommander {
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
-    start: Option[String],
-    end: Option[String],
-    tz: Option[String],
-    coll: Option[String],
     debug: Option[String]): PartialSearchResult
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int]
@@ -89,10 +81,6 @@ class SearchCommanderImpl @Inject() (
     lastUUIDStr: Option[String],
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None,
     debug: Option[String] = None,
     withUriSummary: Boolean = false): DecoratedResult = {
 
@@ -105,7 +93,7 @@ class SearchCommanderImpl @Inject() (
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = getSearchFilter(userId, filter, context, start, end, tz, coll)
+    val searchFilter = getSearchFilter(userId, filter, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     // build distribution plan
@@ -125,7 +113,7 @@ class SearchCommanderImpl @Inject() (
 
     if (dispatchPlan.nonEmpty) {
       // dispatch query
-      searchClient.distSearch(dispatchPlan, userId, firstLang, secondLang, query, filter, maxHits, context, start, end, tz, coll, debug).foreach { f =>
+      searchClient.distSearch(dispatchPlan, userId, firstLang, secondLang, query, filter, maxHits, context, debug).foreach { f =>
         resultFutures += f.map(json => new PartialSearchResult(json))
       }
     }
@@ -141,7 +129,7 @@ class SearchCommanderImpl @Inject() (
     if (localShards.nonEmpty) {
       resultFutures += Promise[PartialSearchResult].complete(
         Try {
-          distSearch(localShards, userId, firstLang, secondLang, experiments, query, filter, maxHits, context, predefinedConfig, start, end, tz, coll, debug)
+          distSearch(localShards, userId, firstLang, secondLang, experiments, query, filter, maxHits, context, predefinedConfig, debug)
         }
       ).future
     }
@@ -208,17 +196,13 @@ class SearchCommanderImpl @Inject() (
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None,
     debug: Option[String] = None): PartialSearchResult = {
 
     val timing = new SearchTiming
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
 
-    val searchFilter = getSearchFilter(userId, filter, context, start, end, tz, coll)
+    val searchFilter = getSearchFilter(userId, filter, context)
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
@@ -338,27 +322,16 @@ class SearchCommanderImpl @Inject() (
   private def getSearchFilter(
     userId: Id[User],
     filter: Option[String],
-    context: Option[String],
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None): SearchFilter = {
+    context: Option[String]): SearchFilter = {
     filter match {
       case Some("m") =>
-        val collExtIds = coll.map { _.split('.').flatMap(id => Try(ExternalId[Collection](id)).toOption) }
-        val collIdsFuture = collExtIds.map { shoeboxClient.getCollectionIdsByExternalIds(_) }
-        SearchFilter.mine(context, collIdsFuture, start, end, tz, monitoredAwait)
+        SearchFilter.mine(context)
       case Some("f") =>
-        SearchFilter.friends(context, start, end, tz)
+        SearchFilter.friends(context)
       case Some("a") =>
-        SearchFilter.all(context, start, end, tz)
-      case Some(ids) =>
-        val userExtIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption)
-        val userIdsFuture = shoeboxClient.getUserIdsByExternalIds(userExtIds)
-        SearchFilter.custom(context, userIdsFuture, start, end, tz, monitoredAwait)
-      case None =>
-        if (start.isDefined || end.isDefined) SearchFilter.all(context, start, end, tz)
-        else SearchFilter.default(context)
+        SearchFilter.all(context)
+      case _ =>
+        SearchFilter.default(context)
     }
   }
 
