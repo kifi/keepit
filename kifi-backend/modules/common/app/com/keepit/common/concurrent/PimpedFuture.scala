@@ -46,7 +46,7 @@ object PimpMyFuture {
 
 }
 
-object FutureHelpers extends Logging {
+object FutureHelpers {
 
   def map[A, B](in: Map[A, Future[B]])(implicit ec: ScalaExecutionContext): Future[Map[A, B]] = {
     val seq = in.map {
@@ -80,9 +80,7 @@ object FutureHelpers extends Logging {
         case Success(_) =>
           chunkCB.foreach { _.apply(items._2) }
           chunkyExec(iter, chunkSize, promised)(f, chunkCB)
-        case Failure(t) =>
-          log.error(s"[chunkyExec] Caught exception $t while processing chunk#${items._2} items=${items._1.take(5)}", t)
-          promised.failure(t)
+        case Failure(t) => promised.failure(t)
       }
     }
     promised.future
