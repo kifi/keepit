@@ -22,7 +22,7 @@ class KTextQueryTest extends Specification {
       indexer.getPersonalizedSearcher(Set(0L)).searchAll(q).map(_.id).toSet === Set.empty[Long]
     }
 
-    "search using main query" in {
+    "search using subqueries" in {
       val q0 = new KTextQuery
       q0.addQuery(new TermQuery(new Term("c", "def")))
       indexer.getPersonalizedSearcher(Set(0L)).searchAll(q0).map(_.id).toSet === Set(0L, 1L, 2L)
@@ -31,23 +31,6 @@ class KTextQueryTest extends Specification {
       q1.addQuery(new TermQuery(new Term("c", "def")))
       q1.addQuery(new TermQuery(new Term("c", "ghi")))
       indexer.getPersonalizedSearcher(Set(0L)).searchAll(q1).map(_.id).toSet === Set(0L, 1L, 2L, 3L)
-    }
-
-    "score using main query and semantic vector query" in {
-      val q0 = new KTextQuery
-      q0.addQuery(new TermQuery(new Term("c", "abc")))
-      q0.setSemanticBoost(1.0f)
-      q0.addSemanticVectorQuery("sv", "abc")
-      indexer.getPersonalizedSearcher(Set(3L)).searchAll(q0).head.id === 3L
-      indexer.getPersonalizedSearcher(Set(4L)).searchAll(q0).head.id === 4L
-    }
-
-    "disable semantic vector query when not available" in {
-      val q0 = new KTextQuery
-      q0.addQuery(new TermQuery(new Term("c", "abc")))
-      q0.setSemanticBoost(1.0f)
-      q0.addSemanticVectorQuery("sv", "def")
-      indexer.getSearcher.searchAll(q0).map(_.id).toSet === Set(0L, 1L, 2L, 3L, 4L)
     }
   }
 }

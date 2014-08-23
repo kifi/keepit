@@ -24,6 +24,8 @@ class QueryEngineBuilderTest extends Specification {
     }
   }
 
+  private[this] val tb = QueryEngineBuilder.tieBreakerMultiplier
+
   "QueryEngineBuilder" should {
 
     "build an engine from a parsed query with a single term" in {
@@ -31,7 +33,7 @@ class QueryEngineBuilderTest extends Specification {
       query must beAnInstanceOf[KBooleanQuery]
 
       val builder = new QueryEngineBuilder(query)
-      builder.build().getScoreExpr().toString() === "MaxWithTieBreaker(0, 0.5)"
+      builder.build().getScoreExpr().toString() === s"MaxWithTieBreaker(0, $tb)"
     }
 
     "build an engine from a parsed query with a phrase" in {
@@ -39,7 +41,7 @@ class QueryEngineBuilderTest extends Specification {
       query must beAnInstanceOf[KBooleanQuery]
 
       val builder = new QueryEngineBuilder(query)
-      builder.build().getScoreExpr().toString() === "DisjunctiveSum(MaxWithTieBreaker(0, 0.5), MaxWithTieBreaker(1, 0.5))"
+      builder.build().getScoreExpr().toString() === s"DisjunctiveSum(MaxWithTieBreaker(0, $tb), MaxWithTieBreaker(1, $tb))"
     }
 
     "build an engine from a parsed query with multiple terms" in {
@@ -47,7 +49,7 @@ class QueryEngineBuilderTest extends Specification {
       query must beAnInstanceOf[KBooleanQuery]
 
       val builder = new QueryEngineBuilder(query)
-      builder.build().getScoreExpr().toString() === "DisjunctiveSum(MaxWithTieBreaker(0, 0.5), MaxWithTieBreaker(1, 0.5), MaxWithTieBreaker(2, 0.5))"
+      builder.build().getScoreExpr().toString() === s"DisjunctiveSum(MaxWithTieBreaker(0, $tb), MaxWithTieBreaker(1, $tb), MaxWithTieBreaker(2, $tb))"
     }
 
     "build an engine from a parsed query with optional and required" in {
@@ -56,7 +58,7 @@ class QueryEngineBuilderTest extends Specification {
 
       val builder = new QueryEngineBuilder(query)
       builder.build().getScoreExpr().toString() ===
-        "Boolean(DisjunctiveSum(MaxWithTieBreaker(0, 0.5), MaxWithTieBreaker(3, 0.5)), ConjunctiveSum(MaxWithTieBreaker(1, 0.5), MaxWithTieBreaker(2, 0.5)))"
+        s"Boolean(DisjunctiveSum(MaxWithTieBreaker(0, $tb), MaxWithTieBreaker(3, $tb)), ConjunctiveSum(MaxWithTieBreaker(1, $tb), MaxWithTieBreaker(2, $tb)))"
     }
 
     "build an engine from a parsed query with optional, required and prohibited" in {
@@ -65,7 +67,7 @@ class QueryEngineBuilderTest extends Specification {
 
       val builder = new QueryEngineBuilder(query)
       builder.build().getScoreExpr().toString() ===
-        "FilterOut(Boolean(DisjunctiveSum(MaxWithTieBreaker(0, 0.5), MaxWithTieBreaker(3, 0.5)), ConjunctiveSum(MaxWithTieBreaker(1, 0.5), MaxWithTieBreaker(2, 0.5))), Max(4))"
+        s"FilterOut(Boolean(DisjunctiveSum(MaxWithTieBreaker(0, $tb), MaxWithTieBreaker(3, $tb)), ConjunctiveSum(MaxWithTieBreaker(1, $tb), MaxWithTieBreaker(2, $tb))), Max(4))"
     }
 
     "build an engine from a parsed query with optional, required and more prohibited" in {
@@ -74,7 +76,7 @@ class QueryEngineBuilderTest extends Specification {
 
       val builder = new QueryEngineBuilder(query)
       builder.build().getScoreExpr().toString() ===
-        "FilterOut(Boolean(DisjunctiveSum(MaxWithTieBreaker(0, 0.5), MaxWithTieBreaker(3, 0.5)), ConjunctiveSum(MaxWithTieBreaker(1, 0.5), MaxWithTieBreaker(2, 0.5))), Exists(Max(4), Max(5)))"
+        s"FilterOut(Boolean(DisjunctiveSum(MaxWithTieBreaker(0, $tb), MaxWithTieBreaker(3, $tb)), ConjunctiveSum(MaxWithTieBreaker(1, $tb), MaxWithTieBreaker(2, $tb))), Exists(Max(4), Max(5)))"
     }
     "build an engine from a parsed query with optional, required and more prohibited" in {
       val query = getParser().parse("taming +information +overload together -bookmark -chat").get
@@ -82,7 +84,7 @@ class QueryEngineBuilderTest extends Specification {
 
       val builder = new QueryEngineBuilder(query)
       builder.build().getScoreExpr().toString() ===
-        "FilterOut(Boolean(DisjunctiveSum(MaxWithTieBreaker(0, 0.5), MaxWithTieBreaker(3, 0.5)), ConjunctiveSum(MaxWithTieBreaker(1, 0.5), MaxWithTieBreaker(2, 0.5))), Exists(Max(4), Max(5)))"
+        s"FilterOut(Boolean(DisjunctiveSum(MaxWithTieBreaker(0, $tb), MaxWithTieBreaker(3, $tb)), ConjunctiveSum(MaxWithTieBreaker(1, $tb), MaxWithTieBreaker(2, $tb))), Exists(Max(4), Max(5)))"
     }
 
     "build an engine from a parsed query with booster" in {
@@ -93,7 +95,7 @@ class QueryEngineBuilderTest extends Specification {
       builder.addBoosterQuery(new TermQuery(new Term("", "important")), 2.0f)
       val engine = builder.build()
       engine.getScoreExpr().toString() ===
-        "Boost(DisjunctiveSum(MaxWithTieBreaker(0, 0.5), MaxWithTieBreaker(1, 0.5)), Max(2), 2.0)"
+        s"Boost(DisjunctiveSum(MaxWithTieBreaker(0, $tb), MaxWithTieBreaker(1, $tb)), Max(2), 2.0)"
       engine.getQuery() must beAnInstanceOf[KBoostQuery]
     }
   }
