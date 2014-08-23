@@ -7,10 +7,13 @@ import org.apache.lucene.search.BooleanClause.Occur._
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
+object QueryEngineBuilder {
+  val tieBreakerMultiplier = 1.0f
+}
+
 class QueryEngineBuilder(baseQuery: Query) {
 
-  private[this] val _tieBreakerMultiplier = 0.5f
-
+  private[this] val _tieBreakerMultiplier = QueryEngineBuilder.tieBreakerMultiplier
   private[this] var _boosters: List[(Query, Float)] = Nil
   private[this] var _exprIndex: Int = 0
   private[this] val _base = buildExpr(baseQuery)
