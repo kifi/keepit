@@ -86,7 +86,7 @@ object FutureHelpers {
     promised.future
   }
 
-  def foldLeft[I, T](items: Iterable[I], promisedResult: Promise[T] = Promise[T]())(accumulator: T)(fMap: (T, I) => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {
+  def foldLeft[I, T](items: Iterable[I])(accumulator: T)(fMap: (T, I) => Future[T])(implicit ec: ScalaExecutionContext): Future[T] = {
     foldLeftWhile(items)(accumulator)(fMap)
   }
 
