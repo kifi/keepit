@@ -81,16 +81,18 @@ class MobileBookmarksController @Inject() (
 
   def addKeepWithTags() = JsonAction.authenticatedParseJson { request =>
     val json = request.body
-    val targetKeep = (json \ "keep").as[KeepInfo]
+    val targetKeep = (json \ "keep").as[JsObject]
     val collectionNames = (json \ "tagNames").as[Seq[String]]
     val source = KeepSource.mobile
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    val listOfKeeps = Seq((targetKeep, collectionNames))
-    val keepsMapping = keepsCommander.keepWithMultipleTags(request.userId, listOfKeeps, source)
-
-    Ok(Json.obj(
-      "addedToCollections" -> keepsMapping.keySet.map(c => c.externalId).toSeq
-    ))
+    keepsCommander.keepWithSelectedTags(request.userId, targetKeep, source, collectionNames) match {
+      case Left(msg) => BadRequest(msg)
+      case Right((keepInfo, tags)) =>
+        Ok(Json.obj(
+          "keep" -> keepInfo,
+          "tags" -> tags.map(tag => Json.obj("name" -> tag.name, "id" -> tag.externalId))
+        ))
+    }
   }
 
   def unkeepMultiple() = JsonAction.authenticated { request =>
