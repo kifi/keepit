@@ -7,6 +7,7 @@ CREATE TABLE if not exists public_feed (
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
     state varchar(20) NOT NULL,
+    seq bigint(20) NOT NULL,
 
     uri_id bigint(20) NOT NULL,
     master_score float(10) NOT NULL,
