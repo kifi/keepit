@@ -79,7 +79,7 @@ class UriIntegrityActor @Inject() (
                 duplicate.withNormUriId(newUriId).withPrimary(false).withState(deadState)
               )
               val liveBm = keepRepo.save(
-                (if (forcePrivate) primary.withPrivate(true) else primary).withNormUriId(newUriId).withPrimary(true).withState(KeepStates.ACTIVE)
+                (if (forcePrivate) primary.copy(visibility = Keep.isPrivateToVisibility(true)) else primary).withNormUriId(newUriId).withPrimary(true).withState(KeepStates.ACTIVE)
               )
               keepRepo.deleteCache(deadBm)
               (Some(deadBm), Some(liveBm))

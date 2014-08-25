@@ -22,7 +22,6 @@ case class Keep(
     urlId: Id[URL],
     url: String, // denormalized for efficiency
     bookmarkPath: Option[String] = None,
-    isPrivate: Boolean = false, // This represents if the Keep is discoverable in search or the feed.
     visibility: LibraryVisibility,
     userId: Id[User],
     state: State[Keep] = KeepStates.ACTIVE,
@@ -35,9 +34,11 @@ case class Keep(
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
+  @deprecated("Use `visibility` instead", "2014-08-25")
+  def isPrivate = Keep.visibilityToIsPrivate(visibility)
+
   def withId(id: Id[Keep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
   def withPrimary(isPrimary: Boolean) = copy(isPrimary = isPrimary)
 
   def withActive(isActive: Boolean) = copy(state = isActive match {
@@ -80,9 +81,9 @@ object Keep {
 
   // is_primary: trueOrNull in db
   def applyWithPrimary(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep], title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], urlId: Id[URL], url: String, bookmarkPath: Option[String], isPrivate: Boolean, visibility: Option[LibraryVisibility], userId: Id[User], state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]], seq: SequenceNumber[Keep], libraryId: Option[Id[Library]]) =
-    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url, bookmarkPath, isPrivate, visibility.getOrElse(isPrivateToVisibility(isPrivate)), userId, state, source, kifiInstallation, seq, libraryId)
+    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url, bookmarkPath, visibility.getOrElse(isPrivateToVisibility(isPrivate)), userId, state, source, kifiInstallation, seq, libraryId)
   def unapplyWithPrimary(k: Keep) = {
-    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url, k.bookmarkPath, k.isPrivate, Option(k.visibility), k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId)
+    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url, k.bookmarkPath, Keep.visibilityToIsPrivate(k.visibility), Option(k.visibility), k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId)
   }
 
   implicit def bookmarkFormat = (
@@ -96,7 +97,6 @@ object Keep {
     (__ \ 'urlId).format(Id.format[URL]) and
     (__ \ 'url).format[String] and
     (__ \ 'bookmarkPath).formatNullable[String] and
-    (__ \ 'isPrivate).format[Boolean] and
     (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'userId).format(Id.format[User]) and
     (__ \ 'state).format(State.format[Keep]) and
@@ -198,8 +198,8 @@ object KeepSource {
 
 object KeepFactory extends Logging {
 
-  def apply(origUrl: String, uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, isPrivate: Boolean, visibility: LibraryVisibility, kifiInstallation: Option[ExternalId[KifiInstallation]] = None, libraryId: Option[Id[Library]]): Keep = {
-    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = origUrl, source = source, isPrivate = isPrivate, visibility = visibility, libraryId = libraryId)
+  def apply(origUrl: String, uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, visibility: LibraryVisibility, kifiInstallation: Option[ExternalId[KifiInstallation]] = None, libraryId: Option[Id[Library]]): Keep = {
+    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = origUrl, source = source, visibility = visibility, libraryId = libraryId)
   }
 
 }

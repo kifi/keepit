@@ -195,14 +195,14 @@ class KeepInterner @Inject() (
     val (isNewKeep, wasInactiveKeep, internedKeep) = keepRepo.getPrimaryByUriAndUser(uri.id.get, userId) match {
       case Some(bookmark) =>
         val wasInactiveKeep = !bookmark.isActive
-        val keepWithPrivate = if (mutatePrivacy) bookmark.copy(isPrivate = isPrivate) else bookmark
+        val keepWithPrivate = if (mutatePrivacy) bookmark.copy(visibility = Keep.isPrivateToVisibility(isPrivate)) else bookmark
         val keep = if (!bookmark.isActive) { keepWithPrivate.withUrl(url).withActive(isActive = true).copy(createdAt = clock.now) } else keepWithPrivate
         val keepWithTitle = keep.withTitle(title orElse bookmark.title orElse uri.title)
         val persistedKeep = if (keepWithTitle != bookmark) keepRepo.save(keepWithTitle) else bookmark
         (false, wasInactiveKeep, persistedKeep)
       case None =>
         val urlObj = urlRepo.get(url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-        (true, false, keepRepo.save(KeepFactory(url, uri, userId, title orElse uri.title, urlObj, source, isPrivate, installationId, None))) // todo(andrew): Fix to use libraries
+        (true, false, keepRepo.save(KeepFactory(url, uri, userId, title orElse uri.title, urlObj, source, Keep.isPrivateToVisibility(isPrivate), installationId, None))) // todo(andrew): Fix to use libraries
     }
     if (wasInactiveKeep) {
       // A inactive keep may have had tags already. Index them if any.

@@ -186,7 +186,7 @@ class LibraryCommander @Inject() (
       case (_, Some(tag)) =>
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, isPrivate = k.isPrivate,
+          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = k.visibility,
             userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId)))
           keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
         }
@@ -391,7 +391,7 @@ class LibraryCommander @Inject() (
       case Some(_) =>
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, isPrivate = k.isPrivate,
+          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = k.visibility,
             userId = k.userId, source = k.source, libraryId = Some(toLibraryId)))
           keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
             keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = k2c.collectionId))

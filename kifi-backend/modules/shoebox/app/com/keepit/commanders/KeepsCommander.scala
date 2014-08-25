@@ -460,7 +460,7 @@ class KeepsCommander @Inject() (
   private def updateKeepWithSession(keep: Keep, isPrivate: Option[Boolean], title: Option[String])(implicit context: HeimdalContext, session: RWSession): Keep = {
     val updatedPrivacy = isPrivate getOrElse keep.isPrivate
     val updatedTitle = title orElse keep.title
-    keepRepo.save(keep.withPrivate(updatedPrivacy).withTitle(updatedTitle))
+    keepRepo.save(keep.copy(visibility = Keep.isPrivateToVisibility(updatedPrivacy)).withTitle(updatedTitle))
   }
 
   def editKeepTagBulk(collectionId: ExternalId[Collection], selection: BulkKeepSelection, userId: Id[User], isAdd: Boolean)(implicit context: HeimdalContext): Int = {
