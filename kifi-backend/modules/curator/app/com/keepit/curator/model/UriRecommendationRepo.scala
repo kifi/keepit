@@ -20,6 +20,7 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getRecommendableByTopMasterScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[UriRecommendation]
   def getNotPushedByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RSession): Boolean
+  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int)(implicit session: RSession): Boolean
 }
 
 @Singleton
@@ -91,6 +92,31 @@ class UriRecommendationRepoImpl @Inject() (
       (for (row <- rows if row.uriId === uriId && row.userId === userId) yield (row.trashed, row.updatedAt)).update((feedback.trashed.get, currentDateTime)) > 0 else true
 
     clickedResult && keptResult && trashedResult
+  }
+
+  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int)(implicit session: RSession): Boolean = {
+    import StaticQuery.interpolation
+    val userIds = (for (row <- rows) yield row.userId).list.distinct
+    var result = true
+
+    userIds.foreach { userId =>
+      val limitScore =
+        sql"""SELECT MIN(master_score)
+              FROM (
+	              SELECT master_score
+	              FROM uri_recommendation
+	              WHERE state=${UriRecommendationStates.ACTIVE} AND user_id=$userId
+	              ORDER BY master_score DESC LIMIT $limitNumRecosForUser
+              ) AS mScoreTable""".as[Float].first
+
+      val query =
+        sql"""UPDATE uri_recommendation
+              SET state=${UriRecommendationStates.INACTIVE}
+              WHERE (state=${UriRecommendationStates.ACTIVE} AND user_id=$userId AND master_score<$limitScore);""".asUpdate.first > 0
+
+      result |= query
+    }
+    result
   }
 
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}
