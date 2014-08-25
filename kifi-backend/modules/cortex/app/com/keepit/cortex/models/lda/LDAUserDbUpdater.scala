@@ -81,7 +81,9 @@ class LDAUserDbUpdaterImpl @Inject() (
       val topicCounts = db.readOnlyReplica { implicit s => uriTopicRepo.getUserTopicHistograms(user, representer.version) }
       val numOfEvidence = topicCounts.map { _._2 }.sum
       val time = currentDateTime
-      val recentTopicCounts = db.readOnlyReplica { implicit s => uriTopicRepo.getUserTopicHistograms(user, representer.version, after = Some(time.minusWeeks(1))) }
+      val recentTopicCounts = db.readOnlyReplica { implicit s =>
+        uriTopicRepo.getSmartRecentUserTopicHistograms(user, representer.version, noOlderThan = time.minusMonths(1), preferablyNewerThan = time.minusWeeks(1), minNum = 15, maxNum = 40)
+      }
       val numOfRecentEvidence = recentTopicCounts.map { _._2 }.sum
       val topicMean = genFeature(topicCounts)
       val recentTopicMean = genFeature(recentTopicCounts)
