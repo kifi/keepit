@@ -81,7 +81,7 @@ class ArticleIndexerTest extends Specification with SearchTestInjector {
 
     class Searchable(indexer: ArticleIndexer) {
       def search(queryString: String): Seq[SearcherHit] = {
-        val searcher = indexer.getSearcher.withSemanticContext
+        val searcher = indexer.getSearcher
         (new TstQueryParser).parse(queryString) match {
           case Some(query) => searcher.searchAll(query)
           case None => Seq.empty[SearcherHit]
