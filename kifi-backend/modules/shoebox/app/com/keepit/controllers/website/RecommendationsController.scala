@@ -3,9 +3,10 @@ package com.keepit.controllers.website
 import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
 import com.keepit.commanders.{ RecommendationsCommander, LocalUserExperimentCommander }
 import com.keepit.common.db.slick.Database
-import com.keepit.model._
+import com.keepit.curator.model.RecommendationClientType
+import com.keepit.model.{ UriRecommendationScores, ExperimentType, UriRecommendationFeedback }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ Json }
+import play.api.libs.json.Json
 import scala.concurrent.Future
 import com.google.inject.Inject
 
@@ -21,6 +22,18 @@ class RecommendationsController @Inject() (
       commander.adHocRecos(request.userId, n, scores).map(fkis => Ok(Json.toJson(fkis)))
     } else {
       Future.successful(Forbidden)
+    }
+  }
+
+  def topRecos(more: Boolean, recencyWeight: Float) = JsonAction.authenticatedParseJsonAsync { request =>
+    commander.topRecos(request.userId, RecommendationClientType.Site, more, recencyWeight).map { recos =>
+      Ok(Json.toJson(recos))
+    }
+  }
+
+  def topPublicRecos() = JsonAction.authenticatedParseJsonAsync { request =>
+    commander.topPublicRecos().map { recos =>
+      Ok(Json.toJson(recos))
     }
   }
 

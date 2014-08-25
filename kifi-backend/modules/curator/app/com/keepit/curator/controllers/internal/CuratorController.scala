@@ -5,8 +5,9 @@ import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.CuratorServiceController
 import com.keepit.common.db.Id
 import com.keepit.curator.commanders.email.FeedDigestEmailSender
-import com.keepit.curator.commanders.{ CuratorAnalytics, RecommendationFeedbackCommander, RecommendationGenerationCommander }
-import com.keepit.model._
+import com.keepit.curator.commanders.{ CuratorAnalytics, RecommendationFeedbackCommander, RecommendationGenerationCommander, RecommendationRetrievalCommander }
+import com.keepit.curator.model.RecommendationClientType
+import com.keepit.model.{ User, UriRecommendationScores, NormalizedURI, UriRecommendationFeedback }
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsString, Json }
@@ -19,6 +20,7 @@ class CuratorController @Inject() (
     curatorAnalytics: CuratorAnalytics,
     recoGenCommander: RecommendationGenerationCommander,
     recoFeedbackCommander: RecommendationFeedbackCommander,
+    recoRetrievalCommander: RecommendationRetrievalCommander,
     engagaementFeedEmailSender: FeedDigestEmailSender) extends CuratorServiceController {
 
   def adHocRecos(userId: Id[User], n: Int) = Action.async { request =>
@@ -26,6 +28,17 @@ class CuratorController @Inject() (
       case Some(json) => json.as[UriRecommendationScores]
       case None => UriRecommendationScores()
     }).map(recos => Ok(Json.toJson(recos)))
+  }
+
+  def topRecos(userId: Id[User]) = Action(parse.tolerantJson) { request =>
+    val clientType = (request.body \ "clientType").as[RecommendationClientType]
+    val more = (request.body \ "more").as[Boolean]
+    val recencyWeight = (request.body \ "recencyWeight").as[Float]
+    Ok(Json.toJson(recoRetrievalCommander.topRecos(userId, more, recencyWeight, clientType)))
+  }
+
+  def topPublicRecos() = Action(parse.tolerantJson) { request =>
+    Ok(Json.toJson(recoRetrievalCommander.topPublicRecos()))
   }
 
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = Action.async { request =>
