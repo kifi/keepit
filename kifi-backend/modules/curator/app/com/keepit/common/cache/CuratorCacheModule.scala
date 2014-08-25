@@ -161,18 +161,6 @@ case class CuratorCacheModule(cachePluginModules: CachePluginModule*) extends Ca
     new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
 
   @Provides @Singleton
-  def sociallyRelatedUsersCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedUsersCache(stats, accessLog, (outerRepo, 1 day))
-
-  @Provides @Singleton
-  def sociallyRelatedFacebookAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedFacebookAccountsCache(stats, accessLog, (outerRepo, 1 day))
-
-  @Provides @Singleton
-  def sociallyRelatedLinkedInAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedLinkedInAccountsCache(stats, accessLog, (outerRepo, 1 day))
-
-  @Provides @Singleton
-  def sociallyRelatedEmailAccountsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedEmailAccountsCache(stats, accessLog, (outerRepo, 1 day))
+  def sociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedEntitiesCache(stats, accessLog, (outerRepo, 1 day))
 }

@@ -109,7 +109,7 @@ class FakeABookServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getUsersWithContact(email: EmailAddress): Future[Set[Id[User]]] = Future.successful(contactsConnectedToEmailAddress)
 
-  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[Seq[Id[User]]]] = {
+  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int, bePatient: Boolean): Future[Option[Seq[Id[User]]]] = {
     Future.successful(Some(friendRecommendationsExpectations(userId)))
   }
 

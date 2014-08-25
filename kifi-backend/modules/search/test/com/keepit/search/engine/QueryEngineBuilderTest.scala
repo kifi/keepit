@@ -78,6 +78,7 @@ class QueryEngineBuilderTest extends Specification {
       builder.build().getScoreExpr().toString() ===
         s"FilterOut(Boolean(DisjunctiveSum(MaxWithTieBreaker(0, $tb), MaxWithTieBreaker(3, $tb)), ConjunctiveSum(MaxWithTieBreaker(1, $tb), MaxWithTieBreaker(2, $tb))), Exists(Max(4), Max(5)))"
     }
+
     "build an engine from a parsed query with optional, required and more prohibited" in {
       val query = getParser().parse("taming +information +overload together -bookmark -chat").get
       query must beAnInstanceOf[KBooleanQuery]

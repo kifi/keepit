@@ -2,7 +2,7 @@ package com.keepit.search.engine.parser
 
 import com.keepit.classify.Domain
 import com.keepit.search.Lang
-import com.keepit.search.engine.query.{ KBooleanQuery, KSiteQuery, KMediaQuery, KTextQuery }
+import com.keepit.search.engine.query._
 import com.keepit.search.index.Analyzer
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.parser.{ QueryParser, QueryParserException, QuerySpec }
@@ -32,13 +32,18 @@ trait KQueryExpansion extends QueryParser {
 
   override def getFieldQuery(field: String, queryText: String, quoted: Boolean): Option[Query] = {
     field.toLowerCase match {
+      case "tag" => getTagQuery(queryText)
       case "site" => getSiteQuery(queryText)
-      case "media" => Option(KMediaQuery(queryText))
+      case "media" => getMediaQuery(queryText)
       case _ => getTextQuery(queryText, quoted)
     }
   }
 
+  protected def getTagQuery(tag: String): Option[Query] = if (tag != null) Option(KTagQuery(tag)) else None
+
   protected def getSiteQuery(domain: String): Option[Query] = if (domain != null) Option(KSiteQuery(domain)) else None
+
+  protected def getMediaQuery(media: String): Option[Query] = if (media != null) Option(KMediaQuery(media)) else None
 
   private def mayConvertQuery(query: Query, language: Lang): Query = {
     if (KQueryExpansion.useBooleanForPhrase(language)) {

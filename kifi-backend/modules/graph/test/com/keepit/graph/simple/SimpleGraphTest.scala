@@ -151,16 +151,47 @@ class SimpleGraphTest() extends Specification {
       vertexReader.moveTo(leo) must throwA[VertexNotFoundException]
       edgeReader.moveTo(leo, alfred, EmptyEdgeReader) must throwA[VertexNotFoundException]
       edgeReader.moveTo(alfred, leo, EmptyEdgeReader) must throwA[VertexNotFoundException]
+    }
 
+    "remove and recreate a vertex in the same commit" in {
       graph.readWrite { writer =>
         writer.saveVertex(UserData(leo))
+        writer.saveEdge(leo, alfred, EmptyEdgeData)
+        writer.saveEdge(alfred, leo, EmptyEdgeData)
       }
+
+      vertexReader.moveTo(leo)
+      vertexReader.outgoingEdgeReader.moveToNextComponent() === true
+      vertexReader.incomingEdgeReader.moveToNextComponent() === true
+      vertexReader.moveTo(alfred)
+      vertexReader.outgoingEdgeReader.moveToNextComponent() === true
+      vertexReader.incomingEdgeReader.moveToNextComponent() === true
+      edgeReader.moveTo(leo, alfred, EmptyEdgeReader)
+      edgeReader.moveTo(alfred, leo, EmptyEdgeReader)
+
+      graph.readWrite { writer =>
+        writer.removeVertex(leo)
+        writer.saveVertex(UserData(leo))
+      }
+
+      edgeReader.moveTo(leo, alfred, EmptyEdgeReader) must throwA[EdgeNotFoundException]
+      edgeReader.moveTo(alfred, leo, EmptyEdgeReader) must throwA[EdgeNotFoundException]
 
       vertexReader.moveTo(leo)
       vertexReader.outgoingEdgeReader.moveToNextComponent() === false
       vertexReader.incomingEdgeReader.moveToNextComponent() === false
-      edgeReader.moveTo(leo, alfred, EmptyEdgeReader) must throwA[EdgeNotFoundException]
-      edgeReader.moveTo(alfred, leo, EmptyEdgeReader) must throwA[EdgeNotFoundException]
+
+      vertexReader.moveTo(alfred)
+
+      while (vertexReader.outgoingEdgeReader.moveToNextComponent()) {
+        vertexReader.outgoingEdgeReader.component !== (UserReader, UserReader, EmptyEdgeReader)
+      }
+
+      while (vertexReader.incomingEdgeReader.moveToNextComponent()) {
+        vertexReader.incomingEdgeReader.component !== (UserReader, UserReader, EmptyEdgeReader)
+      }
+
+      "All good" === "All good"
     }
 
     "be properly serialized and deserialized to file" in {

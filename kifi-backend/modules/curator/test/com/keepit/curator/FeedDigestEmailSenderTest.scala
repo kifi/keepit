@@ -1,5 +1,6 @@
 package com.keepit.curator
 
+import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.FakeHealthcheckModule
@@ -27,7 +28,8 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
     FakeCortexServiceClientModule(),
     FakeHeimdalServiceClientModule(),
     FakeSearchServiceClientModule(),
-    FakeCacheModule())
+    FakeCacheModule(),
+    FakeABookServiceClientModule())
 
   "FeedDigestEmailSender" should {
 
@@ -43,8 +45,20 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
           pictureName = Some("mustache"))
         val friend2 = User(id = Some(Id[User](45)), firstName = "Mr", lastName = "T",
           pictureName = Some("mrt"))
+        val friend3 = User(id = Some(Id[User](46)), firstName = "Dolly", lastName = "Parton",
+          pictureName = Some("mrt"))
+        val friend4 = User(id = Some(Id[User](47)), firstName = "Benedict", lastName = "Arnold",
+          pictureName = Some("mrt"))
+        val friend5 = User(id = Some(Id[User](48)), firstName = "Winston", lastName = "Churchill",
+          pictureName = Some("mrt"))
 
-        shoebox.saveUsers(friend1, friend2)
+        val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
+        val friends = Seq(friend1, friend2, friend3, friend4, friend5)
+        val friendIds = friends.map(_.id.get)
+        abook.addFriendRecommendationsExpectations(user1.id.get, friendIds)
+        abook.addFriendRecommendationsExpectations(user2.id.get, friendIds)
+
+        shoebox.saveUsers(friends: _*)
 
         val savedRecoModels = db.readWrite { implicit rw =>
           Seq(
@@ -75,7 +89,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         val sendFuture: Future[Seq[DigestRecoMail]] = sender.send()
         val summaries = Await.result(sendFuture, Duration(5, "seconds"))
 
-        summaries.size === 4
+        summaries.size === 7
         val sumU42 = summaries.find(_.userId.id == 42).get
         val sumU43 = summaries.find(_.userId.id == 43).get
 
@@ -114,6 +128,11 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail42body must contain("Recommended because it’s trending in a topic you’re interested in: Searching")
         mail42body must contain("Recommended because it’s trending in a topic you’re interested in: Reading")
 
+        // Friend Recommendations
+        friends.foreach { user =>
+          mail42body must contain("?friend=" + user.externalId)
+        }
+
         mail43.senderUserId.get must beEqualTo(Id[User](43))
         val mail43body = mail43.htmlBody.toString
         mail43body must contain("42go.com")
@@ -121,9 +140,6 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail43body must not contain "lycos.com"
         mail43body must not contain "excite.com"
         mail43body must contain("5 others kept this")
-        println(mail43body)
-
-        val email = shoebox.sentMail(0)
 
         val notSentIds = Set(5L)
         savedRecoModels.forall { models =>
