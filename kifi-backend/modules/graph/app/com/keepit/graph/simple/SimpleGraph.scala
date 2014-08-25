@@ -1,6 +1,7 @@
 package com.keepit.graph.simple
 
 import scala.collection.concurrent.{ Map => ConcurrentMap, TrieMap }
+import scala.collection.Map
 import com.keepit.graph.model._
 import play.api.libs.json._
 import com.keepit.graph.manager.GraphStatistics
@@ -11,7 +12,7 @@ import com.keepit.common.logging.Logging
 
 case class SimpleGraph(vertices: ConcurrentMap[VertexId, MutableVertex] = TrieMap()) {
 
-  vertices.foreach { case (vertexId, vertex) => SimpleGraph.checkVertexIntegrity(this, vertexId, vertex) }
+  vertices.foreach { case (vertexId, vertex) => SimpleGraph.checkVertexIntegrity(vertices, vertexId, vertex) }
 
   private val (vertexStatistics, edgeStatistics) = SimpleGraph.initializeGraphStatistics(vertices.valuesIterator)
 
@@ -41,7 +42,7 @@ object SimpleGraph extends Logging {
   def write(graph: SimpleGraph, graphFile: File): Unit = {
     val lines: Iterable[String] = graph.vertices.toIterable.map {
       case (vertexId, vertex) =>
-        checkVertexIntegrity(graph, vertexId, vertex)
+        checkVertexIntegrity(graph.vertices, vertexId, vertex)
         Json.stringify(
           Json.arr(JsNumber(vertexId.id), Json.toJson(vertex))
         )
@@ -68,7 +69,7 @@ object SimpleGraph extends Logging {
     SimpleGraph(vertices)
   }
 
-  def checkVertexIntegrity(graph: SimpleGraph, vertexId: VertexId, vertex: Vertex): Unit = {
+  def checkVertexIntegrity(vertices: Map[VertexId, Vertex], vertexId: VertexId, vertex: Vertex): Unit = {
 
     var errors: List[Throwable] = Nil
 
@@ -81,7 +82,7 @@ object SimpleGraph extends Logging {
         if (vertexId.kind != component._1) { errors :+= new IllegalStateException(s"Invalid source kind for outgoing component $component in vertex $vertexId") }
         destinationIds.foreach {
           case (destinationId, edgeData) =>
-            if (!graph.vertices.contains(destinationId)) { errors :+= new IllegalStateException(s"Could not find destination vertex of outgoing edge ${(vertexId, destinationId, edgeData.kind)}") }
+            if (!vertices.contains(destinationId)) { errors :+= new IllegalStateException(s"Could not find destination vertex of outgoing edge ${(vertexId, destinationId, edgeData.kind)}") }
             if (destinationId.kind != component._2) { errors :+= new IllegalStateException(s"Invalid destination kind for outgoing edge ${(vertexId, destinationId, edgeData.kind)} in component $component") }
             if (edgeData.kind != component._3) { errors :+= new IllegalStateException(s"Invalid edge data kind for outgoing edge ${(vertexId, destinationId, edgeData.kind)} in component $component") }
         }
@@ -91,7 +92,7 @@ object SimpleGraph extends Logging {
       case (component, sourcesIds) =>
         if (vertexId.kind != component._2) { errors :+= new IllegalStateException(s"Invalid destination kind for incoming component $component in vertex $vertexId") }
         sourcesIds.foreach { sourceId =>
-          if (!graph.vertices.contains(sourceId)) { errors :+= new IllegalStateException(s"Could not find source vertex of incoming edge ${(sourceId, vertexId, component._3)}") }
+          if (!vertices.contains(sourceId)) { errors :+= new IllegalStateException(s"Could not find source vertex of incoming edge ${(sourceId, vertexId, component._3)}") }
           if (sourceId.kind != component._1) { errors :+= new IllegalStateException(s"Invalid source kind for incoming edge ${(sourceId, vertexId, component._3)} in component $component") }
         }
     }
