@@ -98,7 +98,6 @@ class UriRecommendationRepoImpl @Inject() (
     import StaticQuery.interpolation
     val userIds = (for (row <- rows) yield row.userId).list.distinct
     var result = true
-    println("7 days ago is: " + before)
     userIds.foreach { userId =>
       val limitScore =
         sql"""SELECT MIN(master_score)
