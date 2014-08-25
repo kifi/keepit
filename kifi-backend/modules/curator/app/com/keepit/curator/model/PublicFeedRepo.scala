@@ -30,11 +30,11 @@ class PublicFeedRepoImpl @Inject() (
 
   type RepoImpl = PublicFeedTable
 
-  class PublicFeedTable(tag: Tag) extends RepoTable[PublicFeed](db, tag, "public_feed") with SeqNumberColumn[PublicFeed] {
+  class PublicFeedTable(tag: Tag) extends RepoTable[PublicFeed](db, tag, "public_feed") {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def publicMasterScore = column[Float]("master_score", O.NotNull)
     def publicAllScores = column[PublicUriScores]("all_scores", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, seq, uriId, publicMasterScore, publicAllScores) <> ((PublicFeed.apply _).tupled, PublicFeed.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, uriId, publicMasterScore, publicAllScores) <> ((PublicFeed.apply _).tupled, PublicFeed.unapply _)
   }
 
   def table(tag: Tag) = new PublicFeedTable(tag)
