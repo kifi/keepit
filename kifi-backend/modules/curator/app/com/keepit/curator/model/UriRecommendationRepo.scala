@@ -19,6 +19,7 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
   def getNotPushedByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RSession): Boolean
+  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int)(implicit session: RSession): Boolean
 }
 
 @Singleton
@@ -87,22 +88,16 @@ class UriRecommendationRepoImpl @Inject() (
     clickedResult && keptResult && trashedResult
   }
 
-  def deactivateRecommendations()(implicit session: RSession): Boolean = {
+  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int)(implicit session: RSession): Boolean = {
     import StaticQuery.interpolation
-    val limitRecos = 1000
     val userIds = (for (row <- rows) yield row.userId).list()
     var result = true
     userIds.foreach { userId =>
+      println("userId is: " + userId)
       val limitScore =
-        sql"""SELECT MIN(master_score)
-             |FROM uri_recommendation
-             |WHERE state='active' AND user_id = $userId
-             |ORDER BY master_score DESC
-             |LIMIT $limitRecos;""".as[Float].first
+        sql"""SELECT MIN(master_score) FROM uri_recommendation WHERE state=${UriRecommendationStates.ACTIVE} AND user_id=$userId GROUP BY master_score ORDER BY master_score DESC LIMIT $limitNumRecosForUser;""".as[Float].first
       val query =
-        sql"""UPDATE uri_recommendation
-             |SET active='inactive'
-             |WHERE (state='active' AND user_id=$userId AND master_score<$limitScore);""".asUpdate.first > 0
+        sql"""UPDATE uri_recommendation SET state=${UriRecommendationStates.INACTIVE} WHERE (state=${UriRecommendationStates.ACTIVE} AND user_id=$userId AND master_score<$limitScore);""".asUpdate.first > 0
 
       result |= query
     }

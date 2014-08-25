@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.curator.model.UriRecommendationRepo
 
 class CuratorCommander @Inject() (
-  uriRecRepo: UriRecommendationRepo) {
+    uriRecRepo: UriRecommendationRepo) {
 
   def reapOldRecommendations() {
 
