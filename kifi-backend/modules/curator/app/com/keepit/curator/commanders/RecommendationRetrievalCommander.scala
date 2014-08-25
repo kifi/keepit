@@ -26,7 +26,7 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecRepo: UriR
 
     val recos = db.readOnlyReplica { implicit session =>
       uriRecRepo.getByTopMasterScore(userId, 1000)
-    } filterNot (_.kept) filter (_.trashed) map { reco =>
+    } filterNot (x => x.kept || x.trashed) map { reco =>
       (scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight), reco)
     } filter (_._1 > 1.0f) sortBy (-1 * _._1) take 10
 
