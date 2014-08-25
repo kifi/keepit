@@ -25,13 +25,13 @@ class RecommendationsController @Inject() (
     }
   }
 
-  def topRecos(more: Boolean, recencyWeight: Float) = JsonAction.authenticatedParseJsonAsync { request =>
+  def topRecos(more: Boolean, recencyWeight: Float) = JsonAction.authenticatedAsync { request =>
     commander.topRecos(request.userId, RecommendationClientType.Site, more, recencyWeight).map { recos =>
       Ok(Json.toJson(recos))
     }
   }
 
-  def topPublicRecos() = JsonAction.authenticatedParseJsonAsync { request =>
+  def topPublicRecos() = JsonAction.authenticatedAsync { request =>
     commander.topPublicRecos().map { recos =>
       Ok(Json.toJson(recos))
     }
