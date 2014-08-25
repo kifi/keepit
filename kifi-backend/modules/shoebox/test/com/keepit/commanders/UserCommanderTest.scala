@@ -15,7 +15,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.scraper.{ FakeScraperServiceClientModule, FakeScrapeSchedulerModule }
 import com.keepit.common.store.FakeShoeboxStoreModule
-import play.api.libs.json.{ JsObject, Json }
 
 import play.api.test.Helpers.running
 
@@ -294,59 +293,6 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 0
         tellContactsAboutNewUser(user1) === Set.empty
         outbox.size === 0
-      }
-    }
-
-    "calculate interaction score" in {
-      withDb(modules: _*) { implicit injector =>
-        val userCommander = inject[UserCommander]
-        val userValueRepo = inject[UserValueRepo]
-        val (user1, user2, user3, user4) = db.readWrite { implicit session =>
-          val user1 = userRepo.save(User(firstName = "George", lastName = "Washington", username = Some(Username("GDubs"))))
-          val user2 = userRepo.save(User(firstName = "Abe", lastName = "Lincoln", username = Some(Username("VampireXSlayer"))))
-          val user3 = userRepo.save(User(firstName = "Ben", lastName = "Franklin", username = Some(Username("Benji"))))
-          val user4 = EmailAddress("unclesam@usa.gov")
-
-          userValueRepo.getValue(user1.id.get, UserValues.recentInteractions).as[List[JsObject]].length === 0
-          (user1, user2, user3, user4)
-        }
-
-        userCommander.addInteraction(user1.id.get, Left(user2.id.get), UserInteraction.MESSAGE_USER)
-        userCommander.addInteraction(user1.id.get, Left(user3.id.get), UserInteraction.MESSAGE_USER)
-        userCommander.addInteraction(user1.id.get, Right(user4), UserInteraction.MESSAGE_USER)
-        userCommander.addInteraction(user1.id.get, Left(user2.id.get), UserInteraction.MESSAGE_USER)
-        userCommander.addInteraction(user1.id.get, Left(user3.id.get), UserInteraction.MESSAGE_USER)
-        userCommander.addInteraction(user1.id.get, Left(user2.id.get), UserInteraction.MESSAGE_USER)
-
-        def createList(objs: List[JsObject]) = {
-          objs.map { o =>
-            (o \ "userType").as[String] match {
-              case "user" => (o \ "id").as[Id[User]]
-              case "email" => (o \ "id").as[String]
-            }
-          }
-        }
-
-        db.readOnlyMaster { implicit session =>
-          val list = userValueRepo.getValue(user1.id.get, UserValues.recentInteractions).as[List[JsObject]]
-          list.size === 6
-          createList(list) === List(user2.id.get, user3.id.get, user4.address, user2.id.get, user3.id.get, user2.id.get)
-          userValueRepo.count === 1
-        }
-
-        // test interaction scores are sorted in decreasing order
-        val sortedScores = userCommander.getInteractionScores(user1.id.get)
-        val unzipList = sortedScores.unzip
-        unzipList._1 === unzipList._1.sorted.reverse
-        createList(unzipList._2.toList) === List(user2.id.get, user3.id.get, user4.address)
-
-        // test interaction array keeps X most recent interactions
-        for (i <- 1 to UserInteraction.maximumInteractions) {
-          userCommander.addInteraction(user1.id.get, Left(user2.id.get), UserInteraction.MESSAGE_USER)
-        }
-        db.readOnlyMaster { implicit session =>
-          userValueRepo.getValue(user1.id.get, UserValues.recentInteractions).as[List[JsObject]].size === UserInteraction.maximumInteractions
-        }
       }
     }
   }
