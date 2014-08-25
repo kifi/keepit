@@ -37,7 +37,7 @@ class CuratorController @Inject() (
     Ok(Json.toJson(recoRetrievalCommander.topRecos(userId, more, recencyWeight, clientType)))
   }
 
-  def topPublicRecos() = Action(parse.tolerantJson) { request =>
+  def topPublicRecos() = Action { request =>
     Ok(Json.toJson(recoRetrievalCommander.topPublicRecos()))
   }
 
