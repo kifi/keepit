@@ -97,7 +97,7 @@ object SimpleGraph extends Logging {
     }
 
     if (errors.nonEmpty) {
-      val message = s"${errors.length} problems found with vertex $vertexId:"
+      val message = s"${errors.length} problem(s) found with vertex $vertexId:"
       val errorMessages = errors.map(_.toString)
       log.error(message)
       errorMessages.foreach(log.error(_))
