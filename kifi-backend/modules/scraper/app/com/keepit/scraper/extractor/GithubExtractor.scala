@@ -17,14 +17,15 @@ object GithubExtractorProvider extends ExtractorProvider {
       case _ => false
     }
   }
-  def apply(uri: URI) = new GithubExtractor(uri.toString, ScraperConfig.maxContentChars)
+  def apply(uri: URI) = new GithubExtractor(uri, ScraperConfig.maxContentChars)
 }
 
-class GithubExtractor(url: String, maxContentChars: Int) extends JsoupBasedExtractor(url, maxContentChars) with Logging {
+class GithubExtractor(uri: URI, maxContentChars: Int) extends JsoupBasedExtractor(uri, maxContentChars) with Logging {
 
   override def getCanonicalUrl(): Option[String] = None //we don't trust github's canonical urls
 
   def parse(doc: Document) = {
+    val url = uri.toString()
     // Determine which kind of page we're on
     val selectors =
       if (url.matches(".*/issues/.*")) {

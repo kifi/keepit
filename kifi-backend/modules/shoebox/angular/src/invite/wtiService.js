@@ -7,16 +7,16 @@ angular.module('kifi')
   function ($http, routeService, Clutch, $q) {
     var list = [];
     var more = true;
-    var page = 0;
+    var offset = 0;
     var pageSize = 20;
 
     var wtiRemoteService = new Clutch(function (pageToGet) {
-      return $http.get(routeService.whoToInvite + '?page=' + pageToGet + '&pageSize=' + pageSize
+      return $http.get(routeService.whoToInvite + '?offset=' + pageToGet + '&limit=' + pageSize
         ).then(function (res) {
         if (res.data.length === 0) {
           more = false;
         } else {
-          page++;
+          offset += pageSize;
           list.push.apply(list, res.data);
         }
         return res.data;
@@ -25,14 +25,14 @@ angular.module('kifi')
 
     var api = {
       getMore: function () {
-        return wtiRemoteService.get(page);
+        return wtiRemoteService.get(offset);
       },
       hasMore: function () {
         return more;
       },
       loadInitial: function () {
         list.length = 0;
-        page = 0;
+        offset = 0;
         more = true;
         wtiRemoteService.expireAll();
 

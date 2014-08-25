@@ -1,13 +1,15 @@
 package com.keepit.scraper.extractor
 
+import java.util.concurrent.atomic.AtomicLong
+
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ Host, URI }
+import com.keepit.common.net.URI
 import com.keepit.scraper.ScraperConfig
 import org.jsoup.nodes.Document
-import com.google.inject.{ Inject, Singleton }
+
 import scala.util.matching.Regex
-import java.util.concurrent.atomic.AtomicLong
 
 @Singleton
 class SimpleJsoupBasedExtractorProvider @Inject() (airbrake: AirbrakeNotifier) extends ExtractorProvider with Logging {
@@ -46,13 +48,13 @@ class SimpleJsoupBasedExtractorProvider @Inject() (airbrake: AirbrakeNotifier) e
 
   def apply(uri: URI) = {
     findRule(uri) match {
-      case Some(rule) => new SimpleJsoupBasedExtractor(uri.toString(), ScraperConfig.maxContentChars, rule.selectors, this)
+      case Some(rule) => new SimpleJsoupBasedExtractor(uri, ScraperConfig.maxContentChars, rule.selectors, this)
       case None => throw new IllegalArgumentException(s"no matching uri=${uri.toString}")
     }
   }
 }
 
-class SimpleJsoupBasedExtractor(url: String, maxContentChars: Int, selectors: Seq[(String, Boolean)], provider: SimpleJsoupBasedExtractorProvider) extends JsoupBasedExtractor(url, maxContentChars) with Logging {
+class SimpleJsoupBasedExtractor(url: URI, maxContentChars: Int, selectors: Seq[(String, Boolean)], provider: SimpleJsoupBasedExtractorProvider) extends JsoupBasedExtractor(url, maxContentChars) with Logging {
   def parse(doc: Document): String = {
     val content = selectors.map {
       case (selector, required) =>

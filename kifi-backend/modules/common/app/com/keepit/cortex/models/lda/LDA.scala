@@ -73,7 +73,8 @@ object LDATopicInfo {
 
 case class LDATopicDetail(
   topicId: Int,
-  sampleURIs: Seq[NormalizedURI])
+  sampleURIs: Seq[NormalizedURI],
+  topicScores: Seq[Float])
 
 @json case class LDAUserURIInterestScore(score: Float, confidence: Float) // confidence: [0,1]. higher better
 @json case class LDAUserURIInterestScores(global: Option[LDAUserURIInterestScore], recency: Option[LDAUserURIInterestScore])
