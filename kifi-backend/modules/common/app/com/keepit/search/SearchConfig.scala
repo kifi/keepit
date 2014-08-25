@@ -5,14 +5,13 @@ import com.keepit.common.db.Id
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.service.RequestConsolidator
-import com.keepit.model.{ ExperimentType, UserExperimentGenerator, User }
+import com.keepit.model.{ ExperimentType, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.logging.Logging
 import com.keepit.common.usersegment.UserSegment
-import com.keepit.commanders.RemoteUserExperimentCommander
 
 object SearchConfig {
   private[search] val defaultParams =
@@ -21,7 +20,6 @@ object SearchConfig {
       "siteBoost" -> "1.0",
       "concatBoost" -> "0.8",
       "homePageBoost" -> "0.2",
-      "similarity" -> "default",
       "maxResultClickBoost" -> "20.0",
       "minMyBookmarks" -> "2",
       "myBookmarkBoost" -> "1.5",
@@ -54,7 +52,6 @@ object SearchConfig {
       "siteBoost" -> "boost value for matching website names and domains",
       "concatBoost" -> "boost value for concatenated terms",
       "homePageBoost" -> "boost value for home page [0f,1f]",
-      "similarity" -> "similarity characteristics",
       "maxResultClickBoost" -> "boosting by recent result clicks",
       "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
       "myBookmarkBoost" -> "importance of my bookmark",
