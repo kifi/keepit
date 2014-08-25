@@ -1,6 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ RecommendationClientType, RecoInfo, UriRecommendationRepo, UriScores }
+import com.keepit.curator.model.{ RecommendationClientType, RecoInfo, UriRecommendationRepo, UriScores, PublicFeedRepo }
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.common.db.slick.Database
@@ -11,7 +11,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{ Inject, Singleton }
 
 @Singleton
-class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: UriRecommendationRepo, analytics: CuratorAnalytics) {
+class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: UriRecommendationRepo, analytics: CuratorAnalytics, publicFeedRepo: PublicFeedRepo) {
 
   private def scoreItem(masterScore: Float, scores: UriScores, timesDelivered: Int, timesClicked: Int, goodBad: Option[Boolean], heavyPenalty: Boolean, recencyWeight: Float): Float = {
     val basePenaltyFactor = Math.pow(0.95, timesDelivered) * Math.pow(0.8, timesClicked)
@@ -48,8 +48,15 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
   }
 
   def topPublicRecos(): Seq[RecoInfo] = {
-    //get top public recos when that is finished
-    Seq.empty
+    db.readOnlyReplica { implicit session => publicFeedRepo.getByTopMasterScore(1000) }.sortBy(-1 * _.updatedAt.getMillis).take(10).map { reco =>
+      RecoInfo(
+        userId = None,
+        uriId = reco.uriId,
+        score = reco.publicMasterScore,
+        explain = None,
+        attribution = None
+      )
+    }
   }
 
 }
