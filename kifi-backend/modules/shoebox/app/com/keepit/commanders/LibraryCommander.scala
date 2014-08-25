@@ -1,13 +1,15 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.commanders.emails.EmailOptOutCommander
 import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail, EmailAddress }
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -29,6 +31,9 @@ class LibraryCommander @Inject() (
     keepRepo: KeepRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     collectionRepo: CollectionRepo,
+    postOffice: LocalPostOffice,
+    s3ImageStore: S3ImageStore,
+    emailOptOutCommander: EmailOptOutCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
@@ -44,12 +49,10 @@ class LibraryCommander @Inject() (
           case _ => (c1, f1)
         }
       }
-      val keeps = keepRepo.getByLibrary(library.id.get).map(KeepInfo.fromBookmark)
+      val keeps = keepRepo.getByLibrary(library.id.get).map(KeepInfo.fromKeep)
       (library, owner, collabs, follows, keeps)
     }
-    val collabGroup = GroupHolder(count = collabs.length, users = collabs, isMore = false)
-    val followerGroup = GroupHolder(count = follows.length, users = follows, isMore = false)
-    val keepsGroup = KeepsHolder(count = keeps.length, keeps = keeps, isMore = false)
+
     FullLibraryInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -58,9 +61,12 @@ class LibraryCommander @Inject() (
       slug = lib.slug,
       url = Library.formatLibraryUrl(owner.username, owner.externalId, lib.slug),
       visibility = lib.visibility,
-      collaborators = collabGroup,
-      followers = followerGroup,
-      keeps = keepsGroup)
+      collaborators = collabs, // todo(andrew): should only be first `x` collaborators
+      followers = follows, // todo(andrew): should only be first `x` followers
+      keeps = keeps, // todo(andrew): should only be first `x` keeps
+      numKeeps = keeps.length, // todo(andrew): should be the total number of keeps in the library
+      numCollaborators = collabs.length, // todo(andrew): should be the total number of collaborators in the library
+      numFollowers = follows.length) // todo(andrew): should be the total number of followers in the library
   }
 
   def addLibrary(libAddReq: LibraryAddRequest, ownerId: Id[User]): Either[LibraryFail, Library] = {
@@ -197,15 +203,18 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def userAccess(userId: Id[User], libraryId: Id[Library]): Option[LibraryAccess] = {
+  def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess] = {
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId) match {
         case Some(mem) =>
           Some(mem.access)
         case None =>
-          if (libraryRepo.get(libraryId).visibility == LibraryVisibility.PUBLISHED)
+          val lib = libraryRepo.get(libraryId)
+          if (lib.visibility == LibraryVisibility.PUBLISHED)
             Some(LibraryAccess.READ_ONLY)
           else if (libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId).nonEmpty)
+            Some(LibraryAccess.READ_ONLY)
+          else if (universalLinkOpt.nonEmpty && lib.universalLink == universalLinkOpt)
             Some(LibraryAccess.READ_ONLY)
           else
             None
@@ -415,6 +424,32 @@ class LibraryCommander @Inject() (
     }
   }
 
+  def inviteNotification(inviterId: Id[User], inviteeId: Id[User], libraryId: Id[Library]): Unit = {
+    val (inviter, invitee, library, owner) = db.readOnlyMaster { implicit s =>
+      val inviter = userRepo.get(inviterId)
+      val invitee = userRepo.get(inviteeId)
+      val library = libraryRepo.get(libraryId)
+      val owner = userRepo.get(library.ownerId)
+      (inviter, invitee, library, owner)
+    }
+    invitee.primaryEmail match {
+      case None => {}
+      case Some(email) =>
+        val libraryLink = s"""www.kifi.com/${owner.username.getOrElse(owner.externalId)}/${library.slug}?auth=${library.universalLink}"""
+
+        val imageUrl = s3ImageStore.avatarUrlByExternalId(Some(200), inviter.externalId, inviter.pictureName.getOrElse("0"), Some("https"))
+        val unsubLink = s"https://www.kifi.com${com.keepit.controllers.website.routes.EmailOptOutController.optOut(emailOptOutCommander.generateOptOutToken(email))}"
+        db.readWrite { implicit session =>
+          postOffice.sendMail(ElectronicMail(
+            from = SystemEmailAddress.NOTIFICATIONS,
+            to = Seq(email),
+            subject = "Kifi.com | You've been invited to a library!",
+            htmlBody = views.html.email.libraryInvitation(invitee.firstName, inviter, imageUrl, library.name, library.description, libraryLink, unsubLink).body,
+            category = NotificationCategory.User.LIBRARY_INVITATION
+          ))
+        }
+    }
+  }
 }
 
 sealed abstract class LibraryError(val message: String)
@@ -482,8 +517,8 @@ object LibraryInfo {
   }
 }
 
-case class GroupHolder(count: Int, users: Seq[BasicUser], isMore: Boolean)
-object GroupHolder {
+private case class GroupHolder(count: Int, users: Seq[BasicUser], isMore: Boolean)
+private object GroupHolder {
   implicit val format = (
     (__ \ 'count).format[Int] and
     (__ \ 'users).format[Seq[BasicUser]] and
@@ -491,8 +526,8 @@ object GroupHolder {
   )(GroupHolder.apply, unlift(GroupHolder.unapply))
 }
 
-case class KeepsHolder(count: Int, keeps: Seq[KeepInfo], isMore: Boolean)
-object KeepsHolder {
+private case class KeepsHolder(count: Int, keeps: Seq[KeepInfo], isMore: Boolean)
+private object KeepsHolder {
   implicit val format = (
     (__ \ 'count).format[Int] and
     (__ \ 'keeps).format[Seq[KeepInfo]] and
@@ -508,9 +543,12 @@ case class FullLibraryInfo(
   slug: LibrarySlug,
   url: String,
   ownerId: ExternalId[User],
-  collaborators: GroupHolder,
-  followers: GroupHolder,
-  keeps: KeepsHolder)
+  collaborators: Seq[BasicUser],
+  followers: Seq[BasicUser],
+  keeps: Seq[KeepInfo],
+  numKeeps: Int,
+  numCollaborators: Int,
+  numFollowers: Int)
 
 object FullLibraryInfo {
   implicit val format = (
@@ -521,9 +559,12 @@ object FullLibraryInfo {
     (__ \ 'slug).format[LibrarySlug] and
     (__ \ 'url).format[String] and
     (__ \ 'ownerId).format[ExternalId[User]] and
-    (__ \ 'collaborators).format[GroupHolder] and
-    (__ \ 'followers).format[GroupHolder] and
-    (__ \ 'keeps).format[KeepsHolder]
+    (__ \ 'collaborators).format[Seq[BasicUser]] and
+    (__ \ 'followers).format[Seq[BasicUser]] and
+    (__ \ 'keeps).format[Seq[KeepInfo]] and
+    (__ \ 'numKeeps).format[Int] and
+    (__ \ 'numCollaborators).format[Int] and
+    (__ \ 'numFollowers).format[Int]
   )(FullLibraryInfo.apply, unlift(FullLibraryInfo.unapply))
 }
 

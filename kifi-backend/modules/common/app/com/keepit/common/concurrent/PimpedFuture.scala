@@ -88,5 +88,36 @@ object FutureHelpers {
     p.future
   }
 
+  // somewhat specialized (short-circuitry); pure side-effects
+  def processWhile[T](futures: Iterable[Future[T]], predicate: T => Boolean, promised: Promise[Unit] = Promise())(implicit ec: ScalaExecutionContext): Future[Unit] = {
+    futures.headOption match {
+      case None => promised.success()
+      case Some(f) => f.onComplete {
+        case Success(res) =>
+          if (predicate(res)) processWhile(futures.tail, predicate, promised)
+          else promised.success()
+        case Failure(t) => promised.failure(t)
+      }
+    }
+    promised.future
+  }
+
+  private val identityFuture = (x: Any) => Future.successful(x)
+
+  // lazily transform an input Seq and filter by a supplied predicate
+  // useful when a transform op involves an expensive Future and you need to limit the # of futures
+  // that are spawned until you have enough
+  def findMatching[A, B](in: Seq[A], n: Int, predicate: B => Boolean, transform: A => Future[B] = identityFuture,
+    seed: Seq[B] = Seq.empty)(implicit ec: ScalaExecutionContext): Future[Seq[B]] = {
+    if (seed.length >= n) Future.successful(seed)
+    else in.headOption match {
+      case Some(head) =>
+        transform(head).flatMap { s =>
+          findMatching[A, B](in.tail, n, predicate, transform, if (predicate(s)) seed :+ s else seed)
+        }
+      case None => Future.successful(seed)
+    }
+  }
+
 }
 

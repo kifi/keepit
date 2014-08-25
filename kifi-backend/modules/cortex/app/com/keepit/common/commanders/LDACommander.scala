@@ -154,12 +154,12 @@ class LDACommander @Inject() (
     s1 * s2
   }
 
-  def sampleURIs(topicId: Int): Seq[Id[NormalizedURI]] = {
+  def sampleURIs(topicId: Int): Seq[(Id[NormalizedURI], Float)] = {
     val SAMPLE_SIZE = 20
     val uris = db.readOnlyReplica { implicit s =>
       uriTopicRepo.getLatestURIsInTopic(LDATopic(topicId), wordRep.version, limit = 100)
     }
-    scala.util.Random.shuffle(uris).take(SAMPLE_SIZE)
+    scala.util.Random.shuffle(uris).take(SAMPLE_SIZE).sortBy(-1f * _._2)
   }
 
   private def scale(datum: Array[Float], mean: Array[Float], std: Array[Float]): Array[Float] = {

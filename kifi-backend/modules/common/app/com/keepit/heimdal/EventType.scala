@@ -39,6 +39,9 @@ object UserEventTypes {
 
   // Maintenance
   val EXT_ERROR = EventType("ext_error")
+
+  // recommendaton
+  val RECOMMENDATION_USER_ACTION = EventType("recommendation_user_action")
 }
 
 object SystemEventTypes {

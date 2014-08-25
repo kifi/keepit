@@ -1,5 +1,6 @@
 package com.keepit.curator
 
+import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
 import com.keepit.common.cache.FakeCacheModule
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.FakeHealthcheckModule
@@ -27,7 +28,8 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
     FakeCortexServiceClientModule(),
     FakeHeimdalServiceClientModule(),
     FakeSearchServiceClientModule(),
-    FakeCacheModule())
+    FakeCacheModule(),
+    FakeABookServiceClientModule())
 
   "FeedDigestEmailSender" should {
 
@@ -43,8 +45,20 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
           pictureName = Some("mustache"))
         val friend2 = User(id = Some(Id[User](45)), firstName = "Mr", lastName = "T",
           pictureName = Some("mrt"))
+        val friend3 = User(id = Some(Id[User](46)), firstName = "Dolly", lastName = "Parton",
+          pictureName = Some("mrt"))
+        val friend4 = User(id = Some(Id[User](47)), firstName = "Benedict", lastName = "Arnold",
+          pictureName = Some("mrt"))
+        val friend5 = User(id = Some(Id[User](48)), firstName = "Winston", lastName = "Churchill",
+          pictureName = Some("mrt"))
 
-        shoebox.saveUsers(friend1, friend2)
+        val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
+        val friends = Seq(friend1, friend2, friend3, friend4, friend5)
+        val friendIds = friends.map(_.id.get)
+        abook.addFriendRecommendationsExpectations(user1.id.get, friendIds)
+        abook.addFriendRecommendationsExpectations(user2.id.get, friendIds)
+
+        shoebox.saveUsers(friends: _*)
 
         val savedRecoModels = db.readWrite { implicit rw =>
           Seq(
@@ -64,7 +78,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
             },
             makeCompleteUriRecommendation(3, 43, 0.3f, "http://www.42go.com"),
             makeCompleteUriRecommendation(4, 43, 0.4f, "http://www.yahoo.com"),
-            makeCompleteUriRecommendation(5, 43, 0.5f, "http://www.lycos.com"),
+            makeCompleteUriRecommendation(5, 43, 0.5f, "http://www.lycos.com", 250, Some(200)),
             {
               val tuple = makeCompleteUriRecommendation(6, 42, 0.99f, "http://www.excite.com")
               tuple.copy(_2 = tuple._2.withLastPushedAt(currentDateTime))
@@ -75,13 +89,18 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         val sendFuture: Future[Seq[DigestRecoMail]] = sender.send()
         val summaries = Await.result(sendFuture, Duration(5, "seconds"))
 
-        summaries.size === 4
+        summaries.size === 7
         val sumU42 = summaries.find(_.userId.id == 42).get
         val sumU43 = summaries.find(_.userId.id == 43).get
 
         sumU42.feed.size === 2
-        sumU43.feed.size === 3
+
+        // lycos and excite should not be included because:
+        // - lycos does not pass the image width requirement
+        // - excite has been sent already
+        sumU43.feed.size === 2
         shoebox.sentMail.size === 2
+
         val (mail42, mail43) = {
           val (xs, ys) = shoebox.sentMail.partition(_.senderUserId.get == Id[User](42))
           (xs.head, ys.head)
@@ -109,19 +128,25 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail42body must contain("Recommended because it’s trending in a topic you’re interested in: Searching")
         mail42body must contain("Recommended because it’s trending in a topic you’re interested in: Reading")
 
+        // Friend Recommendations
+        friends.foreach { user =>
+          mail42body must contain("?friend=" + user.externalId)
+        }
+
         mail43.senderUserId.get must beEqualTo(Id[User](43))
         val mail43body = mail43.htmlBody.toString
-        mail43body must contain("www.42go.com")
-        mail43body must contain("www.yahoo.com")
-        mail43body must contain("www.lycos.com")
+        mail43body must contain("42go.com")
+        mail43body must contain("yahoo.com")
+        mail43body must not contain "lycos.com"
+        mail43body must not contain "excite.com"
         mail43body must contain("5 others kept this")
 
-        val email = shoebox.sentMail(0)
-
+        val notSentIds = Set(5L)
         savedRecoModels.forall { models =>
           val (uri, reco, uriSumm) = models
           db.readOnlyMaster { implicit s =>
-            uriRecoRepo.get(reco.id.get).lastPushedAt must beSome
+            if (notSentIds.contains(uri.id.get.id)) uriRecoRepo.get(reco.id.get).lastPushedAt must beNone
+            else uriRecoRepo.get(reco.id.get).lastPushedAt must beSome
           }
         }
       }
