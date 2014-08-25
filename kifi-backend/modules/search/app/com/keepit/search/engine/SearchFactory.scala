@@ -8,13 +8,13 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.akka.SafeFuture
 import com.keepit.search._
 import com.keepit.search.engine.parser.KQueryParser
 import com.keepit.search.graph.keep.ShardedKeepIndexer
 import com.keepit.search.graph.library.{ LibraryFields, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.phrasedetector.PhraseDetector
+import com.keepit.search.util.LongArraySet
 import org.apache.lucene.index.Term
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent._
@@ -43,7 +43,7 @@ class SearchFactory @Inject() (
     implicit private val fortyTwoServices: FortyTwoServices) extends Logging {
 
   private[this] val phraseDetectionReqConsolidator = new RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]](10 minutes)
-  private[this] val libraryIdsReqConsolidator = new RequestConsolidator[Id[User], (Seq[Long], Seq[Long], Seq[Long])](10 minutes)
+  private[this] val libraryIdsReqConsolidator = new RequestConsolidator[Id[User], (Set[Long], Set[Long])](3 seconds)
 
   def getKifiSearch(
     shards: Set[Shard[NormalizedURI]],
@@ -55,6 +55,7 @@ class SearchFactory @Inject() (
     filter: SearchFilter,
     config: SearchConfig): Seq[KifiSearch] = {
 
+    val friendIdsFuture = getFriendIdsFuture(userId)
     val libraryIdsFuture = getLibraryIdsFuture(userId)
     val clickHistoryFuture = mainSearcherFactory.getClickHistoryFuture(userId)
     val clickBoostsFuture = mainSearcherFactory.getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
@@ -90,6 +91,7 @@ class SearchFactory @Inject() (
             eng,
             articleSearcher,
             keepSearcher,
+            friendIdsFuture,
             libraryIdsFuture,
             clickBoostsFuture,
             clickHistoryFuture,
@@ -101,18 +103,16 @@ class SearchFactory @Inject() (
     }
   }
 
-  def getLibraryIdsFuture(userId: Id[User]): Future[(Seq[Long], Seq[Long], Seq[Long])] = libraryIdsReqConsolidator(userId) { userId =>
+  def getFriendIdsFuture(userId: Id[User]): Future[Set[Long]] = userGraphsSearcherFactory(userId).getSearchFriendsFuture()
+
+  def getLibraryIdsFuture(userId: Id[User]): Future[(Set[Long], Set[Long])] = libraryIdsReqConsolidator(userId) { userId =>
     userGraphsSearcherFactory(userId).getSearchFriendsFuture().map { friendIds =>
       val searcher = libraryIndexer.getSearcher
-      val myLibIds = searcher.findAllIds(new Term(LibraryFields.discoverableOwnerField, userId.id.toString))
-      val mySecretLibIds = searcher.findAllIds(new Term(LibraryFields.secretOwnerField, userId.id.toString))
 
-      val friendLibIds = new ArrayBuffer[Long]
-      friendIds.foreach { friendId =>
-        searcher.findAllIds(new Term(LibraryFields.discoverableOwnerField, friendId.toString), friendLibIds)
-      }
+      val myOwnLibIds = LongArraySet.from(searcher.findAllIds(new Term(LibraryFields.ownerField, userId.id.toString)).toArray)
+      val memberLibIds = LongArraySet.from(searcher.findAllIds(new Term(LibraryFields.usersField, userId.id.toString)).toArray)
 
-      (mySecretLibIds, myLibIds, friendLibIds)
+      (myOwnLibIds, memberLibIds) // myOwnLibIds is a subset of memberLibIds
     }
   }
 }

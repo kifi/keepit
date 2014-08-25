@@ -26,6 +26,7 @@ trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getHighestSeqNumber(version: ModelVersion[DenseLDA])(implicit session: RSession): SequenceNumber[NormalizedURI]
   def getUpdateTimeAndState(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(DateTime, State[URILDATopic])]
   def getUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA], after: Option[DateTime] = None)(implicit session: RSession): Seq[(LDATopic, Int)]
+  def getSmartRecentUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA], noOlderThan: DateTime, preferablyNewerThan: DateTime, minNum: Int, maxNum: Int)(implicit session: RSession): Seq[(LDATopic, Int)]
   def getLatestURIsInTopic(topicId: LDATopic, version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[(Id[NormalizedURI], Float)]
   def getFeaturesSince(seq: SequenceNumber[NormalizedURI], version: ModelVersion[DenseLDA], limit: Int)(implicit session: RSession): Seq[URILDATopic]
   def countUserURIFeatures(userId: Id[User], version: ModelVersion[DenseLDA], min_num_words: Int)(implicit session: RSession): Int
@@ -40,7 +41,7 @@ class URILDATopicRepoImpl @Inject() (
     val db: DataBaseComponent,
     val keepRepoProvider: Provider[CortexKeepRepo],
     val clock: Clock,
-    airbrake: AirbrakeNotifier) extends DbRepo[URILDATopic] with URILDATopicRepo with CortexTypeMappers {
+    airbrake: AirbrakeNotifier) extends DbRepo[URILDATopic] with URILDATopicRepo with CortexTypeMappers with FortyTwoGenericTypeMappers {
 
   import db.Driver.simple._
 
@@ -128,6 +129,23 @@ class URILDATopicRepoImpl @Inject() (
       q.as[(Int, Int)].list map { case (topic, count) => (LDATopic(topic), count) }
     }
 
+  }
+
+  def getSmartRecentUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA], noOlderThan: DateTime, preferablyNewerThan: DateTime, minNum: Int, maxNum: Int)(implicit session: RSession): Seq[(LDATopic, Int)] = {
+    import StaticQuery.interpolation
+    import scala.slick.jdbc.GetResult
+    implicit val getTuple = GetResult(r => (r.nextShort(), dateTimeMapper.nextValue(r)))
+    val q =
+      sql"""select tp.first_topic, ck.kept_at from cortex_keep as ck inner join uri_lda_topic as tp
+           on ck.uri_id = tp.uri_id
+           where ck.user_id = ${userId.id} and tp.version = ${version.version}
+           and ck.source = 'keeper' and ck.kept_at > ${noOlderThan} and ck.state = 'active' and tp.state = 'active' and tp.first_topic is not null
+           order by ck.kept_at desc limit ${maxNum}"""
+
+    val topicAndDates = q.as[(Int, DateTime)].list
+    val sureTake = topicAndDates.take(minNum)
+    val rest = topicAndDates.drop(minNum).takeWhile(_._2 > preferablyNewerThan)
+    (sureTake ++ rest).groupBy { _._1 }.map { case (topicId, gp) => (LDATopic(topicId), gp.size) }.toSeq
   }
 
   // admin usage. (uriId, first_topic_score)
