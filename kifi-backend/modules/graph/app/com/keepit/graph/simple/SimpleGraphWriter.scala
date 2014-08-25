@@ -63,6 +63,7 @@ class SimpleGraphWriter(
       val component = Component(sourceKind, destinationKind, data.kind)
       edgeDeltas(component).incrementAndGet()
     }
+    Vertex.checkIfEdgeExists(bufferedVertices)(sourceVertexId, destinationVertexId, data.kind)
     isNewEdge
   }
 
