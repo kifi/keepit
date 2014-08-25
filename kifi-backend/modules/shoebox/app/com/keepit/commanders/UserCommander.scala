@@ -26,7 +26,6 @@ import com.keepit.typeahead.PrefixFilter
 import com.keepit.typeahead.PrefixMatching
 import com.keepit.typeahead.TypeaheadHit
 import akka.actor.Scheduler
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
