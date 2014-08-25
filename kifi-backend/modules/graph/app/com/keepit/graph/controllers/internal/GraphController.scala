@@ -76,20 +76,8 @@ class GraphController @Inject() (
     }
   }
 
-  def getSociallyRelatedUsers(userId: Id[User]) = Action.async { request =>
-    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.users)) }
-  }
-
-  def getSociallyRelatedFacebookAccounts(userId: Id[User]) = Action.async { request =>
-    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.facebookAccounts)) }
-  }
-
-  def getSociallyRelatedLinkedInAccounts(userId: Id[User]) = Action.async { request =>
-    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.linkedInAccounts)) }
-  }
-
-  def getSociallyRelatedEmailAccounts(userId: Id[User]) = Action.async { request =>
-    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople.emailAccounts)) }
+  def getSociallyRelatedEntities(userId: Id[User]) = Action.async { request =>
+    socialWanderingCommander.refresh(userId).map { relatedPeople => Ok(Json.toJson(relatedPeople)) }
   }
 
   // todo(Léo): Remove this code once CollisionCommander is operational

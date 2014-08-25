@@ -16,18 +16,9 @@ import com.keepit.abook.model.EmailAccountInfo
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.abook.ABookServiceClient
 
-case class SociallyRelatedPeople(
-  users: RelatedEntities[User, User],
-  facebookAccounts: RelatedEntities[User, SocialUserInfo],
-  linkedInAccounts: RelatedEntities[User, SocialUserInfo],
-  emailAccounts: RelatedEntities[User, EmailAccountInfo])
-
 class SocialWanderingCommander @Inject() (
     graph: GraphManager,
-    relatedUsersCache: SociallyRelatedUsersCache,
-    relatedFacebookAccountsCache: SociallyRelatedFacebookAccountsCache,
-    relatedLinkedInAccountsCache: SociallyRelatedLinkedInAccountsCache,
-    relatedEmailAccountsCache: SociallyRelatedEmailAccountsCache,
+    relatedEntitiesCache: SociallyRelatedEntitiesCache,
     abook: ABookServiceClient,
     clock: Clock) extends Logging {
 
@@ -79,10 +70,7 @@ class SocialWanderingCommander @Inject() (
 
   private def invalidateCache(sociallyRelatedPeople: SociallyRelatedPeople): Unit = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-    relatedUsersCache.set(SociallyRelatedUsersCacheKey(sociallyRelatedPeople.users.id), sociallyRelatedPeople.users)
-    relatedFacebookAccountsCache.set(SociallyRelatedFacebookAccountsCacheKey(sociallyRelatedPeople.facebookAccounts.id), sociallyRelatedPeople.facebookAccounts)
-    relatedLinkedInAccountsCache.set(SociallyRelatedLinkedInAccountsCacheKey(sociallyRelatedPeople.linkedInAccounts.id), sociallyRelatedPeople.linkedInAccounts)
-    relatedEmailAccountsCache.set(SociallyRelatedEmailAccountsCacheKey(sociallyRelatedPeople.emailAccounts.id), sociallyRelatedPeople.emailAccounts)
+    relatedEntitiesCache.set(SociallyRelatedEntitiesCacheKey(sociallyRelatedPeople.users.id), sociallyRelatedPeople)
   }
 
   private def wander(userId: Id[User], irrelevantVertices: Set[VertexId]): TeleportationJournal = {

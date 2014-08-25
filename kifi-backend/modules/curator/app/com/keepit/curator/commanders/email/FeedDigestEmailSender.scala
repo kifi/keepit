@@ -182,13 +182,12 @@ class FeedDigestEmailSenderImpl @Inject() (
 
   private def getFriendRecommendationsForUser(userId: Id[User]): Future[Seq[FriendReco]] = {
     val friendRecosF = for {
-      userIds <- abook.getFriendRecommendations(userId, 0, FRIEND_RECOMMENDATIONS_TO_QUERY)
+      userIds <- abook.getFriendRecommendations(userId, offset = 0, limit = FRIEND_RECOMMENDATIONS_TO_QUERY, bePatient = true)
       if userIds.isDefined
       friends <- shoebox.getBasicUsers(userIds.get)
-      userIds = friends.keySet.toSeq
     } yield {
       // todo(josh) only send friend recommendations who haven't been previous emailed (or at least not emailed in a certain timespan)
-      val userIdsToReco = userIds.sortBy(_ => Random.nextInt).take(FRIEND_RECOMMENDATIONS_TO_DELIVER)
+      val userIdsToReco = userIds.get.sortBy(_ => Random.nextInt).take(FRIEND_RECOMMENDATIONS_TO_DELIVER)
       getManyUserImageUrls(userIdsToReco: _*).map { pairs =>
         pairs.collect {
           case (userId, imageUrl) => FriendReco(friends(userId), imageUrl)
