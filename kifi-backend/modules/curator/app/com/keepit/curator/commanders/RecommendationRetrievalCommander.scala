@@ -11,7 +11,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{ Inject, Singleton }
 
 @Singleton
-class RecommendationRetrievalCommander @Inject() (db: Database, uriRecRepo: UriRecommendationRepo, analytics: CuratorAnalytics) {
+class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: UriRecommendationRepo, analytics: CuratorAnalytics) {
 
   private def scoreItem(masterScore: Float, scores: UriScores, timesDelivered: Int, timesClicked: Int, goodBad: Option[Boolean], heavyPenalty: Boolean, recencyWeight: Float): Float = {
     val basePenaltyFactor = Math.pow(0.95, timesDelivered) * Math.pow(0.8, timesClicked)
@@ -25,8 +25,8 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecRepo: UriR
     require(recencyWeight <= 1.0f && recencyWeight >= 0.0f, "recencyWeight must be between 0 and 1")
 
     val recos = db.readOnlyReplica { implicit session =>
-      uriRecRepo.getByTopMasterScore(userId, 1000)
-    } filterNot (x => x.kept || x.trashed) map { reco =>
+      uriRecoRepo.getRecommendableByTopMasterScore(userId, 1000)
+    } map { reco =>
       (scoreItem(reco.masterScore, reco.allScores, reco.delivered, reco.clicked, reco.vote, more, recencyWeight), reco)
     } filter (_._1 > 1.0f) sortBy (-1 * _._1) take 10
 
