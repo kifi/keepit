@@ -60,7 +60,7 @@ class SimpleGraphWriter(
     if (isNewEdge) {
       val bufferedDestinationVertex = getBufferedVertex(destinationVertexId).get
       bufferedDestinationVertex.addIncomingEdge(sourceVertexId, data.kind)
-      val component = (sourceKind, destinationKind, data.kind)
+      val component = Component(sourceKind, destinationKind, data.kind)
       edgeDeltas(component).incrementAndGet()
     }
     isNewEdge
