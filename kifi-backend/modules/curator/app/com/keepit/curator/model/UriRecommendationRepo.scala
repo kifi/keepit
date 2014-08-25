@@ -95,10 +95,12 @@ class UriRecommendationRepoImpl @Inject() (
 
     userIds.foreach { userId =>
       val limitScore =
-        sql"""SELECT MIN(master_score) FROM (
-	            SELECT master_score FROM uri_recommendation
-	            WHERE state=${UriRecommendationStates.ACTIVE} AND user_id=$userId
-	            ORDER BY master_score DESC LIMIT $limitNumRecosForUser
+        sql"""SELECT MIN(master_score)
+              FROM (
+	              SELECT master_score
+	              FROM uri_recommendation
+	              WHERE state=${UriRecommendationStates.ACTIVE} AND user_id=$userId
+	              ORDER BY master_score DESC LIMIT $limitNumRecosForUser
               ) AS mScoreTable""".as[Float].first
 
       val query =
