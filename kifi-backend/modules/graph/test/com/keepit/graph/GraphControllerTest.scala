@@ -2,7 +2,7 @@ package com.keepit.graph
 
 import com.keepit.graph.controllers.internal.GraphController
 import com.keepit.graph.manager.GraphManager
-import com.keepit.graph.model.SociallyRelatedPeople
+import com.keepit.graph.model.SociallyRelatedEntities
 import com.keepit.graph.simple.SimpleGraphTestModule
 import com.keepit.graph.test.{ GraphTestInjector }
 import org.specs2.mutable.Specification
@@ -57,7 +57,7 @@ class GraphControllerTest extends Specification with GraphTestInjector with Grap
           val content = contentAsString(result)
           content !== null
 
-          val jsResult = Json.fromJson[SociallyRelatedPeople](Json.parse(content))
+          val jsResult = Json.fromJson[SociallyRelatedEntities](Json.parse(content))
           jsResult.get.facebookAccounts.id == u42
           jsResult.get.linkedInAccounts.id == u42
           jsResult.get.emailAccounts.id == u42

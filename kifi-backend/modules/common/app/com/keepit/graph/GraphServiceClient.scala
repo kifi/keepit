@@ -33,7 +33,7 @@ trait GraphServiceClient extends ServiceClient {
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
   def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit]
   def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]]
-  def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedPeople]]
+  def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]]
   def getSociallyRelatedUsers(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, User]]]
   def getSociallyRelatedFacebookAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]]
   def getSociallyRelatedLinkedInAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]]
@@ -124,12 +124,12 @@ class GraphServiceClientImpl @Inject() (
     call(Graph.internal.refreshSociallyRelatedEntities(id), callTimeouts = longTimeout).map(_ => ())
   }
 
-  def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedPeople]] = {
+  def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]] = {
     val responseFuture = call(Graph.internal.getSociallyRelatedEntities(userId), callTimeouts = longTimeout)
     cacheProvider.relatedEntitiesCache.get(SociallyRelatedEntitiesCacheKey(userId)) match {
       case Some(relatedEntities) => Future.successful(Some(relatedEntities))
       case None => {
-        if (bePatient) responseFuture.map { r => Some(r.json.as[SociallyRelatedPeople]) }
+        if (bePatient) responseFuture.map { r => Some(r.json.as[SociallyRelatedEntities]) }
         else Future.successful(None)
       }
     }

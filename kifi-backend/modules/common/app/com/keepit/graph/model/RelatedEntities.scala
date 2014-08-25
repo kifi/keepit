@@ -23,26 +23,26 @@ object RelatedEntities {
   def empty[E, R](id: Id[E]) = RelatedEntities(id, Seq.empty[(Id[R], Double)])
 }
 
-case class SociallyRelatedPeople(
+case class SociallyRelatedEntities(
   users: RelatedEntities[User, User],
   facebookAccounts: RelatedEntities[User, SocialUserInfo],
   linkedInAccounts: RelatedEntities[User, SocialUserInfo],
   emailAccounts: RelatedEntities[User, EmailAccountInfo])
 
-object SociallyRelatedPeople {
+object SociallyRelatedEntities {
   implicit val format = (
     (__ \ 'users).format[RelatedEntities[User, User]] and
     (__ \ 'facebookAccounts).format[RelatedEntities[User, SocialUserInfo]] and
     (__ \ 'linkedInAccounts).format[RelatedEntities[User, SocialUserInfo]] and
     (__ \ 'emailAccounts).format[RelatedEntities[User, EmailAccountInfo]]
-  )(SociallyRelatedPeople.apply _, unlift(SociallyRelatedPeople.unapply))
+  )(SociallyRelatedEntities.apply _, unlift(SociallyRelatedEntities.unapply))
 }
 
-case class SociallyRelatedEntitiesCacheKey(id: Id[User]) extends Key[SociallyRelatedPeople] {
+case class SociallyRelatedEntitiesCacheKey(id: Id[User]) extends Key[SociallyRelatedEntities] {
   override val version = 1
   val namespace = "socially_related_entities"
   def toKey(): String = id.id.toString
 }
 
 class SociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SociallyRelatedEntitiesCacheKey, SociallyRelatedPeople](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends JsonCacheImpl[SociallyRelatedEntitiesCacheKey, SociallyRelatedEntities](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

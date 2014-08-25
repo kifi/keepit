@@ -22,10 +22,10 @@ class SocialWanderingCommander @Inject() (
     abook: ABookServiceClient,
     clock: Clock) extends Logging {
 
-  private val consolidate = new RequestConsolidator[Id[User], SociallyRelatedPeople](1 minute)
+  private val consolidate = new RequestConsolidator[Id[User], SociallyRelatedEntities](1 minute)
   private val lock = new ReactiveLock(5)
 
-  def refresh(id: Id[User]): Future[SociallyRelatedPeople] = consolidate(id) { userId =>
+  def refresh(id: Id[User]): Future[SociallyRelatedEntities] = consolidate(id) { userId =>
     lock.withLockFuture {
       getIrrelevantVertices(userId).map { irrelevantVertices =>
         val journal = wander(userId, irrelevantVertices)
@@ -60,7 +60,7 @@ class SocialWanderingCommander @Inject() (
       case _ => // ignore
     }
 
-    SociallyRelatedPeople(
+    SociallyRelatedEntities(
       users = RelatedEntities.top(userId, relatedUsers, limit),
       facebookAccounts = RelatedEntities.top(userId, relatedFacebookAccounts, limit),
       linkedInAccounts = RelatedEntities.top(userId, relatedLinkedInAccounts, limit),
@@ -68,7 +68,7 @@ class SocialWanderingCommander @Inject() (
     )
   }
 
-  private def invalidateCache(sociallyRelatedPeople: SociallyRelatedPeople): Unit = {
+  private def invalidateCache(sociallyRelatedPeople: SociallyRelatedEntities): Unit = {
     import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
     relatedEntitiesCache.set(SociallyRelatedEntitiesCacheKey(sociallyRelatedPeople.users.id), sociallyRelatedPeople)
   }
