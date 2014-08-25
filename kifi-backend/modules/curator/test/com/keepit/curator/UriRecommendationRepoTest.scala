@@ -15,6 +15,7 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
   }
 
   "UriRecommendationRepo" should {
+
     "update uri recommendation feedback" in {
       withDb() { implicit injector =>
         val repo = inject[UriRecommendationRepo]
