@@ -156,7 +156,6 @@ class SimpleGraphTest() extends Specification {
     "remove and recreate a vertex in the same commit" in {
       graph.readWrite { writer =>
         writer.saveVertex(UserData(leo))
-        writer.saveVertex(UserData(leo))
         writer.saveEdge(leo, alfred, EmptyEdgeData)
         writer.saveEdge(alfred, leo, EmptyEdgeData)
       }
