@@ -96,8 +96,12 @@ class RecommendationsCommander @Inject() (
       id = nUri.externalId,
       title = nUri.title,
       url = nUri.url,
-      keepers = db.readOnlyReplica { implicit session => reco.attribution.get.user.map(_.friends.map(basicUserRepo.load)) } getOrElse Seq.empty,
-      others = reco.attribution.get.user.map(_.others) getOrElse 0,
+      keepers = reco.attribution.map { attr =>
+        db.readOnlyReplica { implicit session => attr.user.map(_.friends.map(basicUserRepo.load)) }
+      }.flatten.getOrElse(Seq.empty),
+      others = reco.attribution.map { attr =>
+        attr.user.map(_.others)
+      }.flatten.getOrElse(0),
       siteName = DomainToNameMapper.getNameFromUrl(nUri.url),
       uriSummary = uriSummary
     )
