@@ -23,6 +23,22 @@ case class SeedItem(
   keepers: Keepers,
   discoverable: Boolean)
 
+case class PublicSeedItem(
+  uriId: Id[NormalizedURI],
+  url: String,
+  seq: SequenceNumber[PublicSeedItem],
+  timesKept: Int,
+  lastSeen: DateTime,
+  keepers: Keepers,
+  discoverable: Boolean)
+
+@json case class PublicUriScores(
+  popularityScore: Float,
+  recencyScore: Float,
+  rekeepScore: Float,
+  discoveryScore: Float,
+  multiplier: Option[Float])
+
 @json case class UriScores(
     socialScore: Float,
     popularityScore: Float,
@@ -50,13 +66,24 @@ case class SeedItem(
 }
 
 case class SeedItemWithMultiplier(
+    multiplier: Float = 1.0f,
+    userId: Id[User],
+    uriId: Id[NormalizedURI],
+    priorScore: Option[Float] = None,
+    timesKept: Int,
+    lastSeen: DateTime,
+    keepers: Keepers) {
+  def makePublicSeedItemWithMultiplier = PublicSeedItemWithMultiplier(multiplier, uriId, timesKept, lastSeen, keepers)
+}
+
+case class PublicSeedItemWithMultiplier(
   multiplier: Float = 1.0f,
-  userId: Id[User],
   uriId: Id[NormalizedURI],
-  priorScore: Option[Float],
   timesKept: Int,
   lastSeen: DateTime,
   keepers: Keepers)
+
+case class PublicScoredSeedItem(uriId: Id[NormalizedURI], publicUriScores: PublicUriScores)
 
 case class ScoredSeedItem(userId: Id[User], uriId: Id[NormalizedURI], uriScores: UriScores)
 
