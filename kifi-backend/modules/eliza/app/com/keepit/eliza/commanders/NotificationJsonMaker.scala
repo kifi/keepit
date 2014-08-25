@@ -137,4 +137,3 @@ case class InboxUriSummaryCacheKey(uriId: Id[NormalizedURI]) extends Key[URISumm
 class InboxUriSummaryCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[InboxUriSummaryCacheKey, URISummary](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-//ZZZ remember cache module
