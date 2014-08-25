@@ -9,9 +9,10 @@ object KeepFields {
   val libraryIdField = "libId"
   val uriField = "uri"
   val uriIdField = "uriId"
-  val discoverableUriField = "dUri"
+  val uriDiscoverableField = "uriDisc"
   val userField = "user"
   val userIdField = "userId"
+  val userDiscoverableField = "userDisc"
   val visibilityField = "v"
   val titleField = "t"
   val titleStemmedField = "ts"
@@ -34,8 +35,9 @@ case class KeepIndexable(keep: Keep) extends Indexable[Keep, Keep] {
 
     doc.add(buildKeywordField(libraryField, keep.libraryId.get.toString))
     doc.add(buildKeywordField(uriField, keep.uriId.toString))
-    if (keep.isDiscoverable) doc.add(buildKeywordField(discoverableUriField, keep.uriId.toString))
+    if (keep.isDiscoverable) doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.toString))
     doc.add(buildKeywordField(userField, keep.userId.toString))
+    if (keep.isDiscoverable) doc.add(buildKeywordField(userDiscoverableField, keep.userId.toString))
 
     keep.title.foreach { title =>
       val titleLang = LangDetector.detect(title)

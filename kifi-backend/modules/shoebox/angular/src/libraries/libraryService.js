@@ -5,8 +5,8 @@ angular.module('kifi')
 .factory('libraryService', [
   '$http', 'util', 'profileService', 'routeService', 'Clutch', '$q',
   function ($http, util, profileService, routeService, Clutch, $q) {
-    var libraries = [],
-        invited = [];
+    var librarySummaries = [],
+        invitedSummaries = [];
 
     // var fuseOptions = {
     //   keys: ['name'],
@@ -16,9 +16,9 @@ angular.module('kifi')
 
     var librarySummariesService = new Clutch(function () {
       return $http.get(routeService.getLibrarySummaries).then(function (res) {
-          util.replaceArrayInPlace(libraries, res.data.libraries || []);
-          util.replaceArrayInPlace(invited, res.data.invited || []);
-          return libraries;
+          util.replaceArrayInPlace(librarySummaries, res.data.libraries || []);
+          util.replaceArrayInPlace(invitedSummaries, res.data.invited || []);
+          return res.data;
       });
     });
 
@@ -51,8 +51,8 @@ angular.module('kifi')
       isAllowed: function () {
         return profileService.me.experiments && profileService.me.experiments.indexOf('libraries') !== -1;
       },
-      libraries: libraries,
-      invited: invited,
+      librarySummaries: librarySummaries,
+      invitedSummaries: invitedSummaries,
       fetchLibrarySummaries: function () {
         return librarySummariesService.get();
       },

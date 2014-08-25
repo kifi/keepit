@@ -2,26 +2,24 @@
 
 angular.module('kifi')
 
-.config([
-  '$routeProvider',
-  function ($routeProvider) {
-    $routeProvider
-    .when('/:username/:librarySlug', {
-      templateUrl: 'libraries/library.tpl.html',
-      controller: 'LibraryCtrl'
-    });
-  }
-])
+// .config([
+//   '$routeProvider',
+//   function ($routeProvider) {
+//     $routeProvider
+//     .when('/:username/:librarySlug', {
+//       templateUrl: 'libraries/library.tpl.html',
+//       controller: 'LibraryCtrl'
+//     });
+//   }
+// ])
 
 .controller('LibraryCtrl', [
   '$scope', 'keepService', '$routeParams', 'libraryService',
   function ($scope, keepService, $routeParams, libraryService) {
-
-    keepService.reset();
     $scope.keeps = [];
 
-    var username = $routeParams.username || '';
-    var librarySlug = $routeParams.librarySlug || '';
+    var username = $routeParams.username;
+    var librarySlug = $routeParams.librarySlug;
 
     var libraryP = libraryService.getLibraryByUserSlug(username, librarySlug);
 

@@ -135,7 +135,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
         uriId = Id[NormalizedURI](1),
         isPrivate = false,
         state = State[CortexKeep]("active"),
-        source = KeepSource.bookmarkImport,
+        source = KeepSource.keeper,
         seq = SequenceNumber[CortexKeep](1L)
       ),
         CortexKeep(
@@ -148,7 +148,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           uriId = Id[NormalizedURI](2),
           isPrivate = false,
           state = State[CortexKeep]("active"),
-          source = KeepSource.bookmarkImport,
+          source = KeepSource.keeper,
           seq = SequenceNumber[CortexKeep](2L)
         ),
 
@@ -162,7 +162,7 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
           uriId = Id[NormalizedURI](3),
           isPrivate = false,
           state = State[CortexKeep]("inactive"),
-          source = KeepSource.bookmarkImport,
+          source = KeepSource.keeper,
           seq = SequenceNumber[CortexKeep](3L)
         )
       )
@@ -205,6 +205,23 @@ class URILDATopicRepoTest extends Specification with CortexTestInjector {
         topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 0, limit = 2).map { case (keepId, feat) => keepId.id } === List(20, 1)
         topicRepo.getUserRecentURIFeatures(Id[User](1), ModelVersion[DenseLDA](1), 500, limit = 2).map { case (keepId, feat) => feat.value }.flatten === List()
 
+        var oldTime = new DateTime(2000, 7, 1, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        var newTime = new DateTime(2014, 7, 10, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+
+        var res = topicRepo.getSmartRecentUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1), noOlderThan = oldTime, preferablyNewerThan = newTime, minNum = 2, maxNum = 10).toArray
+        res.sortBy(_._1.index).toList === List((LDATopic(1), 1), (LDATopic(2), 1)) // minNum = 2, so take both
+
+        res = topicRepo.getSmartRecentUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1), noOlderThan = oldTime, preferablyNewerThan = newTime, minNum = 1, maxNum = 10).toArray
+        res.sortBy(_._1.index).toList === List((LDATopic(2), 1)) // minNum = 1, so drop old one
+
+        oldTime = newTime
+        res = topicRepo.getSmartRecentUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1), noOlderThan = oldTime, preferablyNewerThan = newTime, minNum = 2, maxNum = 10).toArray
+        res.sortBy(_._1.index).toList === List((LDATopic(2), 1)) // old one is too old
+
+        oldTime = new DateTime(2048, 7, 1, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        newTime = new DateTime(3000, 7, 10, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
+        res = topicRepo.getSmartRecentUserTopicHistograms(Id[User](1), ModelVersion[DenseLDA](1), noOlderThan = oldTime, preferablyNewerThan = newTime, minNum = 2, maxNum = 10).toArray
+        res.size === 0 // nothing is new enough
       }
     }
   }
