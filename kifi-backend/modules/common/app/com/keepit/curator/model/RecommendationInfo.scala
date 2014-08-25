@@ -8,6 +8,19 @@ import com.kifi.macros.json
 
 import org.joda.time.DateTime
 
+@json case class RecoAttributionKind(value: String)
+
+object RecoAttributionKind {
+  object Keep extends RecoAttributionKind("keep")
+  object Topic extends RecoAttributionKind("topic")
+}
+
+@json case class RecoKind(value: String)
+
+object RecoKind {
+  object Keep extends RecoKind("keep")
+}
+
 @json case class RecoInfo(
   userId: Option[Id[User]], //who is this recommendation for
   uriId: Id[NormalizedURI], //what uri is being recommended
@@ -16,7 +29,7 @@ import org.joda.time.DateTime
   attribution: Option[SeedAttribution])
 
 @json case class RecoAttributionInfo(
-  kind: String,
+  kind: RecoAttributionKind,
   name: Option[String],
   url: Option[String],
   when: Option[DateTime])
@@ -34,7 +47,7 @@ import org.joda.time.DateTime
   uriSummary: URISummary)
 
 @json case class FullRecoInfo(
-  kind: String,
+  kind: RecoKind,
   metaData: Option[RecoMetaData],
   itemInfo: RecoItemInfo)
 

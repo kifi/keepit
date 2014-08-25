@@ -14,7 +14,17 @@ import com.keepit.model.{
   Keep
 }
 import com.keepit.curator.CuratorServiceClient
-import com.keepit.curator.model.{ RecoInfo, RecommendationClientType, FullRecoInfo, RecoItemInfo, RecoMetaData, SeedAttribution, RecoAttributionInfo }
+import com.keepit.curator.model.{
+  RecoInfo,
+  RecommendationClientType,
+  FullRecoInfo,
+  RecoItemInfo,
+  RecoMetaData,
+  SeedAttribution,
+  RecoAttributionInfo,
+  RecoAttributionKind,
+  RecoKind
+}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.domain.DomainToNameMapper
@@ -101,7 +111,7 @@ class RecommendationsCommander @Inject() (
         keep.state == KeepStates.ACTIVE
       } map { keep =>
         RecoAttributionInfo(
-          kind = "keep",
+          kind = RecoAttributionKind.Keep,
           name = keep.title,
           url = Some(keep.url),
           when = Some(keep.createdAt)
@@ -111,7 +121,7 @@ class RecommendationsCommander @Inject() (
 
     attr.topic.map { topicAttr =>
       keepAttrInfos :+ RecoAttributionInfo(
-        kind = "topic",
+        kind = RecoAttributionKind.Topic,
         name = Some(topicAttr.topicName),
         url = None,
         when = None
@@ -129,7 +139,7 @@ class RecommendationsCommander @Inject() (
           val itemInfo = constructRecoItemInfo(nUri, uriSummary, reco)
           val attributionInfo = contstructAttributionInfos(reco.attribution.get)
           FullRecoInfo(
-            kind = "keep",
+            kind = RecoKind.Keep,
             metaData = Some(RecoMetaData(attributionInfo)),
             itemInfo = itemInfo
           )
@@ -147,7 +157,7 @@ class RecommendationsCommander @Inject() (
         case (reco, nUri) => uriSummaryCommander.getDefaultURISummary(nUri, waiting = false).map { uriSummary =>
           val itemInfo = constructRecoItemInfo(nUri, uriSummary, reco)
           FullRecoInfo(
-            kind = "keep",
+            kind = RecoKind.Keep,
             metaData = None,
             itemInfo = itemInfo
           )
