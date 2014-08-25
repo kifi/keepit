@@ -8,6 +8,8 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.curator.model._
 import com.keepit.model._
 import com.keepit.shoebox.{ ShoeboxServiceClient, ShoeboxScraperClient, FakeShoeboxServiceClientImpl }
+import org.joda.time.DateTime
+import com.keepit.common.time._
 
 import scala.collection.mutable.ListBuffer
 
@@ -63,6 +65,28 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
   def makeUriRecommendation(uriId: Int, userIdInt: Int, masterScore: Float) = {
     val userId = Id[User](userIdInt)
     UriRecommendation(
+      uriId = Id[NormalizedURI](uriId),
+      userId = userId,
+      masterScore = masterScore,
+      state = UriRecommendationStates.ACTIVE,
+      allScores = UriScores(socialScore = 1.0f,
+        popularityScore = 1.0f,
+        overallInterestScore = 1.0f,
+        recentInterestScore = 1.0f,
+        recencyScore = 1.0f,
+        priorScore = 1.0f,
+        rekeepScore = 1.0f,
+        curationScore = None,
+        multiplier = Some(1.0f),
+        discoveryScore = 1.0f),
+      delivered = 0, clicked = 0, kept = false,
+      attribution = makeSeedAttribution(userId))
+  }
+
+  def makeUriRecommendationWithCreateTimestamp(uriId: Int, userIdInt: Int, masterScore: Float, createdAt: DateTime) = {
+    val userId = Id[User](userIdInt)
+    UriRecommendation(
+      createdAt = createdAt,
       uriId = Id[NormalizedURI](uriId),
       userId = userId,
       masterScore = masterScore,

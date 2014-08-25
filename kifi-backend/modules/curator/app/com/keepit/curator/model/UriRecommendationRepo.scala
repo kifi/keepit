@@ -20,7 +20,7 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getRecommendableByTopMasterScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[UriRecommendation]
   def getNotPushedByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RSession): Boolean
-  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int)(implicit session: RSession): Boolean
+  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int, before: DateTime)(implicit session: RSession): Boolean
 }
 
 @Singleton
@@ -94,11 +94,11 @@ class UriRecommendationRepoImpl @Inject() (
     clickedResult && keptResult && trashedResult
   }
 
-  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int)(implicit session: RSession): Boolean = {
+  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int, before: DateTime)(implicit session: RSession): Boolean = {
     import StaticQuery.interpolation
     val userIds = (for (row <- rows) yield row.userId).list.distinct
     var result = true
-
+    println("7 days ago is: " + before)
     userIds.foreach { userId =>
       val limitScore =
         sql"""SELECT MIN(master_score)
@@ -106,13 +106,17 @@ class UriRecommendationRepoImpl @Inject() (
 	              SELECT master_score
 	              FROM uri_recommendation
 	              WHERE state=${UriRecommendationStates.ACTIVE} AND user_id=$userId
+	                    AND created_at<$before
 	              ORDER BY master_score DESC LIMIT $limitNumRecosForUser
               ) AS mScoreTable""".as[Float].first
 
       val query =
         sql"""UPDATE uri_recommendation
-              SET state=${UriRecommendationStates.INACTIVE}
-              WHERE (state=${UriRecommendationStates.ACTIVE} AND user_id=$userId AND master_score<$limitScore);""".asUpdate.first > 0
+              SET state=${UriRecommendationStates.INACTIVE},
+                  updated_at=$currentDateTime
+              WHERE state=${UriRecommendationStates.ACTIVE}
+                    AND user_id=$userId AND master_score<$limitScore
+                    AND created_at<$before;""".asUpdate.first > 0
 
       result |= query
     }
