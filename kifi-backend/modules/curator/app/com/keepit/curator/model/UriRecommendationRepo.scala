@@ -90,14 +90,21 @@ class UriRecommendationRepoImpl @Inject() (
 
   def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int)(implicit session: RSession): Boolean = {
     import StaticQuery.interpolation
-    val userIds = (for (row <- rows) yield row.userId).list()
+    val userIds = (for (row <- rows) yield row.userId).list.distinct
     var result = true
+
     userIds.foreach { userId =>
-      println("userId is: " + userId)
       val limitScore =
-        sql"""SELECT MIN(master_score) FROM uri_recommendation WHERE state=${UriRecommendationStates.ACTIVE} AND user_id=$userId GROUP BY master_score ORDER BY master_score DESC LIMIT $limitNumRecosForUser;""".as[Float].first
+        sql"""SELECT MIN(master_score) FROM (
+	            SELECT master_score FROM uri_recommendation
+	            WHERE state=${UriRecommendationStates.ACTIVE} AND user_id=$userId
+	            ORDER BY master_score DESC LIMIT $limitNumRecosForUser
+              ) AS mScoreTable""".as[Float].first
+
       val query =
-        sql"""UPDATE uri_recommendation SET state=${UriRecommendationStates.INACTIVE} WHERE (state=${UriRecommendationStates.ACTIVE} AND user_id=$userId AND master_score<$limitScore);""".asUpdate.first > 0
+        sql"""UPDATE uri_recommendation
+              SET state=${UriRecommendationStates.INACTIVE}
+              WHERE (state=${UriRecommendationStates.ACTIVE} AND user_id=$userId AND master_score<$limitScore);""".asUpdate.first > 0
 
       result |= query
     }

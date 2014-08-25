@@ -51,14 +51,8 @@ class RecommendationCleanupCommanderTest extends Specification with CuratorTestI
 
         db.readOnlyMaster { implicit s =>
           val recos = repo.getByTopMasterScore(Id[User](42), 5)
-
-          recos.foreach { rec =>
-            println("#############")
-            println(rec.toString)
-          }
           recos.size === 4
         }
-        1 === 1
       }
     }
   }

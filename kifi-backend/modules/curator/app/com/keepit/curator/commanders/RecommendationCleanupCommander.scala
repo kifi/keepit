@@ -8,7 +8,7 @@ class RecommendationCleanupCommander @Inject() (
     db: Database,
     uriRecRepo: UriRecommendationRepo) {
 
-  val defaultLimitNumRecosForUser = 1000
+  private val defaultLimitNumRecosForUser = 1000
   def cleanupLowMasterScoreRecos(limitNumRecosForUser: Option[Int] = Some(defaultLimitNumRecosForUser)): Boolean = {
     db.readWrite { implicit session =>
       uriRecRepo.cleanupLowMasterScoreRecos(limitNumRecosForUser.getOrElse(defaultLimitNumRecosForUser))
