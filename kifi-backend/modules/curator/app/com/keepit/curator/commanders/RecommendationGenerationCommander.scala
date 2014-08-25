@@ -1,8 +1,23 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ SeedItem, PublicScoredSeedItem, PublicFeed, PublicUriScores, PublicSeedItem, PublicFeedRepo, ScoredSeedItemWithAttribution, RecommendationInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, UriRecommendationRepo, UriRecommendation, UriScores }
+import com.keepit.curator.model.{
+  ScoredSeedItemWithAttribution,
+  RecoInfo,
+  UserRecommendationGenerationStateRepo,
+  UserRecommendationGenerationState,
+  Keepers,
+  UriRecommendationRepo,
+  UriRecommendation,
+  UriScores,
+  PublicFeedRepo,
+  PublicSeedItem,
+  SeedItem,
+  PublicUriScores,
+  PublicFeed,
+  PublicScoredSeedItem
+}
 import com.keepit.common.db.{ SequenceNumber, Id }
-import com.keepit.model._
+import com.keepit.model.{ User, ExperimentType, UriRecommendationScores, SystemValueRepo, Name }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.slick.Database
@@ -90,17 +105,17 @@ class RecommendationGenerationCommander @Inject() (
     }
   }
 
-  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecommendationInfo]] = {
+  def getAdHocRecommendations(userId: Id[User], howManyMax: Int, scoreCoefficients: UriRecommendationScores): Future[Seq[RecoInfo]] = {
     getTopRecommendations(userId, Math.max(howManyMax, 1000)).map { recos =>
       recos.map { reco =>
-        RecommendationInfo(
-          userId = reco.userId,
+        RecoInfo(
+          userId = Some(reco.userId),
           uriId = reco.uriId,
           score =
             if (scoreCoefficients.isEmpty) computeMasterScore(reco.allScores)
             else computeAdjustedScoreByTester(scoreCoefficients, reco.allScores),
           explain = Some(reco.allScores.toString),
-          attribution = reco.attribution
+          attribution = Some(reco.attribution)
         )
       }.sortBy(-1 * _.score).take(howManyMax)
     }

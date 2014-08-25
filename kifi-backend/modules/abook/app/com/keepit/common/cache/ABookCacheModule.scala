@@ -171,18 +171,6 @@ case class ABookCacheModule(cachePluginModules: CachePluginModule*) extends Cach
     new AllFakeUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
 
   @Provides @Singleton
-  def sociallyRelatedUsersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedUsersCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 1 day))
-
-  @Provides @Singleton
-  def sociallyRelatedFacebookAccountsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedFacebookAccountsCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 1 day))
-
-  @Provides @Singleton
-  def sociallyRelatedLinkedInAccountsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedLinkedInAccountsCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 1 day))
-
-  @Provides @Singleton
-  def sociallyRelatedEmailAccountsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SociallyRelatedEmailAccountsCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 1 day))
+  def sociallyRelatedEntitiesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SociallyRelatedEntitiesCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 1 day))
 }

@@ -8,7 +8,7 @@ import org.apache.lucene.util.PriorityQueue
 object KifiResultCollector {
   val MIN_PERCENT_MATCH = 0.5f
 
-  class Hit(var id: Long, var score: Float, var normalizedScore: Float, var visibility: Int)
+  class Hit(var id: Long, var score: Float, var normalizedScore: Float, var visibility: Int, var libId: Long)
 
   class HitQueue(sz: Int) extends PriorityQueue[Hit](sz) {
 
@@ -25,13 +25,14 @@ object KifiResultCollector {
 
     private[this] var overflow: Hit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
 
-    def insert(id: Long, score: Float, normalizedScore: Float, visibility: Int) {
+    def insert(id: Long, score: Float, normalizedScore: Float, visibility: Int, libId: Long) {
       if (overflow == null) {
-        overflow = new Hit(id, score, normalizedScore, visibility)
+        overflow = new Hit(id, score, normalizedScore, visibility, libId)
       } else {
         overflow.id = id
         overflow.score = score
         overflow.visibility = visibility
+        overflow.libId = libId
         overflow
       }
       overflow = insertWithOverflow(overflow)
@@ -111,12 +112,14 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
         }
 
         if (score > 0.0f) {
+          val libId = ctx.secondaryId
+
           if ((visibility & Visibility.MEMBER) != 0) {
-            myHits.insert(id, score, score, visibility)
+            myHits.insert(id, score, score, visibility, libId)
           } else if ((visibility & Visibility.NETWORK) != 0) {
-            friendsHits.insert(id, score, score, visibility)
+            friendsHits.insert(id, score, score, visibility, libId)
           } else {
-            othersHits.insert(id, score, score, visibility)
+            othersHits.insert(id, score, score, visibility, libId)
           }
         }
       }

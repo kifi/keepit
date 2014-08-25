@@ -38,6 +38,8 @@ object Similarity extends Logging {
     ("noTF" -> new DefaultSimilarity with DocCountBasedIDF with NoTF with NoCoord)
   )
 
+  def apply() = similarities("default")
+
   def apply(name: String) = {
     def fallback = {
       log.warn("Similarity(%s) not found".format(name))

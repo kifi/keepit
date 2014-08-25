@@ -147,7 +147,7 @@ class LDACommander @Inject() (
   }
 
   private def computeConfidence(numOfWords: Int, numOfEvidenceForUser: Int, isRecent: Boolean) = {
-    val alpha = if (isRecent) (numOfEvidenceForUser - 10) / 5f else (numOfEvidenceForUser - 30) / 10f
+    val alpha = if (isRecent) (numOfEvidenceForUser - 20) / 5f else (numOfEvidenceForUser - 30) / 10f
     val s1 = 1f / (1 + exp(-1 * alpha)).toFloat
     val beta = (numOfWords - 50) / 50f
     val s2 = 1f / (1 + exp(-1 * beta)).toFloat

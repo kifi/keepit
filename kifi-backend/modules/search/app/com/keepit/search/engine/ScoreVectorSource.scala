@@ -3,7 +3,7 @@ package com.keepit.search.engine
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.model.LibraryVisibility
 import com.keepit.search.graph.library.LibraryFields
-import com.keepit.search.{ SearchConfig, Searcher }
+import com.keepit.search.{ SearchFilter, SearchConfig, Searcher }
 import com.keepit.search.article.ArticleVisibility
 import com.keepit.search.engine.query.KWeight
 import com.keepit.search.graph.keep.KeepFields
@@ -113,10 +113,11 @@ final class TaggedScoreQueue(size: Int) extends PriorityQueue[TaggedScorer](size
 //  query Article index and Keep index, and aggregate the hits by Uri Id
 //
 
-class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, idFilter: LongArraySet) extends ScoreVectorSourceLike {
+class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter: SearchFilter) extends ScoreVectorSourceLike {
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
+    val idFilter = filter.idFilter
 
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
@@ -155,8 +156,8 @@ class UriFromKeepsScoreVectorSource(
     protected val searcher: Searcher,
     userId: Long,
     friendIdsFuture: Future[Set[Long]],
-    libraryIdsFuture: Future[(Set[Long], Set[Long])],
-    idFilter: LongArraySet,
+    libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
+    filter: SearchFilter,
     config: SearchConfig,
     monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike {
 
@@ -170,18 +171,19 @@ class UriFromKeepsScoreVectorSource(
 
   private def getRecencyScorer(readerContext: AtomicReaderContext): Scorer = {
     // use MatchAllBits to avoid delete check. this is safe because RecencyScorer is used passively.
-    if (recencyWeight == null) null else recencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc()))
+    recencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc()))
   }
 
   private[this] lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
 
-  private[this] lazy val (myOwnLibraryIds, memberLibraryIds) = {
-    val (myLibIds, memberLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting library ids")
-    (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds))
+  private[this] lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds) = {
+    val (myLibIds, memberLibIds, trustedLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting library ids")
+    (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds))
   }
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
+    val idFilter = filter.idFilter
 
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
@@ -220,8 +222,14 @@ class UriFromKeepsScoreVectorSource(
               }
             }
           } else {
-            if (visibilityDocValues.get(docId) == published && myFriendIds.findIndex(userIdDocValues.get(docId)) >= 0) {
-              Visibility.NETWORK // the keep is in a published library, and my friend kept it
+            if (visibilityDocValues.get(docId) == published) {
+              if (myFriendIds.findIndex(userIdDocValues.get(docId)) >= 0) {
+                Visibility.NETWORK // the keep is in a published library, and my friend kept it
+              } else if (trustedLibraryIds.contains(docId)) {
+                Visibility.OTHERS // the keep is in a published library, and it is in a trusted library
+              } else {
+                Visibility.RESTRICTED
+              }
             } else {
               Visibility.RESTRICTED
             }
@@ -229,7 +237,7 @@ class UriFromKeepsScoreVectorSource(
 
         if (visibility != Visibility.RESTRICTED) {
           // recency boost
-          val boost = if (recencyScorer == null) 0.1f else {
+          val boost = {
             if (recencyScorer.docID() < docId) {
               if (recencyScorer.advance(docId) == docId) recencyScorer.score() else 1.0f
             } else {
@@ -243,7 +251,7 @@ class UriFromKeepsScoreVectorSource(
 
           // write to the buffer
           // write the libId. libId is expected for searchable keeps.
-          output.alloc(writer, visibility | Visibility.SEARCHABLE_KEEP, 8 + 8 + size * 4) // id (8 bytes), libId (8 bytes) and taggedFloats (size * 4 bytes)
+          output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // id (8 bytes), libId (8 bytes) and taggedFloats (size * 4 bytes)
           writer.putLong(uriId).putLong(libId).putTaggedFloatBits(taggedScores, size)
         } else {
           docId = pq.skipCurrentDoc() // this keep is not searchable, skipping...
@@ -295,10 +303,11 @@ class UriFromKeepsScoreVectorSource(
 //  query Library index and Keep index and aggregate the hits by Library Id
 //
 
-class LibraryScoreVectorSource(protected val searcher: Searcher, libraryIds: LongArraySet, idFilter: LongArraySet) extends ScoreVectorSourceLike {
+class LibraryScoreVectorSource(protected val searcher: Searcher, libraryIds: LongArraySet, filter: SearchFilter) extends ScoreVectorSourceLike {
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
+    val idFilter = filter.idFilter
 
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
@@ -339,10 +348,11 @@ class LibraryScoreVectorSource(protected val searcher: Searcher, libraryIds: Lon
   }
 }
 
-class LibraryFromKeepsScoreVectorSource(protected val searcher: Searcher, idFilter: LongArraySet) extends ScoreVectorSourceLike {
+class LibraryFromKeepsScoreVectorSource(protected val searcher: Searcher, filter: SearchFilter) extends ScoreVectorSourceLike {
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
+    val idFilter = filter.idFilter
 
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
