@@ -39,12 +39,13 @@ class CuratorAnalytics @Inject() (
 
     if (modelOpt.isDefined && modelOpt.get.delivered > 0) {
       val masterScore = modelOpt.get.masterScore.toInt
+      val keepers = modelOpt.get.attribution.user.map{_.friends}
       val client = feedback.fromClient.getOrElse(RecommendationClientType.Unknown)
 
       var contexts = List.empty[RecommendationUserActionContext]
 
-      feedback.clicked.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Clicked) :: contexts }
-      feedback.kept.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Kept) :: contexts }
+      feedback.clicked.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Clicked, None, keepers) :: contexts }
+      feedback.kept.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Kept, None, keepers) :: contexts }
 
       feedback.vote.foreach { isThumbUp =>
         val action = if (isThumbUp) RecommendationUserAction.MarkedGood else RecommendationUserAction.MarkedBad
@@ -69,6 +70,7 @@ class CuratorAnalytics @Inject() (
     contextBuilder += ("client_type", context.clientType.value)
     contextBuilder += ("action", context.userAction.value)
     context.suggestion.foreach { suggest => contextBuilder += ("user_suggestion", suggest) }
+    context.keepers.foreach{ userIds => contextBuilder += ("keepers", userIds)}
     UserEvent(context.userId, contextBuilder.build, UserEventTypes.RECOMMENDATION_USER_ACTION)
   }
 
@@ -86,6 +88,6 @@ object RecommendationUserAction {
   object ImprovementSuggested extends RecommendationUserAction("improvement_suggested")
 }
 
-case class RecommendationUserActionContext(userId: Id[User], uriId: Id[NormalizedURI], truncatedMasterScore: Int, clientType: RecommendationClientType, userAction: RecommendationUserAction, suggestion: Option[String] = None) {
+case class RecommendationUserActionContext(userId: Id[User], uriId: Id[NormalizedURI], truncatedMasterScore: Int, clientType: RecommendationClientType, userAction: RecommendationUserAction, suggestion: Option[String] = None, keepers: Option[Seq[Id[User]]] = None) {
   require((userAction == RecommendationUserAction.ImprovementSuggested) == suggestion.isDefined, s"invalid arguments: userAction = $userAction, suggestion = ${suggestion}")
 }
