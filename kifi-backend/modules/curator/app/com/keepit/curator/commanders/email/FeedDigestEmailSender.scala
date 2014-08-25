@@ -259,7 +259,12 @@ class FeedDigestEmailSenderImpl @Inject() (
     Future.traverse(seqF) { pair =>
       val (userId, urlF) = pair
       urlF.map((userId, _))
-    }.map(_.toMap)
+    }.map { userImgUrls =>
+      // todo(josh) remove after internal testing
+      val noImages = userImgUrls.filter(_._2.isEmpty)
+      if (noImages.size > 0) log.info(s"getManyUserImageUrls($userIds): failed to load image URLs for: " + noImages.map(_._1))
+      userImgUrls.toMap
+    }
   }
 
 }
