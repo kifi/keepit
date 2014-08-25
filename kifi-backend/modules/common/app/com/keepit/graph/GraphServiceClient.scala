@@ -125,14 +125,12 @@ class GraphServiceClientImpl @Inject() (
   }
 
   def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedPeople]] = {
-    cachedEntities(userId) match {
+    val responseFuture = call(Graph.internal.getSociallyRelatedEntities(userId), callTimeouts = longTimeout)
+    cacheProvider.relatedEntitiesCache.get(SociallyRelatedEntitiesCacheKey(userId)) match {
       case Some(relatedEntities) => Future.successful(Some(relatedEntities))
       case None => {
-        if (bePatient) call(Graph.internal.getSociallyRelatedEntities(userId), callTimeouts = longTimeout).map { r => Some(r.json.as[SociallyRelatedPeople]) }
-        else {
-          refreshSociallyRelatedEntities(userId)
-          Future.successful(None)
-        }
+        if (bePatient) responseFuture.map { r => Some(r.json.as[SociallyRelatedPeople]) }
+        else Future.successful(None)
       }
     }
   }
@@ -157,6 +155,4 @@ class GraphServiceClientImpl @Inject() (
     val payload = Json.obj("user" -> userId, "uris" -> uriIds)
     call(Graph.internal.explainFeed(), payload, callTimeouts = longTimeout).map { r => (r.json).as[Seq[GraphFeedExplanation]] }
   }
-
-  private def cachedEntities(id: Id[User]) = cacheProvider.relatedEntitiesCache.get(SociallyRelatedEntitiesCacheKey(id))
 }
