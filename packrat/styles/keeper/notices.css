@@ -24,7 +24,7 @@
   top: 0;
   bottom: 0;
   left: 0;
-  width: 296px;
+  width: 100%;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   background-color: #fafafa;
@@ -102,7 +102,7 @@
 }
 .kifi-notice {
   position: relative;
-  min-height: 96px;
+  min-height: 100px;
   padding: 4px 8px 8px;
   border-bottom: 1px solid #d2d2d2;
   -moz-box-sizing: border-box;
@@ -293,7 +293,7 @@
   width: 162px;
   margin-top: 15px;
   line-height: 14px;
-  color: #6f6f6f;
+  color: #000;
   font-weight: bold;
   white-space: nowrap;
   overflow: hidden;

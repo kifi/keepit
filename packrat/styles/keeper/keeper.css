@@ -13,12 +13,12 @@
   bottom: 0;
   right: 0;
   width: 322px;
-  height: 62px;
+  height: 64px;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   border: solid transparent;
-  border-width: 5px 7px 8px;
-  margin: -5px -7px -8px;
+  border-width: 7px 7px 8px;
+  margin: -7px -7px -8px;
   font-size: 12px;
   line-height: 14px;
 }
@@ -117,7 +117,7 @@
   transition: width .25s ease-in-out;
 }
 [kifi-with-pane] .kifi-keep-card {
-  width: 125px;
+  width: 126px;
 }
 .kifi-pane .kifi-keep-card {
   left: 153px;
@@ -613,7 +613,7 @@
   /*background-color: blue;*/
 }
 .kifi-dock-messages>.kifi-count {
-  top: -8px;
+  top: -7px;
   left: -2px;
 }
 
