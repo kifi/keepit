@@ -142,11 +142,14 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
       val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
-        uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+        uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
       val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
-        uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+        uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
       val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
-        uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+        uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
 
       val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "USA"))
       val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "food"))
@@ -694,11 +697,14 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
           val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
           val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
           val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
-            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = None))
+            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = None))
 
           val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "USA"))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))

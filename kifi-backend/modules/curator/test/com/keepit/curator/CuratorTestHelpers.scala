@@ -28,6 +28,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         userId = userId,
         state = KeepStates.ACTIVE,
         source = KeepSource.keeper,
+        visibility = LibraryVisibility.DISCOVERABLE,
         libraryId = None))
     }
   }
@@ -41,7 +42,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         userId = userId,
         state = KeepStates.ACTIVE,
         source = KeepSource.keeper,
-        isPrivate = isPrivate,
+        visibility = LibraryVisibility.SECRET,
         libraryId = None))
     }
   }

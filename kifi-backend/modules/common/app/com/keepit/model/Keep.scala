@@ -128,7 +128,7 @@ class KeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlug
   extends PrimitiveCacheImpl[KeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 6
+  override val version = 7
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -137,7 +137,7 @@ class KeepUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPl
   extends JsonCacheImpl[KeepUriUserKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
-  override val version = 4
+  override val version = 5
   val namespace = "latest_keep_uri"
   def toKey(): String = uriId.toString
 }
@@ -146,7 +146,7 @@ class LatestKeepUriCache(stats: CacheStatistics, accessLog: AccessLog, innermost
   extends JsonCacheImpl[LatestKeepUriKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LatestKeepUrlKey(url: String) extends Key[Keep] {
-  override val version = 3
+  override val version = 4
   val namespace = "latest_keep_url"
   def toKey(): String = NormalizedURI.hashUrl(url).hash
 }
@@ -155,7 +155,7 @@ class LatestKeepUrlCache(stats: CacheStatistics, accessLog: AccessLog, innermost
   extends JsonCacheImpl[LatestKeepUrlKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KifiHitKey(userId: Id[User], uriId: Id[NormalizedURI]) extends Key[SanitizedKifiHit] {
-  override val version = 2
+  override val version = 3
   val namespace = "keep_hit"
   def toKey(): String = userId.id + "#" + uriId.id
 }

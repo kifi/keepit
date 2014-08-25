@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 
 import com.keepit.common.core._
-import com.keepit.common.crypto.PublicId
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URISanitizer
@@ -71,7 +71,7 @@ object KeepInfo {
     KeepInfo(
       Some(info.bookmark.externalId),
       info.bookmark.title,
-      (if (sanitize) URISanitizer.sanitize(info.bookmark.url) else info.bookmark.url),
+      if (sanitize) URISanitizer.sanitize(info.bookmark.url) else info.bookmark.url,
       info.bookmark.isPrivate,
       Some(info.bookmark.createdAt),
       Some(info.others),
@@ -82,12 +82,12 @@ object KeepInfo {
       info.siteName,
       info.clickCount,
       info.rekeepCount,
-      None // todo(andrew): Add library external id
+      info.libraryId
     )
   }
 
-  def fromKeep(bookmark: Keep): KeepInfo = {
-    KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate, libraryId = None) // todo(andrew): Add library external id
+  def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
+    KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate, libraryId = bookmark.libraryId.map(Library.publicId))
   }
 }
 
@@ -149,7 +149,8 @@ class KeepsCommander @Inject() (
     collectionCommander: CollectionCommander,
     normalizedURIInterner: NormalizedURIInterner,
     curator: CuratorServiceClient,
-    clock: Clock) extends Logging {
+    clock: Clock,
+    implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   private def getKeeps(
     beforeOpt: Option[ExternalId[Keep]],

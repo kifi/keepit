@@ -494,9 +494,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
           val keep1 = keepRepo.save(Keep(title = Some("k1"), userId = userA.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(library1.id.get)))
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
           val keep2 = keepRepo.save(Keep(title = Some("k2"), userId = userA.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(library1.id.get)))
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
 
           (userA, library1, keep1, keep2)
         }
@@ -544,9 +546,11 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = userA.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, libraryId = Some(library1.id.get)))
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
           val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = userA.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, libraryId = Some(library1.id.get)))
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(library1.id.get)))
 
           val userB = userRepo.save(User(firstName = "Bulba", lastName = "Saur", createdAt = t1))
           val library2 = libraryRepo.save(Library(name = "Library2", ownerId = userB.id.get, slug = LibrarySlug("lib2"), visibility = LibraryVisibility.DISCOVERABLE, memberCount = 1))

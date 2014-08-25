@@ -62,9 +62,11 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
         val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
+          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
+          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
         val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
+          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
+          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
         val collectionRepo = inject[CollectionRepo]
         val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
@@ -126,9 +128,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
         val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, isPrivate = false, libraryId = Some(lib1.id.get)))
+          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, visibility = Keep.isPrivateToVisibility(false), libraryId = Some(lib1.id.get)))
         val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, isPrivate = false, libraryId = Some(lib1.id.get)))
+          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, visibility = Keep.isPrivateToVisibility(false), libraryId = Some(lib1.id.get)))
 
         val collectionRepo = inject[CollectionRepo]
         val collections = collectionRepo.save(Collection(userId = user1.id.get, name = "myCollaction1")) ::
@@ -247,11 +249,14 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
         val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
+          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
+          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
         val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
+          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
+          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
         val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
-          uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
+          uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE,
+          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
         (user1, user2, bookmark1, bookmark2, bookmark3)
       }
@@ -463,11 +468,14 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
         val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
-          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
+          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
+          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
         val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
-          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
+          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), state = KeepStates.ACTIVE,
+          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
         val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
-          uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE, libraryId = Some(lib1.id.get)))
+          uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), state = KeepStates.ACTIVE,
+          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
         (user1, bookmark1, bookmark2, bookmark3)
       }
