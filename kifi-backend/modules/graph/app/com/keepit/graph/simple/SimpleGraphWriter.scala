@@ -60,7 +60,7 @@ class SimpleGraphWriter(
     if (isNewEdge) {
       val bufferedDestinationVertex = getBufferedVertex(destinationVertexId).get
       bufferedDestinationVertex.addIncomingEdge(sourceVertexId, data.kind)
-      val component = (sourceKind, destinationKind, data.kind)
+      val component = Component(sourceKind, destinationKind, data.kind)
       edgeDeltas(component).incrementAndGet()
     }
     isNewEdge
@@ -87,6 +87,16 @@ class SimpleGraphWriter(
 
   def commit(): Unit = {
     val commitStatistics = GraphStatistics.filter(vertexDeltas, edgeDeltas)
+    try { bufferedVertices.updated.foreach { case (vertexId, updatedVertex) => SimpleGraph.checkVertexIntegrity(bufferedVertices, vertexId, updatedVertex) } }
+    catch {
+      case ex: Throwable =>
+        log.error("Commit would leave the graph in a corrupt state.")
+        log.error(ex.toString)
+        log.error(s"Updated vertices: ${bufferedVertices.updated.keys.toSeq.mkString(", ")}")
+        log.error(s"Removed vertices: ${bufferedVertices.removed.toSeq.mkString(", ")}")
+        throw new IllegalStateException("Commit would leave the graph in a corrupt state.", ex)
+    }
+
     bufferedVertices.flush()
     vertexDeltas.foreach { case (vertexKind, counter) => vertexStatistics(vertexKind).addAndGet(counter.getAndSet(0)) }
     edgeDeltas.foreach { case (component, counter) => edgeStatistics(component).addAndGet(counter.getAndSet(0)) }
