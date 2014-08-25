@@ -26,6 +26,7 @@ import com.keepit.typeahead.PrefixFilter
 import com.keepit.typeahead.PrefixMatching
 import com.keepit.typeahead.TypeaheadHit
 import akka.actor.Scheduler
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
@@ -912,6 +913,63 @@ class UserCommander @Inject() (
   }
 
   protected def userAvatarImageUrl(user: User) = s3ImageStore.avatarUrlByUser(user)
+
+  def addInteraction(uid: Id[User], src: Either[Id[User], EmailAddress], interaction: UserInteraction) = {
+    val interactions = db.readOnlyMaster { implicit s =>
+      userValueRepo.getValue(uid, UserValues.recentInteractions)
+    }.as[List[JsObject]]
+    val newJson = src match {
+      case Left(id) => Json.obj("userType" -> "user", "id" -> id, "action" -> interaction.value)
+      case Right(email) => Json.obj("userType" -> "email", "id" -> email.address, "action" -> interaction.value)
+    }
+    val newInteractions = if (interactions.length + 1 > UserInteraction.maximumInteractions) {
+      interactions.drop(1) :+ newJson
+    } else {
+      interactions :+ newJson
+    }
+    db.readWrite { implicit s =>
+      userValueRepo.setValue(uid, UserValueName.RECENT_INTERACTION, Json.stringify(Json.toJson(newInteractions)))
+    }
+  }
+
+  // given an index position in an array and weight of action, calculate score
+  private def calcInteractionScore(idx: Int, action: String): Double = {
+    val score = UserInteraction.getScoreForAction(action)
+    (15 * Math.pow(idx + 1.5, -0.7) + 0.5) * score
+  }
+
+  def getInteractionScores(uid: Id[User]): Seq[(Double, JsObject)] = {
+    db.readOnlyMaster { implicit s =>
+      val arr = userValueRepo.getValue(uid, UserValues.recentInteractions).as[Seq[JsObject]]
+      val scores = for ((a, i) <- arr.zipWithIndex) yield {
+        val action = (a \ "action").as[String]
+        (calcInteractionScore(i, action), a)
+      }
+      val sumScores = scores.groupBy(t => t._2).map { b =>
+        val sum = b._2.foldLeft(0.0)((r, c) => r + c._1)
+        (sum, b._1)
+      }
+      sumScores.toSeq.sortBy(-_._1)
+    }
+  }
+}
+
+sealed abstract class UserInteraction(val value: String, val score: Double)
+object UserInteraction {
+  case object INVITE_KIFI extends UserInteraction("invite_kifi", 1.0)
+  case object INVITE_LIBRARY extends UserInteraction("invite_library", 1.0)
+  case object MESSAGE_USER extends UserInteraction("message", 1.0)
+
+  val maximumInteractions = 100
+
+  def getScoreForAction(action: String) = {
+    action match {
+      case INVITE_KIFI.value => INVITE_KIFI.score
+      case INVITE_LIBRARY.value => INVITE_LIBRARY.score
+      case MESSAGE_USER.value => MESSAGE_USER.score
+      case _ => 1.0
+    }
+  }
 }
 
 object DefaultKeeps {
