@@ -153,6 +153,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allUsers = MutableMap[Id[User], User]()
   val allUserExternalIds = MutableMap[ExternalId[User], User]()
   val allUserConnections = MutableMap[Id[User], Set[Id[User]]]()
+  val allUserImageUrls = MutableMap[Id[User], String]()
   val allConnections = MutableMap[Id[UserConnection], UserConnection]()
   val allSearchFriends = MutableMap[Id[SearchFriend], SearchFriend]()
   val allUserExperiments = MutableMap[Id[User], Set[UserExperiment]]()
@@ -197,6 +198,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def saveURISummary(uriId: Id[NormalizedURI], uriSummary: URISummary): Unit = synchronized {
     uriSummaries(uriId) = uriSummary
+  }
+
+  def saveUserImageUrl(id: Int, url: String) = synchronized {
+    allUserImageUrls(Id[User](id)) = url
   }
 
   def saveConnections(connections: Map[Id[User], Set[Id[User]]]) {
@@ -620,7 +625,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = Future.successful(Seq.fill(uris.size)(false))
 
-  def getUserImageUrl(userId: Id[User], width: Int): Future[String] = Future.successful("https://www.kifi.com/assets/img/ghost.200.png")
+  def getUserImageUrl(userId: Id[User], width: Int): Future[String] = synchronized {
+    Future.successful(allUserImageUrls.getOrElse(userId, "https://www.kifi.com/assets/img/ghost.200.png"))
+  }
 
   def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String] = Future.successful("https://kifi.com")
 
