@@ -9,7 +9,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time.Clock
 import com.keepit.model._
-import play.api.libs.json.{ JsArray, JsString, Json }
+import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
 
 import scala.util.{ Success, Failure }
 
@@ -83,13 +83,13 @@ class LibraryController @Inject() (
 
   def getLibraryByPath(userStr: String, slugStr: String) = JsonAction.authenticated { request =>
     // check if str is either a username or externalId
-    val owner = db.readOnlyMaster { implicit s =>
+    val ownerOpt = db.readOnlyMaster { implicit s =>
       ExternalId.asOpt[User](userStr) match {
         case Some(eid) => userRepo.getOpt(eid)
         case None => userRepo.getUsername(Username(userStr))
       }
     }
-    owner match {
+    ownerOpt match {
       case None => BadRequest(Json.obj("error" -> "invalid username"))
       case Some(owner) =>
         db.readOnlyMaster { implicit s => libraryRepo.getBySlugAndUserId(userId = owner.id.get, slug = LibrarySlug(slugStr)) } match {
@@ -99,7 +99,7 @@ class LibraryController @Inject() (
     }
   }
 
-  def getLibrariesByUser = JsonAction.authenticated { request =>
+  def getLibrarySummariesByUser = JsonAction.authenticated { request =>
     val (librariesWithAccess, librariesWithInvites) = libraryCommander.getLibrariesByUser(request.userId)
     // rule out invites that are not duplicate invites to same library (only show library invite with highest access)
     val invitesToShow = librariesWithInvites.groupBy(x => x._2).map { lib =>
@@ -113,13 +113,13 @@ class LibraryController @Inject() (
         (userRepo.get(library.ownerId), keepRepo.getCountByLibrary(library.id.get))
       }
       val info = LibraryInfo.fromLibraryAndOwner(library, owner, numKeeps)
-      Json.obj("info" -> info, "access" -> access) // todo: highly cachable! may be tricky to invalidate though.
+      Json.toJson(info).as[JsObject] ++ Json.obj("access" -> access)
     }
     val libsInvitedTo = for (invite <- invitesToShow) yield {
       val lib = invite._2
       val (owner, numKeeps) = db.readOnlyMaster { implicit s => (userRepo.get(lib.ownerId), keepRepo.getCountByLibrary(lib.id.get)) }
       val info = LibraryInfo.fromLibraryAndOwner(lib, owner, numKeeps)
-      Json.obj("info" -> info, "access" -> invite._1.access) // todo: highly cachable! may be tricky to invalidate though.
+      Json.toJson(info).as[JsObject] ++ Json.obj("access" -> invite._1.access)
     }
     Ok(Json.obj("libraries" -> libsFollowing, "invited" -> libsInvitedTo))
   }
@@ -206,7 +206,7 @@ class LibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) =>
         val keeps = libraryCommander.getKeeps(id)
-        val keepInfos = keeps.map(KeepInfo.fromBookmark)
+        val keepInfos = keeps.map(KeepInfo.fromKeep)
         Ok(Json.toJson(keepInfos))
     }
   }
@@ -224,7 +224,7 @@ class LibraryController @Inject() (
         val errors = badKeeps.map {
           case (keep, error) =>
             Json.obj(
-              "keep" -> KeepInfo.fromBookmark(keep),
+              "keep" -> KeepInfo.fromKeep(keep),
               "error" -> error.message
             )
         }
@@ -253,7 +253,7 @@ class LibraryController @Inject() (
         val errors = badKeeps.map {
           case (keep, error) =>
             Json.obj(
-              "keep" -> KeepInfo.fromBookmark(keep),
+              "keep" -> KeepInfo.fromKeep(keep),
               "error" -> error.message
             )
         }

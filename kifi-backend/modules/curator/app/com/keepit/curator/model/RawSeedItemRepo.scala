@@ -21,6 +21,7 @@ import org.joda.time.DateTime
 trait RawSeedItemRepo extends DbRepo[RawSeedItem] with SeqNumberFunction[RawSeedItem] with RepoWithDelete[RawSeedItem] {
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[RawSeedItem]
   def getByUriIdAndUserId(uriId: Id[NormalizedURI], userIdOpt: Option[Id[User]])(implicit session: RSession): Option[RawSeedItem]
+  def getDiscoverableBySeqNum(start: SequenceNumber[RawSeedItem], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
   def getDiscoverableBySeqNumAndUser(start: SequenceNumber[RawSeedItem], userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
   def getRecent(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
   def getRecentGeneric(maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem]
@@ -104,6 +105,16 @@ class RawSeedItemRepoImpl @Inject() (
       sql"SELECT * FROM raw_seed_item WHERE seq > ${start.value} AND (user_id=$userId OR user_id IS NULL) AND discoverable=1 ORDER BY seq LIMIT $maxBatchSize;"
     } else {
       sql"SELECT * FROM raw_seed_item USE INDEX (raw_seed_item_u_seq_user_id) WHERE seq > ${start.value} AND (user_id=$userId OR user_id IS NULL) AND discoverable=1 ORDER BY seq LIMIT $maxBatchSize;"
+    }
+    q.as[RawSeedItem].list
+  }
+
+  def getDiscoverableBySeqNum(start: SequenceNumber[RawSeedItem], maxBatchSize: Int)(implicit session: RSession): Seq[RawSeedItem] = {
+    import StaticQuery.interpolation
+    val q = if (db.dialect == H2DatabaseDialect) {
+      sql"SELECT * FROM raw_seed_item WHERE seq > ${start.value} AND (user_id IS NULL) AND discoverable=1 ORDER BY seq LIMIT $maxBatchSize;"
+    } else {
+      sql"SELECT * FROM raw_seed_item USE INDEX (raw_seed_item_u_seq_user_id) WHERE seq > ${start.value} AND (user_id IS NULL) AND discoverable=1 ORDER BY seq LIMIT $maxBatchSize;"
     }
     q.as[RawSeedItem].list
   }

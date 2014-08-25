@@ -1,7 +1,6 @@
 package com.keepit.search.index
 
 import java.io.IOException
-import java.lang.OutOfMemoryError
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field
 import org.apache.lucene.index.CorruptIndexException
@@ -13,9 +12,7 @@ import org.apache.lucene.util.Version
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.search.IndexInfo
-import com.keepit.search.Searcher
-import play.modules.statsd.api.Statsd
+import com.keepit.search.{ Similarity, IndexInfo, Searcher }
 import org.apache.commons.io.FileUtils
 import org.apache.lucene.store.IOContext
 import scala.collection.JavaConversions._
@@ -87,7 +84,9 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
   reopenWriter() // open indexWriter
 
   protected var searcher: Searcher = indexWriterLock.synchronized {
-    Searcher(DirectoryReader.open(indexDirectory))
+    val s = Searcher(DirectoryReader.open(indexDirectory))
+    s.setSimilarity(Similarity("defaut"))
+    s
   }
 
   def warmUpIndexDirectory(): Unit = {
@@ -329,7 +328,9 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
   def numDocs: Int = (indexWriter.numDocs() - 1) // minus the seed doc
 
   def refreshSearcher(): Unit = {
-    searcher = Searcher.reopen(searcher)
+    val s = Searcher.reopen(searcher)
+    s.setSimilarity(Similarity()) // our default similarity (not lucene's default similarity)
+    searcher = s
   }
 
   def refreshWriter(): Unit = reopenWriter()

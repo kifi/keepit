@@ -15,8 +15,8 @@ import com.keepit.common.mail.EmailAddress
 class ABookRecommendationController @Inject() (
     abookRecommendationCommander: ABookRecommendationCommander) extends ABookServiceController {
 
-  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int) = Action.async { request =>
-    abookRecommendationCommander.getFriendRecommendations(userId, offset, limit).map { recommendedUsers =>
+  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int, bePatient: Boolean = false) = Action.async { request =>
+    abookRecommendationCommander.getFriendRecommendations(userId, offset, limit, bePatient).map { recommendedUsers =>
       val json = Json.toJson(recommendedUsers)
       Ok(json)
     }

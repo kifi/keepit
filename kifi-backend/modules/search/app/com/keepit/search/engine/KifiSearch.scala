@@ -29,7 +29,8 @@ class KifiSearch(
     engine: QueryEngine,
     articleSearcher: Searcher,
     keepSearcher: Searcher,
-    libraryIdsFuture: Future[(Seq[Long], Seq[Long], Seq[Long])],
+    friendIdsFuture: Future[Set[Long]],
+    libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
     clickBoostsFuture: Future[ResultClickBoosts],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     monitoredAwait: MonitoredAwait,
@@ -43,7 +44,6 @@ class KifiSearch(
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
   private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-  private[this] val similarity = Similarity(config.asString("similarity"))
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
@@ -52,12 +52,10 @@ class KifiSearch(
 
   def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (HitQueue, HitQueue, HitQueue) = {
 
-    keepSearcher.setSimilarity(similarity)
-    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, libraryIdsFuture, filter.idFilter, config, monitoredAwait)
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
     engine.execute(keepScoreSource)
 
-    articleSearcher.setSimilarity(similarity)
-    val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter.idFilter)
+    val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
     engine.execute(articleScoreSource)
 
     val tClickBoosts = currentDateTime.getMillis()
@@ -152,7 +150,7 @@ class KifiSearch(
     KifiShardResult(hits.toSortedList.map(h => KifiShardHit(h.id, h.score, h.visibility, -1L)), myTotal, friendsTotal, show) // TODO: library id
   }
 
-  @inline private[this] def isDiscoverable(id: Long) = keepSearcher.has(new Term(KeepFields.discoverableUriField, id.toString))
+  @inline private[this] def isDiscoverable(id: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, id.toString))
 
   @inline private[this] def createQueue(sz: Int) = new HitQueue(sz)
 

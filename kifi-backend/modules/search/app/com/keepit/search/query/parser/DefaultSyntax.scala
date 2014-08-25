@@ -9,7 +9,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.annotation.tailrec
 
 object DefaultSyntax {
-  val queryFields = Set("", "site", "media")
+  val queryFields = Set("", "site", "media", "tag")
 
   val spacesRegex = """\p{Zs}+""".r
   val qualifierRegex = """([+-])[^\p{Zs}]""".r
