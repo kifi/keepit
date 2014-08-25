@@ -100,7 +100,7 @@ object SimpleGraph extends Logging {
       val message = s"${errors.length} problems found with vertex $vertexId:"
       val errorMessages = errors.map(_.toString)
       log.error(message)
-      errorMessages.foreach(log.error)
+      errorMessages.foreach(log.error(_))
       throw new IllegalStateException((message :: errors).mkString("\n"))
     }
   }
