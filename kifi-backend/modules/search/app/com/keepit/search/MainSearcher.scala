@@ -59,7 +59,6 @@ class MainSearcher(
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
   private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-  private[this] val similarity = Similarity(config.asString("similarity"))
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
@@ -118,7 +117,6 @@ class MainSearcher(
 
       val tPersonalSearcher = currentDateTime.getMillis()
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
-      personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
 
       val weight = personalizedSearcher.createWeight(articleQuery)
@@ -402,7 +400,6 @@ class MainSearcher(
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     parser.parsedQuery.map { query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
-      personalizedSearcher.setSimilarity(similarity)
 
       (query, personalizedSearcher.explain(query, uriId.id))
     }
