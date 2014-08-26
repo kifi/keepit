@@ -504,12 +504,6 @@ POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchCon
 POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
 POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
 
-GET     /admin/search/semanticVector                      @com.keepit.controllers.admin.AdminSemanticVectorController.index
-POST     /admin/search/semanticVector/analysis            @com.keepit.controllers.admin.AdminSemanticVectorController.analysis
-POST     /admin/search/semanticVector/similarity          @com.keepit.controllers.admin.AdminSemanticVectorController.similarity
-POST     /admin/search/semanticVector/visualize           @com.keepit.controllers.admin.AdminSemanticVectorController.visualize
-POST    /admin/search/semanticVector/semanticLoss         @com.keepit.controllers.admin.AdminSemanticVectorController.semanticLoss
-
 GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI], lang: String)
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
 POST    /admin/search/blindTest     @com.keepit.controllers.admin.AdminSearchController.blindTest

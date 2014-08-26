@@ -85,7 +85,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
 
   protected var searcher: Searcher = indexWriterLock.synchronized {
     val s = Searcher(DirectoryReader.open(indexDirectory))
-    s.setSimilarity(Similarity("defaut"))
+    s.setSimilarity(Similarity()) // use our default similarity (not lucene's default similarity)
     s
   }
 
@@ -329,7 +329,7 @@ abstract class Indexer[T, S, I <: Indexer[T, S, I]](
 
   def refreshSearcher(): Unit = {
     val s = Searcher.reopen(searcher)
-    s.setSimilarity(Similarity()) // our default similarity (not lucene's default similarity)
+    s.setSimilarity(Similarity()) // use our default similarity (not lucene's default similarity)
     searcher = s
   }
 

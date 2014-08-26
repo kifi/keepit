@@ -2,16 +2,16 @@ package com.keepit.curator.model
 
 import com.google.inject.{ Singleton, Inject, ImplementedBy }
 import com.keepit.common.db.{ State, Id }
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.{ DBSession, DataBaseComponent, DbRepo }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.time.Clock
 import com.keepit.model.{ UriRecommendationFeedback, User, NormalizedURI }
 import org.joda.time.DateTime
-import play.api.libs.json.{ Json }
+import play.api.libs.json.Json
 
-import scala.slick.jdbc.{ StaticQuery }
+import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[UriRecommendationRepoImpl])
 trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
@@ -19,8 +19,9 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
   def getRecommendableByTopMasterScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[UriRecommendation]
   def getNotPushedByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
-  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RSession): Boolean
-  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int)(implicit session: RSession): Boolean
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RWSession): Boolean
+  def incrementDeliveredCount(recoId: Id[UriRecommendation])(implicit session: RWSession): Unit
+  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Boolean
 }
 
 @Singleton
@@ -80,7 +81,7 @@ class UriRecommendationRepoImpl @Inject() (
       sortBy(_.masterScore.desc).take(maxBatchSize).list
   }
 
-  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RSession): Boolean = {
+  def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RWSession): Boolean = {
     import StaticQuery.interpolation
 
     val clickedResult = if (feedback.clicked.isDefined && feedback.clicked.get)
@@ -94,12 +95,16 @@ class UriRecommendationRepoImpl @Inject() (
     clickedResult && keptResult && trashedResult
   }
 
-  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int)(implicit session: RSession): Boolean = {
+  def incrementDeliveredCount(recoId: Id[UriRecommendation])(implicit session: RWSession): Unit = {
+    import StaticQuery.interpolation
+    sqlu"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first()
+  }
+
+  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Boolean = {
     import StaticQuery.interpolation
     val userIds = (for (row <- rows) yield row.userId).list.distinct
-    var result = true
 
-    userIds.foreach { userId =>
+    userIds.foldLeft(true) { (updated, userId) =>
       val limitScore =
         sql"""SELECT MIN(master_score)
               FROM (
@@ -109,14 +114,13 @@ class UriRecommendationRepoImpl @Inject() (
 	              ORDER BY master_score DESC LIMIT $limitNumRecosForUser
               ) AS mScoreTable""".as[Float].first
 
-      val query =
-        sql"""UPDATE uri_recommendation
-              SET state=${UriRecommendationStates.INACTIVE}
-              WHERE (state=${UriRecommendationStates.ACTIVE} AND user_id=$userId AND master_score<$limitScore);""".asUpdate.first > 0
-
-      result |= query
+      ((for (
+        row <- rows if row.userId === userId && row.updatedAt < before && row.masterScore < limitScore &&
+          row.state === UriRecommendationStates.ACTIVE
+      ) yield (row.state, row.updatedAt)).
+        update((UriRecommendationStates.INACTIVE, currentDateTime)) > 0) || updated
     }
-    result
+
   }
 
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}

@@ -6,8 +6,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.search.index.IndexDirectory
 import com.keepit.search.index.Indexer
 import com.keepit.search.index.Indexable
-import com.keepit.search.semantic.SemanticVectorBuilder
-import com.keepit.search.util.LongArraySet
 import org.apache.lucene.analysis.Analyzer
 import java.io.StringReader
 
@@ -20,8 +18,6 @@ class TstIndexer(indexDirectory: IndexDirectory) extends Indexer[Tst, Tst, TstIn
   def index(id: Id[Tst], text: String, personalText: String) = {
     indexDocuments(Some(buildIndexable(new Tst(id, text, personalText))).iterator, 100)
   }
-
-  def getPersonalizedSearcher(ids: Set[Long]) = PersonalizedSearcher(searcher.indexReader, LongArraySet.fromSet(ids), null)
 
   override val airbrake: AirbrakeNotifier = null
   def update(): Int = ???
@@ -38,12 +34,8 @@ class TstIndexable(override val id: Id[Tst], val text: String, val personalText:
     val doc = super.buildDocument
     val content = buildTextField("c", text)
     val personal = buildTextField("p", personalText)
-    val builder = new SemanticVectorBuilder(60)
-    builder.load(analyzer.tokenStream("c", text))
-    val semanticVector = buildSemanticVectorField("sv", builder)
     doc.add(content)
     doc.add(personal)
-    doc.add(semanticVector)
     doc
   }
 }

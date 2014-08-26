@@ -32,6 +32,11 @@ class RecommendationRetrievalCommander @Inject() (db: Database, uriRecoRepo: Uri
 
     SafeFuture {
       analytics.trackDeliveredItems(recos.map(_._2), Some(clientType))
+      db.readWrite { implicit session =>
+        recos.map(_._2).map { reco =>
+          uriRecoRepo.incrementDeliveredCount(reco.id.get)
+        }
+      }
     }
 
     recos.map {
