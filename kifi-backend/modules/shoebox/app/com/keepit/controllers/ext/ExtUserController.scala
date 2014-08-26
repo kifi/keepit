@@ -1,11 +1,12 @@
 package com.keepit.controllers.ext
 
 import com.keepit.classify.{ Domain, DomainRepo, DomainStates }
-import com.keepit.commanders.UserCommander
+import com.keepit.commanders.{ TypeaheadCommander, UserInteractionCommander, UserCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URI
 import com.keepit.model._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import play.api.libs.json.Json
 
@@ -16,6 +17,7 @@ class ExtUserController @Inject() (
   db: Database,
   domainRepo: DomainRepo,
   userToDomainRepo: UserToDomainRepo,
+  typeAheadCommander: TypeaheadCommander,
   userCommander: UserCommander)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
@@ -51,4 +53,9 @@ class ExtUserController @Inject() (
     Ok(Json.obj("host" -> host, "suppressed" -> suppress))
   }
 
+  def searchForContacts(query: Option[String], limit: Option[Int], pictureUrl: Boolean, dedupEmail: Boolean) = JsonAction.authenticatedAsync { request =>
+    typeAheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit, pictureUrl, dedupEmail) map { res =>
+      Ok(Json.toJson(res))
+    }
+  }
 }
