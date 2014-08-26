@@ -9,9 +9,9 @@ import com.keepit.common.time._
 import com.keepit.common.time.Clock
 import com.keepit.model.{ UriRecommendationFeedback, User, NormalizedURI }
 import org.joda.time.DateTime
-import play.api.libs.json.{ Json }
+import play.api.libs.json.Json
 
-import scala.slick.jdbc.{ StaticQuery }
+import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[UriRecommendationRepoImpl])
 trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
@@ -21,7 +21,7 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getNotPushedByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RWSession): Boolean
   def incrementDeliveredCount(recoId: Id[UriRecommendation])(implicit session: RWSession): Unit
-
+  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Boolean
 }
 
 @Singleton
@@ -98,6 +98,33 @@ class UriRecommendationRepoImpl @Inject() (
   def incrementDeliveredCount(recoId: Id[UriRecommendation])(implicit session: RWSession): Unit = {
     import StaticQuery.interpolation
     sqlu"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first()
+  }
+
+  def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Boolean = {
+    import StaticQuery.interpolation
+    val userIds = (for (row <- rows) yield row.userId).list.distinct
+    var result = true
+    userIds.foreach { userId =>
+      val limitScore =
+        sql"""SELECT MIN(master_score)
+              FROM (
+	              SELECT master_score
+	              FROM uri_recommendation
+	              WHERE state=${UriRecommendationStates.ACTIVE} AND user_id=$userId
+	              ORDER BY master_score DESC LIMIT $limitNumRecosForUser
+              ) AS mScoreTable""".as[Float].first
+
+      val query =
+        sql"""UPDATE uri_recommendation
+              SET state=${UriRecommendationStates.INACTIVE},
+                  updated_at=$currentDateTime
+              WHERE state=${UriRecommendationStates.ACTIVE}
+                    AND user_id=$userId AND master_score<$limitScore
+                    AND updated_at<$before;""".asUpdate.first > 0
+
+      result |= query
+    }
+    result
   }
 
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}

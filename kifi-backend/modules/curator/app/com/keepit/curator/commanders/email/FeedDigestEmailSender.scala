@@ -41,6 +41,8 @@ object DigestEmail {
 
   val FRIEND_RECOMMENDATIONS_TO_QUERY = 20
   val FRIEND_RECOMMENDATIONS_TO_DELIVER = 5
+
+  def toHttpsUrl(url: String) = if (url.startsWith("//")) "https:" + url else url
 }
 
 sealed case class FriendReco(basicUser: BasicUser, avatarUrl: String)
@@ -51,7 +53,7 @@ sealed case class DigestReco(reco: UriRecommendation, uri: NormalizedURI, uriSum
     keepers: DigestRecoKeepers) {
   val title = uriSummary.title.getOrElse(uri.title.getOrElse(""))
   val description = uriSummary.description.getOrElse("")
-  val imageUrl = uriSummary.imageUrl.map { url => if (url.startsWith("//")) "https:" + url else url }
+  val imageUrl = uriSummary.imageUrl.map(DigestEmail.toHttpsUrl)
   val url = uri.url
   val domain = DomainToNameMapper.getNameFromUrl(url)
   val score = reco.masterScore
@@ -64,10 +66,9 @@ sealed case class DigestReco(reco: UriRecommendation, uri: NormalizedURI, uriSum
   val urls = DigestRecoUrls(recoUrl = url)
 }
 
-sealed case class KeeperUser(userId: Id[User], userAvatarUrl: String, basicUser: BasicUser) {
+sealed case class KeeperUser(userId: Id[User], avatarUrl: String, basicUser: BasicUser) {
   val firstName = basicUser.firstName
   val lastName = basicUser.lastName
-  val avatarUrl = if (userAvatarUrl.startsWith("//")) "https:" + userAvatarUrl else userAvatarUrl
 }
 
 sealed case class DigestRecoKeepers(friends: Seq[Id[User]] = Seq.empty, others: Int = 0,
@@ -76,7 +77,7 @@ sealed case class DigestRecoKeepers(friends: Seq[Id[User]] = Seq.empty, others: 
 
   val friendsToShow = keepers.map { pair =>
     val (userId, user) = pair
-    KeeperUser(userId, userAvatarUrls(userId), user)
+    KeeperUser(userId, DigestEmail.toHttpsUrl(userAvatarUrls(userId)), user)
   }
 
   val message = {
@@ -132,10 +133,14 @@ class FeedDigestEmailSenderImpl @Inject() (
     val userId = user.id.get
     log.info(s"sending engagement feed email to $userId")
 
+    val recosF = getDigestRecommendationsForUser(userId)
+    val unsubUrlF = shoebox.getUnsubscribeUrlForEmail(user.primaryEmail.get)
+    val friendRecoF = getFriendRecommendationsForUser(userId)
+
     val digestRecoMailF = for {
-      recos <- getDigestRecommendationsForUser(userId)
-      unsubscribeUrl <- shoebox.getUnsubscribeUrlForEmail(user.primaryEmail.get)
-      friendRecos <- getFriendRecommendationsForUser(userId)
+      recos <- recosF
+      unsubscribeUrl <- unsubUrlF
+      friendRecos <- friendRecoF
     } yield {
       if (recos.size > 0) composeAndSendEmail(user, recos, friendRecos, unsubscribeUrl)
       else {
@@ -190,7 +195,7 @@ class FeedDigestEmailSenderImpl @Inject() (
       val userIdsToReco = userIds.get.sortBy(_ => Random.nextInt).take(FRIEND_RECOMMENDATIONS_TO_DELIVER)
       getManyUserImageUrls(userIdsToReco: _*).map { pairs =>
         pairs.collect {
-          case (userId, imageUrl) => FriendReco(friends(userId), imageUrl)
+          case (userId, imageUrl) => FriendReco(friends(userId), DigestEmail.toHttpsUrl(imageUrl))
         }.toSeq
       }
     }
@@ -221,10 +226,14 @@ class FeedDigestEmailSenderImpl @Inject() (
 
   private def getDigestReco(reco: UriRecommendation): Future[Option[DigestReco]] = {
     val uriId = reco.uriId
+    val uriF = shoebox.getNormalizedURI(uriId)
+    val summariesF = getRecommendationSummaries(uriId)
+    val recoKeepersF = getRecoKeepers(reco)
+
     for {
-      uri <- shoebox.getNormalizedURI(uriId)
-      summaries <- getRecommendationSummaries(uriId)
-      recoKeepers <- getRecoKeepers(reco)
+      uri <- uriF
+      summaries <- summariesF
+      recoKeepers <- recoKeepersF
       if summaries.isDefinedAt(uriId)
     } yield Some(DigestReco(reco, uri, summaries(uriId), recoKeepers))
   } recover {
@@ -259,12 +268,7 @@ class FeedDigestEmailSenderImpl @Inject() (
     Future.traverse(seqF) { pair =>
       val (userId, urlF) = pair
       urlF.map((userId, _))
-    }.map { userImgUrls =>
-      // todo(josh) remove after internal testing
-      val noImages = userImgUrls.filter(_._2.isEmpty)
-      if (noImages.size > 0) log.info(s"getManyUserImageUrls($userIds): failed to load image URLs for: " + noImages.map(_._1))
-      userImgUrls.toMap
-    }
+    }.map(_.toMap)
   }
 
 }

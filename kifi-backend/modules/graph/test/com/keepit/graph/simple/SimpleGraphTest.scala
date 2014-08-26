@@ -101,12 +101,18 @@ class SimpleGraphTest() extends Specification {
         dirtyVertexReader.moveTo(rearWindow)
         dirtyVertexReader.kind === UriReader
         dirtyVertexReader.data.id === rearWindow
+        dirtyVertexReader.incomingEdgeReader.moveToNextComponent()
+        dirtyVertexReader.incomingEdgeReader.degree === 1
+
+        vertexReader.moveTo(rearWindow) must throwA[VertexNotFoundException]
+
         dirtyVertexReader.moveTo(alfred)
         dirtyVertexReader.outgoingEdgeReader.moveToNextComponent()
         dirtyVertexReader.outgoingEdgeReader.degree === 2
-        vertexReader.moveTo(rearWindow) must throwA[VertexNotFoundException]
+
         vertexReader.moveTo(alfred)
         vertexReader.outgoingEdgeReader.moveToNextComponent() === false
+        vertexReader.incomingEdgeReader.moveToNextComponent() === false
 
         val dirtyEdgeReader = writer.getNewEdgeReader()
 
@@ -117,6 +123,13 @@ class SimpleGraphTest() extends Specification {
       }
 
       vertexReader.moveTo(rearWindow)
+      vertexReader.incomingEdgeReader.moveToNextComponent()
+      vertexReader.incomingEdgeReader.degree === 1
+
+      vertexReader.moveTo(alfred)
+      vertexReader.outgoingEdgeReader.moveToNextComponent()
+      vertexReader.outgoingEdgeReader.degree === 2
+
       edgeReader.moveTo(alfred, rearWindow, EmptyEdgeReader)
       edgeReader.moveTo(alfred, vertigo, EmptyEdgeReader)
 
