@@ -87,19 +87,16 @@ class SearchFactory @Inject() (
         shards.toSeq.map { shard =>
           val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
-          val eng = engBuilder.build()
 
           val timeLogs = new SearchTimeLogs()
           timeLogs.queryParsing = parser.totalParseTime
 
           new KifiSearch(
             userId,
-            lang1,
-            lang2,
             numHitsToReturn,
             filter,
             config,
-            eng,
+            engBuilder,
             articleSearcher,
             keepSearcher,
             friendIdsFuture,
