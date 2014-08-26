@@ -1,6 +1,7 @@
 package com.keepit.common.cache
 
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
+import com.keepit.model.helprank.{ UriReKeepCountCache, UriDiscoveryCountCache }
 import com.keepit.model.{ AnonymousEventDescriptorNameCache, UserEventDescriptorNameCache, SystemEventDescriptorNameCache, NonUserEventDescriptorNameCache }
 
 import scala.concurrent.duration._
@@ -169,4 +170,15 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def kifiHitCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new KifiHitCache(stats, accessLog, (outerRepo, 1 hour))
+
+  @Singleton
+  @Provides
+  def uriDiscoveryCountCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new UriDiscoveryCountCache(stats, accessLog, (outerRepo, 1 hour))
+
+  @Singleton
+  @Provides
+  def uriReKeepCountCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new UriReKeepCountCache(stats, accessLog, (outerRepo, 1 hour))
+
 }
