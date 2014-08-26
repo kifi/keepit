@@ -5,7 +5,13 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.currentDateTime
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.curator.model.{ Keepers, PublicSeedItemWithMultiplier, CuratorKeepInfoRepo, PublicUriScores, PublicScoredSeedItem, SeedItemWithMultiplier, SeedItem, ScoredSeedItem }
+import com.keepit.curator.model.{
+  Keepers,
+  PublicSeedItemWithMultiplier,
+  CuratorKeepInfoRepo,
+  PublicUriScores,
+  PublicScoredSeedItem
+}
 import com.keepit.graph.GraphServiceClient
 import com.keepit.heimdal.HeimdalServiceClient
 import com.keepit.model.{ User, HelpRankInfo, NormalizedURI }
