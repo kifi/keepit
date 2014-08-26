@@ -1,6 +1,6 @@
 package com.keepit.model.helprank
 
-import java.sql.Timestamp
+import java.sql.{ SQLException, Timestamp }
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db._
@@ -75,13 +75,31 @@ class KeepDiscoveryRepoImpl @Inject() (
     sql"select count(distinct (hit_uuid)) from keep_click where uri_id=$uriId and created_at >= $since".as[Int].first
   }
 
-  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime)(implicit r: RSession): Map[Id[NormalizedURI], Int] = {
+  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime)(implicit session: RSession): Map[Id[NormalizedURI], Int] = {
     if (uriIds.isEmpty) Map.empty
     else {
       val valueMap = uriDiscoveryCountCache.bulkGetOrElse(uriIds.map(UriDiscoveryCountKey(_)).toSet) { keys =>
+        val buf = collection.mutable.ArrayBuilder.make[(Id[NormalizedURI], Int)]
         val missing = keys.map(_.uriId)
+        missing.grouped(20).foreach { ids =>
+          val params = Seq.fill(ids.size)("?").mkString(",")
+          val stmt = session.getPreparedStatement(s"select uri_id, count(distinct (hit_uuid)) from keep_click where uri_id in ($params) group by uri_id;")
+          missing.zipWithIndex.foreach {
+            case (uriId, idx) =>
+              stmt.setLong(idx + 1, uriId.id)
+          }
+          val res = stmt.execute()
+          if (!res) throw new SQLException(s"[getDiscoveryCountsByURIs] ($stmt) failed to execute")
+          val rs = stmt.getResultSet()
+          while (rs.next()) {
+            val uriId = Id[NormalizedURI](rs.getLong(1))
+            val count = rs.getInt(2)
+            buf += (uriId -> count)
+          }
+        }
+        val resMap = buf.result.toMap
         missing.map { uriId =>
-          UriDiscoveryCountKey(uriId) -> getDiscoveryCountByURI(uriId, since)
+          UriDiscoveryCountKey(uriId) -> resMap.getOrElse(uriId, 0)
         }.toMap
       }
       valueMap.map { case (k, v) => (k.uriId -> v) }
