@@ -13,7 +13,7 @@ object LibraryFields {
   val visibilityField = "v"
   val ownerField = "o"
   val usersField = "u"
-  val hiddenUsersField = "h"
+  val allUsersField = "a"
   val recordField = "rec"
 
   object Visibility {
@@ -37,14 +37,14 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) ex
   val sequenceNumber = library.seq
   val isDeleted: Boolean = memberships.isEmpty
 
-  private val (users, hiddenUsers) = {
-    var hiddenUsers = Set.empty[Id[User]]
-    val users = memberships.map { membership =>
+  private val (users, allUsers) = {
+    var users = Set.empty[Id[User]]
+    val allUsers = memberships.map { membership =>
       require(membership.libraryId == id, s"This membership is unrelated to library $id: $membership")
-      if (!membership.showInSearch) { hiddenUsers += membership.userId }
+      if (membership.showInSearch) { users += membership.userId }
       membership.userId
-    }
-    (users, hiddenUsers)
+    }.toSet
+    (users, allUsers)
   }
 
   override def buildDocument = {
@@ -63,7 +63,7 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) ex
 
     doc.add(buildKeywordField(ownerField, library.ownerId.id.toString))
     doc.add(buildIteratorField(usersField, users.iterator) { id => id.id.toString })
-    doc.add(buildIteratorField(hiddenUsersField, hiddenUsers.iterator) { id => id.id.toString })
+    doc.add(buildIteratorField(allUsersField, allUsers.iterator) { id => id.id.toString })
 
     doc.add(buildLongValueField(visibilityField, Visibility.toNumericCode(library.visibility)))
 
