@@ -17,7 +17,7 @@
 
 .kifi-tagbox {
   position: absolute;
-  bottom: 53px;
+  bottom: 56px;
   right: 0;
   width: 300px;
   border-top-left-radius: @tagbox-radius !important;
@@ -36,7 +36,7 @@
   transition-duration: .12s;
 
   [kifi-with-pane] & {
-    bottom: 54px;
+    bottom: 64px;
     width: 312px;
     border-bottom: 0;
   }
@@ -79,13 +79,13 @@ html:not([kifi-with-pane]) {
   }
   &::before,
   &::after {
-    content: ' ';
+    content: '';
     position: absolute;
     top: 6px;
     bottom: 6px;
     left: 50%;
     width: 2px;
-    background: #fff;
+    background: #eee;
     font-size: 0;
   }
   &::before {

@@ -319,9 +319,6 @@ this.tagbox = (function ($, win) {
 			if (this.active) {
 				this.active = false;
 
-				if (win.pane) {
-					win.pane.unshade();
-				}
 				win.keeper.moveBackFromBottom();
 
 				$(win).off('resize.kifi-tagbox-suggest');
@@ -1228,6 +1225,9 @@ this.tagbox = (function ($, win) {
 					self.destroy(trigger);
 				}
 			}).removeClass('kifi-in');
+			if (win.pane) {
+				win.pane.unshade();
+			}
 		},
 
 		/**

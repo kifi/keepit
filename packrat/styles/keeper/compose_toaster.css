@@ -3,8 +3,8 @@
   z-index: 1;
   top: 8px;
   bottom: 64px;
-  left: 9px;
-  right: 9px;
+  left: 6px;
+  right: 6px;
   border: 1px solid #ccc;
   border-radius: 12px;
   background: rgba(255,255,255,.94);
@@ -21,12 +21,13 @@
   bottom: 0;
   left: 0;
   right: 0;
-  transition: -webkit-transform .2s ease-out;
-  transition: transform .2s ease-out;
+  transition: -webkit-transform .2s ease-out, opacity .2s linear;
+  transition: transform .2s ease-out, opacity .2s linear;
 }
 .kifi-down>.kifi-toast {
   -webkit-transform: translateY(100%);
   transform: translateY(100%);
+  opacity: 0;
   transition-timing-function: ease-in;
 }
 
@@ -111,7 +112,7 @@
   bottom: 6px;
   left: 50%;
   width: 2px;
-  background: #ddd;
+  background: #eee;
   font-size: 0;
 }
 .kifi-toast-x::before {
@@ -124,10 +125,10 @@
 }
 .kifi-toast-x:hover,
 .kifi-toast-x:focus {
-  background: #5d6d7e;
+  background: #555;
 }
 .kifi-toast-x:active {
-  background: #485b6e;
+  background: #444;
 }
 
 .kifi-toast>.kifi-compose {
