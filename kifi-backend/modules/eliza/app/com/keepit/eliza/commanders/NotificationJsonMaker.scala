@@ -93,11 +93,13 @@ private[commanders] class NotificationJsonMaker @Inject() (
     }
   }
 
-  private def uriSummary(value: JsValue, uriId: Id[NormalizedURI]): Option[URISummary] = {
+  private def uriSummary(value: JsValue, uriIdOpt: Option[Id[NormalizedURI]]): Option[URISummary] = {
     value.asOpt[String].map { url =>
-      val result = summaryCache.get(InboxUriSummaryCacheKey(uriId))
-      if (result.isEmpty) new SafeFuture(fetchAndCacheUriSummary(uriId, url), Some("Fetching URI summary for extension inbox"))
-      result
+      uriIdOpt.map { uriId =>
+        val result = summaryCache.get(InboxUriSummaryCacheKey(uriId))
+        if (result.isEmpty) new SafeFuture(fetchAndCacheUriSummary(uriId, url), Some("Fetching URI summary for extension inbox"))
+        result
+      }.flatten
     }.flatten
   }
 
