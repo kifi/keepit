@@ -8,6 +8,12 @@
   display: none;
 }
 
+@svgLockDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6.7 9"><path fill="%D" d="M6.1,3.4H5.5V2.1C5.5,1,4.5,0,3.4,0C2.2,0,1.3,1,1.3,2.1v1.3H0.6C0.3,3.4,0,3.7,0,4.1v4.3C0,8.7,0.3,9,0.6,9h5.5c0.4,0,0.6-0.3,0.6-0.7V4.1C6.7,3.7,6.5,3.4,6.1,3.4z M3.5,6.4v0.5C3.5,7,3.5,7,3.4,7C3.3,7,3.2,7,3.2,6.9V6.4C3,6.3,2.9,6.1,2.9,5.9c0-0.3,0.2-0.5,0.5-0.5c0.3,0,0.5,0.2,0.5,0.5C3.9,6.1,3.7,6.3,3.5,6.4z M5.1,3.4H1.6V2.1c0-1,0.8-1.8,1.8-1.8c1,0,1.8,0.8,1.8,1.8V3.4z"/></svg>';
+@svgTagDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 9"><path fill-rule="evenodd" clip-rule="evenodd" fill="%D" d="M9.003,0.643c0-0.358-0.285-0.642-0.643-0.642L5.197,0c-0.17-0.005-0.342,0.057-0.472,0.187L0.188,4.719c-0.251,0.251-0.251,0.658,0,0.909l3.183,3.18c0.251,0.251,0.658,0.251,0.909,0l4.537-4.533c0.13-0.13,0.191-0.302,0.187-0.472L9.003,0.643z M7.235,2.249c-0.266,0-0.482-0.216-0.482-0.482c0-0.266,0.216-0.482,0.482-0.482c0.266,0,0.482,0.216,0.482,0.482C7.717,2.034,7.501,2.249,7.235,2.249z"/></svg>';
+@svgBooksDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13.497 11.249"><path fill="%D" d="M1.617,0H0.75C0.336,0,0,0.336,0,0.75v9.749c0,0.414,0.336,0.75,0.75,0.75h0.867c0.414,0,0.75-0.336,0.75-0.75V0.75C2.367,0.336,2.031,0,1.617,0z M5.554,0H4.687c-0.414,0-0.75,0.336-0.75,0.75v9.749c0,0.414,0.336,0.75,0.75,0.75h0.867c0.414,0,0.75-0.336,0.75-0.75V0.75C6.304,0.336,5.968,0,5.554,0z M13.47,10.216l-3.278-9.664c-0.113-0.334-0.547-0.532-0.969-0.442L8.458,0.271C8.036,0.36,7.785,0.703,7.898,1.036l3.278,9.665c0.113,0.334,0.547,0.531,0.969,0.442l0.765-0.162C13.332,10.892,13.583,10.549,13.47,10.216z"/></svg>';
+@svgBellDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14.998 17.998"><path fill="%D" d="M12.748,11.249c0-0.786-0.572-1.5-1.5-2.034V5.999h-0.046c0.017-0.125,0.046-0.246,0.046-0.375c0-1.354-0.981-2.514-2.388-3.051c0.087-0.216,0.138-0.451,0.138-0.698C8.999,0.839,8.159,0,7.124,0S5.249,0.839,5.249,1.875c0,0.247,0.051,0.482,0.138,0.699C3.98,3.111,3,4.27,3,5.624c0,0.128,0.029,0.25,0.046,0.375H3v3.215c-0.928,0.535-1.5,1.248-1.5,2.034h3.787c0.174,0.856,0.93,1.5,1.837,1.5s1.663-0.644,1.837-1.5H12.748z M7.124,0.75c0.621,0,1.125,0.504,1.125,1.125c0,0.133-0.033,0.256-0.076,0.375H6.075C6.033,2.131,5.999,2.008,5.999,1.875C5.999,1.253,6.503,0.75,7.124,0.75z"/></svg>';
+@svgSpeakDataUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13.497 12.747"><path fill-rule="evenodd" clip-rule="evenodd" fill="%D" d="M6.748,0C3.021,0,0,2.511,0,5.609c0,1.912,1.154,3.599,2.912,4.612c-0.114,0.724-0.498,1.605-1.466,2.526c0,0,2.527-0.001,3.922-1.648c0.446,0.077,0.907,0.118,1.38,0.118c3.727,0,6.748-2.511,6.748-5.609S10.475,0,6.748,0z"/></svg>';
+
 .kifi-keeper {
   position: absolute;
   bottom: 0;
@@ -259,23 +265,30 @@
 .kifi-keep-lock,
 .kifi-kept-lock {
   left: 9px;
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6.7 9"><path fill="%23464646" d="M6.1,3.4H5.5V2.1C5.5,1,4.5,0,3.4,0C2.2,0,1.3,1,1.3,2.1v1.3H0.6C0.3,3.4,0,3.7,0,4.1v4.3C0,8.7,0.3,9,0.6,9h5.5c0.4,0,0.6-0.3,0.6-0.7V4.1C6.7,3.7,6.5,3.4,6.1,3.4z M3.5,6.4v0.5C3.5,7,3.5,7,3.4,7C3.3,7,3.2,7,3.2,6.9V6.4C3,6.3,2.9,6.1,2.9,5.9c0-0.3,0.2-0.5,0.5-0.5c0.3,0,0.5,0.2,0.5,0.5C3.9,6.1,3.7,6.3,3.5,6.4z M5.1,3.4H1.6V2.1c0-1,0.8-1.8,1.8-1.8c1,0,1.8,0.8,1.8,1.8V3.4z"/></svg>'), linear-gradient(#fff, #f3f3f3);
+  @url: %(@svgLockDataUrl, #464646);
+  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
   background-size: auto 12px, auto;
   background-position: center 7px, 0;
 }
 .kifi-keep-lock:hover,
-.kifi-kept-lock:hover {
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6.7 9"><path fill="%23e65b45" d="M6.1,3.4H5.5V2.1C5.5,1,4.5,0,3.4,0C2.2,0,1.3,1,1.3,2.1v1.3H0.6C0.3,3.4,0,3.7,0,4.1v4.3C0,8.7,0.3,9,0.6,9h5.5c0.4,0,0.6-0.3,0.6-0.7V4.1C6.7,3.7,6.5,3.4,6.1,3.4z M3.5,6.4v0.5C3.5,7,3.5,7,3.4,7C3.3,7,3.2,7,3.2,6.9V6.4C3,6.3,2.9,6.1,2.9,5.9c0-0.3,0.2-0.5,0.5-0.5c0.3,0,0.5,0.2,0.5,0.5C3.9,6.1,3.7,6.3,3.5,6.4z M5.1,3.4H1.6V2.1c0-1,0.8-1.8,1.8-1.8c1,0,1.8,0.8,1.8,1.8V3.4z"/></svg>'), linear-gradient(#fff, #f3f3f3);
+.kifi-keep-lock:focus,
+.kifi-kept-lock:hover,
+.kifi-kept-lock:focus {
+  @url: %(@svgLockDataUrl, #e65b45);
+  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
 }
 .kifi-keep-lock:active,
 .kifi-kept-lock:active {
-  /*background-color: #6e8aa6;*/
+  @url: %(@svgLockDataUrl, #e65b45);
+  background-image: url(@url);
+  background-color: #f3f3f3;
 }
 .kifi-private .kifi-kept-lock {
   top: 8px;
   left: 8px;
   background-color: #e65b45;
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6.793 9.018"><path fill="%23fff" d="M5.99,3.064H5.924C5.924,1.375,4.79,0,3.397,0S0.87,1.375,0.869,3.064H0.804C0.362,3.064,0,3.432,0,3.882v4.319c0,0.45,0.362,0.818,0.804,0.818H5.99c0.442,0,0.804-0.368,0.804-0.818V3.882C6.793,3.432,6.432,3.064,5.99,3.064z M3.397,0.987c0.945,0,1.713,0.932,1.713,2.077H1.684C1.684,1.919,2.452,0.987,3.397,0.987z"/></svg>');
+  @url: %(@svgLockDataUrl, #fff);
+  background-image: url(@url);
   border-color: #d13a22;
   border-width: 2px;
 }
@@ -287,21 +300,27 @@
 }
 .kifi-kept-tag {
   right: 9px;
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 9"><path fill-rule="evenodd" clip-rule="evenodd" fill="%23464646" d="M9.003,0.643c0-0.358-0.285-0.642-0.643-0.642L5.197,0c-0.17-0.005-0.342,0.057-0.472,0.187L0.188,4.719c-0.251,0.251-0.251,0.658,0,0.909l3.183,3.18c0.251,0.251,0.658,0.251,0.909,0l4.537-4.533c0.13-0.13,0.191-0.302,0.187-0.472L9.003,0.643z M7.235,2.249c-0.266,0-0.482-0.216-0.482-0.482c0-0.266,0.216-0.482,0.482-0.482c0.266,0,0.482,0.216,0.482,0.482C7.717,2.034,7.501,2.249,7.235,2.249z"/></svg>'), linear-gradient(#fff, #f3f3f3);
+  @url: %(@svgTagDataUrl, #464646);
+  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
   background-size: auto 12px, auto;
   background-position: 8px center, 0;
 }
-.kifi-kept-tag:hover {
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 9"><path fill-rule="evenodd" clip-rule="evenodd" fill="%236fa6ef" d="M9.003,0.643c0-0.358-0.285-0.642-0.643-0.642L5.197,0c-0.17-0.005-0.342,0.057-0.472,0.187L0.188,4.719c-0.251,0.251-0.251,0.658,0,0.909l3.183,3.18c0.251,0.251,0.658,0.251,0.909,0l4.537-4.533c0.13-0.13,0.191-0.302,0.187-0.472L9.003,0.643z M7.235,2.249c-0.266,0-0.482-0.216-0.482-0.482c0-0.266,0.216-0.482,0.482-0.482c0.266,0,0.482,0.216,0.482,0.482C7.717,2.034,7.501,2.249,7.235,2.249z"/></svg>'), linear-gradient(#fff, #f3f3f3);
+.kifi-kept-tag:hover,
+.kifi-kept-tag:focus {
+  @url: %(@svgTagDataUrl, #6fa6ef);
+  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
 }
 .kifi-kept-tag:active {
-  /*background-color: #6e8aa6;*/
+  @url: %(@svgTagDataUrl, #6fa6ef);
+  background-image: url(@url);
+  background-color: #f3f3f3;
 }
 .kifi-tagged .kifi-kept-tag {
   top: 8px;
   right: 8px;
+  @url: %(@svgTagDataUrl, #fff);
+  background-image: url(@url);
   background-color: #6fa6ef;
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 9"><path fill-rule="evenodd" clip-rule="evenodd" fill="%23fff" d="M9.003,0.643c0-0.358-0.285-0.642-0.643-0.642L5.197,0c-0.17-0.005-0.342,0.057-0.472,0.187L0.188,4.719c-0.251,0.251-0.251,0.658,0,0.909l3.183,3.18c0.251,0.251,0.658,0.251,0.909,0l4.537-4.533c0.13-0.13,0.191-0.302,0.187-0.472L9.003,0.643z M7.235,2.249c-0.266,0-0.482-0.216-0.482-0.482c0-0.266,0.216-0.482,0.482-0.482c0.266,0,0.482,0.216,0.482,0.482C7.717,2.034,7.501,2.249,7.235,2.249z"/></svg>');
   border-color: #5490df;
   border-width: 2px;
 }
@@ -316,7 +335,7 @@
 .kifi-keep-lock::after,
 .kifi-kept-lock::after,
 .kifi-kept-tag::after {
-  content: ' ';
+  content: '';
   display: block;
   height: 100%;
   margin: -10px;
@@ -558,7 +577,8 @@
   right: 2px;
 }
 .kifi-dock-site {
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13.497 11.249"><path fill="%23464646" d="M1.617,0H0.75C0.336,0,0,0.336,0,0.75v9.749c0,0.414,0.336,0.75,0.75,0.75h0.867c0.414,0,0.75-0.336,0.75-0.75V0.75C2.367,0.336,2.031,0,1.617,0z M5.554,0H4.687c-0.414,0-0.75,0.336-0.75,0.75v9.749c0,0.414,0.336,0.75,0.75,0.75h0.867c0.414,0,0.75-0.336,0.75-0.75V0.75C6.304,0.336,5.968,0,5.554,0z M13.47,10.216l-3.278-9.664c-0.113-0.334-0.547-0.532-0.969-0.442L8.458,0.271C8.036,0.36,7.785,0.703,7.898,1.036l3.278,9.665c0.113,0.334,0.547,0.531,0.969,0.442l0.765-0.162C13.332,10.892,13.583,10.549,13.47,10.216z"/></svg>'), linear-gradient(#fff, #f3f3f3);
+  @url: %(@svgBooksDataUrl, #464646);
+  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
   background-size: 18px auto, auto;
   background-position: center, 0;
   -webkit-transform: translate(-259px);
@@ -566,15 +586,23 @@
   transition: -webkit-transform 200ms ease-out 20ms;
   transition: transform 200ms ease-out 20ms;
 }
-.kifi-dock-site:hover {
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13.497 11.249"><path fill="%233f9f65" d="M1.617,0H0.75C0.336,0,0,0.336,0,0.75v9.749c0,0.414,0.336,0.75,0.75,0.75h0.867c0.414,0,0.75-0.336,0.75-0.75V0.75C2.367,0.336,2.031,0,1.617,0z M5.554,0H4.687c-0.414,0-0.75,0.336-0.75,0.75v9.749c0,0.414,0.336,0.75,0.75,0.75h0.867c0.414,0,0.75-0.336,0.75-0.75V0.75C6.304,0.336,5.968,0,5.554,0z M13.47,10.216l-3.278-9.664c-0.113-0.334-0.547-0.532-0.969-0.442L8.458,0.271C8.036,0.36,7.785,0.703,7.898,1.036l3.278,9.665c0.113,0.334,0.547,0.531,0.969,0.442l0.765-0.162C13.332,10.892,13.583,10.549,13.47,10.216z"/></svg>'), linear-gradient(#fff, #f3f3f3);
+.kifi-dock-site:hover,
+.kifi-dock-site:focus {
+  @url: %(@svgBooksDataUrl, #3f9f65);
+  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
+}
+.kifi-dock-site:active {
+  @url: %(@svgBooksDataUrl, #3f9f65);
+  background-image: url(@url);
+  background-color: #f3f3f3;
 }
 .kifi-hidden>.kifi-dock-site {
   -webkit-transform: rotate(30deg) scale(.8);
   transform: rotate(30deg) scale(.8);
 }
 .kifi-dock-messages {
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14.998 17.998"><path fill="%23464646" d="M12.748,11.249c0-0.786-0.572-1.5-1.5-2.034V5.999h-0.046c0.017-0.125,0.046-0.246,0.046-0.375c0-1.354-0.981-2.514-2.388-3.051c0.087-0.216,0.138-0.451,0.138-0.698C8.999,0.839,8.159,0,7.124,0S5.249,0.839,5.249,1.875c0,0.247,0.051,0.482,0.138,0.699C3.98,3.111,3,4.27,3,5.624c0,0.128,0.029,0.25,0.046,0.375H3v3.215c-0.928,0.535-1.5,1.248-1.5,2.034h3.787c0.174,0.856,0.93,1.5,1.837,1.5s1.663-0.644,1.837-1.5H12.748z M7.124,0.75c0.621,0,1.125,0.504,1.125,1.125c0,0.133-0.033,0.256-0.076,0.375H6.075C6.033,2.131,5.999,2.008,5.999,1.875C5.999,1.253,6.503,0.75,7.124,0.75z"/></svg>'), linear-gradient(#fff, #f3f3f3);
+  @url: %(@svgBellDataUrl, #464646);
+  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
   background-size: 20px auto, auto;
   background-position: center 13px, 0;
   -webkit-transform: translate(-208px);
@@ -582,15 +610,23 @@
   transition: -webkit-transform 200ms ease-out 40ms;
   transition: transform 200ms ease-out 40ms;
 }
-.kifi-dock-messages:hover {
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14.998 17.998"><path fill="%233f9f65" d="M12.748,11.249c0-0.786-0.572-1.5-1.5-2.034V5.999h-0.046c0.017-0.125,0.046-0.246,0.046-0.375c0-1.354-0.981-2.514-2.388-3.051c0.087-0.216,0.138-0.451,0.138-0.698C8.999,0.839,8.159,0,7.124,0S5.249,0.839,5.249,1.875c0,0.247,0.051,0.482,0.138,0.699C3.98,3.111,3,4.27,3,5.624c0,0.128,0.029,0.25,0.046,0.375H3v3.215c-0.928,0.535-1.5,1.248-1.5,2.034h3.787c0.174,0.856,0.93,1.5,1.837,1.5s1.663-0.644,1.837-1.5H12.748z M7.124,0.75c0.621,0,1.125,0.504,1.125,1.125c0,0.133-0.033,0.256-0.076,0.375H6.075C6.033,2.131,5.999,2.008,5.999,1.875C5.999,1.253,6.503,0.75,7.124,0.75z"/></svg>'), linear-gradient(#fff, #f3f3f3);
+.kifi-dock-messages:hover,
+.kifi-dock-messages:focus {
+  @url: %(@svgBellDataUrl, #3f9f65);
+  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
+}
+.kifi-dock-messages:active {
+  @url: %(@svgBellDataUrl, #3f9f65);
+  background-image: url(@url);
+  background-color: #f3f3f3;
 }
 .kifi-hidden>.kifi-dock-messages {
   -webkit-transform: rotate(20deg) scale(.8);
   transform: rotate(20deg) scale(.8);
 }
 .kifi-dock-compose {
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13.497 12.747"><path fill-rule="evenodd" clip-rule="evenodd" fill="%23464646" d="M6.748,0C3.021,0,0,2.511,0,5.609c0,1.912,1.154,3.599,2.912,4.612c-0.114,0.724-0.498,1.605-1.466,2.526c0,0,2.527-0.001,3.922-1.648c0.446,0.077,0.907,0.118,1.38,0.118c3.727,0,6.748-2.511,6.748-5.609S10.475,0,6.748,0z"/></svg>'), linear-gradient(#fff, #f3f3f3);
+  @url: %(@svgSpeakDataUrl, #464646);
+  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
   background-size: auto 17px, auto;
   background-position: center, 0;
   -webkit-transform: translate(-157px);
@@ -598,8 +634,15 @@
   transition: -webkit-transform 200ms ease-out 60ms;
   transition: transform 200ms ease-out 60ms;
 }
-.kifi-dock-compose:hover {
-  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13.497 12.747"><path fill-rule="evenodd" clip-rule="evenodd" fill="%233f9f65" d="M6.748,0C3.021,0,0,2.511,0,5.609c0,1.912,1.154,3.599,2.912,4.612c-0.114,0.724-0.498,1.605-1.466,2.526c0,0,2.527-0.001,3.922-1.648c0.446,0.077,0.907,0.118,1.38,0.118c3.727,0,6.748-2.511,6.748-5.609S10.475,0,6.748,0z"/></svg>'), linear-gradient(#fff, #f3f3f3);
+.kifi-dock-compose:hover,
+.kifi-dock-compose:focus {
+  @url: %(@svgSpeakDataUrl, #3f9f65);
+  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
+}
+.kifi-dock-compose:active {
+  @url: %(@svgSpeakDataUrl, #3f9f65);
+  background-image: url(@url);
+  background-color: #f3f3f3;
 }
 .kifi-hidden>.kifi-dock-compose {
   -webkit-transform: rotate(10deg) scale(.8);
