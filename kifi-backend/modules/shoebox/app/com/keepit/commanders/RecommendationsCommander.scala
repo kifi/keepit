@@ -103,7 +103,7 @@ class RecommendationsCommander @Inject() (
         attr.user.map(_.others)
       }.flatten.getOrElse(0),
       siteName = DomainToNameMapper.getNameFromUrl(nUri.url),
-      uriSummary = uriSummary
+      summary = uriSummary
     )
   }
 
