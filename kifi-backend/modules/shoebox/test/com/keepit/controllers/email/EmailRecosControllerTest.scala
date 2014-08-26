@@ -70,7 +70,7 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "addKeep" should {
+    "keepReco" should {
       "persist a new keep for authenticated user" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val userRepo = inject[UserRepo]
@@ -84,10 +84,10 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
             uri1
           }
 
-          val call = com.keepit.controllers.email.routes.EmailRecosController.addKeep(uri1.externalId)
+          val call = com.keepit.controllers.email.routes.EmailRecosController.keepReco(uri1.externalId)
           call.toString === s"/e/1/recos/keep?id=${uri1.externalId}"
 
-          val result = controller.addKeep(uri1.externalId)(FakeRequest())
+          val result = controller.keepReco(uri1.externalId)(FakeRequest())
           db.readOnlyMaster { implicit session =>
             val keeps = keepRepo.getByUser(Id[User](1))
             keeps.size === 1
@@ -106,7 +106,7 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
         withDb(controllerTestModules: _*) { implicit injector =>
           val extId = ExternalId[NormalizedURI](java.util.UUID.randomUUID.toString) // another UUID bites the dust
           val controller = inject[EmailRecosController]
-          controller.addKeep(extId)(FakeRequest()) must throwA[NoSuchElementException]
+          controller.keepReco(extId)(FakeRequest()) must throwA[NoSuchElementException]
         }
       }
     }

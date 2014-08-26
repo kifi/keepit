@@ -323,7 +323,7 @@ GET     /site/                      @com.keepit.controllers.website.HomeControll
 ##########################################
 
 GET     /e/1/recos/view             @com.keepit.controllers.email.EmailRecosController.viewReco(id: ExternalId[NormalizedURI])
-GET     /e/1/recos/keep              @com.keepit.controllers.email.EmailRecosController.addKeep(id: ExternalId[NormalizedURI])
+GET     /e/1/recos/keep             @com.keepit.controllers.email.EmailRecosController.keepReco(id: ExternalId[NormalizedURI])
 GET     /e/1/recos/send             @com.keepit.controllers.email.EmailRecosController.sendReco(id: ExternalId[NormalizedURI])
 
 ##########################################

@@ -33,7 +33,7 @@ class EmailRecosController @Inject() (
     Found(uri.url)
   }
 
-  def addKeep(uriId: ExternalId[NormalizedURI]) = HtmlAction.authenticated { request =>
+  def keepReco(uriId: ExternalId[NormalizedURI]) = HtmlAction.authenticated { request =>
     val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
     val source = KeepSource.emailReco
     val hcb = heimdalContextBuilder.withRequestInfoAndSource(request, source)
