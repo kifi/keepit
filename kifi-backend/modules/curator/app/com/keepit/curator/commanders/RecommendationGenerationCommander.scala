@@ -246,7 +246,8 @@ class RecommendationGenerationCommander @Inject() (
       systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, newSeqNum)
     }
 
-  private def getPrecomputationFeedsResult(publicSeedsAndSeqFuture: Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])], lastSeqNum: SequenceNumber[PublicSeedItem]) =
+  private def getPrecomputationFeedsResult(publicSeedsAndSeqFuture: Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])],
+    lastSeqNum: SequenceNumber[PublicSeedItem], boostedKeepers: Set[Id[User]]) =
     publicSeedsAndSeqFuture.flatMap {
       case (publicSeedItems, newSeqNum) =>
         if (publicSeedItems.isEmpty) {
@@ -264,7 +265,7 @@ class RecommendationGenerationCommander @Inject() (
           }
           val weightedItems = publicUriWeightingHelper(cleanedItems)
 
-          publicScoringHelper(weightedItems).map { items =>
+          publicScoringHelper(weightedItems, boostedKeepers).map { items =>
             savePublicScoredSeedItems(items, newSeqNum)
             precomputePublicFeeds()
             !publicSeedItems.isEmpty
@@ -273,14 +274,19 @@ class RecommendationGenerationCommander @Inject() (
     }
 
   def precomputePublicFeeds(): Future[Unit] = pubicFeedsGenerationLock.withLockFuture {
-    val lastSeqNumFut: Future[SequenceNumber[PublicSeedItem]] = db.readOnlyMasterAsync { implicit session =>
-      systemValueRepo.getSequenceNumber(SEQ_NUM_NAME) getOrElse { SequenceNumber[PublicSeedItem](0) }
-    }
+    specialCurators().flatMap { boostedKeepersSeq =>
 
-    lastSeqNumFut.flatMap { lastSeqNum =>
-      val publicSeedsAndSeqFuture: Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])] = getPublicFeedCandidateSeeds(lastSeqNum)
-      val res: Future[Boolean] = getPrecomputationFeedsResult(publicSeedsAndSeqFuture, lastSeqNum)
-      res.map(_ => ())
+      val lastSeqNumFut: Future[SequenceNumber[PublicSeedItem]] = db.readOnlyMasterAsync { implicit session =>
+        systemValueRepo.getSequenceNumber(SEQ_NUM_NAME) getOrElse {
+          SequenceNumber[PublicSeedItem](0)
+        }
+      }
+
+      lastSeqNumFut.flatMap { lastSeqNum =>
+        val publicSeedsAndSeqFuture: Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])] = getPublicFeedCandidateSeeds(lastSeqNum)
+        val res: Future[Boolean] = getPrecomputationFeedsResult(publicSeedsAndSeqFuture, lastSeqNum, boostedKeepersSeq.toSet)
+        res.map(_ => ())
+      }
     }
   }
 

@@ -5,10 +5,10 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.currentDateTime
 import com.keepit.cortex.CortexServiceClient
-import com.keepit.curator.model.{ PublicSeedItemWithMultiplier, CuratorKeepInfoRepo, PublicUriScores, PublicScoredSeedItem, SeedItemWithMultiplier, SeedItem, ScoredSeedItem }
+import com.keepit.curator.model.{ Keepers, PublicSeedItemWithMultiplier, CuratorKeepInfoRepo, PublicUriScores, PublicScoredSeedItem, SeedItemWithMultiplier, SeedItem, ScoredSeedItem }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.heimdal.HeimdalServiceClient
-import com.keepit.model.{ HelpRankInfo, NormalizedURI }
+import com.keepit.model.{ User, HelpRankInfo, NormalizedURI }
 import org.joda.time.Days
 import com.keepit.common.time._
 
@@ -28,8 +28,16 @@ class PublicUriScoringHelper @Inject() (
   }
 
   private def getRawRecencyScores(items: Seq[PublicSeedItemWithMultiplier]): Seq[Float] = items.map { item =>
-    val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays()
+    val daysOld = Days.daysBetween(item.lastSeen, currentDateTime).getDays
     (1.0 / (Math.log(daysOld + 1.0) + 1)).toFloat
+  }
+
+  private def getRawCurationScore(items: Seq[PublicSeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Seq[Option[Float]] = {
+    items.map(item =>
+      item.keepers match {
+        case Keepers.ReasonableNumber(users) if (boostedKeepers & users.toSet).nonEmpty => Some(0.75f)
+        case _ => None
+      })
   }
 
   val uriHelpRankScores = TrieMap[Id[NormalizedURI], HelpRankInfo]() //This needs to go when we have proper caching on the help rank scores
@@ -45,13 +53,14 @@ class PublicUriScoringHelper @Inject() (
 
   }
 
-  def getPublicScoredUris(items: Seq[PublicSeedItemWithMultiplier]): Future[Seq[PublicScoredSeedItem]] = {
+  def getPublicScoredUris(items: Seq[PublicSeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Future[Seq[PublicScoredSeedItem]] = {
     if (items.isEmpty) {
       Future.successful(Seq.empty)
     } else {
       val popularityScores = getRawPopularityScores(items)
       val helpRankScoresFuture = getRawHelpRankScores(items)
       val recencyScores = getRawRecencyScores(items)
+      val curationScores = getRawCurationScore(items, boostedKeepers)
       for (
         (rekeepScores, discoveryScores) <- helpRankScoresFuture
       ) yield {
@@ -61,6 +70,7 @@ class PublicUriScoringHelper @Inject() (
             recencyScore = recencyScores(i),
             rekeepScore = rekeepScores(i),
             discoveryScore = discoveryScores(i),
+            curationScore = curationScores(i),
             multiplier = Some(items(i).multiplier)
           )
           PublicScoredSeedItem(items(i).uriId, publicScore)
@@ -69,7 +79,7 @@ class PublicUriScoringHelper @Inject() (
     }
   }
 
-  def apply(items: Seq[PublicSeedItemWithMultiplier]): Future[Seq[PublicScoredSeedItem]] = {
-    getPublicScoredUris(items)
+  def apply(items: Seq[PublicSeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Future[Seq[PublicScoredSeedItem]] = {
+    getPublicScoredUris(items, boostedKeepers)
   }
 }
