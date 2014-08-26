@@ -91,5 +91,21 @@ class UriRecommendationRepoTest extends Specification with CuratorTestInjector w
         }
       }
     }
+
+    "increment delivered count of recommendation" in {
+      withDb() { implicit injector =>
+        val repo = inject[UriRecommendationRepo]
+        val reco = db.readWrite { implicit s =>
+          val recs = setup()
+          repo.save(recs(0))
+        }
+        db.readWrite { implicit session =>
+          repo.incrementDeliveredCount(reco.id.get)
+        }
+        db.readOnlyReplica { implicit session => repo.get(reco.id.get) }.delivered === 1
+      }
+
+    }
+
   }
 }

@@ -120,7 +120,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         val commander = inject[RecommendationGenerationCommander]
         val result1 = commander.getAdHocRecommendations(Id[User](42), 2, UriRecommendationScores(socialScore = Some(0.5f)))
         val recs1 = Await.result(result1, Duration(10, "seconds"))
-        recs1(0).userId === Id[User](42)
+        recs1(0).userId === Some(Id[User](42))
         recs1(0).score === 0.75f
         recs1(1).score === 0.005f
 

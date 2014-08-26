@@ -1,7 +1,7 @@
 package com.keepit.search.engine
 
 import com.keepit.search.engine.query._
-import com.keepit.search.engine.result.ResultCollector
+import com.keepit.search.query.FixedScoreQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.BooleanClause.Occur._
 import scala.collection.JavaConversions._
@@ -21,6 +21,10 @@ class QueryEngineBuilder(baseQuery: Query) {
   def addBoosterQuery(booster: Query, boostStrength: Float): QueryEngineBuilder = {
     _boosters = (booster, boostStrength) :: _boosters
     this
+  }
+
+  def addFilterQuery(filter: Query): QueryEngineBuilder = {
+    addBoosterQuery(new FixedScoreQuery(filter), 1.0f)
   }
 
   def build(): QueryEngine = {
