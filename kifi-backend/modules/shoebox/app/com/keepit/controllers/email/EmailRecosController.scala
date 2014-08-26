@@ -4,7 +4,6 @@ import com.keepit.commanders.{ RawBookmarkRepresentation, KeepInterner }
 import com.keepit.common.controller.{ ActionAuthenticator, ShoeboxServiceController, WebsiteController }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.controllers.ext.HandleDeepLinkRequests
 import com.keepit.curator.CuratorServiceClient
 import com.keepit.curator.model.RecommendationClientType
 import com.keepit.heimdal.HeimdalContextBuilderFactory
