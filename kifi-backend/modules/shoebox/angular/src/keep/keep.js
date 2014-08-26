@@ -489,7 +489,7 @@ angular.module('kifi')
   }
 ])
 
-// Splitting out into smaller directives here...
+// This directive is for recos only right now.
 .directive('kfKeepContent', ['$document', '$rootScope', 'keepService', 'recoService',
   function ($document, $rootScope, keepService, recoService) {
     return {
@@ -501,20 +501,13 @@ angular.module('kifi')
       templateUrl: 'keep/keepContent.tpl.html',
       link: function (scope, element/*, attrs*/) {
         if (!scope.keep) {
-          return;  // Now we can remove the checks in the rest of this file.
+          return;  // TODO: remove the checks in the rest of this file.
         }
 
-        //
-        // Internal data.
-        //
         var useBigLayout = false;
         var strippedSchemeRe = /^https?:\/\//;
         var domainTrailingSlashRe = /^([^\/]*)\/$/;
 
-
-        //
-        // Internal functions.
-        //
         function bolded(text, start, len) {
           return text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
         }
@@ -554,10 +547,6 @@ angular.module('kifi')
           }
         }
 
-
-        //
-        // Scope methods.
-        //
         scope.showSmallImage = function () {
           return scope.keep.hasSmallImage && !useBigLayout;
         };
@@ -571,7 +560,6 @@ angular.module('kifi')
           return keep && !!(keep.keepers && keep.keepers.length);
         };
 
-        // Does this need to be a scope method?
         scope.isMyBookmark = function (keep) {
           return (keep && keep.isMyBookmark) || false;
         };
@@ -645,17 +633,10 @@ angular.module('kifi')
           }
         };
 
-
-        //
-        // Watches.
-        //
-
         scope.$watch('keep.url', function () {
           updateSiteDescHtml();
         });
 
-
-        // Size image stuff.
         function sizeImage() {
           if (!scope.keep || !scope.keep.summary || !scope.keep.summary.description) {
             return;
@@ -781,9 +762,6 @@ angular.module('kifi')
           }
         });
 
-        //
-        // During link.
-        //
         updateSiteDescHtml();
       }
     };
