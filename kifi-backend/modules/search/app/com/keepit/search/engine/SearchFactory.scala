@@ -32,8 +32,6 @@ class SearchFactory @Inject() (
     shardedKeepIndexer: ShardedKeepIndexer,
     libraryIndexer: LibraryIndexer,
     userGraphsSearcherFactory: UserGraphsSearcherFactory,
-    shardedUriGraphIndexer: ShardedURIGraphIndexer,
-    shardedCollectionIndexer: ShardedCollectionIndexer,
     phraseDetector: PhraseDetector,
     resultClickTracker: ResultClickTracker,
     clickHistoryTracker: ClickHistoryTracker,
