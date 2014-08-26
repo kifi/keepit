@@ -12,7 +12,7 @@ class UserInteractionCommander @Inject() (
     userRepo: UserRepo,
     userValueRepo: UserValueRepo) {
 
-  def addInteraction(uid: Id[User], src: Either[Id[User], EmailAddress], interaction: UserInteraction) = {
+  def addInteraction(uid: Id[User], src: Either[Id[User], EmailAddress], interaction: UserInteraction): Unit = {
     val interactions = db.readOnlyMaster { implicit s =>
       userValueRepo.getValue(uid, UserValues.recentInteractions)
     }.as[List[JsObject]]
@@ -21,11 +21,7 @@ class UserInteractionCommander @Inject() (
       case Right(email) => Json.obj("email" -> email.address, "action" -> interaction.value)
     }
     // append to head as most recent (will get the highest weight), remove from tail as least recent (lowest weight)
-    val newInteractions = if (interactions.length + 1 > UserInteraction.maximumInteractions) {
-      newJson :: interactions.take(interactions.length - 1)
-    } else {
-      newJson :: interactions
-    }
+    val newInteractions = newJson :: interactions.take(UserInteraction.maximumInteractions - 1)
     db.readWrite { implicit s =>
       userValueRepo.setValue(uid, UserValueName.RECENT_INTERACTION, Json.stringify(Json.toJson(newInteractions)))
     }
@@ -33,7 +29,7 @@ class UserInteractionCommander @Inject() (
 
   // given an index position in an array and weight of action, calculate score
   private def calcInteractionScore(idx: Int, action: String): Double = {
-    val score = UserInteraction.getScoreForAction(action)
+    val score = UserInteraction.getAction(action).score
     (15 * Math.pow(idx + 1.5, -0.7) + 0.5) * score
   }
 
@@ -73,11 +69,11 @@ object UserInteraction {
 
   val maximumInteractions = 100
 
-  def getScoreForAction(action: String) = {
+  def getAction(action: String) = {
     action match {
-      case INVITE_KIFI.value => INVITE_KIFI.score
-      case INVITE_LIBRARY.value => INVITE_LIBRARY.score
-      case MESSAGE_USER.value => MESSAGE_USER.score
+      case INVITE_KIFI.value => INVITE_KIFI
+      case INVITE_LIBRARY.value => INVITE_LIBRARY
+      case MESSAGE_USER.value => MESSAGE_USER
     }
   }
 }

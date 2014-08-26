@@ -347,35 +347,35 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  def searchForContacts(userId: Id[User], query: String, limit: Option[Int], pictureUrl: Boolean, dedupEmail: Boolean): Future[Seq[ConnectionStatus]] = {
+  def searchForContacts(userId: Id[User], query: String, limit: Option[Int], pictureUrl: Boolean, dedupEmail: Boolean): Future[Seq[ContactFound]] = {
     val q = query.trim
     if (q.length == 0) {
-      val a = interactionCommander.getInteractionScores(userId).map { interaction =>
+      val contacts = interactionCommander.getInteractionScores(userId).map { interaction =>
         interaction.entity match {
           case Left(id) =>
             val user = db.readOnlyMaster { implicit s =>
               userRepo.get(id)
             }
-            ConnectionStatus(user.fullName, interaction.score, if (pictureUrl) user.pictureName.map(_ + ".jpg") else None, s"fortytwo/${user.externalId}")
+            ContactFound(user.fullName, interaction.score, if (pictureUrl) user.pictureName.map(_ + ".jpg") else None, s"fortytwo/${user.externalId}")
           case Right(email) =>
-            ConnectionStatus("", interaction.score, None, emailId(email))
+            ContactFound("", interaction.score, None, emailId(email))
         }
       }
-      Future.successful(a)
+      Future.successful(contacts)
     } else {
       aggregate(userId, q, limit, dedupEmail, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)) flatMap { top =>
-        val b = top flatMap {
+        val contacts = top flatMap {
           case (snType, hit) => hit.info match {
             case e: RichContact =>
-              Some(ConnectionStatus(e.name.getOrElse(""), hit.score, None, emailId(e.email)))
+              Some(ContactFound(e.name.getOrElse(""), hit.score, None, emailId(e.email)))
             case u: User =>
-              Some(ConnectionStatus(u.fullName, hit.score, if (pictureUrl) u.pictureName.map(_ + ".jpg") else None, s"fortytwo/${u.externalId}"))
+              Some(ContactFound(u.fullName, hit.score, if (pictureUrl) u.pictureName.map(_ + ".jpg") else None, s"fortytwo/${u.externalId}"))
             case _ =>
               airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $hit"))
               None
           }
         }
-        Future.successful(b)
+        Future.successful(contacts)
       }
     }
   }
@@ -388,7 +388,7 @@ class TypeaheadCommander @Inject() (
 
 @json case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
 
-@json case class ConnectionStatus(label: String, score: Double, image: Option[String], value: String)
+@json case class ContactFound(label: String, score: Double, image: Option[String], value: String)
 
 sealed abstract class ContactType(val value: String)
 object ContactType {

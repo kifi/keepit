@@ -45,7 +45,6 @@ class UserInteractionCommanderTest extends Specification with ShoeboxTestInjecto
 
         db.readOnlyMaster { implicit session =>
           val list = userValueRepo.getValue(user1.id.get, UserValues.recentInteractions).as[List[JsObject]]
-          list.size === 6
           createList(list) === List(user2.id.get, user3.id.get, user2.id.get, user4.address, user3.id.get, user2.id.get)
           userValueRepo.count === 1
         }

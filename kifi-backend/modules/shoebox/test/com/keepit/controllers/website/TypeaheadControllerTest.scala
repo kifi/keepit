@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.keepit.abook.model.RichContact
 import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeABookServiceClientModule }
-import com.keepit.commanders.{ UserInteractionCommander, UserInteraction, ConnectionStatus, ConnectionWithInviteStatus }
+import com.keepit.commanders.{ UserInteractionCommander, UserInteraction, ContactFound, ConnectionWithInviteStatus }
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
@@ -191,11 +191,11 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
 
         inject[FakeActionAuthenticator].setUser(u1)
 
-        @inline def search(query: String, limit: Int = 10): Seq[ConnectionStatus] = {
+        @inline def search(query: String, limit: Int = 10): Seq[ContactFound] = {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchForContacts(Some(query), Some(limit), false, true).url
           val res = inject[TypeaheadController].searchForContacts(Some(query), Some(limit), false, true)(FakeRequest("GET", path))
           val s = contentAsString(res)
-          Json.parse(s).as[Seq[ConnectionStatus]] tap { res => println(s"[search($query,$limit)] res(len=${res.length}):$res") }
+          Json.parse(s).as[Seq[ContactFound]] tap { res => println(s"[search($query,$limit)] res(len=${res.length}):$res") }
         }
 
         val res0 = search("") // (no query) should get all contacts in Recent_Interactions

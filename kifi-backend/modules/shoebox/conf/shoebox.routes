@@ -304,7 +304,7 @@ POST    /site/user/delighted/cancel @com.keepit.controllers.website.UserControll
 POST    /site/user/close            @com.keepit.controllers.website.UserController.closeAccount()
 
 GET     /site/user/connections/all/search    @com.keepit.controllers.website.TypeaheadController.searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
-GET     /site/user/connections/contacts/search  @com.keepit.controllers.website.TypeaheadController.searchForContacts(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
+GET     /site/user/contacts/search  @com.keepit.controllers.website.TypeaheadController.searchForContacts(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
 
 GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
@@ -313,7 +313,7 @@ POST    /site/user/pic/upload       @com.keepit.controllers.website.UserControll
 POST    /site/user/pic              @com.keepit.controllers.website.UserController.setUserPicture()
 POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: EmailAddress)
 GET     /site/friends/wti           @com.keepit.controllers.website.WTIController.getRipestInvitees(page: Int ?= 0, pageSize: Int ?= 20)
-POST    /site/friends/wti/block     @com.keepit.controllers.website.WTIController.block()
+POST    /site/friends/wti/block     @com.keepit.controllers.website.WTIController.block
 POST    /site/keeps/file-import     @com.keepit.controllers.website.BookmarkImporter.uploadBookmarkFile(public: Boolean ?= false)
 
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
@@ -725,6 +725,8 @@ POST      /internal/shoebox/database/getCandidateURIs   @com.keepit.controllers.
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 
 GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controllers.internal.ShoeboxController.getUsersByExperiment(experiment: ExperimentType)
+
+POST    /internal/shoebox/user/addInteraction            @com.keepit.controllers.internal.ShoeboxController.addInteraction(userId: Id[User])
 
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/angular/dist", file)
