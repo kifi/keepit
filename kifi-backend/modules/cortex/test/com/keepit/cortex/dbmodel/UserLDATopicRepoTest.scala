@@ -13,7 +13,8 @@ class UserLDATopicRepoTest extends Specification with CortexTestInjector {
       withDb() { implicit injector =>
         val userTopicRepo = inject[UserLDAInterestsRepo]
 
-        val topic = UserLDAInterests(userId = Id[User](1), version = ModelVersion[DenseLDA](1), numOfEvidence = 100, userTopicMean = Some(UserTopicMean(Array(0.5f, 0.25f, 0.15f, 0.1f))), numOfRecentEvidence = 0, userRecentTopicMean = None)
+        val topic = UserLDAInterests(userId = Id[User](1), version = ModelVersion[DenseLDA](1), numOfEvidence = 100, userTopicMean = Some(UserTopicMean(Array(0.5f, 0.25f, 0.15f, 0.1f))), numOfRecentEvidence = 0, userRecentTopicMean = None,
+          overallSnapshot = None, recencySnapshot = None, overallSnapshotAt = None, recencySnapshotAt = None)
         db.readWrite { implicit s =>
           userTopicRepo.save(topic)
           userTopicRepo.getByUser(Id[User](1), ModelVersion[DenseLDA](1)).get.userTopicMean.get.mean.toSeq === Seq(0.5f, 0.25f, 0.15f, 0.1f)
