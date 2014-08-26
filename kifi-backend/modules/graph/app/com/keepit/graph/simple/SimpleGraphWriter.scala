@@ -41,14 +41,18 @@ class SimpleGraphWriter(
     val vertexId = VertexId(vertex)
     Vertex.checkIfVertexExists(bufferedVertices)(vertexId)
     val bufferedVertex = getBufferedVertex(vertexId).get
-    bufferedVertex.outgoingEdges.edges.foreach {
-      case ((_, _, edgeKind), destinationVertexIdsWithData) =>
-        destinationVertexIdsWithData.keys.foreach { destinationVertexId => removeEdge(vertexId, destinationVertexId, edgeKind) }
-    }
-    bufferedVertex.incomingEdges.edges.foreach {
+
+    val outgoingEdgesToBeRemoved = bufferedVertex.outgoingEdges.edges.valuesIterator.flatten.map {
+      case (destinationVertexId, edgeData) => (destinationVertexId, edgeData.kind)
+    }.toSeq
+    outgoingEdgesToBeRemoved.foreach { case (destinationVertexId, edgeKind) => removeEdge(vertexId, destinationVertexId, edgeKind) }
+
+    val incomingEdgesToBeRemoved = bufferedVertex.incomingEdges.edges.flatMap {
       case ((_, _, edgeKind), sourceVertexIds) =>
-        sourceVertexIds.foreach { sourceVertexId => removeEdge(sourceVertexId, vertexId, edgeKind) }
-    }
+        sourceVertexIds.map { case sourceVertexId => (sourceVertexId, edgeKind) }
+    }.toSeq
+    incomingEdgesToBeRemoved.foreach { case (sourceVertexId, edgeKind) => removeEdge(sourceVertexId, vertexId, edgeKind) }
+
     bufferedVertices -= vertexId
     vertexDeltas(vertexKind).decrementAndGet()
   }
