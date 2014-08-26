@@ -1,22 +1,7 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{
-  ScoredSeedItemWithAttribution,
-  RecoInfo,
-  UserRecommendationGenerationStateRepo,
-  UserRecommendationGenerationState,
-  Keepers,
-  UriRecommendationRepo,
-  UriRecommendation,
-  UriScores,
-  PublicFeedRepo,
-  PublicSeedItem,
-  SeedItem,
-  PublicUriScores,
-  PublicFeed,
-  PublicScoredSeedItem
-}
-import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.curator.model.{ UriRecommendationStates, ScoredSeedItemWithAttribution, RecoInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, UriRecommendationRepo, UriRecommendation, UriScores, PublicFeedRepo, PublicSeedItem, SeedItem, PublicUriScores, PublicFeed, PublicScoredSeedItem }
+import com.keepit.common.db.{ State, SequenceNumber, Id }
 import com.keepit.model.{ User, ExperimentType, UriRecommendationScores, SystemValueRepo, Name }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ReactiveLock
@@ -175,6 +160,7 @@ class RecommendationGenerationCommander @Inject() (
         val recoOpt = uriRecRepo.getByUriAndUserId(item.uriId, userId, None)
         recoOpt.map { reco =>
           uriRecRepo.save(reco.copy(
+            state = UriRecommendationStates.ACTIVE,
             masterScore = computeMasterScore(item.uriScores),
             allScores = item.uriScores,
             attribution = item.attribution))
