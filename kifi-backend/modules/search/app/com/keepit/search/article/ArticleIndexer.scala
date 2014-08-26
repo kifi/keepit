@@ -7,7 +7,6 @@ import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
-import com.keepit.search.semantic.SemanticVectorBuilder
 import java.io.StringReader
 import com.keepit.search.article.ArticleRecordSerializer._
 import com.keepit.search.index.IndexDirectory
@@ -142,11 +141,6 @@ object ArticleIndexer extends Logging {
 
           doc.add(buildTextField(contentField, new MultiStringReader(content), contentAnalyzer))
           doc.add(buildTextField(contentStemmedField, new MultiStringReader(content), contentAnalyzerWithStemmer))
-
-          val builder = new SemanticVectorBuilder(60)
-          builder.load(titleAnalyzerWithStemmer.tokenStream(titleField, article.title))
-          builder.load(contentAnalyzerWithStemmer.tokenStream(contentField, new MultiStringReader(content)))
-          doc.add(buildSemanticVectorField(semanticVectorField, builder))
 
           buildDomainFields(uri.url, siteField, homePageField).foreach(doc.add)
 

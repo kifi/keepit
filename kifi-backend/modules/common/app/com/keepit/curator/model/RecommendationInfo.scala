@@ -44,7 +44,7 @@ object RecoKind {
   keepers: Seq[BasicUser],
   others: Int,
   siteName: Option[String],
-  uriSummary: URISummary)
+  summary: URISummary)
 
 @json case class FullRecoInfo(
   kind: RecoKind,

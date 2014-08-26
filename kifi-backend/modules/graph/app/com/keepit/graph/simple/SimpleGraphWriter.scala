@@ -41,8 +41,17 @@ class SimpleGraphWriter(
     val vertexId = VertexId(vertex)
     Vertex.checkIfVertexExists(bufferedVertices)(vertexId)
     val bufferedVertex = getBufferedVertex(vertexId).get
-    bufferedVertex.outgoingEdges.edges.valuesIterator.flatten.foreach { case (destinationVertexId, edgeData) => removeEdge(vertexId, destinationVertexId, edgeData.kind) }
-    bufferedVertex.incomingEdges.edges.foreach { case ((_, _, edgeKind), sourceVertexIds) => sourceVertexIds.foreach { sourceVertexId => removeEdge(sourceVertexId, vertexId, edgeKind) } }
+
+    val outgoingEdgesToBeRemoved = bufferedVertex.outgoingEdges.edges.valuesIterator.flatten.map {
+      case (destinationVertexId, edgeData) => (destinationVertexId, edgeData.kind)
+    }.toSeq
+    outgoingEdgesToBeRemoved.foreach { case (destinationVertexId, edgeKind) => removeEdge(vertexId, destinationVertexId, edgeKind) }
+
+    val incomingEdgesToBeRemoved = bufferedVertex.incomingEdges.edges.flatMap {
+      case ((_, _, edgeKind), sourceVertexIds) =>
+        sourceVertexIds.map { case sourceVertexId => (sourceVertexId, edgeKind) }
+    }.toSeq
+    incomingEdgesToBeRemoved.foreach { case (sourceVertexId, edgeKind) => removeEdge(sourceVertexId, vertexId, edgeKind) }
 
     bufferedVertices -= vertexId
     vertexDeltas(vertexKind).decrementAndGet()
@@ -87,15 +96,6 @@ class SimpleGraphWriter(
   }
 
   def commit(): Unit = {
-    try { bufferedVertices.updated.foreach { case (vertexId, updatedVertex) => SimpleGraph.checkVertexIntegrity(bufferedVertices, vertexId, updatedVertex) } }
-    catch {
-      case ex: Throwable =>
-        log.error("Commit would leave the graph in a corrupt state.")
-        log.error(ex.toString)
-        log.error(s"Updated vertices: ${bufferedVertices.updated.keys.toSeq.mkString(", ")}")
-        log.error(s"Removed vertices: ${bufferedVertices.removed.toSeq.mkString(", ")}")
-        throw new IllegalStateException("Commit would leave the graph in a corrupt state.", ex)
-    }
     val commitStatistics = GraphStatistics.filter(vertexDeltas, edgeDeltas)
     bufferedVertices.flush()
     vertexDeltas.foreach { case (vertexKind, counter) => vertexStatistics(vertexKind).addAndGet(counter.getAndSet(0)) }
