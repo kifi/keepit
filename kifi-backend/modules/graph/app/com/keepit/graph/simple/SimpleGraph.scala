@@ -71,7 +71,7 @@ object SimpleGraph extends Logging {
 
   def checkVertexIntegrity(vertices: Map[VertexId, Vertex], vertexId: VertexId, vertex: Vertex): Unit = {
 
-    var errors: List[Throwable] = Nil
+    var errors: Seq[Throwable] = Seq.empty
 
     if (vertex.data.kind != vertexId.kind || vertex.data.id != vertexId.asId(vertexId.kind)) {
       errors :+= new IllegalStateException(s"Invalid vertex id $vertexId for vertex of kind ${vertex.data.kind} with id ${vertex.data.id}")
@@ -102,7 +102,7 @@ object SimpleGraph extends Logging {
       val errorMessages = errors.map(_.toString)
       log.error(message)
       errorMessages.foreach(log.error(_))
-      throw new IllegalStateException((message :: errors).mkString("\n"))
+      throw new IllegalStateException((message :+ errors).mkString("\n"))
     }
   }
 
