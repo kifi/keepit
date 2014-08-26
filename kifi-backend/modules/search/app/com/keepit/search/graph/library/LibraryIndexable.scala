@@ -16,11 +16,16 @@ object LibraryFields {
   val hiddenUsersField = "h"
   val recordField = "rec"
 
-  import LibraryVisibility.{ SECRET, DISCOVERABLE, PUBLISHED }
-  @inline def toNumericCode(visibility: LibraryVisibility) = visibility match {
-    case SECRET => 0
-    case DISCOVERABLE => 1
-    case PUBLISHED => 2
+  object Visibility {
+    val SECRET = 0
+    val DISCOVERABLE = 1
+    val PUBLISHED = 2
+
+    @inline def toNumericCode(visibility: LibraryVisibility) = visibility match {
+      case LibraryVisibility.SECRET => SECRET
+      case LibraryVisibility.DISCOVERABLE => DISCOVERABLE
+      case LibraryVisibility.PUBLISHED => PUBLISHED
+    }
   }
 
   val decoders: Map[String, FieldDecoder] = Map.empty
@@ -60,7 +65,7 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) ex
     doc.add(buildIteratorField(usersField, users.iterator) { id => id.id.toString })
     doc.add(buildIteratorField(hiddenUsersField, hiddenUsers.iterator) { id => id.id.toString })
 
-    doc.add(buildLongValueField(visibilityField, toNumericCode(library.visibility)))
+    doc.add(buildLongValueField(visibilityField, Visibility.toNumericCode(library.visibility)))
 
     doc.add(buildBinaryDocValuesField(recordField, LibraryRecord(library)))
 

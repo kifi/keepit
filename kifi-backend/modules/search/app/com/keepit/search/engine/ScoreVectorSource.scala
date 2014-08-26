@@ -21,12 +21,6 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-object ScoreVectorSource {
-  val PUBLISHED = LibraryFields.toNumericCode(LibraryVisibility.PUBLISHED)
-  val DISCOVERABLE = LibraryFields.toNumericCode(LibraryVisibility.DISCOVERABLE)
-  val SECRET = LibraryFields.toNumericCode(LibraryVisibility.SECRET)
-}
-
 trait ScoreVectorSource {
   def createWeights(query: Query): IndexedSeq[(Weight, Float)]
   def execute(weights: IndexedSeq[(Weight, Float)], dataBuffer: DataBuffer): Unit
@@ -188,7 +182,7 @@ class UriFromKeepsScoreVectorSource(
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
 
-    val published = ScoreVectorSource.PUBLISHED
+    val published = LibraryFields.Visibility.PUBLISHED
     val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
     val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
     val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
@@ -312,7 +306,7 @@ class LibraryScoreVectorSource(protected val searcher: Searcher, libraryIds: Lon
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
 
-    val published = ScoreVectorSource.PUBLISHED
+    val published = LibraryFields.Visibility.PUBLISHED
     val visibilityDocValues = reader.getNumericDocValues(LibraryFields.visibilityField)
 
     val idMapper = reader.getIdMapper

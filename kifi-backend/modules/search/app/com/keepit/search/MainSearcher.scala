@@ -11,7 +11,6 @@ import com.keepit.search.graph.bookmark.UserToUserEdgeSet
 import com.keepit.search.article.ArticleRecord
 import com.keepit.search.article.ArticleVisibility
 import com.keepit.search.query.parser.MainQueryParser
-import com.keepit.search.semantic.SemanticVector
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
@@ -90,17 +89,13 @@ class MainSearcher(
     users.foldLeft(sharingUsers.size.toFloat) { (score, id) => score + normalizedFriendStats.score(id) } / 2.0f
   }
 
-  private def getNonPersonalizedQueryContextVector(parser: MainQueryParser): SemanticVector = {
-    val newSearcher = articleSearcher.withSemanticContext
-    parser.svTerms.foreach { t => newSearcher.addContextTerm(t) }
-    newSearcher.getContextVector
-  }
-
   def getPersonalizedSearcher(query: Query) = {
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.outerjoin(personalReader, personalIdMapper)
 
-    PersonalizedSearcher(indexReader, socialGraphInfo.mySearchUris, collectionSearcher)
+    val searcher = new PersonalizedSearcher(indexReader, collectionSearcher)
+    searcher.setSimilarity(articleSearcher.getSimilarity())
+    searcher
   }
 
   def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue) = {

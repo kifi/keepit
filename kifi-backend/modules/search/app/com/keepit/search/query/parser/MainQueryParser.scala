@@ -34,12 +34,10 @@ class MainQueryParser(
   override val lang: Lang = analyzer.lang
 
   private[this] val proximityBoost = config.asFloat("proximityBoost")
-  private[this] val semanticBoost = config.asFloat("semanticBoost")
   private[this] val phraseBoost = config.asFloat("phraseBoost")
   override val siteBoost = config.asFloat("siteBoost")
   override val concatBoost = config.asFloat("concatBoost")
   private[this] val homePageBoost = config.asFloat("homePageBoost")
-  override val useSemanticMatch = config.asBoolean("useSemanticMatch")
   private[this] val proximityGapPenalty = config.asFloat("proximityGapPenalty")
   private[this] val proximityThreshold = config.asFloat("proximityThreshold")
   private[this] val proximityPowerFactor = config.asFloat("proximityPowerFactor")
@@ -57,7 +55,7 @@ class MainQueryParser(
     parsedQuery = super.parse(queryText).map { query =>
       val numTextQueries = textQueries.size
       if (numTextQueries <= 0) query
-      else if (numTextQueries > ProximityQuery.maxLength) query // too many terms, skip proximity and semantic vector
+      else if (numTextQueries > ProximityQuery.maxLength) query // too many terms, skip proximity
       else {
         val phrasesFuture = if (numTextQueries > 1 && phraseBoost > 0.0f) detectPhrases(queryText, lang) else null
 
@@ -73,13 +71,6 @@ class MainQueryParser(
                 indexToTextQuery(i).addCollectionQuery(collectionId, 1.5f)
                 i += 1
               }
-          }
-        }
-
-        if (semanticBoost > 0.0f) {
-          textQueries.foreach { textQuery =>
-            textQuery.setSemanticBoost(semanticBoost)
-            textQuery.stems.map { stemTerm => textQuery.addSemanticVectorQuery("sv", stemTerm.text) }
           }
         }
 
