@@ -34,4 +34,10 @@ class TypeaheadController @Inject() (
     }
   }
 
+  def searchForContacts(query: Option[String], limit: Option[Int], pictureUrl: Boolean, dedupEmail: Boolean) = JsonAction.authenticatedAsync { request =>
+    commander.searchForContacts(request.userId, query.getOrElse(""), limit, pictureUrl, dedupEmail) map { res =>
+      Ok(Json.toJson(res))
+    }
+  }
+
 }

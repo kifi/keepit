@@ -20,10 +20,11 @@ class UserInteractionCommander @Inject() (
       case Left(id) => Json.obj("user" -> id, "action" -> interaction.value)
       case Right(email) => Json.obj("email" -> email.address, "action" -> interaction.value)
     }
+    // append to head as most recent (will get the highest weight), remove from tail as least recent (lowest weight)
     val newInteractions = if (interactions.length + 1 > UserInteraction.maximumInteractions) {
-      interactions.drop(1) :+ newJson
+      newJson :: interactions.take(interactions.length - 1)
     } else {
-      interactions :+ newJson
+      newJson :: interactions
     }
     db.readWrite { implicit s =>
       userValueRepo.setValue(uid, UserValueName.RECENT_INTERACTION, Json.stringify(Json.toJson(newInteractions)))

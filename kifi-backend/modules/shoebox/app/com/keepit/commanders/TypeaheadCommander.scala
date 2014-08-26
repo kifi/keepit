@@ -38,6 +38,7 @@ class TypeaheadCommander @Inject() (
     socialUserTypeahead: SocialUserTypeahead,
     kifiUserTypeahead: KifiUserTypeahead,
     searchClient: SearchServiceClient,
+    interactionCommander: UserInteractionCommander,
     systemAdminMailSender: SystemAdminMailSender) extends Logging {
 
   type NetworkTypeAndHit = (SocialNetworkType, TypeaheadHit[_])
@@ -224,16 +225,25 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  private def aggregate(userId: Id[User], q: String, limitOpt: Option[Int], dedupEmail: Boolean): Future[Seq[NetworkTypeAndHit]] = {
+  private def aggregate(userId: Id[User], q: String, limitOpt: Option[Int], dedupEmail: Boolean, contacts: Set[ContactType]): Future[Seq[NetworkTypeAndHit]] = {
     implicit val prefix = LogPrefix(s"aggregate($userId,$q,$limitOpt)")
-    val socialF = socialUserTypeahead.topN(userId, q, limitOpt map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { res =>
-      res.collect {
-        case hit if includeHit(hit) => hit
+    // FB or LN
+    val socialF = if (contacts.contains(ContactType.SOCIAL))
+      socialUserTypeahead.topN(userId, q, limitOpt map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { res =>
+        res.collect {
+          case hit if includeHit(hit) => hit
+        }
       }
-    }
-    val kifiF = kifiUserTypeahead.topN(userId, q, limitOpt)(TypeaheadHit.defaultOrdering[User])
-    val abookF = if (q.length < 2) Future.successful(Seq.empty) else abookServiceClient.prefixQuery(userId, q, limitOpt.map(_ * 2))
-    val nfUsersF = if (q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeaheadWithUserId(userId, q, limitOpt.getOrElse(100), filter = "nf")
+    else { Future.successful(Seq.empty) }
+    // Friends on Kifi
+    val kifiF = if (contacts.contains(ContactType.KIFI_FRIEND))
+      kifiUserTypeahead.topN(userId, q, limitOpt)(TypeaheadHit.defaultOrdering[User])
+    else
+      Future.successful(Seq.empty)
+    // Email Contacts
+    val abookF = if (!contacts.contains(ContactType.EMAIL) || q.length < 2) Future.successful(Seq.empty) else abookServiceClient.prefixQuery(userId, q, limitOpt.map(_ * 2)) // Email Contacts
+    // Non-Friends on Kifi
+    val nfUsersF = if (!contacts.contains(ContactType.KIFI_NON_FRIEND) || q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeaheadWithUserId(userId, q, limitOpt.getOrElse(100), filter = "nf") // Non-Friends on Kifi
 
     limitOpt match {
       case None => fetchAll(socialF, kifiF, abookF, nfUsersF)
@@ -319,7 +329,7 @@ class TypeaheadCommander @Inject() (
     val q = query.trim
     if (q.length == 0) Future.successful(Seq.empty[ConnectionWithInviteStatus])
     else {
-      aggregate(userId, q, limit, dedupEmail) flatMap { top =>
+      aggregate(userId, q, limit, dedupEmail, ContactType.getAll()) flatMap { top =>
         for {
           socialInvites <- socialInvitesF
           emailInvites <- emailInvitesF
@@ -337,6 +347,39 @@ class TypeaheadCommander @Inject() (
     }
   }
 
+  def searchForContacts(userId: Id[User], query: String, limit: Option[Int], pictureUrl: Boolean, dedupEmail: Boolean): Future[Seq[ConnectionStatus]] = {
+    val q = query.trim
+    if (q.length == 0) {
+      val a = interactionCommander.getInteractionScores(userId).map { interaction =>
+        interaction.entity match {
+          case Left(id) =>
+            val user = db.readOnlyMaster { implicit s =>
+              userRepo.get(id)
+            }
+            ConnectionStatus(user.fullName, interaction.score, if (pictureUrl) user.pictureName.map(_ + ".jpg") else None, s"fortytwo/${user.externalId}")
+          case Right(email) =>
+            ConnectionStatus("", interaction.score, None, emailId(email))
+        }
+      }
+      Future.successful(a)
+    } else {
+      aggregate(userId, q, limit, dedupEmail, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)) flatMap { top =>
+        val b = top flatMap {
+          case (snType, hit) => hit.info match {
+            case e: RichContact =>
+              Some(ConnectionStatus(e.name.getOrElse(""), hit.score, None, emailId(e.email)))
+            case u: User =>
+              Some(ConnectionStatus(u.fullName, hit.score, if (pictureUrl) u.pictureName.map(_ + ".jpg") else None, s"fortytwo/${u.externalId}"))
+            case _ =>
+              airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $hit"))
+              None
+          }
+        }
+        Future.successful(b)
+      }
+    }
+  }
+
   def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = {
     abookServiceClient.hideEmailFromUser(userId, email)
   }
@@ -344,3 +387,17 @@ class TypeaheadCommander @Inject() (
 }
 
 @json case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
+
+@json case class ConnectionStatus(label: String, score: Double, image: Option[String], value: String)
+
+sealed abstract class ContactType(val value: String)
+object ContactType {
+  case object SOCIAL extends ContactType("social") // FB or LN
+  case object EMAIL extends ContactType("email")
+  case object KIFI_FRIEND extends ContactType("kifi_friend")
+  case object KIFI_NON_FRIEND extends ContactType("kifi_non_friend")
+
+  def getAll(): Set[ContactType] = {
+    Set(SOCIAL, EMAIL, KIFI_FRIEND, KIFI_NON_FRIEND)
+  }
+}

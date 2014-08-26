@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import com.keepit.abook.model.RichContact
 import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeABookServiceClientModule }
-import com.keepit.commanders.ConnectionWithInviteStatus
+import com.keepit.commanders.{ UserInteractionCommander, UserInteraction, ConnectionStatus, ConnectionWithInviteStatus }
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
@@ -161,6 +161,61 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res3.length === 2 // LNKD, EMAIL
         res3(0).label === "郭靖 先生"
         res3(1).label === "郭靖 電郵"
+      }
+    }
+
+    "query contacts" in {
+      withDb(modules: _*) { implicit injector =>
+        val userInteractionCommander = inject[UserInteractionCommander]
+        val (u1, u2, u3, u4, u5) = db.readWrite { implicit session =>
+          val u1 = userRepo.save(User(firstName = "Spongebob", lastName = "Squarepants"))
+          val u2 = userRepo.save(User(firstName = "Patrick", lastName = "Star"))
+          val u3 = userRepo.save(User(firstName = "Squidward", lastName = "Tentacles"))
+          val u4 = EmailAddress("squirrelsandy@texas.gov")
+          val u5 = EmailAddress("mrkrabs@krusty.com")
+
+          userConnRepo.addConnections(u1.id.get, Set(u2.id.get))
+          userConnRepo.addConnections(u1.id.get, Set(u3.id.get))
+
+          (u1, u2, u3, u4, u5)
+        }
+
+        userInteractionCommander.addInteraction(u1.id.get, Left(u2.id.get), UserInteraction.INVITE_LIBRARY)
+        userInteractionCommander.addInteraction(u1.id.get, Left(u3.id.get), UserInteraction.INVITE_LIBRARY)
+        userInteractionCommander.addInteraction(u1.id.get, Right(u4), UserInteraction.INVITE_LIBRARY)
+        userInteractionCommander.addInteraction(u1.id.get, Right(u5), UserInteraction.INVITE_LIBRARY)
+
+        val abookClient = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
+        abookClient.addTypeaheadHits(u1.id.get, Seq(TypeaheadHit[RichContact](0, "mrkrabs", 0, RichContact(u5, Some("Krabs")))))
+        abookClient.addTypeaheadHits(u1.id.get, Seq(TypeaheadHit[RichContact](0, "sandysquirrel", 0, RichContact(u4, Some("SandySquirrel")))))
+
+        inject[FakeActionAuthenticator].setUser(u1)
+
+        @inline def search(query: String, limit: Int = 10): Seq[ConnectionStatus] = {
+          val path = com.keepit.controllers.website.routes.TypeaheadController.searchForContacts(Some(query), Some(limit), false, true).url
+          val res = inject[TypeaheadController].searchForContacts(Some(query), Some(limit), false, true)(FakeRequest("GET", path))
+          val s = contentAsString(res)
+          Json.parse(s).as[Seq[ConnectionStatus]] tap { res => println(s"[search($query,$limit)] res(len=${res.length}):$res") }
+        }
+
+        val res0 = search("") // (no query) should get all contacts in Recent_Interactions
+        res0.length === 4
+
+        val res1 = search("s") // "one letter" -- abook skipped
+        res1.length === 2
+        res1.map(_.label) === Seq("Squidward Tentacles", "Patrick Star")
+
+        val res2 = search("sq")
+        res2.length === 2
+        res2.map(_.label) === Seq("Squidward Tentacles", "SandySquirrel")
+
+        val res3 = search("squid")
+        res3.length === 1
+        res3.map(_.label) === Seq("Squidward Tentacles")
+
+        val res4 = search("squir")
+        res4.length === 1
+        res4.map(_.label) === Seq("SandySquirrel")
       }
     }
 
