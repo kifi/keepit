@@ -97,8 +97,8 @@ class UriRecommendationRepoImpl @Inject() (
   def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int, before: DateTime)(implicit session: RSession): Boolean = {
     import StaticQuery.interpolation
     val userIds = (for (row <- rows) yield row.userId).list.distinct
-    var result = true
-    userIds.foreach { userId =>
+
+    userIds.foldLeft(true) { (updated, userId) =>
       val limitScore =
         sql"""SELECT MIN(master_score)
               FROM (
@@ -108,17 +108,13 @@ class UriRecommendationRepoImpl @Inject() (
 	              ORDER BY master_score DESC LIMIT $limitNumRecosForUser
               ) AS mScoreTable""".as[Float].first
 
-      val query =
-        sql"""UPDATE uri_recommendation
-              SET state=${UriRecommendationStates.INACTIVE},
-                  updated_at=$currentDateTime
-              WHERE state=${UriRecommendationStates.ACTIVE}
-                    AND user_id=$userId AND master_score<$limitScore
-                    AND updated_at<$before;""".asUpdate.first > 0
-
-      result |= query
+      ((for (
+        row <- rows if row.userId === userId && row.updatedAt < before && row.masterScore < limitScore &&
+          row.state === UriRecommendationStates.ACTIVE
+      ) yield (row.state, row.updatedAt)).
+        update((UriRecommendationStates.INACTIVE, currentDateTime)) > 0) || updated
     }
-    result
+
   }
 
   def deleteCache(model: UriRecommendation)(implicit session: RSession): Unit = {}
