@@ -23,12 +23,12 @@ class RecommendationCleanupCommanderTest extends Specification with CuratorTestI
     FakeHealthcheckModule())
 
   def setup(): Seq[UriRecommendation] = {
-    val rec1 = makeUriRecommendationWithCreateTimestamp(1, 42, 0.15f, currentDateTime.minusDays(15))
-    val rec2 = makeUriRecommendationWithCreateTimestamp(2, 42, 0.99f, currentDateTime.minusDays(15))
-    val rec3 = makeUriRecommendationWithCreateTimestamp(3, 42, 0.5f, currentDateTime.minusDays(15))
-    val rec4 = makeUriRecommendationWithCreateTimestamp(4, 42, 0.75f, currentDateTime.minusDays(15))
-    val rec5 = makeUriRecommendationWithCreateTimestamp(5, 42, 0.65f, currentDateTime.minusDays(15))
-    val rec6 = makeUriRecommendationWithCreateTimestamp(6, 42, 0.35f, currentDateTime.minusDays(5))
+    val rec1 = makeUriRecommendationWithUpdateTimestamp(1, 42, 0.15f, currentDateTime.minusDays(30))
+    val rec2 = makeUriRecommendationWithUpdateTimestamp(2, 42, 0.99f, currentDateTime.minusDays(30))
+    val rec3 = makeUriRecommendationWithUpdateTimestamp(3, 42, 0.5f, currentDateTime.minusDays(30))
+    val rec4 = makeUriRecommendationWithUpdateTimestamp(4, 42, 0.75f, currentDateTime.minusDays(30))
+    val rec5 = makeUriRecommendationWithUpdateTimestamp(5, 42, 0.65f, currentDateTime.minusDays(30))
+    val rec6 = makeUriRecommendationWithUpdateTimestamp(6, 42, 0.35f, currentDateTime.minusDays(30))
     Seq(rec1, rec2, rec3, rec4, rec5, rec6)
   }
 
@@ -52,7 +52,7 @@ class RecommendationCleanupCommanderTest extends Specification with CuratorTestI
 
         db.readOnlyMaster { implicit s =>
           val recos = repo.getByTopMasterScore(Id[User](42), 6)
-          recos.size === 5
+          recos.size === 6
           recos(0).masterScore === 0.99f
           recos(1).masterScore === 0.75f
           recos(2).masterScore === 0.65f

@@ -9,9 +9,9 @@ import com.keepit.common.time._
 import com.keepit.common.time.Clock
 import com.keepit.model.{ UriRecommendationFeedback, User, NormalizedURI }
 import org.joda.time.DateTime
-import play.api.libs.json.{ Json }
+import play.api.libs.json.Json
 
-import scala.slick.jdbc.{ StaticQuery }
+import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[UriRecommendationRepoImpl])
 trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
@@ -105,7 +105,6 @@ class UriRecommendationRepoImpl @Inject() (
 	              SELECT master_score
 	              FROM uri_recommendation
 	              WHERE state=${UriRecommendationStates.ACTIVE} AND user_id=$userId
-	                    AND created_at<$before
 	              ORDER BY master_score DESC LIMIT $limitNumRecosForUser
               ) AS mScoreTable""".as[Float].first
 
@@ -115,7 +114,7 @@ class UriRecommendationRepoImpl @Inject() (
                   updated_at=$currentDateTime
               WHERE state=${UriRecommendationStates.ACTIVE}
                     AND user_id=$userId AND master_score<$limitScore
-                    AND created_at<$before;""".asUpdate.first > 0
+                    AND updated_at<$before;""".asUpdate.first > 0
 
       result |= query
     }
