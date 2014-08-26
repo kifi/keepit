@@ -94,6 +94,17 @@ trait SearchServiceClient extends ServiceClient {
     context: Option[String],
     debug: Option[String]): Seq[Future[JsValue]]
 
+  def distSearch2(
+    plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    debug: Option[String]): Seq[Future[JsValue]]
+
   def distLangFreqs(plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])], userId: Id[User]): Seq[Future[Map[Lang, Int]]]
 
   def call(instance: ServiceInstance, url: ServiceRoute, body: JsValue): Future[ClientResponse]
@@ -368,6 +379,35 @@ class SearchServiceClientImpl(
   }
 
   def distSearch(
+    plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    debug: Option[String]): Seq[Future[JsValue]] = {
+
+    distSearch(Search.internal.distSearch, plan, userId, firstLang, secondLang, query, filter, maxHits, context, debug)
+  }
+
+  def distSearch2(
+    plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    debug: Option[String]): Seq[Future[JsValue]] = {
+
+    distSearch(Search.internal.distSearch2, plan, userId, firstLang, secondLang, query, filter, maxHits, context, debug)
+  }
+
+  private def distSearch(
+    path: ServiceRoute,
     plan: Seq[(ServiceInstance, Set[Shard[NormalizedURI]])],
     userId: Id[User],
     firstLang: Lang,

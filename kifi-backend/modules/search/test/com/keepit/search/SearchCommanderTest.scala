@@ -23,7 +23,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
         saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
-        val (graph, _, indexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory) = initIndexes(store)
+        val (graph, _, indexer, userGraphIndexer, userGraphsSearcherFactory, mainSearcherFactory, searchFactory) = initIndexes(store)
         graph.update()
         indexer.update() === uris.size
 
@@ -36,6 +36,7 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
 
         val searchCommander = new SearchCommanderImpl(
           activeShards,
+          searchFactory,
           mainSearcherFactory,
           inject[ArticleSearchResultStore],
           inject[AirbrakeNotifier],
