@@ -133,8 +133,10 @@ panes.notices = function () {
   }
 
   function renderIntoList(o) {
-    $list.append(o.threads.map(renderOne).join(''));
-    $list.find('time').timeago();
+    var $th = $(o.threads.map(renderOne).join(''))
+      .appendTo($list);
+    $th.find('time').timeago();
+    measure($th);
     $list.data('showingOldest', !!o.includesOldest);
     $list[o.includesOldest ? 'off' : 'on']('scroll', onScroll);
     if (!o.includesOldest && $list[0].scrollHeight <= $list[0].clientHeight) {
@@ -225,10 +227,13 @@ panes.notices = function () {
         notice.nameIndex = counter();
         notice.nameSeriesLength = notice.namedParticipants.length + (notice.otherParticipants ? 1 : 0);
       }
-      if (notice.isSelf) {
-        notice.multiple = notice.messages > 1;
-      } else {
-        notice.authorShortName = notice.author.id === me.id ? 'Me' : notice.author.firstName;
+      if (notice.author.id === me.id) {
+        if (notice.isSelf) {
+          notice.multiple = notice.messages > 1;
+        }
+        notice.authorShortName = 'Me';
+      } else if (nParticipants > 2) {
+        notice.authorShortName = notice.author.firstName;
       }
       notice.picturedParticipants.map(formatParticipant);
       return render('html/keeper/notice_message', notice);
@@ -255,6 +260,7 @@ panes.notices = function () {
     if ($th.parent()[0] !== $list[0]) {
       $th.appendTo($list);
     }
+    measure($th);
   }
 
   function markOneRead(timeStr, threadId, id) {
@@ -416,9 +422,10 @@ panes.notices = function () {
   function gotOlderThreads(whenRequested, o) {
     if ($list && $list.data('pendingOlderReqTime') === whenRequested) {
       $list.data('pendingOlderReqTime', 0);
-      $(o.threads.map(renderOne).join(''))
+      var $th = $(o.threads.map(renderOne).join(''))
         .find('time').timeago().end()
         .appendTo($list);
+      measure($th);
       if (o.includesOldest) {
         $list.data('showingOldest', true).off('scroll', onScroll);
       } else if ($list[0].scrollHeight <= $list[0].clientHeight) {
@@ -430,7 +437,7 @@ panes.notices = function () {
   function onHoverfuState(configureHover) {
     var html = $(this).is('.kifi-notice-visited *') ? 'Mark as unread' : 'Mark as read';
     configureHover($('<kifi>', {class: 'kifi-root kifi-tip kifi-notice-state-tip', html: html}), {
-      position: {my: 'right+20 bottom-7', at: 'center top', of: this, collision: 'none'},
+      position: {my: 'left-13 bottom-5', at: 'center top', of: this, collision: 'none'},
       click: 'hide'
     });
   }
@@ -486,5 +493,16 @@ panes.notices = function () {
   function locToKind(locator) {
     return /^\/messages(?:$|:)/.test(locator) ? locator.substr(10) || 'page' : null;
   }
-}();
 
+  function measure($th) {
+    $th = $th.filter('.kifi-notice-unmeasured');
+    // important for performance: measuring all before writing any
+    var lines = $th.find('.kifi-notice-blurb').map(function (i, el) {
+      return el.scrollHeight / parseInt(window.getComputedStyle(el).lineHeight);
+    });
+    $th.each(function (i, el) {
+      el.classList.add('kifi-notice-lines-' + Math.max(1, Math.min(3, Math.floor(lines[i]))));
+      el.classList.remove('kifi-notice-unmeasured');
+    });
+  }
+}();

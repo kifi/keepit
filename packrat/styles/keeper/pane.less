@@ -442,7 +442,7 @@ a.kifi-notices-filter {
   line-height: 21px;
   font-size: 11px;
   padding: 3px 12px 0;
-  color: #67829c !important;
+  color: inherit !important;
 }
 a.kifi-notices-filter:link {
   border-bottom-color: transparent;
@@ -462,7 +462,6 @@ a.kifi-notices-filter-page {
   padding-left: 10px;
   padding-right: 10px;
 }
-@unread-count-bg-color: #5e778f;
 .kifi-notices-unread-count {
   display: inline-block;
   height: 14px;
@@ -471,8 +470,8 @@ a.kifi-notices-filter-page {
   border-radius: 3px !important;
   font-size: 9px;
   font-weight: bold;
-  background-color: @unread-count-bg-color;
-  color: #e8e8e8;
+  background-color: #cc2413;
+  color: #fff;
   text-align: center;
   position: relative;
   top: -2px;
@@ -503,7 +502,7 @@ a.kifi-notices-filter-page {
   top: 14px;
   left: 11px;
   border-style: solid;
-  border-color: tint(@unread-count-bg-color, 20%) transparent;
+  border-color: tint(#5e778f, 20%) transparent;
   border-width: 4px 4px 0;
 }
 .kifi-notices-menu {
