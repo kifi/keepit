@@ -237,9 +237,13 @@ a.kifi-pane-top-menu-a {
   box-sizing: border-box;
   background: linear-gradient(#fff, #f3f3f3) content-box;
   border-radius: 50%;
+  &:active {
+    background-image: none;
+    background-color: #f3f3f3;
+  }
   &::before,
   &::after {
-    content: ' ';
+    content: '';
     position: absolute;
     top: 6px;
     bottom: 6px;

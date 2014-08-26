@@ -186,67 +186,61 @@
   font-weight: 500;
   text-align: center;
   cursor: pointer;
+  .kifi-pane & {
+    border-width: 1px;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+  }
 }
-.kifi-pane .kifi-keep-btn,
-.kifi-pane .kifi-kept-btn {
-  border-width: 1px;
-  top: 2px;
-  left: 2px;
-  right: 2px;
-  bottom: 2px;
-}
-.kifi-keep-btn,
-.kifi-keep-btn.kifi-hoverless:hover,
-.kifi-keep-btn.kifi-hoverless:active {
+.kifi-keep-btn {
   background-image: linear-gradient(#fff, #f3f3f3);
+  &:hover,
+  &:focus {
+    color: #3f9f65;
+  }
+  &:active {
+    background-image: none;
+    background-color: #f3f3f3;
+  }
+  &::before {
+    content: 'Keep it';
+    padding-left: 16px;
+  }
 }
-.kifi-keep-btn:hover {
-  color: #3f9f65;
-}
-.kifi-keep-btn:active {
-  /*background: #1f2b39;*/
-}
-.kifi-keep-btn::before {
-  content: 'Keep it';
-  padding-left: 16px;
-}
-.kifi-kept-btn,
-.kifi-kept-btn.kifi-hoverless:hover,
-.kifi-kept-btn.kifi-hoverless:active {
-  background-color: #4daf7c;
+.kifi-kept-btn {
+  @bg-color: #4daf7c;
+  background-color: @bg-color;
   color: #fff;
   font-weight: 500;
   text-shadow: 0 0 2px rgba(0,0,0,.3);
-}
-.kifi-kept-btn:hover {
-  /*background: #2c88c4;*/
-}
-.kifi-kept-btn:active {
-  /*background: #2676ab;*/
-}
-.kifi-kept-btn::before,
-.kifi-kept-btn.kifi-hoverless:hover::before {
-  content: 'Kept';
-}
-.kifi-private .kifi-kept-btn::before,
-.kifi-private .kifi-kept-btn.kifi-hoverless:hover::before {
-  display: block;
-  line-height: 32px;
-}
-.kifi-private .kifi-kept-btn::after,
-.kifi-private .kifi-kept-btn.kifi-hoverless:hover::after {
-  content: "(private)";
-  display: block;
-  margin-top: -5px;
-  font-size: 9px;
-  line-height: 0;
-}
-.kifi-kept-btn:hover::before {
-  content: 'Unkeep';
-  line-height: 43px;
-}
-.kifi-private .kifi-kept-btn:hover::after {
-  content: '';
+  &:hover,
+  &:focus {
+    background-color: tint(@bg-color, 6%);
+  }
+  &:active {
+    background-color: shade(@bg-color, 4%);
+  }
+  &::before {
+    content: 'Kept';
+  }
+  &:not(.kifi-hoverless):hover::before {
+    content: 'Unkeep';
+  }
+  .kifi-private &:not(:hover)::before,
+  .kifi-private &.kifi-hoverless::before {
+    display: block;
+    line-height: 32px;
+  }
+  .kifi-private &:not(:hover)::after,
+  .kifi-private &.kifi-hoverless::after {
+    content: '(private)';
+    display: block;
+    margin-top: -5px;
+    font-size: 9px;
+    line-height: 0;
+  }
 }
 .kifi-keep-lock,
 .kifi-kept-lock,
@@ -286,17 +280,19 @@
 .kifi-private .kifi-kept-lock {
   top: 8px;
   left: 8px;
-  background-color: #e65b45;
+  @bg-color: #e65b45;
   @url: %(@svgLockDataUrl, #fff);
+  background-color: @bg-color;
   background-image: url(@url);
   border-color: #d13a22;
   border-width: 2px;
-}
-.kifi-private .kifi-kept-lock:hover {
-  /*background-color: #e7958f;*/
-}
-.kifi-private .kifi-kept-lock:active {
-  /*background-color: #e77e76;*/
+  &:hover,
+  &:focus {
+    background-color: tint(@bg-color, 6%);
+  }
+  &:active {
+    background-color: shade(@bg-color, 4%);
+  }
 }
 .kifi-kept-tag {
   right: 9px;
@@ -304,31 +300,33 @@
   background-image: url(@url), linear-gradient(#fff, #f3f3f3);
   background-size: auto 12px, auto;
   background-position: 8px center, 0;
-}
-.kifi-kept-tag:hover,
-.kifi-kept-tag:focus {
-  @url: %(@svgTagDataUrl, #6fa6ef);
-  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
-}
-.kifi-kept-tag:active {
-  @url: %(@svgTagDataUrl, #6fa6ef);
-  background-image: url(@url);
-  background-color: #f3f3f3;
-}
-.kifi-tagged .kifi-kept-tag {
-  top: 8px;
-  right: 8px;
-  @url: %(@svgTagDataUrl, #fff);
-  background-image: url(@url);
-  background-color: #6fa6ef;
-  border-color: #5490df;
-  border-width: 2px;
-}
-.kifi-tagged .kifi-kept-tag:hover {
-  /*background-color: #a3e278;*/
-}
-.kifi-tagged .kifi-kept-tag:active {
-  /*background-color: #76dc32;*/
+  &:hover,
+  &:focus {
+    @url: %(@svgTagDataUrl, #6fa6ef);
+    background-image: url(@url), linear-gradient(#fff, #f3f3f3);
+  }
+  &:active {
+    @url: %(@svgTagDataUrl, #6fa6ef);
+    background-image: url(@url);
+    background-color: #f3f3f3;
+  }
+  .kifi-tagged & {
+    top: 8px;
+    right: 8px;
+    @bg-color: #6fa6ef;
+    @url: %(@svgTagDataUrl, #fff);
+    background-image: url(@url);
+    background-color: @bg-color;
+    border-color: #5490df;
+    border-width: 2px;
+    &:hover,
+    &:focus {
+      background-color: tint(@bg-color, 6%);
+    }
+    &:active {
+      background-color: shade(@bg-color, 4%);
+    }
+  }
 }
 
 /* ::after for invisible expansion */

@@ -129,7 +129,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
     .on('click', '.kifi-keep-btn', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
         keepPage('public', e);
-        this.classList.add('kifi-hoverless');
       }
     }, 400, true))
     .on('click', '.kifi-kept-btn', _.debounce(function (e) {
@@ -138,7 +137,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         this.classList.add('kifi-hoverless');
       }
     }, 400, true))
-    .on('mouseover', '.kifi-keep-btn>.kifi-tip,.kifi-kept-btn>.kifi-tip', function () {
+    .on('mouseover', '.kifi-kept-btn>.kifi-tip', function () {
       this.parentNode.classList.add('kifi-hoverless');
     })
     /*
@@ -176,7 +175,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       });
     })
     */
-    .on('mouseout', '.kifi-keep-btn,.kifi-kept-btn', function () {
+    .on('mouseout', '.kifi-kept-btn', function () {
       this.classList.remove('kifi-hoverless');
     })
     /*
