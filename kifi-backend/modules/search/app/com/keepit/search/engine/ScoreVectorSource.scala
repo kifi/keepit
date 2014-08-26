@@ -21,12 +21,6 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-object ScoreVectorSource {
-  val PUBLISHED = LibraryFields.toNumericCode(LibraryVisibility.PUBLISHED)
-  val DISCOVERABLE = LibraryFields.toNumericCode(LibraryVisibility.DISCOVERABLE)
-  val SECRET = LibraryFields.toNumericCode(LibraryVisibility.SECRET)
-}
-
 trait ScoreVectorSource {
   def createWeights(query: Query): IndexedSeq[(Weight, Float)]
   def execute(weights: IndexedSeq[(Weight, Float)], dataBuffer: DataBuffer): Unit
@@ -107,7 +101,7 @@ trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
   protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])]
   protected val monitoredAwait: MonitoredAwait
 
-  private[this] val published = ScoreVectorSource.PUBLISHED
+  private[this] val published = LibraryFields.Visibility.PUBLISHED
 
   private[this] lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
 

@@ -86,6 +86,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
   def makeUriRecommendationWithUpdateTimestamp(uriId: Int, userIdInt: Int, masterScore: Float, updatedAt: DateTime) = {
     val userId = Id[User](userIdInt)
     UriRecommendation(
+      createdAt = updatedAt,
       updatedAt = updatedAt,
       uriId = Id[NormalizedURI](uriId),
       userId = userId,
