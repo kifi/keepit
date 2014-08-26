@@ -7,7 +7,9 @@ angular.module('kifi')
   function ($http, env, $q, $timeout, routeService, Clutch) {
     var recos = [];
 
-    function formatTitleFromUrl(url) {  // exact copy of what is in Keep constructor. Need to DRY.
+    // Exact copy of what is in Keep constructor. Need to DRY.
+    // TODO: move this into util.
+    function formatTitleFromUrl(url) {
       var aUrlParser = document.createElement('a');
       var secLevDomainRe = /[^.\/]+(?:\.[^.\/]{1,3})?\.[^.\/]+$/;
       var fileNameRe = /[^\/]+?(?=(?:\.[a-zA-Z0-9]{1,6}|\/|)$)/;
@@ -133,7 +135,7 @@ angular.module('kifi')
     }
 
     var clutchParams = {
-      cacheDuration: 2  // Not using the cache so we can see the loading :) 20000
+      cacheDuration: 2000
     };
 
     function populateRecos(res, type) {

@@ -489,7 +489,8 @@ angular.module('kifi')
   }
 ])
 
-// This directive is for recos only right now.
+// This directive is for recos only right now, and copies a lot of code from kfKeep (above).
+// TODO: consolidate/modularize the two directives so we are DRY.
 .directive('kfKeepContent', ['$document', '$rootScope', 'keepService', 'recoService',
   function ($document, $rootScope, keepService, recoService) {
     return {
