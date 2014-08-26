@@ -47,8 +47,7 @@ class ScoreContext(
     val thisVisibility = reader.recordType
     visibility = visibility | thisVisibility
 
-    if ((thisVisibility & Visibility.SEARCHABLE_KEEP) != 0) {
-      // a searchable keep has a library id as a secondary id
+    if ((thisVisibility & Visibility.HAS_SECONDARY_ID) != 0) {
       val id2 = reader.nextLong()
       var scr2 = 0.0f // use a simple sum of scores to compare secondary ids
 

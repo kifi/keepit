@@ -59,6 +59,8 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         abook.addFriendRecommendationsExpectations(user2.id.get, friendIds)
 
         shoebox.saveUsers(friends: _*)
+        shoebox.saveUserImageUrl(44, "//url.com/u44.jpg")
+        shoebox.saveUserImageUrl(48, "//url.com/u48.jpg")
 
         val savedRecoModels = db.readWrite { implicit rw =>
           Seq(
@@ -140,6 +142,8 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail43body must not contain "lycos.com"
         mail43body must not contain "excite.com"
         mail43body must contain("5 others kept this")
+        mail43body must contain("https://url.com/u44.jpg")
+        mail43body must contain("https://url.com/u48.jpg")
 
         val notSentIds = Set(5L)
         savedRecoModels.forall { models =>

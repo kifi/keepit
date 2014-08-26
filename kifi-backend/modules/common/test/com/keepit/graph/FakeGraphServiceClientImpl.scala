@@ -42,6 +42,7 @@ class FakeGraphServiceClientImpl(
 
   def getUserFriendships(userId: Id[User], bePatient: Boolean): Future[Seq[(Id[User], Double)]] = Future.successful(Seq.empty)
   def refreshSociallyRelatedEntities(userId: Id[User]): Future[Unit] = Future.successful(())
+  def getSociallyRelatedEntities(userId: Id[User], bePatient: Boolean): Future[Option[SociallyRelatedEntities]] = Future.successful(None)
   def getSociallyRelatedUsers(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, User]]] = Future.successful(None)
   def getSociallyRelatedFacebookAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]] = Future.successful(None)
   def getSociallyRelatedLinkedInAccounts(userId: Id[User], bePatient: Boolean): Future[Option[RelatedEntities[User, SocialUserInfo]]] = Future.successful(None)

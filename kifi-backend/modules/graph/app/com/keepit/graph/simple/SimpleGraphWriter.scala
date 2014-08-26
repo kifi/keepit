@@ -41,8 +41,17 @@ class SimpleGraphWriter(
     val vertexId = VertexId(vertex)
     Vertex.checkIfVertexExists(bufferedVertices)(vertexId)
     val bufferedVertex = getBufferedVertex(vertexId).get
-    bufferedVertex.outgoingEdges.edges.valuesIterator.flatten.foreach { case (destinationVertexId, edgeData) => removeEdge(vertexId, destinationVertexId, edgeData.kind) }
-    bufferedVertex.incomingEdges.edges.foreach { case ((_, _, edgeKind), sourceVertexIds) => sourceVertexIds.foreach { sourceVertexId => removeEdge(sourceVertexId, vertexId, edgeKind) } }
+
+    val outgoingEdgesToBeRemoved = bufferedVertex.outgoingEdges.edges.valuesIterator.flatten.map {
+      case (destinationVertexId, edgeData) => (destinationVertexId, edgeData.kind)
+    }.toSeq
+    outgoingEdgesToBeRemoved.foreach { case (destinationVertexId, edgeKind) => removeEdge(vertexId, destinationVertexId, edgeKind) }
+
+    val incomingEdgesToBeRemoved = bufferedVertex.incomingEdges.edges.flatMap {
+      case ((_, _, edgeKind), sourceVertexIds) =>
+        sourceVertexIds.map { case sourceVertexId => (sourceVertexId, edgeKind) }
+    }.toSeq
+    incomingEdgesToBeRemoved.foreach { case (sourceVertexId, edgeKind) => removeEdge(sourceVertexId, vertexId, edgeKind) }
 
     bufferedVertices -= vertexId
     vertexDeltas(vertexKind).decrementAndGet()
@@ -60,9 +69,10 @@ class SimpleGraphWriter(
     if (isNewEdge) {
       val bufferedDestinationVertex = getBufferedVertex(destinationVertexId).get
       bufferedDestinationVertex.addIncomingEdge(sourceVertexId, data.kind)
-      val component = (sourceKind, destinationKind, data.kind)
+      val component = Component(sourceKind, destinationKind, data.kind)
       edgeDeltas(component).incrementAndGet()
     }
+    Vertex.checkIfEdgeExists(bufferedVertices)(sourceVertexId, destinationVertexId, data.kind)
     isNewEdge
   }
 
