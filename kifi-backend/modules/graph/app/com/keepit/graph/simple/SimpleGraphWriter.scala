@@ -96,15 +96,6 @@ class SimpleGraphWriter(
   }
 
   def commit(): Unit = {
-    try { bufferedVertices.updated.foreach { case (vertexId, updatedVertex) => SimpleGraph.checkVertexIntegrity(bufferedVertices, vertexId, updatedVertex) } }
-    catch {
-      case ex: Throwable =>
-        log.error("Commit would leave the graph in a corrupt state.")
-        log.error(ex.toString)
-        log.error(s"Updated vertices: ${bufferedVertices.updated.keys.toSeq.mkString(", ")}")
-        log.error(s"Removed vertices: ${bufferedVertices.removed.toSeq.mkString(", ")}")
-        throw new IllegalStateException("Commit would leave the graph in a corrupt state.", ex)
-    }
     val commitStatistics = GraphStatistics.filter(vertexDeltas, edgeDeltas)
     bufferedVertices.flush()
     vertexDeltas.foreach { case (vertexKind, counter) => vertexStatistics(vertexKind).addAndGet(counter.getAndSet(0)) }
