@@ -21,16 +21,14 @@ import com.keepit.search.tracker.ResultClickBoosts
 
 class KifiSearch(
     userId: Id[User],
-    lang1: Lang,
-    lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,
-    engine: QueryEngine,
+    engineBuilder: QueryEngineBuilder,
     articleSearcher: Searcher,
     keepSearcher: Searcher,
     friendIdsFuture: Future[Set[Long]],
-    libraryIdsFuture: Future[(Set[Long], Set[Long])],
+    libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
     clickBoostsFuture: Future[ResultClickBoosts],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     monitoredAwait: MonitoredAwait,
@@ -44,7 +42,6 @@ class KifiSearch(
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
   private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-  private[this] val similarity = Similarity(config.asString("similarity"))
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
@@ -53,12 +50,12 @@ class KifiSearch(
 
   def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (HitQueue, HitQueue, HitQueue) = {
 
-    keepSearcher.setSimilarity(similarity)
-    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter.idFilter, config, monitoredAwait)
+    val engine = engineBuilder.build()
+
+    val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
     engine.execute(keepScoreSource)
 
-    articleSearcher.setSimilarity(similarity)
-    val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter.idFilter)
+    val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
     engine.execute(articleScoreSource)
 
     val tClickBoosts = currentDateTime.getMillis()

@@ -13,7 +13,7 @@ class ScoreContext(
 
   private[engine] var visibility: Int = 0
   private[engine] var secondaryId: Long = -1 // secondary id (library id for kifi search)
-  private[this] var secondaryId2Score: Float = -1.0f
+  private[this] var secondaryIdScore: Float = -1.0f
 
   private[engine] val scoreMax = new Array[Float](scoreArraySize)
   private[engine] val scoreSum = new Array[Float](scoreArraySize)
@@ -37,7 +37,7 @@ class ScoreContext(
   def clear(): Unit = {
     visibility = Visibility.RESTRICTED
     secondaryId = -1L
-    secondaryId2Score = -1.0f
+    secondaryIdScore = -1.0f
     Arrays.fill(scoreMax, 0.0f)
     Arrays.fill(scoreSum, 0.0f)
   }
@@ -47,8 +47,7 @@ class ScoreContext(
     val thisVisibility = reader.recordType
     visibility = visibility | thisVisibility
 
-    if ((thisVisibility & Visibility.SEARCHABLE_KEEP) != 0) {
-      // a searchable keep has a library id as a secondary id
+    if ((thisVisibility & Visibility.HAS_SECONDARY_ID) != 0) {
       val id2 = reader.nextLong()
       var scr2 = 0.0f // use a simple sum of scores to compare secondary ids
 
@@ -61,9 +60,9 @@ class ScoreContext(
         scoreSum(idx) += scr
       }
 
-      if (scr2 > secondaryId2Score) {
+      if (scr2 > secondaryIdScore) {
         secondaryId = id2
-        secondaryId2Score = scr2
+        secondaryIdScore = scr2
       }
     } else {
       while (reader.hasMore) {

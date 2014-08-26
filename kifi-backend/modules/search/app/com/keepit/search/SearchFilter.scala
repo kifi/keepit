@@ -1,17 +1,14 @@
 package com.keepit.search
 
 import com.keepit.common.db.Id
-import com.keepit.common.time._
-import com.keepit.model.User
-import com.keepit.model.Collection
-import com.keepit.common.akka.MonitoredAwait
+import com.keepit.model.Library
 import com.keepit.search.util.{ LongArraySet, IdFilterCompressor }
-import scala.concurrent.duration._
-import scala.concurrent.Future
 
 abstract class SearchFilter(context: Option[String]) {
 
   lazy val idFilter: LongArraySet = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
+
+  val libraryId: Option[Id[Library]] = None
 
   def includeMine: Boolean
   def includeShared: Boolean
@@ -56,6 +53,18 @@ object SearchFilter {
       def includeShared = false
       def includeFriends = true
       def includeOthers = false
+    }
+  }
+
+  def library(libId: Id[Library], context: Option[String] = None) = {
+    new SearchFilter(context) {
+
+      override val libraryId: Option[Id[Library]] = Some(libId)
+
+      def includeMine = true
+      def includeShared = true
+      def includeFriends = true
+      def includeOthers = true
     }
   }
 }

@@ -28,9 +28,6 @@ class TextQuery extends Query with Logging {
 
   private var personalQuery: Query = new DisjunctionMaxQuery(personalQueryTieBreakerMultiplier)
   private var regularQuery: Query = new DisjunctionMaxQuery(regularQueryTieBreakerMultiplier)
-  private var semanticVectorQuery: Query = new DisjunctionMaxQuery(0.0f)
-
-  def getSemanticVectorQuery = semanticVectorQuery
 
   var terms: Array[Term] = Array()
   var stems: Array[Term] = Array()
@@ -74,43 +71,21 @@ class TextQuery extends Query with Logging {
     }
   }
 
-  private[this] var semanticBoost = 0.0f
-
-  def setSemanticBoost(boost: Float): Unit = { semanticBoost = boost }
-
-  def getSemanticBoost(): Float = semanticBoost
-
-  def addSemanticVectorQuery(field: String, text: String): Unit = {
-    val query = SemanticVectorQuery(new Term(field, text))
-    semanticVectorQuery = semanticVectorQuery match {
-      case disjunct: DisjunctionMaxQuery =>
-        totalSubQueryCnt += 1
-        disjunct.add(query)
-        disjunct
-      case _ =>
-        log.error("TextQuery: DisjunctionMaxQuery match failed")
-        throw new Exception("Failed to add semanticVectorQuery")
-    }
-  }
-
   override def createWeight(searcher: IndexSearcher): Weight = {
     new TextWeight(
       this,
       personalQuery.createWeight(searcher),
-      regularQuery.createWeight(searcher),
-      if (semanticBoost > 0.0f) semanticVectorQuery.createWeight(searcher) else null)
+      regularQuery.createWeight(searcher))
   }
 
   override def rewrite(reader: IndexReader): Query = {
     val rewrittenPersonalQuery = personalQuery.rewrite(reader)
     val rewrittenRegularQuery = regularQuery.rewrite(reader)
-    val rewrittenSemanticVectorQuery = semanticVectorQuery.rewrite(reader)
-    if ((personalQuery eq rewrittenPersonalQuery) && (regularQuery eq rewrittenRegularQuery) && (semanticVectorQuery eq rewrittenSemanticVectorQuery)) this
+    if ((personalQuery eq rewrittenPersonalQuery) && (regularQuery eq rewrittenRegularQuery)) this
     else {
       val rewritten = this.clone().asInstanceOf[TextQuery]
       rewritten.personalQuery = rewrittenPersonalQuery
       rewritten.regularQuery = rewrittenRegularQuery
-      rewritten.semanticVectorQuery = rewrittenSemanticVectorQuery
       rewritten
     }
   }
@@ -118,11 +93,10 @@ class TextQuery extends Query with Logging {
   override def extractTerms(out: JSet[Term]): Unit = {
     personalQuery.extractTerms(out)
     regularQuery.extractTerms(out)
-    semanticVectorQuery.extractTerms(out)
   }
 
   override def toString(s: String) = {
-    s"TextQuery(${personalQuery.toString(s)} ${regularQuery.toString(s)} ${semanticVectorQuery.toString(s)})"
+    s"TextQuery(${personalQuery.toString(s)} ${regularQuery.toString(s)})"
   }
 
   override def equals(obj: Any): Boolean = obj match {
@@ -138,15 +112,12 @@ class TextQuery extends Query with Logging {
 class TextWeight(
     query: TextQuery,
     personalWeight: Weight,
-    regularWeight: Weight,
-    semanticWeight: Weight) extends Weight with Logging {
+    regularWeight: Weight) extends Weight with Logging {
 
   override def getQuery() = query
   override def scoresDocsOutOfOrder() = false
 
   override def getValueForNormalization(): Float = {
-    if (semanticWeight != null) semanticWeight.getValueForNormalization() // for side effect
-
     val psub = if (personalWeight != null) personalWeight.getValueForNormalization() else 1.0f
     val rsub = if (regularWeight != null) regularWeight.getValueForNormalization() else 1.0f
     val maxVal = max(psub, rsub)
@@ -156,8 +127,6 @@ class TextWeight(
   }
 
   override def normalize(norm: Float, topLevelBoost: Float): Unit = {
-    if (semanticWeight != null) semanticWeight.normalize(1.0f, 1.0f) // for side effect
-
     val boost = query.getBoost
     if (personalWeight != null) personalWeight.normalize(norm, topLevelBoost * boost)
     if (regularWeight != null) regularWeight.normalize(norm, topLevelBoost * boost)
@@ -181,10 +150,6 @@ class TextWeight(
         val exp = regularWeight.explain(context, doc)
         if (exp.getValue() > 0.0f) result.addDetail(regularWeight.explain(context, doc))
       }
-      if (semanticWeight != null) {
-        val exp = semanticWeight.explain(context, doc)
-        if (exp.getValue() > 0.0f) result.addDetail(semanticWeight.explain(context, doc))
-      }
     } else {
       result.setDescription("TextQuery, doesn't match id %d".format(doc))
       result.setValue(0.0f)
@@ -196,31 +161,20 @@ class TextWeight(
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
     val personalScorer = if (personalWeight != null) personalWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs) else null
     val regularScorer = if (regularWeight != null) regularWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs) else null
-    val semanticScorer = if (semanticWeight != null) semanticWeight.scorer(context, scoreDocsInOrder, topScorer, acceptDocs) else null
 
     if (personalScorer == null && regularScorer == null) null
     else {
-      val adjustedSemanticBoost = {
-        val n = if (semanticScorer != null) {
-          semanticScorer.getChildren().map(scorer => scorer.child.asInstanceOf[SemanticVectorScorer].getNumPayloadsUsed).foldLeft(0)(_ max _)
-        } else 0
-        val adjust = 1.0 / (1 + pow(1.5, 5 - n))
-        query.getSemanticBoost * adjust.toFloat
-      }
-
-      new TextScorer(this, personalScorer, regularScorer, semanticScorer, adjustedSemanticBoost)
+      new TextScorer(this, personalScorer, regularScorer)
     }
   }
 }
 
-class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scorer, semanticScorer: Scorer, semanticBoost: Float) extends Scorer(weight) {
+class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scorer) extends Scorer(weight) {
   private[this] var doc = -1
   private[this] var docP = if (personalScorer == null) NO_MORE_DOCS else -1
   private[this] var docR = if (regularScorer == null) NO_MORE_DOCS else -1
   private[this] var scoredDoc = -1
   private[this] var scoreVal = 0.0f
-
-  private[this] val semanticScoreBase = (1.0f - semanticBoost)
 
   override def docID(): Int = doc
 
@@ -241,30 +195,9 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
       scoredDoc = doc
       val scoreP = if (docP == doc) personalScorer.score() else 0.0f
       val scoreR = if (docR == doc) regularScorer.score() else 0.0f
-      val scoreMax = max(scoreP, scoreR)
-      val semScore = semanticScore()
-
-      scoreVal = scoreMax * semScore
+      scoreVal = max(scoreP, scoreR)
     }
     scoreVal
-  }
-
-  @inline private[this] def semanticScore(): Float = {
-    if (semanticScorer != null) {
-      if (semanticScorer.docID < doc) semanticScorer.advance(doc)
-
-      if (semanticScorer.docID == doc) {
-        semanticScorer.score() * semanticBoost + semanticScoreBase
-      } else {
-        if (docP == doc) {
-          0.9f * semanticBoost + semanticScoreBase
-        } else {
-          semanticScoreBase
-        }
-      }
-    } else {
-      1.0f
-    }
   }
 
   override def freq(): Int = 1
@@ -272,7 +205,6 @@ class TextScorer(weight: TextWeight, personalScorer: Scorer, regularScorer: Scor
   override def cost(): Long = {
     (if (personalScorer == null) 0L else personalScorer.cost)
     +(if (regularScorer == null) 0L else regularScorer.cost)
-    +(if (semanticScorer == null) 0L else semanticScorer.cost)
   }
 }
 

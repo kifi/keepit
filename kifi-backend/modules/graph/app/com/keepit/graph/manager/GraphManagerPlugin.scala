@@ -8,7 +8,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.{ Singleton, Inject }
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 
 sealed trait GraphManagerActorMessage
 object GraphManagerActorMessage {
@@ -42,13 +42,18 @@ class GraphManagerActor @Inject() (
     }
 
     case ProcessGraphUpdates(updates, kind, fetchSize) => {
-      if (updates.nonEmpty) {
-        graph.update(updates: _*)
-        log.info(s"${updates.length} ${kind}s were ingested.")
+      Try { if (updates.nonEmpty) { graph.update(updates: _*) } } match {
+        case Failure(ex) => {
+          log.error(s"Could not process graph updates: $ex")
+          airbrake.notify("Could not process graph updates", ex)
+          updating -= kind
+        }
+        case Success(_) => {
+          log.info(s"${updates.length} ${kind}s were ingested.")
+          if (updates.length < fetchSize) { updating -= kind }
+          else { fetch(kind, fetchSize) }
+        }
       }
-
-      if (updates.length < fetchSize) { updating -= kind }
-      else { fetch(kind, fetchSize) }
     }
 
     case CancelUpdate(kind) => updating -= kind
@@ -67,6 +72,6 @@ class GraphManagerPlugin @Inject() (
 
   override def onStart() {
     scheduleTaskOnAllMachines(actor.system, 2 minutes, 1 minutes, actor.ref, UpdateGraph(Map(), 100))
-    scheduleTaskOnAllMachines(actor.system, 30 minutes, 2 hours, actor.ref, BackupGraph)
+    scheduleTaskOnAllMachines(actor.system, 20 minutes, 2 hours, actor.ref, BackupGraph)
   }
 }
