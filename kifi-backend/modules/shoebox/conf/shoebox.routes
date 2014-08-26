@@ -319,6 +319,14 @@ GET     /site/*path                 @com.keepit.controllers.website.HomeControll
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
 
 ##########################################
+# Email-Link API
+##########################################
+
+GET     /e/1/recos/view             @com.keepit.controllers.email.EmailRecosController.viewReco(id: ExternalId[NormalizedURI])
+GET     /e/1/recos/keep              @com.keepit.controllers.email.EmailRecosController.addKeep(id: ExternalId[NormalizedURI])
+GET     /e/1/recos/send             @com.keepit.controllers.email.EmailRecosController.sendReco(id: ExternalId[NormalizedURI])
+
+##########################################
 # External Services API
 ##########################################
 POST    /api/sendgrid/webhook       @com.keepit.controllers.api.SendgridController.parseEvent()

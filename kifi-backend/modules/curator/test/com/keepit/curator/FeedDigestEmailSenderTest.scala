@@ -80,7 +80,9 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
             },
             makeCompleteUriRecommendation(3, 43, 0.3f, "http://www.42go.com"),
             makeCompleteUriRecommendation(4, 43, 0.4f, "http://www.yahoo.com"),
+            // this isn't in the recommendation list because image width is too small
             makeCompleteUriRecommendation(5, 43, 0.5f, "http://www.lycos.com", 250, Some(200)),
+            // this isn't in recommendation list b/c it has already been sent
             {
               val tuple = makeCompleteUriRecommendation(6, 42, 0.99f, "http://www.excite.com")
               tuple.copy(_2 = tuple._2.withLastPushedAt(currentDateTime))
@@ -114,9 +116,10 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail42body must contain(">www.kifi.com<")
         mail42body must contain(">Google<")
 
-        // check that urls are in the emails
-        mail42body must contain("https://www.kifi.com")
-        mail42body must contain("https://www.google.com")
+        // check that uri's for the recos are in the emails
+        mail42body must contain("/e/1/recos/keep?id=" + savedRecoModels(0)._1.externalId)
+        mail42body must contain("/e/1/recos/view?id=" + savedRecoModels(0)._1.externalId)
+        mail42body must contain("/e/1/recos/send?id=" + savedRecoModels(1)._1.externalId)
 
         // others-who-kept messages
         mail42body must contain("2 friends and 1 other kept this")
@@ -137,13 +140,19 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
 
         mail43.senderUserId.get must beEqualTo(Id[User](43))
         val mail43body = mail43.htmlBody.toString
-        mail43body must contain("42go.com")
-        mail43body must contain("yahoo.com")
+
         mail43body must not contain "lycos.com"
         mail43body must not contain "excite.com"
+        mail43body must not contain savedRecoModels(4)._1.externalId.toString
+        mail43body must not contain savedRecoModels(5)._1.externalId.toString
+
         mail43body must contain("5 others kept this")
         mail43body must contain("https://url.com/u44.jpg")
         mail43body must contain("https://url.com/u48.jpg")
+
+        // check that uri's for the recos are in the emails
+        mail43body must contain("/e/1/recos/keep?id=" + savedRecoModels(2)._1.externalId)
+        mail43body must contain("/e/1/recos/send?id=" + savedRecoModels(3)._1.externalId)
 
         val notSentIds = Set(5L)
         savedRecoModels.forall { models =>

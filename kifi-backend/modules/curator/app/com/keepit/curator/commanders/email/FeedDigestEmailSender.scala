@@ -12,7 +12,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ SystemEmailAddress, ElectronicMail }
 import com.keepit.curator.commanders.RecommendationGenerationCommander
 import com.keepit.curator.model.{ UriRecommendationRepo, UriRecommendation }
-import com.keepit.model.{ URISummary, NormalizedURI, User, UriRecommendationScores, NotificationCategory, ExperimentType }
+import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -63,7 +63,11 @@ sealed case class DigestReco(reco: UriRecommendation, uri: NormalizedURI, uriSum
     val minutesEstimate = wc / 250
     DigestEmail.READ_TIMES.find(minutesEstimate < _).map(_ + " min").getOrElse("> 1 h")
   }
-  val urls = DigestRecoUrls(recoUrl = url)
+
+  // todo(josh) encode urls?? add more analytics information
+  val viewPageUrl = s"https://www.kifi.com/e/1/recos/view?id=${uri.externalId}"
+  val sendPageUrl = s"https://www.kifi.com/e/1/recos/send?id=${uri.externalId}"
+  val keepAndSeeMoreUrl = s"https://www.kifi.com/e/1/recos/keep?id=${uri.externalId}"
 }
 
 sealed case class KeeperUser(userId: Id[User], avatarUrl: String, basicUser: BasicUser) {
@@ -92,12 +96,6 @@ sealed case class DigestRecoKeepers(friends: Seq[Id[User]] = Seq.empty, others: 
 }
 
 sealed case class DigestRecoMail(userId: Id[User], mailSent: Boolean, feed: Seq[DigestReco])
-
-sealed case class DigestRecoUrls(recoUrl: String) {
-  val viewPage = recoUrl
-  val sendPage = recoUrl
-  val keepAndSeeMore = recoUrl
-}
 
 @ImplementedBy(classOf[FeedDigestEmailSenderImpl])
 trait FeedDigestEmailSender {
