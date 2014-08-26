@@ -1,7 +1,23 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ UriRecommendationStates, ScoredSeedItemWithAttribution, RecoInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, UriRecommendationRepo, UriRecommendation, UriScores, PublicFeedRepo, PublicSeedItem, SeedItem, PublicUriScores, PublicFeed, PublicScoredSeedItem }
-import com.keepit.common.db.{ State, SequenceNumber, Id }
+import com.keepit.curator.model.{
+  UriRecommendationStates,
+  ScoredSeedItemWithAttribution,
+  RecoInfo,
+  UserRecommendationGenerationStateRepo,
+  UserRecommendationGenerationState,
+  Keepers,
+  UriRecommendationRepo,
+  UriRecommendation,
+  UriScores,
+  PublicFeedRepo,
+  PublicSeedItem,
+  SeedItem,
+  PublicUriScores,
+  PublicFeed,
+  PublicScoredSeedItem
+}
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model.{ User, ExperimentType, UriRecommendationScores, SystemValueRepo, Name }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ReactiveLock
@@ -201,7 +217,7 @@ class RecommendationGenerationCommander @Inject() (
             }
           }
 
-          val weightedItems = uriWeightingHelper(cleanedItems)
+          val weightedItems = uriWeightingHelper(cleanedItems).filter(_.multiplier != 0.0f)
           val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(weightedItems, boostedKeepers).map { scoredItems =>
             scoredItems.filter(si => shouldInclude(si.uriScores))
           }.flatMap { scoredItems =>
@@ -263,8 +279,7 @@ class RecommendationGenerationCommander @Inject() (
               case _ => false
             }
           }
-          val weightedItems = publicUriWeightingHelper(cleanedItems)
-
+          val weightedItems = publicUriWeightingHelper(cleanedItems).filter(_.multiplier != 0.0f)
           publicScoringHelper(weightedItems, boostedKeepers).map { items =>
             savePublicScoredSeedItems(items, newSeqNum)
             precomputePublicFeeds()

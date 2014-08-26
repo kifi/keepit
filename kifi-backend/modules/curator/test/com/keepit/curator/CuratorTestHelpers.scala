@@ -115,6 +115,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         popularityScore = 1.0f,
         recencyScore = 1.0f,
         rekeepScore = 1.0f,
+        curationScore = Some(1.0f),
         multiplier = Some(1.0f),
         discoveryScore = 1.0f))
   }
