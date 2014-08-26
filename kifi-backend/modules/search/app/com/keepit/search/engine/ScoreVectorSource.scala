@@ -8,7 +8,7 @@ import com.keepit.search.article.ArticleVisibility
 import com.keepit.search.engine.query.KWeight
 import com.keepit.search.graph.keep.KeepFields
 import com.keepit.search.index.WrappedSubReader
-import com.keepit.search.query.RecencyQuery
+import com.keepit.search.query.{ RecencyScorer, RecencyQuery }
 import com.keepit.search.util.LongArraySet
 import com.keepit.search.util.join.{ DataBuffer, DataBufferWriter }
 import org.apache.lucene.index.{ NumericDocValues, Term, AtomicReaderContext }
@@ -20,12 +20,6 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 import scala.concurrent.duration._
-
-object ScoreVectorSource {
-  val PUBLISHED = LibraryFields.toNumericCode(LibraryVisibility.PUBLISHED)
-  val DISCOVERABLE = LibraryFields.toNumericCode(LibraryVisibility.DISCOVERABLE)
-  val SECRET = LibraryFields.toNumericCode(LibraryVisibility.SECRET)
-}
 
 trait ScoreVectorSource {
   def createWeights(query: Query): IndexedSeq[(Weight, Float)]
@@ -71,6 +65,93 @@ trait ScoreVectorSourceLike extends ScoreVectorSource {
       i += 1
     }
     pq
+  }
+}
+
+trait KeepRecencyEvaluator { self: ScoreVectorSourceLike =>
+
+  protected val config: SearchConfig
+
+  private[this] lazy val recencyQuery = {
+    val recencyBoostStrength = config.asFloat("recencyBoost")
+    val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
+    new RecencyQuery(new MatchAllDocsQuery(), KeepFields.createdAtField, recencyBoostStrength, halfDecayMillis)
+  }
+
+  private[this] lazy val recencyWeight: Weight = searcher.createWeight(recencyQuery)
+
+  protected def getRecencyScorer(readerContext: AtomicReaderContext): RecencyScorer = {
+    // use MatchAllBits to avoid delete check. this is safe because RecencyScorer is used passively.
+    recencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc())).asInstanceOf[RecencyScorer]
+  }
+
+  @inline
+  protected def getRecencyBoost(recencyScorer: RecencyScorer, docId: Int) = {
+    if (recencyScorer.docID() < docId) {
+      if (recencyScorer.advance(docId) == docId) recencyScorer.score() else 1.0f
+    } else {
+      if (recencyScorer.docID() == docId) recencyScorer.score() else 1.0f
+    }
+  }
+}
+
+trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
+  protected val userId: Long
+  protected val friendIdsFuture: Future[Set[Long]]
+  protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])]
+  protected val monitoredAwait: MonitoredAwait
+
+  private[this] val published = LibraryFields.Visibility.PUBLISHED
+
+  private[this] lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
+
+  private[this] lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds) = {
+    val (myLibIds, memberLibIds, trustedLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting library ids")
+    (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds))
+  }
+
+  @inline
+  protected def getKeepVisibility(docId: Int, libId: Long, userIdDocValues: NumericDocValues, visibilityDocValues: NumericDocValues): Int = {
+    if (memberLibraryIds.findIndex(libId) >= 0) {
+      if (myOwnLibraryIds.findIndex(libId) >= 0) {
+        Visibility.OWNER // the keep is in my library (I may or may not have kept it)
+      } else {
+        if (userIdDocValues.get(docId) == userId) {
+          Visibility.OWNER // the keep in a library I am a member of, and I kept it
+        } else {
+          Visibility.MEMBER // the keep is in a library I am a member of
+        }
+      }
+    } else {
+      if (visibilityDocValues.get(docId) == published) {
+        if (myFriendIds.findIndex(userIdDocValues.get(docId)) >= 0) {
+          Visibility.NETWORK // the keep is in a published library, and my friend kept it
+        } else if (trustedLibraryIds.findIndex(libId) >= 0) {
+          Visibility.OTHERS // the keep is in a published library, and it is in a trusted library
+        } else {
+          Visibility.RESTRICTED
+        }
+      } else {
+        Visibility.RESTRICTED
+      }
+    }
+  }
+
+  @inline
+  protected def getLibraryVisibility(docId: Int, libId: Long, visibilityDocValues: NumericDocValues): Int = {
+    if (memberLibraryIds.findIndex(libId) >= 0) {
+      if (myOwnLibraryIds.findIndex(libId) >= 0) {
+        Visibility.OWNER // my own library
+      } else {
+        Visibility.MEMBER // a library I am a member of
+      }
+    } else {
+      if (visibilityDocValues.get(docId) == published) {
+        Visibility.OTHERS // a published library
+      } else {
+        Visibility.RESTRICTED
+      }
+    }
   }
 }
 
@@ -154,25 +235,12 @@ class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter:
 
 class UriFromKeepsScoreVectorSource(
     protected val searcher: Searcher,
-    userId: Long,
-    friendIdsFuture: Future[Set[Long]],
-    libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
+    protected val userId: Long,
+    protected val friendIdsFuture: Future[Set[Long]],
+    protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
     filter: SearchFilter,
-    config: SearchConfig,
-    monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike {
-
-  private[this] val recencyQuery = {
-    val recencyBoostStrength = config.asFloat("recencyBoost")
-    val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
-    new RecencyQuery(new MatchAllDocsQuery(), KeepFields.createdAtField, recencyBoostStrength, halfDecayMillis)
-  }
-
-  private[this] lazy val recencyWeight: Weight = searcher.createWeight(recencyQuery)
-
-  private def getRecencyScorer(readerContext: AtomicReaderContext): Scorer = {
-    // use MatchAllBits to avoid delete check. this is safe because RecencyScorer is used passively.
-    recencyWeight.scorer(readerContext, true, false, new MatchAllBits(readerContext.reader.maxDoc()))
-  }
+    protected val config: SearchConfig,
+    protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
 
   private[this] lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
 
@@ -188,7 +256,6 @@ class UriFromKeepsScoreVectorSource(
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
 
-    val published = ScoreVectorSource.PUBLISHED
     val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
     val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
     val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
@@ -210,40 +277,10 @@ class UriFromKeepsScoreVectorSource(
       val libId = libraryIdDocValues.get(docId)
 
       if (idFilter.findIndex(uriId) < 0) {
-        val visibility =
-          if (memberLibraryIds.findIndex(libId) >= 0) {
-            if (myOwnLibraryIds.findIndex(libId) >= 0) {
-              Visibility.OWNER // the keep is in my library (I may or may not have kept it)
-            } else {
-              if (userIdDocValues.get(docId) == userId) {
-                Visibility.OWNER // the keep in a library I am a member of, and I kept it
-              } else {
-                Visibility.MEMBER // the keep is in a library I am a member of
-              }
-            }
-          } else {
-            if (visibilityDocValues.get(docId) == published) {
-              if (myFriendIds.findIndex(userIdDocValues.get(docId)) >= 0) {
-                Visibility.NETWORK // the keep is in a published library, and my friend kept it
-              } else if (trustedLibraryIds.contains(docId)) {
-                Visibility.OTHERS // the keep is in a published library, and it is in a trusted library
-              } else {
-                Visibility.RESTRICTED
-              }
-            } else {
-              Visibility.RESTRICTED
-            }
-          }
+        val visibility = getKeepVisibility(docId, libId, userIdDocValues, visibilityDocValues)
 
         if (visibility != Visibility.RESTRICTED) {
-          // recency boost
-          val boost = {
-            if (recencyScorer.docID() < docId) {
-              if (recencyScorer.advance(docId) == docId) recencyScorer.score() else 1.0f
-            } else {
-              if (recencyScorer.docID() == docId) recencyScorer.score() else 1.0f
-            }
-          }
+          val boost = getRecencyBoost(recencyScorer, docId)
 
           // get all scores
           val size = pq.getTaggedScores(taggedScores, boost)
@@ -303,7 +340,21 @@ class UriFromKeepsScoreVectorSource(
 //  query Library index and Keep index and aggregate the hits by Library Id
 //
 
-class LibraryScoreVectorSource(protected val searcher: Searcher, libraryIds: LongArraySet, filter: SearchFilter) extends ScoreVectorSourceLike {
+class LibraryScoreVectorSource(
+    protected val searcher: Searcher,
+    protected val userId: Long,
+    protected val friendIdsFuture: Future[Set[Long]],
+    protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
+    filter: SearchFilter,
+    protected val config: SearchConfig,
+    protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with VisibilityEvaluator {
+
+  private[this] lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
+
+  private[this] lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds) = {
+    val (myLibIds, memberLibIds, trustedLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting library ids")
+    (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds))
+  }
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
@@ -312,7 +363,6 @@ class LibraryScoreVectorSource(protected val searcher: Searcher, libraryIds: Lon
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
 
-    val published = ScoreVectorSource.PUBLISHED
     val visibilityDocValues = reader.getNumericDocValues(LibraryFields.visibilityField)
 
     val idMapper = reader.getIdMapper
@@ -325,10 +375,7 @@ class LibraryScoreVectorSource(protected val searcher: Searcher, libraryIds: Lon
       val libId = idMapper.getId(docId)
 
       if (idFilter.findIndex(libId) < 0) { // use findIndex to avoid boxing
-        val visibility =
-          if (libraryIds.findIndex(libId) >= 0) Visibility.MEMBER else {
-            if (visibilityDocValues.get(docId) == published) Visibility.OTHERS else Visibility.RESTRICTED
-          }
+        val visibility = getLibraryVisibility(docId, libId, visibilityDocValues)
 
         if (visibility != Visibility.RESTRICTED) {
           // get all scores
@@ -348,7 +395,21 @@ class LibraryScoreVectorSource(protected val searcher: Searcher, libraryIds: Lon
   }
 }
 
-class LibraryFromKeepsScoreVectorSource(protected val searcher: Searcher, filter: SearchFilter) extends ScoreVectorSourceLike {
+class LibraryFromKeepsScoreVectorSource(
+    protected val searcher: Searcher,
+    protected val userId: Long,
+    protected val friendIdsFuture: Future[Set[Long]],
+    protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
+    filter: SearchFilter,
+    protected val config: SearchConfig,
+    protected val monitoredAwait: MonitoredAwait) extends ScoreVectorSourceLike with KeepRecencyEvaluator with VisibilityEvaluator {
+
+  private[this] lazy val myFriendIds = LongArraySet.fromSet(monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friend ids"))
+
+  private[this] lazy val (myOwnLibraryIds, memberLibraryIds, trustedLibraryIds) = {
+    val (myLibIds, memberLibIds, trustedLibIds) = monitoredAwait.result(libraryIdsFuture, 5 seconds, s"getting library ids")
+    (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds))
+  }
 
   protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], output: DataBuffer): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
@@ -358,6 +419,9 @@ class LibraryFromKeepsScoreVectorSource(protected val searcher: Searcher, filter
     if (pq.size <= 0) return // no scorer
 
     val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
+    val visibilityDocValues = reader.getNumericDocValues(KeepFields.visibilityField)
+
+    val recencyScorer = getRecencyScorer(readerContext)
 
     val writer: DataBufferWriter = new DataBufferWriter
 
@@ -368,14 +432,21 @@ class LibraryFromKeepsScoreVectorSource(protected val searcher: Searcher, filter
       val libId = libraryIdDocValues.get(docId)
 
       if (idFilter.findIndex(libId) < 0) { // use findIndex to avoid boxing
-        // get all scores
-        val size = pq.getTaggedScores(taggedScores)
+        val visibility = getLibraryVisibility(docId, libId, visibilityDocValues)
 
-        // write to the buffer
-        // the visibility is restricted since we don't know it for sure
-        output.alloc(writer, Visibility.RESTRICTED, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
-        writer.putLong(libId).putTaggedFloatBits(taggedScores, size)
-        docId = pq.top.doc // next doc
+        if (visibility != Visibility.RESTRICTED) {
+          val boost = getRecencyBoost(recencyScorer, docId)
+
+          // get all scores
+          val size = pq.getTaggedScores(taggedScores, boost)
+          docId = pq.top.doc // next doc
+
+          // write to the buffer
+          output.alloc(writer, visibility, 8 + size * 4) // id (8 bytes) and taggedFloats (size * 4 bytes)
+          writer.putLong(libId).putTaggedFloatBits(taggedScores, size)
+        } else {
+          docId = pq.skipCurrentDoc() // skip this doc
+        }
       } else {
         docId = pq.skipCurrentDoc() // skip this doc
       }

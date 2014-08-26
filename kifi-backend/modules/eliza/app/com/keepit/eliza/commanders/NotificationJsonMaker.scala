@@ -94,13 +94,14 @@ private[commanders] class NotificationJsonMaker @Inject() (
   }
 
   private def uriSummary(value: JsValue, uriIdOpt: Option[Id[NormalizedURI]]): Option[URISummary] = {
-    value.asOpt[String].map { url =>
-      uriIdOpt.map { uriId =>
-        val result = summaryCache.get(InboxUriSummaryCacheKey(uriId))
-        if (result.isEmpty) new SafeFuture(fetchAndCacheUriSummary(uriId, url), Some("Fetching URI summary for extension inbox"))
-        result
-      }.flatten
-    }.flatten
+    value.asOpt[String].flatMap { url =>
+      uriIdOpt.flatMap { uriId =>
+        val resultFut = summaryCache.getOrElseFuture(InboxUriSummaryCacheKey(uriId)) {
+          new SafeFuture(fetchUriSummary(uriId, url), Some("Fetching URI summary for extension inbox"))
+        }
+        resultFut.value.flatMap(_.toOption)
+      }
+    }
   }
 
   private def updateBasicUser(basicUser: BasicUser): Future[BasicUser] = {
@@ -112,7 +113,7 @@ private[commanders] class NotificationJsonMaker @Inject() (
     }
   }
 
-  private def fetchAndCacheUriSummary(uriId: Id[NormalizedURI], url: String): Future[URISummary] = uriSummaryRequestLimiter.withLockFuture {
+  private def fetchUriSummary(uriId: Id[NormalizedURI], url: String): Future[URISummary] = uriSummaryRequestLimiter.withLockFuture {
     shoebox.getUriSummary(
       URISummaryRequest(
         url = url,
@@ -122,10 +123,7 @@ private[commanders] class NotificationJsonMaker @Inject() (
         waiting = true,
         silent = false
       )
-    ).map { uriSummary =>
-        summaryCache.set(InboxUriSummaryCacheKey(uriId), uriSummary)
-        uriSummary
-      }
+    )
   }
 
 }

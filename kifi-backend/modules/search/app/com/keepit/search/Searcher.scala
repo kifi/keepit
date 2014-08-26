@@ -51,19 +51,10 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     buf
   }
 
-  def count(term: Term): Int = {
-    var count = 0
-    foreachReader { reader =>
-      var cnt = 0
-      val td = reader.termDocsEnum(term)
-      var doc = td.nextDoc()
-      while (doc != NO_MORE_DOCS) {
-        cnt += 1
-        doc = td.nextDoc()
-      }
-      count += cnt
-    }
-    count
+  def freq(term: Term): Int = {
+    var freq = 0
+    foreachReader { reader => freq += reader.docFreq(term) }
+    freq
   }
 
   def has(term: Term): Boolean = {
