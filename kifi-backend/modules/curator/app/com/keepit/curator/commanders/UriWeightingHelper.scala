@@ -70,7 +70,6 @@ class PublicUriWeightingHelper() {
     val masterWeight = UrlPatterns.scoringMultiplier.foldLeft(1.0f) { (weight, pattern) =>
       if (pattern.regex.findFirstIn(item.url).isDefined) weight * pattern.weight else weight
     }
-
     PublicSeedItemWithMultiplier(
       multiplier = masterWeight,
       uriId = item.uriId,

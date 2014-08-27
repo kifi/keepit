@@ -4,7 +4,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.commanders.{ RecommendationCleanupCommander }
+import com.keepit.curator.commanders.RecommendationCleanupCommander
 import com.keepit.curator.model.{ UriRecommendationRepo, UriRecommendation }
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
