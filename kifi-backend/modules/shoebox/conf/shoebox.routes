@@ -263,7 +263,7 @@ POST    /site/libraries/move        @com.keepit.controllers.website.LibraryContr
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
 GET     /site/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
-POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback()
+POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
