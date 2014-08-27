@@ -61,7 +61,7 @@ class RecommendationGenerationCommander @Inject() (
   private def specialCurators(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.SPECIAL_CURATOR).map(users => users.map(_.id.get).toSeq)
 
   private def computeMasterScore(scores: UriScores): Float = {
-    (5 * scores.socialScore +
+    (4 * scores.socialScore +
       6 * scores.overallInterestScore +
       2 * scores.priorScore +
       1 * scores.recencyScore +
@@ -77,7 +77,8 @@ class RecommendationGenerationCommander @Inject() (
     (1 * scores.recencyScore +
       1 * scores.popularityScore +
       6 * scores.rekeepScore +
-      3 * scores.discoveryScore) *
+      5 * scores.discoveryScore +
+      5 * scores.curationScore.getOrElse(0.0f)) *
       scores.multiplier.getOrElse(1.0f)
   }
 

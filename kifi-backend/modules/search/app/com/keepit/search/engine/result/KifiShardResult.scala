@@ -49,6 +49,8 @@ class KifiShardHit(val json: JsObject) extends AnyVal {
   def score: Float = (json \ "score").as[Float]
   def visibility: Int = (json \ "visibility").as[Int]
   def libraryId: Option[Long] = (json \ "libId").asOpt[Long]
+  def title: String = (json \ "title").as[String]
+  def url: String = (json \ "url").as[String]
 
   def set(key: String, value: JsValue): KifiShardHit = {
     new KifiShardHit((json - key) + (key -> value))
@@ -56,16 +58,18 @@ class KifiShardHit(val json: JsObject) extends AnyVal {
 }
 
 object KifiShardHit extends Logging {
-  def apply(id: Long, score: Float, visibility: Int, libraryId: Option[Long]): KifiShardHit = {
-    apply(id, score, visibility, libraryId.getOrElse(-1L))
+  def apply(id: Long, score: Float, visibility: Int, libraryId: Option[Long], title: String, url: String): KifiShardHit = {
+    apply(id, score, visibility, libraryId.getOrElse(-1L), title, url)
   }
 
-  def apply(id: Long, score: Float, visibility: Int, libraryId: Long): KifiShardHit = {
+  def apply(id: Long, score: Float, visibility: Int, libraryId: Long, title: String, url: String): KifiShardHit = {
     try {
       var json = JsObject(List(
         "id" -> JsNumber(id),
         "score" -> JsNumber(score.toDouble),
-        "visibility" -> JsNumber(visibility)
+        "visibility" -> JsNumber(visibility),
+        "title" -> JsString(title),
+        "url" -> JsString(url)
       ))
 
       if (libraryId >= 0) { json = json + ("libId" -> JsNumber(libraryId)) }

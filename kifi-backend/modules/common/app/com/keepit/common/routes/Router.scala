@@ -162,6 +162,7 @@ object Shoebox extends Service {
     def getAllFakeUsers() = ServiceRoute(GET, "/internal/shoebox/database/getAllFakeUsers")
     def getInvitations(senderId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getInvitations", Param("senderId", senderId))
     def getSocialConnections(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getSocialConnections", Param("userId", userId))
+    def addInteraction(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/user/addInteraction", Param("userId", userId))
   }
 }
 
