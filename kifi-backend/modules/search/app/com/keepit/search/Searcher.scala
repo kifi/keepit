@@ -1,8 +1,6 @@
 package com.keepit.search
 
-import org.apache.lucene.index.AtomicReaderContext
-import org.apache.lucene.index.DirectoryReader
-import org.apache.lucene.index.Term
+import org.apache.lucene.index.{ AtomicReader, AtomicReaderContext, DirectoryReader, Term }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.IndexSearcher
@@ -110,14 +108,18 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     findDocIdAndAtomicReaderContext(id).flatMap {
       case (docid, context) =>
         val reader = context.reader
-        var docValues = reader.getBinaryDocValues(field)
-        if (docValues != null) {
-          var ref = new BytesRef()
-          docValues.get(docid, ref)
-          Some(decode(ref.bytes, ref.offset, ref.length))
-        } else {
-          None
-        }
+        getDecodedDocValue(field, reader, docid)(decode)
+    }
+  }
+
+  def getDecodedDocValue[T](field: String, reader: AtomicReader, docid: Int)(implicit decode: (Array[Byte], Int, Int) => T): Option[T] = {
+    var docValues = reader.getBinaryDocValues(field)
+    if (docValues != null) {
+      var ref = new BytesRef()
+      docValues.get(docid, ref)
+      Some(decode(ref.bytes, ref.offset, ref.length))
+    } else {
+      None
     }
   }
 
