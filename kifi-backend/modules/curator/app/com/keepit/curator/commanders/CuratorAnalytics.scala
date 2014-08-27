@@ -37,7 +37,7 @@ class CuratorAnalytics @Inject() (
   private def toRecoUserActionContexts(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Seq[RecommendationUserActionContext] = {
     val modelOpt = db.readOnlyReplica { implicit s => uriRecoRepo.getByUriAndUserId(uriId, userId, None) }
 
-    if (modelOpt.isDefined && modelOpt.get.delivered > 0) {
+    if (modelOpt.isDefined && modelOpt.get.delivered > 0 && !modelOpt.get.kept) {
       val masterScore = modelOpt.get.masterScore.toInt
       val keepers = modelOpt.get.attribution.user.map { _.friends }
       val client = feedback.fromClient.getOrElse(RecommendationClientType.Unknown)
