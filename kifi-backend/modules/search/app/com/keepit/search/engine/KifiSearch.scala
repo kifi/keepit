@@ -21,12 +21,10 @@ import com.keepit.search.tracker.ResultClickBoosts
 
 class KifiSearch(
     userId: Id[User],
-    lang1: Lang,
-    lang2: Option[Lang],
     numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,
-    engine: QueryEngine,
+    engineBuilder: QueryEngineBuilder,
     articleSearcher: Searcher,
     keepSearcher: Searcher,
     friendIdsFuture: Future[Set[Long]],
@@ -51,6 +49,8 @@ class KifiSearch(
   private[this] val percentMatch = config.asFloat("percentMatch")
 
   def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (HitQueue, HitQueue, HitQueue) = {
+
+    val engine = engineBuilder.build()
 
     val keepScoreSource = new UriFromKeepsScoreVectorSource(keepSearcher, userId.id, friendIdsFuture, libraryIdsFuture, filter, config, monitoredAwait)
     engine.execute(keepScoreSource)
@@ -147,7 +147,7 @@ class KifiSearch(
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
 
-    KifiShardResult(hits.toSortedList.map(h => KifiShardHit(h.id, h.score, h.visibility, -1L)), myTotal, friendsTotal, show) // TODO: library id
+    KifiShardResult(hits.toSortedList.map(h => KifiShardHit(h.id, h.score, h.visibility, h.libId)), myTotal, friendsTotal, show)
   }
 
   @inline private[this] def isDiscoverable(id: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, id.toString))

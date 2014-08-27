@@ -1,7 +1,23 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ UriRecommendationStates, ScoredSeedItemWithAttribution, RecoInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, UriRecommendationRepo, UriRecommendation, UriScores, PublicFeedRepo, PublicSeedItem, SeedItem, PublicUriScores, PublicFeed, PublicScoredSeedItem }
-import com.keepit.common.db.{ State, SequenceNumber, Id }
+import com.keepit.curator.model.{
+  UriRecommendationStates,
+  ScoredSeedItemWithAttribution,
+  RecoInfo,
+  UserRecommendationGenerationStateRepo,
+  UserRecommendationGenerationState,
+  Keepers,
+  UriRecommendationRepo,
+  UriRecommendation,
+  UriScores,
+  PublicFeedRepo,
+  PublicSeedItem,
+  SeedItem,
+  PublicUriScores,
+  PublicFeed,
+  PublicScoredSeedItem
+}
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model.{ User, ExperimentType, UriRecommendationScores, SystemValueRepo, Name }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ReactiveLock
@@ -45,7 +61,7 @@ class RecommendationGenerationCommander @Inject() (
   private def specialCurators(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.SPECIAL_CURATOR).map(users => users.map(_.id.get).toSeq)
 
   private def computeMasterScore(scores: UriScores): Float = {
-    (5 * scores.socialScore +
+    (4 * scores.socialScore +
       6 * scores.overallInterestScore +
       2 * scores.priorScore +
       1 * scores.recencyScore +
@@ -61,7 +77,8 @@ class RecommendationGenerationCommander @Inject() (
     (1 * scores.recencyScore +
       1 * scores.popularityScore +
       6 * scores.rekeepScore +
-      3 * scores.discoveryScore) *
+      5 * scores.discoveryScore +
+      5 * scores.curationScore.getOrElse(0.0f)) *
       scores.multiplier.getOrElse(1.0f)
   }
 
@@ -84,9 +101,9 @@ class RecommendationGenerationCommander @Inject() (
     }
   }
 
-  def getTopRecommendationsNotPushed(userId: Id[User], howManyMax: Int): Future[Seq[UriRecommendation]] = {
+  def getTopRecommendationsNotPushed(userId: Id[User], howManyMax: Int, masterScoreThreshold: Float = 0f): Future[Seq[UriRecommendation]] = {
     db.readOnlyReplicaAsync { implicit session =>
-      uriRecRepo.getNotPushedByTopMasterScore(userId, howManyMax)
+      uriRecRepo.getNotPushedByTopMasterScore(userId, howManyMax, masterScoreThreshold)
     }
   }
 
@@ -201,7 +218,7 @@ class RecommendationGenerationCommander @Inject() (
             }
           }
 
-          val weightedItems = uriWeightingHelper(cleanedItems)
+          val weightedItems = uriWeightingHelper(cleanedItems).filter(_.multiplier != 0.0f)
           val toBeSaved: Future[Seq[ScoredSeedItemWithAttribution]] = scoringHelper(weightedItems, boostedKeepers).map { scoredItems =>
             scoredItems.filter(si => shouldInclude(si.uriScores))
           }.flatMap { scoredItems =>
@@ -246,7 +263,8 @@ class RecommendationGenerationCommander @Inject() (
       systemValueRepo.setSequenceNumber(SEQ_NUM_NAME, newSeqNum)
     }
 
-  private def getPrecomputationFeedsResult(publicSeedsAndSeqFuture: Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])], lastSeqNum: SequenceNumber[PublicSeedItem]) =
+  private def getPrecomputationFeedsResult(publicSeedsAndSeqFuture: Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])],
+    lastSeqNum: SequenceNumber[PublicSeedItem], boostedKeepers: Set[Id[User]]) =
     publicSeedsAndSeqFuture.flatMap {
       case (publicSeedItems, newSeqNum) =>
         if (publicSeedItems.isEmpty) {
@@ -262,9 +280,8 @@ class RecommendationGenerationCommander @Inject() (
               case _ => false
             }
           }
-          val weightedItems = publicUriWeightingHelper(cleanedItems)
-
-          publicScoringHelper(weightedItems).map { items =>
+          val weightedItems = publicUriWeightingHelper(cleanedItems).filter(_.multiplier != 0.0f)
+          publicScoringHelper(weightedItems, boostedKeepers).map { items =>
             savePublicScoredSeedItems(items, newSeqNum)
             precomputePublicFeeds()
             !publicSeedItems.isEmpty
@@ -273,14 +290,19 @@ class RecommendationGenerationCommander @Inject() (
     }
 
   def precomputePublicFeeds(): Future[Unit] = pubicFeedsGenerationLock.withLockFuture {
-    val lastSeqNumFut: Future[SequenceNumber[PublicSeedItem]] = db.readOnlyMasterAsync { implicit session =>
-      systemValueRepo.getSequenceNumber(SEQ_NUM_NAME) getOrElse { SequenceNumber[PublicSeedItem](0) }
-    }
+    specialCurators().flatMap { boostedKeepersSeq =>
 
-    lastSeqNumFut.flatMap { lastSeqNum =>
-      val publicSeedsAndSeqFuture: Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])] = getPublicFeedCandidateSeeds(lastSeqNum)
-      val res: Future[Boolean] = getPrecomputationFeedsResult(publicSeedsAndSeqFuture, lastSeqNum)
-      res.map(_ => ())
+      val lastSeqNumFut: Future[SequenceNumber[PublicSeedItem]] = db.readOnlyMasterAsync { implicit session =>
+        systemValueRepo.getSequenceNumber(SEQ_NUM_NAME) getOrElse {
+          SequenceNumber[PublicSeedItem](0)
+        }
+      }
+
+      lastSeqNumFut.flatMap { lastSeqNum =>
+        val publicSeedsAndSeqFuture: Future[(Seq[PublicSeedItem], SequenceNumber[PublicSeedItem])] = getPublicFeedCandidateSeeds(lastSeqNum)
+        val res: Future[Boolean] = getPrecomputationFeedsResult(publicSeedsAndSeqFuture, lastSeqNum, boostedKeepersSeq.toSet)
+        res.map(_ => ())
+      }
     }
   }
 

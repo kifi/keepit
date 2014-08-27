@@ -2,7 +2,7 @@ package com.keepit.curator.commanders
 
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.curator.model.{ SeedItemWithMultiplier, CuratorKeepInfoRepo, Keepers, SeedItem, ScoredSeedItem, UriScores }
+import com.keepit.curator.model.{ SeedItemWithMultiplier, CuratorKeepInfoRepo, Keepers, ScoredSeedItem, UriScores }
 import com.keepit.common.time._
 import com.keepit.cortex.CortexServiceClient
 import com.keepit.heimdal.HeimdalServiceClient
@@ -38,14 +38,6 @@ class UriScoringHelper @Inject() (
     }
   }
 
-  private def getRawCurationScore(items: Seq[SeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Seq[Option[Float]] = {
-    items.map(item =>
-      item.keepers match {
-        case Keepers.ReasonableNumber(users) if (!(boostedKeepers & users.toSet).isEmpty) => Some(0.75f)
-        case _ => None
-      })
-  }
-
   // assume all items have same userId
   private def getRawSocialScores(items: Seq[SeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Future[Seq[Float]] = {
     //convert user scores seq to map, assume there is no duplicate userId from graph service
@@ -75,10 +67,9 @@ class UriScoringHelper @Inject() (
     if (items.isEmpty) {
       Future.successful(Seq.empty)
     } else {
-      val publicScoresFut = publicScoring(items.map(item => item.makePublicSeedItemWithMultiplier))
+      val publicScoresFut = publicScoring(items.map(item => item.makePublicSeedItemWithMultiplier), boostedKeepers)
       val priorScores = getRawPriorScores(items)
       val socialScoresFuture = getRawSocialScores(items, boostedKeepers)
-      val curationScores = getRawCurationScore(items, boostedKeepers)
       val interestScoresFuture = getRawInterestScores(items)
       for {
         socialScores <- socialScoresFuture
@@ -95,7 +86,7 @@ class UriScoringHelper @Inject() (
             priorScore = priorScores(i),
             rekeepScore = publicScores(i).publicUriScores.rekeepScore,
             discoveryScore = publicScores(i).publicUriScores.discoveryScore,
-            curationScore = curationScores(i),
+            curationScore = publicScores(i).publicUriScores.curationScore,
             multiplier = Some(items(i).multiplier)
           )
           ScoredSeedItem(items(i).userId, items(i).uriId, scores)

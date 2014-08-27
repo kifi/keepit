@@ -3,7 +3,7 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', 'util', 'keepService', 'friendService', 'tagService', 'profileService' /* only needed for libraries experiment */, 'libraryService',
+  '$location', 'util', 'keepService', 'friendService', 'tagService', 'profileService', /* only needed for libraries experiment */ 'libraryService',
   function ($location, util, keepService, friendService, tagService, profileService, libraryService) {
     return {
       //replace: true,
@@ -48,6 +48,10 @@ angular.module('kifi')
         scope.isActive = function (path) {
           var loc = $location.path();
           return loc === path || util.startsWith(loc, path + '/');
+        };
+
+        scope.inRecoExperiment = function () {
+          return profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('recos_beta') >= 0;
         };
       }
     };

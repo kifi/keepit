@@ -82,6 +82,8 @@ object KifiResultCollector {
       totalHits = 0
     }
   }
+
+  def createQueue(sz: Int) = new HitQueue(sz)
 }
 
 class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: Int, percentMatchThreshold: Float) extends ResultCollector[ScoreContext] {
@@ -127,7 +129,36 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
   }
 
   def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
+}
 
-  @inline private[this] def createQueue(sz: Int) = new HitQueue(sz)
+class NonUserKifiResultCollector(libId: Long, maxHitsPerCategory: Int, percentMatchThreshold: Float) extends ResultCollector[ScoreContext] {
+
+  import KifiResultCollector._
+
+  private[this] val hits = createQueue(maxHitsPerCategory)
+
+  override def collect(ctx: ScoreContext): Unit = {
+    val id = ctx.id
+    val visibility = ctx.visibility
+    if (visibility != Visibility.RESTRICTED) {
+      // compute the percent match value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
+      val percentMatch = ctx.computePercentMatch(KifiResultCollector.MIN_PERCENT_MATCH)
+
+      if (percentMatch > 0.0f) {
+        // compute score
+        var score = 0.0f
+
+        if (percentMatch >= percentMatchThreshold) {
+          score = ctx.score() * percentMatch
+        }
+
+        if (score > 0.0f && visibility != Visibility.RESTRICTED) {
+          hits.insert(id, score, score, visibility, libId)
+        }
+      }
+    }
+  }
+
+  def getResults(): HitQueue = hits
 }
 

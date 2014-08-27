@@ -1,5 +1,8 @@
 package com.keepit.search
 
+import com.keepit.search.engine.{ Visibility, SearchFactory }
+import com.keepit.search.engine.result.{ KifiResultMerger, KifiShardResult }
+import com.keepit.search.util.Hit
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise }
@@ -48,6 +51,19 @@ trait SearchCommander {
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): PartialSearchResult
 
+  def distSearch2(
+    shards: Set[Shard[NormalizedURI]],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig],
+    debug: Option[String]): KifiShardResult
+
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]): Map[Lang, Int]
 
   def explain(
@@ -64,6 +80,7 @@ trait SearchCommander {
 
 class SearchCommanderImpl @Inject() (
     shards: ActiveShards,
+    searchFactory: SearchFactory,
     mainSearcherFactory: MainSearcherFactory,
     articleSearchResultStore: ArticleSearchResultStore,
     airbrake: AirbrakeNotifier,
@@ -97,14 +114,7 @@ class SearchCommanderImpl @Inject() (
     val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
 
     // build distribution plan
-    val (localShards, dispatchPlan) = {
-      // do distributed search using a remote-only plan when the debug flag has "dist" for now. still experimental
-      if (debug.isDefined && debug.get.indexOf("dist") >= 0) {
-        distributionPlanRemoteOnly(userId, maxShardsPerInstance = 2)
-      } else {
-        distributionPlan(userId, shards)
-      }
-    }
+    val (localShards, dispatchPlan) = distributionPlan(userId, shards)
 
     // TODO: use user profile info as a bias
     val (firstLang, secondLang) = getLangs(localShards, dispatchPlan, userId, query, acceptLangs) // TODO: distributed version of getLang
@@ -198,6 +208,13 @@ class SearchCommanderImpl @Inject() (
     predefinedConfig: Option[SearchConfig] = None,
     debug: Option[String] = None): PartialSearchResult = {
 
+    if (debug.isDefined) {
+      val debugFlags = debug.get.split(",").map(_.toLowerCase).toSet
+      if (debugFlags.contains("newengine")) {
+        return distSearchTest(shards, userId, firstLang, secondLang, experiments, query, filter, maxHits, context, predefinedConfig, debug)
+      }
+    }
+
     val timing = new SearchTiming
 
     val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
@@ -225,6 +242,111 @@ class SearchCommanderImpl @Inject() (
     }
 
     timing.decoration // search end
+    timing.end
+
+    SafeFuture {
+      // stash timing information
+      timing.send()
+    }
+
+    mergedResult
+  }
+
+  def distSearchTest(
+    shards: Set[Shard[NormalizedURI]],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig] = None,
+    debug: Option[String] = None): PartialSearchResult = {
+
+    val timing = new SearchTiming
+
+    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
+
+    val searchFilter = getSearchFilter(userId, filter, context)
+    val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
+
+    val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
+
+    val resultMerger = new KifiResultMerger(enableTailCutting, config)
+
+    val mergedResult = {
+      val resultMerger = new ResultMerger(enableTailCutting, config)
+
+      timing.factory
+
+      val searches = (searchFactory.getKifiSearch(shards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
+        zip mainSearcherFactory(shards, userId, query, firstLang, secondLang, maxHits, searchFilter, config))
+      val future = Future.traverse(searches) { search =>
+        SafeFuture {
+          val result = search._1.search()
+
+          val shardHits = search._2.toDetailedSearchHits(
+            result.hits.map { h => new Hit(h.score, null, new MutableArticleHit(h.id, h.score, 1.0f, ((h.visibility & Visibility.OWNER) != 0), Set(), 0)) }
+          )
+          PartialSearchResult(shardHits, result.myTotal, result.friendsTotal, 0, FriendStats.empty, -1.0f, result.show)
+        }
+      }
+
+      timing.search
+      val results = monitoredAwait.result(future, 10 seconds, "slow search")
+      resultMerger.merge(results, maxHits)
+    }
+
+    timing.decoration // search end
+    timing.end
+
+    SafeFuture {
+      // stash timing information
+      timing.send()
+    }
+
+    mergedResult
+  }
+
+  def distSearch2(
+    shards: Set[Shard[NormalizedURI]],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig] = None,
+    debug: Option[String] = None): KifiShardResult = {
+
+    val timing = new SearchTiming
+
+    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
+
+    val searchFilter = getSearchFilter(userId, filter, context)
+    val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
+
+    val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
+
+    val resultMerger = new KifiResultMerger(enableTailCutting, config)
+
+    timing.factory
+
+    val searches = searchFactory.getKifiSearch(shards, userId, query, firstLang, secondLang, maxHits, searchFilter, config)
+    val future = Future.traverse(searches) { search =>
+      SafeFuture { search.search() }
+    }
+
+    timing.search // search start
+
+    val results = monitoredAwait.result(future, 10 seconds, "slow search")
+    val mergedResult = resultMerger.merge(results, maxHits)
+
+    timing.decoration // search end, no decoration
     timing.end
 
     SafeFuture {
