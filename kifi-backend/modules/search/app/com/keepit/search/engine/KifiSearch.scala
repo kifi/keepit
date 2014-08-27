@@ -32,7 +32,7 @@ class KifiSearch(
     clickBoostsFuture: Future[ResultClickBoosts],
     clickHistoryFuture: Future[MultiHashFilter[ClickedURI]],
     monitoredAwait: MonitoredAwait,
-    timeLogs: SearchTimeLogs) extends Logging {
+    timeLogs: SearchTimeLogs) extends KifiSearchUtil(articleSearcher, keepSearcher) with Logging {
 
   private[this] val currentTime = currentDateTime.getMillis()
   private[this] val idFilter = filter.idFilter
@@ -147,7 +147,24 @@ class KifiSearch(
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
 
-    KifiShardResult(hits.toSortedList.map(h => KifiShardHit(h.id, h.score, h.visibility, -1L)), myTotal, friendsTotal, show) // TODO: library id
+    KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, show)
+  }
+
+  private[this] def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
+    val visibility = h.visibility
+    if ((visibility & Visibility.HAS_SECONDARY_ID) != 0) {
+      // has a keep id
+      val r = getKeepRecord(h.altId).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.altId}"))
+      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url)
+    } else if ((visibility & Visibility.HAS_TERTIARY_ID) != 0) {
+      // has a library id
+      val r = getKeepRecord(h.altId, h.id).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.altId}"))
+      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url)
+    } else {
+      // only a primary id (uri id)
+      val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))
+      KifiShardHit(h.id, h.score, h.visibility, -1, r.title, r.url)
+    }
   }
 
   @inline private[this] def isDiscoverable(id: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, id.toString))

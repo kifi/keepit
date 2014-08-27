@@ -631,6 +631,10 @@ class MessagingCommander @Inject() (
       userRecipients <- userRecipientsFuture
       nonUserRecipients <- nonUserRecipientsFuture
     } yield {
+      userRecipients.map(id => shoebox.addInteraction(userId, Left(id), action = "message"))
+      nonUserRecipients.collect {
+        case NonUserEmailParticipant(address) => shoebox.addInteraction(userId, Right(address), action = "message")
+      }
       val (thread, message) = sendNewMessage(userId, userRecipients, nonUserRecipients, urls, title, text, source)(context)
       val messageThreadFut = basicMessageCommander.getThreadMessagesWithBasicUser(thread)
 

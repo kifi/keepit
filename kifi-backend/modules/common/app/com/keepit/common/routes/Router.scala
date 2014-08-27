@@ -162,6 +162,7 @@ object Shoebox extends Service {
     def getAllFakeUsers() = ServiceRoute(GET, "/internal/shoebox/database/getAllFakeUsers")
     def getInvitations(senderId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getInvitations", Param("senderId", senderId))
     def getSocialConnections(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getSocialConnections", Param("userId", userId))
+    def addInteraction(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/user/addInteraction", Param("userId", userId))
   }
 }
 
@@ -210,6 +211,7 @@ object Search extends Service {
     def searchMessages(userId: Id[User], query: String, page: Int = 0) = ServiceRoute(GET, "/internal/search/searchMessages", Param("userId", userId), Param("query", query), Param("page", page))
 
     def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
+    def distSearch2() = ServiceRoute(POST, "/internal/search/dist/search2")
     def distLangFreqs() = ServiceRoute(POST, "/internal/search/dist/langFreqs")
     def distFeeds() = ServiceRoute(POST, "/internal/search/dist/feeds")
   }

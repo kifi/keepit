@@ -1,8 +1,9 @@
 package com.keepit.search.graph.keep
 
 import com.keepit.search.index.{ FieldDecoder, DefaultAnalyzer, Indexable }
-import com.keepit.model.Keep
+import com.keepit.model.{ NormalizedURI, Keep }
 import com.keepit.search.LangDetector
+import com.keepit.search.sharding.Shard
 
 object KeepFields {
   val libraryField = "lib"
@@ -24,10 +25,10 @@ object KeepFields {
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
 
-case class KeepIndexable(keep: Keep) extends Indexable[Keep, Keep] {
+case class KeepIndexable(keep: Keep, shard: Shard[NormalizedURI]) extends Indexable[Keep, Keep] {
   val id = keep.id.get
   val sequenceNumber = keep.seq
-  val isDeleted = !keep.isActive
+  val isDeleted = !keep.isActive || !shard.contains(keep.uriId)
 
   override def buildDocument = {
     import KeepFields._

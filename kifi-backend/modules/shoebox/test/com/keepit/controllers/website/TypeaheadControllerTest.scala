@@ -2,9 +2,10 @@ package com.keepit.controllers.website
 
 import com.keepit.abook.model.RichContact
 import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeABookServiceClientModule }
-import com.keepit.commanders.ConnectionWithInviteStatus
+import com.keepit.commanders._
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -20,7 +21,7 @@ import com.keepit.social.{ SocialId, SocialNetworks }
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.typeahead.TypeaheadHit
 import org.specs2.mutable.Specification
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsValue, Json }
 import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
@@ -161,6 +162,74 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res3.length === 2 // LNKD, EMAIL
         res3(0).label === "郭靖 先生"
         res3(1).label === "郭靖 電郵"
+      }
+    }
+
+    "query contacts" in {
+      withDb(modules: _*) { implicit injector =>
+        val userInteractionCommander = inject[UserInteractionCommander]
+        val (u1, u2, u3, u4, u5) = db.readWrite { implicit session =>
+          val u1 = userRepo.save(User(firstName = "Spongebob", lastName = "Squarepants"))
+          val u2 = userRepo.save(User(firstName = "Patrick", lastName = "Star"))
+          val u3 = userRepo.save(User(firstName = "Squidward", lastName = "Tentacles"))
+          val u4 = EmailAddress("squirrelsandy@texas.gov")
+          val u5 = EmailAddress("mrkrabs@krusty.com")
+
+          userConnRepo.addConnections(u1.id.get, Set(u2.id.get))
+          userConnRepo.addConnections(u1.id.get, Set(u3.id.get))
+
+          (u1, u2, u3, u4, u5)
+        }
+
+        userInteractionCommander.addInteraction(u1.id.get, UserRecipient(u2.id.get), UserInteraction.INVITE_LIBRARY)
+        userInteractionCommander.addInteraction(u1.id.get, UserRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY)
+        userInteractionCommander.addInteraction(u1.id.get, EmailRecipient(u4), UserInteraction.INVITE_LIBRARY)
+        userInteractionCommander.addInteraction(u1.id.get, EmailRecipient(u5), UserInteraction.INVITE_LIBRARY)
+
+        val abookClient = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
+        abookClient.addTypeaheadHits(u1.id.get, Seq(TypeaheadHit[RichContact](0, "mrkrabs", 0, RichContact(u5, Some("Krabs")))))
+        abookClient.addTypeaheadHits(u1.id.get, Seq(TypeaheadHit[RichContact](0, "sandysquirrel", 0, RichContact(u4, Some("SandySquirrel")))))
+
+        inject[FakeActionAuthenticator].setUser(u1)
+
+        @inline def search(query: String, limit: Int = 10): Seq[ContactSearchResult] = {
+          val path = com.keepit.controllers.website.routes.TypeaheadController.searchForContacts(Some(query), Some(limit)).url
+          val res = inject[TypeaheadController].searchForContacts(Some(query), Some(limit))(FakeRequest("GET", path))
+          val js = Json.parse(contentAsString(res)).as[Seq[JsValue]].map { j =>
+            (j \ "id").asOpt[ExternalId[User]] match {
+              case Some(id) => j.as[UserContactResult]
+              case None => j.as[EmailContactResult]
+            }
+          }
+          println(s"[search($query,$limit)] res(len=${js.length}):$js")
+          js
+        }
+
+        def parseRes(contacts: Seq[ContactSearchResult]) = {
+          contacts.collect {
+            case u: UserContactResult => u.name
+            case e: EmailContactResult => e.name.get
+          }
+        }
+
+        val res0 = search("") // (no query) should get all contacts in Recent_Interactions
+        res0.length === 4
+
+        val res1 = search("s") // "one letter" -- abook skipped
+        res1.length === 2
+        parseRes(res1) === Seq("Squidward Tentacles", "Patrick Star")
+
+        val res2 = search("sq")
+        res2.length === 2
+        parseRes(res2) === Seq("Squidward Tentacles", "SandySquirrel")
+
+        val res3 = search("squid")
+        res3.length === 1
+        parseRes(res3) === Seq("Squidward Tentacles")
+
+        val res4 = search("squir")
+        res4.length === 1
+        parseRes(res4) === Seq("SandySquirrel")
       }
     }
 

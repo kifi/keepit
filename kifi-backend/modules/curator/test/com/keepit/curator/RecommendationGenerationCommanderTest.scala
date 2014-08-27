@@ -126,7 +126,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
 
         val result2 = commander.getAdHocRecommendations(Id[User](42), 1, UriRecommendationScores())
         val recs2 = Await.result(result2, Duration(10, "seconds"))
-        recs2(0).score === 49.5f
+        recs2(0).score === 48.0f
 
       }
     }
@@ -164,7 +164,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         Await.result(futUnit, Duration(10, "seconds"))
         val result = commander.getPublicFeeds(5)
         val feeds = Await.result(result, Duration(10, "seconds"))
-        feeds.size === 5
+        feeds.size === 0
       }
     }
   }

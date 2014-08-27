@@ -31,8 +31,8 @@
                             <tr>
                                 <td width="72" class="side1">&nbsp;</td>
                                 <td align="center" valign="top" width="488">
-                                    <a href="@reco.urls.viewPage" target="_blank">
-                                        <img src="@reco.imageUrl" alt="@reco.title" style="display:block;max-width:488px;" border="0" class="banner" />
+                                    <a href="@reco.viewPageUrl" target="_blank">
+                                        <img src="@reco.imageUrl" alt="@reco.title" style="display:block;" border="0" class="banner" width="488" />
                                     </a>
                                 </td>
                                 <td width="65" class="side1">&nbsp;</td>
@@ -53,12 +53,12 @@
                                     <table width="466" border="0" cellspacing="0" cellpadding="0" class="wrapper">
                                         <tr>
                                             <td align="left">
-                                                <a style="font-family:Georgia, 'Times New Roman', Times, serif;text-align:left; color:#000000; font-size:22px; line-height:26px;" href="@reco.urls.viewPage">@reco.title</a>
+                                                <a style="text-decoration: none; font-family:Georgia, 'Times New Roman', Times, serif;text-align:left; color:#000000; font-size:22px; line-height:26px;" href="@reco.viewPageUrl">@reco.title</a>
                                             </td>
                                         </tr>
                                         <tr>
                                             <td align="left" class="num1" style="line-height:22px; font-size:17px; font-family:Arial, sans-serif;color:#000000; ">
-                                                <a href="@reco.urls.viewPage" target="_blank" style="line-height:22px; font-size:17px; font-family:Arial, sans-serif;color:#000000; text-decoration:none; ">@reco.domain</a>
+                                                <a href="@reco.viewPageUrl" target="_blank" style="line-height:22px; font-size:17px; font-family:Arial, sans-serif;color:#000000; text-decoration:none; ">@reco.domain</a>
                                                 <span style="line-height:22px; font-size:14px; color:#9a9b99;">&bull;</span>
                                                 @reco.readTime.map { readTime =>
                                                 <span>@readTime read</span>
@@ -77,13 +77,13 @@
                                         </tr>
                                         <tr>
                                             <td align="left" class="num2" valign="middle" style="line-height:16px; font-size:14px; color:#43a0f8; font-family:Arial, sans-serif;">
-                                                <a href="@reco.urls.viewPage" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">View Page</a>
+                                                <a href="@reco.viewPageUrl" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">View Page</a>
                                                 <span style="line-height:18px; font-size:14px; color:#9a9b99;">•</span>
                                                 @{ /* TODO(josh) fix url */ }
-                                                <a href="@reco.urls.sendPage" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;">Send</a>
+                                                <a href="@reco.sendPageUrl" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;">Send</a>
                                                 <span style="line-height:18px; font-size:14px; color:#9a9b99;">•</span>
                                                 @{ /* TODO(josh) fix url */ }
-                                                <a href="@reco.urls.keepAndSeeMore" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">Keep &amp; See More</a>
+                                                <a href="@reco.keepAndSeeMoreUrl" style="line-height:16px; font-size:14px; color:#43a0f8; text-decoration:none;font-family:Arial, sans-serif;">Keep &amp; See More</a>
                                             </td>
                                         </tr>
                                         <tr>

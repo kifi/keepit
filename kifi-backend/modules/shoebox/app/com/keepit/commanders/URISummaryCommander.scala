@@ -4,9 +4,7 @@ import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.logging.Logging
 import com.google.inject.Inject
 import scala.concurrent._
-import play.api.libs.json.{ Json, JsValue }
 import com.keepit.model._
-import scala.Some
 import com.keepit.common.store.{ S3URIImageStore, ImageSize }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.db.slick.Database
@@ -15,7 +13,6 @@ import java.awt.image.BufferedImage
 import com.keepit.common.images.ImageFetcher
 import scala.util.{ Success, Failure }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import scala.collection.mutable
 import com.keepit.common.time._
 import com.keepit.scraper.ScraperServiceClient
 import com.keepit.scraper.embedly.EmbedlyStore

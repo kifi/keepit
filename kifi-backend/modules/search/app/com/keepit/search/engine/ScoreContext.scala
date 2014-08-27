@@ -12,8 +12,8 @@ class ScoreContext(
     collector: ResultCollector[ScoreContext]) extends Joiner {
 
   private[engine] var visibility: Int = 0
-  private[engine] var secondaryId: Long = -1 // secondary id (library id for kifi search)
-  private[this] var secondaryIdScore: Float = -1.0f
+  private[engine] var alternativeId: Long = -1 // secondary id (keep id for kifi search) or tertiary id (library id for kifi search)
+  private[this] var alternativeIdScore: Float = -1.0f
 
   private[engine] val scoreMax = new Array[Float](scoreArraySize)
   private[engine] val scoreSum = new Array[Float](scoreArraySize)
@@ -36,8 +36,8 @@ class ScoreContext(
 
   def clear(): Unit = {
     visibility = Visibility.RESTRICTED
-    secondaryId = -1L
-    secondaryIdScore = -1.0f
+    alternativeId = -1L
+    alternativeIdScore = -1.0f
     Arrays.fill(scoreMax, 0.0f)
     Arrays.fill(scoreSum, 0.0f)
   }
@@ -47,7 +47,7 @@ class ScoreContext(
     val thisVisibility = reader.recordType
     visibility = visibility | thisVisibility
 
-    if ((thisVisibility & Visibility.HAS_SECONDARY_ID) != 0) {
+    if ((thisVisibility & Visibility.HAS_ALTERNATIVE_ID) != 0) {
       val id2 = reader.nextLong()
       var scr2 = 0.0f // use a simple sum of scores to compare secondary ids
 
@@ -60,9 +60,9 @@ class ScoreContext(
         scoreSum(idx) += scr
       }
 
-      if (scr2 > secondaryIdScore) {
-        secondaryId = id2
-        secondaryIdScore = scr2
+      if (scr2 > alternativeIdScore) {
+        alternativeId = id2
+        alternativeIdScore = scr2
       }
     } else {
       while (reader.hasMore) {

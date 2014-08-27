@@ -8,7 +8,7 @@ import org.apache.lucene.util.PriorityQueue
 object KifiResultCollector {
   val MIN_PERCENT_MATCH = 0.5f
 
-  class Hit(var id: Long, var score: Float, var normalizedScore: Float, var visibility: Int, var libId: Long)
+  class Hit(var id: Long, var score: Float, var normalizedScore: Float, var visibility: Int, var altId: Long)
 
   class HitQueue(sz: Int) extends PriorityQueue[Hit](sz) {
 
@@ -25,14 +25,14 @@ object KifiResultCollector {
 
     private[this] var overflow: Hit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
 
-    def insert(id: Long, score: Float, normalizedScore: Float, visibility: Int, libId: Long) {
+    def insert(id: Long, score: Float, normalizedScore: Float, visibility: Int, altId: Long) {
       if (overflow == null) {
-        overflow = new Hit(id, score, normalizedScore, visibility, libId)
+        overflow = new Hit(id, score, normalizedScore, visibility, altId)
       } else {
         overflow.id = id
         overflow.score = score
         overflow.visibility = visibility
-        overflow.libId = libId
+        overflow.altId = altId
         overflow
       }
       overflow = insertWithOverflow(overflow)
@@ -82,6 +82,8 @@ object KifiResultCollector {
       totalHits = 0
     }
   }
+
+  def createQueue(sz: Int) = new HitQueue(sz)
 }
 
 class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: Int, percentMatchThreshold: Float) extends ResultCollector[ScoreContext] {
@@ -112,14 +114,14 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
         }
 
         if (score > 0.0f) {
-          val libId = ctx.secondaryId
+          val altId = ctx.alternativeId
 
           if ((visibility & Visibility.MEMBER) != 0) {
-            myHits.insert(id, score, score, visibility, libId)
+            myHits.insert(id, score, score, visibility, altId)
           } else if ((visibility & Visibility.NETWORK) != 0) {
-            friendsHits.insert(id, score, score, visibility, libId)
+            friendsHits.insert(id, score, score, visibility, altId)
           } else {
-            othersHits.insert(id, score, score, visibility, libId)
+            othersHits.insert(id, score, score, visibility, altId)
           }
         }
       }
@@ -127,7 +129,36 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
   }
 
   def getResults(): (HitQueue, HitQueue, HitQueue) = (myHits, friendsHits, othersHits)
+}
 
-  @inline private[this] def createQueue(sz: Int) = new HitQueue(sz)
+class NonUserKifiResultCollector(maxHitsPerCategory: Int, percentMatchThreshold: Float) extends ResultCollector[ScoreContext] {
+
+  import KifiResultCollector._
+
+  private[this] val hits = createQueue(maxHitsPerCategory)
+
+  override def collect(ctx: ScoreContext): Unit = {
+    val id = ctx.id
+    val visibility = ctx.visibility
+    if (visibility != Visibility.RESTRICTED) {
+      // compute the percent match value. this returns 0.0f if the match is less than the MIN_PERCENT_MATCH
+      val percentMatch = ctx.computePercentMatch(KifiResultCollector.MIN_PERCENT_MATCH)
+
+      if (percentMatch > 0.0f) {
+        // compute score
+        var score = 0.0f
+
+        if (percentMatch >= percentMatchThreshold) {
+          score = ctx.score() * percentMatch
+        }
+
+        if (score > 0.0f && visibility != Visibility.RESTRICTED) {
+          hits.insert(id, score, score, visibility, ctx.alternativeId)
+        }
+      }
+    }
+  }
+
+  def getResults(): HitQueue = hits
 }
 

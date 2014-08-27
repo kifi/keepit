@@ -96,12 +96,13 @@ POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/showExtMsgIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMsgIntro(show: Boolean)
 POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
+GET     /ext/user/contacts/search   @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit:Option[Int])
 GET     /ext/contacts               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToMessage(q: String, n: Int ?= 4)
 POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser()
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
-GET     /r/:token                   @com.keepit.controllers.ext.ExtDeepLinkController.handle(token: String)
+GET     /r/$token<[0-9a-f-]{36}>    @com.keepit.controllers.ext.ExtDeepLinkController.handle(token: String)
 GET     /mr/:token                  @com.keepit.controllers.ext.ExtDeepLinkController.handleMobile(token: String)
 GET     /ir/:token                  @com.keepit.controllers.ext.ExtDeepLinkController.handleIPhoneTempForDev(token: String)
 
@@ -262,7 +263,7 @@ POST    /site/libraries/move        @com.keepit.controllers.website.LibraryContr
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
 GET     /site/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
-POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback()
+POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
@@ -304,6 +305,7 @@ POST    /site/user/delighted/cancel @com.keepit.controllers.website.UserControll
 POST    /site/user/close            @com.keepit.controllers.website.UserController.closeAccount()
 
 GET     /site/user/connections/all/search    @com.keepit.controllers.website.TypeaheadController.searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
+GET     /site/user/contacts/search  @com.keepit.controllers.website.TypeaheadController.searchForContacts(query:Option[String], limit:Option[Int])
 
 GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
@@ -312,11 +314,19 @@ POST    /site/user/pic/upload       @com.keepit.controllers.website.UserControll
 POST    /site/user/pic              @com.keepit.controllers.website.UserController.setUserPicture()
 POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: EmailAddress)
 GET     /site/friends/wti           @com.keepit.controllers.website.WTIController.getRipestInvitees(page: Int ?= 0, pageSize: Int ?= 20)
-POST    /site/friends/wti/block     @com.keepit.controllers.website.WTIController.block()
+POST    /site/friends/wti/block     @com.keepit.controllers.website.WTIController.block
 POST    /site/keeps/file-import     @com.keepit.controllers.website.BookmarkImporter.uploadBookmarkFile(public: Boolean ?= false)
 
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
+
+##########################################
+# Email-Link API
+##########################################
+
+GET     /r/e/1/recos/view             @com.keepit.controllers.email.EmailRecosController.viewReco(id: ExternalId[NormalizedURI])
+GET     /r/e/1/recos/keep             @com.keepit.controllers.email.EmailRecosController.keepReco(id: ExternalId[NormalizedURI])
+GET     /r/e/1/recos/send           @com.keepit.controllers.email.EmailRecosController.sendReco(id: ExternalId[NormalizedURI])
 
 ##########################################
 # External Services API
@@ -473,6 +483,7 @@ GET    /admin/users/bumpSeq          @com.keepit.controllers.admin.AdminUserCont
 GET     /admin/users/bumpConnSeq     @com.keepit.controllers.admin.AdminUserController.bumpUpSeqNumForConnections()
 GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminUserController.resetAllMixpanelProfiles()
 GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
+POST    /admin/user/:id/emails/:code/send    @com.keepit.controllers.admin.AdminUserController.sendEmail(id: Id[User], code: String)
 
 GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
 GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])
@@ -724,6 +735,8 @@ POST      /internal/shoebox/database/getCandidateURIs   @com.keepit.controllers.
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 
 GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controllers.internal.ShoeboxController.getUsersByExperiment(experiment: ExperimentType)
+
+POST    /internal/shoebox/user/addInteraction            @com.keepit.controllers.internal.ShoeboxController.addInteraction(userId: Id[User])
 
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path="/angular/dist", file)

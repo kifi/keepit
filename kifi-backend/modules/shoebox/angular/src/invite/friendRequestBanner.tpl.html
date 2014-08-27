@@ -2,7 +2,7 @@
     ng-show="showFriendRequestBanner"
     ng-class="{hidden: hidden}">
 
-  <h2 class="kf-add-friend-banner-title">Send a friend request to your email contact</h2>
+  <h2 class="kf-add-friend-banner-title">{{friendRequestBannerHeader}}</h2>
 
   <div class="kf-add-friend-banner">
     <img class="kf-add-friend-banner-image" onerror="this.src='/assets/img/ghost.200.png'" ng-src="{{mainImage}}"/>

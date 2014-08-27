@@ -41,6 +41,9 @@ class KifiResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   }
 
   private def mergeHits(results: Seq[KifiShardResult], maxHits: Int): Seq[KifiShardHit] = {
+
+    if (results.size == 1) return results.head.hits // short cut for a single result set
+
     val myHits = createQueue(maxHits * 5)
     val friendsHits = createQueue(maxHits * 5)
     val othersHits = createQueue(maxHits * 5)

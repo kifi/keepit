@@ -9,6 +9,8 @@ object Visibility { // use value class?
   val MEMBER = 0x04
   val OWNER = 0x08
   //  unused = 0x10
-  //  unused = 0x20
-  val HAS_SECONDARY_ID = 0x40
+  val HAS_SECONDARY_ID = 0x20
+  val HAS_TERTIARY_ID = 0x40
+
+  val HAS_ALTERNATIVE_ID = HAS_SECONDARY_ID | HAS_TERTIARY_ID
 }

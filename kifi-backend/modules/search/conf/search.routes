@@ -35,6 +35,7 @@ POST        /site/search/events/searched        @com.keepit.controllers.website.
 ##########################################
 
 POST        /internal/search/dist/search          @com.keepit.controllers.search.SearchController.distSearch()
+POST        /internal/search/dist/search2         @com.keepit.controllers.search.SearchController.distSearch2()
 POST        /internal/search/dist/langFreqs       @com.keepit.controllers.search.SearchController.distLangFreqs()
 
 GET         /internal/search/warmUp/:userId        @com.keepit.controllers.search.SearchController.warmUpUser(userId: Id[User])
