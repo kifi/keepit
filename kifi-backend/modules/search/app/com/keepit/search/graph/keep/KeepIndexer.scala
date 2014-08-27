@@ -25,7 +25,8 @@ class KeepIndexer(indexDirectory: IndexDirectory, shard: Shard[NormalizedURI], v
   }
 
   private def validate(indexable: KeepIndexable): Unit = {
-    if (!shard.contains(indexable.keep.uriId)) { throw new IllegalArgumentException(s"$indexable does not belong to $shard") }
+    val isValidIndexable = shard.contains(indexable.keep.uriId) || indexable.isDeleted
+    if (!isValidIndexable) { throw new IllegalArgumentException(s"$indexable does not belong to $shard") }
   }
 }
 
@@ -51,12 +52,10 @@ class ShardedKeepIndexer(
 
   private def fetchIndexables(seq: SequenceNumber[Keep], fetchSize: Int): Future[(Map[Shard[NormalizedURI], Seq[KeepIndexable]], SequenceNumber[Keep], Boolean)] = {
     shoebox.getBookmarksChanged(seq, fetchSize).map { changedKeeps =>
-      val shardedKeeps = changedKeeps.groupBy(keep => indexShards.keysIterator.find(_.contains(keep.uriId)))
-      val shardedIndexables = shardedKeeps.collect {
-        case (Some(shard), keeps) =>
-          val indexables = keeps.map(keep => new KeepIndexable(keep))
-          (shard -> indexables)
-      }
+      val shardedIndexables = indexShards.keys.map { shard =>
+        val indexables = changedKeeps.map { keep => new KeepIndexable(keep, shard) }
+        shard -> indexables
+      }.toMap
       val exhausted = changedKeeps.length < fetchSize
       val maxSeq = changedKeeps.map(_.seq).max
       (shardedIndexables, maxSeq, exhausted)

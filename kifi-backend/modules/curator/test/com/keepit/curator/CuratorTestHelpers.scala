@@ -8,6 +8,8 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.curator.model._
 import com.keepit.model._
 import com.keepit.shoebox.{ ShoeboxServiceClient, ShoeboxScraperClient, FakeShoeboxServiceClientImpl }
+import org.joda.time.DateTime
+import com.keepit.common.time._
 
 import scala.collection.mutable.ListBuffer
 
@@ -82,6 +84,29 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
       attribution = makeSeedAttribution(userId))
   }
 
+  def makeUriRecommendationWithUpdateTimestamp(uriId: Int, userIdInt: Int, masterScore: Float, updatedAt: DateTime) = {
+    val userId = Id[User](userIdInt)
+    UriRecommendation(
+      createdAt = updatedAt,
+      updatedAt = updatedAt,
+      uriId = Id[NormalizedURI](uriId),
+      userId = userId,
+      masterScore = masterScore,
+      state = UriRecommendationStates.ACTIVE,
+      allScores = UriScores(socialScore = 1.0f,
+        popularityScore = 1.0f,
+        overallInterestScore = 1.0f,
+        recentInterestScore = 1.0f,
+        recencyScore = 1.0f,
+        priorScore = 1.0f,
+        rekeepScore = 1.0f,
+        curationScore = None,
+        multiplier = Some(1.0f),
+        discoveryScore = 1.0f),
+      delivered = 0, clicked = 0, kept = false,
+      attribution = makeSeedAttribution(userId))
+  }
+
   def makePublicFeed(uriId: Int, publicMasterScore: Float) = {
     PublicFeed(
       uriId = Id[NormalizedURI](uriId),
@@ -91,6 +116,7 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         popularityScore = 1.0f,
         recencyScore = 1.0f,
         rekeepScore = 1.0f,
+        curationScore = Some(1.0f),
         multiplier = Some(1.0f),
         discoveryScore = 1.0f))
   }

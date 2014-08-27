@@ -37,6 +37,7 @@ case class PublicSeedItem(
   recencyScore: Float,
   rekeepScore: Float,
   discoveryScore: Float,
+  curationScore: Option[Float],
   multiplier: Option[Float])
 
 @json case class UriScores(

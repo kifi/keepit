@@ -259,8 +259,9 @@ GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/copy        @com.keepit.controllers.website.LibraryController.copyKeeps()
 POST    /site/libraries/move        @com.keepit.controllers.website.LibraryController.moveKeeps()
 
-GET     /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
 POST    /site/recos/adHoc           @com.keepit.controllers.website.RecommendationsController.adHocRecos(n: Int)
+GET     /site/recos/top             @com.keepit.controllers.website.RecommendationsController.topRecos(more: Boolean, recency: Float)
+GET     /site/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
 POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback()
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
@@ -316,6 +317,14 @@ POST    /site/keeps/file-import     @com.keepit.controllers.website.BookmarkImpo
 
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String)
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSiteRedirect(path: String = "")
+
+##########################################
+# Email-Link API
+##########################################
+
+GET     /e/1/recos/view             @com.keepit.controllers.email.EmailRecosController.viewReco(id: ExternalId[NormalizedURI])
+GET     /e/1/recos/keep             @com.keepit.controllers.email.EmailRecosController.keepReco(id: ExternalId[NormalizedURI])
+GET     /e/1/recos/send             @com.keepit.controllers.email.EmailRecosController.sendReco(id: ExternalId[NormalizedURI])
 
 ##########################################
 # External Services API
@@ -472,6 +481,7 @@ GET    /admin/users/bumpSeq          @com.keepit.controllers.admin.AdminUserCont
 GET     /admin/users/bumpConnSeq     @com.keepit.controllers.admin.AdminUserController.bumpUpSeqNumForConnections()
 GET    /admin/users/mixpanel/reset          @com.keepit.controllers.admin.AdminUserController.resetAllMixpanelProfiles()
 GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.AdminUserController.deleteAllMixpanelProfiles()
+POST    /admin/user/:id/emails/:code/send    @com.keepit.controllers.admin.AdminUserController.sendEmail(id: Id[User], code: String)
 
 GET     /admin/users/fixFortyTwoConnections    @com.keepit.controllers.admin.AdminUserController.fixMissingFortyTwoSocialConnections(readOnly: Boolean ?= true)
 GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])
@@ -501,12 +511,6 @@ GET     /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchCon
 POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchConfigController.addNewExperiment
 POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
 POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSearchConfigController.updateExperiment
-
-GET     /admin/search/semanticVector                      @com.keepit.controllers.admin.AdminSemanticVectorController.index
-POST     /admin/search/semanticVector/analysis            @com.keepit.controllers.admin.AdminSemanticVectorController.analysis
-POST     /admin/search/semanticVector/similarity          @com.keepit.controllers.admin.AdminSemanticVectorController.similarity
-POST     /admin/search/semanticVector/visualize           @com.keepit.controllers.admin.AdminSemanticVectorController.visualize
-POST    /admin/search/semanticVector/semanticLoss         @com.keepit.controllers.admin.AdminSemanticVectorController.semanticLoss
 
 GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI], lang: String)
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])

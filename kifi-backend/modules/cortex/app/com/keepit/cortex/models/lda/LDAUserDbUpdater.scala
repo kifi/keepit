@@ -81,17 +81,21 @@ class LDAUserDbUpdaterImpl @Inject() (
       val topicCounts = db.readOnlyReplica { implicit s => uriTopicRepo.getUserTopicHistograms(user, representer.version) }
       val numOfEvidence = topicCounts.map { _._2 }.sum
       val time = currentDateTime
-      val recentTopicCounts = db.readOnlyReplica { implicit s => uriTopicRepo.getUserTopicHistograms(user, representer.version, after = Some(time.minusWeeks(1))) }
+      val recentTopicCounts = db.readOnlyReplica { implicit s =>
+        uriTopicRepo.getSmartRecentUserTopicHistograms(user, representer.version, noOlderThan = time.minusMonths(1), preferablyNewerThan = time.minusWeeks(1), minNum = 15, maxNum = 40)
+      }
       val numOfRecentEvidence = recentTopicCounts.map { _._2 }.sum
       val topicMean = genFeature(topicCounts)
       val recentTopicMean = genFeature(recentTopicCounts)
       val state = if (topicMean.isDefined) UserLDAInterestsStates.ACTIVE else UserLDAInterestsStates.NOT_APPLICABLE
-      val tosave = model match {
+      val newModel = model match {
         case Some(m) => m.copy(numOfEvidence = numOfEvidence, userTopicMean = topicMean, numOfRecentEvidence = numOfRecentEvidence, userRecentTopicMean = recentTopicMean).withUpdateTime(currentDateTime).withState(state)
-        case None => UserLDAInterests(userId = user, version = representer.version, numOfEvidence = numOfEvidence, userTopicMean = topicMean, numOfRecentEvidence = numOfRecentEvidence, userRecentTopicMean = recentTopicMean, state = state)
+        case None => UserLDAInterests(userId = user, version = representer.version, numOfEvidence = numOfEvidence, userTopicMean = topicMean, numOfRecentEvidence = numOfRecentEvidence, userRecentTopicMean = recentTopicMean,
+          overallSnapshotAt = Some(time), overallSnapshot = topicMean, recencySnapshotAt = Some(time), recencySnapshot = recentTopicMean, state = state)
       }
+      val (snaphShotChanged, tosave) = updateSnapshotIfNecessary(newModel)
       db.readWrite { implicit s => userTopicRepo.save(tosave) }
-      if (changedMuch(model, Some(tosave))) { curator.resetUserRecoGenState(user) }
+      if (snaphShotChanged) { curator.resetUserRecoGenState(user) }
     }
   }
 
@@ -117,17 +121,17 @@ class LDAUserDbUpdaterImpl @Inject() (
     Some(UserTopicMean(arr.map { x => x / s }))
   }
 
-  private def changedMuch(oldModel: Option[UserLDAInterests], newModel: Option[UserLDAInterests]): Boolean = {
-    val m1Opt = oldModel.flatMap { m => m.userTopicMean }
-    val m2Opt = newModel.flatMap { m => m.userTopicMean }
+  private def updateSnapshotIfNecessary(model: UserLDAInterests): (Boolean, UserLDAInterests) = {
+    val m1Opt = model.userTopicMean
+    val m2Opt = model.overallSnapshot
     val overallChanged = (m1Opt, m2Opt) match {
       case (Some(m1), Some(m2)) => if (cosineDistance(m1.mean, m2.mean) < 0.5f) true else false
       case (None, None) => false
       case _ => true
     }
 
-    val recent1Opt = oldModel.flatMap { m => m.userRecentTopicMean }
-    val recent2Opt = newModel.flatMap { m => m.userRecentTopicMean }
+    val recent1Opt = model.userRecentTopicMean
+    val recent2Opt = model.recencySnapshot
 
     val recentChanged = (recent1Opt, recent2Opt) match {
       case (Some(m1), Some(m2)) => if (cosineDistance(m1.mean, m2.mean) < 0.2f) true else false // recent profile is more volatile
@@ -135,7 +139,12 @@ class LDAUserDbUpdaterImpl @Inject() (
       case _ => true
     }
 
-    overallChanged || recentChanged
+    (overallChanged, recentChanged) match {
+      case (true, true) => (true, model.copy(overallSnapshot = model.userTopicMean, recencySnapshot = model.userRecentTopicMean, overallSnapshotAt = Some(currentDateTime), recencySnapshotAt = Some(currentDateTime)))
+      case (true, false) => (true, model.copy(overallSnapshot = model.userTopicMean, overallSnapshotAt = Some(currentDateTime)))
+      case (false, true) => (true, model.copy(recencySnapshot = model.userRecentTopicMean, recencySnapshotAt = Some(currentDateTime)))
+      case (false, false) => (false, model)
+    }
   }
 
 }

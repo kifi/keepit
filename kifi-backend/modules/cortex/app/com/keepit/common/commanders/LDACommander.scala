@@ -147,7 +147,7 @@ class LDACommander @Inject() (
   }
 
   private def computeConfidence(numOfWords: Int, numOfEvidenceForUser: Int, isRecent: Boolean) = {
-    val alpha = if (isRecent) (numOfEvidenceForUser - 10) / 5f else (numOfEvidenceForUser - 30) / 10f
+    val alpha = if (isRecent) (numOfEvidenceForUser - 20) / 5f else (numOfEvidenceForUser - 30) / 10f
     val s1 = 1f / (1 + exp(-1 * alpha)).toFloat
     val beta = (numOfWords - 50) / 50f
     val s2 = 1f / (1 + exp(-1 * beta)).toFloat
@@ -236,7 +236,7 @@ class LDACommander @Inject() (
 
   def explainFeed(userId: Id[User], uris: Seq[Id[NormalizedURI]]): Seq[Seq[Id[Keep]]] = {
 
-    val MAX_KL_DIST = 0.8f // empirically this should be < 1.0
+    val MAX_KL_DIST = 0.6f // empirically this should be < 1.0
     val topK = 3
 
     def bestMatch(userFeats: Seq[(Id[Keep], LDATopicFeature)], uriFeat: URILDATopic): Seq[Id[Keep]] = {

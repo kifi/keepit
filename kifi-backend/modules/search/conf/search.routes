@@ -35,6 +35,7 @@ POST        /site/search/events/searched        @com.keepit.controllers.website.
 ##########################################
 
 POST        /internal/search/dist/search          @com.keepit.controllers.search.SearchController.distSearch()
+POST        /internal/search/dist/search2         @com.keepit.controllers.search.SearchController.distSearch2()
 POST        /internal/search/dist/langFreqs       @com.keepit.controllers.search.SearchController.distLangFreqs()
 
 GET         /internal/search/warmUp/:userId        @com.keepit.controllers.search.SearchController.warmUpUser(userId: Id[User])
@@ -74,12 +75,6 @@ GET         /internal/search/searchConfig/:id        @com.keepit.controllers.sea
 POST        /internal/search/searchConfig/:id/set        @com.keepit.controllers.search.SearchConfigController.setUserConfig(id: Id[User])
 GET         /internal/search/searchConfig/:id/reset        @com.keepit.controllers.search.SearchConfigController.resetUserConfig(id: Id[User])
 GET         /internal/search/defaultSearchConfig/defaultSearchConfig        @com.keepit.controllers.search.SearchConfigController.getSearchDefaultConfig
-
-GET         /internal/search/semanticVector/leaveOneOut        @com.keepit.controllers.search.SemanticVectorController.leaveOneOut(queryText: String, stem: Boolean, useSketch: Boolean)
-GET         /internal/search/semanticVector/allSubsets        @com.keepit.controllers.search.SemanticVectorController.allSubsets(queryText: String, stem: Boolean, useSketch: Boolean)
-GET         /internal/search/semanticVector/similarity        @com.keepit.controllers.search.SemanticVectorController.similarity(query1: String, query2: String, stem: Boolean)
-GET         /internal/search/semanticVector/semanticLoss        @com.keepit.controllers.search.SemanticVectorController.semanticLoss(queryText: String)
-POST        /internal/search/semanticVector/visualize        @com.keepit.controllers.search.SemanticVectorController.visualizeSemanticVector
 
 GET         /internal/search/cache/warmResultClick        @com.keepit.controllers.search.SearchCacheController.warmResultClick()
 

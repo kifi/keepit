@@ -11,7 +11,6 @@ import com.keepit.search.graph.bookmark.UserToUserEdgeSet
 import com.keepit.search.article.ArticleRecord
 import com.keepit.search.article.ArticleVisibility
 import com.keepit.search.query.parser.MainQueryParser
-import com.keepit.search.semantic.SemanticVector
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
@@ -59,7 +58,6 @@ class MainSearcher(
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
   private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
   private[this] val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
-  private[this] val similarity = Similarity(config.asString("similarity"))
   private[this] val minMyBookmarks = config.asInt("minMyBookmarks")
   private[this] val myBookmarkBoost = config.asFloat("myBookmarkBoost")
   private[this] val usefulPageBoost = config.asFloat("usefulPageBoost")
@@ -91,17 +89,13 @@ class MainSearcher(
     users.foldLeft(sharingUsers.size.toFloat) { (score, id) => score + normalizedFriendStats.score(id) } / 2.0f
   }
 
-  private def getNonPersonalizedQueryContextVector(parser: MainQueryParser): SemanticVector = {
-    val newSearcher = articleSearcher.withSemanticContext
-    parser.svTerms.foreach { t => newSearcher.addContextTerm(t) }
-    newSearcher.getContextVector
-  }
-
   def getPersonalizedSearcher(query: Query) = {
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.outerjoin(personalReader, personalIdMapper)
 
-    PersonalizedSearcher(indexReader, socialGraphInfo.mySearchUris, collectionSearcher)
+    val searcher = new PersonalizedSearcher(indexReader, collectionSearcher)
+    searcher.setSimilarity(articleSearcher.getSimilarity())
+    searcher
   }
 
   def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): (ArticleHitQueue, ArticleHitQueue, ArticleHitQueue) = {
@@ -118,7 +112,6 @@ class MainSearcher(
 
       val tPersonalSearcher = currentDateTime.getMillis()
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
-      personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - tPersonalSearcher
 
       val weight = personalizedSearcher.createWeight(articleQuery)
@@ -325,7 +318,7 @@ class MainSearcher(
     PartialSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, svVar, show)
   }
 
-  private[this] def toDetailedSearchHits(hitList: List[Hit[MutableArticleHit]]): List[DetailedSearchHit] = {
+  def toDetailedSearchHits(hitList: Seq[Hit[MutableArticleHit]]): Seq[DetailedSearchHit] = {
     val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
 
     hitList.map { hit =>
@@ -402,7 +395,6 @@ class MainSearcher(
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     parser.parsedQuery.map { query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
-      personalizedSearcher.setSimilarity(similarity)
 
       (query, personalizedSearcher.explain(query, uriId.id))
     }

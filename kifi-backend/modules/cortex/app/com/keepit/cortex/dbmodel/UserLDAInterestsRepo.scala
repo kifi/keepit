@@ -23,7 +23,7 @@ trait UserLDAInterestsRepo extends DbRepo[UserLDAInterests] {
 class UserLDAInterestsRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    airbrake: AirbrakeNotifier) extends DbRepo[UserLDAInterests] with UserLDAInterestsRepo with CortexTypeMappers {
+    airbrake: AirbrakeNotifier) extends DbRepo[UserLDAInterests] with UserLDAInterestsRepo with CortexTypeMappers with FortyTwoGenericTypeMappers {
 
   import db.Driver.simple._
 
@@ -36,7 +36,12 @@ class UserLDAInterestsRepoImpl @Inject() (
     def userTopicMean = column[UserTopicMean]("user_topic_mean", O.Nullable)
     def numOfRecentEvidence = column[Int]("num_of_recent_evidence")
     def userRecentTopicMean = column[UserTopicMean]("user_recent_topic_mean", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, version, numOfEvidence, userTopicMean.?, numOfRecentEvidence, userRecentTopicMean.?, state) <> ((UserLDAInterests.apply _).tupled, UserLDAInterests.unapply _)
+    def overallSnapshotAt = column[DateTime]("overall_snapshot_at", O.Nullable)
+    def overallSnapshot = column[UserTopicMean]("overall_snapshot", O.Nullable)
+    def recencySnapshotAt = column[DateTime]("recency_snapshot_at", O.Nullable)
+    def recencySnapshot = column[UserTopicMean]("recency_snapshot", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, userId, version, numOfEvidence, userTopicMean.?, numOfRecentEvidence, userRecentTopicMean.?,
+      overallSnapshotAt.?, overallSnapshot.?, recencySnapshotAt.?, recencySnapshot.?, state) <> ((UserLDAInterests.apply _).tupled, UserLDAInterests.unapply _)
   }
 
   def table(tag: Tag) = new UserLDATopicTable(tag)

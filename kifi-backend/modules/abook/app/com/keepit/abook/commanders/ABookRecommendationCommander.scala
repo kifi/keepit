@@ -38,9 +38,9 @@ class ABookRecommendationCommander @Inject() (
     }
   }
 
-  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[Seq[Id[User]]]] = {
+  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int, bePatient: Boolean = false): Future[Option[Seq[Id[User]]]] = {
     val start = clock.now()
-    val futureRecommendations = generateFutureFriendRecommendations(userId).map(_.map(_.drop(offset).take(limit).map(_._1).toSeq))
+    val futureRecommendations = generateFutureFriendRecommendations(userId, bePatient).map(_.map(_.drop(offset).take(limit).map(_._1).toSeq))
     futureRecommendations.onSuccess {
       case Some(recommendations) => log.info(s"Computed ${recommendations.length}/${limit} (skipped $offset) friend recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
       case None => log.info(s"Friend recommendations are not available. Returning in ${clock.now().getMillis - start.getMillis}ms.")
@@ -105,8 +105,8 @@ class ABookRecommendationCommander @Inject() (
     }
   }
 
-  private def generateFutureFriendRecommendations(userId: Id[User]): Future[Option[Stream[(Id[User], Double)]]] = {
-    val futureRelatedUsers = graph.getSociallyRelatedUsers(userId, bePatient = false)
+  private def generateFutureFriendRecommendations(userId: Id[User], bePatient: Boolean = false): Future[Option[Stream[(Id[User], Double)]]] = {
+    val futureRelatedUsers = graph.getSociallyRelatedEntities(userId, bePatient).map(_.map(_.users))
     val futureFriends = shoebox.getFriends(userId)
     val futureFriendRequests = shoebox.getFriendRequestsBySender(userId)
     val futureFakeUsers = shoebox.getAllFakeUsers()
