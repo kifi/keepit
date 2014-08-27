@@ -41,7 +41,7 @@ class PublicUriScoringHelper @Inject() (
   private def getRawCurationScore(items: Seq[PublicSeedItemWithMultiplier], boostedKeepers: Set[Id[User]]): Seq[Option[Float]] = {
     items.map(item =>
       item.keepers match {
-        case Keepers.ReasonableNumber(users) if (boostedKeepers & users.toSet).nonEmpty => Some(0.75f)
+        case Keepers.ReasonableNumber(users) if (boostedKeepers & users.toSet).nonEmpty => Some(0.5f)
         case _ => None
       })
   }
