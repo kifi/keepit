@@ -39,6 +39,7 @@ class RecommendationGenerationCommander @Inject() (
     scoringHelper: UriScoringHelper,
     publicScoringHelper: PublicUriScoringHelper,
     uriWeightingHelper: UriWeightingHelper,
+    rescoringHelper: UriRecosRescoringHelper,
     publicUriWeightingHelper: PublicUriWeightingHelper,
     attributionHelper: SeedAttributionHelper,
     db: Database,
@@ -227,7 +228,7 @@ class RecommendationGenerationCommander @Inject() (
           toBeSaved.map { items =>
             saveScoredSeedItems(items, userId, newState)
             precomputeRecommendationsForUser(userId, boostedKeepers)
-            !seedItems.isEmpty
+            seedItems.nonEmpty
           }
         }
     }
@@ -283,7 +284,7 @@ class RecommendationGenerationCommander @Inject() (
           publicScoringHelper(weightedItems, boostedKeepers).map { items =>
             savePublicScoredSeedItems(items, newSeqNum)
             precomputePublicFeeds()
-            !publicSeedItems.isEmpty
+            publicSeedItems.nonEmpty
           }
         }
     }
@@ -326,4 +327,30 @@ class RecommendationGenerationCommander @Inject() (
       }
     }
   }
+
+  def recomputeRecos(userId: Id[User]): Future[Unit] = {
+    getPerUserGenerationLock(userId).withLockFuture {
+      db.readOnlyMasterAsync { implicit s =>
+        val recos = uriRecRepo.getByUserId(userId)
+        val recomputedScoresFut = rescoringHelper(recos)
+        recomputedScoresFut.map { recomputedScores =>
+          db.readWrite { implicit s =>
+            for (i <- 0 until recos.length) yield {
+              val newScore = recos(i).allScores.copy(socialScore = recomputedScores(i).socialScore,
+                overallInterestScore = recomputedScores(i).overallInterestScore,
+                recentInterestScore = recomputedScores(i).recentInterestScore)
+              uriRecRepo.save(
+                recos(i).copy(
+                  state = UriRecommendationStates.ACTIVE,
+                  masterScore = computeMasterScore(newScore),
+                  allScores = newScore
+                ))
+            }
+          }
+        }
+      }
+    }
+    precomputeRecommendations()
+  }
+
 }

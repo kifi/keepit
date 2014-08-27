@@ -32,6 +32,11 @@ case class PublicSeedItem(
   keepers: Keepers,
   discoverable: Boolean)
 
+@json case class RecomputedScores(
+  socialScore: Float,
+  overallInterestScore: Float,
+  recentInterestScore: Float)
+
 @json case class PublicUriScores(
   popularityScore: Float,
   recencyScore: Float,
