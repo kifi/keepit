@@ -16,16 +16,20 @@ class DistributedSearchRouter(client: SearchServiceClient) extends CustomRouter 
   @volatile
   private[this] var dispatcher = Dispatcher[T](Vector.empty[ServiceInstance], () => ())
 
+  private def getRandomizer(userId: Id[User]) = {
+    if (userId.id < 0) Dispatcher.defaultRandomizer else Dispatcher.randomizer(userId.id)
+  }
+
   def update(instances: Vector[ServiceInstance], forceReload: () => Unit): Unit = {
     dispatcher = Dispatcher[T](instances.filter(_.isUp), forceReload)
   }
 
   def plan(userId: Id[User], shards: Set[Shard[T]], maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[T]])] = {
-    dispatcher.dispatch(shards, Dispatcher.randomizer(userId.id), maxShardsPerInstance) { (instance, shards) => (instance, shards) }
+    dispatcher.dispatch(shards, getRandomizer(userId), maxShardsPerInstance) { (instance, shards) => (instance, shards) }
   }
 
   def planRemoteOnly(userId: Id[User], maxShardsPerInstance: Int = Int.MaxValue): Seq[(ServiceInstance, Set[Shard[T]])] = {
-    dispatcher.dispatch(Dispatcher.randomizer(userId.id), maxShardsPerInstance) { (instance, shards) => (instance, shards) }
+    dispatcher.dispatch(getRandomizer(userId), maxShardsPerInstance) { (instance, shards) => (instance, shards) }
   }
 
   def dispatch(plan: Seq[(ServiceInstance, Set[Shard[T]])], url: ServiceRoute, request: JsValue): Seq[Future[ClientResponse]] = {

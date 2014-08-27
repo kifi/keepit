@@ -96,6 +96,7 @@ trait KeepRecencyEvaluator { self: ScoreVectorSourceLike =>
 }
 
 trait VisibilityEvaluator { self: ScoreVectorSourceLike =>
+
   protected val userId: Long
   protected val friendIdsFuture: Future[Set[Long]]
   protected val libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])]
@@ -256,6 +257,7 @@ class UriFromKeepsScoreVectorSource(
     val pq = createScorerQueue(scorers)
     if (pq.size <= 0) return // no scorer
 
+    val idMapper = reader.getIdMapper
     val uriIdDocValues = reader.getNumericDocValues(KeepFields.uriIdField)
     val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)
     val userIdDocValues = reader.getNumericDocValues(KeepFields.userIdField)
@@ -273,6 +275,7 @@ class UriFromKeepsScoreVectorSource(
 
     var docId = pq.top.doc
     while (docId < NO_MORE_DOCS) {
+      val keepId = idMapper.getId(docId)
       val uriId = uriIdDocValues.get(docId)
       val libId = libraryIdDocValues.get(docId)
 
@@ -289,7 +292,7 @@ class UriFromKeepsScoreVectorSource(
           // write to the buffer
           // write the libId. libId is expected for searchable keeps.
           output.alloc(writer, visibility | Visibility.HAS_SECONDARY_ID, 8 + 8 + size * 4) // id (8 bytes), libId (8 bytes) and taggedFloats (size * 4 bytes)
-          writer.putLong(uriId).putLong(libId).putTaggedFloatBits(taggedScores, size)
+          writer.putLong(uriId).putLong(keepId).putTaggedFloatBits(taggedScores, size)
         } else {
           docId = pq.skipCurrentDoc() // this keep is not searchable, skipping...
         }
@@ -308,8 +311,8 @@ class UriFromKeepsScoreVectorSource(
 
         if (idFilter.findIndex(uriId) < 0) { // use findIndex to avoid boxing
           // write to the buffer
-          output.alloc(writer, visibility, 8) // id (8 bytes)
-          writer.putLong(uriId)
+          output.alloc(writer, visibility | Visibility.HAS_TERTIARY_ID, 8) // id (8 bytes)
+          writer.putLong(uriId).putLong(libId)
         }
       }
     }

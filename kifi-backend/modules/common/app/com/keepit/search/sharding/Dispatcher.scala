@@ -20,7 +20,7 @@ object Dispatcher {
     new Dispatcher[T](instances.map(new ShardedServiceInstance[T](_)), forceReloadFromZK)
   }
 
-  def defaultRandomizer: Randomizer = new Randomizer(System.currentTimeMillis())
+  def defaultRandomizer: Randomizer = new Randomizer(System.currentTimeMillis() ^ Thread.currentThread().getId)
 
   def randomizer(seed: Long): Randomizer = new Randomizer(seed)
 }
