@@ -98,9 +98,6 @@ class SendgridCommander @Inject() (
     eventName.filter(CLICK == _).foreach { _ =>
       emailOpt.foreach { email =>
         verifyEmailAddress(event, email)
-        if (NotificationCategory.fromElectronicMailCategory(email.category) == NotificationCategory.User.DIGEST) {
-          recordClickForDigestEmail(event, email)
-        }
       }
     }
 
@@ -139,20 +136,5 @@ class SendgridCommander @Inject() (
         emailOptOutRepo.optOut(userEmail, NotificationCategory.ALL)
       }
     }
-
-  private def recordClickForDigestEmail(event: SendgridEvent, email: ElectronicMail): Unit = {
-    log.info(s"recordClickForDigestEmail(${event}, ${email})") // TODO (josh) remove this after debugging
-    if (event.url.isEmpty || email.senderUserId.isEmpty) {
-      log.warn(s"cannot record click event for digest email; url=${event.url} email=${email.senderUserId}")
-      return
-    }
-
-    //    val userId = email.senderUserId.get
-    //    val keepUrl = event.url.get
-    //
-    //    recoCommander.updateUriRecommendationFeedback(userId, keepUrl, uriRecoFeedback).map { ok =>
-    //      if (!ok) log.warn(s"updateUriRecommendationFeedback($userId, $keepUrl, $uriRecoFeedback) returned false")
-    //    }
-  }
 }
 

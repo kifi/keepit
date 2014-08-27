@@ -35,7 +35,6 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI]
   def checkUnrestrictedURIs(uriId: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
   def checkScrapedURIs(uriId: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
-  def getByExtId(extId: ExternalId[NormalizedURI])(implicit session: RSession): Option[NormalizedURI]
 }
 
 @Singleton
@@ -206,10 +205,6 @@ class NormalizedURIRepoImpl @Inject() (
 
   def checkScrapedURIs(uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
     (for (r <- rows if r.id.inSet(uriIds)) yield r.state).list.map(_.equals(NormalizedURIStates.SCRAPED))
-  }
-
-  def getByExtId(extId: ExternalId[NormalizedURI])(implicit session: RSession): Option[NormalizedURI] = {
-    (for (r <- rows if r.externalId === extId) yield r).firstOption
   }
 
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {

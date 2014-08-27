@@ -82,7 +82,7 @@ class RecommendationsCommander @Inject() (
 
   def updateUriRecommendationFeedback(userId: Id[User], extId: ExternalId[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
     val uriOpt = db.readOnlyMaster { implicit s =>
-      nUriRepo.getByExtId(extId)
+      nUriRepo.getOpt(extId)
     }
     uriOpt match {
       case Some(uri) => curator.updateUriRecommendationFeedback(userId, uri.id.get, feedback)
