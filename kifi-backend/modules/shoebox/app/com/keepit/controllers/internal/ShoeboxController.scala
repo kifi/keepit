@@ -420,12 +420,12 @@ class ShoeboxController @Inject() (
 
   def addInteraction(userId: Id[User]) = Action(parse.tolerantJson) { request =>
     val json = request.body
-    val src = (json \ "user").asOpt[Id[User]] match {
-      case Some(id) => Left(id)
-      case None => Right((json \ "email").as[EmailAddress])
+    val recipient = (json \ "user").asOpt[Id[User]] match {
+      case Some(id) => UserRecipient(id)
+      case None => EmailRecipient((json \ "email").as[EmailAddress])
     }
     val interaction = (json \ "action").as[String]
-    userInteractionCommander.addInteraction(userId, src, UserInteraction.getAction(interaction))
+    userInteractionCommander.addInteraction(userId, recipient, UserInteraction.getAction(interaction))
     Ok
   }
 }

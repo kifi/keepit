@@ -1,7 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.keepit.classify.{ Domain, DomainRepo, DomainStates }
-import com.keepit.commanders.{ TypeaheadCommander, UserInteractionCommander, UserCommander }
+import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URI
@@ -53,8 +53,8 @@ class ExtUserController @Inject() (
     Ok(Json.obj("host" -> host, "suppressed" -> suppress))
   }
 
-  def searchForContacts(query: Option[String], limit: Option[Int], pictureUrl: Boolean, dedupEmail: Boolean) = JsonAction.authenticatedAsync { request =>
-    typeAheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit, pictureUrl, dedupEmail) map { res =>
+  def searchForContacts(query: Option[String], limit: Option[Int]) = JsonAction.authenticatedAsync { request =>
+    typeAheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit) map { res =>
       Ok(Json.toJson(res))
     }
   }

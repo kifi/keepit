@@ -96,7 +96,7 @@ POST    /ext/pref/maxResults        @com.keepit.controllers.ext.ExtPreferenceCon
 POST    /ext/pref/showExtMsgIntro   @com.keepit.controllers.ext.ExtPreferenceController.setShowExtMsgIntro(show: Boolean)
 POST    /ext/pref/email/:kind/:send @com.keepit.controllers.ext.ExtPreferenceController.setEmailNotifyPreference(kind: com.keepit.common.mail.ElectronicMailCategory, send: Boolean)
 GET     /ext/user/friends           @com.keepit.controllers.ext.ExtUserController.getFriends()
-GET     /ext/user/contacts/search   @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
+GET     /ext/user/contacts/search   @com.keepit.controllers.ext.ExtUserController.searchForContacts(query:Option[String], limit:Option[Int])
 GET     /ext/contacts               @com.keepit.controllers.ext.ExtNonUserSearchController.findPeopleToMessage(q: String, n: Int ?= 4)
 POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearchController.hideEmailFromUser()
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
@@ -305,7 +305,7 @@ POST    /site/user/delighted/cancel @com.keepit.controllers.website.UserControll
 POST    /site/user/close            @com.keepit.controllers.website.UserController.closeAccount()
 
 GET     /site/user/connections/all/search    @com.keepit.controllers.website.TypeaheadController.searchWithInviteStatus(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
-GET     /site/user/contacts/search  @com.keepit.controllers.website.TypeaheadController.searchForContacts(query:Option[String], limit:Option[Int], pictureUrl:Boolean ?= true, dedupEmail:Boolean ?= true)
+GET     /site/user/contacts/search  @com.keepit.controllers.website.TypeaheadController.searchForContacts(query:Option[String], limit:Option[Int])
 
 GET     /site/user/abookUploadStatus @com.keepit.controllers.website.UserController.getABookUploadStatus(id:Id[ABookInfo], callbackOpt:Option[String])
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()

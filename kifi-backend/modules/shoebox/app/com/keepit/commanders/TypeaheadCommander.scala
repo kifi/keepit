@@ -5,20 +5,24 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, SequenceNumber, State, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
 import com.keepit.common.logging.Logging.LoggerWithPrefix
 import com.keepit.common.logging.{ LogPrefix, Logging }
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model.{ SocialUserConnectionsKey, _ }
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{ SocialNetworkType, SocialNetworks, TypeaheadUserHit }
+import com.keepit.social.{ BasicUser, SocialNetworkType, SocialNetworks, TypeaheadUserHit }
 import com.keepit.typeahead.TypeaheadHit
 import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ Promise, Future }
@@ -33,6 +37,7 @@ class TypeaheadCommander @Inject() (
     invitationRepo: InvitationRepo,
     emailAddressRepo: UserEmailAddressRepo,
     userRepo: UserRepo,
+    basicUserRepo: BasicUserRepo,
     friendRequestRepo: FriendRequestRepo,
     abookServiceClient: ABookServiceClient,
     socialUserTypeahead: SocialUserTypeahead,
@@ -347,35 +352,37 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  def searchForContacts(userId: Id[User], query: String, limit: Option[Int], pictureUrl: Boolean, dedupEmail: Boolean): Future[Seq[ContactFound]] = {
+  def searchForContacts(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[ContactFound]] = {
     val q = query.trim
     if (q.length == 0) {
-      val contacts = interactionCommander.getInteractionScores(userId).map { interaction =>
-        interaction.entity match {
-          case Left(id) =>
-            val user = db.readOnlyMaster { implicit s =>
-              userRepo.get(id)
+      val contacts = interactionCommander.getRecentInteractions(userId).map { interaction =>
+        interaction.recipient match {
+          case UserRecipient(id) =>
+            val (basicUser, user) = db.readOnlyMaster { implicit s =>
+              (basicUserRepo.load(id), userRepo.get(id))
             }
-            ContactFound(user.fullName, interaction.score, if (pictureUrl) user.pictureName.map(_ + ".jpg") else None, s"fortytwo/${user.externalId}")
-          case Right(email) =>
-            ContactFound("", interaction.score, None, emailId(email))
+            ContactFound(name = basicUser.firstName + " " + basicUser.lastName, eid = Some(basicUser.externalId), email = None, score = interaction.score, image = user.pictureName.map(_ + ".jpg"), value = s"fortytwo/${user.externalId}")
+          case EmailRecipient(email) =>
+            ContactFound(name = "", eid = None, email = Some(email), score = interaction.score, image = None, value = emailId(email))
         }
       }
       Future.successful(contacts)
     } else {
-      aggregate(userId, q, limit, dedupEmail, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)) flatMap { top =>
-        val contacts = top flatMap {
+      aggregate(userId, q, limit, true, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)) map { top =>
+        top flatMap {
           case (snType, hit) => hit.info match {
             case e: RichContact =>
-              Some(ContactFound(e.name.getOrElse(""), hit.score, None, emailId(e.email)))
+              Some(ContactFound(name = e.name.getOrElse(""), eid = None, email = Some(e.email), score = hit.score, image = None, value = emailId(e.email)))
             case u: User =>
-              Some(ContactFound(u.fullName, hit.score, if (pictureUrl) u.pictureName.map(_ + ".jpg") else None, s"fortytwo/${u.externalId}"))
+              val basicUser = db.readOnlyMaster { implicit s =>
+                basicUserRepo.load(u.id.get)
+              }
+              Some(ContactFound(name = u.firstName + " " + u.lastName, eid = Some(u.externalId), email = u.primaryEmail, score = hit.score, image = u.pictureName.map(_ + ".jpg"), value = s"fortytwo/${u.externalId}"))
             case _ =>
               airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $hit"))
               None
           }
         }
-        Future.successful(contacts)
       }
     }
   }
@@ -387,8 +394,7 @@ class TypeaheadCommander @Inject() (
 }
 
 @json case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
-
-@json case class ContactFound(label: String, score: Double, image: Option[String], value: String)
+@json case class ContactFound(name: String, eid: Option[ExternalId[User]], email: Option[EmailAddress], score: Double, image: Option[String], value: String)
 
 sealed abstract class ContactType(val value: String)
 object ContactType {

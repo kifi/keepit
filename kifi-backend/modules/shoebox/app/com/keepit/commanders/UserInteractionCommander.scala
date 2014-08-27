@@ -12,13 +12,13 @@ class UserInteractionCommander @Inject() (
     userRepo: UserRepo,
     userValueRepo: UserValueRepo) {
 
-  def addInteraction(uid: Id[User], src: Either[Id[User], EmailAddress], interaction: UserInteraction): Unit = {
+  def addInteraction(uid: Id[User], recipient: InteractionRecipient, interaction: UserInteraction): Unit = {
     val interactions = db.readOnlyMaster { implicit s =>
       userValueRepo.getValue(uid, UserValues.recentInteractions)
     }.as[List[JsObject]]
-    val newJson = src match {
-      case Left(id) => Json.obj("user" -> id, "action" -> interaction.value)
-      case Right(email) => Json.obj("email" -> email.address, "action" -> interaction.value)
+    val newJson = recipient match {
+      case UserRecipient(id) => Json.obj("user" -> id, "action" -> interaction.value)
+      case EmailRecipient(email) => Json.obj("email" -> email.address, "action" -> interaction.value)
     }
     // append to head as most recent (will get the highest weight), remove from tail as least recent (lowest weight)
     val newInteractions = newJson :: interactions.take(UserInteraction.maximumInteractions - 1)
@@ -33,16 +33,16 @@ class UserInteractionCommander @Inject() (
     (15 * Math.pow(idx + 1.5, -0.7) + 0.5) * score
   }
 
-  def getInteractionScores(uid: Id[User]): Seq[InteractionInfo] = {
+  def getRecentInteractions(uid: Id[User]): Seq[InteractionInfo] = {
     db.readOnlyMaster { implicit s =>
       val arr = userValueRepo.getValue(uid, UserValues.recentInteractions).as[Seq[JsObject]]
       val scores = for ((obj, i) <- arr.zipWithIndex) yield {
         val action = (obj \ "action").as[String]
         val entity = (obj \ "user").asOpt[Id[User]] match {
           case Some(id) =>
-            Left(id)
+            UserRecipient(id)
           case None =>
-            Right(EmailAddress((obj \ "email").as[String]))
+            EmailRecipient(EmailAddress((obj \ "email").as[String]))
         }
         (entity, calcInteractionScore(i, action))
       }
@@ -54,7 +54,7 @@ class UserInteractionCommander @Inject() (
   }
 }
 
-case class InteractionInfo(entity: Either[Id[User], EmailAddress], score: Double)
+case class InteractionInfo(recipient: InteractionRecipient, score: Double)
 object InteractionInfo {
   implicit def ord: Ordering[InteractionInfo] = new Ordering[InteractionInfo] {
     def compare(x: InteractionInfo, y: InteractionInfo): Int = x.score compare y.score
@@ -77,3 +77,7 @@ object UserInteraction {
     }
   }
 }
+
+sealed trait InteractionRecipient
+case class UserRecipient(id: Id[User]) extends InteractionRecipient
+case class EmailRecipient(address: EmailAddress) extends InteractionRecipient
