@@ -1,14 +1,14 @@
 package com.keepit.controllers.internal
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepsCommander, RawKeepImporterPlugin, UserCommander }
+import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ ElectronicMail, LocalPostOffice }
+import com.keepit.common.mail.{ EmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
@@ -55,6 +55,7 @@ class ShoeboxController @Inject() (
   socialGraphPlugin: SocialGraphPlugin,
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   scrapeScheduler: ScrapeScheduler,
+  userInteractionCommander: UserInteractionCommander,
   verifiedEmailUserIdCache: VerifiedEmailUserIdCache)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
@@ -415,5 +416,16 @@ class ShoeboxController @Inject() (
     val connectionsByNetwork = db.readOnlyReplica { implicit session => socialConnectionRepo.getSocialConnectionInfosByUser(userId) }
     val allConnections = connectionsByNetwork.valuesIterator.flatten.toSeq
     Ok(Json.toJson(allConnections))
+  }
+
+  def addInteraction(userId: Id[User]) = Action(parse.tolerantJson) { request =>
+    val json = request.body
+    val recipient = (json \ "user").asOpt[Id[User]] match {
+      case Some(id) => UserRecipient(id)
+      case None => EmailRecipient((json \ "email").as[EmailAddress])
+    }
+    val interaction = (json \ "action").as[String]
+    userInteractionCommander.addInteraction(userId, recipient, UserInteraction.getAction(interaction))
+    Ok
   }
 }

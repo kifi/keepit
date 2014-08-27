@@ -5,20 +5,24 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.RichContact
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core._
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, SequenceNumber, State, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, SystemAdminMailSender }
 import com.keepit.common.logging.Logging.LoggerWithPrefix
 import com.keepit.common.logging.{ LogPrefix, Logging }
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.model.{ SocialUserConnectionsKey, _ }
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.{ SocialNetworkType, SocialNetworks, TypeaheadUserHit }
+import com.keepit.social.{ BasicUser, SocialNetworkType, SocialNetworks, TypeaheadUserHit }
 import com.keepit.typeahead.TypeaheadHit
 import com.keepit.typeahead.socialusers.{ KifiUserTypeahead, SocialUserTypeahead }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{ Promise, Future }
@@ -33,11 +37,13 @@ class TypeaheadCommander @Inject() (
     invitationRepo: InvitationRepo,
     emailAddressRepo: UserEmailAddressRepo,
     userRepo: UserRepo,
+    basicUserRepo: BasicUserRepo,
     friendRequestRepo: FriendRequestRepo,
     abookServiceClient: ABookServiceClient,
     socialUserTypeahead: SocialUserTypeahead,
     kifiUserTypeahead: KifiUserTypeahead,
     searchClient: SearchServiceClient,
+    interactionCommander: UserInteractionCommander,
     systemAdminMailSender: SystemAdminMailSender) extends Logging {
 
   type NetworkTypeAndHit = (SocialNetworkType, TypeaheadHit[_])
@@ -224,16 +230,22 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  private def aggregate(userId: Id[User], q: String, limitOpt: Option[Int], dedupEmail: Boolean): Future[Seq[NetworkTypeAndHit]] = {
+  private def aggregate(userId: Id[User], q: String, limitOpt: Option[Int], dedupEmail: Boolean, contacts: Set[ContactType]): Future[Seq[NetworkTypeAndHit]] = {
     implicit val prefix = LogPrefix(s"aggregate($userId,$q,$limitOpt)")
-    val socialF = socialUserTypeahead.topN(userId, q, limitOpt map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { res =>
-      res.collect {
-        case hit if includeHit(hit) => hit
+    // FB or LN
+    val socialF = if (contacts.contains(ContactType.SOCIAL))
+      socialUserTypeahead.topN(userId, q, limitOpt map (_ * 3))(TypeaheadHit.defaultOrdering[SocialUserBasicInfo]) map { res =>
+        res.collect {
+          case hit if includeHit(hit) => hit
+        }
       }
-    }
-    val kifiF = kifiUserTypeahead.topN(userId, q, limitOpt)(TypeaheadHit.defaultOrdering[User])
-    val abookF = if (q.length < 2) Future.successful(Seq.empty) else abookServiceClient.prefixQuery(userId, q, limitOpt.map(_ * 2))
-    val nfUsersF = if (q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeaheadWithUserId(userId, q, limitOpt.getOrElse(100), filter = "nf")
+    else { Future.successful(Seq.empty) }
+    // Friends on Kifi
+    val kifiF = if (contacts.contains(ContactType.KIFI_FRIEND)) kifiUserTypeahead.topN(userId, q, limitOpt)(TypeaheadHit.defaultOrdering[User]) else Future.successful(Seq.empty)
+    // Email Contacts
+    val abookF = if (!contacts.contains(ContactType.EMAIL) || q.length < 2) Future.successful(Seq.empty) else abookServiceClient.prefixQuery(userId, q, limitOpt.map(_ * 2))
+    // Non-Friends on Kifi
+    val nfUsersF = if (!contacts.contains(ContactType.KIFI_NON_FRIEND) || q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeaheadWithUserId(userId, q, limitOpt.getOrElse(100), filter = "nf")
 
     limitOpt match {
       case None => fetchAll(socialF, kifiF, abookF, nfUsersF)
@@ -319,7 +331,7 @@ class TypeaheadCommander @Inject() (
     val q = query.trim
     if (q.length == 0) Future.successful(Seq.empty[ConnectionWithInviteStatus])
     else {
-      aggregate(userId, q, limit, dedupEmail) flatMap { top =>
+      aggregate(userId, q, limit, dedupEmail, ContactType.getAll()) flatMap { top =>
         for {
           socialInvites <- socialInvitesF
           emailInvites <- emailInvitesF
@@ -337,6 +349,36 @@ class TypeaheadCommander @Inject() (
     }
   }
 
+  def searchForContacts(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[ContactSearchResult]] = {
+    val q = query.trim
+    if (q.length == 0) {
+      val contacts = interactionCommander.getRecentInteractions(userId).map { interaction =>
+        interaction.recipient match {
+          case UserRecipient(id) =>
+            val user = db.readOnlyMaster { implicit s => userRepo.get(id) }
+            UserContactResult(name = user.fullName, id = user.externalId, image = user.pictureName.map(_ + ".jpg"))
+          case EmailRecipient(email) =>
+            EmailContactResult(name = None, email = email)
+        }
+      }
+      Future.successful(contacts)
+    } else {
+      aggregate(userId, q, limit, true, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)) map { top =>
+        top flatMap {
+          case (snType, hit) => hit.info match {
+            case e: RichContact =>
+              Some(EmailContactResult(name = e.name, email = e.email))
+            case u: User =>
+              Some(UserContactResult(name = u.fullName, id = u.externalId, image = u.pictureName.map(_ + ".jpg")))
+            case _ =>
+              airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $hit"))
+              None
+          }
+        }
+      }
+    }
+  }
+
   def hideEmailFromUser(userId: Id[User], email: EmailAddress): Future[Boolean] = {
     abookServiceClient.hideEmailFromUser(userId, email)
   }
@@ -344,3 +386,19 @@ class TypeaheadCommander @Inject() (
 }
 
 @json case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
+
+sealed trait ContactSearchResult {}
+@json case class UserContactResult(name: String, id: ExternalId[User], image: Option[String]) extends ContactSearchResult
+@json case class EmailContactResult(name: Option[String], email: EmailAddress) extends ContactSearchResult
+
+sealed abstract class ContactType(val value: String)
+object ContactType {
+  case object SOCIAL extends ContactType("social") // FB or LN
+  case object EMAIL extends ContactType("email")
+  case object KIFI_FRIEND extends ContactType("kifi_friend")
+  case object KIFI_NON_FRIEND extends ContactType("kifi_non_friend")
+
+  def getAll(): Set[ContactType] = {
+    Set(SOCIAL, EMAIL, KIFI_FRIEND, KIFI_NON_FRIEND)
+  }
+}
