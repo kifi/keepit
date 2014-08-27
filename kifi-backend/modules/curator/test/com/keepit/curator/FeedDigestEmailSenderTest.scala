@@ -68,28 +68,30 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         val savedRecoModels = db.readWrite { implicit rw =>
           Seq(
             {
-              val tuple = makeCompleteUriRecommendation(1, 42, 0.15f, "https://www.kifi.com", 10000)
+              val tuple = makeCompleteUriRecommendation(1, 42, 8f, "https://www.kifi.com", 10000)
               tuple.copy(_2 = tuple._2.copy(attribution = SeedAttribution(
                 user = Some(UserAttribution(friends = Seq(friend1, friend2).map(_.id.get), others = 1)),
                 topic = Some(TopicAttribution("Reading"))
               )))
             },
             {
-              val tuple = makeCompleteUriRecommendation(2, 42, 0.99f, "https://www.google.com", 2500)
+              val tuple = makeCompleteUriRecommendation(2, 42, 9f, "https://www.google.com", 2500)
               tuple.copy(_2 = tuple._2.copy(attribution = SeedAttribution(
                 user = Some(UserAttribution(friends = Seq(friend1.id.get), others = 2)),
                 topic = Some(TopicAttribution("Searching"))
               )))
             },
-            makeCompleteUriRecommendation(3, 43, 0.3f, "http://www.42go.com"),
-            makeCompleteUriRecommendation(4, 43, 0.4f, "http://www.yahoo.com"),
+            makeCompleteUriRecommendation(3, 43, 11f, "http://www.42go.com"),
+            makeCompleteUriRecommendation(4, 43, 8.5f, "http://www.yahoo.com"),
             // this isn't in the recommendation list because image width is too small
-            makeCompleteUriRecommendation(5, 43, 0.5f, "http://www.lycos.com", 250, Some(200)),
+            makeCompleteUriRecommendation(5, 43, 9f, "http://www.lycos.com", 250, Some(200)),
             // this isn't in recommendation list b/c it has already been sent
             {
-              val tuple = makeCompleteUriRecommendation(6, 42, 0.99f, "http://www.excite.com")
+              val tuple = makeCompleteUriRecommendation(6, 42, 9f, "http://www.excite.com")
               tuple.copy(_2 = tuple._2.withLastPushedAt(currentDateTime))
-            }
+            },
+            // shouldn't be in reco list b/c it's below threshold (8)
+            makeCompleteUriRecommendation(7, 43, 7.99f, "https://www.bing.com")
           ).map(tuple => saveUriModels(tuple, shoebox))
         }
 
@@ -158,7 +160,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail43body must contain("/e/1/recos/keep?id=" + savedRecoModels(2)._1.externalId)
         mail43body must contain("/e/1/recos/send?id=" + savedRecoModels(3)._1.externalId)
 
-        val notSentIds = Set(5L)
+        val notSentIds = Set(5L, 7F) // reco Ids in our list that still haven't been sent
         savedRecoModels.forall { models =>
           val (uri, reco, uriSumm) = models
           db.readOnlyMaster { implicit s =>
