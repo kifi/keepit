@@ -361,9 +361,9 @@ class TypeaheadCommander @Inject() (
             val (basicUser, user) = db.readOnlyMaster { implicit s =>
               (basicUserRepo.load(id), userRepo.get(id))
             }
-            ContactFound(name = basicUser.firstName + " " + basicUser.lastName, eid = Some(basicUser.externalId), email = None, score = interaction.score, image = user.pictureName.map(_ + ".jpg"), value = s"fortytwo/${user.externalId}")
+            ContactFound(name = basicUser.firstName + " " + basicUser.lastName, eid = Some(basicUser.externalId), email = None, image = user.pictureName.map(_ + ".jpg"))
           case EmailRecipient(email) =>
-            ContactFound(name = "", eid = None, email = Some(email), score = interaction.score, image = None, value = emailId(email))
+            ContactFound(name = "", eid = None, email = Some(email), image = None)
         }
       }
       Future.successful(contacts)
@@ -372,12 +372,12 @@ class TypeaheadCommander @Inject() (
         top flatMap {
           case (snType, hit) => hit.info match {
             case e: RichContact =>
-              Some(ContactFound(name = e.name.getOrElse(""), eid = None, email = Some(e.email), score = hit.score, image = None, value = emailId(e.email)))
+              Some(ContactFound(name = e.name.getOrElse(""), eid = None, email = Some(e.email), image = None))
             case u: User =>
               val basicUser = db.readOnlyMaster { implicit s =>
                 basicUserRepo.load(u.id.get)
               }
-              Some(ContactFound(name = u.firstName + " " + u.lastName, eid = Some(u.externalId), email = u.primaryEmail, score = hit.score, image = u.pictureName.map(_ + ".jpg"), value = s"fortytwo/${u.externalId}"))
+              Some(ContactFound(name = u.firstName + " " + u.lastName, eid = Some(u.externalId), email = u.primaryEmail, image = u.pictureName.map(_ + ".jpg")))
             case _ =>
               airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $hit"))
               None
@@ -394,7 +394,7 @@ class TypeaheadCommander @Inject() (
 }
 
 @json case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
-@json case class ContactFound(name: String, eid: Option[ExternalId[User]], email: Option[EmailAddress], score: Double, image: Option[String], value: String)
+@json case class ContactFound(name: String, eid: Option[ExternalId[User]], email: Option[EmailAddress], image: Option[String])
 
 sealed abstract class ContactType(val value: String)
 object ContactType {
