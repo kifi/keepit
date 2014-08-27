@@ -91,7 +91,9 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
               tuple.copy(_2 = tuple._2.withLastPushedAt(currentDateTime))
             },
             // shouldn't be in reco list b/c it's below threshold (8)
-            makeCompleteUriRecommendation(7, 43, 7.99f, "https://www.bing.com")
+            makeCompleteUriRecommendation(7, 43, 7.99f, "https://www.bing.com"),
+            // shouldn't be in reco list b/c image is too tall
+            makeCompleteUriRecommendation(uriId = 8, userId = 43, masterScore = 9, url = "https://www.youtube.com/watch?v=BROWqjuTM0g", summaryImageHeight = Some(1001))
           ).map(tuple => saveUriModels(tuple, shoebox))
         }
 
@@ -160,7 +162,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail43body must contain("/e/1/recos/keep?id=" + savedRecoModels(2)._1.externalId)
         mail43body must contain("/e/1/recos/send?id=" + savedRecoModels(3)._1.externalId)
 
-        val notSentIds = Set(5L, 7F) // reco Ids in our list that still haven't been sent
+        val notSentIds = Set(5L, 7F, 8F) // reco Ids in our list that still haven't been sent
         savedRecoModels.forall { models =>
           val (uri, reco, uriSumm) = models
           db.readOnlyMaster { implicit s =>

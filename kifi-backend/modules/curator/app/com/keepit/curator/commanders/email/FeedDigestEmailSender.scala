@@ -36,6 +36,7 @@ object DigestEmail {
 
   // exclude recommendations with an image less than this
   val MIN_IMAGE_WIDTH_PX = 488
+  val MAX_IMAGE_HEIGHT_PX = 1000
 
   // max # of friend thumbnails to show for each recommendation
   val MAX_FRIENDS_TO_SHOW = 10
@@ -218,6 +219,7 @@ class FeedDigestEmailSenderImpl @Inject() (
         val summary = reco.uriSummary
         val uri = reco.uri
         summary.imageWidth.isDefined && summary.imageUrl.isDefined && summary.imageWidth.get >= MIN_IMAGE_WIDTH_PX &&
+          summary.imageHeight.isDefined && summary.imageHeight.get <= MAX_IMAGE_HEIGHT_PX &&
           (summary.title.exists(_.size > 0) || uri.title.exists(_.size > 0))
       case None => false
     }

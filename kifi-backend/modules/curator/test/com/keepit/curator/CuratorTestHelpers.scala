@@ -139,7 +139,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
 
   def makeKeepAttribution() = KeepAttribution(keeps = Seq.empty)
 
-  def makeCompleteUriRecommendation(uriId: Int, userId: Int, masterScore: Float, url: String, wc: Int = 250, summaryImageWidth: Option[Int] = Some(700)) = {
+  def makeCompleteUriRecommendation(uriId: Int, userId: Int, masterScore: Float, url: String, wc: Int = 250,
+    summaryImageWidth: Option[Int] = Some(700), summaryImageHeight: Option[Int] = Some(500)) = {
     val normalizedUri = makeNormalizedUri(uriId, url)
     val uriRecommendation = makeUriRecommendation(uriId, userId, masterScore)
     val uriSummary = URISummary(
@@ -151,7 +152,8 @@ trait CuratorTestHelpers { this: CuratorTestInjector =>
         "amet dolor. Proin eu augue id lectus viverra consectetur at sed orci. Suspendisse potenti."),
       wordCount = Some(wc),
       imageUrl = Some("https://djty7jcqog9qu.cloudfront.net/screenshot/f5d6aedb-fea9-485f-aead-f2a8d1f31ac5/1000x560.jpg"),
-      imageWidth = summaryImageWidth
+      imageWidth = summaryImageWidth,
+      imageHeight = summaryImageHeight
     )
 
     (normalizedUri, uriRecommendation, uriSummary)
