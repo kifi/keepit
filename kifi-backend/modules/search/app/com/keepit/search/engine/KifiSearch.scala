@@ -147,7 +147,7 @@ class KifiSearch(
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
 
-    KifiShardResult(hits.toSortedList.map(h => KifiShardHit(h.id, h.score, h.visibility, -1L)), myTotal, friendsTotal, show) // TODO: library id
+    KifiShardResult(hits.toSortedList.map(h => KifiShardHit(h.id, h.score, h.visibility, h.libId)), myTotal, friendsTotal, show)
   }
 
   @inline private[this] def isDiscoverable(id: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, id.toString))
