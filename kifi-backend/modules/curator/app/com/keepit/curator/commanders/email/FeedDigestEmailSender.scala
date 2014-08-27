@@ -70,9 +70,9 @@ sealed case class DigestReco(reco: UriRecommendation, uri: NormalizedURI, uriSum
   }
 
   // todo(josh) encode urls?? add more analytics information
-  val viewPageUrl = s"https://www.kifi.com/e/1/recos/view?id=${uri.externalId}"
+  val viewPageUrl = s"https://www.kifi.com/r/e/1/recos/view?id=${uri.externalId}"
   val sendPageUrl = s"https://www.kifi.com/r/e/1/recos/send?id=${uri.externalId}"
-  val keepAndSeeMoreUrl = s"https://www.kifi.com/e/1/recos/keep?id=${uri.externalId}"
+  val keepAndSeeMoreUrl = s"https://www.kifi.com/r/e/1/recos/keep?id=${uri.externalId}"
 }
 
 sealed case class KeeperUser(userId: Id[User], avatarUrl: String, basicUser: BasicUser) {

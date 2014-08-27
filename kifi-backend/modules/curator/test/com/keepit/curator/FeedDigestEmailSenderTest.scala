@@ -128,8 +128,8 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail42body must contain(">Google<")
 
         // check that uri's for the recos are in the emails
-        mail42body must contain("/e/1/recos/keep?id=" + savedRecoModels(0)._1.externalId)
-        mail42body must contain("/e/1/recos/view?id=" + savedRecoModels(0)._1.externalId)
+        mail42body must contain("/r/e/1/recos/keep?id=" + savedRecoModels(0)._1.externalId)
+        mail42body must contain("/r/e/1/recos/view?id=" + savedRecoModels(0)._1.externalId)
         mail42body must contain("/r/e/1/recos/send?id=" + savedRecoModels(1)._1.externalId)
 
         // others-who-kept messages
@@ -163,7 +163,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail43body must contain("https://url.com/u48.jpg")
 
         // check that uri's for the recos are in the emails
-        mail43body must contain("/e/1/recos/keep?id=" + savedRecoModels(2)._1.externalId)
+        mail43body must contain("/r/e/1/recos/keep?id=" + savedRecoModels(2)._1.externalId)
         mail43body must contain("/r/e/1/recos/send?id=" + savedRecoModels(3)._1.externalId)
 
         // conditionally show the "Connect Facebook" link if they haven't connected facebook
