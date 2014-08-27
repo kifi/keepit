@@ -1,18 +1,75 @@
+.kf-recos-view-header
+  padding: 25px 25px 40px 30px
+  min-height: 50px
+
+  .kf-subtitle
+    margin-left: 10px
+
+.kf-reco-recency
+  float: right
+  position: relative
+  width: 60%
+
+  // Reduce slider width to 50% when the screen is narrower but before the 
+  // three columns are reduced to two, and then increase it again when there are 
+  // only two columns on the page.
+  @media (min-width: 1024px) and (max-width: 1150px)
+    width: 50%
+
+  // Reduce slider width to 50% when the screen is really narrow.
+  @media (max-width: 880px)
+    width: 50%
+
+.kf-reco-refresh-btn
+  position: absolute
+  top: 8px
+  right: 0
+  padding: 3px 12px
+  border: 1px solid #c7c7c7
+  border-radius: 5px
+  height: 26px
+  background-color: #fff
+
+.kf-reco-refresh-btn
+.kf-reco-recency-all-time
+.kf-reco-recency-recent
+  font-size: 14px
+  color: #9b9b9b
+
 .kf-reco-recency-slider
-  margin: 20px auto
-  width: 75%
+  position: relative
+  width: calc(100% - 100px)
+  height: 50px
+  
+.kf-reco-recency-all-time
+.kf-reco-recency-recent
+  position: absolute
+  top: 2px
 
-  span
-    display: inline-block
-    margin: 0 10px
-    vertical-align: top
+.kf-reco-recency-all-time
+  left: 0
 
-  button
-    margin-left: 15px
+.kf-reco-recency-recent
+  right: 0
 
 .kf-reco-slider-container
+  position: absolute
+  left: 0
+  bottom: 20px
   display: inline-block
-  width: calc(100% - 250px)
+  width: 100%
+
+  .ui-slider-horizontal
+    border: none
+    height: 6px
+    background-color: #e4e4e4
+
+  .ui-slider-handle
+    top: -8px
+    border: 1px solid #bbb
+    border-radius: 12px
+    background-color: #fff
+    cursor: pointer
 
 .kf-recos
   padding: 0 25px 20px 30px

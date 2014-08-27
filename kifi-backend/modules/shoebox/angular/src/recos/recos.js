@@ -22,6 +22,7 @@ angular.module('kifi')
 
     $scope.getMore = function () {
       $scope.loading = true;
+      $scope.recos = [];
      
       recoService.getMore($scope.recency.value).then(function (recos) {
         $scope.loading = false;
