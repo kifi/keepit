@@ -113,31 +113,21 @@
   height: 49px;
   -webkit-perspective: 200px;
   perspective: 200px;
-}
-.kifi-hidden>.kifi-keep-card {
-  width: 49px;
-}
-[kifi-pane-parent] .kifi-keep-card {
-  left: 168px;
-  right: auto;
-  transition: width .25s ease-in-out;
-}
-[kifi-with-pane] .kifi-keep-card {
-  width: 126px;
-}
-.kifi-pane .kifi-keep-card {
-  left: 153px;
-}
-.kifi-keep-card,
-.kifi-dock-btn { /* width for .kifi-keep-card only */
-  transition: width 200ms ease-out, -webkit-transform 50ms ease-in, box-shadow 50ms ease-in;
-  transition: width 200ms ease-out, transform 50ms ease-in, box-shadow 50ms ease-in;
-}
-.kifi-tile.ui-draggable .kifi-keep-card,
-.kifi-tile.ui-draggable .kifi-dock-btn {
-  box-shadow: 0 8px 7px -4px rgba(0,0,0,.7);
-  -webkit-transform: translate(0,-4px);
-  transform: translate(0,-4px);
+  transition: width 200ms ease-out;
+  .kifi-hidden>& {
+    width: 49px;
+  }
+  [kifi-pane-parent] & {
+    left: 168px;
+    right: auto;
+    transition: width .25s ease-in-out;
+  }
+  [kifi-with-pane] & {
+    width: 126px;
+  }
+  .kifi-pane & {
+    left: 153px;
+  }
 }
 .kifi-keep-side,
 .kifi-kept-side {
@@ -174,6 +164,10 @@
   border-radius: 24.5px !important;
   background-clip: content-box;
 }
+
+@draggable-box-shadow: 0 8px 7px -4px rgba(0,0,0,.6);
+@draggable-box-shadow-transition: box-shadow .2s;
+
 .kifi-keep-btn,
 .kifi-kept-btn {
   position: absolute;
@@ -192,6 +186,10 @@
     left: 2px;
     right: 2px;
     bottom: 2px;
+  }
+  transition: @draggable-box-shadow-transition;
+  .kifi-tile.ui-draggable & {
+    box-shadow: @draggable-box-shadow;
   }
 }
 .kifi-keep-btn {
@@ -568,11 +566,18 @@
   border-radius: 50% !important;
   background-repeat: no-repeat;
   cursor: pointer;
-}
-.kifi-pane .kifi-dock-btn {
-  border-width: 1px;
-  bottom: 2px;
-  right: 2px;
+  .kifi-pane & {
+    border-width: 1px;
+    bottom: 2px;
+    right: 2px;
+  }
+  .kifi-hidden>& {
+    transition-delay: 0;
+  }
+  // &:active,
+  // &.kifi-at {
+  //   background-color: blue;
+  // }
 }
 .kifi-dock-site {
   @url: %(@svgBooksDataUrl, #464646);
@@ -581,22 +586,25 @@
   background-position: center, 0;
   -webkit-transform: translate(-259px);
   transform: translate(-259px);
-  transition: -webkit-transform 200ms ease-out 20ms;
-  transition: transform 200ms ease-out 20ms;
-}
-.kifi-dock-site:hover,
-.kifi-dock-site:focus {
-  @url: %(@svgBooksDataUrl, #3f9f65);
-  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
-}
-.kifi-dock-site:active {
-  @url: %(@svgBooksDataUrl, #3f9f65);
-  background-image: url(@url);
-  background-color: #f3f3f3;
-}
-.kifi-hidden>.kifi-dock-site {
-  -webkit-transform: rotate(30deg) scale(.8);
-  transform: rotate(30deg) scale(.8);
+  transition: -webkit-transform 200ms ease-out 20ms, @draggable-box-shadow-transition;
+  transition: transform 200ms ease-out 20ms, @draggable-box-shadow-transition;
+  .kifi-tile.ui-draggable & {
+    box-shadow: @draggable-box-shadow;
+  }
+  &:hover,
+  &:focus {
+    @url: %(@svgBooksDataUrl, #3f9f65);
+    background-image: url(@url), linear-gradient(#fff, #f3f3f3);
+  }
+  &:active {
+    @url: %(@svgBooksDataUrl, #3f9f65);
+    background-image: url(@url);
+    background-color: #f3f3f3;
+  }
+  .kifi-hidden>& {
+    -webkit-transform: rotate(30deg) scale(.8);
+    transform: rotate(30deg) scale(.8);
+  }
 }
 .kifi-dock-messages {
   @url: %(@svgBellDataUrl, #464646);
@@ -605,22 +613,25 @@
   background-position: center 13px, 0;
   -webkit-transform: translate(-208px);
   transform: translate(-208px);
-  transition: -webkit-transform 200ms ease-out 40ms;
-  transition: transform 200ms ease-out 40ms;
-}
-.kifi-dock-messages:hover,
-.kifi-dock-messages:focus {
-  @url: %(@svgBellDataUrl, #3f9f65);
-  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
-}
-.kifi-dock-messages:active {
-  @url: %(@svgBellDataUrl, #3f9f65);
-  background-image: url(@url);
-  background-color: #f3f3f3;
-}
-.kifi-hidden>.kifi-dock-messages {
-  -webkit-transform: rotate(20deg) scale(.8);
-  transform: rotate(20deg) scale(.8);
+  transition: -webkit-transform 200ms ease-out 40ms, @draggable-box-shadow-transition;
+  transition: transform 200ms ease-out 40ms, @draggable-box-shadow-transition;
+  .kifi-tile.ui-draggable & {
+    box-shadow: @draggable-box-shadow;
+  }
+  &:hover,
+  &:focus {
+    @url: %(@svgBellDataUrl, #3f9f65);
+    background-image: url(@url), linear-gradient(#fff, #f3f3f3);
+  }
+  &:active {
+    @url: %(@svgBellDataUrl, #3f9f65);
+    background-image: url(@url);
+    background-color: #f3f3f3;
+  }
+  .kifi-hidden>& {
+    -webkit-transform: rotate(20deg) scale(.8);
+    transform: rotate(20deg) scale(.8);
+  }
 }
 .kifi-dock-compose {
   @url: %(@svgSpeakDataUrl, #464646);
@@ -629,29 +640,25 @@
   background-position: center, 0;
   -webkit-transform: translate(-157px);
   transform: translate(-157px);
-  transition: -webkit-transform 200ms ease-out 60ms;
-  transition: transform 200ms ease-out 60ms;
-}
-.kifi-dock-compose:hover,
-.kifi-dock-compose:focus {
-  @url: %(@svgSpeakDataUrl, #3f9f65);
-  background-image: url(@url), linear-gradient(#fff, #f3f3f3);
-}
-.kifi-dock-compose:active {
-  @url: %(@svgSpeakDataUrl, #3f9f65);
-  background-image: url(@url);
-  background-color: #f3f3f3;
-}
-.kifi-hidden>.kifi-dock-compose {
-  -webkit-transform: rotate(10deg) scale(.8);
-  transform: rotate(10deg) scale(.8);
-}
-.kifi-hidden>.kifi-dock-btn {
-  transition-delay: 0;
-}
-.kifi-dock-btn:active,
-.kifi-dock-btn.kifi-at {
-  /*background-color: blue;*/
+  transition: -webkit-transform 200ms ease-out 60ms, @draggable-box-shadow-transition;
+  transition: transform 200ms ease-out 60ms, @draggable-box-shadow-transition;
+  .kifi-tile.ui-draggable & {
+    box-shadow: @draggable-box-shadow;
+  }
+  &:hover,
+  &:focus {
+    @url: %(@svgSpeakDataUrl, #3f9f65);
+    background-image: url(@url), linear-gradient(#fff, #f3f3f3);
+  }
+  &:active {
+    @url: %(@svgSpeakDataUrl, #3f9f65);
+    background-image: url(@url);
+    background-color: #f3f3f3;
+  }
+  .kifi-hidden>& {
+    -webkit-transform: rotate(10deg) scale(.8);
+    transform: rotate(10deg) scale(.8);
+  }
 }
 .kifi-dock-messages>.kifi-count {
   top: -7px;

@@ -97,8 +97,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
           if (!this.parentNode.contains(e.relatedTarget)) {
             log('[slider.mouseout] hiding', e.relatedTarget);
             hideSlider('mouseout');
-          } else {
-            log('[slider.mouseout] not hiding', this.parentNode, 'does not contain', e.relatedTarget);
           }
         } else {  // out of window
           log('[slider.mouseout] out of window');
