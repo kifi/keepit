@@ -40,7 +40,7 @@ class CuratorAnalytics @Inject() (
     if (modelOpt.isDefined && modelOpt.get.delivered > 0) {
       val masterScore = modelOpt.get.masterScore.toInt
       val keepers = modelOpt.get.attribution.user.map { _.friends }
-      val client = feedback.fromClient.getOrElse(RecommendationClientType.Unknown)
+      val client = feedback.clientType.getOrElse(RecommendationClientType.Unknown)
 
       var contexts = List.empty[RecommendationUserActionContext]
 
@@ -53,7 +53,7 @@ class CuratorAnalytics @Inject() (
       }
 
       feedback.trashed.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Trashed) :: contexts }
-      feedback.improvement.foreach { text => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.ImprovementSuggested, Some(text)) :: contexts }
+      feedback.comment.foreach { text => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.ImprovementSuggested, Some(text)) :: contexts }
 
       contexts
     } else {

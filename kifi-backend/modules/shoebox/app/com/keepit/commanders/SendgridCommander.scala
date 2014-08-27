@@ -1,13 +1,14 @@
 package com.keepit.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.SystemAdminMailSender
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ ElectronicMail, ElectronicMailRepo, EmailAddress, SystemEmailAddress }
 import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, currentDateTime }
 import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalServiceClient, NonUserEvent, NonUserEventTypes, UserEvent, UserEventTypes }
-import com.keepit.model.{ UriRecommendationFeedback, EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates }
+import com.keepit.model.{ NormalizedURI, UriRecommendationFeedback, EmailOptOutRepo, NotificationCategory, UserEmailAddressRepo, UserEmailAddressStates }
 import com.keepit.social.NonUserKinds
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -146,13 +147,13 @@ class SendgridCommander @Inject() (
       return
     }
 
-    val userId = email.senderUserId.get
-    val keepUrl = event.url.get
-    val uriRecoFeedback = UriRecommendationFeedback(clicked = Some(true), kept = None)
-
-    recoCommander.updateUriRecommendationFeedback(userId, keepUrl, uriRecoFeedback).map { ok =>
-      if (!ok) log.warn(s"updateUriRecommendationFeedback($userId, $keepUrl, $uriRecoFeedback) returned false")
-    }
+    //    val userId = email.senderUserId.get
+    //    val keepUrl = event.url.get
+    //    val uriRecoFeedback = UriRecommendationFeedback(clicked = Some(true), kept = None)
+    //
+    //    recoCommander.updateUriRecommendationFeedback(userId, fakeExtId, uriRecoFeedback).map { ok =>
+    //      if (!ok) log.warn(s"updateUriRecommendationFeedback($userId, $keepUrl, $uriRecoFeedback) returned false")
+    //    }
   }
 }
 

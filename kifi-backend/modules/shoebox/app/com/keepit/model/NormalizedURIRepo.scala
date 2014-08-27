@@ -3,7 +3,7 @@ package com.keepit.model
 import com.google.inject.{ ImplementedBy, Provider, Inject, Singleton }
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
-import com.keepit.common.db.{ State, SequenceNumber }
+import com.keepit.common.db.{ ExternalId, State, SequenceNumber, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.logging.Logging
 import org.joda.time.DateTime
@@ -12,7 +12,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import org.feijoas.mango.common.cache._
 import NormalizedURIStates._
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.db.Id
 import com.keepit.queue._
 import scala.slick.jdbc.StaticQuery
 import com.keepit.model.serialize.UriIdAndSeq
@@ -36,6 +35,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getRestrictedURIs(targetRestriction: Restriction)(implicit session: RSession): Seq[NormalizedURI]
   def checkUnrestrictedURIs(uriId: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
   def checkScrapedURIs(uriId: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
+  def getByExtId(extId: ExternalId[NormalizedURI])(implicit session: RSession): Option[NormalizedURI]
 }
 
 @Singleton
@@ -73,7 +73,7 @@ class NormalizedURIRepoImpl @Inject() (
   }
 
   def getChanged(sequenceNumber: SequenceNumber[NormalizedURI], states: Set[State[NormalizedURI]], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
-    val q = (for (f <- rows if (f.seq > sequenceNumber && f.state.inSet(states))) yield f).sortBy(_.seq)
+    val q = (for (f <- rows if f.seq > sequenceNumber && f.state.inSet(states)) yield f).sortBy(_.seq)
     (if (limit >= 0) q.take(limit) else q).list
   }
 
@@ -206,6 +206,10 @@ class NormalizedURIRepoImpl @Inject() (
 
   def checkScrapedURIs(uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
     (for (r <- rows if r.id.inSet(uriIds)) yield r.state).list.map(_.equals(NormalizedURIStates.SCRAPED))
+  }
+
+  def getByExtId(extId: ExternalId[NormalizedURI])(implicit session: RSession): Option[NormalizedURI] = {
+    (for (r <- rows if r.externalId === extId) yield r).firstOption
   }
 
   override def assignSequenceNumbers(limit: Int = 20)(implicit session: RWSession): Int = {

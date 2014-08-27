@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.model.{
   User,
   NormalizedURI,
@@ -42,7 +42,6 @@ class RecommendationsCommander @Inject() (
     db: Database,
     nUriRepo: NormalizedURIRepo,
     uriSummaryCommander: URISummaryCommander,
-    normalizedURIInterner: NormalizedURIInterner,
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo) {
 
@@ -81,9 +80,9 @@ class RecommendationsCommander @Inject() (
     }
   }
 
-  def updateUriRecommendationFeedback(userId: Id[User], url: String, feedback: UriRecommendationFeedback): Future[Boolean] = {
+  def updateUriRecommendationFeedback(userId: Id[User], extId: ExternalId[NormalizedURI], feedback: UriRecommendationFeedback): Future[Boolean] = {
     val uriOpt = db.readOnlyMaster { implicit s =>
-      normalizedURIInterner.getByUri(url) //using cache
+      nUriRepo.getByExtId(extId)
     }
     uriOpt match {
       case Some(uri) => curator.updateUriRecommendationFeedback(userId, uri.id.get, feedback)

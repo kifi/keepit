@@ -8,7 +8,7 @@ import com.kifi.macros.json
     kept: Option[Boolean] = None,
     trashed: Option[Boolean] = None,
     vote: Option[Boolean] = None,
-    improvement: Option[String] = None,
-    fromClient: Option[RecommendationClientType] = None) {
-  override def toString = s"UriRecommendationFeedback(clicked:$clicked, kept:$kept, trashed:$trashed, vote:$vote, improvement:$improvement, fromClient:$fromClient)"
+    comment: Option[String] = None,
+    clientType: Option[RecommendationClientType] = None) {
+  override def toString = s"UriRecommendationFeedback(clicked:$clicked, kept:$kept, trashed:$trashed, vote:$vote, comment:$comment, clientType:$clientType)"
 }

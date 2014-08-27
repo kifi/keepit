@@ -2,9 +2,10 @@ package com.keepit.controllers.website
 
 import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
 import com.keepit.commanders.{ RecommendationsCommander, LocalUserExperimentCommander }
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.curator.model.RecommendationClientType
-import com.keepit.model.{ UriRecommendationScores, ExperimentType, UriRecommendationFeedback }
+import com.keepit.model.{ NormalizedURI, UriRecommendationScores, ExperimentType, UriRecommendationFeedback }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import scala.concurrent.Future
@@ -37,10 +38,9 @@ class RecommendationsController @Inject() (
     }
   }
 
-  def updateUriRecommendationFeedback() = JsonAction.authenticatedParseJsonAsync { request =>
-    val url = (request.body \ "url").as[String]
-    val feedback = (request.body \ "feedback").as[UriRecommendationFeedback]
-    commander.updateUriRecommendationFeedback(request.userId, url, feedback).map(fkis => Ok(Json.toJson(fkis)))
+  def updateUriRecommendationFeedback(id: ExternalId[NormalizedURI]) = JsonAction.authenticatedParseJsonAsync { request =>
+    val feedback = request.body.as[UriRecommendationFeedback]
+    commander.updateUriRecommendationFeedback(request.userId, id, feedback).map(fkis => Ok(Json.toJson(fkis)))
   }
 
 }
