@@ -8,9 +8,10 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
-import com.keepit.model.User
+import com.keepit.model.{ SocialUserInfo, User }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.social.{ SocialNetworks, SocialId }
 import commanders.email.{ FeedDigestEmailSender, DigestRecoMail }
 import com.keepit.curator.model.{ TopicAttribution, UserAttribution, SeedAttribution, UriRecommendationRepo }
 import org.specs2.mutable.Specification
@@ -40,6 +41,9 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         val user1 = makeUser(42, shoebox)
         val user2 = makeUser(43, shoebox)
         val uriRecoRepo = inject[UriRecommendationRepo]
+
+        shoebox.socialUserInfosByUserId(user1.id.get) = List()
+        shoebox.socialUserInfosByUserId(user2.id.get) = List(SocialUserInfo(fullName = "Muggsy Bogues", profileUrl = Some("http://fb.com/me"), networkType = SocialNetworks.FACEBOOK, socialId = SocialId("123")))
 
         val friend1 = User(id = Some(Id[User](44)), firstName = "Joe", lastName = "Mustache",
           pictureName = Some("mustache"))
@@ -124,9 +128,9 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail42body must contain(">Google<")
 
         // check that uri's for the recos are in the emails
-        mail42body must contain("/e/1/recos/keep?id=" + savedRecoModels(0)._1.externalId)
-        mail42body must contain("/e/1/recos/view?id=" + savedRecoModels(0)._1.externalId)
-        mail42body must contain("/e/1/recos/send?id=" + savedRecoModels(1)._1.externalId)
+        mail42body must contain("/r/e/1/recos/keep?id=" + savedRecoModels(0)._1.externalId)
+        mail42body must contain("/r/e/1/recos/view?id=" + savedRecoModels(0)._1.externalId)
+        mail42body must contain("/r/e/1/recos/send?id=" + savedRecoModels(1)._1.externalId)
 
         // others-who-kept messages
         mail42body must contain("2 friends and 1 other kept this")
@@ -142,7 +146,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
 
         // Friend Recommendations
         friends.slice(0, 4).foreach { user =>
-          mail42body must contain("?friend=" + user.externalId)
+          mail42body must contain("?friend=" + user.externalId + "&amp;subtype=digestPymk")
         }
         mail42body must not contain friends(5).externalId.toString
 
@@ -159,8 +163,12 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail43body must contain("https://url.com/u48.jpg")
 
         // check that uri's for the recos are in the emails
-        mail43body must contain("/e/1/recos/keep?id=" + savedRecoModels(2)._1.externalId)
-        mail43body must contain("/e/1/recos/send?id=" + savedRecoModels(3)._1.externalId)
+        mail43body must contain("/r/e/1/recos/keep?id=" + savedRecoModels(2)._1.externalId)
+        mail43body must contain("/r/e/1/recos/send?id=" + savedRecoModels(3)._1.externalId)
+
+        // conditionally show the "Connect Facebook" link if they haven't connected facebook
+        mail42body must contain("Connect Facebook")
+        mail43body must not contain "Connect Facebook"
 
         val notSentIds = Set(5L, 7F, 8F) // reco Ids in our list that still haven't been sent
         savedRecoModels.forall { models =>
