@@ -5,6 +5,7 @@ import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeAB
 import com.keepit.commanders._
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.external.FakeExternalServiceModule
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -20,7 +21,7 @@ import com.keepit.social.{ SocialId, SocialNetworks }
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.typeahead.TypeaheadHit
 import org.specs2.mutable.Specification
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsValue, Json }
 import play.api.test.Helpers._
 import play.api.test._
 import securesocial.core._
@@ -191,15 +192,24 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
 
         inject[FakeActionAuthenticator].setUser(u1)
 
-        @inline def search(query: String, limit: Int = 10): Seq[ContactFound] = {
+        @inline def search(query: String, limit: Int = 10): Seq[ContactSearchResult] = {
           val path = com.keepit.controllers.website.routes.TypeaheadController.searchForContacts(Some(query), Some(limit)).url
           val res = inject[TypeaheadController].searchForContacts(Some(query), Some(limit))(FakeRequest("GET", path))
-          val s = contentAsString(res)
-          Json.parse(s).as[Seq[ContactFound]] tap { res => println(s"[search($query,$limit)] res(len=${res.length}):$res") }
+          val js = Json.parse(contentAsString(res)).as[Seq[JsValue]].map { j =>
+            (j \ "id").asOpt[ExternalId[User]] match {
+              case Some(id) => j.as[UserContactResult]
+              case None => j.as[EmailContactResult]
+            }
+          }
+          println(s"[search($query,$limit)] res(len=${js.length}):$js")
+          js
         }
 
-        def parseRes(contacts: Seq[ContactFound]) = {
-          contacts.map(_.name)
+        def parseRes(contacts: Seq[ContactSearchResult]) = {
+          contacts.collect {
+            case u: UserContactResult => u.name
+            case e: EmailContactResult => e.name.get
+          }
         }
 
         val res0 = search("") // (no query) should get all contacts in Recent_Interactions

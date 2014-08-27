@@ -7,7 +7,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.controller.{ ShoeboxServiceController, ActionAuthenticator, WebsiteController }
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import com.keepit.commanders.TypeaheadCommander
+import com.keepit.commanders.{ EmailContactResult, UserContactResult, TypeaheadCommander }
 
 case class TypeaheadSearchRequest(query: String, limit: Int, pictureUrl: Boolean, inviteStatus: Boolean)
 
@@ -25,7 +25,13 @@ class TypeaheadController @Inject() (
 
   def searchForContacts(query: Option[String], limit: Option[Int]) = JsonAction.authenticatedAsync { request =>
     commander.searchForContacts(request.userId, query.getOrElse(""), limit) map { res =>
-      Ok(Json.toJson(res))
+      val res1 = res.map { r =>
+        r match {
+          case u: UserContactResult => Json.toJson(u)
+          case e: EmailContactResult => Json.toJson(e)
+        }
+      }
+      Ok(Json.toJson(res1))
     }
   }
 

@@ -241,14 +241,11 @@ class TypeaheadCommander @Inject() (
       }
     else { Future.successful(Seq.empty) }
     // Friends on Kifi
-    val kifiF = if (contacts.contains(ContactType.KIFI_FRIEND))
-      kifiUserTypeahead.topN(userId, q, limitOpt)(TypeaheadHit.defaultOrdering[User])
-    else
-      Future.successful(Seq.empty)
+    val kifiF = if (contacts.contains(ContactType.KIFI_FRIEND)) kifiUserTypeahead.topN(userId, q, limitOpt)(TypeaheadHit.defaultOrdering[User]) else Future.successful(Seq.empty)
     // Email Contacts
-    val abookF = if (!contacts.contains(ContactType.EMAIL) || q.length < 2) Future.successful(Seq.empty) else abookServiceClient.prefixQuery(userId, q, limitOpt.map(_ * 2)) // Email Contacts
+    val abookF = if (!contacts.contains(ContactType.EMAIL) || q.length < 2) Future.successful(Seq.empty) else abookServiceClient.prefixQuery(userId, q, limitOpt.map(_ * 2))
     // Non-Friends on Kifi
-    val nfUsersF = if (!contacts.contains(ContactType.KIFI_NON_FRIEND) || q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeaheadWithUserId(userId, q, limitOpt.getOrElse(100), filter = "nf") // Non-Friends on Kifi
+    val nfUsersF = if (!contacts.contains(ContactType.KIFI_NON_FRIEND) || q.length < 2) Future.successful(Seq.empty) else searchClient.userTypeaheadWithUserId(userId, q, limitOpt.getOrElse(100), filter = "nf")
 
     limitOpt match {
       case None => fetchAll(socialF, kifiF, abookF, nfUsersF)
@@ -352,18 +349,16 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  def searchForContacts(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[ContactFound]] = {
+  def searchForContacts(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[ContactSearchResult]] = {
     val q = query.trim
     if (q.length == 0) {
       val contacts = interactionCommander.getRecentInteractions(userId).map { interaction =>
         interaction.recipient match {
           case UserRecipient(id) =>
-            val (basicUser, user) = db.readOnlyMaster { implicit s =>
-              (basicUserRepo.load(id), userRepo.get(id))
-            }
-            ContactFound(name = basicUser.firstName + " " + basicUser.lastName, eid = Some(basicUser.externalId), email = None, image = user.pictureName.map(_ + ".jpg"))
+            val user = db.readOnlyMaster { implicit s => userRepo.get(id) }
+            UserContactResult(name = user.fullName, id = user.externalId, image = user.pictureName.map(_ + ".jpg"))
           case EmailRecipient(email) =>
-            ContactFound(name = "", eid = None, email = Some(email), image = None)
+            EmailContactResult(name = None, email = email)
         }
       }
       Future.successful(contacts)
@@ -372,12 +367,9 @@ class TypeaheadCommander @Inject() (
         top flatMap {
           case (snType, hit) => hit.info match {
             case e: RichContact =>
-              Some(ContactFound(name = e.name.getOrElse(""), eid = None, email = Some(e.email), image = None))
+              Some(EmailContactResult(name = e.name, email = e.email))
             case u: User =>
-              val basicUser = db.readOnlyMaster { implicit s =>
-                basicUserRepo.load(u.id.get)
-              }
-              Some(ContactFound(name = u.firstName + " " + u.lastName, eid = Some(u.externalId), email = u.primaryEmail, image = u.pictureName.map(_ + ".jpg")))
+              Some(UserContactResult(name = u.fullName, id = u.externalId, image = u.pictureName.map(_ + ".jpg")))
             case _ =>
               airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $hit"))
               None
@@ -394,7 +386,10 @@ class TypeaheadCommander @Inject() (
 }
 
 @json case class ConnectionWithInviteStatus(label: String, score: Int, networkType: String, image: Option[String], value: String, status: String, email: Option[String] = None, inviteLastSentAt: Option[DateTime] = None)
-@json case class ContactFound(name: String, eid: Option[ExternalId[User]], email: Option[EmailAddress], image: Option[String])
+
+sealed trait ContactSearchResult {}
+@json case class UserContactResult(name: String, id: ExternalId[User], image: Option[String]) extends ContactSearchResult
+@json case class EmailContactResult(name: Option[String], email: EmailAddress) extends ContactSearchResult
 
 sealed abstract class ContactType(val value: String)
 object ContactType {

@@ -55,7 +55,13 @@ class ExtUserController @Inject() (
 
   def searchForContacts(query: Option[String], limit: Option[Int]) = JsonAction.authenticatedAsync { request =>
     typeAheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit) map { res =>
-      Ok(Json.toJson(res))
+      val res1 = res.map { r =>
+        r match {
+          case u: UserContactResult => Json.toJson(u)
+          case e: EmailContactResult => Json.toJson(e)
+        }
+      }
+      Ok(Json.toJson(res1))
     }
   }
 }
