@@ -160,7 +160,7 @@ class RecommendationGenerationCommander @Inject() (
       seeds <- seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, 200)
       recos <- db.readWriteAsync(implicit s => uriRecRepo.getByUserId(userId))
     } yield {
-      ((recos zip seeds) filter (x => x._1.uriId != x._2.uriId) map (_._2), if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
+      ((recos zip seeds) filter (x => x._1.uriId == x._2.uriId) map (_._2), if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
     }
   }
 
