@@ -290,7 +290,7 @@ panes.notices = function () {
   function onMenuBtnMouseDown(e) {
     e.preventDefault();
     var $a = $(this).addClass('kifi-active');
-    var $menu = $a.next('.kifi-notices-menu').fadeIn(50);
+    var $menu = $a.next('.kifi-notices-menu').addClass('kifi-visible');
     var $items = $menu.find('.kifi-notices-menu-item')
       .on('mouseenter', enterItem)
       .on('mouseleave', leaveItem)
@@ -319,9 +319,10 @@ panes.notices = function () {
       $items.off('mouseenter', enterItem)
             .off('mouseleave', leaveItem)
             .off('mouseup', hide);
-      $menu.fadeOut(50, function () {
-        $menu.find('.kifi-hover').removeClass('kifi-hover');
-      });
+      $menu.on('transitionend', function end() {
+        $menu.off('transitionend', end)
+          .find('.kifi-hover').removeClass('kifi-hover');
+      }).removeClass('kifi-visible');
     }
   }
 
