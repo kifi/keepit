@@ -28,8 +28,12 @@ class DistributedSearchRouter(client: SearchServiceClient) extends CustomRouter 
     dispatcher.dispatch(Dispatcher.randomizer(userId.id), maxShardsPerInstance) { (instance, shards) => (instance, shards) }
   }
 
+  def dispatch[R](plan: Seq[(ServiceInstance, Set[Shard[T]])])(body: (ServiceInstance, Set[Shard[T]]) => R): Seq[R] = {
+    plan.map(body.tupled)
+  }
+
   def dispatch(plan: Seq[(ServiceInstance, Set[Shard[T]])], url: ServiceRoute, request: JsValue): Seq[Future[ClientResponse]] = {
-    plan.map {
+    dispatch(plan) {
       case (instance, shards) =>
         val body = JsObject(List("shards" -> JsString(ShardSpec.toString(shards)), "request" -> request))
         client.call(instance, url, body)
