@@ -16,15 +16,14 @@ angular.module('kifi')
   function ($scope, $rootScope, $analytics, $timeout, $window, recoService, tagService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
-    $scope.recency = { value: 0.75 };
     $scope.recosState = 'hasRecos';
     $scope.initialCardClosed = false;
 
-    $scope.getMore = function () {
+    $scope.getMore = function (recency) {
       $scope.loading = true;
       $scope.recos = [];
      
-      recoService.getMore($scope.recency.value).then(function (recos) {
+      recoService.getMore(recency).then(function (recos) {
         $scope.loading = false;
 
         if (recos.length > 0) {
@@ -166,6 +165,23 @@ angular.module('kifi')
         };
       }
     };
-  }]);
+  }
+])
+
+.directive('kfRecoRecencySlider', [
+  function () {
+    return {
+      restrict: 'A',
+      replace: true,
+      scope: {
+        getMore: '&'
+      },
+      templateUrl: 'recos/recoRecencySlider.tpl.html',
+      link: function (scope/*, element, attrs*/) {
+        scope.recency = { value: 0.75 };
+      }
+    };
+  }
+]);
 
 

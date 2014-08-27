@@ -1,15 +1,6 @@
 <div class="recos-view" ng-controller="RecosCtrl">
   <header class="kf-recos-view-header">
-    <div class="kf-reco-recency" ng-if="recosState === 'hasRecos'">
-      <button class="kf-reco-refresh-btn" ng-click="getMore()">Refresh</button>
-      <div class="kf-reco-recency-slider">
-        <span class="kf-reco-recency-all-time">All time</span>
-        <div class="kf-reco-slider-container">
-          <div class="kf-reco-slider" ui-slider min="0.0" max="1.0" step="0.25" use-decimals ng-model="recency.value"></div>
-        </div>
-        <span class="kf-reco-recency-recent">Recent</span>
-      </div>
-    </div>
+    <div kf-reco-recency-slider ng-if="recosState === 'hasRecos'" get-more="getMore(recency)"></div>
     <h1 class="kf-main-title">Recommendations</h1>
     <div class="kf-subtitle" ng-show="recos.length">Showing {{recos.length}} recommendations</div>
   </header>
