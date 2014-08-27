@@ -44,10 +44,12 @@ angular.module('kifi')
 
       _.assign(this, rawKeep);
 
+      this.urlId = this.id;
+
       // This is needed to make keep/unkeep etc. to work.
       // Compare normal keeps with keeps in search results.
       // See unkeep() function in keepService.js.
-      // TODO: figure out exactly why this distinction is there!
+      // TODO: this should be updated when we refactor KeepService.
       delete this.id;
 
       // Helper functions.
@@ -183,50 +185,25 @@ angular.module('kifi')
       },
 
       trash: function (keep) {
-        $http.post(routeService.recoFeedback(), { 
-          url: keep.url,
-          feedback: {
-            trashed: true
-          }
-        });
+        $http.post(routeService.recoFeedback(keep.urlId), { trashed: true });
       },
 
       vote: function (keep, vote) {
         // vote === true -> upvote
         // vote === false -> downvote
-        $http.post(routeService.recoFeedback(), {
-          url: keep.url,
-          feedback: {
-            vote: vote
-          }
-        });
+        $http.post(routeService.recoFeedback(keep.urlId), { vote: vote });
       },
 
       keep: function (keep) {
-        $http.post(routeService.recoFeedback(), { 
-          url: keep.url,
-          feedback: {
-            kept: true
-          }
-        });
+        $http.post(routeService.recoFeedback(keep.urlId), { kept: true });
       },
 
       click: function (keep) {
-        $http.post(routeService.recoFeedback(), { 
-          url: keep.url,
-          feedback: {
-            clicked: true 
-          }
-        });
+        $http.post(routeService.recoFeedback(keep.urlId), { clicked: true });
       },
 
       improve: function (keep, improvement) {
-        $http.post(routeService.recoFeedback(), { 
-          url: keep.url,
-          feedback: {
-            improvement: improvement 
-          }
-        });
+        $http.post(routeService.recoFeedback(keep.urlId), { improvement: improvement });
       }
     };
 
