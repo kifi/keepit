@@ -504,29 +504,36 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         }
 
         val pubId1 = Library.publicId(lib1.id.get)
-        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1).url
+        val testPath1 = com.keepit.controllers.website.routes.LibraryController.getKeeps(pubId1, 10, 0).url
         inject[FakeActionAuthenticator].setUser(user1)
         val request1 = FakeRequest("POST", testPath1)
-        val result1: Future[SimpleResult] = libraryController.getKeeps(pubId1)(request1)
+        val result1: Future[SimpleResult] = libraryController.getKeeps(pubId1, 10, 0)(request1)
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
         val expected1 = Json.parse(
           s"""
-             |[{
-             |"id":"${keep1.externalId}",
-             |"title":"k1",
-             |"url":"http://www.google.com/",
-             |"isPrivate":false,
-             |"libraryId":"l7jlKlnA36Su"
-             |},
              |{
-             |"id":"${keep2.externalId}",
-             |"title":"k2",
-             |"url":"http://www.amazon.com/",
-             |"isPrivate":false,
-             |"libraryId":"l7jlKlnA36Su"
-             |}]
+               |"keeps": [
+                 |{
+                 |"id":"${keep1.externalId}",
+                 |"title":"k1",
+                 |"url":"http://www.google.com/",
+                 |"isPrivate":false,
+                 |"libraryId":"l7jlKlnA36Su"
+                 |},
+                 |{
+                 |"id":"${keep2.externalId}",
+                 |"title":"k2",
+                 |"url":"http://www.amazon.com/",
+                 |"isPrivate":false,
+                 |"libraryId":"l7jlKlnA36Su"
+                 |}
+               |],
+               |"count": 2,
+               |"numKeeps": 2,
+               |"offset" : 0
+             |}
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
       }

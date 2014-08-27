@@ -44,7 +44,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps]
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
-  def getByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
+  def getByLibrary(libraryId: Id[Library], count: Int, offset: Int, excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getCountByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Int
   // Do not use:
   def doNotUseStealthUpdate(model: Keep)(implicit session: RWSession): Keep
@@ -386,11 +386,9 @@ class KeepRepoImpl @Inject() (
     sql_query.as[(DateTime, Option[String], String, Option[String])].list.map { case (created_at, title, url, tags) => KeepExport(created_at, title, url, tags) }
   }
 
-  private def getByLibraryCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {
-    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b)
-  }
-  def getByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] = {
-    getByLibraryCompiled(libraryId, excludeState).list
+  // Make compiled in Slick 2.1
+  def getByLibrary(libraryId: Id[Library], count: Int, offset: Int, excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep] = {
+    (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).drop(offset).take(count).list
   }
 
   private def getCountByLibraryCompiled(libraryId: Column[Id[Library]], excludeState: Option[State[Keep]]) = Compiled {

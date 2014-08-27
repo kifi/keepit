@@ -199,15 +199,20 @@ class LibraryController @Inject() (
     }
   }
 
-  def getKeeps(pubId: PublicId[Library]) = JsonAction.authenticated { request =>
+  def getKeeps(pubId: PublicId[Library], count: Int, offset: Int) = JsonAction.authenticated { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid id"))
-      case Success(id) =>
-        val keeps = libraryCommander.getKeeps(id)
+      case Success(libraryId) =>
+        val take = Math.min(count, 100)
+        val (keeps, numKeeps) = db.readOnlyReplica { implicit session =>
+          val k = keepRepo.getByLibrary(libraryId, take, offset)
+          val numK = keepRepo.getCountByLibrary(libraryId)
+          (k, numK)
+        }
         val keepInfos = keeps.map(KeepInfo.fromKeep)
-        Ok(Json.toJson(keepInfos))
+        Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "count" -> Math.min(take, keeps.length), "offset" -> offset, "numKeeps" -> numKeeps))
     }
   }
 
