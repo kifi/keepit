@@ -54,7 +54,7 @@ class RecommendationsControllerTest extends TestKitSupport with SpecificationLik
     }
 
     "update uri recommendation feedback" in {
-      withInjector(modules: _*) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val url = "id1"
         val route = com.keepit.controllers.website.routes.RecommendationsController.
           updateUriRecommendationFeedback(ExternalId[NormalizedURI]("58328718-0222-47bf-9b12-d2d781cb8b0c")).url

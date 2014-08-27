@@ -149,9 +149,8 @@ class SendgridCommander @Inject() (
 
     //    val userId = email.senderUserId.get
     //    val keepUrl = event.url.get
-    //    val uriRecoFeedback = UriRecommendationFeedback(clicked = Some(true), kept = None)
     //
-    //    recoCommander.updateUriRecommendationFeedback(userId, fakeExtId, uriRecoFeedback).map { ok =>
+    //    recoCommander.updateUriRecommendationFeedback(userId, keepUrl, uriRecoFeedback).map { ok =>
     //      if (!ok) log.warn(s"updateUriRecommendationFeedback($userId, $keepUrl, $uriRecoFeedback) returned false")
     //    }
   }
