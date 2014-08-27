@@ -7,6 +7,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search._
+import com.keepit.search.engine.result.KifiShardResult
 import com.keepit.search.index.{ IndexDirectory, IndexModule, IndexStore, VolatileIndexDirectory }
 import com.keepit.search.result.{ DecoratedResult, _ }
 import com.keepit.search.sharding.Shard
@@ -188,6 +189,19 @@ class FixedResultSearchCommander extends SearchCommander {
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): PartialSearchResult = ???
+
+  def distSearch2(
+    shards: Set[Shard[NormalizedURI]],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig],
+    debug: Option[String]): KifiShardResult = ???
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]) = ???
 

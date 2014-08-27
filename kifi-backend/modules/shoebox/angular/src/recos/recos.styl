@@ -1,0 +1,225 @@
+.kf-reco-recency-slider
+  margin: 20px auto
+  width: 75%
+
+  span
+    display: inline-block
+    margin: 0 10px
+    vertical-align: top
+
+  button
+    margin-left: 15px
+
+.kf-reco-slider-container
+  display: inline-block
+  width: calc(100% - 250px)
+
+.kf-recos
+  padding: 0 25px 20px 30px
+
+.kf-reco
+  box-sizing: border-box
+  margin: 0 auto 20px
+
+.kf-reco.ng-leave
+  opacity: 1
+  transition: 0.5s ease all
+
+.kf-reco.ng-leave.ng-leave-active
+  opacity: 0
+
+.kf-reco-info
+  margin: 0 25px 20px 30px
+  border: defaultBorder
+  border-radius: 3px
+  padding: 25px 20px
+  background-color: #fafafa
+  box-shadow: defaultBoxShadow
+  font-size: 18px
+
+  h4
+    font-weight: bold
+
+.kf-reco-top
+  padding: 25px 20px 0px
+.kf-reco-bottom
+  padding: 10px 20px
+
+.kf-reco-top
+.kf-reco-bottom
+  border-left: 1px solid #dadae2
+  border-right: 1px solid #dadae2
+
+.kf-reco-top
+  position: relative
+  border-top: 1px solid #dadae2
+  border-top-left-radius: 3px
+  border-top-right-radius: 3px
+  background-color: #fff
+  font-size: 14px
+  font-weight: 400
+  color: #aaa
+  span
+    display: inline-block
+
+.kf-reco-bottom
+  margin: 0 auto
+  border-bottom: 1px solid #dadae2
+  border-bottom-left-radius: 3px
+  border-bottom-right-radius: 3px
+  width: 90%
+  box-shadow: defaultBoxShadow
+
+.kf-reco-reason
+  margin-right: 40px
+
+.kf-reason-bullet-container
+  margin: 0px 40px -5px 0
+
+.kf-reason-bullet
+  padding: 0 1px
+  font-size: 28px
+  color: #ddd
+
+  &.kf-dark-reason-bullet
+    color: #bbb
+
+.kf-reco
+  .kf-keep
+    border-top: none
+
+// Icons
+.kf-reco-icon
+  position: relative
+  float: right
+  margin: -10px 0 0 5px
+  width: 20px
+  height: 20px
+
+.kf-reco-icon:hover
+  cursor: pointer
+
+.kf-reco-icon::before
+.kf-reco-icon::after
+  content: ' '
+  position: absolute;
+  left: 50%
+  width: 4px;
+  background: #ddd
+  font-size: 0
+
+.kf-reco-icon:hover::before
+.kf-reco-icon:hover::after
+.kf-reco-icon:focus::before
+.kf-reco-icon:focus::after
+  background: #bbb
+
+.kf-reco-icon:active::before
+.kf-reco-icon:active::after
+  background: #aaa
+
+// X icon
+.kf-reco-close-x::before
+.kf-reco-close-x::after
+  top: 1px
+  bottom: 1px
+  border-radius: 2px
+.kf-reco-close-x::before
+  transform: translate(-1px) rotate(45deg)
+.kf-reco-close-x::after
+  transform: translate(-1px) rotate(-45deg)
+
+// Down chevron icon
+.kf-reco-dropdown-menu-down::before
+.kf-reco-dropdown-menu-down::after
+  top: 4px
+  bottom: 4px
+  border-top-left-radius: 2px
+  border-top-right-radius: 2px
+.kf-reco-dropdown-menu-down::before
+  transform: translate(-4px) rotate(-45deg)
+.kf-reco-dropdown-menu-down::after
+  transform: translate(2px) rotate(45deg)
+
+// Left and right chevron Icons
+.kf-reco-reasons-left
+.kf-reco-reasons-right
+  position: absolute
+  top: 0
+  bottom: 0
+
+.kf-reco-reasons-left::before
+.kf-reco-reasons-left::after
+.kf-reco-reasons-right::before
+.kf-reco-reasons-right::after
+  top: 4px
+  bottom: 4px
+  border-top-left-radius: 2px
+  border-top-right-radius: 2px
+
+// Left chevron icon
+.kf-reco-reasons-left
+  right: 40px
+.kf-reco-reasons-left::before
+  transform: translate(-2px, -3px) rotate(45deg)
+.kf-reco-reasons-left::after
+  transform: translate(-2px, 3px) rotate(135deg)
+
+// Right chevron icon
+.kf-reco-reasons-right
+  right: 20px
+.kf-reco-reasons-right::before
+  transform: translate(-2px, -3px) rotate(-45deg)
+.kf-reco-reasons-right::after
+  transform: translate(-2px, 3px) rotate(-135deg)
+
+.kf-reco-bottom
+  position:relative
+  font-size: 18px
+  text-align: center
+
+  .kf-reco-icon
+    margin: auto
+
+// Dropdown menu
+.kf-reco-dropdown-menu-container
+  position: relative
+  &:hover
+    .kf-dropdown-menu
+      display: block
+
+  .kf-dropdown-menu
+    display: none
+    top: 10px
+    right: 20px
+
+    & li
+      display: block
+      padding: 0 25px 0 16px
+      color: #556179
+      transition: background .2s ease
+      white-space: nowrap
+      font-size: 15px
+      line-height: 30px
+      white-space: nowrap
+      cursor: pointer
+
+      &:hover
+        background: #eee
+
+      &:active
+        background: #ccc
+  
+// Modal
+.kf-reco-improve-modal
+  p
+    font-size: 15px
+
+  label
+    margin-left: 5px
+
+  button
+    float: right
+    margin: 0 25px 20px 0
+    padding: 5px 3px
+    font-size: 15px

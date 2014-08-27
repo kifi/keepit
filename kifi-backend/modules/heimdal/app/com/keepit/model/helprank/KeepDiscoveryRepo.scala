@@ -84,7 +84,7 @@ class KeepDiscoveryRepoImpl @Inject() (
         missing.grouped(20).foreach { ids =>
           val params = Seq.fill(ids.size)("?").mkString(",")
           val stmt = session.getPreparedStatement(s"select uri_id, count(distinct (hit_uuid)) from keep_click where uri_id in ($params) group by uri_id;")
-          missing.zipWithIndex.foreach {
+          ids.zipWithIndex.foreach {
             case (uriId, idx) =>
               stmt.setLong(idx + 1, uriId.id)
           }

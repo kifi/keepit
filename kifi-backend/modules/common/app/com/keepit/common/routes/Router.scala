@@ -210,6 +210,7 @@ object Search extends Service {
     def searchMessages(userId: Id[User], query: String, page: Int = 0) = ServiceRoute(GET, "/internal/search/searchMessages", Param("userId", userId), Param("query", query), Param("page", page))
 
     def distSearch() = ServiceRoute(POST, "/internal/search/dist/search")
+    def distSearch2() = ServiceRoute(POST, "/internal/search/dist/search2")
     def distLangFreqs() = ServiceRoute(POST, "/internal/search/dist/langFreqs")
     def distFeeds() = ServiceRoute(POST, "/internal/search/dist/feeds")
   }

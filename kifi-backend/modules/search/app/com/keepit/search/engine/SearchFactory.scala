@@ -32,8 +32,6 @@ class SearchFactory @Inject() (
     shardedKeepIndexer: ShardedKeepIndexer,
     libraryIndexer: LibraryIndexer,
     userGraphsSearcherFactory: UserGraphsSearcherFactory,
-    shardedUriGraphIndexer: ShardedURIGraphIndexer,
-    shardedCollectionIndexer: ShardedCollectionIndexer,
     phraseDetector: PhraseDetector,
     resultClickTracker: ResultClickTracker,
     clickHistoryTracker: ClickHistoryTracker,
@@ -121,6 +119,62 @@ class SearchFactory @Inject() (
       val memberLibIds = LongArraySet.from(searcher.findAllIds(new Term(LibraryFields.usersField, userId.id.toString)).toArray)
 
       (myOwnLibIds, memberLibIds, trustedPublishedLibIds) // myOwnLibIds is a subset of memberLibIds
+    }
+  }
+
+  def getNonUserSearch(
+    shards: Set[Shard[NormalizedURI]],
+    libId: Id[Library],
+    queryString: String,
+    lang1: Lang,
+    lang2: Option[Lang],
+    numHitsToReturn: Int,
+    filter: SearchFilter,
+    config: SearchConfig): Seq[NonUserSearch] = {
+
+    // this non-user is treat as if he/she is a member of the library
+    val libraryIdsFuture = Future.successful((LongArraySet.empty, LongArraySet.from(Array(libId.id)), LongArraySet.empty))
+    val friendIdsFuture = Future.successful(LongArraySet.empty)
+
+    val parser = new KQueryParser(
+      DefaultAnalyzer.getAnalyzer(lang1),
+      DefaultAnalyzer.getAnalyzerWithStemmer(lang1),
+      lang2.map(DefaultAnalyzer.getAnalyzer),
+      lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
+      config,
+      phraseDetector,
+      phraseDetectionReqConsolidator,
+      monitoredAwait
+    )
+
+    parser.parse(queryString) match {
+      case Some(engBuilder) =>
+
+        // this is a non-user, library restricted, search, add a library filter query
+        engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, libId.id.toString)))
+
+        shards.toSeq.map { shard =>
+          val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
+          val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
+
+          val timeLogs = new SearchTimeLogs()
+          timeLogs.queryParsing = parser.totalParseTime
+
+          new NonUserSearch(
+            libId,
+            numHitsToReturn,
+            filter,
+            config,
+            engBuilder,
+            articleSearcher,
+            keepSearcher,
+            friendIdsFuture,
+            libraryIdsFuture,
+            monitoredAwait,
+            timeLogs
+          )
+        }
+      case None => Seq.empty[NonUserSearch]
     }
   }
 }
