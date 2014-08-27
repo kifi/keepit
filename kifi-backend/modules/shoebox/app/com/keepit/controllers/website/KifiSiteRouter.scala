@@ -122,7 +122,8 @@ class AngularRouter @Inject() (userRepo: UserRepo, libraryRepo: LibraryRepo) {
     "invite" -> Seq(),
     "profile" -> Seq(),
     "kifeeeed" -> Seq(),
-    "find" -> Seq()
+    "find" -> Seq(),
+    "recommendation" -> Seq()
   )
   private val ngPrefixRoutes: Map[String, Seq[Request[_] => Future[String]]] = Map(
     "friends" -> Seq(),

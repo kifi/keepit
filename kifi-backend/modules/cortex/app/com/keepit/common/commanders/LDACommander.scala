@@ -236,7 +236,7 @@ class LDACommander @Inject() (
 
   def explainFeed(userId: Id[User], uris: Seq[Id[NormalizedURI]]): Seq[Seq[Id[Keep]]] = {
 
-    val MAX_KL_DIST = 0.8f // empirically this should be < 1.0
+    val MAX_KL_DIST = 0.6f // empirically this should be < 1.0
     val topK = 3
 
     def bestMatch(userFeats: Seq[(Id[Keep], LDATopicFeature)], uriFeat: URILDATopic): Seq[Id[Keep]] = {
