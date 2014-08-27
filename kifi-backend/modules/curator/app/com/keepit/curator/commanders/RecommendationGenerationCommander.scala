@@ -33,6 +33,8 @@ import scala.collection.concurrent.TrieMap
 
 import com.google.inject.{ Inject, Singleton }
 
+import scala.util.{ Failure, Success }
+
 @Singleton
 class RecommendationGenerationCommander @Inject() (
     seedCommander: SeedIngestionCommander,
@@ -177,7 +179,8 @@ class RecommendationGenerationCommander @Inject() (
       seeds <- seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, 200)
       recos <- db.readWriteAsync(implicit s => uriRecRepo.getByUserId(userId))
     } yield {
-      ((recos zip seeds) filter (x => x._1.uriId == x._2.uriId) map (_._2), if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
+      val recoUris = recos.map(_.uriId).toSet
+      (seeds filter (seed => recoUris.contains(seed.uriId)), if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
     }
   }
 
@@ -341,10 +344,10 @@ class RecommendationGenerationCommander @Inject() (
       val state = getStateOfUser(userId)
       val seedsAndSeqFuture = getRescoreSeedsForUser(userId, state)
       val res: Future[Boolean] = getPrecomputationRecosResult(seedsAndSeqFuture, state, userId, Set.empty)
-      res.onFailure {
-        case t: Throwable => airbrake.notify("Failure during recommendation recomputation", t)
+      res.onComplete {
+        case Success(_) => ()
+        case Failure(t) => airbrake.notify("Failure during recommendation recomputation", t)
       }
-      res.map(_ => ())
     }
   }
 
