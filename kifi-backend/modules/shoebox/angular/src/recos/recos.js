@@ -118,14 +118,6 @@ angular.module('kifi')
       $scope.reasonIndex = ($scope.reco.recoData.reasons.length + $scope.reasonIndex - 1) % $scope.reco.recoData.reasons.length;
     };
 
-    $scope.upVote = function (reco) {
-      recoService.vote(reco.recoKeep, true);
-    };
-
-    $scope.downVote = function (reco) {
-      recoService.vote(reco.recoKeep, false);
-    };
-
     $scope.showRecoImproveModal = false;
     $scope.improvement = {};
 
@@ -137,4 +129,42 @@ angular.module('kifi')
       recoService.improve(reco.recoKeep, $scope.improvement.type);
     };
   }
-]);
+])
+
+.directive('kfRecoDropdownMenu', ['recoService',
+  function (recoService) {
+    return {
+      restrict: 'A',
+      replace: true,
+      scope: {
+        reco: '=',
+        showImprovementModal: '&'
+      },
+      templateUrl: 'recos/recoDropdownMenu.tpl.html',
+      link: function (scope, element/*, attrs*/) {
+        var dropdownArrow= element.find('.kf-reco-dropdown-menu-down');
+        var dropdownMenu = element.find('.kf-dropdown-menu');
+
+        dropdownArrow.on('click', function () {
+          element.find('.kf-dropdown-menu').toggle();
+        });
+
+        scope.upVote = function (reco) {
+          dropdownMenu.hide();
+          recoService.vote(reco.recoKeep, true);
+        };
+
+        scope.downVote = function (reco) {
+          dropdownMenu.hide();
+          recoService.vote(reco.recoKeep, false);
+        };
+
+        scope.showModal = function () {
+          dropdownMenu.hide();
+          scope.showImprovementModal();
+        };
+      }
+    };
+  }]);
+
+
