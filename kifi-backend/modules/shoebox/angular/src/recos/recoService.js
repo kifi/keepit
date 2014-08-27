@@ -203,7 +203,7 @@ angular.module('kifi')
       },
 
       improve: function (keep, improvement) {
-        $http.post(routeService.recoFeedback(keep.urlId), { improvement: improvement });
+        $http.post(routeService.recoFeedback(keep.urlId), { comment: improvement });
       }
     };
 
