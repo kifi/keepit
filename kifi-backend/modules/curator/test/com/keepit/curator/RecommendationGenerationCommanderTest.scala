@@ -164,7 +164,7 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
         Await.result(futUnit, Duration(10, "seconds"))
         val result = commander.getPublicFeeds(5)
         val feeds = Await.result(result, Duration(10, "seconds"))
-        feeds.size === 5
+        feeds.size === 0
       }
     }
   }
