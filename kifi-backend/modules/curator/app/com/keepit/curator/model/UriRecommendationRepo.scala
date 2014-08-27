@@ -18,7 +18,7 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getByUriAndUserId(uriId: Id[NormalizedURI], userId: Id[User], uriRecommendationState: Option[State[UriRecommendation]])(implicit session: RSession): Option[UriRecommendation]
   def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
   def getRecommendableByTopMasterScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[UriRecommendation]
-  def getNotPushedByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
+  def getNotPushedByTopMasterScore(userId: Id[User], maxBatchSize: Int, masterScoreThreshold: Float = 0f, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RWSession): Boolean
   def incrementDeliveredCount(recoId: Id[UriRecommendation])(implicit session: RWSession): Unit
   def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Boolean
@@ -76,8 +76,8 @@ class UriRecommendationRepoImpl @Inject() (
       sortBy(_.masterScore.desc).take(maxBatchSize).list
   }
 
-  def getNotPushedByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation] = {
-    (for (row <- rows if row.userId === userId && row.state === uriRecommendationState && row.lastPushedAt.isNull) yield row).
+  def getNotPushedByTopMasterScore(userId: Id[User], maxBatchSize: Int, masterScoreThreshold: Float = 0f, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation] = {
+    (for (row <- rows if row.userId === userId && row.state === uriRecommendationState && row.lastPushedAt.isNull && row.masterScore >= masterScoreThreshold) yield row).
       sortBy(_.masterScore.desc).take(maxBatchSize).list
   }
 
