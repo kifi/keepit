@@ -178,14 +178,11 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
           repo.save(recs(2))
         }
         val commander = inject[RecommendationGenerationCommander]
-        db.readWrite { implicit s =>
-          val futUnit = commander.recomputeRecos(Id[User](42))
-          Await.result(futUnit, Duration(10, "seconds"))
-          val recos = repo.getByTopMasterScore(Id[User](42), 6)
-          recos.size === 3
-          recos.foreach(reco => println(reco.toString))
-          recos(0).masterScore === 19.5
-        }
+        val futUnit = commander.resetUser(Id[User](42))
+        Await.result(futUnit, Duration(10, "seconds"))
+        val result = commander.getTopRecommendations(Id[User](42), 2)
+        val recs = Await.result(result, Duration(10, "seconds"))
+        recs.size === 2
       }
     }
   }

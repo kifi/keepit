@@ -1,6 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{RawSeedItemRepo, UriRecommendationStates, ScoredSeedItemWithAttribution, RecoInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, UriRecommendationRepo, UriRecommendation, UriScores, PublicFeedRepo, PublicSeedItem, SeedItem, PublicUriScores, PublicFeed, PublicScoredSeedItem}
+import com.keepit.curator.model.{ RawSeedItemRepo, UriRecommendationStates, ScoredSeedItemWithAttribution, RecoInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, UriRecommendationRepo, UriRecommendation, UriScores, PublicFeedRepo, PublicSeedItem, SeedItem, PublicUriScores, PublicFeed, PublicScoredSeedItem }
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model.{ User, ExperimentType, UriRecommendationScores, SystemValueRepo, Name }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -23,7 +23,6 @@ class RecommendationGenerationCommander @Inject() (
     scoringHelper: UriScoringHelper,
     publicScoringHelper: PublicUriScoringHelper,
     uriWeightingHelper: UriWeightingHelper,
-    rescoringHelper: UriRecosRescoringHelper,
     publicUriWeightingHelper: PublicUriWeightingHelper,
     attributionHelper: SeedAttributionHelper,
     db: Database,
@@ -159,12 +158,11 @@ class RecommendationGenerationCommander @Inject() (
   private def getRescoreSeedsForUser(userId: Id[User], state: UserRecommendationGenerationState) = {
     for {
       seeds <- seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, 200)
-      recos <- uriRecRepo.getByUserId(userId)
+      recos <- db.readWriteAsync(implicit s => uriRecRepo.getByUserId(userId))
     } yield {
       ((recos zip seeds) filter (x => x._1.uriId != x._2.uriId) map (_._2), if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
     }
   }
-
 
   private def saveScoredSeedItems(items: Seq[ScoredSeedItemWithAttribution], userId: Id[User], newState: UserRecommendationGenerationState) =
     db.readWrite { implicit s =>
