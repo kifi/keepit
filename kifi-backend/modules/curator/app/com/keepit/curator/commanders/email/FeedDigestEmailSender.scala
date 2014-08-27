@@ -184,21 +184,18 @@ class FeedDigestEmailSenderImpl @Inject() (
   }
 
   private def getFriendRecommendationsForUser(userId: Id[User]): Future[Seq[FriendReco]] = {
-    val friendRecosF = for {
+    for {
       userIds <- abook.getFriendRecommendations(userId, offset = 0, limit = FRIEND_RECOMMENDATIONS_TO_QUERY, bePatient = true)
       if userIds.isDefined
       friends <- shoebox.getBasicUsers(userIds.get)
+      friendImages <- getManyUserImageUrls(userIds.get: _*)
     } yield {
-      // todo(josh) only send friend recommendations who haven't been previous emailed (or at least not emailed in a certain timespan)
-      val userIdsToReco = userIds.get.sortBy(_ => Random.nextInt).take(FRIEND_RECOMMENDATIONS_TO_DELIVER)
-      getManyUserImageUrls(userIdsToReco: _*).map { pairs =>
-        pairs.collect {
-          case (userId, imageUrl) => FriendReco(friends(userId), DigestEmail.toHttpsUrl(imageUrl))
-        }.toSeq
-      }
+      val friendRecos = friends.map(pair => FriendReco(pair._2, DigestEmail.toHttpsUrl(friendImages(pair._1)))).toSeq
+      friendRecos.sortBy { friendReco =>
+        /* kifi ghost images should be at the bottom of the list */
+        (if (friendReco.avatarUrl.endsWith("/0.jpg")) 1 else -1) * Random.nextInt(Int.MaxValue)
+      }.take(FRIEND_RECOMMENDATIONS_TO_DELIVER)
     }
-
-    friendRecosF.flatten
   } recover {
     case throwable =>
       airbrake.notify(s"getFriendRecommendationsForUser($userId) failed", throwable)

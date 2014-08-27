@@ -51,9 +51,11 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
           pictureName = Some("mrt"))
         val friend5 = User(id = Some(Id[User](48)), firstName = "Winston", lastName = "Churchill",
           pictureName = Some("mrt"))
+        val friend6 = User(id = Some(Id[User](49)), firstName = "Bob", lastName = "Marley",
+          pictureName = Some("0"))
 
         val abook = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
-        val friends = Seq(friend1, friend2, friend3, friend4, friend5)
+        val friends = Seq(friend1, friend2, friend3, friend4, friend5, friend6)
         val friendIds = friends.map(_.id.get)
         abook.addFriendRecommendationsExpectations(user1.id.get, friendIds)
         abook.addFriendRecommendationsExpectations(user2.id.get, friendIds)
@@ -61,6 +63,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         shoebox.saveUsers(friends: _*)
         shoebox.saveUserImageUrl(44, "//url.com/u44.jpg")
         shoebox.saveUserImageUrl(48, "//url.com/u48.jpg")
+        shoebox.saveUserImageUrl(49, "//url.com/0.jpg")
 
         val savedRecoModels = db.readWrite { implicit rw =>
           Seq(
@@ -93,7 +96,7 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         val sendFuture: Future[Seq[DigestRecoMail]] = sender.send()
         val summaries = Await.result(sendFuture, Duration(5, "seconds"))
 
-        summaries.size === 7
+        summaries.size === 8
         val sumU42 = summaries.find(_.userId.id == 42).get
         val sumU43 = summaries.find(_.userId.id == 43).get
 
@@ -134,9 +137,10 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail42body must contain("Recommended because it’s trending in a topic you’re interested in: Reading")
 
         // Friend Recommendations
-        friends.foreach { user =>
+        friends.slice(0, 4).foreach { user =>
           mail42body must contain("?friend=" + user.externalId)
         }
+        mail42body must not contain friends(5).externalId.toString
 
         mail43.senderUserId.get must beEqualTo(Id[User](43))
         val mail43body = mail43.htmlBody.toString
