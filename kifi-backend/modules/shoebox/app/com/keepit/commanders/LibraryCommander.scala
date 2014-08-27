@@ -142,6 +142,7 @@ class LibraryCommander @Inject() (
         } yield {
           val newDescription: Option[String] = description.orElse(targetLib.description)
           val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
+          // todo(andrew/aaron): Update every keep's visibility when the library visibility changes. Do it in a smart async way.
           libraryRepo.save(targetLib.copy(name = newName, slug = LibrarySlug(newSlug), visibility = newVisibility, description = newDescription))
         }
       }
@@ -228,7 +229,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def internSystemGeneratedLibraries(userId: Id[User]): (Library, Library) = { // returns true if created, false if already existed
+  def internSystemGeneratedLibraries(userId: Id[User]): (Library, Library) = {
     db.readWrite { implicit session =>
       val libMem = libraryMembershipRepo.getWithUserId(userId, None)
       val allLibs = libraryRepo.getByUser(userId, None)
@@ -462,6 +463,9 @@ class LibraryCommander @Inject() (
         acc == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_SECRET
     }
     val (main, secret) = if (mainOpt.isEmpty || secretOpt.isEmpty) {
+      // Right now, we don't have any users without libraries. However, I'd prefer to be safe for now
+      // and fix it if a user's libraries are not set up.
+      log.error(s"Unable to get main or secret libraries for user $userId: $mainOpt $secretOpt")
       internSystemGeneratedLibraries(userId)
     } else (mainOpt.get._2, secretOpt.get._2)
     (main, secret)

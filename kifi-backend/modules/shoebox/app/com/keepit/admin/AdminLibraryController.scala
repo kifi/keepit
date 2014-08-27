@@ -159,5 +159,28 @@ class AdminLibraryController @Inject() (
     Redirect(request.request.referer)
   }
 
+  def migrateKeepsToLibraries(startPage: Int, endPage: Int, readOnly: Boolean) = AdminHtmlAction.authenticated { implicit request =>
+    val PAGE_SIZE = 200
+    for (page <- startPage to endPage) {
+      db.readWrite { implicit session =>
+        val keeps = keepRepo.page(page, PAGE_SIZE, true, Set.empty)
+        keeps.groupBy(_.userId).map { case (userId, keepsAllFromOneUser) =>
+          val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(userId)
+          keepsAllFromOneUser.map { keep =>
+            if (keep.isPrivate) {
+              keepRepo.doNotUseStealthUpdate(keep.copy(libraryId = Some(secret.id.get), visibility = secret.visibility))
+            } else {
+              keepRepo.doNotUseStealthUpdate(keep.copy(libraryId = Some(main.id.get), visibility = main.visibility))
+            }
+          }
+          log.info(s"[lib-migrate] Updated batch of ${keepsAllFromOneUser.length} keeps for userId $userId")
+        }
+      }
+    }
+
+    Ok
+
+  }
+
 }
 

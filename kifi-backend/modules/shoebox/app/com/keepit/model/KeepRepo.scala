@@ -46,6 +46,8 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
   def getByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
   def getCountByLibrary(libraryId: Id[Library], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Int
+  // Do not use:
+  def doNotUseStealthUpdate(model: Keep)(implicit session: RWSession): Keep
 }
 
 @Singleton
@@ -118,6 +120,17 @@ class KeepRepoImpl @Inject() (
 
     val newModel = model.copy(seq = sequence.incrementAndGet())
     super.save(newModel.clean())
+  }
+
+  def doNotUseStealthUpdate(model: Keep)(implicit session: RWSession): Keep = {
+    val target = getCompiled(model.id.get)
+    val count = target.update(model)
+    invalidateCache(model)
+    if (count != 1) {
+      deleteCache(model)
+      throw new IllegalStateException(s"Updating $count models of [${model.toString}] instead of exactly one. Maybe there is a cache issue. The actual model (from cache) is no longer in db.")
+    }
+    model
   }
 
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep] = {

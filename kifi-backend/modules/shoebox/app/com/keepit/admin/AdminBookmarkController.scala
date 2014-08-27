@@ -294,20 +294,5 @@ class AdminBookmarksController @Inject() (
       }
     }
   }
-
-  def migrateKeepsToLibraries(startPage: Int, endPage: Int, readOnly: Boolean) = AdminHtmlAction.authenticated { implicit request =>
-    val PAGE_SIZE = 200
-    for (page <- startPage to endPage) {
-      db.readWrite { implicit session =>
-        val keeps = keepRepo.page(page, PAGE_SIZE, true, Set.empty)
-        keeps.map { keep =>
-          libraryRepo.getByUser(keep.userId)
-        }
-      }
-    }
-
-    Ok
-
-  }
 }
 
