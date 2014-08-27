@@ -60,6 +60,10 @@ case class Keep(
   def isActive: Boolean = state == KeepStates.ACTIVE
 
   def isDiscoverable = !isPrivate
+
+  private var _deprecatedIsPrivate = false
+  def deprecatedIsPrivate: Boolean = _deprecatedIsPrivate
+  private def setDeprecatedIsPrivate(dbColumnField: Boolean) = { _deprecatedIsPrivate = dbColumnField; _deprecatedIsPrivate }
 }
 
 object Keep {
@@ -82,7 +86,9 @@ object Keep {
 
   // is_primary: trueOrNull in db
   def applyWithPrimary(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep], title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], urlId: Id[URL], url: String, bookmarkPath: Option[String], isPrivate: Boolean, userId: Id[User], state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]], seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: Option[LibraryVisibility]) = {
-    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url, bookmarkPath, visibility.getOrElse(isPrivateToVisibility(isPrivate)), userId, state, source, kifiInstallation, seq, libraryId)
+    val k = Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url, bookmarkPath, visibility.getOrElse(isPrivateToVisibility(isPrivate)), userId, state, source, kifiInstallation, seq, libraryId)
+    k.setDeprecatedIsPrivate(isPrivate)
+    k
   }
   def unapplyWithPrimary(k: Keep) = {
     Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url, k.bookmarkPath, Keep.visibilityToIsPrivate(k.visibility), k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, Option(k.visibility))

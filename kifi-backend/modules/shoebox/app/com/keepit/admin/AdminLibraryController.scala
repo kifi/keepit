@@ -167,17 +167,21 @@ class AdminLibraryController @Inject() (
         keeps.groupBy(_.userId).map {
           case (userId, keepsAllFromOneUser) =>
             val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(userId)
-            if (!readOnly) {
-              keepsAllFromOneUser.map { keep =>
-                if (keep.isPrivate && (keep.visibility != secret.visibility || keep.libraryId != Some(secret.id.get))) {
-                  log.info(s"[priv] Updating keep ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
+            keepsAllFromOneUser.map { keep =>
+              if (keep.isPrivate && (keep.visibility != secret.visibility || keep.libraryId != Some(secret.id.get))) {
+                log.info(s"[lib-migrate:priv] Updating keep ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
+                if (!readOnly) {
                   keepRepo.doNotUseStealthUpdate(keep.copy(libraryId = Some(secret.id.get), visibility = secret.visibility))
-                } else if (!keep.isPrivate && (keep.visibility != main.visibility || keep.libraryId != Some(main.id.get))) {
-                  log.info(s"[publ] Updating keep ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
-                  keepRepo.doNotUseStealthUpdate(keep.copy(libraryId = Some(main.id.get), visibility = main.visibility))
-                } else {
-                  log.info(s"[okay] Seems okay ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
                 }
+              } else if (!keep.isPrivate && (keep.visibility != main.visibility || keep.libraryId != Some(main.id.get))) {
+                log.info(s"[lib-migrate:publ] Updating keep ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
+                if (!readOnly) {
+                  keepRepo.doNotUseStealthUpdate(keep.copy(libraryId = Some(main.id.get), visibility = main.visibility))
+                }
+              } else if (keep.isPrivate != keep.deprecatedIsPrivate) {
+                log.info(s"[lib-migrate:erro] something wrong ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
+              } else {
+                log.info(s"[lib-migrate:okay] It's good ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
               }
             }
             log.info(s"[lib-migrate] Updated batch of ${keepsAllFromOneUser.length} keeps for userId $userId")

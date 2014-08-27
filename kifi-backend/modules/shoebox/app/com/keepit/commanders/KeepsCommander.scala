@@ -150,6 +150,7 @@ class KeepsCommander @Inject() (
     normalizedURIInterner: NormalizedURIInterner,
     curator: CuratorServiceClient,
     clock: Clock,
+    libraryCommander: LibraryCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   private def getKeeps(
@@ -461,7 +462,17 @@ class KeepsCommander @Inject() (
   private def updateKeepWithSession(keep: Keep, isPrivate: Option[Boolean], title: Option[String])(implicit context: HeimdalContext, session: RWSession): Keep = {
     val updatedPrivacy = isPrivate getOrElse keep.isPrivate
     val updatedTitle = title orElse keep.title
-    keepRepo.save(keep.copy(visibility = Keep.isPrivateToVisibility(updatedPrivacy)).withTitle(updatedTitle))
+
+    val (mainLib, secretLib) = libraryCommander.getMainAndSecretLibrariesForUser(keep.userId)
+    def getLibFromPrivacy(isPrivate: Boolean) = {
+      if (isPrivate) Some(secretLib.id.get) else Some(mainLib.id.get)
+    }
+    if (isPrivate.isDefined && isPrivate.get != keep.isPrivate) {
+      keepRepo.save(keep.copy(visibility = Keep.isPrivateToVisibility(isPrivate.get), libraryId = getLibFromPrivacy(isPrivate.get)).withTitle(updatedTitle))
+    } else {
+      keepRepo.save(keep.withTitle(updatedTitle))
+    }
+
   }
 
   def editKeepTagBulk(collectionId: ExternalId[Collection], selection: BulkKeepSelection, userId: Id[User], isAdd: Boolean)(implicit context: HeimdalContext): Int = {
