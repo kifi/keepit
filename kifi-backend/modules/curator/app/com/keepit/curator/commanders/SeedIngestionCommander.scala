@@ -1,13 +1,12 @@
 package com.keepit.curator.commanders
 
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.curator.model._
-import com.keepit.model.{ User, ExperimentType }
+import com.keepit.model.ExperimentType
 import com.keepit.common.db.slick.Database
 import com.keepit.commanders.RemoteUserExperimentCommander
 
@@ -17,9 +16,7 @@ import com.keepit.model.User
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.util.{ Failure, Success }
-import scala.concurrent.{ Future, Promise }
-
-import java.util.concurrent.atomic.AtomicBoolean
+import scala.concurrent.Future
 
 @Singleton
 class SeedIngestionCommander @Inject() (
