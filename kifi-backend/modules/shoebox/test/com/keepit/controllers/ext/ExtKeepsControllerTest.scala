@@ -110,7 +110,7 @@ class ExtKeepsControllerTest extends Specification with ShoeboxTestInjector with
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
-        val expected = Json.obj("id" -> k1.externalId, "title" -> "G1", "url" -> "http://www.google.com", "isPrivate" -> false)
+        val expected = Json.obj("id" -> k1.externalId, "title" -> "G1", "url" -> "http://www.google.com", "isPrivate" -> false, "libraryId" -> "l7jlKlnA36Su")
         Json.parse(contentAsString(result)) must equalTo(expected)
 
         val bookmarks = db.readOnlyMaster { implicit s =>

@@ -186,7 +186,7 @@ class LibraryCommander @Inject() (
       case (_, Some(tag)) =>
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = k.visibility,
+          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = library.visibility,
             userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId)))
           keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
         }
@@ -391,7 +391,7 @@ class LibraryCommander @Inject() (
       case Some(_) =>
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = k.visibility,
+          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = library.visibility,
             userId = k.userId, source = k.source, libraryId = Some(toLibraryId)))
           keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
             keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = k2c.collectionId))
@@ -449,6 +449,22 @@ class LibraryCommander @Inject() (
           ))
         }
     }
+  }
+
+  def getMainAndSecretLibrariesForUser(userId: Id[User])(implicit session: RWSession) = {
+    val libs = libraryRepo.getByUser(userId)
+    val mainOpt = libs.find {
+      case (acc, lib) =>
+        acc == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_MAIN
+    }
+    val secretOpt = libs.find {
+      case (acc, lib) =>
+        acc == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_SECRET
+    }
+    val (main, secret) = if (mainOpt.isEmpty || secretOpt.isEmpty) {
+      internSystemGeneratedLibraries(userId)
+    } else (mainOpt.get._2, secretOpt.get._2)
+    (main, secret)
   }
 }
 

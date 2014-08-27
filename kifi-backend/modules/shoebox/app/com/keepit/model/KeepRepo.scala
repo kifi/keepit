@@ -6,9 +6,10 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import scala.slick.jdbc.{ GetResult, StaticQuery }
+import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 import com.keepit.common.logging.Logging
 import com.keepit.commanders.WhoKeptMyKeeps
+import com.keepit.common.core._
 
 @ImplementedBy(classOf[KeepRepoImpl])
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
@@ -70,13 +71,13 @@ class KeepRepoImpl @Inject() (
     def bookmarkPath = column[String]("bookmark_path", O.Nullable)
     def userId = column[Id[User]]("user_id", O.Nullable) //indexd
     def isPrivate = column[Boolean]("is_private", O.NotNull) //indexd
-    def visiblity = column[LibraryVisibility]("visibility", O.Nullable)
     def source = column[KeepSource]("source", O.NotNull)
     def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
+    def visibility = column[LibraryVisibility]("visibility", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, urlId, url, bookmarkPath.?, isPrivate, visiblity.?,
-      userId, state, source, kifiInstallation.?, seq, libraryId) <> ((Keep.applyWithPrimary _).tupled, Keep.unapplyWithPrimary _)
+    def * = (id.?, createdAt, updatedAt, externalId, title.?, uriId, isPrimary.?, urlId, url, bookmarkPath.?, isPrivate,
+      userId, state, source, kifiInstallation.?, seq, libraryId, visibility.?) <> ((Keep.applyWithPrimary _).tupled, Keep.unapplyWithPrimary _)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -85,7 +86,7 @@ class KeepRepoImpl @Inject() (
   implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
 
-  private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r => // bonus points for anyone who can do this generically in Slick 2.0
+  private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
     var privateFlag: Boolean = false
 
     Keep.applyWithPrimary(
@@ -99,7 +100,7 @@ class KeepRepoImpl @Inject() (
       urlId = r.<<[Id[URL]],
       url = r.<<[String],
       bookmarkPath = r.<<[Option[String]],
-      isPrivate = { privateFlag = r.<<[Boolean]; privateFlag }, // todo(andrew): wowza, clean up when done with libraries
+      isPrivate = r.<<[Boolean], // todo(andrew): wowza, clean up when done with libraries
       userId = r.<<[Id[User]],
       state = r.<<[State[Keep]],
       source = r.<<[KeepSource],

@@ -517,13 +517,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              |"id":"${keep1.externalId}",
              |"title":"k1",
              |"url":"http://www.google.com/",
-             |"isPrivate":false
+             |"isPrivate":false,
+             |"libraryId":"l7jlKlnA36Su"
              |},
              |{
              |"id":"${keep2.externalId}",
              |"title":"k2",
              |"url":"http://www.amazon.com/",
-             |"isPrivate":false
+             |"isPrivate":false,
+             |"libraryId":"l7jlKlnA36Su"
              |}]
            """.stripMargin)
         Json.parse(contentAsString(result1)) must equalTo(expected1)
