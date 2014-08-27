@@ -605,15 +605,15 @@ a.kifi-notices-filter-page {
   color: #777;
 }
 .kifi-thread-who {
-  padding: 0;
   position: relative;
   z-index: 1;
+  border-radius: 12px 12px 0 0 !important;
 }
 .kifi-thread-who.kifi-active {
   z-index: 4;
 }
-@bgColor: #eff2f7;
-@borderColor: #e1e8e9;
+@bgColor: #f6f6f6;
+@borderColor: #ccc;
 @fgColor: #b8c5d1;
 @optionBgColor: #b8c5d1;
 @optionButtonWidth: 40px;
@@ -626,7 +626,6 @@ a.kifi-notices-filter-page {
   line-height: normal;
   color: @fgColor;
   background: @bgColor;
-  width: 310px;
   ul {
     margin: 0;
     padding: 0;
@@ -666,31 +665,16 @@ a.kifi-notices-filter-page {
   height: @barHeight;
 }
 .kifi-message-header-option-button {
-  position: relative;
-  display: block;
   float: right;
   width: @optionButtonWidth;
   height: @barHeight;
   border-left: 1px solid @borderColor;
-  span {
-    @iconWidth: 11px;
-    @iconHeight: 6px;
-    position: relative;
+  &::before {
+    content: '';
     display: block;
-    width: @iconWidth;
-    height: @iconHeight;
-    top: (@barHeight - @iconHeight) / 2;
-    left: (@optionButtonWidth - @iconWidth) / 2;
-    background-image: url(@dropdownDark2x);
-    background-repeat: no-repeat;
-    background-size: auto 6px;
-    background-position: 50%;
-    vertical-align: middle;
-    .kifi-message-header.kifi-option-expanded & {
-      background-image: url(@dropdownGray2x);
-      -webkit-transform: rotateX(180deg);
-      transform: rotateX(180deg);
-    }
+    width: 100%;
+    height: 100%;
+    background: url(@dropdownDark2x) 50%/auto 6px no-repeat;
   }
   &:hover, &:focus {
     background-color: tint(@bgColor, 70%);
@@ -705,6 +689,11 @@ a.kifi-notices-filter-page {
     }
     &:active {
       background-color: shade(@optionBgColor, 20%);
+    }
+    &::before {
+      background-image: url(@dropdownGray2x);
+      -webkit-transform: scale(1,-1);
+      transform: scale(1,-1);
     }
   }
 }

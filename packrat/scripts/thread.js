@@ -222,7 +222,6 @@ panes.thread = function () {
     }
     m.formatLocalDate = formatLocalDate;
     m.sender = m.user;
-    m.isLoggedInUser = m.sender && m.sender.id === me.id;
     formatParticipant(m.sender);
     if (m.source && m.source !== "server") {
       m.displayedSource = m.source;
