@@ -11,8 +11,8 @@ object helpers {
     val kifiFacebookUrl = appendUrlUtmCodes("https://www.facebook.com/kifi42?", campaign, "footerFacebook")
     val kifiLogoUrl = appendUrlUtmCodes("https://www.kifi.com/?", campaign, "headerLogo")
 
-    def inviteFriendUrl(user: BasicUser, index: Int) =
-      appendUrlUtmCodes(s"https://www.kifi.com/invite?friend=${user.externalId}&", campaign, "pymk" + index)
+    def inviteFriendUrl(user: BasicUser, index: Int, subtype: String) =
+      appendUrlUtmCodes(s"https://www.kifi.com/invite?friend=${user.externalId}&subtype=${subtype}&", campaign, "pymk" + index)
   }
 
   val iTunesAppStoreUrl = "https://itunes.apple.com/us/app/kifi/id740232575"

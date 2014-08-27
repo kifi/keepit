@@ -60,7 +60,7 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
             uriRepo.save(NormalizedURI.withHash("http://www.website.com/article1", Some("Article1")))
           }
           val call = com.keepit.controllers.email.routes.EmailRecosController.sendReco(uri1.externalId)
-          call.toString === s"/e/1/recos/send?id=${uri1.externalId}"
+          call.toString === s"/r/e/1/recos/send?id=${uri1.externalId}"
           val result = controller.sendReco(uri1.externalId)(FakeRequest())
           status(result) === OK
           val htmlBody = contentAsString(result)

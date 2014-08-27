@@ -14,7 +14,7 @@ import com.keepit.curator.commanders.RecommendationGenerationCommander
 import com.keepit.curator.model.{ UriRecommendationRepo, UriRecommendation }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.BasicUser
+import com.keepit.social.{ SocialNetworks, SocialNetworkType, BasicUser }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 import views.html.email.helpers
@@ -52,7 +52,7 @@ object DigestEmail {
 
 sealed case class FriendReco(basicUser: BasicUser, avatarUrl: String)
 
-sealed case class AllDigestRecos(toUser: User, recos: Seq[DigestReco], friendRecos: Seq[FriendReco])
+sealed case class AllDigestRecos(toUser: User, recos: Seq[DigestReco], friendRecos: Seq[FriendReco], isFacebookConnected: Boolean = false)
 
 sealed case class DigestReco(reco: UriRecommendation, uri: NormalizedURI, uriSummary: URISummary,
     keepers: DigestRecoKeepers) {
@@ -71,7 +71,7 @@ sealed case class DigestReco(reco: UriRecommendation, uri: NormalizedURI, uriSum
 
   // todo(josh) encode urls?? add more analytics information
   val viewPageUrl = s"https://www.kifi.com/e/1/recos/view?id=${uri.externalId}"
-  val sendPageUrl = s"https://www.kifi.com/e/1/recos/send?id=${uri.externalId}"
+  val sendPageUrl = s"https://www.kifi.com/r/e/1/recos/send?id=${uri.externalId}"
   val keepAndSeeMoreUrl = s"https://www.kifi.com/e/1/recos/keep?id=${uri.externalId}"
 }
 
@@ -139,13 +139,15 @@ class FeedDigestEmailSenderImpl @Inject() (
     val recosF = getDigestRecommendationsForUser(userId)
     val unsubUrlF = shoebox.getUnsubscribeUrlForEmail(user.primaryEmail.get)
     val friendRecoF = getFriendRecommendationsForUser(userId)
+    val socialInfosF = shoebox.getSocialUserInfosByUserId(userId)
 
     val digestRecoMailF = for {
       recos <- recosF
       unsubscribeUrl <- unsubUrlF
       friendRecos <- friendRecoF
+      socialInfos <- socialInfosF
     } yield {
-      if (recos.size >= MIN_RECOMMENDATIONS_TO_DELIVER) composeAndSendEmail(user, recos, friendRecos, unsubscribeUrl)
+      if (recos.size >= MIN_RECOMMENDATIONS_TO_DELIVER) composeAndSendEmail(user, recos, friendRecos, socialInfos, unsubscribeUrl)
       else {
         log.info(s"NOT sending digest email to ${user.id.get}; 0 worthy recos")
         Future.successful(DigestRecoMail(userId = userId, mailSent = false, feed = Seq.empty))
@@ -154,9 +156,12 @@ class FeedDigestEmailSenderImpl @Inject() (
     digestRecoMailF.flatten
   }
 
-  private def composeAndSendEmail(user: User, digestRecos: Seq[DigestReco], friendRecos: Seq[FriendReco], unsubscribeUrl: String): Future[DigestRecoMail] = {
+  private def composeAndSendEmail(user: User, digestRecos: Seq[DigestReco], friendRecos: Seq[FriendReco],
+    socialInfos: Seq[SocialUserInfo], unsubscribeUrl: String): Future[DigestRecoMail] = {
     val userId = user.id.get
-    val emailData = AllDigestRecos(toUser = user, recos = digestRecos, friendRecos = friendRecos)
+
+    val isFacebookConnected = socialInfos.find(_.networkType == SocialNetworks.FACEBOOK).exists(_.getProfileUrl.isDefined)
+    val emailData = AllDigestRecos(toUser = user, recos = digestRecos, friendRecos = friendRecos, isFacebookConnected = isFacebookConnected)
     val ctx = Context(campaign = "emailDigest", unsubscribeUrl = unsubscribeUrl)
 
     val htmlBody: LargeString = views.html.email.feedDigest(emailData, ctx).body

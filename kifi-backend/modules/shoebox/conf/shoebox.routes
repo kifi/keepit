@@ -101,7 +101,7 @@ POST    /ext/contacts/hide          @com.keepit.controllers.ext.ExtNonUserSearch
 POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 POST    /ext/invite                 @com.keepit.controllers.ext.ExtInviteController.invite()
 
-GET     /r/:token                   @com.keepit.controllers.ext.ExtDeepLinkController.handle(token: String)
+GET     /r/$token<[0-9a-f-]{36}>    @com.keepit.controllers.ext.ExtDeepLinkController.handle(token: String)
 GET     /mr/:token                  @com.keepit.controllers.ext.ExtDeepLinkController.handleMobile(token: String)
 GET     /ir/:token                  @com.keepit.controllers.ext.ExtDeepLinkController.handleIPhoneTempForDev(token: String)
 
@@ -324,7 +324,9 @@ GET     /site/                      @com.keepit.controllers.website.HomeControll
 
 GET     /e/1/recos/view             @com.keepit.controllers.email.EmailRecosController.viewReco(id: ExternalId[NormalizedURI])
 GET     /e/1/recos/keep             @com.keepit.controllers.email.EmailRecosController.keepReco(id: ExternalId[NormalizedURI])
-GET     /e/1/recos/send             @com.keepit.controllers.email.EmailRecosController.sendReco(id: ExternalId[NormalizedURI])
+
+# /r/ used b/c the extension only checks HTML in /r/ urls to handle the redirect and compose
+GET     /r/e/1/recos/send           @com.keepit.controllers.email.EmailRecosController.sendReco(id: ExternalId[NormalizedURI])
 
 ##########################################
 # External Services API

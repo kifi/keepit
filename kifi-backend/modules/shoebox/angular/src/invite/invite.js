@@ -251,8 +251,8 @@ angular.module('kifi')
 ])
 
 .directive('kfFriendRequestBanner', [
-  'injectedState', 'routeService', 'userService', 'keepWhoService', 'profileService', '$timeout', '$analytics',
-  function (injectedState, routeService, userService, keepWhoService, profileService, $timeout, $analytics) {
+  'injectedState', 'routeService', 'userService', 'keepWhoService', 'profileService', '$timeout', '$analytics', 'analyticsState',
+  function (injectedState, routeService, userService, keepWhoService, profileService, $timeout, $analytics, analyticsState) {
 
     function setupShowFriendRequestBanner(scope, externalId) {
       function closeBanner() {
@@ -262,6 +262,7 @@ angular.module('kifi')
         scope.hidden = true;
       }
 
+      var eventSubtype = analyticsState.events.user_viewed_page.subtype || 'contactJoined';
       userService.getBasicUserInfo(externalId, true).then(function (res) {
         var user = res.data,
             picUrl = keepWhoService.getPicUrl(user, 200);
@@ -275,10 +276,16 @@ angular.module('kifi')
           networkType: 'fortytwo'
         };
 
+        if (eventSubtype === 'contactJoined') {
+          scope.friendRequestBannerHeader = 'Send a friend request to your email contact';
+        } else {
+          scope.friendRequestBannerHeader = 'Send a friend request to ' + user.firstName;
+        }
+
         scope.onAfterInvite = function () {
           $analytics.eventTrack('user_clicked_page', {
             type: 'addFriends',
-            subtype: 'contactJoined',
+            subtype: eventSubtype,
             action: 'addFriend'
           });
 
@@ -289,7 +296,7 @@ angular.module('kifi')
       scope.close = function () {
         $analytics.eventTrack('user_clicked_page', {
           type: 'addFriends',
-          subtype: 'contactJoined',
+          subtype: eventSubtype,
           action: 'close'
         });
 
@@ -304,6 +311,7 @@ angular.module('kifi')
         return;
       }
 
+      scope.friendRequestBannerHeader = 'Send a friend request';
       scope.showFriendRequestBanner = true;
       setupShowFriendRequestBanner(scope, externalId);
     }
