@@ -72,7 +72,7 @@ panes.notices = function () {
     },
     unread_thread_count: function (n) {
       $unreadCount.text(n || '');
-      positionTabUnderlineImmediately($unreadCount.parent());
+      positionTabUnderlineImmediately($unreadCount.parent().siblings('.kifi-notices-filter').addBack().not('[href]'));
     }
   };
 
