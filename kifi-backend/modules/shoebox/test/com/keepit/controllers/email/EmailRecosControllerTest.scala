@@ -2,6 +2,7 @@ package com.keepit.controllers.email
 
 import java.util.NoSuchElementException
 
+import com.keepit.commanders.LibraryCommander
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.store.FakeShoeboxStoreModule
@@ -37,6 +38,8 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
             val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.website.com/article1", Some("Article1")))
             (user1, uri1)
           }
+
+          inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
 
           val call = com.keepit.controllers.email.routes.EmailRecosController.viewReco(uri1.externalId)
           call.toString === s"/r/e/1/recos/view?id=${uri1.externalId}"

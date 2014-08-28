@@ -5,6 +5,7 @@ import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier, HealthcheckPlugin }
@@ -55,7 +56,8 @@ class ExtBookmarksController @Inject() (
   rawKeepFactory: RawKeepFactory,
   searchClient: SearchServiceClient,
   normalizedURIInterner: NormalizedURIInterner,
-  clock: Clock)
+  clock: Clock,
+  implicit val publicIdConfig: PublicIdConfiguration)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def removeTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>

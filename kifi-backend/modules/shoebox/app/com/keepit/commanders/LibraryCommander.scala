@@ -38,7 +38,7 @@ class LibraryCommander @Inject() (
     clock: Clock) extends Logging {
 
   def createFullLibraryInfo(library: Library): FullLibraryInfo = {
-    val (lib, owner, collabs, follows, keeps) = db.readOnlyReplica { implicit s =>
+    val (lib, owner, collabs, follows, keeps, keepCount) = db.readOnlyReplica { implicit s =>
       val owner = basicUserRepo.load(library.ownerId)
       val memberships = libraryMembershipRepo.getWithLibraryId(library.id.get)
       val (collabs, follows) = memberships.foldLeft(List.empty[BasicUser], List.empty[BasicUser]) {
@@ -49,8 +49,9 @@ class LibraryCommander @Inject() (
           case _ => (c1, f1)
         }
       }
-      val keeps = keepRepo.getByLibrary(library.id.get).map(KeepInfo.fromKeep)
-      (library, owner, collabs, follows, keeps)
+      val keeps = keepRepo.getByLibrary(library.id.get, 10, 0).map(KeepInfo.fromKeep)
+      val keepCount = keepRepo.getCountByLibrary(library.id.get)
+      (library, owner, collabs, follows, keeps, keepCount)
     }
 
     FullLibraryInfo(
@@ -63,8 +64,8 @@ class LibraryCommander @Inject() (
       visibility = lib.visibility,
       collaborators = collabs, // todo(andrew): should only be first `x` collaborators
       followers = follows, // todo(andrew): should only be first `x` followers
-      keeps = keeps, // todo(andrew): should only be first `x` keeps
-      numKeeps = keeps.length, // todo(andrew): should be the total number of keeps in the library
+      keeps = keeps,
+      numKeeps = keepCount,
       numCollaborators = collabs.length, // todo(andrew): should be the total number of collaborators in the library
       numFollowers = follows.length) // todo(andrew): should be the total number of followers in the library
   }
@@ -142,6 +143,7 @@ class LibraryCommander @Inject() (
         } yield {
           val newDescription: Option[String] = description.orElse(targetLib.description)
           val newVisibility: LibraryVisibility = visibility.getOrElse(targetLib.visibility)
+          // todo(andrew/aaron): Update every keep's visibility when the library visibility changes. Do it in a smart async way.
           libraryRepo.save(targetLib.copy(name = newName, slug = LibrarySlug(newSlug), visibility = newVisibility, description = newDescription))
         }
       }
@@ -186,7 +188,7 @@ class LibraryCommander @Inject() (
       case (_, Some(tag)) =>
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, isPrivate = k.isPrivate,
+          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = library.visibility,
             userId = k.userId, source = KeepSource.tagImport, libraryId = Some(libraryId)))
           keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = tag.id.get))
         }
@@ -228,7 +230,7 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def internSystemGeneratedLibraries(userId: Id[User]): (Library, Library) = { // returns true if created, false if already existed
+  def internSystemGeneratedLibraries(userId: Id[User]): (Library, Library) = {
     db.readWrite { implicit session =>
       val libMem = libraryMembershipRepo.getWithUserId(userId, None)
       val allLibs = libraryRepo.getByUser(userId, None)
@@ -339,12 +341,6 @@ class LibraryCommander @Inject() (
     }
   }
 
-  def getKeeps(libraryId: Id[Library]): Seq[Keep] = {
-    db.readOnlyMaster { implicit s =>
-      keepRepo.getByLibrary(libraryId)
-    }
-  }
-
   // Return is Set of Keep -> error message
   private def applyToKeeps(userId: Id[User],
     library: Library,
@@ -354,7 +350,8 @@ class LibraryCommander @Inject() (
 
     val badKeeps = collection.mutable.Set[(Keep, LibraryError)]()
     db.readWrite { implicit s =>
-      val existingURIs = keepRepo.getByLibrary(library.id.get).map(_.uriId).toSet
+      // todo: make more performant
+      val existingURIs = keepRepo.getByLibrary(library.id.get, 10000, 0).map(_.uriId).toSet
       keeps.groupBy(_.libraryId).map {
         case (None, keeps) => keeps
         case (Some(fromLibraryId), keeps) =>
@@ -391,7 +388,7 @@ class LibraryCommander @Inject() (
       case Some(_) =>
         def saveKeep(k: Keep, s: RWSession): Unit = {
           implicit val session = s
-          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, isPrivate = k.isPrivate,
+          val newKeep = keepRepo.save(Keep(title = k.title, uriId = k.uriId, url = k.url, urlId = k.urlId, visibility = library.visibility,
             userId = k.userId, source = k.source, libraryId = Some(toLibraryId)))
           keepToCollectionRepo.getByKeep(k.id.get).map { k2c =>
             keepToCollectionRepo.save(KeepToCollection(keepId = newKeep.id.get, collectionId = k2c.collectionId))
@@ -449,6 +446,25 @@ class LibraryCommander @Inject() (
           ))
         }
     }
+  }
+
+  def getMainAndSecretLibrariesForUser(userId: Id[User])(implicit session: RWSession) = {
+    val libs = libraryRepo.getByUser(userId)
+    val mainOpt = libs.find {
+      case (acc, lib) =>
+        acc == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_MAIN
+    }
+    val secretOpt = libs.find {
+      case (acc, lib) =>
+        acc == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_SECRET
+    }
+    val (main, secret) = if (mainOpt.isEmpty || secretOpt.isEmpty) {
+      // Right now, we don't have any users without libraries. However, I'd prefer to be safe for now
+      // and fix it if a user's libraries are not set up.
+      log.error(s"Unable to get main or secret libraries for user $userId: $mainOpt $secretOpt")
+      internSystemGeneratedLibraries(userId)
+    } else (mainOpt.get._2, secretOpt.get._2)
+    (main, secret)
   }
 }
 

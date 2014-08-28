@@ -20,8 +20,7 @@ import views.html
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import play.api.mvc.{ AnyContent, Action }
-import com.keepit.commanders.URISummaryCommander
-import com.keepit.commanders.RichWhoKeptMyKeeps
+import com.keepit.commanders.{ LibraryCommander, URISummaryCommander, RichWhoKeptMyKeeps }
 import com.keepit.model.KeywordsSummary
 import com.keepit.model.KeepStates
 
@@ -37,6 +36,7 @@ class AdminBookmarksController @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   libraryRepo: LibraryRepo,
   uriSummaryCommander: URISummaryCommander,
+  libraryCommander: LibraryCommander,
   clock: Clock)
     extends AdminController(actionAuthenticator) {
 
@@ -113,10 +113,15 @@ class AdminBookmarksController @Inject() (
   def updateBookmarks() = AdminHtmlAction.authenticated { request =>
     def toBoolean(str: String) = str.trim.toInt == 1
 
+    val (mainLib, secretLib) = db.readWrite { s => libraryCommander.getMainAndSecretLibrariesForUser(request.userId)(s) }
+    def getLibFromPrivacy(isPrivate: Boolean) = {
+      if (isPrivate) Some(secretLib.id.get) else Some(mainLib.id.get)
+    }
+
     def setIsPrivate(id: Id[Keep], isPrivate: Boolean)(implicit session: RWSession): Id[User] = {
       val bookmark = keepRepo.get(id)
       log.info("updating bookmark %s with private = %s".format(bookmark, isPrivate))
-      keepRepo.save(bookmark.withPrivate(isPrivate))
+      keepRepo.save(bookmark.copy(visibility = Keep.isPrivateToVisibility(isPrivate), libraryId = getLibFromPrivacy(isPrivate)))
       log.info("updated bookmark %s".format(bookmark))
       bookmark.userId
     }
