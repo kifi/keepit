@@ -357,7 +357,7 @@ class AuthHelper @Inject() (
         val user = userRepo.get(address.userId)
         val (verifiedEmailOpt, isVerifiedForTheFirstTime) = emailAddressRepo.verify(address.userId, code)
         verifiedEmailOpt.collect {
-          case verifiedEmail if isVerifiedForTheFirstTime && (user.primaryEmail.isEmpty || isPendingPrimaryEmail) =>
+          case verifiedEmail if (user.primaryEmail.isEmpty || isPendingPrimaryEmail) =>
             userCommander.updateUserPrimaryEmail(verifiedEmail)
         }
 

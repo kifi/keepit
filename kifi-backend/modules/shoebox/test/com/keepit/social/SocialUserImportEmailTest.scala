@@ -2,6 +2,7 @@ package com.keepit.common.social
 
 import java.io.File
 
+import com.keepit.commanders.UserCommander
 import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.test._
@@ -30,7 +31,7 @@ class SocialUserImportEmailTest extends Specification with ShoeboxTestInjector {
     }
     val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(jsonFilename))).mkString)
     val email = inject[FacebookSocialGraph].extractEmails(json)
-      .map(em => inject[SocialUserImportEmail].importEmail(user.id.get, em)).head
+      .map(em => inject[UserCommander].importSocialEmail(user.id.get, em)).head
     email.address === emailAddress
     db.readOnlyMaster { implicit session =>
       emailAddressRepo.get(email.id.get).address === emailAddress
