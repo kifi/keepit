@@ -44,10 +44,11 @@
         <div class="kf-reco-reason" ng-repeat="reason in reasons" ng-if="$index === reasonIndex">
           <div ng-if="reason.kind === 'keep'">
             Because you kept <a ng-href="{{reason.url}}" target="_blank" ng-attr-title="{{reason.name}}">{{reason.name}}</a>
-            <span class="kf-reco-ago"><time am-time-ago="reason.when"></time></span>
+            <span class="nowrap"><time am-time-ago="reason.when"></time></span>
           </div>
           <div ng-if="reason.kind === 'topic'">
-            <div>Because it's trending in a topic you're interested in: {{reason.name}}</div>
+            <div>Because it's trending in a topic you're interested in:
+            <span class="nowrap">{{reason.name}}</span></div>
           </div>
           <div ng-if="reason.kind === 'users'">
             Because lots of users kept it

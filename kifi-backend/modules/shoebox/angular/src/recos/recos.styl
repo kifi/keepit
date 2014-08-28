@@ -146,9 +146,6 @@
   &.kf-dark-reason-bullet
     color: #bbb
 
-.kf-reco-ago
-  white-space: nowrap
-
 .kf-reco
   .kf-keep
     border-top: none
@@ -157,9 +154,9 @@
 .kf-reco-icon
   position: relative
   float: right
-  margin: -10px 0 0 5px
-  width: 20px
-  height: 20px
+  margin: -10px 0 0 10px
+  width: 18px
+  height: 18px
 
 .kf-reco-icon:hover
   cursor: pointer
@@ -169,19 +166,19 @@
   content: ' '
   position: absolute;
   left: 50%
-  width: 4px;
-  background: #ddd
+  width: 3px;
+  background: #c7c7c7
   font-size: 0
 
 .kf-reco-icon:hover::before
 .kf-reco-icon:hover::after
 .kf-reco-icon:focus::before
 .kf-reco-icon:focus::after
-  background: #bbb
+  background: #aaa
 
 .kf-reco-icon:active::before
 .kf-reco-icon:active::after
-  background: #aaa
+  background: #888
 
 // X icon
 .kf-reco-close-x::before
@@ -218,7 +215,7 @@
 
 // Left chevron icon
 .kf-reco-reasons-left
-  right: 40px
+  right: 41px
 .kf-reco-reasons-left::before
   transform: translate(-2px, -3px) rotate(45deg)
 .kf-reco-reasons-left::after
@@ -235,7 +232,7 @@
 .kf-reco-bottom
   .kf-reco-icon
     position: absolute
-    bottom: 40px
+    top: 20px
     margin: auto
 
 // Dropdown menu
@@ -255,7 +252,6 @@
       white-space: nowrap
       font-size: 15px
       line-height: 30px
-      white-space: nowrap
       cursor: pointer
 
       &:hover
