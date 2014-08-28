@@ -892,7 +892,7 @@ class AdminUserController @Inject() (
   def selectPrimaryEmails = AdminHtmlAction.authenticated { implicit request =>
     val a = db.readWrite { implicit s =>
 
-      def pickAnEmail(userId: Id[User]) = {
+      def pickAnEmail(user: User) = {
         /*
         val all = emailRepo.getAllByUser(user.id.get)
         all.filter(_.verified).sortBy(e => (e.lastVerificationSent, e.verifiedAt)).lastOption match {
@@ -900,13 +900,18 @@ class AdminUserController @Inject() (
           case _ => None // no verified emails to choose from, so still None
         }
         */
-        Some(emailRepo.getByUser(userId))
+        user.primaryEmail match {
+          case Some(e) => Some(e)
+          case None =>
+            val all = emailRepo.getAllByUser(user.id.get)
+            all.find(_.verified).map(_.address)
+        }
       }
 
       userRepo.all.map { user =>
         user.primaryEmail match {
           case None =>
-            val selectedEmail = pickAnEmail(user.id.get)
+            val selectedEmail = pickAnEmail(user)
             if (selectedEmail.nonEmpty) {
               log.info("Setting primary email address %s of userId %s".format(selectedEmail.get, user.id.get.toString))
             }
@@ -918,7 +923,7 @@ class AdminUserController @Inject() (
             allEmails.find(e => e.address == primary) match {
               case Some(e) if e.verified => user // good
               case _ => // primary email does not exist in user's list of emails OR is not verified yet, select a new one
-                val selectedEmail = pickAnEmail(user.id.get)
+                val selectedEmail = pickAnEmail(user)
                 if (selectedEmail.nonEmpty) {
                   log.info("Setting primary email address %s of userId %s".format(selectedEmail.get, user.id.get.toString))
                 }
