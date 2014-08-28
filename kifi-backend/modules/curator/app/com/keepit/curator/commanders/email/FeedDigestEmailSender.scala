@@ -73,7 +73,7 @@ sealed case class DigestReco(reco: UriRecommendation, uri: NormalizedURI, uriSum
   // todo(josh) encode urls?? add more analytics information
   val viewPageUrl = s"${config.applicationBaseUrl}/r/e/1/recos/view?id=${uri.externalId}"
   val sendPageUrl = s"${config.applicationBaseUrl}/r/e/1/recos/send?id=${uri.externalId}"
-  val keepAndSeeMoreUrl = s"${config.applicationBaseUrl}/r/e/1/recos/keep?id=${uri.externalId}"
+  val keepUrl = s"${config.applicationBaseUrl}/r/e/1/recos/keep?id=${uri.externalId}"
 }
 
 sealed case class KeeperUser(userId: Id[User], avatarUrl: String, basicUser: BasicUser) {
@@ -125,7 +125,7 @@ class FeedDigestEmailSenderImpl @Inject() (
 
   def send() = {
     userExperimentCommander.getUsersByExperiment(ExperimentType.DIGEST_EMAIl).flatMap { userSet =>
-      Future.sequence(userSet.map(sendToUser(_)).toSeq)
+      Future.sequence(userSet.map(sendToUser).toSeq)
     }
   }
 
@@ -170,7 +170,7 @@ class FeedDigestEmailSenderImpl @Inject() (
 
     // TODO(josh) use the inlined template as soon as the base one is done/approved
     //val htmlBody: LargeString = views.html.email.feedDigestInlined(emailData).body
-    val textBody: Some[LargeString] = Some(views.html.email.feedDigestText(emailData).body)
+    val textBody: Some[LargeString] = Some(views.html.email.feedDigestText(emailData, ctx).body)
 
     val email = ElectronicMail(
       category = NotificationCategory.User.DIGEST,
@@ -246,7 +246,7 @@ class FeedDigestEmailSenderImpl @Inject() (
     } yield Some(DigestReco(reco = reco, uri = uri, uriSummary = summaries(uriId), keepers = recoKeepers, config = config))
   } recover {
     case throwable =>
-      airbrake.notify(s"failed to load data for ${reco}", throwable)
+      airbrake.notify(s"failed to load data for $reco", throwable)
       None
   }
 
