@@ -4,14 +4,14 @@ import com.keepit.search.engine.result.ResultCollector
 import com.keepit.search.util.join.{ DataBuffer, HashJoin }
 import org.apache.lucene.search.{ Query, Weight }
 
-class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArraySize: Int) {
+class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, totalSize: Int, coreSize: Int) {
 
   private[this] val dataBuffer: DataBuffer = new DataBuffer()
-  private[this] val matchWeight: Array[Float] = new Array[Float](scoreArraySize)
+  private[this] val matchWeight: Array[Float] = new Array[Float](totalSize)
 
   private[this] def accumulateWeightInfo(weights: IndexedSeq[(Weight, Float)]): Unit = {
     var i = 0
-    while (i < scoreArraySize) {
+    while (i < totalSize) {
       matchWeight(i) += weights(i)._2
       i += 1
     }
@@ -19,13 +19,13 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArra
   private def normalizeMatchWeight(): Unit = {
     var sum = 0.0f
     var i = 0
-    while (i < scoreArraySize) {
+    while (i < totalSize) {
       sum += matchWeight(i)
       i += 1
     }
     if (sum != 0.0f) {
       i = 0
-      while (i < scoreArraySize) {
+      while (i < totalSize) {
         matchWeight(i) += matchWeight(i) / sum
         i += 1
       }
@@ -41,12 +41,12 @@ class QueryEngine private[engine] (scoreExpr: ScoreExpr, query: Query, scoreArra
       // extract and accumulate information from Weights for later use (percent match)
       accumulateWeightInfo(weights)
 
-      source.execute(weights, dataBuffer)
+      source.execute(weights, coreSize, dataBuffer)
     }
   }
 
   def createScoreContext(collector: ResultCollector[ScoreContext]): ScoreContext = {
-    new ScoreContext(scoreExpr, scoreArraySize, matchWeight, collector)
+    new ScoreContext(scoreExpr, totalSize, matchWeight, collector)
   }
 
   def join(collector: ResultCollector[ScoreContext]): Unit = {
