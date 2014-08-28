@@ -912,6 +912,30 @@ class UserCommander @Inject() (
   }
 
   protected def userAvatarImageUrl(user: User) = s3ImageStore.avatarUrlByUser(user)
+
+  def importSocialEmail(userId: Id[User], emailAddress: EmailAddress): UserEmailAddress = {
+    db.readWrite { implicit s =>
+      val emails = emailRepo.getByAddress(emailAddress, excludeState = None)
+      emails.map { email =>
+        if (email.userId != userId) {
+          if (email.state == UserEmailAddressStates.VERIFIED) {
+            throw new IllegalStateException(s"email ${email.address} of user ${email.userId} is VERIFIED but not associated with user $userId")
+          } else if (email.state == UserEmailAddressStates.UNVERIFIED) {
+            emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE))
+          }
+          None
+        } else {
+          Some(email)
+        }
+      }.flatten.headOption.getOrElse {
+        log.info(s"creating new email $emailAddress for user $userId")
+        val user = userRepo.get(userId)
+        if (user.primaryEmail.isEmpty) userRepo.save(user.copy(primaryEmail = Some(emailAddress)))
+        emailRepo.save(UserEmailAddress(userId = userId, address = emailAddress, state = UserEmailAddressStates.VERIFIED))
+      }
+    }
+  }
+
 }
 
 object DefaultKeeps {
