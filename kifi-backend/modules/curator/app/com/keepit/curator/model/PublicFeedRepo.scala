@@ -69,7 +69,7 @@ class PublicFeedRepoImpl @Inject() (
 	              WHERE state=${PublicFeedStates.ACTIVE}
 	              ORDER BY master_score DESC LIMIT $limitNumFeeds
               ) AS mScoreTable""".as[Float].first
-
+    println("limit score: " + limitScore)
     (for (
       row <- rows if row.updatedAt < before && row.publicMasterScore < limitScore &&
         row.state === PublicFeedStates.ACTIVE
