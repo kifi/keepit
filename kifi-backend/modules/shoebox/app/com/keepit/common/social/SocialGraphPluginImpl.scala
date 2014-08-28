@@ -1,5 +1,6 @@
 package com.keepit.common.social
 
+import com.keepit.commanders.UserCommander
 import com.keepit.model._
 import com.google.inject.Inject
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -37,10 +38,10 @@ private[social] class SocialGraphActor @Inject() (
   db: Database,
   socialRepo: SocialUserInfoRepo,
   socialUserImportFriends: SocialUserImportFriends,
-  socialUserImportEmail: SocialUserImportEmail,
   socialUserCreateConnections: UserConnectionCreator,
   socialUserTypeahead: SocialUserTypeahead,
   userValueRepo: UserValueRepo,
+  userCommander: UserCommander,
   heimdal: HeimdalServiceClient,
   clock: Clock)
     extends FortyTwoActor(airbrake) with Logging {
@@ -95,7 +96,7 @@ private[social] class SocialGraphActor @Inject() (
         markGraphImportUserValue(userId, socialUserInfo.networkType, "import_connections")
 
         val friendsSocialId = rawInfo.jsons.map { json =>
-          graph.extractEmails(json).map(email => socialUserImportEmail.importEmail(userId, email))
+          graph.extractEmails(json).map(email => userCommander.importSocialEmail(userId, email))
 
           val friends = graph.extractFriends(json)
           socialUserImportFriends.importFriends(socialUserInfo, friends)
