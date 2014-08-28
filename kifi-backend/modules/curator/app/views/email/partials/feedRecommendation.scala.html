@@ -2,16 +2,16 @@
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center">
     <tr>
         <td valign="top">
-            <table width="625" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
+            <table width="673" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
                 <tr>
                     <td height="8" style="font-size:1px; line-height:1px;">&nbsp;</td>
                 </tr>
                 <tr>
                     <td>
-                        <table width="625" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
+                        <table width="673" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
                             <tr>
                                 <td width="82" class="side1">&nbsp;</td>
-                                <td align="left" style="font-family:Arial, sans-serif; font-size:14px; color:#92938d; text-align:left; line-height:18px;  font-weight:bold;">
+                                <td align="center" style="font-family:Arial, sans-serif; font-size:14px; color:#92938d; text-align:left; line-height:18px;  font-weight:bold;">
                                     @reco.topic.map { topic =>
                                     Recommended because it’s trending in a topic you’re interested in: @topic
                                     }
@@ -27,12 +27,12 @@
 
                 <tr>
                     <td>
-                        <table width="625" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
+                        <table width="672" border="0" cellspacing="0" cellpadding="0" align="center" class="wrapper">
                             <tr>
                                 <td width="72" class="side1">&nbsp;</td>
-                                <td align="center" valign="top" width="488">
+                                <td align="center" valign="top" width="535">
                                     <a href="@reco.viewPageUrl" target="_blank">
-                                        <img src="@reco.imageUrl" alt="@reco.title" style="display:block;" border="0" class="banner" width="488" />
+                                        <img src="@reco.imageUrl" alt="@reco.title" style="display:block;" border="0" class="banner" width="535" />
                                     </a>
                                 </td>
                                 <td width="65" class="side1">&nbsp;</td>
@@ -46,22 +46,22 @@
                 </tr>
                 <tr>
                     <td valign="top">
-                        <table width="625" border="0" cellspacing="0" cellpadding="0" class="wrapper">
+                        <table width="673" border="0" cellspacing="0" cellpadding="0" class="wrapper">
                             <tr>
                                 <td width="82" class="side1">&nbsp;</td>
                                 <td valign="top" >
                                     <table width="466" border="0" cellspacing="0" cellpadding="0" class="wrapper">
                                         <tr>
                                             <td align="left">
-                                                <a style="text-decoration: none; font-family:Georgia, 'Times New Roman', Times, serif;text-align:left; color:#000000; font-size:22px; line-height:26px;" href="@reco.viewPageUrl">@reco.title</a>
+                                                <a style="text-decoration: none; font-family:Georgia, 'Times New Roman', Times, serif;text-align:left; color:#000000; font-size:30px; line-height:35px;" href="@reco.viewPageUrl">@reco.title</a>
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td align="left" class="num1" style="line-height:22px; font-size:17px; font-family:Arial, sans-serif;color:#000000; ">
-                                                <a href="@reco.viewPageUrl" target="_blank" style="line-height:22px; font-size:17px; font-family:Arial, sans-serif;color:#000000; text-decoration:none; ">@reco.domain</a>
-                                                <span style="line-height:22px; font-size:14px; color:#9a9b99;">&bull;</span>
+                                            <td align="left" class="num1">
+                                                <a href="@reco.viewPageUrl" target="_blank" style="line-height:22px;font-size:14px;font-family:Arial,sans-serif;color:#888;text-decoration:none;">@reco.domain</a>
+                                                <span style="line-height:22px;font-size:14px;font-family:Arial,sans-serif;color:#888;">·</span>
                                                 @reco.readTime.map { readTime =>
-                                                <span>@readTime read</span>
+                                                <span style="line-height:22px;font-size:14px;font-family:Arial,sans-serif;color:#888;">@readTime read</span>
                                                 }
                                             </td>
                                         </tr>
