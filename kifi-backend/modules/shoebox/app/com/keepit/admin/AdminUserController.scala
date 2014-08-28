@@ -895,7 +895,7 @@ class AdminUserController @Inject() (
         user.primaryEmail match {
           case None =>
             val all = emailRepo.getAllByUser(user.id.get)
-            val selectedEmail = all.filter(_.verified).sortBy(e => e.lastVerificationSent).lastOption match {
+            val selectedEmail = all.filter(_.verified).sortBy(e => (e.lastVerificationSent, e.verifiedAt)).lastOption match {
               case Some(verifiedEmail) => Some(verifiedEmail.address)
               case _ => None // no verified emails to choose from, so still None
             }
@@ -910,7 +910,7 @@ class AdminUserController @Inject() (
             allEmails.find(e => e.address == primary) match {
               case Some(e) if e.verified => user // good
               case _ => // primary email does not exist in user's list of emails OR is not verified yet, select a new one
-                val selectedEmail = allEmails.filter(_.verified).sortBy(e => e.lastVerificationSent).lastOption match {
+                val selectedEmail = allEmails.filter(_.verified).sortBy(e => (e.lastVerificationSent, e.verifiedAt)).lastOption match {
                   case Some(verifiedEmail) => Some(verifiedEmail.address)
                   case _ => None // no verified emails to choose from, so still None
                 }
