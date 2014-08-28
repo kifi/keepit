@@ -99,8 +99,6 @@
 
 .kf-reco-top
   padding: 25px 20px 0px
-.kf-reco-bottom
-  padding: 10px 20px
 
 .kf-reco-top
 .kf-reco-bottom
@@ -120,15 +118,29 @@
     display: inline-block
 
 .kf-reco-bottom
+  position:relative
   margin: 0 auto
   border-bottom: 1px solid #dadae2
   border-bottom-left-radius: 3px
   border-bottom-right-radius: 3px
+  padding: 15px 0 15px
   width: 90%
   box-shadow: defaultBoxShadow
+  font-size: 16px
+  text-align: center
+
+  &.kf-reco-multiple-reasons
+    padding-bottom: 10px
 
 .kf-reco-reason
-  margin-right: 40px
+  margin: 0 auto
+  width: 58%
+  line-height: 1.5em
+
+.kf-reco-multiple-reasons
+  .kf-reco-reason
+    position: relative
+    left: -15px
 
 .kf-reason-bullet-container
   margin: 0px 40px -5px 0
@@ -225,13 +237,9 @@
   transform: translate(-2px, 3px) rotate(-135deg)
 
 .kf-reco-bottom
-  position:relative
-  font-size: 18px
-  text-align: center
-
   .kf-reco-icon
     position: absolute
-    top: 20px
+    bottom: 40px
     margin: auto
 
 // Dropdown menu
