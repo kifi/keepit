@@ -1,18 +1,18 @@
 package com.keepit.controllers
 
 import com.google.inject.Inject
-import com.keepit.commander.{ EventTrackingCommander, HelpRankCommander }
+import com.keepit.commander.EventTrackingCommander
 import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.curator.RecommendationUserAction
 import com.keepit.heimdal._
-import com.keepit.model.{ AnonymousEventLoggingRepo, UserEventLoggingRepo, SystemEventLoggingRepo, NonUserEventLoggingRepo }
+import com.keepit.model.{AnonymousEventLoggingRepo, NonUserEventLoggingRepo, SystemEventLoggingRepo, UserEventLoggingRepo}
 import com.kifi.franz.SQSQueue
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsArray, JsValue }
+import play.api.libs.json.{JsArray, JsValue}
 
 import scala.concurrent.duration._
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 class EventTrackingController @Inject() (
     userEventLoggingRepo: UserEventLoggingRepo,
@@ -21,7 +21,6 @@ class EventTrackingController @Inject() (
     nonUserEventLoggingRepo: NonUserEventLoggingRepo,
     heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]],
     eventTrackingCommander: EventTrackingCommander,
-    helprankCommander: HelpRankCommander,
     airbrake: AirbrakeNotifier) extends HeimdalServiceController {
 
   private[controllers] def trackInternalEvent(eventJs: JsValue): Unit = trackInternalEvent(eventJs.as[HeimdalEvent])
@@ -34,6 +33,7 @@ class EventTrackingController @Inject() (
   }
 
   private def handleUserEvent(userEvent: UserEvent) = {
+    userEventLoggingRepo.persist(userEvent)
     userEvent.eventType match {
       case UserEventTypes.RECOMMENDATION_USER_ACTION =>
         log.info(s"[handleUserEvent] reco event=$userEvent")
