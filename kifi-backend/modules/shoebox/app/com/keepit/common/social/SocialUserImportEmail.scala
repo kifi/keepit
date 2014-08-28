@@ -9,7 +9,8 @@ import com.keepit.common.mail.EmailAddress
 
 class SocialUserImportEmail @Inject() (
     db: Database,
-    emailRepo: UserEmailAddressRepo) extends Logging {
+    emailRepo: UserEmailAddressRepo,
+    userRepo: UserRepo) extends Logging {
 
   def importEmail(userId: Id[User], emailAddress: EmailAddress): UserEmailAddress = {
     db.readWrite { implicit s =>
@@ -27,6 +28,8 @@ class SocialUserImportEmail @Inject() (
         }
       }.flatten.headOption.getOrElse {
         log.info(s"creating new email $emailAddress for user $userId")
+        val user = userRepo.get(userId)
+        if (user.primaryEmail.isEmpty) userRepo.save(user.copy(primaryEmail = Some(emailAddress)))
         emailRepo.save(UserEmailAddress(userId = userId, address = emailAddress, state = UserEmailAddressStates.VERIFIED))
       }
     }
