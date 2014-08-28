@@ -102,7 +102,7 @@ class KeepRepoImpl @Inject() (
       urlId = r.<<[Id[URL]],
       url = r.<<[String],
       bookmarkPath = r.<<[Option[String]],
-      isPrivate = r.<<[Boolean], // todo(andrew): wowza, clean up when done with libraries
+      isPrivate = {privateFlag = r.<<[Boolean]; privateFlag}, // todo(andrew): wowza, clean up when done with libraries
       userId = r.<<[Id[User]],
       state = r.<<[State[Keep]],
       source = r.<<[KeepSource],
