@@ -890,7 +890,8 @@ class AdminUserController @Inject() (
   }
 
   def selectPrimaryEmails = AdminHtmlAction.authenticated { implicit request =>
-    val a = db.readWrite { implicit s =>
+    var a = 0
+    db.readWrite { implicit s =>
 
       def pickAnEmail(user: User) = {
         /*
@@ -914,8 +915,9 @@ class AdminUserController @Inject() (
             val selectedEmail = pickAnEmail(user)
             if (selectedEmail.nonEmpty) {
               log.info("Setting primary email address %s of userId %s".format(selectedEmail.get, user.id.get.toString))
+              userRepo.save(user.copy(primaryEmail = selectedEmail))
+              a += 1
             }
-            userRepo.save(user.copy(primaryEmail = selectedEmail))
 
           case Some(primary) => // sanity checking
             // check email exists in repo
@@ -926,13 +928,15 @@ class AdminUserController @Inject() (
                 val selectedEmail = pickAnEmail(user)
                 if (selectedEmail.nonEmpty) {
                   log.info("Setting primary email address %s of userId %s".format(selectedEmail.get, user.id.get.toString))
+                  userRepo.save(user.copy(primaryEmail = selectedEmail))
+                  a += 1
                 }
-                userRepo.save(user.copy(primaryEmail = selectedEmail))
+
             }
         }
       }
     }
-    Ok(Json.obj("count" -> a.length))
+    Ok(Json.obj("count" -> a))
   }
 
 }
