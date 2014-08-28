@@ -183,7 +183,7 @@ class URILDATopicRepoImpl @Inject() (
       sql"""select ck.keep_id, tp.feature from cortex_keep as ck inner join uri_lda_topic as tp
            on ck.uri_id = tp.uri_id
            where ck.user_id = ${userId.id} and ck.state = 'active' and tp.version = ${version.version}
-           and ck.source != 'default' and tp.state = 'active' and tp.num_words > ${min_num_words}
+           and ck.source = 'keeper' and tp.state = 'active' and tp.num_words > ${min_num_words}
            order by ck.kept_at desc limit ${limit}"""
     q.as[(Long, LDATopicFeature)].list.map { case (keepId, feature) => (Id[Keep](keepId), feature) }
   }

@@ -11,7 +11,6 @@ abstract class SearchFilter(context: Option[String]) {
   val libraryId: Option[Id[Library]] = None
 
   def includeMine: Boolean
-  def includeShared: Boolean
   def includeFriends: Boolean
   def includeOthers: Boolean
   def isDefault = false
@@ -22,7 +21,6 @@ object SearchFilter {
   def default(context: Option[String] = None) = {
     new SearchFilter(context) {
       def includeMine = true
-      def includeShared = true
       def includeFriends = true
       def includeOthers = true
       override def isDefault = true
@@ -32,7 +30,6 @@ object SearchFilter {
   def all(context: Option[String] = None) = {
     new SearchFilter(context) {
       def includeMine = true
-      def includeShared = true
       def includeFriends = true
       def includeOthers = false
     }
@@ -41,7 +38,6 @@ object SearchFilter {
   def mine(context: Option[String] = None) = {
     new SearchFilter(context) {
       def includeMine = true
-      def includeShared = true
       def includeFriends = false
       def includeOthers = false
     }
@@ -50,7 +46,6 @@ object SearchFilter {
   def friends(context: Option[String] = None) = {
     new SearchFilter(context) {
       def includeMine = false
-      def includeShared = false
       def includeFriends = true
       def includeOthers = false
     }
@@ -62,7 +57,6 @@ object SearchFilter {
       override val libraryId: Option[Id[Library]] = Some(libId)
 
       def includeMine = true
-      def includeShared = true
       def includeFriends = true
       def includeOthers = true
     }

@@ -17,10 +17,10 @@ class QueryEngineTest extends Specification {
 
     protected val searcher: Searcher = indexer.getSearcher
 
-    protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], output: DataBuffer): Unit = {
+    protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer): Unit = {
       val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
 
-      val pq = createScorerQueue(scorers)
+      val pq = createScorerQueue(scorers, coreSize)
       if (pq.size <= 0) return // no scorer
 
       val idMapper = reader.getIdMapper

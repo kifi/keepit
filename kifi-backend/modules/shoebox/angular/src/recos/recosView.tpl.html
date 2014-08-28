@@ -1,12 +1,9 @@
 <div class="recos-view" ng-controller="RecosCtrl">
-  <div class="kf-reco-recency-slider" ng-if="recosState === 'hasRecos'">
-    <span>All time</span>
-    <div class="kf-reco-slider-container">
-      <div class="kf-reco-slider" ui-slider min="0.0" max="1.0" step="0.01" use-decimals ng-model="recency.value"></div>
-    </div>
-    <span>Recent</span>
-    <button ng-click="getMore()">Replace</button>
-  </div>
+  <header class="kf-recos-view-header">
+    <div kf-reco-recency-slider ng-if="recosState === 'hasRecos'" get-more="getMore(recency)"></div>
+    <h1 class="kf-main-title">Recommendations</h1>
+    <div class="kf-subtitle" ng-show="recos.length">Showing {{recos.length}} recommendations</div>
+  </header>
 
   <div class="kf-reco kf-reco-info" ng-if="recosState === 'noRecos'" ng-hide="initialCardClosed">
     <span class="kf-reco-icon kf-reco-close-x" ng-click="closeInitialCard()"></span>
@@ -29,14 +26,7 @@
     <div class="kf-reco" ng-repeat="reco in recos" reco="reco" ng-controller="RecoCtrl">
       <header class="kf-reco-top">
         <span class="kf-reco-icon kf-reco-close-x" ng-click="trash(reco)"></span>
-        <div class="kf-reco-dropdown-menu-container">
-          <span class="kf-reco-icon kf-reco-dropdown-menu-down"></span>
-          <menu class="kf-dropdown-menu">
-            <li class="kf-dropdown-menu-item" ng-click="downVote(reco)">Don't recommend items like this to me</li>
-            <li class="kf-dropdown-menu-item" ng-click="upVote(reco)">Recommend me more things like this</li>
-            <li class="kf-dropdown-menu-item" ng-click="showImprovementModal()">How can we improve this?</li>
-          </menu>
-        </div>
+        <div kf-reco-dropdown-menu reco="reco" show-improvement-modal="showImprovementModal()"></div>
         <span>{{reco.recoData.type | titlecase}} {{reco.recoData.kind | titlecase}}</span>
       </header>
 
@@ -65,7 +55,6 @@
         </div>
       </footer>
 
-      <!-- modal here -->
       <div kf-modal show="showRecoImproveModal" class="kf-reco-improve-modal">
         <div kf-basic-modal-content action-text="Submit" action="submitImprovement(reco)">
           <p>Why was the recommendation not great?</p>

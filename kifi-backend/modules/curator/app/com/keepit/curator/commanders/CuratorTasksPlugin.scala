@@ -33,6 +33,9 @@ class CuratorTasksPlugin @Inject() (
     scheduleTaskOnLeader(system, 1 hours, 5 hours) {
       cleanupCommander.cleanupLowMasterScoreRecos()
     }
+    scheduleTaskOnLeader(system, 1 hours, 10 hours) {
+      cleanupCommander.cleanupLowMasterScoreFeeds()
+    }
 
     scheduleRecommendationEmail()
   }
