@@ -1,6 +1,8 @@
 package com.keepit.search.engine.result
 
+import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
+import com.keepit.model.Keep
 import scala.math.BigDecimal.double2bigDecimal
 import scala.math.BigDecimal.int2bigDecimal
 import scala.math.BigDecimal.long2bigDecimal
@@ -54,6 +56,7 @@ class KifiShardHit(val json: JsObject) extends AnyVal {
   def libraryId: Option[Long] = (json \ "libId").asOpt[Long]
   def title: String = (json \ "title").as[String]
   def url: String = (json \ "url").as[String]
+  def keepId: Option[ExternalId[Keep]] = (json \ "keepId").asOpt[String].map(ExternalId[Keep])
 
   def set(key: String, value: JsValue): KifiShardHit = {
     new KifiShardHit((json - key) + (key -> value))
@@ -61,11 +64,11 @@ class KifiShardHit(val json: JsObject) extends AnyVal {
 }
 
 object KifiShardHit extends Logging {
-  def apply(id: Long, score: Float, visibility: Int, libraryId: Option[Long], title: String, url: String): KifiShardHit = {
-    apply(id, score, visibility, libraryId.getOrElse(-1L), title, url)
+  def apply(id: Long, score: Float, visibility: Int, libraryId: Option[Long], title: String, url: String, keepId: ExternalId[Keep]): KifiShardHit = {
+    apply(id, score, visibility, libraryId.getOrElse(-1L), title, url, keepId)
   }
 
-  def apply(id: Long, score: Float, visibility: Int, libraryId: Long, title: String, url: String): KifiShardHit = {
+  def apply(id: Long, score: Float, visibility: Int, libraryId: Long, title: String, url: String, keepId: ExternalId[Keep]): KifiShardHit = {
     try {
       var json = JsObject(List(
         "id" -> JsNumber(id),
@@ -76,6 +79,7 @@ object KifiShardHit extends Logging {
       ))
 
       if (libraryId >= 0) { json = json + ("libId" -> JsNumber(libraryId)) }
+      if (keepId != null) { json = json + ("keepId" -> JsString(keepId.id)) }
       new KifiShardHit(json)
     } catch {
       case e: Throwable =>
