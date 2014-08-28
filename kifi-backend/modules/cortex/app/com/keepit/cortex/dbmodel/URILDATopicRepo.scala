@@ -17,12 +17,14 @@ import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.cortex.models.lda.SparseTopicRepresentation
 import com.keepit.cortex.models.lda.LDATopicFeature
 import org.joda.time.DateTime
+import scala.collection.mutable
 
 @ImplementedBy(classOf[URILDATopicRepoImpl])
 trait URILDATopicRepo extends DbRepo[URILDATopic] {
   def getFeature(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[LDATopicFeature]
   def getByURI(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[URILDATopic]
   def getActiveByURI(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[URILDATopic]
+  def getActiveByURIs(uriIds: Seq[Id[NormalizedURI]], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[Option[URILDATopic]]
   def getHighestSeqNumber(version: ModelVersion[DenseLDA])(implicit session: RSession): SequenceNumber[NormalizedURI]
   def getUpdateTimeAndState(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[(DateTime, State[URILDATopic])]
   def getUserTopicHistograms(userId: Id[User], version: ModelVersion[DenseLDA], after: Option[DateTime] = None)(implicit session: RSession): Seq[(LDATopic, Int)]
@@ -93,6 +95,17 @@ class URILDATopicRepoImpl @Inject() (
     } yield r
 
     q.firstOption
+  }
+
+  def getActiveByURIs(uriIds: Seq[Id[NormalizedURI]], version: ModelVersion[DenseLDA])(implicit session: RSession): Seq[Option[URILDATopic]] = {
+    val feats = (for {
+      r <- rows
+      if ((r.uriId inSetBind uriIds) && r.version === version && r.state === URILDATopicStates.ACTIVE)
+    } yield r).list
+
+    val m = mutable.Map.empty[Id[NormalizedURI], URILDATopic]
+    feats.foreach { feat => m(feat.uriId) = feat }
+    uriIds.map { uriId => m.get(uriId) }
   }
 
   def getActiveByURI(uriId: Id[NormalizedURI], version: ModelVersion[DenseLDA])(implicit session: RSession): Option[URILDATopic] = {

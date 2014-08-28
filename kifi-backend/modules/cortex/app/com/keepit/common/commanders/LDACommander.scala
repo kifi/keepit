@@ -77,7 +77,7 @@ class LDACommander @Inject() (
   def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores] = {
     db.readOnlyReplica { implicit s =>
       val userInterestOpt = userTopicRepo.getByUser(userId, wordRep.version)
-      val uriTopicOpts = uriIds.map { uriId => uriTopicRepo.getActiveByURI(uriId, wordRep.version) }
+      val uriTopicOpts = uriTopicRepo.getActiveByURIs(uriIds, wordRep.version)
       uriTopicOpts.map { uriTopicOpt =>
         computeInterestScore(uriTopicOpt, userInterestOpt)
       }
@@ -87,7 +87,7 @@ class LDACommander @Inject() (
   def batchGaussianUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores] = {
     db.readOnlyReplica { implicit s =>
       val userInterestStatOpt = userLDAStatRepo.getActiveByUser(userId, wordRep.version)
-      val uriTopicOpts = uriIds.map { uriId => uriTopicRepo.getActiveByURI(uriId, wordRep.version) }
+      val uriTopicOpts = uriTopicRepo.getActiveByURIs(uriIds, wordRep.version)
       uriTopicOpts.map { uriTopicOpt =>
         computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
       }
@@ -249,7 +249,7 @@ class LDACommander @Inject() (
     }
 
     val userFeats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserRecentURIFeatures(userId, wordRep.version, min_num_words = 50, limit = 200) }
-    val uriFeats = db.readOnlyReplica { implicit s => uris.map { uri => uriTopicRepo.getActiveByURI(uri, wordRep.version) } }
+    val uriFeats = db.readOnlyReplica { implicit s => uriTopicRepo.getActiveByURIs(uris, wordRep.version) }
     uriFeats.map { uriFeatOpt =>
       uriFeatOpt match {
         case Some(uriFeat) if uriFeat.numOfWords > 50 => bestMatch(userFeats, uriFeat)
