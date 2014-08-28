@@ -236,7 +236,7 @@ class LDACommander @Inject() (
 
   def explainFeed(userId: Id[User], uris: Seq[Id[NormalizedURI]]): Seq[Seq[Id[Keep]]] = {
 
-    val MAX_KL_DIST = 0.6f // empirically this should be < 1.0
+    val MAX_KL_DIST = 0.5f // empirically this should be < 1.0
     val topK = 3
 
     def bestMatch(userFeats: Seq[(Id[Keep], LDATopicFeature)], uriFeat: URILDATopic): Seq[Id[Keep]] = {
@@ -248,7 +248,7 @@ class LDACommander @Inject() (
       scored.filter { _._2 < MAX_KL_DIST }.sortBy(_._2).take(topK).map { _._1 }
     }
 
-    val userFeats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserRecentURIFeatures(userId, wordRep.version, min_num_words = 50, limit = 50) }
+    val userFeats = db.readOnlyReplica { implicit s => uriTopicRepo.getUserRecentURIFeatures(userId, wordRep.version, min_num_words = 50, limit = 100) }
     val uriFeats = db.readOnlyReplica { implicit s => uris.map { uri => uriTopicRepo.getActiveByURI(uri, wordRep.version) } }
     uriFeats.map { uriFeatOpt =>
       uriFeatOpt match {
