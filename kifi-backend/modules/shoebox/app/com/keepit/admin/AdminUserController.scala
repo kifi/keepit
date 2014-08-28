@@ -889,4 +889,19 @@ class AdminUserController @Inject() (
     NoContent
   }
 
+  def selectPrimaryEmails = AdminHtmlAction.authenticated { implicit request =>
+    val a = db.readWrite { implicit s =>
+      val usersNoPrimaries = userRepo.all.filter(_.primaryEmail.isEmpty)
+      usersNoPrimaries.map { u =>
+        val all = emailRepo.getAllByUser(u.id.get)
+        val selectedEmail = all.find(_.verified) match {
+          case Some(verifiedEmail) => Some(verifiedEmail.address)
+          case _ => None // no verified emails to choose from, so still None
+        }
+        userRepo.save(u.copy(primaryEmail = selectedEmail))
+      }
+    }
+    Ok(Json.obj("count" -> a.length))
+  }
+
 }
