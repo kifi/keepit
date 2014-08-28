@@ -1,27 +1,20 @@
 package com.keepit.controllers
 
-import com.keepit.model._
-import org.specs2.mutable._
-
-import com.keepit.common.db.LargeString._
-import com.keepit.inject._
-import com.keepit.test.CommonTestInjector
 import com.google.inject.Injector
-import com.keepit.common.cache.HeimdalCacheModule
-import com.keepit.common.time._
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.heimdal._
-
-import play.api.test.Helpers._
-import play.api.libs.json.{ Json }
 import com.keepit.common.db.Id
-import akka.actor.ActorSystem
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.heimdal._
+import com.keepit.model._
 import com.keepit.social.NonUserKinds
+import com.keepit.test.HeimdalTestInjector
+import org.specs2.mutable._
+import play.api.libs.json.Json
 
-class EventTrackingTest extends Specification with CommonTestInjector {
+class EventTrackingTest extends Specification with HeimdalTestInjector {
 
   def modules = {
-    Seq(FakeMongoModule(), FakeActorSystemModule(), HeimdalQueueDevModule(), HeimdalServiceTypeModule())
+    Seq(FakeMongoModule(), FakeActorSystemModule(), HeimdalQueueDevModule(), HeimdalServiceTypeModule(), FakeHttpClientModule())
   }
 
   def setup()(implicit injector: Injector) = {

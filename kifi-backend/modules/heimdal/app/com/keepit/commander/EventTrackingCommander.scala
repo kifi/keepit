@@ -5,11 +5,10 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.cache.TransactionalCaching
-import com.keepit.common.core._
 import com.keepit.common.logging.{ LogPrefix, Logging }
 import com.keepit.heimdal.{ HeimdalContext, KifiHitContext, SanitizedKifiHit, UserEvent }
 import com.keepit.model._
-import com.keepit.model.helprank.{ ReKeepRepo, KeepDiscoveryRepo }
+import com.keepit.model.helprank.{ KeepDiscoveryRepo }
 import com.keepit.search.ArticleSearchResult
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -30,8 +29,7 @@ class EventTrackingCommander @Inject() (
     airbrake: AirbrakeNotifier,
     kifiHitCache: KifiHitCache,
     shoebox: ShoeboxServiceClient,
-    keepDiscoveryRepo: KeepDiscoveryRepo,
-    rekeepRepo: ReKeepRepo) extends Logging {
+    keepDiscoveryRepo: KeepDiscoveryRepo) extends Logging {
 
   import EventTrackingCommander._
 

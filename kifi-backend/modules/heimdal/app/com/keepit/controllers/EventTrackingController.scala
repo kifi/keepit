@@ -6,13 +6,13 @@ import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.curator.RecommendationUserAction
 import com.keepit.heimdal._
-import com.keepit.model.{AnonymousEventLoggingRepo, NonUserEventLoggingRepo, SystemEventLoggingRepo, UserEventLoggingRepo}
+import com.keepit.model.{ AnonymousEventLoggingRepo, NonUserEventLoggingRepo, SystemEventLoggingRepo, UserEventLoggingRepo }
 import com.kifi.franz.SQSQueue
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{JsArray, JsValue}
+import play.api.libs.json.{ JsArray, JsValue }
 
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 class EventTrackingController @Inject() (
     userEventLoggingRepo: UserEventLoggingRepo,
