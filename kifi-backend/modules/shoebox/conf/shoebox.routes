@@ -38,7 +38,7 @@ POST    /auth/log-in                @com.keepit.controllers.core.AuthController.
 
 GET     /connect/:provider          @com.keepit.controllers.core.AuthController.popupBeforeLinkSocial(provider)
 GET     /connect/:provider/done     @com.keepit.controllers.core.AuthController.popupAfterLinkSocial(provider)
-GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider)
+GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider: String, redirect: Option[String] ?= None)
 
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider)
 
