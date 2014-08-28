@@ -444,32 +444,59 @@ div.kifi-pane-empty>img {
   z-index: 2;
 }
 
+.kifi-scroll-hint-up {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(rgba(0,0,0,.05),rgba(0,0,0,0));
+  transition: height .2s linear;
+}
+.kifi-scroll-hint-down {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.05));
+  transition: height .2s linear;
+}
+
 // message box pane
-@notices-head-height: 30px;
+@notices-head-height: 31px;
 @notices-head-link-hover: rgba(255,255,255,.7);
 @notices-head-link-active: rgba(0,0,0,.03);
 .kifi-notices-head {
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   height: @notices-head-height;
+  border-bottom: 1px solid #ccc;
   padding: 0 9px;
   cursor: default;
   position: relative;
 }
+.kifi-notices-filter-line {
+  position: absolute;
+  bottom: -1px;
+  height: 3px;
+  left: 6px;
+  width: 30px;
+  background: #a0bf67;
+  transition: left .2s, width .2s;
+}
 a.kifi-notices-filter {
+  display: inline-block;
+  vertical-align: top;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  height: @notices-head-height;
-  display: inline-block;
-  border-top: 3px solid transparent;
-  border-bottom: 3px solid #a0bf67;
+  height: @notices-head-height - 1;
   line-height: 21px;
   font-size: 11px;
-  padding: 3px 12px 0;
+  padding: 6px 12px 3px;
   color: inherit !important;
 }
 a.kifi-notices-filter:link {
-  border-bottom-color: transparent;
   &:hover,
   &:focus {
     background-color: @notices-head-link-hover;

@@ -6,6 +6,7 @@
 // @require scripts/html/keeper/notice_triggered.js
 // @require scripts/html/keeper/notice_message.js
 // @require scripts/lib/jquery-ui-position.min.js
+// @require scripts/lib/jquery-canscroll.js
 // @require scripts/lib/jquery-hoverfu.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/antiscroll.min.js
@@ -71,6 +72,7 @@ panes.notices = function () {
     },
     unread_thread_count: function (n) {
       $unreadCount.text(n || '');
+      positionTabUnderlineImmediately($unreadCount.parent());
     }
   };
 
@@ -78,7 +80,9 @@ panes.notices = function () {
   return {
     render: function ($paneBox, locator) {
       var kind = locator.substr(10) || 'page';
-      $paneBox.find('.kifi-notices-filter-' + kind).removeAttr('href');
+      var $tab = $paneBox.find('.kifi-notices-filter-' + kind);
+      positionTabUnderlineImmediately($tab);
+      $tab.removeAttr('href');
       $unreadCount = $paneBox.find('.kifi-notices-unread-count');
       $pageCount = $paneBox.find('.kifi-notices-page-count');
       $list = $(renderListHolder(kind))
@@ -106,6 +110,13 @@ panes.notices = function () {
       }
     }};
 
+  function positionTabUnderlineImmediately($a) {
+    $a.prevAll('.kifi-notices-filter-line')
+      .css({left: $a[0].offsetLeft, width: $a[0].offsetWidth, transition: 'none'})
+      .layout()
+      .css('transition', '');
+  }
+
   function renderListHolder(kind) {
     var params = {kind: kind};
     params[kind] = true;
@@ -116,7 +127,8 @@ panes.notices = function () {
     renderIntoList(o);
     $list
       .removeClass('kifi-loading')
-      .preventAncestorScroll();
+      .preventAncestorScroll()
+      .canScroll();
 
     var $box = $list.closest('.kifi-notices-box');
     $box.antiscroll({x: false});
@@ -146,6 +158,7 @@ panes.notices = function () {
 
   function onSubTabClick(e) {
     if (e.which !== 1) return;
+    $(this).prevAll('.kifi-notices-filter-line').css({left: this.offsetLeft, width: this.offsetWidth});
     var $aNew = $(this).removeAttr('href');
     var $aOld = $aNew.siblings('.kifi-notices-filter:not([href])').attr('href', 'javascript:');
     var back = $aNew.index() < $aOld.index();
