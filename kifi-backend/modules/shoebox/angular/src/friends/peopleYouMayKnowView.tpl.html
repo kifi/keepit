@@ -3,7 +3,7 @@
   <div class="kf-pymk" ng-repeat="person in peopleYouMayKnow | limitTo: 3">
     <div class="kf-pymk-info">
       <span class="kf-pymk-close-icon" ng-click="remove(person)">x</span>
-      <a href="javascript:" class="kf-pymk-action-icon" ng-click="action(person)" ng-class="{clickable: person.clickable}">{{person.actionText}}</a>
+      <a href="javascript:" class="kf-pymk-action-icon" ng-click="action(person)" ng-class="{clickable: person.clickable}"><span class="sprite sprite-tag-new-plus-icon"></span>{{person.actionText}}</a>
       <div class="kf-pymk-info-content">
         <span class="kf-pymk-name">{{person.fullName}}</span>
         <span class="kf-pymk-via">{{person.via}}
