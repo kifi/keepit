@@ -15,7 +15,7 @@ import com.keepit.model.User
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.util.{ Failure, Success }
+import scala.util.Failure
 import scala.concurrent.Future
 
 @Singleton
@@ -89,6 +89,20 @@ class SeedIngestionCommander @Inject() (
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
         }
         cookSeedItem(userId, rawItem, keepers)
+      }
+    }
+  }
+
+  def getPreviousSeeds(rawSeeds: Seq[RawSeedItem], userId: Id[User]): Future[Seq[SeedItem]] = {
+    db.readOnlyReplicaAsync { implicit session =>
+      rawSeeds.map { rawSeed =>
+        val keepers =
+          if (rawSeed.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
+            Keepers.TooMany
+          } else {
+            Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawSeed.uriId))
+          }
+        cookSeedItem(userId, rawSeed, keepers)
       }
     }
   }

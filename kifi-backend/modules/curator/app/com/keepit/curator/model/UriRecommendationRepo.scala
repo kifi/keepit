@@ -10,8 +10,6 @@ import com.keepit.common.time.Clock
 import com.keepit.model.{ UriRecommendationFeedback, User, NormalizedURI }
 import org.joda.time.DateTime
 import play.api.libs.json.Json
-
-import scala.concurrent.Future
 import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[UriRecommendationRepoImpl])
