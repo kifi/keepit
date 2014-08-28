@@ -2,7 +2,14 @@ package com.keepit.common.social
 
 import java.io.File
 
+import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.UserCommander
+import com.keepit.common.external.FakeExternalServiceModule
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.curator.FakeCuratorServiceClientModule
+import com.keepit.scraper.{ FakeScrapeSchedulerModule, FakeScraperServiceClientModule }
+import com.keepit.search.FakeSearchServiceClientModule
 import org.specs2.mutable._
 import com.keepit.model._
 import com.keepit.test._
@@ -14,9 +21,23 @@ import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
 
 class SocialUserImportEmailTest extends Specification with ShoeboxTestInjector {
 
+  val modules = Seq(
+    FakeHttpClientModule(),
+    FakeMailModule(),
+    FakeABookServiceClientModule(),
+    FakeCortexServiceClientModule(),
+    FakeCuratorServiceClientModule(),
+    FakeSearchServiceClientModule(),
+    FakeScraperServiceClientModule(),
+    FakeSocialGraphModule(),
+    FakeShoeboxStoreModule(),
+    FakeExternalServiceModule(),
+    FakeScrapeSchedulerModule()
+  )
+
   "SocialUserImportEmail" should {
     "import email" in {
-      withDb(FakeHttpClientModule(), FakeMailModule()) { implicit injector =>
+      withDb(modules: _*) { implicit injector =>
         val graphs = List(
           ("facebook_graph_andrew.json", "fb@andrewconner.org")
         )
