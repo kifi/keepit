@@ -891,14 +891,29 @@ class AdminUserController @Inject() (
 
   def selectPrimaryEmails = AdminHtmlAction.authenticated { implicit request =>
     val a = db.readWrite { implicit s =>
-      val usersNoPrimaries = userRepo.all.filter(_.primaryEmail.isEmpty)
-      usersNoPrimaries.map { u =>
-        val all = emailRepo.getAllByUser(u.id.get)
-        val selectedEmail = all.find(_.verified) match {
-          case Some(verifiedEmail) => Some(verifiedEmail.address)
-          case _ => None // no verified emails to choose from, so still None
+      userRepo.all.map { user =>
+        user.primaryEmail match {
+          case None =>
+            val all = emailRepo.getAllByUser(user.id.get)
+            val selectedEmail = all.filter(_.verified).sortBy(e => e.lastVerificationSent).lastOption match {
+              case Some(verifiedEmail) => Some(verifiedEmail.address)
+              case _ => None // no verified emails to choose from, so still None
+            }
+            userRepo.save(user.copy(primaryEmail = selectedEmail))
+
+          case Some(primary) => // sanity checking
+            // check email exists in repo
+            val allEmails = emailRepo.getAllByUser(user.id.get)
+            allEmails.find(e => e.address == primary) match {
+              case Some(e) if e.verified => user // good
+              case _ => // primary email does not exist in user's list of emails OR is not verified yet, select a new one
+                val selectedEmail = allEmails.filter(_.verified).sortBy(e => e.lastVerificationSent).lastOption match {
+                  case Some(verifiedEmail) => Some(verifiedEmail.address)
+                  case _ => None // no verified emails to choose from, so still None
+                }
+                userRepo.save(user.copy(primaryEmail = selectedEmail))
+            }
         }
-        userRepo.save(u.copy(primaryEmail = selectedEmail))
       }
     }
     Ok(Json.obj("count" -> a.length))
