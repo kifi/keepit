@@ -138,5 +138,12 @@ class MessagingController @Inject() (
     Ok(Json.toJson(messagingCommander.keepAttribution(userId, uriId)))
   }
 
+  def checkBatchThreads(userId: Id[User]) = Action.async(parse.json) { request =>
+    val uriIds = request.body.as[Seq[Id[NormalizedURI]]]
+    messagingCommander.checkBatchThreads(userId, uriIds).map { res =>
+      Ok(Json.toJson(res))
+    }
+  }
+
 }
 

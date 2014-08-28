@@ -18,6 +18,7 @@ import com.keepit.curator.model.{
   PublicScoredSeedItem
 }
 import com.keepit.common.db.{ SequenceNumber, Id }
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model.{ User, ExperimentType, UriRecommendationScores, SystemValueRepo, Name }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.concurrent.ReactiveLock
@@ -36,6 +37,7 @@ import com.google.inject.{ Inject, Singleton }
 class RecommendationGenerationCommander @Inject() (
     seedCommander: SeedIngestionCommander,
     shoebox: ShoeboxServiceClient,
+    eliza: ElizaServiceClient,
     scoringHelper: UriScoringHelper,
     publicScoringHelper: PublicUriScoringHelper,
     uriWeightingHelper: UriWeightingHelper,
@@ -155,13 +157,19 @@ class RecommendationGenerationCommander @Inject() (
       UserRecommendationGenerationState(userId = userId)
     }
 
-  private def getCandidateSeedsForUser(userId: Id[User], state: UserRecommendationGenerationState) =
-    for {
+  private def getCandidateSeedsForUser(userId: Id[User], state: UserRecommendationGenerationState): Future[(Seq[SeedItem], SequenceNumber[SeedItem])] = {
+    val result = for {
       seeds <- seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, 200)
-      candidateURIs <- shoebox.getCandidateURIs(seeds.map { _.uriId })
+      candidateURIs <- shoebox.getCandidateURIs(seeds.map(_.uriId))
     } yield {
-      ((seeds zip candidateURIs) filter (_._2) map (_._1), if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
+      val candidateSeeds = (seeds zip candidateURIs) filter (_._2) map (_._1)
+      eliza.checkBatchThreads(userId, candidateSeeds.map(_.uriId)).map { checkThreads =>
+        val candidates = (candidateSeeds zip checkThreads) filter (_._2) map (_._1)
+        (candidates, if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
+      }
     }
+    result.flatMap(x => x)
+  }
 
   private def getPublicFeedCandidateSeeds(seq: SequenceNumber[PublicSeedItem]) =
     for {

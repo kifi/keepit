@@ -140,6 +140,10 @@ class MessagingCommander @Inject() (
     }
   }
 
+  def checkBatchThreads(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
+    db.readOnlyReplicaAsync { implicit session => userThreadRepo.checkBatchThreads(userId, uriIds) }
+  }
+
   def deleteUserThreadsForMessageId(id: Id[Message]): Unit = {
     val (threadExtId, userThreads): (ExternalId[MessageThread], Seq[UserThread]) = db.readOnlyMaster { implicit session =>
       val message = messageRepo.get(id)
