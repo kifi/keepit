@@ -95,7 +95,7 @@ object Keep {
     Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url, k.bookmarkPath, Keep.visibilityToIsPrivate(k.visibility), k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, Option(k.visibility))
   }
 
-  implicit def bookmarkFormat = (
+  def _bookmarkFormat = (
     (__ \ 'id).formatNullable(Id.format[Keep]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
@@ -114,6 +114,34 @@ object Keep {
     (__ \ 'seq).format(SequenceNumber.format[Keep]) and
     (__ \ 'libraryId).formatNullable(Id.format[Library])
   )(Keep.apply, unlift(Keep.unapply))
+
+  implicit def bookmarkFormat = new Format[Keep] {
+    def reads(j: JsValue) = {
+      _bookmarkFormat.reads(j)
+    }
+    def writes(k: Keep) = {
+      Json.obj(
+        "id" -> k.id,
+        "createdAt" -> k.createdAt,
+        "updatedAt" -> k.updatedAt,
+        "externalId" -> k.externalId,
+        "title" -> k.title,
+        "uriId" -> k.uriId,
+        "isPrimary" -> k.isPrimary,
+        "urlId" -> k.urlId,
+        "url" -> k.url,
+        "bookmarkPath" -> k.bookmarkPath,
+        "visibility" -> k.visibility,
+        "isPrivate" -> Keep.visibilityToIsPrivate(k.visibility),
+        "userId" -> k.userId,
+        "state" -> k.state,
+        "source" -> k.source.value,
+        "kifiInstallation" -> k.kifiInstallation,
+        "seq" -> k.seq,
+        "libraryId" -> k.libraryId
+      )
+    }
+  }
 }
 
 case class KeepUriAndTime(uriId: Id[NormalizedURI], createdAt: DateTime = currentDateTime)

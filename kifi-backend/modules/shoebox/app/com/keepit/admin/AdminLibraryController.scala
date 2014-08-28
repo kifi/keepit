@@ -164,7 +164,7 @@ class AdminLibraryController @Inject() (
     for (page <- startPage to endPage) {
       db.readWrite { implicit session =>
         val keeps = keepRepo.page(page, PAGE_SIZE, true, Set.empty)
-        keeps.groupBy(_.userId).map {
+        keeps.groupBy(_.userId).foreach {
           case (userId, keepsAllFromOneUser) =>
             val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(userId)
             keepsAllFromOneUser.map { keep =>
