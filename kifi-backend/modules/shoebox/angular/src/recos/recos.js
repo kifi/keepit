@@ -146,7 +146,7 @@ angular.module('kifi')
         var dropdownMenu = element.find('.kf-dropdown-menu');
 
         dropdownArrow.on('click', function () {
-          element.find('.kf-dropdown-menu').toggle();
+          dropdownMenu.toggle();
         });
 
         scope.upVote = function (reco) {
