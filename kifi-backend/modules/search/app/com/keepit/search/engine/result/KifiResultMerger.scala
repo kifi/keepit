@@ -20,7 +20,7 @@ class KifiResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   private[this] val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.000f
 
   def merge(results: Seq[KifiShardResult], maxHits: Int): KifiShardResult = {
-    val (myTotal, friendsTotal) = mergeTotals(results)
+    val (myTotal, friendsTotal, othersTotal) = mergeTotals(results)
     val hits = mergeHits(results, maxHits)
     val show = results.exists(_.show)
 
@@ -35,6 +35,7 @@ class KifiResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
       hits,
       myTotal,
       friendsTotal,
+      othersTotal,
       show,
       cutPoint
     )
@@ -106,13 +107,15 @@ class KifiResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   @inline private def createQueue(maxHits: Int) = new HitQueue[KifiShardHit](maxHits)
   @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
 
-  private def mergeTotals(results: Seq[KifiShardResult]): (Int, Int) = {
+  private def mergeTotals(results: Seq[KifiShardResult]): (Int, Int, Int) = {
     var myTotal = 0
     var friendsTotal = 0
+    var othersTotal = 0
     results.foreach { res =>
       myTotal += res.myTotal
       friendsTotal += res.friendsTotal
+      othersTotal += res.othersTotal
     }
-    (myTotal, friendsTotal)
+    (myTotal, friendsTotal, othersTotal)
   }
 }

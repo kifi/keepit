@@ -2,6 +2,7 @@
 # Search Extension API
 ##########################################
 GET         /search        @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String])
+GET         /search2       @com.keepit.controllers.ext.ExtSearchController.search2(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, debug: Option[String])
 GET         /search/warmUp        @com.keepit.controllers.ext.ExtSearchController.warmUp()
 GET         /search/message        @com.keepit.controllers.ext.ExtMessageSearchController.search(q: String, page: Int ?= 0)
 POST        /search/events/resultClicked        @com.keepit.controllers.ext.ExtSearchEventController.clickedSearchResult()
