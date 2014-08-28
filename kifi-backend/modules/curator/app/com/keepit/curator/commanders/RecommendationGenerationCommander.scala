@@ -174,7 +174,10 @@ class RecommendationGenerationCommander @Inject() (
     val seedsFut = db.readOnlyReplicaAsync { implicit s =>
       val recos = uriRecRepo.getByUserId(userId)
       val rawSeedItems = recos.foldLeft(Seq.empty[RawSeedItem]) { (recosSeq, reco) =>
-        recosSeq ++ rawSeedItemRepo.getByUriId(reco.uriId)
+        rawSeedItemRepo.getByUriIdAndUserId(reco.uriId, Some(userId)) match {
+          case Some(rawSeed) => recosSeq :+ rawSeed
+          case None => recosSeq
+        }
       }
 
       rawSeedItems.map { rawItem =>
