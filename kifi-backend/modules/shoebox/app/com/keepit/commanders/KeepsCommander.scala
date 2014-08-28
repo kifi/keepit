@@ -605,9 +605,9 @@ class KeepsCommander @Inject() (
             val tagsToAdd = selectedTagIds.filterNot(existingTagIds.contains(_))
             val tagsToRemove = existingTagIds.filterNot(selectedTagIds.contains(_))
 
-            keepToCollectionRepo.insertAll(tagsToAdd.map { tagId =>
-              KeepToCollection(keepId = keep.id.get, collectionId = tagId)
-            })
+            tagsToAdd.map { tagId =>
+              keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
+            }
             tagsToRemove.map { tagId =>
               keepToCollectionRepo.remove(keep.id.get, tagId)
             }
