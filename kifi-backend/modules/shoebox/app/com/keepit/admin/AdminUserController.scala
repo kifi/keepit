@@ -899,6 +899,9 @@ class AdminUserController @Inject() (
               case Some(verifiedEmail) => Some(verifiedEmail.address)
               case _ => None // no verified emails to choose from, so still None
             }
+            if (selectedEmail.nonEmpty) {
+              log.info("Setting primary email address %s of userId %s".format(selectedEmail.get, user.id.get.toString))
+            }
             userRepo.save(user.copy(primaryEmail = selectedEmail))
 
           case Some(primary) => // sanity checking
@@ -910,6 +913,9 @@ class AdminUserController @Inject() (
                 val selectedEmail = allEmails.filter(_.verified).sortBy(e => e.lastVerificationSent).lastOption match {
                   case Some(verifiedEmail) => Some(verifiedEmail.address)
                   case _ => None // no verified emails to choose from, so still None
+                }
+                if (selectedEmail.nonEmpty) {
+                  log.info("Setting primary email address %s of userId %s".format(selectedEmail.get, user.id.get.toString))
                 }
                 userRepo.save(user.copy(primaryEmail = selectedEmail))
             }
