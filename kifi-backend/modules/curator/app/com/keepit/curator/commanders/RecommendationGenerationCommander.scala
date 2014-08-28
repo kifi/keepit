@@ -1,23 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{
-  RawSeedItemRepo,
-  UriRecommendationStates,
-  ScoredSeedItemWithAttribution,
-  RecoInfo,
-  UserRecommendationGenerationStateRepo,
-  UserRecommendationGenerationState,
-  Keepers,
-  UriRecommendationRepo,
-  UriRecommendation,
-  UriScores,
-  PublicFeedRepo,
-  PublicSeedItem,
-  SeedItem,
-  PublicUriScores,
-  PublicFeed,
-  PublicScoredSeedItem
-}
+import com.keepit.curator.model.{ CuratorKeepInfoRepo, RawSeedItem, RawSeedItemRepo, UriRecommendationStates, ScoredSeedItemWithAttribution, RecoInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, UriRecommendationRepo, UriRecommendation, UriScores, PublicFeedRepo, PublicSeedItem, SeedItem, PublicUriScores, PublicFeed, PublicScoredSeedItem }
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model.{ User, ExperimentType, UriRecommendationScores, SystemValueRepo, Name }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -46,6 +29,7 @@ class RecommendationGenerationCommander @Inject() (
     attributionHelper: SeedAttributionHelper,
     db: Database,
     airbrake: AirbrakeNotifier,
+    keepInfoRepo: CuratorKeepInfoRepo,
     uriRecRepo: UriRecommendationRepo,
     publicFeedRepo: PublicFeedRepo,
     rawSeedItemRepo: RawSeedItemRepo,
@@ -54,7 +38,7 @@ class RecommendationGenerationCommander @Inject() (
     experimentCommander: RemoteUserExperimentCommander) {
 
   val defaultScore = 0.0f
-
+  val MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER = 100
   val recommendationGenerationLock = new ReactiveLock(15)
   val pubicFeedsGenerationLock = new ReactiveLock(1)
   val perUserRecommendationGenerationLocks = TrieMap[Id[User], ReactiveLock]()
@@ -174,13 +158,40 @@ class RecommendationGenerationCommander @Inject() (
       ((seeds zip candidateURIs) filter (_._2) map (_._1), if (seeds.isEmpty) seq else seeds.map(_.seq).max)
     }
 
+  private def recookSeedItem(userId: Id[User], rawItem: RawSeedItem, keepers: Keepers): SeedItem = SeedItem(
+    userId = userId,
+    uriId = rawItem.uriId,
+    url = rawItem.url,
+    seq = SequenceNumber[SeedItem](rawItem.seq.value),
+    priorScore = rawItem.priorScore,
+    timesKept = rawItem.timesKept,
+    lastSeen = rawItem.lastSeen,
+    keepers = keepers,
+    discoverable = rawItem.discoverable
+  )
+
   private def getRescoreSeedsForUser(userId: Id[User], state: UserRecommendationGenerationState) = {
+    val seedsFut = db.readOnlyReplicaAsync { implicit s =>
+      val recos = uriRecRepo.getByUserId(userId)
+      val rawSeedItems = recos.foldLeft(Seq.empty[RawSeedItem]) { (recosSeq, reco) =>
+        recosSeq ++ rawSeedItemRepo.getByUriId(reco.uriId)
+      }
+
+      rawSeedItems.map { rawItem =>
+        val keepers =
+          if (rawItem.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
+            Keepers.TooMany
+          } else {
+            Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
+          }
+        recookSeedItem(userId, rawItem, keepers)
+      }
+    }
+
     for {
-      seeds <- seedCommander.getDiscoverableBySeqNumAndUser(state.seq, userId, 200)
-      recos <- db.readWriteAsync(implicit s => uriRecRepo.getByUserId(userId))
+      seeds <- seedsFut
     } yield {
-      val recoUris = recos.map(_.uriId).toSet
-      (seeds filter (seed => recoUris.contains(seed.uriId)), if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
+      (seeds, if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
     }
   }
 
