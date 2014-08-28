@@ -51,6 +51,19 @@ trait SearchCommander {
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): PartialSearchResult
 
+  def search2(
+    userId: Id[User],
+    acceptLangs: Seq[String],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig] = None,
+    debug: Option[String] = None,
+    withUriSummary: Boolean = false): KifiShardResult // TODO: change the return type (decoration and chunked response)
+
   def distSearch2(
     shards: Set[Shard[NormalizedURI]],
     userId: Id[User],
@@ -117,7 +130,7 @@ class SearchCommanderImpl @Inject() (
     val (localShards, dispatchPlan) = distributionPlan(userId, shards)
 
     // TODO: use user profile info as a bias
-    val (firstLang, secondLang) = getLangs(localShards, dispatchPlan, userId, query, acceptLangs) // TODO: distributed version of getLang
+    val (firstLang, secondLang) = getLangs(localShards, dispatchPlan, userId, query, acceptLangs)
 
     var resultFutures = new ListBuffer[Future[PartialSearchResult]]()
 
@@ -306,6 +319,91 @@ class SearchCommanderImpl @Inject() (
       // stash timing information
       timing.send()
     }
+
+    mergedResult
+  }
+
+  def search2(
+    userId: Id[User],
+    acceptLangs: Seq[String],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig] = None,
+    debug: Option[String] = None,
+    withUriSummary: Boolean = false): KifiShardResult = { // TODO: change result (decoration, chunked response)
+
+    if (maxHits <= 0) throw new IllegalArgumentException("maxHits is zero")
+
+    val timing = new SearchTiming
+
+    // fetch user data in background
+    val prefetcher = fetchUserDataInBackground(userId)
+
+    val configFuture = mainSearcherFactory.getConfigFuture(userId, experiments, predefinedConfig)
+
+    val searchFilter = getSearchFilter(userId, filter, context)
+    val enableTailCutting = (searchFilter.isDefault && searchFilter.idFilter.isEmpty)
+
+    // build distribution plan
+    val (localShards, dispatchPlan) = distributionPlan(userId, shards)
+
+    // TODO: use user profile info as a bias
+    val (firstLang, secondLang) = getLangs(localShards, dispatchPlan, userId, query, acceptLangs)
+
+    var resultFutures = new ListBuffer[Future[KifiShardResult]]()
+
+    if (dispatchPlan.nonEmpty) {
+      // dispatch query
+      searchClient.distSearch2(dispatchPlan, userId, firstLang, secondLang, query, filter, maxHits, context, debug).foreach { f =>
+        resultFutures += f.map(json => new KifiShardResult(json))
+      }
+    }
+
+    val (config, searchExperimentId) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
+
+    val resultDecorator = {
+      val showExperts = (filter.isEmpty && config.asBoolean("showExperts"))
+      new ResultDecorator(userId, query, firstLang, showExperts, searchExperimentId, shoeboxClient, monitoredAwait)
+    }
+
+    // do the local part
+    if (localShards.nonEmpty) {
+      resultFutures += Promise[KifiShardResult].complete(
+        Try {
+          distSearch2(localShards, userId, firstLang, secondLang, experiments, query, filter, maxHits, context, predefinedConfig, debug)
+        }
+      ).future
+    }
+
+    val mergedResult = {
+
+      val resultMerger = new KifiResultMerger(enableTailCutting, config)
+
+      timing.search
+      val results = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow search")
+      resultMerger.merge(results, maxHits)
+    }
+
+    timing.decoration
+
+    // TODO: decoration
+
+    timing.end
+
+    SafeFuture {
+      // stash timing information
+      timing.sendTotal()
+
+      // TODO: save ArticleSearchResult
+
+      // TODO: check slow query
+    }
+
+    // TODO: chunked response
 
     mergedResult
   }

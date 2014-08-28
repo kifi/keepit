@@ -16,14 +16,14 @@ angular.module('kifi')
   function ($scope, $rootScope, $analytics, $timeout, $window, recoService, tagService) {
     $window.document.title = 'Kifi • Your Recommendation List';
 
-    $scope.recency = { value: 0.75 };
     $scope.recosState = 'hasRecos';
     $scope.initialCardClosed = false;
 
-    $scope.getMore = function () {
+    $scope.getMore = function (recency) {
       $scope.loading = true;
+      $scope.recos = [];
      
-      recoService.getMore($scope.recency.value).then(function (recos) {
+      recoService.getMore(recency).then(function (recos) {
         $scope.loading = false;
 
         if (recos.length > 0) {
@@ -118,14 +118,6 @@ angular.module('kifi')
       $scope.reasonIndex = ($scope.reco.recoData.reasons.length + $scope.reasonIndex - 1) % $scope.reco.recoData.reasons.length;
     };
 
-    $scope.upVote = function (reco) {
-      recoService.vote(reco.recoKeep, true);
-    };
-
-    $scope.downVote = function (reco) {
-      recoService.vote(reco.recoKeep, false);
-    };
-
     $scope.showRecoImproveModal = false;
     $scope.improvement = {};
 
@@ -137,4 +129,59 @@ angular.module('kifi')
       recoService.improve(reco.recoKeep, $scope.improvement.type);
     };
   }
+])
+
+.directive('kfRecoDropdownMenu', ['recoService',
+  function (recoService) {
+    return {
+      restrict: 'A',
+      replace: true,
+      scope: {
+        reco: '=',
+        showImprovementModal: '&'
+      },
+      templateUrl: 'recos/recoDropdownMenu.tpl.html',
+      link: function (scope, element/*, attrs*/) {
+        var dropdownArrow= element.find('.kf-reco-dropdown-menu-down');
+        var dropdownMenu = element.find('.kf-dropdown-menu');
+
+        dropdownArrow.on('click', function () {
+          element.find('.kf-dropdown-menu').toggle();
+        });
+
+        scope.upVote = function (reco) {
+          dropdownMenu.hide();
+          recoService.vote(reco.recoKeep, true);
+        };
+
+        scope.downVote = function (reco) {
+          dropdownMenu.hide();
+          recoService.vote(reco.recoKeep, false);
+        };
+
+        scope.showModal = function () {
+          dropdownMenu.hide();
+          scope.showImprovementModal();
+        };
+      }
+    };
+  }
+])
+
+.directive('kfRecoRecencySlider', [
+  function () {
+    return {
+      restrict: 'A',
+      replace: true,
+      scope: {
+        getMore: '&'
+      },
+      templateUrl: 'recos/recoRecencySlider.tpl.html',
+      link: function (scope/*, element, attrs*/) {
+        scope.recency = { value: 0.75 };
+      }
+    };
+  }
 ]);
+
+

@@ -37,7 +37,7 @@ class CuratorAnalytics @Inject() (
   private def toRecoUserActionContexts(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback): Seq[RecommendationUserActionContext] = {
     val modelOpt = db.readOnlyReplica { implicit s => uriRecoRepo.getByUriAndUserId(uriId, userId, None) }
 
-    if (modelOpt.isDefined && modelOpt.get.delivered > 0) {
+    if (modelOpt.exists(r => r.delivered > 0)) {
       val masterScore = modelOpt.get.masterScore.toInt
       val keepers = modelOpt.get.attribution.user.map { _.friends }
       val client = feedback.clientType.getOrElse(RecommendationClientType.Unknown)
@@ -45,7 +45,9 @@ class CuratorAnalytics @Inject() (
       var contexts = List.empty[RecommendationUserActionContext]
 
       feedback.clicked.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Clicked, None, keepers) :: contexts }
-      feedback.kept.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Kept, None, keepers) :: contexts }
+      if (!modelOpt.get.kept) {
+        feedback.kept.filter { x => x }.foreach { _ => contexts = RecommendationUserActionContext(userId, uriId, masterScore, client, RecommendationUserAction.Kept, None, keepers) :: contexts }
+      }
 
       feedback.vote.foreach { isThumbUp =>
         val action = if (isThumbUp) RecommendationUserAction.MarkedGood else RecommendationUserAction.MarkedBad

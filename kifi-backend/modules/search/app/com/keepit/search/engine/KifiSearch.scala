@@ -114,6 +114,7 @@ class KifiSearch(
     val noFriendlyHits = (hits.size == 0)
 
     var othersHighScore = -1.0f
+    var othersTotal = othersHits.size
     if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers &&
       (!forbidEmptyFriendlyHits || hits.size == 0 || !filter.isDefault || !isInitialSearch)) {
       val queue = createQueue(numHitsToReturn - hits.size)
@@ -131,6 +132,8 @@ class KifiSearch(
           hit.normalizedScore = hit.score / othersNorm
           queue.insert(hit)
           rank += 1
+        } else {
+          othersTotal -= 1
         }
         hits.size < numHitsToReturn // until we fill up the queue
       }
@@ -147,7 +150,7 @@ class KifiSearch(
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
 
-    KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, show)
+    KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, othersTotal, show)
   }
 
   private[this] def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {

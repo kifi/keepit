@@ -72,7 +72,7 @@ class NonUserSearch(
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
 
-    KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), total, 0, true)
+    KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), total, 0, 0, true)
   }
 
   private[this] def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {

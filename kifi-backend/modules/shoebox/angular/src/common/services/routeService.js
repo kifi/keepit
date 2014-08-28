@@ -91,8 +91,8 @@ angular.module('kifi')
       recosPublic: function () {
         return route('/recos/public');
       },
-      recoFeedback: function () {
-        return route('/recos/feedback');
+      recoFeedback: function (urlId) {
+        return route('/recos/feedback?id=' + urlId);
       },
       basicUserInfo: function (id, friendCount) {
         friendCount = friendCount ? 1 : 0;
