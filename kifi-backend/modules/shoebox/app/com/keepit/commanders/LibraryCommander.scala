@@ -461,8 +461,7 @@ class LibraryCommander @Inject() (
     val (main, secret) = if (mainOpt.isEmpty || secretOpt.isEmpty) {
       // Right now, we don't have any users without libraries. However, I'd prefer to be safe for now
       // and fix it if a user's libraries are not set up.
-      val caller = (new Exception()).getStackTrace.filter(_.getClassName.startsWith("com.keepit")).map(s => s.getClassName + ": " + s.getLineNumber).mkString("\n")
-      log.error(s"Unable to get main or secret libraries for user $userId: $mainOpt $secretOpt:\n$caller\n")
+      log.error(s"Unable to get main or secret libraries for user $userId: $mainOpt $secretOpt")
       internSystemGeneratedLibraries(userId)
     } else (mainOpt.get._2, secretOpt.get._2)
     (main, secret)
