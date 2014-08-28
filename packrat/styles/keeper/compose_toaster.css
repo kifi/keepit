@@ -131,9 +131,6 @@
   background: #444;
 }
 
-.kifi-toast>.kifi-compose {
-  padding: 0;
-}
 .kifi-toast input.kifi-compose-to, /* initial input */
 .kifi-toast .kifi-ti-list {
   border-top: none !important;

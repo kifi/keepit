@@ -132,8 +132,10 @@ panes.notices = function () {
 
     var $box = $list.closest('.kifi-notices-box');
     $box.antiscroll({x: false});
-    var scroller = $box.data('antiscroll');
-    $(window).off('resize.notices').on('resize.notices', scroller.refresh.bind(scroller));
+    $(window).off('resize.notices').on('resize.notices', function () {
+      $box.data('antiscroll').refresh();
+      $list.canScroll();
+    });
 
     $list
     .on('mouseenter mouseleave', '.kifi-notice', onMouseEnterLeaveNotice)

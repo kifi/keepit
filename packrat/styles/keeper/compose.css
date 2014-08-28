@@ -1,5 +1,4 @@
 .kifi-compose {
-  padding: 10px 0 0;
   font-size: 12px;
   line-height: 14px;
 }
@@ -8,13 +7,17 @@
   border-top: 1px solid #d2d2d2;
   border-radius: 0 !important;
   background-color: #fff;
-  padding: 6px 15px;
+  padding: 11px 15px;
   min-height: 21px;
   max-height: 114px;
   overflow: auto;
   box-shadow: none !important;
   cursor: text; /* ff */
   word-wrap: break-word;
+}
+.kifi-compose-to+.kifi-compose-draft {
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
 textarea.kifi-compose-draft {
   display: block;

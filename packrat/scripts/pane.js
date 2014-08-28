@@ -8,15 +8,14 @@
 // @require scripts/html/keeper/pane_notices.js
 // @require scripts/html/keeper/pane_thread.js
 
-$.fn.scrollToBottom = function () {
+$.fn.scrollToBottom = function (callback) {
   'use strict';
   return this.each(function () {
-    var cH = this.clientHeight, sH = this.scrollHeight;
-    if (cH < sH) {
-      var sT = this.scrollTop, d = sH - sT - cH;
-      if (d > 0) {
-        $(this).animate({scrollTop: sT + d}, 40 * Math.log(d));
-      }
+    var cH = this.clientHeight, sH = this.scrollHeight, sT, d;
+    if (cH < sH && (d = sH - (sT = this.scrollTop) - cH) > 0) {
+      $(this).animate({scrollTop: sT + d}, 40 * Math.log(d), callback);
+    } else if (callback) {
+      callback();
     }
   });
 };
