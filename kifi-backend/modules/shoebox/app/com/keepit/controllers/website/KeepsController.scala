@@ -1,5 +1,6 @@
 package com.keepit.controllers.website
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 
@@ -39,7 +40,8 @@ class KeepsController @Inject() (
   userValueRepo: UserValueRepo,
   clock: Clock,
   normalizedURIInterner: NormalizedURIInterner,
-  heimdalContextBuilder: HeimdalContextBuilderFactory)
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
+  implicit val publicIdConfig: PublicIdConfiguration)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def updateCollectionOrdering() = JsonAction.authenticatedParseJson { request =>

@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import java.util.concurrent.{ Callable, TimeUnit }
+
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
@@ -20,6 +22,7 @@ import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationCandidate }
 import java.util.UUID
 import com.keepit.heimdal.{ HeimdalServiceClient, HeimdalContext }
 import com.keepit.search.ArticleSearchResult
+import com.google.common.cache.{ CacheBuilder, Cache }
 import play.api.libs.json.Json
 import scala.concurrent.Future
 import scala.util.{ Try, Success, Failure, Random }
@@ -45,6 +48,7 @@ class KeepInterner @Inject() (
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   elizaClient: ElizaServiceClient,
   heimdalClient: HeimdalServiceClient,
+  libraryCommander: LibraryCommander,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
@@ -190,19 +194,35 @@ class KeepInterner @Inject() (
       Failure(e)
   }
 
+  // Until we can refactor this intern API to use libraries instead of privacy, we need to look up the library.
+  // Since keeping often happens in large batches, we either need to query for the library early on (and pass it down
+  // many functions), or cache it here.
+  // This should be removed as soon as we can. - Andrew
+  private val librariesByUserId: Cache[Id[User], (Library, Library)] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(128).maximumSize(128).expireAfterWrite(30, TimeUnit.SECONDS).build()
+
   private def internKeep(uri: NormalizedURI, userId: Id[User], isPrivate: Boolean, mutatePrivacy: Boolean,
     installationId: Option[ExternalId[KifiInstallation]], source: KeepSource, title: Option[String], url: String)(implicit session: RWSession) = {
+    // This is really messy and I'd *love* a refactor. Specifically, isPrivate vs mutatePrivacy
+    val (main, secret) = librariesByUserId.get(userId, new Callable[(Library, Library)] {
+      def call() = libraryCommander.getMainAndSecretLibrariesForUser(userId)
+    })
+    def getLibFromPrivacy(isPrivate: Boolean) = {
+      if (isPrivate) Some(secret.id.get) else Some(main.id.get)
+    }
     val (isNewKeep, wasInactiveKeep, internedKeep) = keepRepo.getPrimaryByUriAndUser(uri.id.get, userId) match {
       case Some(bookmark) =>
         val wasInactiveKeep = !bookmark.isActive
-        val keepWithPrivate = if (mutatePrivacy) bookmark.copy(isPrivate = isPrivate) else bookmark
+        val keepWithPrivate = if (mutatePrivacy) {
+          bookmark.copy(visibility = Keep.isPrivateToVisibility(isPrivate), libraryId = getLibFromPrivacy(isPrivate))
+        } else bookmark
         val keep = if (!bookmark.isActive) { keepWithPrivate.withUrl(url).withActive(isActive = true).copy(createdAt = clock.now) } else keepWithPrivate
         val keepWithTitle = keep.withTitle(title orElse bookmark.title orElse uri.title)
-        val persistedKeep = if (keepWithTitle != bookmark) keepRepo.save(keepWithTitle) else bookmark
+        val librariedKeep = if (keepWithTitle.libraryId.isEmpty) keepWithTitle.copy(libraryId = getLibFromPrivacy(keepWithTitle.isPrivate)) else keepWithTitle
+        val persistedKeep = if (librariedKeep != bookmark) keepRepo.save(librariedKeep) else bookmark
         (false, wasInactiveKeep, persistedKeep)
       case None =>
         val urlObj = urlRepo.get(url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-        (true, false, keepRepo.save(KeepFactory(url, uri, userId, title orElse uri.title, urlObj, source, isPrivate, installationId, None))) // todo(andrew): Fix to use libraries
+        (true, false, keepRepo.save(KeepFactory(url, uri, userId, title orElse uri.title, urlObj, source, Keep.isPrivateToVisibility(isPrivate), installationId, getLibFromPrivacy(isPrivate)))) // todo(andrew): Fix to use libraries
     }
     if (wasInactiveKeep) {
       // A inactive keep may have had tags already. Index them if any.

@@ -76,7 +76,7 @@ class AdminLibraryController @Inject() (
     val (library, owner, totalKeepCount, keepInfos) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(libraryId)
       val owner = userRepo.get(lib.ownerId)
-      val keeps = keepRepo.getByLibrary(libraryId).filter(b => showPrivates || !(b.isPrivate || lib.visibility == LibraryVisibility.SECRET))
+      val keeps = keepRepo.getByLibrary(libraryId, 400, 0).filter(b => showPrivates || !(b.isPrivate || lib.visibility == LibraryVisibility.SECRET))
 
       val keepInfos = for (keep <- keeps) yield {
         val tagNames = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).map(collectionRepo.get).map(_.name)
@@ -157,6 +157,40 @@ class AdminLibraryController @Inject() (
     }
     log.info("updating changed users")
     Redirect(request.request.referer)
+  }
+
+  def migrateKeepsToLibraries(startPage: Int, endPage: Int, readOnly: Boolean) = AdminHtmlAction.authenticated { implicit request =>
+    val PAGE_SIZE = 200
+    for (page <- startPage to endPage) {
+      db.readWrite { implicit session =>
+        val keeps = keepRepo.page(page, PAGE_SIZE, true, Set.empty)
+        keeps.groupBy(_.userId).foreach {
+          case (userId, keepsAllFromOneUser) =>
+            val (main, secret) = libraryCommander.getMainAndSecretLibrariesForUser(userId)
+            keepsAllFromOneUser.map { keep =>
+              if (keep.deprecatedIsPrivate && (keep.visibility != secret.visibility || keep.libraryId != Some(secret.id.get))) {
+                log.info(s"[lib-migrate:priv] Updating keep ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
+                if (!readOnly) {
+                  keepRepo.doNotUseStealthUpdate(keep.copy(libraryId = Some(secret.id.get), visibility = secret.visibility))
+                }
+              } else if (!keep.deprecatedIsPrivate && (keep.visibility != main.visibility || keep.libraryId != Some(main.id.get))) {
+                log.info(s"[lib-migrate:publ] Updating keep ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
+                if (!readOnly) {
+                  keepRepo.doNotUseStealthUpdate(keep.copy(libraryId = Some(main.id.get), visibility = main.visibility))
+                }
+              } else if (keep.isPrivate != keep.deprecatedIsPrivate) {
+                log.info(s"[lib-migrate:erro] something wrong ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
+              } else {
+                log.info(s"[lib-migrate:okay] It's good ${keep.id}, current: ${keep.visibility} + ${keep.libraryId}")
+              }
+            }
+            log.info(s"[lib-migrate] Updated batch of ${keepsAllFromOneUser.length} keeps for userId $userId")
+        }
+      }
+    }
+
+    Ok
+
   }
 
 }
