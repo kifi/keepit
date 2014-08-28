@@ -40,6 +40,30 @@ class ExtSearchController @Inject() (
     Ok(toKifiSearchResultV1(decoratedResult)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
 
+  def search2(
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    kifiVersion: Option[KifiVersion] = None,
+    start: Option[String] = None,
+    end: Option[String] = None,
+    tz: Option[String] = None,
+    coll: Option[String] = None,
+    debug: Option[String] = None,
+    withUriSummary: Boolean = false) = JsonAction.authenticated { request =>
+
+    val userId = request.userId
+    val acceptLangs: Seq[String] = request.request.acceptLanguages.map(_.code)
+
+    val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
+
+    val decoratedResult = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, debugOpt, withUriSummary)
+
+    Ok(decoratedResult.json).withHeaders("Cache-Control" -> "private, max-age=10")
+  }
+
   //external (from the extension)
   def warmUp() = JsonAction.authenticated { request =>
     searchCommander.warmUp(request.userId)
