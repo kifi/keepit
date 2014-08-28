@@ -318,7 +318,7 @@ class MainSearcher(
     PartialSearchResult(shardHits, myTotal, friendsTotal, othersTotal, friendStats, svVar, show)
   }
 
-  def toDetailedSearchHits(hitList: Seq[Hit[MutableArticleHit]]): Seq[DetailedSearchHit] = {
+  private[this] def toDetailedSearchHits(hitList: Seq[Hit[MutableArticleHit]]): Seq[DetailedSearchHit] = {
     val myUriEdgeAccessor = socialGraphInfo.myUriEdgeAccessor
 
     hitList.map { hit =>
