@@ -1,18 +1,20 @@
 package views.html.email
 
+import com.keepit.inject.FortyTwoConfig
 import com.keepit.social.BasicUser
 
 object helpers {
   val cdnBaseUrl = "https://djty7jcqog9qu.cloudfront.net"
 
-  case class Context(campaign: String, unsubscribeUrl: String, title: String = "Kifi") {
-    val privacyUrl = appendUrlUtmCodes("https://www.kifi.com/privacy?", campaign, "footerPrivacy")
+  case class Context(campaign: String, unsubscribeUrl: String, title: String = "Kifi", protected val config: FortyTwoConfig) {
+    val baseUrl = config.applicationBaseUrl
+    val privacyUrl = appendUrlUtmCodes(s"${baseUrl}/privacy?", campaign, "footerPrivacy")
     val kifiTwitterUrl = appendUrlUtmCodes("https://twitter.com/kifi?", campaign, "footerTwitter")
     val kifiFacebookUrl = appendUrlUtmCodes("https://www.facebook.com/kifi42?", campaign, "footerFacebook")
-    val kifiLogoUrl = appendUrlUtmCodes("https://www.kifi.com/?", campaign, "headerLogo")
+    val kifiLogoUrl = appendUrlUtmCodes(s"${baseUrl}/?", campaign, "headerLogo")
 
     def inviteFriendUrl(user: BasicUser, index: Int, subtype: String) =
-      appendUrlUtmCodes(s"https://www.kifi.com/invite?friend=${user.externalId}&subtype=${subtype}&", campaign, "pymk" + index)
+      appendUrlUtmCodes(s"${baseUrl}/invite?friend=${user.externalId}&subtype=${subtype}&", campaign, "pymk" + index)
   }
 
   val iTunesAppStoreUrl = "https://itunes.apple.com/us/app/kifi/id740232575"

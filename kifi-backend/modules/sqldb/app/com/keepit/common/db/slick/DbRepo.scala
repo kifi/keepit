@@ -47,6 +47,8 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with FortyTwoGenericTypeMappers with
   protected val changeListener: Option[RepoModification.Listener[M]] = None
 
   type RepoImpl <: RepoTable[M]
+  type RepoQuery = scala.slick.lifted.Query[RepoImpl, M]
+
   def table(tag: Tag): RepoImpl
   lazy val _taggedTable = table(new BaseTag { base =>
     def taggedAs(path: List[scala.slick.ast.Symbol]): AbstractTable[_] = base.taggedAs(path)

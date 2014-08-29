@@ -1,6 +1,6 @@
 package com.keepit.serializer
 
-import play.api.libs.json.{ Json, Format, JsValue }
+import play.api.libs.json.{ JsResult, Json, Format, JsValue }
 
 /* Be careful, this will always attempt to deserialize to Left first, and then to Right if Left has failed.
 This could lead to an incorrect behavior if the Right type can be serialized to a valid Left type
@@ -13,3 +13,14 @@ object EitherFormat {
   }
 }
 
+object TupleFormat {
+  implicit def tuple2Format[T1, T2](implicit format1: Format[T1], format2: Format[T2]) = new Format[(T1, T2)] {
+    def reads(json: JsValue): JsResult[(T1, T2)] = json.validate[Seq[JsValue]].map { case (Seq(_1, _2)) => (_1.as[T1], _2.as[T2]) }
+    def writes(t: (T1, T2)): JsValue = Json.arr(format1.writes(t._1), format2.writes(t._2))
+  }
+
+  implicit def tuple3Format[T1, T2, T3](implicit format1: Format[T1], format2: Format[T2], format3: Format[T3]) = new Format[(T1, T2, T3)] {
+    def reads(json: JsValue): JsResult[(T1, T2, T3)] = json.validate[Seq[JsValue]].map { case (Seq(_1, _2, _3)) => (_1.as[T1], _2.as[T2], _3.as[T3]) }
+    def writes(t: (T1, T2, T3)): JsValue = Json.arr(format1.writes(t._1), format2.writes(t._2), format3.writes(t._3))
+  }
+}

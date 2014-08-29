@@ -101,7 +101,7 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
           }
 
           status(result) === SEE_OTHER
-          header("Location", result).get === com.keepit.controllers.website.routes.HomeController.kifeeeed().toString
+          header("Location", result).get === "/"
         }
       }
 

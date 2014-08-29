@@ -2,7 +2,7 @@
 # Search Extension API
 ##########################################
 GET         /search        @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String], debug: Option[String])
-GET         /search2       @com.keepit.controllers.ext.ExtSearchController.search2(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, debug: Option[String])
+GET         /search2       @com.keepit.controllers.ext.ExtSearchController.search2(q: String, f: Option[String], l: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiExtVersion] ?= None, debug: Option[String])
 GET         /search/warmUp        @com.keepit.controllers.ext.ExtSearchController.warmUp()
 GET         /search/message        @com.keepit.controllers.ext.ExtMessageSearchController.search(q: String, page: Int ?= 0)
 POST        /search/events/resultClicked        @com.keepit.controllers.ext.ExtSearchEventController.clickedSearchResult()
@@ -38,6 +38,7 @@ POST        /site/search/events/searched        @com.keepit.controllers.website.
 POST        /internal/search/dist/search          @com.keepit.controllers.search.SearchController.distSearch()
 POST        /internal/search/dist/search2         @com.keepit.controllers.search.SearchController.distSearch2()
 POST        /internal/search/dist/langFreqs       @com.keepit.controllers.search.SearchController.distLangFreqs()
+POST        /internal/search/dist/augmentation    @com.keepit.controllers.search.SearchController.distAugmentation()
 
 GET         /internal/search/warmUp/:userId        @com.keepit.controllers.search.SearchController.warmUpUser(userId: Id[User])
 

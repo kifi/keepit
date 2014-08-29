@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.model._
 import com.keepit.common.db._
@@ -21,6 +22,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
 
   private val singleShard = Shard[NormalizedURI](0, 1)
   implicit private val activeShards = ActiveShards(Set(singleShard))
+  implicit private val publicIdConfig = PublicIdConfiguration("secret key")
 
   "MainSearcher" should {
     "search and categorize using social graph" in {
@@ -242,7 +244,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
         var uriSeen = Set.empty[Long]
         var context = Some(IdFilterCompressor.fromSetToBase64(uriSeen))
         mainSearcherFactory.clear()
-        val mainSearcher = mainSearcherFactory(singleShard, userId, "alldocs", english, None, numHitsToReturn, SearchFilter.default(context), allHitsConfig)
+        val mainSearcher = mainSearcherFactory(singleShard, userId, "alldocs", english, None, numHitsToReturn, SearchFilter.default(context = context), allHitsConfig)
         val graphSearcher = mainSearcher.uriGraphSearcher
         val reachableUris = users.foldLeft(Set.empty[Long])((s, u) => s ++ graphSearcher.getUserToUriEdgeSet(u.id.get, publicOnly = true).destIdLongSet)
 
@@ -250,7 +252,7 @@ class MainSearcherTest extends Specification with SearchTestInjector with Search
         while (cnt < reachableUris.size && uriSeen.size < reachableUris.size) {
           cnt += 1
           context = Some(IdFilterCompressor.fromSetToBase64(uriSeen))
-          val mainSearcher = mainSearcherFactory(singleShard, userId, "alldocs", english, None, numHitsToReturn, SearchFilter.default(context), allHitsConfig)
+          val mainSearcher = mainSearcherFactory(singleShard, userId, "alldocs", english, None, numHitsToReturn, SearchFilter.default(context = context), allHitsConfig)
           //println("---" + uriSeen + ":" + reachableUris)
           val res = mainSearcher.search()
           res.hits.foreach { h =>

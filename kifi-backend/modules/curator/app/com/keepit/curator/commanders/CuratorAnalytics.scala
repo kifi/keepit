@@ -3,6 +3,7 @@ package com.keepit.curator.commanders
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.curator.RecommendationUserAction
 import com.keepit.curator.model.{ RecommendationClientType, UriRecommendationRepo, UriRecommendation }
 import com.keepit.heimdal.{ UserEventTypes, HeimdalContextBuilderFactory, UserEvent, HeimdalServiceClient }
 import com.keepit.model.{ NormalizedURI, User, UriRecommendationFeedback }
@@ -76,18 +77,6 @@ class CuratorAnalytics @Inject() (
     UserEvent(context.userId, contextBuilder.build, UserEventTypes.RECOMMENDATION_USER_ACTION)
   }
 
-}
-
-case class RecommendationUserAction(value: String)
-
-object RecommendationUserAction {
-  object Delivered extends RecommendationUserAction("delivered")
-  object Clicked extends RecommendationUserAction("clicked")
-  object Kept extends RecommendationUserAction("kept")
-  object MarkedGood extends RecommendationUserAction("marked_good")
-  object MarkedBad extends RecommendationUserAction("marked_bad")
-  object Trashed extends RecommendationUserAction("trashed")
-  object ImprovementSuggested extends RecommendationUserAction("improvement_suggested")
 }
 
 case class RecommendationUserActionContext(userId: Id[User], uriId: Id[NormalizedURI], truncatedMasterScore: Int, clientType: RecommendationClientType, userAction: RecommendationUserAction, suggestion: Option[String] = None, keepers: Option[Seq[Id[User]]] = None) {

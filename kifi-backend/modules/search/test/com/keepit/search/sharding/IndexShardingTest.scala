@@ -1,5 +1,6 @@
 package com.keepit.search.sharding
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import org.specs2.mutable._
 import play.api.test.Helpers._
 import com.keepit.model._
@@ -15,6 +16,7 @@ import scala.concurrent._
 class IndexShardingTest extends Specification with SearchTestInjector with SearchTestHelper {
 
   implicit private val activeShards = ActiveShards((new ShardSpecParser).parse("0,1/2"))
+  implicit private val publicIdConfig = PublicIdConfiguration("secret key")
   val emptyFuture = Future.successful(Set[Long]())
 
   "ShardedArticleIndexer" should {
