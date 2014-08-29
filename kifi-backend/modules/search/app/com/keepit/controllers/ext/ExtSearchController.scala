@@ -51,14 +51,11 @@ class ExtSearchController @Inject() (
   def search2(
     query: String,
     filter: Option[String],
+    library: Option[String],
     maxHits: Int,
     lastUUIDStr: Option[String],
     context: Option[String],
     kifiVersion: Option[KifiVersion] = None,
-    start: Option[String] = None,
-    end: Option[String] = None,
-    tz: Option[String] = None,
-    coll: Option[String] = None,
     debug: Option[String] = None,
     withUriSummary: Boolean = false) = JsonAction.authenticated { request =>
 
@@ -67,7 +64,7 @@ class ExtSearchController @Inject() (
 
     val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val plainResultFuture = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, debugOpt)
+    val plainResultFuture = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, library, maxHits, lastUUIDStr, context, predefinedConfig = None, debugOpt)
 
     val plainResultEnumerator = Enumerator.flatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 

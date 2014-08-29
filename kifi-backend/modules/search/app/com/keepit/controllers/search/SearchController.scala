@@ -75,6 +75,7 @@ class SearchController @Inject() (
     val lang2 = (searchRequest \ "lang2").asOpt[String]
     val query = (searchRequest \ "query").as[String]
     val filter = (searchRequest \ "filter").asOpt[String]
+    val library = (searchRequest \ "library").asOpt[String]
     val maxHits = (searchRequest \ "maxHits").as[Int]
     val context = (searchRequest \ "context").asOpt[String]
     val debug = (searchRequest \ "debug").asOpt[String]
@@ -90,6 +91,7 @@ class SearchController @Inject() (
       userExperiments,
       query,
       filter,
+      library,
       maxHits,
       context,
       None,
