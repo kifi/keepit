@@ -114,6 +114,7 @@ class KifiSearch(
     val noFriendlyHits = (hits.size == 0)
 
     var othersHighScore = -1.0f
+    var othersTotal = othersHits.size
     if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers &&
       (!forbidEmptyFriendlyHits || hits.size == 0 || !filter.isDefault || !isInitialSearch)) {
       val queue = createQueue(numHitsToReturn - hits.size)
@@ -131,6 +132,8 @@ class KifiSearch(
           hit.normalizedScore = hit.score / othersNorm
           queue.insert(hit)
           rank += 1
+        } else {
+          othersTotal -= 1
         }
         hits.size < numHitsToReturn // until we fill up the queue
       }
@@ -147,7 +150,7 @@ class KifiSearch(
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
 
-    KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, show)
+    KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), myTotal, friendsTotal, othersTotal, show)
   }
 
   private[this] def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
@@ -155,15 +158,15 @@ class KifiSearch(
     if ((visibility & Visibility.HAS_SECONDARY_ID) != 0) {
       // has a keep id
       val r = getKeepRecord(h.altId).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.altId}"))
-      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url)
+      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url, r.externalId)
     } else if ((visibility & Visibility.HAS_TERTIARY_ID) != 0) {
       // has a library id
       val r = getKeepRecord(h.altId, h.id).getOrElse(throw new Exception(s"missing keep record: keep id = ${h.altId}"))
-      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url)
+      KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url, r.externalId)
     } else {
       // only a primary id (uri id)
       val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))
-      KifiShardHit(h.id, h.score, h.visibility, -1, r.title, r.url)
+      KifiShardHit(h.id, h.score, h.visibility, -1, r.title, r.url, null)
     }
   }
 

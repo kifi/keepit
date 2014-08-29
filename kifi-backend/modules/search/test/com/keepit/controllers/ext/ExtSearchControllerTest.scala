@@ -192,6 +192,19 @@ class FixedResultSearchCommander extends SearchCommander {
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): PartialSearchResult = ???
 
+  def search2(
+    userId: Id[User],
+    acceptLangs: Seq[String],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig] = None,
+    debug: Option[String] = None,
+    withUriSummary: Boolean = false) = ???
+
   def distSearch2(
     shards: Set[Shard[NormalizedURI]],
     userId: Id[User],

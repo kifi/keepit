@@ -1,18 +1,75 @@
-.kf-reco-recency-slider
-  margin: 20px auto
-  width: 75%
+.kf-recos-view-header
+  padding: 25px 25px 40px 30px
+  min-height: 50px
 
-  span
+  .kf-recos-clover-icon
+  .kf-main-title
     display: inline-block
-    margin: 0 10px
-    vertical-align: top
 
-  button
-    margin-left: 15px
+  .kf-recos-clover-icon
+    margin-right: 8px
+
+  .kf-subtitle
+    margin: -8px 0 0 50px
+
+.kf-recos-title
+  display: inline-block
+
+.kf-reco-recency
+  position: relative
+  float: right
+  width: calc(100% - 280px)
+
+.kf-reco-refresh-btn
+  position: absolute
+  top: 8px
+  right: 0
+  padding: 3px 12px
+  border: 1px solid #c7c7c7
+  border-radius: 5px
+  height: 26px
+  background-color: #fff
+
+.kf-reco-refresh-btn
+.kf-reco-recency-all-time
+.kf-reco-recency-recent
+  font-size: 14px
+  color: #9b9b9b
+
+.kf-reco-recency-slider
+  position: relative
+  width: calc(100% - 85px)
+  height: 50px
+  
+.kf-reco-recency-all-time
+.kf-reco-recency-recent
+  position: absolute
+  top: 2px
+
+.kf-reco-recency-all-time
+  left: 0
+
+.kf-reco-recency-recent
+  right: 0
 
 .kf-reco-slider-container
+  position: absolute
+  left: 0
+  bottom: 20px
   display: inline-block
-  width: calc(100% - 250px)
+  width: 100%
+
+  .ui-slider-horizontal
+    border: none
+    height: 6px
+    background-color: #e4e4e4
+
+  .ui-slider-handle
+    top: -8px
+    border: 1px solid #bbb
+    border-radius: 12px
+    background-color: #fff
+    cursor: pointer
 
 .kf-recos
   padding: 0 25px 20px 30px
@@ -41,9 +98,7 @@
     font-weight: bold
 
 .kf-reco-top
-  padding: 25px 20px 0px
-.kf-reco-bottom
-  padding: 10px 20px
+  padding: 20px 20px 0px
 
 .kf-reco-top
 .kf-reco-bottom
@@ -58,20 +113,40 @@
   background-color: #fff
   font-size: 14px
   font-weight: 400
-  color: #aaa
+  color: #9d9d9d
   span
     display: inline-block
 
 .kf-reco-bottom
+  position:relative
   margin: 0 auto
   border-bottom: 1px solid #dadae2
   border-bottom-left-radius: 3px
   border-bottom-right-radius: 3px
+  padding: 15px 0 15px
   width: 90%
   box-shadow: defaultBoxShadow
+  font-size: 16px
+  text-align: center
+
+  &.kf-reco-multiple-reasons
+    padding-bottom: 10px
 
 .kf-reco-reason
-  margin-right: 40px
+  margin: 0 auto
+  width: 58%
+  line-height: 1.5em
+
+  time
+    white-space: nowrap
+
+.kf-reco-multiple-reasons
+  .kf-reco-reason
+    position: relative
+    left: -15px
+
+.kf-reco-reason-topic
+    white-space: nowrap
 
 .kf-reason-bullet-container
   margin: 0px 40px -5px 0
@@ -92,9 +167,9 @@
 .kf-reco-icon
   position: relative
   float: right
-  margin: -10px 0 0 5px
-  width: 20px
-  height: 20px
+  margin: -8px 0 0 10px
+  width: 18px
+  height: 18px
 
 .kf-reco-icon:hover
   cursor: pointer
@@ -104,19 +179,19 @@
   content: ' '
   position: absolute;
   left: 50%
-  width: 4px;
-  background: #ddd
+  width: 3px;
+  background: #c7c7c7
   font-size: 0
 
 .kf-reco-icon:hover::before
 .kf-reco-icon:hover::after
 .kf-reco-icon:focus::before
 .kf-reco-icon:focus::after
-  background: #bbb
+  background: #aaa
 
 .kf-reco-icon:active::before
 .kf-reco-icon:active::after
-  background: #aaa
+  background: #888
 
 // X icon
 .kf-reco-close-x::before
@@ -129,7 +204,7 @@
 .kf-reco-close-x::after
   transform: translate(-1px) rotate(-45deg)
 
-// Down chevron icon
+// Down arrow icon
 .kf-reco-dropdown-menu-down::before
 .kf-reco-dropdown-menu-down::after
   top: 4px
@@ -141,13 +216,7 @@
 .kf-reco-dropdown-menu-down::after
   transform: translate(2px) rotate(45deg)
 
-// Left and right chevron Icons
-.kf-reco-reasons-left
-.kf-reco-reasons-right
-  position: absolute
-  top: 0
-  bottom: 0
-
+// Left and right arrow Icons
 .kf-reco-reasons-left::before
 .kf-reco-reasons-left::after
 .kf-reco-reasons-right::before
@@ -157,15 +226,15 @@
   border-top-left-radius: 2px
   border-top-right-radius: 2px
 
-// Left chevron icon
+// Left arrow icon
 .kf-reco-reasons-left
-  right: 40px
+  right: 41px
 .kf-reco-reasons-left::before
   transform: translate(-2px, -3px) rotate(45deg)
 .kf-reco-reasons-left::after
   transform: translate(-2px, 3px) rotate(135deg)
 
-// Right chevron icon
+// Right arrow icon
 .kf-reco-reasons-right
   right: 20px
 .kf-reco-reasons-right::before
@@ -174,20 +243,15 @@
   transform: translate(-2px, 3px) rotate(-135deg)
 
 .kf-reco-bottom
-  position:relative
-  font-size: 18px
-  text-align: center
-
   .kf-reco-icon
+    position: absolute
+    top: 20px
     margin: auto
 
 // Dropdown menu
 .kf-reco-dropdown-menu-container
   position: relative
-  &:hover
-    .kf-dropdown-menu
-      display: block
-
+  
   .kf-dropdown-menu
     display: none
     top: 10px
@@ -201,7 +265,6 @@
       white-space: nowrap
       font-size: 15px
       line-height: 30px
-      white-space: nowrap
       cursor: pointer
 
       &:hover

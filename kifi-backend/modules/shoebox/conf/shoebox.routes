@@ -38,7 +38,7 @@ POST    /auth/log-in                @com.keepit.controllers.core.AuthController.
 
 GET     /connect/:provider          @com.keepit.controllers.core.AuthController.popupBeforeLinkSocial(provider)
 GET     /connect/:provider/done     @com.keepit.controllers.core.AuthController.popupAfterLinkSocial(provider)
-GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider)
+GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider: String, redirect: Option[String] ?= None)
 
 GET     /signup/:provider           @com.keepit.controllers.core.AuthController.signup(provider)
 
@@ -256,7 +256,7 @@ POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryContr
 POST    /site/libraries/:id/join    @com.keepit.controllers.website.LibraryController.joinLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/decline @com.keepit.controllers.website.LibraryController.declineLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/leave   @com.keepit.controllers.website.LibraryController.leaveLibrary(id: PublicId[Library])
-GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library])
+GET     /site/libraries/:id/keeps   @com.keepit.controllers.website.LibraryController.getKeeps(id: PublicId[Library], count: Int, offset: Int ?= 0)
 POST    /site/libraries/copy        @com.keepit.controllers.website.LibraryController.copyKeeps()
 POST    /site/libraries/move        @com.keepit.controllers.website.LibraryController.moveKeeps()
 
@@ -442,6 +442,9 @@ GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.
 
 GET     /admin/users/reindex        @com.keepit.controllers.admin.AdminUserIndexController.reindex()
 
+
+GET    /admin/users/selectPrimaryEmails @com.keepit.controllers.admin.AdminUserController.selectPrimaryEmails(readOnly: Boolean ?= true)
+
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
 POST    /admin/users/autoSetUsernames   @com.keepit.controllers.admin.AdminUserController.autoSetUsernames(startingUserId: Id[User], endingUserId: Id[User], readOnly: Boolean ?= true)
 GET     /admin/realUsers            @com.keepit.controllers.admin.AdminUserController.allRegisteredUsersView
@@ -545,6 +548,7 @@ POST    /admin/libraries/internForUser   @com.keepit.controllers.admin.AdminLibr
 POST    /admin/libraries/internForAllUsers  @com.keepit.controllers.admin.AdminLibraryController.internAllUserSystemLibraries(startingUserId: Id[User], endingUserId: Id[User])
 POST    /admin/libraries/:id/state/:state   @com.keepit.controllers.admin.AdminLibraryController.changeState(id: Id[Library], state: String)
 POST    /admin/libraries/update             @com.keepit.controllers.admin.AdminLibraryController.updateLibraries
+POST    /admin/libraries/migrateKeeps       @com.keepit.controllers.admin.AdminLibraryController.migrateKeepsToLibraries(startPage: Int, endPage: Int, readOnly: Boolean ?= true)
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")

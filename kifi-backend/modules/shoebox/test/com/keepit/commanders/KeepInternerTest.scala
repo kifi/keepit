@@ -30,6 +30,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
+        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
         val (bookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmarks(Json.obj(
           "url" -> "http://42go.com",
@@ -49,6 +50,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
+        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
         bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, Json.obj(
           "url" -> "http://42go.com",
@@ -67,6 +69,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
+        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
         val raw = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com",
@@ -111,6 +114,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
+        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val fakeAirbrake = inject[FakeAirbrakeNotifier]
         fakeAirbrake.errorCount() === 0
         val bookmarkInterner = inject[KeepInterner]
@@ -144,6 +148,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val user = db.readWrite { implicit s =>
           userRepo.save(User(firstName = "Greg", lastName = "Smith"))
         }
+        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
         val (initialBookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com/",

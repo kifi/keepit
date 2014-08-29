@@ -1,17 +1,42 @@
-@(emailData: com.keepit.curator.commanders.email.AllDigestRecos)
+@(emailData: com.keepit.curator.commanders.email.AllDigestRecos, ctx: email.helpers.Context)
 
-Hello @emailData.toUser.firstName,<br/><br/>
+Hello @emailData.toUser.firstName,
 
-Kifi recommends @emailData.recos.size items for you:
-
+This digest is a recommended list based on your interests and recent activity on Kifi.
 @emailData.recos.map { reco =>
-
-    @reco.title
-    @reco.description
-    @reco.url
-    @reco.score
-    @reco.explain
-
-    -----
+@reco.topic.map { topic =>
+Recommended because it’s trending in a topic you’re interested in: @topic
 }
+@reco.title
+@{reco.domain.getOrElse("") + reco.readTime.map(" | " + _ + " read").getOrElse("")}
+
+@reco.description
+
+View: @reco.viewPageUrl
+Send: @reco.sendPageUrl
+Keep: @reco.keepUrl
+
+@reco.keepers.message
+
+-----
+}
+
+@if(emailData.friendRecos.size > 0) {
+Find friends on Kifi to benefit from their keeps:
+
+@for(i <- 1 to emailData.friendRecos.size) {
+@defining(emailData.friendRecos(i - 1)) { friend =>
+@{friend.basicUser.firstName} @{friend.basicUser.lastName}
+Add: @{ctx.inviteFriendUrl(friend.basicUser, i, "digestPymk")}
+}}}
+
+Follow us on Facebook: @ctx.kifiFacebookUrl
+Follow us on Twitter: @ctx.kifiTwitterUrl
+
+Available on the App Store: @email.helpers.iTunesAppStoreUrl
+
+Sent by Kifi 883 N Shoreline Blvd, Mountain View, CA 94043, USA
+Go to @ctx.unsubscribeUrl to unsubscribe from updates like this.
+
+(c) 2014 FortyTwo, Inc. All rights reserved.
 

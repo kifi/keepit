@@ -142,11 +142,14 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
       val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
-        uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+        uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
       val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
-        uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+        uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
       val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
-        uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+        uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
 
       val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "USA"))
       val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "food"))
@@ -536,20 +539,6 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get keeps" in {
-      withDb(modules: _*) { implicit injector =>
-        implicit val config = inject[PublicIdConfiguration]
-        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps
-        val libraryCommander = inject[LibraryCommander]
-
-        libraryCommander.getKeeps(libShield.id.get).length === 0
-        libraryCommander.getKeeps(libScience.id.get).length === 0
-        val res = libraryCommander.getKeeps(libMurica.id.get)
-        res.length === 3
-        res.map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-      }
-    }
-
     "copy keeps to another library" in {
       withDb(modules: _*) { implicit injector =>
         implicit val config = inject[PublicIdConfiguration]
@@ -565,7 +554,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get)
+          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get, 20, 0)
           (libFreedom, libIronMurica, keepsInMurica)
         }
 
@@ -575,9 +564,9 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         val keepsInIronMurica = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
-          keepRepo.getByLibrary(libMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get)
+          keepRepo.getByLibrary(libMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0)
         }
 
         // Ironman attempts to copy from IronMurica to Murica (but only has read_only access to Murica) (tests RW -> RO)
@@ -590,9 +579,9 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
-          keepRepo.getByLibrary(libMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libFreedom.id.get).map(_.title.get) === Seq("Reddit", "Freedom")
+          keepRepo.getByLibrary(libMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom")
         }
 
         // Ironman copies duplicates from Murica to Freedom
@@ -602,7 +591,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 9
-          keepRepo.getByLibrary(libFreedom.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
         }
       }
     }
@@ -622,7 +611,7 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val libIronMurica = libraryRepo.save(Library(name = "IronMurica", slug = LibrarySlug("ironmurica"), ownerId = userIron.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = libIronMurica.id.get, userId = userIron.id.get, access = LibraryAccess.OWNER, showInSearch = true))
 
-          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get)
+          val keepsInMurica = keepRepo.getByLibrary(libMurica.id.get, 20, 0)
           (libFreedom, libIronMurica, keepsInMurica)
         }
 
@@ -634,8 +623,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         libraryCommander.copyKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
         val keepsInMyMurica = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
-          keepRepo.getByLibrary(libIronMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
-          keepRepo.getByLibrary(libIronMurica.id.get)
+          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0)
         }
 
         // Ironman moves 2 keeps from IronMurica to Freedom (tests RW -> RW)
@@ -644,9 +633,9 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         val keepsInFreedom = db.readOnlyMaster { implicit s =>
           keepRepo.count === 6
-          keepRepo.getByLibrary(libIronMurica.id.get).map(_.title.get) === Seq("McDonalds")
-          keepRepo.getByLibrary(libFreedom.id.get).map(_.title.get) === Seq("Reddit", "Freedom")
-          keepRepo.getByLibrary(libFreedom.id.get)
+          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("McDonalds")
+          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom")
+          keepRepo.getByLibrary(libFreedom.id.get, 20, 0)
         }
 
         // Ironman attempts to move keeps from IronMurica to Murica (tests RW -> RO)
@@ -657,8 +646,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
         libraryCommander.copyKeeps(userIron.id.get, libIronMurica.id.get, keepsInMurica)
         val keepsInMyMurica2 = db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
-          keepRepo.getByLibrary(libIronMurica.id.get).map(_.title.get) === Seq("McDonalds", "Reddit", "Freedom")
-          keepRepo.getByLibrary(libIronMurica.id.get)
+          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("McDonalds", "Reddit", "Freedom")
+          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0)
         }
 
         // move duplicates (Reddit) IronMurica -> Freedom
@@ -668,8 +657,8 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
 
         db.readOnlyMaster { implicit s =>
           keepRepo.count === 8
-          keepRepo.getByLibrary(libIronMurica.id.get).map(_.title.get) === Seq("Reddit", "Freedom") // for now, URIs that exist in toLibrary also stay in fromLibrary
-          keepRepo.getByLibrary(libFreedom.id.get).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
+          keepRepo.getByLibrary(libIronMurica.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom") // for now, URIs that exist in toLibrary also stay in fromLibrary
+          keepRepo.getByLibrary(libFreedom.id.get, 20, 0).map(_.title.get) === Seq("Reddit", "Freedom", "McDonalds")
         }
       }
     }
@@ -694,11 +683,14 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
           val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url, urlId = url1.id.get,
-            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
           val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url, urlId = url2.id.get,
-            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = Some(libMurica.id.get)))
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
           val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url, urlId = url3.id.get,
-            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), libraryId = None))
+            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = LibraryVisibility.DISCOVERABLE, libraryId = None))
 
           val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = "USA"))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))

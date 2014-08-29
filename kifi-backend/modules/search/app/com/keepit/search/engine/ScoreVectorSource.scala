@@ -23,7 +23,7 @@ import scala.concurrent.duration._
 
 trait ScoreVectorSource {
   def createWeights(query: Query): IndexedSeq[(Weight, Float)]
-  def execute(weights: IndexedSeq[(Weight, Float)], dataBuffer: DataBuffer): Unit
+  def execute(weights: IndexedSeq[(Weight, Float)], coreSize: Int, dataBuffer: DataBuffer): Unit
 }
 
 trait ScoreVectorSourceLike extends ScoreVectorSource {
@@ -36,7 +36,7 @@ trait ScoreVectorSourceLike extends ScoreVectorSource {
     weights
   }
 
-  def execute(weights: IndexedSeq[(Weight, Float)], dataBuffer: DataBuffer): Unit = {
+  def execute(weights: IndexedSeq[(Weight, Float)], coreSize: Int, dataBuffer: DataBuffer): Unit = {
     val scorers = new Array[Scorer](weights.size)
     indexReaderContexts.foreach { readerContext =>
       var i = 0
@@ -44,7 +44,7 @@ trait ScoreVectorSourceLike extends ScoreVectorSource {
         scorers(i) = weights(i)._1.scorer(readerContext, true, false, readerContext.reader.getLiveDocs)
         i += 1
       }
-      writeScoreVectors(readerContext, scorers, dataBuffer)
+      writeScoreVectors(readerContext, scorers, coreSize, dataBuffer)
     }
   }
 
@@ -52,15 +52,20 @@ trait ScoreVectorSourceLike extends ScoreVectorSource {
 
   protected def indexReaderContexts: Seq[AtomicReaderContext] = { searcher.indexReader.getContext.leaves }
 
-  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], output: DataBuffer)
+  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer)
 
-  protected def createScorerQueue(scorers: Array[Scorer]): TaggedScoreQueue = {
-    val pq = new TaggedScoreQueue(scorers.length)
+  protected def createScorerQueue(scorers: Array[Scorer], coreSize: Int): TaggedScorerQueue = {
+    val pq = new TaggedScorerQueue(coreSize)
     var i = 0
     while (i < scorers.length) {
       val sc = scorers(i)
       if (sc != null && sc.nextDoc() < NO_MORE_DOCS) {
-        pq.insertWithOverflow(new TaggedScorer(i.toByte, sc))
+        val taggedScorer = new TaggedScorer(i.toByte, sc)
+        if (i < coreSize) {
+          pq.insertWithOverflow(taggedScorer)
+        } else {
+          pq.addDependentScorer(taggedScorer)
+        }
       }
       i += 1
     }
@@ -163,8 +168,12 @@ final class TaggedScorer(tag: Byte, scorer: Scorer) {
   def taggedScore(boost: Float) = DataBuffer.taggedFloatBits(tag, scorer.score * boost)
 }
 
-final class TaggedScoreQueue(size: Int) extends PriorityQueue[TaggedScorer](size) {
+final class TaggedScorerQueue(size: Int) extends PriorityQueue[TaggedScorer](size) {
   override def lessThan(a: TaggedScorer, b: TaggedScorer): Boolean = (a.doc < b.doc)
+
+  private val dependentScores: ArrayBuffer[TaggedScorer] = ArrayBuffer()
+
+  def addDependentScorer(scorer: TaggedScorer): Unit = { dependentScores += scorer }
 
   def getTaggedScores(taggedScores: Array[Int], boost: Float = 1.0f): Int = {
     var scorer = top()
@@ -176,6 +185,24 @@ final class TaggedScoreQueue(size: Int) extends PriorityQueue[TaggedScorer](size
       scorer.next
       scorer = updateTop()
     }
+
+    if (size > 0) {
+      var i = 0
+      while (i < dependentScores.length) {
+        val scorer = dependentScores(i)
+        if (scorer.doc < docId) {
+          if (scorer.advance(docId) == docId) {
+            taggedScores(size) = scorer.taggedScore(1.0f)
+            size += 1
+          }
+        } else if (scorer.doc == docId) {
+          taggedScores(size) = scorer.taggedScore(1.0f)
+          size += 1
+        }
+        i += 1
+      }
+    }
+
     size
   }
 
@@ -197,11 +224,11 @@ final class TaggedScoreQueue(size: Int) extends PriorityQueue[TaggedScorer](size
 
 class UriFromArticlesScoreVectorSource(protected val searcher: Searcher, filter: SearchFilter) extends ScoreVectorSourceLike {
 
-  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], output: DataBuffer): Unit = {
+  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
 
-    val pq = createScorerQueue(scorers)
+    val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
 
     val articleVisibility = ArticleVisibility(reader)
@@ -250,11 +277,11 @@ class UriFromKeepsScoreVectorSource(
     (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds))
   }
 
-  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], output: DataBuffer): Unit = {
+  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
 
-    val pq = createScorerQueue(scorers)
+    val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
 
     val idMapper = reader.getIdMapper
@@ -359,11 +386,11 @@ class LibraryScoreVectorSource(
     (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds))
   }
 
-  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], output: DataBuffer): Unit = {
+  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
 
-    val pq = createScorerQueue(scorers)
+    val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
 
     val visibilityDocValues = reader.getNumericDocValues(LibraryFields.visibilityField)
@@ -414,11 +441,11 @@ class LibraryFromKeepsScoreVectorSource(
     (LongArraySet.fromSet(myLibIds), LongArraySet.fromSet(memberLibIds), LongArraySet.fromSet(trustedLibIds))
   }
 
-  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], output: DataBuffer): Unit = {
+  protected def writeScoreVectors(readerContext: AtomicReaderContext, scorers: Array[Scorer], coreSize: Int, output: DataBuffer): Unit = {
     val reader = readerContext.reader.asInstanceOf[WrappedSubReader]
     val idFilter = filter.idFilter
 
-    val pq = createScorerQueue(scorers)
+    val pq = createScorerQueue(scorers, coreSize)
     if (pq.size <= 0) return // no scorer
 
     val libraryIdDocValues = reader.getNumericDocValues(KeepFields.libraryIdField)

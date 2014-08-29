@@ -72,17 +72,17 @@ class NonUserSearch(
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
 
-    KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), total, 0, true)
+    KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), total, 0, 0, true)
   }
 
   private[this] def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
     val recOpt = if (h.altId >= 0) getKeepRecord(h.altId) else getKeepRecord(libId.id, h.id)
     recOpt match {
       case Some(r) =>
-        KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url)
+        KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url, r.externalId)
       case None =>
         val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))
-        KifiShardHit(h.id, h.score, h.visibility, -1L, r.title, r.url)
+        KifiShardHit(h.id, h.score, h.visibility, -1L, r.title, r.url, null)
     }
   }
 

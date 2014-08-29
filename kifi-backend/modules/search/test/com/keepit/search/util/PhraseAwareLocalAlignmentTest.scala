@@ -42,6 +42,7 @@ class PhraseAwareLocalAlignmentTest extends Specification {
     def begin(): Unit = { positions = Set.empty[(Int, Int, Float)] }
     def update(id: Int, pos: Int, weight: Float = 1.0f): Unit = { positions += ((id, pos, weight)) }
     def end(): Unit = {}
+    def single(id: Int, weight: Float = 1.0f): Float = weight
     def score: Float = 0.0f
     def maxScore: Float = 1.0f
   }

@@ -1,10 +1,12 @@
 package com.keepit.controllers
 
 import com.google.inject.Inject
+import com.keepit.commander.HelpRankEventTrackingCommander
 import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.curator.RecommendationUserAction
 import com.keepit.heimdal._
-import com.keepit.model.{ AnonymousEventLoggingRepo, UserEventLoggingRepo, SystemEventLoggingRepo, NonUserEventLoggingRepo }
+import com.keepit.model.{ AnonymousEventLoggingRepo, NonUserEventLoggingRepo, SystemEventLoggingRepo, UserEventLoggingRepo }
 import com.kifi.franz.SQSQueue
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsValue }
@@ -18,15 +20,34 @@ class EventTrackingController @Inject() (
     anonymousEventLoggingRepo: AnonymousEventLoggingRepo,
     nonUserEventLoggingRepo: NonUserEventLoggingRepo,
     heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]],
+    eventTrackingCommander: HelpRankEventTrackingCommander,
     airbrake: AirbrakeNotifier) extends HeimdalServiceController {
 
   private[controllers] def trackInternalEvent(eventJs: JsValue): Unit = trackInternalEvent(eventJs.as[HeimdalEvent])
 
   private def trackInternalEvent(event: HeimdalEvent): Unit = event match {
     case systemEvent: SystemEvent => systemEventLoggingRepo.persist(systemEvent)
-    case userEvent: UserEvent => userEventLoggingRepo.persist(userEvent)
+    case userEvent: UserEvent => handleUserEvent(userEvent)
     case anonymousEvent: AnonymousEvent => anonymousEventLoggingRepo.persist(anonymousEvent)
     case nonUserEvent: NonUserEvent => nonUserEventLoggingRepo.persist(nonUserEvent)
+  }
+
+  private def handleUserEvent(userEvent: UserEvent) = {
+    userEventLoggingRepo.persist(userEvent)
+    userEvent.eventType match {
+      case UserEventTypes.RECOMMENDATION_USER_ACTION =>
+        log.info(s"[handleUserEvent] reco event=$userEvent")
+        for {
+          actionType <- userEvent.context.get[String]("action")
+        } yield {
+          if (actionType == RecommendationUserAction.Clicked.value)
+            eventTrackingCommander.userClickedFeedItem(userEvent)
+          else
+            log.info(s"[handleUserEvent] reco event (action=$actionType) NOT handled: $userEvent")
+        }
+      case _ =>
+        log.info(s"[handleUserEvent] non-reco event NOT handled: $userEvent") // ignore
+    }
   }
 
   def readIncomingEvent(): Unit = {

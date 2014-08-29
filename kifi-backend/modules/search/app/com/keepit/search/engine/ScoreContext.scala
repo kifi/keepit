@@ -43,11 +43,10 @@ class ScoreContext(
   }
 
   def join(reader: DataBufferReader): Unit = {
-    // compute the visibility
-    val thisVisibility = reader.recordType
-    visibility = visibility | thisVisibility
+    val theVisibility = reader.recordType
+    val theAltIdKind = (theVisibility & Visibility.ALTERNATIVE_ID_MASK)
 
-    if ((thisVisibility & Visibility.HAS_ALTERNATIVE_ID) != 0) {
+    if (theAltIdKind != 0) {
       val id2 = reader.nextLong()
       var scr2 = 0.0f // use a simple sum of scores to compare secondary ids
 
@@ -60,7 +59,9 @@ class ScoreContext(
         scoreSum(idx) += scr
       }
 
-      if (scr2 > alternativeIdScore) {
+      val currentAltIdKind = (visibility & Visibility.ALTERNATIVE_ID_MASK)
+
+      if (theAltIdKind > currentAltIdKind || (theAltIdKind == currentAltIdKind && scr2 > alternativeIdScore)) {
         alternativeId = id2
         alternativeIdScore = scr2
       }
@@ -73,6 +74,7 @@ class ScoreContext(
         scoreSum(idx) += scr
       }
     }
+    visibility = visibility | theVisibility
   }
 
   def flush(): Unit = collector.collect(this)
