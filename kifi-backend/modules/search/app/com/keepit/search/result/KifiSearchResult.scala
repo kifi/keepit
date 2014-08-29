@@ -83,21 +83,30 @@ object KifiSearchResult extends Logging {
   }
 
   def toKifiSearchHitsV2(hits: Seq[KifiShardHit]): JsArray = {
-    val v2Hits = hits.zipWithIndex.map {
-      case (h, index) =>
-        val json = JsObject(List(
-          "idx" -> JsNumber(index),
-          "title" -> h.titleJson,
-          "url" -> h.urlJson
-        ))
-        h.keepIdJson match {
-          case v: JsString => json + ("keepId" -> v)
-          case _ => json
-        }
+    val v2Hits = hits.map { h =>
+      val json = JsObject(List(
+        "title" -> h.titleJson,
+        "url" -> h.urlJson
+      ))
+      h.keepIdJson match {
+        case v: JsString => json + ("keepId" -> v)
+        case _ => json
+      }
     }
     JsArray(v2Hits)
   }
 
+  def uriSummaryInfoV2(uriSummaries: Seq[Option[URISummary]]): JsObject = {
+    val v2Infos = uriSummaries.zipWithIndex.map {
+      case (Some(uriSummary), index) =>
+        JsObject(List("uriSummary" -> Json.toJson(uriSummary)))
+      case _ =>
+        JsObject(List())
+    }
+    JsObject(List(
+      "hits" -> JsArray(v2Infos)
+    ))
+  }
 }
 
 class KifiSearchHit(val json: JsObject) extends AnyVal {

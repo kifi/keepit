@@ -3,6 +3,7 @@ package com.keepit.controllers.ext
 import com.google.inject.Inject
 import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.controller.{ SearchServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
@@ -12,12 +13,15 @@ import com.keepit.search.result.KifiSearchResult
 import com.keepit.search.result.ResultUtil
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.SearchCommander
+import com.keepit.shoebox.ShoeboxServiceClient
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import scala.concurrent.Future
 
 class ExtSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
+    shoeboxClient: ShoeboxServiceClient,
     searchCommander: SearchCommander) extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging {
 
   def search(
@@ -65,21 +69,33 @@ class ExtSearchController @Inject() (
 
     val plainResultFuture = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, debugOpt)
 
-    val plainResultEnumerator = Enumerator.flatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r)))(immediate))
+    val plainResultEnumerator = Enumerator.flatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r).toString))(immediate))
 
-    var decorationFutures = Seq.empty[Future[JsObject]]
+    var decorationFutures: List[Future[String]] = Nil
 
     // TODO: augmentation
-    // decorationFutures += (plainResultFuture.map { ... })
+    // decorationFutures = augmentationFuture(plainResultFuture) :: decorationFutures
 
-    // TODO: URI Summary
-    // if (withUriSummary) decorationFutures += (plainResultFuture.map { ... })
+    if (withUriSummary) {
+      decorationFutures = uriSummaryInfoFuture(plainResultFuture) :: decorationFutures
+    }
 
     val decorationEnumerator = reactiveEnumerator(decorationFutures)
 
-    val resultEnumerator = plainResultEnumerator.andThen(decorationEnumerator).andThen(Enumerator.eof)
+    val resultEnumerator = Enumerator("[").andThen(plainResultEnumerator).andThen(decorationEnumerator).andThen(Enumerator("]")).andThen(Enumerator.eof)
 
     Ok.chunked(resultEnumerator).withHeaders("Cache-Control" -> "private, max-age=10")
+  }
+
+  private def augmentationFuture(plainResultFuture: Future[KifiPlainResult]): Future[String] = ??? // TODO: augmentation
+
+  private def uriSummaryInfoFuture(plainResultFuture: Future[KifiPlainResult]): Future[String] = {
+    plainResultFuture.flatMap { r =>
+      val uriIds = r.hits.map(h => Id[NormalizedURI](h.id))
+      shoeboxClient.getUriSummaries(uriIds).map { uriSummaries =>
+        KifiSearchResult.uriSummaryInfoV2(uriIds.map { uriId => uriSummaries.get(uriId) }).toString
+      }
+    }
   }
 
   @inline
