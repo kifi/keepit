@@ -189,8 +189,7 @@ angular.module('kifi')
       },
 
       vote: function (keep, vote) {
-        // vote === true -> upvote
-        // vote === false -> downvote
+        // vote === true -> upvote; vote === false -> downvote
         $http.post(routeService.recoFeedback(keep.urlId), { vote: vote });
       },
 
