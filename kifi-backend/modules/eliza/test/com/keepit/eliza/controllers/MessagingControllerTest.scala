@@ -57,7 +57,7 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         val jsonResponse: String = contentAsString(result)
-        jsonResponse === "[]"
+        jsonResponse === "[false,false]"
       }
     }
   }

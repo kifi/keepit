@@ -395,9 +395,8 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
-    val uriSet = uriIds.toSet
-    val uris = (for (row <- rows if row.user === userId) yield row.uriId).list
-    uris.map(uri => uriSet.contains(uri)).toSeq
+    val uriSet = (for (row <- rows if row.user === userId) yield row.uriId).list.toSet
+    uriIds.map(uriId => uriSet.contains(uriId))
   }
 
   def getByThread(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThread] = {
