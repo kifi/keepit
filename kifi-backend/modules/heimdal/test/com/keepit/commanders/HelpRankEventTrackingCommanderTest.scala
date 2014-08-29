@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import com.keepit.commander.{ EventTrackingCommander, AttributionCommander, HelpRankCommander }
+import com.keepit.commander.{ HelpRankEventTrackingCommander, AttributionCommander, HelpRankCommander }
 import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.time._
@@ -20,7 +20,7 @@ import org.specs2.time.NoTimeConversions
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class EventTrackingCommanderTest extends Specification with HeimdalTestInjector with NoTimeConversions {
+class HelpRankEventTrackingCommanderTest extends Specification with HeimdalTestInjector with NoTimeConversions {
 
   val keepIdCounter = new AtomicInteger(0)
   def mkKeep(userId: Id[User], ts: DateTime = currentDateTime, idOpt: Option[Id[Keep]] = None, libraryId: Option[Id[Library]] = None)(uri: NormalizedURI): Keep = {
@@ -97,7 +97,7 @@ class EventTrackingCommanderTest extends Specification with HeimdalTestInjector 
 
         val keeps = Map(u1 -> keeps1, u2 -> keeps2, u3 -> keeps3)
 
-        val commander = inject[EventTrackingCommander]
+        val commander = inject[HelpRankEventTrackingCommander]
 
         val shoebox = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val savedUsers = shoebox.saveUsers(u1, u2, u3).toVector

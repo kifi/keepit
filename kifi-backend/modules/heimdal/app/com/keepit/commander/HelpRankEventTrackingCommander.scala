@@ -16,7 +16,7 @@ import com.keepit.common.logging.Logging.LoggerWithPrefix
 
 import scala.concurrent.Future
 
-object EventTrackingCommander {
+object HelpRankEventTrackingCommander {
   implicit class HeimdalContextWrapper(underlying: HeimdalContext) {
     // helpers/workarounds -- until we have a stronger contract for events
     def getIdOpt[T](key: String): Option[Id[T]] = underlying.get[Double](key) map { id => Id[T](id.toLong) }
@@ -24,14 +24,14 @@ object EventTrackingCommander {
   }
 }
 
-class EventTrackingCommander @Inject() (
+class HelpRankEventTrackingCommander @Inject() (
     db: Database,
     airbrake: AirbrakeNotifier,
     kifiHitCache: KifiHitCache,
     shoebox: ShoeboxServiceClient,
     keepDiscoveryRepo: KeepDiscoveryRepo) extends Logging {
 
-  import EventTrackingCommander._
+  import HelpRankEventTrackingCommander._
 
   def userClickedFeedItem(userEvent: UserEvent): Future[Unit] = {
     val valuesOpt = for {

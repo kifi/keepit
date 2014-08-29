@@ -1,7 +1,7 @@
 package com.keepit.controllers
 
 import com.google.inject.Inject
-import com.keepit.commander.EventTrackingCommander
+import com.keepit.commander.HelpRankEventTrackingCommander
 import com.keepit.common.controller.HeimdalServiceController
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.curator.RecommendationUserAction
@@ -20,7 +20,7 @@ class EventTrackingController @Inject() (
     anonymousEventLoggingRepo: AnonymousEventLoggingRepo,
     nonUserEventLoggingRepo: NonUserEventLoggingRepo,
     heimdalEventQueue: SQSQueue[Seq[HeimdalEvent]],
-    eventTrackingCommander: EventTrackingCommander,
+    eventTrackingCommander: HelpRankEventTrackingCommander,
     airbrake: AirbrakeNotifier) extends HeimdalServiceController {
 
   private[controllers] def trackInternalEvent(eventJs: JsValue): Unit = trackInternalEvent(eventJs.as[HeimdalEvent])
