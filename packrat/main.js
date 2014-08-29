@@ -1177,8 +1177,11 @@ api.port.on({
       respond(false);
     });
   },
-  open_tab: function (path) {
-    api.tabs.open(webBaseUri() + path);
+  open_tab: function (data) {
+    api.tabs.open(webBaseUri() + data.path);
+    if (data.source === 'keeper') {
+      mixpanel.track('user_clicked_pane', {type: 'keeper', action: 'visitKifiSite'});
+    }
   },
   close_tab: function (_, __, tab) {
     api.tabs.close(tab.id);
@@ -1895,18 +1898,16 @@ function kififyWithPageData(tab, d) {
   // consider triggering automatic keeper behavior on page to engage user (only once)
   if (!tab.engaged) {
     tab.engaged = true;
-    // if (!d.kept && !hide) {
-    //   if (ruleSet.rules.url && urlPatterns.some(reTest(tab.url))) {
-    //     log('[initTab]', tab.id, 'restricted');
-    //   } else if (ruleSet.rules.shown && d.shown) {
-    //     log('[initTab]', tab.id, 'shown before');
-    //   } else if (d.keepers.length) {
-    //     tab.keepersSec = 20;
-    //     if (api.tabs.isFocused(tab)) scheduleAutoEngage(tab, 'keepers');
-    //   }
-    // }
-    tab.keepersSec = 2;
-    scheduleAutoEngage(tab, 'keepers');
+    if (!d.kept && !hide) {
+      if (ruleSet.rules.url && urlPatterns.some(reTest(tab.url))) {
+        log('[initTab]', tab.id, 'restricted');
+      } else if (ruleSet.rules.shown && d.shown) {
+        log('[initTab]', tab.id, 'shown before');
+      } else if (d.keepers.length) {
+        tab.keepersSec = 20;
+        if (api.tabs.isFocused(tab)) scheduleAutoEngage(tab, 'keepers');
+      }
+    }
   }
 }
 

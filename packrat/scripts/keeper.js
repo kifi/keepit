@@ -260,7 +260,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       if (e.originalEvent.isTrusted === false) return;
       var $btn = $(this);
       if ($btn.hasClass('kifi-dock-site')) {
-        api.port.emit('open_tab', '');
+        api.port.emit('open_tab', {path: '', source: 'keeper'});
       } else {
         $slider.data().stickiness |= 2;
         api.require('scripts/pane.js', function () {
