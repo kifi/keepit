@@ -195,7 +195,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   }
 
   def checkBatchThreads(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    Future.successful(Seq.empty)
+    Future.successful(Seq.fill(uriIds.size)(false))
   }
 
   //migration
