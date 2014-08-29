@@ -47,13 +47,13 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
     "check batch threads" in {
       withDb(modules: _*) { implicit injector =>
         val messagingController = inject[MessagingController]
-        val route = com.keepit.eliza.controllers.internal.routes.MessagingController.checkBatchThreads(Id[User](42)).url
-        route === "/internal/eliza/checkBatchThreads?userId=42"
+        val route = com.keepit.eliza.controllers.internal.routes.MessagingController.checkUrisChatted(Id[User](42)).url
+        route === "/internal/eliza/checkUrisChatted?userId=42"
         val uris = Seq(Id[NormalizedURI](1), Id[NormalizedURI](2))
         val json = Json.toJson(uris)
         val input = Json.parse(s"""[{"uriId": "1"}]""".stripMargin)
         val request = FakeRequest("POST", route, FakeHeaders(Seq("Content-Type" -> Seq("application/json"))), json)
-        val result: Future[SimpleResult] = messagingController.checkBatchThreads(Id[User](42))(request)
+        val result: Future[SimpleResult] = messagingController.checkUrisChatted(Id[User](42))(request)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         val jsonResponse: String = contentAsString(result)
