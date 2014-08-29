@@ -6,12 +6,11 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.curator.model._
-import com.keepit.model.ExperimentType
+import com.keepit.model.{NormalizedURI, ExperimentType, User}
 import com.keepit.common.db.slick.Database
 import com.keepit.commanders.RemoteUserExperimentCommander
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.model.User
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
@@ -92,6 +91,11 @@ class SeedIngestionCommander @Inject() (
       }
     }
   }
+
+  def getRawSeeds(userId: Id[User], uris: Seq[Id[NormalizedURI]]) =
+    db.readOnlyReplicaAsync { implicit s =>
+      rawSeedsRepo.getByUserIdAndUriIds(userId, uris)
+    }
 
   def getPreviousSeeds(rawSeeds: Seq[RawSeedItem], userId: Id[User]): Future[Seq[SeedItem]] = {
     db.readOnlyReplicaAsync { implicit session =>

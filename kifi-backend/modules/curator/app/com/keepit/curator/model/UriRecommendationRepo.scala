@@ -14,7 +14,7 @@ import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[UriRecommendationRepoImpl])
 trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
-  def getByUserId(userId: Id[User], uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
+  def getByUserId(userId: Id[User])(implicit session: RSession): Seq[UriRecommendation]
   def getByUriAndUserId(uriId: Id[NormalizedURI], userId: Id[User], uriRecommendationState: Option[State[UriRecommendation]])(implicit session: RSession): Option[UriRecommendation]
   def getByTopMasterScore(userId: Id[User], maxBatchSize: Int, uriRecommendationState: Option[State[UriRecommendation]] = Some(UriRecommendationStates.ACTIVE))(implicit session: RSession): Seq[UriRecommendation]
   def getRecommendableByTopMasterScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[UriRecommendation]
@@ -62,8 +62,8 @@ class UriRecommendationRepoImpl @Inject() (
   def table(tag: Tag) = new UriRecommendationTable(tag)
   initTable()
 
-  def getByUserId(userId: Id[User], uriRecommendationState: Option[State[UriRecommendation]])(implicit session: RSession): Seq[UriRecommendation] = {
-    (for (row <- rows if row.userId === userId && row.state === uriRecommendationState) yield row).list
+  def getByUserId(userId: Id[User])(implicit session: RSession): Seq[UriRecommendation] = {
+    (for (row <- rows if row.userId === userId) yield row).list
   }
 
   def getByUriAndUserId(uriId: Id[NormalizedURI], userId: Id[User], excludeUriRecommendationState: Option[State[UriRecommendation]])(implicit session: RSession): Option[UriRecommendation] = {

@@ -1,10 +1,27 @@
 package com.keepit.curator.commanders
 
-import com.keepit.curator.model.{ CuratorKeepInfoRepo, RawSeedItemRepo, UriRecommendationStates, ScoredSeedItemWithAttribution, RecoInfo, UserRecommendationGenerationStateRepo, UserRecommendationGenerationState, Keepers, UriRecommendationRepo, UriRecommendation, UriScores, PublicFeedRepo, PublicSeedItem, SeedItem, PublicUriScores, PublicFeed, PublicScoredSeedItem }
+import com.keepit.curator.model.{
+  RawSeedItemRepo,
+  UriRecommendationStates,
+  ScoredSeedItemWithAttribution,
+  RecoInfo,
+  UserRecommendationGenerationStateRepo,
+  UserRecommendationGenerationState,
+  Keepers,
+  UriRecommendationRepo,
+  UriRecommendation,
+  UriScores,
+  PublicFeedRepo,
+  PublicSeedItem,
+  SeedItem,
+  PublicUriScores,
+  PublicFeed,
+  PublicScoredSeedItem
+}
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model.{ User, ExperimentType, UriRecommendationScores, SystemValueRepo, Name }
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.concurrent.{ ReactiveLock }
+import com.keepit.common.concurrent.{FutureHelpers, ReactiveLock}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.commanders.RemoteUserExperimentCommander
@@ -27,7 +44,6 @@ class RecommendationGenerationCommander @Inject() (
     attributionHelper: SeedAttributionHelper,
     db: Database,
     airbrake: AirbrakeNotifier,
-    keepInfoRepo: CuratorKeepInfoRepo,
     uriRecRepo: UriRecommendationRepo,
     publicFeedRepo: PublicFeedRepo,
     rawSeedItemRepo: RawSeedItemRepo,
@@ -156,10 +172,8 @@ class RecommendationGenerationCommander @Inject() (
 
   private def getRescoreSeedsForUser(userId: Id[User]): Future[Seq[SeedItem]] = {
     for {
-      rawSeeds <- db.readOnlyReplicaAsync { implicit s =>
-        val recos = uriRecRepo.getByUserId(userId)
-        rawSeedItemRepo.getByUserIdAndUriIds(userId, recos.map(_.uriId))
-      }
+      recos <- db.readOnlyReplicaAsync ( implicit s => uriRecRepo.getByUserId(userId))
+      rawSeeds <- seedCommander.getRawSeeds(userId, recos.map(_.uriId))
       seeds <- seedCommander.getPreviousSeeds(rawSeeds, userId)
     } yield {
       seeds
@@ -193,7 +207,8 @@ class RecommendationGenerationCommander @Inject() (
       genStateRepo.save(newState)
     }
 
-  private def processSeeds(seedItems: Seq[SeedItem], newState: UserRecommendationGenerationState, userId: Id[User], boostedKeepers: Set[Id[User]]) = {
+  private def processSeeds(seedItems: Seq[SeedItem], newState: UserRecommendationGenerationState,
+                           userId: Id[User], boostedKeepers: Set[Id[User]]): Future[Boolean] = {
     val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
       seedItem.keepers match {
         case Keepers.ReasonableNumber(users) => !users.contains(userId)
@@ -234,7 +249,7 @@ class RecommendationGenerationCommander @Inject() (
     getPerUserGenerationLock(userId).withLockFuture {
       val state = getStateOfUser(userId)
       val seedsAndSeqFuture = getCandidateSeedsForUser(userId, state)
-      val res: Future[Boolean] = seedsAndSeqFuture.flatMap(seedsAndSeq => getPrecomputationRecosResult(seedsAndSeq._1, seedsAndSeq._2, state, userId, boostedKeepers))
+      val res: Future[Boolean] = seedsAndSeqFuture.flatMap{ case (seeds, seq) => getPrecomputationRecosResult(seeds, seq, state, userId, boostedKeepers) }
 
       res.onFailure {
         case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
@@ -329,23 +344,16 @@ class RecommendationGenerationCommander @Inject() (
       val state = getStateOfUser(userId)
 
       val seedsFuture = getRescoreSeedsForUser(userId)
-      val res: Future[Seq[Boolean]] = seedsFuture.flatMap { seeds =>
+      val res: Future[Unit] = seedsFuture.flatMap { seeds =>
         val batches = seeds.grouped(200)
-        val allBatchesFutureResponses = batches.foldLeft(Future.successful(Seq.empty[Boolean])) { (allFutureResponses, batch) =>
-          allFutureResponses.flatMap { responses =>
-            val batchFuture = processSeeds(batch, state, userId, Set.empty)
-            batchFuture.map { batchResponse =>
-              responses :+ batchResponse
-            }
-          }
-        }
-        allBatchesFutureResponses
+        FutureHelpers.sequentialExec(batches.toIterable)(batch => processSeeds(batch, state, userId, Set.empty))
       }
 
       res.onFailure {
         case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
       }
-      res.map(_ => ())
+
+      res
     }
   }
 
