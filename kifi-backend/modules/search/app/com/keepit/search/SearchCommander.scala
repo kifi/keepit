@@ -350,7 +350,7 @@ class SearchCommanderImpl @Inject() (
 
       val idFilter = searchFilter.idFilter ++ mergedResult.hits.map(_.id)
 
-      new KifiPlainResult(query, mergedResult, idFilter, searchExperimentId)
+      KifiPlainResult(query, mergedResult, idFilter, searchExperimentId)
     }
   }
 

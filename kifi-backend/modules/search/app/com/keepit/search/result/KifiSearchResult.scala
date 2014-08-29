@@ -97,11 +97,9 @@ object KifiSearchResult extends Logging {
   }
 
   def uriSummaryInfoV2(uriSummaries: Seq[Option[URISummary]]): JsObject = {
-    val v2Infos = uriSummaries.zipWithIndex.map {
-      case (Some(uriSummary), index) =>
-        JsObject(List("uriSummary" -> Json.toJson(uriSummary)))
-      case _ =>
-        JsObject(List())
+    val v2Infos = uriSummaries.map {
+      case Some(uriSummary) => JsObject(List("uriSummary" -> Json.toJson(uriSummary)))
+      case None => JsObject(List())
     }
     JsObject(List(
       "hits" -> JsArray(v2Infos)
