@@ -3,7 +3,7 @@ package com.keepit.search
 import com.keepit.model.{ Library, NormalizedURI, User }
 import com.keepit.common.db.Id
 import com.keepit.search.Item.{ Tag }
-import com.google.inject.Inject
+import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.search.graph.keep.{ ShardedKeepIndexer, KeepFields }
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.index.Term
@@ -24,6 +24,7 @@ object AugmentationCommander {
   type DistributionPlan = (Set[Shard[NormalizedURI]], Seq[(ServiceInstance, Set[Shard[NormalizedURI]])])
 }
 
+@ImplementedBy(classOf[AugmentationCommanderImpl])
 trait AugmentationCommander {
   def augment(userId: Id[User], keptIn: Set[Id[Library]], keptBy: Set[Id[User]], item: Item): Future[AugmentedItem]
   def augment(plan: DistributionPlan, userId: Id[User], keptIn: Set[Id[Library]], keptBy: Set[Id[User]], weightedItems: Seq[(Item, Float)], offset: Int, limit: Int): Future[Seq[AugmentedItem]]
@@ -33,7 +34,7 @@ trait AugmentationCommander {
 class AugmentationCommanderImpl @Inject() (
     activeShards: ActiveShards,
     shardedKeepIndexer: ShardedKeepIndexer,
-    val searchClient: SearchServiceClient) extends Sharding with Logging {
+    val searchClient: SearchServiceClient) extends AugmentationCommander with Sharding with Logging {
 
   def augment(userId: Id[User], keptIn: Set[Id[Library]], keptBy: Set[Id[User]], item: Item): Future[AugmentedItem] = {
     val (localShards, remotePlan) = distributionPlan(userId, activeShards)
@@ -42,7 +43,7 @@ class AugmentationCommanderImpl @Inject() (
       if (localShards.contains(relevantShard)) (Set(relevantShard), Seq.empty)
       else (Set.empty, remotePlan.find(_._2.contains(relevantShard)).map { case (relevantInstance, _) => (relevantInstance, Set(relevantShard)) }.toSeq)
     }
-    augment(restrictedPlan, userId, keptIn, keptBy, Seq((item, 1)), 0, 1).map(_.head)
+    augment(restrictedPlan, userId, keptIn, keptBy, Seq((item, 1f)), 0, 1).map(_.head)
   }
 
   def augment(plan: DistributionPlan, userId: Id[User], keptIn: Set[Id[Library]], keptBy: Set[Id[User]], weightedItems: Seq[(Item, Float)], offset: Int, limit: Int): Future[Seq[AugmentedItem]] = {
