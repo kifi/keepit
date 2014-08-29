@@ -222,7 +222,8 @@ class KeepInterner @Inject() (
         (false, wasInactiveKeep, persistedKeep)
       case None =>
         val urlObj = urlRepo.get(url, uri.id.get).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-        (true, false, keepRepo.save(KeepFactory(url, uri, userId, title orElse uri.title, urlObj, source, Keep.isPrivateToVisibility(isPrivate), installationId, getLibFromPrivacy(isPrivate)))) // todo(andrew): Fix to use libraries
+        val keep = Keep(title = title, userId = userId, uriId = uri.id.get, urlId = urlObj.id.get, url = url, source = source, visibility = Keep.isPrivateToVisibility(isPrivate), libraryId = getLibFromPrivacy(isPrivate)) // todo(andrew): Fix to use libraries
+        (true, false, keepRepo.save(keep))
     }
     if (wasInactiveKeep) {
       // A inactive keep may have had tags already. Index them if any.
