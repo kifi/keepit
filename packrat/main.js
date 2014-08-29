@@ -1895,16 +1895,18 @@ function kififyWithPageData(tab, d) {
   // consider triggering automatic keeper behavior on page to engage user (only once)
   if (!tab.engaged) {
     tab.engaged = true;
-    if (!d.kept && !hide) {
-      if (ruleSet.rules.url && urlPatterns.some(reTest(tab.url))) {
-        log('[initTab]', tab.id, 'restricted');
-      } else if (ruleSet.rules.shown && d.shown) {
-        log('[initTab]', tab.id, 'shown before');
-      } else if (d.keepers.length) {
-        tab.keepersSec = 20;
-        if (api.tabs.isFocused(tab)) scheduleAutoEngage(tab, 'keepers');
-      }
-    }
+    // if (!d.kept && !hide) {
+    //   if (ruleSet.rules.url && urlPatterns.some(reTest(tab.url))) {
+    //     log('[initTab]', tab.id, 'restricted');
+    //   } else if (ruleSet.rules.shown && d.shown) {
+    //     log('[initTab]', tab.id, 'shown before');
+    //   } else if (d.keepers.length) {
+    //     tab.keepersSec = 20;
+    //     if (api.tabs.isFocused(tab)) scheduleAutoEngage(tab, 'keepers');
+    //   }
+    // }
+    tab.keepersSec = 2;
+    scheduleAutoEngage(tab, 'keepers');
   }
 }
 

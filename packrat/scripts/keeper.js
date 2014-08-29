@@ -138,7 +138,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
     .on('mouseover', '.kifi-kept-btn>.kifi-tip', function () {
       this.parentNode.classList.add('kifi-hoverless');
     })
-    /*
     .hoverfu('.kifi-keep-btn,.kifi-kept-btn', function (configureHover) {
       var btn = this;
       api.port.emit('get_keepers', function (o) {
@@ -172,11 +171,9 @@ var keeper = keeper || function () {  // idempotent for Chrome
         }
       });
     })
-    */
     .on('mouseout', '.kifi-kept-btn', function () {
       this.classList.remove('kifi-hoverless');
     })
-    /*
     .hoverfu('.kifi-keep-lock,.kifi-kept-lock', function (configureHover) {
       var $a = $(this);
       var $card = $(this).closest('.kifi-keep-card');
@@ -199,7 +196,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
           position: {my: 'center bottom-13', at: 'center top', of: $a, collision: 'none'}});
       });
     })
-    */
     .on('click', '.kifi-keep-lock', _.debounce(function (e) {
       if (e.target === this && e.originalEvent.isTrusted !== false) {
         keepPage('private', e);
@@ -210,7 +206,6 @@ var keeper = keeper || function () {  // idempotent for Chrome
         toggleKeep($(this).closest('.kifi-keep-card').hasClass('kifi-public') ? 'private' : 'public');
       }
     }, 400, true))
-    /*
     .hoverfu('.kifi-keep-tag,.kifi-kept-tag', function (configureHover) {
       var btn = this;
       var kept = this.classList.contains('kifi-kept-tag');
@@ -224,11 +219,10 @@ var keeper = keeper || function () {  // idempotent for Chrome
           mustHoverFor: 700,
           hideAfter: 4000,
           click: 'hide',
-          position: {my: 'right bottom-13', at: 'right top', of: btn, collision: 'none'}
+          position: {my: 'right+10 bottom-13', at: 'right top', of: btn, collision: 'none'}
         });
       });
     })
-    */
     .on('click', '.kifi-keep-tag,.kifi-kept-tag', _.debounce(function (e) {
       if (e.originalEvent.closedTagbox || e.originalEvent.isTrusted === false) {
         return;
@@ -242,26 +236,23 @@ var keeper = keeper || function () {  // idempotent for Chrome
         tagbox.toggle($slider, 'click:tagIcon');
       });
     }, 400, true))
-    /*
     .hoverfu('.kifi-dock-btn', function(configureHover) {
       var $a = $(this);
       var tip = {
-        s: ['Keeps Library', 'View your keeps<br/>on kifi.com in a new tab.'],
-        i: ['Message Box (' + CO_KEY + '+Shift+O)', 'Open your Message Box<br/>and see your messages.'],
-        c: ['Compose (' + CO_KEY + '+Shift+S)', 'Send this page to any email<br/>address or Kifi friend.']
+        s: ['Home', 'Open your keeps library<br/>on kifi.com in a new tab.'],
+        i: ['Inbox (' + CO_KEY + '+Shift+O)', 'Open your Inbox and<br/>see your messages.'],
+        c: ['Send (' + CO_KEY + '+Shift+S)', 'Send this page to any email<br/>address or Kifi friend.']
       }[this.dataset.tip];
       render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {
-        var px = $a.find('.kifi-count').text() > 0 ? 24 : 13;
         configureHover(html, {
           suppressed: isSticky,
           mustHoverFor: 700,
           hideAfter: 4000,
           click: 'hide',
-          position: {my: 'center bottom-' + px, at: 'center top', of: $a, collision: 'none'}
+          position: {my: 'center bottom-13', at: 'center top', of: $a, collision: 'none'}
         });
       });
     })
-    */
     .on('mousedown', '.kifi-dock-btn', function (e) {
       e.preventDefault();
     })
