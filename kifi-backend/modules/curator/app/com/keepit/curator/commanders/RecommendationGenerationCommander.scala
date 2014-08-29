@@ -1,7 +1,6 @@
 package com.keepit.curator.commanders
 
 import com.keepit.curator.model.{
-  RawSeedItemRepo,
   UriRecommendationStates,
   ScoredSeedItemWithAttribution,
   RecoInfo,
@@ -21,7 +20,7 @@ import com.keepit.curator.model.{
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.model.{ User, ExperimentType, UriRecommendationScores, SystemValueRepo, Name }
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.concurrent.{FutureHelpers, ReactiveLock}
+import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.commanders.RemoteUserExperimentCommander
@@ -46,7 +45,6 @@ class RecommendationGenerationCommander @Inject() (
     airbrake: AirbrakeNotifier,
     uriRecRepo: UriRecommendationRepo,
     publicFeedRepo: PublicFeedRepo,
-    rawSeedItemRepo: RawSeedItemRepo,
     genStateRepo: UserRecommendationGenerationStateRepo,
     systemValueRepo: SystemValueRepo,
     experimentCommander: RemoteUserExperimentCommander) {
@@ -172,7 +170,7 @@ class RecommendationGenerationCommander @Inject() (
 
   private def getRescoreSeedsForUser(userId: Id[User]): Future[Seq[SeedItem]] = {
     for {
-      recos <- db.readOnlyReplicaAsync ( implicit s => uriRecRepo.getByUserId(userId))
+      recos <- db.readOnlyReplicaAsync(implicit s => uriRecRepo.getByUserId(userId))
       rawSeeds <- seedCommander.getRawSeeds(userId, recos.map(_.uriId))
       seeds <- seedCommander.getPreviousSeeds(rawSeeds, userId)
     } yield {
@@ -208,7 +206,7 @@ class RecommendationGenerationCommander @Inject() (
     }
 
   private def processSeeds(seedItems: Seq[SeedItem], newState: UserRecommendationGenerationState,
-                           userId: Id[User], boostedKeepers: Set[Id[User]]): Future[Boolean] = {
+    userId: Id[User], boostedKeepers: Set[Id[User]]): Future[Boolean] = {
     val cleanedItems = seedItems.filter { seedItem => //discard super popular items and the users own keeps
       seedItem.keepers match {
         case Keepers.ReasonableNumber(users) => !users.contains(userId)
@@ -249,7 +247,7 @@ class RecommendationGenerationCommander @Inject() (
     getPerUserGenerationLock(userId).withLockFuture {
       val state = getStateOfUser(userId)
       val seedsAndSeqFuture = getCandidateSeedsForUser(userId, state)
-      val res: Future[Boolean] = seedsAndSeqFuture.flatMap{ case (seeds, seq) => getPrecomputationRecosResult(seeds, seq, state, userId, boostedKeepers) }
+      val res: Future[Boolean] = seedsAndSeqFuture.flatMap { case (seeds, seq) => getPrecomputationRecosResult(seeds, seq, state, userId, boostedKeepers) }
 
       res.onFailure {
         case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
