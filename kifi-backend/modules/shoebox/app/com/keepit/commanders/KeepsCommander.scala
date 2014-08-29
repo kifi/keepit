@@ -601,12 +601,15 @@ class KeepsCommander @Inject() (
         case Success(keep) =>
           val tags = db.readWrite { implicit s =>
             val selectedTagIds = selectedTagNames.map { getOrCreateTag(userId, _).id.get }
-            val existingTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
-            val tagsToAdd = selectedTagIds.filterNot(existingTagIds.contains(_))
-            val tagsToRemove = existingTagIds.filterNot(selectedTagIds.contains(_))
+            val activeTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
+            val tagsToAdd = selectedTagIds.filterNot(activeTagIds.contains(_))
+            val tagsToRemove = activeTagIds.filterNot(selectedTagIds.contains(_))
 
             tagsToAdd.map { tagId =>
-              keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
+              keepToCollectionRepo.getOpt(keep.id.get, tagId) match {
+                case None => keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
+                case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
+              }
             }
             tagsToRemove.map { tagId =>
               keepToCollectionRepo.remove(keep.id.get, tagId)

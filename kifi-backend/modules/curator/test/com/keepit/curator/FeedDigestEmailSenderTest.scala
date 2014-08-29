@@ -180,12 +180,18 @@ class FeedDigestEmailSenderTest extends Specification with CuratorTestInjector w
         mail42body must contain("Connect Facebook")
         mail43body must not contain "Connect Facebook"
 
-        val notSentIds = Set(5L, 7F, 8F, 9F, 10F) // reco Ids in our list that still haven't been sent
+        val sentRecoIds = Set(1L, 2L, 3L, 4L) // reco Ids that were just sent
         savedRecoModels.forall { models =>
           val (uri, reco, uriSumm) = models
           db.readOnlyMaster { implicit s =>
-            if (notSentIds.contains(uri.id.get.id)) uriRecoRepo.get(reco.id.get).lastPushedAt must beNone
-            else uriRecoRepo.get(reco.id.get).lastPushedAt must beSome
+            val freshReco = uriRecoRepo.get(reco.id.get)
+            if (sentRecoIds.contains(uri.id.get.id)) {
+              freshReco.lastPushedAt must beSome
+              freshReco.delivered === 1
+            } else {
+              freshReco.lastPushedAt must (if (reco.id.get.id == 6L) beSome else beNone)
+              freshReco.delivered === 0
+            }
           }
         }
       }
