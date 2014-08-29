@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.keepit.search.engine.{ Visibility, SearchFactory }
-import com.keepit.search.engine.result.{ KifiShardHit, KifiResultMerger, KifiShardResult }
+import com.keepit.search.engine.result.{ KifiShardHit, KifiShardResultMerger, KifiShardResult }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, Promise }
@@ -339,7 +339,7 @@ class SearchCommanderImpl @Inject() (
 
     val mergedResult = {
 
-      val resultMerger = new KifiResultMerger(enableTailCutting, config)
+      val resultMerger = new KifiShardResultMerger(enableTailCutting, config)
 
       timing.search
       val results = monitoredAwait.result(Future.sequence(resultFutures), 10 seconds, "slow search")
@@ -388,7 +388,7 @@ class SearchCommanderImpl @Inject() (
 
     val (config, _) = monitoredAwait.result(configFuture, 1 seconds, "getting search config")
 
-    val resultMerger = new KifiResultMerger(enableTailCutting, config)
+    val resultMerger = new KifiShardResultMerger(enableTailCutting, config)
 
     timing.factory
 
