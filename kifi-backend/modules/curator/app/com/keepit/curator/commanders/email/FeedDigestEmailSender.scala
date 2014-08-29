@@ -186,7 +186,7 @@ class FeedDigestEmailSenderImpl @Inject() (
     shoebox.sendMail(email).map { sent =>
       if (sent) {
         db.readWrite { implicit rw =>
-          digestRecos.foreach(digestReco => uriRecommendationRepo.save(digestReco.reco.withLastPushedAt(now)))
+          digestRecos.foreach(digestReco => uriRecommendationRepo.incrementDeliveredCount(digestReco.reco.id.get, true))
         }
       }
       DigestRecoMail(userId, sent, digestRecos)

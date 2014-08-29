@@ -21,7 +21,7 @@ trait UriRecommendationRepo extends DbRepo[UriRecommendation] {
   def getRecommendableByTopMasterScore(userId: Id[User], maxBatchSize: Int)(implicit session: RSession): Seq[UriRecommendation]
   def getDigestRecommendableByTopMasterScore(userId: Id[User], maxBatchSize: Int, masterScoreThreshold: Float = 0f)(implicit session: RSession): Seq[UriRecommendation]
   def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI], feedback: UriRecommendationFeedback)(implicit session: RWSession): Boolean
-  def incrementDeliveredCount(recoId: Id[UriRecommendation])(implicit session: RWSession): Unit
+  def incrementDeliveredCount(recoId: Id[UriRecommendation], withLastPushedAt: Boolean = false)(implicit session: RWSession): Unit
   def cleanupLowMasterScoreRecos(limitNumRecosForUser: Int, before: DateTime)(implicit session: RWSession): Boolean
 }
 
@@ -112,6 +112,12 @@ class UriRecommendationRepoImpl @Inject() (
       (for (row <- byUser(userId)(rows) |> byUri(uriId)) yield (row.trashed, row.updatedAt)).update((feedback.trashed.get, currentDateTime)) > 0 else true
 
     clickedResult && keptResult && trashedResult
+  }
+
+  def incrementDeliveredCount(recoId: Id[UriRecommendation], withlastPushedAt: Boolean = false)(implicit session: RWSession): Unit = {
+    import StaticQuery.interpolation
+    if (withlastPushedAt) sqlu"UPDATE uri_recommendation SET delivered=delivered+1, last_pushed_at=$currentDateTime, updated_at=$currentDateTime WHERE id=$recoId".first()
+    else sqlu"UPDATE uri_recommendation SET delivered=delivered+1, updated_at=$currentDateTime WHERE id=$recoId".first()
   }
 
   def incrementDeliveredCount(recoId: Id[UriRecommendation])(implicit session: RWSession): Unit = {
