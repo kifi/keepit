@@ -10,11 +10,11 @@ import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.curator.model._
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ Keep, Name, SystemValueRepo, UriRecommendationScores, User, NormalizedURI }
+import com.keepit.model.{ UriRecommendationScores, User, NormalizedURI }
 import com.keepit.search.FakeSearchServiceClientModule
 import org.specs2.mutable.Specification
 
-import scala.concurrent.{ Future, Await }
+import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class RecommendationGenerationCommanderTest extends Specification with CuratorTestInjector with CuratorTestHelpers {
@@ -170,19 +170,33 @@ class RecommendationGenerationCommanderTest extends Specification with CuratorTe
 
     "re-compute recos for user" in {
       withDb(modules: _*) { implicit injector =>
-        val repo = inject[UriRecommendationRepo]
-        db.readWrite { implicit s =>
-          val recs = setupRecs()
-          repo.save(recs(0))
-          repo.save(recs(1))
-          repo.save(recs(2))
-        }
+
+        val (user1, user2, shoebox) = setup()
+        val user1Keeps = makeKeeps(user1, 5, shoebox)
+        val user2Keeps = makeKeeps(user2, 5, shoebox)
+        val seedCommander = inject[SeedIngestionCommander]
+        val seedItemRepo = inject[RawSeedItemRepo]
         val commander = inject[RecommendationGenerationCommander]
-        val futUnit = commander.resetUser(Id[User](42))
+        Await.result(seedCommander.ingestAllKeeps(), Duration(10, "seconds"))
+        db.readWrite { implicit session => seedItemRepo.assignSequenceNumbers(1000) }
+        commander.precomputeRecommendations()
+        val futUnit = commander.precomputeRecommendations()
         Await.result(futUnit, Duration(10, "seconds"))
-        val result = commander.getTopRecommendations(Id[User](42), 2)
+        val result = commander.getTopRecommendations(Id[User](42), 1)
         val recs = Await.result(result, Duration(10, "seconds"))
-        recs.size === 2
+        recs.size === 0
+
+        val resetFut = commander.resetUser(Id[User](42))
+        Await.result(resetFut, Duration(10, "seconds"))
+
+        val genStateRepo = inject[UserRecommendationGenerationStateRepo]
+        val re = db.readOnlyMaster { implicit session =>
+          genStateRepo.getByUserId(Id[User](42))
+        }
+        re.get.seq === SequenceNumber.ZERO
+        val newResult = commander.getTopRecommendations(Id[User](42), 1)
+        val newRecs = Await.result(newResult, Duration(10, "seconds"))
+        newRecs.size === 0
       }
     }
   }

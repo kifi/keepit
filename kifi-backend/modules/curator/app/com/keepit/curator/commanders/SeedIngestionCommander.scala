@@ -92,13 +92,9 @@ class SeedIngestionCommander @Inject() (
     }
   }
 
-  def getRawSeeds(userId: Id[User], uris: Seq[Id[NormalizedURI]]) =
-    db.readOnlyReplicaAsync { implicit s =>
-      rawSeedsRepo.getByUserIdAndUriIds(userId, uris)
-    }
-
-  def getPreviousSeeds(rawSeeds: Seq[RawSeedItem], userId: Id[User]): Future[Seq[SeedItem]] = {
+  def getPreviousSeeds(userId: Id[User], uris: Seq[Id[NormalizedURI]]): Future[Seq[SeedItem]] = {
     db.readOnlyReplicaAsync { implicit session =>
+      val rawSeeds = rawSeedsRepo.getByUserIdAndUriIds(userId, uris)
       rawSeeds.map { rawSeed =>
         val keepers =
           if (rawSeed.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {

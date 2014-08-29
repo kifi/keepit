@@ -171,8 +171,7 @@ class RecommendationGenerationCommander @Inject() (
   private def getRescoreSeedsForUser(userId: Id[User]): Future[Seq[SeedItem]] = {
     for {
       recos <- db.readOnlyReplicaAsync(implicit s => uriRecRepo.getByUserId(userId))
-      rawSeeds <- seedCommander.getRawSeeds(userId, recos.map(_.uriId))
-      seeds <- seedCommander.getPreviousSeeds(rawSeeds, userId)
+      seeds <- seedCommander.getPreviousSeeds(userId, recos.map(_.uriId))
     } yield {
       seeds
     }
@@ -342,16 +341,18 @@ class RecommendationGenerationCommander @Inject() (
       val state = getStateOfUser(userId)
 
       val seedsFuture = getRescoreSeedsForUser(userId)
-      val res: Future[Unit] = seedsFuture.flatMap { seeds =>
-        val batches = seeds.grouped(200)
-        FutureHelpers.sequentialExec(batches.toIterable)(batch => processSeeds(batch, state, userId, Set.empty))
-      }
+      specialCurators().flatMap { boostedKeepersSeq =>
+        val res: Future[Unit] = seedsFuture.flatMap { seeds =>
+          val batches = seeds.grouped(200)
+          FutureHelpers.sequentialExec(batches.toIterable)(batch => processSeeds(batch, state, userId, boostedKeepersSeq.toSet))
+        }
 
-      res.onFailure {
-        case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
-      }
+        res.onFailure {
+          case t: Throwable => airbrake.notify("Failure during recommendation precomputation", t)
+        }
 
-      res
+        res
+      }
     }
   }
 
