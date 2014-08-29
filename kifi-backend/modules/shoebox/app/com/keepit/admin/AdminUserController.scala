@@ -889,7 +889,7 @@ class AdminUserController @Inject() (
     NoContent
   }
 
-  def selectPrimaryEmails = AdminHtmlAction.authenticated { implicit request =>
+  def selectPrimaryEmails(readOnly: Boolean = true) = AdminHtmlAction.authenticated { implicit request =>
     var a = 0
     db.readWrite { implicit s =>
 
@@ -915,7 +915,7 @@ class AdminUserController @Inject() (
             val selectedEmail = pickAnEmail(user)
             if (selectedEmail.nonEmpty) {
               log.info("Setting primary email address %s of userId %s".format(selectedEmail.get, user.id.get.toString))
-              userRepo.save(user.copy(primaryEmail = selectedEmail))
+              if (!readOnly) userRepo.save(user.copy(primaryEmail = selectedEmail))
               a += 1
             }
 
@@ -928,7 +928,7 @@ class AdminUserController @Inject() (
                 val selectedEmail = pickAnEmail(user)
                 if (selectedEmail.nonEmpty) {
                   log.info("Setting primary email address %s of userId %s".format(selectedEmail.get, user.id.get.toString))
-                  userRepo.save(user.copy(primaryEmail = selectedEmail))
+                  if (!readOnly) userRepo.save(user.copy(primaryEmail = selectedEmail))
                   a += 1
                 }
 
