@@ -82,7 +82,7 @@ class LibraryCommander @Inject() (
       case _ => {
         val exists = db.readOnlyReplica { implicit s => libraryRepo.getByNameAndUserId(ownerId, libAddReq.name) }
         exists match {
-          case Some(x) => Left(LibraryFail("library name already exists for user"))
+          case Some(lib) if lib.state == LibraryStates.ACTIVE => Left(LibraryFail("library name already exists for user"))
           case _ => {
             val (collaboratorIds, followerIds) = db.readOnlyReplica { implicit s =>
               val collabs = libAddReq.collaborators.map { x =>
@@ -99,13 +99,21 @@ class LibraryCommander @Inject() (
             val validSlug = LibrarySlug(libAddReq.slug)
 
             val library = db.readWrite { implicit s =>
-              val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
-                visibility = validVisibility, slug = validSlug, kind = LibraryKind.USER_CREATED, memberCount = 1))
-              val libId = lib.id.get
-              libraryMembershipRepo.save(LibraryMembership(libraryId = libId, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
-              lib
+              libraryRepo.getOpt(ownerId, validSlug) match {
+                case None =>
+                  val lib = libraryRepo.save(Library(ownerId = ownerId, name = libAddReq.name, description = libAddReq.description,
+                    visibility = validVisibility, slug = validSlug, kind = LibraryKind.USER_CREATED, memberCount = 1))
+                  libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
+                  lib
+                case Some(lib) =>
+                  val newLib = libraryRepo.save(lib.copy(state = LibraryStates.ACTIVE))
+                  libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId) match {
+                    case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, showInSearch = true))
+                    case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE))
+                  }
+                  newLib
+              }
             }
-
             val bulkInvites1 = for (c <- collaboratorIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = Some(c), access = LibraryAccess.READ_WRITE)
             val bulkInvites2 = for (c <- followerIds) yield LibraryInvite(libraryId = library.id.get, ownerId = ownerId, userId = Some(c), access = LibraryAccess.READ_ONLY)
 
@@ -287,9 +295,11 @@ class LibraryCommander @Inject() (
   def inviteUsersToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess)]): Either[LibraryFail, Seq[(Either[ExternalId[User], EmailAddress], LibraryAccess)]] = {
     db.readWrite { implicit s =>
       val targetLib = libraryRepo.get(libraryId)
-      if (targetLib.ownerId != inviterId) {
+      if (targetLib.ownerId != inviterId)
         Left(LibraryFail("Not Owner"))
-      } else {
+      else if (targetLib.kind == LibraryKind.SYSTEM_MAIN || targetLib.kind == LibraryKind.SYSTEM_SECRET)
+        Left(LibraryFail("System generated MAIN/SECRET libraries cannot be invited to!"))
+      else {
         val successInvites = for (i <- inviteList) yield {
           val (inv, extId) = i._1 match {
             case Left(id) =>
@@ -311,9 +321,11 @@ class LibraryCommander @Inject() (
       val lib = libraryRepo.get(libraryId)
       val listInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
 
-      if (lib.visibility != LibraryVisibility.PUBLISHED && listInvites.isEmpty) {
+      if (lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET)
+        Left(LibraryFail("System generated MAIN/SECRET libraries cannot be joined by others!"))
+      else if (lib.visibility != LibraryVisibility.PUBLISHED && listInvites.isEmpty)
         Left(LibraryFail("cannot join - not published library"))
-      } else {
+      else {
         val maxAccess = if (listInvites.isEmpty) LibraryAccess.READ_ONLY else listInvites.sorted.last.access
         libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, showInSearch = true))
         listInvites.map(inv => libraryInviteRepo.save(inv.copy(state = LibraryInviteStates.ACCEPTED)))
