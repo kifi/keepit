@@ -27,6 +27,7 @@ class SearchController @Inject() (
     searcherFactory: MainSearcherFactory,
     userSearchFilterFactory: UserSearchFilterFactory,
     searchCommander: SearchCommander,
+    augmentationCommander: AugmentationCommander,
     userExperimentCommander: RemoteUserExperimentCommander) extends SearchServiceController {
 
   def distSearch() = Action(parse.tolerantJson) { request =>
@@ -103,6 +104,16 @@ class SearchController @Inject() (
     val userId = Id[User]((json \ "request").as[Long])
     val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
     Ok(Json.toJson(searchCommander.distLangFreqs(shards, userId).map { case (lang, freq) => lang.lang -> freq }))
+  }
+
+  def distAugmentation() = Action.async(parse.tolerantJson) { request =>
+    val json = request.body
+    val shardSpec = (json \ "shards").as[String]
+    val shards = (new ShardSpecParser).parse[NormalizedURI](shardSpec)
+    val augmentationRequest = (json \ "request").as[ItemAugmentationRequest]
+    augmentationCommander.distAugmentation(shards, augmentationRequest).map { augmentationResponse =>
+      Ok(Json.toJson(augmentationResponse))
+    }
   }
 
   //internal (from eliza/shoebox)
