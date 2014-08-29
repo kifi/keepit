@@ -1,16 +1,20 @@
 package com.keepit.controllers.ext
 
-import play.api.libs.json._
 import com.google.inject.Inject
+import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.controller.{ SearchServiceController, BrowserExtensionController, ActionAuthenticator }
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.model.ExperimentType.ADMIN
+import com.keepit.search.engine.result.KifiPlainResult
 import com.keepit.search.result.DecoratedResult
 import com.keepit.search.result.KifiSearchResult
 import com.keepit.search.result.ResultUtil
 import com.keepit.search.util.IdFilterCompressor
 import com.keepit.search.SearchCommander
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.json._
+import scala.concurrent.Future
 
 class ExtSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
@@ -59,9 +63,31 @@ class ExtSearchController @Inject() (
 
     val debugOpt = if (debug.isDefined && request.experiments.contains(ADMIN)) debug else None // debug is only for admin
 
-    val decoratedResult = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, debugOpt, withUriSummary)
+    val plainResultFuture = searchCommander.search2(userId, acceptLangs, request.experiments, query, filter, maxHits, lastUUIDStr, context, predefinedConfig = None, debugOpt)
 
-    Ok(decoratedResult.json).withHeaders("Cache-Control" -> "private, max-age=10")
+    val plainResultEnumerator = Enumerator.flatten(plainResultFuture.map(r => Enumerator(toKifiSearchResultV2(r)))(immediate))
+
+    var decorationFutures = Seq.empty[Future[JsObject]]
+
+    // TODO: augmentation
+    // decorationFutures += (plainResultFuture.map { ... })
+
+    // TODO: URI Summary
+    // if (withUriSummary) decorationFutures += (plainResultFuture.map { ... })
+
+    val decorationEnumerator = reactiveEnumerator(decorationFutures)
+
+    val resultEnumerator = plainResultEnumerator.andThen(decorationEnumerator).andThen(Enumerator.eof)
+
+    Ok.chunked(resultEnumerator).withHeaders("Cache-Control" -> "private, max-age=10")
+  }
+
+  @inline
+  private def reactiveEnumerator[T](futureSeq: Seq[Future[T]]) = {
+    // Returns successful results of Futures in the order they are completed, reactively
+    Enumerator.interleave(futureSeq.map { future =>
+      Enumerator.flatten(future.map(r => Enumerator(r))(immediate))
+    })
   }
 
   //external (from the extension)
@@ -84,6 +110,19 @@ class ExtSearchController @Inject() (
       IdFilterCompressor.fromSetToBase64(decoratedResult.idFilter),
       Nil,
       decoratedResult.experts).json
+  }
+
+  private def toKifiSearchResultV2(KifiPlainResult: KifiPlainResult): JsObject = {
+    KifiSearchResult.v2(
+      KifiPlainResult.uuid,
+      KifiPlainResult.query,
+      KifiPlainResult.hits,
+      KifiPlainResult.myTotal,
+      KifiPlainResult.friendsTotal,
+      KifiPlainResult.mayHaveMoreHits,
+      KifiPlainResult.show,
+      KifiPlainResult.searchExperimentId,
+      IdFilterCompressor.fromSetToBase64(KifiPlainResult.idFilter)).json
   }
 }
 

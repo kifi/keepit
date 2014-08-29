@@ -54,9 +54,13 @@ class KifiShardHit(val json: JsObject) extends AnyVal {
   def score: Float = (json \ "score").as[Float]
   def visibility: Int = (json \ "visibility").as[Int]
   def libraryId: Option[Long] = (json \ "libId").asOpt[Long]
-  def title: String = (json \ "title").as[String]
-  def url: String = (json \ "url").as[String]
-  def keepId: Option[ExternalId[Keep]] = (json \ "keepId").asOpt[String].map(ExternalId[Keep])
+  def title: String = titleJson.as[String]
+  def url: String = urlJson.as[String]
+  def keepId: Option[ExternalId[Keep]] = keepIdJson.asOpt[String].map(ExternalId[Keep])
+
+  def titleJson: JsValue = json \ "title"
+  def urlJson: JsValue = json \ "url"
+  def keepIdJson: JsValue = json \ "keepId"
 
   def set(key: String, value: JsValue): KifiShardHit = {
     new KifiShardHit((json - key) + (key -> value))

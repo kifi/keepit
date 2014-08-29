@@ -200,8 +200,7 @@ class FixedResultSearchCommander extends SearchCommander {
     lastUUIDStr: Option[String],
     context: Option[String],
     predefinedConfig: Option[SearchConfig] = None,
-    debug: Option[String] = None,
-    withUriSummary: Boolean = false) = ???
+    debug: Option[String] = None) = ???
 
   def distSearch2(
     shards: Set[Shard[NormalizedURI]],
