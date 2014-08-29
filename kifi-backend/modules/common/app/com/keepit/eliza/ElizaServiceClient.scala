@@ -136,7 +136,7 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def checkBatchThreads(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    call(Eliza.internal.checkUrisChatted(userId), body = Json.toJson(uriIds)).map { r =>
+    call(Eliza.internal.checkUrisDiscussed(userId), body = Json.toJson(uriIds)).map { r =>
       r.json.as[Seq[Boolean]]
     }
   }

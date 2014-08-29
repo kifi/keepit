@@ -159,7 +159,7 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
           userThreadRepo.save(threads(2))
 
           val uris = Seq(Id[NormalizedURI](1), Id[NormalizedURI](2), Id[NormalizedURI](3))
-          val result = userThreadRepo.checkUrisChatted(Id[User](42), uris)
+          val result = userThreadRepo.checkUrisDiscussed(Id[User](42), uris)
           result.size === 2
         }
       }

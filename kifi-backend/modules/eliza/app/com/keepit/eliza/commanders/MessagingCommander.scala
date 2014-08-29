@@ -140,8 +140,8 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def checkUrisChatted(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    db.readOnlyReplicaAsync { implicit session => userThreadRepo.checkUrisChatted(userId, uriIds) }
+  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
+    db.readOnlyReplicaAsync { implicit session => userThreadRepo.checkUrisDiscussed(userId, uriIds) }
   }
 
   def deleteUserThreadsForMessageId(id: Id[Message]): Unit = {
