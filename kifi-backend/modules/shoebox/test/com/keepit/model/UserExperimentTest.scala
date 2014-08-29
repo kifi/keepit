@@ -126,4 +126,20 @@ class UserExperimentTest extends Specification with ShoeboxTestInjector {
       secondGen(userId, Set(conditionExp)) === None
     }
   }
+
+  "probability density" should {
+    "work using binary search or linear search" in {
+      val n = 64
+      val p = 1.0 / n
+      val eps = 1.0 / (2 * n)
+      val density = ProbabilityDensity((0 until n - 1).map { i => (i, p) })
+      (0 until n - 1).map { i =>
+        val x = eps + i * p
+        density.linearSample(x).get === i
+        density.binarySample(x).get === i
+      }
+      density.linearSample(1.0 - eps) === None
+      density.binarySample(1.0 - eps) === None
+    }
+  }
 }
