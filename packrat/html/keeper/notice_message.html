@@ -6,7 +6,7 @@
   {{/picturedParticipants}}
   </div>
   {{#uriSummary.imageUrl}}
-    <img class="kifi-notice-site-img" src="{{uriSummary.imageUrl}}"/>
+    <div class="kifi-notice-site-img" style="background-image:url('{{uriSummary.imageUrl}}')"></div>
   {{/uriSummary.imageUrl}}
   <div class="kifi-notice-names{{#nameSeriesLength}} kifi-notice-names-{{nameSeriesLength}}{{/nameSeriesLength}}">
     {{#isSelf}}
