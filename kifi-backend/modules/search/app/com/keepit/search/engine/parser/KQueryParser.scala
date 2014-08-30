@@ -34,10 +34,9 @@ class KQueryParser(
     override val lang: Lang = qp.analyzer.lang
   }
 
-  private[this] val proximityBoost = config.asFloat("proximityBoost")
-  private[this] val semanticBoost = config.asFloat("semanticBoost")
   private[this] val phraseBoost = config.asFloat("phraseBoost")
   private[this] val homePageBoost = config.asFloat("homePageBoost")
+  private[this] val proximityBoost = config.asFloat("proximityBoost")
   private[this] val proximityGapPenalty = config.asFloat("proximityGapPenalty")
   private[this] val proximityThreshold = config.asFloat("proximityThreshold")
   private[this] val proximityPowerFactor = config.asFloat("proximityPowerFactor")
@@ -50,17 +49,10 @@ class KQueryParser(
     val builderOpt = parser.parse(queryText).map { query =>
       val numTextQueries = parser.textQueries.size
 
-      if (numTextQueries <= 0 || numTextQueries > ProximityQuery.maxLength) { // no terms or too many terms, skip proximity and semantic vector
+      if (numTextQueries <= 0 || numTextQueries > ProximityQuery.maxLength) { // no terms or too many terms, skip proximity
         new QueryEngineBuilder(query)
       } else {
         val phrasesFuture = if (numTextQueries > 1 && phraseBoost > 0.0f) detectPhrases(queryText, parser.lang) else null
-
-        if (semanticBoost > 0.0f) {
-          parser.textQueries.foreach { textQuery =>
-            textQuery.setSemanticBoost(semanticBoost)
-            textQuery.stems.map { stemTerm => textQuery.addSemanticVectorQuery("sv", stemTerm.text) }
-          }
-        }
 
         val engBuilder = new QueryEngineBuilder(query)
 

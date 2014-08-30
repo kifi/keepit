@@ -120,36 +120,6 @@ class SendgridCommanderTest extends Specification with ShoeboxTestInjector {
         }
       }
 
-      "click events for digest emails" in {
-        withDb(modules: _*) { implicit injector =>
-          val commander = inject[SendgridCommander]
-          val emailAddrRepo = inject[UserEmailAddressRepo]
-          val emailRepo = inject[ElectronicMailRepo]
-          val curator = inject[CuratorServiceClient].asInstanceOf[FakeCuratorServiceClientImpl]
-
-          val (user: User, emailAddr: UserEmailAddress, email: ElectronicMail) = {
-            val tuple = setup(db)
-            val updatedEmail = db.readWrite { implicit rw =>
-              emailRepo.save(tuple._3.copy(category = NotificationCategory.User.DIGEST, senderUserId = tuple._1.id))
-            }
-            tuple.copy(_3 = updatedEmail)
-          }
-
-          val uriRepo = inject[NormalizedURIRepo]
-          val uri = db.readWrite { implicit rw =>
-            uriRepo.save(NormalizedURI(url = "https://www.kifi.com", urlHash = UrlHash("https://www.kifi.com")))
-          }
-          val sgEvent = mockSendgridEvent(email.externalId).copy(url = Some("https://www.kifi.com"))
-
-          commander.processNewEvents(Seq(sgEvent))
-
-          val (actualUserId, actualUriId, actualFeedback) = curator.updatedUriRecommendationFeedback.head
-          actualUriId === uri.id.get
-          actualUserId === user.id.get
-          actualFeedback === UriRecommendationFeedback(clicked = Some(true), kept = None)
-        }
-      }
-
       "click events confirm unconfirmed emails" in {
         withDb(modules: _*) { implicit injector =>
           val commander = inject[SendgridCommander]

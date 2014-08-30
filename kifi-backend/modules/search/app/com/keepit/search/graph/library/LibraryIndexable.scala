@@ -11,17 +11,21 @@ object LibraryFields {
   val descriptionField = "d"
   val descriptionStemmedField = "ds"
   val visibilityField = "v"
-  val discoverableOwnerField = "do"
-  val secretOwnerField = "so"
+  val ownerField = "o"
   val usersField = "u"
-  val hiddenUsersField = "h"
+  val allUsersField = "a"
   val recordField = "rec"
 
-  import LibraryVisibility.{ SECRET, DISCOVERABLE, PUBLISHED }
-  @inline def toNumericCode(visibility: LibraryVisibility) = visibility match {
-    case SECRET => 0
-    case DISCOVERABLE => 1
-    case PUBLISHED => 2
+  object Visibility {
+    val SECRET = 0
+    val DISCOVERABLE = 1
+    val PUBLISHED = 2
+
+    @inline def toNumericCode(visibility: LibraryVisibility) = visibility match {
+      case LibraryVisibility.SECRET => SECRET
+      case LibraryVisibility.DISCOVERABLE => DISCOVERABLE
+      case LibraryVisibility.PUBLISHED => PUBLISHED
+    }
   }
 
   val decoders: Map[String, FieldDecoder] = Map.empty
@@ -33,14 +37,14 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) ex
   val sequenceNumber = library.seq
   val isDeleted: Boolean = memberships.isEmpty
 
-  private val (users, hiddenUsers) = {
-    var hiddenUsers = Set.empty[Id[User]]
-    val users = memberships.map { membership =>
+  private val (users, allUsers) = {
+    var users = Set.empty[Id[User]]
+    val allUsers = memberships.map { membership =>
       require(membership.libraryId == id, s"This membership is unrelated to library $id: $membership")
-      if (!membership.showInSearch) { hiddenUsers += membership.userId }
+      if (membership.showInSearch) { users += membership.userId }
       membership.userId
-    }
-    (users, hiddenUsers)
+    }.toSet
+    (users, allUsers)
   }
 
   override def buildDocument = {
@@ -57,10 +61,11 @@ class LibraryIndexable(library: Library, memberships: Seq[LibraryMembership]) ex
       doc.add(buildTextField(descriptionStemmedField, description, DefaultAnalyzer.getAnalyzerWithStemmer(descriptionLang)))
     }
 
+    doc.add(buildKeywordField(ownerField, library.ownerId.id.toString))
     doc.add(buildIteratorField(usersField, users.iterator) { id => id.id.toString })
-    doc.add(buildIteratorField(hiddenUsersField, hiddenUsers.iterator) { id => id.id.toString })
+    doc.add(buildIteratorField(allUsersField, allUsers.iterator) { id => id.id.toString })
 
-    doc.add(buildLongValueField(visibilityField, toNumericCode(library.visibility)))
+    doc.add(buildLongValueField(visibilityField, Visibility.toNumericCode(library.visibility)))
 
     doc.add(buildBinaryDocValuesField(recordField, LibraryRecord(library)))
 

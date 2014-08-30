@@ -68,7 +68,7 @@ class BookmarkStore(
             urlId = Id[URL](-1),
             createdAt = new DateTime(rec.createdAt),
             uriId = rec.uriId,
-            isPrivate = rec.isPrivate,
+            visibility = Keep.isPrivateToVisibility(rec.isPrivate), // todo(andrew/léo/yasuhiro): Fix to include real library visibility
             userId = userId,
             source = BookmarkStore.bookmarkSource,
             libraryId = None // todo(andrew/léo/yasuhiro): Fix to include real library

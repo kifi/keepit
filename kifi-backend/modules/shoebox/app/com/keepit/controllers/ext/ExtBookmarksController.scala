@@ -5,6 +5,7 @@ import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier, HealthcheckPlugin }
@@ -55,7 +56,8 @@ class ExtBookmarksController @Inject() (
   rawKeepFactory: RawKeepFactory,
   searchClient: SearchServiceClient,
   normalizedURIInterner: NormalizedURIInterner,
-  clock: Clock)
+  clock: Clock,
+  implicit val publicIdConfig: PublicIdConfiguration)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def removeTag(id: ExternalId[Collection]) = JsonAction.authenticatedParseJson { request =>
@@ -113,7 +115,7 @@ class ExtBookmarksController @Inject() (
       }
     } map { bookmark =>
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-      bookmarksCommander.unkeepMultiple(Seq(KeepInfo.fromBookmark(bookmark)), request.userId).headOption match {
+      bookmarksCommander.unkeepMultiple(Seq(KeepInfo.fromKeep(bookmark)), request.userId).headOption match {
         case Some(deactivatedKeepInfo) =>
           Ok(Json.obj("removedKeep" -> deactivatedKeepInfo))
         case None =>

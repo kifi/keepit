@@ -3,7 +3,7 @@
 angular.module('kifi')
 
 .directive('kfNav', [
-  '$location', 'util', 'keepService', 'friendService', 'tagService', 'profileService' /* only needed for libraries experiment */, 'libraryService',
+  '$location', 'util', 'keepService', 'friendService', 'tagService', 'profileService', /* only needed for libraries experiment */ 'libraryService',
   function ($location, util, keepService, friendService, tagService, profileService, libraryService) {
     return {
       //replace: true,
@@ -24,9 +24,9 @@ angular.module('kifi')
         }, function (n) {
           scope.librariesEnabled = n || false;
           if (scope.librariesEnabled) {
-            libraryService.fetchLibrarySummaries().then(function () {
-              scope.libraries = libraryService.libraries;
-              scope.invited = libraryService.invited;
+            libraryService.fetchLibrarySummaries().then(function (summaries) {
+              scope.libraries = summaries.libraries;
+              scope.invited = summaries.invited;
             });
           }
         });
@@ -48,6 +48,10 @@ angular.module('kifi')
         scope.isActive = function (path) {
           var loc = $location.path();
           return loc === path || util.startsWith(loc, path + '/');
+        };
+
+        scope.inRecoExperiment = function () {
+          return profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('recos_beta') >= 0;
         };
       }
     };

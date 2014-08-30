@@ -7,6 +7,7 @@ import com.google.inject.{ Inject, Provider, Singleton }
 import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.URI
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.model._
 import com.keepit.scraper._
@@ -73,7 +74,12 @@ class ScrapeProcessorActorImpl @Inject() (
                 case Success(requests) =>
                   log.info(s"[ScrapeProcessorActorImpl.pull(${inst.id.id})] assigned (${requests.length}) scraping tasks: ${requests.map(r => s"[uriId=${r.uri.id},infoId=${r.scrapeInfo.id},url=${r.uri.url}]").mkString(",")} ")
                   for (sr <- requests) {
-                    asyncScrape(sr.uri, sr.scrapeInfo, sr.pageInfoOpt, sr.proxyOpt)
+                    val uri = sr.uri
+                    URI.parse(uri.url) match {
+                      case Success(_) => asyncScrape(uri, sr.scrapeInfo, sr.pageInfoOpt, sr.proxyOpt)
+                      case Failure(e) => throw new Exception(s"url can not be parsed for $uri in scrape request $sr", e)
+                    }
+
                   }
               }(ExecutionContext.fj)
             }

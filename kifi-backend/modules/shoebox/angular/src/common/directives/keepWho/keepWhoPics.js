@@ -68,18 +68,17 @@ angular.module('kifi')
 ])
 
 .directive('kfKeepWhoPics', [
-  'keepWhoService',
-  function (keepWhoService) {
+  'keepWhoService', 'profileService',
+  function (keepWhoService, profileService) {
     return {
       restrict: 'A',
       replace: true,
       templateUrl: 'common/directives/keepWho/keepWhoPics.tpl.html',
       scope: {
-        me: '=',
-        keepers: '=',
         keep: '='
       },
       link: function (scope) {
+        scope.me = profileService.me;
         scope.getPicUrl = keepWhoService.getPicUrl;
         scope.getName = keepWhoService.getName;
         scope.isMyBookmark = scope.keep && scope.keep.isMyBookmark;

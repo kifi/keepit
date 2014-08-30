@@ -1,5 +1,6 @@
 package com.keepit.search.engine
 
+import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
@@ -8,15 +9,15 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.akka.SafeFuture
 import com.keepit.search._
 import com.keepit.search.engine.parser.KQueryParser
-import com.keepit.search.graph.keep.ShardedKeepIndexer
+import com.keepit.search.graph.keep.{ KeepFields, ShardedKeepIndexer }
 import com.keepit.search.graph.library.{ LibraryFields, LibraryIndexer }
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.phrasedetector.PhraseDetector
+import com.keepit.search.util.LongArraySet
 import org.apache.lucene.index.Term
-import scala.collection.mutable.ArrayBuffer
+import org.apache.lucene.search.TermQuery
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -31,8 +32,6 @@ class SearchFactory @Inject() (
     shardedKeepIndexer: ShardedKeepIndexer,
     libraryIndexer: LibraryIndexer,
     userGraphsSearcherFactory: UserGraphsSearcherFactory,
-    shardedUriGraphIndexer: ShardedURIGraphIndexer,
-    shardedCollectionIndexer: ShardedCollectionIndexer,
     phraseDetector: PhraseDetector,
     resultClickTracker: ResultClickTracker,
     clickHistoryTracker: ClickHistoryTracker,
@@ -43,7 +42,7 @@ class SearchFactory @Inject() (
     implicit private val fortyTwoServices: FortyTwoServices) extends Logging {
 
   private[this] val phraseDetectionReqConsolidator = new RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]](10 minutes)
-  private[this] val libraryIdsReqConsolidator = new RequestConsolidator[Id[User], (Seq[Long], Seq[Long], Seq[Long])](10 minutes)
+  private[this] val libraryIdsReqConsolidator = new RequestConsolidator[Id[User], (Set[Long], Set[Long])](3 seconds)
 
   def getKifiSearch(
     shards: Set[Shard[NormalizedURI]],
@@ -55,9 +54,11 @@ class SearchFactory @Inject() (
     filter: SearchFilter,
     config: SearchConfig): Seq[KifiSearch] = {
 
-    val libraryIdsFuture = getLibraryIdsFuture(userId)
     val clickHistoryFuture = mainSearcherFactory.getClickHistoryFuture(userId)
     val clickBoostsFuture = mainSearcherFactory.getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
+
+    val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryId)
+    val friendIdsFuture = getFriendIdsFuture(userId)
 
     val parser = new KQueryParser(
       DefaultAnalyzer.getAnalyzer(lang1),
@@ -72,24 +73,26 @@ class SearchFactory @Inject() (
 
     parser.parse(queryString) match {
       case Some(engBuilder) =>
+
+        // if this is a library restricted search, add a library filter query
+        filter.libraryId.map { libId => engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, libId.id.toString))) }
+
         shards.toSeq.map { shard =>
           val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
           val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
-          val eng = engBuilder.build()
 
           val timeLogs = new SearchTimeLogs()
           timeLogs.queryParsing = parser.totalParseTime
 
           new KifiSearch(
             userId,
-            lang1,
-            lang2,
             numHitsToReturn,
             filter,
             config,
-            eng,
+            engBuilder,
             articleSearcher,
             keepSearcher,
+            friendIdsFuture,
             libraryIdsFuture,
             clickBoostsFuture,
             clickHistoryFuture,
@@ -101,18 +104,82 @@ class SearchFactory @Inject() (
     }
   }
 
-  def getLibraryIdsFuture(userId: Id[User]): Future[(Seq[Long], Seq[Long], Seq[Long])] = libraryIdsReqConsolidator(userId) { userId =>
-    userGraphsSearcherFactory(userId).getSearchFriendsFuture().map { friendIds =>
-      val searcher = libraryIndexer.getSearcher
-      val myLibIds = searcher.findAllIds(new Term(LibraryFields.discoverableOwnerField, userId.id.toString))
-      val mySecretLibIds = searcher.findAllIds(new Term(LibraryFields.secretOwnerField, userId.id.toString))
+  def getFriendIdsFuture(userId: Id[User]): Future[Set[Long]] = userGraphsSearcherFactory(userId).getSearchFriendsFuture()
 
-      val friendLibIds = new ArrayBuffer[Long]
-      friendIds.foreach { friendId =>
-        searcher.findAllIds(new Term(LibraryFields.discoverableOwnerField, friendId.toString), friendLibIds)
+  def getLibraryIdsFuture(userId: Id[User], libraryRestriction: Option[Id[Library]]): Future[(Set[Long], Set[Long], Set[Long])] = {
+
+    val trustedPublishedLibIds = libraryRestriction match {
+      case Some(libId) => LongArraySet.from(Array(libId.id)) // if this library is not public, it is ignored by the engine
+      case None => LongArraySet.empty // we may want to get a set of published libraries that are trusted (or featured) somehow
+    }
+
+    val future = libraryIdsReqConsolidator(userId) { userId =>
+      userGraphsSearcherFactory(userId).getSearchFriendsFuture().map { friendIds =>
+        val searcher = libraryIndexer.getSearcher
+
+        val myOwnLibIds = LongArraySet.from(searcher.findAllIds(new Term(LibraryFields.ownerField, userId.id.toString)).toArray)
+        val memberLibIds = LongArraySet.from(searcher.findAllIds(new Term(LibraryFields.usersField, userId.id.toString)).toArray)
+
+        (myOwnLibIds, memberLibIds) // myOwnLibIds is a subset of memberLibIds
       }
+    }
 
-      (mySecretLibIds, myLibIds, friendLibIds)
+    future.map { case (myOwnLibIds, memberLibIds) => (myOwnLibIds, memberLibIds, trustedPublishedLibIds) }(immediate)
+  }
+
+  def getNonUserSearch(
+    shards: Set[Shard[NormalizedURI]],
+    libId: Id[Library],
+    queryString: String,
+    lang1: Lang,
+    lang2: Option[Lang],
+    numHitsToReturn: Int,
+    filter: SearchFilter,
+    config: SearchConfig): Seq[NonUserSearch] = {
+
+    // this non-user is treat as if he/she is a member of the library
+    val libraryIdsFuture = Future.successful((LongArraySet.empty, LongArraySet.from(Array(libId.id)), LongArraySet.empty))
+    val friendIdsFuture = Future.successful(LongArraySet.empty)
+
+    val parser = new KQueryParser(
+      DefaultAnalyzer.getAnalyzer(lang1),
+      DefaultAnalyzer.getAnalyzerWithStemmer(lang1),
+      lang2.map(DefaultAnalyzer.getAnalyzer),
+      lang2.map(DefaultAnalyzer.getAnalyzerWithStemmer),
+      config,
+      phraseDetector,
+      phraseDetectionReqConsolidator,
+      monitoredAwait
+    )
+
+    parser.parse(queryString) match {
+      case Some(engBuilder) =>
+
+        // this is a non-user, library restricted, search, add a library filter query
+        engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, libId.id.toString)))
+
+        shards.toSeq.map { shard =>
+          val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
+          val keepSearcher = shardedKeepIndexer.getIndexer(shard).getSearcher
+
+          val timeLogs = new SearchTimeLogs()
+          timeLogs.queryParsing = parser.totalParseTime
+
+          new NonUserSearch(
+            libId,
+            numHitsToReturn,
+            filter,
+            config,
+            engBuilder,
+            articleSearcher,
+            keepSearcher,
+            friendIdsFuture,
+            libraryIdsFuture,
+            monitoredAwait,
+            timeLogs
+          )
+        }
+      case None => Seq.empty[NonUserSearch]
     }
   }
 }

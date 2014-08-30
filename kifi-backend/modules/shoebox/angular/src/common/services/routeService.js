@@ -85,6 +85,15 @@ angular.module('kifi')
       adHocRecos: function (howMany) {
         return route('/recos/adHoc?n=' + howMany);
       },
+      recos: function (opts) {
+        return route('/recos/top?more=' + opts.more + '&recency=' + opts.recency);
+      },
+      recosPublic: function () {
+        return route('/recos/public');
+      },
+      recoFeedback: function (urlId) {
+        return route('/recos/feedback?id=' + urlId);
+      },
       basicUserInfo: function (id, friendCount) {
         friendCount = friendCount ? 1 : 0;
         return route('/user/' + id + '?friendCount=' + friendCount);

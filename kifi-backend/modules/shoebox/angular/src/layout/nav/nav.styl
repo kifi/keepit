@@ -1,15 +1,7 @@
 .kf-nav-item
-  padding: 0 0 15px 0
+  padding: 0 0 5px 0
   font-size: 13px
   user-select: none
-
-  &.active
-
-    .sprite-my-keeps-library
-        sprite2x($my-keeps-library-active)
-
-    .kf-nav-count
-      color: countColor
 
 .kf-nav-name
 .kf-nav-count
@@ -35,12 +27,16 @@
   &.empty
     display: none
 
-.kf-nav-item:hover
+.kf-nav-keeps:hover
   .sprite-my-keeps-library
     sprite2x($my-keeps-library-active)
 
+.kf-nav-recos:hover
+  .sprite-clover-small
+    sprite2x($clover-small-active)
+
 .kf-nav-group
-  padding: 20px 0 10px 0
+  padding: 20px 0
 
 .kf-nav-group-name
   margin: 0 40px 0 20px

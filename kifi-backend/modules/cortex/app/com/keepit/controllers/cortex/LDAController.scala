@@ -1,6 +1,7 @@
 package com.keepit.controllers.cortex
 
 import com.google.inject.Inject
+import com.keepit.common.logging.Logging
 import play.api.mvc.Action
 import play.api.libs.json._
 import com.keepit.common.controller.CortexServiceController
@@ -16,7 +17,7 @@ import com.keepit.common.db.Id
 class LDAController @Inject() (
   lda: LDACommander,
   infoCommander: LDAInfoCommander)
-    extends CortexServiceController {
+    extends CortexServiceController with Logging {
 
   def numOfTopics() = Action { request =>
     Ok(JsNumber(lda.numOfTopics))
@@ -76,9 +77,13 @@ class LDAController @Inject() (
     val js = request.body
     val userId = (js \ "userId").as[Id[User]]
     val uriIds = (js \ "uriIds").as[Seq[Id[NormalizedURI]]]
-    val scores1 = lda.batchUserURIsInterests(userId, uriIds)
-    val scores2 = lda.batchGaussianUserURIsInterests(userId, uriIds)
-    val scores = (scores1 zip scores2).map { case (s1, s2) => LDAUserURIInterestScores(s2.global, s1.recency) }
+
+    val t1 = System.currentTimeMillis
+
+    val scores = lda.batchUserURIsInterests(userId, uriIds)
+
+    val t2 = System.currentTimeMillis
+    log.info(s"batch uris scoring for user = ${userId}, num of uris: ${uriIds.size}, took ${t2 - t1} milli seconds")
     Ok(Json.toJson(scores))
   }
 
@@ -125,7 +130,10 @@ class LDAController @Inject() (
     val js = request.body
     val userId = (js \ "user").as[Id[User]]
     val uris = (js \ "uris").as[Seq[Id[NormalizedURI]]]
+    val t1 = System.currentTimeMillis
     val explain = lda.explainFeed(userId, uris)
+    val t2 = System.currentTimeMillis
+    log.info(s"batch explain feeds for user = ${userId}, num of uris: ${uris.size}, took ${t2 - t1} milli seconds")
     Ok(Json.toJson(explain))
   }
 

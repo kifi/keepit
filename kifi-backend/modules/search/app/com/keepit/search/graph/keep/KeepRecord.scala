@@ -5,10 +5,10 @@ import com.keepit.model.Keep
 import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 import org.apache.lucene.store.{ InputStreamDataInput, OutputStreamDataOutput }
 
-case class KeepRecord(title: Option[String], url: String, createdAt: Long, externalId: ExternalId[Keep])
+case class KeepRecord(title: Option[String], url: String, createdAt: Long, libraryId: Long, externalId: ExternalId[Keep])
 
 object KeepRecord {
-  def apply(keep: Keep): KeepRecord = KeepRecord(keep.title, keep.url, keep.createdAt.getMillis, keep.externalId)
+  def apply(keep: Keep): KeepRecord = KeepRecord(keep.title, keep.url, keep.createdAt.getMillis, keep.libraryId.map(_.id).getOrElse(-1L), keep.externalId)
 
   implicit def toByteArray(record: KeepRecord): Array[Byte] = {
     val baos = new ByteArrayOutputStream()
@@ -18,6 +18,7 @@ object KeepRecord {
     out.writeString(record.title.getOrElse(""))
     out.writeString(record.url)
     out.writeLong(record.createdAt)
+    out.writeLong(record.libraryId)
     out.writeString(record.externalId.id)
     out.close()
     baos.close()
@@ -36,7 +37,8 @@ object KeepRecord {
     val title = Some(in.readString()).filter(_.nonEmpty)
     val url = in.readString()
     val createdAt = in.readLong()
+    val libraryId = in.readLong()
     val id = ExternalId[Keep](in.readString())
-    KeepRecord(title, url, createdAt, id)
+    KeepRecord(title, url, createdAt, libraryId, id)
   }
 }

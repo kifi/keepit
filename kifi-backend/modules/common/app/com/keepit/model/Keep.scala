@@ -18,11 +18,11 @@ case class Keep(
     externalId: ExternalId[Keep] = ExternalId(),
     title: Option[String] = None,
     uriId: Id[NormalizedURI],
-    isPrimary: Boolean = true,
+    isPrimary: Boolean = true, // trick to let us have multiple inactive Keeps while keeping integrity constraints
     urlId: Id[URL],
     url: String, // denormalized for efficiency
     bookmarkPath: Option[String] = None,
-    isPrivate: Boolean = false, // This represents if the Keep is discoverable in search or the feed.
+    visibility: LibraryVisibility, // denormalized from this keep’s library
     userId: Id[User],
     state: State[Keep] = KeepStates.ACTIVE,
     source: KeepSource,
@@ -34,9 +34,12 @@ case class Keep(
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
+  // todo(andrew): deprecate this field (right now, it just produces too many warnings to be of use)
+  //@deprecated("Use `visibility` instead", "2014-08-25")
+  def isPrivate = Keep.visibilityToIsPrivate(visibility)
+
   def withId(id: Id[Keep]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def withPrivate(isPrivate: Boolean) = copy(isPrivate = isPrivate)
   def withPrimary(isPrimary: Boolean) = copy(isPrimary = isPrimary)
 
   def withActive(isActive: Boolean) = copy(state = isActive match {
@@ -57,18 +60,42 @@ case class Keep(
   def isActive: Boolean = state == KeepStates.ACTIVE
 
   def isDiscoverable = !isPrivate
+
+  private var _deprecatedIsPrivate = false
+  def deprecatedIsPrivate: Boolean = _deprecatedIsPrivate
+  private def setDeprecatedIsPrivate(dbColumnField: Boolean) = { _deprecatedIsPrivate = dbColumnField; _deprecatedIsPrivate }
 }
 
 object Keep {
 
-  // is_primary: trueOrNull in db
-  def applyWithPrimary(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep], title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], urlId: Id[URL], url: String, bookmarkPath: Option[String], isPrivate: Boolean, userId: Id[User], state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]], seq: SequenceNumber[Keep], libraryId: Option[Id[Library]]) =
-    Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url, bookmarkPath, isPrivate, userId, state, source, kifiInstallation, seq, libraryId)
-  def unapplyWithPrimary(k: Keep) = {
-    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url, k.bookmarkPath, k.isPrivate, k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId)
+  // If you see this after library migration is done, tell Andrew to clean up his messes.
+  def isPrivateToVisibility(isPrivate: Boolean) = {
+    if (isPrivate) {
+      LibraryVisibility.SECRET
+    } else {
+      LibraryVisibility.DISCOVERABLE // This is not always true (post migration)! Do not use this!
+    }
   }
 
-  implicit def bookmarkFormat = (
+  def visibilityToIsPrivate(visibility: LibraryVisibility) = {
+    visibility match {
+      case LibraryVisibility.PUBLISHED | LibraryVisibility.DISCOVERABLE => false
+      case LibraryVisibility.SECRET => true
+    }
+  }
+
+  // is_primary: trueOrNull in db
+  def applyWithPrimary(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep], title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean], urlId: Id[URL], url: String, bookmarkPath: Option[String], isPrivate: Boolean, userId: Id[User], state: State[Keep], source: KeepSource, kifiInstallation: Option[ExternalId[KifiInstallation]], seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: Option[LibraryVisibility]) = {
+    val k = Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), urlId, url, bookmarkPath, visibility.getOrElse(isPrivateToVisibility(isPrivate)), userId, state, source, kifiInstallation, seq, libraryId)
+    // This is so that migration tools can sanity check
+    k.setDeprecatedIsPrivate(isPrivate)
+    k
+  }
+  def unapplyWithPrimary(k: Keep) = {
+    Some(k.id, k.createdAt, k.updatedAt, k.externalId, k.title, k.uriId, if (k.isPrimary) Some(true) else None, k.urlId, k.url, k.bookmarkPath, Keep.visibilityToIsPrivate(k.visibility), k.userId, k.state, k.source, k.kifiInstallation, k.seq, k.libraryId, Option(k.visibility))
+  }
+
+  def _bookmarkFormat = (
     (__ \ 'id).formatNullable(Id.format[Keep]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'updatedAt).format(DateTimeJsonFormat) and
@@ -79,7 +106,7 @@ object Keep {
     (__ \ 'urlId).format(Id.format[URL]) and
     (__ \ 'url).format[String] and
     (__ \ 'bookmarkPath).formatNullable[String] and
-    (__ \ 'isPrivate).format[Boolean] and
+    (__ \ 'visibility).format[LibraryVisibility] and
     (__ \ 'userId).format(Id.format[User]) and
     (__ \ 'state).format(State.format[Keep]) and
     (__ \ 'source).format[String].inmap(KeepSource.apply, unlift(KeepSource.unapply)) and
@@ -87,6 +114,34 @@ object Keep {
     (__ \ 'seq).format(SequenceNumber.format[Keep]) and
     (__ \ 'libraryId).formatNullable(Id.format[Library])
   )(Keep.apply, unlift(Keep.unapply))
+
+  implicit def bookmarkFormat = new Format[Keep] {
+    def reads(j: JsValue) = {
+      _bookmarkFormat.reads(j)
+    }
+    def writes(k: Keep) = {
+      Json.obj(
+        "id" -> k.id,
+        "createdAt" -> k.createdAt,
+        "updatedAt" -> k.updatedAt,
+        "externalId" -> k.externalId,
+        "title" -> k.title,
+        "uriId" -> k.uriId,
+        "isPrimary" -> k.isPrimary,
+        "urlId" -> k.urlId,
+        "url" -> k.url,
+        "bookmarkPath" -> k.bookmarkPath,
+        "visibility" -> k.visibility,
+        "isPrivate" -> Keep.visibilityToIsPrivate(k.visibility),
+        "userId" -> k.userId,
+        "state" -> k.state,
+        "source" -> k.source.value,
+        "kifiInstallation" -> k.kifiInstallation,
+        "seq" -> k.seq,
+        "libraryId" -> k.libraryId
+      )
+    }
+  }
 }
 
 case class KeepUriAndTime(uriId: Id[NormalizedURI], createdAt: DateTime = currentDateTime)
@@ -110,7 +165,7 @@ class KeepCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPlug
   extends PrimitiveCacheImpl[KeepCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Keep] {
-  override val version = 6
+  override val version = 7
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
@@ -119,7 +174,7 @@ class KeepUriUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPl
   extends JsonCacheImpl[KeepUriUserKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LatestKeepUriKey(uriId: Id[NormalizedURI]) extends Key[Keep] {
-  override val version = 4
+  override val version = 5
   val namespace = "latest_keep_uri"
   def toKey(): String = uriId.toString
 }
@@ -128,7 +183,7 @@ class LatestKeepUriCache(stats: CacheStatistics, accessLog: AccessLog, innermost
   extends JsonCacheImpl[LatestKeepUriKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class LatestKeepUrlKey(url: String) extends Key[Keep] {
-  override val version = 3
+  override val version = 4
   val namespace = "latest_keep_url"
   def toKey(): String = NormalizedURI.hashUrl(url).hash
 }
@@ -137,7 +192,7 @@ class LatestKeepUrlCache(stats: CacheStatistics, accessLog: AccessLog, innermost
   extends JsonCacheImpl[LatestKeepUrlKey, Keep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KifiHitKey(userId: Id[User], uriId: Id[NormalizedURI]) extends Key[SanitizedKifiHit] {
-  override val version = 2
+  override val version = 3
   val namespace = "keep_hit"
   def toKey(): String = userId.id + "#" + uriId.id
 }
@@ -166,8 +221,9 @@ object KeepSource {
   val pocket = KeepSource("Pocket")
   val instapaper = KeepSource("Instapaper")
   val tagImport = KeepSource("tagImport")
+  val emailReco = KeepSource("emailReco")
 
-  val valid = Set(keeper, bookmarkImport, site, mobile, email, default, bookmarkFileImport, kippt, pocket, instapaper)
+  val valid = Set(keeper, bookmarkImport, site, mobile, email, default, bookmarkFileImport, kippt, pocket, instapaper, emailReco)
 
   val imports = Set(bookmarkImport, kippt, pocket, instapaper, bookmarkFileImport)
 
@@ -180,8 +236,8 @@ object KeepSource {
 
 object KeepFactory extends Logging {
 
-  def apply(origUrl: String, uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, isPrivate: Boolean = false, kifiInstallation: Option[ExternalId[KifiInstallation]] = None, libraryId: Option[Id[Library]]): Keep = {
-    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = origUrl, source = source, isPrivate = isPrivate, libraryId = libraryId)
+  def apply(origUrl: String, uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: KeepSource, visibility: LibraryVisibility, kifiInstallation: Option[ExternalId[KifiInstallation]] = None, libraryId: Option[Id[Library]]): Keep = {
+    Keep(title = title, userId = userId, uriId = uri.id.get, urlId = url.id.get, url = origUrl, source = source, visibility = visibility, libraryId = libraryId)
   }
 
 }

@@ -1,5 +1,6 @@
 package com.keepit.controllers.website
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 
@@ -39,7 +40,8 @@ class KeepsController @Inject() (
   userValueRepo: UserValueRepo,
   clock: Clock,
   normalizedURIInterner: NormalizedURIInterner,
-  heimdalContextBuilder: HeimdalContextBuilderFactory)
+  heimdalContextBuilder: HeimdalContextBuilderFactory,
+  implicit val publicIdConfig: PublicIdConfiguration)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
   def updateCollectionOrdering() = JsonAction.authenticatedParseJson { request =>
@@ -294,7 +296,7 @@ class KeepsController @Inject() (
     } else {
       // user may get the info for a keep that was just created
       db.readOnlyMaster { implicit s => keepRepo.getOpt(id) } filter { _.isActive } map { b =>
-        Future.successful(Ok(Json.toJson(KeepInfo.fromBookmark(b))))
+        Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(b))))
       }
     }
     resOpt.getOrElse(Future.successful(NotFound(Json.obj("error" -> "not_found"))))
@@ -314,7 +316,7 @@ class KeepsController @Inject() (
         bookmarksCommander.updateKeep(bookmark, isPrivate, title) getOrElse bookmark
       } match {
         case None => NotFound(Json.obj("error" -> "Keep not found"))
-        case Some(keep) => Ok(Json.obj("keep" -> KeepInfo.fromBookmark(keep)))
+        case Some(keep) => Ok(Json.obj("keep" -> KeepInfo.fromKeep(keep)))
       }
     }
   }

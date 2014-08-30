@@ -1,5 +1,6 @@
 package com.keepit.controllers.ext
 
+import com.keepit.search.engine.result.KifiShardResult
 import com.keepit.test.{ SearchApplication, SearchTestInjector }
 import org.specs2.mutable._
 import com.keepit.model._
@@ -190,6 +191,33 @@ class FixedResultSearchCommander extends SearchCommander {
     context: Option[String],
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): PartialSearchResult = ???
+
+  def search2(
+    userId: Id[User],
+    acceptLangs: Seq[String],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    library: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig] = None,
+    debug: Option[String] = None) = ???
+
+  def distSearch2(
+    shards: Set[Shard[NormalizedURI]],
+    userId: Id[User],
+    firstLang: Lang,
+    secondLang: Option[Lang],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    library: Option[String],
+    maxHits: Int,
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig],
+    debug: Option[String]): KifiShardResult = ???
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User]) = ???
 

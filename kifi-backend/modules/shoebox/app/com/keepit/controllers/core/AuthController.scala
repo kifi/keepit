@@ -9,6 +9,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.time._
+import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.social.{ SecureSocialClientIds, SocialNetworkType }
 
@@ -51,7 +52,11 @@ class AuthController @Inject() (
     inviteCommander: InviteCommander,
     passwordResetRepo: PasswordResetRepo,
     heimdalServiceClient: HeimdalServiceClient,
+    config: FortyTwoConfig,
     implicit val secureSocialClientIds: SecureSocialClientIds) extends WebsiteController(actionAuthenticator) with ShoeboxServiceController with Logging {
+
+  // path is an Angular route
+  val LinkRedirects = Map("recommendation" -> s"${config.applicationBaseUrl}/recommendation")
 
   private val PopupKey = "popup"
 
@@ -120,11 +125,13 @@ class AuthController @Inject() (
     }
   }
 
-  def link(provider: String) = Action.async(parse.anyContent) { implicit request =>
+  def link(provider: String, redirect: Option[String] = None) = Action.async(parse.anyContent) { implicit request =>
     ProviderController.authenticate(provider)(request) map { res: SimpleResult =>
       val resCookies = res.header.headers.get(SET_COOKIE).map(Cookies.decode).getOrElse(Seq.empty)
       val resSession = Session.decodeFromCookie(resCookies.find(_.name == Session.COOKIE_NAME))
-      if (resSession.get(PopupKey).isDefined) {
+      if (redirect.isDefined && LinkRedirects.isDefinedAt(redirect.get)) {
+        res.withSession(resSession + (SecureSocial.OriginalUrlKey -> LinkRedirects(redirect.get)))
+      } else if (resSession.get(PopupKey).isDefined) {
         res.withSession(resSession + (SecureSocial.OriginalUrlKey -> routes.AuthController.popupAfterLinkSocial(provider).url))
       } else if (resSession.get(SecureSocial.OriginalUrlKey).isEmpty) {
         request.headers.get(REFERER).map { url =>

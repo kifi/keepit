@@ -10,9 +10,8 @@ import scala.concurrent.Future
 import com.keepit.search._
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{ Map => MutableMap }
-import com.keepit.social.{ SocialNetworkType, BasicUser }
+import com.keepit.social.{ SocialNetworks, SocialNetworkType, BasicUser, SocialId }
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail }
-import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
 import com.keepit.scraper.{ ScrapeRequest, Signature, HttpRedirect }
 import com.google.inject.util.Providers
@@ -22,7 +21,6 @@ import org.joda.time.DateTime
 import com.keepit.eliza.model.ThreadItem
 import com.kifi.franz.QueueName
 import com.keepit.graph.manager._
-import com.keepit.social.SocialId
 import play.api.libs.json.JsObject
 import com.keepit.heimdal.SanitizedKifiHit
 import com.keepit.model.serialize.UriIdAndSeq
@@ -153,6 +151,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allUsers = MutableMap[Id[User], User]()
   val allUserExternalIds = MutableMap[ExternalId[User], User]()
   val allUserConnections = MutableMap[Id[User], Set[Id[User]]]()
+  val allUserImageUrls = MutableMap[Id[User], String]()
   val allConnections = MutableMap[Id[UserConnection], UserConnection]()
   val allSearchFriends = MutableMap[Id[SearchFriend], SearchFriend]()
   val allUserExperiments = MutableMap[Id[User], Set[UserExperiment]]()
@@ -170,6 +169,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   val allUserFriendRequests = MutableMap[Id[User], Seq[FriendRequest]]()
   val sentMail = mutable.MutableList[ElectronicMail]()
   val uriSummaries = MutableMap[Id[NormalizedURI], URISummary]()
+  val socialUserInfosByUserId = MutableMap[Id[User], List[SocialUserInfo]]()
 
   // Fake data initialization methods
 
@@ -197,6 +197,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
 
   def saveURISummary(uriId: Id[NormalizedURI], uriSummary: URISummary): Unit = synchronized {
     uriSummaries(uriId) = uriSummary
+  }
+
+  def saveUserImageUrl(id: Int, url: String) = synchronized {
+    allUserImageUrls(Id[User](id)) = url
   }
 
   def saveConnections(connections: Map[Id[User], Set[Id[User]]]) {
@@ -287,7 +291,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     val bookmarks = edges.map {
       case (uri, user, optionalTitle) => {
         val url = uriToUrl(uri.id.get)
-        KeepFactory(url.url, uri = uri, userId = user.id.get, title = optionalTitle orElse uri.title, url = url, source = source, isPrivate = isPrivate, libraryId = None) // todo(andrew): Library id?
+        KeepFactory(url.url, uri = uri, userId = user.id.get, title = optionalTitle orElse uri.title, url = url, source = source, visibility = Keep.isPrivateToVisibility(isPrivate), libraryId = None) // todo(andrew): Library id?
       }
     }
     saveBookmarks(bookmarks: _*)
@@ -438,8 +442,10 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]] = Future.successful(Seq())
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = ???
-  def getSessionByExternalId(sessionId: com.keepit.common.db.ExternalId[com.keepit.model.UserSession]): scala.concurrent.Future[Option[com.keepit.model.UserSession]] = ???
-  def getSocialUserInfosByUserId(userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[List[com.keepit.model.SocialUserInfo]] = ???
+  def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]] = ???
+  def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]] = {
+    Future.successful(socialUserInfosByUserId(userId))
+  }
 
   def getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI]): Future[Seq[(Id[NormalizedURI], NormalizedURI)]] = ???
 
@@ -618,9 +624,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
     uriSummaries.toMap.filter { pair => uriSet.contains(pair._1) }
   }
 
-  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = Future.successful(Seq.fill(uris.size)(false))
+  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = Future.successful(Seq.fill(uris.size)(true))
 
-  def getUserImageUrl(userId: Id[User], width: Int): Future[String] = Future.successful("https://www.kifi.com/assets/img/ghost.200.png")
+  def getUserImageUrl(userId: Id[User], width: Int): Future[String] = synchronized {
+    Future.successful(allUserImageUrls.getOrElse(userId, "https://www.kifi.com/assets/img/ghost.200.png"))
+  }
 
   def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String] = Future.successful("https://kifi.com")
 
@@ -639,4 +647,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier) exten
   def getInvitations(senderId: Id[User]): Future[Seq[Invitation]] = Future.successful(Seq.empty)
 
   def getSocialConnections(userId: Id[User]): Future[Seq[SocialUserBasicInfo]] = Future.successful(Seq.empty)
+
+  def addInteraction(usedId: Id[User], src: Either[Id[User], EmailAddress], action: String): Unit = {}
 }

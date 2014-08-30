@@ -435,16 +435,6 @@ class UserCommander @Inject() (
     }
   }
 
-  def createDefaultKeeps(userId: Id[User]): Unit = {
-    val contextBuilder = new HeimdalContextBuilder()
-    contextBuilder += ("source", KeepSource.default.value) // manually set the source so that it appears in tag analytics
-    val keepsByTag = bookmarkCommander.keepWithMultipleTags(userId, DefaultKeeps.orderedKeepsWithTags, KeepSource.default)(contextBuilder.build)
-    val tagsByName = keepsByTag.keySet.map(tag => tag.name -> tag).toMap
-    val keepsByUrl = keepsByTag.values.flatten.map(keep => keep.url -> keep).toMap
-    db.readWrite { implicit session => collectionCommander.setCollectionOrdering(userId, DefaultKeeps.orderedTags.map(tagsByName(_).externalId)) }
-    bookmarkCommander.setFirstKeeps(userId, DefaultKeeps.orderedKeepsWithTags.map { case (keepInfo, _) => keepsByUrl(keepInfo.url) })
-  }
-
   def doChangePassword(userId: Id[User], oldPassword: String, newPassword: String): Try[Identity] = Try {
     val resOpt = db.readOnlyMaster { implicit session =>
       socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO)
@@ -922,6 +912,30 @@ class UserCommander @Inject() (
   }
 
   protected def userAvatarImageUrl(user: User) = s3ImageStore.avatarUrlByUser(user)
+
+  def importSocialEmail(userId: Id[User], emailAddress: EmailAddress): UserEmailAddress = {
+    db.readWrite { implicit s =>
+      val emails = emailRepo.getByAddress(emailAddress, excludeState = None)
+      emails.map { email =>
+        if (email.userId != userId) {
+          if (email.state == UserEmailAddressStates.VERIFIED) {
+            throw new IllegalStateException(s"email ${email.address} of user ${email.userId} is VERIFIED but not associated with user $userId")
+          } else if (email.state == UserEmailAddressStates.UNVERIFIED) {
+            emailRepo.save(email.withState(UserEmailAddressStates.INACTIVE))
+          }
+          None
+        } else {
+          Some(email)
+        }
+      }.flatten.headOption.getOrElse {
+        log.info(s"creating new email $emailAddress for user $userId")
+        val user = userRepo.get(userId)
+        if (user.primaryEmail.isEmpty) userRepo.save(user.copy(primaryEmail = Some(emailAddress)))
+        emailRepo.save(UserEmailAddress(userId = userId, address = emailAddress, state = UserEmailAddressStates.VERIFIED))
+      }
+    }
+  }
+
 }
 
 object DefaultKeeps {
@@ -969,12 +983,12 @@ object UsernameOps {
     val normalized = Normalizer.normalize(username, Normalizer.Form.NFKD)
     normalized.replaceAll("[\\p{InCombiningDiacriticalMarks}]", "")
   }
-  private val letterDigitRegex = """\p{L}?\d?""".r
+  private val letterDigitRegex = """\p{L}\p{M}*?\d?""".r
   private def removePunctuation(username: String): String = {
     (letterDigitRegex findAllIn username).mkString("")
   }
 
-  private val letterRegex = """\p{L}""".r
+  private val letterRegex = """\p{L}\p{M}*""".r
   def lettersOnly(username: String) = {
     (letterRegex findAllIn username).mkString("")
   }
