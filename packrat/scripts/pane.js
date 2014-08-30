@@ -251,14 +251,12 @@ var pane = pane || function () {  // idempotent for Chrome
         window.open(this.dataset.href);
         $(this).closest(".kifi-pane-top-menu").triggerHandler("kifi:hide");
       })
-      /*
       .hoverfu('.kifi-pane-x', function (configureHover) {
         configureHover({
           mustHoverFor: 700, hideAfter: 2500, click: 'hide',
-          position: {my: 'right bottom-13', at: 'right top', of: this, collision: 'none'}
+          position: {my: 'right+1 bottom-7', at: 'right top', of: this, collision: 'none'}
         });
       })
-      */
       .on('click', '.kifi-pane-x', _.debounce(function (e) {
         if (e.originalEvent.isTrusted !== false) {
           hidePane(tile.style.display !== 'none' && !tile.hasAttribute('kifi-fullscreen'));

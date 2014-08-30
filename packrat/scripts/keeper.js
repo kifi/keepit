@@ -158,8 +158,8 @@ var keeper = keeper || function () {  // idempotent for Chrome
         } else {
           render('html/keeper/titled_tip', {
             title: (o.kept ? 'Unkeep' : 'Keep') + ' (' + CO_KEY + '+Shift+K)',
-            html: o.kept ? 'Un-keeping this page will<br/>remove it from your keeps.' :
-              'Keeping this page helps you<br/>easily find it later.'
+            html: o.kept ? 'Click to remove this<br/>page from your keeps.' :
+              'Keeping this page helps<br/>you easily find it later.'
           }, function (html) {
             configureHover(html, {
               suppressed: isSticky,
@@ -184,7 +184,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
         'Make Private' :
         'Make Public';
       var html = !kept ?
-        'Keeping this privately allows you<br/>to find this page easily without<br/>letting anyone know you kept it.' : publicly ?
+        'Keeping privately allows you<br/>to find this page easily without<br/>letting anyone know you kept it.' : publicly ?
         'This keep is public. Making it private<br/>allows you to find it easily without<br/>letting anyone know you kept it.' :
         'This keep is private. Making it<br/>public allows your friends to<br/>discover that you kept it.';
       render('html/keeper/titled_tip', {title: title, html: html}, function (html) {
@@ -240,7 +240,7 @@ var keeper = keeper || function () {  // idempotent for Chrome
       var $a = $(this);
       var tip = {
         s: ['Home', 'Open your keeps library<br/>on kifi.com in a new tab.'],
-        i: ['Inbox (' + CO_KEY + '+Shift+O)', 'Open your Inbox and<br/>see your messages.'],
+        i: ['Inbox (' + CO_KEY + '+Shift+O)', 'See the messages in<br/>your Inbox.'],
         c: ['Send (' + CO_KEY + '+Shift+S)', 'Send this page to any email<br/>address or Kifi friend.']
       }[this.dataset.tip];
       render('html/keeper/titled_tip', {title: tip[0], html: tip[1]}, function (html) {

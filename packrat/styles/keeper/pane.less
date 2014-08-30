@@ -283,9 +283,13 @@ a.kifi-pane-top-menu-a {
     background: #e65b45;
   }
 }
-.kifi-pane-x-tip::before {
-  left: auto;
-  right: 10px;
+.kifi-pane-x-tip {
+  padding: 4px 8px;
+  &::before {
+    border-width: 4px 4px 0;
+    left: auto;
+    right: 10px;
+  }
 }
 
 .kifi-signed-out-tooltip {
