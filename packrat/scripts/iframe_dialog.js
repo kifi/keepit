@@ -108,7 +108,7 @@ var iframeDialog = function () {
   function onLoginMessage(e) {
     if ($dialog && e.origin === $dialog.data('origin')) {
       if (e.data.path) {
-        api.port.emit('open_tab', e.data.path);
+        api.port.emit('open_tab', {path: e.data.path});
         hide();
       } else if (e.data.authenticated) {
         api.port.emit('logged_in');

@@ -94,14 +94,17 @@ var messageHeader = this.messageHeader = (function ($, win) {
 
 		shadePane: function () {
 			if (win.pane) {
-				this.$el.closest('.kifi-thread-who').addClass('kifi-active');
+				var $who = this.$el.closest('.kifi-thread-who').css('overflow', 'hidden').addClass('kifi-active');
 				win.pane.shade();
+				clearTimeout($who.data('t'));
 			}
 		},
 
 		unshadePane: function () {
 			if (win.pane) {
-				this.$el.closest('.kifi-thread-who').removeClass('kifi-active');
+				var $who = this.$el.closest('.kifi-thread-who').removeClass('kifi-active').data('t', setTimeout(function () {
+					$who.css('overflow', '');
+				}, 300));
 				win.pane.unshade();
 			}
 		},

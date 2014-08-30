@@ -108,11 +108,6 @@
       }
       var $h = data.$h = $(hover).data("hoverfu", data);
       data.opts = opts = opts || {};
-      if (opts.position) {
-        $h.css({visibility: 'hidden', display: 'block'});
-        attach($h, opts);
-        $h.position(opts.position).css({visibility: '', display: ''}).detach();
-      }
       if (opts.canLeaveFor) {
         $h.on("mouseover.hoverfu", $.proxy(onMouseOver, null, null))
           .on("mouseout.hoverfu", onMouseOut);
@@ -126,10 +121,16 @@
     });
   }
   function attach($h, opts) {
+    if (opts.position) {
+      $h.css({visibility: 'hidden', display: 'block'});
+    }
     if (opts.insertBefore) {
       $h.insertBefore(opts.insertBefore);
     } else {
       $h.appendTo(opts.parent || (doc.body.tagName.toLowerCase() === 'body' ? doc.body : doc.documentElement));
+    }
+    if (opts.position) {
+      $h.position(opts.position).css({visibility: '', display: ''});
     }
   }
   function show() {

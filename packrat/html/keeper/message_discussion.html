@@ -1,7 +1,7 @@
 <div class="kifi-message-sent" data-id="{{id}}">
   <div class="kifi-message-status"></div>
   {{#sender.isUser}}
-    <img class="kifi-message-pic{{#isLoggedInUser}} kifi-self{{/isLoggedInUser}}" src="{{cdnBase}}/users/{{sender.id}}/pics/100/{{sender.pictureName}}"/>
+    <img class="kifi-message-pic" src="{{cdnBase}}/users/{{sender.id}}/pics/100/{{sender.pictureName}}"/>
   {{/sender.isUser}}
   {{^sender.isUser}}
     <span class="kifi-message-pic-email kifi-participant-background-{{sender.color}}">{{sender.initial}}</span>
