@@ -19,6 +19,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Option[LibraryMembership]
+  def getOpt(userId: Id[User], libraryId: Id[Library])(implicit session: RSession): Option[LibraryMembership]
 }
 
 @Singleton
@@ -68,6 +69,13 @@ class LibraryMembershipRepoImpl @Inject() (
   }
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Option[LibraryMembership] = {
     (for (b <- rows if b.libraryId === libraryId && b.userId === userId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).firstOption
+  }
+
+  private def getOptCompiled(userId: Column[Id[User]], libraryId: Column[Id[Library]]) = Compiled {
+    (for (r <- rows if r.userId === userId && r.libraryId === libraryId) yield r)
+  }
+  def getOpt(userId: Id[User], libraryId: Id[Library])(implicit session: RSession): Option[LibraryMembership] = {
+    getOptCompiled(userId, libraryId).firstOption
   }
 
   override def deleteCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {

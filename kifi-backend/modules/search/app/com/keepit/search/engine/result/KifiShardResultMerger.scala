@@ -6,7 +6,7 @@ import com.keepit.search.util.HitQueue
 import scala.math._
 import play.api.libs.json.JsNumber
 
-class KifiResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
+class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   // get config params
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
   private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
@@ -20,7 +20,7 @@ class KifiResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   private[this] val tailCutting = if (enableTailCutting) config.asFloat("tailCutting") else 0.000f
 
   def merge(results: Seq[KifiShardResult], maxHits: Int): KifiShardResult = {
-    val (myTotal, friendsTotal) = mergeTotals(results)
+    val (myTotal, friendsTotal, othersTotal) = mergeTotals(results)
     val hits = mergeHits(results, maxHits)
     val show = results.exists(_.show)
 
@@ -35,12 +35,16 @@ class KifiResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
       hits,
       myTotal,
       friendsTotal,
+      othersTotal,
       show,
       cutPoint
     )
   }
 
   private def mergeHits(results: Seq[KifiShardResult], maxHits: Int): Seq[KifiShardHit] = {
+
+    if (results.size == 1) return results.head.hits // short cut for a single result set
+
     val myHits = createQueue(maxHits * 5)
     val friendsHits = createQueue(maxHits * 5)
     val othersHits = createQueue(maxHits * 5)
@@ -103,13 +107,15 @@ class KifiResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   @inline private def createQueue(maxHits: Int) = new HitQueue[KifiShardHit](maxHits)
   @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
 
-  private def mergeTotals(results: Seq[KifiShardResult]): (Int, Int) = {
+  private def mergeTotals(results: Seq[KifiShardResult]): (Int, Int, Int) = {
     var myTotal = 0
     var friendsTotal = 0
+    var othersTotal = 0
     results.foreach { res =>
       myTotal += res.myTotal
       friendsTotal += res.friendsTotal
+      othersTotal += res.othersTotal
     }
-    (myTotal, friendsTotal)
+    (myTotal, friendsTotal, othersTotal)
   }
 }

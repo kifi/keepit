@@ -118,7 +118,7 @@ case class FixedResultIndexModule() extends IndexModule {
 
 class FixedResultSearchCommander extends SearchCommander {
   private val results: Map[String, DecoratedResult] = Map(
-    ("test" -> DecoratedResult(
+    "test" -> DecoratedResult(
       ExternalId[ArticleSearchResult]("21eb7aa7-97ba-466f-a357-c3511e4c8b29"), // uuid
       Seq[DetailedSearchHit]( // hits
         DetailedSearchHit(
@@ -159,7 +159,7 @@ class FixedResultSearchCommander extends SearchCommander {
       true, //show
       Some(Id[SearchConfigExperiment](10)), //searchExperimentId
       Seq.empty[JsObject] // experts
-    ))
+    )
   )
 
   def search(
@@ -190,6 +190,19 @@ class FixedResultSearchCommander extends SearchCommander {
     predefinedConfig: Option[SearchConfig],
     debug: Option[String]): PartialSearchResult = ???
 
+  def search2(
+    userId: Id[User],
+    acceptLangs: Seq[String],
+    experiments: Set[ExperimentType],
+    query: String,
+    filter: Option[String],
+    library: Option[String],
+    maxHits: Int,
+    lastUUIDStr: Option[String],
+    context: Option[String],
+    predefinedConfig: Option[SearchConfig] = None,
+    debug: Option[String] = None) = ???
+
   def distSearch2(
     shards: Set[Shard[NormalizedURI]],
     userId: Id[User],
@@ -198,6 +211,7 @@ class FixedResultSearchCommander extends SearchCommander {
     experiments: Set[ExperimentType],
     query: String,
     filter: Option[String],
+    library: Option[String],
     maxHits: Int,
     context: Option[String],
     predefinedConfig: Option[SearchConfig],

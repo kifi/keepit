@@ -24,7 +24,7 @@ class HelpRankCommanderTest extends Specification with HeimdalTestInjector with 
   val keepIdCounter = new AtomicInteger(0)
   def mkKeep(userId: Id[User], ts: DateTime = currentDateTime, idOpt: Option[Id[Keep]] = None, libraryId: Option[Id[Library]] = None)(uri: NormalizedURI): Keep = {
     val id = idOpt getOrElse Id[Keep](keepIdCounter.incrementAndGet)
-    Keep(id = Some(id), createdAt = ts, updatedAt = ts, uriId = uri.id.get, url = uri.url, urlId = Id[URL](uri.id.get.id), isPrivate = false, userId = userId, source = KeepSource.keeper, libraryId = libraryId)
+    Keep(id = Some(id), createdAt = ts, updatedAt = ts, uriId = uri.id.get, url = uri.url, urlId = Id[URL](uri.id.get.id), visibility = Keep.isPrivateToVisibility(false), userId = userId, source = KeepSource.keeper, libraryId = libraryId)
   }
 
   val uriIdCounter = new AtomicInteger(0)

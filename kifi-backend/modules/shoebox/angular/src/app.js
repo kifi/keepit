@@ -128,7 +128,7 @@ angular.module('kifi', [
     if (typeof state.friend === 'string' && state.friend.match(/^[a-f0-9-]{36}$/)) {
       // naively assumes that state.friend is a valid externalId and the user
       // will see the contact jointed banner
-      attributes.events.user_viewed_page.subtype = 'contactJoined';
+      attributes.events.user_viewed_page.subtype = state.subtype || 'contactJoined';
     }
 
     return attributes;

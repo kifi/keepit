@@ -89,7 +89,7 @@ class MobileBookmarksController @Inject() (
       case Left(msg) => BadRequest(msg)
       case Right((keepInfo, tags)) =>
         Ok(Json.obj(
-          "keep" -> keepInfo,
+          "keep" -> Json.toJson(keepInfo),
           "tags" -> tags.map(tag => Json.obj("name" -> tag.name, "id" -> tag.externalId))
         ))
     }

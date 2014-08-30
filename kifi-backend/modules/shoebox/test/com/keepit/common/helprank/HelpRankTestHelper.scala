@@ -1,7 +1,7 @@
 package com.keepit.common.helprank
 
 import com.google.inject.Injector
-import com.keepit.commanders.{ RawBookmarkFactory, KeepInterner }
+import com.keepit.commanders.{ LibraryCommander, RawBookmarkFactory, KeepInterner }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
@@ -34,6 +34,11 @@ trait HelpRankTestHelper { self: TestInjector =>
       val u4 = userRepo.save(User(firstName = "Ro", lastName = "Bot"))
       (u1, u2, u3, u4)
     }
+
+    inject[LibraryCommander].internSystemGeneratedLibraries(u1.id.get)
+    inject[LibraryCommander].internSystemGeneratedLibraries(u2.id.get)
+    inject[LibraryCommander].internSystemGeneratedLibraries(u3.id.get)
+    inject[LibraryCommander].internSystemGeneratedLibraries(u4.id.get)
 
     val raw1 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keep42, keepKifi))
     val raw2 = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(keepKifi, keepGoog, keepBing))

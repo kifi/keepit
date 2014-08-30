@@ -6,12 +6,10 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.search.engine.result.{ NonUserKifiResultCollector, KifiShardResult, KifiShardHit }
-import com.keepit.search.engine.result.KifiResultCollector._
-import org.apache.lucene.search.Query
-import org.apache.lucene.search.Explanation
+import com.keepit.search.engine.result.KifiResultCollector.HitQueue
+import com.keepit.search.engine.result.{ KifiResultCollector, NonUserKifiResultCollector, KifiShardResult, KifiShardHit }
+import org.apache.lucene.search._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.math._
 import scala.concurrent.{ Future, Promise }
 
 class NonUserSearch(
@@ -25,14 +23,12 @@ class NonUserSearch(
     friendIdsFuture: Future[Set[Long]],
     libraryIdsFuture: Future[(Set[Long], Set[Long], Set[Long])],
     monitoredAwait: MonitoredAwait,
-    timeLogs: SearchTimeLogs) extends Logging {
+    timeLogs: SearchTimeLogs) extends KifiSearchUtil(articleSearcher, keepSearcher) with Logging {
 
   private[this] val currentTime = currentDateTime.getMillis()
   private[this] val idFilter = filter.idFilter
-  private[this] val isInitialSearch = idFilter.isEmpty
 
   // get config params
-  private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
   private[this] val percentMatch = config.asFloat("percentMatch")
 
   def searchText(maxTextHitsPerCategory: Int, promise: Option[Promise[_]] = None): HitQueue = {
@@ -45,7 +41,7 @@ class NonUserSearch(
     val articleScoreSource = new UriFromArticlesScoreVectorSource(articleSearcher, filter)
     engine.execute(articleScoreSource)
 
-    val collector = new NonUserKifiResultCollector(libId.id, maxTextHitsPerCategory, percentMatch)
+    val collector = new NonUserKifiResultCollector(maxTextHitsPerCategory, percentMatch)
     engine.join(collector)
 
     collector.getResults()
@@ -67,8 +63,6 @@ class NonUserSearch(
     if (textHits.size > 0) {
       textHits.toRankedIterator.foreach {
         case (hit, rank) =>
-          val score = hit.score * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
-          hit.score = score
           hit.normalizedScore = hit.score / highScore
           hits.insert(hit)
       }
@@ -78,12 +72,21 @@ class NonUserSearch(
     timeLogs.total = currentDateTime.getMillis() - now.getMillis()
     timing()
 
-    KifiShardResult(hits.toSortedList.map(h => KifiShardHit(h.id, h.score, h.visibility, libId.id)), total, 0, true)
+    KifiShardResult(hits.toSortedList.map(h => toKifiShardHit(h)), total, 0, 0, true)
+  }
+
+  private[this] def toKifiShardHit(h: KifiResultCollector.Hit): KifiShardHit = {
+    val recOpt = if (h.altId >= 0) getKeepRecord(h.altId) else getKeepRecord(libId.id, h.id)
+    recOpt match {
+      case Some(r) =>
+        KifiShardHit(h.id, h.score, h.visibility, r.libraryId, r.title.getOrElse(""), r.url, r.externalId)
+      case None =>
+        val r = getArticleRecord(h.id).getOrElse(throw new Exception(s"missing article record: uri id = ${h.id}"))
+        KifiShardHit(h.id, h.score, h.visibility, -1L, r.title, r.url, null)
+    }
   }
 
   @inline private[this] def createQueue(sz: Int) = new HitQueue(sz)
-
-  @inline private[this] def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble / halfDecay, 3.0d))).toFloat
 
   def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     throw new UnsupportedOperationException("explanation is not supported yet")

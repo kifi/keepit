@@ -27,7 +27,7 @@ class EmailRecosController @Inject() (
     val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
 
     curator.updateUriRecommendationFeedback(request.userId, uri.id.get, UriRecommendationFeedback(clicked = Some(true),
-      fromClient = Some(RecommendationClientType.Email)))
+      clientType = Some(RecommendationClientType.Email)))
 
     Found(uri.url)
   }
@@ -43,10 +43,9 @@ class EmailRecosController @Inject() (
     keepInterner.internRawBookmark(rawBookmark, request.userId, source, mutatePrivacy = false)
 
     curator.updateUriRecommendationFeedback(request.userId, uri.id.get, UriRecommendationFeedback(kept = Some(true),
-      fromClient = Some(RecommendationClientType.Email)))
+      clientType = Some(RecommendationClientType.Email)))
 
-    // todo(josh) angular site should notify the user that page was kept
-    Redirect(com.keepit.controllers.website.routes.HomeController.kifeeeed())
+    Redirect(com.keepit.controllers.website.routes.KifiSiteRouter.home())
   }
 
   def sendReco(uriId: ExternalId[NormalizedURI]) = HtmlAction.authenticated { request =>
@@ -56,7 +55,7 @@ class EmailRecosController @Inject() (
 
     val uri = db.readOnlyReplica { implicit s => uriRepo.get(uriId) }
     curator.updateUriRecommendationFeedback(request.userId, uri.id.get, UriRecommendationFeedback(clicked = Some(true),
-      fromClient = Some(RecommendationClientType.Email)))
+      clientType = Some(RecommendationClientType.Email)))
 
     handleAuthenticatedDeepLink(request, uri, DeepLocator("#compose"), None)
   }

@@ -1,8 +1,10 @@
 package com.keepit.search.graph.keep
 
 import com.keepit.search.index.{ FieldDecoder, DefaultAnalyzer, Indexable }
-import com.keepit.model.Keep
+import com.keepit.model.{ NormalizedURI, Keep }
 import com.keepit.search.LangDetector
+import com.keepit.search.sharding.Shard
+import com.keepit.search.graph.library.LibraryFields
 
 object KeepFields {
   val libraryField = "lib"
@@ -24,10 +26,10 @@ object KeepFields {
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
 
-case class KeepIndexable(keep: Keep) extends Indexable[Keep, Keep] {
+case class KeepIndexable(keep: Keep, shard: Shard[NormalizedURI]) extends Indexable[Keep, Keep] {
   val id = keep.id.get
   val sequenceNumber = keep.seq
-  val isDeleted = !keep.isActive
+  val isDeleted = !keep.isActive || !shard.contains(keep.uriId)
 
   override def buildDocument = {
     import KeepFields._
@@ -51,7 +53,7 @@ case class KeepIndexable(keep: Keep) extends Indexable[Keep, Keep] {
     doc.add(buildIdValueField(userIdField, keep.userId))
     keep.libraryId.foreach(libId => doc.add(buildIdValueField(libraryIdField, libId)))
 
-    doc.add(buildLongValueField(visibilityField, ???)) // todo(Andrew, Léo): denormalize library visibility onto keeps
+    doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.visibility)))
 
     doc.add(buildBinaryDocValuesField(recordField, KeepRecord(keep)))
     buildLongValueField(createdAtField, keep.createdAt.getMillis)

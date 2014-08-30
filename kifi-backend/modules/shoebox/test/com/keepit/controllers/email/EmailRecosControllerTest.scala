@@ -2,6 +2,7 @@ package com.keepit.controllers.email
 
 import java.util.NoSuchElementException
 
+import com.keepit.commanders.LibraryCommander
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.store.FakeShoeboxStoreModule
@@ -38,8 +39,10 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
             (user1, uri1)
           }
 
+          inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
+
           val call = com.keepit.controllers.email.routes.EmailRecosController.viewReco(uri1.externalId)
-          call.toString === s"/e/1/recos/view?id=${uri1.externalId}"
+          call.toString === s"/r/e/1/recos/view?id=${uri1.externalId}"
 
           val result = controller.viewReco(uri1.externalId)(FakeRequest())
           header("Location", result).get === uri1.url
@@ -60,7 +63,7 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
             uriRepo.save(NormalizedURI.withHash("http://www.website.com/article1", Some("Article1")))
           }
           val call = com.keepit.controllers.email.routes.EmailRecosController.sendReco(uri1.externalId)
-          call.toString === s"/e/1/recos/send?id=${uri1.externalId}"
+          call.toString === s"/r/e/1/recos/send?id=${uri1.externalId}"
           val result = controller.sendReco(uri1.externalId)(FakeRequest())
           status(result) === OK
           val htmlBody = contentAsString(result)
@@ -85,7 +88,7 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
           }
 
           val call = com.keepit.controllers.email.routes.EmailRecosController.keepReco(uri1.externalId)
-          call.toString === s"/e/1/recos/keep?id=${uri1.externalId}"
+          call.toString === s"/r/e/1/recos/keep?id=${uri1.externalId}"
 
           val result = controller.keepReco(uri1.externalId)(FakeRequest())
           db.readOnlyMaster { implicit session =>
@@ -98,7 +101,7 @@ class EmailRecosControllerTest extends Specification with ShoeboxTestInjector {
           }
 
           status(result) === SEE_OTHER
-          header("Location", result).get === com.keepit.controllers.website.routes.HomeController.kifeeeed().toString
+          header("Location", result).get === "/"
         }
       }
 

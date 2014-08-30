@@ -17,3 +17,4 @@ alter table user_lda_interests
 insert into evolutions (name, description) values('236.sql', 'add multiple columns related to shapshot to user_lda_interests');
 
 # --- !Downs
+

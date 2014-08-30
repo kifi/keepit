@@ -8,9 +8,8 @@
 // @require scripts/kifi_util.js
 // @require scripts/scorefilter.js
 // @require scripts/html/keeper/tagbox.js
-// @require scripts/html/keeper/tag-suggestion.js
-// @require scripts/html/keeper/tag-new.js
-// @require scripts/html/keeper/tagbox-tag.js
+// @require scripts/html/keeper/tag_suggestion.js
+// @require scripts/html/keeper/tag.js
 // @require styles/keeper/tagbox.css
 
 /**
@@ -18,7 +17,7 @@
  *     Tag Box
  * ---------------
  *
- * Tag box is an UI component that lets you conveniently tag your keep
+ * Tag box is a UI component that lets you conveniently tag your keep
  * into existing and/or new tag(s).
  */
 
@@ -173,7 +172,7 @@ this.tagbox = (function ($, win) {
 				this.tagsAdded = util.toKeys(util.pluck(tags.page, 'id'), true);
 				this.active = true;
 				this.$tagbox = $(this.renderTagBoxHtml())
-					.on('click', '.kifi-tagbox-close', this.hide.bind(this, 'X'))
+					.on('click', '.kifi-tagbox-x', this.hide.bind(this, 'X'))
 					.on('click', '.kifi-tagbox-clear', this.clearTags.bind(this, 'clear'));
 				this.$suggestWrapper = this.$tagbox.find('.kifi-tagbox-suggest');
 				this.$suggest = this.$suggestWrapper.find('.kifi-tagbox-suggest-inner')
@@ -182,11 +181,8 @@ this.tagbox = (function ($, win) {
 					.on('mouseover', this.onMouseoverSuggestion.bind(this));
 				this.$tagListWrapper = this.$tagbox.find('.kifi-tagbox-tag-list');
 				this.$tagList = this.$tagListWrapper.find('.kifi-tagbox-tag-list-inner')
-					.on('click', '.kifi-tagbox-tag-remove', this.onClickRemoveTag.bind(this));
-				this.$inputbox = this.$tagbox.find('.kifi-tagbox-input-box');
-				this.$input = this.$inputbox.find('.kifi-tagbox-input')
-					.on('focus', $.fn.addClass.bind(this.$inputbox, 'kifi-focus'))
-					.on('blur', $.fn.removeClass.bind(this.$inputbox, 'kifi-focus'))
+					.on('click', '.kifi-tagbox-tag-x', this.onClickRemoveTag.bind(this));
+				this.$input = this.$tagbox.find('.kifi-tagbox-input')
 					.on('input', _.debounce(this.handleInput.bind(this), 1))
 					.on('keydown', this.onKeyDown.bind(this));
 				this.updateTagList();
@@ -266,7 +262,6 @@ this.tagbox = (function ($, win) {
 			var text = this.getInputValue();
 			if (text !== this.text) {
 				this.text = text;
-				this.$inputbox.toggleClass('kifi-empty', !text);
 				this.suggest(text);
 			}
 		},
@@ -324,14 +319,11 @@ this.tagbox = (function ($, win) {
 			if (this.active) {
 				this.active = false;
 
-				if (win.pane) {
-					win.pane.unshade();
-				}
 				win.keeper.moveBackFromBottom();
 
 				$(win).off('resize.kifi-tagbox-suggest');
 
-				'$input,$inputbox,$suggest,$suggestWrapper,$tagbox,$tagList,$tagListWrapper'.split(',').forEach(function (name) {
+				'$input,$suggest,$suggestWrapper,$tagbox,$tagList,$tagListWrapper'.split(',').forEach(function (name) {
 					var $el = this[name];
 					if ($el) {
 						$el.remove();
@@ -595,7 +587,7 @@ this.tagbox = (function ($, win) {
 			this.$suggest.html(this.renderTagSuggestionsHtml(tags));
 
 			if (text.trim() && this.indexOfTagByName(text) === -1) {
-				this.$suggest.append(this.renderNewTagSuggestionHtml(text));
+				this.$suggest.append(this.renderTagSuggestionHtml({name: text, 'new': true}));
 			}
 
 			this.toggleClass('kifi-suggested', text || this.$suggest.children().length);
@@ -819,8 +811,6 @@ this.tagbox = (function ($, win) {
 		 * Renders and adds a tag element if not already added.
 		 *
 		 * @param {Object} tag - A tag item
-		 *
-		 * @return {jQuery} A jQuery object for tag element
 		 */
 		addTag$: function (tag) {
 			var $tag = this.getTag$ById(tag.id);
@@ -830,7 +820,6 @@ this.tagbox = (function ($, win) {
 				$tag = $(html).appendTo(this.$tagList);
 				this.updateScroll();
 			}
-			return $tag;
 		},
 
 		updateTagName: function (tag) {
@@ -861,17 +850,12 @@ this.tagbox = (function ($, win) {
 
 		/**
 		 * Finds and removes a tag by its id
-		 *
-		 * @param {string} tagId - A tag id
-		 *
-		 * @return {number} Number of elements removed
 		 */
 		removeTag$ById: function (tagId) {
 			delete this.tagsAdded[tagId];
 
-			var $el = this.getTag$ById(tagId),
-				len = $el.length;
-			if (len) {
+			var $el = this.getTag$ById(tagId);
+			if ($el.length) {
 				$el.remove();
 				var tag = this.getTagById(tagId),
 					tags = this.filterTagsByText(this.getInputValue(), [tag]);
@@ -892,7 +876,6 @@ this.tagbox = (function ($, win) {
 				}
 				this.updateScroll();
 			}
-			return len;
 		},
 
 		/**
@@ -973,14 +956,10 @@ this.tagbox = (function ($, win) {
 		 */
 		onAddResponse: function (tag) {
 			log('[onAddResponse]', tag);
-
 			var tagId = tag.id;
-
 			this.tagsAdded[tagId] = true;
-
 			this.removeSuggestionById(tagId);
-
-			return this.addTag$(tag);
+			this.addTag$(tag);
 		},
 
 		/**
@@ -994,8 +973,7 @@ this.tagbox = (function ($, win) {
 		 */
 		onRemoveResponse: function (tagId, response) {
 			log('[onRemoveResponse]', response);
-
-			return this.removeTag$ById(tagId);
+			this.removeTag$ById(tagId);
 		},
 
 		/**
@@ -1009,11 +987,8 @@ this.tagbox = (function ($, win) {
 		 */
 		onClearTagsResponse: function () {
 			log('[onClearTagsResponse]');
-
 			this.clearTags$();
 			this.tagsAdded = {};
-
-			return;
 		},
 
 		//
@@ -1143,70 +1118,26 @@ this.tagbox = (function ($, win) {
 		// TEMPLATE RENDERERS
 		//
 
-		/**
-		 * Renders and returns a tag box html.
-		 *
-		 * @return {string} tag box html
-		 */
 		renderTagBoxHtml: function () {
 			return win.render('html/keeper/tagbox');
 		},
 
-		/**
-		 * Renders and returns a tag suggestion html for a given tag item.
-		 *
-		 * @param {Object} tag - A tag item
-		 *
-		 * @return {string} tag suggestion html
-		 */
 		renderTagSuggestionHtml: function (tag) {
-			return win.render('html/keeper/tag-suggestion', tag);
+			return win.render('html/keeper/tag_suggestion', tag);
 		},
 
-		/**
-		 * Renders and returns html for a given tag items.
-		 *
-		 * @param {Object[]} tags - A list of tag items
-		 *
-		 * @return {string} html
-		 */
 		renderTagSuggestionsHtml: function (tags) {
 			return (tags && tags.length) ? tags.map(this.renderTagSuggestionHtml, this).join('') : '';
 		},
 
-		/**
-		 * Renders and returns a new tag suggestion html for a given tag name.
-		 *
-		 * @param {string} name - A tag name
-		 *
-		 * @return {string} new tag suggestion html
-		 */
-		renderNewTagSuggestionHtml: function (name) {
-			return win.render('html/keeper/tag-new', {
-				name: name
-			});
-		},
-
-		/**
-		 * Renders and returns a tag item.
-		 *
-		 * @param {Object} tag - A tag item
-		 *
-		 * @return {string} tag html
-		 */
 		renderTagHtml: function (tag) {
-			return win.render('html/keeper/tagbox-tag', tag);
+			return win.render('html/keeper/tag', tag);
 		},
 
 		//
 		// EVENT LISTENERS
 		//
 
-		/**
-		 * On click listener for a tag suggestion.
-		 *
-		 * @param {Object} event - A click event object
-		 */
 		onClickSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-suggestion'),
 				tagId = this.getData($suggestion, 'id');
@@ -1214,11 +1145,6 @@ this.tagbox = (function ($, win) {
 			this.addTagById(tagId, $suggestion, 'autocomplete');
 		},
 
-		/**
-		 * On click listener for a new tag suggestion.
-		 *
-		 * @param {Object} event - A click event object
-		 */
 		onClickNewSuggestion: function (e) {
 			var $suggestion = $(e.target).closest('.kifi-tagbox-new'),
 				tagName = this.getData($suggestion, 'name');
@@ -1226,11 +1152,6 @@ this.tagbox = (function ($, win) {
 			this.createTag(tagName, 'new');
 		},
 
-		/**
-		 * On mouseover listener for suggestion box.
-		 *
-		 * @param {Object} event - A mouseover event object
-		 */
 		onMouseoverSuggestion: function (e) {
 			if (this.ignoreMouseover) {
 				this.ignoreMouseover = false;
@@ -1248,11 +1169,6 @@ this.tagbox = (function ($, win) {
 			this.navigateTo($suggestion, 'mouseover');
 		},
 
-		/**
-		 * On click listener for removing tag.
-		 *
-		 * @param {Object} event - A click event object
-		 */
 		onClickRemoveTag: function (e) {
 			var $tag = $(e.target).closest('.kifi-tagbox-tag'),
 				tagId = this.getData($tag, 'id');
@@ -1309,6 +1225,9 @@ this.tagbox = (function ($, win) {
 					self.destroy(trigger);
 				}
 			}).removeClass('kifi-in');
+			if (win.pane) {
+				win.pane.unshade();
+			}
 		},
 
 		/**

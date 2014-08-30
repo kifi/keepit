@@ -12,19 +12,16 @@ class UserInteractionCommander @Inject() (
     userRepo: UserRepo,
     userValueRepo: UserValueRepo) {
 
-  def addInteraction(uid: Id[User], src: Either[Id[User], EmailAddress], interaction: UserInteraction) = {
+  def addInteraction(uid: Id[User], recipient: InteractionRecipient, interaction: UserInteraction): Unit = {
     val interactions = db.readOnlyMaster { implicit s =>
       userValueRepo.getValue(uid, UserValues.recentInteractions)
     }.as[List[JsObject]]
-    val newJson = src match {
-      case Left(id) => Json.obj("user" -> id, "action" -> interaction.value)
-      case Right(email) => Json.obj("email" -> email.address, "action" -> interaction.value)
+    val newJson = recipient match {
+      case UserRecipient(id) => Json.obj("user" -> id, "action" -> interaction.value)
+      case EmailRecipient(email) => Json.obj("email" -> email.address, "action" -> interaction.value)
     }
-    val newInteractions = if (interactions.length + 1 > UserInteraction.maximumInteractions) {
-      interactions.drop(1) :+ newJson
-    } else {
-      interactions :+ newJson
-    }
+    // append to head as most recent (will get the highest weight), remove from tail as least recent (lowest weight)
+    val newInteractions = newJson :: interactions.take(UserInteraction.maximumInteractions - 1)
     db.readWrite { implicit s =>
       userValueRepo.setValue(uid, UserValueName.RECENT_INTERACTION, Json.stringify(Json.toJson(newInteractions)))
     }
@@ -32,20 +29,20 @@ class UserInteractionCommander @Inject() (
 
   // given an index position in an array and weight of action, calculate score
   private def calcInteractionScore(idx: Int, action: String): Double = {
-    val score = UserInteraction.getScoreForAction(action)
+    val score = UserInteraction.getAction(action).score
     (15 * Math.pow(idx + 1.5, -0.7) + 0.5) * score
   }
 
-  def getInteractionScores(uid: Id[User]): Seq[InteractionInfo] = {
+  def getRecentInteractions(uid: Id[User]): Seq[InteractionInfo] = {
     db.readOnlyMaster { implicit s =>
       val arr = userValueRepo.getValue(uid, UserValues.recentInteractions).as[Seq[JsObject]]
       val scores = for ((obj, i) <- arr.zipWithIndex) yield {
         val action = (obj \ "action").as[String]
         val entity = (obj \ "user").asOpt[Id[User]] match {
           case Some(id) =>
-            Left(id)
+            UserRecipient(id)
           case None =>
-            Right(EmailAddress((obj \ "email").as[String]))
+            EmailRecipient(EmailAddress((obj \ "email").as[String]))
         }
         (entity, calcInteractionScore(i, action))
       }
@@ -57,7 +54,7 @@ class UserInteractionCommander @Inject() (
   }
 }
 
-case class InteractionInfo(entity: Either[Id[User], EmailAddress], score: Double)
+case class InteractionInfo(recipient: InteractionRecipient, score: Double)
 object InteractionInfo {
   implicit def ord: Ordering[InteractionInfo] = new Ordering[InteractionInfo] {
     def compare(x: InteractionInfo, y: InteractionInfo): Int = x.score compare y.score
@@ -72,11 +69,15 @@ object UserInteraction {
 
   val maximumInteractions = 100
 
-  def getScoreForAction(action: String) = {
+  def getAction(action: String) = {
     action match {
-      case INVITE_KIFI.value => INVITE_KIFI.score
-      case INVITE_LIBRARY.value => INVITE_LIBRARY.score
-      case MESSAGE_USER.value => MESSAGE_USER.score
+      case INVITE_KIFI.value => INVITE_KIFI
+      case INVITE_LIBRARY.value => INVITE_LIBRARY
+      case MESSAGE_USER.value => MESSAGE_USER
     }
   }
 }
+
+sealed trait InteractionRecipient
+case class UserRecipient(id: Id[User]) extends InteractionRecipient
+case class EmailRecipient(address: EmailAddress) extends InteractionRecipient

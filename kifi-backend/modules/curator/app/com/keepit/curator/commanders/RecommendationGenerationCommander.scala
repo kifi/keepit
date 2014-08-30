@@ -60,7 +60,7 @@ class RecommendationGenerationCommander @Inject() (
   private def specialCurators(): Future[Seq[Id[User]]] = experimentCommander.getUsersByExperiment(ExperimentType.SPECIAL_CURATOR).map(users => users.map(_.id.get).toSeq)
 
   private def computeMasterScore(scores: UriScores): Float = {
-    (5 * scores.socialScore +
+    (4 * scores.socialScore +
       6 * scores.overallInterestScore +
       2 * scores.priorScore +
       1 * scores.recencyScore +
@@ -76,7 +76,8 @@ class RecommendationGenerationCommander @Inject() (
     (1 * scores.recencyScore +
       1 * scores.popularityScore +
       6 * scores.rekeepScore +
-      3 * scores.discoveryScore) *
+      5 * scores.discoveryScore +
+      5 * scores.curationScore.getOrElse(0.0f)) *
       scores.multiplier.getOrElse(1.0f)
   }
 
@@ -99,9 +100,9 @@ class RecommendationGenerationCommander @Inject() (
     }
   }
 
-  def getTopRecommendationsNotPushed(userId: Id[User], howManyMax: Int): Future[Seq[UriRecommendation]] = {
+  def getTopRecommendationsNotPushed(userId: Id[User], howManyMax: Int, masterScoreThreshold: Float = 0f): Future[Seq[UriRecommendation]] = {
     db.readOnlyReplicaAsync { implicit session =>
-      uriRecRepo.getNotPushedByTopMasterScore(userId, howManyMax)
+      uriRecRepo.getDigestRecommendableByTopMasterScore(userId, howManyMax, masterScoreThreshold)
     }
   }
 

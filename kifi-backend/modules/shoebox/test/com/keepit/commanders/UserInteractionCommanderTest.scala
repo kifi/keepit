@@ -26,12 +26,12 @@ class UserInteractionCommanderTest extends Specification with ShoeboxTestInjecto
           (user1, user2, user3, user4)
         }
 
-        userInteractionCommander.addInteraction(user1.id.get, Left(user2.id.get), UserInteraction.MESSAGE_USER)
-        userInteractionCommander.addInteraction(user1.id.get, Left(user3.id.get), UserInteraction.MESSAGE_USER)
-        userInteractionCommander.addInteraction(user1.id.get, Right(user4), UserInteraction.MESSAGE_USER)
-        userInteractionCommander.addInteraction(user1.id.get, Left(user2.id.get), UserInteraction.MESSAGE_USER)
-        userInteractionCommander.addInteraction(user1.id.get, Left(user3.id.get), UserInteraction.MESSAGE_USER)
-        userInteractionCommander.addInteraction(user1.id.get, Left(user2.id.get), UserInteraction.MESSAGE_USER)
+        userInteractionCommander.addInteraction(user1.id.get, UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER)
+        userInteractionCommander.addInteraction(user1.id.get, UserRecipient(user3.id.get), UserInteraction.MESSAGE_USER)
+        userInteractionCommander.addInteraction(user1.id.get, EmailRecipient(user4), UserInteraction.MESSAGE_USER)
+        userInteractionCommander.addInteraction(user1.id.get, UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER)
+        userInteractionCommander.addInteraction(user1.id.get, UserRecipient(user3.id.get), UserInteraction.MESSAGE_USER)
+        userInteractionCommander.addInteraction(user1.id.get, UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER)
 
         def createList(objs: List[JsObject]) = {
           objs.map { o =>
@@ -45,20 +45,19 @@ class UserInteractionCommanderTest extends Specification with ShoeboxTestInjecto
 
         db.readOnlyMaster { implicit session =>
           val list = userValueRepo.getValue(user1.id.get, UserValues.recentInteractions).as[List[JsObject]]
-          list.size === 6
-          createList(list) === List(user2.id.get, user3.id.get, user4.address, user2.id.get, user3.id.get, user2.id.get)
+          createList(list) === List(user2.id.get, user3.id.get, user2.id.get, user4.address, user3.id.get, user2.id.get)
           userValueRepo.count === 1
         }
 
         // test interaction scores are sorted in decreasing order
-        val sortedScores = userInteractionCommander.getInteractionScores(user1.id.get)
+        val sortedScores = userInteractionCommander.getRecentInteractions(user1.id.get)
         val scoresOnly = sortedScores.map(_.score)
         scoresOnly === scoresOnly.sorted.reverse
-        sortedScores.map(_.entity).toList === List(Left(user2.id.get), Left(user3.id.get), Right(user4))
+        sortedScores.map(_.recipient).toList === List(UserRecipient(user2.id.get), UserRecipient(user3.id.get), EmailRecipient(user4))
 
         // test interaction array keeps X most recent interactions
         for (i <- 1 to UserInteraction.maximumInteractions) {
-          userInteractionCommander.addInteraction(user1.id.get, Left(user2.id.get), UserInteraction.MESSAGE_USER)
+          userInteractionCommander.addInteraction(user1.id.get, UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER)
         }
         db.readOnlyMaster { implicit session =>
           userValueRepo.getValue(user1.id.get, UserValues.recentInteractions).as[List[JsObject]].size === UserInteraction.maximumInteractions
