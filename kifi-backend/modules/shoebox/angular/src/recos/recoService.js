@@ -3,10 +3,7 @@
 angular.module('kifi')
 
 .factory('recoService', [
-  '$http', 'env', '$q', '$timeout', 'routeService', 'Clutch',
-  function ($http, env, $q, $timeout, routeService, Clutch) {
-    var recos = [];
-
+  function () {
     // Exact copy of what is in Keep constructor. Need to DRY.
     // TODO: move this into util.
     function formatTitleFromUrl(url) {
@@ -136,73 +133,13 @@ angular.module('kifi')
       this.recoKeep = new Keep(rawReco.itemInfo);
     }
 
-    var clutchParams = {
-      cacheDuration: 2000
-    };
-
-    function populateRecos(res, type) {
-      recos = [];
-
-      if (res && res.data) {
-        res.data.forEach(function (rawReco) {
-          recos.push(new Recommendation(rawReco, type));
-        });
-      }
-
-      return recos;
-    }
-
-    var kifiRecommendationService = new Clutch(function (opts) {
-      var recoOpts = {
-        more: (!opts || opts.more === undefined) ? false : opts.more,
-        recency: opts && angular.isNumber(opts.recency) ? opts.recency : 0.75
-      };
-
-      return $http.get(routeService.recos(recoOpts)).then(function (res) {
-        return populateRecos(res, 'recommended');
-      });
-    }, clutchParams);
-
-    var kifiPopularRecommendationService = new Clutch(function () {
-      return $http.get(routeService.recosPublic()).then(function (res) {
-        return populateRecos(res, 'popular');
-      });
-    }, clutchParams);
-
     var api = {
-      get: function () {
-        return recos.length > 0 ? 
-          $q.when(recos) :
-          kifiRecommendationService.get();
+      UserRecommendation: function (rawReco) {
+        return new Recommendation(rawReco, 'recommended');
       },
 
-      getMore: function (opt_recency) {
-        return kifiRecommendationService.get({ more: true, recency: opt_recency });
-      },
-
-      getPopular: function () {
-        return kifiPopularRecommendationService.get();
-      },
-
-      trash: function (keep) {
-        $http.post(routeService.recoFeedback(keep.urlId), { trashed: true });
-      },
-
-      vote: function (keep, vote) {
-        // vote === true -> upvote; vote === false -> downvote
-        $http.post(routeService.recoFeedback(keep.urlId), { vote: vote });
-      },
-
-      keep: function (keep) {
-        $http.post(routeService.recoFeedback(keep.urlId), { kept: true });
-      },
-
-      click: function (keep) {
-        $http.post(routeService.recoFeedback(keep.urlId), { clicked: true });
-      },
-
-      improve: function (keep, improvement) {
-        $http.post(routeService.recoFeedback(keep.urlId), { comment: improvement });
+      PopularRecommendation: function (rawReco) {
+        return new Recommendation(rawReco, 'popular');
       }
     };
 
