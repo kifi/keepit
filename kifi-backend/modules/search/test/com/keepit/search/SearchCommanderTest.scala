@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.test._
 import org.specs2.mutable._
@@ -14,6 +15,7 @@ import com.keepit.search.sharding.ShardSpecParser
 class SearchCommanderTest extends Specification with SearchTestInjector with SearchTestHelper {
 
   implicit private val activeShards: ActiveShards = ActiveShards((new ShardSpecParser).parse("0,1 / 2"))
+  private val publicIdConfig = PublicIdConfiguration("secret key")
 
   "SearchCommander" should {
     "generate results in the correct json format" in {
@@ -42,7 +44,8 @@ class SearchCommanderTest extends Specification with SearchTestInjector with Sea
           inject[AirbrakeNotifier],
           inject[SearchServiceClient],
           inject[ShoeboxServiceClient],
-          inject[MonitoredAwait])
+          inject[MonitoredAwait],
+          publicIdConfig)
 
         val res = searchCommander.search(
           userId = users(0).id.get,

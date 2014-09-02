@@ -12,28 +12,27 @@ guide.step3 = guide.step3 || function () {
       allow: {type: 'mouseover', target: '.kifi-tile-keep,.kifi-tile-kept'},
     },
     {
-      lit: '.kifi-dock-compose',
+      lit: {bottom: 8, right: 164, width: 49, height: 49},
       pad: [2, 188, 90, 70],
-      arrow: {dx: 130, dy: 96, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -80, gap: 10}},
+      afterTransition: '.kifi-dock-compose',
+      arrow: {dx: 130, dy: 96, from: {angle: 0, gap: 12, along: [1, .55]}, to: {angle: -80, gap: 10, sel: '.kifi-dock-compose'}},
       allow: {type: 'click', target: '.kifi-dock-compose', proceed: true},
       substep: true
     },
     {
-      lit: '.kifi-keeper',
-      pad: [128, 100, 112, 20],
+      lit: {bottom: 65, right: 10, width: 302, height: 177},
+      pad: [0, 30, 60, 30],
+      afterTransition: '.kifi-toast',
       arrow: {dx: 160, dy: 80, from: {angle: -80, gap: 10}, to: {angle: 0, gap: 5, along: [0, .45], sel: '.kifi-compose>.kifi-ti-list'}},
       allow: [
         {type: /^key/, target: '.kifi-compose input', unless: isEscOrEnterOnTip},
         {type: /^key/, target: '.kifi-compose-draft', unless: isEsc},
         {type: 'mousedown', target: '.kifi-ti-dropdown-item-token'}
-      ],
-      afterTransition: '.kifi-toast'
+      ]
     },
     {
-      lit: '.kifi-keeper',
-      pad: [132, 102, 116, 26],
-      // lit: '.kifi-toast',
-      // pad: [-28, 100, 92, 70],
+      lit: {bottom: 65, right: 10, width: 302, height: 177},
+      pad: [0, 30, 60, 30],
       arrow: {dx: 290, dy: 180, from: {angle: 0, gap: 16, along: [1, .55]}, to: {angle: -90, gap: 10, sel: '.kifi-compose-submit'}},
       allow: [
         {type: /^key/, target: '.kifi-compose input', unless: isEscOrEnterOnTip},

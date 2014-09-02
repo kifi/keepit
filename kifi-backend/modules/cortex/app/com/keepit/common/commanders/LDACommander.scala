@@ -61,7 +61,7 @@ class LDACommander @Inject() (
     db.readOnlyReplica { implicit s =>
       val uriTopicOpt = uriTopicRepo.getActiveByURI(uriId, wordRep.version)
       val userInterestOpt = userTopicRepo.getByUser(userId, wordRep.version)
-      computeInterestScore(uriTopicOpt, userInterestOpt)
+      computeCosineInterestScore(uriTopicOpt, userInterestOpt)
     }
   }
 
@@ -77,19 +77,12 @@ class LDACommander @Inject() (
   def batchUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores] = {
     db.readOnlyReplica { implicit s =>
       val userInterestOpt = userTopicRepo.getByUser(userId, wordRep.version)
-      val uriTopicOpts = uriTopicRepo.getActiveByURIs(uriIds, wordRep.version)
-      uriTopicOpts.map { uriTopicOpt =>
-        computeInterestScore(uriTopicOpt, userInterestOpt)
-      }
-    }
-  }
-
-  def batchGaussianUserURIsInterests(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[LDAUserURIInterestScores] = {
-    db.readOnlyReplica { implicit s =>
       val userInterestStatOpt = userLDAStatRepo.getActiveByUser(userId, wordRep.version)
       val uriTopicOpts = uriTopicRepo.getActiveByURIs(uriIds, wordRep.version)
       uriTopicOpts.map { uriTopicOpt =>
-        computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
+        val s1 = computeCosineInterestScore(uriTopicOpt, userInterestOpt)
+        val s2 = computeGaussianInterestScore(uriTopicOpt, userInterestStatOpt)
+        LDAUserURIInterestScores(s2.global, s1.recency)
       }
     }
   }
@@ -117,17 +110,17 @@ class LDACommander @Inject() (
     }
   }
 
-  private def computeInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAInterests]): LDAUserURIInterestScores = {
+  private def computeCosineInterestScore(uriTopicOpt: Option[URILDATopic], userInterestOpt: Option[UserLDAInterests]): LDAUserURIInterestScores = {
     (uriTopicOpt, userInterestOpt) match {
       case (Some(uriFeat), Some(userFeat)) =>
-        val globalScore = computeInterestScore(userFeat.numOfEvidence, userFeat.userTopicMean, uriFeat, isRecent = false)
-        val recencyScore = computeInterestScore(userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, uriFeat, isRecent = true)
+        val globalScore = computeCosineInterestScore(userFeat.numOfEvidence, userFeat.userTopicMean, uriFeat, isRecent = false)
+        val recencyScore = computeCosineInterestScore(userFeat.numOfRecentEvidence, userFeat.userRecentTopicMean, uriFeat, isRecent = true)
         LDAUserURIInterestScores(globalScore, recencyScore)
       case _ => LDAUserURIInterestScores(None, None)
     }
   }
 
-  private def computeInterestScore(numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeat: URILDATopic, isRecent: Boolean): Option[LDAUserURIInterestScore] = {
+  private def computeCosineInterestScore(numOfEvidenceForUser: Int, userFeatOpt: Option[UserTopicMean], uriFeat: URILDATopic, isRecent: Boolean): Option[LDAUserURIInterestScore] = {
     (userFeatOpt, uriFeat.feature) match {
       case (Some(userFeat), Some(uriFeatVec)) =>
         val userVec = getUserLDAStats(wordRep.version) match {

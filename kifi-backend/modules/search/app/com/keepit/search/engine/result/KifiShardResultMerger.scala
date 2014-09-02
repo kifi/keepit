@@ -6,7 +6,7 @@ import com.keepit.search.util.HitQueue
 import scala.math._
 import play.api.libs.json.JsNumber
 
-class KifiResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
+class KifiShardResultMerger(enableTailCutting: Boolean, config: SearchConfig) {
   // get config params
   private[this] val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
   private[this] val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")

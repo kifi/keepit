@@ -228,6 +228,18 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
             (userIron.id.get, userHulk.id.get) ::
             Nil
         }
+
+        // test re-activating inactive library
+        val libScience = add3.right.get
+        db.readWrite { implicit s =>
+          libraryRepo.save(libScience.copy(state = LibraryStates.INACTIVE))
+        }
+        libraryCommander.addLibrary(lib3Request, userIron.id.get).isRight === true
+        db.readOnlyMaster { implicit s =>
+          val allLibs = libraryRepo.all
+          allLibs.length === 3
+          allLibs.map(_.slug.value) === Seq("avengers", "murica", "science")
+        }
       }
 
     }

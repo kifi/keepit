@@ -4,6 +4,7 @@ import com.keepit.search.index.{ FieldDecoder, DefaultAnalyzer, Indexable }
 import com.keepit.model.{ NormalizedURI, Keep }
 import com.keepit.search.LangDetector
 import com.keepit.search.sharding.Shard
+import com.keepit.search.graph.library.LibraryFields
 
 object KeepFields {
   val libraryField = "lib"
@@ -52,7 +53,7 @@ case class KeepIndexable(keep: Keep, shard: Shard[NormalizedURI]) extends Indexa
     doc.add(buildIdValueField(userIdField, keep.userId))
     keep.libraryId.foreach(libId => doc.add(buildIdValueField(libraryIdField, libId)))
 
-    doc.add(buildLongValueField(visibilityField, ???)) // todo(Andrew, Léo): denormalize library visibility onto keeps
+    doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.visibility)))
 
     doc.add(buildBinaryDocValuesField(recordField, KeepRecord(keep)))
     buildLongValueField(createdAtField, keep.createdAt.getMillis)
