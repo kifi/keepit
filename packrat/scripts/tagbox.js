@@ -269,11 +269,7 @@ this.tagbox = (function ($, win) {
 		handleEsc: function () {
 			log('[handleEsc]');
 
-			if (this.currentSuggestion) {
-				this.navigateTo(null, 'esc');
-			} else {
-				this.hide('key:esc');
-			}
+			this.hide('key:esc');
 			return false;
 		},
 
