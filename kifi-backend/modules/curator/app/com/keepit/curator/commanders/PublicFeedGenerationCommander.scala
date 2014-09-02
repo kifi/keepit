@@ -1,6 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.google.inject.Inject
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.{ Id, SequenceNumber }
@@ -19,6 +19,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
+@Singleton
 class PublicFeedGenerationCommander @Inject() (
     seedCommander: SeedIngestionCommander,
     shoebox: ShoeboxServiceClient,
@@ -34,17 +35,12 @@ class PublicFeedGenerationCommander @Inject() (
   private def specialCurators(): Future[Seq[Id[User]]] =
     experimentCommander.getUsersByExperiment(ExperimentType.SPECIAL_CURATOR).map(users => users.map(_.id.get).toSeq)
 
-  def getPublicFeeds(howManyMax: Int): Future[Seq[PublicFeed]] = {
-    db.readOnlyReplicaAsync { implicit session =>
-      publicFeedRepo.getByTopMasterScore(howManyMax)
-    }
-  }
-
   private def computePublicMasterScore(scores: PublicUriScores): Float = {
     (1 * scores.recencyScore +
       1 * scores.popularityScore +
       6 * scores.rekeepScore +
-      3 * scores.discoveryScore) *
+      3 * scores.discoveryScore +
+      4 * scores.curationScore.getOrElse(0.0f)) *
       scores.multiplier.getOrElse(1.0f)
   }
 
