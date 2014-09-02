@@ -14,7 +14,7 @@ case class CuratorKeepInfo(
   userId: Id[User],
   keepId: Id[Keep],
   libraryId: Option[Id[Library]], // TODO: tan will change it to not option after re-ingesting
-  state: State[CuratorKeepInfo], //library: Id[Library]
+  state: State[CuratorKeepInfo],
   discoverable: Boolean)
     extends Model[CuratorKeepInfo] with ModelWithState[CuratorKeepInfo] {
 
