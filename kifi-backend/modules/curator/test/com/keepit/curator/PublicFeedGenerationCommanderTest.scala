@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.commanders.PublicFeedGenerationCommander
+import com.keepit.curator.commanders.{ RecommendationRetrievalCommander, PublicFeedGenerationCommander }
 import com.keepit.curator.model.{ PublicFeedRepo, PublicFeed }
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
@@ -53,12 +53,9 @@ class PublicFeedGenerationCommanderTest extends Specification with CuratorTestIn
           }
 
           val commander = inject[PublicFeedGenerationCommander]
-
-          val result = commander.getPublicFeeds(2)
-          val feeds = Await.result(result, Duration(10, "seconds"))
-          feeds.size === 2
-          feeds(0).uriId === Id[NormalizedURI](1)
-          feeds(0).publicMasterScore === 3.0f
+          val retrivalCommander = inject[RecommendationRetrievalCommander]
+          val feeds = retrivalCommander.topPublicRecos()
+          feeds.size === 3
       }
     }
   }
