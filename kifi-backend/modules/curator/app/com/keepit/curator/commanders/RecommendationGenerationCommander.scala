@@ -163,7 +163,7 @@ class RecommendationGenerationCommander @Inject() (
       candidateURIs <- shoebox.getCandidateURIs(seeds.map(_.uriId))
     } yield {
       val candidateSeeds = (seeds zip candidateURIs) filter (_._2) map (_._1)
-      eliza.checkBatchThreads(userId, candidateSeeds.map(_.uriId)).map { checkThreads =>
+      eliza.checkUrisDiscussed(userId, candidateSeeds.map(_.uriId)).map { checkThreads =>
         val candidates = (candidateSeeds zip checkThreads).collect{case (cand, hasChat) if hasChat => cand}
         (candidates, if (seeds.isEmpty) state.seq else seeds.map(_.seq).max)
       }
