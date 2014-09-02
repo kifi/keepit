@@ -1,6 +1,6 @@
 package com.keepit.curator.commanders
 
-import com.google.inject.Inject
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.commanders.RemoteUserExperimentCommander
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.{ Id, SequenceNumber }
@@ -19,6 +19,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
+@Singleton
 class PublicFeedGenerationCommander @Inject() (
     seedCommander: SeedIngestionCommander,
     shoebox: ShoeboxServiceClient,
