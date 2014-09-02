@@ -5,6 +5,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
+import com.keepit.common.performance._
 import com.keepit.model._
 import org.joda.time.DateTime
 
@@ -118,7 +119,7 @@ class ReKeepRepoImpl @Inject() (
     sql"select count(distinct (src_user_id)) from rekeep where uri_id=$uriId".as[Int].first
   }
 
-  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]])(implicit r: RSession): Map[Id[NormalizedURI], Int] = {
+  def getReKeepCountsByURIs(uriIds: Set[Id[NormalizedURI]])(implicit r: RSession): Map[Id[NormalizedURI], Int] = timing(s"getReKeepCountsByURIs(${uriIds.size})") {
     if (uriIds.isEmpty) Map.empty
     else {
       val valueMap = uriReKeepCountCache.bulkGetOrElse(uriIds.map(UriReKeepCountKey(_)).toSet) { keys =>
