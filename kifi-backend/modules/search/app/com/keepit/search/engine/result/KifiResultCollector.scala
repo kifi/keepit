@@ -8,7 +8,7 @@ import org.apache.lucene.util.PriorityQueue
 object KifiResultCollector {
   val MIN_PERCENT_MATCH = 0.5f
 
-  class Hit(var id: Long, var score: Float, var normalizedScore: Float, var visibility: Int, var altId: Long)
+  class Hit(var id: Long, var score: Float, var normalizedScore: Float, var visibility: Int, var keepId: Long, var libId: Long)
 
   class HitQueue(sz: Int) extends PriorityQueue[Hit](sz) {
 
@@ -25,14 +25,15 @@ object KifiResultCollector {
 
     private[this] var overflow: Hit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
 
-    def insert(id: Long, score: Float, normalizedScore: Float, visibility: Int, altId: Long) {
+    def insert(id: Long, score: Float, normalizedScore: Float, visibility: Int, keepId: Long, libId: Long) {
       if (overflow == null) {
-        overflow = new Hit(id, score, normalizedScore, visibility, altId)
+        overflow = new Hit(id, score, normalizedScore, visibility, keepId, libId)
       } else {
         overflow.id = id
         overflow.score = score
         overflow.visibility = visibility
-        overflow.altId = altId
+        overflow.keepId = keepId
+        overflow.libId = libId
         overflow
       }
       overflow = insertWithOverflow(overflow)
@@ -114,14 +115,12 @@ class KifiResultCollector(clickBoosts: ResultClickBoosts, maxHitsPerCategory: In
         }
 
         if (score > 0.0f) {
-          val altId = ctx.alternativeId
-
           if ((visibility & Visibility.MEMBER) != 0) {
-            myHits.insert(id, score, score, visibility, altId)
+            myHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
           } else if ((visibility & Visibility.NETWORK) != 0) {
-            friendsHits.insert(id, score, score, visibility, altId)
+            friendsHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
           } else {
-            othersHits.insert(id, score, score, visibility, altId)
+            othersHits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
           }
         }
       }
@@ -153,7 +152,7 @@ class NonUserKifiResultCollector(maxHitsPerCategory: Int, percentMatchThreshold:
         }
 
         if (score > 0.0f && visibility != Visibility.RESTRICTED) {
-          hits.insert(id, score, score, visibility, ctx.alternativeId)
+          hits.insert(id, score, score, visibility, ctx.secondaryId, ctx.tertiaryId)
         }
       }
     }
