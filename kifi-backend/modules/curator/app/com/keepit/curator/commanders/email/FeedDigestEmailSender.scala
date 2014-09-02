@@ -184,7 +184,6 @@ class FeedDigestEmailSenderImpl @Inject() (
     )
 
     log.info(s"sending email to $userId with ${digestRecos.size} keeps")
-    val now = currentDateTime
     shoebox.sendMail(email).map { sent =>
       if (sent) {
         db.readWrite { implicit rw =>
