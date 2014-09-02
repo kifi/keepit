@@ -33,7 +33,7 @@ class CuratorAnalytics @Inject() (
       log.info(s"[analytics] Sending event: $event")
       heimdal.trackEvent(event)
     }
-    if (contexts.isEmpty) log.info("[analytics] nothing to to for user $userId reco feedback on $uriId to track: $feedback")
+    if (contexts.isEmpty) log.info(s"[analytics] nothing to do for user $userId reco feedback on $uriId to track: $feedback")
   }
 
   private def toRecoUserActionContext(item: UriRecommendation, clientType: RecommendationClientType): RecommendationUserActionContext = {
