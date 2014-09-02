@@ -1,7 +1,7 @@
 package com.keepit.search.engine
 
 object Visibility { // use value class?
-  // NOTE: only 7 bits for record type.
+  // NOTE: this is stored as the record type in DataBuffer. Only 7 bits are available for record type.
   val RESTRICTED = 0x00
 
   val OTHERS = 0x01
@@ -12,5 +12,5 @@ object Visibility { // use value class?
   val HAS_SECONDARY_ID = 0x20
   val HAS_TERTIARY_ID = 0x40
 
-  val HAS_ALTERNATIVE_ID = HAS_SECONDARY_ID | HAS_TERTIARY_ID
+  val ALTERNATIVE_ID_MASK = (0x20 | 0x40)
 }

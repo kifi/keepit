@@ -1,25 +1,21 @@
 package com.keepit.curator.commanders
 
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.curator.model._
-import com.keepit.model.{ User, ExperimentType }
+import com.keepit.model.{ NormalizedURI, ExperimentType, User }
 import com.keepit.common.db.slick.Database
 import com.keepit.commanders.RemoteUserExperimentCommander
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.model.User
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.util.{ Failure, Success }
-import scala.concurrent.{ Future, Promise }
-
-import java.util.concurrent.atomic.AtomicBoolean
+import scala.util.Failure
+import scala.concurrent.Future
 
 @Singleton
 class SeedIngestionCommander @Inject() (
@@ -92,6 +88,21 @@ class SeedIngestionCommander @Inject() (
           Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawItem.uriId))
         }
         cookSeedItem(userId, rawItem, keepers)
+      }
+    }
+  }
+
+  def getPreviousSeeds(userId: Id[User], uris: Seq[Id[NormalizedURI]]): Future[Seq[SeedItem]] = {
+    db.readOnlyReplicaAsync { implicit session =>
+      val rawSeeds = rawSeedsRepo.getByUserIdAndUriIds(userId, uris)
+      rawSeeds.map { rawSeed =>
+        val keepers =
+          if (rawSeed.timesKept > MAX_INDIVIDUAL_KEEPERS_TO_CONSIDER) {
+            Keepers.TooMany
+          } else {
+            Keepers.ReasonableNumber(keepInfoRepo.getKeepersByUriId(rawSeed.uriId))
+          }
+        cookSeedItem(userId, rawSeed, keepers)
       }
     }
   }

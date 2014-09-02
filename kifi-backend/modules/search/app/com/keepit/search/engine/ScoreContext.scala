@@ -12,8 +12,11 @@ class ScoreContext(
     collector: ResultCollector[ScoreContext]) extends Joiner {
 
   private[engine] var visibility: Int = 0
-  private[engine] var alternativeId: Long = -1 // secondary id (keep id for kifi search) or tertiary id (library id for kifi search)
-  private[this] var alternativeIdScore: Float = -1.0f
+
+  private[engine] var secondaryId: Long = -1 // secondary id (keep id for kifi search)
+  private[this] var secondaryIdScore: Float = -1.0f
+  private[engine] var tertiaryId: Long = -1 // tertiary id (library id for kifi search)
+  private[this] var tertiaryIdScore: Float = -1.0f
 
   private[engine] val scoreMax = new Array[Float](scoreArraySize)
   private[engine] val scoreSum = new Array[Float](scoreArraySize)
@@ -36,43 +39,38 @@ class ScoreContext(
 
   def clear(): Unit = {
     visibility = Visibility.RESTRICTED
-    alternativeId = -1L
-    alternativeIdScore = -1.0f
+    secondaryId = -1L
+    secondaryIdScore = -1.0f
+    tertiaryId = -1L
+    tertiaryIdScore = -1.0f
     Arrays.fill(scoreMax, 0.0f)
     Arrays.fill(scoreSum, 0.0f)
   }
 
   def join(reader: DataBufferReader): Unit = {
-    // compute the visibility
-    val thisVisibility = reader.recordType
-    visibility = visibility | thisVisibility
+    val theVisibility = reader.recordType
+    val id2 = if ((theVisibility & Visibility.HAS_SECONDARY_ID) != 0) reader.nextLong() else -1L
+    val id3 = if ((theVisibility & Visibility.HAS_TERTIARY_ID) != 0) reader.nextLong() else -1L
+    var localSum = 0.0f // use a simple sum of scores to compare secondary/tertiary ids
 
-    if ((thisVisibility & Visibility.HAS_ALTERNATIVE_ID) != 0) {
-      val id2 = reader.nextLong()
-      var scr2 = 0.0f // use a simple sum of scores to compare secondary ids
-
-      while (reader.hasMore) {
-        val bits = reader.nextTaggedFloatBits()
-        val idx = DataBuffer.getTaggedFloatTag(bits)
-        val scr = DataBuffer.getTaggedFloatValue(bits)
-        scr2 += scr
-        if (scoreMax(idx) < scr) scoreMax(idx) = scr
-        scoreSum(idx) += scr
-      }
-
-      if (scr2 > alternativeIdScore) {
-        alternativeId = id2
-        alternativeIdScore = scr2
-      }
-    } else {
-      while (reader.hasMore) {
-        val bits = reader.nextTaggedFloatBits()
-        val idx = DataBuffer.getTaggedFloatTag(bits)
-        val scr = DataBuffer.getTaggedFloatValue(bits)
-        if (scoreMax(idx) < scr) scoreMax(idx) = scr
-        scoreSum(idx) += scr
-      }
+    while (reader.hasMore) {
+      val bits = reader.nextTaggedFloatBits()
+      val idx = DataBuffer.getTaggedFloatTag(bits)
+      val scr = DataBuffer.getTaggedFloatValue(bits)
+      scoreSum(idx) += scr
+      if (scoreMax(idx) < scr) scoreMax(idx) = scr
     }
+
+    if (id2 >= 0 && localSum > secondaryIdScore) {
+      secondaryId = id2
+      secondaryIdScore = localSum
+    }
+    if (id3 >= 0 && localSum > tertiaryIdScore) {
+      tertiaryId = id3
+      tertiaryIdScore = localSum
+    }
+
+    visibility = visibility | theVisibility
   }
 
   def flush(): Unit = collector.collect(this)

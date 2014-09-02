@@ -1,10 +1,9 @@
-@bgColor: #eff2f7;
 @fgColor: #111111;
 @buttonBgColor: #67829c;
-@borderColor: #e1e8e9;
+@borderColor: #ccc;
 @recipientFgColor: black;
 @dotBgColor: #b8c5d1;
-@dotFgColor: @bgColor;
+@dotFgColor: #eff2f7;
 @picSize: 29px;
 @listPicSize: 35px;
 @duration: .3s;
@@ -20,7 +19,6 @@
   position: relative;
   padding: 8px 0px;
   color: @fgColor;
-  background: @bgColor;
   border-bottom: 1px solid @borderColor;
 }
 
@@ -63,7 +61,6 @@
   }
 
   .kifi-message-participants-n & {
-    font-weight: 500;
     color: @fgColor;
     padding: 0 @itemPaddingX;
   }
@@ -133,11 +130,11 @@
   height: @picSize;
   border: 0;
   padding: 0;
-  margin: 0;
-  margin-right: 3px;
+  margin: 0 3px 0 0;
 
-  img, .kifi-message-participant-email-image {
-    border-radius: 2px !important;
+  img,
+  .kifi-message-participant-email-image {
+    border-radius: 50% !important;
   }
 
   img {
@@ -183,17 +180,16 @@
 }
 
 .kifi-message-participants-avatars-expand {
-  //display: none;
   display: inline-block;
+  margin-left: 2px;
+  border-radius: 7px !important;
+  padding: 0 4px 4px;
+  line-height: 12px;
+  vertical-align: 8px;
   font-size: 20px;
   font-weight: 500;
-  line-height: 13px;
   text-align: center;
   text-decoration: none;
-  padding: 2px 4px;
-  padding-top: 0;
-  vertical-align: bottom;
-  border-radius: 2px !important;
   color: white;
   background: @dotBgColor;
 
@@ -335,10 +331,10 @@
   vertical-align: middle;
 
   &:hover, &:focus {
-    background-color: tint(@bgColor, 70%);
+    background-color: rgba(255,255,255,.6);
   }
   &:active {
-    background-color: shade(@bgColor, 5%);
+    background-color: rgba(0,0,0,.04);
   }
   &.kifi-active {
     background-color: @dotBgColor;

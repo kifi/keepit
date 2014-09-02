@@ -54,7 +54,7 @@ guide.step = guide.step || function () {
     $loading.remove();
     $loading = null;
     $(window).on('resize.guideStep', onWinResize);
-    showStep(0);
+    showStep($(steps[0].lit).css('display') !== 'none' ? 0 : 1);
   }
 
   function hide() {
@@ -167,7 +167,7 @@ guide.step = guide.step || function () {
             anchor.css);
         }
 
-        (step.substep ? showSubstep : showNewStep)(pos || step.pos, ms, newArrow);
+        (step.substep && arrow ? showSubstep : showNewStep)(pos || step.pos, ms, newArrow);
       });
     }
   }
@@ -370,9 +370,18 @@ guide.step = guide.step || function () {
     return dx * dx + dy * dy;
   }
 
-  function getRect(sel) {
-    var el = $(sel)[0];
-    return el && el.getBoundingClientRect();
+  function getRect(selOrBox) {
+    if (typeof selOrBox === 'string') {
+      var el = $(selOrBox)[0];
+      return el && el.getBoundingClientRect();
+    } else {
+      return {
+        top: 'top' in selOrBox ? selOrBox.top : window.innerHeight - selOrBox.bottom - selOrBox.height,
+        left: 'left' in selOrBox ? selOrBox.left : window.innerWidth - selOrBox.right - selOrBox.width,
+        width: selOrBox.width,
+        height: selOrBox.height
+      };
+    }
   }
 
   function newStepPosCss(pos) {

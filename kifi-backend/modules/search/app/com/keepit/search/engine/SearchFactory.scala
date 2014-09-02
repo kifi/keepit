@@ -1,5 +1,6 @@
 package com.keepit.search.engine
 
+import com.keepit.common.concurrent.ExecutionContext._
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.RequestConsolidator
@@ -17,7 +18,6 @@ import com.keepit.search.phrasedetector.PhraseDetector
 import com.keepit.search.util.LongArraySet
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.TermQuery
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -42,7 +42,7 @@ class SearchFactory @Inject() (
     implicit private val fortyTwoServices: FortyTwoServices) extends Logging {
 
   private[this] val phraseDetectionReqConsolidator = new RequestConsolidator[(CharSequence, Lang), Set[(Int, Int)]](10 minutes)
-  private[this] val libraryIdsReqConsolidator = new RequestConsolidator[Id[User], (Set[Long], Set[Long], Set[Long])](3 seconds)
+  private[this] val libraryIdsReqConsolidator = new RequestConsolidator[Id[User], (Set[Long], Set[Long])](3 seconds)
 
   def getKifiSearch(
     shards: Set[Shard[NormalizedURI]],
@@ -57,12 +57,7 @@ class SearchFactory @Inject() (
     val clickHistoryFuture = mainSearcherFactory.getClickHistoryFuture(userId)
     val clickBoostsFuture = mainSearcherFactory.getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
 
-    val trustedPublishedLibraries = filter.libraryId match {
-      case Some(libId) => LongArraySet.from(Array(libId.id))
-      case None => LongArraySet.empty // TODO: get a set of published libraries that are trusted (or featured)
-    }
-
-    val libraryIdsFuture = getLibraryIdsFuture(userId, trustedPublishedLibraries)
+    val libraryIdsFuture = getLibraryIdsFuture(userId, filter.libraryId)
     val friendIdsFuture = getFriendIdsFuture(userId)
 
     val parser = new KQueryParser(
@@ -111,15 +106,25 @@ class SearchFactory @Inject() (
 
   def getFriendIdsFuture(userId: Id[User]): Future[Set[Long]] = userGraphsSearcherFactory(userId).getSearchFriendsFuture()
 
-  def getLibraryIdsFuture(userId: Id[User], trustedPublishedLibIds: Set[Long]): Future[(Set[Long], Set[Long], Set[Long])] = libraryIdsReqConsolidator(userId) { userId =>
-    userGraphsSearcherFactory(userId).getSearchFriendsFuture().map { friendIds =>
-      val searcher = libraryIndexer.getSearcher
+  def getLibraryIdsFuture(userId: Id[User], libraryRestriction: Option[Id[Library]]): Future[(Set[Long], Set[Long], Set[Long])] = {
 
-      val myOwnLibIds = LongArraySet.from(searcher.findAllIds(new Term(LibraryFields.ownerField, userId.id.toString)).toArray)
-      val memberLibIds = LongArraySet.from(searcher.findAllIds(new Term(LibraryFields.usersField, userId.id.toString)).toArray)
-
-      (myOwnLibIds, memberLibIds, trustedPublishedLibIds) // myOwnLibIds is a subset of memberLibIds
+    val trustedPublishedLibIds = libraryRestriction match {
+      case Some(libId) => LongArraySet.from(Array(libId.id)) // if this library is not public, it is ignored by the engine
+      case None => LongArraySet.empty // we may want to get a set of published libraries that are trusted (or featured) somehow
     }
+
+    val future = libraryIdsReqConsolidator(userId) { userId =>
+      userGraphsSearcherFactory(userId).getSearchFriendsFuture().map { friendIds =>
+        val searcher = libraryIndexer.getSearcher
+
+        val myOwnLibIds = LongArraySet.from(searcher.findAllIds(new Term(LibraryFields.ownerField, userId.id.toString)).toArray)
+        val memberLibIds = LongArraySet.from(searcher.findAllIds(new Term(LibraryFields.usersField, userId.id.toString)).toArray)
+
+        (myOwnLibIds, memberLibIds) // myOwnLibIds is a subset of memberLibIds
+      }
+    }
+
+    future.map { case (myOwnLibIds, memberLibIds) => (myOwnLibIds, memberLibIds, trustedPublishedLibIds) }(immediate)
   }
 
   def getNonUserSearch(

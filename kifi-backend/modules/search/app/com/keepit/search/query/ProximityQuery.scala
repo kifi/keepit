@@ -87,11 +87,11 @@ class ProximityWeight(query: ProximityQuery) extends Weight {
 
   private[this] val termIdMap = {
     var id = -1
-    query.terms.take(ProximityQuery.maxLength).foldLeft(Map.empty[Seq[Term], Int]) { (m, term) =>
-      if (m.contains(term)) m
+    query.terms.take(ProximityQuery.maxLength).foldLeft(Map.empty[Seq[Term], Int]) { (m, termSeq) =>
+      if (m.contains(termSeq)) m
       else {
         id += 1
-        m + (term -> id)
+        m + (termSeq -> id)
       }
     }
   }
@@ -225,22 +225,28 @@ class ProximityScorer(weight: ProximityWeight, tps: Array[PositionAndId], termId
     if (scoredDoc != doc) {
       // start fetching position for all terms at this doc
       // in fact, it only fetches the first position (if exists) for each term
+      var termCnt = 0
       var top = pq.top
       while (top.doc == doc && top.pos == -1) {
+        termCnt += 1
         top.nextPos()
         top = pq.updateTop()
       }
 
-      // go through all positions
-      localAlignment.begin()
-      while (top.doc == doc && top.pos < Int.MaxValue) { // doc still have term positions left
-        localAlignment.update(top.id, top.pos) // note: doc is fixed, earlier term position fetched first, the associated term also changes
-        top.nextPos()
-        top = pq.updateTop()
+      if (termCnt == 1) {
+        // a single term matched. use a short cut
+        proximityScore = weightVal * localAlignment.single(top.id)
+      } else {
+        // go through all positions
+        localAlignment.begin()
+        while (top.doc == doc && top.pos < Int.MaxValue) { // doc still have term positions left
+          localAlignment.update(top.id, top.pos) // note: doc is fixed, earlier term position fetched first, the associated term also changes
+          top.nextPos()
+          top = pq.updateTop()
+        }
+        localAlignment.end()
+        proximityScore = weightVal * localAlignment.score
       }
-      localAlignment.end()
-
-      proximityScore = weightVal * localAlignment.score
       proximityScore = pow(proximityScore, powerFactor).toFloat // for title field, powerfactor = 1. For content field, this could be greater than 1. Loose match in content field gets more penalty.
       scoredDoc = doc
     }
