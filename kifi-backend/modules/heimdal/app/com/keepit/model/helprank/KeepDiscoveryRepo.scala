@@ -76,7 +76,7 @@ class KeepDiscoveryRepoImpl @Inject() (
     sql"select count(distinct (hit_uuid)) from keep_click where uri_id=$uriId and created_at >= $since".as[Int].first
   }
 
-  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime)(implicit session: RSession): Map[Id[NormalizedURI], Int] = timing(s"getDiscoveryCountsByURIs(${uriIds.size})") {
+  def getDiscoveryCountsByURIs(uriIds: Set[Id[NormalizedURI]], since: DateTime)(implicit session: RSession): Map[Id[NormalizedURI], Int] = timing(s"getDiscoveryCountsByURIs(sz=${uriIds.size})") {
     if (uriIds.isEmpty) Map.empty
     else {
       val valueMap = uriDiscoveryCountCache.bulkGetOrElse(uriIds.map(UriDiscoveryCountKey(_)).toSet) { keys =>
@@ -89,7 +89,7 @@ class KeepDiscoveryRepoImpl @Inject() (
             case (uriId, idx) =>
               stmt.setLong(idx + 1, uriId.id)
           }
-          val res = stmt.execute()
+          val res = timing(s"getDiscoveryCountsByURIs(sz=${ids.size};ids=$ids)") { stmt.execute() }
           if (!res) throw new SQLException(s"[getDiscoveryCountsByURIs] ($stmt) failed to execute")
           val rs = stmt.getResultSet()
           while (rs.next()) {
