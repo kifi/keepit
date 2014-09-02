@@ -2,7 +2,7 @@ package com.keepit.curator
 
 import com.keepit.common.db.{ Id }
 import com.keepit.curator.model.{ CuratorKeepInfoStates, CuratorKeepInfo, CuratorKeepInfoRepo }
-import com.keepit.model.{ Keep, User, NormalizedURI }
+import com.keepit.model.{ Library, Keep, User, NormalizedURI }
 import org.specs2.mutable.Specification
 
 class CuratorKeepInfoRepoTest extends Specification with CuratorTestInjector {
@@ -16,6 +16,7 @@ class CuratorKeepInfoRepoTest extends Specification with CuratorTestInjector {
             uriId = Id[NormalizedURI](1),
             userId = Id[User](42),
             keepId = Id[Keep](1),
+            libraryId = Some(Id[Library](1)),
             state = CuratorKeepInfoStates.ACTIVE,
             discoverable = false))
 
@@ -27,6 +28,7 @@ class CuratorKeepInfoRepoTest extends Specification with CuratorTestInjector {
             uriId = Id[NormalizedURI](1),
             userId = Id[User](43),
             keepId = Id[Keep](2),
+            libraryId = Some(Id[Library](1)),
             state = CuratorKeepInfoStates.ACTIVE,
             discoverable = true))
 

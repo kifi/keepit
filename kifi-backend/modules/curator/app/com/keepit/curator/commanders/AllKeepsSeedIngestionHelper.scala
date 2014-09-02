@@ -92,6 +92,7 @@ class AllKeepSeedIngestionHelper @Inject() (
       uriId = keep.uriId,
       userId = keep.userId,
       keepId = keep.id.get,
+      libraryId = keep.libraryId,
       state = State[CuratorKeepInfo](keep.state.value),
       discoverable = !keep.isPrivate
     ))
@@ -130,6 +131,7 @@ class AllKeepSeedIngestionHelper @Inject() (
       keepInfoRepo.save(keepInfo.copy(
         uriId = keep.uriId,
         userId = keep.userId,
+        libraryId = keep.libraryId,
         state = State[CuratorKeepInfo](keep.state.value),
         discoverable = !keep.isPrivate
       ))
