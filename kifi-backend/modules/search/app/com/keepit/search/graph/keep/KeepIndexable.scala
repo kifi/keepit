@@ -1,7 +1,7 @@
 package com.keepit.search.graph.keep
 
 import com.keepit.search.index.{ FieldDecoder, DefaultAnalyzer, Indexable }
-import com.keepit.model.{ NormalizedURI, Keep }
+import com.keepit.model.{ LibraryVisibility, NormalizedURI, Keep }
 import com.keepit.search.LangDetector
 import com.keepit.search.sharding.Shard
 import com.keepit.search.graph.library.LibraryFields
@@ -37,9 +37,9 @@ case class KeepIndexable(keep: Keep, shard: Shard[NormalizedURI]) extends Indexa
 
     doc.add(buildKeywordField(libraryField, keep.libraryId.get.toString))
     doc.add(buildKeywordField(uriField, keep.uriId.toString))
-    if (keep.isDiscoverable) doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.toString))
+    if (keep.visibility != LibraryVisibility.SECRET) doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.toString))
     doc.add(buildKeywordField(userField, keep.userId.toString))
-    if (keep.isDiscoverable) doc.add(buildKeywordField(userDiscoverableField, keep.userId.toString))
+    if (keep.visibility != LibraryVisibility.SECRET) doc.add(buildKeywordField(userDiscoverableField, keep.userId.toString))
 
     keep.title.foreach { title =>
       val titleLang = LangDetector.detect(title)
