@@ -277,7 +277,7 @@ angular.module('kifi')
         };
 
         if (eventSubtype === 'contactJoined') {
-          scope.friendRequestBannerHeader = 'Send a friend request to your email contact';
+          scope.friendRequestBannerHeader = 'Send a friend request to your email contact that just joined';
         } else {
           scope.friendRequestBannerHeader = 'Send a friend request to ' + user.firstName;
         }
