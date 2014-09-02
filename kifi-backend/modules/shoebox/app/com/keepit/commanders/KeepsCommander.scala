@@ -603,24 +603,6 @@ class KeepsCommander @Inject() (
     }
   }
 
-  //<<<<<<< HEAD
-  //  def keepWithSelectedTags(userId: Id[User], rawBookmark: RawBookmarkRepresentation, libraryId: Id[Library], source: KeepSource, selectedTagNames: Seq[String])(implicit context: HeimdalContext): Either[String, (KeepInfo, Seq[Collection])] = {
-  //
-  //    val library = db.readOnlyReplica { implicit session =>
-  //      libraryRepo.get(libraryId)
-  //    }
-  //    keepInterner.internRawBookmark(rawBookmark, userId, library, source, installationId = None) match {
-  //      case Failure(e) => Left(e.getMessage)
-  //      case Success(keep) =>
-  //        val tags = db.readWrite { implicit s =>
-  //          val selectedTagIds = selectedTagNames.map { getOrCreateTag(userId, _).id.get }
-  //          val existingTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get)
-  //          val tagsToAdd = selectedTagIds.filterNot(existingTagIds.contains(_))
-  //          val tagsToRemove = existingTagIds.filterNot(selectedTagIds.contains(_))
-  //
-  //          tagsToAdd.map { tagId =>
-  //            keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
-  //=======
   def keepWithSelectedTags(userId: Id[User], rawBookmark: RawBookmarkRepresentation, libraryId: Id[Library], source: KeepSource, selectedTagNames: Seq[String])(implicit context: HeimdalContext): Either[String, (KeepInfo, Seq[Collection])] = {
 
     val library = db.readOnlyReplica { implicit session =>

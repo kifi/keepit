@@ -69,7 +69,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
-        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
+        val (library, _) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
         val raw = inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com",
@@ -78,7 +78,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val deduped = bookmarkInterner.deDuplicate(raw)
         deduped === raw
         deduped.size === 2
-        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, KeepSource.email, true)
+        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, library, KeepSource.email)
 
         db.readWrite { implicit session =>
           userRepo.get(user.id.get) === user
@@ -114,7 +114,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val user = db.readWrite { implicit session =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
-        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
+        val (library, _) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val fakeAirbrake = inject[FakeAirbrakeNotifier]
         fakeAirbrake.errorCount() === 0
         val bookmarkInterner = inject[KeepInterner]
@@ -131,7 +131,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val deduped = bookmarkInterner.deDuplicate(raw)
         raw === deduped
 
-        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, KeepSource.email, true)
+        val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, library, KeepSource.email)
         fakeAirbrake.errorCount() === 0
         bookmarks.size === 3
         db.readWrite { implicit session =>
@@ -148,12 +148,12 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val user = db.readWrite { implicit s =>
           userRepo.save(User(firstName = "Greg", lastName = "Smith"))
         }
-        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
+        val (library, _) = inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
         val (initialBookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
-        ))), user.id.get, KeepSource.keeper, true)
+        ))), user.id.get, library, KeepSource.keeper)
         initialBookmarks.size === 1
         db.readWrite { implicit s =>
           keepRepo.save(keepRepo.getByUser(user.id.get).head.withActive(false))
@@ -161,7 +161,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         val (bookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true
-        ))), user.id.get, KeepSource.keeper, true)
+        ))), user.id.get, library, KeepSource.keeper)
         db.readOnlyMaster { implicit s =>
           bookmarks.size === 1
           keepRepo.all.size === 1

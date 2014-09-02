@@ -621,9 +621,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
         val withCollection =
-          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false) ::
-            KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
-            KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
+          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
             Nil
         val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
@@ -651,7 +651,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val expected = Json.parse(s"""
           {
             "keeps":[{"id":"${extIds(0)}","title":"title 11","url":"http://www.hi.com11","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
-                     {"id":"${extIds(1)}","title":"title 21","url":"http://www.hi.com21","isPrivate":true,"libraryId":"l8rlPD6Bk7A9"},
+                     {"id":"${extIds(1)}","title":"title 21","url":"http://www.hi.com21","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
                      {"id":"${extIds(2)}","title":"title 31","url":"http://www.hi.com31","isPrivate":false,"libraryId":"l7jlKlnA36Su"}],
             "addedToCollection":3
           }
@@ -668,9 +668,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
         val withCollection =
-          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false) ::
-            KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
-            KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
+          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
             Nil
         val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
@@ -713,9 +713,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
         val withCollection =
-          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false) ::
-            KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
-            KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
+          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
             Nil
         val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
@@ -755,7 +755,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val expected = Json.parse(s"""
           {"removedKeeps":[
             {"id":"$ext1","title":"title 11","url":"http://www.hi.com11","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
-            {"id":"$ext2","title":"title 21","url":"http://www.hi.com21","isPrivate":true,"libraryId":"l8rlPD6Bk7A9"}
+            {"id":"$ext2","title":"title 21","url":"http://www.hi.com21","isPrivate":false,"libraryId":"l7jlKlnA36Su"}
           ]}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
@@ -770,9 +770,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
 
         val withCollection =
-          KeepInfo(id = None, title = Some("title 11"), url = "http://www.hi.com11", isPrivate = false) ::
-            KeepInfo(id = None, title = Some("title 21"), url = "http://www.hi.com21", isPrivate = true) ::
-            KeepInfo(id = None, title = Some("title 31"), url = "http://www.hi.com31", isPrivate = false) ::
+          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
+            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
             Nil
         val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
 
@@ -816,7 +816,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
           {
             "removedKeeps":[
               {"id":"$ext1","title":"title 11","url":"http://www.hi.com11","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
-              {"id":"$ext2","title":"title 21","url":"http://www.hi.com21","isPrivate":true,"libraryId":"l8rlPD6Bk7A9"}
+              {"id":"$ext2","title":"title 21","url":"http://www.hi.com21","isPrivate":false,"libraryId":"l7jlKlnA36Su"}
             ],
             "errors":[]
           }
