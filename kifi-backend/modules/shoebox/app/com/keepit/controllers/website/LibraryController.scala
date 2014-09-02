@@ -31,8 +31,8 @@ class LibraryController @Inject() (
     libraryCommander.addLibrary(addRequest, request.userId) match {
       case Left(LibraryFail(message)) =>
         BadRequest(Json.obj("error" -> message))
-      case Right(newLibrary) =>
-        Ok(Json.toJson(libraryCommander.createFullLibraryInfo(newLibrary)))
+      case Right(lib) =>
+        Ok(Json.toJson(libraryCommander.createFullLibraryInfo(lib, 0, 0, 0, 0)))
     }
   }
 
@@ -78,21 +78,25 @@ class LibraryController @Inject() (
     }
   }
 
-  def getLibraryById(pubId: PublicId[Library], authToken: Option[String] = None) = JsonAction.authenticated { request =>
+  def getLibraryById(pubId: PublicId[Library], pageKeeps: Int = 0, pageUsers: Int = 0, authToken: Option[String] = None) = JsonAction.authenticated { request =>
     val idTry = Library.decodePublicId(pubId)
     idTry match {
       case Failure(ex) =>
         BadRequest(Json.obj("error" -> "invalid id"))
       case Success(id) =>
         val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
-        if (canView(request.userId, lib, authToken))
-          Ok(Json.obj("library" -> Json.toJson(libraryCommander.createFullLibraryInfo(lib))))
-        else
+        if (canView(request.userId, lib, authToken)) {
+          val keepsPageSize = 10
+          val usersPageSize = 10
+          Ok(Json.obj("library" -> Json.toJson(libraryCommander.createFullLibraryInfo(lib, pageKeeps, keepsPageSize, pageUsers, usersPageSize)),
+            "keepPageSize" -> keepsPageSize,
+            "userPageSize" -> usersPageSize))
+        } else
           BadRequest(Json.obj("error" -> "invalid access"))
     }
   }
 
-  def getLibraryByPath(userStr: String, slugStr: String, authToken: Option[String] = None) = JsonAction.authenticated { request =>
+  def getLibraryByPath(userStr: String, slugStr: String, pageKeeps: Int = 0, pageUsers: Int = 0, authToken: Option[String] = None) = JsonAction.authenticated { request =>
     // check if str is either a username or externalId
     val ownerOpt = db.readOnlyMaster { implicit s =>
       ExternalId.asOpt[User](userStr) match {
@@ -108,9 +112,13 @@ class LibraryController @Inject() (
           libraryRepo.getBySlugAndUserId(userId = owner.id.get, slug = LibrarySlug(slugStr)) match {
             case None => BadRequest(Json.obj("error" -> "no library found"))
             case Some(lib) =>
-              if (canView(request.userId, lib, authToken))
-                Ok(Json.obj("library" -> Json.toJson(libraryCommander.createFullLibraryInfo(lib))))
-              else
+              if (canView(request.userId, lib, authToken)) {
+                val keepsPageSize = 10
+                val usersPageSize = 10
+                Ok(Json.obj("library" -> Json.toJson(libraryCommander.createFullLibraryInfo(lib, pageKeeps, keepsPageSize, pageUsers, usersPageSize)),
+                  "keepPageSize" -> keepsPageSize,
+                  "userPageSize" -> usersPageSize))
+              } else
                 BadRequest(Json.obj("error" -> "invalid access"))
           }
         }

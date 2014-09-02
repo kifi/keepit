@@ -168,6 +168,27 @@ class LibraryCommanderTest extends Specification with ShoeboxTestInjector {
   }
 
   "LibraryCommander" should {
+
+    "create full library info" in {
+      withDb(modules: _*) { implicit injector =>
+        val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupKeeps()
+        val libraryCommander = inject[LibraryCommander]
+
+        val fullLib1 = libraryCommander.createFullLibraryInfo(libMurica, 0, 1, 0, 10)
+        fullLib1.keeps.map(k => k.title.get) === Seq("McDonalds")
+        fullLib1.numKeeps === 3
+        fullLib1.numCollaborators === 0
+        fullLib1.numFollowers === 2
+        fullLib1.followers.map(_.externalId) === Seq(userAgent.externalId, userIron.externalId)
+
+        val fullLib2 = libraryCommander.createFullLibraryInfo(libMurica, 1, 1, 1, 1)
+        fullLib2.keeps.map(k => k.title.get) === Seq("Freedom")
+        fullLib2.numCollaborators === 0
+        fullLib2.numFollowers === 2
+        fullLib2.followers.map(_.externalId) === Seq(userIron.externalId)
+      }
+    }
+
     "create libraries, memberships & invites" in {
       withDb(modules: _*) { implicit injector =>
         val (userIron, userCaptain, userAgent, userHulk) = setupUsers()

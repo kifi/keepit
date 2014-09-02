@@ -20,6 +20,10 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def getWithUserId(userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Option[LibraryMembership]
   def getOpt(userId: Id[User], libraryId: Id[Library])(implicit session: RSession): Option[LibraryMembership]
+  def pageWithLibraryIdAndAccess(libraryId: Id[Library], count: Int, offset: Int, accessSet: Set[LibraryAccess],
+                                 excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership]
+  def countWithLibraryIdAndAccess(libraryId: Id[Library], accessSet: Set[LibraryAccess],
+                                  excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int
 }
 
 @Singleton
@@ -61,6 +65,9 @@ class LibraryMembershipRepoImpl @Inject() (
     }
   }
 
+  def pageWithLibraryIdAndAccess(libraryId: Id[Library], count: Int, offset: Int, accessSet: Set[LibraryAccess], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership] = {
+    (for (b <- rows if b.libraryId === libraryId && b.access.inSet(accessSet) && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).drop(offset).take(count).list
+  }
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Seq[LibraryMembership] = {
     (for (b <- rows if b.libraryId === libraryId && b.state =!= excludeState.orNull) yield b).sortBy(_.createdAt).list
   }
@@ -76,6 +83,13 @@ class LibraryMembershipRepoImpl @Inject() (
   }
   def getOpt(userId: Id[User], libraryId: Id[Library])(implicit session: RSession): Option[LibraryMembership] = {
     getOptCompiled(userId, libraryId).firstOption
+  }
+
+  private def countWithLibraryCompiled(libraryId: Column[Id[Library]], accessSet: Set[LibraryAccess], excludeState: Option[State[LibraryMembership]]) = Compiled {
+    (for (b <- rows if b.libraryId === libraryId && b.access.inSet(accessSet) && b.state =!= excludeState.orNull) yield b).length
+  }
+  def countWithLibraryIdAndAccess(libraryId: Id[Library], accessSet: Set[LibraryAccess], excludeState: Option[State[LibraryMembership]] = Some(LibraryMembershipStates.INACTIVE))(implicit session: RSession): Int = {
+    countWithLibraryCompiled(libraryId, accessSet, excludeState).run
   }
 
   override def deleteCache(libMem: LibraryMembership)(implicit session: RSession): Unit = {
